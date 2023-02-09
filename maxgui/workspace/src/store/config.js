@@ -16,24 +16,25 @@ import { isMAC } from '@share/utils/helpers'
 export const ORM_NAMESPACE = 'ORM'
 export const ORM_PERSISTENT_ENTITIES = {
     EDITORS: 'editors',
+    ETL_TASKS: 'etlTasks',
     QUERY_CONNS: 'queryConns',
+    QUERY_EDITORS: 'queryEditors',
     QUERY_RESULTS: 'queryResults',
     QUERY_TABS: 'queryTabs',
     SCHEMA_SIDEBARS: 'schemaSidebars',
     WORKSHEETS: 'worksheets',
-    ETL_TASKS: 'etlTasks',
 }
 export const ORM_TMP_ENTITIES = {
+    ETL_TASKS_TMP: 'etlTasksTmp',
     QUERY_EDITORS_TMP: 'queryEditorsTmp',
     QUERY_TABS_TMP: 'queryTabsTmp',
-    ETL_TASKS_TMP: 'etlTasksTmp',
 }
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     QUERY_TAB: 'QUERY_TAB',
-    // Used by <wke-conn-man/>. It's also used for stopping the running query
-    WORKSHEET: 'WORKSHEET',
+    // QueryEditor connection using for cloning query tabs and stopping query tab query
+    QUERY_EDITOR: 'QUERY_EDITOR',
     ETL_SRC: 'ETL_SOURCE',
     ETL_DEST: 'ETL_DESTINATION',
 })

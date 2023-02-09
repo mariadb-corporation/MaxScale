@@ -261,9 +261,9 @@ export default {
         },
     },
     methods: {
-        ...mapActions({ chooseActiveWorkspaceWke: 'visualization/chooseActiveWorkspaceWke' }),
+        ...mapActions({ chooseQueryEditorWke: 'visualization/chooseQueryEditorWke' }),
         runQueries(param) {
-            this.chooseActiveWorkspaceWke(param)
+            this.chooseQueryEditorWke(param)
             this.$router.push(`/workspace`)
         },
     },

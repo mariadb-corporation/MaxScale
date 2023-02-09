@@ -27,7 +27,7 @@ const mountFactory = opts =>
 
 const dummyWke = {
     id: '71cb4820-76d6-11ed-b6c2-dfe0423852da',
-    active_query_tab_id: '71cb4821-76d6-11ed-b6c2-dfe0423852da',
+    query_editor_id: '71cb4821-76d6-11ed-b6c2-dfe0423852da',
     name: 'WORKSHEET',
 }
 describe('wke-nav-tab', () => {

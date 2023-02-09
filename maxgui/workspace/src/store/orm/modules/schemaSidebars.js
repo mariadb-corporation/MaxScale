@@ -11,11 +11,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { query } from '@wsSrc/api/query'
@@ -31,7 +31,7 @@ export default {
          * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
          */
         async loadChildNodes({ getters }, nodeGroup) {
-            const activeWkeId = Worksheet.getters('getActiveWkeId')
+            const queryEditorId = QueryEditor.getters('getQueryEditorId')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const { data, completionItems } = await queryHelper.getNewTreeData({
                 connId,
@@ -40,7 +40,7 @@ export default {
                 completionItems: getters.getSchemaCompletionItems,
             })
             QueryEditorTmp.update({
-                where: activeWkeId,
+                where: queryEditorId,
                 data(obj) {
                     obj.db_tree = data
                     obj.completion_items = completionItems
@@ -48,12 +48,12 @@ export default {
             })
         },
         async fetchSchemas({ getters, rootState }) {
-            const activeWkeId = Worksheet.getters('getActiveWkeId')
+            const queryEditorId = QueryEditor.getters('getQueryEditorId')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
                 'getActiveQueryTabConn'
             )
             QueryEditorTmp.update({
-                where: activeWkeId,
+                where: queryEditorId,
                 data: { loading_db_tree: true },
             })
 
@@ -62,7 +62,7 @@ export default {
             )
             if (e)
                 QueryEditorTmp.update({
-                    where: activeWkeId,
+                    where: queryEditorId,
                     data: { loading_db_tree: false },
                 })
             else {
@@ -91,7 +91,7 @@ export default {
                         }
                     }
                     QueryEditorTmp.update({
-                        where: activeWkeId,
+                        where: queryEditorId,
                         data(obj) {
                             obj.loading_db_tree = false
                             obj.completion_items = completion_items
@@ -114,16 +114,16 @@ export default {
             sql += ` ORDER BY ${schema};`
             return sql
         },
-        getSchemaSidebar: () => SchemaSidebar.find(Worksheet.getters('getActiveWkeId')) || {},
+        getSchemaSidebar: () => SchemaSidebar.find(QueryEditor.getters('getQueryEditorId')) || {},
         getExpandedNodes: (state, getters) => getters.getSchemaSidebar.expanded_nodes || [],
         getFilterTxt: (state, getters) => getters.getSchemaSidebar.filter_txt || '',
         // Getters for mem states
-        getLoadingDbTree: () => Worksheet.getters('getQueryEditorTmp').loading_db_tree || false,
+        getLoadingDbTree: () => QueryEditor.getters('getQueryEditorTmp').loading_db_tree || false,
         getSchemaCompletionItems: () =>
-            lodash.uniqBy(Worksheet.getters('getQueryEditorTmp').completion_items || [], 'label'),
-        getDbTreeOfConn: () => Worksheet.getters('getQueryEditorTmp').db_tree_of_conn || '',
-        getDbTreeData: () => Worksheet.getters('getQueryEditorTmp').db_tree || {},
-        getActivePrvwNode: () => QueryTab.getters('getActiveQueryTabMem').active_prvw_node || {},
+            lodash.uniqBy(QueryEditor.getters('getQueryEditorTmp').completion_items || [], 'label'),
+        getDbTreeOfConn: () => QueryEditor.getters('getQueryEditorTmp').db_tree_of_conn || '',
+        getDbTreeData: () => QueryEditor.getters('getQueryEditorTmp').db_tree || {},
+        getActivePrvwNode: () => QueryTab.getters('getQueryTabTmp').active_prvw_node || {},
         getActivePrvwNodeFQN: (state, getters) => getters.getActivePrvwNode.qualified_name || '',
     },
 }

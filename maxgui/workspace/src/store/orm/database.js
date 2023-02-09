@@ -15,6 +15,7 @@ import { Database } from '@vuex-orm/core'
 import Editor from '@wsModels/Editor'
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
@@ -27,6 +28,7 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import editors from '@wsSrc/store/orm/modules/editors'
 import etlTasks from '@wsSrc/store/orm/modules/etlTasks'
 import queryConns from '@wsSrc/store/orm/modules/queryConns'
+import queryEditors from '@wsSrc/store/orm/modules/queryEditors'
 import queryResults from '@wsSrc/store/orm/modules/queryResults'
 import queryTabs from '@wsSrc/store/orm/modules/queryTabs'
 import schemaSidebars from '@wsSrc/store/orm/modules/schemaSidebars'
@@ -36,6 +38,7 @@ const database = new Database()
 database.register(Editor, editors)
 database.register(EtlTask, etlTasks)
 database.register(QueryConn, queryConns)
+database.register(QueryEditor, queryEditors)
 database.register(QueryResult, queryResults)
 database.register(QueryTab, queryTabs)
 database.register(SchemaSidebar, schemaSidebars)

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2020 MariaDB Corporation Ab
- * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ * Copyright (c) 2023 MariaDB plc
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
@@ -13,28 +12,24 @@
  */
 import Extender from '@wsSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@wsSrc/store/config'
-import { uuidv1 } from '@share/utils/helpers'
 
-export default class QueryTab extends Extender {
-    static entity = ORM_PERSISTENT_ENTITIES.QUERY_TABS
+export default class QueryEditor extends Extender {
+    static entity = ORM_PERSISTENT_ENTITIES.QUERY_EDITORS
 
     /**
      * @returns {Object} - return fields that are not key, relational fields
      */
     static getNonKeyFields() {
-        return { name: this.string('Query Tab 1'), count: this.number(1) }
+        return { active_query_tab_id: this.attr(null) }
     }
 
     static fields() {
         return {
-            id: this.uid(() => uuidv1()),
+            id: this.attr(null), // use Worksheet id as PK for this table
             ...this.getNonKeyFields(),
-            //FK
-            query_editor_id: this.attr(null),
-            // relationship fields
-            editor: this.hasOne(ORM_PERSISTENT_ENTITIES.EDITORS, 'id'),
-            queryResult: this.hasOne(ORM_PERSISTENT_ENTITIES.QUERY_RESULTS, 'id'),
-            queryTabTmp: this.hasOne(ORM_TMP_ENTITIES.QUERY_TABS_TMP, 'id'),
+            queryTabs: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_TABS, 'query_editor_id'),
+            schemaSidebar: this.hasOne(ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS, 'id'),
+            queryEditorTmp: this.hasOne(ORM_TMP_ENTITIES.QUERY_EDITORS_TMP, 'id'),
         }
     }
 }

@@ -8,7 +8,7 @@
                 small
                 class="float-left add-query-tab-btn"
                 icon
-                @click="add({ worksheet_id: activeWkeId })"
+                @click="add({ query_editor_id: queryEditorId })"
             >
                 <v-icon size="18" color="blue-azure">mdi-plus</v-icon>
             </v-btn>
@@ -48,7 +48,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
 import { mapMutations } from 'vuex'
@@ -57,17 +57,17 @@ export default {
     name: 'query-tab-nav-toolbar-ctr',
     components: {},
     computed: {
-        activeWkeId() {
-            return Worksheet.getters('getActiveWkeId')
+        queryEditorId() {
+            return QueryEditor.getters('getQueryEditorId')
         },
         activeQueryTabConn() {
             return QueryConn.getters('getActiveQueryTabConn')
         },
-        activeWkeConn() {
-            return QueryConn.getters('getActiveWkeConn')
+        activeQueryEditorConn() {
+            return QueryConn.getters('getQueryEditorConn')
         },
         connectedServerName() {
-            return this.$typy(this.activeWkeConn, 'meta.name').safeString
+            return this.$typy(this.activeQueryEditorConn, 'meta.name').safeString
         },
     },
     watch: {

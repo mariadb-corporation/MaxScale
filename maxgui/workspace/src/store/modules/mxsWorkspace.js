@@ -11,13 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import QueryTab from '@wsModels/QueryTab'
 import * as config from '@wsSrc/store/config'
 import commonConfig from '@share/config'
-import initEntities, { insertQueryTab } from '@wsSrc/store/orm/initEntities'
+import initEntities from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -54,21 +50,6 @@ export default {
         async initWorkspace({ dispatch }) {
             initEntities()
             await dispatch('fileSysAccess/initStorage', {}, { root: true })
-        },
-        /**
-         * Init QueryEditor entities if they aren't existed for
-         * the active worksheet.
-         */
-        initQueryEditorEntities() {
-            const id = Worksheet.getters('getActiveWkeId')
-            if (!QueryEditorTmp.find(id)) QueryEditorTmp.insert({ data: { id } })
-            if (!SchemaSidebar.find(id)) SchemaSidebar.insert({ data: { id } })
-            if (
-                !QueryTab.query()
-                    .where('worksheet_id', id)
-                    .first()
-            )
-                insertQueryTab(id)
         },
     },
 }

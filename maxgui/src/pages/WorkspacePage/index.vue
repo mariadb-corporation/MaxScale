@@ -26,7 +26,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
@@ -45,20 +44,16 @@ export default {
     computed: {
         ...mapState({
             is_conn_dlg_opened: state => state.mxsWorkspace.is_conn_dlg_opened,
-            pre_select_conn_rsrc: state => state.queryConnsMem.pre_select_conn_rsrc,
         }),
         allConns() {
             return QueryConn.all()
         },
-        // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
-        wkeConnOpts() {
-            return QueryConn.getters('getWkeConns').map(c => ({
+        // all connections having binding_type === QUERY_CONN_BINDING_TYPES.QUERY_EDITOR
+        queryEditorConnOpts() {
+            return QueryConn.getters('getQueryEditorConns').map(c => ({
                 ...c,
-                disabled: Boolean(c.worksheet_id),
+                disabled: Boolean(c.query_editor_id),
             }))
-        },
-        activeWkeId() {
-            return Worksheet.getters('getActiveWkeId')
         },
         isConnDlgOpened: {
             get() {
@@ -68,11 +63,11 @@ export default {
                 this.SET_IS_CONN_DLG_OPENED(v)
             },
         },
-        wkeConns() {
-            return QueryConn.getters('getWkeConns')
+        queryEditorConns() {
+            return QueryConn.getters('getQueryEditorConns')
         },
         availableConnOpts() {
-            return this.wkeConnOpts.filter(cnn => !cnn.disabled)
+            return this.queryEditorConnOpts.filter(cnn => !cnn.disabled)
         },
     },
     beforeRouteLeave(to, from, next) {
@@ -101,12 +96,6 @@ export default {
         }
     },
     watch: {
-        pre_select_conn_rsrc: {
-            immediate: true,
-            async handler(v) {
-                if (v) await this.handlePreSelectConnRsrc()
-            },
-        },
         allConns: {
             deep: true,
             immediate: true,
@@ -138,17 +127,6 @@ export default {
         },
         async handleOpenConn(opts) {
             await QueryConn.dispatch('openQueryEditorConn', opts)
-        },
-        /**
-         * Check if there is an available connection (connection that has not been bound to a worksheet),
-         * bind it to the current worksheet. otherwise open dialog
-         */
-        async handlePreSelectConnRsrc() {
-            const conn = this.availableConnOpts.find(
-                conn => conn.name === this.pre_select_conn_rsrc.id
-            )
-            if (conn) await await QueryConn.dispatch('onChangeWkeConn', conn)
-            else this.SET_IS_CONN_DLG_OPENED(true)
         },
     },
 }

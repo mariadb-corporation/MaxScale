@@ -249,7 +249,7 @@ export default {
             return (
                 !query_txt ||
                 !queryTabConn.id ||
-                QueryConn.getters('getIsConnBusyByQueryTabId')(this.queryTab.id) ||
+                QueryConn.getters('getIsQueryTabConnBusyByQueryTabId')(this.queryTab.id) ||
                 this.isExecuting
             )
         },
@@ -257,7 +257,7 @@ export default {
             const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(this.queryTab.id)
             return (
                 !queryTabConn.id ||
-                (QueryConn.getters('getIsConnBusyByQueryTabId')(this.queryTab.id) &&
+                (QueryConn.getters('getIsQueryTabConnBusyByQueryTabId')(this.queryTab.id) &&
                     this.isExecuting)
             )
         },

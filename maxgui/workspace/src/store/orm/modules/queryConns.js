@@ -11,11 +11,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from '@wsSrc/store/queryHelper'
-import QueryConn from '@wsModels/QueryConn'
-import QueryTab from '@wsModels/QueryTab'
-import Worksheet from '@wsModels/Worksheet'
 import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryTab from '@wsModels/QueryTab'
+import queryHelper from '@wsSrc/store/queryHelper'
 import { getAliveConns, openConn, cloneConn, reconnect, deleteConn } from '@wsSrc/api/connection'
 import { query } from '@wsSrc/api/query'
 
@@ -24,27 +24,44 @@ export default {
     actions: {
         /**
          * If a record is deleted, then the corresponding records in its relational
-         * tables (Worksheet, QueryTab) will have their data refreshed
+         * tables (QueryEditor, QueryTab) will have their data refreshed
          * @param {String|Function} payload - either a QueryConn id or a callback function that return Boolean (filter)
          */
         cascadeRefreshOnDelete(_, payload) {
             const entities = queryHelper.filterEntity(QueryConn, payload)
             entities.forEach(entity => {
                 /**
-                 * refresh its relations, when a connection bound to the worksheet is deleted,
-                 * all QueryTabs data should also be refreshed (Worksheet.dispatch('cascadeRefresh').
-                 * If the connection being deleted doesn't have worksheet_id FK but query_tab_id FK,
+                 * refresh its relations, when a connection bound to the QueryEditor is deleted,
+                 * QueryEditor should be refreshed.
+                 * If the connection being deleted doesn't have query_editor_id FK but query_tab_id FK,
                  * it is a connection bound to QueryTab, thus call QueryTab.dispatch('cascadeRefresh').
                  */
-                if (entity.worksheet_id)
-                    Worksheet.dispatch('cascadeRefresh', w => w.id === entity.worksheet_id)
+                if (entity.query_editor_id)
+                    QueryEditor.dispatch('cascadeRefresh', entity.query_editor_id)
                 else if (entity.query_tab_id)
                     QueryTab.dispatch('cascadeRefresh', t => t.id === entity.query_tab_id)
                 QueryConn.delete(entity.id) // delete itself
             })
         },
         /**
-         * @param {Array} connIds - alive connection ids that were cloned from expired worksheet connections
+         * This handles delete the QueryEditor connection and its query tab connections.
+         * @param {Boolean} param.showSnackbar - should show success message or not
+         * @param {Number} param.id - connection id that is bound to the QueryEditor
+         */
+        async cascadeDisconnect({ dispatch }, { showSnackbar, id }) {
+            const target = QueryConn.find(id)
+            if (target) {
+                // Delete its clones first
+                const clonedConnIds = QueryConn.query()
+                    .where(c => c.clone_of_conn_id === id)
+                    .get()
+                    .map(c => c.id)
+                await dispatch('cleanUpOrphanedConns', clonedConnIds)
+                await dispatch('disconnect', { id, showSnackbar })
+            }
+        },
+        /**
+         * @param {Array} connIds - alive connection ids that were cloned from expired QueryEditor connections
          */
         async cleanUpOrphanedConns({ dispatch }, connIds) {
             await this.vue.$helpers.to(
@@ -75,101 +92,43 @@ export default {
             commit('queryConnsMem/SET_IS_VALIDATING_CONN', false, { root: true })
         },
         /**
-         * Unbind the connection bound to the current worksheet and connections bound
-         * to queryTabs of the current worksheet before opening/selecting a new one,
-         * so it can be used by other worksheet
-         */
-        unbindConn() {
-            QueryConn.update({
-                where: c => c.worksheet_id === Worksheet.getters('getActiveWkeId'),
-                data: { worksheet_id: null },
-            })
-            QueryTab.getters('getQueryTabsOfActiveWke').forEach(t =>
-                QueryConn.update({
-                    where: c => c.query_tab_id === t.id,
-                    data: { query_tab_id: null },
-                })
-            )
-        },
-        async onChangeWkeConn({ getters, dispatch }, chosenWkeConn) {
-            try {
-                dispatch('unbindConn')
-                // Replace the connection of all queryTabs of the worksheet
-                const queryTabs = QueryTab.getters('getQueryTabsOfActiveWke')
-                if (queryTabs.length) {
-                    const clonesOfChosenWkeConn = getters.getClonedConnsOfWkeConn(chosenWkeConn.id)
-
-                    // Bind the existing cloned connections to bondable queryTabs
-                    const bondableQueryTabIds = queryTabs
-                        .slice(0, clonesOfChosenWkeConn.length)
-                        .map(t => t.id)
-                    bondableQueryTabIds.forEach((id, i) => {
-                        QueryConn.update({
-                            where: clonesOfChosenWkeConn[i].id,
-                            data: { query_tab_id: id },
-                        })
-                    })
-
-                    // clones the chosenWkeConn and bind them to leftover queryTabs
-                    const leftoverQueryTabIds = queryTabs
-                        .slice(clonesOfChosenWkeConn.length)
-                        .map(t => t.id)
-                    await dispatch('cloneWkeConnToQueryTabs', {
-                        queryTabIds: leftoverQueryTabIds,
-                        wkeConn: chosenWkeConn,
-                    })
-                }
-                // bind chosenWkeConn to the active worksheet
-                QueryConn.update({
-                    where: chosenWkeConn.id,
-                    data: { worksheet_id: Worksheet.getters('getActiveWkeId') },
-                })
-            } catch (e) {
-                this.vue.$logger.error(e)
-            }
-        },
-        /**
          * @param {Object} param.body - request body
          * @param {Object} param.meta - meta - connection meta
          */
         async openQueryEditorConn({ dispatch, commit, getters, rootState }, { body, meta }) {
             const { $helpers, $mxs_t } = this.vue
             const {
-                QUERY_CONN_BINDING_TYPES: { WORKSHEET },
+                QUERY_CONN_BINDING_TYPES: { QUERY_EDITOR },
             } = rootState.mxsWorkspace.config
 
-            const activeWorksheetId = Worksheet.getters('getActiveWkeId')
-            const activeWkeConn = getters.getActiveWkeConn
+            const activeQueryEditorConn = getters.getQueryEditorConn
 
             const [e, res] = await $helpers.to(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
-                dispatch('unbindConn')
-                const wkeConn = {
+                // clean up previous conn after binding the new one
+                if (activeQueryEditorConn.id)
+                    await QueryConn.dispatch('cascadeDisconnect', {
+                        id: activeQueryEditorConn.id,
+                    })
+
+                QueryEditor.dispatch('initQueryEditorEntities')
+                const queryEditorId = QueryEditor.getters('getQueryEditorId')
+                const queryEditorConn = {
                     id: res.data.data.id,
                     attributes: res.data.data.attributes,
-                    binding_type: WORKSHEET,
-                    worksheet_id: activeWorksheetId,
+                    binding_type: QUERY_EDITOR,
+                    query_editor_id: queryEditorId,
                     meta,
                 }
-                QueryConn.insert({ data: wkeConn })
+                QueryConn.insert({ data: queryEditorConn })
 
-                // clean up previous conn after binding the new one
-                if (activeWkeConn.id)
-                    await QueryConn.dispatch('cascadeDisconnectWkeConn', { id: activeWkeConn.id })
+                const activeQueryTabIds = QueryTab.getters('getActiveQueryTabs').map(t => t.id)
 
-                // Initialize QueryEditor orm entities
-                dispatch('mxsWorkspace/initQueryEditorEntities', {}, { root: true })
-
-                const queryTabIdsOfActiveWke = QueryTab.query()
-                    .where('worksheet_id', activeWorksheetId)
-                    .get()
-                    .map(t => t.id)
-
-                if (queryTabIdsOfActiveWke.length) {
-                    await dispatch('cloneWkeConnToQueryTabs', {
-                        queryTabIds: queryTabIdsOfActiveWke,
-                        wkeConn,
+                if (activeQueryTabIds.length) {
+                    await dispatch('cloneQueryEditorConnToQueryTabs', {
+                        queryTabIds: activeQueryTabIds,
+                        queryEditorConn,
                     })
                     if (body.db) await dispatch('useDb', body.db)
                 }
@@ -186,39 +145,41 @@ export default {
             }
         },
         /**
-         * This clones the worksheet connection and bind it to the queryTabs.
+         * This clones the QueryEditor connection and bind it to the queryTabs.
          * @param {Array} param.queryTabIds - queryTabIds
-         * @param {Object} param.wkeConn - connection bound to a worksheet
+         * @param {Object} param.queryEditorConn - connection bound to a QueryEditor
          */
-        async cloneWkeConnToQueryTabs({ dispatch }, { queryTabIds, wkeConn }) {
+        async cloneQueryEditorConnToQueryTabs({ dispatch }, { queryTabIds, queryEditorConn }) {
             // clone the connection and bind it to all queryTabs
             await Promise.all(
-                queryTabIds.map(id => dispatch('openQueryTabConn', { wkeConn, query_tab_id: id }))
+                queryTabIds.map(id =>
+                    dispatch('openQueryTabConn', { queryEditorConn, query_tab_id: id })
+                )
             )
         },
         /**
          * Open a query tab connection
-         * @param {Object} param.wkeConn - Worksheet connection
+         * @param {Object} param.queryEditorConn - QueryEditor connection
          * @param {String} param.query_tab_id - id of the queryTab that binds this connection
          */
-        async openQueryTabConn({ rootState }, { wkeConn, query_tab_id }) {
+        async openQueryTabConn({ rootState }, { queryEditorConn, query_tab_id }) {
             const {
                 QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
             } = rootState.mxsWorkspace.config
 
-            const [e, res] = await this.vue.$helpers.to(cloneConn(wkeConn.id))
+            const [e, res] = await this.vue.$helpers.to(cloneConn(queryEditorConn.id))
 
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201)
                 QueryConn.insert({
                     data: {
                         id: res.data.data.id,
-                        name: wkeConn.name,
+                        name: queryEditorConn.name,
                         attributes: res.data.data.attributes,
                         binding_type: QUERY_TAB,
                         query_tab_id,
-                        clone_of_conn_id: wkeConn.id,
-                        meta: wkeConn.meta,
+                        clone_of_conn_id: queryEditorConn.id,
+                        meta: queryEditorConn.meta,
                     },
                 })
         },
@@ -305,23 +266,7 @@ export default {
             }
             dispatch('cascadeRefreshOnDelete', id)
         },
-        /**
-         * This handles delete the worksheet connection and its query tab connections.
-         * @param {Boolean} param.showSnackbar - should show success message or not
-         * @param {Number} param.id - connection id that is bound to the worksheet
-         */
-        async cascadeDisconnectWkeConn({ dispatch }, { showSnackbar, id }) {
-            const target = QueryConn.find(id)
-            if (target) {
-                // Delete its clones first
-                const clonedConnIds = QueryConn.query()
-                    .where(c => c.clone_of_conn_id === id)
-                    .get()
-                    .map(c => c.id)
-                await dispatch('cleanUpOrphanedConns', clonedConnIds)
-                await dispatch('disconnect', { id, showSnackbar })
-            }
-        },
+
         /**
          * @param {Object} param.ids - connections to be reconnected
          * @param {Function} param.onSuccess - on success callback
@@ -368,8 +313,8 @@ export default {
             )
         },
         async disconnectAll({ getters, dispatch }) {
-            for (const { id } of getters.getWkeConns)
-                await dispatch('cascadeDisconnectWkeConn', { showSnackbar: false, id })
+            for (const { id } of getters.getQueryEditorConns)
+                await dispatch('cascadeDisconnect', { showSnackbar: false, id })
             await this.vue.$helpers.to(
                 Promise.all(getters.getEtlConns.map(({ id }) => dispatch('disconnect', { id })))
             )
@@ -436,7 +381,7 @@ export default {
     getters: {
         // QueryTab connection getters
         getActiveQueryTabConn: () => {
-            const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
+            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             if (!activeQueryTabId) return {}
             return (
                 QueryConn.query()
@@ -448,30 +393,22 @@ export default {
             QueryConn.query()
                 .where('query_tab_id', query_tab_id)
                 .first() || {},
-        getIsConnBusyByActiveQueryTab: (state, getters) =>
+        getIsActiveQueryTabConnBusy: (state, getters) =>
             getters.getActiveQueryTabConn.is_busy || false,
-        getIsConnBusyByQueryTabId: (state, getters) => query_tab_id =>
+        getIsQueryTabConnBusyByQueryTabId: (state, getters) => query_tab_id =>
             getters.getQueryTabConnByQueryTabId(query_tab_id).is_busy || false,
-        // Worksheet connection getters
-        getActiveWkeConn: () =>
+        // QueryEditor connection getters
+        getQueryEditorConn: () =>
             QueryConn.query()
-                .where('worksheet_id', Worksheet.getters('getActiveWkeId'))
+                .where('query_editor_id', QueryEditor.getters('getQueryEditorId'))
                 .first() || {},
-        getWkeConnByWkeId: () => wke_id =>
-            QueryConn.query()
-                .where('worksheet_id', wke_id)
-                .first() || {},
-        getWkeConns: (state, getters, rootState) =>
+        getQueryEditorConns: (state, getters, rootState) =>
             QueryConn.query()
                 .where(
                     'binding_type',
-                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR
                 )
                 .get(),
-        getClonedConnsOfWkeConn: () => wkeConnId =>
-            QueryConn.query()
-                .where('clone_of_conn_id', wkeConnId)
-                .get() || [],
         // ETL connection getters
         getEtlConns: (state, getters, rootState) => {
             const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES

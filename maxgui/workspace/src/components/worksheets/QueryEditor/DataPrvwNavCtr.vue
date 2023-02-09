@@ -34,7 +34,7 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
+import QueryEditor from '@wsModels/QueryEditor'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import QueryResult from '@wsModels/QueryResult'
 
@@ -61,7 +61,7 @@ export default {
                     this.currQueryMode === this.QUERY_MODES.PRVW_DATA_DETAILS
                 )
                     QueryResult.update({
-                        where: Worksheet.getters('getActiveQueryTabId'),
+                        where: QueryEditor.getters('getActiveQueryTabId'),
                         data: { curr_query_mode: v },
                     })
             },

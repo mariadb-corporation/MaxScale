@@ -132,7 +132,7 @@ export default {
             this.dim = { width, height }
         },
         isQueryEditorWke(wke) {
-            return Boolean(this.$typy(wke, 'active_query_tab_id').safeString)
+            return Boolean(this.$typy(wke, 'query_editor_id').safeString)
         },
         isEtlWke(wke) {
             return Boolean(this.$typy(wke, 'etl_task_id').safeString)

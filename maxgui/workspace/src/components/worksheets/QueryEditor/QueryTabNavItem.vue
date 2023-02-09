@@ -64,13 +64,13 @@ export default {
             return this.getIsQueryTabUnsaved(this.queryTab.id)
         },
         queryTabsOfActiveWke() {
-            return QueryTab.getters('getQueryTabsOfActiveWke')
+            return QueryTab.getters('getActiveQueryTabs')
         },
         isLoadingQueryResult() {
             return QueryResult.getters('getLoadingQueryResultByQueryTabId')(this.queryTab.id)
         },
         isQueryTabConnBusy() {
-            return QueryConn.getters('getIsConnBusyByQueryTabId')(this.queryTab.id)
+            return QueryConn.getters('getIsQueryTabConnBusyByQueryTabId')(this.queryTab.id)
         },
     },
     methods: {

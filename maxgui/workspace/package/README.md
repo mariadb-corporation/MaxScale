@@ -321,7 +321,7 @@ for (const { id = '' } of connections_of_a_maxscale) {
         },
         { root: true }
     )
-    await models.QueryConn.dispatch('cascadeDisconnectWkeConn', { showSnackbar: false, id })
+    await models.QueryConn.dispatch('cascadeDisconnect', { showSnackbar: false, id })
 }
 ```
 

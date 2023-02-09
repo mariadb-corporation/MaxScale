@@ -41,6 +41,7 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import EtlTask from '@wsModels/EtlTask'
 import { mapState, mapActions } from 'vuex'
@@ -49,24 +50,26 @@ export default {
     name: 'reconn-dlg-ctr',
     computed: {
         ...mapState({
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
+        activeWke() {
+            return Worksheet.getters('getActiveWke')
+        },
         isActiveQueryEditorWke() {
-            return Boolean(Worksheet.getters('getActiveQueryTabId'))
+            return Boolean(this.activeWke.query_editor_id)
         },
         isActiveEtlWke() {
-            return Boolean(Worksheet.getters('getActiveEtlTaskId'))
+            return Boolean(this.activeWke.etl_task_id)
         },
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTask')
         },
-        activeWkeConn() {
-            return QueryConn.getters('getActiveWkeConn')
+        activeQueryEditorConn() {
+            return QueryConn.getters('getQueryEditorConn')
         },
         activeConns() {
             if (this.isActiveQueryEditorWke)
-                return [this.activeWkeConn, QueryConn.getters('getActiveQueryTabConn')]
+                return [this.activeQueryEditorConn, QueryConn.getters('getActiveQueryTabConn')]
             if (this.isActiveEtlWke) return QueryConn.getters('getActiveEtlConns')
             return []
         },
@@ -80,19 +83,20 @@ export default {
             return this.lostConns.map(c => c.id)
         },
         isWkeConnLost() {
-            return this.lostConnIds.includes(this.activeWkeConn.id)
+            return this.lostConnIds.includes(this.activeQueryEditorConn.id)
         },
         connIdsToBeReconnected() {
             let ids = this.lostConnIds
             /**
-             * The worksheet connection is normally not included in 'lostConns'
-             * since the `lost_cnn_err` is retrieved if the worksheet connection
-             * is used for querying. The worksheet connection, on the other hand,
+             * The QueryEditor connection is normally not included in 'lostConns'
+             * since the `lost_cnn_err` is retrieved if the QueryEditor connection
+             * is used for querying. The QueryEditor connection, on the other hand,
              * is solely utilized to terminate the running query. As a result,
-             * it's preferable to provide the worksheet connection for reconnecting
+             * it's preferable to provide the QueryEditor connection for reconnecting
              * to avoid this edge case.
              */
-            if (this.isActiveQueryEditorWke && !this.isWkeConnLost) ids.push(this.activeWkeConn.id)
+            if (this.isActiveQueryEditorWke && !this.isWkeConnLost)
+                ids.push(this.activeQueryEditorConn.id)
             return ids
         },
         showReconnDialog: {
@@ -110,8 +114,8 @@ export default {
         ...mapActions({ fetchSrcSchemas: 'etlMem/fetchSrcSchemas' }),
         async deleteConns() {
             if (this.isActiveQueryEditorWke)
-                await QueryConn.dispatch('cascadeDisconnectWkeConn', {
-                    id: QueryConn.getters('getActiveWkeConn').id,
+                await QueryConn.dispatch('cascadeDisconnect', {
+                    id: this.activeQueryEditorConn.id,
                 })
             else
                 await Promise.all(
@@ -123,7 +127,8 @@ export default {
                 ids: this.connIdsToBeReconnected,
                 onError: async () => await this.deleteConns(),
                 onSuccess: async () => {
-                    if (this.isActiveQueryEditorWke) await Worksheet.dispatch('handleInitialFetch')
+                    if (this.isActiveQueryEditorWke)
+                        await QueryEditor.dispatch('handleInitialFetch')
                     else if (this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.SRC_OBJ)
                         await this.fetchSrcSchemas()
                 },

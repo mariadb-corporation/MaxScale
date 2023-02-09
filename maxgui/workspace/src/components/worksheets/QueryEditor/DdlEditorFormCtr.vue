@@ -55,8 +55,8 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
 import Editor from '@wsModels/Editor'
+import QueryEditor from '@wsModels/QueryEditor'
 import AlterTableOpts from '@wkeComps/QueryEditor/AlterTableOpts.vue'
 import AlterColsOpts from '@wkeComps/QueryEditor/AlterColsOpts.vue'
 
@@ -111,7 +111,7 @@ export default {
             },
             set(value) {
                 Editor.update({
-                    where: Worksheet.getters('getActiveQueryTabId'),
+                    where: QueryEditor.getters('getActiveQueryTabId'),
                     data: { curr_ddl_alter_spec: value },
                 })
             },

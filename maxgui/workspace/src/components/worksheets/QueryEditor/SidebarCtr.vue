@@ -95,13 +95,13 @@
  * update:execSqlDlg?: (object)
  */
 import { mapState, mapActions, mapMutations } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
-import QueryTab from '@wsModels/QueryTab'
-import QueryConn from '@wsModels/QueryConn'
 import Editor from '@wsModels/Editor'
+import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 
 export default {
@@ -123,18 +123,18 @@ export default {
             EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
         }),
-        activeWkeId() {
-            return Worksheet.getters('getActiveWkeId')
+        queryEditorId() {
+            return QueryEditor.getters('getQueryEditorId')
         },
         activeQueryTabId() {
-            return Worksheet.getters('getActiveQueryTabId')
+            return QueryEditor.getters('getActiveQueryTabId')
         },
         filterTxt: {
             get() {
                 return SchemaSidebar.getters('getFilterTxt')
             },
             set(v) {
-                SchemaSidebar.update({ where: this.activeWkeId, data: { filter_txt: v } })
+                SchemaSidebar.update({ where: this.queryEditorId, data: { filter_txt: v } })
             },
         },
         isLoadingDbTree() {
@@ -144,7 +144,7 @@ export default {
             return !this.hasConn || this.isLoadingDbTree
         },
         isSidebarDisabled() {
-            return QueryConn.getters('getIsConnBusyByActiveQueryTab') || this.isLoadingDbTree
+            return QueryConn.getters('getIsActiveQueryTabConnBusy') || this.isLoadingDbTree
         },
         hasConn() {
             return Boolean(this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString)
@@ -178,7 +178,7 @@ export default {
         },
         async onAlterTable(node) {
             await QueryTab.dispatch('handleAddQueryTab', {
-                worksheet_id: this.activeWkeId,
+                query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,
             })
             const mode = this.EDITOR_MODES.DDL_EDITOR
@@ -208,13 +208,13 @@ export default {
             this.actionName = sql.slice(0, -1)
         },
         async confirmExeStatements() {
-            await Worksheet.dispatch('exeStmtAction', {
+            await QueryEditor.dispatch('exeStmtAction', {
                 sql: this.execSqlDlg.sql,
                 action: this.actionName,
             })
         },
         clearExeStatementsResult() {
-            QueryEditorTmp.update({ where: this.activeWkeId, data: { exe_stmt_result: {} } })
+            QueryEditorTmp.update({ where: this.queryEditorId, data: { exe_stmt_result: {} } })
         },
     },
 }

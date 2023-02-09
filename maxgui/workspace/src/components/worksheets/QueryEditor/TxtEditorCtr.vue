@@ -107,10 +107,10 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Editor from '@wsModels/Editor'
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
 import TxtEditorToolbarCtr from '@wkeComps/QueryEditor/TxtEditorToolbarCtr.vue'
 import SqlEditor from '@wsComps/SqlEditor'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
@@ -277,7 +277,7 @@ export default {
             },
             set(value) {
                 Editor.update({
-                    where: Worksheet.getters('getActiveQueryTabId'),
+                    where: QueryEditor.getters('getActiveQueryTabId'),
                     data: {
                         query_txt: value,
                     },

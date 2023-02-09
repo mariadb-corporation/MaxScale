@@ -401,8 +401,8 @@ function filterEntity(entity, payload) {
  * @param {Array} persistentConns - current persistent connections
  * @returns {Object} - { alive_conns: [], expired_conn_ids: [], orphaned_conn_ids: [] }
  * alive_conns: stores connections that exists in the response of a GET to /sql/
- * orphaned_conn_ids: When wke connection expires but its cloned connections (query tabs) are still alive,
- * those are orphaned connections
+ * orphaned_conn_ids: When QueryEditor connection expires but its cloned connections (query tabs)
+ * are still alive, those are orphaned connections
  */
 function categorizeSqlConns({ apiConnMap, persistentConns }) {
     let alive_conns = [],
@@ -412,9 +412,9 @@ function categorizeSqlConns({ apiConnMap, persistentConns }) {
     persistentConns.forEach(conn => {
         const connId = conn.id
         if (apiConnMap[connId]) {
-            // if this has value, it is a cloned connection from the wke connection
-            const wkeConnId = typy(conn, 'clone_of_conn_id').safeString
-            if (wkeConnId && !apiConnMap[wkeConnId]) orphaned_conn_ids.push(conn.id)
+            // if this has value, it is a cloned connection from the QueryEditor connection
+            const queryEditorConnId = typy(conn, 'clone_of_conn_id').safeString
+            if (queryEditorConnId && !apiConnMap[queryEditorConnId]) orphaned_conn_ids.push(conn.id)
             else
                 alive_conns.push({
                     ...conn,

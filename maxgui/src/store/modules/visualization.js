@@ -13,7 +13,7 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
-import { insertQueryEditor } from '@wsSrc/store/orm/initEntities'
+import { insertQueryEditorWke } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -84,40 +84,40 @@ export default {
             }
         },
         /**
-         * Check if there is a worksheet connected to the provided conn_name make it the current
-         * active worksheet if it's not. Otherwise, find an empty worksheet(has not been bound to a connection),
-         * set it as active and dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
+         * Check if there is a QueryEditor connected to the provided conn_name and set it as the
+         * active worksheet. Otherwise, find an blank worksheet, set it as active show connection
+         * dialog with pre-select object
          * @param {String} param.conn_name - connection name
          */
-        async chooseActiveWorkspaceWke({ commit }, { type, conn_name }) {
+        async chooseQueryEditorWke({ commit }, { type, conn_name }) {
             const { $typy } = this.vue
-            const wkeConns = QueryConn.getters('getWkeConns')
+            const queryEditorConns = QueryConn.getters('getQueryEditorConns')
             // Find connection
-            const wkeConn = wkeConns.find(c => $typy(c, 'meta.name').safeString === conn_name)
-            // If it is already bound to a worksheet, set that worksheet as active
-            if ($typy(wkeConn, 'worksheet_id').safeString)
-                Worksheet.commit(state => (state.active_wke_id = wkeConn.worksheet_id))
+            const queryEditorConn = queryEditorConns.find(
+                c => $typy(c, 'meta.name').safeString === conn_name
+            )
+            /**
+             * If it is already bound to a QueryEditor, use the QueryEditor id for
+             * setting active worksheet because the QueryEditor id is also Worksheet id.
+             */
+            if ($typy(queryEditorConn, 'query_editor_id').safeString)
+                Worksheet.commit(state => (state.active_wke_id = queryEditorConn.query_editor_id))
             else {
-                const unavailableWkeIds = wkeConns.map(c => c.worksheet_id)
                 const blankQueryEditorWke = Worksheet.query()
                     .where(
-                        w =>
-                            !unavailableWkeIds.includes(w.id) &&
-                            !$typy(w, 'active_query_tab_id').isNull
+                        w => $typy(w, 'etl_task_id').isNull && $typy(w, 'query_editor_id').isNull
                     )
                     .first()
                 // Use a blank query editor wke if there is one, otherwise create a new one
                 if (blankQueryEditorWke)
                     Worksheet.commit(state => (state.active_wke_id = blankQueryEditorWke.id))
-                else insertQueryEditor()
-                // call onChangeWkeConn to handle connection binding, otherwise popup connection dialog
-                if (wkeConn) await QueryConn.dispatch('onChangeWkeConn', wkeConn)
-                else
-                    commit(
-                        'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',
-                        { type, id: conn_name },
-                        { root: true }
-                    )
+                else insertQueryEditorWke()
+                commit(
+                    'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',
+                    { type, id: conn_name },
+                    { root: true }
+                )
+                commit('mxsWorkspace/SET_IS_CONN_DLG_OPENED', true, { root: true })
             }
         },
     },

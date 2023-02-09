@@ -11,12 +11,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import Editor from '@wsModels/Editor'
+import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import Worksheet from '@wsModels/Worksheet'
-import QueryConn from '@wsModels/QueryConn'
-import Editor from '@wsModels/Editor'
-import QueryResult from '@wsModels/QueryResult'
 import { insertQueryTab } from '@wsSrc/store/orm/initEntities'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { deleteConn } from '@wsSrc/api/connection'
@@ -62,24 +62,21 @@ export default {
             })
         },
         /**
-         * This action add new queryTab to the provided worksheet id.
-         * It uses the worksheet connection to clone into a new connection and bind it
+         * This action add new queryTab to the provided QueryEditor id.
+         * It uses the QueryEditor connection to clone into a new connection and bind it
          * to the queryTab being created.
-         * @param {String} param.worksheet_id - worksheet id
+         * @param {String} param.query_editor_id - QueryEditor id
          * @param {String} param.name - queryTab name. If not provided, it'll be auto generated
          */
-        async handleAddQueryTab(_, { worksheet_id, name }) {
+        async handleAddQueryTab(_, { query_editor_id, name }) {
             const query_tab_id = this.vue.$helpers.uuidv1()
             let fields = { query_tab_id }
             if (name) fields.name = name
-            insertQueryTab(worksheet_id, fields)
-            const activeWkeConn = QueryConn.getters('getActiveWkeConn')
-            // Clone the wke conn and bind it to the new queryTab
-            if (activeWkeConn.id)
-                await QueryConn.dispatch('openQueryTabConn', {
-                    wkeConn: activeWkeConn,
-                    query_tab_id,
-                })
+            insertQueryTab(query_editor_id, fields)
+            const queryEditorConn = QueryConn.getters('getQueryEditorConn')
+            // Clone the QueryEditor conn and bind it to the new queryTab
+            if (queryEditorConn.id)
+                await QueryConn.dispatch('openQueryTabConn', { queryEditorConn, query_tab_id })
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
@@ -97,18 +94,13 @@ export default {
         },
     },
     getters: {
-        getActiveQueryTab: () => QueryTab.find(Worksheet.getters('getActiveQueryTabId')) || {},
-        getQueryTabsOfActiveWke: () =>
+        getActiveQueryTab: () => QueryTab.find(QueryEditor.getters('getActiveQueryTabId')) || {},
+        getActiveQueryTabs: () =>
             QueryTab.query()
-                .where(t => t.worksheet_id === Worksheet.getters('getActiveWkeId'))
-                .get(),
-        getQueryTabsByWkeId: () => wke_id =>
-            QueryTab.query()
-                .where(t => t.worksheet_id === wke_id)
+                .where(t => t.query_editor_id === QueryEditor.getters('getQueryEditorId'))
                 .get(),
         getQueryTabById: () => id => QueryTab.find(id) || {},
-        getActiveQueryTabMem: () =>
-            QueryTabTmp.find(Worksheet.getters('getActiveQueryTabId')) || {},
-        getQueryTabMemById: () => id => QueryTabTmp.find(id) || {},
+        getQueryTabTmp: () => QueryTabTmp.find(QueryEditor.getters('getActiveQueryTabId')) || {},
+        getQueryTabTmpById: () => id => QueryTabTmp.find(id) || {},
     },
 }

@@ -204,7 +204,7 @@
  * Public License.
  */
 import { mapState, mapMutations } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
 import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable'
 
@@ -250,7 +250,7 @@ export default {
                     this.currQueryMode === this.QUERY_MODES.SNIPPETS
                 )
                     QueryResult.update({
-                        where: Worksheet.getters('getActiveQueryTabId'),
+                        where: QueryEditor.getters('getActiveQueryTabId'),
                         data: { curr_query_mode: v },
                     })
             },

@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryConn from '@wsModels/QueryConn'
 import Editor from '@wsModels/Editor'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -22,7 +22,7 @@ export default {
     actions: {
         async queryTblCreationInfo({ commit }, node) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
-            const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
+            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const {
                 $helpers: { getObjectRows, getErrorsArr },
                 $typy,
@@ -83,7 +83,7 @@ export default {
         },
     },
     getters: {
-        getEditor: () => Editor.find(Worksheet.getters('getActiveQueryTabId')) || {},
+        getEditor: () => Editor.find(QueryEditor.getters('getActiveQueryTabId')) || {},
         getQueryTxt: (state, getters) => getters.getEditor.query_txt || '',
         getCurrDdlAlterSpec: (state, getters) => getters.getEditor.curr_ddl_alter_spec || '',
         getIsVisSidebarShown: (state, getters) => getters.getEditor.is_vis_sidebar_shown || false,

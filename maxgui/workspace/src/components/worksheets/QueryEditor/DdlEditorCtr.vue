@@ -38,9 +38,10 @@
  * 2-way data binding to execSqlDlg prop
  * update:execSqlDlg?: (object)
  */
-import Worksheet from '@wsModels/Worksheet'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
+
 import Editor from '@wsModels/Editor'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import DdlEditorFormCtr from '@wkeComps/QueryEditor/DdlEditorFormCtr.vue'
 import DdlEditorToolbar from '@wkeComps/QueryEditor/DdlEditorToolbar.vue'
 
@@ -410,14 +411,14 @@ export default {
         async confirmAlter() {
             const { escapeIdentifiers: escape } = this.$helpers
             const { dbName, table_name } = this.formData.table_opts_data
-            await Worksheet.dispatch('exeStmtAction', {
+            await QueryEditor.dispatch('exeStmtAction', {
                 sql: this.execSqlDlg.sql,
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
             if (!this.isExecFailed) {
                 const data = this.$helpers.lodash.cloneDeep(this.formData)
                 Editor.update({
-                    where: Worksheet.getters('getActiveQueryTabId'),
+                    where: QueryEditor.getters('getActiveQueryTabId'),
                     data(editor) {
                         editor.tbl_creation_info.data = data
                     },
@@ -426,7 +427,7 @@ export default {
         },
         clearAlterResult() {
             QueryEditorTmp.update({
-                where: Worksheet.getters('getActiveWkeId'),
+                where: QueryEditor.getters('getQueryEditorId'),
                 data: { exe_stmt_result: {} },
             })
         },

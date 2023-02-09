@@ -48,10 +48,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
-import QueryTab from '@wsModels/QueryTab'
 import EtlTask from '@wsModels/EtlTask'
 import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
+import Worksheet from '@wsModels/Worksheet'
 import { mapState } from 'vuex'
 
 export default {
@@ -66,8 +66,14 @@ export default {
         wkeId() {
             return this.wke.id
         },
-        isOneOfQueryTabRunning() {
-            const queryTabs = QueryTab.getters('getQueryTabsByWkeId')(this.wkeId)
+        isRunningETL() {
+            const etlTask = EtlTask.find(this.$typy(this.wke, 'etl_task_id').safeString)
+            return this.$typy(etlTask, 'status').safeString === this.ETL_STATUS.RUNNING
+        },
+        isOneOfQueryTabsRunning() {
+            const queryTabs = QueryTab.query()
+                .where(t => t.query_editor_id === this.wkeId)
+                .get()
             let isLoading = false
             for (const { id } of queryTabs) {
                 if (QueryResult.getters('getLoadingQueryResultByQueryTabId')(id)) {
@@ -77,12 +83,8 @@ export default {
             }
             return isLoading
         },
-        isRunningETL() {
-            const etlTask = EtlTask.find(this.$typy(this.wke, 'etl_task_id').safeString)
-            return this.$typy(etlTask, 'status').safeString === this.ETL_STATUS.RUNNING
-        },
         isRunning() {
-            return this.isOneOfQueryTabRunning || this.isRunningETL
+            return this.isOneOfQueryTabsRunning || this.isRunningETL
         },
     },
     methods: {

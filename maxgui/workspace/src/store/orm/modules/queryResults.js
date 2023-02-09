@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryResult from '@wsModels/QueryResult'
 import { query } from '@wsSrc/api/query'
 
@@ -28,7 +28,7 @@ export default {
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
                 'getActiveQueryTabConn'
             )
-            const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
+            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const request_sent_time = new Date().valueOf()
             let field, sql, queryName
             const escapedQN = this.vue.$helpers.escapeIdentifiers(qualified_name)
@@ -95,7 +95,7 @@ export default {
                 'getActiveQueryTabConn'
             )
             const request_sent_time = new Date().valueOf()
-            const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
+            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const abort_controller = new AbortController()
             const config = rootState.mxsWorkspace.config
 
@@ -179,16 +179,16 @@ export default {
             }
         },
         /**
-         * This action uses the current active worksheet connection to send
+         * This action uses the current active QueryEditor connection to send
          * KILL QUERY thread_id
          */
         async stopUserQuery({ commit }) {
             const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
-            const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
-            const wkeConn = QueryConn.getters('getActiveWkeConn')
+            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
+            const queryEditorConn = QueryConn.getters('getQueryEditorConn')
             const [e, res] = await this.vue.$helpers.to(
                 query({
-                    id: wkeConn.id,
+                    id: queryEditorConn.id,
                     body: { sql: `KILL QUERY ${activeQueryTabConn.attributes.thread_id}` },
                 })
             )
@@ -226,7 +226,7 @@ export default {
          */
         clearDataPreview() {
             QueryTabTmp.update({
-                where: Worksheet.getters('getActiveQueryTabId'),
+                where: QueryEditor.getters('getActiveQueryTabId'),
                 data(obj) {
                     obj.prvw_data = {}
                     obj.prvw_data_details = {}
@@ -235,19 +235,19 @@ export default {
         },
     },
     getters: {
-        getQueryResult: () => QueryResult.find(Worksheet.getters('getActiveQueryTabId')) || {},
+        getQueryResult: () => QueryResult.find(QueryEditor.getters('getActiveQueryTabId')) || {},
         getCurrQueryMode: (state, getters) => getters.getQueryResult.curr_query_mode || '',
 
         // Getters for accessing query data stored in memory
-        getQueryTabMem: () => QueryTabTmp.find(Worksheet.getters('getActiveQueryTabId')) || {},
-        getUserQueryRes: (state, getters) => getters.getQueryTabMem.query_results || {},
+        getQueryTabTmp: () => QueryTabTmp.find(QueryEditor.getters('getActiveQueryTabId')) || {},
+        getUserQueryRes: (state, getters) => getters.getQueryTabTmp.query_results || {},
         getPrvwData: (state, getters, rootState) => mode => {
             const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.mxsWorkspace.config.QUERY_MODES
             switch (mode) {
                 case PRVW_DATA:
-                    return getters.getQueryTabMem.prvw_data || {}
+                    return getters.getQueryTabTmp.prvw_data || {}
                 case PRVW_DATA_DETAILS:
-                    return getters.getQueryTabMem.prvw_data_details || {}
+                    return getters.getQueryTabTmp.prvw_data_details || {}
                 default:
                     return {}
             }

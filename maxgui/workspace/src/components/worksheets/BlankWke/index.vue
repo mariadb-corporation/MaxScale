@@ -52,7 +52,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTasks from '@wkeComps/BlankWke/EtlTasks.vue'
 import { mapMutations, mapState } from 'vuex'
@@ -70,9 +69,6 @@ export default {
     },
     computed: {
         ...mapState({ MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES }),
-        activeWkeId() {
-            return Worksheet.getters('getActiveWkeId')
-        },
         cards() {
             return [
                 {

@@ -279,7 +279,7 @@ export default {
         /**
          * a unique key of each table being altered.
          * This key is used to handle show column options in the case when
-         * user alters a table then alter another table in the same worksheet
+         * user alters a table then alter another table in the same QueryEditor
          */
         initialDataFirstCellId() {
             return this.$typy(this.initialData.data, `[0]['${this.idxOfId}']`).safeString

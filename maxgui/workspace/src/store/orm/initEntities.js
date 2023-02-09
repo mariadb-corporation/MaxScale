@@ -13,71 +13,75 @@
  */
 import { uuidv1 } from '@share/utils/helpers'
 import Editor from '@wsModels/Editor'
-import QueryResult from '@wsModels/QueryResult'
-import QueryTab from '@wsModels/QueryTab'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
-import Worksheet from '@wsModels/Worksheet'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
+import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
+import QueryResult from '@wsModels/QueryResult'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
+import Worksheet from '@wsModels/Worksheet'
 
 /**
  * Initialize a blank worksheet
- * @param {Object} [fields = { worksheet_id = uuidv1(), query_tab_id : uuidv1()}] - fields
+ * @param {Object} [fields = { worksheet_id: uuidv1(), name: 'WORKSHEET'}] - fields
  */
-export function insertBlankWke(
-    fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1(), name: 'WORKSHEET' }
-) {
+export function insertBlankWke(fields = { worksheet_id: uuidv1(), name: 'WORKSHEET' }) {
     Worksheet.insert({ data: { id: fields.worksheet_id, name: fields.name } })
     Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
 }
 
 /**
- * Initialize a worksheet with and its query editor relational entities
- * @param {Object} [fields = { worksheet_id = uuidv1(), query_tab_id : uuidv1()}] - fields
+ * Insert a QueryEditor worksheet with its relational entities
  */
-export function insertQueryEditor(
-    fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1(), name: 'QUERY EDITOR' }
-) {
-    insertBlankWke(fields)
-    QueryEditorTmp.insert({ data: { id: fields.worksheet_id } })
-    SchemaSidebar.insert({ data: { id: fields.worksheet_id } })
-    insertQueryTab(fields.worksheet_id, { query_tab_id: fields.query_tab_id })
+export function insertQueryEditorWke() {
+    const worksheet_id = uuidv1()
+    insertBlankWke({ worksheet_id, name: 'QUERY EDITOR' })
+    insertQueryEditor(worksheet_id)
+}
+
+/**
+ * Insert a QueryEditor with its relational entities
+ * @param {String} query_editor_id - QueryEditor id
+ */
+export function insertQueryEditor(query_editor_id) {
+    QueryEditor.insert({ data: { id: query_editor_id } })
+    QueryEditorTmp.insert({ data: { id: query_editor_id } })
+    SchemaSidebar.insert({ data: { id: query_editor_id } })
+    insertQueryTab(query_editor_id)
 }
 
 /**
  * Initialize a blank QueryTab and its mandatory relational entities
- * @param {String} worksheet_id  - id of the worksheet has QueryTab being inserted
- * @param {Object} [ fields = { query_tab_id : uuidv1() } ] - fields
+ * @param {String} query_editor_id  - id of the QueryEditor has QueryTab being inserted
+ * @param {Object} [ fields = { query_tab_id: uuidv1(), name: '' } ] - fields
  */
-export function insertQueryTab(worksheet_id, fields = { query_tab_id: uuidv1() }) {
-    let name = 'Query Tab 1',
+export function insertQueryTab(query_editor_id, fields = { query_tab_id: uuidv1(), name: '' }) {
+    let tabName = 'Query Tab 1',
         count = 1
 
     const lastQueryTabOfWke = QueryTab.query()
-        .where(t => t.worksheet_id === worksheet_id)
+        .where(t => t.query_editor_id === query_editor_id)
         .last()
-
     if (lastQueryTabOfWke) {
         count = lastQueryTabOfWke.count + 1
-        name = `Query Tab ${count}`
+        tabName = `Query Tab ${count}`
     }
+    if (fields.name) tabName = fields.name
     QueryTab.insert({
         data: {
             id: fields.query_tab_id,
             count,
-            name,
-            worksheet_id,
-            ...fields,
+            name: tabName,
+            query_editor_id,
         },
     })
     Editor.insert({ data: { id: fields.query_tab_id } })
-
     QueryResult.insert({ data: { id: fields.query_tab_id } })
     QueryTabTmp.insert({ data: { id: fields.query_tab_id } })
-    Worksheet.update({
-        where: Worksheet.getters('getActiveWkeId'),
+    QueryEditor.update({
+        where: query_editor_id,
         data: { active_query_tab_id: fields.query_tab_id },
     })
 }
@@ -96,13 +100,15 @@ export function insertEtlTask({ id, name }) {
  * Initialize entities that will be kept only in memory for all worksheets and queryTabs
  */
 function initMemEntities() {
-    const worksheets = Worksheet.query()
-        .with('queryTabs')
-        .all()
+    const worksheets = Worksheet.all()
     worksheets.forEach(w => {
-        if (w.active_query_tab_id) {
-            QueryEditorTmp.insert({ data: { id: w.id } })
-            w.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
+        if (w.query_editor_id) {
+            const queryEditor = QueryEditor.query()
+                .where('id', w.query_editor_id)
+                .with('queryTabs')
+                .first()
+            QueryEditorTmp.insert({ data: { id: queryEditor.id } })
+            queryEditor.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
         } else if (w.etl_task_id) EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
     })
 }

@@ -15,22 +15,24 @@ import Editor from '@wsModels/Editor'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 
 export default {
     Editor,
     EtlTask,
     EtlTaskTmp,
     QueryConn,
+    QueryEditor,
+    QueryEditorTmp,
     QueryResult,
     QueryTab,
+    QueryTabTmp,
     SchemaSidebar,
     Worksheet,
-    QueryTabTmp,
-    QueryEditorTmp,
 }

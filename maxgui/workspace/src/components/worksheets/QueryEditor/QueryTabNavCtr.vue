@@ -39,7 +39,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabNavToolbarCtr from '@wkeComps/QueryEditor/QueryTabNavToolbarCtr.vue'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
@@ -58,20 +58,18 @@ export default {
     computed: {
         activeQueryTabId: {
             get() {
-                return Worksheet.getters('getActiveQueryTabId')
+                return QueryEditor.getters('getActiveQueryTabId')
             },
             set(v) {
                 if (v)
-                    Worksheet.update({
-                        where: Worksheet.getters('getActiveWkeId'),
-                        data: {
-                            active_query_tab_id: v,
-                        },
+                    QueryEditor.update({
+                        where: QueryEditor.getters('getQueryEditorId'),
+                        data: { active_query_tab_id: v },
                     })
             },
         },
         queryTabsOfActiveWke() {
-            return QueryTab.getters('getQueryTabsOfActiveWke')
+            return QueryTab.getters('getActiveQueryTabs')
         },
     },
 }

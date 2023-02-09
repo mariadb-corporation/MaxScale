@@ -84,11 +84,11 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
-import QueryTab from '@wsModels/QueryTab'
-import QueryConn from '@wsModels/QueryConn'
 import Editor from '@wsModels/Editor'
+import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryTab from '@wsModels/QueryTab'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
 import DdlEditorCtr from '@wkeComps/QueryEditor/DdlEditorCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
@@ -137,13 +137,13 @@ export default {
             return QueryTab.all()
         },
         activeQueryTabId() {
-            return Worksheet.getters('getActiveQueryTabId')
+            return QueryEditor.getters('getActiveQueryTabId')
         },
         completionItems() {
             return SchemaSidebar.getters('getSchemaCompletionItems')
         },
         exeStmtResult() {
-            return Worksheet.getters('getExeStmtResult')
+            return QueryEditor.getters('getExeStmtResult')
         },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
@@ -221,7 +221,7 @@ export default {
             this.unwatch_activeQueryTabConn = this.$watch(
                 'activeQueryTabConn.id',
                 async (v, oV) => {
-                    if (v !== oV) await Worksheet.dispatch('handleInitialFetch')
+                    if (v !== oV) await QueryEditor.dispatch('handleInitialFetch')
                 },
                 { deep: true, immediate: true }
             )

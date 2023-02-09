@@ -112,11 +112,11 @@ This component emits the following events
 @on-dragend: Event.
 */
 import { mapState } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
-import QueryConn from '@wsModels/QueryConn'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Editor from '@wsModels/Editor'
+import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
 
@@ -140,14 +140,14 @@ export default {
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
             NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
         }),
-        activeWkeId() {
-            return Worksheet.getters('getActiveWkeId')
+        queryEditorId() {
+            return QueryEditor.getters('getQueryEditorId')
         },
         activeQueryTabConn() {
             return QueryConn.getters('getActiveQueryTabConn')
         },
         activeQueryTabId() {
-            return Worksheet.getters('getActiveQueryTabId')
+            return QueryEditor.getters('getActiveQueryTabId')
         },
         filterTxt() {
             return SchemaSidebar.getters('getFilterTxt')
@@ -257,14 +257,14 @@ export default {
                         let validLevels = nodes.map(node => node.level)
                         if (validLevels[0] === 0)
                             SchemaSidebar.update({
-                                where: this.activeWkeId,
+                                where: this.queryEditorId,
                                 data: {
                                     expanded_nodes: nodes,
                                 },
                             })
                         else
                             SchemaSidebar.update({
-                                where: this.activeWkeId,
+                                where: this.queryEditorId,
                                 data: {
                                     expanded_nodes: [],
                                 },

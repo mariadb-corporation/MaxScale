@@ -83,7 +83,7 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import Worksheet from '@wsModels/Worksheet'
+import QueryEditor from '@wsModels/QueryEditor'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
@@ -117,7 +117,7 @@ export default {
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
         }),
         isConnBusy() {
-            return QueryConn.getters('getIsConnBusyByActiveQueryTab')
+            return QueryConn.getters('getIsActiveQueryTabConnBusy')
         },
         componentDynDim() {
             /*
@@ -144,7 +144,7 @@ export default {
             },
             set(v) {
                 QueryResult.update({
-                    where: Worksheet.getters('getActiveQueryTabId'),
+                    where: QueryEditor.getters('getActiveQueryTabId'),
                     data: { curr_query_mode: v },
                 })
             },
