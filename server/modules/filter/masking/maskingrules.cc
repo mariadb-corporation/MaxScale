@@ -178,7 +178,7 @@ public:
             {
                 Closer<pcre2_match_data*> data(pData);
 
-                rv = (pcre2_match(m_pCode, (PCRE2_SPTR)zHost, 0, 0, 0, pData, NULL) >= 0);
+                rv = (pcre2_match(m_pCode, (PCRE2_SPTR)zHost, PCRE2_ZERO_TERMINATED, 0, 0, pData, NULL) >= 0);
             }
         }
 
