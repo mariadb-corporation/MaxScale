@@ -15,7 +15,7 @@ import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import { query } from '@wsSrc/api/query'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { ETL_CREATE_MODES } from '@wsSrc/store/config'
+import { ETL_CREATE_MODES, ETL_DEF_POLLING_INTERVAL } from '@wsSrc/store/config'
 
 export default {
     namespaced: true,
@@ -23,6 +23,7 @@ export default {
         src_schema_tree: [],
         create_mode: ETL_CREATE_MODES.NORMAL,
         migration_objs: [], // store migration objects for /etl/prepare
+        polling_interval: ETL_DEF_POLLING_INTERVAL,
     },
     mutations: {
         SET_SRC_SCHEMA_TREE(state, payload) {
@@ -33,6 +34,9 @@ export default {
         },
         SET_MIGRATION_OBJS(state, payload) {
             state.migration_objs = payload
+        },
+        SET_POLLING_INTERVAL(state, payload) {
+            state.polling_interval = payload
         },
     },
     actions: {

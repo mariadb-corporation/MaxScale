@@ -25,7 +25,7 @@
                 />
             </template>
             <template v-else-if="migr_dlg.type === MIGR_DLG_TYPES.DELETE">
-                <small> {{ dlgData.info }} </small>
+                <p>{{ dlgData.info }}</p>
             </template>
         </template>
     </mxs-dlg>

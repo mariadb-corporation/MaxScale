@@ -197,3 +197,5 @@ export const MIGR_DLG_TYPES = Object.freeze({
     CREATE: 'create',
     DELETE: 'delete',
 })
+
+export const ETL_DEF_POLLING_INTERVAL = 250

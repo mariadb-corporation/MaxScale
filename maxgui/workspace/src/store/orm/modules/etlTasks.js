@@ -121,6 +121,7 @@ export default {
                     await QueryConn.dispatch('disconnectConnsFromTask', task.id)
                     break
                 case MIGR_OTHER_OBJS:
+                    await dispatch('etlMem/fetchSrcSchemas', {}, { root: true })
                     EtlTask.update({
                         where: task.id,
                         data: { active_stage_index: SRC_OBJ },
@@ -195,17 +196,15 @@ export default {
         /**
          * @param {String} id - etl task id
          */
-        async getEtlCallRes({ getters, dispatch, rootState }, id) {
+        async getEtlCallRes({ getters, dispatch, rootState, commit }, id) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
             const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             const {
-                INITIALIZING,
-                COMPLETE,
-                ERROR,
-                CANCELED,
-            } = rootState.mxsWorkspace.config.ETL_STATUS
+                ETL_DEF_POLLING_INTERVAL,
+                ETL_STATUS: { INITIALIZING, COMPLETE, ERROR, CANCELED },
+            } = rootState.mxsWorkspace.config
 
             let etlStatus,
                 migrationRes,
@@ -217,8 +216,15 @@ export default {
                 let logMsg
                 if (res.status === 202) {
                     EtlTaskTmp.update({ where: id, data: { etl_res: results } })
+                    const { polling_interval } = rootState.etlMem
+                    const newInterval = polling_interval * 2
+                    commit(
+                        'etlMem/SET_POLLING_INTERVAL',
+                        newInterval <= 4000 ? newInterval : 5000,
+                        { root: true }
+                    )
                     await this.vue.$helpers
-                        .delay(2000)
+                        .delay(polling_interval)
                         .then(async () => await dispatch('getEtlCallRes', id))
                 } else if (res.status === 201) {
                     const timestamp = new Date().valueOf()
@@ -250,6 +256,7 @@ export default {
                     dispatch('pushLog', { id, log: { timestamp, name: logMsg } })
 
                     EtlTaskTmp.update({ where: id, data: { etl_res: results } })
+                    commit('etlMem/SET_POLLING_INTERVAL', ETL_DEF_POLLING_INTERVAL, { root: true })
                 }
             }
             EtlTask.update({
