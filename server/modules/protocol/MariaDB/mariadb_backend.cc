@@ -346,7 +346,6 @@ void MariaDBBackendConnection::prepare_for_write(const GWBUF& buffer)
     {
         m_collect_result = true;
     }
-    m_track_state = buffer.type_is_track_state();
 }
 
 void MariaDBBackendConnection::process_stmt_execute(GWBUF& original, uint32_t id, PSInfo& ps_info)

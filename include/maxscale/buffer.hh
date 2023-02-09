@@ -75,13 +75,12 @@ public:
         TYPE_UNDEFINED      = 0,
         TYPE_COLLECT_RESULT = (1 << 0),
         TYPE_REPLAYED       = (1 << 1),
-        TYPE_TRACK_STATE    = (1 << 2),
 
         // This causes the current resultset rows to be collected into mxs::Reply. They can be accessed
         // using mxs::Reply::row_data() inside the clientReply function and they are only available for
         // the duration of the function call. The rows should be considered a read-only view into
         // the buffer that contains them.
-        TYPE_COLLECT_ROWS = (1 << 3),
+        TYPE_COLLECT_ROWS = (1 << 2),
     };
 
     using HintVector = std::vector<Hint>;
@@ -176,7 +175,6 @@ public:
     bool type_is_replayed() const;
     bool type_is_collect_result() const;
     bool type_is_collect_rows() const;
-    bool type_is_track_state() const;
 
     /**
      * Capacity of underlying shared buffer.
@@ -401,12 +399,6 @@ inline bool GWBUF::type_is_collect_rows() const
 inline bool GWBUF::type_is_replayed() const
 {
     return m_type & TYPE_REPLAYED;
-}
-
-// Track session state change response
-inline bool GWBUF::type_is_track_state() const
-{
-    return m_type & TYPE_TRACK_STATE;
 }
 
 inline bool gwbuf_is_parsed(const GWBUF* b)

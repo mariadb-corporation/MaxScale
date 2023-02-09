@@ -1114,10 +1114,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
             buffer = add_prefix_wait_gtid(tmp);
             store = false;      // The storage for causal reads is done inside add_prefix_wait_gtid
         }
-        else if (m_config.causal_reads != CausalReads::NONE && target->is_master())
-        {
-            buffer.get()->set_type(GWBUF::TYPE_TRACK_STATE);
-        }
 
         if (m_wait_gtid == GTID_READ_DONE)
         {

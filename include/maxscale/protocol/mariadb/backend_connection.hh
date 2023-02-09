@@ -229,7 +229,6 @@ private:
     std::string m_account;                          /**< The user@host that last used this connection */
     std::string m_db;                               /**< The database last used with this connection */
     bool        m_collect_result {false};           /**< Collect the next result set as one buffer */
-    bool        m_track_state {false};              /**< Track session state */
     bool        m_skip_next {false};
     uint64_t    m_num_coldefs {0};
     GWBUF       m_collectq;             /**< Used to collect results when resultset collection is requested */
