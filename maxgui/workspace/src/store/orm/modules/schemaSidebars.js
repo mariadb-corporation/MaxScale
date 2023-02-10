@@ -18,7 +18,7 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { query } from '@wsSrc/api/query'
+import queries from '@wsSrc/api/queries'
 
 export default {
     namespaced: true,
@@ -58,7 +58,7 @@ export default {
             })
 
             const [e, res] = await this.vue.$helpers.to(
-                query({ id, body: { sql: getters.getDbSql } })
+                queries.post({ id, body: { sql: getters.getDbSql } })
             )
             if (e)
                 QueryEditorTmp.update({

@@ -21,7 +21,7 @@ import {
 import { lodash, to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { getObjectRows } from '@wsSrc/utils/helpers'
-import { query } from '@wsSrc/api/query'
+import queries from '@wsSrc/api/queries'
 
 /**
  * @public
@@ -266,7 +266,7 @@ function genNodeData({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
  */
 async function getChildNodeData({ connId, nodeGroup, nodeAttrs }) {
     const sql = getNodeGroupSQL({ nodeAttrs, nodeGroup })
-    const [e, res] = await to(query({ id: connId, body: { sql } }))
+    const [e, res] = await to(queries.post({ id: connId, body: { sql } }))
     if (e) return { nodes: {}, completionItems: [] }
     else {
         return genNodeData({

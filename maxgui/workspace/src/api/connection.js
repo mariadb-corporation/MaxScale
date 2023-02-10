@@ -11,58 +11,37 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import http from '@wsSrc/utils/http'
+import base from '@wsSrc/api/base'
 import commonConfig from '@share/config'
 
 const { PERSIST_TOKEN_OPT } = commonConfig
 
-/**
- * @returns {Promise}
- */
-export async function getAliveConns() {
-    return await http().get(`/sql`)
-}
-
-/**
- * @param {String} body.target - either 'odbc' or name of a server||listener||service
- * @param {String} [body.db] - default database
- * @param {Number} [body.timeout] - timeout to create the connection
- * @param {String} body.user - required when target !== 'odbc'
- * @param {String} body.password - required when target !== 'odbc'
- * @param {String} body.connection_string - required when target === 'odbc'
- * @returns {Promise}
- */
-export async function openConn(body) {
-    return await http().post(`/sql?${PERSIST_TOKEN_OPT}`, body)
-}
-
-/**
- * @param {String} connId - connection to be cloned
- * @returns {Promise}
- */
-export async function cloneConn(connId) {
-    return await http().post(`/sql/${connId}/clone?${PERSIST_TOKEN_OPT}`)
-}
-
-/**
- * @param {String} connId - connection to be reconnected
- * @returns {Promise}
- */
-export async function reconnect(connId) {
-    return await http().post(`/sql/${connId}/reconnect`)
-}
-
-/**
- * @param {String} connId - connection to be reconnected
- * @returns {Promise}
- */
-export async function deleteConn(connId) {
-    return await http().delete(`/sql/${connId}`)
-}
-
-/**
- * @returns {Promise}
- */
-export async function getDrivers() {
-    return await http().get('/sql/odbc/drivers')
+export default {
+    get: config => base.get({ url: '/sql', config }),
+    getDrivers: config => base.get({ url: '/sql/odbc/drivers', config }),
+    delete: ({ id, config }) => base.delete({ url: `/sql/${id}`, config }),
+    /**
+     * @param {String} param.body.target - either 'odbc' or name of a server||listener||service
+     * @param {String} param.body[db] - default database
+     * @param {Number} param.body[timeout] - timeout to create the connection
+     * @param {String} param.body.user - required when target !== 'odbc'
+     * @param {String} param.body.password - required when target !== 'odbc'
+     * @param {String} param.body.connection_string - required when target === 'odbc'
+     * @param {Object} param.config - axios config
+     * @returns {Promise}
+     */
+    open: ({ body, config }) => base.post({ url: `/sql?${PERSIST_TOKEN_OPT}`, body, config }),
+    /**
+     * @param {String} param.id - connection to be cloned
+     * @param {Object} param.config - axios config
+     * @returns {Promise}
+     */
+    clone: ({ id, body, config }) =>
+        base.post({ url: `/sql/${id}/clone?${PERSIST_TOKEN_OPT}`, body, config }),
+    /**
+     * @param {String} param.id - connection to be reconnected
+     * @param {Object} param.config - axios config
+     * @returns {Promise}
+     */
+    reconnect: ({ id, body, config }) => base.post({ url: `/sql/${id}/reconnect`, body, config }),
 }

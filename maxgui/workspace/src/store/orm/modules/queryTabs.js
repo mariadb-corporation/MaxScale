@@ -19,7 +19,7 @@ import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import { insertQueryTab } from '@wsSrc/store/orm/initEntities'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { deleteConn } from '@wsSrc/api/connection'
+import connection from '@wsSrc/api/connection'
 
 export default {
     namespaced: true,
@@ -80,7 +80,7 @@ export default {
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
-            if (id) await this.vue.$helpers.to(deleteConn(id))
+            if (id) await this.vue.$helpers.to(connection.delete({ id }))
             dispatch('cascadeDelete', query_tab_id)
         },
         /**

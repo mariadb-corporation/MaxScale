@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getDrivers } from '@wsSrc/api/connection'
+import connection from '@wsSrc/api/connection'
 
 export default {
     namespaced: true,
@@ -55,7 +55,7 @@ export default {
             }
         },
         async fetchOdbcDrivers({ commit }) {
-            const [e, res] = await this.vue.$helpers.to(getDrivers())
+            const [e, res] = await this.vue.$helpers.to(connection.getDrivers())
             if (!e && res.status === 200) commit('SET_ODBC_DRIVERS', res.data.data)
         },
     },

@@ -16,8 +16,8 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { getAliveConns, openConn, cloneConn, reconnect, deleteConn } from '@wsSrc/api/connection'
-import { query } from '@wsSrc/api/query'
+import connection from '@wsSrc/api/connection'
+import queries from '@wsSrc/api/queries'
 
 export default {
     namespaced: true,
@@ -78,7 +78,7 @@ export default {
 
             const { $helpers } = this.vue
             const persistentConns = rootState.mxsWorkspace.conns_to_be_validated
-            const [e, res] = await $helpers.to(getAliveConns())
+            const [e, res] = await $helpers.to(connection.get())
             const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
             const {
                 alive_conns = [],
@@ -103,7 +103,7 @@ export default {
 
             const activeQueryEditorConn = getters.getQueryEditorConn
 
-            const [e, res] = await $helpers.to(openConn(body))
+            const [e, res] = await $helpers.to(connection.open({ body }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 // clean up previous conn after binding the new one
@@ -167,7 +167,9 @@ export default {
                 QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
             } = rootState.mxsWorkspace.config
 
-            const [e, res] = await this.vue.$helpers.to(cloneConn(queryEditorConn.id))
+            const [e, res] = await this.vue.$helpers.to(
+                connection.clone({ id: queryEditorConn.id })
+            )
 
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201)
@@ -198,7 +200,7 @@ export default {
             const { $mxs_t, $helpers } = this.vue
             const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
             let target
-            const [e, res] = await $helpers.to(openConn(body))
+            const [e, res] = await $helpers.to(connection.open({ body }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 let connData = {
@@ -252,7 +254,7 @@ export default {
          * @param {String} id - connection id
          */
         async disconnect({ commit, dispatch }, { id, showSnackbar }) {
-            const [e, res] = await this.vue.$helpers.to(deleteConn(id))
+            const [e, res] = await this.vue.$helpers.to(connection.delete({ id }))
             if (!e && res.status === 204) {
                 if (showSnackbar)
                     commit(
@@ -274,7 +276,7 @@ export default {
          */
         async reconnectConns({ commit, dispatch }, { ids, onSuccess, onError }) {
             const [e, allRes] = await this.vue.$helpers.to(
-                Promise.all(ids.map(id => reconnect(id)))
+                Promise.all(ids.map(id => connection.reconnect({ id })))
             )
             // call validateConns to get new thread ID
             await dispatch('validateConns', { silentValidation: true })
@@ -322,7 +324,7 @@ export default {
         async updateActiveDb({ getters }) {
             const { id, active_db } = getters.getActiveQueryTabConn
             const [e, res] = await this.vue.$helpers.to(
-                query({ id, body: { sql: 'SELECT DATABASE()' } })
+                queries.post({ id, body: { sql: 'SELECT DATABASE()' } })
             )
             if (!e && res) {
                 const resActiveDb = this.vue
@@ -342,7 +344,7 @@ export default {
             const now = new Date().valueOf()
             const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
             const sql = `USE ${escapedDb};`
-            const [e, res] = await this.vue.$helpers.to(query({ id, body: { sql } }))
+            const [e, res] = await this.vue.$helpers.to(queries.post({ id, body: { sql } }))
             if (!e && res) {
                 let queryName = `Change default database to ${escapedDb}`
                 const errObj = this.vue.$typy(res, 'data.data.attributes.results[0]')

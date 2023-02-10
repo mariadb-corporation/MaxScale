@@ -13,7 +13,7 @@
  */
 import ax from 'axios'
 import { t } from 'typy'
-import { lodash, getErrorsArr } from '@share/utils/helpers'
+import { getErrorsArr } from '@share/utils/helpers'
 import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@wsSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'
@@ -67,9 +67,8 @@ function queryHttp(store) {
     })
     queryHttp.interceptors.request.use(
         config => {
-            config = lodash.merge(config, store.state.mxsWorkspace.axios_opts)
             updateConnBusyStatus({ value: true, sql_conn_id: getSqlConnId(config.url) })
-            return { ...config }
+            return config
         },
         error => Promise.reject(error)
     )

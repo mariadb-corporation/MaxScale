@@ -15,9 +15,8 @@ import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
-import { cancel } from '@wsSrc/api/etl'
-import { query, getAsyncResult } from '@wsSrc/api/query'
-import { prepare, start } from '@wsSrc/api/etl'
+import queries from '@wsSrc/api/queries'
+import etl from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { insertEtlTask } from '@wsSrc/store/orm/initEntities'
 
@@ -48,7 +47,7 @@ export default {
         async cancelEtlTask({ commit, rootState }, id) {
             const { id: srcConnId } = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             if (srcConnId) {
-                const [e] = await this.vue.$helpers.to(cancel(srcConnId))
+                const [e] = await this.vue.$helpers.to(queries.cancel({ id: srcConnId }))
                 const { CANCELED, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
                 let etlStatus = CANCELED
                 if (e) {
@@ -103,7 +102,7 @@ export default {
                     },
                 })
                 const [e, res] = await $helpers.to(
-                    query({
+                    queries.post({
                         id: QueryConn.getters('getActiveSrcConn').id,
                         body: { sql: getters.getSchemaSql },
                     })
@@ -232,12 +231,12 @@ export default {
 
                 if (task.is_prepare_etl) {
                     logName = $mxs_t('info.preparingMigrationScript')
-                    apiAction = prepare
+                    apiAction = etl.prepare
                     status = RUNNING
                     body.create_mode = getters.getCreateMode(id)
                 } else {
                     logName = $mxs_t('info.startingMigration')
-                    apiAction = start
+                    apiAction = etl.start
                     status = RUNNING
                 }
                 if (body.type === 'generic') body.catalog = $typy(srcConn, 'active_db').safeString
@@ -294,7 +293,7 @@ export default {
                 migrationRes,
                 ignoreKeys = ['create', 'insert', 'select']
 
-            const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
+            const [e, res] = await $helpers.to(queries.getAsyncRes({ id: srcConn.id, queryId }))
             if (!e) {
                 const results = $typy(res, 'data.data.attributes.results').safeObject
                 let logMsg

@@ -12,7 +12,7 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
-import { query } from '@wsSrc/api/query'
+import queries from '@wsSrc/api/queries'
 
 export default {
     namespaced: true,
@@ -55,7 +55,7 @@ export default {
         async queryCharsetCollationMap({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
-                query({
+                queries.post({
                     id: connId,
                     body: {
                         sql:
@@ -84,7 +84,7 @@ export default {
         async queryDefDbCharsetMap({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
-                query({
+                queries.post({
                     id: connId,
                     body: {
                         sql:
@@ -107,7 +107,7 @@ export default {
         async queryEngines({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
-                query({
+                queries.post({
                     id: connId,
                     body: {
                         sql: 'SELECT engine FROM information_schema.ENGINES',

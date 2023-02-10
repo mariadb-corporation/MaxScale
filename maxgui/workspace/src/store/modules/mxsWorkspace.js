@@ -20,7 +20,6 @@ export default {
     state: {
         config: { ...config, COMMON_CONFIG: commonConfig },
         hidden_comp: [''],
-        axios_opts: {},
         migr_dlg: { is_opened: false, etl_task_id: '', type: '' },
         etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
@@ -33,9 +32,6 @@ export default {
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
             state.hidden_comp = payload
-        },
-        SET_AXIOS_OPTS(state, payload) {
-            state.axios_opts = payload
         },
         SET_MIGR_DLG(state, payload) {
             state.migr_dlg = payload

@@ -15,7 +15,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryConn from '@wsModels/QueryConn'
 import Editor from '@wsModels/Editor'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { query } from '@wsSrc/api/query'
+import queries from '@wsSrc/api/queries'
 
 export default {
     namespaced: true,
@@ -38,10 +38,10 @@ export default {
 
             let tblOptsData, colsOptsData
             const [tblOptError, tblOptsRes] = await this.vue.$helpers.to(
-                query({ id: connId, body: { sql: queryHelper.getAlterTblOptsSQL(node) } })
+                queries.post({ id: connId, body: { sql: queryHelper.getAlterTblOptsSQL(node) } })
             )
             const [colsOptsError, colsOptsRes] = await this.vue.$helpers.to(
-                query({ id: connId, body: { sql: queryHelper.getAlterColsOptsSQL(node) } })
+                queries.post({ id: connId, body: { sql: queryHelper.getAlterColsOptsSQL(node) } })
             )
             if (tblOptError || colsOptsError) {
                 Editor.update({

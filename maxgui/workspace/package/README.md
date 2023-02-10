@@ -293,36 +293,12 @@ This package does not automatically clean up the opened connection when the
 `mxs-workspace` component is destroyed. e.g. When leaving the page, the opened
 connections are kept.
 
-If all connections belong to one MaxScale, use the below vuex action to clear
-all connections:
+Use the below vuex action to clear all connections:
 
 ```js
 import { models } from 'mxs-workspace'
 
 await models.QueryConn.dispatch('disconnectAll')
-```
-
-If connections belongs to multiple MaxScale, use the below example to clear
-all connections of a MaxScale:
-
-```js
-import { models } from 'mxs-workspace'
-/**
- * When creating a connection via `models.QueryConn.dispatch('openQueryEditorConn', { body, meta })`,
- * The meta field can store information needed to identify which connections belong to which maxscale.
- * To delete all open connections from the workspace, group all connections belong to one maxscale and
- * delete one by one.
- */
-for (const { id = '' } of connections_of_a_maxscale) {
-    commit(
-        'mxsWorkspace/SET_AXIOS_OPTS',
-        {
-            baseURL: maxscale_API_URL,
-        },
-        { root: true }
-    )
-    await models.QueryConn.dispatch('cascadeDisconnect', { showSnackbar: false, id })
-}
 ```
 
 ## Build the editor
@@ -342,29 +318,39 @@ module.exports = {
 }
 ```
 
-## Change axios request config options
+## Config the workspace to work with multiple MaxScales
 
-Axios request config options can be changed at run time by committing the following
-mutation:
+When the workspace is used with multiple MaxScales, the base URL is dynamic,
+therefore, to make it work properly, use the `WorksheetTmp` model for
+setting axios request config:
 
-```js
-store.commit('mxsWorkspace/SET_AXIOS_OPTS', options)
-```
-
-The provided config options will be merged with the current one which has the following default options:
-
-```js
-{
-    baseURL: '/',
-    headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-   },
+```vue
+<script>
+import { models } from 'mxs-workspace'
+export default {
+    name: 'maxscale-workspace',
+    async created() {
+        models.Worksheets.all().forEach(worksheet => {
+            models.WorksheetTmp.update({
+                where: worksheet.id,
+                data: {
+                    // Check [axios documentation](https://github.com/axios/axios#request-config) for available options
+                    axios_opt: {
+                        withCredentials: true,
+                        baseURL: 'MAXSCALE API URL',
+                        headers: {
+                            Authorization: 'Bearer TOKEN',
+                        },
+                    },
+                },
+            })
+        })
+    },
 }
+</script>
 ```
 
-Check [axios documentation](https://github.com/axios/axios#request-config) for available options
+The `WorksheetTmp` model is stored in memory so your auth token can be secured.
 
 ## Reserved keywords
 

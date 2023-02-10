@@ -18,7 +18,7 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { query } from '@wsSrc/api/query'
+import queries from '@wsSrc/api/queries'
 import { insertQueryEditor } from '@wsSrc/store/orm/initEntities'
 
 export default {
@@ -120,7 +120,10 @@ export default {
             const request_sent_time = new Date().valueOf()
             let stmt_err_msg_obj = {}
             const [e, res] = await this.vue.$helpers.to(
-                query({ id, body: { sql, max_rows: rootState.prefAndStorage.query_row_limit } })
+                queries.post({
+                    id,
+                    body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
+                })
             )
             if (e) this.vue.$logger.error(e)
             else {

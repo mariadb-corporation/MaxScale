@@ -11,34 +11,27 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import http from '@wsSrc/utils/http'
+import base from '@wsSrc/api/base'
 
-/**
- * Prepare ETL Operation
- * @param {String} id - ODBC source connection ID
- * @param {String} body.target - destination server connection id
- * @param {String} body.type - mariadb||postgresql||generic
- * @param {Array} body.tables - e.g. [{ "table": "t1", "schema": "test"}]
- * @param {Number} body.threads
- * @returns {Promise}
- */
-export async function prepare({ id, body }) {
-    return await http().post(`/sql/${id}/etl/prepare`, body)
-}
-/**
- * Start ETL operation
- * @param {Array} body.tables - Result from the prepare step.
- * @param {String} body.target - destination server connection id
- * @returns {Promise}
- */
-export async function start({ id, body }) {
-    return await http().post(`/sql/${id}/etl/start`, body)
-}
-/**
- * Cancel ETL operation
- * @param {String} id - ODBC source connection ID
- * @returns {Promise}
- */
-export async function cancel(id) {
-    return await http().post(`/sql/${id}/cancel`)
+export default {
+    /**
+     * Prepare ETL Operation
+     * @param {String} param.id - ODBC source connection ID
+     * @param {String} param.body.target - destination server connection id
+     * @param {String} param.body.type - mariadb||postgresql||generic
+     * @param {Array}  param.body.tables - e.g. [{ "table": "t1", "schema": "test"}]
+     * @param {Number} param.body.threads
+     * @param {Object} param.config - axios config
+     * @returns {Promise}
+     */
+    prepare: ({ id, body, config }) => base.post({ url: `/sql/${id}/etl/prepare`, body, config }),
+    /**
+     * Start ETL operation
+     * @param {String} param.id - ODBC source connection ID
+     * @param {Array} param.body.tables - Result from the prepare step.
+     * @param {String} param.body.target - destination server connection id
+     * @param {Object} param.config - axios config
+     * @returns {Promise}
+     */
+    start: ({ id, body, config }) => base.post({ url: `/sql/${id}/etl/start`, body, config }),
 }

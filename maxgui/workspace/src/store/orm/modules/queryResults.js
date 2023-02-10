@@ -15,7 +15,7 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryResult from '@wsModels/QueryResult'
-import { query } from '@wsSrc/api/query'
+import queries from '@wsSrc/api/queries'
 
 export default {
     namespaced: true,
@@ -53,7 +53,10 @@ export default {
                 },
             })
             const [e, res] = await this.vue.$helpers.to(
-                query({ id, body: { sql, max_rows: rootState.prefAndStorage.query_row_limit } })
+                queries.post({
+                    id,
+                    body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
+                })
             )
             if (e)
                 QueryTabTmp.update({
@@ -117,7 +120,7 @@ export default {
             })
 
             let [e, res] = await this.vue.$helpers.to(
-                query({
+                queries.post({
                     id,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
                     config: { signal: abortController.signal },
@@ -173,7 +176,7 @@ export default {
             const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const queryEditorConn = QueryConn.getters('getQueryEditorConn')
             const [e, res] = await this.vue.$helpers.to(
-                query({
+                queries.post({
                     id: queryEditorConn.id,
                     body: { sql: `KILL QUERY ${activeQueryTabConn.attributes.thread_id}` },
                 })
