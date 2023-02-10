@@ -20,7 +20,7 @@
             class="mxs-truncate-tooltip-menu py-2 px-4 text-body-2"
             :class="[$typy(truncate_tooltip_item, 'contentClass').safeString]"
         >
-            <pre>{{ truncate_tooltip_item.txt }}</pre>
+            <span :style="{ wordBreak: 'break-word' }">{{ truncate_tooltip_item.txt }}</span>
         </v-sheet>
     </v-menu>
 </template>
