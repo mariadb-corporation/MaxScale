@@ -25,9 +25,16 @@
   to synchronize the configurations of multiple MaxScale instances.
 
 * The REST-API is now supports ODBC-type connections in the `/sql`
-  endpoints. The `/sql/` endpoints also supports ETL operations from ODBC data
-  sources into MariaDB servers. For more information on the new API functions,
-  refer to the [REST-API documentation](./REST-API/API.md).
+  endpoints. For more information, refer to the SQL resource
+  [documentation](./REST-API/Resources-SQL.md#open-sql-connection-to-server).
+
+* The REST-API query endpoint now supports asynchronous query execution
+  using the `async=true` option.
+
+* The new `/sql/:id/etl` endpoints allow ETL operations to be done from
+  ODBC data sources into MariaDB servers. For more information on the
+  new API functions, refer to the SQL resource
+  [documentation](./REST-API/Resources-SQL.md#prepare-etl-operation).
 
 * Create-Backup Restore-From-Backup
 
