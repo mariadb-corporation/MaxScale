@@ -11,8 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
 import QueryEditor from '@wsModels/QueryEditor'
+import Worksheet from '@wsModels/Worksheet'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
 
@@ -32,6 +33,7 @@ export default {
             for (const id of entityIds) {
                 const { query_editor_id } = Worksheet.find(id) || {}
                 if (query_editor_id) await QueryEditor.dispatch('cascadeDelete', query_editor_id)
+                WorksheetTmp.delete(id)
                 Worksheet.delete(id) // delete itself
             }
         },
@@ -47,5 +49,9 @@ export default {
     getters: {
         getActiveWkeId: state => state.active_wke_id,
         getActiveWke: (state, getters) => Worksheet.find(getters.getActiveWkeId) || {},
+        getRequestConfig: () => wkeId => {
+            const { request_config = {} } = WorksheetTmp.find(wkeId) || {}
+            return request_config
+        },
     },
 }
