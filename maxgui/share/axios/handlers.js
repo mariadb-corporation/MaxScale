@@ -32,8 +32,12 @@ export async function defErrStatusHandler({ store, error }) {
         await delay(600).then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true }))
 }
 
+export function isCancelled(error) {
+    return error.toString().includes(CANCEL_MESSAGE)
+}
+
 export function handleNullStatusCode({ store, error }) {
-    if (error.toString().includes(CANCEL_MESSAGE))
+    if (isCancelled(error))
         // request is cancelled by user, so no response is received
         store.vue.$logger.info(error.toString())
     else

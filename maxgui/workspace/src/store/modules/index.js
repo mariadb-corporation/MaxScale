@@ -15,6 +15,7 @@ import editorsMem from './editorsMem'
 import fileSysAccess from './fileSysAccess'
 import mxsApp from '@share/store/mxsApp'
 import queryConnsMem from './queryConnsMem'
+import queryResultsMem from './queryResultsMem'
 import mxsWorkspace from './mxsWorkspace'
 import prefAndStorage from './prefAndStorage'
 
@@ -23,6 +24,7 @@ export default {
     fileSysAccess,
     mxsApp,
     queryConnsMem,
+    queryResultsMem,
     mxsWorkspace,
     prefAndStorage,
 }

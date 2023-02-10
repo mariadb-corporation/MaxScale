@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { isCancelled } from '@share/axios/handlers'
 import moment from 'moment'
 import { logger } from '@share/plugins/logger'
 export const uuidv1 = require('uuid').v1
@@ -262,7 +263,7 @@ export async function to(promise) {
     return promise
         .then(data => [null, data])
         .catch(err => {
-            logger.error(getErrorsArr(err).toString())
+            if (!isCancelled(err)) logger.error(getErrorsArr(err).toString())
             return [err, undefined]
         })
 }

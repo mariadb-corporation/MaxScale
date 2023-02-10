@@ -90,14 +90,22 @@ export default {
         /**
          * @param {String} sql - SQL string
          */
-        async fetchUserQuery({ dispatch, getters, rootState }, sql) {
+        async fetchUserQuery({ commit, dispatch, getters, rootState }, sql) {
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
                 'getActiveQueryTabConn'
             )
             const request_sent_time = new Date().valueOf()
             const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
-            const abort_controller = new AbortController()
-            const config = rootState.mxsWorkspace.config
+            const abortController = new AbortController()
+            commit(
+                'queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP',
+                { id: activeQueryTabId, value: abortController },
+                { root: true }
+            )
+            const {
+                QUERY_CANCELED,
+                QUERY_LOG_TYPES: { USER_LOGS },
+            } = rootState.mxsWorkspace.config
 
             QueryTabTmp.update({
                 where: activeQueryTabId,
@@ -105,7 +113,6 @@ export default {
                     obj.query_results.request_sent_time = request_sent_time
                     obj.query_results.total_duration = 0
                     obj.query_results.is_loading = true
-                    obj.query_results.abort_controller = abort_controller
                 },
             })
 
@@ -113,76 +120,55 @@ export default {
                 query({
                     id,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
-                    config: { signal: abort_controller.signal },
+                    config: { signal: abortController.signal },
                 })
             )
+            const now = new Date().valueOf()
+            const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
 
-            if (e)
-                QueryTabTmp.update({
-                    where: activeQueryTabId,
-                    data(obj) {
-                        obj.query_results.is_loading = false
-                    },
-                })
-            else {
-                const now = new Date().valueOf()
-                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-                // If the KILL command was sent for the query is being run, the query request is aborted/canceled
-                if (getters.getHasKillFlagMapByQueryTabId(activeQueryTabId)) {
-                    QueryTabTmp.update({
-                        where: activeQueryTabId,
-                        data(obj) {
-                            obj.has_kill_flag = false
-                        },
-                    })
-                    QueryConn.update({
-                        where: id,
-                        /**
-                         * This is done automatically in queryHttp.interceptors.response.
-                         * However, because the request is aborted, is_busy needs to be set manually.
-                         */
-                        data: { is_busy: false },
-                    })
-                    res = {
-                        data: {
-                            data: {
-                                attributes: {
-                                    results: [{ message: config.QUERY_CANCELED }],
-                                    sql,
-                                },
-                            },
-                        },
-                    }
-                } else if (sql.match(/(use|drop database)\s/i))
-                    await QueryConn.dispatch('updateActiveDb')
+            if (!e && res && sql.match(/(use|drop database)\s/i))
+                await QueryConn.dispatch('updateActiveDb')
 
-                QueryTabTmp.update({
-                    where: activeQueryTabId,
-                    data(obj) {
-                        obj.query_results.data = Object.freeze(res.data.data)
-                        obj.query_results.total_duration = parseFloat(total_duration)
-                        obj.query_results.is_loading = false
-                    },
-                })
-
-                dispatch(
-                    'prefAndStorage/pushQueryLog',
-                    {
-                        startTime: now,
-                        sql,
-                        res,
-                        connection_name,
-                        queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.USER_LOGS,
-                    },
-                    { root: true }
-                )
+            if (getters.getHasKillFlagMapByQueryTabId(activeQueryTabId)) {
+                // If the KILL command was sent for the query is being run, the query request is aborted
+                QueryTabTmp.update({ where: activeQueryTabId, data: { has_kill_flag: false } })
+                /**
+                 * This is done automatically in queryHttp.interceptors.response.
+                 * However, because the request is aborted, is_busy needs to be set manually.
+                 */
+                QueryConn.update({ where: id, data: { is_busy: false } })
+                res = {
+                    data: { data: { attributes: { results: [{ message: QUERY_CANCELED }], sql } } },
+                }
             }
+
+            QueryTabTmp.update({
+                where: activeQueryTabId,
+                data(obj) {
+                    obj.query_results.data = Object.freeze(res.data.data)
+                    obj.query_results.total_duration = parseFloat(total_duration)
+                    obj.query_results.is_loading = false
+                },
+            })
+
+            dispatch(
+                'prefAndStorage/pushQueryLog',
+                {
+                    startTime: request_sent_time,
+                    sql,
+                    res,
+                    connection_name,
+                    queryType: USER_LOGS,
+                },
+                { root: true }
+            )
+            commit('queryResultsMem/DELETE_ABORT_CONTROLLER', activeQueryTabId, { root: true })
         },
         /**
          * This action uses the current active QueryEditor connection to send
          * KILL QUERY thread_id
          */
-        async stopUserQuery({ commit }) {
+        async stopUserQuery({ commit, rootGetters }) {
             const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const queryEditorConn = QueryConn.getters('getQueryEditorConn')
@@ -213,10 +199,12 @@ export default {
                         },
                         { root: true }
                     )
-                else
-                    this.vue
-                        .$typy(QueryTabTmp.find(activeQueryTabId), 'abort_controller.abort')
-                        .safeFunction() // abort the running query
+                else {
+                    const abort_controller = rootGetters['queryResultsMem/getAbortController'](
+                        activeQueryTabId
+                    )
+                    abort_controller.abort() // abort the running query
+                }
             }
         },
         /**
@@ -260,7 +248,7 @@ export default {
         getLoadingQueryResultByQueryTabId: (state, getters) => query_tab_id =>
             getters.getUserQueryResByQueryTabId(query_tab_id).is_loading || false,
 
-        getHasKillFlagMapByQueryTabId: (state, getters) => query_tab_id =>
-            getters.getUserQueryResByQueryTabId(query_tab_id).has_kill_flag || false,
+        getHasKillFlagMapByQueryTabId: () => query_tab_id =>
+            QueryTabTmp.find(query_tab_id).has_kill_flag,
     },
 }
