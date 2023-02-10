@@ -30,7 +30,10 @@
   refer to the [REST-API documentation](./REST-API/API.md).
 
 * Create-Backup Restore-From-Backup
-* Audit-Log
+
+* The number of routing threads MaxScale uses can now be changed at runtime.
+
+* The Audit-Log allows all REST-API calls to be logged.
 
 * MaxScale now supports Xpand parallel replication streams that go through
   MaxScale.

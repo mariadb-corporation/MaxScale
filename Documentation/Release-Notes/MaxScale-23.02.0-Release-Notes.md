@@ -56,6 +56,10 @@ can now be changed at runtime.
 
 ### [MXS-3827](https://jira.mariadb.org/browse/MXS-3827) Audit log for the REST API
 
+The REST-API calls to MaxScale can now be logged. See
+[here](../Getting-Started/Configuration-Guide.md#administration-audit-file)
+for more information.
+
 ### [MXS-4106](https://jira.mariadb.org/browse/MXS-4106) Redis authentication
 
 Authentication can be enabled when Redis is used as the cache storage. See
