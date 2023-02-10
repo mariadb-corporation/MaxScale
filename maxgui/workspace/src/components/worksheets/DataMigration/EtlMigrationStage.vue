@@ -60,6 +60,7 @@
             />
             <etl-tbl-script
                 v-else
+                class="migration-tbl"
                 :task="task"
                 :data="etlResTable"
                 :headers="tableHeaders"
@@ -67,8 +68,11 @@
                 @get-activeRow="activeItem = $event"
                 @get-staging-data="stagingScript = $event"
             >
+                <template v-for="slot in ['schema', 'table']" v-slot:[`item.${slot}`]="{ value }">
+                    <mxs-truncate-str :key="slot" :tooltipItem="{ txt: `${value}` }" />
+                </template>
                 <template v-slot:[`item.obj`]="{ item }">
-                    {{ customCol(item, 'obj') }}
+                    <mxs-truncate-str :tooltipItem="{ txt: `${customCol(item, 'obj')}` }" />
                 </template>
                 <template v-slot:[`item.result`]="{ item }">
                     <etl-status-icon
@@ -191,12 +195,12 @@ export default {
         tableHeaders() {
             return this.isPrepareEtl
                 ? [
-                      { text: 'SCHEMA', value: 'schema' },
-                      { text: 'TABLE', value: 'table' },
+                      { text: 'SCHEMA', value: 'schema', cellClass: 'truncate-cell', width: '50%' },
+                      { text: 'TABLE', value: 'table', cellClass: 'truncate-cell', width: '50%' },
                   ]
                 : [
-                      { text: 'OBJECT', value: 'obj' },
-                      { text: 'RESULT', value: 'result' },
+                      { text: 'OBJECT', value: 'obj', cellClass: 'truncate-cell', width: '60%' },
+                      { text: 'RESULT', value: 'result', width: '40%' },
                   ]
         },
         isRunning() {
@@ -311,6 +315,18 @@ export default {
     },
 }
 </script>
+<style lang="scss">
+.migration-tbl {
+    .truncate-cell {
+        // Workaround for enabling auto-truncate on mxs-truncate-str
+        max-width: 1px;
+        //mxs-truncate-str span
+        span {
+            vertical-align: middle;
+        }
+    }
+}
+</style>
 <style lang="scss" scoped>
 .etl-migration-stage__header {
     .header-text {
