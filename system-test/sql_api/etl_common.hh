@@ -356,6 +356,12 @@ public:
         del(mxb::cat("sql/", job.dest.id, "?token=", job.dest.token));
     }
 
+    void cancel_etl(EtlJob& job)
+    {
+        post(mxb::cat("sql/", job.source.id, "/cancel?token=", job.source.token),
+             mxb::Json {mxb::Json::Type::OBJECT});
+    }
+
     std::pair<bool, mxb::Json> run_etl(std::string source_dsn,
                                        std::string destination,
                                        std::string type,
