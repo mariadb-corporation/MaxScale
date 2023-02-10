@@ -51,6 +51,20 @@ struct EtlTable
 class EtlTest
 {
 public:
+    struct SqlApiConn
+    {
+        std::string id;
+        std::string token;
+    };
+
+    struct EtlJob
+    {
+        SqlApiConn source;
+        SqlApiConn dest;
+        mxb::Json  request{mxb::Json::Type::UNDEFINED};
+        mxb::Json  response{mxb::Json::Type::UNDEFINED};
+    };
+
     enum class Op
     {
         PREPARE,
@@ -218,14 +232,8 @@ public:
                       sql.c_str(), res.to_string().c_str());
     }
 
-    std::pair<bool, mxb::Json> run_etl(std::string source_dsn,
-                                       std::string destination,
-                                       std::string type,
-                                       Op operation,
-                                       std::chrono::seconds timeout,
-                                       std::vector<EtlTable> tables,
-                                       Mode mode = Mode::NORMAL,
-                                       int iterations = 1)
+    EtlJob prepare_etl(std::string source_dsn, std::string destination, std::string type,
+                       std::chrono::seconds timeout, std::vector<EtlTable> tables, Mode mode)
     {
         auto source = connect({
             {"target", "odbc"},
@@ -244,15 +252,16 @@ public:
 
         m_test.expect(dest.valid(), "Failed to create destination connection");
 
-        auto source_id = source.at("data/id").get_string();
-        auto source_token = source.at("meta/token").get_string();
+        EtlJob job;
+        job.source.id = source.at("data/id").get_string();
+        job.source.token = source.at("meta/token").get_string();
 
-        auto dest_id = dest.at("data/id").get_string();
-        auto dest_token = dest.at("meta/token").get_string();
+        job.dest.id = dest.at("data/id").get_string();
+        job.dest.token = dest.at("meta/token").get_string();
 
         mxb::Json js(mxb::Json::Type::OBJECT);
         js.set_string("type", type);
-        js.set_string("target", dest_id);
+        js.set_string("target", job.dest.id);
         js.set_int("timeout", timeout.count());
 
         for (const auto& [k, v] : m_extra)
@@ -293,59 +302,79 @@ public:
             js.add_array_elem("tables", std::move(elem));
         }
 
-        auto etl_url = mxb::cat("sql/", source_id, "/etl/",
+        job.request = js;
+        return job;
+    }
+
+    void start_etl(EtlJob& job, Op operation)
+    {
+        auto etl_url = mxb::cat("sql/", job.source.id, "/etl/",
                                 operation == Op::PREPARE ? "prepare" : "start",
-                                "?token=", source_token,
-                                "&target_token=", dest_token);
-        bool ok = false;
-        mxb::Json response;
+                                "?token=", job.source.token,
+                                "&target_token=", job.dest.token);
 
-        for (int i = 0; i < iterations && m_test.ok(); i++)
+        job.response.load_string(post(etl_url, job.request).body);
+    }
+
+    void wait_for_etl(EtlJob& job, std::chrono::seconds timeout)
+    {
+        auto self = job.response.at("links/self").get_string();
+        self += "?token=" + job.source.token;
+        auto start = mxb::Clock::now();
+        auto sleep_time = 100ms;
+        mxb::http::Response res;
+
+        do
         {
-            auto res = post(etl_url, js);
-            response.load_string(res.body);
-            auto self = response.at("links/self").get_string();
-            self += "?token=" + source_token;
-            auto start = mxb::Clock::now();
-            auto sleep_time = 100ms;
-
-            while (res.code == 202 && m_test.ok())
+            if (mxb::Clock::now() - start < std::chrono::seconds(timeout))
             {
-                // Use a raw mxb::http:get(), the `self` already includes the hostname and port.
-                res = mxb::http::get(self, "admin", "mariadb");
-                response.reset();
-                response.load_string(res.body);
-
-                if (res.code == 202)
-                {
-                    if (mxb::Clock::now() - start < std::chrono::seconds(timeout))
-                    {
-                        std::this_thread::sleep_for(sleep_time);
-                        sleep_time = std::min(sleep_time * 2, std::chrono::milliseconds {5000});
-                    }
-                    else
-                    {
-                        m_test.add_failure("ETL timed out");
-                    }
-                }
-            }
-
-            if (res.code == 201)
-            {
-                response.at("data/attributes/results").try_get_bool("ok", &ok);
+                std::this_thread::sleep_for(sleep_time);
+                sleep_time = std::min(sleep_time * 2, std::chrono::milliseconds {5000});
             }
             else
             {
-                m_test.tprintf("ETL failed:\n%s", res.body.c_str());
-                response.reset();
-                break;
+                m_test.add_failure("ETL timed out");
             }
+
+            // Use a raw mxb::http:get(), the `self` already includes the hostname and port.
+            res = mxb::http::get(self, "admin", "mariadb");
+            job.response.reset();
+            job.response.load_string(res.body);
         }
+        while (res.code == 202 && m_test.ok());
 
-        del(mxb::cat("sql/", source_id, "?token=", source_token));
-        del(mxb::cat("sql/", dest_id, "?token=", dest_token));
+        if (res.code != 201)
+        {
+            m_test.tprintf("ETL failed:\n%s", res.body.c_str());
+            job.response.reset();
+        }
+    }
 
-        return {ok, response};
+    void stop_etl(EtlJob& job)
+    {
+        del(mxb::cat("sql/", job.source.id, "?token=", job.source.token));
+        del(mxb::cat("sql/", job.dest.id, "?token=", job.dest.token));
+    }
+
+    std::pair<bool, mxb::Json> run_etl(std::string source_dsn,
+                                       std::string destination,
+                                       std::string type,
+                                       Op operation,
+                                       std::chrono::seconds timeout,
+                                       std::vector<EtlTable> tables,
+                                       Mode mode = Mode::NORMAL)
+    {
+
+        EtlJob job = prepare_etl(source_dsn, destination, type, timeout, tables, mode);
+        start_etl(job, operation);
+        wait_for_etl(job, timeout);
+
+        bool ok = false;
+        job.response.at("data/attributes/results").try_get_bool("ok", &ok);
+
+        stop_etl(job);
+
+        return {ok, job.response};
     }
 
     void set_extra(std::map<std::string, std::string> extras)
