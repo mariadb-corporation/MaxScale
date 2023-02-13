@@ -11,10 +11,10 @@
                 </div>
                 <data-prvw-nav-ctr :isLoading="isLoading" :resultData="resultData" />
                 <v-spacer />
-                <!-- Add currQueryMode as key to make sure it re-render when switching between two tabs  -->
+                <!-- Add activeQueryMode as key to make sure it re-render when switching between two tabs  -->
                 <keep-alive>
                     <duration-timer
-                        :key="currQueryMode"
+                        :key="activeQueryMode"
                         :startTime="requestSentTime"
                         :executionTime="execTime"
                         :totalDuration="totalDuration"
@@ -33,7 +33,7 @@
             <keep-alive>
                 <result-data-table
                     v-if="$typy(resultData, 'fields').safeArray.length"
-                    :key="currQueryMode"
+                    :key="activeQueryMode"
                     :height="dynDim.height - headerHeight"
                     :width="dynDim.width"
                     :headers="$typy(resultData, 'fields').safeArray.map(field => ({ text: field }))"
@@ -85,7 +85,7 @@ export default {
             },
             required: true,
         },
-        currQueryMode: { type: String, required: true },
+        activeQueryMode: { type: String, required: true },
         isLoading: { type: Boolean, required: true },
         data: { type: Object, required: true },
         requestSentTime: { type: Number, required: true },

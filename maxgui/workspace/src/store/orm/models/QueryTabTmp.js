@@ -30,7 +30,6 @@ export default class QueryTabTmp extends Extender {
              * @property {number} total_duration
              * @property {boolean} is_loading
              * @property {object} data
-             * @property {object} abort_controller // only query_results has it
              */
             prvw_data: this.attr({}),
             prvw_data_details: this.attr({}),

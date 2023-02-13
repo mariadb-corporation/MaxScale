@@ -11,9 +11,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryEditor from '@wsModels/QueryEditor'
-import QueryConn from '@wsModels/QueryConn'
 import Editor from '@wsModels/Editor'
+import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
+import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
 import queries from '@wsSrc/api/queries'
 
@@ -21,6 +22,7 @@ export default {
     namespaced: true,
     actions: {
         async queryTblCreationInfo({ commit }, node) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const {
@@ -38,10 +40,18 @@ export default {
 
             let tblOptsData, colsOptsData
             const [tblOptError, tblOptsRes] = await this.vue.$helpers.to(
-                queries.post({ id: connId, body: { sql: queryHelper.getAlterTblOptsSQL(node) } })
+                queries.post({
+                    id: connId,
+                    body: { sql: queryHelper.getAlterTblOptsSQL(node) },
+                    config,
+                })
             )
             const [colsOptsError, colsOptsRes] = await this.vue.$helpers.to(
-                queries.post({ id: connId, body: { sql: queryHelper.getAlterColsOptsSQL(node) } })
+                queries.post({
+                    id: connId,
+                    body: { sql: queryHelper.getAlterColsOptsSQL(node) },
+                    config,
+                })
             )
             if (tblOptError || colsOptsError) {
                 Editor.update({

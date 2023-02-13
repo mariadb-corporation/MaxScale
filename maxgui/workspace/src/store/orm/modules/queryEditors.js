@@ -36,9 +36,10 @@ export default {
                 .map(entity => entity.id)
 
             for (const id of entityIds) {
-                const { id: connId } = QueryConn.query()
-                    .where('query_editor_id', id)
-                    .first()
+                const { id: connId } =
+                    QueryConn.query()
+                        .where('query_editor_id', id)
+                        .first() || {}
                 // delete the QueryEditor connection and its clones (query tabs)
                 if (connId) await QueryConn.dispatch('cascadeDisconnect', { id: connId })
                 // delete records in its relational tables
@@ -113,6 +114,7 @@ export default {
          * @param {Boolean} payload.showSnackbar - show successfully snackbar message
          */
         async exeStmtAction({ rootState, dispatch, commit }, { sql, action, showSnackbar = true }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
                 'getActiveQueryTabConn'
             )
@@ -123,6 +125,7 @@ export default {
                 queries.post({
                     id,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
+                    config,
                 })
             )
             if (e) this.vue.$logger.error(e)

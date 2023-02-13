@@ -48,21 +48,21 @@ export default {
         ...mapState({
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
         }),
-        currQueryMode() {
-            return QueryResult.getters('getCurrQueryMode')
+        activeQueryMode() {
+            return QueryResult.getters('getActiveQueryMode')
         },
         activeView: {
             get() {
-                return this.currQueryMode
+                return this.activeQueryMode
             },
             set(v) {
                 if (
-                    this.currQueryMode === this.QUERY_MODES.PRVW_DATA ||
-                    this.currQueryMode === this.QUERY_MODES.PRVW_DATA_DETAILS
+                    this.activeQueryMode === this.QUERY_MODES.PRVW_DATA ||
+                    this.activeQueryMode === this.QUERY_MODES.PRVW_DATA_DETAILS
                 )
                     QueryResult.update({
                         where: QueryEditor.getters('getActiveQueryTabId'),
-                        data: { curr_query_mode: v },
+                        data: { query_mode: v },
                     })
             },
         },

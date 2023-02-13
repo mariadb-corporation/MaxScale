@@ -22,7 +22,7 @@ export default class QueryResult extends Extender {
      */
     static getNonKeyFields() {
         return {
-            curr_query_mode: this.string(QUERY_MODES.QUERY_VIEW),
+            query_mode: this.string(QUERY_MODES.QUERY_VIEW),
         }
     }
 

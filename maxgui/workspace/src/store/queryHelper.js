@@ -262,11 +262,12 @@ function genNodeData({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
  * @param {String} param.connId - SQL connection ID
  * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @param {Object} [param.nodeAttrs] - node attributes
+ * @param {Object} param.config - axios config
  * @returns {Promise<Array>} { nodes: {}, completionItems: [] }
  */
-async function getChildNodeData({ connId, nodeGroup, nodeAttrs }) {
+async function getChildNodeData({ connId, nodeGroup, nodeAttrs, config }) {
     const sql = getNodeGroupSQL({ nodeAttrs, nodeGroup })
-    const [e, res] = await to(queries.post({ id: connId, body: { sql } }))
+    const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
     if (e) return { nodes: {}, completionItems: [] }
     else {
         return genNodeData({
@@ -283,10 +284,15 @@ async function getChildNodeData({ connId, nodeGroup, nodeAttrs }) {
  * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @param {Array} payload.data - Array of tree node to be updated
  * @param {Array} [payload.completionItems] - Array of completion items for editor
+ * @param {Object} param.config - axios config
  * @returns {Promise<Array>} { data: {}, completionItems: [] }
  */
-async function getNewTreeData({ connId, nodeGroup, data, completionItems = [] }) {
-    const { nodes, completionItems: childCmplItems } = await getChildNodeData({ connId, nodeGroup })
+async function getNewTreeData({ connId, nodeGroup, data, completionItems = [], config }) {
+    const { nodes, completionItems: childCmplItems } = await getChildNodeData({
+        connId,
+        nodeGroup,
+        config,
+    })
     return {
         data: deepReplaceNode({
             treeData: data,

@@ -12,6 +12,7 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsModels/Worksheet'
 import queries from '@wsSrc/api/queries'
 
 export default {
@@ -53,6 +54,7 @@ export default {
     },
     actions: {
         async queryCharsetCollationMap({ commit }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
@@ -62,6 +64,7 @@ export default {
                             // eslint-disable-next-line vue/max-len
                             'SELECT character_set_name, collation_name, is_default FROM information_schema.collations',
                     },
+                    config,
                 })
             )
             if (!e) {
@@ -82,6 +85,7 @@ export default {
             }
         },
         async queryDefDbCharsetMap({ commit }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
@@ -91,6 +95,7 @@ export default {
                             // eslint-disable-next-line vue/max-len
                             'SELECT schema_name, default_character_set_name FROM information_schema.schemata',
                     },
+                    config,
                 })
             )
             if (!e) {
@@ -105,6 +110,7 @@ export default {
             }
         },
         async queryEngines({ commit }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
@@ -112,6 +118,7 @@ export default {
                     body: {
                         sql: 'SELECT engine FROM information_schema.ENGINES',
                     },
+                    config,
                 })
             )
             if (!e) commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())

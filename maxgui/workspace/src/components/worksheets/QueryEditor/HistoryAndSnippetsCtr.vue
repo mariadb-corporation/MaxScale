@@ -237,21 +237,21 @@ export default {
             query_history: state => state.prefAndStorage.query_history,
             query_snippets: state => state.prefAndStorage.query_snippets,
         }),
-        currQueryMode() {
-            return QueryResult.getters('getCurrQueryMode')
+        activeQueryMode() {
+            return QueryResult.getters('getActiveQueryMode')
         },
         activeView: {
             get() {
-                return this.currQueryMode
+                return this.activeQueryMode
             },
             set(v) {
                 if (
-                    this.currQueryMode === this.QUERY_MODES.HISTORY ||
-                    this.currQueryMode === this.QUERY_MODES.SNIPPETS
+                    this.activeQueryMode === this.QUERY_MODES.HISTORY ||
+                    this.activeQueryMode === this.QUERY_MODES.SNIPPETS
                 )
                     QueryResult.update({
                         where: QueryEditor.getters('getActiveQueryTabId'),
-                        data: { curr_query_mode: v },
+                        data: { query_mode: v },
                     })
             },
         },

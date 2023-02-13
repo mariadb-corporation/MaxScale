@@ -16,6 +16,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
+import Worksheet from '@wsModels/Worksheet'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@wsSrc/store/queryHelper'
 import queries from '@wsSrc/api/queries'
@@ -31,6 +32,7 @@ export default {
          * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
          */
         async loadChildNodes({ getters }, nodeGroup) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const queryEditorId = QueryEditor.getters('getQueryEditorId')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const { data, completionItems } = await queryHelper.getNewTreeData({
@@ -38,6 +40,7 @@ export default {
                 nodeGroup,
                 data: getters.getDbTreeData,
                 completionItems: getters.getSchemaCompletionItems,
+                config,
             })
             QueryEditorTmp.update({
                 where: queryEditorId,
@@ -48,6 +51,7 @@ export default {
             })
         },
         async fetchSchemas({ getters, rootState }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const queryEditorId = QueryEditor.getters('getQueryEditorId')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
                 'getActiveQueryTabConn'
@@ -58,7 +62,7 @@ export default {
             })
 
             const [e, res] = await this.vue.$helpers.to(
-                queries.post({ id, body: { sql: getters.getDbSql } })
+                queries.post({ id, body: { sql: getters.getDbSql }, config })
             )
             if (e)
                 QueryEditorTmp.update({
@@ -123,7 +127,7 @@ export default {
             lodash.uniqBy(QueryEditor.getters('getQueryEditorTmp').completion_items || [], 'label'),
         getDbTreeOfConn: () => QueryEditor.getters('getQueryEditorTmp').db_tree_of_conn || '',
         getDbTreeData: () => QueryEditor.getters('getQueryEditorTmp').db_tree || {},
-        getActivePrvwNode: () => QueryTab.getters('getQueryTabTmp').active_prvw_node || {},
+        getActivePrvwNode: () => QueryTab.getters('getActiveQueryTabTmp').active_prvw_node || {},
         getActivePrvwNodeFQN: (state, getters) => getters.getActivePrvwNode.qualified_name || '',
     },
 }

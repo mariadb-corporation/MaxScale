@@ -17,6 +17,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
+import Worksheet from '@wsModels/Worksheet'
 import { insertQueryTab } from '@wsSrc/store/orm/initEntities'
 import queryHelper from '@wsSrc/store/queryHelper'
 import connection from '@wsSrc/api/connection'
@@ -79,8 +80,9 @@ export default {
                 await QueryConn.dispatch('openQueryTabConn', { queryEditorConn, query_tab_id })
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
-            if (id) await this.vue.$helpers.to(connection.delete({ id }))
+            if (id) await this.vue.$helpers.to(connection.delete({ id, config }))
             dispatch('cascadeDelete', query_tab_id)
         },
         /**
@@ -99,8 +101,7 @@ export default {
             QueryTab.query()
                 .where(t => t.query_editor_id === QueryEditor.getters('getQueryEditorId'))
                 .get(),
-        getQueryTabById: () => id => QueryTab.find(id) || {},
-        getQueryTabTmp: () => QueryTabTmp.find(QueryEditor.getters('getActiveQueryTabId')) || {},
-        getQueryTabTmpById: () => id => QueryTabTmp.find(id) || {},
+        getActiveQueryTabTmp: () =>
+            QueryTabTmp.find(QueryEditor.getters('getActiveQueryTabId')) || {},
     },
 }

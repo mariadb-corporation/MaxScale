@@ -21,7 +21,7 @@ export default class WorksheetTmp extends Extender {
      */
     static getNonKeyFields() {
         return {
-            request_config: this.attr({ baseURL: '/' }), // axios request config
+            request_config: this.attr(null).nullable(), // axios request config
         }
     }
 
