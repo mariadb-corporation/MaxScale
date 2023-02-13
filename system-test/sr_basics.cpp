@@ -69,6 +69,11 @@ void thread_stress(TestConnections* pTest, int id)
             pTest->expect(c.query(ss.str()), "Thread %d (%u) failed to SELECT: %s",
                           id, c.thread_id(), c.error());
         }
+
+        if (pTest->ok())
+        {
+            pTest->reset_timeout();
+        }
     }
 
     pTest->tprintf("Goodbye from thread %d", id);
