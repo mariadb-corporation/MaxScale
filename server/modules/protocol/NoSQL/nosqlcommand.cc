@@ -333,7 +333,7 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 
     if (append_checksum)
     {
-        uint32_t checksum = crc32_func(gwbuf_link_data(pResponse), response_size - sizeof(uint32_t));
+        uint32_t checksum = crc32_func(pResponse->data(), response_size - sizeof(uint32_t));
         pData += protocol::set_byte4(pData, checksum);
     }
 

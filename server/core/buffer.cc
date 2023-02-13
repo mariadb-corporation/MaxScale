@@ -367,12 +367,6 @@ unsigned int gwbuf_length(const GWBUF* head)
     return head->length();
 }
 
-GWBUF* gwbuf_rtrim(GWBUF* head, uint64_t n_bytes)
-{
-    head->rtrim(n_bytes);
-    return head->empty() ? nullptr : head;
-}
-
 void GWBUF::set_type(Type type)
 {
     m_type |= type;
@@ -599,6 +593,34 @@ GWBUF& GWBUF::add_chars(const char* str, size_t n_bytes)
     mariadb::copy_chars(ptr, str, n_bytes);
     write_complete(n_bytes);
     return *this;
+}
+
+size_t GWBUF::varying_size() const
+{
+    size_t rv = 0;
+
+    if (m_sbuf)
+    {
+        rv += sizeof(*m_sbuf);
+        rv += m_sbuf->size() / m_sbuf.use_count();
+    }
+
+    if (m_stmt_info)
+    {
+        rv += sizeof(*m_stmt_info);
+        rv += m_stmt_info->size() / m_stmt_info.use_count();
+    }
+
+    rv += m_sql.capacity();
+    rv += m_canonical.capacity();
+    rv += m_markers.capacity() * sizeof(decltype(m_markers)::value_type);
+
+    return rv;
+}
+
+size_t GWBUF::runtime_size() const
+{
+    return sizeof(*this) + varying_size();
 }
 
 size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)

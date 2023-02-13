@@ -123,7 +123,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
         pBuffer = gwbuf_make_contiguous(pBuffer);
     }
 
-    protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(gwbuf_link_data(pBuffer));
+    protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(pBuffer->data());
 
     int buffer_len = gwbuf_length(pBuffer);
     if (buffer_len >= pHeader->msg_len)

@@ -1128,7 +1128,7 @@ public:
 
         default:
             {
-                uint8_t* pBuffer = gwbuf_link_data(mariadb_response.get());
+                uint8_t* pBuffer = mariadb_response.get()->data();
 
                 ComQueryResponse cqr(&pBuffer);
                 auto nFields = cqr.nFields();
@@ -1267,7 +1267,7 @@ public:
 
         default:
             {
-                uint8_t* pBuffer = gwbuf_link_data(mariadb_response.get());
+                uint8_t* pBuffer = mariadb_response.get()->data();
 
                 ComQueryResponse cqr(&pBuffer);
                 auto nFields = cqr.nFields();

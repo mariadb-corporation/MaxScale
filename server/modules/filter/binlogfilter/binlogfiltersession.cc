@@ -655,11 +655,10 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
      * Now we remove the useless bytes in the buffer
      * in case of inout packet is bigger than RAND_EVENT packet
      */
-    if (gwbuf_length(*ppPacket) > (new_event_size + 1 + MYSQL_HEADER_LEN))
+    if ((*ppPacket)->length() > (new_event_size + 1 + MYSQL_HEADER_LEN))
     {
-        uint32_t remove_bytes = gwbuf_length(*ppPacket)   \
-            - (new_event_size + 1 + MYSQL_HEADER_LEN);
-        *ppPacket = gwbuf_rtrim(*ppPacket, remove_bytes);
+        uint32_t remove_bytes = (*ppPacket)->length() - (new_event_size + 1 + MYSQL_HEADER_LEN);
+        (*ppPacket)->rtrim(remove_bytes);
     }
 
     // Fix Event Next pos = 0 and set new CRC32

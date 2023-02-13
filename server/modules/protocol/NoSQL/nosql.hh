@@ -388,7 +388,7 @@ public:
     }
 
     Packet(const GWBUF* pBuffer)
-        : Packet(gwbuf_link_data(pBuffer), gwbuf_link_data(pBuffer) + gwbuf_link_length(pBuffer))
+        : Packet(pBuffer->data(), pBuffer->data() + pBuffer->length())
     {
         mxb_assert(gwbuf_is_contiguous(pBuffer));
     }

@@ -591,7 +591,7 @@ public:
      */
     void update(const GWBUF* buffer)
     {
-        update(gwbuf_link_data(buffer), buffer->length());
+        update(buffer->data(), buffer->length());
     }
 
     /**

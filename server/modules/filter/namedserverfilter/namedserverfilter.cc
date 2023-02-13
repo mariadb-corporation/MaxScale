@@ -363,7 +363,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
         {
             // Is either a COM_QUERY or COM_STMT_PREPARE. In either case, generate hints.
             const RegexToServers* reg_serv = find_servers(sql, sql_len);
-            auto cmd = MYSQL_GET_COMMAND(gwbuf_link_data(queue));
+            auto cmd = MYSQL_GET_COMMAND(queue->data());
             switch (cmd)
             {
             case MXS_COM_QUERY:
@@ -422,7 +422,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
         else if (gwbuf_length(queue) >= 9)
         {
             // Can be a PS command with ID.
-            auto cmd = MYSQL_GET_COMMAND(gwbuf_link_data(queue));
+            auto cmd = MYSQL_GET_COMMAND(queue->data());
             switch (cmd)
             {
             case MXS_COM_STMT_EXECUTE:

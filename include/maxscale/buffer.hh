@@ -308,51 +308,18 @@ public:
     uint8_t operator[](size_t ind) const;
 
     /**
-     * Returns the static size of the instance, i.e. sizeof(*this).
-     *
-     * @return The static size.
-     */
-    size_t static_size() const
-    {
-        return sizeof(*this);
-    }
-
-    /**
      * Returns the current size of the varying part of the instance.
      *
      * @return The varying size.
      */
-    size_t varying_size() const
-    {
-        size_t rv = 0;
-
-        if (m_sbuf)
-        {
-            rv += sizeof(*m_sbuf.get());
-            rv += m_sbuf->size() / m_sbuf.use_count();
-        }
-
-        if (m_stmt_info)
-        {
-            rv += sizeof(*m_stmt_info.get());
-            rv += m_stmt_info->size() / m_stmt_info.use_count();
-        }
-        rv += m_sql.capacity();
-        rv += m_canonical.capacity();
-        rv += m_markers.capacity() * sizeof(decltype(m_markers)::value_type);
-
-        return rv;
-    }
+    size_t varying_size() const;
 
     /**
      * Returns the runtime size of the instance; i.e. the static size + the varying size.
      *
      * @return The runtime size.
      */
-    size_t runtime_size() const
-    {
-        return static_size() + varying_size();
-    }
+    size_t runtime_size() const;
 
     GWBUF& add_byte(uint8_t byte);
     GWBUF& add_lsbyte2(uint16_t bytes);
@@ -436,17 +403,6 @@ inline const uint8_t* GWBUF::end() const
     return m_end;
 }
 
-/*< First valid, unconsumed byte in the buffer */
-inline uint8_t* gwbuf_link_data(GWBUF* b)
-{
-    return b->data();
-}
-
-inline const uint8_t* gwbuf_link_data(const GWBUF* b)
-{
-    return b->data();
-}
-
 inline uint8_t* GWBUF_DATA(GWBUF* b)
 {
     return b->data();
@@ -489,21 +445,6 @@ inline bool gwbuf_is_contiguous(const GWBUF* b)
 {
     mxb_assert(b);
     return true;
-}
-
-inline bool GWBUF_EMPTY(const GWBUF* b)
-{
-    return b->empty();
-}
-
-inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)
-{
-    b->rtrim(bytes);
-}
-
-inline void GWBUF_RTRIM(GWBUF* b, unsigned int bytes)
-{
-    gwbuf_link_rtrim(b, bytes);
 }
 
 /**
@@ -588,18 +529,6 @@ GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
  * @return The head of the linked list or NULL if everything was consumed
  */
 GWBUF* gwbuf_consume(GWBUF* head, uint64_t length);
-
-/**
- * Trim bytes from the end of a GWBUF structure that may be the first
- * in a list. If the buffer has n_bytes or less then it will be freed and
- * the next buffer in the list will be returned, or if none, NULL.
- *
- * @param head     The buffer to trim
- * @param n_bytes  The number of bytes to trim off
- *
- * @return The buffer chain or NULL if buffer chain now empty
- */
-extern GWBUF* gwbuf_rtrim(GWBUF* head, uint64_t length);
 
 /**
  * Return the number of bytes of data in the linked list.

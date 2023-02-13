@@ -218,8 +218,8 @@ NoSQLCursor::NoSQLCursor(const std::string& ns,
     , m_id(this_unit.next_id() | BSON_LONG_BIT)
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
-    , m_pBuffer(gwbuf_link_data(m_mariadb_response.get()))
-    , m_nBuffer(gwbuf_link_length(m_mariadb_response.get()))
+    , m_pBuffer(m_mariadb_response.get()->data())
+    , m_nBuffer(m_mariadb_response.get()->length())
 {
     initialize();
 }
