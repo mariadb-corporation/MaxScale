@@ -148,7 +148,7 @@ export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013, 1927
 // 57P01 is for postgresql odbc
 export const ODBC_NET_ERR_SQLSTATE = ['08S01', '57P01']
 
-export const QUERY_CANCELED = 'Query canceled'
+export const QUERY_CANCELED = 'Query execution was interrupted'
 
 export const ETL_ACTIONS = Object.freeze({
     CANCEL: 'cancel',

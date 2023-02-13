@@ -210,62 +210,72 @@ export default {
          * @param {String} param.id - etl task id
          * @param {Array} param.tables - tables for preparing etl or start etl
          */
-        async handleEtlCall({ getters, dispatch, rootState }, { id, tables }) {
+        async handleEtlCall({ getters, dispatch, rootState, commit }, { id, tables }) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const { RUNNING, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
 
             const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             const destConn = QueryConn.getters('getDestConnByEtlTaskId')(id)
+            if (srcConn.id && destConn.id) {
+                const task = getters.getEtlTask(id)
 
-            const task = getters.getEtlTask(id)
+                let logName,
+                    apiAction,
+                    status,
+                    timestamp = new Date().valueOf()
 
-            let logName,
-                apiAction,
-                status,
-                timestamp = new Date().valueOf()
+                let body = {
+                    target: destConn.id,
+                    type: task.meta.src_type,
+                    tables,
+                }
 
-            let body = {
-                target: destConn.id,
-                type: task.meta.src_type,
-                tables,
-            }
+                if (task.is_prepare_etl) {
+                    logName = $mxs_t('info.preparingMigrationScript')
+                    apiAction = prepare
+                    status = RUNNING
+                    body.create_mode = getters.getCreateMode(id)
+                } else {
+                    logName = $mxs_t('info.startingMigration')
+                    apiAction = start
+                    status = RUNNING
+                }
+                if (body.type === 'generic') body.catalog = $typy(srcConn, 'active_db').safeString
 
-            if (task.is_prepare_etl) {
-                logName = $mxs_t('info.preparingMigrationScript')
-                apiAction = prepare
-                status = RUNNING
-                body.create_mode = getters.getCreateMode(id)
+                EtlTask.update({
+                    where: id,
+                    data(obj) {
+                        obj.status = status
+                        delete obj.meta.async_query_id
+                    },
+                })
+                const [e, res] = await $helpers.to(apiAction({ id: srcConn.id, body }))
+                if (e) {
+                    status = ERROR
+                    logName = `${$mxs_t(
+                        'errors.failedToPrepareMigrationScript'
+                    )} ${$helpers.getErrorsArr(e).join('. ')}`
+                }
+                const queryId = $typy(res, 'data.data.id').safeString
+                EtlTask.update({
+                    where: id,
+                    data(obj) {
+                        obj.status = status
+                        if (!e) obj.meta.async_query_id = queryId // Persist query id
+                    },
+                })
+                dispatch('pushLog', { id, log: { timestamp, name: logName } })
+                if (queryId) await dispatch('getEtlCallRes', id)
             } else {
-                logName = $mxs_t('info.startingMigration')
-                apiAction = start
-                status = RUNNING
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: ['Connection expired, please reconnect.'],
+                        type: 'error',
+                    },
+                    { root: true }
+                )
             }
-            if (body.type === 'generic') body.catalog = $typy(srcConn, 'active_db').safeString
-
-            EtlTask.update({
-                where: id,
-                data(obj) {
-                    obj.status = status
-                    delete obj.meta.async_query_id
-                },
-            })
-            const [e, res] = await $helpers.to(apiAction({ id: srcConn.id, body }))
-            if (e) {
-                status = ERROR
-                logName = `${$mxs_t(
-                    'errors.failedToPrepareMigrationScript'
-                )} ${$helpers.getErrorsArr(e).join('. ')}`
-            }
-            const queryId = $typy(res, 'data.data.id').safeString
-            EtlTask.update({
-                where: id,
-                data(obj) {
-                    obj.status = status
-                    if (!e) obj.meta.async_query_id = queryId // Persist query id
-                },
-            })
-            dispatch('pushLog', { id, log: { timestamp, name: logName } })
-            if (queryId) await dispatch('getEtlCallRes', id)
         },
         /**
          * @param {String} id - etl task id
