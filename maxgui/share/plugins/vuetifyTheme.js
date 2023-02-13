@@ -26,6 +26,7 @@ export default {
             navigation: '#424F62',
             ['deep-ocean']: '#003545',
             ['blue-azure']: '#0e6488',
+            ['grayed-out']: '#a6a4a6',
         },
     },
 }

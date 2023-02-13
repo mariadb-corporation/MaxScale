@@ -11,20 +11,35 @@
                     v-for="(card, i) in cards"
                     :key="i"
                     outlined
-                    class="px-2 rounded-lg task-card relative ma-2"
+                    class="ma-2 px-2 rounded-lg task-card relative"
+                    :class="{ 'mxs-color-helper all-border-separator': card.disabled }"
                     height="90"
                     width="225"
+                    :disabled="card.disabled"
                     @click="card.click"
                 >
-                    <v-card-title
-                        class="pa-0 fill-height justify-center align-center card-title font-weight-regular mxs-color-helper text-primary"
+                    <div
+                        class="d-flex fill-height align-center justify-center mxs-color-helper card-title"
+                        :class="card.disabled ? 'text-grayed-out' : 'text-primary'"
                     >
-                        <v-icon :size="card.iconSize" color="primary" class="mr-4">
+                        <v-icon
+                            :size="card.iconSize"
+                            :color="card.disabled ? 'grayed-out' : 'primary'"
+                            class="mr-4"
+                        >
                             {{ card.icon }}
                         </v-icon>
-                        {{ card.text }}
-                    </v-card-title>
+                        <div class="d-flex flex-column">
+                            {{ card.title }}
+                            <span class="card-subtitle font-weight-medium">
+                                {{ card.subtitle }}
+                            </span>
+                        </div>
+                    </div>
                 </v-card>
+            </v-col>
+            <v-col cols="12" class="d-flex justify-center pa-0">
+                <slot name="blank-worksheet-task-cards-bottom" />
             </v-col>
         </v-row>
         <v-row v-if="hasEtlTasks" justify="center">
@@ -54,13 +69,12 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import EtlTasks from '@wkeComps/BlankWke/EtlTasks.vue'
-import { mapMutations, mapState } from 'vuex'
-
 export default {
     name: 'blank-wke',
     components: { EtlTasks },
     props: {
         ctrDim: { type: Object, required: true },
+        cards: { type: Array, required: true },
     },
     data() {
         return {
@@ -68,30 +82,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({ MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES }),
-        cards() {
-            return [
-                {
-                    text: this.$mxs_t('runQueries'),
-                    icon: '$vuetify.icons.mxs_workspace',
-                    iconSize: 26,
-                    click: () => this.SET_IS_CONN_DLG_OPENED(true),
-                },
-                {
-                    text: this.$mxs_t('dataMigration'),
-                    icon: '$vuetify.icons.mxs_dataMigration',
-                    iconSize: 32,
-                    click: () =>
-                        this.SET_MIGR_DLG({ type: this.MIGR_DLG_TYPES.CREATE, is_opened: true }),
-                },
-                /*  {
-                    text: this.$mxs_t('createAnErd'),
-                    icon: '$vuetify.icons.mxs_erd',
-                    iconSize: 32,
-                    click: () => null,
-                }, */
-            ]
-        },
         migrationTaskTblHeight() {
             return this.ctrDim.height - this.taskCardCtrHeight - 12 - 24 - 80 // minus grid padding
         },
@@ -103,10 +93,6 @@ export default {
         this.setTaskCardCtrHeight()
     },
     methods: {
-        ...mapMutations({
-            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
-            SET_MIGR_DLG: 'mxsWorkspace/SET_MIGR_DLG',
-        }),
         setTaskCardCtrHeight() {
             const { height } = this.$refs.taskCardCtr.getBoundingClientRect()
             this.taskCardCtrHeight = height
@@ -124,6 +110,10 @@ export default {
 
             .card-title {
                 font-size: 1.125rem;
+                opacity: 1;
+                .card-subtitle {
+                    font-size: 0.75rem;
+                }
             }
         }
     }
