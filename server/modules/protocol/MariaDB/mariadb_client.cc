@@ -1847,7 +1847,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
         // this was being executed on the MainWorker.
 
         // Then move execution back to the original worker to keep all connections on the same thread
-        origin->call(
+        origin->execute(
             [this, info, ref, origin, cb = std::move(cb)]() {
             MXS_SESSION::Scope scope(m_session);
 
