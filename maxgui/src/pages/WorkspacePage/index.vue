@@ -27,6 +27,8 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsModels/Worksheet'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
 import { mapState, mapMutations } from 'vuex'
@@ -85,35 +87,25 @@ export default {
                     case '/login':
                         this.leavePage()
                         break
-                    case '/404':
-                        this.cancelLeave()
-                        QueryConn.dispatch('validateConns')
-                        break
                     default:
                         this.shouldDelAll = true
                         this.isConfDlgOpened = true
                 }
         }
     },
-    watch: {
-        allConns: {
-            deep: true,
-            immediate: true,
-            handler(v) {
-                this.SET_CONNS_TO_BE_VALIDATED(v)
-            },
-        },
-    },
     async beforeCreate() {
         await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
+        // Set baseURL: '/' to all worksheets as maxgui and maxscale API are on the same domain
+        Worksheet.all().forEach(wke => {
+            WorksheetTmp.update({ where: wke.id, data: { request_config: { baseURL: '/' } } })
+        })
         await QueryConn.dispatch('validateConns')
     },
     methods: {
         ...mapMutations({
             SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
-            SET_CONNS_TO_BE_VALIDATED: 'mxsWorkspace/SET_CONNS_TO_BE_VALIDATED',
         }),
         async onLeave() {
             if (this.shouldDelAll) await QueryConn.dispatch('disconnectAll')

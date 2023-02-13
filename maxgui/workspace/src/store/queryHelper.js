@@ -399,14 +399,13 @@ function filterEntity(entity, payload) {
  *
  * @param {Object} apiConnMap - connections from API mapped by id
  * @param {Array} persistentConns - current persistent connections
- * @returns {Object} - { alive_conns: [], expired_conn_ids: [], orphaned_conn_ids: [] }
+ * @returns {Object} - { alive_conns: [], orphaned_conn_ids: [] }
  * alive_conns: stores connections that exists in the response of a GET to /sql/
  * orphaned_conn_ids: When QueryEditor connection expires but its cloned connections (query tabs)
  * are still alive, those are orphaned connections
  */
-function categorizeSqlConns({ apiConnMap, persistentConns }) {
+function categorizeConns({ apiConnMap, persistentConns }) {
     let alive_conns = [],
-        expired_conn_ids = [],
         orphaned_conn_ids = []
 
     persistentConns.forEach(conn => {
@@ -421,10 +420,10 @@ function categorizeSqlConns({ apiConnMap, persistentConns }) {
                     // update attributes
                     attributes: apiConnMap[connId].attributes,
                 })
-        } else expired_conn_ids.push(connId)
+        }
     })
 
-    return { alive_conns, expired_conn_ids, orphaned_conn_ids }
+    return { alive_conns, orphaned_conn_ids }
 }
 /**
  * @param {String} param.driver
@@ -460,7 +459,7 @@ export default {
     getAlterTblOptsSQL,
     getAlterColsOptsSQL,
     filterEntity,
-    categorizeSqlConns,
+    categorizeConns,
     genConnStr,
     getDatabase,
 }

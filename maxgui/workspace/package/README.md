@@ -251,14 +251,40 @@ export default {
         await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
-        this.SET_CONNS_TO_BE_VALIDATED(this.allConns)
+        this.initApis()
         await models.QueryConn.dispatch('validateConns')
     },
     methods: {
         ...mapMutations({
             SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
-            SET_CONNS_TO_BE_VALIDATED: 'mxsWorkspace/SET_CONNS_TO_BE_VALIDATED',
         }),
+        /**
+         * When the workspace UI is used with multiple MaxScales, the base URL is dynamic,
+         * therefore, to make it work properly, use the `WorksheetTmp` model for
+         * setting axios request config. The `WorksheetTmp` model is stored in memory
+         * so your auth token can be secured.
+         */
+        initApis(){
+            models.Worksheet.all().forEach(worksheet => {
+            /**
+             * If a worksheet is not yet connected to any MaxScales, you must skip the update
+             * otherwise it'll use the root url as the baseURL for validating alive connections.
+             */
+            models.WorksheetTmp.update({
+                where: worksheet.id,
+                data: {
+                    // [request-config](https://github.com/axios/axios#request-config)
+                    request_config: {
+                        withCredentials: true,
+                        baseURL: 'MAXSCALE API URL',
+                        headers: {
+                            Authorization: 'Bearer TOKEN',
+                        },
+                    },
+                },
+            })
+        })
+        }
         async onLeave() {
             if (this.shouldDelAll) await models.QueryConn.dispatch('disconnectAll')
             this.leavePage()
@@ -317,40 +343,6 @@ module.exports = {
     },
 }
 ```
-
-## Config the workspace to work with multiple MaxScales
-
-When the workspace is used with multiple MaxScales, the base URL is dynamic,
-therefore, to make it work properly, use the `WorksheetTmp` model for
-setting axios request config:
-
-```vue
-<script>
-import { models } from 'mxs-workspace'
-export default {
-    name: 'maxscale-workspace',
-    async created() {
-        models.Worksheets.all().forEach(worksheet => {
-            models.WorksheetTmp.update({
-                where: worksheet.id,
-                data: {
-                    // Check [axios documentation](https://github.com/axios/axios#request-config) for available options
-                    axios_opt: {
-                        withCredentials: true,
-                        baseURL: 'MAXSCALE API URL',
-                        headers: {
-                            Authorization: 'Bearer TOKEN',
-                        },
-                    },
-                },
-            })
-        })
-    },
-}
-</script>
-```
-
-The `WorksheetTmp` model is stored in memory so your auth token can be secured.
 
 ## Reserved keywords
 

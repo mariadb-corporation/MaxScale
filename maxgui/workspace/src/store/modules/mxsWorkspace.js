@@ -24,10 +24,6 @@ export default {
         etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
         is_conn_dlg_opened: false, // control showing connection dialog
-        /* SkySQL has multiple maxscales, so this state keeps the connections of
-         * a maxscale. It'll be used for comparing the result of `/sql` endpoint.
-         */
-        conns_to_be_validated: [],
     },
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
@@ -41,9 +37,6 @@ export default {
         },
         SET_IS_CONN_DLG_OPENED(state, payload) {
             state.is_conn_dlg_opened = payload
-        },
-        SET_CONNS_TO_BE_VALIDATED(state, payload) {
-            state.conns_to_be_validated = payload
         },
     },
     actions: {
