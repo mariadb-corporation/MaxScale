@@ -180,9 +180,8 @@ export default {
                     let rscType = this.resourceTypes[0] // use the first one as default
                     if (this.pre_select_conn_rsrc) rscType = this.pre_select_conn_rsrc.type
                     this.resourceType = rscType
-                } // reset to initial state and bind this context
-                else {
-                    Object.assign(this.$data, this.$options.data.apply(this))
+                } else {
+                    this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
                     this.SET_PRE_SELECT_CONN_RSRC(null)
                 }
             },
