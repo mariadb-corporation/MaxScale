@@ -14,6 +14,8 @@
   replication connection on a previous replica, Slave_Pos is used. When starting
   a new replication connection on a previous primary, Current_Pos is used.
 
+* Create-Backup and Restore-From-Backup commands added to MariaDBMonitor.
+
 * The `csmon` and `auroramon` monitors that were deprecated in 22.08.2
   have been removed.
 
@@ -35,8 +37,6 @@
   ODBC data sources into MariaDB servers. For more information on the
   new API functions, refer to the SQL resource
   [documentation](./REST-API/Resources-SQL.md#prepare-etl-operation).
-
-* Create-Backup Restore-From-Backup
 
 * The number of routing threads MaxScale uses can now be changed at runtime.
 
