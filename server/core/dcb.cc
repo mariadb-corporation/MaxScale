@@ -722,36 +722,8 @@ bool DCB::writeq_append(GWBUF&& data)
 
     // This can be slow in a situation where data is queued faster than it can be sent.
     m_writeq.merge_back(move(data));
-    bool rval = false;
 
-    if (write_parameter_check())
-    {
-        m_stats.n_buffered++;
-        writeq_drain();
-
-        if (m_high_water > 0 && m_writeq.length() > m_high_water && !m_high_water_reached)
-        {
-            call_callback(Reason::HIGH_WATER);
-            m_high_water_reached = true;
-            m_stats.n_high_water++;
-        }
-        rval = true;
-    }
-    return rval;
-}
-
-/**
- * Check the parameters for dcb_write
- *
- * @return true if parameters acceptable, false otherwise
- */
-bool DCB::write_parameter_check()
-{
-    if (m_fd == DCB::FD_CLOSED)
-    {
-        MXB_ERROR("Write failed, dcb is closed.");
-        return false;
-    }
+    mxb_assert_message(m_fd != DCB::FD_CLOSED, "Trying to write to closed socket.");
 
     if (!m_session || m_session->state() != MXS_SESSION::State::STOPPING)
     {
@@ -763,15 +735,19 @@ bool DCB::write_parameter_check()
          * before router's closeSession is called and that tells that DCB may
          * still be writable.
          */
-        if (m_state != DCB::State::CREATED && m_state != DCB::State::POLLING
-            && m_state != DCB::State::NOPOLLING)
-        {
-            MXB_DEBUG("Write aborted to dcb %p because it is in state %s",
-                      this, mxs::to_string(m_state));
-            return false;
-        }
+        mxb_assert(m_state != DCB::State::DISCONNECTED);
     }
-    return true;
+
+    m_stats.n_buffered++;
+    writeq_drain();
+
+    if (m_high_water > 0 && m_writeq.length() > m_high_water && !m_high_water_reached)
+    {
+        call_callback(Reason::HIGH_WATER);
+        m_high_water_reached = true;
+        m_stats.n_high_water++;
+    }
+    return true;    // Propagate this change to callers once it's clear the asserts are not hit.
 }
 
 void DCB::writeq_drain()
