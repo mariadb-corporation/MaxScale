@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <mutex>
+#include <vector>
 #include <maxbase/assert.h>
 #include <maxbase/log.h>
 #include <maxbase/string.hh>
@@ -297,17 +298,17 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 
     if (events & EPOLLIN)
     {
-        Message message;
-
+        std::vector<Message> messages;
         ssize_t n;
 
         do
         {
+            Message message;
             n = read(m_read_fd, &message, sizeof(message));
 
             if (n == sizeof(message))
             {
-                m_handler.handle_message(*this, message);
+                messages.push_back(std::move(message));
             }
             else if (n == -1)
             {
@@ -332,6 +333,11 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
         while ((n != 0) && (n != -1));
 
         rc = MXB_POLL_READ;
+
+        for (const auto& message : messages)
+        {
+            m_handler.handle_message(*this, message);
+        }
     }
 
     return rc;
