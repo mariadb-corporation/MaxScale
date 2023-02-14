@@ -187,6 +187,9 @@
       },
       {
         "name": "caching_tools"
+      },
+      {
+        "name" : "binutils"
       }
     ]
   },
