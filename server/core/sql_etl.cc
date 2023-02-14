@@ -520,7 +520,7 @@ SELECT
   STRING_AGG(
     '  ' ||
     CASE
-    WHEN LOWER(data_type) IN ('point', 'path', 'polygon', 'geometry')
+    WHEN LOWER(data_type) IN ('point', 'path', 'polygon') OR LOWER(udt_name) IN ('geometry')
       THEN 'ST_AsText(CAST(' || QUOTE_IDENT(column_name) || ' AS GEOMETRY)) ' || QUOTE_IDENT(column_name)
     WHEN LOWER(udt_name) IN ('hstore')
       THEN 'hstore_to_json_loose(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
@@ -549,7 +549,14 @@ GROUP BY table_schema, table_name;
 SELECT
   E'INSERT INTO `%s`.`%s` (\n' ||
   STRING_AGG( '  `' || column_name || '`', E',\n' ORDER BY ordinal_position)
-  || E'\n) VALUES (' || STRING_AGG('?', ',') || ')'
+  || E'\n) VALUES (' || STRING_AGG(
+    CASE
+    WHEN LOWER(data_type) IN ('point', 'path', 'polygon') OR LOWER(udt_name) IN ('geometry')
+      THEN 'ST_GeomFromText(?)'
+    ELSE
+      '?'
+    END
+    , ', ') || ')'
 FROM information_schema.columns
 WHERE table_schema = '%s' AND table_name = '%s' AND is_generated = 'NEVER'
 GROUP BY table_schema, table_name;

@@ -202,6 +202,9 @@ to prevent the driver from consuming too much memory.
 * All indexes specific to PostgreSQL will be converted into normal indexes in
   MariaDB.
 
+* The `GEOMETRY` type is assumed to be the type provided by PostGIS. It is
+  converted into a MariaDB `GEOMETRY` type and is extracted using `ST_AsText`.
+
 ## ETL Limitations with Generic ODBC Targets
 
 It is the responsibility of the end-user to correctly configure the ODBC

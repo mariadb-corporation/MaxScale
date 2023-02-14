@@ -109,18 +109,28 @@ void reuse_connections(TestConnections& test, EtlTest& etl, const std::string& d
                 && source.query("INSERT INTO test.reuse_connections SELECT seq FROM seq_0_to_100"),
                 "Failed to create test data");
 
-    auto [ok, res] = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
-                                 {EtlTable {"test", "reuse_connections"}},
-                                 EtlTest::Mode::REPLACE, 50);
+    auto job = etl.prepare_etl(dsn, "server4", "mariadb", 15s,
+                               {EtlTable {"test", "reuse_connections"}},
+                               EtlTest::Mode::REPLACE);
 
-    test.expect(ok, "ETL failed: %s", res.to_string().c_str());
-    etl.compare_results(dsn, 3, "SELECT COUNT* FROM test.reuse_connections");
+    for (int i = 0; i < 50; i++)
+    {
+        etl.start_etl(job, EtlTest::Op::START);
+        etl.wait_for_etl(job, 15s);
 
-    source.query("DROP TABLE test.etl_sanity_check");
+        bool ok = false;
+        job.response.at("data/attributes/results").try_get_bool("ok", &ok);
+        test.expect(ok, "ETL failed: %s", job.response.to_string().c_str());
+        etl.compare_results(dsn, 3, "SELECT COUNT* FROM test.reuse_connections");
+    }
+
+    etl.stop_etl(job);
+
+    source.query("DROP TABLE test.reuse_connections");
 
     auto dest = test.repl->get_connection(3);
     dest.connect();
-    dest.query("DROP TABLE test.etl_sanity_check");
+    dest.query("DROP TABLE test.reuse_connections");
 }
 
 void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
@@ -213,6 +223,40 @@ void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
     dest.query("DROP TABLE test.masive_result");
 }
 
+void cancel_etl(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    etl.check_odbc_result(dsn, "CREATE TABLE test.cancel_etl(id INT)");
+    std::string sql = "INSERT INTO test.cancel_etl VALUES (1)";
+
+    for (int i = 0; i < 300; i++)
+    {
+        sql += ",(1)";
+    }
+
+    etl.check_odbc_result(dsn, sql);
+
+    const char* INSERT = "INSERT INTO test.cancel_etl(id) VALUES (SLEEP(?))";
+    auto job = etl.prepare_etl(dsn, "server4", "mariadb", 15s,
+                               {EtlTable {"test", "cancel_etl", "", "", INSERT}},
+                               EtlTest::Mode::NORMAL);
+
+    etl.start_etl(job, EtlTest::Op::START);
+
+    // Wait for a few seconds and then cancel the ETL
+    sleep(3);
+    etl.cancel_etl(job);
+
+    etl.wait_for_etl(job, 15s);
+
+    bool ok = false;
+    job.response.at("data/attributes/results").try_get_bool("ok", &ok);
+    test.expect(!ok, "ETL should fail: %s", job.response.to_string().c_str());
+
+    etl.stop_etl(job);
+    etl.query_odbc(dsn, "DROP TABLE test.cancel_etl");
+    etl.query_native("server4", "DROP TABLE test.cancel_etl");
+}
+
 void test_main(TestConnections& test)
 {
     EtlTest etl(test);
@@ -232,6 +276,7 @@ void test_main(TestConnections& test)
         TESTCASE(test_datatypes),
         TESTCASE(test_parallel_datatypes),
         TESTCASE(massive_result),
+        TESTCASE(cancel_etl),
     };
 
     etl.run_tests(ss.str(), test_cases);

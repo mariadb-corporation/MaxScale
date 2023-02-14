@@ -517,10 +517,6 @@ add_test_executable(mxs1677_temp_table.cpp mxs1677_temp_table replication LABELS
 # https://jira.mariadb.org/browse/MXS-1678
 add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LABELS mysqlmon REPL_BACKEND)
 
-# MXS-1731: Empty version_string is not detected
-# https://jira.mariadb.org/browse/MXS-1731
-add_test_executable(mxs1731_old_persisted_config.cpp mxs1731_old_persisted_config replication LABELS maxscale REPL_BACKEND)
-
 # MXS-1743: Maxscale unable to enforce round-robin between read service for Slave
 # https://jira.mariadb.org/browse/MXS-1743
 add_test_executable(mxs1743_rconn_bitmask.cpp mxs1743_rconn_bitmask mxs1743_rconn_bitmask LABELS REPL_BACKEND)

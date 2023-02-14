@@ -31,7 +31,39 @@ Was deprecated in 22.08.2.
 
 ## New Features
 
-### [MXS-2709](https://jira.mariadb.org/browse/MXS-2709) ETL/Data Migration Service
+### REST-API
+
+#### ODBC Type SQL Connections
+
+The `POST /sql` REST-API endpoint can now use an ODBC driver to connect to an
+external data source. To make the use of these new ODBC connections easier, a
+new endpoint for canceling active queries was added. The `POST /sql/:id/cancel`
+endpoint will interrupt the ongoing operation on the given connection.
+
+For more information on how ODBC type connections differ from native MariaDB
+connections, refer to the SQL resource
+[documentation](./REST-API/Resources-SQL.md#open-sql-connection-to-server).
+
+#### Asynchronous Query API
+
+The `POST /sql/:id/queries` now supports the `async=true` request option. When
+enabled, the results of the query will be delivered asynchronously via the newly
+added `GET /sql/:id/queries/:query_id` endpoint.
+
+To make the use of the API easier, the latest asynchronous query result can be
+retrieved multiple times. Results can also be explicitly discarded with the new
+`DELETE /sql/:id/queries/:query_id` endpoint.
+
+#### [MXS-2709](https://jira.mariadb.org/browse/MXS-2709) ETL/Data Migration Service
+
+The newly added ODBC type connections can be used with the new `/sql/:id/etl`
+endpoints to perform data migration operations from external ODBC data sources
+into MariaDB. The initial version supports MariaDB-to-MariaDB and
+PostgreSQL-to-MariaDB migrations as well as generic migrations done via the ODBC
+catalog functions.
+
+For more information on the new API functions, refer to the SQL resource
+[documentation](./REST-API/Resources-SQL.md#prepare-etl-operation).
 
 ### [MXS-3003](https://jira.mariadb.org/browse/MXS-3003) Support inbound proxy protocol
 
