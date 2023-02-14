@@ -96,9 +96,6 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
         mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET @@session.autocommit=1;");
     }
 
-    char yes = 1;
-    mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
-
     auto ssl = server->ssl_config();
     MYSQL* mysql = mxs_mysql_real_connect(con, server->address(), port, user, passwd, ssl);
 
