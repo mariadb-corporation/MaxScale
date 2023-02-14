@@ -3,6 +3,7 @@
         :title="$mxs_t('confirmations.leavePage')"
         saveText="confirm"
         minBodyWidth="624px"
+        :onSave="onConfirm"
         v-bind="{ ...$attrs }"
         v-on="$listeners"
     >
@@ -38,26 +39,20 @@
  */
 /*
  * Events
- * update:shouldDelAll?: (boolean)
+ * on-confirm: (confirmDelAll) (boolean):
  */
 export default {
     name: 'confirm-leave-dlg',
     inheritAttrs: false,
-    props: {
-        shouldDelAll: {
-            required: true,
-            validator: prop => typeof prop === 'boolean' || prop === null,
-            default: true,
-        }, // sync prop
+
+    data() {
+        return {
+            confirmDelAll: true,
+        }
     },
-    computed: {
-        confirmDelAll: {
-            get() {
-                return this.shouldDelAll
-            },
-            set(value) {
-                this.$emit('update:shouldDelAll', value)
-            },
+    methods: {
+        onConfirm() {
+            this.$emit('on-confirm', this.confirmDelAll)
         },
     },
 }

@@ -3,8 +3,7 @@
         <mxs-workspace />
         <confirm-leave-dlg
             v-model="isConfDlgOpened"
-            :onSave="onLeave"
-            :shouldDelAll.sync="shouldDelAll"
+            @on-confirm="onConfirm"
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         />
@@ -42,7 +41,6 @@ export default {
     data() {
         return {
             isConfDlgOpened: false,
-            shouldDelAll: true,
             to: '',
         }
     },
@@ -78,7 +76,6 @@ export default {
                         this.leavePage()
                         break
                     default:
-                        this.shouldDelAll = true
                         this.isConfDlgOpened = true
                 }
         }
@@ -97,8 +94,8 @@ export default {
         ...mapMutations({
             SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
         }),
-        async onLeave() {
-            if (this.shouldDelAll) await QueryConn.dispatch('disconnectAll')
+        async onConfirm(shouldDelAll) {
+            if (shouldDelAll) await QueryConn.dispatch('disconnectAll')
             this.leavePage()
         },
         leavePage() {
