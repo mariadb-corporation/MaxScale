@@ -42,6 +42,7 @@
  */
 export default {
     name: 'confirm-leave-dlg',
+    inheritAttrs: false,
     props: {
         shouldDelAll: {
             required: true,

@@ -38,7 +38,7 @@
                     </keep-alive>
                 </template>
             </template>
-            <migr-dlg />
+            <migr-delete-dlg />
             <reconn-dlg-ctr />
         </div>
     </div>
@@ -65,7 +65,7 @@ import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke'
 import QueryEditor from '@wkeComps/QueryEditor'
 import DataMigration from '@wkeComps/DataMigration'
-import MigrDlg from '@wkeComps/BlankWke/MigrDlg.vue'
+import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
@@ -74,7 +74,7 @@ export default {
     components: {
         WkeNavCtr,
         BlankWke,
-        MigrDlg,
+        MigrDeleteDlg,
         QueryEditor,
         DataMigration,
         ReconnDlgCtr,

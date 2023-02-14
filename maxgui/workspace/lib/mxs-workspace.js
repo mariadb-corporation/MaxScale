@@ -21,10 +21,11 @@ import logger from '@share/plugins/logger'
 import scopingI18n from '@share/plugins/scopingI18n'
 import txtHighlighter from '@share/plugins/txtHighlighter'
 
-//TODO: Add more if needed
 export { default as ConfirmLeaveDlg } from '@wsComps/ConfirmLeaveDlg.vue'
+export { default as MigrCreateDlg } from '@wkeComps/DataMigration/MigrCreateDlg.vue'
 export { default as workspaceStorePlugins } from '@wsSrc/store/plugins/index'
 export { default as models } from '@wsModels'
+
 export default /*#__PURE__*/ (() => {
     // Get component instance
     const installable = MxsWorkspace
