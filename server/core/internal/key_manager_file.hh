@@ -75,7 +75,6 @@ private:
         }
 
         std::string keyfile;
-        int64_t     id;
     };
 
     FileKey(std::map<std::string, std::vector<uint8_t>> keys)
@@ -99,7 +98,6 @@ private:
         {
             bool error = false;
             mxb::trim(str);
-            std::string id = std::to_string(config.id);
 
             for (auto line : mxb::strtok(str, "\n"))
             {
