@@ -360,9 +360,11 @@ export default {
         },
         genNodeOpts(node) {
             const baseOpts = this.baseOptsMap[node.type]
-            return node.isSys
-                ? baseOpts
-                : [...baseOpts, { divider: true }, ...this.genUserNodeOpts(node)]
+            let opts = baseOpts
+            if (node.isSys) return opts
+            const userNodeOpts = this.genUserNodeOpts(node)
+            if (userNodeOpts.length) opts = [...opts, { divider: true }, ...userNodeOpts]
+            return opts
         },
         /**
          * Both INSERT and CLIPBOARD types have same options.
