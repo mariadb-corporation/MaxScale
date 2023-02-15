@@ -67,7 +67,7 @@ export default {
             return QueryTab.getters('getActiveQueryTabs')
         },
         isLoadingQueryResult() {
-            return QueryResult.getters('getLoadingQueryResultByQueryTabId')(this.queryTab.id)
+            return QueryResult.getters('getIsLoading')(this.queryTab.id)
         },
         isQueryTabConnBusy() {
             return QueryConn.getters('getIsQueryTabConnBusyByQueryTabId')(this.queryTab.id)

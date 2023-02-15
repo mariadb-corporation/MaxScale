@@ -70,7 +70,10 @@ Vue.use(Vuetify)
 Vue.use(MxsWorkspace, {
     store: require('./store/index').default,
     i18n: require('@/plugins/i18n').default,
-    // a list of component name to be hidden
+    /**
+     * a list of component name to be hidden, for now, only
+     * `wke-nav-ctr` is a valid option.
+     */
     hidden_comp: ['wke-nav-ctr'],
 })
 
@@ -173,14 +176,84 @@ export default new Vuex.Store({
 })
 ```
 
-## Use `mxs-workspace` and its sub components
+## Webpack config
+
+The workspace internally uses [monaco-editor](https://github.com/microsoft/monaco-editor)
+and it requires configuration steps from webpack.
+
+```js
+//vue.config.js
+const monacoConfig = require('mxs-workspace/dist/buildConfig/monaco.js')
+module.exports = {
+    chainWebpack: config => {
+        config
+            .plugin('MonacoWebpackPlugin')
+            .use(require('monaco-editor-webpack-plugin'), [monacoConfig])
+    },
+}
+```
+
+## Components props, slots, events
+
+### mxs-workspace
+
+This component is registered globally.
+
+#### Props
+
+| Name                  |  Type   | Default |              Description              |
+| --------------------- | :-----: | :-----: | :-----------------------------------: |
+| disableRunQueries     | boolean |  false  |    Disable the "Run Queries" task     |
+| disableDataMigration  | boolean |  false  |   Disable the "Data Migration" task   |
+| runQueriesSubtitle    | string  |   ''    |  Subtitle of the "Run Queries" task   |
+| dataMigrationSubtitle | string  |   ''    | Subtitle of the "Data Migration" task |
+
+#### Slots
+
+| Name                              |                   Description                   |
+| --------------------------------- | :---------------------------------------------: |
+| blank-worksheet-task-cards-bottom |            Slot below the task cards            |
+| query-tab-nav-toolbar-right       | Slot in the right side of the query tab toolbar |
+
+### ConfirmLeaveDlg
+
+Built-in dialog component to prompt users when they attempt to leave a page with
+open connections.
+
+#### Props
+
+| Name  |  Type   | Default |                         Description                         |
+| ----- | :-----: | :-----: | :---------------------------------------------------------: |
+| value | boolean |  false  | Controls whether the dialog is visible or hidden. (v-model) |
+
+#### Events
+
+| Name       | Parameter             |                      Description                      |
+| ---------- | --------------------- | :---------------------------------------------------: |
+| on-confirm | confirmDelAll:boolean | Event that fires when clicking the "Confirm" button.  |
+| on-close   |                       | Event that fires when clicking the close icon button. |
+| on-cancel  |                       |  Event that fires when clicking the "Cancel" button.  |
+
+### MigrCreateDlg
+
+Built-in dialog component for creating a migration task.
+
+#### Props
+
+| Name       |   Type   | Required |                     Description                     |
+| ---------- | :------: | :------: | :-------------------------------------------------: |
+| handleSave | function |   true   | Event that fires when clicking the "Create" button. |
+
+#### Slots
+
+| Name         |            Description             |
+| ------------ | :--------------------------------: |
+| form-prepend | Slot above the built-in name input |
+
+## Example of using the `mxs-workspace` and its sub components
 
 The `mxs-workspace` component is registered at global scope, so it can be used
 without importing.
-
-If the `hidden_comp` option is provided when registering the plugin,
-the components in the list won't be rendered. e.g. `hidden_comp: ['wke-nav-ctr']`.
-For now, only `wke-nav-ctr` will be applied.
 
 Certain components can be manually imported and placed somewhere else outside
 the `mxs-workspace` component. At the moment, the following components in the below
@@ -192,30 +265,34 @@ example are importable.
         <mxs-workspace />
         <confirm-leave-dlg
             v-model="isConfDlgOpened"
-            :onSave="onLeave"
-            :shouldDelAll.sync="shouldDelAll"
+            @on-confirm="onConfirm"
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         />
         <conn-dlg v-model="isConnDlgOpened" :handleSave="handleOpenConn" />
+        <migr-create-dlg :handleSave="createEtlTask">
+            <template v-slot:form-prepend>
+                <!-- Add other input here. e.g. Input to determine MaxScale API. -->
+            </template>
+        </migr-create-dlg>
     </div>
 </template>
 
 <script>
 import ConnDlg from '@components/ConnDlgCtr.vue'
-import { models, ConfirmLeaveDlg } from 'mxs-workspace'
+import { models, ConfirmLeaveDlg, MigrCreateDlg } from 'mxs-workspace'
 import { mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'maxscale-workspace',
     components: {
-        ConfirmLeaveDlg, // built-in confirmation on leave dialog
         ConnDlg,
+        ConfirmLeaveDlg,
+        MigrCreateDlg,
     },
     data() {
         return {
             isConfDlgOpened: false,
-            shouldDelAll: true,
             to: '',
         }
     },
@@ -241,26 +318,38 @@ export default {
         } else {
             this.to = to
             if (this.allConns.length === 0) this.leavePage()
-            else {
-                this.shouldDelAll = true
-                this.isConfDlgOpened = true
-            }
+            else this.isConfDlgOpened = true
         }
     },
     async beforeCreate() {
         await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
-        this.SET_CONNS_TO_BE_VALIDATED(this.allConns)
+        this.initApis()
         await models.QueryConn.dispatch('validateConns')
     },
     methods: {
         ...mapMutations({
             SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
-            SET_CONNS_TO_BE_VALIDATED: 'mxsWorkspace/SET_CONNS_TO_BE_VALIDATED',
         }),
-        async onLeave() {
-            if (this.shouldDelAll) await models.QueryConn.dispatch('disconnectAll')
+        /**
+         * When the workspace UI is used with multiple MaxScales, the base URL is dynamic,
+         * therefore, to make it work properly, use the `WorksheetTmp` model for
+         * setting axios request config. The `WorksheetTmp` model is stored in memory
+         * so your auth token can be secured.
+         */
+        initApis() {
+            models.Worksheet.all().forEach(worksheet => {
+                /**
+                 * If a worksheet is not yet connected to any MaxScales, you must skip the below method
+                 * otherwise it'll use the root url as the baseURL for validating alive connections.
+                 */
+                setRequestConfig(worksheet.id)
+            })
+        },
+        async onConfirm(shouldDelAll) {
+            // Connection cleans up
+            if (shouldDelAll) await models.QueryConn.dispatch('disconnectAll')
             this.leavePage()
         },
         leavePage() {
@@ -269,13 +358,34 @@ export default {
         cancelLeave() {
             this.to = null
         },
+        setRequestConfig(worksheetId) {
+            models.WorksheetTmp.update({
+                where: worksheetId,
+                data: {
+                    // [request-config](https://github.com/axios/axios#request-config)
+                    request_config: {
+                        withCredentials: true,
+                        baseURL: 'MAXSCALE API URL',
+                        headers: {
+                            Authorization: 'Bearer TOKEN',
+                        },
+                    },
+                },
+            })
+        },
         /**
-         * @param {Object} params.body - https://github.com/mariadb-corporation/MaxScale/blob/22.08/Documentation/REST-API/Resources-SQL.md#open-sql-connection-to-server
+         * https://github.com/mariadb-corporation/MaxScale/blob/22.08/Documentation/REST-API/Resources-SQL.md#open-sql-connection-to-server
+         * @param {Object} params.body
          * @param {Object} params.meta - extra info about the connection.
          * @param {String} params.meta.name - connection name.
          */
         async handleOpenConn(params) {
+            this.setRequestConfig(models.Worksheet.getters('getActiveWkeId'))
             await models.QueryConn.dispatch('openQueryEditorConn', params)
+        },
+        createEtlTask(name) {
+            this.setRequestConfig(models.Worksheet.getters('getActiveWkeId'))
+            models.EtlTask.dispatch('createEtlTask', name)
         },
     },
 }
@@ -287,92 +397,13 @@ export default {
 </style>
 ```
 
-## Connection cleans up
-
-This package does not automatically clean up the opened connection when the
-`mxs-workspace` component is destroyed. e.g. When leaving the page, the opened
-connections are kept.
-
-If all connections belong to one MaxScale, use the below vuex action to clear
-all connections:
-
-```js
-import { models } from 'mxs-workspace'
-
-await models.QueryConn.dispatch('disconnectAll')
-```
-
-If connections belongs to multiple MaxScale, use the below example to clear
-all connections of a MaxScale:
-
-```js
-import { models } from 'mxs-workspace'
-/**
- * When creating a connection via `models.QueryConn.dispatch('openQueryEditorConn', { body, meta })`,
- * The meta field can store information needed to identify which connections belong to which maxscale.
- * To delete all open connections from the workspace, group all connections belong to one maxscale and
- * delete one by one.
- */
-for (const { id = '' } of connections_of_a_maxscale) {
-    commit(
-        'mxsWorkspace/SET_AXIOS_OPTS',
-        {
-            baseURL: maxscale_API_URL,
-        },
-        { root: true }
-    )
-    await models.QueryConn.dispatch('cascadeDisconnect', { showSnackbar: false, id })
-}
-```
-
-## Build the editor
-
-The workspace internally uses [monaco-editor](https://github.com/microsoft/monaco-editor)
-and it requires configuration steps from webpack.
-
-```js
-//vue.config.js
-const monacoConfig = require('mxs-workspace/dist/buildConfig/monaco.js')
-module.exports = {
-    chainWebpack: config => {
-        config
-            .plugin('MonacoWebpackPlugin')
-            .use(require('monaco-editor-webpack-plugin'), [monacoConfig])
-    },
-}
-```
-
-## Change axios request config options
-
-Axios request config options can be changed at run time by committing the following
-mutation:
-
-```js
-store.commit('mxsWorkspace/SET_AXIOS_OPTS', options)
-```
-
-The provided config options will be merged with the current one which has the following default options:
-
-```js
-{
-    baseURL: '/',
-    headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-   },
-}
-```
-
-Check [axios documentation](https://github.com/axios/axios#request-config) for available options
-
 ## Reserved keywords
 
 Certain keywords are reserved in order to make the workspace work properly.
 
 | Keywords           |                         For                         |
 | ------------------ | :-------------------------------------------------: |
-| workspace          |                  i18n json locale                   |
+| mxs                |                  i18n json locale                   |
 | mxs_icon_name      | The workspace icons, they have `mxs_`as the prefix. |
 | mxs-component-name |    Global Vue components with`mxs-`as the prefix    |
 | mxs-workspace      |                Global Vue component                 |
@@ -380,10 +411,11 @@ Certain keywords are reserved in order to make the workspace work properly.
 | fileSysAccess      |                     Vuex module                     |
 | mxsApp             |                     Vuex module                     |
 | queryConnsMem      |                     Vuex module                     |
-| mxsWorkspace       |                     Vuex module                     |
 | prefAndStorage     |                     Vuex module                     |
+| mxsWorkspace       |                     Vuex module                     |
+| queryResultsMem    |                     Vuex module                     |
 | ORM                |                     Vuex module                     |
-| store.vue          |                     Vuex store                      |
+| store.vue          |      Vue.prototype is registered in Vuex store      |
 | \$mxs_t            |                Vue instance property                |
 | \$mxs_tc           |                Vue instance property                |
 | \$mxs_te           |                Vue instance property                |
@@ -394,6 +426,9 @@ Certain keywords are reserved in order to make the workspace work properly.
 | \$logger           |                Vue instance property                |
 
 ## How to publish the package
+
+There is an issue with the `rollup-plugin-monaco-editor` package regarding
+their [peer dependencies resolution](https://github.com/chengcyber/rollup-plugin-monaco-editor/issues/11). The workaround is to use `npm ci --force`.
 
 At the root directory that is `/maxgui`
 

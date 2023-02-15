@@ -167,9 +167,7 @@ export default {
             QueryResult.dispatch('clearDataPreview')
             QueryResult.update({
                 where: this.activeQueryTabId,
-                data: {
-                    curr_query_mode: query_mode,
-                },
+                data: { query_mode },
             })
             await QueryResult.dispatch('fetchPrvw', { qualified_name: qualified_name, query_mode })
         },

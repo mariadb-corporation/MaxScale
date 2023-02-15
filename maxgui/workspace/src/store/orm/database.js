@@ -24,6 +24,7 @@ import Worksheet from '@wsModels/Worksheet'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 // Store modules
 import editors from '@wsSrc/store/orm/modules/editors'
 import etlTasks from '@wsSrc/store/orm/modules/etlTasks'
@@ -46,5 +47,6 @@ database.register(Worksheet, worksheets)
 database.register(EtlTaskTmp)
 database.register(QueryTabTmp)
 database.register(QueryEditorTmp)
+database.register(WorksheetTmp)
 
 export default database

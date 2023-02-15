@@ -21,7 +21,7 @@ import {
 import { lodash, to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { getObjectRows } from '@wsSrc/utils/helpers'
-import { query } from '@wsSrc/api/query'
+import queries from '@wsSrc/api/queries'
 
 /**
  * @public
@@ -262,11 +262,12 @@ function genNodeData({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
  * @param {String} param.connId - SQL connection ID
  * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @param {Object} [param.nodeAttrs] - node attributes
+ * @param {Object} param.config - axios config
  * @returns {Promise<Array>} { nodes: {}, completionItems: [] }
  */
-async function getChildNodeData({ connId, nodeGroup, nodeAttrs }) {
+async function getChildNodeData({ connId, nodeGroup, nodeAttrs, config }) {
     const sql = getNodeGroupSQL({ nodeAttrs, nodeGroup })
-    const [e, res] = await to(query({ id: connId, body: { sql } }))
+    const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
     if (e) return { nodes: {}, completionItems: [] }
     else {
         return genNodeData({
@@ -283,10 +284,15 @@ async function getChildNodeData({ connId, nodeGroup, nodeAttrs }) {
  * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @param {Array} payload.data - Array of tree node to be updated
  * @param {Array} [payload.completionItems] - Array of completion items for editor
+ * @param {Object} param.config - axios config
  * @returns {Promise<Array>} { data: {}, completionItems: [] }
  */
-async function getNewTreeData({ connId, nodeGroup, data, completionItems = [] }) {
-    const { nodes, completionItems: childCmplItems } = await getChildNodeData({ connId, nodeGroup })
+async function getNewTreeData({ connId, nodeGroup, data, completionItems = [], config }) {
+    const { nodes, completionItems: childCmplItems } = await getChildNodeData({
+        connId,
+        nodeGroup,
+        config,
+    })
     return {
         data: deepReplaceNode({
             treeData: data,
@@ -399,14 +405,13 @@ function filterEntity(entity, payload) {
  *
  * @param {Object} apiConnMap - connections from API mapped by id
  * @param {Array} persistentConns - current persistent connections
- * @returns {Object} - { alive_conns: [], expired_conn_ids: [], orphaned_conn_ids: [] }
+ * @returns {Object} - { alive_conns: [], orphaned_conn_ids: [] }
  * alive_conns: stores connections that exists in the response of a GET to /sql/
  * orphaned_conn_ids: When QueryEditor connection expires but its cloned connections (query tabs)
  * are still alive, those are orphaned connections
  */
-function categorizeSqlConns({ apiConnMap, persistentConns }) {
+function categorizeConns({ apiConnMap, persistentConns }) {
     let alive_conns = [],
-        expired_conn_ids = [],
         orphaned_conn_ids = []
 
     persistentConns.forEach(conn => {
@@ -421,10 +426,10 @@ function categorizeSqlConns({ apiConnMap, persistentConns }) {
                     // update attributes
                     attributes: apiConnMap[connId].attributes,
                 })
-        } else expired_conn_ids.push(connId)
+        }
     })
 
-    return { alive_conns, expired_conn_ids, orphaned_conn_ids }
+    return { alive_conns, orphaned_conn_ids }
 }
 /**
  * @param {String} param.driver
@@ -460,7 +465,7 @@ export default {
     getAlterTblOptsSQL,
     getAlterColsOptsSQL,
     filterEntity,
-    categorizeSqlConns,
+    categorizeConns,
     genConnStr,
     getDatabase,
 }

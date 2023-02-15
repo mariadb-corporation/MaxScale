@@ -76,7 +76,7 @@ export default {
                 .get()
             let isLoading = false
             for (const { id } of queryTabs) {
-                if (QueryResult.getters('getLoadingQueryResultByQueryTabId')(id)) {
+                if (QueryResult.getters('getIsLoading')(id)) {
                     isLoading = true
                     break
                 }

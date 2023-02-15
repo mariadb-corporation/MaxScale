@@ -238,10 +238,10 @@ export default {
             },
         },
         isExecuting() {
-            return QueryResult.getters('getLoadingQueryResultByQueryTabId')(this.queryTab.id)
+            return QueryResult.getters('getIsLoading')(this.queryTab.id)
         },
         hasKillFlag() {
-            return QueryResult.getters('getHasKillFlagMapByQueryTabId')(this.queryTab.id)
+            return QueryResult.getters('getHasKillFlag')(this.queryTab.id)
         },
         isRunBtnDisabled() {
             const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(this.queryTab.id)
@@ -325,7 +325,7 @@ export default {
             QueryResult.update({
                 where: this.queryTab.id,
                 data: {
-                    curr_query_mode: this.QUERY_MODES.QUERY_VIEW,
+                    query_mode: this.QUERY_MODES.QUERY_VIEW,
                 },
             })
             switch (mode) {

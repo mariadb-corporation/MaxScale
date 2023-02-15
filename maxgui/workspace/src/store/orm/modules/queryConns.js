@@ -15,9 +15,10 @@ import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
+import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { getAliveConns, openConn, cloneConn, reconnect, deleteConn } from '@wsSrc/api/connection'
-import { query } from '@wsSrc/api/query'
+import connection from '@wsSrc/api/connection'
+import queries from '@wsSrc/api/queries'
 
 export default {
     namespaced: true,
@@ -61,6 +62,26 @@ export default {
             }
         },
         /**
+         * Disconnect a connection and its persisted data
+         * @param {String} id - connection id
+         */
+        async disconnect({ commit, dispatch }, { id, showSnackbar }) {
+            const config = Worksheet.getters('getRequestConfigByConnId')(id)
+            const [e, res] = await this.vue.$helpers.to(connection.delete({ id, config }))
+            if (!e && res.status === 204) {
+                if (showSnackbar)
+                    commit(
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [this.vue.$mxs_t('success.disconnected')],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+            }
+            dispatch('cascadeRefreshOnDelete', id)
+        },
+        /**
          * @param {Array} connIds - alive connection ids that were cloned from expired QueryEditor connections
          */
         async cleanUpOrphanedConns({ dispatch }, connIds) {
@@ -68,27 +89,56 @@ export default {
                 Promise.all(connIds.map(id => dispatch('disconnect', { id })))
             )
         },
+        async disconnectConnsFromTask({ getters }, taskId) {
+            await this.vue.$helpers.to(
+                Promise.all(
+                    getters
+                        .getEtlConnsByTaskId(taskId)
+                        .map(({ id }) => QueryConn.dispatch('disconnect', { id }))
+                )
+            )
+        },
+        async disconnectAll({ getters, dispatch }) {
+            for (const { id } of getters.getQueryEditorConns)
+                await dispatch('cascadeDisconnect', { showSnackbar: false, id })
+            await this.vue.$helpers.to(
+                Promise.all(getters.getEtlConns.map(({ id }) => dispatch('disconnect', { id })))
+            )
+        },
         /**
-         * Validate mxsWorkspace.conns_to_be_validated
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
          */
-        async validateConns({ commit, dispatch, rootState }, { silentValidation = false } = {}) {
+        async validateConns({ commit, dispatch }, { silentValidation = false } = {}) {
             if (!silentValidation)
                 commit('queryConnsMem/SET_IS_VALIDATING_CONN', true, { root: true })
+            const persistentConns = QueryConn.all()
+            const { $typy, $helpers } = this.vue
 
-            const { $helpers } = this.vue
-            const persistentConns = rootState.mxsWorkspace.conns_to_be_validated
-            const [e, res] = await $helpers.to(getAliveConns())
-            const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
-            const {
-                alive_conns = [],
-                expired_conn_ids = [],
-                orphaned_conn_ids = [],
-            } = queryHelper.categorizeSqlConns({ apiConnMap, persistentConns })
-            //cascade refresh relations and delete expired connections objects in ORM
-            dispatch('cascadeRefreshOnDelete', c => expired_conn_ids.includes(c.id))
-            await dispatch('cleanUpOrphanedConns', orphaned_conn_ids)
-            QueryConn.update({ data: alive_conns })
+            let requestConfigs = Worksheet.all().reduce((configs, wke) => {
+                const config = Worksheet.getters('getRequestConfig')(wke.id)
+                const baseUrl = $typy(config, 'baseURL').safeString
+                if (baseUrl) configs.push(config)
+                return configs
+            }, [])
+            requestConfigs = $helpers.lodash.uniqBy(requestConfigs, 'baseURL')
+            let aliveConns = [],
+                orphanedConnIds = []
+
+            for (const config of requestConfigs) {
+                const [e, res] = await $helpers.to(connection.get(config))
+                const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
+                const { alive_conns = [], orphaned_conn_ids = [] } = queryHelper.categorizeConns({
+                    apiConnMap,
+                    persistentConns,
+                })
+                aliveConns = [...aliveConns, ...alive_conns]
+                orphanedConnIds = [...orphanedConnIds, ...orphaned_conn_ids]
+            }
+            QueryConn.update({ data: aliveConns })
+            const aliveConnIds = aliveConns.map(c => c.id)
+            //Delete orphaned connections clean-up expired ones
+            await dispatch('cleanUpOrphanedConns', orphanedConnIds)
+            dispatch('cascadeRefreshOnDelete', c => !aliveConnIds.includes(c.id))
             commit('queryConnsMem/SET_IS_VALIDATING_CONN', false, { root: true })
         },
         /**
@@ -96,6 +146,7 @@ export default {
          * @param {Object} param.meta - meta - connection meta
          */
         async openQueryEditorConn({ dispatch, commit, getters, rootState }, { body, meta }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { $helpers, $mxs_t } = this.vue
             const {
                 QUERY_CONN_BINDING_TYPES: { QUERY_EDITOR },
@@ -103,7 +154,7 @@ export default {
 
             const activeQueryEditorConn = getters.getQueryEditorConn
 
-            const [e, res] = await $helpers.to(openConn(body))
+            const [e, res] = await $helpers.to(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 // clean up previous conn after binding the new one
@@ -163,11 +214,14 @@ export default {
          * @param {String} param.query_tab_id - id of the queryTab that binds this connection
          */
         async openQueryTabConn({ rootState }, { queryEditorConn, query_tab_id }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const {
                 QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
             } = rootState.mxsWorkspace.config
 
-            const [e, res] = await this.vue.$helpers.to(cloneConn(queryEditorConn.id))
+            const [e, res] = await this.vue.$helpers.to(
+                connection.clone({ id: queryEditorConn.id, config })
+            )
 
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201)
@@ -195,10 +249,11 @@ export default {
             { commit, rootState },
             { body, binding_type, etl_task_id, connMeta = {}, taskMeta = {}, showMsg = false }
         ) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { $mxs_t, $helpers } = this.vue
             const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
             let target
-            const [e, res] = await $helpers.to(openConn(body))
+            const [e, res] = await $helpers.to(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 let connData = {
@@ -248,33 +303,14 @@ export default {
             })
         },
         /**
-         * Disconnect a connection and its persisted data
-         * @param {String} id - connection id
-         */
-        async disconnect({ commit, dispatch }, { id, showSnackbar }) {
-            const [e, res] = await this.vue.$helpers.to(deleteConn(id))
-            if (!e && res.status === 204) {
-                if (showSnackbar)
-                    commit(
-                        'mxsApp/SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.vue.$mxs_t('success.disconnected')],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
-            }
-            dispatch('cascadeRefreshOnDelete', id)
-        },
-
-        /**
          * @param {Object} param.ids - connections to be reconnected
          * @param {Function} param.onSuccess - on success callback
          * @param {Function} param.onError - on error callback
          */
         async reconnectConns({ commit, dispatch }, { ids, onSuccess, onError }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const [e, allRes] = await this.vue.$helpers.to(
-                Promise.all(ids.map(id => reconnect(id)))
+                Promise.all(ids.map(id => connection.reconnect({ id, config })))
             )
             // call validateConns to get new thread ID
             await dispatch('validateConns', { silentValidation: true })
@@ -303,26 +339,11 @@ export default {
                 await this.vue.$typy(onSuccess).safeFunction()
             }
         },
-        async disconnectConnsFromTask({ getters }, taskId) {
-            await this.vue.$helpers.to(
-                Promise.all(
-                    getters
-                        .getEtlConnsByTaskId(taskId)
-                        .map(({ id }) => QueryConn.dispatch('disconnect', { id }))
-                )
-            )
-        },
-        async disconnectAll({ getters, dispatch }) {
-            for (const { id } of getters.getQueryEditorConns)
-                await dispatch('cascadeDisconnect', { showSnackbar: false, id })
-            await this.vue.$helpers.to(
-                Promise.all(getters.getEtlConns.map(({ id }) => dispatch('disconnect', { id })))
-            )
-        },
         async updateActiveDb({ getters }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id, active_db } = getters.getActiveQueryTabConn
             const [e, res] = await this.vue.$helpers.to(
-                query({ id, body: { sql: 'SELECT DATABASE()' } })
+                queries.post({ id, body: { sql: 'SELECT DATABASE()' } }, config)
             )
             if (!e && res) {
                 const resActiveDb = this.vue
@@ -338,11 +359,12 @@ export default {
          * @param {String} db - database name
          */
         async useDb({ commit, dispatch, getters, rootState }, db) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id, meta: { name: connection_name } = {} } = getters.getActiveQueryTabConn
             const now = new Date().valueOf()
             const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
             const sql = `USE ${escapedDb};`
-            const [e, res] = await this.vue.$helpers.to(query({ id, body: { sql } }))
+            const [e, res] = await this.vue.$helpers.to(queries.post({ id, body: { sql }, config }))
             if (!e && res) {
                 let queryName = `Change default database to ${escapedDb}`
                 const errObj = this.vue.$typy(res, 'data.data.attributes.results[0]')

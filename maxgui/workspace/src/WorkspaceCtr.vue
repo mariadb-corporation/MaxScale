@@ -17,11 +17,19 @@
                     :height="wkeNavCtrHeight"
                 />
                 <template v-if="ctrDim.height">
-                    <blank-wke v-if="isBlankWke(activeWke)" :key="activeWkeId" :ctrDim="ctrDim" />
+                    <!-- blank-wke has blank-worksheet-task-cards-bottom slot used by SkySQL -->
+                    <blank-wke
+                        v-if="isBlankWke(activeWke)"
+                        :key="activeWkeId"
+                        :ctrDim="ctrDim"
+                        :cards="blankWkeCards"
+                    >
+                        <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                    </blank-wke>
                     <!-- Keep alive worksheets -->
                     <keep-alive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
                         <template v-if="activeWkeId === wke.id">
-                            <!-- query-editor has query-tab-nav-toolbar-right-slot used by SkySQL -->
+                            <!-- query-editor has query-tab-nav-toolbar-right slot used by SkySQL -->
                             <query-editor v-if="isQueryEditorWke(wke)" :ctrDim="ctrDim">
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                             </query-editor>
@@ -30,7 +38,7 @@
                     </keep-alive>
                 </template>
             </template>
-            <migr-dlg />
+            <migr-delete-dlg />
             <reconn-dlg-ctr />
         </div>
     </div>
@@ -50,14 +58,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapState, mapMutations } from 'vuex'
 import Worksheet from '@wsModels/Worksheet'
 import '@wsSrc/styles/workspace.scss'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke'
 import QueryEditor from '@wkeComps/QueryEditor'
 import DataMigration from '@wkeComps/DataMigration'
-import MigrDlg from '@wkeComps/BlankWke/MigrDlg'
+import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
@@ -66,10 +74,16 @@ export default {
     components: {
         WkeNavCtr,
         BlankWke,
-        MigrDlg,
+        MigrDeleteDlg,
         QueryEditor,
         DataMigration,
         ReconnDlgCtr,
+    },
+    props: {
+        disableRunQueries: { type: Boolean, default: false },
+        disableDataMigration: { type: Boolean, default: false },
+        runQueriesSubtitle: { type: String, default: '' },
+        dataMigrationSubtitle: { type: String, default: '' },
     },
     data() {
         return {
@@ -78,9 +92,10 @@ export default {
     },
     computed: {
         ...mapState({
+            QUERY_SHORTCUT_KEYS: state => state.mxsWorkspace.config.QUERY_SHORTCUT_KEYS,
+            MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
             is_fullscreen: state => state.prefAndStorage.is_fullscreen,
             is_validating_conn: state => state.queryConnsMem.is_validating_conn,
-            QUERY_SHORTCUT_KEYS: state => state.mxsWorkspace.config.QUERY_SHORTCUT_KEYS,
             hidden_comp: state => state.mxsWorkspace.hidden_comp,
         }),
         keptAliveWorksheets() {
@@ -103,6 +118,33 @@ export default {
                 height: this.dim.height - this.wkeNavCtrHeight,
             }
         },
+        blankWkeCards() {
+            return [
+                {
+                    title: this.$mxs_t('runQueries'),
+                    subtitle: this.runQueriesSubtitle,
+                    icon: '$vuetify.icons.mxs_workspace',
+                    iconSize: 26,
+                    disabled: this.disableRunQueries,
+                    click: () => this.SET_IS_CONN_DLG_OPENED(true),
+                },
+                {
+                    title: this.$mxs_t('dataMigration'),
+                    subtitle: this.dataMigrationSubtitle,
+                    icon: '$vuetify.icons.mxs_dataMigration',
+                    iconSize: 32,
+                    disabled: this.disableDataMigration,
+                    click: () =>
+                        this.SET_MIGR_DLG({ type: this.MIGR_DLG_TYPES.CREATE, is_opened: true }),
+                },
+                /*  {
+                    title: this.$mxs_t('createAnErd'),
+                    icon: '$vuetify.icons.mxs_erd',
+                    iconSize: 32,
+                    click: () => null,
+                }, */
+            ]
+        },
         eventBus() {
             return EventBus
         },
@@ -124,6 +166,10 @@ export default {
         this.$nextTick(() => this.setDim())
     },
     methods: {
+        ...mapMutations({
+            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_MIGR_DLG: 'mxsWorkspace/SET_MIGR_DLG',
+        }),
         ...mapActions({
             handleAutoClearQueryHistory: 'prefAndStorage/handleAutoClearQueryHistory',
         }),

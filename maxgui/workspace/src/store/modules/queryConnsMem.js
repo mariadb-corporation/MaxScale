@@ -11,7 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getDrivers } from '@wsSrc/api/connection'
+import connection from '@wsSrc/api/connection'
+import Worksheet from '@wsModels/Worksheet'
+import base from '@wsSrc/api/base'
 
 export default {
     namespaced: true,
@@ -41,8 +43,9 @@ export default {
     },
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
+                base.get({ url: `/${resourceType}?fields[${resourceType}]=id`, config })
             )
             if (!e) {
                 const names = this.vue
@@ -55,7 +58,8 @@ export default {
             }
         },
         async fetchOdbcDrivers({ commit }) {
-            const [e, res] = await this.vue.$helpers.to(getDrivers())
+            const config = Worksheet.getters('getActiveRequestConfig')
+            const [e, res] = await this.vue.$helpers.to(connection.getDrivers(config))
             if (!e && res.status === 200) commit('SET_ODBC_DRIVERS', res.data.data)
         },
     },

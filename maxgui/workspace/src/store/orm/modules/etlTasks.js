@@ -15,9 +15,8 @@ import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
-import { cancel } from '@wsSrc/api/etl'
-import { query, getAsyncResult } from '@wsSrc/api/query'
-import { prepare, start } from '@wsSrc/api/etl'
+import queries from '@wsSrc/api/queries'
+import etl from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { insertEtlTask } from '@wsSrc/store/orm/initEntities'
 
@@ -46,9 +45,10 @@ export default {
          * @param {String} id - etl task id
          */
         async cancelEtlTask({ commit, rootState }, id) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             const { id: srcConnId } = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             if (srcConnId) {
-                const [e] = await this.vue.$helpers.to(cancel(srcConnId))
+                const [e] = await this.vue.$helpers.to(queries.cancel({ id: srcConnId, config }))
                 const { CANCELED, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
                 let etlStatus = CANCELED
                 if (e) {
@@ -69,11 +69,9 @@ export default {
             }
         },
         viewEtlTask(_, task) {
-            let wkeId = Worksheet.getters('getActiveWkeId')
-            const wke = Worksheet.query()
-                .where('etl_task_id', task.id)
-                .first()
-            if (wke) wkeId = wke.id
+            const wkeId =
+                Worksheet.getters('getWkeIdByEtlTaskId')(task.id) ||
+                Worksheet.getters('getActiveWkeId')
             Worksheet.update({
                 where: wkeId,
                 data: {
@@ -94,6 +92,7 @@ export default {
         async fetchSrcSchemas({ dispatch, getters }) {
             const { $mxs_t, $helpers, $typy } = this.vue
             const taskId = getters.getActiveEtlTask.id
+            const config = Worksheet.getters('getActiveRequestConfig')
             if (!getters.getSrcSchemaTree(taskId).length) {
                 dispatch('pushLog', {
                     id: taskId,
@@ -103,9 +102,10 @@ export default {
                     },
                 })
                 const [e, res] = await $helpers.to(
-                    query({
+                    queries.post({
                         id: QueryConn.getters('getActiveSrcConn').id,
                         body: { sql: getters.getSchemaSql },
+                        config,
                     })
                 )
                 let logName = ''
@@ -142,6 +142,7 @@ export default {
         async loadChildNodes({ rootState, getters }, nodeGroup) {
             const { id: connId } = QueryConn.getters('getActiveSrcConn')
             const taskId = getters.getActiveEtlTask.id
+            const config = Worksheet.getters('getActiveRequestConfig')
             const {
                 NODE_GROUP_TYPES: { TBL_G },
             } = rootState.mxsWorkspace.config
@@ -155,6 +156,7 @@ export default {
                             isLeaf: true,
                             activatable: false,
                         },
+                        config,
                     })
                     const tree = queryHelper.deepReplaceNode({
                         treeData: getters.getSrcSchemaTree(taskId),
@@ -213,6 +215,7 @@ export default {
         async handleEtlCall({ getters, dispatch, rootState, commit }, { id, tables }) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const { RUNNING, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
+            const config = Worksheet.getters('getRequestConfigByEtlTaskId')(id)
 
             const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             const destConn = QueryConn.getters('getDestConnByEtlTaskId')(id)
@@ -232,12 +235,12 @@ export default {
 
                 if (task.is_prepare_etl) {
                     logName = $mxs_t('info.preparingMigrationScript')
-                    apiAction = prepare
+                    apiAction = etl.prepare
                     status = RUNNING
                     body.create_mode = getters.getCreateMode(id)
                 } else {
                     logName = $mxs_t('info.startingMigration')
-                    apiAction = start
+                    apiAction = etl.start
                     status = RUNNING
                 }
                 if (body.type === 'generic') body.catalog = $typy(srcConn, 'active_db').safeString
@@ -249,7 +252,7 @@ export default {
                         delete obj.meta.async_query_id
                     },
                 })
-                const [e, res] = await $helpers.to(apiAction({ id: srcConn.id, body }))
+                const [e, res] = await $helpers.to(apiAction({ id: srcConn.id, body, config }))
                 if (e) {
                     status = ERROR
                     logName = `${$mxs_t(
@@ -283,6 +286,7 @@ export default {
         async getEtlCallRes({ getters, dispatch, rootState, commit }, id) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const task = EtlTask.find(id)
+            const config = Worksheet.getters('getRequestConfigByEtlTaskId')(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
             const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             const {
@@ -294,7 +298,9 @@ export default {
                 migrationRes,
                 ignoreKeys = ['create', 'insert', 'select']
 
-            const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
+            const [e, res] = await $helpers.to(
+                queries.getAsyncRes({ id: srcConn.id, queryId, config })
+            )
             if (!e) {
                 const results = $typy(res, 'data.data.attributes.results').safeObject
                 let logMsg

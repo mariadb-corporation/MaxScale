@@ -179,7 +179,7 @@ export default {
             let resSets = []
             // user query result data
             const userQueryResults = this.$helpers.stringifyClone(
-                this.$typy(QueryResult.getters('getUserQueryRes'), 'data.attributes.results')
+                this.$typy(QueryResult.getters('getActiveUserQueryRes'), 'data.attributes.results')
                     .safeArray
             )
             let resSetCount = 0
@@ -196,7 +196,7 @@ export default {
             for (const mode of prvwModes) {
                 const data = this.$helpers.stringifyClone(
                     this.$typy(
-                        QueryResult.getters('getPrvwData')(mode),
+                        QueryResult.getters('getActivePrvwData')(mode),
                         'data.attributes.results[0]'
                     ).safeObjectOrEmpty
                 )

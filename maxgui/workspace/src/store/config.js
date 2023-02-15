@@ -28,6 +28,7 @@ export const ORM_TMP_ENTITIES = {
     ETL_TASKS_TMP: 'etlTasksTmp',
     QUERY_EDITORS_TMP: 'queryEditorsTmp',
     QUERY_TABS_TMP: 'queryTabsTmp',
+    WORKSHEETS_TMP: 'worksheetsTmp',
 }
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'

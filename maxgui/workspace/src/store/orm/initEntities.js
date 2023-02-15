@@ -22,6 +22,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryResult from '@wsModels/QueryResult'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 
 /**
  * Initialize a blank worksheet
@@ -29,6 +30,7 @@ import Worksheet from '@wsModels/Worksheet'
  */
 export function insertBlankWke(fields = { worksheet_id: uuidv1(), name: 'WORKSHEET' }) {
     Worksheet.insert({ data: { id: fields.worksheet_id, name: fields.name } })
+    WorksheetTmp.insert({ data: { id: fields.worksheet_id } })
     Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
 }
 
@@ -102,6 +104,7 @@ export function insertEtlTask({ id, name }) {
 function initMemEntities() {
     const worksheets = Worksheet.all()
     worksheets.forEach(w => {
+        WorksheetTmp.insert({ data: { id: w.id } })
         if (w.query_editor_id) {
             const queryEditor = QueryEditor.query()
                 .where('id', w.query_editor_id)

@@ -45,7 +45,7 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
-                    :currQueryMode="currQueryMode"
+                    :activeQueryMode="activeQueryMode"
                     :activePrvwNodeQualifiedName="activePrvwNodeQualifiedName"
                     :isLoading="isLoading"
                     :data="queryData"
@@ -126,12 +126,12 @@ export default {
              */
             return { width: this.dynDim.width - 40, height: this.dynDim.height - 24 - 8 }
         },
-        currQueryMode() {
-            return QueryResult.getters('getCurrQueryMode')
+        activeQueryMode() {
+            return QueryResult.getters('getActiveQueryMode')
         },
         activeTab: {
             get() {
-                switch (this.currQueryMode) {
+                switch (this.activeQueryMode) {
                     case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     case this.QUERY_MODES.PRVW_DATA:
                         return this.QUERY_MODES.PRVW_DATA
@@ -139,13 +139,13 @@ export default {
                     case this.QUERY_MODES.HISTORY:
                         return this.QUERY_MODES.HISTORY
                     default:
-                        return this.currQueryMode
+                        return this.activeQueryMode
                 }
             },
             set(v) {
                 QueryResult.update({
                     where: QueryEditor.getters('getActiveQueryTabId'),
-                    data: { curr_query_mode: v },
+                    data: { query_mode: v },
                 })
             },
         },
@@ -154,12 +154,12 @@ export default {
         },
         queryData() {
             const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
-            switch (this.currQueryMode) {
+            switch (this.activeQueryMode) {
                 case QUERY_VIEW:
-                    return QueryResult.getters('getUserQueryRes')
+                    return QueryResult.getters('getActiveUserQueryRes')
                 case PRVW_DATA:
                 case PRVW_DATA_DETAILS:
-                    return QueryResult.getters('getPrvwData')(this.currQueryMode)
+                    return QueryResult.getters('getActivePrvwData')(this.activeQueryMode)
                 default:
                     return {}
             }

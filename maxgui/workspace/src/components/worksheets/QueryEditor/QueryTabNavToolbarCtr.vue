@@ -30,7 +30,7 @@
                 {{ $mxs_t('changeConn') }}
             </mxs-tooltip-btn>
             <!-- A slot for SkySQL Query Editor in service details page where the worksheet tab is hidden  -->
-            <slot name="query-tab-nav-toolbar-right-slot" />
+            <slot name="query-tab-nav-toolbar-right" />
         </div>
     </div>
 </template>

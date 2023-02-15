@@ -13,7 +13,7 @@
  */
 import ax from 'axios'
 import { t } from 'typy'
-import { lodash, getErrorsArr } from '@share/utils/helpers'
+import { getErrorsArr } from '@share/utils/helpers'
 import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@wsSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'
@@ -49,6 +49,9 @@ function getSqlConnId(url) {
     const matched = /\/sql\/([a-zA-z0-9-]*?)\//g.exec(url) || []
     return matched.length > 1 ? matched[1] : null
 }
+function isValidatingRequest(url) {
+    return url === '/sql'
+}
 /**
  * axios instance for workspace endpoint.
  * Use this for sql connection endpoint so that the value for
@@ -67,9 +70,8 @@ function queryHttp(store) {
     })
     queryHttp.interceptors.request.use(
         config => {
-            config = lodash.merge(config, store.state.mxsWorkspace.axios_opts)
             updateConnBusyStatus({ value: true, sql_conn_id: getSqlConnId(config.url) })
-            return { ...config }
+            return config
         },
         error => Promise.reject(error)
     )
@@ -85,29 +87,20 @@ function queryHttp(store) {
         async error => {
             const { response: { status = null, config: { url = '', method } = {} } = {} } =
                 error || {}
-            switch (status) {
-                case null:
-                    handleNullStatusCode({ store, error })
-                    break
-                case 404:
-                case 503:
-                    if (method !== 'delete')
-                        store.commit(
-                            'mxsApp/SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [
-                                    ...getErrorsArr(error),
-                                    'Connection expired, please reconnect.',
-                                ],
-                                type: 'error',
-                            },
-                            { root: true }
-                        )
+            if (status === null) handleNullStatusCode({ store, error })
+            else if (!isValidatingRequest(url)) {
+                if (status === 404 || status === 503)
                     await QueryConn.dispatch('validateConns', { silentValidation: true })
-                    break
-                default:
-                    defErrStatusHandler({ store, error })
-            }
+                if (status === 404 && method !== 'delete')
+                    store.commit(
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [...getErrorsArr(error), 'Connection expired, please reconnect.'],
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+            } else defErrStatusHandler({ store, error })
             updateConnBusyStatus({ value: false, sql_conn_id: getSqlConnId(url) })
             return Promise.reject(error)
         }
