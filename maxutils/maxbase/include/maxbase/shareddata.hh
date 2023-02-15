@@ -162,7 +162,7 @@ private:
     friend class GCUpdater;
 
     void set_new_data(const Data* pData);
-    bool wait_for_updates(maxbase::Duration timeout);
+    bool wait_for_updates(maxbase::Duration timeout, std::atomic<bool> *pNo_blocking);
     bool get_updates(std::vector<InternalUpdate>& swap_me);
     void reset_ptrs();
     void shutdown();
@@ -297,7 +297,7 @@ std::pair<const Data*, const Data*> SharedData<Data, Update>::get_ptrs() const
 }
 
 template<typename Data, typename Update>
-bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
+bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout, std::atomic<bool>* pNo_blocking)
 {
     // The updater can call this on any instance of its SharedDatas
     std::unique_lock<std::mutex> guard(m_update_mutex);
@@ -306,8 +306,8 @@ bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
     if (m_queue.empty())
     {
         *m_pData_rdy = false;
-        auto pred = [this]() {
-            return *m_pData_rdy;
+        auto pred = [this, pNo_blocking]() {
+            return *m_pData_rdy || (*pNo_blocking).load(std::memory_order_relaxed);
         };
 
         if (timeout.count() != 0)
