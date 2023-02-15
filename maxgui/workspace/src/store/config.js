@@ -176,7 +176,7 @@ export const ETL_STAGE_INDEX = Object.freeze({
     DATA_MIGR: 3,
 })
 
-export const ETL_SUPPORT_DB_TYPES = [
+export const ODBC_DB_TYPES = [
     { text: 'MariaDB', id: 'mariadb' },
     { text: 'PostgreSQL', id: 'postgresql' },
     { text: 'Generic', id: 'generic' },

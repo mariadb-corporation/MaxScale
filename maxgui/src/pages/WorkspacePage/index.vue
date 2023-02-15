@@ -7,7 +7,7 @@
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         />
-        <conn-dlg-ctr v-model="isConnDlgOpened" :handleSave="handleOpenConn" />
+        <conn-dlg-ctr v-model="isConnDlgOpened" />
         <migr-create-dlg :handleSave="createEtlTask" />
     </div>
 </template>
@@ -103,9 +103,6 @@ export default {
         },
         cancelLeave() {
             this.to = null
-        },
-        async handleOpenConn(opts) {
-            await QueryConn.dispatch('openQueryEditorConn', opts)
         },
         createEtlTask(name) {
             EtlTask.dispatch('createEtlTask', name)

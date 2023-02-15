@@ -125,6 +125,7 @@
  * Public License.
  */
 import { mapActions, mapMutations, mapState } from 'vuex'
+import QueryConn from '@wsModels/QueryConn'
 import TimeoutInput from '@wkeComps/TimeoutInput.vue'
 import PwdInput from '@wkeComps/PwdInput.vue'
 import UidInput from '@wkeComps/UidInput.vue'
@@ -134,7 +135,6 @@ export default {
     components: { TimeoutInput, PwdInput, UidInput },
     props: {
         value: { type: Boolean, required: true },
-        handleSave: { type: Function, required: true },
     },
     data() {
         return {
@@ -221,11 +221,8 @@ export default {
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource
-            await this.handleSave({
+            await QueryConn.dispatch('openQueryEditorConn', {
                 body: { target: resourceName, ...this.body },
-                /* In SkySQL, meta.name is used for storing service name because server name is hidden from the user.
-                 * To avoid duplicated code in SkySQL, this also stores target connection name in meta.name
-                 */
                 meta: { name: resourceName },
             })
         },
