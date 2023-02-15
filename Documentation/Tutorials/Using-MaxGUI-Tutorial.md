@@ -40,11 +40,23 @@ The replication status of a server monitored by
 the server name. A tooltip will be displayed with the following information:
 replication_state, seconds_behind_master, slave_io_running, slave_sql_running.
 
+## How to kill a session
+
+A session can be killed easily on the "Current Sessions" list which can be
+found on the [Dashboard](#dashboard), Server detail, and Service detail page.
+
+![MaxGUI MaxScale kill session](./images/MaxGUI-kill-session.png)
+
+### Annotation
+
+1. Kill session button. This button is shown on the mouse hover.
+2. Confirm killing the session dialog.
+
 # Detail
 
 This page shows information on each MaxScale object and allow to edit its
 parameter, relationships and perform other manipulation operations. Most of the
-control buttons will be shown on the mouseover event. Below is a screenshot of a
+control buttons will be shown on the mouse hover. Below is a screenshot of a
 Monitor Detail page, other Detail pages also have a similar layout structure so
 this is used for illustration purpose.
 
@@ -60,14 +72,14 @@ this is used for illustration purpose.
       state, Drain and Delete server.
     - Filter and Listener Detail page, there is a delete icon to delete the
       object.
-2.  Switchover button. This button is shown on the mouseover event allowing to
+2.  Switchover button. This button is shown on the mouse hover allowing to
     swap the running primary server with a designated secondary server.
-3.  Edit parameters button. This button is shown on the mouseover event allowing
+3.  Edit parameters button. This button is shown on the mouse hover allowing
     to edit the MaxScale object's parameter. Clicking on it will enable editable
     mode on the table. After finishing editing the parameters, simply click the
     _Done Editing_ button.
 4.  A Detail page has tables showing "Relationship" between other MaxScale
-    object. This "unlink" icon is shown on the mouseover event allowing to
+    object. This "unlink" icon is shown on the mouse hover allowing to
     remove the relationship between two objects.
 5.  This button is used to link other MaxScale objects to the relationship.
 
@@ -143,7 +155,7 @@ This page shows and allows editing of MaxScale parameters.
 
 ## Annotation
 
-1.  Edit parameters button. This button is shown on the mouseover event allowing
+1.  Edit parameters button. This button is shown on the mouse hover allowing
     to edit the MaxScale parameter. Clicking on it will enable editable mode on
     the table..
 2.  Editable parameters are visible as it's illustrated in the screenshot.
@@ -161,95 +173,91 @@ This page show real-time MaxScale logs with filter options.
 1.  Filter by dropdown. All logs types are selected to be shown by default
 2.  Uncheck the box to disable showing a particular log type.
 
-# Query Editor
+# Workspace
 
-A SQL editor tool to run queries and perform other SQL operations.
+On this page, you may add numerous worksheets, each of which can be used for either "Run queries" or "Data migration".
 
-![MaxGUI MaxScale Query Editor](./images/MaxGUI-query-editor.png)
+![MaxGUI MaxScale Workspace](./images/MaxGUI-workspace.png)
 
-## Annotation
+## Run Queries
 
-1.  Worksheet tab navigation. Each worksheet is bound to a connection, so
-    sessions querying within a worksheet is not yet supported.
-2.  Add a new worksheet button.
-3.  Connection manager dropdown. With this dropdown, you can create a new
-    connection or change the connection for the current active worksheet. A new
-    connection can be created by selecting the last option in the dropdown
-    labeled as `New connection`. Once a connection is created, it automatically
-    binds the connection to the current active worksheet.
-4.  Active database dropdown. Right-click on the database name and click
-    `Use database` option to quickly change the default (current) database
-5.  Schemas sidebar. Showing available schemas on the current connection. As
-    shown in the figure above, these items can be explored to show tables,
-    stored procedures, columns, and triggers within the schema.
-6.  Schemas sidebar object.
-    - Each object has its own context menu providing different options. e.g. For
-      the table object as shown in the figure above, it has options to
-      `Preview Data (top 1000)` and `View Details`. The query result for these
-      options is shown in the `Data Preview` result tab which is annotated as
-      number 12. The context menu can be shown by right-clicking on the object
-      or clicking on the three dots icon placed on the right side of the object.
-    - Quick access to the `Preview Data (top 1000)` context menu option. For a
-      table object, its preview data can also be seen by clicking on its name.
-    - Quick overview tooltip. Each object has its own tooltip providing an
-      overview of the object.
-7.  Refresh schema objects button. After deleting or creating schema object, the
-    `Schemas sidebar` needs to be manually refreshed.
-8.  Collapse the `Schemas sidebar` button.
-9.  SQL editor. The editor is powered by
-    [Monaco editor](https://microsoft.github.io/monaco-editor/) which means its
-    functionalities are similar to VS code. Available commands can be seen by
-    pressing F1 while the cursor is active on the editor. This is an intention
-    to prevent conflict between the browser's shortcut keys and the SQL
-    editor's. This also means the editor shortcut key commands are valid only
-    when the cursor is active on the `SQL editor` with an exception for the
-    `Run all statements`, `Run selected statements` and
-    `Save statements to favorite` commands.
-10. Query Results. Showing the query results of queries written in the SQL
-    editor.
-11. Data Preview. Showing the query results of `Preview Data (top 1000)` and
-    `View Details` options of the schema sidebar context menu.
-12. History/Snippets. Showing query history and snippet queries.
-13. Result tab navigation. Navigating between SQL queries results.
-14. Filter query history logs. The query history is divided into two types of
-    logs The `User query logs` contains logs for queries written in the
-    `SQL editor` while the `Action logs` contains logs for auto-generated SQL,
-    such as `Preview Data (top 1000)`, `View Details`, `Drop Table` and
-    `Truncate Table`.
-15. Export query result button. Exporting as `json`, `csv` with a custom
-    delimiter.
-16. Filter query result columns dropdown. Selecting columns to be visible.
-17. Vertical query result button. Switching to vertical mode.
-18. Run button. Running the queries written in the `SQL editor`. Alternatively,
-    pressing `Ctrl/CMD+Shift+Enter` to `Run all statements` or `Ctrl/CMD+Enter`
-    to `Run selected statements`.
-19. Visualize query result button. Visualizing a query result into a line,
-    scatter, vertical bar, and horizontal bar graph.
-20. Create a query snippet from the queries written in the `SQL editor`.
-    Alternatively, press `Ctrl/CMD+D`.
-21. Open Script button.
-22. Save Script button. This writes content into the opened file. This only
-    works on Chrome or any browsers based on Chromium served over a secure
-    connection (https)
-23. Save Script As button. Save the content as a new file.
-24. [sql_select_limit](https://mariadb.com/docs/reference/mdb/system-variables/sql_select_limit/)
-    input. Changing the maximum number of rows to return from SELECT statements.
-25. Add a new session button.
-26. Query Editor settings button. Open `Query configuration` dialog to change
-    the value of `Max rows` (sql_select_limit),
-    `Query history retention period (in days)`,
-    `Show confirmation before executing the statements` and
-    `Show system schemas`.
-27. Maximize Query Editor window.
+Clicking on the "Run Queries" card will pop-up a dialog, providing options
+to establish a connection to different MaxScale object types, including
+"Listener, Server, Service".
 
-# How to kill a session
+The Query Editor worksheet will be rendered in the active worksheet after correctly connecting.
 
-A session can be killed easily on the "Current Sessions" table which can be
-found on the [Dashboard](#dashboard), Server detail, and Service detail page.
+### Query Editor worksheet
 
-![MaxGUI MaxScale kill session](./images/MaxGUI-kill-session.png)
+There are various features in the Query Editor worksheet, the most notable ones are listed below.
 
-## Annotation
+![MaxGUI Workspace Query Editor](./images/MaxGUI-workspace-query-editor.png)
 
-1. Kill session button. This button is shown on the mouseover event.
-2. Confirm killing the session dialog.
+#### Create a new connection
+
+If the connection of the Query Editor expires, or if you wish to make
+a new connection for the active worksheet, simply clicking on the button
+located on the right side of the query tabs navigation bar which features a
+server icon and an active connection name as a label. This will open the
+connection dialog and allow you to create a new connection.
+
+#### Schemas objects sidebar
+
+##### Set the current database
+
+There are two ways to set the current database:
+
+- Double-click on the name of the database.
+- Right-click on the name of the database to show the context menu, then select
+  the `Use database` option.
+
+##### Preview table data of the top 1000 rows
+
+There are two ways to preview data of a table:
+
+- Click on the name of the table.
+- Right-click on the name of the table to show the context menu, then select
+  the `Preview Data (top 1000)` option.
+
+##### Describe table
+
+Right-click on the name of the table to show the context menu, then select the
+`View Details` option.
+
+##### Alter/Drop/Truncate table
+
+Right-click on the name of the table to show the context menu, then select the
+desired option.
+
+##### Quickly insert an object into the editor
+
+There are two ways to quickly insert an object to the editor:
+
+- Drag the object and drop it in the desire position in the editor.
+- Right-click on the object to show the context menu, then mouse
+hover the `Place to Editor` option and select the desired insert option.
+
+#### Editor
+
+The editor is powered by [Monaco editor](https://microsoft.github.io/monaco-editor/), therefore, its features are similar to those of
+Visual Studio Code.
+
+To see the command palette, press F1 while the cursor is active on the editor.
+
+The editor also comes with various options to assist your querying tasks. To see
+available options, right-click on the editor to show the context menu.
+
+#### Re-execute old queries
+
+Every executed query will be saved in the browser's storage (IndexedDB).
+Query history can be seen in the `History/Snippets` tab.
+To re-execute a query, follow the same step to [insert an object into the editor](#quickly-insert-an-object-into-the-editor)
+and click the execute query button in the editor.
+
+#### Create query snippet
+
+Press CTRL/CMD + D to save the current SQL in the editor to the snippets storage.
+A snippet is created with a prefix keyword, so when that keyword is typed in
+the editor, it will be suggested in the "code completion" menu.
+
+## Data Migration
