@@ -1337,6 +1337,9 @@ This account must have the following grants:
 GRANT SELECT, INSERT, UPDATE, CREATE ON `mysql`.`maxscale_config`
 ```
 
+If the database where the table is created is changed with `config_sync_db`, the
+grants must be adjusted to target that database instead.
+
 ### `config_sync_password`
 
 - **Type**: string
@@ -1345,6 +1348,21 @@ GRANT SELECT, INSERT, UPDATE, CREATE ON `mysql`.`maxscale_config`
 
 The password for `config_sync_user`. Both this parameter and `config_sync_user`
 are required if `config_sync_cluster` is configured.
+
+### `config_sync_db`
+
+- **Type**: string
+- **Default**: `mysql`
+- **Dynamic**: No
+
+The database where the `maxscale_config` table is created. By default the table
+is created in the `mysql` database. This parameter was added in MaxScale
+versions 6.4.6 and 22.08.5.
+
+As tables in the `mysql` database cannot have triggers on them, the database
+must be changed to a user-created one in order to create triggers on the table.
+An example use-case for triggers on this table is to track all configuration
+changes done to MaxScale by inserting them into a separate table.
 
 ### `config_sync_interval`
 

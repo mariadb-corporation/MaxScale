@@ -186,6 +186,12 @@ bool Config::Specification::validate(const ConfigParameters& params,
         }
     }
 
+    if (s_config_sync_db.get(params).empty())
+    {
+        MXS_ERROR("'%s'cannot be empty.", s_config_sync_db.name().c_str());
+        validated = false;
+    }
+
     return validated;
 }
 
@@ -227,6 +233,12 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
                       s_config_sync_password.name().c_str(), s_config_sync_cluster.name().c_str());
             ok = false;
         }
+    }
+
+    if (s_config_sync_db.get(pJson).empty())
+    {
+        MXS_ERROR("'%s'cannot be empty.", s_config_sync_db.name().c_str());
+        ok = false;
     }
 
     return ok;
@@ -587,6 +599,12 @@ config::ParamString Config::s_config_sync_password(
     "Password for the user used for configuration synchronization.",
     "", mxs::config::Param::AT_RUNTIME);
 
+config::ParamString Config::s_config_sync_db(
+    &Config::s_specification,
+    CN_CONFIG_SYNC_DB,
+    "Database where the 'maxscale_config' table is created.",
+    "mysql", mxs::config::Param::AT_STARTUP);
+
 config::ParamSeconds Config::s_config_sync_timeout(
     &Config::s_specification,
     CN_CONFIG_SYNC_TIMEOUT,
@@ -804,6 +822,7 @@ Config::Config(int argc, char** argv)
     add_native(&Config::config_sync_cluster, &s_config_sync_cluster);
     add_native(&Config::config_sync_user, &s_config_sync_user, reconnect_config_manager);
     add_native(&Config::config_sync_password, &s_config_sync_password, reconnect_config_manager);
+    add_native(&Config::config_sync_db, &s_config_sync_db);
     add_native(&Config::config_sync_timeout, &s_config_sync_timeout);
     add_native(&Config::config_sync_interval, &s_config_sync_interval);
     add_native(&Config::log_warn_super_user, &s_log_warn_super_user);

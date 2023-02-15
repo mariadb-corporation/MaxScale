@@ -32,6 +32,7 @@ constexpr char CN_CLUSTER[] = "cluster";
 constexpr char CN_CONFIG_SYNC_CLUSTER[] = "config_sync_cluster";
 constexpr char CN_CONFIG_SYNC_USER[] = "config_sync_user";
 constexpr char CN_CONFIG_SYNC_PASSWORD[] = "config_sync_password";
+constexpr char CN_CONFIG_SYNC_DB[] = "config_sync_db";
 constexpr char CN_CONFIG_SYNC_TIMEOUT[] = "config_sync_timeout";
 constexpr char CN_CONFIG_SYNC_INTERVAL[] = "config_sync_interval";
 constexpr char CN_DATA[] = "data";

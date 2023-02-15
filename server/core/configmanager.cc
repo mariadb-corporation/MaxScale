@@ -46,7 +46,7 @@ const char CN_STATUS[] = "status";
 
 const char STATUS_OK[] = "OK";
 const char SCOPE_NAME[] = "ConfigManager";
-const char TABLE[] = "mysql.maxscale_config";
+const char TABLE[] = "maxscale_config";
 
 struct ThisUnit
 {
@@ -1160,6 +1160,7 @@ json_t* ConfigManager::remove_local_parameters(json_t* json)
     json_object_del(params, CN_CONFIG_SYNC_CLUSTER);
     json_object_del(params, CN_CONFIG_SYNC_USER);
     json_object_del(params, CN_CONFIG_SYNC_PASSWORD);
+    json_object_del(params, CN_CONFIG_SYNC_DB);
 
     // All static parameters must also be removed as they can have different values on different nodes
     // (file paths, REST API port etc.)
@@ -1227,7 +1228,7 @@ void ConfigManager::connect()
         cfg.timeout = config.config_sync_timeout.count();
         cfg.ssl = server->ssl_config();
 
-        if (!m_conn.open(server->address(), server->port()))
+        if (!m_conn.open(server->address(), server->port(), config.config_sync_db))
         {
             throw error("Failed to connect to '", server->name(), "' for configuration update: ",
                         m_conn.error());
