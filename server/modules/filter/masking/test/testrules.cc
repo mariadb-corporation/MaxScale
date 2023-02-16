@@ -302,13 +302,11 @@ public:
             const char* zSuccess;
             const char* zFailure;
         } test_cases[] =
-          {
-              "'alice'@'127.0.0.%'",
-              "127.0.0.42",
-              "127.0.1.0"
-          };
+        {
+            {"'alice'@'127.0.0.%'", "127.0.0.42", "127.0.1.0"}
+        };
 
-        const int nTest_cases = sizeof(test_cases)/sizeof(test_cases[0]);
+        const int nTest_cases = sizeof(test_cases) / sizeof(test_cases[0]);
 
         for (int i = 0; i < nTest_cases; ++i)
         {
