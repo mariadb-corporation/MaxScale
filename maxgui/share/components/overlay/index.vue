@@ -39,7 +39,10 @@ export default {
         'loading-transparent-overlay': LoadingTransparentOverlay,
     },
     computed: {
-        ...mapState({ overlay_type: state => state.mxsApp.overlay_type }),
+        ...mapState({
+            overlay_type: state => state.mxsApp.overlay_type,
+            is_session_alive: state => state.mxsApp.is_session_alive,
+        }),
         transparentLoading() {
             return this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
@@ -53,8 +56,11 @@ export default {
             switch (this.overlay_type) {
                 case OVERLAY_LOGGING:
                     return this.$mxs_t('initializing')
-                case OVERLAY_LOGOUT:
-                    return this.$mxs_t('loggingOut')
+                case OVERLAY_LOGOUT: {
+                    let txt = this.$mxs_t('loggingOut')
+                    if (!this.is_session_alive) txt = `${this.$mxs_t('sessionExpired')}. ${txt}`
+                    return txt
+                }
                 default:
                     return ''
             }

@@ -52,6 +52,27 @@ function getSqlConnId(url) {
 function isValidatingRequest(url) {
     return url === '/sql'
 }
+function handleDefErr({ status, store, error }) {
+    if (status === 401) store.commit('mxsApp/SET_IS_SESSION_ALIVE', false, { root: true })
+    else defErrStatusHandler({ store, error })
+}
+async function handleConnErr({ status, method, store, error }) {
+    await QueryConn.dispatch('validateConns', { silentValidation: true })
+    let msg = ''
+    switch (status) {
+        case 404:
+            if (method !== 'delete') msg = 'Connection expired, please reconnect.'
+            break
+        case 503:
+            msg = 'Connection busy, please wait.'
+            break
+    }
+    store.commit(
+        'mxsApp/SET_SNACK_BAR_MESSAGE',
+        { text: [...getErrorsArr(error), msg], type: 'error' },
+        { root: true }
+    )
+}
 /**
  * axios instance for workspace endpoint.
  * Use this for sql connection endpoint so that the value for
@@ -82,25 +103,17 @@ function queryHttp(store) {
                 sql_conn_id: getSqlConnId(response.config.url),
             })
             analyzeRes({ res: response, sql_conn_id: getSqlConnId(response.config.url) })
+            store.commit('mxsApp/SET_IS_SESSION_ALIVE', true, { root: true })
             return response
         },
         async error => {
             const { response: { status = null, config: { url = '', method } = {} } = {} } =
                 error || {}
             if (status === null) handleNullStatusCode({ store, error })
-            else if (!isValidatingRequest(url)) {
-                if (status === 404 || status === 503)
-                    await QueryConn.dispatch('validateConns', { silentValidation: true })
-                if (status === 404 && method !== 'delete')
-                    store.commit(
-                        'mxsApp/SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [...getErrorsArr(error), 'Connection expired, please reconnect.'],
-                            type: 'error',
-                        },
-                        { root: true }
-                    )
-            } else defErrStatusHandler({ store, error })
+            else if (isValidatingRequest(url)) handleDefErr({ status, store, error })
+            else if (status === 404 || status === 503)
+                await handleConnErr({ status, method, store, error })
+            else handleDefErr({ status, store, error })
             updateConnBusyStatus({ value: false, sql_conn_id: getSqlConnId(url) })
             return Promise.reject(error)
         }

@@ -49,14 +49,17 @@ function http(store) {
         error => Promise.reject(error)
     )
     http.interceptors.response.use(
-        response => response,
+        response => {
+            store.commit('mxsApp/SET_IS_SESSION_ALIVE', true, { root: true })
+            return response
+        },
         async error => {
             const { response: { status = null } = {} } = error || {}
 
             switch (status) {
                 case 401:
                     abortRequests()
-                    await store.dispatch('user/logout')
+                    store.commit('mxsApp/SET_IS_SESSION_ALIVE', false, { root: true })
                     break
                 case 404:
                     await router.push('/404')

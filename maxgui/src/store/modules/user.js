@@ -11,10 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@wsModels/QueryConn'
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import router from '@rootSrc/router'
-import localForage from 'localforage'
 import { authHttp, getBaseHttp, abortRequests } from '@rootSrc/utils/axios'
 
 export default {
@@ -88,22 +86,14 @@ export default {
             }
         },
         async logout({ commit, rootState }) {
-            await QueryConn.dispatch('disconnectAll')
-            abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-            const { ORM_PERSISTENT_ENTITIES, ORM_NAMESPACE } = rootState.mxsWorkspace.config
-
-            const { mxsApp, prefAndStorage, persisted, [ORM_NAMESPACE]: orm } = rootState
+            const { snackbar_message } = rootState.mxsApp
             // hide snackbar snackbar_message if it is on
-            if (mxsApp.snackbar_message.status) {
+            if (snackbar_message.status) {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: mxsApp.snackbar_message.text,
-                        type: mxsApp.snackbar_message.type,
-                        status: false,
-                    },
+                    { text: snackbar_message.text, type: snackbar_message.type, status: false },
                     { root: true }
                 )
             }
@@ -111,22 +101,6 @@ export default {
                 commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true })
                 if (router.app.$route.name !== 'login') router.push('/login')
             })
-
-            // Clear all but persist some states of some modules
-
-            const workspacePersistedState = this.vue.$helpers.lodash.cloneDeep({
-                prefAndStorage,
-                [ORM_NAMESPACE]: this.vue.$helpers.lodash.pick(orm, [
-                    ...Object.values(ORM_PERSISTENT_ENTITIES),
-                    '$name', // not an entity, but it's a reserved key for vuex-orm
-                ]),
-            })
-            const maxguiPersistedState = this.vue.$helpers.lodash.cloneDeep({
-                persisted: persisted,
-            })
-            await localForage.clear()
-            await localForage.setItem('mxs-workspace', workspacePersistedState)
-            await localForage.setItem('maxgui-app', maxguiPersistedState)
         },
         // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchLoggedInUserAttrs({ commit, state }) {

@@ -17,6 +17,7 @@ export default {
         snackbar_message: { status: false, text: '', type: 'info' },
         overlay_type: false,
         truncate_tooltip_item: null,
+        is_session_alive: true,
     },
     mutations: {
         SET_OVERLAY_TYPE(state, type) {
@@ -35,6 +36,9 @@ export default {
         },
         SET_TRUNCATE_TOOLTIP_ITEM(state, obj) {
             state.truncate_tooltip_item = obj
+        },
+        SET_IS_SESSION_ALIVE(state, payload) {
+            state.is_session_alive = payload
         },
     },
 }

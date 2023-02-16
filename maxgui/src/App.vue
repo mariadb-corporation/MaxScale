@@ -44,6 +44,7 @@ export default {
 
     computed: {
         ...mapState(['update_availability']),
+        ...mapState({ is_session_alive: state => state.mxsApp.is_session_alive }),
         updateExists: function() {
             return this.update_availability
         },
@@ -53,6 +54,9 @@ export default {
             // Clear global search state when route changes
             this.SET_SEARCH_KEYWORD('')
         },
+        async is_session_alive(v) {
+            if (!v) await this.logout()
+        },
     },
     mounted() {
         let overlay = document.getElementById('global-overlay')
@@ -60,17 +64,15 @@ export default {
             overlay.style.display = 'none'
         }
     },
-
     async created() {
         this.$logger.info(this.$store.state.app_config.asciiLogo)
         this.$logger.info(`Loaded Version: ${process.env.VUE_APP_VERSION}`)
         // Check if user is authenticated
         await this.authCheck()
     },
-
     methods: {
         ...mapMutations(['SET_UPDATE_AVAILABILITY', 'SET_SEARCH_KEYWORD']),
-        ...mapActions({ authCheck: 'user/authCheck' }),
+        ...mapActions({ authCheck: 'user/authCheck', logout: 'user/logout' }),
         confirmUpdate() {
             this.SET_UPDATE_AVAILABILITY(false)
             window.location.reload()
