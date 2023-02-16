@@ -92,7 +92,7 @@ public:
             // The first buffer in the chain does not contain the full
             // header so we need to copy it first.
             uint8_t header[MYSQL_HEADER_LEN];
-            gwbuf_copy_data(pBuffer, 0, sizeof(header), header);
+            pBuffer->copy_data(0, sizeof(header), header);
             payload_len = MYSQL_GET_PAYLOAD_LEN(header);
         }
 
@@ -111,7 +111,7 @@ public:
             else
             {
                 // Not enough, we copy what we need.
-                gwbuf_copy_data(pBuffer, MYSQL_HEADER_LEN, sizeof(payload), payload);
+                pBuffer->copy_data(MYSQL_HEADER_LEN, sizeof(payload), payload);
                 pPayload = payload;
             }
 

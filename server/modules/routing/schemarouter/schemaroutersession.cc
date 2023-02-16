@@ -243,15 +243,10 @@ mxs::Target* SchemaRouterSession::resolve_query_target(GWBUF* pPacket, uint32_t 
 static bool is_empty_packet(GWBUF* pPacket)
 {
     bool rval = false;
-    uint8_t len[3];
-
-    if (gwbuf_length(pPacket) == 4
-        && gwbuf_copy_data(pPacket, 0, 3, len) == 3
-        && gw_mysql_get_byte3(len) == 0)
+    if (pPacket->length() == MYSQL_HEADER_LEN && mariadb::get_header(pPacket->data()).pl_length == 0)
     {
         rval = true;
     }
-
     return rval;
 }
 

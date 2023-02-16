@@ -316,7 +316,7 @@ void AvroSession::process_command(GWBUF* queue)
     const size_t req_data_len = sizeof(req_data) - 1;
     size_t buflen = gwbuf_length(queue);
     uint8_t data[buflen + 1];
-    gwbuf_copy_data(queue, 0, buflen, data);
+    queue->copy_data(0, buflen, data);
     data[buflen] = '\0';
     char* command_ptr = strstr((char*)data, req_data);
 

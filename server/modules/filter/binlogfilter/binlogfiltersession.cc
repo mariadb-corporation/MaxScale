@@ -98,7 +98,7 @@ BinlogFilterSession* BinlogFilterSession::create(MXS_SESSION* pSession, SERVICE*
 static bool is_matching_query(GWBUF* buffer, const char* target)
 {
     char query[1024];       // Large enough for most practical cases
-    size_t bytes = gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, sizeof(query) - 1, (uint8_t*)query);
+    size_t bytes = buffer->copy_data(MYSQL_HEADER_LEN + 1, sizeof(query) - 1, (uint8_t*)query);
     query[bytes] = '\0';
     return strcasestr(query, target);
 }

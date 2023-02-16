@@ -604,11 +604,6 @@ size_t GWBUF::runtime_size() const
     return sizeof(*this) + varying_size();
 }
 
-size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)
-{
-    return buffer->copy_data(offset, bytes, dest);
-}
-
 static std::string dump_one_buffer(GWBUF* buffer)
 {
     ensure_owned(buffer);

@@ -328,14 +328,20 @@ bool mxs_mysql_is_valid_command(uint8_t command)
 bool mxs_mysql_is_ok_packet(GWBUF* buffer)
 {
     uint8_t cmd = 0xff;     // Default should differ from the OK packet
-    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
+    if (buffer->length() > MYSQL_HEADER_LEN)
+    {
+        cmd = (*buffer)[MYSQL_HEADER_LEN];
+    }
     return cmd == MYSQL_REPLY_OK;
 }
 
 bool mxs_mysql_is_err_packet(GWBUF* buffer)
 {
     uint8_t cmd = 0x00;     // Default should differ from the ERR packet
-    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
+    if (buffer->length() > MYSQL_HEADER_LEN)
+    {
+        cmd = (*buffer)[MYSQL_HEADER_LEN];
+    }
     return cmd == MYSQL_REPLY_ERR;
 }
 
@@ -347,29 +353,8 @@ uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer)
     {
         uint8_t buf[2];
         // First two bytes after the 0xff byte are the error code
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 2, buf);
+        buffer->copy_data(MYSQL_HEADER_LEN + 1, 2, buf);
         rval = mariadb::get_byte2(buf);
-    }
-
-    return rval;
-}
-
-bool mxs_mysql_is_local_infile(GWBUF* buffer)
-{
-    uint8_t cmd = 0xff;     // Default should differ from the OK packet
-    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
-    return cmd == MYSQL_REPLY_LOCAL_INFILE;
-}
-
-bool mxs_mysql_is_prep_stmt_ok(GWBUF* buffer)
-{
-    bool rval = false;
-    uint8_t cmd;
-
-    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd)
-        && cmd == MYSQL_REPLY_OK)
-    {
-        rval = true;
     }
 
     return rval;

@@ -26,7 +26,7 @@
 GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
 {
     uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
-    gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN + 1, header_and_command);
+    buffer->copy_data(0, MYSQL_HEADER_LEN + 1, header_and_command);
 
     if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK)
     {
@@ -236,7 +236,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(GWBUF* origin)
 
         /* Trim origin to sql, Append origin buffer to the prefix buffer */
         uint8_t header[MYSQL_HEADER_LEN];
-        gwbuf_copy_data(origin, 0, MYSQL_HEADER_LEN, header);
+        origin->copy_data(0, MYSQL_HEADER_LEN, header);
         /* Command length = 1 */
         size_t origin_sql_len = MYSQL_GET_PAYLOAD_LEN(header) - 1;
         /* Trim mysql header and command */

@@ -230,22 +230,6 @@ bool RWSplitSession::route_stored_query()
     return rval;
 }
 
-static bool connection_was_killed(GWBUF* buffer)
-{
-    bool rval = false;
-
-    if (mxs_mysql_is_err_packet(buffer))
-    {
-        uint8_t buf[2];
-        // First two bytes after the 0xff byte are the error code
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 2, buf);
-        uint16_t errcode = gw_mysql_get_byte2(buf);
-        rval = errcode == ER_CONNECTION_KILLED;
-    }
-
-    return rval;
-}
-
 void RWSplitSession::trx_replay_next_stmt()
 {
     mxb_assert(m_state == TRX_REPLAY);

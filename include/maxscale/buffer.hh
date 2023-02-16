@@ -527,21 +527,6 @@ GWBUF* gwbuf_consume(GWBUF* head, uint64_t length);
 extern unsigned int gwbuf_length(const GWBUF* head);
 
 /**
- * @brief Copy bytes from a buffer
- *
- * Copy bytes from a chain of buffers. Supports copying data from buffers where
- * the data is spread across multiple buffers.
- *
- * @param buffer  Buffer to copy from
- * @param offset  Offset into the buffer
- * @param bytes   Number of bytes to copy
- * @param dest    Destination where the bytes are copied
- *
- * @return Number of bytes copied.
- */
-extern size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest);
-
-/**
  * @brief Split a buffer in two
  *
  * The returned value will be @c length bytes long. If the length of @c buf

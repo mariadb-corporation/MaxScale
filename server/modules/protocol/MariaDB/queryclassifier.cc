@@ -29,22 +29,6 @@ namespace
 
 const int QC_TRACE_MSG_LEN = 1000;
 
-// Copy of mxs_mysql_extract_ps_id() in modules/protocol/MySQL/mysql_common.cc,
-// but we do not want to create a dependency from maxscale-common to that.
-
-uint32_t mysql_extract_ps_id(GWBUF* buffer)
-{
-    uint32_t rval = 0;
-    uint8_t id[MYSQL_PS_ID_SIZE];
-
-    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
-    {
-        rval = gw_mysql_get_byte4(id);
-    }
-
-    return rval;
-}
-
 std::string qc_mysql_get_current_db(MXS_SESSION* session)
 {
     return session->client_connection()->current_db();
@@ -59,33 +43,6 @@ bool qc_mysql_is_ps_command(uint8_t cmd)
            || cmd == MXS_COM_STMT_CLOSE
            || cmd == MXS_COM_STMT_FETCH
            || cmd == MXS_COM_STMT_RESET;
-}
-
-// Copied from mysql_common.cc
-uint32_t qc_mysql_extract_ps_id(GWBUF* buffer)
-{
-    uint32_t rval = 0;
-    uint8_t id[MYSQL_PS_ID_SIZE];
-
-    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
-    {
-        rval = gw_mysql_get_byte4(id);
-    }
-
-    return rval;
-}
-
-uint16_t qc_extract_ps_param_count(GWBUF* buffer)
-{
-    uint16_t rval = 0;
-    uint8_t params[MYSQL_PS_PARAMS_SIZE];
-
-    if (gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params))
-    {
-        rval = gw_mysql_get_byte2(params);
-    }
-
-    return rval;
 }
 
 bool is_packet_a_query(int packet_type)
@@ -308,7 +265,7 @@ public:
         }
         else if (qc_mysql_is_ps_command(cmd))
         {
-            erase(mysql_extract_ps_id(buffer));
+            erase(mxs_mysql_extract_ps_id(buffer));
         }
         else
         {
@@ -557,7 +514,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
 uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
 {
     // All COM_STMT type statements store the ID in the same place
-    uint32_t id = mysql_extract_ps_id(pBuffer);
+    uint32_t id = mxs_mysql_extract_ps_id(pBuffer);
 
     // MARIADB_PS_DIRECT_EXEC_ID is a special ID that refers to the previous prepared statement
     if (id == MARIADB_PS_DIRECT_EXEC_ID && m_prev_ps_id)
@@ -597,7 +554,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
 
         if (qc_mysql_is_ps_command(command))
         {
-            sqldata = "ID: " + std::to_string(mysql_extract_ps_id(querybuf));
+            sqldata = "ID: " + std::to_string(mxs_mysql_extract_ps_id(querybuf));
             sql = sqldata.c_str();
             len = sqldata.length();
         }
