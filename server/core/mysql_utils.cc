@@ -358,7 +358,7 @@ const char* mxs_response_to_string(GWBUF* pPacket)
                 end = std::next(it, sizeof(error) - 1);     // -1 due to the 1 in 'header' above.
                 std::copy(it, end, error + 1);
 
-                uint32_t error_code = gw_mysql_get_byte2(&error[1]);
+                uint32_t error_code = mariadb::get_byte2(&error[1]);
 
                 ss << ", Code: " << error_code;
 

@@ -435,12 +435,12 @@ static inline REP_HEADER construct_header(uint8_t* ptr)
 {
     REP_HEADER hdr;
 
-    hdr.timestamp = gw_mysql_get_byte4(ptr);
+    hdr.timestamp = mariadb::get_byte4(ptr);
     hdr.event_type = ptr[4];
-    hdr.serverid = gw_mysql_get_byte4(&ptr[5]);
-    hdr.event_size = gw_mysql_get_byte4(&ptr[9]);
-    hdr.next_pos = gw_mysql_get_byte4(&ptr[13]);
-    hdr.flags = gw_mysql_get_byte2(&ptr[17]);
+    hdr.serverid = mariadb::get_byte4(&ptr[5]);
+    hdr.event_size = mariadb::get_byte4(&ptr[9]);
+    hdr.next_pos = mariadb::get_byte4(&ptr[13]);
+    hdr.flags = mariadb::get_byte2(&ptr[17]);
 
     return hdr;
 }

@@ -426,13 +426,13 @@ private:
     void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
     {
         uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-        gw_mysql_set_byte4(ptr, id);
+        mariadb::set_byte4(ptr, id);
     }
 
     uint32_t extract_binary_ps_id(GWBUF* buffer)
     {
         uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-        return gw_mysql_get_byte4(ptr);
+        return mariadb::get_byte4(ptr);
     }
 
     bool in_optimistic_trx() const

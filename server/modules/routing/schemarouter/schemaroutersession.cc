@@ -660,7 +660,7 @@ bool extract_database(GWBUF* buf, char* str)
     unsigned int plen;
 
     packet = GWBUF_DATA(buf);
-    plen = gw_mysql_get_byte3(packet) - 1;
+    plen = mariadb::get_byte3(packet) - 1;
 
     /** Copy database name from MySQL packet to session */
     if (mxs_mysql_get_command(buf) == MXS_COM_QUERY
@@ -902,7 +902,7 @@ bool SchemaRouterSession::handle_default_db()
         GWBUF* buffer = gwbuf_alloc(qlen + 5);
         uint8_t* data = GWBUF_DATA(buffer);
 
-        gw_mysql_set_byte3(data, qlen + 1);
+        mariadb::set_byte3(data, qlen + 1);
         data[3] = 0x0;
         data[4] = MXS_COM_INIT_DB;
         memcpy(data + 5, m_connect_db.c_str(), qlen);

@@ -368,7 +368,7 @@ void unpack_datetime(uint8_t* ptr, int length, struct tm* dest)
     uint64_t val = 0;
     uint32_t second, minute, hour, day, month, year;
 
-    val = gw_mysql_get_byte8(ptr);
+    val = mariadb::get_byte8(ptr);
     second = val - ((val / 100) * 100);
     val /= 100;
     minute = val - ((val / 100) * 100);
@@ -902,12 +902,12 @@ void set_numeric_field_value(SRowEventHandler& conv, const Table& create, int id
     case TABLE_COL_TYPE_SHORT:
         if (is_unsigned)
         {
-            uint16_t s = gw_mysql_get_byte2(value);
+            uint16_t s = mariadb::get_byte2(value);
             conv->column_int(create, idx, s);
         }
         else
         {
-            int16_t s = gw_mysql_get_byte2(value);
+            int16_t s = mariadb::get_byte2(value);
             conv->column_int(create, idx, s);
         }
         break;
@@ -915,12 +915,12 @@ void set_numeric_field_value(SRowEventHandler& conv, const Table& create, int id
     case TABLE_COL_TYPE_INT24:
         if (is_unsigned)
         {
-            uint32_t x = gw_mysql_get_byte3(value);
+            uint32_t x = mariadb::get_byte3(value);
             conv->column_int(create, idx, x);
         }
         else
         {
-            int32_t x = gw_mysql_get_byte3(value);
+            int32_t x = mariadb::get_byte3(value);
 
             if (x & 0x800000)
             {
@@ -934,18 +934,18 @@ void set_numeric_field_value(SRowEventHandler& conv, const Table& create, int id
     case TABLE_COL_TYPE_LONG:
         if (is_unsigned)
         {
-            uint32_t x = gw_mysql_get_byte4(value);
+            uint32_t x = mariadb::get_byte4(value);
             conv->column_long(create, idx, x);
         }
         else
         {
-            int32_t x = gw_mysql_get_byte4(value);
+            int32_t x = mariadb::get_byte4(value);
             conv->column_long(create, idx, x);
         }
         break;
 
     case TABLE_COL_TYPE_LONGLONG:
-        conv->column_long(create, idx, gw_mysql_get_byte8(value));
+        conv->column_long(create, idx, mariadb::get_byte8(value));
         break;
 
     case TABLE_COL_TYPE_FLOAT:
@@ -1365,9 +1365,9 @@ STable load_table_from_schema(const char* file, const char* db, const char* tabl
 
 void gtid_pos_t::extract(const REP_HEADER& hdr, uint8_t* ptr)
 {
-    domain = gw_mysql_get_byte4(ptr + 8);
+    domain = mariadb::get_byte4(ptr + 8);
     server_id = hdr.serverid;
-    seq = gw_mysql_get_byte8(ptr);
+    seq = mariadb::get_byte8(ptr);
     event_num = 0;
     timestamp = hdr.timestamp;
 }
@@ -1808,7 +1808,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                 int bytes = metadata[metadata_offset] | metadata[metadata_offset + 1] << 8;
                 if (bytes > 255)
                 {
-                    sz = gw_mysql_get_byte2(ptr);
+                    sz = mariadb::get_byte2(ptr);
                     ptr += 2;
                 }
                 else
@@ -2139,7 +2139,7 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
     constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2; // Post-header offset
 
     int dblen = ptr[DBNM_OFF];
-    int vblklen = gw_mysql_get_byte2(ptr + VBLK_OFF);
+    int vblklen = mariadb::get_byte2(ptr + VBLK_OFF);
     int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen);
     std::string sql((char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
     std::string db((char*) ptr + PHDR_OFF + vblklen, dblen);
@@ -2151,7 +2151,7 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
     if (warn_not_row_format)
     {
         GWBUF* buffer = gwbuf_alloc(sql.length() + 5);
-        gw_mysql_set_byte3(GWBUF_DATA(buffer), sql.length() + 1);
+        mariadb::set_byte3(GWBUF_DATA(buffer), sql.length() + 1);
         GWBUF_DATA(buffer)[4] = 0x03;
         memcpy(GWBUF_DATA(buffer) + 5, sql.c_str(), sql.length());
         qc_query_op_t op = qc_get_operation(buffer);

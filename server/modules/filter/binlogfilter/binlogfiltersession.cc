@@ -134,7 +134,7 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
     {
     case MXS_COM_REGISTER_SLAVE:
         // Connected client is registering as Slave Server
-        m_serverid = gw_mysql_get_byte4(data + MYSQL_HEADER_LEN + 1);
+        m_serverid = mariadb::get_byte4(data + MYSQL_HEADER_LEN + 1);
         MXB_INFO("Client is registering as Replica server with ID %u", m_serverid);
         break;
 
@@ -193,7 +193,7 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
 static void extract_header(const uint8_t* event, REP_HEADER* hdr)
 {
     hdr->seqno = event[3];
-    hdr->payload_len = gw_mysql_get_byte3(event);
+    hdr->payload_len = mariadb::get_byte3(event);
     hdr->ok = event[MYSQL_HEADER_LEN];
     if (hdr->ok != 0)
     {
@@ -203,13 +203,13 @@ static void extract_header(const uint8_t* event, REP_HEADER* hdr)
 
     // event points to Event Header (19 bytes)
     event += MYSQL_HEADER_LEN + 1;
-    hdr->timestamp = gw_mysql_get_byte4(event);
+    hdr->timestamp = mariadb::get_byte4(event);
     hdr->event_type = event[4];
-    // TODO: add offsets in order to facilitate reading
-    hdr->serverid = gw_mysql_get_byte4(event + 4 + 1);
-    hdr->event_size = gw_mysql_get_byte4(event + 4 + 1 + 4);
-    hdr->next_pos = gw_mysql_get_byte4(event + 4 + 1 + 4 + 4);
-    hdr->flags = gw_mysql_get_byte2(event + 4 + 1 + 4 + 4 + 4);
+    event += 4 + 1;
+    hdr->serverid = mariadb::consume_byte4(&event);
+    hdr->event_size = mariadb::consume_byte4(&event);
+    hdr->next_pos = mariadb::consume_byte4(&event);
+    hdr->flags = mariadb::get_byte2(event);
 }
 
 /**
@@ -476,7 +476,7 @@ static void event_set_crc32(uint8_t* event, uint32_t event_size)
 {
     uint32_t chksum = crc32(0L, NULL, 0);
     chksum = crc32(chksum, event, event_size - 4);
-    gw_mysql_set_byte4(event + event_size - 4, chksum);
+    mariadb::set_byte4(event + event_size - 4, chksum);
 }
 
 /**
@@ -488,12 +488,12 @@ static void event_set_crc32(uint8_t* event, uint32_t event_size)
 void BinlogFilterSession::fixEvent(uint8_t* event, uint32_t event_size, const REP_HEADER& hdr)
 {
     // Update event length in case we changed it
-    gw_mysql_set_byte4(event + 4 + 1 + 4, event_size);
+    mariadb::set_byte4(event + 4 + 1 + 4, event_size);
 
     // Set next pos to 0.
     // The next_pos offset is the 13th byte in replication event header 19 bytes
     // +  4 (time) + 1 (type) + 4 (server_id) + 4 (event_size)
-    gw_mysql_set_byte4(event + 4 + 1 + 4 + 4, hdr.next_pos);
+    mariadb::set_byte4(event + 4 + 1 + 4 + 4, hdr.next_pos);
 
     // Set CRC32 in the new event
     if (m_crc)
@@ -519,7 +519,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
 
         int db_name_len = event[4 + 4];
         int var_block_len_offset = 4 + 4 + 1 + 2;
-        int var_block_len = gw_mysql_get_byte2(event + var_block_len_offset);
+        int var_block_len = mariadb::get_byte2(event + var_block_len_offset);
         int static_size = 4 + 4 + 1 + 2 + 2;
         int statement_len = event_size - static_size - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
         uint8_t* sql_start = event + static_size + var_block_len + db_name_len + 1;
@@ -581,7 +581,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
      * 3) set 1 byte OK indicator
      */
     // Set New Packet size: new event_size + 1 byte replication status
-    gw_mysql_set_byte3(ptr, new_event_size + 1);
+    mariadb::set_byte3(ptr, new_event_size + 1);
 
     // Force OK flag after 3 bytes packet size
     ptr[MYSQL_HEADER_LEN] = 0;
@@ -596,7 +596,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
     int event_header_offset = MYSQL_HEADER_LEN + 1;
 
     // Force Set timestamp to 0 [4 bytes]
-    gw_mysql_set_byte4(ptr + event_header_offset, 0);
+    mariadb::set_byte4(ptr + event_header_offset, 0);
     // Point to event_type
     event_header_offset += 4;
 
@@ -611,20 +611,19 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
     event_header_offset++;
 
     // Force Set server_id to 0 [4 bytes]
-    gw_mysql_set_byte4(ptr + event_header_offset, 0);
+    mariadb::set_byte4(ptr + event_header_offset, 0);
     // Point to event_size
     event_header_offset += 4;
 
     // Set event_event size [4 bytes]
-    gw_mysql_set_byte4(ptr + event_header_offset, new_event_size);
+    mariadb::set_byte4(ptr + event_header_offset, new_event_size);
     // Next pos [4 bytes] is set by fixEvent(), go ahead!!!
     event_header_offset += 4;
     // Point to event_flags,
     event_header_offset += 4;
 
     // Set LOG_EVENT_SKIP_REPLICATION_F flags [2 bytes]
-    gw_mysql_set_byte2(ptr + event_header_offset,
-                       LOG_EVENT_SKIP_REPLICATION_F);
+    mariadb::set_byte2(ptr + event_header_offset, LOG_EVENT_SKIP_REPLICATION_F);
 
     // Point to RAND_EVENT content now
     event_header_offset += 2;
@@ -635,19 +634,19 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
      * event_size is 0 for all packets belonging to a large event
      */
     // Set first seed as the input packet size (4 bytes only)
-    gw_mysql_set_byte4(ptr + event_header_offset,
+    mariadb::set_byte4(ptr + event_header_offset,
                        buf_len - (MYSQL_HEADER_LEN + 1));
     event_header_offset += 4;
     // Set 0 for next 4 bytes of first seed
-    gw_mysql_set_byte4(ptr + event_header_offset, 0);
+    mariadb::set_byte4(ptr + event_header_offset, 0);
 
     // Point to second seed
     event_header_offset += 4;
     // Set second seed as the input event type (4 bytes only)
-    gw_mysql_set_byte4(ptr + event_header_offset, orig_event_type);
+    mariadb::set_byte4(ptr + event_header_offset, orig_event_type);
     event_header_offset += 4;
     // Set 0 for next 4 bytes of second seed
-    gw_mysql_set_byte4(ptr + event_header_offset, 0);
+    mariadb::set_byte4(ptr + event_header_offset, 0);
 
     /**
      * Now we remove the useless bytes in the buffer
@@ -685,7 +684,7 @@ static char* extract_column(GWBUF* buf, int col)
 
     ptr = (uint8_t*)GWBUF_DATA(buf);
     /* First packet should be the column count */
-    len = gw_mysql_get_byte3(ptr);
+    len = mariadb::get_byte3(ptr);
     ptr += 3;
     if (*ptr != 1)      // Check sequence number is 1
     {
@@ -701,12 +700,12 @@ static char* extract_column(GWBUF* buf, int col)
     // Now ptr points at the column definition
     while (ncol-- > 0)
     {
-        len = gw_mysql_get_byte3(ptr);
+        len = mariadb::get_byte3(ptr);
         ptr += 4;   // Skip to payload
         ptr += len; // Skip over payload
     }
     // Now we should have an EOF packet
-    len = gw_mysql_get_byte3(ptr);
+    len = mariadb::get_byte3(ptr);
     ptr += 4;       // Skip to payload
     if (*ptr != 0xfe)
     {
@@ -715,7 +714,7 @@ static char* extract_column(GWBUF* buf, int col)
     ptr += len;
 
     // Finally we have reached the row
-    len = gw_mysql_get_byte3(ptr);
+    len = mariadb::get_byte3(ptr);
     ptr += 4;
 
     /**
@@ -851,7 +850,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
 
     int db_name_len = event[4 + 4];
     int var_block_len_offset = 4 + 4 + 1 + 2;
-    int var_block_len = gw_mysql_get_byte2(event + var_block_len_offset);
+    int var_block_len = mariadb::get_byte2(event + var_block_len_offset);
     int static_size = 4 + 4 + 1 + 2 + 2 + extra_len;
     int statement_len = event_size - static_size - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
 
@@ -900,7 +899,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
             event[4 + 4] = db.length();
 
             // Also fix the packet length
-            gw_mysql_set_byte3(GWBUF_DATA(*buffer), gwbuf_length(*buffer) - MYSQL_HEADER_LEN);
+            mariadb::set_byte3(GWBUF_DATA(*buffer), gwbuf_length(*buffer) - MYSQL_HEADER_LEN);
 
             MXB_INFO("Rewrote query: (%s) %s", db.c_str(), sql.c_str());
         }

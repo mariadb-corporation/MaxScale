@@ -245,7 +245,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(GWBUF* origin)
 
         /* Modify totol length: Prefix sql len + origin sql len + command len */
         size_t new_payload_len = sql.size() + origin_sql_len + 1;
-        gw_mysql_set_byte3(GWBUF_DATA(rval), new_payload_len);
+        mariadb::set_byte3(GWBUF_DATA(rval), new_payload_len);
 
         m_wait_gtid = WAITING_FOR_HEADER;
     }

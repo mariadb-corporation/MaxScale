@@ -90,46 +90,6 @@
 class DCB;
 class BackendDCB;
 
-/** Protocol packing macros. */
-#define gw_mysql_set_byte2(__buffer, __int) \
-    do { \
-        (__buffer)[0] = (uint8_t)((__int) & 0xFF); \
-        (__buffer)[1] = (uint8_t)(((__int) >> 8) & 0xFF);} while (0)
-#define gw_mysql_set_byte3(__buffer, __int) \
-    do { \
-        (__buffer)[0] = (uint8_t)((__int) & 0xFF); \
-        (__buffer)[1] = (uint8_t)(((__int) >> 8) & 0xFF); \
-        (__buffer)[2] = (uint8_t)(((__int) >> 16) & 0xFF);} while (0)
-#define gw_mysql_set_byte4(__buffer, __int) \
-    do { \
-        (__buffer)[0] = (uint8_t)((__int) & 0xFF); \
-        (__buffer)[1] = (uint8_t)(((__int) >> 8) & 0xFF); \
-        (__buffer)[2] = (uint8_t)(((__int) >> 16) & 0xFF); \
-        (__buffer)[3] = (uint8_t)(((__int) >> 24) & 0xFF);} while (0)
-
-/** Protocol unpacking macros. */
-#define gw_mysql_get_byte2(__buffer) \
-    (uint16_t)((__buffer)[0]   \
-               | ((__buffer)[1] << 8))
-#define gw_mysql_get_byte3(__buffer) \
-    (uint32_t)((__buffer)[0]   \
-               | ((__buffer)[1] << 8)   \
-               | ((__buffer)[2] << 16))
-#define gw_mysql_get_byte4(__buffer) \
-    (uint32_t)((__buffer)[0]   \
-               | ((__buffer)[1] << 8)   \
-               | ((__buffer)[2] << 16)   \
-               | ((__buffer)[3] << 24))
-#define gw_mysql_get_byte8(__buffer) \
-    ((uint64_t)(__buffer)[0]   \
-     | ((uint64_t)(__buffer)[1] << 8)   \
-     | ((uint64_t)(__buffer)[2] << 16)   \
-     | ((uint64_t)(__buffer)[3] << 24)   \
-     | ((uint64_t)(__buffer)[4] << 32)   \
-     | ((uint64_t)(__buffer)[5] << 40)   \
-     | ((uint64_t)(__buffer)[6] << 48)   \
-     | ((uint64_t)(__buffer)[7] << 56))
-
 namespace mariadb
 {
 /**
@@ -167,7 +127,7 @@ inline uint32_t consume_byte3(uint8_t** buffer)
     return rv;
 }
 
-inline uint32_t consume_byte4(uint8_t** buffer)
+inline uint32_t consume_byte4(const uint8_t** buffer)
 {
     uint32_t rv = get_byte4(*buffer);
     *buffer += 4;
@@ -391,7 +351,7 @@ static inline uint8_t MYSQL_GET_PACKET_NO(const uint8_t* header)
 
 static inline uint32_t MYSQL_GET_PAYLOAD_LEN(const uint8_t* header)
 {
-    return gw_mysql_get_byte3(header);
+    return mariadb::get_byte3(header);
 }
 
 static inline uint32_t MYSQL_GET_PACKET_LEN(const GWBUF* buffer)
