@@ -33,6 +33,9 @@ add_library(pinloki-core
 add_dependencies(pinloki-core boost)
 target_link_libraries(pinloki-core maxscale-common uuid)
 
+# Clang 15 complains about deprecated builtins in the boost headers without this
+target_compile_options(pinloki-core PRIVATE "-Wno-deprecated-builtins")
+
 add_library(binlogrouter SHARED pinloki.cc pinlokisession.cc)
 target_link_libraries(binlogrouter pinloki-core maxscale-common)
 set_target_properties(binlogrouter PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)

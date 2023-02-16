@@ -2057,7 +2057,6 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
             /** Each event has one or more rows in it. The number of rows is not known
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
-            int rows = 0;
             MXB_INFO("Row Event for '%s' at %u", table_ident.c_str(), hdr->next_pos - hdr->event_size);
 
             while (ptr < end)
@@ -2081,8 +2080,6 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
                     ptr = process_row_event_data(create, ptr, col_present, end);
                     m_handler->commit(create, m_gtid);
                 }
-
-                rows++;
             }
 
             rval = true;

@@ -918,6 +918,31 @@ void test_admin_users(TestConnections& test)
     reset(test);
 }
 
+void test_custom_db(TestConnections& test)
+{
+    test.maxscale->ssh_output("sed -i 's/config_sync_db=mysql/config_sync_db=test/' /etc/maxscale.cnf");
+    test.maxscale2->ssh_output("sed -i 's/config_sync_db=mysql/config_sync_db=test/' /etc/maxscale.cnf");
+    reset(test);
+
+    int version = 0;
+    test.tprintf("Create a filter");
+    test.check_maxctrl("create filter test-object hintfilter");
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "filters/test-object", "/data/type");
+
+    auto res = test.maxscale2->maxctrl("destroy filter test-object");
+    test.expect(res.rc == 0, "Destroying object on second MaxScale should work: %s", res.output.c_str());
+
+    auto c = test.repl->get_connection(0);
+    test.expect(c.connect() && c.field("SELECT COUNT(*) FROM test.maxscale_config") == "1",
+                "Expected 1 row in test.maxscale_config. %s", c.error());
+
+    test.maxscale->ssh_output("sed -i 's/config_sync_db=test/config_sync_db=mysql/' /etc/maxscale.cnf");
+    test.maxscale2->ssh_output("sed -i 's/config_sync_db=test/config_sync_db=mysql/' /etc/maxscale.cnf");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -947,6 +972,9 @@ int main(int argc, char** argv)
 
     test.log_printf("8. test_admin_users");
     test_admin_users(test);
+
+    test.log_printf("9. test_custom_db");
+    test_custom_db(test);
 
     return test.global_result;
 }
