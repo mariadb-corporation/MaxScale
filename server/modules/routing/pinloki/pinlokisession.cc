@@ -166,11 +166,16 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_QUERY:
+        try
         {
             const auto& sql = buf.get()->get_sql();
             MXB_DEBUG("COM_QUERY: %s", sql.c_str());
             parser::parse(sql, this);
             rval = 1;
+        }
+        catch (const BinlogWriteError& err)
+        {
+            MXS_ERROR("Binlog write error: %s", err.what());
         }
         break;
 
