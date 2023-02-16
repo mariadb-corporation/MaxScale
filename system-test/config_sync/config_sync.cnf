@@ -4,6 +4,7 @@ config_sync_cluster=MariaDB-Monitor
 config_sync_user=maxskysql
 config_sync_password=skysql
 config_sync_interval=100ms
+config_sync_db=mysql
 
 ###server###
 

@@ -280,7 +280,6 @@ int CDCAuthenticatorModule::set_service_user(SERVICE* service)
 mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
 {
     FILE* fp;
-    int loaded = 0;
     char* avro_user;
     char* user_passwd;
     /* user maxlen ':' password hash  '\n' '\0' */
@@ -312,7 +311,6 @@ mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
 
                 /* add user */
                 rval.add(avro_user, user_passwd, USER_ACCOUNT_ADMIN);
-                loaded++;
             }
         }
     }

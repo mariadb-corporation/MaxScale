@@ -319,6 +319,7 @@ public:
     std::string  config_sync_cluster;           /**< Cluster used for config sync */
     std::string  config_sync_user;              /**< User used for config sync */
     std::string  config_sync_password;          /**< Password used for config sync */
+    std::string  config_sync_db;                /**< Database for config sync */
     seconds      config_sync_timeout;           /**< Timeout for the config sync database operations */
     milliseconds config_sync_interval;          /**< How often to  sync the config */
     bool         log_warn_super_user;           /**< Log a warning if incoming client has super-priv. */
@@ -459,6 +460,7 @@ private:
     static config::ParamString                          s_config_sync_cluster;
     static config::ParamString                          s_config_sync_user;
     static config::ParamPassword                        s_config_sync_password;
+    static config::ParamString                          s_config_sync_db;
     static config::ParamSeconds                         s_config_sync_timeout;
     static config::ParamMilliseconds                    s_config_sync_interval;
     static config::ParamBool                            s_log_warn_super_user;
