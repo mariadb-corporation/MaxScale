@@ -434,13 +434,6 @@ inline size_t gwbuf_link_length(const GWBUF* b)
     return b->length();
 }
 
-/*< Check whether the buffer is contiguous*/
-inline bool gwbuf_is_contiguous(const GWBUF* b)
-{
-    mxb_assert(b);
-    return true;
-}
-
 /**
  * Allocate a new gateway buffer of specified size.
  *
@@ -560,17 +553,6 @@ extern size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, 
  * @return Head of the buffer chain.
  */
 extern GWBUF* gwbuf_split(GWBUF** buf, size_t length);
-
-/**
- * Convert a chain of GWBUF structures into a single GWBUF structure
- *
- * @param orig  The chain to convert, must not be used after the function call
- *
- * @return A contiguous version of @c buf.
- *
- * @attention Never returns NULL, memory allocation failures abort the process
- */
-extern GWBUF* gwbuf_make_contiguous(GWBUF* buf);
 
 #if defined (BUFFER_TRACE)
 extern void dprintAllBuffers(void* pdcb);
@@ -1289,34 +1271,6 @@ public:
     bool empty() const
     {
         return m_pBuffer == nullptr;
-    }
-
-    /**
-     * Make the buffer contiguous.
-     *
-     * @return  True, if the buffer could be made contiguous.
-     *
-     * @attention  Invalidates all iterators.
-     */
-    bool make_contiguous(std::nothrow_t)
-    {
-        return m_pBuffer != NULL;
-    }
-
-    /**
-     * Make the buffer contiguous.
-     *
-     * @throws  @c std::bad_alloc if an allocation failed.
-     *
-     * @attention  Invalidates all iterators.
-     */
-    void make_contiguous()
-    {
-        if (!make_contiguous(std::nothrow))
-        {
-            mxb_assert(!true);
-            throw std::bad_alloc();
-        }
     }
 
     /**

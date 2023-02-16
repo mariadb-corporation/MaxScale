@@ -507,12 +507,6 @@ void GWBUF::set_owner(mxb::Worker* owner)
 }
 #endif
 
-GWBUF* gwbuf_make_contiguous(GWBUF* orig)
-{
-    // Already contiguous
-    return orig;
-}
-
 void GWBUF::merge_front(GWBUF&& buffer)
 {
     if (!buffer.empty())

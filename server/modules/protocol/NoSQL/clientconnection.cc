@@ -116,13 +116,6 @@ bool ClientConnection::setup_ssl()
 void ClientConnection::ready_for_reading(GWBUF* pBuffer)
 {
     // Got the header, the full packet may be available.
-    auto link_len = gwbuf_link_length(pBuffer);
-
-    if (link_len < protocol::HEADER_LEN)
-    {
-        pBuffer = gwbuf_make_contiguous(pBuffer);
-    }
-
     protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(pBuffer->data());
 
     int buffer_len = gwbuf_length(pBuffer);
@@ -147,15 +140,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
             m_pDcb->trigger_read_event();
         }
 
-        // We are not going to be able to parse bson unless the data is
-        // contiguous.
-        if (!gwbuf_is_contiguous(pPacket))
-        {
-            pPacket = gwbuf_make_contiguous(pPacket);
-        }
-
         GWBUF* pResponse = handle_one_packet(pPacket);
-
         if (pResponse)
         {
             m_pDcb->writeq_append(pResponse);
@@ -356,7 +341,6 @@ void ClientConnection::prepare_session(const string& user, const vector<uint8_t>
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 {
-    mxb_assert(gwbuf_is_contiguous(pPacket));
     mxb_assert(gwbuf_length(pPacket) >= protocol::HEADER_LEN);
 
     return m_nosql.handle_request(pPacket);

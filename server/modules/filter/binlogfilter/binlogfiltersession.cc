@@ -569,8 +569,6 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
                               + (new_event_size - buf_len));
         // Append new buff to current one
         *ppPacket = gwbuf_append(*ppPacket, pTmpbuf);
-        // Make current buff contiguous
-        *ppPacket = gwbuf_make_contiguous(*ppPacket);
     }
 
     // point to data
@@ -885,7 +883,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
             if (len > 0)
             {
                 // Buffer is too short, extend it
-                *buffer = gwbuf_make_contiguous(gwbuf_append(*buffer, gwbuf_alloc(len)));
+                *buffer = gwbuf_append(*buffer, gwbuf_alloc(len));
             }
             else if (len < 0)
             {

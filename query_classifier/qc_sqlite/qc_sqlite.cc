@@ -3849,111 +3849,104 @@ static bool parse_query(GWBUF* query, uint32_t collect)
     bool parsed = false;
     mxb_assert(!query_is_parsed(query, collect));
 
-    if (gwbuf_is_contiguous(query))
+    uint8_t* data = (uint8_t*) GWBUF_DATA(query);
+
+    if ((gwbuf_link_length(query) >= MYSQL_HEADER_LEN + 1)
+        && (gwbuf_link_length(query) == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data)))
     {
-        uint8_t* data = (uint8_t*) GWBUF_DATA(query);
+        uint8_t command = MYSQL_GET_COMMAND(data);
 
-        if ((gwbuf_link_length(query) >= MYSQL_HEADER_LEN + 1)
-            && (gwbuf_link_length(query) == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data)))
+        if ((command == MXS_COM_QUERY) || (command == MXS_COM_STMT_PREPARE))
         {
-            uint8_t command = MYSQL_GET_COMMAND(data);
+            bool suppress_logging = false;
 
-            if ((command == MXS_COM_QUERY) || (command == MXS_COM_STMT_PREPARE))
+            auto* pInfo = static_cast<QcSqliteInfo*>(query->get_classifier_data_ptr());
+            if (pInfo)
             {
-                bool suppress_logging = false;
+                mxb_assert((~pInfo->m_collect & collect) != 0);
+                mxb_assert((~pInfo->m_collected & collect) != 0);
 
-                auto* pInfo = static_cast<QcSqliteInfo*>(query->get_classifier_data_ptr());
-                if (pInfo)
-                {
-                    mxb_assert((~pInfo->m_collect & collect) != 0);
-                    mxb_assert((~pInfo->m_collected & collect) != 0);
+                // If we get here, then the statement has been parsed once, but
+                // not all needed was collected. Now we turn on all blinkenlichts to
+                // ensure that a statement is parsed at most twice.
+                pInfo->m_collect = QC_COLLECT_ALL;
 
-                    // If we get here, then the statement has been parsed once, but
-                    // not all needed was collected. Now we turn on all blinkenlichts to
-                    // ensure that a statement is parsed at most twice.
-                    pInfo->m_collect = QC_COLLECT_ALL;
+                // We also reset the collected keywords, so that code that behaves
+                // differently depending on whether keywords have been seem or not
+                // acts the same way on this second round.
+                pInfo->m_keyword_1 = 0;
+                pInfo->m_keyword_2 = 0;
 
-                    // We also reset the collected keywords, so that code that behaves
-                    // differently depending on whether keywords have been seem or not
-                    // acts the same way on this second round.
-                    pInfo->m_keyword_1 = 0;
-                    pInfo->m_keyword_2 = 0;
-
-                    // And turn off logging. Any parsing issues were logged on the first round.
-                    suppress_logging = true;
-                }
-                else
-                {
-                    auto sInfo = QcSqliteInfo::create(collect);
-                    pInfo = sInfo.get();
-                    if (pInfo)
-                    {
-                        query->set_classifier_data(std::move(sInfo));
-
-                        // TODO: Asking GWBUF for its canonical version is a bit ass-backwards,
-                        // TODO: but sorting that out is for later.
-                        pInfo->m_canonical = query->get_canonical();
-
-                        if (command == MXS_COM_STMT_PREPARE)
-                        {
-                            // This is to ensure that a COM_QUERY and a COM_STMT_PREPARE
-                            // containing the same statement have a different canonical string.
-                            pInfo->m_canonical.append(":P");
-                        }
-
-                        pInfo->m_canonical.shrink_to_fit();
-                    }
-                }
-
-                if (pInfo)
-                {
-                    this_thread.pInfo = pInfo;
-
-                    size_t len = MYSQL_GET_PAYLOAD_LEN(data) - 1;   // Subtract 1 for packet type byte.
-
-                    const char* s = (const char*) &data[MYSQL_HEADER_LEN + 1];
-
-                    this_thread.pInfo->m_pQuery = s;
-                    this_thread.pInfo->m_nQuery = len;
-                    parse_query_string(s, len, suppress_logging);
-                    this_thread.pInfo->m_pQuery = NULL;
-                    this_thread.pInfo->m_nQuery = 0;
-
-                    if (command == MXS_COM_STMT_PREPARE)
-                    {
-                        pInfo->m_type_mask |= QUERY_TYPE_PREPARE_STMT;
-                    }
-
-                    pInfo->m_collected = pInfo->m_collect;
-
-                    pInfo->calculate_size();
-
-                    parsed = true;
-
-                    this_thread.pInfo = NULL;
-                }
-                else
-                {
-                    MXB_ERROR("Could not allocate structure for containing parse data.");
-                }
+                // And turn off logging. Any parsing issues were logged on the first round.
+                suppress_logging = true;
             }
             else
             {
-                MXB_ERROR("The provided buffer does not contain a COM_QUERY, but a %s.",
-                          STRPACKETTYPE(MYSQL_GET_COMMAND(data)));
-                mxb_assert(!true);
+                auto sInfo = QcSqliteInfo::create(collect);
+                pInfo = sInfo.get();
+                if (pInfo)
+                {
+                    query->set_classifier_data(std::move(sInfo));
+
+                    // TODO: Asking GWBUF for its canonical version is a bit ass-backwards,
+                    // TODO: but sorting that out is for later.
+                    pInfo->m_canonical = query->get_canonical();
+
+                    if (command == MXS_COM_STMT_PREPARE)
+                    {
+                        // This is to ensure that a COM_QUERY and a COM_STMT_PREPARE
+                        // containing the same statement have a different canonical string.
+                        pInfo->m_canonical.append(":P");
+                    }
+
+                    pInfo->m_canonical.shrink_to_fit();
+                }
+            }
+
+            if (pInfo)
+            {
+                this_thread.pInfo = pInfo;
+
+                size_t len = MYSQL_GET_PAYLOAD_LEN(data) - 1;   // Subtract 1 for packet type byte.
+
+                const char* s = (const char*) &data[MYSQL_HEADER_LEN + 1];
+
+                this_thread.pInfo->m_pQuery = s;
+                this_thread.pInfo->m_nQuery = len;
+                parse_query_string(s, len, suppress_logging);
+                this_thread.pInfo->m_pQuery = NULL;
+                this_thread.pInfo->m_nQuery = 0;
+
+                if (command == MXS_COM_STMT_PREPARE)
+                {
+                    pInfo->m_type_mask |= QUERY_TYPE_PREPARE_STMT;
+                }
+
+                pInfo->m_collected = pInfo->m_collect;
+
+                pInfo->calculate_size();
+
+                parsed = true;
+
+                this_thread.pInfo = NULL;
+            }
+            else
+            {
+                MXB_ERROR("Could not allocate structure for containing parse data.");
             }
         }
         else
         {
-            MXB_ERROR("Packet size %u, provided buffer is %ld.",
-                      MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data),
-                      gwbuf_link_length(query));
+            MXB_ERROR("The provided buffer does not contain a COM_QUERY, but a %s.",
+                      STRPACKETTYPE(MYSQL_GET_COMMAND(data)));
+            mxb_assert(!true);
         }
     }
     else
     {
-        MXB_ERROR("Provided buffer is not contiguous.");
+        MXB_ERROR("Packet size %u, provided buffer is %ld.",
+                  MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data),
+                  gwbuf_link_length(query));
     }
 
     return parsed;

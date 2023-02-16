@@ -126,31 +126,15 @@ public:
                     // First character is alphabetic, we can check whether it is "SET".
                     if (is_set(pStmt))
                     {
-                        // It is, so we must parse further and must therefore ensure that
-                        // the buffer is contiguous. We get the same buffer back if it
-                        // already is.
-                        pBuffer = gwbuf_make_contiguous(*ppBuffer);
-
-                        if (pBuffer)
-                        {
-                            *ppBuffer = pBuffer;
-                            initialize(pBuffer);
-
-                            rv = parse(pSql_mode);
-                        }
-                        else
-                        {
-                            rv = ERROR;
-                        }
+                        initialize(pBuffer);
+                        rv = parse(pSql_mode);
                     }
                 }
                 else
                 {
                     // If the first character is not an alphabetic character we assume there
-                    // is a comment and make the buffer contiguous to make it possible to
-                    // efficiently bypass the whitespace.
-                    pBuffer = gwbuf_make_contiguous(*ppBuffer);
-
+                    // is a comment.
+                    pBuffer = *ppBuffer;
                     if (pBuffer)
                     {
                         *ppBuffer = pBuffer;

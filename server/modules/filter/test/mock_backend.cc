@@ -293,9 +293,7 @@ public:
 private:
     int32_t write(GWBUF* pBuffer)
     {
-        pBuffer = gwbuf_make_contiguous(pBuffer);
         mxb_assert(pBuffer);
-
         unsigned char* begin = GWBUF_DATA(pBuffer);
         unsigned char* end = begin + gwbuf_link_length(pBuffer);
 

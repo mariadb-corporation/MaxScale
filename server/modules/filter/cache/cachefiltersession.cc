@@ -378,7 +378,6 @@ bool CacheFilterSession::routeQuery(GWBUF* pPacket)
             uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket));
 
             // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
-            mxb_assert(gwbuf_is_contiguous(pPacket));
             mxb_assert(gwbuf_link_length(pPacket) >= MYSQL_HEADER_LEN + 1);
             mxb_assert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == gwbuf_link_length(pPacket));
 
@@ -770,12 +769,6 @@ void CacheFilterSession::reset_response_state()
 void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(m_res);
-
-    GWBUF* pData = gwbuf_make_contiguous(m_res);
-    MXB_ABORT_IF_NULL(pData);
-
-    m_res = pData;
-
     std::vector<std::string> invalidation_words;
 
     if (m_invalidate)

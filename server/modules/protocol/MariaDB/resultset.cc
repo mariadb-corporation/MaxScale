@@ -177,9 +177,5 @@ mxs::Buffer ResultSet::as_buffer() const
     }
 
     buf.append(create_eof(seqno));
-
-    // This allows the data to be sent in one write call
-    buf.make_contiguous();
-
     return buf;
 }

@@ -390,7 +390,6 @@ public:
     Packet(const GWBUF* pBuffer)
         : Packet(pBuffer->data(), pBuffer->data() + pBuffer->length())
     {
-        mxb_assert(gwbuf_is_contiguous(pBuffer));
     }
 
     int32_t msg_len() const

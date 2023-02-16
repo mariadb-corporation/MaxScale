@@ -2906,9 +2906,6 @@ int32_t NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
 {
     mxb_assert(m_sDatabase.get());
 
-    // TODO: Remove need for making resultset contiguous.
-    pMariadb_response = gwbuf_make_contiguous(pMariadb_response);
-
     mxs::Buffer mariadb_response(pMariadb_response);
     GWBUF* pProtocol_response = m_sDatabase->translate(std::move(mariadb_response));
 
