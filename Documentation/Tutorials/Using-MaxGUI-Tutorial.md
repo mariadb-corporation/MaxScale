@@ -261,3 +261,65 @@ A snippet is created with a prefix keyword, so when that keyword is typed in
 the editor, it will be suggested in the "code completion" menu.
 
 ## Data Migration
+
+Clicking on the "Data Migration" card will pop-up a dialog, providing an option
+to name the task. The Data Migration worksheet will be rendered in the active
+worksheet after clicking the `Create` button in the dialog.
+
+### Data Migration worksheet
+
+MaxScale uses ODBC for extracting and loading from the data source to a server
+in MaxScale. Before starting a migration, ensure that you have set up the
+necessary configurations on the MaxScale server.  Instruction can be found [here](../REST-API/Resources-SQL.md#prepare-etl-operation)
+and limitations [here](../About/Limitations.md#etl-limitations).
+
+#### Connections
+
+![MaxGUI Workspace Data Migration Set Up Connections](./images/MaxGUI-workspace-data-migration-set-up-connections.png)
+
+Source connection shows the most common parameter inputs for creating
+an ODBC connection. For extra parameters, enable the `Advanced` mode
+to manually edit the `Connection String` input.
+
+After successfully connected to both source and destination servers,
+click on the `Select objects to migrate` to navigate to the next stage.
+
+#### Objects Selection
+
+![MaxGUI Workspace Data Migration Objects Selection](./images/MaxGUI-workspace-data-migration-objects-selection.png)
+
+Select the objects you wish to migrate to the MariaDB server.
+
+After selecting the desired objects, click on the `Prepare Migration Script` to
+navigate to the next stage. The migration scripts will be generated
+differently based on the value selected for the `Create mode` input. Hover over
+the question icon for additional information on the modes.
+
+#### Migration
+
+![MaxGUI Workspace Data Migration Migration Script](./images/MaxGUI-workspace-data-migration-migration-script.png)
+
+As shown in the screenshot, you can quickly modify the script for each object
+by selecting the corresponding object in the table and using the editors on the
+right-hand side to make any necessary changes.
+
+After clicking the `Start Migration` button, the script for each object will be
+executed in parallel.
+
+#### Migration report
+
+![MaxGUI Workspace Data Migration Migration Report](./images/MaxGUI-workspace-data-migration-migration-report.png)
+
+If errors are reported for certain objects, review the output messages and
+adjust the script accordingly. Then, click the `Manage` button and select `Restart`.
+
+To migrate additional objects, click the `Manage` button and select
+`Migrate other objects`. Doing so will replace the current migration
+report for the current object with a new one.
+
+To retain the report and terminate open connections after migration, click the
+`Manage` button, then select `Disconnect`, and finally delete the worksheet.
+
+Deleting the worksheet will not delete the migration task. To clean-up
+everything after migration, click the `Manage` button, then select
+`Delete`.

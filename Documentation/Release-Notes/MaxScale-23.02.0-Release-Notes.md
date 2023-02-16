@@ -135,9 +135,10 @@ The most notable ones are listed here:
 
 * [MXS-4013](https://jira.mariadb.org/browse/MXS-4013) Add Views, Functions, and Indexes to the Query Editor schema sidebar.
 * [MXS-4285](https://jira.mariadb.org/browse/MXS-4285) Store user preferences.
-* [MXS-4430](https://jira.mariadb.org/browse/MXS-4430) ETL/Data Migration service GUI
+* [MXS-4430](https://jira.mariadb.org/browse/MXS-4430) ETL/Data Migration service GUI. Instructions on using it can be found [here](../Tutorials/Using-MaxGUI-Tutorial.md#workspace)
 
 ## Bug fixes
+
 * [MXS-4490](https://jira.mariadb.org/browse/MXS-4490) Query Editor - A query tab becomes unusable when a connection is not successfully reconnected.
 
 ## Known Issues and Limitations
