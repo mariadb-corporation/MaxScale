@@ -175,7 +175,7 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         }
         catch (const BinlogWriteError& err)
         {
-            MXS_ERROR("Binlog write error: %s", err.what());
+            MXB_ERROR("Binlog write error: %s", err.what());
         }
         break;
 
