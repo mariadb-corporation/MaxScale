@@ -17,8 +17,6 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/jansson.hh>
 
-MXS_BEGIN_DECLS
-
 typedef enum qc_trx_parse_using
 {
     QC_TRX_PARSE_USING_QC,      /**< Use the query classifier. */
@@ -75,5 +73,3 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
  * @return A json object containing information about the query classifier cache.
  */
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
-
-MXS_END_DECLS
