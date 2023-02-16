@@ -242,7 +242,7 @@ void test_multiple_sql_packets1()
     expect(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
 
     /** Fragmented buffer split into multiple chains and then reassembled as a complete resultset */
-    GWBUF half(complete);
+    GWBUF half = complete.shallow_clone();
     GWBUF quarter = half.split(half.length() / 2);
     head = quarter.split(quarter.length() / 2);
     expect(!half.empty() && !quarter.empty() && !head.empty(), "split should work");

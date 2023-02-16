@@ -826,7 +826,7 @@ void MariaDBBackendConnection::normal_read()
             std::unique_ptr<GWBUF> sTmp_for_row_data;
             if (m_collect_rows)
             {
-                sTmp_for_row_data.reset(new GWBUF(stmt));
+                sTmp_for_row_data.reset(mxs::gwbuf_to_gwbufptr(stmt.shallow_clone()));
             }
 
             thread_local mxs::ReplyRoute route;
@@ -877,7 +877,7 @@ void MariaDBBackendConnection::send_history()
             MXB_INFO("Execute %s %u on '%s': %s", STRPACKETTYPE(query.command),
                      history_query.id(), m_server.name(), history_query.get_sql().c_str());
 
-            m_dcb->writeq_append(GWBUF(history_query));
+            m_dcb->writeq_append(history_query.shallow_clone());
             m_history_responses.push_back(history_query.id());
         }
     }
@@ -2922,7 +2922,9 @@ bool MariaDBBackendConnection::send_delayed_packets()
             // One of the packets caused the state to change. Put the rest of the packets back into the
             // delayed packet queue.
             mxb_assert(m_delayed_packets.empty());
-            m_delayed_packets.assign(std::next(it), packets.end());
+            ++it;
+            packets.erase(packets.begin(), it);
+            m_delayed_packets = std::move(packets);
             break;
         }
     }
@@ -2948,7 +2950,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
             {
                 // Send all the initialization queries in one packet. The server should respond with one
                 // OK-packet per query.
-                m_dcb->writeq_append(GWBUF(query_contents));
+                m_dcb->writeq_append(query_contents.shallow_clone());
                 m_init_query_status.ok_packets_expected = init_query_data.queries.size();
                 m_init_query_status.ok_packets_received = 0;
                 m_init_query_status.state = InitQueryStatus::State::RECEIVING;

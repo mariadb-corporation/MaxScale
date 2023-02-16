@@ -122,12 +122,7 @@ public:
      * prevents freeing the underlying data. GWBUFs traveling along the routing chain are best
      * recycled when written to a socket. Any existing shallow copies prevent this from happening.
      */
-    explicit GWBUF(const GWBUF& rhs);
-
-    /**
-     * Shallow-clones the source buffer.
-     */
-    GWBUF& operator=(const GWBUF& rhs);
+    GWBUF shallow_clone() const;
 
     /*
      * Deep-clones the source buffer. Only allocates minimal capacity. Is best used when the GWBUF is
@@ -344,7 +339,6 @@ private:
 
     void move_helper(GWBUF&& other) noexcept;
     void clone_helper(const GWBUF& other);
-    void shallow_clone_helper(const GWBUF& other);
 };
 
 inline bool GWBUF::type_is_undefined() const

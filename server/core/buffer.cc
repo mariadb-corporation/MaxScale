@@ -151,19 +151,15 @@ GWBUF::GWBUF(const uint8_t* data, size_t datasize)
     append(data, datasize);
 }
 
-GWBUF::GWBUF(const GWBUF& rhs)
-    : GWBUF()
+GWBUF GWBUF::shallow_clone() const
 {
-    shallow_clone_helper(rhs);
-}
+    GWBUF rval;
+    rval.clone_helper(*this);
 
-GWBUF& GWBUF::operator=(const GWBUF& rhs)
-{
-    if (this != &rhs)
-    {
-        shallow_clone_helper(rhs);
-    }
-    return *this;
+    rval.m_start = m_start;
+    rval.m_end = m_end;
+    rval.m_sbuf = m_sbuf;
+    return rval;
 }
 
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
@@ -248,18 +244,9 @@ void GWBUF::clone_helper(const GWBUF& other)
     // No need to copy 'markers'.
 }
 
-void GWBUF::shallow_clone_helper(const GWBUF& other)
-{
-    clone_helper(other);
-
-    m_start = other.m_start;
-    m_end = other.m_end;
-    m_sbuf = other.m_sbuf;
-}
-
 GWBUF* gwbuf_clone_shallow(GWBUF* buf)
 {
-    return new GWBUF(*buf);
+    return mxs::gwbuf_to_gwbufptr(buf->shallow_clone());
 }
 
 GWBUF GWBUF::split(uint64_t n_bytes)
@@ -709,7 +696,7 @@ SHARED_BUF::SHARED_BUF(size_t len)
 
 GWBUF* mxs::gwbuf_to_gwbufptr(GWBUF&& buffer)
 {
-    return new GWBUF(move(buffer));
+    return new GWBUF(std::move(buffer));
 }
 
 GWBUF mxs::gwbufptr_to_gwbuf(GWBUF* buffer)

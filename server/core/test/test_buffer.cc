@@ -208,7 +208,7 @@ void test_basics()
     const uint8_t message[] = "12345";
     auto len = sizeof(message);
     GWBUF orig(message, len);
-    GWBUF shallow_clone(orig);
+    GWBUF shallow_clone = orig.shallow_clone();
     GWBUF deep_clone = orig.deep_clone();
     test(orig.length() == len && shallow_clone.length() == len && deep_clone.length() == len,
          "Wrong length after cloning");

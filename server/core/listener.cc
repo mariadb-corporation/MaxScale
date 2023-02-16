@@ -261,7 +261,7 @@ ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVI
     , m_proto_module(move(protocol_module))
     , m_listener_name(listener_name)
     , m_authenticators(move(authenticators))
-    , m_conn_init_sql(init_sql)
+    , m_conn_init_sql(std::move(init_sql))
     , m_mapping_info(move(mapping))
     , m_proxy_networks(std::move(proxy_networks))
 {
@@ -1636,5 +1636,11 @@ bool Listener::read_proxy_networks(maxbase::proxy_protocol::SubnetArray& output)
         mxb_assert(!true);      // Validation should catch faulty setting.
     }
     return rval;
+}
+
+ListenerData::ConnectionInitSql::ConnectionInitSql(ListenerData::ConnectionInitSql&& rhs) noexcept
+    : queries(std::move(rhs.queries))
+    , buffer_contents(std::move(rhs.buffer_contents))
+{
 }
 }

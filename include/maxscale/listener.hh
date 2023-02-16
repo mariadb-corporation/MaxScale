@@ -45,7 +45,8 @@ public:
     struct ConnectionInitSql
     {
         ConnectionInitSql() = default;
-        ConnectionInitSql(const ConnectionInitSql& rhs) = default;
+        ConnectionInitSql(const ConnectionInitSql& rhs) = delete;
+        ConnectionInitSql(ConnectionInitSql&& rhs) noexcept;
 
         std::vector<std::string> queries;
         GWBUF                    buffer_contents;
