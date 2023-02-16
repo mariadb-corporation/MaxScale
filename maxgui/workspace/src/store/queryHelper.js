@@ -263,12 +263,12 @@ function genNodeData({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
  * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @param {Object} [param.nodeAttrs] - node attributes
  * @param {Object} param.config - axios config
- * @returns {Promise<Array>} { nodes: {}, completionItems: [] }
+ * @returns {Promise<Array>} { nodes: [], completionItems: [] }
  */
 async function getChildNodeData({ connId, nodeGroup, nodeAttrs, config }) {
     const sql = getNodeGroupSQL({ nodeAttrs, nodeGroup })
     const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
-    if (e) return { nodes: {}, completionItems: [] }
+    if (e) return { nodes: [], completionItems: [] }
     else {
         return genNodeData({
             queryResult: typy(res, 'data.data.attributes.results[0]').safeObject,
