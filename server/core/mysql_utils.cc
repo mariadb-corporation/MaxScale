@@ -91,6 +91,9 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, const char* address, int port,
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* user, const char* passwd)
 {
+    char yes = 1;
+    mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
+
     bool server_is_db = server->info().is_database();
     if (server_is_db)
     {

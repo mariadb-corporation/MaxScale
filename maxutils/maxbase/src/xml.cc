@@ -202,9 +202,9 @@ bool mxb::xml::insert(xmlNode& ancestor, const char* zPath, const char* zValue, 
     else
     {
         string name = path.substr(pos + 1);
-        string path = path.substr(0, pos);
+        string pathname = path.substr(0, pos);
 
-        xmlNode* pParent = find_descendant(ancestor, path);
+        xmlNode* pParent = find_descendant(ancestor, pathname);
 
         if (pParent)
         {
