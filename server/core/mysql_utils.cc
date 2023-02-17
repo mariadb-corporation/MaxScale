@@ -72,6 +72,8 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
 
     bool server_is_db = server->info().is_database();
 
+    char yes = 1;
+    mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
     if (server_is_db)
     {
         mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
