@@ -158,13 +158,13 @@ export default {
         },
         async next() {
             if (this.hasActiveConns) {
-                await EtlTask.dispatch('fetchSrcSchemas')
                 EtlTask.update({
                     where: this.task.id,
                     data(obj) {
                         obj.active_stage_index = obj.active_stage_index + 1
                     },
                 })
+                await EtlTask.dispatch('fetchSrcSchemas')
             } else {
                 await this.$refs.form.validate()
                 if (this.isFormValid) await this.handleOpenConns()
