@@ -643,10 +643,10 @@ Configuration& Configuration::operator=(Configuration&& rhs)
 {
     if (this != &rhs)
     {
-        std::move(rhs.m_name);
-        std::move(rhs.m_pSpecification);
-        std::move(rhs.m_values);
-        std::move(rhs.m_natives);
+        m_name = std::move(rhs.m_name);
+        m_pSpecification = std::move(rhs.m_pSpecification);
+        m_values = std::move(rhs.m_values);
+        m_natives = std::move(rhs.m_natives);
 
         for (auto& kv : m_values)
         {
