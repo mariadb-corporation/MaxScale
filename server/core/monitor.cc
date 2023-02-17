@@ -1140,9 +1140,13 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             mysql_close(pConn);
         }
         pConn = mysql_init(nullptr);
-        mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
-        mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
-        mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
+        // ConC takes the timeouts in seconds.
+        unsigned int conn_to_s = sett.connect_timeout.count();
+        unsigned int read_to_s = sett.read_timeout.count();
+        unsigned int write_to_s = sett.write_timeout.count();
+        mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &conn_to_s);
+        mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &read_to_s);
+        mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &write_to_s);
         mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
         mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
 
