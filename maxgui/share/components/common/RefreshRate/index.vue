@@ -20,7 +20,7 @@
                             $vuetify.icons.mxs_reload
                         </v-icon>
                         <span class="mr-1 mxs-color-helper text-navigation">
-                            {{ $mxs_t('refreshRate') }}:
+                            {{ $mxs_t('nextRefresh') }}:
                             <template v-if="refreshCount >= 0">
                                 {{
                                     $mxs_tc('seconds', refreshCount === 1 ? 1 : 2, {
@@ -32,7 +32,7 @@
                         </span>
                     </v-btn>
                 </template>
-                {{ $mxs_t('info.refreshRate') }}
+                {{ $mxs_t('info.nextRefresh') }}
             </v-tooltip>
         </template>
         <v-list>
@@ -133,7 +133,7 @@ export default {
         },
         workerInit() {
             this.workerTimer = new workerTimer()
-            this.workerTimer.postMessage([{ name: 'Refresh rate timer', interval: 1000 }])
+            this.workerTimer.postMessage([{ name: 'Next refresh timer', interval: 1000 }])
             this.workerTimer.onmessage = () => {
                 if (!this.paused) this.updateCountTime()
             }
