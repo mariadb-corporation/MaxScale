@@ -244,17 +244,6 @@ void DCB::free(DCB* dcb)
     }
 }
 
-/**
- * Remove a DCB from the poll list and trigger shutdown mechanisms.
- *
- * @param       dcb     The DCB to be processed
- */
-void DCB::stop_polling_and_shutdown()
-{
-    disable_events();
-    shutdown();
-}
-
 int DCB::read(GWBUF** head, int maxbytes)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
@@ -868,10 +857,12 @@ void DCB::destroy()
 #endif
     mxb_assert(m_nClose != 0);
 
-    if (m_state == State::POLLING)
+    if (is_polling())
     {
-        stop_polling_and_shutdown();
+        disable_events();
     }
+
+    shutdown();
 
     if (m_fd != FD_CLOSED)
     {

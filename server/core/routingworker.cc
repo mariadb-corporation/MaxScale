@@ -592,7 +592,6 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
             if (pDcb->state() == DCB::State::POLLING)
             {
                 pDcb->disable_events();
-                pDcb->shutdown();
             }
 
             DCB::close(pDcb);
@@ -764,7 +763,6 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
     if (pDcb->state() == DCB::State::POLLING)
     {
         pDcb->disable_events();
-        pDcb->shutdown();
     }
 
     // This will cause can_be_destroyed() to be called. However, the dcb will
