@@ -439,6 +439,17 @@ public:
     bool remove_fd(int fd);
 
     /**
+     * Modifies the events the file descriptor waits for
+     *
+     * @param fd      File descriptor to be modified
+     * @param events  New event mask
+     * @param pData   Poll data
+     *
+     * @return True if event modification was successful
+     */
+    bool modify_fd(int fd, uint32_t events, MXB_POLL_DATA* pData);
+
+    /**
      * Main function of worker.
      *
      * The worker will run the poll loop, until it is told to shut down.

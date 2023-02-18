@@ -370,6 +370,15 @@ public:
     virtual bool disable_events();
 
     /**
+     * Control whether EPOLLIN events are handled for this DCB
+     *
+     * @param enable Whether EPOLLIN events are listened for
+     *
+     * @return True if the events were successfully modified
+     */
+    bool set_reads_enabled(bool val);
+
+    /**
      * Add a callback to the DCB.
      *
      * @reason     When the callback should be called.

@@ -1515,6 +1515,25 @@ void DCB::trigger_write_event()
     add_event(EPOLLOUT);
 }
 
+bool DCB::set_reads_enabled(bool enable)
+{
+    uint32_t mask = THIS_UNIT::poll_events;
+
+    if (!enable)
+    {
+        mask &= ~EPOLLIN;
+    }
+
+    mxb_assert(m_state == State::POLLING);
+    mxb_assert(m_fd != FD_CLOSED);
+
+    bool rv = false;
+    RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
+    mxb_assert(worker == RoutingWorker::get_current());
+
+    return worker->modify_fd(m_fd, mask, this);
+}
+
 bool DCB::enable_events()
 {
     mxb_assert(m_state == State::CREATED || m_state == State::NOPOLLING);
@@ -1588,14 +1607,14 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
         MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
                  session->user().c_str(), client_dcb->remote().c_str());
 
-        client_dcb->disable_events();
+        client_dcb->set_reads_enabled(false);
     }
     else if (reason == DCB::Reason::LOW_WATER)
     {
         MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data",
                  session->user().c_str(), client_dcb->remote().c_str());
 
-        if (!client_dcb->enable_events())
+        if (!client_dcb->set_reads_enabled(true))
         {
             MXS_ERROR("Could not re-enable I/O events for client connection whose I/O events "
                       "earlier were disabled due to the high water mark having been hit. "
@@ -1618,7 +1637,7 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
                  "mark is hit", backend_dcb->server()->name(),
                  session->user().c_str(), session->client_remote().c_str());
 
-        backend_dcb->disable_events();
+        backend_dcb->set_reads_enabled(false);
     }
 
     return true;
@@ -1636,7 +1655,7 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
                  backend_dcb->server()->name(),
                  session->user().c_str(), client_dcb->remote().c_str());
 
-        if (!backend_dcb->enable_events())
+        if (!backend_dcb->set_reads_enabled(true))
         {
             MXS_ERROR("Could not re-enable I/O events for backend connection whose I/O events "
                       "earlier were disabled due to the high water mark having been hit. "

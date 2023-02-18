@@ -402,6 +402,26 @@ bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
     return rv;
 }
 
+bool Worker::modify_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
+{
+    bool rv = true;
+
+    struct epoll_event ev;
+
+    ev.events = events;
+    ev.data.ptr = pData;
+
+    mxb_assert(pData->owner == this);
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, fd, &ev) != 0)
+    {
+        resolve_poll_error(fd, errno, EPOLL_CTL_MOD);
+        rv = false;
+    }
+
+    return rv;
+}
+
 bool Worker::remove_fd(int fd)
 {
     bool rv = true;
