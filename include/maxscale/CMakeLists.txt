@@ -15,14 +15,14 @@ foreach(var ${HEADERS})
 endforeach()
 
 # Install generated C headers
-file(GLOB GENERATD_HEADERS "${CMAKE_BINARY_DIR}/include/maxscale/*.h")
-foreach(var ${GENERATD_HEADERS})
+file(GLOB GENERATED_HEADERS "${CMAKE_BINARY_DIR}/include/maxscale/*.h")
+foreach(var ${GENERATED_HEADERS})
   install_header(${var} devel)
 endforeach()
 
 # Install generated C++ headers
-file(GLOB GENERATD_HEADERS "${CMAKE_BINARY_DIR}/include/maxscale/*.hh")
-foreach(var ${GENERATD_HEADERS})
+file(GLOB GENERATED_HEADERS "${CMAKE_BINARY_DIR}/include/maxscale/*.hh")
+foreach(var ${GENERATED_HEADERS})
   install_header(${var} devel)
 endforeach()
 
