@@ -13,7 +13,7 @@
  */
 
 /**
- * @file qlafilter.cc - Quary Log All Filter
+ * @file qlafilter.cc - Query Log All Filter
  *
  * QLA Filter - Query Log All. A simple query logging filter. All queries passing
  * through the filter are written to a text file.
