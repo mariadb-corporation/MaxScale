@@ -805,7 +805,7 @@ void BinlogFilterSession::handlePackets(uint32_t len, const REP_HEADER& hdr)
 }
 
 /**
- * Process received data size of a large event trasmission
+ * Process received data size of a large event transmission
  * Incoming data don't carry the OK byte and event header
  *
  * This sets member variables
