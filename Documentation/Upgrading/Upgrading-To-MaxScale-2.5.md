@@ -31,7 +31,7 @@ a later version.
 ### Password encryption
 
 The encrypted passwords feature has been updated to be more secure. Users are
-recommended to generate a new encryption key and and re-encrypt their passwords
+recommended to generate a new encryption key and re-encrypt their passwords
 using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
 
 ## Default Server State
