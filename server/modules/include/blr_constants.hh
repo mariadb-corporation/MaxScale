@@ -102,7 +102,7 @@
 #define BLR_NSTATS_MINUTES 30
 
 /**
- * High and Low water marks for the slave dcb. These values can be overriden
+ * High and Low water marks for the slave dcb. These values can be overridden
  * by the router options highwater and lowwater.
  */
 #define DEF_LOW_WATER  1000
