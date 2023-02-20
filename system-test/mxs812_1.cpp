@@ -1,6 +1,6 @@
 /**
  * - set global max_allowed_packet=10000000
- * - pretare statement INSERT INTO long_blob_table(x, b) VALUES(1, ?)
+ * - prepare statement INSERT INTO long_blob_table(x, b) VALUES(1, ?)
  * - load chunks
  * - execute statement
  * - wait 5 seconds

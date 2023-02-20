@@ -34,7 +34,7 @@ fi
 export dist_sfx="$platform"."$platform_version"
 export cmake_flags="${cmake_flags} -DPACKAGE=Y -DDISTRIB_SUFFIX=${dist_sfx}"
 
-# prerare VM
+# prepare VM
 export provider=`${mdbci_dir}/mdbci show provider $box --silent 2> /dev/null`
 export name="$box-${JOB_NAME}-${BUILD_NUMBER}"
 export name=`echo $name | sed "s|/|-|g"`
