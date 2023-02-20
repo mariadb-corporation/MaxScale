@@ -253,7 +253,7 @@ add_test_executable(crash_out_of_files.cpp crash_out_of_files load LABELS maxsca
 # Tries INSERTs with size close to 0x0ffffff * N
 add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication LABELS readwritesplit HEAVY REPL_BACKEND)
 
-# Tries to use 'maxkeys', 'maxpasswrd'
+# Tries to use 'maxkeys', 'maxpasswd'
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # Basic MaxCtrl test. Also covers the following bugs:
