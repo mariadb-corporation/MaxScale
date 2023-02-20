@@ -751,7 +751,7 @@ drop table t1;
 create table t1 select coalesce('a' collate latin1_swedish_ci,'b' collate latin1_bin);
 
 
-# Base vs temporary tables dillema (a.k.a. bug#24508 "Inconsistent
+# Base vs temporary tables dilemma (a.k.a. bug#24508 "Inconsistent
 # results of CREATE TABLE ... SELECT when temporary table exists").
 # In this situation we either have to create non-temporary table and
 # insert data in it or insert data in temporary table without creation of
