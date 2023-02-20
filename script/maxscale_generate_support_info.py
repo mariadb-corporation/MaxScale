@@ -25,7 +25,7 @@ def main(argv):
     maxctrl_un = ""
     maxctrl_pw = ""
     if len(argv) == 2 or len(argv) > 3:
-        print("Usage: {} [<maxctr_username> <maxctrl_password]".format(argv[0]))
+        print("Usage: {} [<maxctrl_username> <maxctrl_password]".format(argv[0]))
     elif len(argv) == 3:
         maxctrl_un = argv[1]
         maxctrl_pw = argv[2]
