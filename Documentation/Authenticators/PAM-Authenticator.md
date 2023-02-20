@@ -29,9 +29,9 @@ port=12345
 
 MaxScale uses the PAM authenticator plugin to authenticate users with *plugin*
 set to "pam" in the *mysql.user*-table. The PAM service name of a user is read
-from the *authetication_string*-column. The matching PAM service in the
+from the *authentication_string*-column. The matching PAM service in the
 operating system PAM config is used for authenticating the user. If the
-*authetication_string* for a user is empty, the fallback service "mysql" is
+*authentication_string* for a user is empty, the fallback service "mysql" is
 used.
 
 PAM service configuration is out of the scope of this document, see

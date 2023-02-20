@@ -25,7 +25,7 @@ using std::string_view;
 namespace
 {
 
-void add_packet_auth_request(GWBUF& gwbuf, pg::Auth athentication_method)
+void add_packet_auth_request(GWBUF& gwbuf, pg::Auth authentication_method)
 {
     const size_t auth_len = 1 + 4 + 4;      // Byte1('R'), Int32(8) len, Int32 auth_method
     std::array<uint8_t, auth_len> data;
@@ -33,7 +33,7 @@ void add_packet_auth_request(GWBUF& gwbuf, pg::Auth athentication_method)
     uint8_t* ptr = begin(data);
     *ptr++ = pg::AUTHENTICATION;
     ptr += pg::set_uint32(ptr, 8);
-    ptr += pg::set_uint32(ptr, athentication_method);
+    ptr += pg::set_uint32(ptr, authentication_method);
 
     gwbuf.append(begin(data), data.size());
 }
