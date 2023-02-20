@@ -3894,7 +3894,7 @@ In addition there is an `os` object that contains what the Linux command `uname`
 If `threads` has not been specified at all in the MaxScale configuration file,
 or if its value is `auto`, then MaxScale will use as many routing threads as
 there are physical cores on the machine. This is the right choice, if MaxScale
-is running on a dedicated machine or in a container that has not been restriced
+is running on a dedicated machine or in a container that has not been restricted
 in any way.
 
 However, if the number of cores available to MaxScale have been restricted or
@@ -3912,7 +3912,7 @@ that value is `1` it may be beneficial to check whether `2` gives better perform
 If `query_classifier_cache_size` has not been specified in the MaxScale
 configuration file, then MaxScale will use at most 15% of the amount of physical
 memory in the machine for the cache. This is a good starting point, if MaxScale
-is running on a dedicated machine or in a container that has not been restriced
+is running on a dedicated machine or in a container that has not been restricted
 in any way. Note that the amount specifies how much memory the cache at maximum
 is allowed to use, not what would immediately be allocated for the cache.
 
