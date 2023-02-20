@@ -90,7 +90,7 @@ int64_t Timer::wait_alarm() const
         std::this_thread::sleep_for(d);
     }
 
-    // This while loop is for the case when sleep_for() returns too early (clock resolution, rouding error).
+    // This while loop is for the case when sleep_for() returns too early (clock resolution, rounding error).
     // Hypothetical, could not get this to trigger in testing.
     while ((ticks = alarm()) == 0)
     {
