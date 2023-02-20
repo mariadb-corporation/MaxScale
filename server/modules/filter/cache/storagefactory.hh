@@ -80,7 +80,7 @@ public:
      * provided.
      *
      * @param zName      The name of the storage.
-     * @param config     The storagfe configuration.
+     * @param config     The storage configuration.
      * @param parameters Storage specific parameters.
      *
      * @return A storage instance or NULL in case of errors.
@@ -98,7 +98,7 @@ public:
      * accordingly.
      *
      * @param zName      The name of the storage.
-     * @param config     The storagfe configuration.
+     * @param config     The storage configuration.
      * @param parameters Storage specific parameters.
      *
      * @return A storage instance or NULL in case of errors.
