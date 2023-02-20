@@ -111,7 +111,7 @@ configuration sections.
 
 # Administration
 
-The administation of MaxScale can be divided in two parts:
+The administration of MaxScale can be divided in two parts:
 
 * Writing the MaxScale configuration file, which is described in the following
   [section](#configuration).
