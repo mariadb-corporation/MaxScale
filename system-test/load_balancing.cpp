@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     Test->tprintf("average number of quries per node %ld\n", avr);
     long int min_q = avr / 3;
     long int max_q = avr * 3;
-    Test->tprintf("Acceplable value for every node from %ld until %ld\n", min_q, max_q);
+    Test->tprintf("Acceptable value for every node from %ld until %ld\n", min_q, max_q);
 
     for (int i = 1; i < Test->repl->N; i++)
     {
