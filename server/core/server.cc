@@ -1275,7 +1275,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
         break;
 
     case ConnStatus::IDLE_POOLED:
-        // Connection was pre-emptively pooled. Try to get another one.
+        // Connection was preemptively pooled. Try to get another one.
         if (connect())
         {
             if (m_connstatus == ConnStatus::CONNECTED)
