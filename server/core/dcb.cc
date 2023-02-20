@@ -1572,27 +1572,27 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     auto session = dcb->session();
     auto client_dcb = session->client_connection()->dcb();
 
-    // The fd is removed manually here due to the fact that poll_add_dcb causes the DCB to be added to the
-    // worker's list of DCBs but poll_remove_dcb doesn't remove it from it. This is due to the fact that the
-    // DCBs are only removed from the list when they are closed.
-    if (reason == DCB::Reason::HIGH_WATER)
+    if (client_dcb->is_polling())
     {
-        MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
-                 session->user().c_str(), client_dcb->remote().c_str());
-
-        client_dcb->set_reads_enabled(false);
-    }
-    else if (reason == DCB::Reason::LOW_WATER)
-    {
-        MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data",
-                 session->user().c_str(), client_dcb->remote().c_str());
-
-        if (!client_dcb->set_reads_enabled(true))
+        if (reason == DCB::Reason::HIGH_WATER)
         {
-            MXS_ERROR("Could not re-enable I/O events for client connection whose I/O events "
-                      "earlier were disabled due to the high water mark having been hit. "
-                      "Closing session.");
-            client_dcb->trigger_hangup_event();
+            MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
+                     session->user().c_str(), client_dcb->remote().c_str());
+
+            client_dcb->set_reads_enabled(false);
+        }
+        else if (reason == DCB::Reason::LOW_WATER)
+        {
+            MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data",
+                     session->user().c_str(), client_dcb->remote().c_str());
+
+            if (!client_dcb->set_reads_enabled(true))
+            {
+                MXS_ERROR("Could not re-enable I/O events for client connection whose I/O events "
+                          "earlier were disabled due to the high water mark having been hit. "
+                          "Closing session.");
+                client_dcb->trigger_hangup_event();
+            }
         }
     }
 
@@ -1603,7 +1603,7 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
 {
     MXS_SESSION* session = (MXS_SESSION*)data;
 
-    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
+    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND && dcb->is_polling())
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
@@ -1620,7 +1620,7 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
 {
     MXS_SESSION* session = (MXS_SESSION*)data;
 
-    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
+    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND && dcb->is_polling())
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         auto client_dcb = session->client_connection()->dcb();
