@@ -1380,7 +1380,7 @@ mxb::Json ConfigManager::fetch_config()
                 // Reverting the configuration is possible but it introduces a problem:
                 // If the configuration on server-A causes server-B to be chosen and the configuration on
                 // server-B causes server-A to be chosen, the configuration would oscillate between the two if
-                // the version values were different. Ignoring older configurations guaratees that we
+                // the version values were different. Ignoring older configurations guarantees that we
                 // stabilize to some known configuration which is easier to deal with (for both MaxScale and
                 // the users) than trying to figure out which of the configurations is the real one.
                 mxb_assert(m_server);
