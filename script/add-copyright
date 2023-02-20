@@ -33,7 +33,7 @@ recd=re.compile(pattern)
 def print_usage_and_exit(name, code):
     print("usage: " + name + " -c copyright [path]+")
     print()
-    print("Add a specfic copyright line after the \"MariaDB\"")
+    print("Add a specific copyright line after the \"MariaDB\"")
     print("copyright line. If path is a directory, the copyright will ")
     print("recursively be added to all files in that directory hierarchy.")
     print()

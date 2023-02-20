@@ -236,7 +236,7 @@ creation when connecting to backend servers. `listen` creates a listener socket.
 
 In the ideal case modules other than the protocol modules themselves should not
 be protocol-specific. This is currently difficult to achieve, since many actions
-in the modules are dependent on protocol-speficic details. In the future,
+in the modules are dependent on protocol-specific details. In the future,
 protocol modules may be expanded to implement a generic query parsing and
 information API, allowing filters and routers to be used with different SQL
 variants.
