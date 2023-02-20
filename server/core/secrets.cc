@@ -120,7 +120,7 @@ ReadKeyResult secrets_readkeys(const string& filepath)
 
     if (old_format)
     {
-        MXB_ERROR("File format of '%s' is using a pre-2.5 format that is no longer suported. "
+        MXB_ERROR("File format of '%s' is using a pre-2.5 format that is no longer supported. "
                   "Please generate a new encryption key ('maxkeys') and re-encrypt "
                   "passwords ('maxpasswd').", filepathc);
         return rval;
