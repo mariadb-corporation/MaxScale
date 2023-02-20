@@ -34,7 +34,7 @@ exports.builder = function (yargs) {
     })
     .command(
       "get <resource> [path]",
-      "Do a GET reqest",
+      "Do a GET request",
       function (yargs) {
         return yargs
           .epilog(
