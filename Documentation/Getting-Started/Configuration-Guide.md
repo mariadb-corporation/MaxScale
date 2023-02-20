@@ -1815,7 +1815,7 @@ file.keyfile=/path/to/keyfile
 ## Events
 
 MaxScale logs warnings and errors for various reasons and often it is self-
-evident and generally applicable whether some occurence should warrant a
+evident and generally applicable whether some occurrence should warrant a
 warning or an error, or perhaps just an info-level message.
 
 However, there are events whose seriousness is not self-evident. For
