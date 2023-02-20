@@ -336,7 +336,7 @@ bool maxavro_record_seek(MAXAVRO_FILE* file, uint64_t offset)
 /**
  * @brief seek to file offset
  *
- * This sets the file offset to a position and checks that it is preceeded by a
+ * This sets the file offset to a position and checks that it is preceded by a
  * valid sync marker.
  *
  * @param file File to seek
