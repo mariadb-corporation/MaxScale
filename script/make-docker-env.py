@@ -279,7 +279,7 @@ def open_file(file_enum, ip):
 
 
 #### function create_parameter_dicts,
-# Creates parameter dictionaries. key-value pairs, for file genration.
+# Creates parameter dictionaries. key-value pairs, for file generation.
 def create_parameter_dicts(config):
     maxscale_params={"threads" : config.threads, "user" : default_user, "password" : default_passwd}
     systest_params={"threads" : "###threads###", "user" : default_user, "password" : default_passwd}
