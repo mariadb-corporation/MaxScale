@@ -248,7 +248,7 @@ public:
         uint32_t max_count = 0;
 
         /**
-         * The maximum size of the storage may may occupy, before it should evict
+         * The maximum size of the storage may occupy, before it should evict
          * some items. A value of 0 means that there is no limit. The caller should
          * specify 0, unless CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
          */
