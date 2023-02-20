@@ -12,7 +12,7 @@
  * Public License.
  */
 
-// To ensure that ss_info_assert asserts also when builing in non-debug mode.
+// To ensure that ss_info_assert asserts also when building in non-debug mode.
 #if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
