@@ -301,7 +301,7 @@ public:
      * has passed.
      *
      * @param seconds          How many seconds to wait at most.
-     * @param nseconds         How many nanonseconds to wait at most.
+     * @param nseconds         How many nanoseconds to wait at most.
      * @param signal_approach  Whether signals should be ignored or honoured.
      *
      * @return True if the waiting could be performed, false otherwise.
@@ -331,7 +331,7 @@ public:
      *
      * @param n_wait           How many times should be waited.
      * @param seconds          How many seconds to wait at most.
-     * @param nseconds         How many nanonseconds to wait at most.
+     * @param nseconds         How many nanoseconds to wait at most.
      * @param signal_approach  Whether signals should be ignored or honoured.
      *
      * @return How many times the semaphore has been waited on. If the
