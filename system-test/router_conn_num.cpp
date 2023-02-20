@@ -103,7 +103,7 @@
  *
  *  If you already have a rwsplit session, no new connections should be created when new queries are executed.
  *  Comment 7 Vilho Raatikka 2014-09-11 12:34:26 UTC
- *  I built MaxScale from releaes-1.0beta-refresh branch and tested by running 5000 prepared statements in one
+ *  I built MaxScale from releases-1.0beta-refresh branch and tested by running 5000 prepared statements in one
  * session to MaxScale/RWSplit and executing 'show servers' in another window. During the run the number of
  * current connections was 1 in each server and after the run all 'current' counters show 0.
  *
