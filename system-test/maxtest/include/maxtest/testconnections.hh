@@ -267,7 +267,7 @@ public:
     int check_maxscale_alive();
 
     /**
-     * @brief try_query Executes SQL query and repors error
+     * @brief try_query Executes SQL query and reports error
      * @param conn MYSQL struct
      * @param sql SQL string
      * @return 0 if ok
