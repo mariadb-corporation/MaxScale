@@ -130,7 +130,7 @@ private:
  * Contains references up to 256 nodes, info about IP, port, ssh key, use name and password for each node
  * Node parameters should be defined in the enviromental variables in the follwing way:
  * prefix_N - N number of nodes in the setup
- * prefix_NNN - IP adress of the node (NNN 3 digits node index)
+ * prefix_NNN - IP address of the node (NNN 3 digits node index)
  * prefix_port_NNN - MariaDB port number of the node
  * prefix_User - User name to access backend setup (should have full access to 'test' DB with GRANT OPTION)
  * prefix_Password - Password to access backend setup
