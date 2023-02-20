@@ -1781,7 +1781,7 @@ GWBUF MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ss
     // clearing data
     memset(payload, '\0', bytes);
 
-    // put here the paylod size: bytes to write - 4 bytes packet header
+    // put here the payload size: bytes to write - 4 bytes packet header
     mariadb::set_byte3(payload, (bytes - 4));
 
     // set packet # = 1

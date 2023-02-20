@@ -788,7 +788,7 @@ void BinlogFilterSession::getReplicationChecksum(GWBUF* pPacket)
  *
  * Also remaininf data are set
  *
- * @param len    The binlog event paylod len
+ * @param len    The binlog event payload len
  * @param hdr    The reference to binlog event header
  */
 void BinlogFilterSession::handlePackets(uint32_t len, const REP_HEADER& hdr)
