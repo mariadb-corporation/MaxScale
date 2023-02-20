@@ -198,7 +198,7 @@ bool RWSplitSession::continue_causal_read()
 GWBUF RWSplitSession::add_prefix_wait_gtid(const GWBUF& origin)
 {
     /**
-     * Pack wait function and client query into a multistatments will save a round trip latency,
+     * Pack wait function and client query into a multistatement will save a round trip latency,
      * and prevent the client query being executed on timeout.
      * For example:
      * SET @maxscale_secret_variable=(SELECT CASE WHEN MASTER_GTID_WAIT('232-1-1', 10) = 0
