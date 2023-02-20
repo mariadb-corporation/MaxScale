@@ -840,7 +840,7 @@ void BinlogFilterSession::handleEventData(uint32_t len)
  * This function checks whether the statement should be replicated and whether the database/table name should
  * be rewritten. If a rewrite takes place, the buffer can be reallocated.
  *
- * @param bufer     Pointer to the buffer containing the event
+ * @param buffer     Pointer to the buffer containing the event
  * @param hdr       The extracted replication header
  * @param extra_len Extra static bytes that this event has (only EXECUTE_LOAD_QUERY_EVENT uses it)
  */
