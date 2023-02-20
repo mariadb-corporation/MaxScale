@@ -2421,7 +2421,7 @@ private:
             {
                 if (m_insert.empty())
                 {
-                    // Ok, so the update did not match anything and we havn't attempted
+                    // Ok, so the update did not match anything and we haven't attempted
                     // an insert.
                     rv = insert_document(index);
                 }
