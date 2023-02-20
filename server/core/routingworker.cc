@@ -2055,7 +2055,7 @@ void RoutingWorker::terminate()
             if (maxscale_is_shutting_down())
             {
                 MXB_NOTICE("Terminating worker %d going down immediately, "
-                           "as MaxScale shutdown has been iniated.",
+                           "as MaxScale shutdown has been initiated.",
                            index());
                 ready_to_proceed = true;
             }

@@ -1258,7 +1258,7 @@ private:
     uint32_t         m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
     Statistics       m_statistics;                /*< Worker statistics. */
     bool             m_should_shutdown {false};   /*< Whether shutdown should be performed. */
-    bool             m_shutdown_initiated {false};/*< Whether shutdown has been initated. */
+    bool             m_shutdown_initiated {false};/*< Whether shutdown has been initiated. */
     int64_t          m_nCurrent_descriptors {0};  /*< Current number of descriptors. */
     int64_t          m_nTotal_descriptors {0};    /*< Total number of descriptors. */
     Load             m_load;                      /*< The worker load. */
