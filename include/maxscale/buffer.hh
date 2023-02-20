@@ -629,7 +629,7 @@ public:
          * Returns address of the internal pointer to a GWBUF.
          *
          * @attention This is provided as a backdoor for situations where it is
-         *            unavoidable to access the interal pointer directly. It should
+         *            unavoidable to access the internal pointer directly. It should
          *            carefully be assessed whether it actually can be avoided.
          *
          * @return Pointer to pointer to GWBUF.
