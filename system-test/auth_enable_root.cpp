@@ -222,7 +222,7 @@
  |
  |  So, root@127.0.0.1 is present in the list.
  |  Comment 10 Mark Riddoch 2015-01-05 13:03:34 UTC
- |  The message "Failed to add user root@127.0.0.1" is because the two entries root@localhsot and
+ |  The message "Failed to add user root@127.0.0.1" is because the two entries root@localhost and
  |root@127.0.0.1 are seen as duplicates in MaxScale. This is a result of MaxScale resolving hostnames at the
  |time it reads the database rather than at connect time. So a duplicate is detected and the second one causes
  |the error to be displayed.
