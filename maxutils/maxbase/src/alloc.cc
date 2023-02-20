@@ -179,7 +179,7 @@ char* mxb_strdup_a(const char* s1    /*, const char *caller*/)
 }
 
 /**
- * @breif Duplicates a string.
+ * @brief Duplicates a string.
  *
  * Behaves exactly like `strndup` except that `mxb_strndup_a` _always_
  * returns a non-NULL pointer. In case `mxb_strndup_a` cannot do that, it

@@ -55,7 +55,7 @@ void RWSplitSession::discard_master_wait_gtid_result(GWBUF& buffer)
 }
 
 /**
- * @bref After discarded the wait result, we need correct the seqence number of every packet
+ * @brief After discarded the wait result, we need correct the seqence number of every packet
  *
  * @param buffer origin reply buffer
  *
