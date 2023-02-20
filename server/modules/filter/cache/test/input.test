@@ -3507,7 +3507,7 @@ select * from v1a join v1b on t1.b = t2.b;
 #
 # Bug #17523 natural join and information_schema
 #
-# Omit columns.PRIVILIGES as it may vary with embedded server.
+# Omit columns.PRIVILEGES as it may vary with embedded server.
 # Omit columns.ORDINAL_POSITION and statistics.CARDINALITY as it may vary with hostname='localhost'.
 select 
  statistics.TABLE_NAME, statistics.COLUMN_NAME, statistics.TABLE_CATALOG, statistics.TABLE_SCHEMA, statistics.NON_UNIQUE, statistics.INDEX_SCHEMA, statistics.INDEX_NAME, statistics.SEQ_IN_INDEX, statistics.COLLATION, statistics.SUB_PART, statistics.PACKED, statistics.NULLABLE, statistics.INDEX_TYPE, statistics.COMMENT, 

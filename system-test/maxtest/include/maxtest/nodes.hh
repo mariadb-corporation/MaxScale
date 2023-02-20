@@ -169,7 +169,7 @@ public:
      * @brief executes shell command on the node using ssh
      * @param index number of the node (index)
      * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
+     * @param sudo if true the command is executed with root privileges
      * @return exit code of the command
      */
     int ssh_node(int node, const std::string& ssh, bool sudo);
