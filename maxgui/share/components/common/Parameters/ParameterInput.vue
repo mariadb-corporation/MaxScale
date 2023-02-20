@@ -421,7 +421,7 @@ export default {
 
         durationSuffixSwapper(newSuffix, oldSuffix, val) {
             const { convertDuration } = this.$helpers
-            // convert to miliseconds from oldSuffix
+            // convert to milliseconds from oldSuffix
             const ms = convertDuration({ suffix: oldSuffix, val })
             switch (newSuffix) {
                 case 'ms':
