@@ -75,11 +75,13 @@
                     <mxs-truncate-str :tooltipItem="{ txt: `${customCol(item, 'obj')}` }" />
                 </template>
                 <template v-slot:[`item.result`]="{ item }">
-                    <etl-status-icon
-                        :icon="objMigrationStatus(item).icon"
-                        :spinning="objMigrationStatus(item).isSpinning"
-                    />
-                    {{ objMigrationStatus(item).txt }}
+                    <div class="d-flex align-center flex-row">
+                        <etl-status-icon
+                            :icon="objMigrationStatus(item).icon"
+                            :spinning="objMigrationStatus(item).isSpinning"
+                        />
+                        <mxs-truncate-str :tooltipItem="{ txt: objMigrationStatus(item).txt }" />
+                    </div>
                 </template>
             </etl-tbl-script>
         </template>
@@ -200,7 +202,7 @@ export default {
                   ]
                 : [
                       { text: 'OBJECT', value: 'obj', cellClass: 'truncate-cell', width: '60%' },
-                      { text: 'RESULT', value: 'result', width: '40%' },
+                      { text: 'RESULT', value: 'result', cellClass: 'truncate-cell', width: '40%' },
                   ]
         },
         isRunning() {

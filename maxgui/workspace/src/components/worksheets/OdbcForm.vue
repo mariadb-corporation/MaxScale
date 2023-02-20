@@ -1,17 +1,13 @@
 <template>
     <v-row class="ma-n1">
-        <v-col cols="12" class="pa-1">
-            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
-                {{ $mxs_t('source') }}
-            </h3>
-        </v-col>
+        <slot name="prepend" />
         <v-col cols="12" md="6" class="pa-1">
             <label class="field__label mxs-color-helper text-small-text label-required">
                 {{ $mxs_t('databaseType') }}
             </label>
             <v-select
                 v-model="src.type"
-                :items="ETL_SUPPORT_DB_TYPES"
+                :items="ODBC_DB_TYPES"
                 item-text="text"
                 item-value="id"
                 name="databaseType"
@@ -87,10 +83,10 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <uid-input v-model.trim="src.user" :disabled="isAdvanced" name="etl-src-uid" />
+            <uid-input v-model.trim="src.user" :disabled="isAdvanced" name="odbc--uid" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <pwd-input v-model.trim="src.password" :disabled="isAdvanced" name="etl-src-pwd" />
+            <pwd-input v-model.trim="src.password" :disabled="isAdvanced" name="odbc--pwd" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
             <v-switch
@@ -139,7 +135,7 @@ import queryHelper from '@wsSrc/store/queryHelper'
 import { mapState } from 'vuex'
 
 export default {
-    name: 'etl-src-conn',
+    name: 'odbc-form',
     components: { PwdInput, UidInput, TimeoutInput },
     props: {
         value: { type: Object, required: true },
@@ -163,7 +159,7 @@ export default {
     },
     computed: {
         ...mapState({
-            ETL_SUPPORT_DB_TYPES: state => state.mxsWorkspace.config.ETL_SUPPORT_DB_TYPES,
+            ODBC_DB_TYPES: state => state.mxsWorkspace.config.ODBC_DB_TYPES,
         }),
         shouldRequireField() {
             const { type } = this.src

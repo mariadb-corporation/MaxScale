@@ -38,7 +38,7 @@
             </template>
 
             <v-list>
-                <v-list-item @click="logout">
+                <v-list-item @click="handleLogout">
                     <v-list-item-title>{{ $mxs_t('logout') }}</v-list-item-title>
                 </v-list-item>
             </v-list>
@@ -61,6 +61,9 @@
  * Public License.
  */
 import { mapActions, mapState } from 'vuex'
+import QueryConn from '@wsModels/QueryConn'
+import { abortRequests } from '@rootSrc/utils/axios'
+
 export default {
     name: 'app-header',
     data() {
@@ -76,6 +79,12 @@ export default {
     },
     methods: {
         ...mapActions('user', ['logout']),
+        async handleLogout() {
+            abortRequests() // abort all previous pending requests before logging out
+            // Disconnect all workspace connections
+            await QueryConn.dispatch('disconnectAll')
+            await this.logout()
+        },
     },
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-    <div style="min-width:160px" class="fill-height d-flex align-center justify-space-between px-3">
+    <div style="min-width:162px" class="fill-height d-flex align-center justify-space-between px-3">
         <div class="d-inline-flex align-center">
             <mxs-truncate-str
                 :tooltipItem="{ txt: `${queryTab.name}`, nudgeLeft: 36 }"

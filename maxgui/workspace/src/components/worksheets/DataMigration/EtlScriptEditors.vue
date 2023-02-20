@@ -1,24 +1,24 @@
 <template>
-    <div class="fill-height d-flex flex-column relative">
+    <div class="fill-height d-flex flex-column">
         <div class="script-container d-flex flex-column fill-height">
             <etl-editor
                 v-model="stagingRow.select"
-                class="select-script-ctr flex-grow-1"
+                class="select-script"
+                :class="stagingRow.select ? '' : 'mxs-color-helper all-border-error'"
                 :label="$mxs_t('retrieveDataFromSrc')"
-                :editorClass="stagingRow.select ? '' : 'mxs-color-helper all-border-error'"
             />
             <etl-editor
                 v-model="stagingRow.create"
-                class="create-script-ctr flex-grow-1"
+                class="create-script"
+                :class="stagingRow.create ? '' : 'mxs-color-helper all-border-error'"
                 :label="$mxs_t('createObjInDest')"
-                :editorClass="`${stagingRow.create ? '' : 'mxs-color-helper all-border-error'}`"
                 skipRegEditorCompleters
             />
             <etl-editor
                 v-model="stagingRow.insert"
-                class="insert-script-ctr flex-grow-1"
+                class="insert-script"
+                :class="stagingRow.insert ? '' : 'mxs-color-helper all-border-error'"
                 :label="$mxs_t('insertDataInDest')"
-                :editorClass="stagingRow.insert ? '' : 'mxs-color-helper all-border-error'"
                 skipRegEditorCompleters
             />
             <div class="btn-ctr d-flex flex-row">
@@ -94,22 +94,18 @@ export default {
 .field__label {
     font-size: 0.875rem !important;
 }
+.btn-ctr {
+    height: 36px;
+}
+</style>
+<style lang="scss">
 .script-container {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 100%;
-    .create-script-ctr {
-        min-height: 150px;
-        max-height: 400px;
+    .create-script {
+        flex-grow: 0.5;
     }
-    .select-script-ctr,
-    .insert-script-ctr {
-        min-height: 100px;
-        max-height: 200px;
-    }
-    .btn-ctr {
-        height: 36px;
+    .select-script,
+    .insert-script {
+        flex-grow: 0.25;
     }
 }
 </style>

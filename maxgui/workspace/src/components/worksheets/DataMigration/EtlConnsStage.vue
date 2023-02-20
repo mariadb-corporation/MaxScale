@@ -4,7 +4,17 @@
             <template v-slot:body>
                 <v-row class="fill-height">
                     <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
-                        <etl-src-conn v-model="src" :drivers="odbc_drivers" class="pb-1" />
+                        <odbc-form v-model="src" :drivers="odbc_drivers" class="pb-1">
+                            <template v-slot:prepend>
+                                <v-col cols="12" class="pa-1">
+                                    <h3
+                                        class="etl-stage-title mxs-color-helper text-navigation font-weight-light"
+                                    >
+                                        {{ $mxs_t('source') }}
+                                    </h3>
+                                </v-col>
+                            </template>
+                        </odbc-form>
                     </v-col>
                     <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
                         <div class="d-flex flex-column fill-height">
@@ -56,14 +66,14 @@
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
-import EtlSrcConn from '@wkeComps/DataMigration/EtlSrcConn.vue'
+import OdbcForm from '@wkeComps/OdbcForm.vue'
 import EtlDestConn from '@wkeComps/DataMigration/EtlDestConn.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
 import { mapActions, mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'etl-conns-stage',
-    components: { EtlStageCtr, EtlSrcConn, EtlDestConn, EtlLogs },
+    components: { EtlStageCtr, OdbcForm, EtlDestConn, EtlLogs },
     props: { task: { type: Object, required: true } },
     data() {
         return {
@@ -148,13 +158,13 @@ export default {
         },
         async next() {
             if (this.hasActiveConns) {
-                await EtlTask.dispatch('fetchSrcSchemas')
                 EtlTask.update({
                     where: this.task.id,
                     data(obj) {
                         obj.active_stage_index = obj.active_stage_index + 1
                     },
                 })
+                await EtlTask.dispatch('fetchSrcSchemas')
             } else {
                 await this.$refs.form.validate()
                 if (this.isFormValid) await this.handleOpenConns()

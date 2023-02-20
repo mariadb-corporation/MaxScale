@@ -1,11 +1,25 @@
 <template>
-    <div class="d-flex flex-column transform-editor rounded pa-2">
-        <code class="mariadb-code-style ml-8 mb-2 ">
+    <div class="etl-editor" :class="[isFullScreen ? 'etl-editor--fullscreen' : 'relative rounded']">
+        <code
+            class="etl-editor__header d-flex justify-space-between align-center mariadb-code-style pl-12 pr-2 py-1"
+        >
             <span class="editor-comment"> -- {{ label }} </span>
+            <mxs-tooltip-btn
+                btnClass="min-max-btn"
+                icon
+                small
+                color="primary"
+                @click="isFullScreen = !isFullScreen"
+            >
+                <template v-slot:btn-content>
+                    <v-icon size="22"> mdi-fullscreen{{ isFullScreen ? '-exit' : '' }} </v-icon>
+                </template>
+                {{ isFullScreen ? $mxs_t('minimize') : $mxs_t('maximize') }}
+            </mxs-tooltip-btn>
         </code>
         <sql-editor
             v-model="sql"
-            :class="`${editorClass} fill-height etl-editor`"
+            class="etl-editor__body pl-2"
             :options="{
                 contextmenu: false,
                 wordWrap: 'on',
@@ -39,7 +53,11 @@ export default {
         value: { type: String, required: true },
         label: { type: String, required: true },
         skipRegEditorCompleters: { type: Boolean, default: false },
-        editorClass: { type: String, default: '' },
+    },
+    data() {
+        return {
+            isFullScreen: false,
+        }
     },
     computed: {
         sql: {
@@ -57,22 +75,46 @@ export default {
 .field__label {
     font-size: 0.875rem !important;
 }
-.transform-editor {
+.etl-editor {
     margin-bottom: 16px;
     border: thin solid #e8eef1;
     background-color: #fbfbfb;
-    .editor-comment {
-        color: #60a0b0;
+    &--fullscreen {
+        height: 100%;
+        width: 100%;
+        z-index: 2;
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        border: none;
+    }
+    $header-height: 36px;
+    &__header {
+        height: $header-height;
+        .editor-comment {
+            color: #60a0b0;
+        }
+    }
+    &__body {
+        position: absolute;
+        top: $header-height;
+        right: 0;
+        bottom: 0;
+        left: 0;
     }
 }
 </style>
 
 <style lang="scss">
-.transform-editor .etl-editor {
-    .margin,
-    .editor-scrollable,
-    .monaco-editor-background {
-        background-color: #fbfbfb !important;
+.etl-editor {
+    &__body {
+        .margin,
+        .editor-scrollable,
+        .monaco-editor-background {
+            background-color: #fbfbfb !important;
+        }
     }
 }
 </style>

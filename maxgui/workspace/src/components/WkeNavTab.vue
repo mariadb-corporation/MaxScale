@@ -1,7 +1,7 @@
 <template>
     <v-hover v-slot="{ hover: isHovered }">
         <span
-            :style="{ width: '160px' }"
+            :style="{ width: '162px' }"
             class="fill-height d-flex align-center justify-space-between px-3 tab-name"
         >
             <div class="d-inline-flex align-center">

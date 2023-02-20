@@ -183,8 +183,9 @@ export default {
                 if (v.length) {
                     if (this.tables.length) {
                         this.errMsg = ''
-                        if (this.parsedObjs.emptySchemas.length)
-                            this.infoMsg = this.$mxs_t('info.ignoreSchemas')
+                        this.infoMsg = this.parsedObjs.emptySchemas.length
+                            ? this.$mxs_t('info.ignoreSchemas')
+                            : ''
                     } else this.errMsg = this.$mxs_t('errors.invalidChosenSchemas')
                 } else this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
 
