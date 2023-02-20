@@ -177,7 +177,7 @@ public:
 
         if (health_port != m_health_port)
         {
-            MXB_WARNING("Healtch check port of node '%d' has changed from '%d' to '%d', updating.",
+            MXB_WARNING("Health check port of node '%d' has changed from '%d' to '%d', updating.",
                         m_id, m_health_port, health_port);
 
             m_health_port = health_port;
