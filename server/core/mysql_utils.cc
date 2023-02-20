@@ -396,11 +396,7 @@ const char* mxs_response_to_string(GWBUF* pPacket)
 void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {
     const char* CHARSET_QUERY =
-        "SELECT co.id, @@global.character_set_server "
-        "FROM information_schema.collations AS co "
-        "JOIN information_schema.character_sets AS cs "
-        "ON (co.collation_name = cs.default_collate_name) "
-        "WHERE cs.character_set_name=@@global.character_set_server;";
+        "SELECT id FROM information_schema.collations WHERE collation_name=@@global.collation_server";
 
     if (mxs_mysql_query(mysql, CHARSET_QUERY) == 0)
     {
