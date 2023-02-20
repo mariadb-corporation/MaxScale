@@ -434,7 +434,7 @@ public:
            << "\nOrg table    : " << m_org_table
            << "\nName         : " << m_name
            << "\nOrd name     : " << m_org_name
-           << "\nCharacer set : " << m_character_set
+           << "\nCharacter set: " << m_character_set
            << "\nColumn length: " << m_column_length
            << "\nType         : " << (uint16_t)m_type
            << "\nFlags        : " << m_flags
