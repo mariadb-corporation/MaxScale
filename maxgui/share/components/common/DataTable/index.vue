@@ -400,7 +400,7 @@ export default {
         },
 
         /**
-         * This function group all items have same groupdID and assign
+         * This function group all items have same groupId and assign
          * correct value for hidden and rowspan properties.
          * @param {Array} target Array of objects,
          * @return {Array} Always return new array
