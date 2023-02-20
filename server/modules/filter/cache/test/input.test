@@ -6045,7 +6045,7 @@ select * from t1 natural left join (t1 as t2 left join t1 as t3 using (a));
 select * from (t1 as t2 left join t1 as t3 using (a)) right join t1 on t1.a>1;
 --sorted_result
 select * from t1 right join (t1 as t2 left join t1 as t3 using (a)) on t1.a>1;
-# right [outer] joing using
+# right [outer] join using
 select * from (t1 as t2 left join t1 as t3 using (a)) right outer join t1 using ( a );
 select * from t1 right outer join (t1 as t2 left join t1 as t3 using (a)) using ( a );
 # natural right join
