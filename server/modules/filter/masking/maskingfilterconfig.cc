@@ -76,7 +76,7 @@ config::ParamBool check_user_variables(
 config::ParamBool check_unions(
     &specification,
     "check_unions",
-    "If true, then if the second SELECT in a UNION refers to a masked colums "
+    "If true, then if the second SELECT in a UNION refers to a masked columns "
     "the statement will be blocked.",
     true,
     config::Param::AT_RUNTIME);
