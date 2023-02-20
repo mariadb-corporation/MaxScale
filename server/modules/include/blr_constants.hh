@@ -152,7 +152,7 @@
 #define BLRM_SET_HEARTBEAT_QUERY_LEN 80
 
 /* string len for master registration query  */
-#define BLRM_MASTER_REGITRATION_QUERY_LEN 255
+#define BLRM_MASTER_REGISTRATION_QUERY_LEN 255
 
 /* Read Binlog position states */
 #define SLAVE_POS_READ_OK     0x00
