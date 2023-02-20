@@ -6738,7 +6738,7 @@ drop view v2;
 
 
 #
-# Bug #4789 Incosistent results of more than 2-way natural joins due to
+# Bug #4789 Inconsistent results of more than 2-way natural joins due to
 #           incorrect transformation to join ... on.
 #
 
