@@ -134,7 +134,7 @@ public:
         Data();
 
         /**
-         * Peform worker initialization.
+         * Perform worker initialization.
          *
          * This call will, if the routing workers are already running, cause
          * @c init_for() to be called for each worker. If the routing workers

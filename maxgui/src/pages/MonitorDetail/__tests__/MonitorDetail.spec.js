@@ -161,7 +161,7 @@ describe('MonitorDetail index', () => {
             })
         })
 
-        it(`Should send POST request with accurate params to peform switchover`, async () => {
+        it(`Should send POST request with accurate params to perform switchover`, async () => {
             await axiosPostStub.firstCall.should.have.been.calledWith(
                 `/maxscale/modules/${monitorModule}/async-switchover?${monitorId}&${dummyMasterId}`
             )
