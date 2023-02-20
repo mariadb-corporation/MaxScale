@@ -131,7 +131,7 @@ func StoreSchema(db *sql.DB, schema, table string) {
 	encoder.Encode(Schema{Namespace: "MaxScaleChangeDataSchema.avro", Type: "record", Name: "ChangeRecord", Fields: fieldlist})
 }
 
-// Main funtion that queries the database for table names
+// Main function that queries the database for table names
 func main() {
 	var err error
 	field_re, err = regexp.Compile("[(].*")
