@@ -103,7 +103,7 @@ def completed_process_print(cp):
         print(cp.stdout.decode('utf-8'))
 
 
-#### function execute_regular_command, any command you would notmally run on command line
+#### function execute_regular_command, any command you would normally run on command line
 #### Executed in the home directory of the remote user.
 def execute_regular_command(cmd):
     for host in settings.selected_hosts:
