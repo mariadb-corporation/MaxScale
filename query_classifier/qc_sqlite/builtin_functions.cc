@@ -347,7 +347,7 @@ static const char* BUILTIN_FUNCTIONS[] =
     "version",
 
     /*
-     * Miscellanesous Functions
+     * Miscellaneous Functions
      * https://mariadb.com/kb/en/mariadb/miscellaneous-functions/
      */
     "default",
