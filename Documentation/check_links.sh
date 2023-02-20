@@ -29,7 +29,7 @@ function check_file() {
                 continue
             fi
 
-            # Using double bracets changes how the matching works.
+            # Using double brackets changes how the matching works.
             # See the documentation for the '==' operator: https://tldp.org/LDP/abs/html/comparison-ops.html
             if [[ $i != http* ]]
             then
