@@ -85,10 +85,10 @@ export default {
         processModuleParams() {
             const parameters = this.$helpers.lodash.cloneDeep(this.module_parameters)
             // hard code type for child parameter of log_throttling
-            const log_throttingIndex = parameters.findIndex(
+            const log_throttlingIndex = parameters.findIndex(
                 param => param.name === 'log_throttling'
             )
-            const log_throttling = parameters[log_throttingIndex]
+            const log_throttling = parameters[log_throttlingIndex]
 
             const log_throttling_child_params = [
                 {
@@ -116,8 +116,8 @@ export default {
                 },
             ]
 
-            const left = parameters.slice(0, log_throttingIndex + 1)
-            const right = parameters.slice(log_throttingIndex + 1)
+            const left = parameters.slice(0, log_throttlingIndex + 1)
+            const right = parameters.slice(log_throttlingIndex + 1)
 
             this.overridingModuleParams = [...left, ...log_throttling_child_params, ...right]
         },
