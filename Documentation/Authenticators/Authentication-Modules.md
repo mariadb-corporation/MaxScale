@@ -86,7 +86,7 @@ GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
 
 ## Limitations and troubleshooting
 
-When a client logs in to MaxScale, MaxScale sees the client's IP address. When
+When a client logs into MaxScale, MaxScale sees the client's IP address. When
 MaxScale then connects the client to backends (using the client's username and
 password), the backends see the connection coming from the IP address of
 MaxScale. If the client user account is to a wildcard host (`'alice'@'%'`), this
@@ -171,7 +171,7 @@ authenticator_options=match_host=false
 ### `lower_case_table_names`
 
 Integer, default value is 0. Controls database name matching for authentication
-when an incoming client logs in to a non-empty database. The setting functions
+when an incoming client logs into a non-empty database. The setting functions
 similar to the MariaDB Server setting
 [lower_case_table_names](https://mariadb.com/kb/en/library/server-system-variables/#lower_case_table_names)
 and should be set to the value used by the backends.

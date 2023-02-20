@@ -100,7 +100,7 @@ solution than the more complex readwritesplit router but requires the
 application to be able to use distinct write and read ports.
 
 To configure a read-only service that tolerates primary failures, we first
-need to add a new section in to the configuration file.
+need to add a new section into the configuration file.
 
 ```
 [Read-Service]

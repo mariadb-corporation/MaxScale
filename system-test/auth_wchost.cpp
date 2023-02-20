@@ -66,11 +66,11 @@ void test_main(TestConnections& test)
                 {
                     if (query_ok)
                     {
-                        test.tprintf("%s logged in to db %s, as expected.", un, db.c_str());
+                        test.tprintf("%s logged into db %s, as expected.", un, db.c_str());
                     }
                     else if (mxs_login)
                     {
-                        test.add_failure("%s logged in to db %s on MaxScale yet query failed.",
+                        test.add_failure("%s logged into db %s on MaxScale yet query failed.",
                                          un, db.c_str());
                     }
                     else
@@ -83,11 +83,11 @@ void test_main(TestConnections& test)
                     // If expecting failure, then even managing to log in to MaxScale is too much.
                     if (!mxs_login)
                     {
-                        test.tprintf("%s failed to log in to db %s, as expected.", un, db.c_str());
+                        test.tprintf("%s failed to log into db %s, as expected.", un, db.c_str());
                     }
                     else
                     {
-                        test.add_failure("%s logged in to db %s, when failure was expected.",
+                        test.add_failure("%s logged into db %s, when failure was expected.",
                                          un, db.c_str());
                     }
                 }

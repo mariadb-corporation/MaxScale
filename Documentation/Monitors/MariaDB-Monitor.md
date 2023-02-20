@@ -1230,16 +1230,16 @@ while the backup is transferred and prepared.
 
 #### `ssh_user`
 
-String. Ssh username. Used when logging in to backend servers to run commands.
+String. Ssh username. Used when logging into backend servers to run commands.
 
 #### `ssh_keyfile`
 
-Path to file with an ssh private key. Used when logging in to backend servers to
+Path to file with an ssh private key. Used when logging into backend servers to
 run commands.
 
 #### `ssh_check_host_key`
 
-Boolean, default: true. When logging in to backends, require that the server is
+Boolean, default: true. When logging into backends, require that the server is
 already listed in the known_hosts-file of the user running MaxScale.
 
 #### `ssh_timeout`

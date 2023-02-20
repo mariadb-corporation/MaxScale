@@ -763,7 +763,7 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
             // This will be printed repeatedly until admin adds the priv.
             const char msg[] = "Service user '%s' of service '%s' does not have 'SHOW DATABASES' or "
                                "a similar global privilege on '%s'. This may cause authentication errors on "
-                               "clients logging in to a specific database.";
+                               "clients logging into a specific database.";
             MXB_WARNING(msg, con.connection_settings().user.c_str(), svc_name(), servername);
         }
     }

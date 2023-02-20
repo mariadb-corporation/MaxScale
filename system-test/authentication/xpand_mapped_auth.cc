@@ -105,7 +105,7 @@ void test_main(TestConnections& test)
         const char user[] = "batman";
         const char pw[] = "iambatman";
 
-        // Create databases for real so that MaxScale does not complain when logging in to them.
+        // Create databases for real so that MaxScale does not complain when logging into them.
         auto server_conn = test.xpand->backend(0)->open_connection();
         server_conn->try_cmd_f("create database %s;", db1);
         server_conn->try_cmd_f("create database %s;", db2);

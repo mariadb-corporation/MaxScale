@@ -68,6 +68,6 @@ int main(int argc, char** argv)
     test.expect(check_variable_value(init_var3, expected_res3), msg);
 
     test.maxscale->ssh_node_f(true, "%s", delete_file_cmd.c_str());
-    test.log_includes("Super user '.*' logged in to service");
+    test.log_includes("Super user '.*' logged into service");
     return test.global_result;
 }

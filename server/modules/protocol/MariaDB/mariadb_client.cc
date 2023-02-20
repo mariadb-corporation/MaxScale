@@ -2604,7 +2604,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
                     m_auth_state = AuthState::START_SESSION;
                     if (user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
                     {
-                        MXB_WARNING("Super user %s logged in to service '%s'.",
+                        MXB_WARNING("Super user %s logged into service '%s'.",
                                     m_session_data->user_and_host().c_str(), m_session->service->name());
                     }
                 }
