@@ -2108,7 +2108,7 @@ DROP TABLE t1;
 
 #
 # Bug#27525: table not found when using multi-table-deletes with aliases over
-#            several databas
+#            several databases
 # Bug#21148: MULTI-DELETE fails to resolve a table by alias if it's from a
 #            different database
 #
