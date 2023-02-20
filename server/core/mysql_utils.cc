@@ -407,7 +407,8 @@ const char* dbg_decode_response(GWBUF* pPacket)
 void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {
     const char* CHARSET_QUERY =
-        "SELECT id FROM information_schema.collations WHERE collation_name=@@global.collation_server";
+        "SELECT id, @@global.collation_server FROM information_schema.collations "
+        "WHERE collation_name=@@global.collation_server";
 
     if (mxs_mysql_query(mysql, CHARSET_QUERY) == 0)
     {
