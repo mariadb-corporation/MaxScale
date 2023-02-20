@@ -808,7 +808,7 @@ bool rule_get_match_value_fill(json_t* pRule,
     json_t* pTheFill = rule_get_fill(pWith);
     // Get value from 'with' object
     json_t* pTheValue = json_object_get(pWith, KEY_VALUE);
-    // Get 'match' from 'replace' ojbect
+    // Get 'match' from 'replace' object
     json_t* pTheMatch = json_object_get(pKeyObj, KEY_MATCH);
 
     // Check values: 'match' and 'fill' are mandatory (if not provided, there will be
