@@ -25,7 +25,7 @@ int readenv_int(const char * name, int def);
 
 /**
  * @brief readenv_int Read boolean value of environment variable, if empty - set default
- * Values 'yes', 'y', 'true' (case independedant) are interpreted as TRUE, everything else - as FALSE
+ * Values 'yes', 'y', 'true' (case independent) are interpreted as TRUE, everything else - as FALSE
  * @param name Name of the variable
  * @param def Default value
  * @return Environment variable value converted to bool
