@@ -2,7 +2,7 @@
  * @file change_master_during_seesion.cpp Tries to reconfigure replication setup to use another node as a
  * Master
  * - connect to RWSplit
- * - reconfugure backend
+ * - reconfigure backend
  * - checks that after time > monitor_interval everything is ok
  */
 
