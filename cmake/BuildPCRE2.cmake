@@ -2,7 +2,7 @@
 #
 # This will add a 'pcre2' target to CMake which will generate the libpcre2-8.a
 # static library and the pcre2.h header. If your target requires PCRE2 you
-# need to add a dependeny on the 'pcre2' target by adding add_dependencies(<target> pcre2)
+# need to add a dependency on the 'pcre2' target by adding add_dependencies(<target> pcre2)
 # to the CMakeLists.txt. You don't need to link against the pcre2 library
 # because the static symbols will be in MaxScale.
 ExternalProject_Add(pcre2 SOURCE_DIR ${CMAKE_SOURCE_DIR}/pcre2/
