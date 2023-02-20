@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     if ((new_selects[0] - selects[0]) > avr / 3)
     {
         Test->add_result(1,
-                         "number of queries for master greater then 30%% of averange number of queries per node\n");
+                         "number of queries for master greater then 30%% of average number of queries per node\n");
     }
 
     Test->tprintf("Restoring nodes\n");
