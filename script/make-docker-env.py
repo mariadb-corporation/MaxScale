@@ -116,7 +116,7 @@ class Config(object):
         self.servers = self.read_servers(cnf)
         self.threads = cnf.get("maxscale", "threads", fallback="1")
         self.replace_server_sections(cnf, self.servers)
-        self.insert_placefolders(cnf)
+        self.insert_placeholders(cnf)
 
         string_io = StringIO()
         cnf.write(string_io)
@@ -133,7 +133,7 @@ class Config(object):
         return servers
 
     @staticmethod
-    def insert_placefolders(cnf): # other than those in server sections
+    def insert_placeholders(cnf): # other than those in server sections
         cnf.set("maxscale", "threads", "{threads}")
         for sect in cnf.sections():
             if  cnf.has_option(sect, "user"):
