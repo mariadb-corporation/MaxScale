@@ -1584,25 +1584,29 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     auto* session = static_cast<Session*>(be_dcb->session());
     auto* client_dcb = session->client_connection()->dcb();
 
-    if (reason == DCB::Reason::HIGH_WATER && client_dcb->state() == DCB::State::POLLING)
+    if (client_dcb->is_polling())
     {
-        client_dcb->set_reads_enabled(false);
-        MXB_INFO("Write buffer size of connection to server %s reached %s. Pausing reading from client %s "
-                 "until buffer size falls to %s.", be_dcb->server()->name(), CN_WRITEQ_HIGH_WATER,
-                 session->user_and_host().c_str(), CN_WRITEQ_LOW_WATER);
-    }
-    else if (reason == DCB::Reason::LOW_WATER && client_dcb->state() == DCB::State::NOPOLLING)
-    {
-        if (client_dcb->set_reads_enabled(true))
+        if (reason == DCB::Reason::HIGH_WATER)
         {
-            MXB_INFO("Write buffer size of connection to server %s fell to %s. Resuming reading from client "
-                     "%s.", be_dcb->server()->name(), CN_WRITEQ_LOW_WATER, session->user_and_host().c_str());
+            client_dcb->set_reads_enabled(false);
+            MXB_INFO("Write buffer size of connection to server %s reached %s. Pausing reading from "
+                     "client %s until buffer size falls to %s.", be_dcb->server()->name(),
+                     CN_WRITEQ_HIGH_WATER, session->user_and_host().c_str(), CN_WRITEQ_LOW_WATER);
         }
-        else
+        else if (reason == DCB::Reason::LOW_WATER)
         {
-            MXB_ERROR("Could not re-enable I/O events for connection to client %s. Closing session.",
-                      session->user_and_host().c_str());
-            client_dcb->trigger_hangup_event();
+            if (client_dcb->set_reads_enabled(true))
+            {
+                MXB_INFO("Write buffer size of connection to server %s fell to %s. Resuming reading "
+                         "from client %s.", be_dcb->server()->name(), CN_WRITEQ_LOW_WATER,
+                         session->user_and_host().c_str());
+            }
+            else
+            {
+                MXB_ERROR("Could not re-enable I/O events for connection to client %s. Closing session.",
+                          session->user_and_host().c_str());
+                client_dcb->trigger_hangup_event();
+            }
         }
     }
 
@@ -1631,7 +1635,7 @@ static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* user
         for (auto& be_conn : be_conns)
         {
             auto* be_dcb = be_conn->dcb();
-            if (be_dcb->state() == DCB::State::POLLING)
+            if (be_dcb->is_polling())
             {
                 if (be_dcb->set_reads_enabled(false))
                 {
@@ -1654,7 +1658,7 @@ static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* user
         for (auto& be_conn : be_conns)
         {
             auto* be_dcb = be_conn->dcb();
-            if (be_dcb->state() == DCB::State::NOPOLLING)
+            if (be_dcb->is_polling())
             {
                 if (be_dcb->set_reads_enabled(true))
                 {
