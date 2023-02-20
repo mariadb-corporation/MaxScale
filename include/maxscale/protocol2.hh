@@ -408,7 +408,7 @@ public:
     /**
      * Check if the connection can be closed in a controlled manner
      *
-     * @return True if the connection can be closed without interruping anything
+     * @return True if the connection can be closed without interrupting anything
      */
     virtual bool can_close() const = 0;
 
