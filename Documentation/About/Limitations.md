@@ -26,7 +26,7 @@ unexpected splitting of connections. This will only happen if users explicitly
 tell MaxScale to ignore the default directories and will not happen in normal
 use.
 
-## Security limitiations
+## Security limitations
 
 ### MariaDB 10.2
 
