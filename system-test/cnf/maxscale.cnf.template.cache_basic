@@ -29,7 +29,7 @@ storage=storage_inmemory
 selects=verify_cacheable
 cached_data=shared
 # NOTE: If you adjust the TTL values, ensure that test programs dependent
-# NOTE: on the TTL are ajusted as well.
+# NOTE: on the TTL are adjusted as well.
 hard_ttl=10s
 soft_ttl=5s
 rules=/###access_homedir###/cache_rules.json
@@ -57,7 +57,7 @@ storage_options="server=127.0.0.1"
 selects=verify_cacheable
 cached_data=shared
 # NOTE: If you adjust the TTL values, ensure that test programs dependent
-# NOTE: on the TTL are ajusted as well.
+# NOTE: on the TTL are adjusted as well.
 hard_ttl=10s
 soft_ttl=5s
 rules=/###access_homedir###/cache_rules.json
@@ -85,7 +85,7 @@ storage_options="server=127.0.0.1"
 selects=verify_cacheable
 cached_data=shared
 # NOTE: If you adjust the TTL values, ensure that test programs dependent
-# NOTE: on the TTL are ajusted as well.
+# NOTE: on the TTL are adjusted as well.
 hard_ttl=10s
 soft_ttl=5s
 rules=/###access_homedir###/cache_rules.json
