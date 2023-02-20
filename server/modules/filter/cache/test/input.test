@@ -5852,7 +5852,7 @@ select t2.companynr,count(*),min(fld3),max(fld3),sum(price),avg(price) from t2,t
 
 #
 # group with many tables and long group on many tables. group on formula
-# optimizer: create tmp table with neaded fields
+# optimizer: create tmp table with needed fields
 #           sort tmp table by group and calculate sums to new table
 #	    if different order by than group, sort tmp table
 #	    send rows
