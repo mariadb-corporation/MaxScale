@@ -237,7 +237,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
         }
         catch (const bsoncxx::exception& x)
         {
-            MXB_ERROR("bsoncxx exeception occurred when parsing NoSQL command: %s", x.what());
+            MXB_ERROR("bsoncxx exception occurred when parsing NoSQL command: %s", x.what());
 
             HardError error(x.what(), error::FAILED_TO_PARSE);
             m_context.set_last_error(error.create_last_error());
