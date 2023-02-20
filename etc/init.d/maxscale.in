@@ -124,7 +124,7 @@ stop() {
 
     [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$servicename
 
-    # Return rigth code
+    # Return right code
     if [ $RETVAL -ne 0 ]; then
        RETVAL=$_RETVAL_NOT_RUNNING
     fi
