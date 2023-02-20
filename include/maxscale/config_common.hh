@@ -261,7 +261,7 @@ inline bool config_is_valid_name(const std::string& name, std::string* reason)
 }
 
 /**
- * Converts a string into milliseconds, intepreting in a case-insensitive manner
+ * Converts a string into milliseconds, interpreting in a case-insensitive manner
  * an 'h'-suffix to indicate hours, an 'm'-suffix to indicate minutes, an
  * 's'-suffix to indicate seconds and an 'ms'-suffix to indicate milliseconds.
  *
@@ -277,7 +277,7 @@ bool get_suffixed_duration(const char* zValue,
                            mxs::config::DurationUnit* pUnit = nullptr);
 
 /**
- * Converts a string into seconds, intepreting in a case-insensitive manner
+ * Converts a string into seconds, interpreting in a case-insensitive manner
  * an 'h'-suffix to indicate hours, an 'm'-suffix to indicate minutes, an
  * 's'-suffix to indicate seconds and an 'ms'-suffix to indicate milliseconds.
  *
