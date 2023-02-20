@@ -1188,7 +1188,7 @@ purposes. Currently the session trace log is written to the log in the following
 * When MaxScale receives a fatal signal and is about to crash.
 * Whenever an unexpected response is read from a server
 * If the session is not closed gracefully (i.e. client doesn't send a  COM_QUIT packet)
-* Whenever readwritesplit receives a responce that is was not expecting.
+* Whenever readwritesplit receives a response that is was not expecting.
 
 It would be good to enable this if a session is disconnected and the log is not
 detailed enough. In this case the info log might reveal the true cause of why
