@@ -394,11 +394,11 @@ export default {
             let targetMatrices = cloneDeep(this.itemsToBeDeleted).map(
                 row => row.filter((_, i) => i !== 0) // Remove # col
             )
-            const newMaxtrices = xorWith(this.rows, targetMatrices, isEqual)
+            const newMatrices = xorWith(this.rows, targetMatrices, isEqual)
             // Convert to array of objects
             const newData = this.$helpers.getObjectRows({
                 columns: this.headers.map(h => h.text),
-                rows: newMaxtrices,
+                rows: newMatrices,
             })
 
             this[`SET_QUERY_${this.activeView}`](newData)
