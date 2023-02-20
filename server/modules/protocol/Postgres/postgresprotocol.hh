@@ -319,7 +319,7 @@ bool will_respond(const GWBUF& buffer);
 bool will_respond(uint8_t cmd);
 
 /**
- * Create a Postgres packat from SQL.
+ * Create a Postgres packet from SQL.
  *
  * @return A postgres packet containing SQL.
  */

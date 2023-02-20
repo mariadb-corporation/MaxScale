@@ -19,7 +19,7 @@ MYSQL* connect_to_serv(TestConnections* Test, bool binlog);
 
 /**
  * @brief set_max_packet Executes 'cmd' on Master of RWSplit ('cmd' should be 'set global
- * max_paxket_size=...')
+ * max_packet_size=...')
  * @param Test TestConnections object
  * @param binlog if true - connects to Master, otherwise - to RWSplit router
  * @param cmd command to execute
