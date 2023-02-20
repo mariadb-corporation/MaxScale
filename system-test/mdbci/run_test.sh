@@ -24,7 +24,7 @@
 # same as $version by default
 
 # $target - name of binary repository
-# (name of subdirectroy http://max-tst-01.mariadb.com/ci-repository/)
+# (name of subdirectory http://max-tst-01.mariadb.com/ci-repository/)
 
 # $team_keys - path to the file with open ssh keys to be
 # installed on all VMs (default ${HOME}/team_keys)
