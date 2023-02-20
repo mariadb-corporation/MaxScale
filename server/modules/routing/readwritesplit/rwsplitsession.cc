@@ -914,7 +914,7 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
         handle_slave_error(backend->name(), expected_response);
     }
 
-    // Decrement the expected response count only if we know we can continue the sesssion.
+    // Decrement the expected response count only if we know we can continue the session.
     // This keeps the internal logic sound even if another query is routed before the session
     // is closed.
     if (expected_response)
