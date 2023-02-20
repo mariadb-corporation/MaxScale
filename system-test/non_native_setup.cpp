@@ -20,7 +20,7 @@ void print_usage(const char* zProgram)
     cout << "usage: " << zProgram << "[<flags>] <name> <script>\n"
          << "\n"
          << "where\n"
-         << "  <flags>   are flags that will be provided to the TestConnections contructor,\n"
+         << "  <flags>   are flags that will be provided to the TestConnections constructor,\n"
          << "  <name>    is the name of the test, and\n"
          << "  <script>  is the program that will be invoked." << endl;
 }
