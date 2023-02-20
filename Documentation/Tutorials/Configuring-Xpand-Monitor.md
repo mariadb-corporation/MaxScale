@@ -31,7 +31,7 @@ protocol=mariadbbackend
 
 The server configuration is identical with that of any other server, but since
 these servers are _only_ used for bootstrapping the Xpand monitor it is
-adviceable to use names that clearly will identify them as such.
+advisable to use names that clearly will identify them as such.
 
 The actual Xpand monitor configuration looks as follows:
 ```

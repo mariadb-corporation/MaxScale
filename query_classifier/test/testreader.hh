@@ -45,7 +45,7 @@ public:
     /**
      * Initialize internal shared tables. This will automatically be called
      * by the TestReader constructor, but if multiple threads are used it
-     * is adviseable to call this function explicitly from the main thread.
+     * is advisable to call this function explicitly from the main thread.
      */
     static void init();
 

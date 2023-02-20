@@ -34,7 +34,7 @@ will completely rely upon information obtained at runtime. To change the
 default behaviour, please see the parameter
 [dynamic_node_detection](#dynamic_node_detection).
 
-To ensure that the Xpand monitor will be able to start, it is adviseable
+To ensure that the Xpand monitor will be able to start, it is advisable
 to provide _more_ than one server to cater for the case that not all nodes
 are always up when MaxScale starts.
 
