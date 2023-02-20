@@ -25,7 +25,7 @@ In addition to the aforementioned query classifier caching, the
 readwritesplit session command history is enabled by default in 2.3 but is
 limited to a maximum of 50 commands after which the history is
 disabled. This is unlikely to show in any metrics but it contributes to
-the increased memory foorprint of MaxScale.
+the increased memory footprint of MaxScale.
 
 ## Unknown Global Parameters
 
