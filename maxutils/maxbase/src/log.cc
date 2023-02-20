@@ -312,7 +312,7 @@ public:
                 // Not within the window, reset the situation.
 
                 // The flooding situation is analyzed window by window.
-                // That means that if there in each of two consequtive
+                // That means that if there in each of two consecutive
                 // windows are not enough messages for throttling to take
                 // effect, but there would be if the window was placed at a
                 // slightly different position (e.g. starting in the middle
