@@ -188,7 +188,7 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
  * Extract binlog replication header from event data
  *
  * @param event    The replication event
- * @param hdr      Pointer to repliction header to fill
+ * @param hdr      Pointer to replication header to fill
  */
 static void extract_header(const uint8_t* event, REP_HEADER* hdr)
 {
@@ -286,7 +286,7 @@ bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
  * Member variable m_skip is set accordingly to db/table match.
  *
  * @param buffer    The GWBUF with binlog event data
- * @param hdr       Reference to repliction event header
+ * @param hdr       Reference to replication event header
  * @return          True id TABLE_MAP_EVENT contains
  * db/table names to skip
  */
