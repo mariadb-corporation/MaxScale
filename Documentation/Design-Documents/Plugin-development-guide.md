@@ -118,7 +118,7 @@ module. This function must be exported without C++ name mangling, so in C++ code
 it should be defined `extern "C"`.
 
 The information container describes the module in general and is constructed
-once during program excecution. A module may have multiple *instances* with
+once during program execution. A module may have multiple *instances* with
 different values for configuration parameters. For example, a filter module can
 be used with two different configurations in different services (or even in the
 same service). In this case the loader uses the same module information
