@@ -1331,7 +1331,7 @@ bool set_dirs(const char* basedir)
 }
 
 /**
- * A RAII class that at construction time takes overship of pipe
+ * A RAII class that at construction time takes ownership of pipe
  * handle and at destruction time notifies parent if there is
  * a need for that.
  */
