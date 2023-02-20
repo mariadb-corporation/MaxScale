@@ -244,7 +244,7 @@ void run_test(TestConnections& test)
 
     node = node_by_address[server2.address];
 
-    // Sleep a short while to allow things to stabalize.
+    // Sleep a short while to allow things to stabilize.
     sleep(2);
 
     // SECOND TEST: Take down another node but than the one we are connected to.

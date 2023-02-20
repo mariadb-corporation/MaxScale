@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
         test.tprintf("Starting redis/memcached.");
         start_redis(test);
         start_memcached(test);
-        sleep(1); // To allow things to stabalize.
+        sleep(1); // To allow things to stabilize.
 
         // As the caches are now running, they will now be taken into use. However, that
         // will be triggered by the fetching and hence the first result will be fetched from
