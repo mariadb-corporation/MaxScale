@@ -607,7 +607,7 @@ void run_failover_stress_test(TestConnections& test, const BaseSettings& base_se
                         {
                             failover_success = true;
                             failovers++;
-                            test.tprintf("Failover %i successfull.", failovers);
+                            test.tprintf("Failover %i successful.", failovers);
                         }
                         else
                         {

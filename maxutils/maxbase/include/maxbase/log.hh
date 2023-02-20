@@ -463,7 +463,7 @@ bool mxb_log_init(const char* ident,
 /**
  * @brief Finalize the log
  *
- * A successfull call to @c max_log_init() should be followed by a call
+ * A successful call to @c max_log_init() should be followed by a call
  * to this function before the process exits.
  */
 void mxb_log_finish();
