@@ -104,7 +104,7 @@ private:
     maxbase::Duration m_heartbeat_interval = maxbase::Duration(300s);
 
     /**
-     *  Master connection retry timout. Default 60s.
+     *  Master connection retry timeout. Default 60s.
      */
     maxbase::Duration m_connect_retry_tmo = 60s;
 
