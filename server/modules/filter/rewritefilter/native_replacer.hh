@@ -88,7 +88,7 @@ Iterator read_placeholder(const Iterator cfirst, const Iterator last,
     pRegex->clear();
     auto first = cfirst;
 
-    // Should start with with "@{"
+    // Should start with "@{"
     if (*first != '@' || ++first == last || *first != '{' || ++first == last)
     {
         *pOrdinal = 0;      // not a placeholder

@@ -340,7 +340,7 @@ public:
          *   fields to be defined and they do not need to be a part of the PRIMARY KEY to work. MariaDB
          *   requires that there is only one AUTO_INCREMENT field and it must be a part of the primary key.
          *
-         * - Fields with with 'NULL::' as the starting of the expression mean that the field has a default
+         * - Fields with 'NULL::' as the starting of the expression mean that the field has a default
          *   value of NULL. This usually seems to happen when an explicit NULL default is used instead of an
          *   implicit one.
          *
