@@ -257,7 +257,7 @@ class Closer
 {
 public:
     /**
-     * Creates the closer and stores the provided resourece. Note that
+     * Creates the closer and stores the provided resource. Note that
      * the constructor assumes that the resource exists already.
      *
      * @param resource  The resource whose closing is to be ensured.
