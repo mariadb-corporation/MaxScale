@@ -1465,7 +1465,7 @@ private:
                 ss << "Could ";
             }
 
-            ss << "update the grants in the MariaDB server, but could not store the corresponing "
+            ss << "update the grants in the MariaDB server, but could not store the corresponding "
                << "roles in the local database.";
 
             throw SoftError(ss.str(), error::INTERNAL_ERROR);
