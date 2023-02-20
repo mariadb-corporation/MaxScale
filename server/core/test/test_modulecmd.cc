@@ -384,7 +384,7 @@ int call_module(const MODULECMD* cmd, const char* ns)
  * Load a module from ../../modules/monitor/mariadbmon and invoke a command.
  *
  * @param actual_module   The actual name of the module; the name of the module
- *                        that exists as a physcal file, i.e. mariadbmon.
+ *                        that exists as a physical file, i.e. mariadbmon.
  * @param loaded_module   The name of the module as referred to in the configuration
  *                        file, i.e. mysqlmon or mariadbmon.
  * @id                    The id of the command; unique for each invocation.
