@@ -20,7 +20,7 @@
  * the maxscale with a Change Data Capture API interface (supporting Avro right now)
  * databases.
  *
- * In the first instance it is intended to connect, authenticate and retieve data in the Avro format
+ * In the first instance it is intended to connect, authenticate and retrieve data in the Avro format
  * as requested by compatible clients.
  *
  * @verbatim

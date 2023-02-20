@@ -1370,7 +1370,7 @@ mxt::MariaDB* MariaDBServer::admin_connection()
 
 bool MariaDBServer::copy_logs(const std::string& destination_prefix)
 {
-    string log_retrive_commands[] =
+    string log_retrieve_commands[] =
     {
         "cat /var/lib/mysql/*.err",
         "cat /var/log/syslog | grep mysql",
@@ -1378,7 +1378,7 @@ bool MariaDBServer::copy_logs(const std::string& destination_prefix)
     };
 
     int cmd_ind = 1;
-    for (const auto& cmd : log_retrive_commands)
+    for (const auto& cmd : log_retrieve_commands)
     {
         auto output = m_vm.run_cmd_output_sudo(cmd).output;
         if (!output.empty())
