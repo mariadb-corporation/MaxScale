@@ -788,7 +788,7 @@ HTML_HEADER            =
 HTML_FOOTER            =
 
 # If the HTML_TIMESTAMP tag is set to YES then the generated HTML
-# documentation will contain the timesstamp.
+# documentation will contain the timestamp.
 
 HTML_TIMESTAMP         = NO
 
