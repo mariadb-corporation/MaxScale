@@ -22,7 +22,7 @@ using std::string;
 namespace
 {
 const char EVENT_NAME[] = "test_event";
-const char EVENT_SHCEDULER[] = "SET GLOBAL event_scheduler = %s;";
+const char EVENT_SCHEDULER[] = "SET GLOBAL event_scheduler = %s;";
 const char USE_TEST[] = "USE test;";
 const char SET_NAMES[] = "SET NAMES %s COLLATE %s";
 
@@ -72,7 +72,7 @@ void create_event(TestConnections& test)
     const char create_event_query[] = "CREATE EVENT %s ON SCHEDULE EVERY 1 SECOND "
                                       "DO UPDATE test.t1 SET c1 = c1 + 1;";
 
-    if (conn->cmd_f(EVENT_SHCEDULER, "ON")
+    if (conn->cmd_f(EVENT_SCHEDULER, "ON")
         && conn->cmd_f("CREATE OR REPLACE TABLE test.t1(c1 INT);")
         && conn->cmd(USE_TEST)
         && conn->cmd("INSERT INTO t1 VALUES (1);")
@@ -91,7 +91,7 @@ void create_event(TestConnections& test)
 void delete_event(TestConnections& test)
 {
     auto conn = test.maxscale->open_rwsplit_connection2();
-    conn->cmd_f(EVENT_SHCEDULER, "OFF");
+    conn->cmd_f(EVENT_SCHEDULER, "OFF");
     conn->cmd(USE_TEST);
     conn->cmd_f("DROP EVENT IF EXISTS %s;", EVENT_NAME);
     test.repl->sync_slaves();
