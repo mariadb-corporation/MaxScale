@@ -50,7 +50,7 @@
 //
 // Note that we do not modify the set; deleting will not be performed other
 // than in error situations (and at the time of this writing is considered to
-// be removed entirelly) and it does not really matter if an non-existing key
+// be removed entirely) and it does not really matter if an non-existing key
 // is in the set.
 //
 // Invalidating

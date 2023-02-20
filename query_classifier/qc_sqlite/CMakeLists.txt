@@ -33,7 +33,7 @@ set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,--version-script=${CMA
 # NOTE: symbols are resolved at compile time - then for whatever reason, sqlite3_prepare
 # NOTE: is *not* taken from sqlite3.c built into this library, but from the sqlite3
 # NOTE: shared library on the system. Libmaxscale-common depends on the libsqlite, but
-# NOTE: reason is not entirelly understood.
+# NOTE: reason is not entirely understood.
 #
 # target_link_libraries(qc_sqlite maxscale-common)
 # set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,-z,defs)
