@@ -4,7 +4,7 @@
  *
  * - Connect to RWSplit
  * - find which backend slave is used for connection
- * - blocm mariadb on the slave with firewall
+ * - block mariadb on the slave with firewall
  * - wait 60 seconds
  * - check which slave is used for connection now, expecting any other slave
  * - check warning in the error log about broken slave
