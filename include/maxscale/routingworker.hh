@@ -428,8 +428,8 @@ public:
      * @attention The return value tells *only* whether message could be posted,
      *            *not* that it has reached the worker.
      *
-     * @attentsion Exactly the same arguments are passed to all workers. Take that
-     *             into account if the passed data must be freed.
+     * @attention Exactly the same arguments are passed to all workers. Take that
+     *            into account if the passed data must be freed.
      *
      * @attention This function is signal safe.
      */
