@@ -997,7 +997,7 @@ add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS g
 # INSERT extremely big number of rows
 add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit HEAVY GALERA_BACKEND)
 
-# Prepearing and execution statements in the loop
+# Preparing and execution statements in the loop
 add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
 
 # Playing with blocking and unblocking nodes under INSERT load
