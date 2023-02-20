@@ -194,7 +194,7 @@ void test_multiple_sql_packets1()
         auto headlen = head.length();
         auto completelen = complete.length();
         expect(headlen + completelen == sizeof(resultset),
-               "Both buffers should sum up to sizeof(resutlset) bytes");
+               "Both buffers should sum up to sizeof(resultset) bytes");
         uint8_t databuf[sizeof(resultset)];
         complete.copy_data(0, completelen, databuf);
         if (!head.empty())
@@ -217,12 +217,12 @@ void test_multiple_sql_packets1()
     }
     while (total < sizeof(resultset));
 
-    expect(head.length() == sizeof(resultset), "Head should be sizeof(resulset) bytes long");
+    expect(head.length() == sizeof(resultset), "Head should be sizeof(resultset) bytes long");
     complete = mariadb::get_complete_packets(head);
     expect(head.empty(), "Head should be empty");
     expect(!complete.empty(), "Complete should not be empty");
     expect(complete.length() == sizeof(resultset),
-           "Complete should be sizeof(resulset) bytes long");
+           "Complete should be sizeof(resultset) bytes long");
 
     auto headlen = head.length();
     auto completelen = complete.length();
@@ -365,7 +365,7 @@ void test_multiple_sql_packets2()
         auto headlen = head.length();
         auto nextlen = next.length();
         expect(headlen + nextlen == sizeof(resultset),
-               "Both buffers should sum up to sizeof(resutlset) bytes");
+               "Both buffers should sum up to sizeof(resultset) bytes");
         uint8_t databuf[sizeof(resultset)];
         next.copy_data(0, nextlen, databuf);
         head.copy_data(0, headlen, databuf + nextlen);
