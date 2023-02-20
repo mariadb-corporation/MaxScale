@@ -1967,7 +1967,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
  * @param router Avro router instance
  * @param hdr Replication header
  * @param ptr Pointer to the start of the event
- * @return True on succcess, false on error
+ * @return True on success, false on error
  */
 bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 {
