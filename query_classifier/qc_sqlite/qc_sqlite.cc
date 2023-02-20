@@ -2202,7 +2202,7 @@ public:
 
     int maxscaleComment()
     {
-        // We are regularily parsing if the thread has been initialized.
+        // We are regularly parsing if the thread has been initialized.
         // In that case # should be interpreted as the start of a comment,
         // otherwise it should not.
         int regular_parsing = false;
