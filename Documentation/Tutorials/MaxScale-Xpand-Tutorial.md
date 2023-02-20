@@ -30,7 +30,7 @@ address=IP-OF-NODE
 port=3306
 protocol=MySQLBackend
 ```
-That server defintion will be used by the monitor in order to connect
+That server definition will be used by the monitor in order to connect
 to the Xpand cluster. There can be more than one such "bootstrap"
 definition to cater for the case that the node used as a bootstrap
 server is down when MaxScale starts.
