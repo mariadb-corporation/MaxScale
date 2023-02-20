@@ -438,7 +438,7 @@ inline const char* qcme_string_get(const char* s)
     return s;
 }
 
-#define QC_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICT_COMMIT_BEGIN
+#define QC_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICIT_COMMIT_BEGIN
 #define QC_CF_IMPLICIT_COMMIT_END   CF_IMPLICIT_COMMIT_END
 
 inline SELECT_LEX* qcme_get_first_select_lex(LEX* lex)
