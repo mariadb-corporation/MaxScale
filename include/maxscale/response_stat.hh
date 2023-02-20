@@ -47,7 +47,7 @@ private:
     const int                      m_num_filter_samples;
     const maxbase::Duration        m_sync_duration;
     long                           m_sample_count;
-    std::vector<maxbase::Duration> m_samples;   // N sampels from which median is used
+    std::vector<maxbase::Duration> m_samples;   // N samples from which median is used
     maxbase::CumulativeAverage     m_average;
     maxbase::TimePoint             m_last_start;
     maxbase::TimePoint             m_next_sync;
