@@ -35,7 +35,7 @@
 This component render item object to input, it's a container component for parameter-input
 PROPS explanation:
 - usePortOrSocket: if true, passing the value of portValue, socketValue props,
-  to parameter-input for handling special input field when editting server or listener.
+  to parameter-input for handling special input field when editing server or listener.
 - portValue, socketValue and parentForm are passed if a server or listener is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
 - isListener: if true, address input won't be required

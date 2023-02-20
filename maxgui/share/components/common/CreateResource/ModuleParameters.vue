@@ -53,7 +53,7 @@ When a module is selelcted, a parameters input table will be rendered.
 moduleName props is defined to render correct label for select input
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue to pass to parameter-input
-  for handling special input field when editting server or listener.
+  for handling special input field when editing server or listener.
 - isListener: accepts boolean , if true, address parameter won't be required
 */
 import ParametersCollapse from './ParametersCollapse'

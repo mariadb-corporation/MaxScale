@@ -115,7 +115,7 @@ This component allows to read parameters and edit parameters. It means to be use
 
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
-  passing them to parameter-input for handling special input field when editting server or listener.
+  passing them to parameter-input for handling special input field when editing server or listener.
   If editing listener, address parameter won't be required.
 - overridingModuleParams props allows to override parameters in module_parameters. This props is only used
   in case module_prameters doesn't include type info for nested object. e.g. log_throttling parameter

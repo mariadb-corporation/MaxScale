@@ -68,7 +68,7 @@ The component is meant to be used for creating resource
 
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
-  passing them to parameter-input for handling special input field when editting server or listener.
+  passing them to parameter-input for handling special input field when editing server or listener.
 - isListener: accepts boolean , if true, address parameter will not be required
 */
 import getParamInfo from '@share/mixins/getParamInfo'
