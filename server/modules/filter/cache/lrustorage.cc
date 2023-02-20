@@ -199,7 +199,7 @@ public:
                             if (node_words.size() > 1)
                             {
                                 // If there are multiple invalidation words associated with
-                                // the node, then the node must be removed from the bookeeping
+                                // the node, then the node must be removed from the bookkeeping
                                 // of those words as well. Otherwise we have the following:
                                 // SELECT * FROM t1 UNION SELECT * FROM t2 => Node stored to t1 and t2.
                                 // DELETE * FROM t1                        => Node removed from t1 and deleted
