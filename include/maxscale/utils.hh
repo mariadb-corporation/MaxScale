@@ -243,7 +243,7 @@ struct CloserTraits
  *     {
  *         Closer<FILE*> file(pFile);
  *
- *         // Use pFile, call functions that potentually may throw
+ *         // Use pFile, call functions that potentially may throw
  *     }
  * }
  * @endcode
