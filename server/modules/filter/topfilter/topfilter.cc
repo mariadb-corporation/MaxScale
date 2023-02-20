@@ -115,7 +115,7 @@ public:
     struct Values
     {
         int64_t                 count;      /* Number of queries to store */
-        std::string             filebase;   /* Base of fielname to log into */
+        std::string             filebase;   /* Base of filename to log into */
         std::string             source;     /* The source of the client connection */
         std::string             user;       /* A user name to filter on */
         uint32_t                options;    /* Regex options */
