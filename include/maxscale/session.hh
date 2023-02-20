@@ -322,7 +322,7 @@ public:
      *
      * This method should be used to stop the session when an abnormal failure has occurred.
      *
-     * @param error An optionl error message that is sent to the client before the session is terminated
+     * @param error An optional error message that is sent to the client before the session is terminated
      */
     void kill(const std::string& errmsg = {});
 
