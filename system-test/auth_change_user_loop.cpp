@@ -5,7 +5,7 @@
  * - in 100 parallel threads start to open/close session
  * - do change_user 2000 times
  * - check all change_user are ok
- * - check Mascale is alive
+ * - check Maxscale is alive
  */
 
 #include <maxtest/testconnections.hh>

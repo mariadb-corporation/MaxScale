@@ -7,7 +7,7 @@
  *  + GRANT ALL PRIVILEGES ON *.* TO  'bar'@'127.0.0.*' IDENTIFIED BY 'bar'
  *  + DROP USER 'foo'@'*.foo.notexists'
  *  + DROP USER 'bar'@'127.0.0.*'
- * - do "select * from mysql.user" using RWSplit to check if Maxsclae crashed
+ * - do "select * from mysql.user" using RWSplit to check if Maxscale crashed
  */
 
 
