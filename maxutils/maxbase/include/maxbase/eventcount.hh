@@ -111,7 +111,7 @@ private:
     mutable std::vector<EventCount> m_event_counts;
 };
 
-// conveniece. Any real formatted output should go elsewhere.
+// convenience. Any real formatted output should go elsewhere.
 std::ostream& operator<<(std::ostream& os, const SessionCount& stats);
 void          dump(std::ostream& os, const std::vector<SessionCount>& sessions);
 void          dumpTotals(std::ostream& os, const std::vector<SessionCount>& sessions);

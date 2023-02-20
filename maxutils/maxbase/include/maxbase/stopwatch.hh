@@ -213,7 +213,7 @@ private:
 
 /** Returns the duration as a double and string adjusted to a suffix like ms for milliseconds.
  *  The double and suffix (unit) combination is selected to be easy to read.
- *  This is for output conveniece. You can always convert a duration to a specific unit:
+ *  This is for output convenience. You can always convert a duration to a specific unit:
  *  long ms {std::chrono::duration_cast<std::chrono::milliseconds>(dur).count()};
  */
 std::pair<double, std::string> dur_to_human_readable(Duration dur);
