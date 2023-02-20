@@ -6,7 +6,7 @@
 
 # $cmake_flags - cmake flags to be used in the build
 
-# $MDBCI_VM_PATH - path to the MDBCI virtual machies directory
+# $MDBCI_VM_PATH - path to the MDBCI virtual machines directory
 
 # $source - reference to the point in the source code repository
 
