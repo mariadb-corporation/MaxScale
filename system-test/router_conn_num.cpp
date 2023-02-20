@@ -79,7 +79,7 @@
  *  Any update on this one?
  *  Comment 4 Vilho Raatikka 2014-09-11 10:34:20 UTC
  *  The problem can't be reproduced with the code I'm working currently, and which will be the one where beta
- * release will be refresed from. Thus, I'd wait till beta refresh is done and see if the problem still
+ * release will be refreshed from. Thus, I'd wait till beta refresh is done and see if the problem still
  * exists.
  *  Comment 5 lisu87 2014-09-11 10:47:32 UTC
  *  Thank you.
