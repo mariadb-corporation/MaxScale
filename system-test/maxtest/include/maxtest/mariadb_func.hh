@@ -160,7 +160,7 @@ int execute_query_from_file(MYSQL* conn, FILE* file);
 int execute_query_silent(MYSQL* conn, const char* sql, bool silent = true);
 
 /**
- * @brief Executes SQL query and store 'affected rows' number in affectet_rows parameter
+ * @brief Executes SQL query and store 'affected rows' number in affected_rows parameter
  * @param conn MYSQL    connection struct
  * @param sql   SQL string
  * @param affected_rows pointer to variabe to store number of affected rows
