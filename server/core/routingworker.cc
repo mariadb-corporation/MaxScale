@@ -682,7 +682,6 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
                 if (pDcb->state() == DCB::State::POLLING)
                 {
                     pDcb->disable_events();
-                    pDcb->shutdown();
                 }
 
                 BackendDCB::close(pDcb);
@@ -900,7 +899,6 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
     if (pDcb->state() == DCB::State::POLLING)
     {
         pDcb->disable_events();
-        pDcb->shutdown();
     }
 
     auto* srv = pDcb->server();

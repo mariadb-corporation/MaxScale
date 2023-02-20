@@ -342,6 +342,15 @@ public:
     virtual bool disable_events();
 
     /**
+     * Control whether EPOLLIN events are handled for this DCB
+     *
+     * @param enable Whether EPOLLIN events are listened for
+     *
+     * @return True if the events were successfully modified
+     */
+    bool set_reads_enabled(bool val);
+
+    /**
      * Add a callback to the DCB.
      *
      * @reason     When the callback should be called.
@@ -610,8 +619,6 @@ protected:
      * @return True, if the DCB was released and can be deleted, false otherwise.
      */
     virtual bool release_from(MXS_SESSION* session) = 0;
-
-    void stop_polling_and_shutdown();
 
     int         log_errors_SSL(int ret);
     std::string get_one_SSL_error(unsigned long ssl_errno);
