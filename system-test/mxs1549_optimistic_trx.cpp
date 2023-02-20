@@ -218,7 +218,7 @@ int main(int argc, char** argv)
             test.log_printf("%s%s", a.description, extra);
             conn.connect();
 
-            // Helps debugging to have a distict query in the log
+            // Helps debugging to have a distinct query in the log
             conn.query(string("SELECT '") + a.description + "'");
 
             for (auto s : a.steps)
