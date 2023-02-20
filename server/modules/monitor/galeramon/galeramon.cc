@@ -821,7 +821,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
  *
  * @param   a        Pointer to array value
  * @param   b        Pointer to array value
- * @return  A number less than, threater than or equal to 0
+ * @return  A number less than, greater than or equal to 0
  */
 
 static int compare_node_index(const void* a, const void* b)
@@ -849,7 +849,7 @@ static int compare_node_index(const void* a, const void* b)
  *
  * @param   a        Pointer to array value
  * @param   b        Pointer to array value
- * @return  A number less than, threater than or equal to 0
+ * @return  A number less than, greater than or equal to 0
  */
 
 static int compare_node_priority(const void* a, const void* b)
