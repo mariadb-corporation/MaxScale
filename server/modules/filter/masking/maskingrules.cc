@@ -1248,7 +1248,7 @@ void MaskingRules::MatchRule::rewrite(mxq::LEncString& s) const
             startoffset = ovector[1];
         }
 
-        // Log errors, exclding NO_MATCH or PARTIAL
+        // Log errors, excluding NO_MATCH or PARTIAL
         if (rv < 0 && (rv != PCRE2_ERROR_NOMATCH || PCRE2_ERROR_PARTIAL))
         {
             MXS_PCRE2_PRINT_ERROR(rv);
