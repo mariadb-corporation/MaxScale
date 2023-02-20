@@ -1,5 +1,5 @@
 /**
- * @file lots_of_row.cpp INSERT extremelly big number of rows
+ * @file lots_of_row.cpp INSERT extremely big number of rows
  * - do INSERT of 100 rows in the loop 2000 times
  * - do SELECT *
  */

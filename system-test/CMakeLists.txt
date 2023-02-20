@@ -994,7 +994,7 @@ add_test_executable(bug676.cpp bug676 galera LABELS galeramon GALERA_BACKEND)
 # Galera node priority test. Also tests MXS-3826 and MXS-3532.
 add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS galeramon LIGHT GALERA_BACKEND)
 
-# INSERT extremelly big number of rows
+# INSERT extremely big number of rows
 add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit HEAVY GALERA_BACKEND)
 
 # Prepearing and execution statements in the loop
