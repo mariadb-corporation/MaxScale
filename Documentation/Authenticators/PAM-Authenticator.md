@@ -50,7 +50,7 @@ Boolean, default value is "false". If enabled, MaxScale communicates with the
 client as if using
 [mysql_clear_password](https://mariadb.com/kb/en/connection/#mysql_clear_password-plugin).
 This setting has no effect on MaxScale-to-backend communication, which adapts to
-either "dialog" or "mysql_clear_password", depeding on which one the backend
+either "dialog" or "mysql_clear_password", depending on which one the backend
 suggests. This setting is meant to be used with the similarly named MariaDB
 Server setting.
 
