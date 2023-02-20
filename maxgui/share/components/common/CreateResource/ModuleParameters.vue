@@ -49,7 +49,7 @@
 
 /*
 This component takes modules props to render v-select component for selecting a module.
-When a module is selelcted, a parameters input table will be rendered.
+When a module is selected, a parameters input table will be rendered.
 moduleName props is defined to render correct label for select input
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue to pass to parameter-input
