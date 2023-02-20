@@ -308,7 +308,7 @@ public:
      * Returns a map of server variables and their values. The content
      * of the map depends upon which variables the relevant monitor was
      * instructed to fetch. Note that @c session_track_system_variables
-     * that is always fetchd, is not returned in this map but by
+     * that is always fetched, is not returned in this map but by
      * @c get_session_track_system_variables().
      *
      * @return Map of server variables and their values.
@@ -320,7 +320,7 @@ public:
      *
      * @param variable  The variable.
      *
-     * @return  The variable's value. Empty string if it has not been fethced.
+     * @return  The variable's value. Empty string if it has not been fetched.
      */
     virtual std::string get_variable_value(const std::string& variable) const = 0;
 
