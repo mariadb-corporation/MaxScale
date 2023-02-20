@@ -688,7 +688,7 @@ protected:
         // How often should a disk space check be made at most.
         milliseconds disk_space_check_interval;
 
-        // TODO: Either add arbitratily deep nesting of structs in Configurations or separate these into
+        // TODO: Either add arbitrarily deep nesting of structs in Configurations or separate these into
         // something else. Now the values are stored twice.
         MonitorServer::ConnectionSettings conn_settings;
 
