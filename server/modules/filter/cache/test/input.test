@@ -8856,7 +8856,7 @@ drop table t1;
 #
 # followed by some fixes.
 #
-# Lot's of duplicates, but that does not relly matter.
+# Lot's of duplicates, but that does not really matter.
 #
 set global myisam_data_pointer_size=2;
 set global myisam_data_pointer_size=default;
