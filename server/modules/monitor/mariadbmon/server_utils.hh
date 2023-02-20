@@ -143,7 +143,7 @@ public:
      * domain on the calling GtidList, the sequences are considered identical. Missing domains are
      * handled depending on the value of @c domain_substraction_mode.
      *
-     * @param rhs The value doing the substracting
+     * @param rhs The value doing the subtracting
      * @param domain_substraction_mode How domains that exist on the caller but not on @c rhs are handled.
      * If MISSING_DOMAIN_IGNORE, these are simply ignored. If MISSING_DOMAIN_LHS_ADD,
      * the sequence number on lhs is added to the total difference.
