@@ -78,7 +78,7 @@ public:
      * one of them will subsequently return.
      *
      * @return `True` if the semaphore could be posed, otherwise `false`.
-     *         If `false` is returned, then the maximum count of the sempahore
+     *         If `false` is returned, then the maximum count of the semaphore
      *         has been reached.
      */
     bool post() const
@@ -221,7 +221,7 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
-     * Waits on the sempahore at most until the specified time.
+     * Waits on the semaphore at most until the specified time.
      *
      * @param ts               The *absolute* time until which the waiting at
      *                         most is performed.
@@ -257,7 +257,7 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
-     * Waits on the sempahore the specified number of times, at most until the
+     * Waits on the semaphore the specified number of times, at most until the
      * specified time.
      *
      * @param n_wait           How many times should be waited.
@@ -297,7 +297,7 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
-     * Waits on the sempahore at most until the specified amount of time
+     * Waits on the semaphore at most until the specified amount of time
      * has passed.
      *
      * @param seconds          How many seconds to wait at most.
@@ -326,7 +326,7 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
-     * Waits on the sempahore the specified number of times at most until the
+     * Waits on the semaphore the specified number of times at most until the
      * specified time.
      *
      * @param n_wait           How many times should be waited.
@@ -357,7 +357,7 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
-     * Waits on the sempahore at most until the specified amount of time
+     * Waits on the semaphore at most until the specified amount of time
      * has passed.
      *
      * @param seconds          How many seconds to wait at most.
@@ -380,7 +380,7 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
-     * Waits on the sempahore the specified number of times at most until the
+     * Waits on the semaphore the specified number of times at most until the
      * specified time.
      *
      * @param n_wait           How many times should be waited.
