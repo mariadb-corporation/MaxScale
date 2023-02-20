@@ -320,7 +320,7 @@ mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
 }
 
 /**
- * @brief Replace the user/passwd in the service users tbale from a db file
+ * @brief Replace the user/passwd in the service users table from a db file
  *
  * @param service The current service
  */
