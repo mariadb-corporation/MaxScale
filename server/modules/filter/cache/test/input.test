@@ -2379,7 +2379,7 @@ DELETE v2 FROM v2;
 DROP VIEW v2, v1;
 DROP TABLE t1, t2;
 #
-# Test of refering to old values
+# Test of referring to old values
 #
 
 --disable_warnings
