@@ -2450,7 +2450,7 @@ MariaDB [(none)]> select * from test.collection;
 +------+------------------------------------+
 ```
 The collection `collection` is represented by a table `collection` with
-the two colums `id` and `doc`. `id` is a virtual column whose content is
+the two columns `id` and `doc`. `id` is a virtual column whose content is
 the value of the `_id` field of the document in the `doc` column.
 
 All MongoDB® commands that _mongdbprotocol_ support (but for the ones that
