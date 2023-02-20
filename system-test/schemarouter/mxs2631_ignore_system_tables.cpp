@@ -1,5 +1,5 @@
 /**
- * MXS-2631: Dublicate system tables found
+ * MXS-2631: Duplicate system tables found
  *
  * https://jira.mariadb.org/browse/MXS-2631
  */
