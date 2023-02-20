@@ -49,7 +49,7 @@ void check(TestConnections& test, Connection& c1, Connection& c2, const string& 
     Result rows2 = c2.rows("SELECT * FROM cache_users");
 
     test.expect(rows1 == rows2,
-                "After '%s' the result result was not identical for different users.",
+                "After '%s' the result was not identical for different users.",
                 stmt.c_str());
 }
 
