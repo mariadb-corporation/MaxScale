@@ -320,7 +320,7 @@ bool runtime_thread_rebalance(maxscale::RoutingWorker& worker,
 /**
  * Rebalance work of threads.
  *
- * @param threashold  The rebalancing threshold.
+ * @param threshold  The rebalancing threshold.
  *
  * @return True, if the rebalancing could be initiated.
  */

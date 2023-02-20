@@ -158,7 +158,7 @@ struct TimeConvert
 {
     double      div;        // divide the value of the previous unit by this
     std::string suffix;     // milliseconds, hours etc.
-    double      max_visual; // threashold to switch to the next unit
+    double      max_visual; // threshold to switch to the next unit
 };
 // Will never get to centuries because the duration is a long carrying nanoseconds
 TimeConvert convert[]
