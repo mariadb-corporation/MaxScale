@@ -6491,7 +6491,7 @@ SELECT STRAIGHT_JOIN SQL_NO_CACHE * FROM t2, t1 WHERE t1.b = t2.b OR t2.b IS NUL
 DROP TABLE IF EXISTS t1,t2;
 
 #
-# Bug #20954 "avg(keyval) retuns 0.38 but max(keyval) returns an empty set"
+# Bug #20954 "avg(keyval) returns 0.38 but max(keyval) returns an empty set"
 #
 --disable_ps_protocol
 CREATE TABLE t1 (key1 float default NULL, UNIQUE KEY key1 (key1));
