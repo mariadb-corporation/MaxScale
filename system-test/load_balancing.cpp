@@ -11,7 +11,7 @@
  * - after 100 seconds all threads are stopped
  * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not
  * greater then 3 times and no
- * more then 10% of quesries went to Master
+ * more then 10% of queries went to Master
  */
 
 #include <maxtest/big_load.hh>
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
          true);
 
     long int avr = (i1 + i2 ) / (Test->repl->N);
-    Test->tprintf("average number of quries per node %ld\n", avr);
+    Test->tprintf("average number of queries per node %ld\n", avr);
     long int min_q = avr / 3;
     long int max_q = avr * 3;
     Test->tprintf("Acceptable value for every node from %ld until %ld\n", min_q, max_q);
