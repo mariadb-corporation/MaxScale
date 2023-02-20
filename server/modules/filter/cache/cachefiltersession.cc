@@ -229,7 +229,7 @@ StatementType get_statement_type(std::string_view sql)
             if ((pKey == pKey_end) && ((pSql == pSql_end) || !isalpha(*pSql)))
             {
                 // All is fine; either the statement only contain the keyword (so syntactically
-                // the statement is erroenous) or the keyword was followed by something else
+                // the statement is erroneous) or the keyword was followed by something else
                 // than an alphanumeric character, e.g. whitespace.
             }
             else
