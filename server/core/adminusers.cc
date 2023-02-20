@@ -353,7 +353,7 @@ const char* admin_remove_inet_user(const char* uname)
 }
 
 /**
- * Check for existance of remote user.
+ * Check for existence of remote user.
  *
  * @param user The user name to test.
  *
