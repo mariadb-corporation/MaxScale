@@ -3,7 +3,7 @@
  * - configure binlog router setup, avro router, avro listener
  * - connect to avro listener
  * - start INSERT load thread
- * - read data from avro listener, comapre it with inserted data
+ * - read data from avro listener, compare it with inserted data
  */
 
 #include <atomic>
