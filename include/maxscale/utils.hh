@@ -140,7 +140,7 @@ long get_cpu_count();
  * Get number of virtual CPUs (cores) that are available to the process
  *
  * This differs from get_processor_count() by taking CPU affinities and cgroup CPU quotas into account. This
- * results in a "virtual" CPU count that estimates how much CPU resoures, in terms of CPU cores, are
+ * results in a "virtual" CPU count that estimates how much CPU resources, in terms of CPU cores, are
  * available. Note that the returned value may be a fraction.
  *
  * @return The "virtual" CPU count available to this process. If no limits or quotas have been placed, this
