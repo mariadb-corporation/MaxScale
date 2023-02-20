@@ -16,7 +16,7 @@ bool test_longblob(TestConnections& test, MYSQL* conn, const char* blob_name,
                    unsigned long chunk_size, int chunks, int rows);
 
 /**
- * @brief check_longblob_data Does SELECT against table created by test_longblob() and cheks that data are
+ * @brief check_longblob_data Does SELECT against table created by test_longblob() and checks that data are
  * correct
  * @param Test TestConnection object
  * @param conn MYSQL connection handler
