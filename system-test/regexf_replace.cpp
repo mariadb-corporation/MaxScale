@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Connecting to all MaxScale services\n");
     Test->reset_timeout();
-    Test->add_result(Test->maxscale->connect_maxscale(), "Error connectiong to Maxscale\n");
+    Test->add_result(Test->maxscale->connect_maxscale(), "Error connecting to Maxscale\n");
 
     Test->tprintf("executing fetch * from mysql.user \n");
     Test->reset_timeout();
