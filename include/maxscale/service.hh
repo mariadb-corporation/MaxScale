@@ -258,7 +258,7 @@ public:
      *
      * @param level The log level to inspect
      *
-     * @return True if the mesage should be logged
+     * @return True if the message should be logged
      */
     virtual bool log_is_enabled(int level) const = 0;
 

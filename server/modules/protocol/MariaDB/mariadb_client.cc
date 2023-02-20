@@ -1692,7 +1692,7 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
     memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
     mysql_payload = mysql_payload + sizeof(mysql_statemsg);
 
-    // write err messg
+    // write err message
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
     // writing data in the Client buffer queue

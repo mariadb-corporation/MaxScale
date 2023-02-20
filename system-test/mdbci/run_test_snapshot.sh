@@ -5,7 +5,7 @@ function checkExitStatus {
     errorMessage=$2
     lockFilePath=$3
     if [ "$returnCode" != 0 ]; then
-        echo "$errorMesage"
+        echo "$errorMessage"
         rm $lockFilePath
         echo "Snapshot lock file was deleted due to an error"
         exit 1
