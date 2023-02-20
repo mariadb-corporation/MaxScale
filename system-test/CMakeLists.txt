@@ -5,7 +5,7 @@
 #     pip install JayDeBeApi
 
 
-# Backend labes:
+# Backend labels:
 #     REPL_BACKEND
 #     GALERA_BACKEND
 #     EXTERN_BACKEND
