@@ -2,7 +2,7 @@
 
 ###
 ## @file bug567.sh Regression case for the bug "Crash if files from /dev/shm/ removed"
-## - try to remove everythign from /dev/shm/$maxscale_pid
+## - try to remove everything from /dev/shm/$maxscale_pid
 ## check if Maxscale is alive
 
 export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"

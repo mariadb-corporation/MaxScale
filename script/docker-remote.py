@@ -157,7 +157,7 @@ def deploy_command():
         completed_process_print(completed_process)
 
 
-#### function purge, stop docker, docker prune verything and remove docker deployment files
+#### function purge, stop docker, docker prune everything and remove docker deployment files
 #### Only purges the stuff associated with the current user. TODO, add purge everything (everyone) option.
 def purge_command():
     compose_command("down")
