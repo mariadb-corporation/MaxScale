@@ -194,7 +194,7 @@ public:
      *
      * @return `True` if the semaphore was waited for, `false` otherwise.
      *
-     * @attention If the function returns `false` and `signal_approch` is
+     * @attention If the function returns `false` and `signal_approach` is
      *            `HONOUR_SIGNALS` then the caller must check the value of
      *            `errno` to find out whether the call was timed out or
      *            interrupted. In the former case the value will be `EAGAIN`
@@ -229,7 +229,7 @@ public:
      *
      * @return True if the waiting could be performed, false otherwise.
      *
-     * @attention If the function returns `false` and `signal_approch` is
+     * @attention If the function returns `false` and `signal_approach` is
      *            `HONOUR_SIGNALS` then the caller must check the value of
      *            `errno` to find out whether the call was timed out or
      *            interrupted. In the former case the value will be `ETIMEDOUT`
@@ -270,7 +270,7 @@ public:
      *         value will be less than `n_wait`.
      *
      * @attention If the function returns a value less than `n_count` and
-     *            `signal_approch` is `HONOUR_SIGNALS` then the caller must check
+     *            `signal_approach` is `HONOUR_SIGNALS` then the caller must check
      *            the value of `errno` to find out whether the call was timed out or
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
@@ -308,7 +308,7 @@ public:
      *
      * @attention `nseconds` must be less than 1000000000.
      *
-     * @attention If the function returns `false` and `signal_approch` is
+     * @attention If the function returns `false` and `signal_approach` is
      *            `HONOUR_SIGNALS` then the caller must check the value of
      *            `errno` to find out whether the call was timed out or
      *            interrupted. In the former case the value will be `ETIMEDOUT`
@@ -339,7 +339,7 @@ public:
      *         value will be less than `n_wait`.
      *
      * @attention If the function returns a value less than `n_count` and
-     *            `signal_approch` is `HONOUR_SIGNALS` then the caller must check
+     *            `signal_approach` is `HONOUR_SIGNALS` then the caller must check
      *            the value of `errno` to find out whether the call was timed out or
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
@@ -365,7 +365,7 @@ public:
      *
      * @return True if the waiting could be performed, false otherwise.
      *
-     * @attention If the function returns `false` and `signal_approch` is
+     * @attention If the function returns `false` and `signal_approach` is
      *            `HONOUR_SIGNALS` then the caller must check the value of
      *            `errno` to find out whether the call was timed out or
      *            interrupted. In the former case the value will be `ETIMEDOUT`
@@ -392,7 +392,7 @@ public:
      *         value will be less than `n_wait`.
      *
      * @attention If the function returns a value less than `n_count` and
-     *            `signal_approch` is `HONOUR_SIGNALS` then the caller must check
+     *            `signal_approach` is `HONOUR_SIGNALS` then the caller must check
      *            the value of `errno` to find out whether the call was timed out or
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
