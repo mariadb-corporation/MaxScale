@@ -201,7 +201,7 @@ add_test_derived(bug587_1 bug587 bug587_1 LABELS regexfilter hintfilter REPL_BAC
 # Tries to connect Maxscale when all slaves stopped
 add_test_executable(auth_users_from_master.cpp auth_users_from_master replication LABELS MySQLAuth readwritesplit REPL_BACKEND)
 
-# Tries to do change user in the loop, checks that autorization is still ok
+# Tries to do change user in the loop, checks that authorization is still ok
 add_test_executable(auth_change_user_loop.cpp auth_change_user_loop auth_change_user_loop LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Simple test with enable_root_user=true
