@@ -264,7 +264,7 @@ Master communication.
 
 This parameter sets the maximum length of the certificate authority chain that
 will be accepted. Legal values are positive integers. This applies to SSL
-connection to master server that could be acivated either by writing options in
+connection to master server that could be activated either by writing options in
 master.ini or later via a _CHANGE MASTER TO_ command. This parameter cannot be
 modified at runtime. The default verification depth is 9.
 
