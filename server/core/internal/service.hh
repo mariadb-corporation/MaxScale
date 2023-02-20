@@ -180,7 +180,7 @@ public:
     // Set the current cluster without updating targets
     void set_cluster(mxs::Monitor* monitor);
 
-    // Removes the cluster from use (if it's used) and updates the targest
+    // Removes the cluster from use (if it's used) and updates the targets
     bool remove_cluster(mxs::Monitor* monitor);
 
     // Changes the current cluster and updates the targets
