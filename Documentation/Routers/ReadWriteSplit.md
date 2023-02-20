@@ -781,7 +781,7 @@ The possible values for this parameter are:
     could cause non-causal reads to occur. Starting with MaxScale 2.5.15, this
     was fixed and all the GTID coordinates are passed alongside all requests
     which makes multi-domain GTIDs safe to use. However, this does mean that the
-    GTID coordinates will never be reset: if replication is reset and and GTID
+    GTID coordinates will never be reset: if replication is reset and GTID
     coordinates go "backwards", readwritesplit will not consider these as being
     newer than the ones already stored. To reset the stored GTID coordinates in
     readwritesplit, MaxScale must be restarted.
