@@ -5991,7 +5991,7 @@ SELECT a.gvid, (SUM(CASE b.sampletid WHEN 140 THEN b.samplevalue ELSE 0 END)) as
 DROP TABLE t1,t2;
 
 #
-# Test of bigint comparision
+# Test of bigint comparison
 #
 
 create table  t1 (  A_Id bigint(20) NOT NULL default '0',  A_UpdateBy char(10) NOT NULL default '',  A_UpdateDate bigint(20) NOT NULL default '0',  A_UpdateSerial int(11) NOT NULL default '0',  other_types bigint(20) NOT NULL default '0',  wss_type bigint(20) NOT NULL default '0');
