@@ -117,7 +117,7 @@ class ComResponse : public ComPacket
 public:
     enum class Type {Ok, Err, Eof, LocalInfile, Data};
 
-    // The client has to specificy when it is expecting a packet without a cmd byte. See the meaning
+    // The client has to specify when it is expecting a packet without a cmd byte. See the meaning
     // of different Types in member functions below.
     ComResponse(const ComPacket& packet, bool expecting_data_only)
         : ComPacket(packet)
