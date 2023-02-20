@@ -1065,7 +1065,7 @@ static int read_log(const char* name, char** err_log_content_p)
         }
         else
         {
-            printf("Error allocationg memory for the log\n");
+            printf("Error allocating memory for the log\n");
             return 1;
         }
     }
