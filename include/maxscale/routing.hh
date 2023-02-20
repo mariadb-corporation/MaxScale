@@ -193,7 +193,7 @@ enum mxs_routing_capability_t
 /**
  * Determines whether a particular capability type is required.
  *
- * @param capabilites The capability bits to be tested.
+ * @param capabilities The capability bits to be tested.
  * @param type        A particular capability type or a bitmask of types.
  *
  * @return True, if @c type is present in @c capabilities.

@@ -1897,7 +1897,7 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
         final_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
     }
 
-    // The current handshake response generation code assumes that the follwing capabilites are always
+    // The current handshake response generation code assumes that the follwing capabilities are always
     // enabled. Since the plugin is always mysql_native_password, the AUTH_LELENC_DATA isn't really needed as
     // the auth data size is always 20 bytes and both the length-encoded string representation and the string
     // prefixed with fixed size integer representation are the same for payloads less than 251 bytes.
