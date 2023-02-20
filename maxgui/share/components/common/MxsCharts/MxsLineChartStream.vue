@@ -13,13 +13,13 @@
  * Public License.
  */
 
-import { Line } from 'vue-chartjs'
+import { Line, mixins } from 'vue-chartjs'
 import 'chartjs-plugin-streaming'
 import { streamTooltip } from './customTooltips'
 export default {
     extends: Line,
+    mixins: [mixins.reactiveProp],
     props: {
-        chartData: { type: Object, required: true },
         options: { type: Object },
     },
     data() {
@@ -27,29 +27,17 @@ export default {
             uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
         }
     },
-    watch: {
-        /* This chartData watcher doesn't make the chart reactivity, but it helps to
-        destroy the chart when it's unmounted from the page. Eg: moving from dashboard page (have 3 charts)
-        to service-detail page (1 chart), the chart will be destroyed and rerender to avoid
-        several problems within vue-chartjs while using chartjs-plugin-streaming
-        */
-        chartData: function() {
-            this.$data._chart.destroy()
-            this.renderLineChart()
-        },
-    },
     beforeDestroy() {
         let tooltipEl = document.getElementById(this.uniqueTooltipId)
-        tooltipEl && tooltipEl.remove()
-        if (this.$data._chart) this.$data._chart.destroy()
+        if (tooltipEl) tooltipEl.remove()
     },
     mounted() {
         this.renderLineChart()
     },
     methods: {
         renderLineChart() {
-            let scope = this
-            let chartOption = {
+            const scope = this
+            let baseOpts = {
                 showLines: true,
                 layout: {
                     padding: {
@@ -116,7 +104,7 @@ export default {
                     ],
                 },
             }
-            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
+            this.renderChart(this.chartData, this.$helpers.lodash.merge(baseOpts, this.options))
         },
     },
 }
