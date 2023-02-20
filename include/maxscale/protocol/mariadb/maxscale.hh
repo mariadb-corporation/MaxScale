@@ -145,7 +145,7 @@ std::unique_ptr<mxb::QueryResult> execute_query(MYSQL* conn, const std::string& 
  *
  * @param pPacket  A response packet. Need not be contiguous.
  *
- * @return A human-readable representatation of @c pPacket. The returned string
+ * @return A human-readable representation of @c pPacket. The returned string
  *         must not be freed.
  */
 const char* mxs_response_to_string(GWBUF* pPacket);
