@@ -242,7 +242,7 @@ nosqlprotocol.password=thepassword
 ```
 then each MongoDB® client will use those credentials when accessing the
 MariaDB server. Note that from the perspective of the MariaDB server, it
-is not possibe to distinguish between different MongoDB® clients.
+is not possible to distinguish between different MongoDB® clients.
 
 ### Unique Credentials
 
