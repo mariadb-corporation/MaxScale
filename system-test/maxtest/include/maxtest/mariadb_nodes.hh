@@ -226,7 +226,7 @@ public:
     bool stop_nodes();
 
     /**
-     * @brief stop_slaves isues 'stop slave;' to all nodes
+     * @brief stop_slaves issues 'stop slave;' to all nodes
      * @return  0 in case of success
      */
     int stop_slaves();
