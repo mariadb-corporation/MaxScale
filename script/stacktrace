@@ -8,7 +8,7 @@ DATE_TIME="[0-9]\+-[0-9]\+-[0-9]\+ [0-9]\+:[0-9]\+:[0-9]\+"
 function print_usage {
     echo "usage: stacktrace [-p prefix] [stacktrace.txt]"
     echo
-    echo "-p frefix: The path prefix (e.g. /usr/local/mariadb-maxscale/) "
+    echo "-p prefix: The path prefix (e.g. /usr/local/mariadb-maxscale/) "
     echo "           to remove when searching for files."
     echo
     echo "stacktrace.txt: A file containing a stack-trace."
