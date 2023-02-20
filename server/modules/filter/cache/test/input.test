@@ -1433,7 +1433,7 @@ DROP TEMPORARY TABLE t2;
 --echo # Bug #22909 "Using CREATE ... LIKE is possible to create field
 --echo #             with invalid default value"
 --echo #
---echo # Altough original bug report suggests to use older version of MySQL
+--echo # Although original bug report suggests to use older version of MySQL
 --echo # for producing .FRM with invalid defaults we use sql_mode to achieve
 --echo # the same effect.
 --disable_warnings
