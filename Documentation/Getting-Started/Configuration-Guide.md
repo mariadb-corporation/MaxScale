@@ -1322,7 +1322,7 @@ only for testing purposes and are not to be used in production.
 ### REST API Configuration
 
 The MaxScale REST API is an HTTP interface that provides JSON format data
-intended to be consumed by monitoring appllications and visualization tools.
+intended to be consumed by monitoring applications and visualization tools.
 
 The following options must be defined under the `[maxscale]` section in the
 configuration file.
