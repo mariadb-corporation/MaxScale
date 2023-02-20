@@ -132,7 +132,7 @@ export default {
             else document.body.classList.remove('no-userSelect--all', 'no-pointerEvent--all')
         },
         value(v) {
-            // update current pecent when value change. e.g when pane is toggled
+            // update current percent when value change. e.g when pane is toggled
             if (v !== this.currPct) this.currPct = v
         },
     },
