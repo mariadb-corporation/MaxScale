@@ -201,7 +201,7 @@ void test_services(TestConnections& test, std::vector<std::string> ids)
     c.connect();
     test.expect(c.field("SELECT @@server_id") == ids[3], "Fourth slave should reply");
 
-    // Set all serviecs to the same rank
+    // Set all services to the same rank
     test.check_maxctrl("alter service service1 rank secondary");
     test.check_maxctrl("alter service service2 rank secondary");
     test.check_maxctrl("alter service service3 rank secondary");

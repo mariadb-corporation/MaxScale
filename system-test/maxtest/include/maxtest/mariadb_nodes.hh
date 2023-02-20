@@ -412,7 +412,7 @@ public:
     virtual std::string cnf_servers();
 
     /**
-     * @brief cnf_servers_line Generates list of backend servers for serivces definition in maxscale.cnf
+     * @brief cnf_servers_line Generates list of backend servers for services definition in maxscale.cnf
      * @return List of servers, e.g server1,server2,server3,...
      */
     std::string cnf_servers_line();
