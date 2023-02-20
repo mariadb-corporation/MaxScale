@@ -59,7 +59,7 @@ new_version=`ssh $sshopt "maxscale --version" `
 
 echo "old version: '${old_version}', new version: '${new_version}'"
 if [ "${old_version}" == "${new_version}" ]; then
-	echo "Upgrde was not done!"
+	echo "Upgrade was not done!"
 	res=1
 fi
 
