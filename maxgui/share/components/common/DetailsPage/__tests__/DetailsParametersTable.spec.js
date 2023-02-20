@@ -193,7 +193,7 @@ const defaultProps = {
     parameters: resourceParameters,
     updateResourceParameters: () => null, // send ajax
     onEditSucceeded: () => null, // send ajax to get resource data after update
-    // specical props to manipulate required or dependent input attribute
+    // special props to manipulate required or dependent input attribute
     usePortOrSocket: true, // set true for server resource
     isTree: false, // true if a parameter has value as an object or array,
 }

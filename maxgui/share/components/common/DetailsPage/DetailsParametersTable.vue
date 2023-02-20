@@ -132,7 +132,7 @@ export default {
         overridingModuleParams: { type: Array },
         updateResourceParameters: { type: Function, required: false },
         onEditSucceeded: { type: Function, required: false },
-        // specical props to manipulate required or dependent input attribute
+        // special props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
         expandAll: { type: Boolean, default: false },

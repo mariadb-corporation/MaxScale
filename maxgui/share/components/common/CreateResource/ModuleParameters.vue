@@ -66,7 +66,7 @@ export default {
     props: {
         moduleName: { type: String, required: true },
         modules: { type: Array, required: true },
-        // specical props to manipulate required or dependent input attribute
+        // special props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
         parentForm: { type: Object },
         isListener: { type: Boolean, default: false },

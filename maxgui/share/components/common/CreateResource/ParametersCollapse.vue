@@ -78,7 +78,7 @@ export default {
     mixins: [getParamInfo],
     props: {
         parameters: { type: Array, required: true },
-        // specical props to manipulate required or dependent input attribute
+        // special props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false }, // needed for server, listener
         parentForm: { type: Object }, // needed for server, listener
         isListener: { type: Boolean, default: false },
