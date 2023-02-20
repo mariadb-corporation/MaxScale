@@ -115,7 +115,7 @@ export default {
             parameters.forEach(param => {
                 let paramObj = this.$helpers.lodash.cloneDeep(param)
                 /* this ensure 0 default_value could be assigned,
-                   undefined default_value property will fallback to null to make the input visibled
+                   undefined default_value property will fallback to null to make the input visible
                  */
                 const defaultValue = this.$typy(paramObj.default_value).isUndefined
                     ? null
