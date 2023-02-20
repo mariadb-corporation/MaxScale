@@ -1,5 +1,5 @@
 /**
- * @file regexfilter1.cpp Simple regexfilter tests; aslo regression case for mxs508 ("regex filter ignores
+ * @file regexfilter1.cpp Simple regexfilter tests; also regression case for mxs508 ("regex filter ignores
  * username")
  *
  * Three services are configured with regexfilter, each with different parameters.
