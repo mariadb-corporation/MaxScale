@@ -13,7 +13,7 @@
  *  Timofey Turenko 2014-10-24 09:35:35 UTC
  *  1. setup: Master/Slave replication
  *  2. reboot slaves
- *  3. create user usinf connection to RWSplit
+ *  3. create user using connection to RWSplit
  *  4. try to use this user to connect to Maxscale
  *
  *  expected result:
