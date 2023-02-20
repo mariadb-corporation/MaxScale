@@ -1287,7 +1287,7 @@ uint32_t DCB::process_events(uint32_t events)
         rc |= mxb::poll_action::READ;
 
         int return_code = 1;
-        /** SSL authentication is still going on, we need to call DCB::ssl_handehake
+        /** SSL authentication is still going on, we need to call DCB::ssl_handshake
          * until it return 1 for success or -1 for error */
         if (m_encryption.state == SSLState::HANDSHAKE_REQUIRED)
         {
