@@ -23,7 +23,7 @@
 #include <openssl/rand.h>
 
 std::vector<int> lengths = {
-    // A handful of prime numbers for testing encryption of some lenghts
+    // A handful of prime numbers for testing encryption of some lengths
     2, 3, 5, 7,  11, 13, 17,  19,  23,  29,   31,   37,   41,  43,  47,  53,  59,   61,   67, 71,
     // Powers of two
     2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096,
