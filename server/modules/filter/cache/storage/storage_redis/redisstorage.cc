@@ -871,7 +871,7 @@ public:
             }
             else if (reply.is_status())
             {
-                MXB_ERROR("Expected status OK as reponse to FLUSHALL, but received %s.", reply.str());
+                MXB_ERROR("Expected status OK as response to FLUSHALL, but received %s.", reply.str());
             }
             else
             {

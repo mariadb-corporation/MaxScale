@@ -3054,7 +3054,7 @@ void MariaDBClientConnection::kill_complete(const std::function<void()>& cb, Loc
             return c.get() == client;
         });
 
-        // It's possible that both the reponse to the KILL as well as an error occur on the same LocalClient
+        // It's possible that both the response to the KILL as well as an error occur on the same LocalClient
         // before we end up processing either of the two events. For this reason, the validity of the client
         // must be checked before we invoke the callback, otherwise we risk calling it twice.
         if (it != m_local_clients.end())
