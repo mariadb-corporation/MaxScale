@@ -1363,7 +1363,7 @@ HAVE_DOT               = YES
 # directory and reference it in all dot files that doxygen generates. This
 # font does not include all possible unicode characters however, so when you need
 # these (or just want a differently looking font) you can specify the font name
-# using DOT_FONTNAME. You need need to make sure dot is able to find the font,
+# using DOT_FONTNAME. You need to make sure dot is able to find the font,
 # which can be done by putting it in a standard location or by setting the
 # DOTFONTPATH environment variable or by setting DOT_FONTPATH to the directory
 # containing the font.
