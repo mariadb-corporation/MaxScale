@@ -838,7 +838,7 @@ public:
     }
 
     /**
-     * Initate an SSL handshake with a server.
+     * Initiate an SSL handshake with a server.
      *
      * @return -1 if an error occurred,
      *          0 if the handshaking is still ongoing and another call to ssl_handshake() is needed, and
