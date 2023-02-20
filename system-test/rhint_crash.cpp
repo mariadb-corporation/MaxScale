@@ -14,7 +14,7 @@
  *  select @@server_id; -- maxscale route to server =a
  *  select @@server_id; -- maxscale route to server = a
  *
- *  Most likely all variatios with the equals sign and a character after it cause the crash.
+ *  Most likely all variations with the equals sign and a character after it cause the crash.
  *
  *  Call stack:
  *
