@@ -2509,7 +2509,7 @@ protected:
      * - assumed not to be modified at runtime via admin interface
      *
      * @param pValue  Pointer to the parameter value.
-     * @param pParam  Pointer to paramter describing value.
+     * @param pParam  Pointer to parameter describing value.
      * @param onSet   Optional functor to be called when value is set (at startup).
      */
     template<class ParamType,
@@ -2526,7 +2526,7 @@ protected:
      *
      * @param pContainer  Pointer to the container containing the parameter.
      * @param pValue      Member pointer to the parameter value.
-     * @param pParam      Pointer to paramter describing value.
+     * @param pParam      Pointer to parameter describing value.
      * @param onSet       Optional functor to be called when value is set (at startup).
      */
     template<class ParamType, class ConcreteConfiguration, class Container>
@@ -2543,7 +2543,7 @@ protected:
      * @param pArray   Member pointer to array of containers containing parameter.
      * @param index    Index of container in array.
      * @param pValue   Member pointer to the parameter value.
-     * @param pParam   Pointer to paramter describing value.
+     * @param pParam   Pointer to parameter describing value.
      * @param onSet    Optional functor to be called when value is set (at startup).
      */
     template<class ParamType, class ConcreteConfiguration, class Container, int N>

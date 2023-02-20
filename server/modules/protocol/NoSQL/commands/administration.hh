@@ -1573,7 +1573,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        // TODO: Should be assigned to the session so that getParamter
+        // TODO: Should be assigned to the session so that getParameter
         // TODO: would return the set value.
 
         DocumentBuilder was;
