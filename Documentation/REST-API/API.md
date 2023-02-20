@@ -436,7 +436,7 @@ would require basic HTTP authentication.
 This header is used for sending generic warnings to clients about actions that
 were successful and valid but could cause problems in the future. Currently
 these are used to indicate when a configuration change was made to a static
-object and an overriding configuraiton is created or when a static object is
+object and an overriding configuration is created or when a static object is
 being deleted at runtime.
 
 The content of the header is the human-readable warning that should be displayed

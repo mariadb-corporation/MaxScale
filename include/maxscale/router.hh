@@ -257,7 +257,7 @@ struct MXS_ROUTER_API
  */
 enum mxs_router_capability_t
 {
-    RCAP_TYPE_RUNTIME_CONFIG = 0x00020000,      /**< Router supports runtime cofiguration */
+    RCAP_TYPE_RUNTIME_CONFIG = 0x00020000,      /**< Router supports runtime configuration */
 };
 
 enum mxs_target_t

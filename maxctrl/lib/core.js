@@ -18,7 +18,7 @@ var os = require("os");
 var yargs = require("yargs");
 const { maxctrl, error } = require("./common.js");
 
-// Note: The version.js file is generated at configuation time. If you are
+// Note: The version.js file is generated at configuration time. If you are
 // building in-source, manually create the file
 const maxctrl_version = require("./version.js").version;
 

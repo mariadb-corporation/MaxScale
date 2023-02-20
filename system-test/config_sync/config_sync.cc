@@ -646,7 +646,7 @@ void test_failures(TestConnections& test)
                 "Database and MaxScale should be in sync: %s != %ld",
                 db_version.c_str(), mxs_version);
 
-    test.tprintf("Store bad configation data in database");
+    test.tprintf("Store bad configuration data in database");
     c.query("ALTER TABLE mysql.maxscale_config MODIFY COLUMN config TEXT");
     c.query("UPDATE mysql.maxscale_config SET config = 'hello world', version = 105");
     wait_for_sync(105);
