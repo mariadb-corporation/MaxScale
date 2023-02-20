@@ -235,7 +235,7 @@ RRRouter::~RRRouter()
  * The router session stores all client specific data required by the router.
  *
  * @param session    The MaxScale session (generic client connection data)
- * @param endspoints The routing endpoints that this session should use
+ * @param endpoints The routing endpoints that this session should use
  *
  * @return          Client specific data for this router
  */
