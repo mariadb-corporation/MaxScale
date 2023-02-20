@@ -185,7 +185,7 @@ private:
     char*                   m_zDefaultDb;     /**< The default database. */
     char*                   m_zUseDb;         /**< Pending default database. Needs server response. */
     bool                    m_refreshing;     /**< Whether the session is updating a stale cache entry. */
-    bool                    m_is_read_only;   /**< Whether the current trx has been read-only in pratice. */
+    bool                    m_is_read_only;   /**< Whether the current trx has been read-only in practice. */
     bool                    m_use;            /**< Whether the cache should be used in this session. */
     bool                    m_populate;       /**< Whether the cache should be populated in this session. */
     uint32_t                m_soft_ttl;       /**< The soft TTL used in the session. */
