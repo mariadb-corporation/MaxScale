@@ -76,7 +76,7 @@ and build the package with `make package` instead of installing MaxScale with
 `make install`. This process will create a RPM/DEB package depending on your
 system.
 
-To build a tarball, add `-DTARBALL=Y` to the cmake invokation. This will create
+To build a tarball, add `-DTARBALL=Y` to the cmake invocation. This will create
 a _maxscale-x.y.z.tar.gz_ file where _x.y.z_ is the version number.
 
 Some Debian and Ubuntu systems suffer from a bug where `make package` fails
