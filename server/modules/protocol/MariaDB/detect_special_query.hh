@@ -19,7 +19,7 @@
 
 /**
  * @brief  detect_special_query - Quickly determine if the query is potentially
- *                                special and needs futher handling.
+ *                                special and needs further handling.
  *
  * @param  ppSql     In:  pSql points to the start of the query.
  *                   Out: pSql points to a possible start of the special query
