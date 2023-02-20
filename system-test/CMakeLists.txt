@@ -1023,7 +1023,7 @@ add_test_derived(mxs1110_16mb_ssl mxs1110_16mb mxs1110_16mb LABELS readwritespli
 # A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
 add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
 
-# Crash with Galera and backend restart when persistant cfonnections are in use
+# Crash with Galera and backend restart when persistant connections are in use
 add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale REPL_BACKEND GALERA_BACKEND)
 
  # MXS-1585: Crash in MaxScale 2.1.12

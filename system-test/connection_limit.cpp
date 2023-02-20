@@ -92,7 +92,7 @@ void check_max_conn(int router, int max_conn, TestConnections& test)
     if (mysql_errno(conn[i]) != 1040)
     {
         test.add_result(1,
-                         "Max_xonnections reached, but error is not 1040, it is %d %s\n",
+                         "Max_connections reached, but error is not 1040, it is %d %s\n",
                          mysql_errno(conn[i]),
                          mysql_error(conn[i]));
     }

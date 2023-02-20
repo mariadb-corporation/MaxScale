@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->ip4(i), conn_num);
         if ((conn_num > ConnCell) || (conn_num < ConnFloor))
         {
-            Test->add_result(1, "wrong number of connectiosn to mode %d\n", i);
+            Test->add_result(1, "wrong number of connections to mode %d\n", i);
         }
     }
 
