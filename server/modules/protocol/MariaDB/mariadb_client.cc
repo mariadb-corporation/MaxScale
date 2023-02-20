@@ -342,6 +342,10 @@ static bool kill_func(DCB* dcb, void* data)
             }
             else
             {
+                MXB_AT_DEBUG(MXB_WARNING(
+                    "Forcefully closing DCB to %s for session %lu: DCB is not yet connected.",
+                    dcb->whoami().c_str(), dcb->session()->id()));
+
                 // DCB is not yet connected, send a hangup to forcibly close it
                 dcb->session()->close_reason = SESSION_CLOSE_KILLED;
                 dcb->trigger_hangup_event();

@@ -51,13 +51,13 @@ void thread_stress(TestConnections* pTest, int id)
     preamble += std::to_string(id);
     preamble += ", ";
 
-    for (size_t i = 0; i < N_INSERTS; ++i)
+    for (size_t i = 0; i < N_INSERTS && pTest->ok(); ++i)
     {
         string query = preamble + std::to_string(i) + ")";
 
         pTest->expect(c.query(query), "Thread %d failed to execute INSERT: %s", id, c.error());
 
-        for (size_t j = 0; j < N_SELECTS; ++j)
+        for (size_t j = 0; j < N_SELECTS && pTest->ok(); ++j)
         {
             // Use a unique field name in a subset of the queries. This stress tests the measurement as well
             // as the cached response processing.
