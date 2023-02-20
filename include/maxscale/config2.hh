@@ -2525,7 +2525,7 @@ protected:
      * - assumed not to be modified at runtime via admin interface
      *
      * @param pContainer  Pointer to the container containing the parameter.
-     * @param pValue      Memeber pointer to the parameter value.
+     * @param pValue      Member pointer to the parameter value.
      * @param pParam      Pointer to paramter describing value.
      * @param onSet       Optional functor to be called when value is set (at startup).
      */
