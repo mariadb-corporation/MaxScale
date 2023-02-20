@@ -55,7 +55,7 @@ export default {
             return {
                 // for editable feature
                 'v-data-table__editable-cell-mode': this.editableCell,
-                // for row draggble feature
+                // for row draggable feature
                 'draggable-row': this.draggable,
             }
         },
