@@ -250,7 +250,7 @@ public:
      * @param pObject   The JSON object containing the JSON array.
      * @param path      The path of the resource, e.g. "a/b/c"
      * @param presence  Whether the path must exist or not. Note that if it is
-     *                  a true path "a/b/c", onlt the leaf may be optional, the
+     *                  a true path "a/b/c", only the leaf may be optional, the
      *                  components leading to the leaf must be present.
      *
      * @return Vector of object of desired type.
