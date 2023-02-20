@@ -406,7 +406,7 @@ configuration file.
 
 In this example, the RoundRobinRouter is compiled, installed and tested. The
 software environment this section was written and tested is listed below. Any
-recent Linux setup should be applicaple.
+recent Linux setup should be applicable.
 
 * Linux Mint 18
 * gcc 5.4.0, glibc 2.23
