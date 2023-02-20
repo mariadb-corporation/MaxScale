@@ -540,7 +540,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
     uint32_t buf_len = gwbuf_length(*ppPacket);
     uint32_t orig_event_type = 0;
 
-    // If size < BINLOG_EVENT_HDR_LEN + crc32 add rand_event to buff contiguos
+    // If size < BINLOG_EVENT_HDR_LEN + crc32 add rand_event to buff contiguous
     mxb_assert(m_skip == true);
 
     /**

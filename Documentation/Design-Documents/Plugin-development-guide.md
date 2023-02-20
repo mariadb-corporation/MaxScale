@@ -336,7 +336,7 @@ If a router or filter sets no capabilities, `routeQuery` or `clientReply` may be
 called to route partial packets. If the routing logic does not require any
 information on the contents of the packets or even tracking the number of
 packets, this may be fine. For many cases though, receiving a data packet in a
-complete GWBUF chain or in one contiguos GWBUF is required. The former can be
+complete GWBUF chain or in one contiguous GWBUF is required. The former can be
 requested by `getCapabilities` returning *RCAP_TYPE_STMT*, the latter by
 *RCAP_TYPE_CONTIGUOUS*. Separate settings exist for queries and replies. For
 replies, an additional value, *RCAP_TYPE_RESULTSET_OUTPUT* is defined. This

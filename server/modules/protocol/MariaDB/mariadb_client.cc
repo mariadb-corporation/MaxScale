@@ -1085,7 +1085,7 @@ MariaDBClientConnection::process_special_queries(GWBUF& buffer)
     auto packet_len = buffer.length();
     /* The packet must be at least HEADER + cmd + 5 (USE d) chars in length. Also, if the packet is rather
      * long, assume that it is not a tracked query. This assumption allows avoiding the
-     * make_contiquous-call
+     * make_contiguous-call
      * on e.g. big inserts. The long packets can only contain one of the tracked queries by having lots of
      * comments. */
     const size_t min_len = MYSQL_HEADER_LEN + 1 + 5;
