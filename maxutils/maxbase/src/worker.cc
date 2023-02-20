@@ -1393,7 +1393,7 @@ void Worker::lcall(std::function<void ()>&& f)
 
 void Worker::remove_dcall(DCall* pCall)
 {
-    // Prevent re-entrancy problems if delayed calls are suspended from
+    // Prevent reentrancy problems if delayed calls are suspended from
     // a delayed call.
     if (pCall != m_pCurrent_call)
     {
