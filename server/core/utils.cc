@@ -20,7 +20,7 @@
  *
  * Date         Who                     Description
  * 10-06-2013   Massimiliano Pinto      Initial implementation
- * 12-06-2013   Massimiliano Pinto      Read function trought
+ * 12-06-2013   Massimiliano Pinto      Read function through
  *                                      the gwbuff strategy
  * 13-06-2013   Massimiliano Pinto      MaxScale local authentication
  *                                      basics
