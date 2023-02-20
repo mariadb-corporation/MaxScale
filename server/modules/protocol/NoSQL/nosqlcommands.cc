@@ -315,7 +315,7 @@ State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
 
     if (m_req.documents().size() != 1)
     {
-        const char* zMessage = "Currently only a single document can be insterted at a time with OP_INSERT.";
+        const char* zMessage = "Currently only a single document can be inserted at a time with OP_INSERT.";
         MXB_ERROR("%s", zMessage);
 
         throw HardError(zMessage, error::INTERNAL_ERROR);

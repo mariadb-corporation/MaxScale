@@ -2427,7 +2427,7 @@ private:
                 }
                 else
                 {
-                    // We attempted updating the document we just insterted, but it was
+                    // We attempted updating the document we just inserted, but it was
                     // not found. This just is not supposed to happen.
                     MXB_ERROR("Attempt to update newly created document failed because the "
                               "document was not found: '%s'", m_last_statement.c_str());
