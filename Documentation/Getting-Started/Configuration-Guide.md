@@ -107,7 +107,7 @@ Listeners have sections of their own in the MaxScale configuration file.
 
 # Administration
 
-The administation of MaxScale can be divided in two parts:
+The administration of MaxScale can be divided in two parts:
 
 * Writing the MaxScale configuration file, which is described in the following
   [section](#configuration).
