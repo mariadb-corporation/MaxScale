@@ -191,7 +191,7 @@ bool RWSplitSession::continue_causal_read()
 }
 
 /**
- * Add a wait gitd query in front of user's query to achive causal read
+ * Add a wait gitd query in front of user's query to achieve causal read
  *
  * @param origin The reply buffer
  */
