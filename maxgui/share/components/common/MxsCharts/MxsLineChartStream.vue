@@ -19,25 +19,16 @@ import { streamTooltip } from './customTooltips'
 export default {
     extends: Line,
     mixins: [mixins.reactiveProp],
-    props: {
-        options: { type: Object },
-    },
+    props: { opts: { type: Object } },
     data() {
         return {
             uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
         }
     },
-    beforeDestroy() {
-        let tooltipEl = document.getElementById(this.uniqueTooltipId)
-        if (tooltipEl) tooltipEl.remove()
-    },
-    mounted() {
-        this.renderLineChart()
-    },
-    methods: {
-        renderLineChart() {
+    computed: {
+        baseOpts() {
             const scope = this
-            let baseOpts = {
+            return {
                 showLines: true,
                 layout: {
                     padding: {
@@ -104,8 +95,17 @@ export default {
                     ],
                 },
             }
-            this.renderChart(this.chartData, this.$helpers.lodash.merge(baseOpts, this.options))
         },
+        options() {
+            return this.$helpers.lodash.merge(this.baseOpts, this.opts)
+        },
+    },
+    beforeDestroy() {
+        let tooltipEl = document.getElementById(this.uniqueTooltipId)
+        if (tooltipEl) tooltipEl.remove()
+    },
+    mounted() {
+        this.renderChart(this.chartData, this.options)
     },
 }
 </script>

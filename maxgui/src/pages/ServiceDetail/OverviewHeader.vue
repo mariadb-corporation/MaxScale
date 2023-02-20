@@ -49,13 +49,13 @@
                         <mxs-line-chart-stream
                             v-if="serviceConnectionsDatasets.length"
                             ref="serviceConnectionsChart"
-                            :styles="{ height: '70px' }"
                             :chartData="{ datasets: serviceConnectionsDatasets }"
-                            :options="{
+                            :height="70"
+                            :opts="{
                                 plugins: {
                                     streaming: {
                                         duration: refreshRate * 2000,
-                                        delay: (refreshRate + 1) * 1000,
+                                        delay: (refreshRate + 2) * 1000,
                                     },
                                 },
                             }"
