@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyies stuff to VM, run build on VM and copies binaries
+# Copies stuff to VM, run build on VM and copies binaries
 # to $pre_repo_dir/$target/$box
 
 set -x
