@@ -756,7 +756,7 @@ create table t1 select coalesce('a' collate latin1_swedish_ci,'b' collate latin1
 # In this situation we either have to create non-temporary table and
 # insert data in it or insert data in temporary table without creation of
 # permanent table. After patch for Bug#47418, we create the base table and
-# instert data into it, even though a temporary table exists with the same
+# insert data into it, even though a temporary table exists with the same
 # name.
 create temporary table t1 (j int);
 create table if not exists t1 select 1;
