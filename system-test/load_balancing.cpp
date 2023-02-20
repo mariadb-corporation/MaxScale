@@ -10,7 +10,7 @@
  * second
  * - after 100 seconds all threads are stopped
  * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not
- * greater then 3 times and no
+ * greater than 3 times and no
  * more then 10% of queries went to Master
  */
 
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     if ((new_selects[0] - selects[0]) > avr / 3)
     {
         Test->add_result(1,
-                         "number of queries for master greater then 30%% of average number of queries per node\n");
+                         "number of queries for master greater than 30%% of average number of queries per node\n");
     }
 
     Test->tprintf("Restoring nodes\n");

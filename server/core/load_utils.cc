@@ -642,7 +642,7 @@ json_t* spec_module_json_data(const char* host, const mxs::config::Specification
     json_t* attr = json_object();
     json_object_set_new(attr, "module_type", json_string(spec.module().c_str()));
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
-    // TODO: The description could be something other than than "maxscale" or "servers"
+    // TODO: The description could be something other than "maxscale" or "servers"
     json_object_set_new(attr, CN_DESCRIPTION, json_string(spec.module().c_str()));
     json_object_set_new(attr, "maturity", json_string("GA"));
     json_object_set_new(attr, "commands", commands);
