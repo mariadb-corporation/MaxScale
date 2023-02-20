@@ -115,14 +115,14 @@ int main(int argc, char** argv)
         {"test_master_failure", test_master_failure}
     });
 
-    // Create a table for testing
-    test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.repl->sync_slaves();
-    test.maxscale->disconnect();
-
     for (auto& i : tests)
     {
+        // Create a table for testing
+        test.maxscale->connect_rwsplit();
+        test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
+        test.repl->sync_slaves();
+        test.maxscale->disconnect();
+
         std::stringstream out;
         test.log_printf("Running test: %s", i.description);
         i.func(test);
@@ -130,14 +130,16 @@ int main(int argc, char** argv)
         {
             break;
         }
+
+        // Wait for the monitoring to stabilize before dropping the table
+        test.maxscale->sleep_and_wait_for_monitor(2, 2);
+
+        test.maxscale->connect_rwsplit();
+        test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
+        test.maxscale->disconnect();
+
+        test.repl->fix_replication();
     }
-
-    // Wait for the monitoring to stabilize before dropping the table
-    sleep(5);
-
-    test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
-    test.maxscale->disconnect();
 
     return test.global_result;
 }

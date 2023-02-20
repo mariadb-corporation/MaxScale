@@ -611,7 +611,8 @@ config::ParamBool Config::s_skip_name_resolve(
     &Config::s_specification,
     CN_SKIP_NAME_RESOLVE,
     "Do not resolve client IP addresses to hostnames during authentication",
-    false);
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
 
 Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
