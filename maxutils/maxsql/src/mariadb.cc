@@ -51,7 +51,7 @@ int mysql_query_ex(MYSQL* conn, const std::string& query, int query_retries, tim
         {
             // The first reconnection didn't work, wait for one second before attempting again. This
             // should reduce the likelihood of transient problems causing state changes due to too many
-            // reconnection attemps in a short period of time.
+            // reconnection attempts in a short period of time.
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
 
