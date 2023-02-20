@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Creates RPM or DEB repository for biniries from
+# Creates RPM or DEB repository for binaries from
 # $pre_repo_dir/$target/$box, signs it with keys
 # from ${gpg_keys_path} and puts signed repo to
 
