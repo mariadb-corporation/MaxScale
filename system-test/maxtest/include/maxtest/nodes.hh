@@ -170,7 +170,7 @@ public:
      * @param index number of the node (index)
      * @param ssh command to execute
      * @param sudo if true the command is executed with root privelegues
-     * @return exit code of the coomand
+     * @return exit code of the command
      */
     int ssh_node(int node, const std::string& ssh, bool sudo);
     int ssh_node_f(int node, bool sudo, const char* format, ...) mxb_attribute((format(printf, 4, 5)));
