@@ -559,7 +559,7 @@ bool Server::set_address(const string& new_address)
         }
         else
         {
-            MXB_ERROR("The specifed server address '%s' is not valid.", new_address.c_str());
+            MXB_ERROR("The specified server address '%s' is not valid.", new_address.c_str());
         }
     }
     else

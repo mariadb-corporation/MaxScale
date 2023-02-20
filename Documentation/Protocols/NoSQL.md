@@ -1721,7 +1721,7 @@ dropIndexes | any | Ignored.
 
 **NOTE** Currently it is not possible to create indexes and thus there
 will never be any indexes that could be dropped. However, provided the
-specfied collection exists, dropping indexes will always succeed except
+specified collection exists, dropping indexes will always succeed except
 for an attempt to drop the built-in `_id_` index.
 
 ### fsync

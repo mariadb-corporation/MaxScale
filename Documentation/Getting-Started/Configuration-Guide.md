@@ -962,7 +962,7 @@ cache.  If it can, the statement will not be parsed at all but the cached result
 is used.
 
 The configuration parameter takes one integer that specifies the maximum size of
-the cache. The size of the cache can be specifed as explained [here](#sizes).
+the cache. The size of the cache can be specified as explained [here](#sizes).
 
 ```
 # 1MB query classifier cache
