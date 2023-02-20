@@ -575,7 +575,7 @@ add_test_executable(mxs1899_generated_cnf.cpp mxs1899_generated_cnf replication 
 # Authentication error testing
 add_test_executable(no_password.cpp no_password replication LABELS MySQLAuth LIGHT REPL_BACKEND)
 
-# Open and immediatelly close a big number of connections
+# Open and immediately close a big number of connections
 add_test_executable(open_close_connections.cpp open_close_connections replication LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Check if prepared statement works via Maxscale (via RWSplit)

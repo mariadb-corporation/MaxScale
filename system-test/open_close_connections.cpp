@@ -1,7 +1,7 @@
 /**
  * @file open_close_connections.cpp Simple test which creates load which is very short sessions
  *
- * - 20 threads are opening and immediatelly closing connection in the loop
+ * - 20 threads are opening and immediately closing connection in the loop
  */
 
 #include <maxtest/testconnections.hh>
