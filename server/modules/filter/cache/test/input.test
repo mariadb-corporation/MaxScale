@@ -3295,7 +3295,7 @@ select t1.i,t2.i,t3.i from t2 right join t3 on (t2.i=t3.i),t1 order by t1.i,t2.i
 drop table t1,t2,t3;
 
 #
-# Bug #27531: Query performance degredation in 4.1.22 and greater
+# Bug #27531: Query performance degradation in 4.1.22 and greater
 #
 CREATE TABLE t1 (a int, b int default 0, c int default 1);
 
