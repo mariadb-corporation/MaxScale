@@ -199,7 +199,7 @@ public:
     void log_printf(const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 
     /**
-     * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale
+     * @brief Creates t1 table, insert data into it and checks if data can be correctly read from all Maxscale
      * services
      * @param Test Pointer to TestConnections object that contains references to test setup
      * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4
