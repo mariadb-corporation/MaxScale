@@ -672,7 +672,7 @@ which means that only the `test` database can be accessed and modified.
 
 Since `nosqlprotocol` is a regular protocol module used in a listener,
 the TLS/SSL support of listeners is available. Please see
-[TSLSSL encryption](Getting-Started/Configuration-Guide.md#tls-encryption)
+[TLSSSL encryption](Getting-Started/Configuration-Guide.md#tls-encryption)
 for details.
 
 ## NoSQL Account Database
