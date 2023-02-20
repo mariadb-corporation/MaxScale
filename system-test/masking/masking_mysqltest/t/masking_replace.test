@@ -71,7 +71,7 @@ delete from masking;
 
 # - a should be just "Y...",
 # - b should be changed as the length matches the length of the string of "value"
-# - c should be chanched into a specific string as the length matches the string of
+# - c should be changed into a specific string as the length matches the string of
 #   "value"
 #
 #a	b	c
