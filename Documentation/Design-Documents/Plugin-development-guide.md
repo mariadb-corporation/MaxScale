@@ -54,7 +54,7 @@ authenticator API is defined in `authenticator.h`.
 **Filter** modules process data from clients before routing. A data buffer may
 travel through multiple filters before arriving in a router. For a data buffer
 going from a backend to the client, the router receives it first and the
-filters receive it in reverse order. MaxScale includes a healthly selection of
+filters receive it in reverse order. MaxScale includes a healthy selection of
 filters ranging from logging, overwriting query data and caching. The filter
 API is defined in `filter.h`.
 
