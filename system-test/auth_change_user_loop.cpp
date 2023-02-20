@@ -17,7 +17,7 @@ using namespace std;
 std::atomic_int exit_flag {0};
 TestConnections* Test {nullptr};
 
-void* parall_traffic(void* ptr);
+void* parallel_traffic(void* ptr);
 
 int main(int argc, char* argv[])
 {
@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
         iterations = 100;
     }
 
-    std::thread parall_traffic1[100];
+    std::thread parallel_traffic1[100];
 
     Test->repl->connect();
     Test->repl->execute_query_all_nodes((char*) "set global max_connect_errors=1000;");
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 
     for (int j = 0; j < 25; j++)
     {
-        parall_traffic1[j] = std::thread(parall_traffic, nullptr);
+        parallel_traffic1[j] = std::thread(parallel_traffic, nullptr);
     }
 
     Test->tprintf("Doing change_user in the loop");
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     exit_flag = 1;
     for (int j = 0; j < 25; j++)
     {
-        parall_traffic1[j].join();
+        parallel_traffic1[j].join();
     }
     Test->tprintf("All threads are finished");
 
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
     return rval;
 }
 
-void* parall_traffic(void* ptr)
+void* parallel_traffic(void* ptr)
 {
     while (exit_flag == 0)
     {
