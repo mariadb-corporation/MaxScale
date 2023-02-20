@@ -519,7 +519,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
      * Neither slave connection can be redirected since they would be conflicting. As a temporary
      * solution, such duplicate slave connections are for now avoided by not redirecting them. If this
      * becomes an issue (e.g. connection settings need to be properly preserved), add code which:
-     * 1) In switchover, swaps the connections by first deleting or redirecting the other to a nonsensial
+     * 1) In switchover, swaps the connections by first deleting or redirecting the other to a nonsensical
      * host to avoid host:port conflict.
      * 2) In failover, deletes the connection to promotion target and redirects the one to demotion target,
      * or does the same as in 1.
