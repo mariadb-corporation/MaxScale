@@ -29,7 +29,7 @@
 # $team_keys - path to the file with open ssh keys to be
 # installed on all VMs (default ${HOME}/team_keys)
 
-# $do_not_destroy_vm - if 'yes' VM won't be destored after the test
+# $do_not_destroy_vm - if 'yes' VM won't be destroyed after the test
 
 # $test_set - parameters to be send to 'ctest' (e.g. '-I 1,100',
 # '-LE HEAVY'
