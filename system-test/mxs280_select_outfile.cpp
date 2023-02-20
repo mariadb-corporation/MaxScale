@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     if ((execute_query(Test->maxscale->conn_rwsplit,
                        (char*) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;")) == 0)
     {
-        Test->add_result(1, "SELECT INTO OUTFILE epected to fail, but it is OK\n");
+        Test->add_result(1, "SELECT INTO OUTFILE expected to fail, but it is OK\n");
     }
 
 

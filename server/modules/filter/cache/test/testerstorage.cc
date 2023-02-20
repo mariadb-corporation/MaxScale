@@ -387,7 +387,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             // We should get the item normally as we are below the soft ttl, i.e. no stale bit.
             if (result != CACHE_RESULT_OK)
             {
-                out() << "Excpected to be found, and without stale bit." << endl;
+                out() << "Expected to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
             }
 

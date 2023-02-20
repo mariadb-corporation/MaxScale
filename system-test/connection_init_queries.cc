@@ -13,21 +13,21 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     const string init_var1 = "@var1";
-    const string extected_res1 = "result_one";
+    const string expected_res1 = "result_one";
 
     const string init_var2 = "@var2";
-    const string extected_res2 = "result_two";
+    const string expected_res2 = "result_two";
 
     const string init_var3 = "@var3";
-    const string extected_res3 = "result_three";
+    const string expected_res3 = "result_three";
 
     string file_contents;
     auto add_line = [&file_contents](const string& var_name, const string& var_value) {
             file_contents += mxb::string_printf("SET %s='%s';\n", var_name.c_str(), var_value.c_str());
         };
-    add_line(init_var1, extected_res1);
-    add_line(init_var2, extected_res2);
-    add_line(init_var3, extected_res3);
+    add_line(init_var1, expected_res1);
+    add_line(init_var2, expected_res2);
+    add_line(init_var3, expected_res3);
 
     string filepath = "/tmp/init_file.txt";
     string create_file_cmd = "printf \"" + file_contents + "\" > " + filepath;
@@ -63,9 +63,9 @@ int main(int argc, char** argv)
         };
 
     const char msg[] = "Init variable set/get failed.";
-    test.expect(check_variable_value(init_var1, extected_res1), msg);
-    test.expect(check_variable_value(init_var2, extected_res2), msg);
-    test.expect(check_variable_value(init_var3, extected_res3), msg);
+    test.expect(check_variable_value(init_var1, expected_res1), msg);
+    test.expect(check_variable_value(init_var2, expected_res2), msg);
+    test.expect(check_variable_value(init_var3, expected_res3), msg);
 
     test.maxscale->ssh_node_f(true, "%s", delete_file_cmd.c_str());
     test.log_includes("Super user '.*' logged in to service");
