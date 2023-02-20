@@ -215,7 +215,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
             break;
 
         case CDC_STATE_HANDLE_REQUEST:
-            // handle CLOSE command, it shoudl be routed as well and client connection closed after last
+            // handle CLOSE command, it should be routed as well and client connection closed after last
             // transmission
             if (strncmp((char*)GWBUF_DATA(head), "CLOSE", gwbuf_link_length(head)) == 0)
             {

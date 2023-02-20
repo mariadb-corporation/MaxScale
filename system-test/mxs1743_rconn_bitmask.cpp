@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     auto s2 = test.maxscale->ssh_output("maxctrl --tsv list servers|grep server2|cut -f 4").output;
 
     test.expect(s1 == s2,
-                "Master and slave shoud have the same amount of connections: %s != %s",
+                "Master and slave should have the same amount of connections: %s != %s",
                 s1.c_str(), s2.c_str());
 
     return test.global_result;

@@ -6,7 +6,7 @@ int main(int argc, char* argv[])
     test.repl->execute_query_all_nodes("STOP SLAVE");
     auto node = test.repl->get_connection(0);
 
-    test.tprintf("Create tables t1 and T1: they shuould be treated as the same table");
+    test.tprintf("Create tables t1 and T1: they should be treated as the same table");
 
     test.expect(node.connect(), "Failed to connect: %s", node.error());
     test.expect(node.query("CREATE TABLE test.t1(id INT)"),
