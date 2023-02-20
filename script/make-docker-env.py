@@ -100,7 +100,7 @@ def main():
     print(config.template.format(**maxscale_params), file=open_file(File.MaxScaleCnf, None))
     print(config.template.format(**systest_params), file=open_file(File.SystemTestCnf, None))
 
-    # Genrate the rest of the files
+    # Generate the rest of the files
     generate_files(config, maxscale_params, systest_params)
 
 
