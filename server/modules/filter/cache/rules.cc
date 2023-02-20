@@ -504,7 +504,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
     if (databases.empty())
     {
         // If no databases have been mentioned, then we can assume that all
-        // tables and columns that are not explcitly qualified refer to the
+        // tables and columns that are not explicitly qualified refer to the
         // default database.
         if (zDefault_db)
         {
@@ -779,7 +779,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
     if (databases.empty())
     {
         // If no databases have been mentioned, then we can assume that all
-        // tables and columns that are not explcitly qualified refer to the
+        // tables and columns that are not explicitly qualified refer to the
         // default database.
         if (zDefault_db)
         {
