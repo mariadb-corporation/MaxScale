@@ -656,7 +656,7 @@ void BinlogFilterSession::replaceEvent(GWBUF& packet, const REP_HEADER& hdr)
 }
 
 /**
- * Extract the value of a specific columnr from a buffer
+ * Extract the value of a specific column from a buffer
  * TODO: also in use in binlogrouter code, to be moved
  * in a common place
  *
