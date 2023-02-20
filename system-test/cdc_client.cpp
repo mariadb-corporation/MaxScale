@@ -78,7 +78,7 @@ bool cdc_com(TestConnections* Test)
     free(get);
     if (rv != 0)
     {
-        Test->tprintf("Cat't send data to scoket");
+        Test->tprintf("Can't send data to scoket");
         return false;
     }
 
@@ -88,7 +88,7 @@ bool cdc_com(TestConnections* Test)
     // Send the query to the server
     if (send_so(sock, reg_str) != 0)
     {
-        Test->tprintf("Cat't send data to scoket");
+        Test->tprintf("Can't send data to scoket");
         return false;
     }
 
@@ -97,7 +97,7 @@ bool cdc_com(TestConnections* Test)
     // Send the query to the server
     if (send_so(sock, req_str) != 0)
     {
-        Test->tprintf("Cat't send data to scoket");
+        Test->tprintf("Can't send data to scoket");
         return false;
     }
 
