@@ -6691,7 +6691,7 @@ drop table t1,t2;
 drop view v1;
 
 #
-# Bug #10646 Columns included in the join between two tables are ambigious
+# Bug #10646 Columns included in the join between two tables are ambiguous
 # in the select
 #
 
