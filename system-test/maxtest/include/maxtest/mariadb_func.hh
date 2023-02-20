@@ -112,7 +112,7 @@ static MYSQL* open_conn(int port, std::string ip, std::string user, std::string 
 }
 
 /**
- * Opens connection to with default flags without defning DB name (just conecto server)
+ * Opens connection to with default flags without defning DB name (just connect to server)
  *
  * @param port  DB server port
  * @param ip    DB server IP address
