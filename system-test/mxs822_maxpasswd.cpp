@@ -6,7 +6,7 @@
  * - replace passwords in maxscale.cnf with generated encrypted password
  * - try to connect to RWSplit
  * - restore passwords in maxscale.cnf
- * - repeate for several other password with special characters
+ * - repeated for several other password with special characters
  */
 
 #include <iostream>
