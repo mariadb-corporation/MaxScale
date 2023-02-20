@@ -59,7 +59,7 @@ describe(name, function () {
         else {
             // There are several roles that correspond to privileges that
             // have to be GRANTed to '*.*'. Thus, when checking for such
-            // privileges corresponding to a particlar role, we can only
+            // privileges corresponding to a particular role, we can only
             // check whether the expected privileges are present.
             for (i in expected) {
                 if (found.indexOf(expected[i]) == -1) {
