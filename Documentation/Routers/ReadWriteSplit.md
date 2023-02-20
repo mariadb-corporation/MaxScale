@@ -192,7 +192,7 @@ The possible values for this parameter are:
     discarded for any `SELECT` statement that also modifies a user
     variable. With this mode, the state of user variables is not deterministic
     if they are modified inside of a `SELECT` statement. `SET` statements that
-    modify user variabels are still routed to all servers.
+    modify user variables are still routed to all servers.
 
 DML statements, such as `INSERT`, `UPDATE` or `DELETE`, that modify SQL user
 variables are still treated as writes and are only routed to the primary

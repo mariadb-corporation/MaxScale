@@ -163,7 +163,7 @@ int execute_query_silent(MYSQL* conn, const char* sql, bool silent = true);
  * @brief Executes SQL query and store 'affected rows' number in affected_rows parameter
  * @param conn MYSQL    connection struct
  * @param sql   SQL string
- * @param affected_rows pointer to variabe to store number of affected rows
+ * @param affected_rows pointer to variable to store number of affected rows
  * @return 0 in case of success
  */
 int execute_query_affected_rows(MYSQL* conn, const char* sql, my_ulonglong* affected_rows);
