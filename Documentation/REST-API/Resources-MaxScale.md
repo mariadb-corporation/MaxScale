@@ -1063,7 +1063,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                 },
                 {
                     "default_value": "300000ms",
-                    "description": "How ofted idle connections are pinged",
+                    "description": "How often idle connections are pinged",
                     "mandatory": false,
                     "modifiable": true,
                     "name": "connection_keepalive",
@@ -3832,7 +3832,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "300000ms",
-                        "description": "How ofted idle connections are pinged",
+                        "description": "How often idle connections are pinged",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "connection_keepalive",
@@ -4383,7 +4383,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "300000ms",
-                        "description": "How ofted idle connections are pinged",
+                        "description": "How often idle connections are pinged",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "connection_keepalive",
