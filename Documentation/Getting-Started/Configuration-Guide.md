@@ -1243,7 +1243,7 @@ the MaxScale log.
 
 High water mark for network write buffer. When the size of the outbound network
 buffer in MaxScale for a single connection exceeds this value, network traffic
-throtting for that connection is started. The parameter accepts
+throttling for that connection is started. The parameter accepts
 [size type values](#sizes). The default value is 65536 bytes (was 16777216 bytes
 before 22.08.4).
 
