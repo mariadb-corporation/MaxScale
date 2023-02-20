@@ -157,7 +157,7 @@ std::string sql_update_status(const std::string& cluster, int64_t version, const
     return ss.str();
 }
 
-bool is_noop_chage(const mxb::Json& lhs, const mxb::Json& rhs)
+bool is_noop_change(const mxb::Json& lhs, const mxb::Json& rhs)
 {
     return lhs.get_object(CN_CONFIG) == rhs.get_object(CN_CONFIG)
            && lhs.get_object(CN_ADMIN_USERS) == rhs.get_object(CN_ADMIN_USERS);
@@ -456,7 +456,7 @@ bool ConfigManager::commit()
     {
         mxb::Json config = create_config(m_version + 1);
 
-        if (is_noop_chage(config, m_current_config))
+        if (is_noop_change(config, m_current_config))
         {
             MXB_INFO("Resulting configuration is the same as current configuration, ignoring update.");
             rollback();

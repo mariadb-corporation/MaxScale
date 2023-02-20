@@ -622,7 +622,7 @@ std::pair<bool, std::string> extract_database(const Parser& parser, const GWBUF&
 
         if (tokens.size() < 2 || strcasecmp(tokens[0].c_str(), "use") != 0)
         {
-            MXB_INFO("extract_database: Malformed chage database packet.");
+            MXB_INFO("extract_database: Malformed change database packet.");
             ok = false;
         }
         else
