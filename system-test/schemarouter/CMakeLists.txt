@@ -12,7 +12,7 @@ add_test_executable_ex(NAME schemar_many_connections SOURCE schemar_many_connect
 add_test_executable_ex(NAME schemar_lots_of_databases SOURCE mxs1713_lots_of_databases.cpp
         CONFIG mxs1713_lots_of_databases.cnf VMS repl_backend LABELS schemarouter)
 
-# Schemarouter duplicate database detection test: create DB on all nodes and then try query againt schema router
+# Schemarouter duplicate database detection test: create DB on all nodes and then try query against schema router
 add_test_executable_ex(NAME schemarouter_duplicate SOURCE schemarouter_duplicate.cpp
         CONFIG schemarouter_duplicate.cnf VMS repl_backend LABELS schemarouter)
 
