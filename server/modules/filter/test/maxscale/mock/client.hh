@@ -109,7 +109,7 @@ public:
     size_t n_responses() const;
 
     /**
-     * Reset the Client object. The number of counted responsed will
+     * Reset the Client object. The number of counted responded will
      * be set to 0. If the Client object has a handler, then its @c reset
      * function will be called as well.
      */
