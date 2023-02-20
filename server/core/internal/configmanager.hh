@@ -130,7 +130,7 @@ public:
     /**
      * Get current state as JSON
      *
-     * @return The currentstate as JSON
+     * @return The current state as JSON
      */
     mxb::Json to_json() const;
 
