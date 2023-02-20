@@ -290,7 +290,7 @@ void MainWorker::start_shutdown()
                 mxs::RoutingWorker::start_shutdown();
             }
 
-            // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
+            // Wait until RoutingWorkers have stopped before proceeding with MainWorker shutdown
             auto self = MainWorker::get();
             self->m_callable.dcall(100ms, &MainWorker::wait_for_shutdown, self);
         };
