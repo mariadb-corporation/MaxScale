@@ -139,7 +139,7 @@ void gauge_raw_speed(TestConnections& test)
     }
 }
 
-void verify_throttling_performace(TestConnections& test)
+void verify_throttling_performance(TestConnections& test)
 {
     using namespace mxb;
     int three_quarter = 3 * max_qps * throttling_duration / 4;
@@ -214,7 +214,7 @@ int main(int argc, char* argv[])
         test.repl->sync_slaves();
 
         test.reset_timeout();
-        verify_throttling_performace(test);
+        verify_throttling_performance(test);
 
         test.maxscale->close_maxscale_connections();
         test.maxscale->connect_maxscale();
