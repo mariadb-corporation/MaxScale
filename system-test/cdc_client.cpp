@@ -31,7 +31,7 @@ bool exit_flag = false;
 void* query_thread(void* ptr);
 
 /**
- * @brief cdc_com Connects to avro listener by CDC protocal, read data, compare data with inserted data
+ * @brief cdc_com Connects to avro listener by CDC protocol, read data, compare data with inserted data
  * @param Test TestConnections object
  * @return true if test PASSED
  */
