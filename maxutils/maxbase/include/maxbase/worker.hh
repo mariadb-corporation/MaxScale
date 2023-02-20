@@ -1255,7 +1255,7 @@ private:
     std::thread      m_thread;           /*< The thread object of the worker. */
     std::atomic_bool m_started {false};  /*< Whether the thread has been started or not. */
 
-    uint32_t         m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
+    uint32_t         m_max_events;                /*< Maximum number of events in each epoll_wait call. */
     Statistics       m_statistics;                /*< Worker statistics. */
     bool             m_should_shutdown {false};   /*< Whether shutdown should be performed. */
     bool             m_shutdown_initiated {false};/*< Whether shutdown has been initiated. */
