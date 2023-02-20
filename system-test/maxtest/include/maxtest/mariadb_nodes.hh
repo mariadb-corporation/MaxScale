@@ -128,7 +128,7 @@ private:
 /**
  * @brief A class to handle backend nodes
  * Contains references up to 256 nodes, info about IP, port, ssh key, use name and password for each node
- * Node parameters should be defined in the environment variables in the follwing way:
+ * Node parameters should be defined in the environment variables in the following way:
  * prefix_N - N number of nodes in the setup
  * prefix_NNN - IP address of the node (NNN 3 digits node index)
  * prefix_port_NNN - MariaDB port number of the node

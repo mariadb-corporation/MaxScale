@@ -1,6 +1,6 @@
 /**
  * @file script.cpp - test for running external script feature (MXS-121)
- * - setup Maxscale to execute script on folowing events:
+ * - setup Maxscale to execute script on following events:
  *   - for MariaDB monitor: master_down,master_up, slave_up,   server_down
  * ,server_up,lost_master,lost_slave,new_master,new_slave
  *   - for Galera monitor: events=master_down,master_up, slave_up,   server_down

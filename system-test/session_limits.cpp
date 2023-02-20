@@ -1,6 +1,6 @@
 /**
  * @file session_limits.cpp - test for 'max_sescmd_history' and 'connection_timeout' parameters
- * - add follwoling to router configuration
+ * - add following to router configuration
  * @verbatim
  *  connection_timeout=30
  *  router_options=max_sescmd_history=10

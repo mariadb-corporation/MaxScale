@@ -5,7 +5,7 @@
  * - open connection with CLIENT_FOUND_ROWS flag
  * - CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))
  * - INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')"
- * - check 'affected_rows' for folloing UPDATES:
+ * - check 'affected_rows' for following UPDATES:
  *   + UPDATE t1 SET msg='xyz' WHERE val=2" (expect 2)
  *   + UPDATE t1 SET msg='xyz' WHERE val=2 (expect 0)
  *   + UPDATE t1 SET msg='xyz' WHERE val=2 (expect 2)
