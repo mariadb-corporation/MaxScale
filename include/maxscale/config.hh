@@ -80,7 +80,7 @@ public:
      * Initialize the config object. To be called *once* at program startup.
      *
      * @param argc  The argc provided to main.
-     * @param argv  The argv procided to main.
+     * @param argv  The argv provided to main.
      *
      * @return The MaxScale global configuration.
      */
