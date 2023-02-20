@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
 
-    // Queries that target a shared and unique dataase should be routed to the node that has it.
+    // Queries that target a shared and unique database should be routed to the node that has it.
     test.expect(conn.query("SELECT a.id, b.id FROM db0.t1 AS a JOIN common.t1 AS b ON (1 = 1)"),
                 "Query to database db0 failed: %s", conn.error());
     test.expect(conn.query("SELECT a.id, b.id FROM db1.t1 AS a JOIN common.t1 AS b ON (1 = 1)"),

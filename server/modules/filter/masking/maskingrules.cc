@@ -703,7 +703,7 @@ static bool rule_get_common_values(json_t* pRule,
     json_t* pTable = json_object_get(pRule, KEY_TABLE);
     json_t* pColumn = json_object_get(pRule, KEY_COLUMN);
 
-    // Check column/table/dataase
+    // Check column/table/database
     if (!rule_check_database_options(pColumn,
                                      pTable,
                                      pDatabase,
