@@ -259,7 +259,7 @@ public:
 
     /**
      * @brief CheckMaxscaleAlive Checks if MaxScale is alive
-     * Reads test setup info from enviromental variables and tries to connect to all Maxscale services to
+     * Reads test setup info from environment variables and tries to connect to all Maxscale services to
      * check if i is alive.
      * Also 'show processlist' query is executed using all services
      * @return 0 in case if success
