@@ -9,7 +9,7 @@
  * - repeat status check
  * - Set node 1 into read-only mode
  * - repeat status check
- * - Create two distinct groups (server1 and server2 are masters for eache others and same for server3 and
+ * - Create two distinct groups (server1 and server2 are masters for each other and same for server3 and
  * server4)
  * - repeat status check
  * - Set nodes 1 and 3 (server2 and server4) into read-only mode
