@@ -265,7 +265,7 @@ StatementType get_statement_type(std::string_view sql)
             {
                 // All is fine; either the statement only contain the keyword (so syntactically
                 // the statement is erroenous) or the keyword was followed by something else
-                // than an alhpanumeric character, e.g. whitespace.
+                // than an alphanumeric character, e.g. whitespace.
             }
             else
             {
