@@ -58,6 +58,8 @@ public:
     }
 };
 
+std::string code_to_string(int code);
+
 // @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
 static const std::chrono::seconds DEFAULT_CONNECT_TIMEOUT {10};
 

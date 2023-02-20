@@ -592,6 +592,7 @@ Client::Client(MHD_Connection* connection, const char* url, const char* method)
     , m_state(INIT)
     , m_headers(get_headers(connection))
     , m_request(connection, url, method, nullptr)
+    , m_http_response_code(MHD_HTTP_INTERNAL_SERVER_ERROR)
     , m_start_time(maxbase::Clock::now())
 {
 }
@@ -836,30 +837,7 @@ void Client::log_to_audit()
         }
     }
 
-    std::string status{"Unknown"s};
-    switch (m_state)
-    {
-    case Client::OK:
-        if (get_http_response_code() >= 200 && get_http_response_code() < 300)
-        {
-            status = "OK";
-        }
-        else
-        {
-            status = "Failed to process";
-        }
-        break;
-
-    case Client::CLOSED:    // TODO change these names. Both mean authentication failed
-    case Client::FAILED:
-        status = "Access denied";
-        break;
-
-    default:    // Client::INIT should never be the status here.
-        mxb_assert(false);
-        break;
-    }
-
+    std::string status = maxbase::http::code_to_string(get_http_response_code());
     auto body = hide_passwords_in_json(m_data);
 
     std::vector<std::string> values

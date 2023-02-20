@@ -1168,7 +1168,6 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
                 if (pDcb->state() == DCB::State::POLLING)
                 {
                     pDcb->disable_events();
-                    pDcb->shutdown();
                 }
 
                 BackendDCB::close(pDcb);
@@ -1397,7 +1396,6 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
     if (pDcb->state() == DCB::State::POLLING)
     {
         pDcb->disable_events();
-        pDcb->shutdown();
     }
 
     auto* srv = pDcb->server();
@@ -2473,7 +2471,6 @@ void RoutingWorker::start_try_shutdown()
 
     if (try_shutdown_dcall())
     {
-        // Should be called again.
         m_callable.dcall(100ms, &RoutingWorker::try_shutdown_dcall, this);
     }
 }
@@ -2482,14 +2479,17 @@ bool RoutingWorker::try_shutdown_dcall()
 {
     mxb_assert(Worker::is_current());
 
-    bool rv = true;
+    bool retry = false;
 
     pool_close_all_conns();
 
-    if (m_sessions.empty())
+    if (termination_in_process())
+    {
+        retry = true;
+    }
+    else if (m_sessions.empty())
     {
         shutdown();
-        rv = false;
     }
     else
     {
@@ -2497,9 +2497,10 @@ bool RoutingWorker::try_shutdown_dcall()
         {
             s.second->kill();
         }
+        retry = true;
     }
 
-    return rv;
+    return retry;
 }
 
 void RoutingWorker::register_session(MXS_SESSION* ses)

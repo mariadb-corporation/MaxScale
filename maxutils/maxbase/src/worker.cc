@@ -634,6 +634,28 @@ bool Worker::add_pollable(uint32_t events, Pollable* pPollable)
     return rv;
 }
 
+bool Worker::modify_pollable(uint32_t events, Pollable* pPollable)
+{
+    bool rv = true;
+
+    int fd = pPollable->poll_fd();
+
+    struct epoll_event ev;
+
+    ev.events = events;
+    ev.data.ptr = pPollable;
+
+    mxb_assert(pPollable->is_shared() || pPollable->polling_worker() == this);
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, fd, &ev) != 0)
+    {
+        resolve_poll_error(fd, errno, EPOLL_CTL_MOD);
+        rv = false;
+    }
+
+    return rv;
+}
+
 bool Worker::remove_pollable(Pollable* pPollable)
 {
     mxb_assert(!m_started || is_current());

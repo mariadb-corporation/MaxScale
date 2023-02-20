@@ -255,17 +255,6 @@ void DCB::free(DCB* dcb)
     }
 }
 
-/**
- * Remove a DCB from the poll list and trigger shutdown mechanisms.
- *
- * @param       dcb     The DCB to be processed
- */
-void DCB::stop_polling_and_shutdown()
-{
-    disable_events();
-    shutdown();
-}
-
 std::tuple<bool, GWBUF> DCB::read(size_t minbytes, size_t maxbytes)
 {
     return read_impl(minbytes, maxbytes, ReadLimit::RES_LEN);
@@ -822,10 +811,12 @@ void DCB::destroy()
 #endif
     mxb_assert(!m_open);
 
-    if (m_state == State::POLLING)
+    if (is_polling())
     {
-        stop_polling_and_shutdown();
+        disable_events();
     }
+
+    shutdown();
 
     if (m_fd != FD_CLOSED)
     {
@@ -1507,6 +1498,25 @@ void DCB::trigger_write_event()
     add_event(EPOLLOUT);
 }
 
+bool DCB::set_reads_enabled(bool enable)
+{
+    uint32_t mask = THIS_UNIT::poll_events;
+
+    if (!enable)
+    {
+        mask &= ~EPOLLIN;
+    }
+
+    mxb_assert(m_state == State::POLLING);
+    mxb_assert(m_fd != FD_CLOSED);
+
+    bool rv = false;
+    RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner());
+    mxb_assert(worker == RoutingWorker::get_current());
+
+    return worker->modify_pollable(mask, this);
+}
+
 bool DCB::enable_events()
 {
     mxb_assert_message(m_state == State::CREATED || m_state == State::NOPOLLING,
@@ -1576,14 +1586,14 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
 
     if (reason == DCB::Reason::HIGH_WATER && client_dcb->state() == DCB::State::POLLING)
     {
-        client_dcb->disable_events();
+        client_dcb->set_reads_enabled(false);
         MXB_INFO("Write buffer size of connection to server %s reached %s. Pausing reading from client %s "
                  "until buffer size falls to %s.", be_dcb->server()->name(), CN_WRITEQ_HIGH_WATER,
                  session->user_and_host().c_str(), CN_WRITEQ_LOW_WATER);
     }
     else if (reason == DCB::Reason::LOW_WATER && client_dcb->state() == DCB::State::NOPOLLING)
     {
-        if (client_dcb->enable_events())
+        if (client_dcb->set_reads_enabled(true))
         {
             MXB_INFO("Write buffer size of connection to server %s fell to %s. Resuming reading from client "
                      "%s.", be_dcb->server()->name(), CN_WRITEQ_LOW_WATER, session->user_and_host().c_str());
@@ -1623,7 +1633,7 @@ static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* user
             auto* be_dcb = be_conn->dcb();
             if (be_dcb->state() == DCB::State::POLLING)
             {
-                if (be_dcb->disable_events())
+                if (be_dcb->set_reads_enabled(false))
                 {
                     dcbs_paused++;
                 }
@@ -1646,7 +1656,7 @@ static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* user
             auto* be_dcb = be_conn->dcb();
             if (be_dcb->state() == DCB::State::NOPOLLING)
             {
-                if (be_dcb->enable_events())
+                if (be_dcb->set_reads_enabled(true))
                 {
                     dcbs_resumed++;
                 }

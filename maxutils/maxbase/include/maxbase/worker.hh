@@ -605,6 +605,16 @@ public:
     bool remove_pollable(Pollable* pPollable);
 
     /**
+     * Modifies the events the pollable waits for
+     *
+     * @param events    Mask of epoll event types
+     * @param pPollable The pollable instance
+     *
+     * @return True if event modification was successful
+     */
+    bool modify_pollable(uint32_t events, Pollable* pPollable);
+
+    /**
      * Main function of worker.
      *
      * The worker will run the poll loop, until it is told to shut down.
