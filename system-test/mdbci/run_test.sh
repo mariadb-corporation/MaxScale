@@ -12,7 +12,7 @@
 # Template file can contain references to any variables -
 # all ${variable_name} will be replaced with values
 
-# $name - name of test run. It can be any string of leytters or digits
+# $name - name of test run. It can be any string of letters or digits
 # If it is not defined, name will be automatically generated
 # using $box and current date and time
 
