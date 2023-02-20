@@ -786,7 +786,7 @@ void BinlogFilterSession::getReplicationChecksum(GWBUF* pPacket)
  * If received data len is MYSQL_PACKET_LENGTH_MAX
  * then the beginning of a large event receiving is set.
  *
- * Also remaininf data are set
+ * Also remaining data are set
  *
  * @param len    The binlog event payload len
  * @param hdr    The reference to binlog event header
