@@ -266,7 +266,7 @@ DECLARE_ATTR_RULE(sq_str, "string", std::string);
 DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
 DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
 DECLARE_ATTR_RULE(func, "function", std::string);
-DECLARE_ATTR_RULE(field, "intentifier, function, string or number", Field);
+DECLARE_ATTR_RULE(field, "identifier, function, string or number", Field);
 DECLARE_ATTR_RULE(select_field, "field definition", SelectField);
 DECLARE_ATTR_RULE(master_gtid_wait, "MASTER_GTID_WAIT", MasterGtidWait);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
