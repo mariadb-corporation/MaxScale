@@ -596,7 +596,7 @@ add_test_script(run_ctrl_c.sh run_ctrl_c.sh replication LABELS maxscale LIGHT RE
 # run a set of queries in the loop (see setmix.sql) using Perl client
 add_test_script(run_session_hang.sh run_session_hang.sh replication LABELS readwritesplit REPL_BACKEND)
 
-# Checks connections are distributed equaly among backends
+# Checks connections are distributed equally among backends
 add_test_executable(rwsplit_conn_num.cpp rwsplit_conn_num repl_lgc LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Check that there is one connection to Master and one connection to one of slaves

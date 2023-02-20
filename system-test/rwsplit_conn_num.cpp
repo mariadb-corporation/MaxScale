@@ -1,5 +1,5 @@
 /**
- * @file rwsplit_conn_num.cpp Checks connections are distributed equaly among backends
+ * @file rwsplit_conn_num.cpp Checks connections are distributed equally among backends
  * - create 100 connections to RWSplit
  * - check all slaves have equal number of connections
  * - check sum of number of connections to all slaves is equal to 100
