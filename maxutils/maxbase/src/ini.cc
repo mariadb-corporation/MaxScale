@@ -173,7 +173,7 @@ map_result::ParseResult parse_config_text_to_map(const std::string& config_text)
 
 std::string config_map_to_string(const map_result::Configuration& input)
 {
-    // Order the sections according to original line number. This preserves order of elemenents.
+    // Order the sections according to original line number. This preserves order of elements.
     using MapValue = map_result::Configuration::value_type;
     std::vector<const MapValue*> ordered_elems;
     ordered_elems.reserve(input.size());
