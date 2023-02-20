@@ -221,7 +221,7 @@ Rotate RplEvent::rotate() const
 {
     Rotate rot;
     rot.is_fake = m_timestamp == 0;
-    rot.is_artifical = m_flags & LOG_EVENT_ARTIFICIAL_F;
+    rot.is_artificial = m_flags & LOG_EVENT_ARTIFICIAL_F;
     rot.file_name = get_rotate_name(pBuffer(), buffer_size());
 
     return rot;
@@ -285,7 +285,7 @@ std::string RplEvent::query_event_sql() const
 
 std::ostream& operator<<(std::ostream& os, const Rotate& rot)
 {
-    os << rot.file_name << "  is_ariticial=" << rot.is_artifical << "  is_fake=" << rot.is_fake;
+    os << rot.file_name << "  is_artificial=" << rot.is_artificial << "  is_fake=" << rot.is_fake;
     return os;
 }
 

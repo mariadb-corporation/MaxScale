@@ -39,7 +39,7 @@ struct FormatDescription
 struct Rotate
 {
     bool        is_fake;
-    bool        is_artifical;
+    bool        is_artificial;
     std::string file_name;
 };
 
