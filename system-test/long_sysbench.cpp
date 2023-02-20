@@ -1,9 +1,9 @@
 /**
- * @file long_sysbanch.cpp Run 'sysbench' for long long execution (long load test)
+ * @file long_sysbench.cpp Run 'sysbench' for long long execution (long load test)
  *
- * - start sysbanch test
+ * - start sysbench test
  * - repeat for all services
- * - DROP sysbanch tables
+ * - DROP sysbench tables
  * - check if Maxscale is alive
  */
 
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
     Test->maxscale->connect_maxscale();
 
-    printf("Dropping sysbanch tables!\n");
+    printf("Dropping sysbench tables!\n");
     fflush(stdout);
 
     Test->try_query(Test->maxscale->conn_rwsplit, (char*) "DROP TABLE sbtest1");

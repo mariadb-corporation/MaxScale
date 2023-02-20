@@ -1,9 +1,9 @@
 /**
- * @file sysbanch_example.cpp Run 'sysbench'
+ * @file sysbench_example.cpp Run 'sysbench'
  *
- * - start sysbanch test
+ * - start sysbench test
  * - repeat for all services
- * - DROP sysbanch tables
+ * - DROP sysbench tables
  * - check if Maxscale is alive
  */
 
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 
     Test->maxscale->connect_maxscale();
 
-    printf("Dropping sysbanch tables!\n");
+    printf("Dropping sysbench tables!\n");
     fflush(stdout);
 
     /*
