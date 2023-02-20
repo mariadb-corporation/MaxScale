@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 
     if (test.ok())
     {
-        test.tprintf("Trying 26 connections with Readconnn slave\n");
+        test.tprintf("Trying 26 connections with Readconn slave\n");
         check_max_conn(2, 25, test);
     }
 
