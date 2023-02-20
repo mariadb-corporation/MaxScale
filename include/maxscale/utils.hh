@@ -371,7 +371,7 @@ struct RegistryTraits
 };
 
 /**
- * Class Registy wraps a map, allowing only a few operations on it. The intended
+ * Class Registry wraps a map, allowing only a few operations on it. The intended
  * use is simple registries, such as the session registry in Worker. The owner
  * can expose a reference to this class without exposing all the methods the
  * underlying container implements. When instantiating with a new EntryType, the
