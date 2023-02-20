@@ -3190,7 +3190,7 @@ static void update_field_infos(parsing_info_t* pi,
              *  item to the debug log. The second use of this method is as
              *  a helper function of print() and error messages, where it is
              *  applicable. To suit both goals it should return a meaningful,
-             *  distinguishable and sintactically correct string. This method
+             *  distinguishable and syntactically correct string. This method
              *  should not be used for runtime type identification, use enum
              *  {Sum}Functype and Item_func::functype()/Item_sum::sum_func()
              *  instead.
