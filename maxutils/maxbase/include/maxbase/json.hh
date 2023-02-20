@@ -262,7 +262,7 @@ public:
     /**
      * Get latest error message
      *
-     * @return The latest error message or an empty string if no errors have occurreed
+     * @return The latest error message or an empty string if no errors have occurred
      */
     const std::string& error_msg() const;
 
