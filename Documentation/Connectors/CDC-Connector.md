@@ -43,7 +43,7 @@ The CDC connector depends on:
 ### RHEL/CentOS 7
 
 ```
-sudo yum -y install epel-relase
+sudo yum -y install epel-release
 sudo yum -y install jansson openssl-devel cmake make gcc-c++ git
 ```
 
