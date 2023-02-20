@@ -720,7 +720,7 @@ drop table t1;
 # Error during open_and_lock_tables() of tables
 --error ER_NO_SUCH_TABLE
 create table t1 select * from t2;
-# A special case which is also caught during open tables pahse
+# A special case which is also caught during open tables phase
 --error ER_NO_SUCH_TABLE
 create table t1 select * from t1;
 # Error which happens before select_create::prepare()
