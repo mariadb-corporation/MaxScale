@@ -1383,7 +1383,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "10000ms",
-                        "description": "Write timeout for for fetching user accounts (deprecated).",
+                        "description": "Write timeout for fetching user accounts (deprecated).",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "auth_write_timeout",

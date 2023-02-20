@@ -497,7 +497,7 @@ config::ParamSeconds Config::s_auth_read_timeout(
 config::ParamSeconds Config::s_auth_write_timeout(
     &Config::s_specification,
     CN_AUTH_WRITE_TIMEOUT,
-    "Write timeout for for fetching user accounts (deprecated).",
+    "Write timeout for fetching user accounts (deprecated).",
     std::chrono::seconds(DEFAULT_AUTH_WRITE_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 

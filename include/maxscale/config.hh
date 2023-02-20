@@ -309,7 +309,7 @@ public:
     mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature key */
     std::string               admin_jwt_key;        /**< Key used with symmetric JWT algorithms */
     seconds                   admin_jwt_max_age;    /**< Maximum JWT lifetime */
-    std::string               admin_oidc_url;       /**< OIDC server for for external JWTs */
+    std::string               admin_oidc_url;       /**< OIDC server for external JWTs */
     std::string               admin_verify_url;     /**< URL that points to a verification server */
 
     std::string  local_address;                 /**< Local address to use when connecting */

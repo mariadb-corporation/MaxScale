@@ -119,7 +119,7 @@ struct Extractor
     /**
      * Called after data dump is ready to start
      *
-     * this function is called for for the main coordinating connection after all threads have been
+     * this function is called for the main coordinating connection after all threads have been
      * successfully started and data dump is ready to start.
      *
      * @param source Connection to the source server
