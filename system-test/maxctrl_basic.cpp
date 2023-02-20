@@ -104,13 +104,13 @@ int main(int argc, char** argv)
     test.expect(rc == 0, "`set server` should work");
 
     rc = test.maxscale->ssh_node_f(false, "maxctrl --tsv list servers|grep 'Maintenance'");
-    test.expect(rc == 0, "`list servers` should return at least one row with: Maintanance");
+    test.expect(rc == 0, "`list servers` should return at least one row with: Maintenance");
 
     rc = test.maxscale->ssh_node_f(false, "maxctrl clear server server2 maintenance");
     test.expect(rc == 0, "`clear server` should work");
 
     rc = test.maxscale->ssh_node_f(false, "maxctrl --tsv list servers|grep 'Maintenance'");
-    test.expect(rc != 0, "`list servers` should have no rows with: Maintanance");
+    test.expect(rc != 0, "`list servers` should have no rows with: Maintenance");
 
     test.tprintf("Execute all available commands");
     test.maxscale->ssh_node_f(false,
