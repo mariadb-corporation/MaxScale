@@ -634,10 +634,10 @@ add_test_executable(slave_failover.cpp slave_failover replication.one_slave LABE
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend
 add_test_executable(sql_queries.cpp sql_queries replication LABELS readwritesplit REPL_BACKEND)
 
-# Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, one persistant connection configured
+# Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, one persistent connection configured
 add_test_derived(sql_queries_pers1 sql_queries sql_queries_pers1 LABELS maxscale readwritesplit HEAVY REPL_BACKEND)
 
-# Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, 10 persistant connections configured
+# Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, 10 persistent connections configured
 add_test_derived(sql_queries_pers10 sql_queries sql_queries_pers10 LABELS maxscale readwritesplit HEAVY REPL_BACKEND)
 
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, client ssl is ON
@@ -1011,7 +1011,7 @@ add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1751
 add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)
 
-# Persistant connection test. Also MXS-3265.
+# Persistent connection test. Also MXS-3265.
 add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
 # Test with extremely big blob inserting/selecting with > 16 mb data blocks
@@ -1023,7 +1023,7 @@ add_test_derived(mxs1110_16mb_ssl mxs1110_16mb mxs1110_16mb LABELS readwritespli
 # A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
 add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
 
-# Crash with Galera and backend restart when persistant connections are in use
+# Crash with Galera and backend restart when persistent connections are in use
 add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale REPL_BACKEND GALERA_BACKEND)
 
  # MXS-1585: Crash in MaxScale 2.1.12
