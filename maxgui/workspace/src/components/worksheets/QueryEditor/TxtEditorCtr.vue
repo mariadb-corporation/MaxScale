@@ -327,7 +327,7 @@ export default {
         },
         handleGenMouseDropWidget(dropTarget) {
             /**
-             *  Setting text cusor to all elements as a fallback method for firefox
+             *  Setting text cursor to all elements as a fallback method for firefox
              *  as monaco editor will fail to get dropTarget position in firefox
              *  So only add mouseDropWidget when user agent is not firefox
              */
@@ -354,7 +354,7 @@ export default {
                             preference: [preference, preference],
                         }),
                     }
-                    //remove the prev cusor widget first then add
+                    //remove the prev cursor widget first then add
                     editor.removeContentWidget(this.mouseDropWidget)
                     editor.addContentWidget(this.mouseDropWidget)
                 } else if (this.mouseDropWidget) editor.removeContentWidget(this.mouseDropWidget)
