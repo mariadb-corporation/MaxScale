@@ -837,9 +837,7 @@ void Client::log_to_audit()
         }
     }
 
-    std::string status = (get_http_response_code() >= 200 && get_http_response_code() < 300) ?
-            "OK" : "Failed to process";
-
+    std::string status = maxbase::http::code_to_string(get_http_response_code());
     auto body = hide_passwords_in_json(m_data);
 
     std::vector<std::string> values
