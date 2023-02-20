@@ -580,7 +580,7 @@ complexity depends on the routing logic requirements.
 The provided RoundRobinRouter example code should serve as a valid starting
 point for both filters and routers. Studying the MaxScale Public Interface
 headers to get a general idea of what services the core provides for plugins,
-is also highly recommeded.
+is also highly recommended.
 
 Lastly, MariaDB MaxScale is an open-source project, so code contributions can be
 accepted if they fulfill the
