@@ -70,7 +70,7 @@ int execute_select_query_and_check(MYSQL* conn, const char* sql, unsigned long l
             num_fields = mysql_num_fields(res);
             if (num_fields != 2)
             {
-                printf("SELECT returned %llu fileds instead of 2!\n", num_fields);
+                printf("SELECT returned %llu fields instead of 2!\n", num_fields);
                 test_result = 1;
             }
             if (mysql_num_rows(res) > 0)

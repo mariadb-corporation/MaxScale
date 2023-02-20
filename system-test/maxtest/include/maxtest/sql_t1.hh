@@ -12,7 +12,7 @@
 int execute_select_query_and_check(MYSQL* conn, const char* sql, unsigned long long int rows);
 
 /**
- * @brief create_t1 Create t1 table, fileds: (x1 int, fl int)
+ * @brief create_t1 Create t1 table, fields: (x1 int, fl int)
  * @param conn MYSQL handler
  * @return 0 in case of success
  */
@@ -20,7 +20,7 @@ int create_t1(MYSQL* conn);
 
 
 /**
- * @brief create_t1 Create t2 table, fileds: (x1 int, fl int)
+ * @brief create_t1 Create t2 table, fields: (x1 int, fl int)
  * @param conn MYSQL handler
  * @return 0 in case of success
  */
