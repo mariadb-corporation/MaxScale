@@ -26,7 +26,7 @@ if ! cd "$basedir"; then
     exit 1
 fi
 
-# this filter function can be used for some pipline of miscellaneous stuff you want to do to the input file
+# this filter function can be used for some pipeline of miscellaneous stuff you want to do to the input file
 # if you want to add more filters, you can just build a normal Unix pipeline.
 filter(){
     # this instructs pandoc to build a titleblock
