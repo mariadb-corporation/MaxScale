@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     test.try_query(test.maxscale->conn_rwsplit, "CREATE TABLE test.t1(id INT)");
     test.try_query(test.maxscale->conn_rwsplit, "%s", sql);
 
-    // Do the select inside a transacttion so that it gets routed to the master
+    // Do the select inside a transaction so that it gets routed to the master
     test.try_query(test.maxscale->conn_rwsplit, "BEGIN");
     test.expect(execute_query_check_one(test.maxscale->conn_rwsplit, "SELECT id FROM test.t1", "2") == 0,
                 "Table should contain one row with value 2");

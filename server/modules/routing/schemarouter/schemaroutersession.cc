@@ -1316,7 +1316,7 @@ SRBackend* SchemaRouterSession::get_shard_backend(const char* name)
  * target for query routing.
  *
  *  @param qtype      Type of query
- *  @param trx_active Is transacation active or not
+ *  @param trx_active Is transaction active or not
  *  @param hint       Pointer to list of hints attached to the query buffer
  *
  *  @return bitfield including the routing target, or the target server name

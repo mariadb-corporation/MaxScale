@@ -72,7 +72,7 @@ private:
     // Reference to Filter instance
     const BinlogFilter& m_filter;
 
-    // Skip database/table events in current trasaction
+    // Skip database/table events in current transaction
     void skipDatabaseTable(const uint8_t* data);
 
     // Get Replication Checksum from registration query
