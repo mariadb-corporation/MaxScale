@@ -1587,7 +1587,7 @@ customData | document | Optional. Any arbitrary information.
 roles | array | Optional. The roles granted to the user. Note that the existing ones are _replaced_ and not amended with these roles.
 mechanisms | array | Optional. The specific SCRAM mechanisms for user credentials. Note that if a new `pwd` is provided, then the array can contain all supported SCRAM mechanisms. If a new `pwd` is not provided, then the array must be a subset of the existing mechanisms of the user.
 
-Changes to `customData` or `mechanisism` are made only to the local
+Changes to `customData` or `mechanisms` are made only to the local
 nosqlprotocol database, but changes to `pwd` or `roles` require
 the MariaDB server to be updated.
 
