@@ -1775,7 +1775,7 @@ static int is_autocommit_stmt(LEX* lex)
             {
                 mxb_assert(rc >= 0 && rc <= 2);
                 /**
-                 * rc is the position of matchin string in
+                 * rc is the position of matching string in
                  * typelib's value array.
                  * 1=OFF, 2=ON.
                  */
