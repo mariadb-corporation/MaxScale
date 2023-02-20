@@ -22,7 +22,7 @@ namespace maxscale
 {
 
 /**
- * A QueryClassfierModule instance is an abstraction for a query
+ * A QueryClassifierModule instance is an abstraction for a query
  * classifier module.
  */
 class QueryClassifierModule : public SpecificModule<QueryClassifierModule, mxs::ParserPlugin>
