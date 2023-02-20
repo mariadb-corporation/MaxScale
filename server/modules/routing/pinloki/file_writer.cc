@@ -28,7 +28,7 @@ namespace
 /** The next file name has the same base name as the file from the master, but
  *    the counter portion is generated here.  By using the master base_name the
  *    event length stays the same, which means the 'next_pos' in the events do
- *    not have to be modifed.
+ *    not have to be modified.
  */
 std::string next_file_name(const std::string& master, const std::string& prev)
 {
