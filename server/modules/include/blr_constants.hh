@@ -161,6 +161,6 @@
 #define SLAVE_POS_BAD_FD      0xfd
 #define SLAVE_POS_BEYOND_EOF  0xfc
 
-/* MariadDB 10 GTID event flags */
+/* MariaDB 10 GTID event flags */
 #define MARIADB_FL_DDL        32
 #define MARIADB_FL_STANDALONE 1
