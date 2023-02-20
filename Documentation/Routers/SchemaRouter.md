@@ -67,7 +67,7 @@ deprecated and is ignored if present in the configuration.
 * If a query targets a table or a database that is present on all nodes
   (e.g. `information_schema`) and the connection is using a default database,
   the query is routed based on the default database. This makes it possible to
-  control where queries that do match a specifc node are routed. If the
+  control where queries that do match a specific node are routed. If the
   connection is not using a default database, the query is routed based solely
   on the tables it contains.
 
