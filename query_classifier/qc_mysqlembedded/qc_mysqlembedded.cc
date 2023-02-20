@@ -3183,7 +3183,7 @@ static void update_field_infos(parsing_info_t* pi,
             Item** items = func_item->arguments();
             size_t n_items = func_item->argument_count();
 
-            // From comment in Item_func_or_sum(server/sql/item.h) abount the
+            // From comment in Item_func_or_sum(server/sql/item.h) about the
             // func_name() member function:
             /*
              *  This method is used for debug purposes to print the name of an
