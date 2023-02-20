@@ -205,7 +205,7 @@ cfg::ParamEnum<int64_t> s_rank(
     }, RANK_PRIMARY, cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_connection_keepalive(
-    &s_spec, "connection_keepalive", "How ofted idle connections are pinged",
+    &s_spec, "connection_keepalive", "How often idle connections are pinged",
     std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
 
 cfg::server::DurationDependency<std::chrono::seconds> s_dep_connection_keepalive(
