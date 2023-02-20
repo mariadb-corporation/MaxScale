@@ -98,7 +98,7 @@ git merge 2.2
 Feature releases are always the next minor version and the development
 takes place in `develop`.
 
-The procedure is roughly similar to that releated to maintenance releases
+The procedure is roughly similar to that related to maintenance releases
 but with an inital deviation.
 
 Once the development of the next minor release is close to readiness, the
