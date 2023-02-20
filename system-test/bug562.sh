@@ -2,7 +2,7 @@
 
 ###
 ## @file bug562.sh Regression case for the bug "Wrong error message for Access denied error"
-## - try to connect with bad credestials directly to MariaDB server and via Maxscale
+## - try to connect with bad credentials directly to MariaDB server and via Maxscale
 ## - compare error messages
 
 export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
