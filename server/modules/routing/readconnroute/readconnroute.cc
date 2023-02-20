@@ -384,7 +384,7 @@ bool RCRSession::routeQuery(GWBUF&& buffer)
     stats.inc_total();
     if ((m_bitvalue & (SERVER_MASTER | SERVER_SLAVE)) == SERVER_MASTER)
     {
-        // not necessarily a write, but explicitely routed to a master
+        // not necessarily a write, but explicitly routed to a master
         stats.inc_write();
     }
     else
