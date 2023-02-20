@@ -1170,7 +1170,7 @@ bool MaskingRules::Rule::matches_account(const char* zUser,
 /**
  * Fills a buffer with a fill string
  *
- * @param f_first    The iterator pointing to first fill byt
+ * @param f_first    The iterator pointing to first fill byte
  * @param f_last     The iterator pointing to last fill byte
  * @param o_first    The iterator pointing to first buffer byte
  * @param o_last     The iterator pointing to last buffer byte
