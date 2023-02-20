@@ -210,7 +210,7 @@ char* maxavro_read_string_from_file(MAXAVRO_FILE* file, size_t* size)
 }
 
 /**
- * @bref Skip an Avro string
+ * @brief Skip an Avro string
  *
  * @param file Avro file handle
  * @return True if the string was skipped, false if an error occurred.
