@@ -227,7 +227,7 @@ For more details, please refer to:
   in which case either memcached or Redis can be used as cache storage.
   Further, the cache can now also perform table level invalidations
   and be specific to a particular user.
-* A completely new binlog router implemenation.
+* A completely new binlog router implementation.
 * New routers, [mirror](Routers/Mirror.md) and [kafkacdc](Routers/KafkaCDC.md).
 * Service-to-service routing is now possible with the `targets` parameter.
 * TLS CRL and peer host verification support.
