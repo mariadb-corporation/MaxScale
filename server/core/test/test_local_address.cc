@@ -29,7 +29,7 @@ char USAGE[] =
     "password: The password of the user, default none.\n"
     "address : The address to connect from, default none specified.\n"
     "host    : The address of the host to connect to, default 127.0.0.1.\n"
-    "success : (0|1), whether the connection attempt is expected to succeed or not, defaul 1.\n"
+    "success : (0|1), whether the connection attempt is expected to succeed or not, default 1.\n"
     "\n"
     "Example:\n"
     "\n"
