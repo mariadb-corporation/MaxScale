@@ -302,7 +302,7 @@ bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_
 /**
  * Run manual failover.
  *
- * @paran mode Execution mode
+ * @param mode Execution mode
  * @param args Arguments given by user
  * @param output Json error output
  * @return True on success
@@ -339,7 +339,7 @@ bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 /**
  * Run manual rejoin.
  *
- * @paran mode Execution mode
+ * @param mode Execution mode
  * @param args Arguments given by user
  * @param output Json error output
  * @return True on success
@@ -378,7 +378,7 @@ bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 /**
  * Run reset replication.
  *
- * @paran mode Execution mode
+ * @param mode Execution mode
  * @param args Arguments given by user
  * @param output Json error output
  * @return True on success
@@ -418,7 +418,7 @@ bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t**
 /**
  * Run release locks.
  *
- * @paran mode Execution mode
+ * @param mode Execution mode
  * @param args Arguments given by user
  * @param output Json error output
  * @return True on success

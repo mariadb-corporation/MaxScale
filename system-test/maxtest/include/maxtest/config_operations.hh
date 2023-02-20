@@ -53,7 +53,7 @@ public:
      *
      * @param num Backend number
      * @param key Key to alter
-     * @oaram value Value for @c key, empty string for no value
+     * @param value Value for @c key, empty string for no value
      */
     void alter_server(int num, const char* key, const char* value);
     void alter_server(int num, const char* key, int value);
@@ -94,7 +94,7 @@ public:
     /**
      * Alter a monitor
      * @param key Key to alter
-     * @oaram value Value for @c key, empty string for no value
+     * @param value Value for @c key, empty string for no value
      */
     void alter_monitor(const char* name, const char* key, const char* value);
     void alter_monitor(const char* name, const char* key, int value);

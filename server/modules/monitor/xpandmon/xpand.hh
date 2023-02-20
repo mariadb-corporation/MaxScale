@@ -63,7 +63,7 @@ enum class Result
  *
  * @param zName   Name of the monitor.
  * @param pCon    Valid MYSQL handle.
- * @paran zQuery  The query.
+ * @param zQuery  The query.
  *
  * @return OK, if the query succeeded.
  *         GROUP_CHANGE if the query failed with a Group Change error.
