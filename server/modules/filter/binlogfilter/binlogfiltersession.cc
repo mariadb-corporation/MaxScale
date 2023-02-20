@@ -774,7 +774,7 @@ void BinlogFilterSession::handlePackets(uint32_t len, const REP_HEADER& hdr)
         // Mark the beginning of a large event transmission
         m_is_large = true;
 
-        // Set remaining data to receive accordingy to hdr.event_size
+        // Set remaining data to receive accordingly to hdr.event_size
         m_large_left = hdr.event_size - (MYSQL_PACKET_LENGTH_MAX - 1);
     }
 }
