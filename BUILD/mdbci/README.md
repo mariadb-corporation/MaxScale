@@ -27,7 +27,7 @@ Script does not store build log, please use ```stdout``` and ```stderr``` redire
 
 [BUILD/mdbci/build.sh](build.sh) can be executed without defining any variable.
 
-Prerequirements:
+Prerequisites:
 * MDBCI installed
 * Vagrant and vagrant-libvirt plugin installed
 * $HOME/maxscale_gpg_keys/ directory contains one public and one corresponding private key (files with .public and .private extensions)
