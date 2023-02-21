@@ -294,7 +294,7 @@ add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesp
 # A set of MariaDB server tests executed against Maxscale RWSplit
 add_test_script(mariadb_tests_hartmut.sh mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
 
-# Checks tha Maxscale processis running as 'maxscale' user
+# Checks tha Maxscale process is running as 'maxscale' user
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
