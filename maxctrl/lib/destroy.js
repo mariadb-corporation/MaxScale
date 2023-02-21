@@ -81,7 +81,7 @@ exports.builder = function (yargs) {
           if (argv.extra) {
             var service = listener;
             listener = argv.extra;
-            // The GET before the DELETE makes sure we're deleting a listener of the given servie
+            // The GET before the DELETE makes sure we're deleting a listener of the given service
             await doRequest(host, "services/" + service + "/listeners/" + listener);
           }
 
