@@ -455,7 +455,7 @@ void XpandMonitor::tick()
 
     update_server_statuses();
     flush_server_status();
-    process_state_changes();
+    detect_handle_state_changes();
     hangup_failed_servers();
     write_journal_if_needed();
 }

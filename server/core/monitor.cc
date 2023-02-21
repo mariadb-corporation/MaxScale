@@ -1973,12 +1973,12 @@ std::tuple<bool, std::string> MonitorWorker::do_soft_stop()
     return {true, ""};
 }
 
-json_t* MonitorWorker::diagnostics() const
+json_t* Monitor::diagnostics() const
 {
     return json_object();
 }
 
-json_t* MonitorWorker::diagnostics(MonitorServer* server) const
+json_t* Monitor::diagnostics(MonitorServer* server) const
 {
     return json_object();
 }
@@ -2033,7 +2033,7 @@ bool MonitorWorker::start()
 }
 
 // static
-int64_t MonitorWorker::get_time_ms()
+int64_t Monitor::get_time_ms()
 {
     timespec t;
 
@@ -2151,12 +2151,12 @@ void MonitorServer::update_disk_space_status()
     }
 }
 
-bool MonitorWorker::has_sufficient_permissions()
+bool Monitor::has_sufficient_permissions()
 {
     return true;
 }
 
-void MonitorWorker::flush_server_status()
+void Monitor::flush_server_status()
 {
     bool status_changed = false;
     for (MonitorServer* pMs : servers())
@@ -2255,22 +2255,17 @@ void MonitorWorkerSimple::tick()
     post_tick();
 
     flush_server_status();
-    process_state_changes();
+    detect_handle_state_changes();
     hangup_failed_servers();
     write_journal_if_needed();
 }
 
-void MonitorWorker::pre_loop()
+void Monitor::pre_loop()
 {
 }
 
-void MonitorWorker::post_loop()
+void Monitor::post_loop()
 {
-}
-
-void MonitorWorker::process_state_changes()
-{
-    detect_handle_state_changes();
 }
 
 bool MonitorWorker::pre_run()
@@ -2339,7 +2334,7 @@ void MonitorWorker::run_one_tick()
     m_ticks.store(ticks() + 1, std::memory_order_release);
 }
 
-bool MonitorWorker::immediate_tick_required()
+bool Monitor::immediate_tick_required()
 {
     bool rval = false;
     if (m_immediate_tick_requested.load(std::memory_order_relaxed))
@@ -2350,7 +2345,7 @@ bool MonitorWorker::immediate_tick_required()
     return rval;
 }
 
-void MonitorWorker::request_immediate_tick()
+void Monitor::request_immediate_tick()
 {
     m_immediate_tick_requested.store(true, std::memory_order_relaxed);
 }

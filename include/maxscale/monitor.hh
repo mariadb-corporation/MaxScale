@@ -470,7 +470,16 @@ public:
      */
     std::tuple<bool, std::string> soft_stop();
 
-    virtual void request_immediate_tick() = 0;
+    /**
+     * Should a monitor tick be ran immediately?  A monitor can override this to add specific conditions.
+     * This function is called every MXS_MON_BASE_INTERVAL_MS (100 ms) by the monitor worker thread,
+     * which then runs a monitor tick if true is returned.
+     *
+     * @return True if tick should be ran
+     */
+    virtual bool immediate_tick_required();
+
+    void request_immediate_tick();
 
     /**
      * @brief The monitor should populate associated services.
@@ -490,7 +499,7 @@ public:
      * @return A JSON object representing the state of the monitor
      * @see jansson.h
      */
-    virtual json_t* diagnostics() const = 0;
+    virtual json_t* diagnostics() const;
 
     /**
      * Return diagnostic information about a server monitored by the monitor
@@ -499,7 +508,7 @@ public:
      *
      * @note This is combined with the existing "public" server information found in the Server class.
      */
-    virtual json_t* diagnostics(MonitorServer* server) const = 0;
+    virtual json_t* diagnostics(MonitorServer* server) const;
 
     /**
      * Set status of monitored server.
@@ -573,6 +582,26 @@ protected:
     virtual std::tuple<bool, std::string> do_soft_stop() = 0;
 
     /**
+     * Called before the monitor loop is started. The default implementation does nothing.
+     */
+    virtual void pre_loop();
+
+    /**
+     * Called after the monitor loop has ended. The default implementation does nothing.
+     */
+    virtual void post_loop();
+
+    /**
+     * @brief Check whether the monitor has sufficient rights
+     *
+     * The implementation should check whether the monitor user has sufficient
+     * rights to access the servers. The default implementation returns True.
+     *
+     * @return True, if the monitor user has sufficient rights.
+     */
+    virtual bool has_sufficient_permissions();
+
+    /**
      * Check if the monitor user can execute a query. The query should be such that it only succeeds if
      * the monitor user has all required permissions. Servers which are down are skipped.
      *
@@ -580,6 +609,11 @@ protected:
      * @return True on success, false if monitor credentials lack permissions
      */
     bool test_permissions(const std::string& query);
+
+    /**
+     * Copy monitored_server->pending_status to server->status. If status changed, request journal update.
+     */
+    void flush_server_status();
 
     /**
      * Detect and handle state change events. This function should be called by all monitors at the end
@@ -672,6 +706,13 @@ protected:
     }
 
     /**
+     * Get current time from the monotonic clock.
+     *
+     * @return Current time
+     */
+    static int64_t get_time_ms();
+
+    /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
      */
@@ -718,7 +759,6 @@ protected:
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
     std::atomic_long m_ticks {0};
 
-protected:
     /**
      * Can a server be disabled, that is, set to maintenance or draining mode.
      *
@@ -822,6 +862,8 @@ private:
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
 
+    std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
+
     /**
      * Has something changed such that journal needs to be updated. This is separate from the time-based
      * condition. */
@@ -875,65 +917,12 @@ public:
      */
     bool start() override final;
 
-    void request_immediate_tick() override;
-
-    /**
-     * @brief Obtain diagnostics
-     *
-     * The implementation should create a JSON object and fill it with diagnostics
-     * information. The default implementation returns an object that is populated
-     * with the keys 'script' and 'events' if they have been set, otherwise the
-     * object is empty.
-     *
-     * @return An object, if there is information to return, NULL otherwise.
-     */
-    json_t* diagnostics() const override;
-
-    /**
-     * Obtain diagnostics about a monitored server
-     *
-     * The implementation should return a JSON object with detailed diagnostic information that is amended to
-     * the general server diagnostic information. For example, mariadbmon would return replication
-     * information.
-     *
-     * The default implementation returns an empty JSON object.
-     *
-     * @return JSON object that describes the server or NULL if no information is available
-     */
-    json_t* diagnostics(MonitorServer* server) const override;
-
-    /**
-     * Get current time from the monotonic clock.
-     *
-     * @return Current time
-     */
-    static int64_t get_time_ms();
-
 protected:
     MonitorWorker(const std::string& name, const std::string& module);
 
     void do_stop() override final;
 
     std::tuple<bool, std::string> do_soft_stop() override;
-
-    /**
-     * @brief Check whether the monitor has sufficient rights
-     *
-     * The implementation should check whether the monitor user has sufficient
-     * rights to access the servers. The default implementation returns True.
-     *
-     * @return True, if the monitor user has sufficient rights, false otherwise.
-     */
-    virtual bool has_sufficient_permissions();
-
-    /**
-     * @brief Flush pending server status to each server.
-     *
-     * This function is expected to flush the pending status to each server.
-     * The default implementation simply copies monitored_server->pending_status
-     * to server->status.
-     */
-    virtual void flush_server_status();
 
     /**
      * @brief Monitor the servers
@@ -943,37 +932,6 @@ protected:
      */
     virtual void tick() = 0;
 
-    /**
-     * @brief Called before the monitor loop is started
-     *
-     * The default implementation does nothing.
-     */
-    virtual void pre_loop();
-
-    /**
-     * @brief Called after the monitor loop has ended.
-     *
-     * The default implementation does nothing.
-     */
-    virtual void post_loop();
-
-    /**
-     * @brief Called after tick returns
-     *
-     * The default implementation will call @Monitor::detect_state_changes. Overriding functions
-     * should do the same before proceeding with their own processing.
-     */
-    virtual void process_state_changes();
-
-    /**
-     * Should a monitor tick be ran immediately? The base class version always returns false. A monitor can
-     * override this to add specific conditions. This function is called every MXS_MON_BASE_INTERVAL_MS
-     * (100 ms) by the monitor worker thread, which then runs a monitor tick if true is returned.
-     *
-     * @return True if tick should be ran
-     */
-    virtual bool immediate_tick_required();
-
     Worker::Callable  m_callable;       /**< Context for own dcalls */
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
 
@@ -981,8 +939,6 @@ private:
     bool           m_checked;       /**< Whether server access has been checked. */
     mxb::Semaphore m_semaphore;     /**< Semaphore for synchronizing with monitor thread. */
     int64_t        m_loop_called;   /**< When was the loop called the last time. */
-
-    std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
 
     bool pre_run() override final;
     void post_run() override final;

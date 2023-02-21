@@ -282,8 +282,8 @@ protected:
     void        pre_loop() override;
     void        post_loop() override;
     void        tick() override;
-    void        process_state_changes() override;
-    void        flush_server_status() override;
+    void        process_state_changes();
+    void        flush_mdb_server_status();
     std::string annotate_state_change(mxs::MonitorServer* server) override final;
 
     std::tuple<bool, std::string> do_soft_stop() override;

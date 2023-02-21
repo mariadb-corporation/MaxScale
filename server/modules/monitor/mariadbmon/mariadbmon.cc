@@ -774,7 +774,7 @@ void MariaDBMonitor::tick()
         check_acquire_masterlock();
     }
 
-    flush_server_status();
+    flush_mdb_server_status();
     process_state_changes();
     hangup_failed_servers();
     write_journal_if_needed();
@@ -785,7 +785,7 @@ void MariaDBMonitor::process_state_changes()
 {
     using ExecState = mon_op::ExecState;
     m_state = State::EXECUTE_SCRIPTS;
-    MonitorWorker::process_state_changes();
+    detect_handle_state_changes();
 
     m_cluster_modified = false;
     if (cluster_operation_disable_timer > 0)
@@ -1097,7 +1097,7 @@ bool MariaDBMonitor::start_long_running_op(mon_op::SOperation op, const std::str
 
 bool MariaDBMonitor::immediate_tick_required()
 {
-    return mxs::MonitorWorker::immediate_tick_required() || m_cluster_modified
+    return mxs::Monitor::immediate_tick_required() || m_cluster_modified
            || (m_op_info.exec_state.load(mo_relaxed) == mon_op::ExecState::SCHEDULED);
 }
 
@@ -1240,7 +1240,7 @@ void MariaDBMonitor::load_monitor_specific_journal_data(const mxb::Json& data)
     m_master_gtid_domain = data.get_int(journal_fields::MASTER_GTID_DOMAIN);
 }
 
-void MariaDBMonitor::flush_server_status()
+void MariaDBMonitor::flush_mdb_server_status()
 {
     // Update shared status.
     bool status_changed = false;
