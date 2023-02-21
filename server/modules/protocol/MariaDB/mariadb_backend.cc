@@ -1063,7 +1063,7 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
     }
     else
     {
-        if (m_state == State::HANDSHAKING && m_hs_state == HandShakeState::SEND_PROHY_HDR)
+        if (m_state == State::HANDSHAKING && m_hs_state == HandShakeState::SEND_PROXY_HDR)
         {
             // Write ready is usually the first event delivered after a connection is made.
             // Proxy header should be sent in case the server is waiting for it.
@@ -2594,7 +2594,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
     {
         switch (m_hs_state)
         {
-        case HandShakeState::SEND_PROHY_HDR:
+        case HandShakeState::SEND_PROXY_HDR:
             if (m_server.proxy_protocol())
             {
                 // If read was the first event triggered, send proxy header.
