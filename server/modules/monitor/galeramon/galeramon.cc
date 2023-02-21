@@ -695,7 +695,7 @@ static GaleraServer* set_cluster_master(GaleraServer* current_master, GaleraServ
  * The list is then added to SET GLOBAL VARIABLE wrep_sst_donor =
  * The variable must be sent to all slave nodes.
  *
- * All slave nodes have a sorted list of nodes tht can be used as donor nodes.
+ * All slave nodes have a sorted list of nodes that can be used as donor nodes.
  *
  * If there is only one node the function returns,
  *

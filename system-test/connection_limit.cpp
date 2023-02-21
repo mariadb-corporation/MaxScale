@@ -3,7 +3,7 @@
  *
  * - Maxscale.cnf contains max_connections=10 for RWSplit, max_connections=20 for ReadConn master and
  * max_connections=25 for ReadConn slave
- * - create max num of connections and check tha N+1 connection fails
+ * - create max num of connections and check that N+1 connection fails
  */
 
 #include <maxtest/testconnections.hh>
