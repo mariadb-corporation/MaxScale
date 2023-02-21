@@ -13,13 +13,13 @@
  * Public License.
  */
 
-import { Line, mixins } from 'vue-chartjs'
+import { Line } from 'vue-chartjs'
+import base from '@share/components/common/MxsCharts/base.js'
 import 'chartjs-plugin-streaming'
-import { streamTooltip } from './customTooltips'
+import { streamTooltip } from '@share/components/common/MxsCharts/customTooltips'
 export default {
     extends: Line,
-    mixins: [mixins.reactiveProp],
-    props: { opts: { type: Object } },
+    mixins: [base],
     data() {
         return {
             uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
@@ -38,20 +38,11 @@ export default {
                         top: 15,
                     },
                 },
-                legend: {
-                    display: false,
-                },
+                legend: { display: false },
                 responsive: true,
                 maintainAspectRatio: false,
-                elements: {
-                    point: {
-                        radius: 0,
-                    },
-                },
-                hover: {
-                    mode: 'index',
-                    intersect: false,
-                },
+                elements: { point: { radius: 0 } },
+                hover: { mode: 'index', intersect: false },
                 tooltips: {
                     mode: 'index',
                     intersect: false,
@@ -70,42 +61,20 @@ export default {
                     },
                 },
                 scales: {
-                    xAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: true,
-                            },
-                            type: 'realtime',
-                            ticks: {
-                                display: false,
-                            },
-                        },
-                    ],
+                    xAxes: [{ type: 'realtime', ticks: { display: false } }],
                     yAxes: [
                         {
-                            gridLines: {
-                                drawBorder: false,
-                                zeroLineColor: 'transparent',
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                                maxTicksLimit: 3,
-                            },
+                            gridLines: { zeroLineColor: 'transparent' },
+                            ticks: { beginAtZero: true, maxTicksLimit: 3 },
                         },
                     ],
                 },
             }
         },
-        options() {
-            return this.$helpers.lodash.merge(this.baseOpts, this.opts)
-        },
     },
     beforeDestroy() {
         let tooltipEl = document.getElementById(this.uniqueTooltipId)
         if (tooltipEl) tooltipEl.remove()
-    },
-    mounted() {
-        this.renderChart(this.chartData, this.options)
     },
 }
 </script>

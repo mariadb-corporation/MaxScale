@@ -191,9 +191,9 @@ export default {
         },
         /**
          * Method  to be called by parent component to update the chart
-         * @param {Number} timestamp
          */
-        async updateChart(timestamp) {
+        async updateChart() {
+            const timestamp = Date.now()
             const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
                 await Promise.all([

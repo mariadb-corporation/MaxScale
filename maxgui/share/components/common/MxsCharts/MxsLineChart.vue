@@ -13,63 +13,30 @@
  * Public License.
  */
 import { Line } from 'vue-chartjs'
-import vertCrossHair from './vertCrossHair'
+import vertCrossHair from '@share/components/common/MxsCharts/vertCrossHair.js'
+import base from '@share/components/common/MxsCharts/base.js'
 export default {
     extends: Line,
+    mixins: [base],
     props: {
-        chartData: { type: Object, required: true },
-        options: { type: Object },
         hasVertCrossHair: { type: Boolean, default: false },
     },
-    watch: {
-        chartData() {
-            this.$data._chart.destroy()
-            this.renderLineChart()
-        },
-    },
-    beforeDestroy() {
-        if (this.$data._chart) this.$data._chart.destroy()
-    },
-    mounted() {
-        if (this.hasVertCrossHair) {
-            this.addPlugin({
-                id: 'vert-cross-hair',
-                afterDatasetsDraw: vertCrossHair,
-            })
-        }
-        this.renderLineChart()
-    },
-    methods: {
-        renderLineChart() {
-            let chartOption = {
+    computed: {
+        baseOpts() {
+            return {
                 plugins: {
                     streaming: false,
                 },
                 scales: {
-                    xAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: true,
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                            },
-                        },
-                    ],
-                    yAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: false,
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                            },
-                        },
-                    ],
+                    xAxes: [{ ticks: { beginAtZero: true } }],
+                    yAxes: [{ ticks: { beginAtZero: true } }],
                 },
             }
-            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
         },
+    },
+    mounted() {
+        if (this.hasVertCrossHair)
+            this.addPlugin({ id: 'vert-cross-hair', afterDatasetsDraw: vertCrossHair })
     },
 }
 </script>
