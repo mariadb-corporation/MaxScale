@@ -13,7 +13,7 @@
                             class="relative"
                             :height="70"
                             :chart-data="{ datasets: sessions_datasets }"
-                            :opts="streamOpts"
+                            :refreshRate="refreshRate"
                         />
                     </v-sheet>
                 </template>
@@ -34,7 +34,7 @@
                             :chart-data="{
                                 datasets: server_connections_datasets,
                             }"
-                            :opts="streamOpts"
+                            :refreshRate="refreshRate"
                         />
                     </v-sheet>
                 </template>
@@ -55,20 +55,8 @@
                             :chart-data="{
                                 datasets: threads_datasets,
                             }"
-                            :opts="
-                                $helpers.lodash.merge(streamOpts, {
-                                    scales: {
-                                        yAxes: [
-                                            {
-                                                ticks: {
-                                                    max: 100,
-                                                    min: 0,
-                                                },
-                                            },
-                                        ],
-                                    },
-                                })
-                            "
+                            :opts="{ scales: { yAxes: [{ ticks: { max: 100, min: 0 } }] } }"
+                            :refreshRate="refreshRate"
                         />
                     </v-sheet>
                 </template>
@@ -106,16 +94,6 @@ export default {
             thread_stats: state => state.maxscale.thread_stats,
             threads_datasets: state => state.maxscale.threads_datasets,
         }),
-        streamOpts() {
-            return {
-                plugins: {
-                    streaming: {
-                        duration: this.refreshRate * 2000,
-                        delay: (this.refreshRate + 2) * 1000,
-                    },
-                },
-            }
-        },
         ...mapGetters({
             getTotalSessions: 'session/getTotalSessions',
         }),

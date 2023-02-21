@@ -48,17 +48,10 @@
                     <v-sheet width="100%">
                         <mxs-line-chart-stream
                             v-if="serviceConnectionsDatasets.length"
-                            ref="serviceConnectionsChart"
+                            ref="connsChart"
                             :chartData="{ datasets: serviceConnectionsDatasets }"
                             :height="70"
-                            :opts="{
-                                plugins: {
-                                    streaming: {
-                                        duration: refreshRate * 2000,
-                                        delay: (refreshRate + 2) * 1000,
-                                    },
-                                },
-                            }"
+                            :refreshRate="refreshRate"
                         />
                     </v-sheet>
                 </template>
@@ -90,19 +83,18 @@ export default {
         refreshRate: { type: Number, required: true },
     },
     methods: {
-        async updateChart(timeStamp) {
-            const { serviceConnectionsChart } = this.$refs
-            if (serviceConnectionsChart) {
+        updateChart() {
+            const timestamp = Date.now()
+            const { connsChart } = this.$refs
+            if (connsChart) {
                 const { connections } = this.serviceConnectionInfo
-                serviceConnectionsChart.chartData.datasets.forEach(function(dataset) {
+                connsChart.chartData.datasets.forEach(function(dataset) {
                     dataset.data.push({
-                        x: timeStamp,
+                        x: timestamp,
                         y: connections,
                     })
                 })
-                await serviceConnectionsChart.$data._chart.update({
-                    preservation: true,
-                })
+                connsChart.$data._chart.update({ preservation: true })
             }
         },
     },

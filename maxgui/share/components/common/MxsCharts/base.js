@@ -36,10 +36,8 @@ export default {
         opts: {
             deep: true,
             handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) {
-                    this.$data._chart.destroy()
-                    this.renderChart(this.chartData, this.options)
-                }
+                if (!this.$helpers.lodash.isEqual(v, oV))
+                    this.$data._chart.update({ preservation: true })
             },
         },
     },

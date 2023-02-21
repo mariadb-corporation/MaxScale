@@ -20,6 +20,9 @@ import { streamTooltip } from '@share/components/common/MxsCharts/customTooltips
 export default {
     extends: Line,
     mixins: [base],
+    props: {
+        refreshRate: { type: Number, required: true },
+    },
     data() {
         return {
             uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
@@ -69,6 +72,20 @@ export default {
                         },
                     ],
                 },
+                plugins: {
+                    streaming: {
+                        duration: this.refreshRate * 2000,
+                        delay: (this.refreshRate + 2) * 1000,
+                    },
+                },
+            }
+        },
+    },
+    watch: {
+        refreshRate(v, oV) {
+            if (!this.$helpers.lodash.isEqual(v, oV)) {
+                this.$data._chart.destroy()
+                this.renderChart(this.chartData, this.options)
             }
         },
     },
