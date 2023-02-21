@@ -129,7 +129,7 @@ public:
     /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
      * @param result 0 if step PASSED
-     * @param format ... message to pring if result is not 0
+     * @param format ... message to print if result is not 0
      */
     void add_result(bool result, const char* format, ...) __attribute__ ((format(printf, 3, 4)));
 
