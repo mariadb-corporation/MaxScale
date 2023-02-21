@@ -142,7 +142,7 @@ public:
         std::chrono::seconds switchover_timeout {0};    /* Switchover time limit */
     };
 
-    /* What position this server has in the monitor config? Used for tiebreaking between servers. */
+    /* What position this server has in the monitor config? Used for breaking ties between servers. */
     int m_config_index = 0;
 
     Capabilities m_capabilities;                    /* Server capabilities */
