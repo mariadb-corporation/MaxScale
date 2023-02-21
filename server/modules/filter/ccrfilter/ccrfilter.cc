@@ -110,7 +110,7 @@ config::ParamRegex ignore(
 config::ParamEnumMask<regex_options> options(
     &specification,
     "options",
-    "Specificies additional options for the regular expressions; 'ignorecase' makes the "
+    "Specifies additional options for the regular expressions; 'ignorecase' makes the "
     "matching case insensitive (on by default), 'case' makes the matching case sensitive "
     "and 'extended' causes whitespace to be ignored. They have been deprecated and you "
     "should instead use pattern settings in the regular expressions themselves.",
