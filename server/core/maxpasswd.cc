@@ -13,7 +13,7 @@
  */
 
 /**
- * @file maxpasswd.c  - Implementation of pasword encoding
+ * @file maxpasswd.c  - Implementation of password encoding
  */
 
 #include <maxscale/ccdefs.hh>
