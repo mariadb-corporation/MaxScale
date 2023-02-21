@@ -885,7 +885,7 @@ void Client::handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_
 
 void Client::upgrade_to_ws()
 {
-    // The WebSocket protocol requries the server to perform a "complex" task to make sure it understands the
+    // The WebSocket protocol requires the server to perform a "complex" task to make sure it understands the
     // protocol. This means taking the literal value of the Sec-WebSocket-Key header and concatenating it with
     // a special UUID, taking the SHA1 of the result and sending the Base64 encoded result back in the
     // Sec-WebSocket-Accept header.
