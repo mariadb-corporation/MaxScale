@@ -1492,9 +1492,24 @@ bool DCB::set_reads_enabled(bool enable)
 {
     uint32_t mask = THIS_UNIT::poll_events;
 
-    if (!enable)
+    if (enable)
+    {
+        // Restore triggered EPOLLIN events. The code that enables or disables events relies on epoll
+        // notifications to trigger any suspended events so the same approach is taken here.
+        m_triggered_event |= m_triggered_event_old & EPOLLIN;
+        m_triggered_event_old &= ~EPOLLIN;
+    }
+    else
     {
         mask &= ~EPOLLIN;
+
+        // Store the EPOLLIN event if one exists. This does not prevent new EPOLLIN events from being
+        // triggered on this DCB but it does prevent an existing EPOLLIN event from causing a new read. Any
+        // code that can potentially trigger writeq throttling (i.e. calls to routeQuery or clientReply) must
+        // trigger events before the function call. Otherwise the writeq throttling is not effective as the
+        // fake events get delivered regardless of the events that the DCB listens to.
+        m_triggered_event_old |= m_triggered_event & EPOLLIN;
+        m_triggered_event &= ~EPOLLIN;
     }
 
     mxb_assert(m_state == State::POLLING);
