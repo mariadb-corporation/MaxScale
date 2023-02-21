@@ -389,7 +389,7 @@ public:
      *
      * @return True if monitor is running.
      */
-    virtual bool is_running() const = 0;
+    bool is_running() const;
 
     /**
      * Get running state as string.
@@ -451,12 +451,11 @@ public:
     long ticks() const;
 
     /**
-     * Starts the monitor. If the monitor requires polling of the servers, it should create
-     * a separate monitoring thread.
+     * Starts the monitor.
      *
-     * @return True, if the monitor could be started, false otherwise.
+     * @return True, if the monitor started.
      */
-    virtual bool start() = 0;
+    bool start();
 
     /**
      * Stops the monitor.
@@ -568,18 +567,22 @@ public:
 
     json_t* parameters_to_json() const;
 
+    // The following should only be called by the monitor worker.
+    bool pre_run();
+    void post_run();
+
 protected:
     /**
      * Stop the monitor. If the monitor uses a polling thread, the thread should be stopped.
      */
-    virtual void do_stop() = 0;
+    void do_stop();
 
     /**
      * Subclass-specific soft-stop.
      *
      * @return True if success. On fail, also return an error message.
      */
-    virtual std::tuple<bool, std::string> do_soft_stop() = 0;
+    virtual std::tuple<bool, std::string> do_soft_stop();
 
     /**
      * Called before the monitor loop is started. The default implementation does nothing.
@@ -759,6 +762,8 @@ protected:
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
     std::atomic_long m_ticks {0};
 
+    std::unique_ptr<mxb::Worker> m_worker;      /**< The worker thread running this monitor */
+
     /**
      * Can a server be disabled, that is, set to maintenance or draining mode.
      *
@@ -801,6 +806,15 @@ protected:
     bool post_configure();
 
     friend bool Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
+
+    /**
+     * This function is called once per monitor round. The implementation should probe servers and set
+     * status bits.
+     */
+    virtual void tick() = 0;
+
+    mxb::Worker::Callable m_callable;               /**< Context for own dcalls */
+    std::atomic<bool>     m_thread_running {false}; /**< Thread state. */
 
 private:
     /**
@@ -877,77 +891,16 @@ private:
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
 
+    bool           m_checked {false};   /**< Whether server access has been checked. */
+    mxb::Semaphore m_semaphore;         /**< Semaphore for synchronizing with monitor thread. */
+    int64_t        m_loop_called;       /**< When was the loop called the last time. */
+
     std::string journal_filepath() const;
+    bool        call_run_one_tick();
+    void        run_one_tick();
 };
 
-/**
- * An abstract class which helps implement a monitor based on a maxbase::Worker thread.
- */
-class MonitorWorker : public Monitor
-                    , protected maxbase::Worker
-{
-public:
-    MonitorWorker(const MonitorWorker&) = delete;
-    MonitorWorker& operator=(const MonitorWorker&) = delete;
-
-    ~MonitorWorker();
-
-    bool is_running() const override final;
-
-    /**
-     * @brief Starts the monitor.
-     *
-     * - Calls @c has_sufficient_permissions(), if it has not been done earlier.
-     * - Updates the 'script' and 'events' configuration paramameters.
-     * - Starts the monitor thread.
-     *
-     * - Once the monitor thread starts, it will
-     *   - Load the server journal and update @c m_master.
-     *   - Call @c pre_loop().
-     *   - Enter a loop where it, until told to shut down, will
-     *     - Check whether there are maintenance requests.
-     *     - Call @c tick().
-     *     - Call @c process_state_changes()
-     *     - Hang up failed servers.
-     *     - Store the server journal (@c m_master assumed to reflect the current situation).
-     *     - Sleep until time for next @c tick().
-     *   - Call @c post_loop().
-     *
-     * @return True, if the monitor started, false otherwise.
-     */
-    bool start() override final;
-
-protected:
-    MonitorWorker(const std::string& name, const std::string& module);
-
-    void do_stop() override final;
-
-    std::tuple<bool, std::string> do_soft_stop() override;
-
-    /**
-     * @brief Monitor the servers
-     *
-     * This function is called once per monitor round, and the concrete
-     * implementation should probe all servers and set server status bits.
-     */
-    virtual void tick() = 0;
-
-    Worker::Callable  m_callable;       /**< Context for own dcalls */
-    std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
-
-private:
-    bool           m_checked;       /**< Whether server access has been checked. */
-    mxb::Semaphore m_semaphore;     /**< Semaphore for synchronizing with monitor thread. */
-    int64_t        m_loop_called;   /**< When was the loop called the last time. */
-
-    bool pre_run() override final;
-    void post_run() override final;
-
-    bool call_run_one_tick();
-    void run_one_tick();
-};
-
-class MonitorWorkerSimple : public MonitorWorker
+class MonitorWorkerSimple : public Monitor
 {
 public:
     MonitorWorkerSimple(const MonitorWorkerSimple&) = delete;
@@ -955,7 +908,7 @@ public:
 
 protected:
     MonitorWorkerSimple(const std::string& name, const std::string& module)
-        : MonitorWorker(name, module)
+        : Monitor(name, module)
     {
     }
 

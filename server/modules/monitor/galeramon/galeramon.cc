@@ -119,7 +119,7 @@ mxs::config::Configuration& GaleraMonitor::configuration()
 
 json_t* GaleraMonitor::diagnostics() const
 {
-    json_t* rval = MonitorWorker::diagnostics();
+    json_t* rval = Monitor::diagnostics();
     json_object_set_new(rval, "disable_master_failback", json_boolean(m_config.disable_master_failback));
     json_object_set_new(rval, "disable_master_role_setting", json_boolean(m_config.disable_master_role_setting));
     json_object_set_new(rval, "root_node_as_master", json_boolean(m_config.root_node_as_master));

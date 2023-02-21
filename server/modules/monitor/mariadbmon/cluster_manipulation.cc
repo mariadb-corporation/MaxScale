@@ -73,7 +73,7 @@ const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed.";
 mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
 {
     // Manual commands should only run in the main monitor thread.
-    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(mxb::Worker::get_current()->id() == m_worker->id());
     mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
@@ -112,7 +112,7 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
 mon_op::Result MariaDBMonitor::manual_failover()
 {
     // Manual commands should only run in the main monitor thread.
-    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(mxb::Worker::get_current()->id() == m_worker->id());
     mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
@@ -149,7 +149,7 @@ mon_op::Result MariaDBMonitor::manual_failover()
 mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
 {
     // Manual commands should only run in the main monitor thread.
-    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(mxb::Worker::get_current()->id() == m_worker->id());
     mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
@@ -252,7 +252,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
     // when replication is broken and they know the cluster is in sync.
 
     // Manual commands should only run in the main monitor thread.
-    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(mxb::Worker::get_current()->id() == m_worker->id());
     mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;

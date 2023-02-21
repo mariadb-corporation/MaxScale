@@ -308,7 +308,7 @@ auto mo_release = std::memory_order_release;
 }
 
 MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
-    : MonitorWorker(name, module)
+    : Monitor(name, module)
     , m_settings(name, this)
 {
 }
@@ -588,7 +588,7 @@ json_t* MariaDBMonitor::to_json(State op)
 
 json_t* MariaDBMonitor::to_json() const
 {
-    json_t* rval = MonitorWorker::diagnostics();
+    json_t* rval = Monitor::diagnostics();
 
     // The m_master-pointer can be modified during a tick, but the pointed object cannot be deleted.
     auto master = mxb::atomic::load(&m_master, mxb::atomic::RELAXED);
@@ -696,8 +696,8 @@ std::tuple<bool, std::string> MariaDBMonitor::do_soft_stop()
 
     if (stopping)
     {
-        Worker::shutdown();
-        Worker::join();
+        m_worker->shutdown();
+        m_worker->join();
         m_thread_running.store(false, std::memory_order_release);
     }
     return {stopping, errmsg};

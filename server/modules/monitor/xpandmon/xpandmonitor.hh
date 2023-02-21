@@ -25,7 +25,7 @@
 
 namespace config = maxscale::config;
 
-class XpandMonitor : public maxscale::MonitorWorker
+class XpandMonitor : public maxscale::Monitor
                    , private XpandNode::Persister
 {
     XpandMonitor(const XpandMonitor&) = delete;

@@ -379,15 +379,44 @@ const char WRN_REQUEST_OVERWRITTEN[] =
     "Previous maintenance/draining request was not yet read by the monitor and was overwritten.";
 
 const MonitorServer::EventList empty_event_list;
+
+/**
+ * Helper class for running monitor in a worker-thread.
+ */
+class MonitorWorker : public maxbase::Worker
+{
+public:
+    MonitorWorker(const MonitorWorker&) = delete;
+    MonitorWorker& operator=(const MonitorWorker&) = delete;
+
+    MonitorWorker(Monitor& monitor)
+        : m_monitor(monitor)
+    {
+    }
+private:
+    Monitor& m_monitor;
+
+    bool pre_run() override final
+    {
+        return m_monitor.pre_run();
+    }
+
+    void post_run() override final
+    {
+        m_monitor.post_run();
+    }
+};
 }
 
 namespace maxscale
 {
-
 Monitor::Monitor(const string& name, const string& module)
     : m_name(name)
     , m_module(module)
+    , m_worker(std::make_unique<MonitorWorker>(*this))
+    , m_callable(m_worker.get())
     , m_settings(name, this)
+    , m_loop_called(get_time_ms())
 {
 }
 
@@ -527,6 +556,7 @@ const char* Monitor::state_string() const
 
 Monitor::~Monitor()
 {
+    m_callable.cancel_dcalls();
     for (auto server : m_servers)
     {
         // TODO: store unique pointers in the array
@@ -1936,40 +1966,21 @@ void Monitor::load_monitor_specific_journal_data(const mxb::Json& data)
 {
 }
 
-MonitorWorker::MonitorWorker(const string& name, const string& module)
-    : Monitor(name, module)
-    , m_callable(this)
-    , m_thread_running(false)
-    , m_checked(false)
-    , m_loop_called(get_time_ms())
-{
-}
-
-MonitorWorker::~MonitorWorker()
-{
-    m_callable.cancel_dcalls();
-}
-
-bool MonitorWorker::is_running() const
-{
-    return Worker::event_loop_state() == Worker::EventLoop::RUNNING;
-}
-
-void MonitorWorker::do_stop()
+void Monitor::do_stop()
 {
     // This should only be called by monitor_stop().
     mxb_assert(Monitor::is_main_worker());
     mxb_assert(is_running());
     mxb_assert(m_thread_running.load() == true);
 
-    Worker::shutdown();
-    Worker::join();
+    m_worker->shutdown();
+    m_worker->join();
     m_thread_running.store(false, std::memory_order_release);
 }
 
-std::tuple<bool, std::string> MonitorWorker::do_soft_stop()
+std::tuple<bool, std::string> Monitor::do_soft_stop()
 {
-    MonitorWorker::do_stop();
+    do_stop();
     return {true, ""};
 }
 
@@ -1983,7 +1994,7 @@ json_t* Monitor::diagnostics(MonitorServer* server) const
     return json_object();
 }
 
-bool MonitorWorker::start()
+bool Monitor::start()
 {
     // This should only be called by monitor_start(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
@@ -2010,7 +2021,7 @@ bool MonitorWorker::start()
     {
         // Next tick should happen immediately.
         m_loop_called = get_time_ms() - settings().interval.count();
-        if (!Worker::start(name()))
+        if (!m_worker->start(name()))
         {
             MXB_ERROR("Failed to start worker for monitor '%s'.", name());
         }
@@ -2025,7 +2036,7 @@ bool MonitorWorker::start()
             {
                 // Ok, so the initialization failed and the thread will exit.
                 // We need to wait on it so that the thread resources will not leak.
-                Worker::join();
+                m_worker->join();
             }
         }
     }
@@ -2268,7 +2279,7 @@ void Monitor::post_loop()
 {
 }
 
-bool MonitorWorker::pre_run()
+bool Monitor::pre_run()
 {
     bool rv = false;
     m_ticks.store(0, std::memory_order_release);
@@ -2281,7 +2292,7 @@ bool MonitorWorker::pre_run()
         m_semaphore.post();
 
         pre_loop();
-        m_callable.dcall(1ms, &MonitorWorker::call_run_one_tick, this);
+        m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
     }
     else
     {
@@ -2292,14 +2303,13 @@ bool MonitorWorker::pre_run()
     return rv;
 }
 
-void MonitorWorker::post_run()
+void Monitor::post_run()
 {
     post_loop();
-
     mysql_thread_end();
 }
 
-bool MonitorWorker::call_run_one_tick()
+bool Monitor::call_run_one_tick()
 {
     /** This is both the minimum sleep between two ticks and also the maximum time between early
      *  wakeup checks. */
@@ -2323,12 +2333,12 @@ bool MonitorWorker::call_run_one_tick()
     int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
         base_interval_ms : ms_to_next_call;
 
-    m_callable.dcall(milliseconds(delay), &MonitorWorker::call_run_one_tick, this);
+    m_callable.dcall(milliseconds(delay), &Monitor::call_run_one_tick, this);
 
     return false;
 }
 
-void MonitorWorker::run_one_tick()
+void Monitor::run_one_tick()
 {
     tick();
     m_ticks.store(ticks() + 1, std::memory_order_release);
@@ -2353,6 +2363,11 @@ void Monitor::request_immediate_tick()
 void Monitor::request_journal_update()
 {
     m_journal_update_needed = true;
+}
+
+bool Monitor::is_running() const
+{
+    return m_worker->event_loop_state() == mxb::Worker::EventLoop::RUNNING;
 }
 
 MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)

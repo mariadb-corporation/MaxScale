@@ -39,7 +39,7 @@ typedef std::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
 typedef std::map<int, ServerArray> CycleMap;
 
 // MariaDB Monitor instance data
-class MariaDBMonitor : public maxscale::MonitorWorker
+class MariaDBMonitor : public maxscale::Monitor
 {
 public:
     MariaDBMonitor(const MariaDBMonitor&) = delete;

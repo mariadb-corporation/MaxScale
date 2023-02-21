@@ -229,7 +229,7 @@ bool XpandMonitor::Config::post_configure(const std::map<std::string, mxs::Confi
 }
 
 XpandMonitor::XpandMonitor(const string& name, const string& module, sqlite3* pDb)
-    : MonitorWorker(name, module)
+    : Monitor(name, module)
     , m_config(name, this)
     , m_pDb(pDb)
 {
@@ -309,9 +309,9 @@ bool XpandMonitor::post_configure()
         populate_from_bootstrap_servers();
     }
 
-    execute([this]() {
-             make_health_check();
-         }, mxb::Worker::EXECUTE_AUTO);
+    m_worker->execute([this]() {
+        make_health_check();
+    }, mxb::Worker::EXECUTE_AUTO);
 
     return true;
 }
@@ -336,10 +336,9 @@ bool XpandMonitor::softfail(SERVER* pServer, json_t** ppError)
 
     if (is_running())
     {
-        call([this, pServer, ppError, &rv]() {
-                 rv = perform_softfail(pServer, ppError);
-             },
-             EXECUTE_QUEUED);
+        m_worker->call([this, pServer, ppError, &rv]() {
+            rv = perform_softfail(pServer, ppError);
+        }, mxb::Worker::EXECUTE_QUEUED);
     }
     else
     {
@@ -358,10 +357,9 @@ bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
 
     if (is_running())
     {
-        call([this, pServer, ppError, &rv]() {
-                 rv = perform_unsoftfail(pServer, ppError);
-             },
-             EXECUTE_QUEUED);
+        m_worker->call([this, pServer, ppError, &rv]() {
+            rv = perform_unsoftfail(pServer, ppError);
+        }, mxb::Worker::EXECUTE_QUEUED);
     }
     else
     {
@@ -1255,7 +1253,7 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
         extra = m_extra;
     }
 
-    if (Worker::get_current() == pMain)
+    if (mxb::Worker::get_current() == pMain)
     {
         // Running in the main worker, we can call directly.
         if (runtime_create_volatile_server(server_name, ip, port, extra))
@@ -1288,7 +1286,7 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
 
         // We don't call, as that could lead to a deadlock if someone precisely at
         // the wrong moment mxsctrls the monitor.
-        if (pMain->execute(f, Worker::EXECUTE_QUEUED))
+        if (pMain->execute(f, mxb::Worker::EXECUTE_QUEUED))
         {
             int attempts = 0;
 

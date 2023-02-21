@@ -756,7 +756,7 @@ bool MariaDBMonitor::schedule_release_locks(json_t** error_out)
 mon_op::Result MariaDBMonitor::manual_release_locks()
 {
     // Manual commands should only run in the main monitor thread.
-    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(mxb::Worker::get_current()->id() == m_worker->id());
     mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
