@@ -3426,7 +3426,7 @@ select * from (t1, t2) join (t3, t4) on (a < y and t2.b < t3.c);
 select * from (t1 natural join t2) join (t3 natural join t4) on a = y;
 select * from ((t3 join (t1 join t2 on c > a) on t3.b < t2.a) join t4 on y > t1.c) join t5 on z = t1.b + 3;
 
-# MySQL extension - refererence qualified coalesced columns
+# MySQL extension - reference qualified coalesced columns
 select * from t1 natural join t2 where t1.b > 0;
 select * from t1 natural join (t4 natural join t5) where t4.y > 7;
 select * from (t4 natural join t5) natural join t1 where t4.y > 7;
@@ -5748,7 +5748,7 @@ select distinct t2.companynr,t4.companynr from t2,t4 where t2.companynr=t4.compa
 explain select distinct t2.companynr,t4.companynr from t2,t4 where t2.companynr=t4.companynr+1;
 
 #
-# Search using 'or' with the same referens group.
+# Search using 'or' with the same reference group.
 # An interval search will be done first with the first table and after that
 # the other table is referenced with a key with a 'test if key in use' for
 # each record
