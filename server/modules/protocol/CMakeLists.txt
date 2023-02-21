@@ -8,3 +8,7 @@ add_subdirectory(MariaDB)
 if(BUILD_NOSQL)
   add_subdirectory(NoSQL)
 endif()
+
+if(BUILD_POSTGRES)
+  add_subdirectory(PostGres)
+endif()
