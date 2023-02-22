@@ -39,24 +39,11 @@ struct json_t;
 class ExternalCmd;
 typedef struct st_mysql MYSQL;
 
-/**
- * @verbatim
- * The "module object" structure for a backend monitor module
- *
- * Monitor modules monitor the backend databases that MaxScale connects to.
- * The information provided by a monitor is used in routing decisions.
- * @endverbatim
- *
- * @see load_module
- */
 struct MXS_MONITOR_API
 {
     /**
-     * @brief Create the monitor.
-     *
-     * This entry point is called once when MaxScale is started, for creating the monitor.
-     * If the function fails, MaxScale will not start. The returned object must inherit from
-     * the abstract base monitor class and implement the missing methods.
+     * Create the monitor.The returned object must inherit from the abstract base monitor class and
+     * implement the missing methods.
      *
      * @param name Configuration name of the monitor
      * @param module Module name of the monitor
@@ -137,16 +124,12 @@ public:
     public:
         using seconds = std::chrono::seconds;
 
-        std::string username;       /**< Monitor username */
-        std::string password;       /**< Monitor password */
-        seconds     connect_timeout;/**< Connect timeout in seconds for mysql_real_connect */
-        seconds     write_timeout;  /**< Timeout in seconds for each attempt to write to the server.
-                                     *   There are retries and the total effective timeout value is two
-                                     *   times the option value. */
-        seconds read_timeout;       /**< Timeout in seconds to read from the server. There are retries
-                                     *   and the total effective timeout value is three times the
-                                     *   option value. */
-        int64_t connect_attempts;   /**< How many times a connection is attempted */
+        std::string username;           /**< Monitor username */
+        std::string password;           /**< Monitor password */
+        seconds     connect_timeout;    /**< Connector/C connect timeout */
+        seconds     write_timeout;      /**< Connector/C write timeout */
+        seconds     read_timeout;       /**< Connector/C read timeout */
+        int64_t     connect_attempts;   /**< How many times a connection is attempted */
     };
 
     /**
@@ -376,7 +359,7 @@ public:
      */
     static bool is_main_worker();
 
-    /*
+    /**
      * Convert a monitor event (enum) to string.
      *
      * @param   event    The event
@@ -550,18 +533,6 @@ public:
         return true;
     }
 
-    /**
-     * Check if monitor is dynamic
-     *
-     * A dynamic monitor only uses the servers specified in the configuration as "bootstrap"
-     * servers, that is, for connecting to the cluster. The monitor will create a volatile
-     * server instance for each server in the cluster.
-     */
-    virtual bool is_dynamic() const
-    {
-        return false;
-    }
-
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
 
@@ -593,16 +564,6 @@ protected:
      * Called after the monitor loop has ended. The default implementation does nothing.
      */
     virtual void post_loop();
-
-    /**
-     * @brief Check whether the monitor has sufficient rights
-     *
-     * The implementation should check whether the monitor user has sufficient
-     * rights to access the servers. The default implementation returns True.
-     *
-     * @return True, if the monitor user has sufficient rights.
-     */
-    virtual bool has_sufficient_permissions();
 
     /**
      * Check if the monitor user can execute a query. The query should be such that it only succeeds if
@@ -842,6 +803,14 @@ private:
      * @param data Json from journal file
      */
     virtual void load_monitor_specific_journal_data(const mxb::Json& data);
+
+    /**
+     * Check whether the monitor user has sufficient rights to access the servers. The default
+     * implementation returns True.
+     *
+     * @return True, if the monitor user has sufficient rights.
+     */
+    virtual bool has_sufficient_permissions();
 
     bool add_server(SERVER* server);
     void remove_all_servers();

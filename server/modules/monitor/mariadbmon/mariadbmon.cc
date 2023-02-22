@@ -634,16 +634,7 @@ bool MariaDBMonitor::is_cluster_owner() const
 void MariaDBMonitor::pre_loop()
 {
     // Read the journal and the last known master.
-    // Write the corresponding MariaDBServer into the class-specific m_master variable.
-    MonitorServer* journal_master = nullptr;
     read_journal();
-    if (journal_master)
-    {
-        // This is somewhat questionable, as the journal only contains status bits but no actual topology
-        // info. In a fringe case the actual queried topology may not match the journal data, freezing the
-        // master to a suboptimal choice.
-        assign_new_master(get_server(journal_master));
-    }
 
     /* This loop can be removed if/once the replication check code is inside tick. It's required so that
      * the monitor makes new connections when starting. */

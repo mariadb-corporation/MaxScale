@@ -70,8 +70,6 @@ public:
 
     static XpandMonitor* create(const std::string& name, const std::string& module);
 
-    bool is_dynamic() const override;
-
     bool softfail(SERVER* pServer, json_t** ppError);
     bool unsoftfail(SERVER* pServer, json_t** ppError);
 

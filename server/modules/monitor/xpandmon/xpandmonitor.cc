@@ -316,11 +316,6 @@ bool XpandMonitor::post_configure()
     return true;
 }
 
-bool XpandMonitor::is_dynamic() const
-{
-    return m_config.dynamic_node_detection();
-}
-
 void XpandMonitor::populate_services()
 {
     mxb_assert(!is_running());
