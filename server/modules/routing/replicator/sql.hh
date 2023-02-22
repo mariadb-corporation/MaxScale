@@ -109,15 +109,6 @@ public:
         return Event {mariadb_rpl_fetch(m_rpl, nullptr), mariadb_free_rpl_event};
     }
 
-    /**
-     * Pointer to the raw event data
-     */
-    uint8_t* event_data() const
-    {
-        return m_rpl->buffer;
-    }
-
-
     Result result(const std::string& sql);
 
 private:

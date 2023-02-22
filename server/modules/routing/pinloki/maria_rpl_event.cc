@@ -56,17 +56,20 @@ const st_mariadb_rpl_event& MariaRplEvent::event() const
 {
     return *m_pEvent;
 }
+size_t MariaRplEvent::raw_data_offset() const
+{
+    // Discard the extra byte in the event buffer. If semi-sync is enabled, skip two extra bytes.
+    return 1 + (m_pEvent->is_semi_sync ? 2 : 0);
+}
 
 const char* MariaRplEvent::raw_data() const
 {
-    // discard the extra byte in the event buffer
-    return reinterpret_cast<const char*>(m_pRpl_handle->buffer) + 1;
+    return reinterpret_cast<const char*>(m_pEvent->raw_data) + raw_data_offset();
 }
 
 size_t MariaRplEvent::raw_data_size() const
 {
-    // discard the extra byte in the event buffer
-    return m_pRpl_handle->buffer_size - 1;
+    return m_pEvent->raw_data_size - raw_data_offset();
 }
 
 maxsql::MariaRplEvent::~MariaRplEvent()

@@ -528,7 +528,14 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
 
     bool rval = true;
     REP_HEADER hdr;
-    uint8_t* ptr = m_sql->event_data() + 20;
+    size_t ev_offset = 20;
+
+    if (event->is_semi_sync)
+    {
+        ev_offset += 2;
+    }
+
+    uint8_t* ptr = event->raw_data + ev_offset;
 
     MARIADB_RPL_EVENT& ev = *event;
     hdr.event_size = ev.event_length + (m_rpl.have_checksums() ? 4 : 0);
