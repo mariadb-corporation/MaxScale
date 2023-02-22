@@ -41,7 +41,7 @@ struct GaleraNode
 
 typedef std::unordered_map<mxs::MonitorServer*, GaleraNode> NodeMap;
 
-class GaleraMonitor : public maxscale::MonitorWorkerSimple
+class GaleraMonitor : public maxscale::SimpleMonitor
 {
 public:
     GaleraMonitor(const GaleraMonitor&) = delete;

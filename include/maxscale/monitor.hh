@@ -869,14 +869,14 @@ private:
     void        run_one_tick();
 };
 
-class MonitorWorkerSimple : public Monitor
+class SimpleMonitor : public Monitor
 {
 public:
-    MonitorWorkerSimple(const MonitorWorkerSimple&) = delete;
-    MonitorWorkerSimple& operator=(const MonitorWorkerSimple&) = delete;
+    SimpleMonitor(const SimpleMonitor&) = delete;
+    SimpleMonitor& operator=(const SimpleMonitor&) = delete;
 
 protected:
-    MonitorWorkerSimple(const std::string& name, const std::string& module)
+    SimpleMonitor(const std::string& name, const std::string& module)
         : Monitor(name, module)
     {
     }
@@ -903,9 +903,6 @@ protected:
      */
     virtual void post_tick();
 
-    MonitorServer* m_master {nullptr};      /**< Master server */
-
-protected:
     /**
      * A derived class overriding this function should first call this base version.
      */
@@ -915,6 +912,8 @@ protected:
      * A derived class overriding this function should last call this base version.
      */
     void post_loop() override;
+
+    MonitorServer* m_master {nullptr};      /**< Master server */
 
 private:
     /**

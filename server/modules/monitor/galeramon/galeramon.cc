@@ -95,7 +95,7 @@ bool GaleraMonitor::Config::post_configure(const std::map<std::string, mxs::Conf
 }
 
 GaleraMonitor::GaleraMonitor(const std::string& name, const std::string& module)
-    : MonitorWorkerSimple(name, module)
+    : SimpleMonitor(name, module)
     , m_config(name, this)
     , m_log_no_members(false)
     , m_cluster_size(0)

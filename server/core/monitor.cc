@@ -2185,27 +2185,27 @@ void Monitor::flush_server_status()
     }
 }
 
-void MonitorWorkerSimple::pre_loop()
+void SimpleMonitor::pre_loop()
 {
     m_master = nullptr;
     read_journal();
     // Add another overridable function for derived classes (e.g. pre_loop_monsimple) if required.
 }
 
-void MonitorWorkerSimple::post_loop()
+void SimpleMonitor::post_loop()
 {
     write_journal();
 }
 
-void MonitorWorkerSimple::pre_tick()
+void SimpleMonitor::pre_tick()
 {
 }
 
-void MonitorWorkerSimple::post_tick()
+void SimpleMonitor::post_tick()
 {
 }
 
-void MonitorWorkerSimple::tick()
+void SimpleMonitor::tick()
 {
     check_maintenance_requests();
     pre_tick();
