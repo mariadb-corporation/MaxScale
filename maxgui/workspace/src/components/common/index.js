@@ -16,8 +16,7 @@ import MxsDataTable from '@share/components/common/MxsDataTable'
 import MxsDlgs from '@share/components/common/MxsDlgs'
 import MxsLineChart from '@share/components/common/MxsCharts/MxsLineChart.vue'
 import MxsScatterChart from '@share/components/common/MxsCharts/MxsScatterChart.vue'
-import MxsVertBarChart from '@share/components/common/MxsCharts/MxsVertBarChart.vue'
-import MxsHorizBarChart from '@share/components/common/MxsCharts/MxsHorizBarChart.vue'
+import MxsBarChart from '@share/components/common/MxsCharts/MxsBarChart.vue'
 import MxsCollapse from '@share/components/common/MxsCollapse'
 import MxsFilterList from '@share/components/common/MxsFilterList'
 import MxsSelect from '@share/components/common/MxsSelect'
@@ -35,8 +34,7 @@ export default {
     ...MxsDlgs,
     'mxs-line-chart': MxsLineChart,
     'mxs-scatter-chart': MxsScatterChart,
-    'mxs-vert-bar-chart': MxsVertBarChart,
-    'mxs-horiz-bar-chart': MxsHorizBarChart,
+    'mxs-bar-chart': MxsBarChart,
     'mxs-collapse': MxsCollapse,
     'mxs-filter-list': MxsFilterList,
     'mxs-select': MxsSelect,

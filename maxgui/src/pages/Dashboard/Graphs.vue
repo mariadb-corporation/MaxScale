@@ -6,16 +6,14 @@
                     {{ $mxs_tc('sessions', 2) }}
                 </template>
                 <template v-slot:card-body>
-                    <v-sheet width="100%">
-                        <mxs-line-chart-stream
-                            v-if="sessions_datasets.length"
-                            ref="sessionsChart"
-                            class="relative"
-                            :height="70"
-                            :chart-data="{ datasets: sessions_datasets }"
-                            :refreshRate="refreshRate"
-                        />
-                    </v-sheet>
+                    <mxs-line-chart-stream
+                        v-if="sessions_datasets.length"
+                        ref="sessionsChart"
+                        class="relative pl-1"
+                        :height="64"
+                        :chartData="{ datasets: sessions_datasets }"
+                        :refreshRate="refreshRate"
+                    />
                 </template>
             </outlined-overview-card>
         </v-col>
@@ -25,18 +23,14 @@
                     {{ $mxs_tc('connections', 2) }}
                 </template>
                 <template v-if="all_servers.length" v-slot:card-body>
-                    <v-sheet width="100%">
-                        <mxs-line-chart-stream
-                            v-if="server_connections_datasets.length"
-                            ref="connectionsChart"
-                            class="relative"
-                            :height="70"
-                            :chart-data="{
-                                datasets: server_connections_datasets,
-                            }"
-                            :refreshRate="refreshRate"
-                        />
-                    </v-sheet>
+                    <mxs-line-chart-stream
+                        v-if="server_connections_datasets.length"
+                        ref="connsChart"
+                        class="relative pl-1"
+                        :height="64"
+                        :chartData="{ datasets: server_connections_datasets }"
+                        :refreshRate="refreshRate"
+                    />
                 </template>
             </outlined-overview-card>
         </v-col>
@@ -46,19 +40,15 @@
                     {{ $mxs_t('load') }}
                 </template>
                 <template v-slot:card-body>
-                    <v-sheet width="100%">
-                        <mxs-line-chart-stream
-                            v-if="threads_datasets.length"
-                            ref="threadsChart"
-                            class="relative"
-                            :height="70"
-                            :chart-data="{
-                                datasets: threads_datasets,
-                            }"
-                            :opts="{ scales: { yAxes: [{ ticks: { max: 100, min: 0 } }] } }"
-                            :refreshRate="refreshRate"
-                        />
-                    </v-sheet>
+                    <mxs-line-chart-stream
+                        v-if="threads_datasets.length"
+                        ref="threadsChart"
+                        class="relative pl-1"
+                        :height="64"
+                        :chartData="{ datasets: threads_datasets }"
+                        :opts="{ scales: { y: { max: 100, min: 0 } } }"
+                        :refreshRate="refreshRate"
+                    />
                 </template>
             </outlined-overview-card>
         </v-col>
@@ -100,11 +90,11 @@ export default {
     },
     methods: {
         update(chart) {
-            chart.$data._chart.update({ preservation: true })
+            chart.update('quiet')
         },
         updateSessionsGraph(chart, timestamp) {
             const self = this
-            chart.chartData.datasets.forEach(function(dataset) {
+            chart.data.datasets.forEach(function(dataset) {
                 dataset.data.push({
                     x: timestamp,
                     y: self.getTotalSessions,
@@ -116,7 +106,7 @@ export default {
             const scope = this
             const { genLineStreamDataset } = this.$helpers
             this.all_servers.forEach((server, i) => {
-                const dataset = chart.chartData.datasets.find(d => d.resourceId === server.id)
+                const dataset = chart.data.datasets.find(d => d.resourceId === server.id)
                 const value = scope.$typy(server, 'attributes.statistics.connections').safeNumber
                 // update existing datasets
                 if (dataset) dataset.data.push({ x: timestamp, y: value })
@@ -127,9 +117,9 @@ export default {
                         The value of each item should be 0 because
                         at previous timestamp, new servers aren't created yet.
                     */
-                    let dataOfADataSet = scope.$typy(chart, 'chartData.datasets[0].data').safeArray
+                    let dataOfADataSet = scope.$typy(chart, 'data.datasets[0].data').safeArray
                     dataOfADataSet.forEach(item => (item.y = 0))
-                    chart.chartData.datasets.push({
+                    chart.data.datasets.push({
                         ...genLineStreamDataset({
                             label: `Server ID - ${server.id}`,
                             value,
@@ -144,13 +134,13 @@ export default {
         },
         updateThreadsGraph(chart, timestamp) {
             const { genLineStreamDataset } = this.$helpers
-            const datasets = chart.chartData.datasets
+            const datasets = chart.data.datasets
             this.thread_stats.forEach((thread, i) => {
                 const {
                     attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
                 } = thread
 
-                if (chart.chartData.datasets[i]) {
+                if (chart.data.datasets[i]) {
                     datasets[i].data.push({
                         x: timestamp,
                         y: last_second,
@@ -172,11 +162,14 @@ export default {
          */
         async updateChart() {
             const timestamp = Date.now()
-            const { sessionsChart, connectionsChart, threadsChart } = this.$refs
-            if (sessionsChart && connectionsChart && threadsChart) {
+            const sessionsChart = this.$typy(this.$refs, 'sessionsChart.chartInstance').safeObject
+            const connsChart = this.$typy(this.$refs, 'connsChart.chartInstance').safeObject
+            const threadsChart = this.$typy(this.$refs, 'threadsChart.chartInstance').safeObject
+
+            if (sessionsChart && connsChart && threadsChart) {
                 await Promise.all([
-                    this.updateConnsGraph(connectionsChart, timestamp),
                     this.updateSessionsGraph(sessionsChart, timestamp),
+                    this.updateConnsGraph(connsChart, timestamp),
                     this.updateThreadsGraph(threadsChart, timestamp),
                 ])
             }

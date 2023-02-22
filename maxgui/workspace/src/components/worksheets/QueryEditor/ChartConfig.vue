@@ -179,6 +179,10 @@ export default {
             const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.chartTypes
             return [LINE, SCATTER, BAR_VERT, BAR_HORIZ].includes(this.chartOpt.type)
         },
+        areNumericalAxes() {
+            const { LINEAR } = this.axisTypes
+            return this.axesType.x === LINEAR && this.axesType.y === LINEAR
+        },
     },
     watch: {
         'chartOpt.type'() {
@@ -255,9 +259,9 @@ export default {
                     {
                         dataset = {
                             ...dataset,
+                            fill: true,
                             backgroundColor: backgroundColor,
                             borderColor: lineColor,
-                            lineTension: 0,
                             borderWidth: 1,
                             pointBorderColor: 'transparent',
                             pointBackgroundColor: 'transparent',
@@ -270,6 +274,7 @@ export default {
                     dataset = {
                         ...dataset,
                         borderWidth: 1,
+                        fill: true,
                         backgroundColor: backgroundColor,
                         borderColor: lineColor,
                         pointHoverBackgroundColor: lineColor,
@@ -295,8 +300,7 @@ export default {
                     break
                 }
             }
-
-            if (this.showTrendline && this.supportTrendLine)
+            if (this.areNumericalAxes && this.showTrendline && this.supportTrendLine)
                 dataset.trendlineLinear = {
                     style: '#2d9cdb',
                     lineStyle: 'solid',
@@ -304,28 +308,26 @@ export default {
                 }
             return dataset
         },
-
         /** This mutates sorting chart data for LINEAR or TIME axis
-         * @param {Object} data - ChartData object
-         * @param {String} axisId - axis id: x or y
-         * @param {String} axisType - LINEAR or TIME axis
+         * @param {Object} dataRows - Data rows
          */
-        sortingChartData({ data, axisId, axisType }) {
+        sortLinearOrTimeData(dataRows) {
+            const { BAR_HORIZ } = this.chartTypes
+            let axisId = 'y'
+            // For vertical graphs, sort only the y axis, but for horizontal, sort the x axis
+            if (this.chartOpt.type === BAR_HORIZ) axisId = 'x'
+            const axisType = this.axesType[axisId]
             const { LINEAR, TIME } = this.axisTypes
-            switch (axisType) {
-                case LINEAR:
-                    data.xLabels.sort((a, b) => a - b)
-                    data.datasets[0].data.sort((a, b) => a[axisId] - b[axisId])
-                    break
-                case TIME:
-                    data.xLabels.sort((a, b) => this.$moment(a) - this.$moment(b))
-                    data.datasets[0].data.sort(
-                        (a, b) => this.$moment(a[axisId]) - this.$moment(b[axisId])
-                    )
-                    break
+            const scaleLabels = this.scaleLabels
+            if (axisType === LINEAR || axisType === TIME) {
+                dataRows.sort((a, b) => {
+                    const valueA = a[scaleLabels[axisId]]
+                    const valueB = b[scaleLabels[axisId]]
+                    if (axisType === this.axisTypes.LINEAR) return valueA - valueB
+                    return this.$moment(valueA) - this.$moment(valueB)
+                })
             }
         },
-
         genChartData() {
             let axesType = this.axesType,
                 scaleLabels = this.scaleLabels,
@@ -340,7 +342,7 @@ export default {
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
                 })
-
+                this.sortLinearOrTimeData(dataRows)
                 for (const row of dataRows) {
                     const xAxisVal = row[scaleLabels.x]
                     const yAxisVal = row[scaleLabels.y]
@@ -358,20 +360,6 @@ export default {
 
                 const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
                 data.datasets = [dataset]
-                // handle sorting chart data for LINEAR or TIME axis
-                const { BAR_HORIZ } = this.chartTypes
-                let axisIdToBeSorted = 'x'
-                // For vertical graphs, sort only the X axis, but for horizontal, sort the Y axis
-                switch (this.chartOpt.type) {
-                    case BAR_HORIZ:
-                        axisIdToBeSorted = 'y'
-                        break
-                }
-                this.sortingChartData({
-                    data,
-                    axisId: axisIdToBeSorted,
-                    axisType: axesType[axisIdToBeSorted],
-                })
             }
             this.chartOpt = { ...this.chartOpt, data, scaleLabels, axesType }
         },

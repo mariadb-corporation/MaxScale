@@ -1,3 +1,13 @@
+<template>
+    <line-chart
+        ref="wrapper"
+        v-bind="{ ...$attrs }"
+        :style="{ width: '100%' }"
+        :chartOptions="chartOptions"
+        v-on="$listeners"
+    />
+</template>
+
 <script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
@@ -12,16 +22,20 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import { Line } from 'vue-chartjs'
+import Chart from 'chart.js/auto'
+import { Line } from 'vue-chartjs/legacy'
+import ChartStreaming from 'chartjs-plugin-streaming'
 import base from '@share/components/common/MxsCharts/base.js'
-import 'chartjs-plugin-streaming'
 import { streamTooltip } from '@share/components/common/MxsCharts/customTooltips'
+
+Chart.register(ChartStreaming)
+
 export default {
-    extends: Line,
+    components: { 'line-chart': Line },
     mixins: [base],
+    inheritAttrs: false,
     props: {
-        refreshRate: { type: Number, required: true },
+        refreshRate: { type: Number, default: -1 },
     },
     data() {
         return {
@@ -29,64 +43,43 @@ export default {
         }
     },
     computed: {
-        baseOpts() {
+        chartOptions() {
             const scope = this
-            return {
-                showLines: true,
-                layout: {
-                    padding: {
-                        left: 2,
-                        bottom: 10,
-                        right: 0,
-                        top: 15,
-                    },
-                },
-                legend: { display: false },
-                responsive: true,
-                maintainAspectRatio: false,
+            const options = {
+                showLine: true,
                 elements: { point: { radius: 0 } },
-                hover: { mode: 'index', intersect: false },
-                tooltips: {
-                    mode: 'index',
-                    intersect: false,
-                    enabled: false,
-                    custom: function(tooltipModel) {
-                        const chartScope = this
-                        const position = chartScope._chart.canvas.getBoundingClientRect()
-                        /** TODO: provide alignTooltipToLeft check to auto align tooltip position
-                         *  For now, it is aligned to center
-                         */
-                        streamTooltip({
-                            tooltipModel,
-                            tooltipId: scope.uniqueTooltipId,
-                            position,
-                        })
-                    },
-                },
+                interaction: { mode: 'index', intersect: false },
                 scales: {
-                    xAxes: [{ type: 'realtime', ticks: { display: false } }],
-                    yAxes: [
-                        {
-                            gridLines: { zeroLineColor: 'transparent' },
-                            ticks: { beginAtZero: true, maxTicksLimit: 3 },
-                        },
-                    ],
+                    x: {
+                        type: 'realtime',
+                        ticks: { display: false },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { zeroLineColor: 'transparent' },
+                        ticks: { maxTicksLimit: 3 },
+                    },
                 },
                 plugins: {
                     streaming: {
                         duration: this.refreshRate * 2000,
                         delay: (this.refreshRate + 2) * 1000,
                     },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        enabled: false,
+                        external: context =>
+                            streamTooltip({ context, tooltipId: scope.uniqueTooltipId }),
+                    },
                 },
             }
+            return this.$helpers.lodash.merge(options, this.baseOpts)
         },
     },
     watch: {
         refreshRate(v, oV) {
-            if (!this.$helpers.lodash.isEqual(v, oV)) {
-                this.$data._chart.destroy()
-                this.renderChart(this.chartData, this.options)
-            }
+            if (!this.$helpers.lodash.isEqual(v, oV)) this.chartInstance.update('quiet')
         },
     },
     beforeDestroy() {

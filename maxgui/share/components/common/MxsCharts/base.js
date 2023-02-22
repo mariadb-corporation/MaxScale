@@ -11,37 +11,29 @@
  * Public License.
  */
 
-import { mixins } from 'vue-chartjs'
-
 export default {
-    mixins: [mixins.reactiveProp],
-    props: { opts: { type: Object } },
+    props: { opts: { type: Object, default: () => {} } },
     computed: {
         baseOpts() {
-            return {
-                plugins: {
-                    streaming: false,
+            return this.$helpers.lodash.merge(
+                {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                 },
-                scales: {
-                    xAxes: [{ gridLines: { drawBorder: true } }],
-                    yAxes: [{ gridLines: { drawBorder: false } }],
-                },
-            }
+                this.opts
+            )
         },
-        options() {
-            return this.$helpers.lodash.merge(this.baseOpts, this.opts)
+        chartInstance() {
+            return this.$typy(this.$refs, 'wrapper.$data._chart').safeObject
         },
     },
     watch: {
         opts: {
             deep: true,
             handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV))
-                    this.$data._chart.update({ preservation: true })
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.chartInstance.update('quiet')
             },
         },
-    },
-    mounted() {
-        this.renderChart(this.chartData, this.options)
     },
 }

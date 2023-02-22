@@ -1,3 +1,14 @@
+<template>
+    <line-chart
+        ref="wrapper"
+        v-bind="{ ...$attrs }"
+        :style="{ width: '100%' }"
+        :chartOptions="chartOptions"
+        :plugins="plugins"
+        v-on="$listeners"
+    />
+</template>
+
 <script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
@@ -12,31 +23,29 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Line } from 'vue-chartjs'
+import { Line } from 'vue-chartjs/legacy'
 import vertCrossHair from '@share/components/common/MxsCharts/vertCrossHair.js'
 import base from '@share/components/common/MxsCharts/base.js'
+
 export default {
-    extends: Line,
+    components: { 'line-chart': Line },
     mixins: [base],
+    inheritAttrs: false,
     props: {
         hasVertCrossHair: { type: Boolean, default: false },
     },
     computed: {
-        baseOpts() {
-            return {
-                plugins: {
-                    streaming: false,
-                },
-                scales: {
-                    xAxes: [{ ticks: { beginAtZero: true } }],
-                    yAxes: [{ ticks: { beginAtZero: true } }],
-                },
+        chartOptions() {
+            const options = {
+                scales: { x: { beginAtZero: true }, y: { beginAtZero: true } },
             }
+            return this.$helpers.lodash.merge(options, this.baseOpts)
         },
-    },
-    mounted() {
-        if (this.hasVertCrossHair)
-            this.addPlugin({ id: 'vert-cross-hair', afterDatasetsDraw: vertCrossHair })
+        plugins() {
+            if (this.hasVertCrossHair)
+                return [{ id: 'vert-cross-hair', afterDatasetsDraw: vertCrossHair }]
+            return []
+        },
     },
 }
 </script>

@@ -372,10 +372,10 @@ export function genLineStreamDataset({ label, value, colorIndex, timestamp, id, 
         id: label,
         type: 'line',
         // background of the line
+        fill: true,
         backgroundColor: backgroundColor,
         borderColor: lineColor,
         borderWidth: 1,
-        lineTension: 0,
         data: [{ x: time, y: value }],
     }
     if (id) dataset.resourceId = id

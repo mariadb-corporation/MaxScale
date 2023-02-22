@@ -1,3 +1,13 @@
+<template>
+    <scatter-chart
+        ref="wrapper"
+        v-bind="{ ...$attrs }"
+        :style="{ width: '100%' }"
+        :chartOptions="chartOptions"
+        v-on="$listeners"
+    />
+</template>
+
 <script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
@@ -12,25 +22,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Scatter } from 'vue-chartjs'
+import { Scatter } from 'vue-chartjs/legacy'
 import base from '@share/components/common/MxsCharts/base.js'
+
 export default {
-    extends: Scatter,
+    components: { 'scatter-chart': Scatter },
     mixins: [base],
+    inheritAttrs: false,
     computed: {
-        baseOpts() {
-            return {
+        chartOptions() {
+            const options = {
                 scales: {
-                    xAxes: [
-                        {
-                            type: 'linear',
-                            position: 'bottom',
-                            ticks: { beginAtZero: true },
-                        },
-                    ],
-                    yAxes: [{ ticks: { beginAtZero: true } }],
+                    x: { type: 'linear', position: 'bottom', beginAtZero: true },
+                    y: { beginAtZero: true },
                 },
             }
+            return this.$helpers.lodash.merge(options, this.baseOpts)
         },
     },
 }

@@ -15,8 +15,7 @@ import './config'
 import MxsLineChartStream from './MxsLineChartStream.vue'
 import MxsLineChart from './MxsLineChart.vue'
 import MxsScatterChart from './MxsScatterChart.vue'
-import MxsVertBarChart from './MxsVertBarChart.vue'
-import MxsHorizBarChart from './MxsHorizBarChart.vue'
+import MxsBarChart from './MxsBarChart.vue'
 import MxsTreeGraph from './MxsTreeGraph.vue'
 import MxsTreeGraphNode from './MxsTreeGraphNode.vue'
 import MxsDagGraph from './MxsDagGraph.vue'
@@ -25,8 +24,7 @@ export default {
     'mxs-line-chart-stream': MxsLineChartStream,
     'mxs-line-chart': MxsLineChart,
     'mxs-scatter-chart': MxsScatterChart,
-    'mxs-vert-bar-chart': MxsVertBarChart,
-    'mxs-horiz-bar-chart': MxsHorizBarChart,
+    'mxs-bar-chart': MxsBarChart,
     'mxs-tree-graph': MxsTreeGraph, // d3 graph
     'mxs-tree-graph-node': MxsTreeGraphNode,
     'mxs-dag-graph': MxsDagGraph,

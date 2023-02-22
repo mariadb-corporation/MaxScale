@@ -52,15 +52,8 @@
                 :chartData="chartData"
                 :opts="chartOptions"
             />
-            <mxs-vert-bar-chart
-                v-else-if="type === chartTypes.BAR_VERT"
-                id="query-chart"
-                :style="chartStyle"
-                :chartData="chartData"
-                :opts="chartOptions"
-            />
-            <mxs-horiz-bar-chart
-                v-else-if="type === chartTypes.BAR_HORIZ"
+            <mxs-bar-chart
+                v-else-if="type === chartTypes.BAR_VERT || type === chartTypes.BAR_HORIZ"
                 id="query-chart"
                 :style="chartStyle"
                 :chartData="chartData"
@@ -152,8 +145,8 @@ export default {
             )
         },
         chartOptions() {
-            const componentScope = this
-            return {
+            const scope = this
+            let options = {
                 layout: {
                     padding: {
                         left: 12,
@@ -162,78 +155,63 @@ export default {
                         top: 24,
                     },
                 },
-                responsive: true,
-                maintainAspectRatio: false,
-                hover: {
-                    mode: 'nearest',
-                    onHover: (e, el) => {
-                        e.target.style.cursor = el[0] ? 'pointer' : 'default'
-                    },
-                    animationDuration: 0,
-                    intersect: false,
+                animation: { active: { duration: 0 } },
+                onHover: (e, el) => {
+                    e.native.target.style.cursor = el[0] ? 'pointer' : 'default'
                 },
-                tooltips: {
-                    mode: 'nearest',
-                    enabled: false,
-                    intersect: false,
-                    position: 'cursor',
-                    custom: function(tooltipModel) {
-                        const chartScope = this
-                        const position = chartScope._chart.canvas.getBoundingClientRect()
-                        objectTooltip({
-                            tooltipModel,
-                            tooltipId: componentScope.uniqueTooltipId,
-                            position,
-                            dataPoint: componentScope.dataPoint,
-                            alignTooltipToLeft:
-                                tooltipModel.caretX >=
-                                componentScope.$refs.chartWrapper.clientWidth / 2,
-                        })
-                    },
-                    callbacks: {
-                        label(tooltipItem, data) {
-                            componentScope.dataPoint =
-                                data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
-                        },
-                    },
-                },
-                legend: {
-                    display: false,
-                },
+                interaction: { mode: 'nearest', intersect: false },
                 scales: {
-                    xAxes: [
-                        {
-                            type: this.axesType.x,
-                            scaleLabel: {
-                                display: true,
-                                labelString: this.scaleLabels.x,
-                                fontSize: 14,
-                                lineHeight: 1,
-                                padding: {
-                                    top: 16,
-                                },
-                                fontColor: '#424f62',
-                            },
-                            ticks: this.getAxisTicks({ axisId: 'x', axisType: this.axesType.x }),
+                    x: {
+                        type: this.axesType.x,
+                        labels: this.$typy(this.chartData, 'xLabels').safeArray,
+                        title: {
+                            display: true,
+                            text: this.scaleLabels.x,
+                            font: { size: 14 },
+                            padding: { top: 16 },
+                            color: '#424f62',
                         },
-                    ],
-                    yAxes: [
-                        {
-                            type: this.axesType.y,
-                            scaleLabel: {
-                                display: true,
-                                labelString: this.scaleLabels.y,
-                                fontSize: 14,
-                                padding: {
-                                    bottom: 16,
-                                },
-                                fontColor: '#424f62',
-                            },
-                            ticks: this.getAxisTicks({ axisId: 'y', axisType: this.axesType.y }),
+                        beginAtZero: true,
+                        ticks: this.getAxisTicks({ axisId: 'x', axisType: this.axesType.x }),
+                    },
+                    y: {
+                        type: this.axesType.y,
+                        labels: this.$typy(this.chartData, 'yLabels').safeArray,
+                        title: {
+                            display: true,
+                            text: this.scaleLabels.y,
+                            font: { size: 14 },
+                            padding: { bottom: 16 },
+                            color: '#424f62',
                         },
-                    ],
+                        beginAtZero: true,
+                        ticks: this.getAxisTicks({ axisId: 'y', axisType: this.axesType.y }),
+                    },
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'nearest',
+                        enabled: false,
+                        intersect: false,
+                        callbacks: {
+                            label(context) {
+                                scope.dataPoint = context.dataset.data[context.dataIndex]
+                            },
+                        },
+                        external: context =>
+                            objectTooltip({
+                                context,
+                                tooltipId: scope.uniqueTooltipId,
+                                dataPoint: scope.dataPoint,
+                                alignTooltipToLeft:
+                                    context.tooltip.caretX >=
+                                    scope.$refs.chartWrapper.clientWidth / 2,
+                            }),
+                    },
                 },
             }
+            if (this.type === this.chartTypes.BAR_HORIZ) options.indexAxis = 'y'
+            return options
         },
     },
     watch: {
@@ -266,24 +244,22 @@ export default {
          * @returns {Object} - ticks object
          */
         getAxisTicks({ axisId, axisType }) {
+            const scope = this
             const { CATEGORY } = this.axisTypes
-            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.chartTypes
             const autoSkip = this.autoSkipTick(this.axesType[axisType])
-            let ticks = { autoSkip, callback: this.truncateLabel, beginAtZero: true }
-            if (autoSkip) {
-                ticks.autoSkipPadding = 15
+            let ticks = {
+                autoSkip,
+                callback: function(value) {
+                    const v = this.getLabelForValue(value)
+                    if (scope.$typy(v).isString && v.length > 10) return `${v.substr(0, 10)}...`
+                    return v
+                },
             }
-            switch (this.type) {
-                case LINE:
-                case SCATTER:
-                case BAR_VERT:
-                case BAR_HORIZ:
-                    // only rotate tick label for the X axis and CATEGORY axis type
-                    if (axisId === 'x' && axisType === CATEGORY) {
-                        ticks.maxRotation = this.autoSkipTick(this.axesType[axisType]) ? 0 : 90
-                        ticks.minRotation = this.autoSkipTick(this.axesType[axisType]) ? 0 : 90
-                    }
-                    break
+            if (autoSkip) ticks.autoSkipPadding = 15
+            // only rotate tick label for the X axis and CATEGORY axis type
+            if (axisId === 'x' && axisType === CATEGORY) {
+                ticks.maxRotation = 90
+                ticks.minRotation = 90
             }
             return ticks
         },
@@ -291,11 +267,7 @@ export default {
             let tooltipEl = document.getElementById(this.uniqueTooltipId)
             if (tooltipEl) tooltipEl.remove()
         },
-        truncateLabel(v) {
-            const toStr = `${v}`
-            if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
-            return v
-        },
+
         getDefFileName() {
             return `MaxScale ${this.type} Chart - ${this.$helpers.dateFormat({
                 value: new Date(),

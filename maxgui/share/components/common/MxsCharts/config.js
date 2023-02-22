@@ -11,21 +11,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Chart from 'chart.js'
-import 'chartjs-plugin-trendline'
-Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
-Chart.defaults.global.defaultFontColor = '#424F62'
-Chart.defaults.global.defaultFontSize = 10
+import Chart from 'chart.js/auto'
+import 'chartjs-adapter-luxon'
+import chartTrendline from 'chartjs-plugin-trendline'
 
-Chart.defaults.scale.gridLines.lineWidth = 0.6
-Chart.defaults.scale.gridLines.color = 'rgba(234, 234, 234, 1)'
-Chart.defaults.scale.gridLines.drawTicks = false
-Chart.defaults.scale.gridLines.drawBorder = true
-Chart.defaults.scale.gridLines.zeroLineColor = 'rgba(234, 234, 234, 1)'
-Chart.defaults.scale.ticks.padding = 12
+Chart.register(chartTrendline)
 
-/**
- * show tooltip at cursor position.
- * tooltips.position = 'cursor'
- */
-Chart.Tooltip.positioners.cursor = (_, coordinates) => coordinates
+Chart.defaults.font.family = "'azo-sans-web', adrianna, serif"
+Chart.defaults.color = '#424F62'
+Chart.defaults.font.size = 10
+Chart.defaults.scale.grid.lineWidth = 0.6
+Chart.defaults.scale.grid.color = 'rgba(234, 234, 234, 1)'
+Chart.defaults.scale.grid.drawTicks = false
+Chart.defaults.scale.grid.drawBorder = false

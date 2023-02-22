@@ -46,6 +46,7 @@ const external = [
     'localforage',
     'lodash',
     'moment',
+    'luxon',
     'sql-formatter',
     'sql-formatter/lib/core/Formatter',
     'sql-formatter/lib/core/Tokenizer',

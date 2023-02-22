@@ -466,7 +466,6 @@ export const dummy_service_connection_datasets = [
         backgroundColor: 'rgba(171,199,74,0.1)',
         borderColor: 'rgba(171,199,74,1)',
         borderWidth: 1,
-        lineTension: 0,
         data: [
             {
                 x: 1598516574793,

@@ -436,7 +436,6 @@ describe('maxgui helpers unit tests', () => {
                 'backgroundColor',
                 'borderColor',
                 'borderWidth',
-                'lineTension',
                 'data'
             )
         })
