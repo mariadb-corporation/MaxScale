@@ -510,7 +510,7 @@ public:
     struct
     {
         mxs::Routable* up;          /*< Upward component to receive buffer. */
-        GWBUF*         buffer;      /*< Buffer to deliver to up. */
+        GWBUF          buffer;      /*< Buffer to deliver to up. */
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
 
@@ -541,7 +541,7 @@ private:
  * @param up       The component that should receive the response.
  * @param buffer   The response to deliver.
  */
-void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF* buffer);
+void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffer);
 
 
 const char* session_state_to_string(MXS_SESSION::State);

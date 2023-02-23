@@ -162,7 +162,7 @@ protected:
      * @param pResponse  The response to be sent to the client.
      * @param pTarget    The source of the response
      */
-    void set_response(GWBUF* pResponse) const;
+    void set_response(GWBUF&& response) const;
 
     /**
      * Returns a parser appropriate for the protocol of this session's client

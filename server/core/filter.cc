@@ -328,9 +328,9 @@ json_t* FilterSession::diagnostics() const
     return NULL;
 }
 
-void FilterSession::set_response(GWBUF* pResponse) const
+void FilterSession::set_response(GWBUF&& response) const
 {
-    session_set_response(m_pSession, m_up, pResponse);
+    session_set_response(m_pSession, m_up, std::move(response));
 }
 }
 

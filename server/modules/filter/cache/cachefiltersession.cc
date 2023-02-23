@@ -1221,7 +1221,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
             {
                 // All set, arrange for the response to be delivered when
                 // we return from the routeQuery() processing.
-                set_response(pResponse);
+                set_response(mxs::gwbufptr_to_gwbuf(pResponse));
                 ready_for_another_call();
             }
         }

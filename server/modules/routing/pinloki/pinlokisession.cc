@@ -192,7 +192,7 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
 
     if (response)
     {
-        set_response(response);
+        set_response(mxs::gwbufptr_to_gwbuf(response));
         rval = 1;
     }
 

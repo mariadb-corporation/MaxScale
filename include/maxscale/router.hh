@@ -119,7 +119,7 @@ protected:
      *
      * @param pResponse  The response to be sent to the client.
      */
-    void set_response(GWBUF* pResponse) const;
+    void set_response(GWBUF&& response) const;
 
 protected:
     MXS_SESSION*   m_pSession; /*< The MXS_SESSION this router session is associated with. */

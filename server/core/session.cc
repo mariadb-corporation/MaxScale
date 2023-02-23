@@ -323,15 +323,15 @@ size_t Session::get_memory_statistics(size_t* connection_buffers_size,
 
 void Session::deliver_response()
 {
-    mxb_assert(response.buffer);
+    mxb_assert(!response.buffer.empty());
 
     // The reply will always be complete
     mxs::ReplyRoute route;
     mxs::Reply reply;
-    response.up->clientReply(response.buffer, route, reply);
+    response.up->clientReply(mxs::gwbuf_to_gwbufptr(std::move(response.buffer)), route, reply);
 
     response.up = NULL;
-    response.buffer = NULL;
+    response.buffer.clear();
 
     // If some filter short-circuits the routing, then there will
     // be no response from a server and we need to ensure that
@@ -339,7 +339,7 @@ void Session::deliver_response()
     book_last_as_complete();
 
     mxb_assert(!response.up);
-    mxb_assert(!response.buffer);
+    mxb_assert(response.buffer.empty());
 }
 
 static bool ses_find_id(DCB* dcb, void* data)
@@ -596,16 +596,16 @@ MXS_SESSION::Scope::~Scope()
     this_thread.session = m_prev;
 }
 
-void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF* buffer)
+void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffer)
 {
     // Valid arguments.
-    mxb_assert(session && up && buffer);
+    mxb_assert(session && up);
 
     // Valid state. Only one filter may terminate the execution and exactly once.
-    mxb_assert(!session->response.up && !session->response.buffer);
+    mxb_assert(!session->response.up && session->response.buffer.empty());
 
     session->response.up = up;
-    session->response.buffer = buffer;
+    session->response.buffer = std::move(buffer);
 }
 
 void session_set_retain_last_statements(uint32_t n)
@@ -1284,7 +1284,7 @@ bool Session::routeQuery(GWBUF* buffer)
 
     auto rv = m_head->routeQuery(buffer);
 
-    if (response.buffer)
+    if (!response.buffer.empty())
     {
         // Something interrupted the routing and queued a response
         deliver_response();

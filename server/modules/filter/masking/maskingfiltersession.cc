@@ -37,12 +37,12 @@ using std::stringstream;
 namespace
 {
 
-GWBUF* create_error_response(const char* zMessage)
+GWBUF create_error_response(const char* zMessage)
 {
-    return mariadb::create_error_packet_ptr(1, 1141, "HY000", zMessage);
+    return mariadb::create_error_packet(1, 1141, "HY000", zMessage);
 }
 
-GWBUF* create_parse_error_response()
+GWBUF create_parse_error_response()
 {
     const char* zMessage =
         "The statement could not be fully parsed and will hence be "

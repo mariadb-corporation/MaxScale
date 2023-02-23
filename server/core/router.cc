@@ -38,8 +38,8 @@ bool RouterSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpo
     return false;
 }
 
-void RouterSession::set_response(GWBUF* pResponse) const
+void RouterSession::set_response(GWBUF&& response) const
 {
-    session_set_response(m_pSession, m_pUp, pResponse);
+    session_set_response(m_pSession, m_pUp, std::move(response));
 }
 }

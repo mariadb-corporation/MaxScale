@@ -887,7 +887,7 @@ bool SchemaRouterSession::send_shards()
 
 void SchemaRouterSession::write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg)
 {
-    set_response(mariadb::create_error_packet_ptr(1, errnum, mysqlstate, errmsg));
+    set_response(mariadb::create_error_packet(1, errnum, mysqlstate, errmsg));
 }
 
 /**

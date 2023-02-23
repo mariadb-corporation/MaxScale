@@ -282,8 +282,7 @@ bool LuaFilterSession::routeQuery(GWBUF* queue)
     else
     {
         gwbuf_free(queue);
-        GWBUF* err = mariadb::create_error_packet_ptr(1, 1045, "28000", "Access denied.");
-        FilterSession::set_response(err);
+        FilterSession::set_response(mariadb::create_error_packet(1, 1045, "28000", "Access denied."));
     }
 
     return ok;

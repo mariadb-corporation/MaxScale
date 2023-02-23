@@ -236,9 +236,10 @@ void RWSplitSession::send_readonly_error()
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)
 {
+    bool unsupported = false;
     const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
-    GWBUF* err = nullptr;
+    GWBUF err;
 
     if (mxs_mysql_is_ps_command(info.command()) && info.stmt_id() == 0)
     {
@@ -248,13 +249,13 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
             std::stringstream ss;
             ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
                << ") for " << STRPACKETTYPE(info.command()) << " given to MaxScale";
-            err = mariadb::create_error_packet_ptr(1, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+            err = mariadb::create_error_packet(1, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
         }
         else
         {
             // The command doesn't expect a response which means we mustn't send one. Sending an unexpected
             // error will cause the client to go out of sync.
-            return true;
+            unsupported = true;
         }
     }
     else if (TARGET_IS_ALL(route_target) && (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target)))
@@ -264,16 +265,17 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
                   "supported with `use_sql_variables_in=all`.",
                   STRPACKETTYPE(info.command()), querybuf->get_sql().c_str());
 
-        err = mariadb::create_error_packet_ptr(1, 1064, "42000", "Routing query to backend failed. "
-                                                                 "See the error log for further details.");
+        err = mariadb::create_error_packet(1, 1064, "42000", "Routing query to backend failed. "
+                                                             "See the error log for further details.");
     }
 
-    if (err)
+    if (!err.empty())
     {
-        set_response(err);
+        set_response(std::move(err));
+        unsupported = true;
     }
 
-    return err != nullptr;
+    return unsupported;
 }
 
 bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
@@ -287,7 +289,7 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
         if (it != m_ps_cache.end())
         {
             // Cannot reuse the GWBUF* stored in the ps cache.
-            set_response(gwbuf_clone_shallow(it->second.get()));
+            set_response(it->second.get()->shallow_clone());
             return true;
         }
     }
