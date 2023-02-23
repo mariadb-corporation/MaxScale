@@ -62,6 +62,7 @@ public:
 
     ~MariaRplEvent();
 private:
+    size_t raw_data_offset() const;
     st_mariadb_rpl_event* m_pEvent = nullptr;
     st_mariadb_rpl*       m_pRpl_handle = nullptr;
 };

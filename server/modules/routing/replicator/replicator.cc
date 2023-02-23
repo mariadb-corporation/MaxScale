@@ -210,7 +210,8 @@ bool Replicator::Imp::connect()
             gtid_start_pos,
             "SET @slave_gtid_strict_mode=1",
             "SET @slave_gtid_ignore_duplicates=1",
-            "SET NAMES latin1"
+            "SET NAMES latin1",
+            "SET @rpl_semi_sync_slave=@@rpl_semi_sync_master_enabled",
         };
 
         if (!m_sql->query(queries))
@@ -528,7 +529,14 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
 
     bool rval = true;
     REP_HEADER hdr;
-    uint8_t* ptr = m_sql->event_data() + 20;
+    size_t ev_offset = 20;
+
+    if (event->is_semi_sync)
+    {
+        ev_offset += 2;
+    }
+
+    uint8_t* ptr = event->raw_data + ev_offset;
 
     MARIADB_RPL_EVENT& ev = *event;
     hdr.event_size = ev.event_length + (m_rpl.have_checksums() ? 4 : 0);
