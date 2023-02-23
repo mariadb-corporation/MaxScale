@@ -14,8 +14,9 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 
 struct KillInfo;
@@ -56,6 +57,9 @@ public:
     size_t  sizeof_buffers() const override;
     bool    safe_to_restart() const override;
     void    kill() override;
+
+    using mxs::ClientConnection::parser;
+    mxs::Parser* parser() override;
 
     std::string current_db() const override;
 
@@ -350,4 +354,6 @@ private:
 
     bool m_track_pooling_status {false};        /**< Does pooling status need to be tracked? */
     bool m_pooling_permanent_disable {false};   /**< Is pooling disabled permanently for this session? */
+
+    MariaDBParser m_parser;
 };

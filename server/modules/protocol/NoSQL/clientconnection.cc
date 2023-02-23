@@ -281,6 +281,11 @@ size_t ClientConnection::sizeof_buffers() const
     return m_pDcb ? m_pDcb->runtime_size() : 0;
 }
 
+mxs::Parser* ClientConnection::parser()
+{
+    return &m_parser;
+}
+
 void ClientConnection::setup_session(const string& user, const vector<uint8_t>& password)
 {
     auto& auth_data = *m_session_data.auth_data;

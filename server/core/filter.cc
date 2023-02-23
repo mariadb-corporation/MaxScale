@@ -295,6 +295,7 @@ namespace maxscale
 FilterSession::FilterSession(MXS_SESSION* pSession, SERVICE* pService)
     : m_pSession(pSession)
     , m_pService(pService)
+    , m_pParser(m_pSession->client_connection()->parser())
 {
 }
 

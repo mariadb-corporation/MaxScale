@@ -15,6 +15,7 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/protocol2.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include "nosql.hh"
 #include "nosqlconfig.hh"
 #include "nosqlusermanager.hh"
@@ -48,6 +49,9 @@ public:
     {
         return true;
     }
+
+    using mxs::ClientConnection::parser;
+    mxs::Parser* parser() override;
 
     void setup_session(const std::string& user, const std::vector<uint8_t>& password);
     bool start_session();
@@ -86,4 +90,5 @@ private:
     DCB*           m_pDcb = nullptr;
     nosql::NoSQL   m_nosql;
     bool           m_ssl_required;
+    MariaDBParser  m_parser;
 };

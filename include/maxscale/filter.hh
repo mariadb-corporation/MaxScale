@@ -38,6 +38,8 @@ class Configuration;
 namespace maxscale
 {
 
+class Parser;
+
 /**
  * Filter is the base class of all filters.
  */
@@ -162,9 +164,28 @@ protected:
      */
     void set_response(GWBUF* pResponse) const;
 
+    /**
+     * Returns a parser appropriate for the protocol of this session's client
+     * connection. This function must only be called if it is know, due to the
+     * context where it is called, that there will be a parser.
+     *
+     * @return The parser associated with the protocol of this session's client connection.
+     */
+    const Parser& parser() const
+    {
+        return const_cast<FilterSession*>(this)->parser();
+    }
+
+    Parser& parser()
+    {
+        mxb_assert_message(m_pParser, "Protocol of client connection does not have a parser.");
+        return *m_pParser;
+    }
+
 protected:
     MXS_SESSION* m_pSession;/*< The MXS_SESSION this filter session is associated with. */
     SERVICE*     m_pService;/*< The service for which this session was created. */
+    Parser*      m_pParser; /*< The parser suitable the protocol of this filter. */
 
     mxs::Routable* m_down = (mxs::Routable*)BAD_ADDR;   /*< The downstream component. */
     mxs::Routable* m_up = (mxs::Routable*)BAD_ADDR;     /*< The upstream component. */

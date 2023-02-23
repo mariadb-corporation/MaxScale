@@ -23,6 +23,7 @@ namespace maxscale
 //
 RouterSession::RouterSession(MXS_SESSION* pSession)
     : m_pSession(pSession)
+    , m_pParser(m_pSession->client_connection()->parser())
 {
 }
 

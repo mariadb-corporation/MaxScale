@@ -28,6 +28,7 @@ namespace maxscale
 class BackendConnection;
 class ClientConnection;
 class ConfigParameters;
+class Parser;
 class UserAccountManager;
 
 class ProtocolModule
@@ -248,6 +249,22 @@ public:
      */
     virtual void tick(std::chrono::seconds idle)
     {
+    }
+
+    /**
+     * Returns a parser appropriate for the protocol in question, or NULL if
+     * there is not one.
+     *
+     * @return A parser appropriate for the protocol in question, or NULL.
+     */
+    const Parser* parser() const
+    {
+        return const_cast<ClientConnection*>(this)->parser();
+    }
+
+    virtual Parser* parser()
+    {
+        return nullptr;
     }
 };
 

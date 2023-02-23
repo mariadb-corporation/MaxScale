@@ -30,6 +30,7 @@ namespace config
 {
 class Configuration;
 }
+class Parser;
 /**
  * @class RouterSession router.hh <maxscale/router.hh>
  *
@@ -89,6 +90,24 @@ public:
         m_pUp = up;
     }
 
+    /**
+     * Returns a parser appropriate for the protocol of this session's client
+     * connection. This function must only be called if it is know, due to the
+     * context where it is called, that there will be a parser.
+     *
+     * @return The parser associated with the protocol of this session's client connection.
+     */
+    const Parser& parser() const
+    {
+        return const_cast<RouterSession*>(this)->parser();
+    }
+
+    Parser& parser()
+    {
+        mxb_assert_message(m_pParser, "Protocol of client connection does not have a parser.");
+        return *m_pParser;
+    }
+
 protected:
     RouterSession(MXS_SESSION* pSession);
 
@@ -103,7 +122,8 @@ protected:
     void set_response(GWBUF* pResponse) const;
 
 protected:
-    MXS_SESSION*   m_pSession;      /*< The MXS_SESSION this router session is associated with. */
+    MXS_SESSION*   m_pSession; /*< The MXS_SESSION this router session is associated with. */
+    Parser*        m_pParser;  /*< The parser suitable the protocol of this router. */
     mxs::Routable* m_pUp;
 };
 

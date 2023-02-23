@@ -3132,6 +3132,11 @@ void MariaDBClientConnection::kill()
     m_local_clients.clear();
 }
 
+mxs::Parser* MariaDBClientConnection::parser()
+{
+    return &m_parser;
+}
+
 bool MariaDBClientConnection::module_init()
 {
     mxb_assert(this_unit.special_queries_regex.empty());
