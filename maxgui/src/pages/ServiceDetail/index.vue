@@ -244,8 +244,7 @@ export default {
         },
         async onCountDone() {
             await this.fetchAll()
-            const timestamp = Date.now()
-            await this.$refs.overviewHeader.updateChart(timestamp)
+            await this.$refs.overviewHeader.updateChart()
         },
         async genRelationshipRows(type) {
             const { relationships: { [`${type}`]: { data = [] } = {} } = {} } = this.current_service

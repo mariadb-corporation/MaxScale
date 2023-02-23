@@ -14,42 +14,24 @@
  */
 
 import { Line } from 'vue-chartjs'
+import base from '@share/components/common/MxsCharts/base.js'
 import 'chartjs-plugin-streaming'
-import { streamTooltip } from './customTooltips'
+import { streamTooltip } from '@share/components/common/MxsCharts/customTooltips'
 export default {
     extends: Line,
+    mixins: [base],
     props: {
-        chartData: { type: Object, required: true },
-        options: { type: Object },
+        refreshRate: { type: Number, required: true },
     },
     data() {
         return {
             uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
         }
     },
-    watch: {
-        /* This chartData watcher doesn't make the chart reactivity, but it helps to
-        destroy the chart when it's unmounted from the page. Eg: moving from dashboard page (have 3 charts)
-        to service-detail page (1 chart), the chart will be destroyed and rerender to avoid
-        several problems within vue-chartjs while using chartjs-plugin-streaming
-        */
-        chartData: function() {
-            this.$data._chart.destroy()
-            this.renderLineChart()
-        },
-    },
-    beforeDestroy() {
-        let tooltipEl = document.getElementById(this.uniqueTooltipId)
-        tooltipEl && tooltipEl.remove()
-        if (this.$data._chart) this.$data._chart.destroy()
-    },
-    mounted() {
-        this.renderLineChart()
-    },
-    methods: {
-        renderLineChart() {
-            let scope = this
-            let chartOption = {
+    computed: {
+        baseOpts() {
+            const scope = this
+            return {
                 showLines: true,
                 layout: {
                     padding: {
@@ -59,20 +41,11 @@ export default {
                         top: 15,
                     },
                 },
-                legend: {
-                    display: false,
-                },
+                legend: { display: false },
                 responsive: true,
                 maintainAspectRatio: false,
-                elements: {
-                    point: {
-                        radius: 0,
-                    },
-                },
-                hover: {
-                    mode: 'index',
-                    intersect: false,
-                },
+                elements: { point: { radius: 0 } },
+                hover: { mode: 'index', intersect: false },
                 tooltips: {
                     mode: 'index',
                     intersect: false,
@@ -91,33 +64,34 @@ export default {
                     },
                 },
                 scales: {
-                    xAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: true,
-                            },
-                            type: 'realtime',
-                            ticks: {
-                                display: false,
-                            },
-                        },
-                    ],
+                    xAxes: [{ type: 'realtime', ticks: { display: false } }],
                     yAxes: [
                         {
-                            gridLines: {
-                                drawBorder: false,
-                                zeroLineColor: 'transparent',
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                                maxTicksLimit: 3,
-                            },
+                            gridLines: { zeroLineColor: 'transparent' },
+                            ticks: { beginAtZero: true, maxTicksLimit: 3 },
                         },
                     ],
                 },
+                plugins: {
+                    streaming: {
+                        duration: this.refreshRate * 2000,
+                        delay: (this.refreshRate + 2) * 1000,
+                    },
+                },
             }
-            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
         },
+    },
+    watch: {
+        refreshRate(v, oV) {
+            if (!this.$helpers.lodash.isEqual(v, oV)) {
+                this.$data._chart.destroy()
+                this.renderChart(this.chartData, this.options)
+            }
+        },
+    },
+    beforeDestroy() {
+        let tooltipEl = document.getElementById(this.uniqueTooltipId)
+        if (tooltipEl) tooltipEl.remove()
     },
 }
 </script>

@@ -13,56 +13,24 @@
  * Public License.
  */
 import { Scatter } from 'vue-chartjs'
+import base from '@share/components/common/MxsCharts/base.js'
 export default {
     extends: Scatter,
-    props: {
-        chartData: { type: Object, required: true },
-        options: { type: Object },
-    },
-    watch: {
-        chartData() {
-            this.$data._chart.destroy()
-            this.renderScatterChart()
-        },
-    },
-    beforeDestroy() {
-        if (this.$data._chart) this.$data._chart.destroy()
-    },
-    mounted() {
-        this.renderScatterChart()
-    },
-    methods: {
-        renderScatterChart() {
-            let chartOption = {
-                plugins: {
-                    streaming: false,
-                },
+    mixins: [base],
+    computed: {
+        baseOpts() {
+            return {
                 scales: {
                     xAxes: [
                         {
                             type: 'linear',
                             position: 'bottom',
-                            gridLines: {
-                                drawBorder: true,
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                            },
+                            ticks: { beginAtZero: true },
                         },
                     ],
-                    yAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: false,
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                            },
-                        },
-                    ],
+                    yAxes: [{ ticks: { beginAtZero: true } }],
                 },
             }
-            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
         },
     },
 }

@@ -13,49 +13,10 @@
  * Public License.
  */
 import { HorizontalBar } from 'vue-chartjs'
+import base from '@share/components/common/MxsCharts/base.js'
+
 export default {
     extends: HorizontalBar,
-    props: {
-        chartData: { type: Object, required: true },
-        options: { type: Object },
-    },
-    watch: {
-        chartData() {
-            this.$data._chart.destroy()
-            this.renderHorizBarChart()
-        },
-    },
-    beforeDestroy() {
-        if (this.$data._chart) this.$data._chart.destroy()
-    },
-    mounted() {
-        this.renderHorizBarChart()
-    },
-    methods: {
-        renderHorizBarChart() {
-            let chartOption = {
-                plugins: {
-                    streaming: false,
-                },
-                scales: {
-                    xAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: true,
-                            },
-                        },
-                    ],
-                    yAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: false,
-                            },
-                        },
-                    ],
-                },
-            }
-            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
-        },
-    },
+    mixins: [base],
 }
 </script>

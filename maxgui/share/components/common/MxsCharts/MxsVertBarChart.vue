@@ -13,49 +13,9 @@
  * Public License.
  */
 import { Bar } from 'vue-chartjs'
+import base from '@share/components/common/MxsCharts/base.js'
 export default {
     extends: Bar,
-    props: {
-        chartData: { type: Object, required: true },
-        options: { type: Object },
-    },
-    watch: {
-        chartData() {
-            this.$data._chart.destroy()
-            this.renderBarChart()
-        },
-    },
-    beforeDestroy() {
-        if (this.$data._chart) this.$data._chart.destroy()
-    },
-    mounted() {
-        this.renderBarChart()
-    },
-    methods: {
-        renderBarChart() {
-            let chartOption = {
-                plugins: {
-                    streaming: false,
-                },
-                scales: {
-                    xAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: true,
-                            },
-                        },
-                    ],
-                    yAxes: [
-                        {
-                            gridLines: {
-                                drawBorder: false,
-                            },
-                        },
-                    ],
-                },
-            }
-            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
-        },
-    },
+    mixins: [base],
 }
 </script>

@@ -82,10 +82,8 @@ export default {
             ])
         },
         async onCountDone() {
-            const timestamp = Date.now()
             await this.fetchAll()
-            // Update charts
-            await this.$refs.graphs.updateChart(timestamp)
+            await this.$refs.graphs.updateChart()
         },
     },
 }
