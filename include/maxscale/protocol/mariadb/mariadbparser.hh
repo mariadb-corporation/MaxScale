@@ -39,6 +39,7 @@ public:
     TableNames       get_table_names(GWBUF* pStmt) const override;
     uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
     uint32_t         get_type_mask(GWBUF* pStmt) const override;
+    bool             is_drop_table_query(GWBUF* pStmt) const override;
 
     bool set_options(uint32_t options) override;
 };

@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <maxscale/hint.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
@@ -350,10 +351,21 @@ public:
         NONE,   // Log nothing
     };
 
-    QueryClassifier(Handler* pHandler,
+    QueryClassifier(mxs::Parser& parser,
+                    Handler* pHandler,
                     MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in,
                     Log log = Log::ALL);
+
+    mxs::Parser& parser()
+    {
+        return m_parser;
+    }
+
+    const mxs::Parser& parser() const
+    {
+        return m_parser;
+    }
 
     /**
      * @brief Return the current route info. A call to update_route_info()
@@ -488,7 +500,7 @@ private:
 
     void log_transaction_status(GWBUF* querybuf, uint32_t qtype);
 
-    static uint32_t determine_query_type(GWBUF* querybuf, int command);
+    uint32_t determine_query_type(GWBUF* querybuf, int command);
 
     void check_create_tmp_table(GWBUF* querybuf, uint32_t type);
 
@@ -514,6 +526,7 @@ private:
 
 
 private:
+    mxs::Parser& m_parser;
     Handler*     m_pHandler;
     MXS_SESSION* m_pSession;
     mxs_target_t m_use_sql_variables_in;

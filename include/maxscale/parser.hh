@@ -32,6 +32,11 @@ public:
         return qc_query_is_type(type_mask, type);
     }
 
+    static std::string type_mask_to_string(uint32_t type_mask)
+    {
+        return qc_typemask_to_string(type_mask);
+    }
+
     virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
 
     virtual DatabaseNames    get_database_names(GWBUF* pStmt) const = 0;
@@ -48,6 +53,7 @@ public:
     virtual TableNames       get_table_names(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_trx_type_mask(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_type_mask(GWBUF* pStmt) const = 0;
+    virtual bool             is_drop_table_query(GWBUF* pStmt) const = 0;
 
     virtual bool set_options(uint32_t options) = 0;
 };

@@ -1673,7 +1673,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
-    , m_qc(this, session, TYPE_ALL, mariadb::QueryClassifier::Log::NONE)
+    , m_qc(m_parser, this, session, TYPE_ALL, mariadb::QueryClassifier::Log::NONE)
 {
     m_qc.set_verbose(false);
     const auto& svc_config = *m_session->service->config();

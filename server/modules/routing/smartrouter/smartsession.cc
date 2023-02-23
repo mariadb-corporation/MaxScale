@@ -25,7 +25,7 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
     : mxs::RouterSession(pSession)
     , m_router(*pRouter)
     , m_clusters(std::move(clusters))
-    , m_qc(this, pSession, TYPE_ALL)
+    , m_qc(parser(), this, pSession, TYPE_ALL)
 {
     for (auto& a : m_clusters)
     {

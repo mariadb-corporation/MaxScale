@@ -82,6 +82,11 @@ uint32_t MariaDBParser::get_type_mask(GWBUF* pStmt) const
     return qc_get_type_mask(pStmt);
 }
 
+bool MariaDBParser::is_drop_table_query(GWBUF* pStmt) const
+{
+    return qc_is_drop_table_query(pStmt);
+}
+
 bool MariaDBParser::set_options(uint32_t options)
 {
     return qc_set_options(options);

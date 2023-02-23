@@ -34,7 +34,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_router(instance)
     , m_wait_gtid(NONE)
     , m_next_seq(0)
-    , m_qc(this, session, m_config.use_sql_variables_in)
+    , m_qc(parser(), this, session, m_config.use_sql_variables_in)
     , m_retry_duration(0)
     , m_can_replay_trx(true)
     , m_server_stats(instance->local_server_stats())

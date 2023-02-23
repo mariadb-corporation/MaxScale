@@ -23,19 +23,20 @@
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 
 using mariadb::QueryClassifier;
+using mxs::Parser;
 
 namespace
 {
 
 const int QC_TRACE_MSG_LEN = 1000;
 
-std::string qc_mysql_get_current_db(MXS_SESSION* session)
+std::string get_current_db(MXS_SESSION* session)
 {
     return session->client_connection()->current_db();
 }
 
 // Copied from mysql_common.c
-bool qc_mysql_is_ps_command(uint8_t cmd)
+bool is_ps_command(uint8_t cmd)
 {
     return cmd == MXS_COM_STMT_EXECUTE
            || cmd == MXS_COM_STMT_BULK_EXECUTE
@@ -50,9 +51,9 @@ bool is_packet_a_query(int packet_type)
     return packet_type == MXS_COM_QUERY;
 }
 
-bool check_for_sp_call(GWBUF* buf, uint8_t packet_type)
+bool check_for_sp_call(const mxs::Parser& parser, GWBUF* buf, uint8_t packet_type)
 {
-    return packet_type == MXS_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CALL;
+    return packet_type == MXS_COM_QUERY && parser.get_operation(buf) == QUERY_OP_CALL;
 }
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
@@ -61,7 +62,7 @@ bool are_multi_statements_allowed(MXS_SESSION* pSession)
     return (ses->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS) != 0;
 }
 
-uint32_t get_prepare_type(GWBUF* buffer)
+uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
 {
     uint32_t type = QUERY_TYPE_UNKNOWN;
 
@@ -71,34 +72,34 @@ uint32_t get_prepare_type(GWBUF* buffer)
         GWBUF stmt = buffer->deep_clone();
         stmt.data()[4] = MXS_COM_QUERY;
         stmt.set_classifier_data(nullptr);      // To ensure cloned buffer is parsed.
-        mxb_assert(qc_get_type_mask(&stmt) == (qc_get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT));
+        mxb_assert(parser.get_type_mask(&stmt) == (parser.get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT));
 #endif
 
-        type = qc_get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT;
+        type = parser.get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT;
     }
     else
     {
-        GWBUF* stmt = qc_get_preparable_stmt(buffer);
+        GWBUF* stmt = parser.get_preparable_stmt(buffer);
 
         if (stmt)
         {
-            type = qc_get_type_mask(stmt);
+            type = parser.get_type_mask(stmt);
         }
     }
 
     return type;
 }
 
-std::string get_text_ps_id(GWBUF* buffer)
+std::string get_text_ps_id(const mxs::Parser& parser, GWBUF* buffer)
 {
-    return std::string(qc_get_prepare_name(buffer));
+    return std::string(parser.get_prepare_name(buffer));
 }
 
-bool relates_to_previous_stmt(GWBUF* pBuffer)
+bool relates_to_previous_stmt(const mxs::Parser& parser, GWBUF* pBuffer)
 {
     const QC_FUNCTION_INFO* infos = nullptr;
     size_t n_infos = 0;
-    qc_get_function_info(pBuffer, &infos, &n_infos);
+    parser.get_function_info(pBuffer, &infos, &n_infos);
 
     for (size_t i = 0; i < n_infos; ++i)
     {
@@ -118,13 +119,13 @@ bool foreach_table(QueryClassifier& qc,
 {
     bool rval = true;
 
-    for (const auto& t : qc_get_table_names(querybuf))
+    for (const auto& t : qc.parser().get_table_names(querybuf))
     {
         std::string table;
 
         if (t.db.empty())
         {
-            table = qc_mysql_get_current_db(pSession);
+            table = get_current_db(pSession);
         }
         else
         {
@@ -161,8 +162,9 @@ public:
         bool     route_to_last_used = false;
     };
 
-    PSManager(Log log)
-        : m_log(log)
+    PSManager(mxs::Parser& parser, Log log)
+        : m_parser(parser)
+        , m_log(log)
     {
     }
 
@@ -173,17 +175,17 @@ public:
     void store(GWBUF* buffer, uint32_t id)
     {
         mxb_assert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE
-                   || qc_query_is_type(qc_get_type_mask(buffer),
-                                       QUERY_TYPE_PREPARE_NAMED_STMT));
+                   || Parser::type_mask_contains(m_parser.get_type_mask(buffer),
+                                                 QUERY_TYPE_PREPARE_NAMED_STMT));
 
         PreparedStmt stmt;
-        stmt.type = get_prepare_type(buffer);
-        stmt.route_to_last_used = relates_to_previous_stmt(buffer);
+        stmt.type = get_prepare_type(m_parser, buffer);
+        stmt.route_to_last_used = relates_to_previous_stmt(m_parser, buffer);
 
         switch (mxs_mysql_get_command(buffer))
         {
         case MXS_COM_QUERY:
-            m_text_ps.emplace(get_text_ps_id(buffer), std::move(stmt));
+            m_text_ps.emplace(get_text_ps_id(m_parser, buffer), std::move(stmt));
             break;
 
         case MXS_COM_STMT_PREPARE:
@@ -261,9 +263,9 @@ public:
 
         if (cmd == MXS_COM_QUERY)
         {
-            erase(get_text_ps_id(buffer));
+            erase(get_text_ps_id(m_parser, buffer));
         }
-        else if (qc_mysql_is_ps_command(cmd))
+        else if (is_ps_command(cmd))
         {
             erase(mxs_mysql_extract_ps_id(buffer));
         }
@@ -297,24 +299,27 @@ private:
     using TextPSMap = std::unordered_map<std::string, PreparedStmt>;
 
 private:
-    BinaryPSMap m_binary_ps;
-    TextPSMap   m_text_ps;
-    Log         m_log;
+    mxs::Parser& m_parser;
+    BinaryPSMap  m_binary_ps;
+    TextPSMap    m_text_ps;
+    Log          m_log;
 };
 
 //
 // QueryClassifier
 //
 
-QueryClassifier::QueryClassifier(Handler* pHandler,
+QueryClassifier::QueryClassifier(mxs::Parser& parser,
+                                 Handler* pHandler,
                                  MXS_SESSION* pSession,
                                  mxs_target_t use_sql_variables_in,
                                  Log log)
-    : m_pHandler(pHandler)
+    : m_parser(parser)
+    , m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
-    , m_sPs_manager(new PSManager(log))
+    , m_sPs_manager(new PSManager(parser, log))
 {
 }
 
@@ -326,7 +331,7 @@ void QueryClassifier::ps_store(GWBUF* pBuffer, uint32_t id)
 
 void QueryClassifier::ps_erase(GWBUF* buffer)
 {
-    if (qc_mysql_is_ps_command(mxs_mysql_get_command(buffer)))
+    if (is_ps_command(mxs_mysql_get_command(buffer)))
     {
         // Erase the type of the statement stored with the internal ID
         m_sPs_manager->erase(ps_id_internal_get(buffer));
@@ -342,16 +347,16 @@ bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
 {
     bool rval = false;
 
-    if (!qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ)
-        && !qc_query_is_type(qtype, QUERY_TYPE_WRITE)
-        && (qc_query_is_type(qtype, QUERY_TYPE_READ)
-            || qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES)
-            || qc_query_is_type(qtype, QUERY_TYPE_SHOW_DATABASES)
-            || qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ)
-            || qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ)
-            || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)))
+    if (!Parser::type_mask_contains(qtype, QUERY_TYPE_MASTER_READ)
+        && !Parser::type_mask_contains(qtype, QUERY_TYPE_WRITE)
+        && (Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
+            || Parser::type_mask_contains(qtype, QUERY_TYPE_SHOW_TABLES)
+            || Parser::type_mask_contains(qtype, QUERY_TYPE_SHOW_DATABASES)
+            || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
+            || Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
+            || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ)))
     {
-        if (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ))
+        if (Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ))
         {
             if (m_use_sql_variables_in == TYPE_ALL)
             {
@@ -444,8 +449,8 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     /**
      * Prepared statements preparations should go to all servers
      */
-    if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT)
-        || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
+    if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
         || command == MXS_COM_STMT_CLOSE
         || command == MXS_COM_STMT_RESET)
     {
@@ -454,15 +459,15 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     /**
      * These queries should be routed to all servers
      */
-    else if (!load_active && !qc_query_is_type(qtype, QUERY_TYPE_WRITE)
-             && (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE)
+    else if (!load_active && !Parser::type_mask_contains(qtype, QUERY_TYPE_WRITE)
+             && (Parser::type_mask_contains(qtype, QUERY_TYPE_SESSION_WRITE)
                  ||     /** Configured to allow writing user variables to all nodes */
                  (m_use_sql_variables_in == TYPE_ALL
-                  && qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE))
-                 || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)
+                  && Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_WRITE))
+                 || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_WRITE)
                  ||     /** enable or disable autocommit are always routed to all */
-                 qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
-                 || qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
+                 Parser::type_mask_contains(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
+                 || Parser::type_mask_contains(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
     {
         target |= TARGET_ALL;
     }
@@ -481,29 +486,29 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     else
     {
         mxb_assert(trx_active || load_active
-                   || (qc_query_is_type(qtype, QUERY_TYPE_WRITE)
-                       || qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ)
-                       || qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE)
-                       || (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ)
+                   || (Parser::type_mask_contains(qtype, QUERY_TYPE_WRITE)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_MASTER_READ)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_SESSION_WRITE)
+                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ)
+                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)
+                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)
+                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_WRITE)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE)
+                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_WRITE)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || qc_query_is_type(qtype, QUERY_TYPE_BEGIN_TRX)
-                       || qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
-                       || qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)
-                       || qc_query_is_type(qtype, QUERY_TYPE_ROLLBACK)
-                       || qc_query_is_type(qtype, QUERY_TYPE_COMMIT)
-                       || qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT)
-                       || qc_query_is_type(qtype, QUERY_TYPE_CREATE_TMP_TABLE)
-                       || qc_query_is_type(qtype, QUERY_TYPE_READ_TMP_TABLE)
-                       || qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN))
-                   || qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT));
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_BEGIN_TRX)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_ROLLBACK)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_COMMIT)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_EXEC_STMT)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_CREATE_TMP_TABLE)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_READ_TMP_TABLE)
+                       || Parser::type_mask_contains(qtype, QUERY_TYPE_UNKNOWN))
+                   || Parser::type_mask_contains(qtype, QUERY_TYPE_EXEC_STMT));
 
         target = TARGET_MASTER;
     }
@@ -550,9 +555,9 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         int len = 0;
         std::string sqldata;
         const char* sql = "<non-SQL>";
-        std::string qtypestr = qc_typemask_to_string(qtype);
+        std::string qtypestr = Parser::type_mask_to_string(qtype);
 
-        if (qc_mysql_is_ps_command(command))
+        if (is_ps_command(command))
         {
             sqldata = "ID: " + std::to_string(mxs_mysql_extract_ps_id(querybuf));
             sql = sqldata.c_str();
@@ -629,11 +634,11 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
         break;
 
     case MXS_COM_QUERY:
-        type = qc_get_type_mask(querybuf);
+        type = m_parser.get_type_mask(querybuf);
         break;
 
     case MXS_COM_STMT_PREPARE:
-        type = qc_get_type_mask(querybuf);
+        type = m_parser.get_type_mask(querybuf);
         type |= QUERY_TYPE_PREPARE_STMT;
         break;
 
@@ -659,15 +664,15 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
 
 void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
 {
-    if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    if (Parser::type_mask_contains(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
         std::string table;
 
-        for (const auto& t : qc_get_table_names(querybuf))
+        for (const auto& t : m_parser.get_table_names(querybuf))
         {
             if (t.db.empty())
             {
-                table = qc_mysql_get_current_db(session());
+                table = get_current_db(session());
             }
             else
             {
@@ -690,11 +695,11 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
 {
     bool rval = false;
 
-    if (qc_query_is_type(qtype, QUERY_TYPE_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
+    if (Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_LOCAL_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
         if (!foreach_table(*this, m_pSession, querybuf, &QueryClassifier::find_table))
         {
@@ -707,7 +712,7 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
 
 void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 {
-    if (qc_is_drop_table_query(querybuf))
+    if (m_parser.is_drop_table_query(querybuf))
     {
         foreach_table(*this, m_pSession, querybuf, &QueryClassifier::delete_table);
     }
@@ -740,7 +745,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
      * when the query is routed. */
     if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
-        bool is_multi = check_for_sp_call(querybuf, packet_type);
+        bool is_multi = check_for_sp_call(m_parser, querybuf, packet_type);
         if (!is_multi && multi_statements_allowed() && packet_type == MXS_COM_QUERY)
         {
             // This is wasteful, the sql is extracted multiple times
@@ -859,7 +864,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     {
         command = mxs_mysql_get_command(pBuffer);
 
-        if (qc_mysql_is_ps_command(command))
+        if (is_ps_command(command))
         {
             stmt_id = ps_id_internal_get(pBuffer);
         }
@@ -924,15 +929,15 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         {
             if (!in_read_only_trx
                 && command == MXS_COM_QUERY
-                && qc_get_operation(pBuffer) == QUERY_OP_EXECUTE)
+                && m_parser.get_operation(pBuffer) == QUERY_OP_EXECUTE)
             {
-                if (const auto* ps = m_sPs_manager->get(get_text_ps_id(pBuffer)))
+                if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, pBuffer)))
                 {
                     type_mask = ps->type;
                     route_to_last_used = ps->route_to_last_used;
                 }
             }
-            else if (qc_mysql_is_ps_command(command))
+            else if (is_ps_command(command))
             {
                 if (const auto* ps = m_sPs_manager->get(stmt_id))
                 {
@@ -941,7 +946,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                     m_route_info.set_ps_continuation(query_continues_ps(command, stmt_id, pBuffer));
                 }
             }
-            else if (command == MXS_COM_QUERY && relates_to_previous_stmt(pBuffer))
+            else if (command == MXS_COM_QUERY && relates_to_previous_stmt(m_parser, pBuffer))
             {
                 route_to_last_used = true;
             }
@@ -956,7 +961,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
         process_routing_hints(pBuffer->hints, &route_target);
 
-        if (protocol_data->is_trx_ending() || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+        if (protocol_data->is_trx_ending() || Parser::type_mask_contains(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
             // Transaction is ending or starting
             m_route_info.set_trx_still_read_only(true);
