@@ -210,9 +210,7 @@ export default {
         },
         secondSlideCommonInfo() {
             return {
-                uptime: this.$moment
-                    .duration(this.nodeAttrs.uptime, 'seconds')
-                    .format('format', 'Y [years] M [months] D [days] h [hours] m [minutes]'),
+                uptime: this.$helpers.uptimeHumanize(this.nodeAttrs.uptime),
                 version_string: this.nodeAttrs.version_string,
             }
         },

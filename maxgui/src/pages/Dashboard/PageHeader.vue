@@ -13,12 +13,7 @@
                 class="grayed-out-info mxs-color-helper text-grayed-out text-capitalize"
             >
                 {{ $mxs_t('uptime') }}
-                {{
-                    [uptime, 'seconds']
-                        | duration('format', 'Y [years] M [months] D [days] h:mm:ss', {
-                            stopTrim: 'h mm',
-                        })
-                }}
+                {{ $helpers.uptimeHumanize(uptime) }}
             </span>
 
             <v-menu
@@ -78,7 +73,7 @@
                                 {{
                                     $helpers.dateFormat({
                                         value,
-                                        formatType: 'DD MMM YYYY HH:mm:ss',
+                                        formatType: 'dd MMM yyyy HH:mm:ss',
                                     })
                                 }}
                             </div>
@@ -173,8 +168,8 @@ export default {
                 )
             }
         },
-        'maxscale_overview_info.uptime': function(val) {
-            this.uptime = val
+        'maxscale_overview_info.uptime'(v) {
+            this.uptime = v
             this.workerInit()
         },
     },

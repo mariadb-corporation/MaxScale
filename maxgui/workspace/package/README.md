@@ -17,13 +17,13 @@ MaxScale Workspace peerDependencies
 | axios                        | 0.27.x  |
 | browser-fs-access            | 0.31.x  |
 | chart.js                     |  3.9.x  |
-| chartjs-adapter-luxon        |  1.3.x  |
+| chartjs-adapter-date-fns     |  3.0.x  |
 | chartjs-plugin-trendline     |  2.0.x  |
+| date-fns                     | 2.29.x  |
 | deep-diff                    |  1.0.x  |
 | immutability-helper          |  3.1.x  |
 | localforage                  | 1.10.x  |
 | lodash                       | 4.17.x  |
-| luxon                        |  3.2.x  |
 | monaco-editor                | 0.33.x  |
 | monaco-editor-webpack-plugin |  7.0.x  |
 | sql-formatter                |  4.0.x  |
@@ -33,7 +33,6 @@ MaxScale Workspace peerDependencies
 | vue                          |   2.x   |
 | vue-chartjs                  |  4.1.x  |
 | vue-i18n                     |   8.x   |
-| vue-moment                   |   4.x   |
 | vue-shortkey                 |   3.x   |
 | vue-template-compiler        |   2.x   |
 | vuetify                      |  2.6.x  |
@@ -49,7 +48,6 @@ Registering MaxScale Workspace plugin
 import Vue from 'vue'
 import shortkey from '@/plugins/shortkey'
 import typy from '@/plugins/typy'
-import VueMoment from 'vue-moment'
 import VueI18n from 'vue-i18n'
 import Vuex from 'vuex'
 import Vuetify from 'vuetify/lib'
@@ -61,7 +59,6 @@ import App from '@/App.vue'
 
 Vue.use(shortkey)
 Vue.use(typy)
-Vue.use(VueMoment)
 Vue.use(VueI18n)
 Vue.use(Vuex)
 Vue.use(Vuetify, { directives: { Resize } })

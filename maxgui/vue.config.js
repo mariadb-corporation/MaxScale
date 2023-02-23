@@ -106,15 +106,6 @@ module.exports = {
             })
             .end()
 
-        /*
-            To strip all locales except “en”, and ...
-            (“en” is built into Moment and can’t be removed)
-        */
-        config.plugin('MomentLocalesPlugin').use(require('moment-locales-webpack-plugin'), [
-            {
-                localesToKeep: [], //e.g. 'ru', 'vi'
-            },
-        ])
         config
             .plugin('MonacoWebpackPlugin')
             .use(require('monaco-editor-webpack-plugin'), [monacoConfig])

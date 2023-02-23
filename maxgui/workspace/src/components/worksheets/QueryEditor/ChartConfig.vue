@@ -324,7 +324,7 @@ export default {
                     const valueA = a[scaleLabels[axisId]]
                     const valueB = b[scaleLabels[axisId]]
                     if (axisType === this.axisTypes.LINEAR) return valueA - valueB
-                    return this.$moment(valueA) - this.$moment(valueB)
+                    return new Date(valueA) - new Date(valueB)
                 })
             }
         },

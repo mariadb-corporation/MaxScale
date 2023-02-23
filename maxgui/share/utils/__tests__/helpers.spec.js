@@ -57,7 +57,7 @@ describe('common helpers unit tests', () => {
         dummyFormatTypes.forEach((type, i) => {
             let des = `Should return date string with format ${type}`
             if (type === undefined)
-                des = des.replace('default format ddd, DD MMM YYYY HH:mm:ss', `format ${type}`)
+                des = des.replace('default format E, dd MMM yyyy HH:mm:ss', `format ${type}`)
             it(des, () => {
                 expect(
                     commonHelpers.dateFormat({

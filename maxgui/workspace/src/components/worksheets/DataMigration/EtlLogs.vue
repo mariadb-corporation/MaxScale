@@ -10,7 +10,7 @@
                     {{
                         $helpers.dateFormat({
                             value: log.timestamp,
-                            formatType: 'DD-MMM-YYYY  HH:mm:ss',
+                            formatType: 'dd-MMM-yyyy  HH:mm:ss',
                         })
                     }}
                 </span>

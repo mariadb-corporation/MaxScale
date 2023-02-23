@@ -19,8 +19,9 @@
             <span class="ml-1 mxs-color-helper text-text-subtle">
                 {{ $mxs_t('uptime') }}
                 {{
-                    [$typy(server, 'serverData.attributes.uptime').safeNumber, 'seconds']
-                        | duration('format', 'Y [years] M [months] D [days] h [hours] m [minutes]')
+                    $helpers.uptimeHumanize(
+                        $typy(server, 'serverData.attributes.uptime').safeNumber
+                    )
                 }}
             </span>
         </div>

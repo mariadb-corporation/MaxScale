@@ -12,7 +12,7 @@
  * Public License.
  */
 import { isCancelled } from '@share/axios/handlers'
-import moment from 'moment'
+import { format, intervalToDuration, formatDuration } from 'date-fns'
 import { logger } from '@share/plugins/logger'
 export const uuidv1 = require('uuid').v1
 
@@ -93,11 +93,11 @@ export function getErrorsArr(error) {
 /**
  * Handle format date value
  * @param {String} param.value - String date to be formatted
- * @param {String} param.formatType - format type (default is DATE_RFC2822: ddd, DD MMM YYYY HH:mm:ss)
+ * @param {String} param.formatType - format type (default is DATE_RFC2822: E, dd MMM yyyy HH:mm:ss)
  * @return {String} new date format
  */
-export function dateFormat({ value, formatType = 'ddd, DD MMM YYYY HH:mm:ss' }) {
-    return moment(new Date(value)).format(formatType)
+export function dateFormat({ value, formatType = 'E, dd MMM yyyy HH:mm:ss' }) {
+    return format(new Date(value), formatType)
 }
 
 export function capitalizeFirstLetter(string) {
@@ -270,4 +270,21 @@ export async function to(promise) {
 
 export function isMAC() {
     return Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
+}
+
+const padTimeNumber = num => num.toString().padStart(2, '0')
+/**
+ * @param {Number} sec - seconds
+ * @returns Human-readable time, e.g. 1295222 -> 14 Days 23:47:02
+ */
+export function uptimeHumanize(sec) {
+    const duration = intervalToDuration({ start: 0, end: sec * 1000 })
+    const formattedDuration = formatDuration(duration, {
+        format: ['years', 'months', 'days'].filter(unit => duration[unit] !== 0),
+    })
+    const formattedTime = [duration.hours, duration.minutes, duration.seconds]
+        .map(padTimeNumber)
+        .join(':')
+
+    return `${formattedDuration} ${formattedTime}`
 }

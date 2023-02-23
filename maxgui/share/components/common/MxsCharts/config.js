@@ -12,7 +12,7 @@
  * Public License.
  */
 import Chart from 'chart.js/auto'
-import 'chartjs-adapter-luxon'
+import 'chartjs-adapter-date-fns'
 import chartTrendline from 'chartjs-plugin-trendline'
 
 Chart.register(chartTrendline)

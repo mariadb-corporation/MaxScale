@@ -282,7 +282,7 @@ export default {
                             rows.forEach(row => {
                                 const key = this.$helpers.dateFormat({
                                     value: row[idx],
-                                    formatType: 'ddd, DD MMM YYYY',
+                                    formatType: 'E, dd MMM yyyy',
                                 })
                                 let matrix = map.get(key) || [] // assign an empty arr if not found
                                 matrix.push(row)
@@ -294,7 +294,7 @@ export default {
                             this.$helpers.ciStrIncludes(
                                 this.$helpers.dateFormat({
                                     value,
-                                    formatType: 'ddd, DD MMM YYYY',
+                                    formatType: 'E, dd MMM yyyy',
                                 }),
                                 search
                             )
@@ -445,7 +445,7 @@ export default {
         formatDate(cell) {
             return this.$helpers.dateFormat({
                 value: cell,
-                formatType: 'ddd, DD MMM YYYY',
+                formatType: 'E, dd MMM yyyy',
             })
         },
     },

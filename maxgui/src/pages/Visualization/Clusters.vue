@@ -20,7 +20,7 @@
                                 <mxs-truncate-str :tooltipItem="{ txt: `${cluster.id}` }" />
                             </v-list-item-title>
                             <v-list-item-subtitle>
-                                <span class="grayed-out">
+                                <span class="text-grayed-out">
                                     {{ cluster.module }}
                                 </span>
                             </v-list-item-subtitle>

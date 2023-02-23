@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import moment from 'moment'
+import { startOfDay, differenceInCalendarDays } from 'date-fns'
 import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
 import sqlFormatter from '@wsComps/SqlEditor/formatter'
 
@@ -73,9 +73,9 @@ export function addDaysToNow(days) {
  * @returns {Number} - days diff
  */
 export function daysDiff(timestamp) {
-    const now = moment().startOf('day')
-    const end = moment(timestamp).startOf('day')
-    return end.diff(now, 'days')
+    const now = startOfDay(new Date())
+    const end = startOfDay(new Date(timestamp))
+    return differenceInCalendarDays(end, now) + 1
 }
 
 //TODO: objects Re-order in array diff
