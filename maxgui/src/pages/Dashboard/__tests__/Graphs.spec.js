@@ -63,11 +63,9 @@ describe('Graphs index', () => {
         })
     })
     it(`Should call corresponding methods when updateChart is called`, () => {
-        let spies = [
-            'updateServerConnectionsDatasets',
-            'updateSessionsDatasets',
-            'updateThreadsDatasets',
-        ].map(fn => sinon.spy(wrapper.vm, fn))
+        let spies = ['updateConnsGraph', 'updateSessionsGraph', 'updateThreadsGraph'].map(fn =>
+            sinon.spy(wrapper.vm, fn)
+        )
         //mockup update chart
         wrapper.vm.updateChart()
         spies.forEach(spy => spy.should.have.been.calledOnce)

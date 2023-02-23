@@ -40,43 +40,31 @@
             <mxs-line-chart
                 v-if="type === chartTypes.LINE"
                 id="query-chart"
-                :style="{
-                    minHeight: `${chartHeight}px`,
-                    minWidth,
-                }"
+                :style="chartStyle"
                 hasVertCrossHair
                 :chartData="chartData"
-                :options="chartOptions"
+                :opts="chartOptions"
             />
             <mxs-scatter-chart
                 v-else-if="type === chartTypes.SCATTER"
                 id="query-chart"
-                :style="{
-                    minHeight: `${chartHeight}px`,
-                    minWidth,
-                }"
+                :style="chartStyle"
                 :chartData="chartData"
-                :options="chartOptions"
+                :opts="chartOptions"
             />
             <mxs-vert-bar-chart
                 v-else-if="type === chartTypes.BAR_VERT"
                 id="query-chart"
-                :style="{
-                    minHeight: `${chartHeight}px`,
-                    minWidth,
-                }"
+                :style="chartStyle"
                 :chartData="chartData"
-                :options="chartOptions"
+                :opts="chartOptions"
             />
             <mxs-horiz-bar-chart
                 v-else-if="type === chartTypes.BAR_HORIZ"
                 id="query-chart"
-                :style="{
-                    minHeight: `${chartHeight}px`,
-                    minWidth,
-                }"
+                :style="chartStyle"
                 :chartData="chartData"
-                :options="chartOptions"
+                :opts="chartOptions"
             />
         </div>
     </div>
@@ -126,6 +114,12 @@ export default {
         },
         chartData() {
             return this.chartOpt.data
+        },
+        chartStyle() {
+            return {
+                minHeight: `${this.chartHeight}px`,
+                minWidth: this.minWidth,
+            }
         },
         axesType() {
             return this.chartOpt.axesType

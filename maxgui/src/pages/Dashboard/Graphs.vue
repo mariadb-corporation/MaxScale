@@ -10,9 +10,10 @@
                         <mxs-line-chart-stream
                             v-if="sessions_datasets.length"
                             ref="sessionsChart"
-                            :styles="chartStyle"
+                            class="relative"
+                            :height="70"
                             :chart-data="{ datasets: sessions_datasets }"
-                            :options="streamOpts"
+                            :refreshRate="refreshRate"
                         />
                     </v-sheet>
                 </template>
@@ -28,11 +29,12 @@
                         <mxs-line-chart-stream
                             v-if="server_connections_datasets.length"
                             ref="connectionsChart"
-                            :styles="chartStyle"
+                            class="relative"
+                            :height="70"
                             :chart-data="{
                                 datasets: server_connections_datasets,
                             }"
-                            :options="streamOpts"
+                            :refreshRate="refreshRate"
                         />
                     </v-sheet>
                 </template>
@@ -48,24 +50,13 @@
                         <mxs-line-chart-stream
                             v-if="threads_datasets.length"
                             ref="threadsChart"
-                            :styles="chartStyle"
+                            class="relative"
+                            :height="70"
                             :chart-data="{
                                 datasets: threads_datasets,
                             }"
-                            :options="
-                                $helpers.lodash.merge(streamOpts, {
-                                    scales: {
-                                        yAxes: [
-                                            {
-                                                ticks: {
-                                                    max: 100,
-                                                    min: 0,
-                                                },
-                                            },
-                                        ],
-                                    },
-                                })
-                            "
+                            :opts="{ scales: { yAxes: [{ ticks: { max: 100, min: 0 } }] } }"
+                            :refreshRate="refreshRate"
                         />
                     </v-sheet>
                 </template>
@@ -88,137 +79,79 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
 export default {
     name: 'graphs',
     props: {
         refreshRate: { type: Number, required: true },
     },
-    data() {
-        return {
-            chartStyle: { height: '70px', position: 'relative' },
-        }
-    },
     computed: {
-        ...mapState('maxscale', {
-            thread_stats: state => state.thread_stats,
-            threads_datasets: state => state.threads_datasets,
+        ...mapState({
+            all_servers: state => state.server.all_servers,
+            server_connections_datasets: state => state.server.server_connections_datasets,
+            sessions_datasets: state => state.session.sessions_datasets,
+            thread_stats: state => state.maxscale.thread_stats,
+            threads_datasets: state => state.maxscale.threads_datasets,
         }),
-        ...mapState('server', {
-            server_connections_datasets: state => state.server_connections_datasets,
-            all_servers: state => state.all_servers,
-        }),
-        ...mapState('session', {
-            sessions_datasets: state => state.sessions_datasets,
-        }),
-        streamOpts() {
-            return {
-                plugins: {
-                    streaming: {
-                        duration: this.refreshRate * 2000,
-                        delay: (this.refreshRate + 1) * 1000,
-                    },
-                },
-            }
-        },
         ...mapGetters({
             getTotalSessions: 'session/getTotalSessions',
         }),
     },
-
     methods: {
-        ...mapActions({
-            fetchThreadStats: 'maxscale/fetchThreadStats',
-            fetchAllServers: 'server/fetchAllServers',
-            fetchAllMonitors: 'monitor/fetchAllMonitors',
-            fetchSessions: 'session/fetchSessions',
-            fetchAllServices: 'service/fetchAllServices',
-        }),
-
-        updateServerConnectionsDatasets(connectionsChart, timestamp) {
-            const {
-                genLineStreamDataset,
-                lodash: { xorWith, isEqual, cloneDeep },
-            } = this.$helpers
-
-            const connectionsChartDataSets = connectionsChart.chartData.datasets
-
-            const currentServerIds = connectionsChartDataSets.map(dataset => dataset.resourceId)
-
-            let currentServers = [] // current servers in datasets
-            // get new data for current servers
-            currentServerIds.forEach(id => {
-                let server = this.all_servers.find(server => server.id === id)
-                if (server) currentServers.push(server)
-            })
-            // update existing datasets
-            currentServers.forEach((server, i) => {
-                const {
-                    attributes: {
-                        statistics: { connections: serverConnections },
-                    },
-                } = server
-                connectionsChartDataSets[i].data.push({
+        update(chart) {
+            chart.$data._chart.update({ preservation: true })
+        },
+        updateSessionsGraph(chart, timestamp) {
+            const self = this
+            chart.chartData.datasets.forEach(function(dataset) {
+                dataset.data.push({
                     x: timestamp,
-                    y: serverConnections,
+                    y: self.getTotalSessions,
                 })
             })
-
-            let newServers = []
-            newServers = xorWith(this.all_servers, currentServers, isEqual)
-            // push new datasets
-            if (newServers.length) {
-                newServers.forEach((server, i) => {
-                    const {
-                        attributes: {
-                            statistics: { connections: serverConnections },
-                        },
-                    } = server
-
+            this.update(chart)
+        },
+        updateConnsGraph(chart, timestamp) {
+            const scope = this
+            const { genLineStreamDataset } = this.$helpers
+            this.all_servers.forEach((server, i) => {
+                const dataset = chart.chartData.datasets.find(d => d.resourceId === server.id)
+                const value = scope.$typy(server, 'attributes.statistics.connections').safeNumber
+                // update existing datasets
+                if (dataset) dataset.data.push({ x: timestamp, y: value })
+                else {
                     /*
                         Copy previous data of a dataset, this ensures new
                         datasets can be added while streaming datasets.
                         The value of each item should be 0 because
                         at previous timestamp, new servers aren't created yet.
                     */
-                    let dataOfADataSet = cloneDeep(connectionsChartDataSets[0].data)
+                    let dataOfADataSet = scope.$typy(chart, 'chartData.datasets[0].data').safeArray
                     dataOfADataSet.forEach(item => (item.y = 0))
-
-                    const newDataSet = genLineStreamDataset({
-                        label: `Server ID - ${server.id}`,
-                        value: serverConnections,
-                        colorIndex: i,
-                        timestamp,
-                        id: server.id,
-                        data: [...dataOfADataSet, { x: timestamp, y: serverConnections }],
+                    chart.chartData.datasets.push({
+                        ...genLineStreamDataset({
+                            label: `Server ID - ${server.id}`,
+                            value,
+                            colorIndex: i,
+                            id: server.id,
+                        }),
+                        data: [...dataOfADataSet, { x: timestamp, y: value }],
                     })
-
-                    connectionsChartDataSets.push(newDataSet)
-                })
-            }
-        },
-
-        updateSessionsDatasets(sessionsChart, timestamp) {
-            const self = this
-            sessionsChart.chartData.datasets.forEach(function(dataset) {
-                dataset.data.push({
-                    x: timestamp,
-                    y: self.getTotalSessions,
-                })
+                }
             })
+            this.update(chart)
         },
-
-        updateThreadsDatasets(threadsChart, timestamp) {
+        updateThreadsGraph(chart, timestamp) {
             const { genLineStreamDataset } = this.$helpers
-            const threadChartDataSets = threadsChart.chartData.datasets
+            const datasets = chart.chartData.datasets
             this.thread_stats.forEach((thread, i) => {
                 const {
                     attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
                 } = thread
 
-                if (threadsChart.chartData.datasets[i]) {
-                    threadChartDataSets[i].data.push({
+                if (chart.chartData.datasets[i]) {
+                    datasets[i].data.push({
                         x: timestamp,
                         y: last_second,
                     })
@@ -229,24 +162,22 @@ export default {
                         colorIndex: i,
                         timestamp,
                     })
-                    threadChartDataSets.push(newDataSet)
+                    datasets.push(newDataSet)
                 }
             })
+            this.update(chart)
         },
         /**
          * Method  to be called by parent component to update the chart
-         * @param {Number} timestamp
          */
-        async updateChart(timestamp) {
+        async updateChart() {
+            const timestamp = Date.now()
             const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
-                this.updateServerConnectionsDatasets(connectionsChart, timestamp)
-                this.updateSessionsDatasets(sessionsChart, timestamp)
-                this.updateThreadsDatasets(threadsChart, timestamp)
                 await Promise.all([
-                    sessionsChart.$data._chart.update({ preservation: true }),
-                    threadsChart.$data._chart.update({ preservation: true }),
-                    connectionsChart.$data._chart.update({ preservation: true }),
+                    this.updateConnsGraph(connectionsChart, timestamp),
+                    this.updateSessionsGraph(sessionsChart, timestamp),
+                    this.updateThreadsGraph(threadsChart, timestamp),
                 ])
             }
         },
