@@ -302,7 +302,8 @@ export default {
             }
             if (this.areNumericalAxes && this.showTrendline && this.supportTrendLine)
                 dataset.trendlineLinear = {
-                    style: '#2d9cdb',
+                    colorMin: '#2d9cdb',
+                    colorMax: '#2d9cdb',
                     lineStyle: 'solid',
                     width: 2,
                 }
