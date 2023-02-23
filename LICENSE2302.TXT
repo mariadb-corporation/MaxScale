@@ -1,16 +1,16 @@
-License text copyright (c) 2022 MariaDB Corporation Ab, All Rights Reserved.
-“Business Source License” is a trademark of MariaDB Corporation Ab.
+License text copyright (c) 2023 MariaDB plc, All Rights Reserved.
+“Business Source License” is a trademark of MariaDB plc.
 
 Parameters
 
-Licensor:             MariaDB Corporation Ab
-Licensed Work:        MariaDB MaxScale (TM) version 22.08
-                      The Licensed Work is (c) 2022 MariaDB Corporation Ab
+Licensor:             MariaDB plc
+Licensed Work:        MariaDB MaxScale (TM) version 23.02
+                      The Licensed Work is (c) 2023 MariaDB plc
 Additional Use Grant: You may use the Licensed Work when your application
                       uses the Licensed Work with a total of less than three
                       server instances for any purpose.
 
-Change Date:          2027-12-27
+Change Date:          2027-02-21
 
 Change License:       Version 2 or later of the GNU General Public License as
                       published by the Free Software Foundation.
