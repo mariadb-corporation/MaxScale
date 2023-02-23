@@ -28,13 +28,14 @@
 
 #include <mysqld_error.h>
 
+using mxs::Parser;
+
 namespace schemarouter
 {
 
 bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session);
 
 enum route_target get_shard_route_target(uint32_t qtype);
-bool              extract_database(GWBUF* buf, char* str);
 bool              detect_show_shards(GWBUF* query);
 
 SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
@@ -125,7 +126,11 @@ SchemaRouterSession::~SchemaRouterSession()
     }
 }
 
-static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uint8_t* command)
+static void inspect_query(const Parser& parser,
+                          GWBUF* pPacket,
+                          uint32_t* type,
+                          qc_query_op_t* op,
+                          uint8_t* command)
 {
     uint8_t* data = GWBUF_DATA(pPacket);
     *command = data[4];
@@ -150,12 +155,12 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
         break;
 
     case MXS_COM_QUERY:
-        *type = qc_get_type_mask(pPacket);
-        *op = qc_get_operation(pPacket);
+        *type = parser.get_type_mask(pPacket);
+        *op = parser.get_operation(pPacket);
         break;
 
     case MXS_COM_STMT_PREPARE:
-        *type = qc_get_type_mask(pPacket);
+        *type = parser.get_type_mask(pPacket);
         *type |= QUERY_TYPE_PREPARE_STMT;
         break;
 
@@ -351,10 +356,10 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
     }
     else
     {
-        inspect_query(pPacket, &type, &op, &command);
+        inspect_query(parser(), pPacket, &type, &op, &command);
 
         /** Create the response to the SHOW DATABASES from the mapped databases */
-        if (qc_query_is_type(type, QUERY_TYPE_SHOW_DATABASES))
+        if (Parser::type_mask_contains(type, QUERY_TYPE_SHOW_DATABASES))
         {
             send_databases();
             gwbuf_free(pPacket);
@@ -652,7 +657,7 @@ void SchemaRouterSession::synchronize_shards()
  * @param str Pointer where the database name is copied
  * @return True for success, false for failure
  */
-bool extract_database(GWBUF* buf, char* str)
+bool extract_database(const Parser& parser, GWBUF* buf, char* str)
 {
     uint8_t* packet;
     char* saved, * tok, * query = NULL;
@@ -664,7 +669,7 @@ bool extract_database(GWBUF* buf, char* str)
 
     /** Copy database name from MySQL packet to session */
     if (mxs_mysql_get_command(buf) == MXS_COM_QUERY
-        && qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
+        && parser.get_operation(buf) == QUERY_OP_CHANGE_DB)
     {
         const char* delim = "` \n\t;";
 
@@ -1096,7 +1101,7 @@ bool SchemaRouterSession::change_current_db(GWBUF* buf, uint8_t cmd)
     bool succp = false;
     char db[MYSQL_DATABASE_MAXLEN + 1];
 
-    if (extract_database(buf, db))
+    if (extract_database(parser(), buf, db))
     {
         mxs::Buffer buffer(gwbuf_clone_shallow(buf));
         auto targets = m_shard.get_all_locations(db);
@@ -1318,14 +1323,14 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
 
     if (command == MXS_COM_QUERY)
     {
-        op = qc_get_operation(buffer);
+        op = parser().get_operation(buffer);
         rval = get_query_target(buffer);
     }
 
     if (mxs_mysql_is_ps_command(command)
-        || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
-        || qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE)
-        || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_DEALLOC_PREPARE)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT)
         || op == QUERY_OP_EXECUTE)
     {
         rval = get_ps_target(buffer, qtype, op);
@@ -1412,17 +1417,17 @@ enum route_target get_shard_route_target(uint32_t qtype)
     /**
      * These queries are not affected by hints
      */
-    if (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE)
-        || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)
-        || qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE)
-        || qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
-        || qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+    if (Parser::type_mask_contains(qtype, QUERY_TYPE_SESSION_WRITE)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_WRITE)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_WRITE)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
     {
         /** hints don't affect on routing */
         target = TARGET_ALL;
     }
-    else if (qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ)
-             || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
+    else if (Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
+             || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
         target = TARGET_ANY;
     }
@@ -1461,7 +1466,7 @@ void SchemaRouterSession::send_databases()
 
 mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 {
-    std::vector<QcTableName> table_names = qc_get_table_names(buffer);
+    std::vector<QcTableName> table_names = parser().get_table_names(buffer);
 
     // We get QcTableNames, but as we need qualified names we need to
     // copy them over to a vector<string>.
@@ -1490,7 +1495,7 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
     {
         MXB_INFO("Query targets table on server '%s'", rval->name());
     }
-    else if ((rval = get_location(qc_get_database_names(buffer))))
+    else if ((rval = get_location(parser().get_database_names(buffer))))
     {
         MXB_INFO("Query targets database on server '%s'", rval->name());
     }
@@ -1503,16 +1508,16 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     mxs::Target* rval = NULL;
     uint8_t command = mxs_mysql_get_command(buffer);
 
-    if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+    if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
     {
         // If pStmt is null, the PREPARE was malformed. In that case it can be routed to any backend to get
         // a proper error response. Also returns null if preparing from a variable. This is a limitation.
-        GWBUF* pStmt = qc_get_preparable_stmt(buffer);
+        GWBUF* pStmt = parser().get_preparable_stmt(buffer);
         if (pStmt)
         {
-            std::string_view stmt = qc_get_prepare_name(buffer);
+            std::string_view stmt = parser().get_prepare_name(buffer);
 
-            if ((rval = get_location(qc_get_table_names(pStmt))))
+            if ((rval = get_location(parser().get_table_names(pStmt))))
             {
                 MXB_INFO("PREPARING NAMED %.*s ON SERVER %s", (int)stmt.length(), stmt.data(), rval->name());
                 m_shard.add_statement(stmt, rval);
@@ -1521,7 +1526,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (op == QUERY_OP_EXECUTE)
     {
-        std::string_view stmt = qc_get_prepare_name(buffer);
+        std::string_view stmt = parser().get_prepare_name(buffer);
         mxs::Target* ps_target = m_shard.get_statement(stmt);
         if (ps_target)
         {
@@ -1530,9 +1535,9 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
                      (int)stmt.length(), stmt.data(), rval->name());
         }
     }
-    else if (qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE))
+    else if (Parser::type_mask_contains(qtype, QUERY_TYPE_DEALLOC_PREPARE))
     {
-        std::string_view stmt = qc_get_prepare_name(buffer);
+        std::string_view stmt = parser().get_prepare_name(buffer);
         if ((rval = m_shard.get_statement(stmt)))
         {
             MXB_INFO("Closing named statement %.*s on server %s",
@@ -1540,9 +1545,9 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
             m_shard.remove_statement(stmt);
         }
     }
-    else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
+    else if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT))
     {
-        rval = get_location(qc_get_table_names(buffer));
+        rval = get_location(parser().get_table_names(buffer));
 
         if (rval)
         {

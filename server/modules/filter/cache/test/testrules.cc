@@ -19,6 +19,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/query_classifier.hh>
 
 using namespace std;
@@ -381,6 +382,7 @@ int CacheRules::Tester::test_store()
 {
     int errors = 0;
 
+    MariaDBParser parser;
     for (int i = 0; i < n_store_test_cases; ++i)
     {
         printf("TC      : %d\n", (int)(i + 1));
@@ -401,7 +403,7 @@ int CacheRules::Tester::test_store()
 
             GWBUF* pPacket = create_gwbuf(test_case.query);
 
-            bool matches = pRules->should_store(test_case.default_db, pPacket);
+            bool matches = pRules->should_store(parser, test_case.default_db, pPacket);
 
             if (matches != test_case.matches)
             {
@@ -497,10 +499,11 @@ struct ShouldStore
 
     bool operator()(SCacheRules sRules)
     {
-        return sRules->should_store(NULL, pStmt);
+        return sRules->should_store(parser, NULL, pStmt);
     }
 
-    GWBUF* pStmt;
+    GWBUF*        pStmt;
+    MariaDBParser parser;
 };
 
 int CacheRules::Tester::test_array_store()

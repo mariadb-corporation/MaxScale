@@ -25,12 +25,14 @@
 #include <maxscale/clock.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using std::chrono::seconds;
+using maxscale::Parser;
 using maxscale::RWBackend;
 using mariadb::QueryClassifier;
 using RouteInfo = QueryClassifier::RouteInfo;
@@ -592,13 +594,14 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 m_qc.ps_erase(buffer.get());
                 m_exec_map.erase(route_info().stmt_id());
             }
-            else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
-                     || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
+            else if (Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_NAMED_STMT)
+                     || Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_STMT))
             {
-                mxb_assert(buffer.id() != 0 || qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT));
+                mxb_assert(buffer.id() != 0 ||
+                           Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_NAMED_STMT));
                 m_qc.ps_store(buffer.get(), buffer.id());
             }
-            else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
+            else if (Parser::type_mask_contains(type, QUERY_TYPE_DEALLOC_PREPARE))
             {
                 mxb_assert(!mxs_mysql_is_ps_command(route_info().command()));
                 m_qc.ps_erase(buffer.get());

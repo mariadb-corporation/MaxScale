@@ -317,7 +317,7 @@ bool ResultSetBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
 
 void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)
 {
-    qc_query_op_t op = qc_get_operation(pStatement);
+    qc_query_op_t op = m_parser.get_operation(pStatement);
     gwbuf_free(pStatement);
 
     if (op == QUERY_OP_SELECT)

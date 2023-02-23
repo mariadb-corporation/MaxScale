@@ -49,13 +49,14 @@
 #include <inttypes.h>
 #include <algorithm>
 
+#include <mysqld_error.h>
+#include <maxbase/regex.hh>
+#include <maxbase/alloc.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
-#include <maxbase/alloc.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/session.hh>
 #include <maxscale/modutil.hh>
-#include <maxbase/regex.hh>
-#include <mysqld_error.h>
 
 #include "binlogfilter.hh"
 #include "binlogfiltersession.hh"
@@ -416,15 +417,16 @@ static bool should_skip(const BinlogConfig::Values& config, const std::string& s
     return (config.match && !config.match.match(str)) || (config.exclude && config.exclude.match(str));
 }
 
-static bool should_skip_query(const BinlogConfig::Values& config,
+static bool should_skip_query(const mxs::Parser& parser,
+                              const BinlogConfig::Values& config,
                               const std::string& sql,
                               const std::string& db = "")
 {
     GWBUF* buf = modutil_create_query(sql.c_str());
     bool rval = false;
-    std::vector<QcTableName> tables = qc_get_table_names(buf);
+    std::vector<QcTableName> tables = parser.get_table_names(buf);
 
-    if (qc_get_trx_type_mask(buf) == 0)
+    if (parser.get_trx_type_mask(buf) == 0)
     {
         // Not a transaction management related command
         for (const auto& t : tables)
@@ -858,7 +860,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
     std::string sql((char*)event + static_size + var_block_len + db_name_len + 1, statement_len);
 
     const auto& config = m_config;
-    m_skip = should_skip_query(config, sql, db);
+    m_skip = should_skip_query(parser(), config, sql, db);
     MXB_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
 
     if (!m_skip && config.rewrite_src)
@@ -909,6 +911,6 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
 void BinlogFilterSession::checkAnnotate(const uint8_t* event, const uint32_t event_size)
 {
     std::string sql((char*)event, event_size - (m_crc ? 4 : 0));
-    m_skip = should_skip_query(m_config, sql);
+    m_skip = should_skip_query(parser(), m_config, sql);
     MXB_INFO("[%s] Annotate: %s", m_skip ? "SKIP" : "    ", sql.c_str());
 }

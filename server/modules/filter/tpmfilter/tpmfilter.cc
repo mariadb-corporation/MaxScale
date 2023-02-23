@@ -56,6 +56,7 @@
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/session.hh>
 
@@ -291,7 +292,7 @@ bool TpmSession::routeQuery(GWBUF* queue)
 
         if (!sql.empty())
         {
-            auto mask = qc_get_type_mask(queue);
+            auto mask = parser().get_type_mask(queue);
 
             if (mask & QUERY_TYPE_COMMIT)
             {

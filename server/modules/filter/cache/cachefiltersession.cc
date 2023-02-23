@@ -19,12 +19,14 @@
 #include <maxbase/pretty_print.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxsimd/multistmt.hh>
 #include "storage.hh"
 
 using mxb::Worker;
+using mxs::Parser;
 
 namespace
 {
@@ -108,14 +110,14 @@ inline bool uses_name(std::string_view name, const char** pzNames, size_t nNames
     return bsearch(std::string(name).c_str(), pzNames, nNames, sizeof(const char*), compare_name) != NULL;
 }
 
-bool uses_non_cacheable_function(GWBUF* pPacket)
+bool uses_non_cacheable_function(const Parser& parser, GWBUF* pPacket)
 {
     bool rv = false;
 
     const QC_FUNCTION_INFO* pInfo;
     size_t nInfos;
 
-    qc_get_function_info(pPacket, &pInfo, &nInfos);
+    parser.get_function_info(pPacket, &pInfo, &nInfos);
 
     const QC_FUNCTION_INFO* pEnd = pInfo + nInfos;
 
@@ -129,14 +131,14 @@ bool uses_non_cacheable_function(GWBUF* pPacket)
     return rv;
 }
 
-bool uses_non_cacheable_variable(GWBUF* pPacket)
+bool uses_non_cacheable_variable(const Parser& parser, GWBUF* pPacket)
 {
     bool rv = false;
 
     const QC_FIELD_INFO* pInfo;
     size_t nInfos;
 
-    qc_get_field_info(pPacket, &pInfo, &nInfos);
+    parser.get_field_info(pPacket, &pInfo, &nInfos);
 
     const QC_FIELD_INFO* pEnd = pInfo + nInfos;
 
@@ -824,14 +826,14 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
     if (m_use || m_populate)
     {
-        uint32_t type_mask = qc_get_trx_type_mask(pPacket);     // Note, only trx-related type mask
+        uint32_t type_mask = parser().get_trx_type_mask(pPacket); // Note, only trx-related type mask
 
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
         const CacheConfig& config = m_sCache->config();
         auto protocol_data = m_pSession->protocol_data();
 
-        if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+        if (Parser::type_mask_contains(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
             if (log_decisions())
             {
@@ -907,7 +909,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
         if (m_invalidate || (action != CACHE_IGNORE))
         {
-            if (qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
+            if (Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
             {
                 m_invalidate_now = m_invalidate;
             }
@@ -920,24 +922,24 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     {
                         // Note that the type mask must be obtained a new. A few lines
                         // above we only got the transaction state related type mask.
-                        type_mask = qc_get_type_mask(pPacket);
+                        type_mask = parser().get_type_mask(pPacket);
 
-                        if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+                        if (Parser::type_mask_contains(type_mask, QUERY_TYPE_USERVAR_READ))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "user variables are read";
                         }
-                        else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+                        else if (Parser::type_mask_contains(type_mask, QUERY_TYPE_SYSVAR_READ))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "system variables are read";
                         }
-                        else if (uses_non_cacheable_function(pPacket))
+                        else if (uses_non_cacheable_function(parser(), pPacket))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "uses non-cacheable function";
                         }
-                        else if (uses_non_cacheable_variable(pPacket))
+                        else if (uses_non_cacheable_variable(parser(), pPacket))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "uses non-cacheable variable";
@@ -954,7 +956,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             m_invalidate_now = true;
                         }
 
-                        qc_parse_result_t result = qc_parse(pPacket, QC_COLLECT_TABLES);
+                        qc_parse_result_t result = parser().parse(pPacket, QC_COLLECT_TABLES);
 
                         if (result == QC_QUERY_PARSED)
                         {
@@ -1073,7 +1075,7 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
 {
     // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
-    std::vector<QcTableName> names = qc_get_table_names(pPacket);
+    std::vector<QcTableName> names = parser().get_table_names(pPacket);
 
     for (auto& name : names)
     {
@@ -1122,7 +1124,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
     if (cache_action != CACHE_IGNORE)
     {
-        std::shared_ptr<CacheRules> sRules = m_sCache->should_store(m_zDefaultDb, pPacket);
+        std::shared_ptr<CacheRules> sRules = m_sCache->should_store(parser(), m_zDefaultDb, pPacket);
 
         if (sRules)
         {
@@ -1638,7 +1640,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
 {
     if (m_invalidate && m_state == CACHE_EXPECTING_RESPONSE)
     {
-        qc_parse_result_t parse_result = qc_parse(pPacket, QC_COLLECT_TABLES);
+        qc_parse_result_t parse_result = parser().parse(pPacket, QC_COLLECT_TABLES);
 
         if (parse_result == QC_QUERY_PARSED)
         {

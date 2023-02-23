@@ -121,7 +121,9 @@ cache_result_t Cache::get_default_key(const std::string& user,
     return CACHE_RESULT_OK;
 }
 
-std::shared_ptr<CacheRules> Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
+std::shared_ptr<CacheRules> Cache::should_store(const mxs::Parser& parser,
+                                                const char* zDefaultDb,
+                                                const GWBUF* pQuery)
 {
     std::shared_ptr<CacheRules> sRules;
 
@@ -133,7 +135,7 @@ std::shared_ptr<CacheRules> Cache::should_store(const char* zDefaultDb, const GW
 
     while (!sRules && (i != rules.end()))
     {
-        if ((*i)->should_store(zDefaultDb, pQuery))
+        if ((*i)->should_store(parser, zDefaultDb, pQuery))
         {
             sRules = *i;
         }

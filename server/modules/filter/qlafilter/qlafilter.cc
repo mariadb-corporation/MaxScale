@@ -38,13 +38,14 @@
 #include <sstream>
 #include <string>
 
-#include <maxscale/config2.hh>
 #include <maxbase/format.hh>
-#include <maxscale/modinfo.hh>
-#include <maxscale/modutil.hh>
-#include <maxscale/service.hh>
-#include <maxscale/modulecmd.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/modinfo.hh>
+#include <maxscale/modulecmd.hh>
+#include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
+#include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using std::string;
@@ -478,7 +479,7 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
 
         if (data_flags & (QlaInstance::LOG_DATA_TRANSACTION | QlaInstance::LOG_DATA_TRANSACTION_DUR))
         {
-            m_qc_type_mask = qc_get_type_mask(queue);
+            m_qc_type_mask = parser().get_type_mask(queue);
 
             if (m_qc_type_mask & QUERY_TYPE_BEGIN_TRX)
             {

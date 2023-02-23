@@ -23,6 +23,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
@@ -331,7 +332,8 @@ private:
             // be better. However, this only requires the storage of the type bitmask instead of the whole
             // buffer which would be required for the function information.
             return !reply.is_ok()
-                   && !qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_MASTER_READ);
+                && !mxs::Parser::type_mask_contains(m_qc.current_route_info().type_mask(),
+                                                    QUERY_TYPE_MASTER_READ);
         }
 
         mxb_assert(!true);

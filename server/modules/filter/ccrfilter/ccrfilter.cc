@@ -23,6 +23,7 @@
 #include <maxscale/hint.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 
@@ -286,7 +287,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
         time_t now = time(NULL);
         /* Not a simple SELECT statement, possibly modifies data. If we're processing a statement
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement. */
-        if (qc_query_is_type(qc_get_type_mask(queue), QUERY_TYPE_WRITE))
+        if (mxs::Parser::type_mask_contains(parser().get_type_mask(queue), QUERY_TYPE_WRITE))
         {
             const char* sql;
             int length;

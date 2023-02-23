@@ -21,6 +21,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 
@@ -28,6 +29,7 @@
 #include "mysql.hh"
 
 using maxscale::Buffer;
+using maxscale::Parser;
 using std::ostream;
 using std::string;
 using std::stringstream;
@@ -56,19 +58,20 @@ public:
     EnableOption(const EnableOption&) = delete;
     EnableOption& operator=(const EnableOption&) = delete;
 
-    EnableOption(uint32_t option)
-        : m_option(option)
+    EnableOption(Parser& parser, uint32_t option)
+        : m_parser(parser)
+        , m_option(option)
         , m_options(0)
         , m_disable(false)
     {
         if (m_option)
         {
-            m_options = qc_get_options();
+            m_options = m_parser.get_options();
 
             if (!(m_options & m_option))
             {
                 uint32_t options = (m_options | m_option);
-                MXB_AT_DEBUG(bool rv = ) qc_set_options(options);
+                MXB_AT_DEBUG(bool rv = ) m_parser.set_options(options);
                 mxb_assert(rv);
                 m_disable = true;
             }
@@ -79,12 +82,13 @@ public:
     {
         if (m_disable)
         {
-            MXB_AT_DEBUG(bool rv = ) qc_set_options(m_options);
+            MXB_AT_DEBUG(bool rv = ) m_parser.set_options(m_options);
             mxb_assert(rv);
         }
     }
 
 private:
+    Parser&  m_parser;
     uint32_t m_option;
     uint32_t m_options;
     bool     m_disable;
@@ -147,7 +151,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     const char* zHost = m_pSession->client_remote().c_str();
     bool acceptable = true;
 
-    if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
+    if (Parser::type_mask_contains(parser().get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
     {
         if (m_config.check_user_variables)
         {
@@ -159,7 +163,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     }
     else
     {
-        qc_query_op_t op = qc_get_operation(pPacket);
+        qc_query_op_t op = parser().get_operation(pPacket);
 
         if (op == QUERY_OP_SELECT)
         {
@@ -201,10 +205,10 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     bool rv = false;
 
     uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
-    EnableOption enable(option);
+    EnableOption enable(parser(), option);
 
-    auto parse_result = qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
-    auto op = qc_get_operation(pPacket);
+    auto parse_result = parser().parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
+    auto op = parser().get_operation(pPacket);
 
     if (op == QUERY_OP_EXPLAIN)
     {
@@ -212,9 +216,9 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     }
     else if (parse_result == QC_QUERY_PARSED || !m_config.require_fully_parsed)
     {
-        if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
+        if (Parser::type_mask_contains(parser().get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
-            GWBUF* pP = qc_get_preparable_stmt(pPacket);
+            GWBUF* pP = parser().get_preparable_stmt(pPacket);
 
             if (pP)
             {
@@ -249,10 +253,10 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
     bool rv = false;
 
     uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
-    EnableOption enable(option);
+    EnableOption enable(parser(), option);
 
-    auto parse_result = qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
-    auto op = qc_get_operation(pPacket);
+    auto parse_result = parser().parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
+    auto op = parser().get_operation(pPacket);
 
     if (op == QUERY_OP_EXPLAIN)
     {
@@ -640,7 +644,7 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
     const QC_FUNCTION_INFO* pInfos;
     size_t nInfos;
 
-    qc_get_function_info(pPacket, &pInfos, &nInfos);
+    parser().get_function_info(pPacket, &pInfos, &nInfos);
 
     const QC_FUNCTION_INFO* begin = pInfos;
     const QC_FUNCTION_INFO* end = begin + nInfos;
@@ -663,7 +667,7 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
 
 bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    mxb_assert(qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE));
+    mxb_assert(Parser::type_mask_contains(parser().get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE));
 
     bool is_defined = false;
 
@@ -686,7 +690,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     const QC_FIELD_INFO* pInfos;
     size_t nInfos;
 
-    qc_get_field_info(pPacket, &pInfos, &nInfos);
+    parser().get_field_info(pPacket, &pInfos, &nInfos);
 
     const QC_FIELD_INFO* begin = pInfos;
     const QC_FIELD_INFO* end = begin + nInfos;
@@ -717,7 +721,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
 bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    mxb_assert(qc_get_operation(pPacket) == QUERY_OP_SELECT);
+    mxb_assert(parser().get_operation(pPacket) == QUERY_OP_SELECT);
     mxb_assert(m_config.check_unions || m_config.check_subqueries);
 
     bool is_used = false;
@@ -756,7 +760,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
     const QC_FIELD_INFO* pInfos;
     size_t nInfos;
 
-    qc_get_field_info(pPacket, &pInfos, &nInfos);
+    parser().get_field_info(pPacket, &pInfos, &nInfos);
 
     const QC_FIELD_INFO* begin = pInfos;
     const QC_FIELD_INFO* end = begin + nInfos;

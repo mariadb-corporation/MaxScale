@@ -95,12 +95,15 @@ public:
     /**
      * Returns whether the results of a particular query should be stored.
      *
+     * @param parser      The parser to use.
      * @param zDefaultDb  The current default database.
      * @param pQuery      Buffer containing a SELECT.
      *
      * @return A rules object, if the query should be stored, NULL otherwise.
      */
-    std::shared_ptr<CacheRules> should_store(const char* zDefaultDb, const GWBUF* pQuery);
+    std::shared_ptr<CacheRules> should_store(const mxs::Parser& parser,
+                                             const char* zDefaultDb,
+                                             const GWBUF* pQuery);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.

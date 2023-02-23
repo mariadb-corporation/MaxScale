@@ -129,12 +129,13 @@ protected:
 class CacheRuleValue : public CacheRuleConcrete
 {
 public:
-    bool matches(const char* zDefault_db, const GWBUF* pQuery) const;
+    bool matches(const mxs::Parser& parser, const char* zDefault_db, const GWBUF* pQuery) const;
 
 protected:
-    virtual bool matches_column(const char* zDefault_db, const GWBUF* pQuery) const;
-    virtual bool matches_table(const char* zDefault_db, const GWBUF* pQuery) const;
-    bool matches_database(const char* zDefault_db, const GWBUF* pQuery) const;
+    virtual bool matches_column(const mxs::Parser& parser, const char* zDefault_db, const GWBUF* pQuery) const;
+    virtual bool matches_table(const mxs::Parser& parser, const char* zDefault_db,
+                               const GWBUF* pQuery) const;
+    bool matches_database(const mxs::Parser& parser, const char* zDefault_db, const GWBUF* pQuery) const;
     bool matches_query(const char* zDefault_db, const GWBUF* pQuery) const;
 
 protected:
@@ -176,8 +177,12 @@ public:
                                 const char* zValue);
 
 protected:
-    bool matches_column(const char* zDefault_db, const GWBUF* pQuery) const override;
-    bool matches_table(const char* zDefault_db, const GWBUF* pQuery) const override;
+    bool matches_column(const mxs::Parser& parser,
+                        const char* zDefault_db,
+                        const GWBUF* pQuery) const override;
+    bool matches_table(const mxs::Parser& parser,
+                       const char* zDefault_db,
+                       const GWBUF* pQuery) const override;
 
     std::string m_column;
     std::string m_table;
@@ -224,8 +229,12 @@ public:
                                   const char* zValue);        // The value from the rule file.
 
 protected:
-    bool matches_column(const char* zDefault_db, const GWBUF* pQuery) const override;
-    bool matches_table(const char* zDefault_db, const GWBUF* pQuery) const override;
+    bool matches_column(const mxs::Parser& parser,
+                        const char* zDefault_db,
+                        const GWBUF* pQuery) const override;
+    bool matches_table(const mxs::Parser& parser,
+                       const char* zDefault_db,
+                       const GWBUF* pQuery) const override;
 
 private:
     CacheRuleRegex(const CacheConfig* pConfig,
@@ -361,12 +370,13 @@ public:
     /**
      * Returns boolean indicating whether the result of the query should be stored.
      *
+     * @param parser      The parser to use.
      * @param zdefault_db The current default database, NULL if there is none.
      * @param pquery      The query, expected to contain a COM_QUERY.
      *
      * @return True, if the results should be stored.
      */
-    bool should_store(const char* zDefault_db, const GWBUF* pQuery) const;
+    bool should_store(const mxs::Parser& parser, const char* zDefault_db, const GWBUF* pQuery) const;
 
     /**
      * Returns boolean indicating whether the cache should be used, that is consulted.
