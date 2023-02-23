@@ -206,7 +206,7 @@ public:
         if (iter != m_server_owners.end())
         {
             // Server is already claimed by a monitor.
-            * existing_owner = iter->second;
+            *existing_owner = iter->second;
         }
         else
         {
@@ -305,7 +305,7 @@ bool MonitorSpec::do_post_validate(const cfg::Configuration* config, Params& par
         }
     }
 
-    vector<::SERVER*> servers = s_servers.get(params);
+    auto servers = s_servers.get(params);
 
     for (::SERVER* server : servers)
     {
@@ -1154,37 +1154,37 @@ int Monitor::launch_command(MonitorServer* ptr, const std::string& event_name)
     m_scriptcmd->match_substitute("$PARENT", gen_parent);
 
     m_scriptcmd->match_substitute("$CHILDREN", [this, ptr] {
-                                      return child_nodes(ptr);
-                                  });
+        return child_nodes(ptr);
+    });
 
     m_scriptcmd->match_substitute("$EVENT", [&event_name] {
-                                      return event_name;
-                                  });
+        return event_name;
+    });
 
     m_scriptcmd->match_substitute("$CREDENTIALS", [this] {
-                                        // Provides credentials for all servers.
-                                      return gen_serverlist(0, CredentialsApproach::INCLUDE);
-                                  });
+        // Provides credentials for all servers.
+        return gen_serverlist(0, CredentialsApproach::INCLUDE);
+    });
 
     m_scriptcmd->match_substitute("$NODELIST", [this] {
-                                      return gen_serverlist(SERVER_RUNNING);
-                                  });
+        return gen_serverlist(SERVER_RUNNING);
+    });
 
     m_scriptcmd->match_substitute("$LIST", [this] {
-                                      return gen_serverlist(0);
-                                  });
+        return gen_serverlist(0);
+    });
 
     m_scriptcmd->match_substitute("$MASTERLIST", [this] {
-                                      return gen_serverlist(SERVER_MASTER);
-                                  });
+        return gen_serverlist(SERVER_MASTER);
+    });
 
     m_scriptcmd->match_substitute("$SLAVELIST", [this] {
-                                      return gen_serverlist(SERVER_SLAVE);
-                                  });
+        return gen_serverlist(SERVER_SLAVE);
+    });
 
     m_scriptcmd->match_substitute("$SYNCEDLIST", [this] {
-                                      return gen_serverlist(SERVER_JOINED);
-                                  });
+        return gen_serverlist(SERVER_JOINED);
+    });
 
     int rv = m_scriptcmd->externcmd_execute();
 
@@ -1423,13 +1423,13 @@ bool MonitorServer::fetch_variables()
             if (!variables.empty())
             {
                 MXB_INFO("Variable(s) %s were not found.", mxb::join(variables, ", ", "'").c_str());
-                mxb_assert(!true); // Suggests typo in variable name.
+                mxb_assert(!true);      // Suggests typo in variable name.
             }
         }
         else
         {
             MXB_ERROR("Fetching server variables failed: (%d), %s", err, err_msg.c_str());
-            mxb_assert(!true); // Suggests error in SQL
+            mxb_assert(!true);      // Suggests error in SQL
             rv = false;
         }
     }
