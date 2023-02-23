@@ -210,7 +210,8 @@ bool Replicator::Imp::connect()
             gtid_start_pos,
             "SET @slave_gtid_strict_mode=1",
             "SET @slave_gtid_ignore_duplicates=1",
-            "SET NAMES latin1"
+            "SET NAMES latin1",
+            "SET @rpl_semi_sync_slave=@@rpl_semi_sync_master_enabled",
         };
 
         if (!m_sql->query(queries))

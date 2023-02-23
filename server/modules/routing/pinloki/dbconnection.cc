@@ -14,6 +14,7 @@
 
 #include "dbconnection.hh"
 #include <maxscale/log.hh>
+#include <maxscale/config.hh>
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -63,7 +64,8 @@ void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid
         "SET @slave_connect_state='" + gtid_str + "'",
         "SET @slave_gtid_strict_mode=1",
         "SET @slave_gtid_ignore_duplicates=1",
-        "SET NAMES latin1"
+        "SET NAMES latin1",
+        "SET @rpl_semi_sync_slave=@@rpl_semi_sync_master_enabled",
     };
 
     for (const auto& sql : queries)
@@ -124,6 +126,7 @@ void Connection::connect()
     mysql_optionsv(m_conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
     mysql_optionsv(m_conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     mysql_optionsv(m_conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+    mysql_optionsv(m_conn, MARIADB_OPT_RPL_REGISTER_REPLICA, mxs::Config::get().nodename.c_str(), 3306);
 
     if (m_details.ssl)
     {

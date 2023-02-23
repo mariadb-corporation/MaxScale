@@ -15,6 +15,7 @@
 #include "sql.hh"
 
 #include <maxsql/mariadb.hh>
+#include <maxscale/config.hh>
 
 SQL::SQL(MYSQL* mysql, const cdc::Server& server)
     : m_mysql(mysql)
@@ -50,6 +51,7 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
 
         mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
         mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &read_timeout);
+        mysql_optionsv(mysql, MARIADB_OPT_RPL_REGISTER_REPLICA, mxs::Config::get().nodename.c_str(), 3306);
 
         if (server.proxy_protocol)
         {
