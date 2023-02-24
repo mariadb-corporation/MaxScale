@@ -79,17 +79,13 @@ export default {
     },
     methods: {
         updateChart() {
-            const timestamp = Date.now()
-            const { connsChart } = this.$refs
-            if (connsChart) {
+            const chart = this.$typy(this.$refs, 'connsChart.chartInstance').safeObject
+            if (chart) {
                 const { connections } = this.serviceConnectionInfo
-                connsChart.chartData.datasets.forEach(function(dataset) {
-                    dataset.data.push({
-                        x: timestamp,
-                        y: connections,
-                    })
-                })
-                connsChart.$data._chart.update({ preservation: true })
+                chart.data.datasets.forEach(dataset =>
+                    dataset.data.push({ x: Date.now(), y: connections })
+                )
+                chart.update('none')
             }
         },
     },

@@ -90,7 +90,7 @@ export default {
     },
     methods: {
         update(chart) {
-            chart.update('quiet')
+            chart.update('none')
         },
         updateSessionsGraph(chart, timestamp) {
             const self = this

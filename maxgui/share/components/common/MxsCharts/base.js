@@ -32,7 +32,7 @@ export default {
         opts: {
             deep: true,
             handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.chartInstance.update('quiet')
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.chartInstance.update('none')
             },
         },
     },
