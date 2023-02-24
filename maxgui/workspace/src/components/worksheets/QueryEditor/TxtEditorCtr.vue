@@ -143,9 +143,11 @@ export default {
             // chart-config and chart-pane state
             defChartOpt: {
                 type: '',
-                data: { datasets: [] },
-                scaleLabels: { x: '', y: '' },
+                chartData: { datasets: [], labels: [] },
+                axisKeys: { x: '', y: '' },
                 axesType: { x: '', y: '' },
+                tableData: [],
+                isHorizChart: false,
                 isMaximized: false,
             },
             chartOpt: null,
@@ -230,8 +232,8 @@ export default {
             return [...SchemaSidebar.getters('getSchemaCompletionItems'), ...this.snippetList]
         },
         showVisChart() {
-            const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray
-            return Boolean(this.$typy(this.chartOpt, 'type').safeString && datasets.length)
+            const labels = this.$typy(this.chartOpt, 'chartData.labels').safeArray
+            return Boolean(this.$typy(this.chartOpt, 'type').safeString && labels.length)
         },
         isChartMaximized() {
             return this.$typy(this.chartOpt, 'isMaximized').safeBoolean

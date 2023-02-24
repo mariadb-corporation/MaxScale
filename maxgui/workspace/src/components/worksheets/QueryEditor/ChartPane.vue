@@ -36,7 +36,8 @@
                 {{ $mxs_t('close') }}
             </mxs-tooltip-btn>
         </div>
-        <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
+        <!-- Chart height will be calculated accurately only after chart tool is fully rendered. -->
+        <div v-if="chartToolHeight" ref="chartWrapper" class="chart-wrapper">
             <mxs-line-chart
                 v-if="type === chartTypes.LINE"
                 id="query-chart"
@@ -105,56 +106,50 @@ export default {
                 this.$emit('input', value)
             },
         },
+        tableData() {
+            return this.chartOpt.tableData
+        },
         chartData() {
-            return this.chartOpt.data
+            return this.chartOpt.chartData
+        },
+        labels() {
+            return this.chartData.labels
         },
         chartStyle() {
             return {
-                minHeight: `${this.chartHeight}px`,
-                minWidth: this.minWidth,
+                height: this.chartHeight,
+                width: this.chartWidth,
             }
         },
         axesType() {
             return this.chartOpt.axesType
         },
-        scaleLabels() {
-            return this.chartOpt.scaleLabels
+        axisKeys() {
+            return this.chartOpt.axisKeys
         },
         type() {
             return this.chartOpt.type
         },
-        minWidth() {
-            if (this.autoSkipTick(this.axesType.x) || this.type === this.chartTypes.BAR_HORIZ)
-                return 'unset'
-            if (this.$typy(this.chartData, 'xLabels').isDefined)
-                return `${Math.min(this.chartData.xLabels.length * 15, 15000)}px`
-            return '0px'
+        chartWidth() {
+            if (this.autoSkipTick(this.axesType.x)) return 'unset'
+            return `${Math.min(this.labels.length * 15, 15000)}px`
         },
         chartHeight() {
-            if (this.autoSkipTick(this.axesType.y))
-                return this.containerHeight - (this.chartToolHeight + 12)
-            /** When there is too many data points,
-             * first, get min value between "overflow" height (this.chartData.yLabels.length * 15)
-             * and max height threshold 15000. However, when there is too little data points,
-             * the "overflow" height is smaller than container height, container height
-             * should be chosen to make chart fit to its container
-             */
-            return Math.max(
-                this.containerHeight - (this.chartToolHeight + 12),
-                Math.min(this.$typy(this.chartData, 'yLabels').safeArray.length * 15, 15000)
-            )
+            let height = this.containerHeight - (this.chartToolHeight + 12)
+            if (!this.autoSkipTick(this.axesType.y))
+                /** When there is too many data points,
+                 * first, get min value between "overflow" height (this.labels.length * 15)
+                 * and max height threshold 15000. However, when there is too little data points,
+                 * the "overflow" height is smaller than container height, container height
+                 * should be chosen to make chart fit to its container
+                 */
+                height = Math.max(height, Math.min(this.labels.length * 15, 15000))
+            return `${height}px`
         },
         chartOptions() {
             const scope = this
             let options = {
-                layout: {
-                    padding: {
-                        left: 12,
-                        bottom: 12,
-                        right: 24,
-                        top: 24,
-                    },
-                },
+                layout: { padding: { left: 12, bottom: 12, right: 24, top: 24 } },
                 animation: { active: { duration: 0 } },
                 onHover: (e, el) => {
                     e.native.target.style.cursor = el[0] ? 'pointer' : 'default'
@@ -163,10 +158,9 @@ export default {
                 scales: {
                     x: {
                         type: this.axesType.x,
-                        labels: this.$typy(this.chartData, 'xLabels').safeArray,
                         title: {
                             display: true,
-                            text: this.scaleLabels.x,
+                            text: this.axisKeys.x,
                             font: { size: 14 },
                             padding: { top: 16 },
                             color: '#424f62',
@@ -176,10 +170,9 @@ export default {
                     },
                     y: {
                         type: this.axesType.y,
-                        labels: this.$typy(this.chartData, 'yLabels').safeArray,
                         title: {
                             display: true,
-                            text: this.scaleLabels.y,
+                            text: this.axisKeys.y,
                             font: { size: 14 },
                             padding: { bottom: 16 },
                             color: '#424f62',
@@ -195,7 +188,7 @@ export default {
                         intersect: false,
                         callbacks: {
                             label(context) {
-                                scope.dataPoint = context.dataset.data[context.dataIndex]
+                                scope.dataPoint = scope.tableData[context.dataIndex]
                             },
                         },
                         external: context =>
@@ -203,6 +196,7 @@ export default {
                                 context,
                                 tooltipId: scope.uniqueTooltipId,
                                 dataPoint: scope.dataPoint,
+                                axisKeys: scope.axisKeys,
                                 alignTooltipToLeft:
                                     context.tooltip.caretX >=
                                     scope.$refs.chartWrapper.clientWidth / 2,
@@ -210,7 +204,7 @@ export default {
                     },
                 },
             }
-            if (this.type === this.chartTypes.BAR_HORIZ) options.indexAxis = 'y'
+            if (this.chartOpt.isHorizChart) options.indexAxis = 'y'
             return options
         },
     },

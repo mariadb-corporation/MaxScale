@@ -111,8 +111,10 @@ export function streamTooltip({ context, tooltipId, alignTooltipToLeft }) {
  * @param {Object} payload.context - chartjs tooltip context
  * @param {String} payload.tooltipId - tooltipId. Use to remove the tooltip when chart instance is destroyed
  * @param {Object} payload.dataPoint - data point object
+ * @param {String} payload.axisKeys.x - xAxisKey
+ * @param {String} payload.axisKeys.y - yAxisKey
  */
-export function objectTooltip({ context, tooltipId, dataPoint, alignTooltipToLeft }) {
+export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTooltipToLeft }) {
     // Tooltip Element
     let tooltipEl = createTooltipEle({
         context,
@@ -123,24 +125,20 @@ export function objectTooltip({ context, tooltipId, dataPoint, alignTooltipToLef
     // Set Text
     if (tooltipEl && context.tooltip.body) {
         let innerHtml = '<tbody>'
-        Object.keys(dataPoint.dataPointObj).forEach(key => {
-            if (key !== 'x' && key !== 'y') {
-                //bold x,y axes value
-                const boldClass = `${
-                    key === dataPoint.scaleLabelX || key === dataPoint.scaleLabelY
-                        ? 'font-weight-black'
-                        : ''
-                }`
-                innerHtml += `
+        Object.keys(dataPoint).forEach(key => {
+            //bold x,y axes value
+            const boldClass = `${
+                key === axisKeys.x || key === axisKeys.y ? 'font-weight-black' : ''
+            }`
+            innerHtml += `
                 <tr>
                     <td class="mxs-color-helper text-small-text ${boldClass}">
                      ${key}
                      </td>
                     <td class="mxs-color-helper text-navigation ${boldClass}">
-                        ${dataPoint.dataPointObj[key]}
+                        ${dataPoint[key]}
                     </td>
                 </tr>`
-            }
         })
         innerHtml += '</tbody>'
         let tableRoot = tooltipEl.querySelector('table')

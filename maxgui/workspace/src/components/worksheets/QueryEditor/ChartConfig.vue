@@ -40,7 +40,7 @@
                 return-object
             />
             <template v-if="resSet">
-                <!-- Don't show scaleLabels inputs if result set is empty -->
+                <!-- Don't show axisKeys inputs if result set is empty -->
                 <div
                     v-if="$typy(resSet, 'data').isEmptyArray"
                     class="mt-4 mxs-color-helper text-small-text"
@@ -48,7 +48,7 @@
                     {{ $mxs_t('emptySet') }}
                 </div>
                 <template v-else>
-                    <div v-for="(_, axisId) in scaleLabels" :key="axisId">
+                    <div v-for="(_, axisId) in axisKeys" :key="axisId">
                         <div class="mt-2">
                             <label
                                 class="field__label mxs-color-helper text-small-text text-capitalize label-required"
@@ -56,7 +56,7 @@
                                 {{ axisId }} axis
                             </label>
                             <v-select
-                                v-model="scaleLabels[axisId]"
+                                v-model="axisKeys[axisId]"
                                 :items="axisFields"
                                 outlined
                                 class="vuetify-input--override v-select--mariadb error--text__bottom"
@@ -157,7 +157,7 @@ export default {
     data() {
         return {
             resSet: null,
-            scaleLabels: { x: '', y: '' }, // scaleLabels inputs
+            axisKeys: { x: '', y: '' }, // axisKeys inputs
             axesType: { x: '', y: '' }, // axesType inputs
             showTrendline: false,
         }
@@ -175,13 +175,16 @@ export default {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
             return this.resSet.fields
         },
+        isHorizChart() {
+            return this.chartOpt.type === this.chartTypes.BAR_HORIZ
+        },
         supportTrendLine() {
             const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.chartTypes
             return [LINE, SCATTER, BAR_VERT, BAR_HORIZ].includes(this.chartOpt.type)
         },
-        areNumericalAxes() {
+        hasLinearAxis() {
             const { LINEAR } = this.axisTypes
-            return this.axesType.x === LINEAR && this.axesType.y === LINEAR
+            return this.axesType.x === LINEAR || this.axesType.y === LINEAR
         },
     },
     watch: {
@@ -194,7 +197,7 @@ export default {
                 this.clearAxes()
             },
         },
-        scaleLabels: {
+        axisKeys: {
             deep: true,
             handler() {
                 this.genChartData()
@@ -228,7 +231,7 @@ export default {
             })
         },
         clearAxes() {
-            this.scaleLabels = { x: '', y: '' }
+            this.axisKeys = { x: '', y: '' }
             this.axesType = { x: '', y: '' }
         },
         labelingAxisType(axisType) {
@@ -242,11 +245,9 @@ export default {
                     return axisType
             }
         },
-        genDataset({ colorIndex, data }) {
-            const lineColor = this.$helpers.dynamicColors(colorIndex)
-            let dataset = {
-                data,
-            }
+        genDatasetProperties() {
+            const lineColor = this.$helpers.dynamicColors(0)
+            let dataset = {}
             const indexOfOpacity = lineColor.lastIndexOf(')') - 1
             const backgroundColor = this.$helpers.strReplaceAt({
                 str: lineColor,
@@ -258,7 +259,6 @@ export default {
                 case LINE:
                     {
                         dataset = {
-                            ...dataset,
                             fill: true,
                             backgroundColor: backgroundColor,
                             borderColor: lineColor,
@@ -272,7 +272,6 @@ export default {
                     break
                 case SCATTER: {
                     dataset = {
-                        ...dataset,
                         borderWidth: 1,
                         fill: true,
                         backgroundColor: backgroundColor,
@@ -285,7 +284,6 @@ export default {
                 case BAR_VERT:
                 case BAR_HORIZ: {
                     dataset = {
-                        ...dataset,
                         barPercentage: 0.5,
                         categoryPercentage: 1,
                         barThickness: 'flex',
@@ -300,7 +298,7 @@ export default {
                     break
                 }
             }
-            if (this.areNumericalAxes && this.showTrendline && this.supportTrendLine)
+            if (this.hasLinearAxis && this.showTrendline && this.supportTrendLine)
                 dataset.trendlineLinear = {
                     colorMin: '#2d9cdb',
                     colorMax: '#2d9cdb',
@@ -310,59 +308,53 @@ export default {
             return dataset
         },
         /** This mutates sorting chart data for LINEAR or TIME axis
-         * @param {Object} dataRows - Data rows
+         * @param {Array} tableData - Table data
          */
-        sortLinearOrTimeData(dataRows) {
+        sortLinearOrTimeData(tableData) {
             const { BAR_HORIZ } = this.chartTypes
             let axisId = 'y'
             // For vertical graphs, sort only the y axis, but for horizontal, sort the x axis
             if (this.chartOpt.type === BAR_HORIZ) axisId = 'x'
             const axisType = this.axesType[axisId]
             const { LINEAR, TIME } = this.axisTypes
-            const scaleLabels = this.scaleLabels
+            const axisKeys = this.axisKeys
             if (axisType === LINEAR || axisType === TIME) {
-                dataRows.sort((a, b) => {
-                    const valueA = a[scaleLabels[axisId]]
-                    const valueB = b[scaleLabels[axisId]]
+                tableData.sort((a, b) => {
+                    const valueA = a[axisKeys[axisId]]
+                    const valueB = b[axisKeys[axisId]]
                     if (axisType === this.axisTypes.LINEAR) return valueA - valueB
                     return new Date(valueA) - new Date(valueB)
                 })
             }
         },
         genChartData() {
-            let axesType = this.axesType,
-                scaleLabels = this.scaleLabels,
-                data = {
-                    xLabels: [],
-                    yLabels: [],
-                    datasets: [],
-                }
-            if (scaleLabels.x && scaleLabels.y && axesType.x && axesType.y) {
-                let dataPoints = []
-                const dataRows = this.$helpers.getObjectRows({
-                    columns: this.resSet.fields,
-                    rows: this.resSet.data,
-                })
-                this.sortLinearOrTimeData(dataRows)
-                for (const row of dataRows) {
-                    const xAxisVal = row[scaleLabels.x]
-                    const yAxisVal = row[scaleLabels.y]
-
-                    dataPoints.push({
-                        dataPointObj: row,
-                        x: xAxisVal,
-                        y: yAxisVal,
-                        scaleLabelX: scaleLabels.x,
-                        scaleLabelY: scaleLabels.y,
-                    })
-                    data.xLabels.push(xAxisVal)
-                    data.yLabels.push(yAxisVal)
-                }
-
-                const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
-                data.datasets = [dataset]
+            const { axisKeys, isHorizChart, axesType, resSet } = this
+            const { x, y } = axisKeys
+            let chartData = {
+                datasets: [{ data: [], ...this.genDatasetProperties() }],
+                labels: [],
             }
-            this.chartOpt = { ...this.chartOpt, data, scaleLabels, axesType }
+            const tableData = this.$helpers.getObjectRows({
+                columns: this.$typy(resSet, 'fields').safeArray,
+                rows: this.$typy(resSet, 'data').safeArray,
+            })
+            if (x && y && axesType.x && axesType.y) {
+                this.sortLinearOrTimeData(tableData)
+                tableData.forEach(row => {
+                    const dataPoint = isHorizChart ? row[x] : row[y]
+                    const label = isHorizChart ? row[y] : row[x]
+                    chartData.datasets[0].data.push(dataPoint)
+                    chartData.labels.push(label)
+                })
+            }
+            this.chartOpt = {
+                ...this.chartOpt,
+                chartData,
+                axisKeys,
+                axesType,
+                tableData,
+                isHorizChart,
+            }
         },
     },
 }
