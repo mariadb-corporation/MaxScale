@@ -59,12 +59,12 @@ std::string PgProtocolModule::auth_default() const
     return "";
 }
 
-GWBUF* PgProtocolModule::reject(const std::string& host)
+GWBUF PgProtocolModule::reject(const std::string& host)
 {
     MXB_ALERT("Not implemented yet: %s", __func__);
     mxb_assert(!true);
 
-    return nullptr;
+    return GWBUF{};
 }
 
 uint64_t PgProtocolModule::capabilities() const

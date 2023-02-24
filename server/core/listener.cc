@@ -1301,10 +1301,9 @@ uint32_t Listener::handle_poll_events(mxb::Worker* worker, uint32_t events, Poll
 
 void Listener::reject_connection(int fd, const char* host)
 {
-    if (GWBUF* buf = m_shared_data->m_proto_module->reject(host))
+    if (GWBUF buf = m_shared_data->m_proto_module->reject(host); !buf.empty())
     {
-        write(fd, buf->data(), buf->length());
-        gwbuf_free(buf);
+        write(fd, buf.data(), buf.length());
     }
 
     close(fd);

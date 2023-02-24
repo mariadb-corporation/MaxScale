@@ -97,10 +97,7 @@ public:
      * @param host The host that is blocked
      * @return A buffer containing the error message
      */
-    virtual GWBUF* reject(const std::string& host)
-    {
-        return nullptr;
-    }
+    virtual GWBUF reject(const std::string& host) = 0;
 
     /**
      * Get protocol module name.

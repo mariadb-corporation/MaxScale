@@ -91,10 +91,10 @@ string ProtocolModule::auth_default() const
     return "";
 }
 
-GWBUF* ProtocolModule::reject(const string& host)
+GWBUF ProtocolModule::reject(const string& host)
 {
     mxb_assert(!true);
-    return nullptr;
+    return GWBUF{};
 }
 
 uint64_t ProtocolModule::capabilities() const

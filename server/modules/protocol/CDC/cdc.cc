@@ -85,6 +85,12 @@ public:
         return m_auth_module.diagnostics();
     }
 
+    GWBUF reject(const std::string& host) override
+    {
+        mxb_assert(!true);
+        return GWBUF{};
+    }
+
 private:
     CDCProtocolModule(const std::string& name)
         : m_config(name, &s_spec)
