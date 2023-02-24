@@ -12,7 +12,7 @@
  * Public License.
  */
 export default function vertCrossHair(chart) {
-    if (chart.tooltip._active && chart.tooltip._active.length) {
+    if (chart.tooltip && chart.tooltip._active && chart.tooltip._active.length) {
         let activePoint = chart.tooltip._active[0],
             ctx = chart.ctx,
             y_axis = chart.scales.y,

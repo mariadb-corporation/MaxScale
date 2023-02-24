@@ -19,7 +19,17 @@ export default {
                 {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    clip: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            enabled: false,
+                            intersect: false,
+                            position: 'mxsCursor',
+                        },
+                    },
                 },
                 this.opts
             )

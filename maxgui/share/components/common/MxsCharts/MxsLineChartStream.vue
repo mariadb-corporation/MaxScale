@@ -43,12 +43,11 @@ export default {
         }
     },
     computed: {
-        chartOptions() {
+        lineChartStreamOptions() {
             const scope = this
-            const options = {
+            return {
                 showLine: true,
                 elements: { point: { radius: 0 } },
-                interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: {
                         type: 'realtime',
@@ -66,20 +65,19 @@ export default {
                         delay: (this.refreshRate + 2) * 1000,
                     },
                     tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        enabled: false,
                         external: context =>
                             streamTooltip({ context, tooltipId: scope.uniqueTooltipId }),
                     },
                 },
             }
-            return this.$helpers.lodash.merge(options, this.baseOpts)
+        },
+        chartOptions() {
+            return this.$helpers.lodash.merge(this.lineChartStreamOptions, this.baseOpts)
         },
     },
     watch: {
         refreshRate(v, oV) {
-            if (!this.$helpers.lodash.isEqual(v, oV)) this.chartInstance.update('quiet')
+            if (!this.$helpers.lodash.isEqual(v, oV)) this.chartInstance.update('none')
         },
     },
     beforeDestroy() {

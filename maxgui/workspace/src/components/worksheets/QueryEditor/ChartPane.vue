@@ -154,7 +154,6 @@ export default {
                 onHover: (e, el) => {
                     e.native.target.style.cursor = el[0] ? 'pointer' : 'default'
                 },
-                interaction: { mode: 'nearest', intersect: false },
                 scales: {
                     x: {
                         type: this.axesType.x,
@@ -183,9 +182,6 @@ export default {
                 },
                 plugins: {
                     tooltip: {
-                        mode: 'nearest',
-                        enabled: false,
-                        intersect: false,
                         callbacks: {
                             label(context) {
                                 scope.dataPoint = scope.tableData[context.dataIndex]

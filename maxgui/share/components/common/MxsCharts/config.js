@@ -12,6 +12,7 @@
  * Public License.
  */
 import Chart from 'chart.js/auto'
+import { Tooltip } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import chartTrendline from 'chartjs-plugin-trendline'
 
@@ -24,3 +25,13 @@ Chart.defaults.scale.grid.lineWidth = 0.6
 Chart.defaults.scale.grid.color = 'rgba(234, 234, 234, 1)'
 Chart.defaults.scale.grid.drawTicks = false
 Chart.defaults.scale.grid.drawBorder = false
+
+/**
+ * @param elements {Chart.Element[]} the tooltip elements
+ * @param eventPosition {Point} the position of the event in canvas coordinates
+ * @returns {TooltipPosition} the tooltip position
+ */
+Tooltip.positioners.mxsCursor = (elements, eventPosition) => ({
+    x: eventPosition.x,
+    y: eventPosition.y,
+})
