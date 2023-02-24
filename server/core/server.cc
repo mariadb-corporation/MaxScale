@@ -1196,8 +1196,7 @@ void ServerEndpoint::handle_failed_continue()
     // after the call.
     auto errorbuf = mysql_create_custom_error(
         1, 0, 1927, "Lost connection to server when reusing connection.");
-    m_up->handleError(mxs::ErrorType::PERMANENT, errorbuf, this, dummy);
-    gwbuf_free(errorbuf);
+    m_up->handleError(mxs::ErrorType::PERMANENT, &errorbuf, this, dummy);
 }
 
 void ServerEndpoint::handle_timed_out_continue()
@@ -1206,8 +1205,7 @@ void ServerEndpoint::handle_timed_out_continue()
     mxs::Reply dummy;
     auto errorbuf = mysql_create_custom_error(
         1, 0, 1927, "Timed out when waiting for a connection.");
-    m_up->handleError(mxs::ErrorType::PERMANENT, errorbuf, this, dummy);
-    gwbuf_free(errorbuf);
+    m_up->handleError(mxs::ErrorType::PERMANENT, &errorbuf, this, dummy);
 }
 
 bool ServerEndpoint::is_open() const

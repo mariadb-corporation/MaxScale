@@ -387,10 +387,8 @@ inline static uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 inline static const char* const USERS_RECENTLY_UPDATED_FMT = "User accounts have been recently updated, "
                                                              "cannot update again for %s.";
 
-GWBUF* mysql_create_com_quit(GWBUF* bufparam, int sequence);
-GWBUF* mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnum, const char* errmsg);
-
-void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
+GWBUF mysql_create_com_quit();
+GWBUF mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnum, const char* errmsg);
 
 /**
  * @brief Check if the given command byte is valid

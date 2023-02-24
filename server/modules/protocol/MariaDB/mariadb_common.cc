@@ -92,39 +92,13 @@ static_assert(s_valid_commands[MXS_COM_QUERY], "COM_QUERY should be valid");
 static_assert(s_valid_commands[MXS_COM_PING], "COM_PING should be valid");
 static_assert(!s_valid_commands[0x50], "0x50 should not be a valid command");
 }
-GWBUF* mysql_create_com_quit(GWBUF* bufparam,
-                             int packet_number)
+GWBUF mysql_create_com_quit()
 {
-    uint8_t* data;
-    GWBUF* buf;
-
-    if (bufparam == NULL)
-    {
-        buf = gwbuf_alloc(COM_QUIT_PACKET_SIZE);
-    }
-    else
-    {
-        buf = bufparam;
-    }
-
-    if (buf == NULL)
-    {
-        return 0;
-    }
-    mxb_assert(gwbuf_link_length(buf) == COM_QUIT_PACKET_SIZE);
-
-    data = GWBUF_DATA(buf);
-
-    *data++ = 0x1;
-    *data++ = 0x0;
-    *data++ = 0x0;
-    *data++ = packet_number;
-    *data = 0x1;
-
-    return buf;
+    uint8_t packet[] = {0x1, 0x0, 0x0, 0x0, 0x1};
+    return GWBUF(packet, sizeof(packet));
 }
 
-GWBUF* mysql_create_custom_error(int packet_number, int affected_rows, uint16_t errnum, const char* errmsg)
+GWBUF mysql_create_custom_error(int packet_number, int affected_rows, uint16_t errnum, const char* errmsg)
 {
     uint8_t mysql_packet_header[4];
     uint8_t field_count = 0xff;
@@ -144,8 +118,10 @@ GWBUF* mysql_create_custom_error(int packet_number, int affected_rows, uint16_t 
         + strlen(errmsg);
 
     /** allocate memory for packet header + payload */
-    GWBUF* errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-    uint8_t* outbuf = GWBUF_DATA(errbuf);
+    size_t total_size = sizeof(mysql_packet_header) + mysql_payload_size;
+    GWBUF errbuf(total_size);
+    errbuf.write_complete(total_size);
+    uint8_t* outbuf = errbuf.data();
 
     /** write packet header and packet number */
     mariadb::set_byte3(mysql_packet_header, mysql_payload_size);

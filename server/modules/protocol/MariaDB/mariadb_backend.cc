@@ -164,7 +164,7 @@ void MariaDBBackendConnection::finish_connection()
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
     m_dcb->silence_errors();
-    m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
+    m_dcb->writeq_append(mysql_create_com_quit());
 }
 
 uint64_t MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
@@ -605,9 +605,9 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
     mysql_session()->history_info.erase(this);
 
     mxb_assert(!dcb->hanged_up());
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, ER_CONNECTION_KILLED, ss.str().c_str());
+    GWBUF errbuf = mysql_create_custom_error(1, 0, ER_CONNECTION_KILLED, ss.str().c_str());
 
-    MXB_AT_DEBUG(bool res = ) m_upstream->handleError(type, errbuf, nullptr, m_reply);
+    MXB_AT_DEBUG(bool res = ) m_upstream->handleError(type, &errbuf, nullptr, m_reply);
 
     mxb_assert_message(res || m_session->state() == MXS_SESSION::State::STOPPING,
                        "The session should be stopping when handleError fails");
@@ -615,8 +615,6 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
                        "The DCB must not be open after a successful handleError call");
 
     m_state = State::FAILED;
-
-    gwbuf_free(errbuf);
 }
 
 /**
@@ -1297,14 +1295,14 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
                     }
                     else
                     {
-                        GWBUF* err = mysql_create_custom_error(
+                        GWBUF err = mysql_create_custom_error(
                             1, 0, ER_UNKNOWN_STMT_HANDLER, ss.str().c_str());
 
                         // Send the error as a separate event. This allows the routeQuery of the router to
                         // finish before we deliver the response.
                         // TODO: questionable code. Deliver the error in some other way.
                         mxb_assert(m_dcb->readq_empty());
-                        m_dcb->unread(err);
+                        m_dcb->unread(std::move(err));
                         m_dcb->trigger_read_event();
                     }
 
