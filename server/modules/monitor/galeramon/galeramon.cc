@@ -135,7 +135,7 @@ json_t* GaleraMonitor::diagnostics() const
     json_t* arr = json_array();
     std::lock_guard<std::mutex> guard(m_lock);
 
-    for (auto ptr : servers())
+    for (auto ptr : m_servers)
     {
         auto it = m_prev_info.find(ptr);
 
@@ -462,7 +462,7 @@ void GaleraMonitor::post_tick()
 
     m_master = set_cluster_master(m_master, candidate_master, m_config.disable_master_failback);
 
-    for (auto ptr : servers())
+    for (auto ptr : m_servers)
     {
         // Although there's some replication lag in Galera, this isn't currently measured and having it be 0
         // seconds is better than having it as undefined. Otherwise, using max_slave_replication_lag in
@@ -594,7 +594,7 @@ MonitorServer* GaleraMonitor::get_candidate_master()
     int minval = INT_MAX;
 
     /* set min_id to the lowest value of moitor_servers->server->node_id */
-    for (auto moitor_servers : servers())
+    for (auto moitor_servers : m_servers)
     {
         if (!moitor_servers->server->is_in_maint()
             && (moitor_servers->pending_status & SERVER_JOINED))
@@ -737,7 +737,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     strcpy(donor_list, DONOR_LIST_SET_VAR);
 
     /* Create an array of slave nodes */
-    for (auto ptr : servers())
+    for (auto ptr : m_servers)
     {
         if ((ptr->pending_status & SERVER_JOINED) && (ptr->pending_status & SERVER_SLAVE))
         {

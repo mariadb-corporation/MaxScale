@@ -313,17 +313,6 @@ MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
 {
 }
 
-mxs::MonitorServer*
-MariaDBMonitor::create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared)
-{
-    return new MariaDBServer(server, servers().size(), shared, m_settings.shared);
-}
-
-const ServerArray& MariaDBMonitor::servers() const
-{
-    return reinterpret_cast<const ServerArray&>(Monitor::servers());
-}
-
 /**
  * Reset and initialize server arrays and related data.
  */
@@ -338,7 +327,7 @@ void MariaDBMonitor::reset_server_info()
 
 void MariaDBMonitor::reset_node_index_info()
 {
-    for (auto server : servers())
+    for (auto server : m_servers)
     {
         server->m_node.reset_indexes();
     }
@@ -348,7 +337,7 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
 {
     MariaDBServer* found = nullptr;
     // Phase 1: Direct string compare
-    for (auto server : servers())
+    for (auto server : m_servers)
     {
         EndPoint srv(server->server);
         if (srv == search_ep)
@@ -365,7 +354,7 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
         DNSResolver::StringSet target_addresses = m_resolver.resolve_server(search_ep.host());
         if (!target_addresses.empty())
         {
-            for (auto server : servers())
+            for (auto server : m_servers)
             {
                 SERVER* srv = server->server;
                 if (srv->port() == search_ep.port())
@@ -401,11 +390,11 @@ MariaDBServer* MariaDBMonitor::get_server(MonitorServer* mon_server) const
 
 MariaDBServer* MariaDBMonitor::get_server(SERVER* server) const
 {
-    for (auto iter : servers())
+    for (auto& srv : m_servers)
     {
-        if (iter->server == server)
+        if (srv->server == server)
         {
-            return iter;
+            return srv;
         }
     }
     return nullptr;
@@ -588,6 +577,7 @@ json_t* MariaDBMonitor::to_json(State op)
 
 json_t* MariaDBMonitor::to_json() const
 {
+    mxb_assert(mxs::MainWorker::is_current());
     json_t* rval = Monitor::diagnostics();
 
     // The m_master-pointer can be modified during a tick, but the pointed object cannot be deleted.
@@ -602,7 +592,8 @@ json_t* MariaDBMonitor::to_json() const
                         server_locks_in_use() ? json_boolean(is_cluster_owner()) : json_null());
 
     json_t* server_info = json_array();
-    for (MariaDBServer* server : servers())
+    // Accessing servers-array is ok since it's only changed from main worker thread.
+    for (auto& server : m_servers)
     {
         json_array_append_new(server_info, server->to_json());
     }
@@ -638,7 +629,7 @@ void MariaDBMonitor::pre_loop()
 
     /* This loop can be removed if/once the replication check code is inside tick. It's required so that
      * the monitor makes new connections when starting. */
-    for (MariaDBServer* server : servers())
+    for (MariaDBServer* server : m_servers)
     {
         if (server->con)
         {
@@ -701,7 +692,7 @@ void MariaDBMonitor::tick()
 
     /* Update MonitorServer->pending_status. This is where the monitor loop writes it's findings.
      * Also, backup current status so that it can be compared to any deduced state. */
-    for (auto srv : servers())
+    for (auto srv : m_servers)
     {
         auto status = srv->server->status();
         srv->pending_status = status;
@@ -720,7 +711,7 @@ void MariaDBMonitor::tick()
 
     update_cluster_lock_status();
 
-    for (MariaDBServer* server : servers())
+    for (MariaDBServer* server : m_servers)
     {
         if (server->m_topology_changed)
         {
@@ -1139,7 +1130,7 @@ void MariaDBMonitor::check_acquire_masterlock()
     }
 
     const auto ml = MariaDBServer::LockType::MASTER;
-    for (auto server : servers())
+    for (auto server : m_servers)
     {
         if (server != masterlock_target)
         {
@@ -1176,7 +1167,7 @@ bool MariaDBMonitor::is_slave_maxscale() const
 
 void MariaDBMonitor::execute_task_all_servers(const ServerFunction& task)
 {
-    execute_task_on_servers(task, servers());
+    execute_task_on_servers(task, m_servers);
 }
 
 void MariaDBMonitor::execute_task_on_servers(const ServerFunction& task, const ServerArray& servers)
@@ -1220,7 +1211,7 @@ void MariaDBMonitor::save_monitor_specific_journal_data(mxb::Json& data)
 void MariaDBMonitor::load_monitor_specific_journal_data(const mxb::Json& data)
 {
     string master_name = data.get_string(journal_fields::MASTER);
-    for (auto* elem : servers())
+    for (auto* elem : m_servers)
     {
         if (strcmp(elem->name(), master_name.c_str()) == 0)
         {
@@ -1236,7 +1227,7 @@ void MariaDBMonitor::flush_mdb_server_status()
     // Update shared status.
     bool status_changed = false;
     auto rlag_limit = m_settings.script_max_rlag;
-    for (auto server : servers())
+    for (auto server : m_servers)
     {
         SERVER* srv = server->server;
         srv->set_replication_lag(server->m_replication_lag);
@@ -1255,6 +1246,24 @@ void MariaDBMonitor::flush_mdb_server_status()
     {
         request_journal_update();
     }
+}
+
+void MariaDBMonitor::configured_servers_updated(const std::vector<SERVER*>& servers)
+{
+    for (auto srv : m_servers)
+    {
+        delete srv;
+    }
+
+    auto& shared_settings = settings().shared;
+    m_servers.resize(servers.size());
+    for (size_t i = 0; i < servers.size(); i++)
+    {
+        m_servers[i] = new MariaDBServer(servers[i], i, shared_settings, m_settings.shared);
+    }
+
+    // The configured servers and the active servers are the same.
+    set_active_servers(std::vector<MonitorServer*>(m_servers.begin(), m_servers.end()));
 }
 
 string monitored_servers_to_string(const ServerArray& servers)

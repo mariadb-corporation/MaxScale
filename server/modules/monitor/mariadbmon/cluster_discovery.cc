@@ -170,13 +170,13 @@ void MariaDBMonitor::build_replication_graph()
 {
     const bool use_hostnames = m_settings.assume_unique_hostnames;
     // First, reset all node data.
-    for (MariaDBServer* server : servers())
+    for (MariaDBServer* server : m_servers)
     {
         server->m_node.reset_indexes();
         server->m_node.reset_results();
     }
 
-    for (auto slave : servers())
+    for (auto slave : m_servers)
     {
         /* Check all slave connections of all servers. Connections are added even if one or both endpoints
          * are down or in maintenance. */
@@ -271,7 +271,7 @@ void MariaDBMonitor::find_graph_cycles()
                                              * identical
                                              * cycle index. */
 
-    for (MariaDBServer* server : servers())
+    for (MariaDBServer* server : m_servers)
     {
         /** Index is 0, this node has not yet been visited. */
         if (server->m_node.index == NodeData::INDEX_NOT_VISITED)
@@ -333,7 +333,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     // Helper function for finding normal master candidates.
     auto search_outside_cycles = [this, &master_candidates](RequireRunning req_running,
                                                             DelimitedPrinter& topo_messages) {
-        for (MariaDBServer* server : servers())
+        for (MariaDBServer* server : m_servers)
         {
             if (server->m_node.parents.empty())
             {
@@ -508,7 +508,7 @@ void MariaDBMonitor::assign_server_roles()
     // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
     // 'mon_prev_status'.
     const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_BLR;
-    for (auto server : servers())
+    for (auto server : m_servers)
     {
         server->clear_status(remove_bits);
         server->m_replication_lag = mxs::Target::RLAG_UNDEFINED;
@@ -861,7 +861,7 @@ void MariaDBMonitor::update_topology()
     {
         // Server IDs may have changed.
         m_servers_by_id.clear();
-        for (auto server : servers())
+        for (auto server : m_servers)
         {
             if (server->m_server_id != SERVER_ID_UNKNOWN)
             {
@@ -1016,7 +1016,7 @@ void MariaDBMonitor::update_master()
 void MariaDBMonitor::set_low_disk_slaves_maintenance()
 {
     // Only set pure slave and standalone servers to maintenance.
-    for (MariaDBServer* server : servers())
+    for (MariaDBServer* server : m_servers)
     {
         if (server->is_low_on_disk_space() && server->is_usable()
             && !server->is_master() && !server->is_relay_master())
@@ -1086,7 +1086,7 @@ void MariaDBMonitor::update_cluster_lock_status()
         int master_locks_held = 0;
         int running_servers = 0;
 
-        for (MariaDBServer* server : servers())
+        for (MariaDBServer* server : m_servers)
         {
             auto lockstatus = server->lock_status(MariaDBServer::LockType::SERVER);
             server_locks_held += lockstatus.status() == ServerLock::Status::OWNED_SELF;
@@ -1104,7 +1104,7 @@ void MariaDBMonitor::update_cluster_lock_status()
         }
         else
         {
-            required_for_majority = ((int)servers().size() / 2 + 1);
+            required_for_majority = (m_servers.size() / 2 + 1);
         }
 
         // Check if this monitor can obtain lock majority.
@@ -1172,7 +1172,7 @@ void MariaDBMonitor::update_cluster_lock_status()
             MXB_WARNING("'%s' holds %i lock(s) without lock majority, and will release them. "
                         "The monitor of the primary MaxScale must have failed to acquire all server locks.",
                         name(), total_locks);
-            for (MariaDBServer* server : servers())
+            for (MariaDBServer* server : m_servers)
             {
                 server->release_all_locks();
             }
@@ -1184,7 +1184,7 @@ void MariaDBMonitor::update_cluster_lock_status()
 int MariaDBMonitor::get_free_locks()
 {
     ServerArray targets;
-    for (auto server : servers())
+    for (auto server : m_servers)
     {
         if (server->serverlock_status().is_free())
         {

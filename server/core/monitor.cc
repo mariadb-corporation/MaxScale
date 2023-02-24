@@ -510,18 +510,21 @@ bool Monitor::post_configure()
         }
     }
 
-    // First, remove all servers.
-    remove_all_servers();
-
-    for (auto elem : m_settings.servers)
+    // Need to start from a clean slate as servers may have been removed. If configuring the monitor fails,
+    // linked services end up using obsolete targets. This should be ok, as SERVER-objects are never deleted.
+    release_all_servers();
+    if (ok && !prepare_servers())
     {
-        if (!add_server(elem))
-        {
-            ok = false;
-        }
+        ok = false;
     }
-
     return ok;
+}
+
+void Monitor::set_active_servers(std::vector<MonitorServer*>&& servers)
+{
+    m_servers = std::move(servers);
+    // Update any services which use this monitor as a source of routing targets.
+    active_servers_updated();
 }
 
 mxs::config::Configuration& Monitor::base_configuration()
@@ -566,57 +569,76 @@ Monitor::~Monitor()
 }
 
 /**
- * Add a server to the monitor. Fails if server is already monitored.
+ * Prepare to monitor servers. Called after config changed.
  *
- * @param server  A server
- * @return True if server was added
+ * @return True on success
  */
-bool Monitor::add_server(SERVER* server)
+bool Monitor::prepare_servers()
 {
     // This should only be called from the admin thread while the monitor is stopped.
     mxb_assert(!is_running() && is_main_worker());
-    bool success = false;
-    string existing_owner;
-    if (this_unit.claim_server(server->name(), m_name, &existing_owner))
+
+    bool claim_ok = true;
+    const auto& cfg_servers = m_settings.servers;
+    for (auto* srv : cfg_servers)
     {
-        auto new_server = create_server(server, m_settings.shared);
-        m_servers.push_back(new_server);
-        server_added(server);
-        success = true;
+        string existing_owner;
+        if (!this_unit.claim_server(srv->name(), m_name, &existing_owner))
+        {
+            claim_ok = false;
+            MXB_ERROR("Server '%s' is already monitored by '%s', cannot add it to '%s'.",
+                      srv->name(), existing_owner.c_str(), m_name.c_str());
+        }
+    }
+
+    if (claim_ok)
+    {
+        m_conf_servers = cfg_servers;
+        configured_servers_updated(m_conf_servers);
     }
     else
     {
-        MXB_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
-                  server->name(), existing_owner.c_str());
+        // Release any claimed servers.
+        for (auto& srv : cfg_servers)
+        {
+            if (this_unit.claimed_by(srv->name()) == m_name)
+            {
+                this_unit.release_server(srv->name());
+            }
+        }
     }
-    return success;
+
+    return claim_ok;
 }
 
-void Monitor::server_added(SERVER* server)
+void Monitor::active_servers_updated()
 {
-    service_add_server(this, server);
+    // This should either be called when monitor is stopped for configuration change or by the running
+    // monitor.
+    mxb_assert(!is_running() || mxb::Worker::get_current() == m_worker.get());
+    service_update_targets(*this);
 }
 
-void Monitor::server_removed(SERVER* server)
+const std::vector<MonitorServer*>& Monitor::active_servers() const
 {
-    service_remove_server(this, server);
+    mxb_assert(!is_running() || mxb::Worker::get_current() == m_worker.get());
+    return m_servers;
 }
 
 /**
- * Remove all servers from the monitor.
+ * Release all configured servers.
  */
-void Monitor::remove_all_servers()
+void Monitor::release_all_servers()
 {
     // This should only be called from the admin thread while the monitor is stopped.
     mxb_assert(!is_running() && is_main_worker());
-    for (auto mon_server : m_servers)
+
+    for (auto srv : m_conf_servers)
     {
-        mxb_assert(this_unit.claimed_by(mon_server->server->name()) == m_name);
-        this_unit.release_server(mon_server->server->name());
-        server_removed(mon_server->server);
-        delete mon_server;
+        mxb_assert(this_unit.claimed_by(srv->name()) == m_name);
+        this_unit.release_server(srv->name());
     }
-    m_servers.clear();
+    m_conf_servers.clear();
 }
 
 json_t* Monitor::to_json(const char* host) const
@@ -1749,23 +1771,13 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
     return written;
 }
 
-void Monitor::populate_services()
-{
-    mxb_assert(!is_running());
-
-    for (MonitorServer* pMs : m_servers)
-    {
-        service_add_server(this, pMs->server);
-    }
-}
-
 void Monitor::deactivate()
 {
     if (is_running())
     {
         stop();
     }
-    remove_all_servers();
+    release_all_servers();
 }
 
 bool Monitor::check_disk_space_this_tick()
@@ -1800,9 +1812,8 @@ std::vector<SERVER*> Monitor::real_servers() const
 
 std::vector<SERVER*> Monitor::configured_servers() const
 {
-    std::vector<SERVER*> rval(m_servers.size());
-    std::transform(m_servers.begin(), m_servers.end(), rval.begin(), std::mem_fn(&MonitorServer::server));
-    return rval;
+    mxb_assert(!is_running());
+    return m_settings.servers;
 }
 
 MonitorServer* Monitor::create_server(SERVER* server, const MonitorServer::SharedSettings& shared)
@@ -1838,7 +1849,7 @@ void Monitor::write_journal()
     data.set_int(journal_fields::FIELD_TIMESTAMP, time(nullptr));
 
     Json servers_data(Json::Type::ARRAY);
-    for (auto* db : servers())
+    for (auto* db : m_servers)
     {
         servers_data.add_array_elem(db->journal_data());
     }
@@ -1893,7 +1904,7 @@ void Monitor::read_journal()
                     // Journal seems valid, try to load data.
                     auto servers_data = data.get_array_elems(journal_fields::FIELD_SERVERS);
                     // Check that all server names in journal are also found in current monitor. If not,
-                    // discard journal.
+                    // discard journal. TODO: this likely fails with XpandMon volatile servers
                     bool servers_found = true;
                     if (servers_data.size() == m_servers.size())
                     {
@@ -2170,7 +2181,7 @@ bool Monitor::has_sufficient_permissions()
 void Monitor::flush_server_status()
 {
     bool status_changed = false;
-    for (MonitorServer* pMs : servers())
+    for (MonitorServer* pMs : m_servers)
     {
         if (pMs->pending_status != pMs->server->status())
         {
@@ -2212,7 +2223,7 @@ void SimpleMonitor::tick()
 
     const bool should_update_disk_space = check_disk_space_this_tick();
 
-    for (MonitorServer* pMs : servers())
+    for (MonitorServer* pMs : m_servers)
     {
         pMs->mon_prev_status = pMs->server->status();
         pMs->pending_status = pMs->server->status();
@@ -2269,6 +2280,24 @@ void SimpleMonitor::tick()
     detect_handle_state_changes();
     hangup_failed_servers();
     write_journal_if_needed();
+}
+
+void SimpleMonitor::configured_servers_updated(const std::vector<SERVER*>& servers)
+{
+    for (auto srv : m_servers)
+    {
+        delete srv;
+    }
+
+    auto& shared_settings = settings().shared;
+    m_servers.resize(servers.size());
+    for (size_t i = 0; i < servers.size(); i++)
+    {
+        m_servers[i] = new MonitorServer(servers[i], shared_settings);
+    }
+
+    // The configured servers and the active servers are the same.
+    set_active_servers(std::vector<MonitorServer*>(m_servers));
 }
 
 void Monitor::pre_loop()
@@ -2509,23 +2538,13 @@ mxs::Monitor::Test::~Test()
 {
 }
 
-void mxs::Monitor::Test::remove_servers()
+void mxs::Monitor::Test::release_servers()
 {
-    // Copy SERVERs before removing from monitor
-    std::vector<SERVER*> copy;
-    for (auto ms : m_monitor->m_servers)
-    {
-        copy.push_back(ms->server);
-    }
-
-    m_monitor->remove_all_servers();
-    for (auto srv : copy)
-    {
-        delete srv;     // MonitorServer dtor doesn't delete the base server.
-    }
+    m_monitor->release_all_servers();
 }
 
-void mxs::Monitor::Test::add_server(SERVER* new_server)
+void mxs::Monitor::Test::set_monitor_base_servers(const vector<SERVER*>& servers)
 {
-    m_monitor->add_server(new_server);
+    m_monitor->m_settings.servers = servers;
+    m_monitor->post_configure();
 }

@@ -63,6 +63,7 @@ public:
 private:
     int  m_current_test = 0;
     bool m_use_hostnames = true;
+    std::vector<SERVER*> m_base_servers;
 
     MariaDBMonitor* monitor() const;
     void            init_servers(int count);
@@ -154,19 +155,22 @@ int MariaDBMonitor::Test::run_tests()
 void MariaDBMonitor::Test::init_servers(int count)
 {
     clear_servers();
+    const auto& mon_servers = monitor()->m_servers;
+    mxb_assert(mon_servers.empty() && monitor()->m_servers_by_id.empty());
+
     monitor()->m_settings.assume_unique_hostnames = m_use_hostnames;
-    mxb_assert(m_monitor->servers().empty() && monitor()->m_servers_by_id.empty());
 
     for (int i = 0; i < count; i++)
     {
-        // Server contents mostly undefined
+        // Server contents mostly undefined.
         auto base_server = Server::create_test_server();
-        Monitor::Test::add_server(base_server);
+        m_base_servers.push_back(base_server);
     }
+    set_monitor_base_servers(m_base_servers);
 
-    for (int i = 0; i < (int)monitor()->servers().size(); i++)
+    for (int i = 0; i < (int)mon_servers.size(); i++)
     {
-        auto maria_server = monitor()->servers()[i];
+        auto maria_server = mon_servers[i];
         auto base_server = maria_server->server;
         int id = i + 1;
         if (m_use_hostnames)
@@ -190,8 +194,14 @@ void MariaDBMonitor::Test::init_servers(int count)
  */
 void MariaDBMonitor::Test::clear_servers()
 {
-    monitor()->m_servers_by_id.clear();
-    remove_servers();
+    set_monitor_base_servers({});
+    monitor()->post_configure();
+
+    for (auto srv : m_base_servers)
+    {
+        delete srv;
+    }
+    m_base_servers.clear();
 }
 
 /**
@@ -244,7 +254,7 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
     int errors = 0;
 
     // Copy the servers for later comparison.
-    std::set<MariaDBServer*> no_cycle_servers(monitor()->servers().begin(), monitor()->servers().end());
+    std::set<MariaDBServer*> no_cycle_servers(monitor()->m_servers.begin(), monitor()->m_servers.end());
     std::set<int> used_cycle_ids;
     for (auto ind_cycles = 0; ind_cycles < MAX_CYCLES; ind_cycles++)
     {

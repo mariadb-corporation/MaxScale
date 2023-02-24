@@ -216,6 +216,9 @@ public:
     void remove_target(SERVER* target);
     void remove_target(Service* target);
 
+    // Update targets from a monitor
+    void update_targets(const mxs::Monitor& mon);
+
     bool has_target(mxs::Target* target) const
     {
         return std::find(m_data->targets.begin(), m_data->targets.end(), target) != m_data->targets.end();
@@ -644,9 +647,8 @@ json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::str
 void service_add_server(mxs::Monitor* pMonitor, SERVER* pServer);
 
 /**
- * @brief Remove server from all services associated with a monitor
+ * Update routing targets of every service that reads its targets from a given monitor.
  *
- * @param monitor  A monitor.
- * @param server   A server.
+ * @param monitor Monitor to update from
  */
-void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
+void service_update_targets(const mxs::Monitor& monitor);

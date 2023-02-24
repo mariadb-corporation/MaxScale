@@ -81,12 +81,6 @@ public:
 
     static mxs::config::Specification* specification();
 
-protected:
-    void populate_services() override;
-
-    void server_added(SERVER* pServer) override;
-    void server_removed(SERVER* pServer) override;
-
 private:
     XpandMonitor(const std::string& name,
                  const std::string& module,
@@ -194,4 +188,8 @@ private:
     std::vector<SERVER*>     m_cluster_servers;
     bool                     m_is_group_change {false};
     mxs::ConfigParameters    m_extra;
+
+    std::vector<mxs::MonitorServer*> m_servers;     /**< Configured servers */
+
+    void configured_servers_updated(const std::vector<SERVER*>& servers) override;
 };

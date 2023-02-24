@@ -362,15 +362,11 @@ private:
         std::unordered_map<std::string, MapElement> m_mapping;      // hostname -> address cache
     };
 
-    mxs::MonitorServer*
-    create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
-
-    const ServerArray& servers() const;     /* Hides base class function. */
-
     mon_op::OperationInfo m_op_info;    /* Manual/automatic op info */
     mon_op::SOperation    m_running_op; /* Currently running op */
 
-    IdToServerMap m_servers_by_id;      /* Map from server id:s to MariaDBServer */
+    IdToServerMap               m_servers_by_id;    /**< Map from server id:s to MariaDBServer */
+    std::vector<MariaDBServer*> m_servers;          /**< All monitored servers */
 
     /* The current state of a cluster modifying operation */
     std::atomic<State> m_state {State::IDLE};
@@ -638,6 +634,7 @@ private:
 
     bool        post_configure();
     friend bool Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
+    void        configured_servers_updated(const std::vector<SERVER*>& servers) override;
 };
 
 /**

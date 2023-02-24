@@ -1156,7 +1156,7 @@ MariaDBMonitor::CsRestResult
 MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, const RestDataFields& data,
                                 std::chrono::seconds cs_timeout)
 {
-    auto& srvs = servers();
+    auto& srvs = m_servers;
     if (srvs.empty())
     {
         return {false, "No valid server to send ColumnStore REST-API command found",
@@ -2353,7 +2353,7 @@ void BackupOperation::cleanup(MariaDBServer* source, const SlaveStatusArray& sou
 MariaDBServer* BackupOperation::autoselect_source_srv(const MariaDBServer* target)
 {
     MariaDBServer* rval = nullptr;
-    for (auto* cand : m_mon.servers())
+    for (auto* cand : m_mon.m_servers)
     {
         if (cand != target && (cand->is_master() || cand->is_slave()))
         {

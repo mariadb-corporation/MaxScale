@@ -316,15 +316,6 @@ bool XpandMonitor::post_configure()
     return true;
 }
 
-void XpandMonitor::populate_services()
-{
-    mxb_assert(!is_running());
-
-    // The servers that the Xpand monitor has been configured with are
-    // only used for bootstrapping and services will not be populated
-    // with them.
-}
-
 bool XpandMonitor::softfail(SERVER* pServer, json_t** ppError)
 {
     bool rv = false;
@@ -365,17 +356,6 @@ bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
     }
 
     return true;
-}
-
-void XpandMonitor::server_added(SERVER* pServer)
-{
-    // The servers explicitly added to the Cluster monitor are only used
-    // as bootstrap servers, so they are not added to any services.
-}
-
-void XpandMonitor::server_removed(SERVER* pServer)
-{
-    // @see server_added(), no action is needed.
 }
 
 std::vector<SERVER*> XpandMonitor::real_servers() const
@@ -542,7 +522,7 @@ void XpandMonitor::choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<s
     bool was_group_change = m_is_group_change;
     m_is_group_change = false;
 
-    for (auto* pMs : servers())
+    for (auto* pMs : m_servers)
     {
         if (ips_checked.find(pMs->server->address()) == ips_checked.end())
         {
@@ -861,7 +841,7 @@ void XpandMonitor::check_bootstrap_servers()
 
         set<string> current_bootstrap_servers;
 
-        for (const auto* pMs : servers())
+        for (const auto* pMs : m_servers)
         {
             SERVER* pServer = pMs->server;
 
@@ -918,7 +898,7 @@ void XpandMonitor::persist_bootstrap_servers()
 {
     string values;
 
-    for (const auto* pMs : servers())
+    for (const auto* pMs : m_servers)
     {
         if (!values.empty())
         {
@@ -1112,7 +1092,7 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
 
 bool XpandMonitor::using_proxy_protocol() const
 {
-    auto srv = servers();
+    auto srv = m_servers;
     return std::any_of(srv.begin(), srv.end(), [](auto s){
         return s->server->proxy_protocol();
     });
@@ -1122,7 +1102,7 @@ void XpandMonitor::populate_from_bootstrap_servers()
 {
     int id = 1;
 
-    for (auto ms : servers())
+    for (auto ms : m_servers)
     {
         SERVER* pServer = ms->server;
 
@@ -1165,14 +1145,15 @@ void XpandMonitor::add_server(SERVER* pServer)
 
     if (std::find(b, e, pServer) == e)
     {
-        service_add_server(this, pServer);
         m_cluster_servers.push_back(pServer);
+        // TODO: call set_active_servers(). Need to add MonitorServer* array
+        service_add_server(this, pServer);
     }
 }
 
 void XpandMonitor::update_server_statuses()
 {
-    for (auto* pMs : servers())
+    for (auto* pMs : m_servers)
     {
         pMs->stash_current_status();
 
@@ -1460,7 +1441,7 @@ bool XpandMonitor::get_extra_settings(mxs::ConfigParameters* pExtra) const
     mxs::ConfigParameters extra;
 
     bool first = true;
-    for (auto* pMs : servers())
+    for (auto* pMs : m_servers)
     {
         SERVER* pServer = pMs->server;
         mxb_assert(pServer);
@@ -1656,4 +1637,21 @@ void XpandMonitor::unpersist(const XpandNode& node)
 mxs::config::Specification* XpandMonitor::specification()
 {
     return &xpandmon::specification;
+}
+
+void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& servers)
+{
+    // XpandMon does not have its own server class derived from MonitorServer, yet the configured servers
+    // are not the active servers. TODO: think more on how this should work with the volatile servers
+    for (auto srv : m_servers)
+    {
+        delete srv;
+    }
+
+    auto& shared_settings = settings().shared;
+    m_servers.resize(servers.size());
+    for (size_t i = 0; i < servers.size(); i++)
+    {
+        m_servers[i] = new mxs::MonitorServer(servers[i], shared_settings);
+    }
 }

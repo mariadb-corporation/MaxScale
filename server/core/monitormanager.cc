@@ -252,9 +252,9 @@ void MonitorManager::populate_services()
     mxb_assert(Monitor::is_main_worker());
     this_unit.foreach_monitor(
         [](Monitor* pMonitor) -> bool {
-            pMonitor->populate_services();
-            return true;
-        });
+        pMonitor->active_servers_updated();
+        return true;
+    });
 }
 
 /**

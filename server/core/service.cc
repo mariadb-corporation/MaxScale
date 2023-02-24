@@ -478,15 +478,14 @@ void service_add_server(Monitor* pMonitor, SERVER* pServer)
     }
 }
 
-void service_remove_server(Monitor* pMonitor, SERVER* pServer)
+void service_update_targets(const mxs::Monitor& monitor)
 {
     LockGuard guard(this_unit.lock);
-
     for (Service* pService : this_unit.services)
     {
-        if (pService->cluster() == pMonitor)
+        if (pService->cluster() == &monitor)
         {
-            pService->remove_target(pServer);
+            pService->update_targets(monitor);
         }
     }
 }
@@ -1775,6 +1774,20 @@ void Service::add_target(Service* target)
 {
     m_data->targets.push_back(target);
     target->add_parent(this);
+    propagate_target_update();
+}
+
+void Service::update_targets(const Monitor& mon)
+{
+    // TODO: ensure that this is only called from MainWorker, even for XpandMon
+    auto& targets = m_data->targets;
+    targets.clear();
+    const auto& servers = mon.active_servers();
+    targets.resize(servers.size());
+    for (size_t i = 0; i < servers.size(); i++)
+    {
+        targets[i] = servers[i]->server;
+    }
     propagate_target_update();
 }
 

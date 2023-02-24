@@ -464,11 +464,6 @@ public:
     void request_immediate_tick();
 
     /**
-     * @brief The monitor should populate associated services.
-     */
-    virtual void populate_services();
-
-    /**
      * Deactivate the monitor. Stops the monitor and removes all servers.
      */
     void deactivate();
@@ -542,6 +537,15 @@ public:
     bool pre_run();
     void post_run();
 
+    /**
+     * Called when the list of monitored servers may have changed. Causes services linked to the monitor
+     * to update their routing targets. Monitor implementations should not need to call this, instead they
+     * should call 'set_active_servers'.
+     */
+    void active_servers_updated();
+
+    const std::vector<MonitorServer*>& active_servers() const;
+
 protected:
     /**
      * Stop the monitor. If the monitor uses a polling thread, the thread should be stopped.
@@ -590,26 +594,6 @@ protected:
      * Remove old format journal file if it exists. Remove this function in MaxScale 2.7.
      */
     void remove_old_journal();
-
-    /**
-     * @brief Called when a server has been added to the monitor.
-     *
-     * The default implementation will add the server to associated
-     * services.
-     *
-     * @param server  A server.
-     */
-    virtual void server_added(SERVER* server);
-
-    /**
-     * @brief Called when a server has been removed from the monitor.
-     *
-     * The default implementation will remove the server from associated
-     * services.
-     *
-     * @param server  A server.
-     */
-    virtual void server_removed(SERVER* server);
 
     /**
      * Transform the list of normal servers into their monitored counterpart
@@ -766,6 +750,14 @@ protected:
 
     bool post_configure();
 
+    /**
+     * Tells the base class which servers are actually monitored. The servers will have their events logged
+     * etc.
+     *
+     * @param servers Monitored servers
+     */
+    void set_active_servers(std::vector<MonitorServer*>&& servers);
+
     friend bool Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
     /**
@@ -812,8 +804,17 @@ private:
      */
     virtual bool has_sufficient_permissions();
 
-    bool add_server(SERVER* server);
-    void remove_all_servers();
+    /**
+     * Called by base class whenever configuration has changed. The implementation should generate its
+     * own bookkeeping of servers and then call 'set_active_servers' to tell base-class what servers
+     * are actually monitored.
+     *
+     * @param servers Servers in monitor configuration
+     */
+    virtual void configured_servers_updated(const std::vector<SERVER*>& servers) = 0;
+
+    bool prepare_servers();
+    void release_all_servers();
 
     /**
      * Launch a command. All default script variables will be replaced.
@@ -855,8 +856,9 @@ private:
     time_t m_journal_max_save_interval {5 * 60};/**< How often to update journal at minimum */
 
     std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
+    std::vector<MonitorServer*>  m_servers;     /** Actively monitored servers. Set by implementation */
+    std::vector<SERVER*>         m_conf_servers;/** Currently configured servers */
 
-    ServerVector          m_servers;    /**< Monitored servers */
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
 
@@ -913,7 +915,8 @@ protected:
      */
     void post_loop() override;
 
-    MonitorServer* m_master {nullptr};      /**< Master server */
+    MonitorServer*              m_master {nullptr}; /**< Master server */
+    std::vector<MonitorServer*> m_servers;          /**< Active servers */
 
 private:
     /**
@@ -940,6 +943,8 @@ private:
      * - Store monitor journal
      */
     void tick() override final;
+
+    void configured_servers_updated(const std::vector<SERVER*>& servers) override;
 };
 
 /**
@@ -980,8 +985,8 @@ class mxs::Monitor::Test
 protected:
     explicit Test(mxs::Monitor* monitor);
     virtual ~Test();
-    void remove_servers();
-    void add_server(SERVER* new_server);
+    void release_servers();
+    void set_monitor_base_servers(const std::vector<SERVER*>& servers);
 
     std::unique_ptr<mxs::Monitor> m_monitor;
 };
