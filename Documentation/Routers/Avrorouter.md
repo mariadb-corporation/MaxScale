@@ -119,6 +119,12 @@ These [regular expression settings](../Getting-Started/Configuration-Guide.md#st
 filter events for processing depending on table names. Avrorouter does not support the
 *options*-parameter for regular expressions.
 
+To prevent excessive matching of similarly named tables, surround each table
+name with the `^` and `$` tokens. For example, to match the `test.clients` table
+but not `test.clients_old` table use `match=^test[.]clients$`. For multiple
+tables, surround each table in parentheses and add a pipe character between
+them: `match=(^test[.]t1$)|(^test[.]t2$)`.
+
 #### `binlogdir`
 
 The location of the binary log files. This is the first mandatory parameter
