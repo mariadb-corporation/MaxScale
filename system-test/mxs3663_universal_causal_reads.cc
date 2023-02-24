@@ -48,7 +48,7 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
     std::string table = "test.t" + std::to_string(id++);
     auto conn = test.maxscale->rwsplit();
     conn.connect();
-    test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT)"),
+    test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT PRIMARY KEY)"),
                 "%s: Table creation should work: %u, %s", func, conn.thread_id(), conn.error());
     conn.disconnect();
 
@@ -65,7 +65,8 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
 
         bool ok = conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')");
         bool ro_error = conn.errnum() == ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION && ignore_errors;
-        test.expect(ok || ignore_errors, "%s: INSERT should work: %u, %s",
+        bool duplicate = conn.errnum() == ER_DUP_ENTRY;
+        test.expect(ok || ignore_errors || duplicate, "%s: INSERT should work: %u, %s",
                     func, conn.thread_id(), conn.error());
         auto first_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
         test.expect(first_count == i + 1 || ro_error, "%s: Missing %d rows.", func, (i + 1) - first_count);
