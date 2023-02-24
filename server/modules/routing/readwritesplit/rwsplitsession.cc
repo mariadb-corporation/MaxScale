@@ -317,7 +317,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
          * regardless of the ROLLBACK result. */
         mxb_assert(backend == m_prev_plan.target);
 
-        if (!mxs_mysql_is_ok_packet(writebuf))
+        if (!mxs_mysql_is_ok_packet(*writebuf))
         {
             m_pSession->kill();
         }

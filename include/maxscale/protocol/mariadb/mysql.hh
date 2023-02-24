@@ -405,7 +405,7 @@ bool mxs_mysql_is_valid_command(uint8_t command);
  * @param buffer Buffer containing a complete MySQL packet
  * @return True if the buffer contains an OK packet
  */
-bool mxs_mysql_is_ok_packet(GWBUF* buffer);
+bool mxs_mysql_is_ok_packet(const GWBUF& buffer);
 
 /**
  * @brief Check if the buffer contains an ERR packet
@@ -413,7 +413,7 @@ bool mxs_mysql_is_ok_packet(GWBUF* buffer);
  * @param buffer Buffer containing a complete MySQL packet
  * @return True if the buffer contains an ERR packet
  */
-bool mxs_mysql_is_err_packet(GWBUF* buffer);
+bool mxs_mysql_is_err_packet(const GWBUF& buffer);
 
 /**
  * Extract the error code from an ERR packet
@@ -422,7 +422,7 @@ bool mxs_mysql_is_err_packet(GWBUF* buffer);
  *
  * @return The error code or 0 if the buffer is not an ERR packet
  */
-uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer);
+uint16_t mxs_mysql_get_mysql_errno(const GWBUF& buffer);
 
 /**
  * Is this a binary protocol command

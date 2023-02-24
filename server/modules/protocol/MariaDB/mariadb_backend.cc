@@ -257,7 +257,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
-    uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
+    uint16_t errcode = mxs_mysql_get_mysql_errno(*buffer);
     std::string reason = mxs::extract_error(buffer);
     std::string errmsg = mxb::string_printf(
         "Authentication to '%s' failed: %hu, %s",

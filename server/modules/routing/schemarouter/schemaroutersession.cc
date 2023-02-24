@@ -612,7 +612,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
             // An error during the shard mapping is not a fatal response. Broken servers are allowed to exist
             // as the user might not exist on all backends.
             mxs::Reply tmp;
-            uint16_t errcode = mxs_mysql_get_mysql_errno(pMessage);
+            uint16_t errcode = mxs_mysql_get_mysql_errno(*pMessage);
             std::string errmsg = mxs::extract_error(pMessage);
             std::string sqlstate = "HY000";
             tmp.set_error(errcode, sqlstate.begin(), sqlstate.end(), errmsg.begin(), errmsg.end());

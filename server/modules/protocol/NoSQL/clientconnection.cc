@@ -367,11 +367,11 @@ bool ClientConnection::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const 
         // TODO: However, currently 'reply' does not contain anything, but the information
         // TODO: has to be digged out from 'pBuffer'.
 
-        if (mxs_mysql_is_ok_packet(pBuffer))
+        if (mxs_mysql_is_ok_packet(*pBuffer))
         {
             MXB_WARNING("Unexpected OK packet received when none was expected.");
         }
-        else if (mxs_mysql_is_err_packet(pBuffer))
+        else if (mxs_mysql_is_err_packet(*pBuffer))
         {
             MXB_ERROR("Error received from backend, session is likely to be closed: %s",
                       mxs::extract_error(pBuffer).c_str());

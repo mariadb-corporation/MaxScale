@@ -211,7 +211,7 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
     // are routers).
     if (cluster.tracker.state() == maxsql::PacketTracker::State::ErrorPacket)
     {
-        auto err_code = mxs_mysql_get_mysql_errno(pPacket);
+        auto err_code = mxs_mysql_get_mysql_errno(*pPacket);
         switch (err_code)
         {
         case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
