@@ -183,13 +183,6 @@ public:
         return 0;
     }
 
-    bool handleError(mxs::ErrorType, GWBUF*, mxs::Endpoint*, const mxs::Reply&) override
-    {
-        /** We should never end up here */
-        mxb_assert(false);
-        return false;
-    }
-
     void queue_client_callback();
 
     static void notify_all_clients(SERVICE* router);

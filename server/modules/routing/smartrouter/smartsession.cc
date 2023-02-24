@@ -428,20 +428,6 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
     });
 }
 
-bool SmartRouterSession::handleError(mxs::ErrorType type,
-                                     GWBUF* pPacket,
-                                     mxs::Endpoint* pProblem,
-                                     const mxs::Reply& pReply)
-{
-    auto err_code = mxs_mysql_get_mysql_errno(pPacket);
-    MXB_SERROR("handleError(): Lost connection to "
-               << pProblem->target()->name() << " Error code=" << err_code << " "
-               << mxs::extract_error(pPacket));
-
-    m_pSession->kill(gwbuf_clone_shallow(pPacket));
-    return false;
-}
-
 bool SmartRouterSession::lock_to_master()
 {
     return false;

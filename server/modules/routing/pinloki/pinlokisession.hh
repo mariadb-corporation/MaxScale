@@ -37,8 +37,6 @@ public:
 
     bool routeQuery(GWBUF&& packet) override;
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
-                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 
     // pinloki::parser::Handler API
     void select(const std::vector<std::string>& values, const std::vector<std::string>& aliases) override;

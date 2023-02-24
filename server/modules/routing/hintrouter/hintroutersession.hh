@@ -44,9 +44,6 @@ public:
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
-                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
-
 private:
     HintRouterSession(const HintRouterSession&);            // denied
     HintRouterSession& operator=(const HintRouterSession&); // denied

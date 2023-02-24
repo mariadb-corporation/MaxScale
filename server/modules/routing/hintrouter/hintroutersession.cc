@@ -130,15 +130,6 @@ bool HintRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down,
     return rc;
 }
 
-bool HintRouterSession::handleError(mxs::ErrorType type,
-                                    GWBUF* pMessage,
-                                    mxs::Endpoint* pProblem,
-                                    const mxs::Reply& pReply)
-{
-    HR_ENTRY();
-    return false;
-}
-
 bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool print_errors)
 {
     using Type = Hint::Type;

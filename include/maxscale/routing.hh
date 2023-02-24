@@ -54,7 +54,7 @@ public:
      *
      * @param endpoint The Endpoint for this Routable
      */
-    void setEndpoint(const mxs::Endpoint* endpoint)
+    void setEndpoint(mxs::Endpoint* endpoint)
     {
         m_endpoint = endpoint;
     }
@@ -70,8 +70,8 @@ public:
         return *m_endpoint;
     }
 
-private:
-    const mxs::Endpoint* m_endpoint = nullptr;
+protected:
+    mxs::Endpoint* m_endpoint = nullptr;
 };
 }
 

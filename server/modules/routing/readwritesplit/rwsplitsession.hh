@@ -92,7 +92,7 @@ public:
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,
-                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
+                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override final;
 
     void endpointConnReleased(mxs::Endpoint* down) override;
 

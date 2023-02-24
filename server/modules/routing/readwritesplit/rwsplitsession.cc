@@ -843,7 +843,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         // This effectively causes an instant termination of the client connection and prevents any errors
         // from being sent to the client (MXS-2562).
         m_pSession->kill();
-        return false;
+        return mxs::RouterSession::handleError(type, errmsgbuf, endpoint, reply);
     }
 
     auto failure_type = type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL;
@@ -1007,7 +1007,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         }
     }
 
-    return can_continue;
+    return can_continue || mxs::RouterSession::handleError(type, errmsgbuf, endpoint, reply);
 }
 
 void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)

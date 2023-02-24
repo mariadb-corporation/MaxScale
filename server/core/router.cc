@@ -35,7 +35,7 @@ bool RouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, con
 bool RouterSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem,
                                 const mxs::Reply& pReply)
 {
-    return false;
+    return m_pUpstream->handleError(type, pMessage, m_endpoint, pReply);
 }
 
 void RouterSession::set_response(GWBUF&& response) const

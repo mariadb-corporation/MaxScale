@@ -425,7 +425,8 @@ bool RRRouterSession::handleError(mxs::ErrorType type,
                                   const mxs::Reply& reply)
 {
     down->close();
-    return std::any_of(m_backends.begin(), m_backends.end(), std::mem_fn(&mxs::Endpoint::is_open));
+    bool ok = std::any_of(m_backends.begin(), m_backends.end(), std::mem_fn(&mxs::Endpoint::is_open));
+    return ok || mxs::RouterSession::handleError(type, message, down, reply);
 }
 
 RRRouterSession::RRRouterSession(RRRouter* router, const mxs::Endpoints& backends,

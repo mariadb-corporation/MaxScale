@@ -192,7 +192,8 @@ bool MirrorSession::handleError(mxs::ErrorType type,
     backend->close();
 
     // We can continue as long as the main connection isn't dead
-    return m_router->config().on_error.get() == ErrorAction::ERRACT_IGNORE && backend != m_main;
+    bool ok = m_router->config().on_error.get() == ErrorAction::ERRACT_IGNORE && backend != m_main;
+    return ok || mxs::RouterSession::handleError(type, pMessage, pProblem, pReply);
 }
 
 bool MirrorSession::should_report() const

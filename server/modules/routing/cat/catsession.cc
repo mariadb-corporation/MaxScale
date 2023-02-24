@@ -118,16 +118,3 @@ bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const 
 
     return rc;
 }
-
-bool CatSession::handleError(mxs::ErrorType type,
-                             GWBUF* pMessage,
-                             mxs::Endpoint* pProblem,
-                             const mxs::Reply& pReply)
-{
-    /**
-     * The simples thing to do here is to close the connection. Anything else
-     * would still require extra processing on the client side and reconnecting
-     * will cause things to fix themselves.
-     */
-    return false;
-}

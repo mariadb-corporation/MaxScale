@@ -64,6 +64,10 @@ public:
     /**
      * Handle backend connection network errors
      *
+     * If the router does not override this function, the error is by default propagated upstream to the next
+     * component in the routing chain. For top-level services, this means that the MXS_SESSION handles it
+     * which will cause the connection to be killed.
+     *
      * @param pMessage  The error message.
      * @param pProblem  The DCB on which the error occurred.
      * @param reply     The reply object for this endpoint
@@ -71,7 +75,7 @@ public:
      * @return True if the session can continue, false if the session should be closed
      */
     virtual bool
-    handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply) = 0;
+    handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply);
 
     /**
      * Called by the service when a ServerEndpoint connection has been released and placed to the pool.
@@ -84,7 +88,7 @@ public:
     {
     }
 
-    // Sets the upstream component (don't override this in the inherited class)
+    // Sets the upstream routable (a filter, if one exists)
     void setUpstream(mxs::Routable* up)
     {
         m_pUp = up;
@@ -108,6 +112,12 @@ public:
         return *m_pParser;
     }
 
+    // Sets the upstream component (session, service)
+    void setUpstreamComponent(mxs::Component* upstream)
+    {
+        m_pUpstream = upstream;
+    }
+
 protected:
     RouterSession(MXS_SESSION* pSession);
 
@@ -121,10 +131,12 @@ protected:
      */
     void set_response(GWBUF&& response) const;
 
-protected:
     MXS_SESSION*   m_pSession; /*< The MXS_SESSION this router session is associated with. */
     Parser*        m_pParser;  /*< The parser suitable the protocol of this router. */
-    mxs::Routable* m_pUp;
+
+private:
+    mxs::Routable*  m_pUp;          // The next upstream routable
+    mxs::Component* m_pUpstream;    // The next upstream component
 };
 
 /**

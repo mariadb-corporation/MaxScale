@@ -206,13 +206,6 @@ bool PinlokiSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
     return 0;
 }
 
-bool PinlokiSession::handleError(mxs::ErrorType type, GWBUF* pMessage,
-                                 mxs::Endpoint* pProblem, const mxs::Reply& pReply)
-{
-    mxb_assert_message(!true, "This should not happen");
-    return false;
-}
-
 mxs::Buffer PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_t size)
 {
     mxs::Buffer buffer(MYSQL_HEADER_LEN + size + prefix);

@@ -628,7 +628,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
 
     bref->close(type == mxs::ErrorType::PERMANENT ? Backend::CLOSE_FATAL : Backend::CLOSE_NORMAL);
 
-    return have_servers();
+    return have_servers() || mxs::RouterSession::handleError(type, pMessage, pProblem, pReply);
 }
 
 /**

@@ -1535,6 +1535,7 @@ bool ServiceEndpoint::connect()
 
     m_tail = chain_tail;
     m_router_session->setUpstream(m_tail);
+    m_router_session->setUpstreamComponent(m_up);
 
     // The endpoint is now "connected"
     m_open = true;
@@ -1601,14 +1602,7 @@ bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    bool ok = m_router_session->handleError(type, error, down, reply);
-
-    if (!ok)
-    {
-        ok = m_up->handleError(type, error, this, reply);
-    }
-
-    return ok;
+    return m_router_session->handleError(type, error, down, reply);
 }
 
 void ServiceEndpoint::endpointConnReleased(Endpoint* down)
