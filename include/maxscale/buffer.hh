@@ -318,7 +318,14 @@ public:
     void set_owner(mxb::Worker* owner);
 #endif
 
-    uint8_t operator[](size_t ind) const;
+    /**
+     * Access byte at the given offset
+     *
+     * @param ind Offset into the buffer
+     *
+     * @return Reference to the byte
+     */
+    const uint8_t& operator[](size_t ind) const;
 
     /**
      * Returns the current size of the varying part of the instance.

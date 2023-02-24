@@ -545,7 +545,7 @@ size_t GWBUF::copy_data(size_t offset, size_t n_bytes, uint8_t* dst) const
     return copied_bytes;
 }
 
-uint8_t GWBUF::operator[](size_t ind) const
+const uint8_t& GWBUF::operator[](size_t ind) const
 {
     const auto* ptr = m_start + ind;
     mxb_assert(m_start && ptr < m_end);
