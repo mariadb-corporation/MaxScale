@@ -268,8 +268,9 @@ mxs::Target* SchemaRouterSession::get_valid_target(const std::set<mxs::Target*>&
     return nullptr;
 }
 
-bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
+bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     if (m_closed)
     {
         return 0;
@@ -452,7 +453,7 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 mxs::Backend::EXPECT_RESPONSE :
                 mxs::Backend::NO_RESPONSE;
 
-            if (bref->write(pPacket, responds))
+            if (bref->write(mxs::gwbufptr_to_gwbuf(pPacket), responds))
             {
                 /** Add one query response waiter to backend reference */
                 mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
@@ -525,8 +526,9 @@ void SchemaRouterSession::handle_default_db_response()
     }
 }
 
-bool SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool SchemaRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
 
     const auto& error = reply.error();
@@ -584,7 +586,7 @@ bool SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 
     if (pPacket)
     {
-        rc = RouterSession::clientReply(pPacket, down, reply);
+        rc = RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
     }
 
     return rc;
@@ -722,7 +724,7 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer 
         }
     }
 
-    if (backend->write(buffer.release(), type))
+    if (backend->write(mxs::gwbufptr_to_gwbuf(buffer.release()), type))
     {
         MXB_INFO("Route query to %s: %s", backend->is_master() ? "primary" : "replica", backend->name());
     }
@@ -880,7 +882,7 @@ bool SchemaRouterSession::send_shards()
 
     const mxs::ReplyRoute down;
     const mxs::Reply reply;
-    mxs::RouterSession::clientReply(set->as_buffer().release(), down, reply);
+    mxs::RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(set->as_buffer().release()), down, reply);
 
     return true;
 }
@@ -914,7 +916,7 @@ bool SchemaRouterSession::handle_default_db()
 
         if (auto backend = get_shard_backend(target->name()))
         {
-            backend->write(buffer);
+            backend->write(mxs::gwbufptr_to_gwbuf(buffer));
             ++m_num_init_db;
             rval = true;
         }
@@ -943,7 +945,7 @@ void SchemaRouterSession::route_queued_query()
 
     MXB_INFO("Routing queued query: %s", tmp->get_sql().c_str());
 
-    m_pSession->delay_routing(this, tmp, 0);
+    m_pSession->delay_routing(this, mxs::gwbufptr_to_gwbuf(tmp), 0);
 }
 
 bool SchemaRouterSession::delay_routing()
@@ -1033,12 +1035,12 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
         }
         else if (rc == SHOWDB_FATAL_ERROR)
         {
-            auto err = mariadb::create_error_packet_ptr(
+            auto err = mariadb::create_error_packet(
                 1, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
                 ("Error: database mapping failed due to: " + reply.error().message()).c_str());
 
             mxs::ReplyRoute route;
-            RouterSession::clientReply(err, route, reply);
+            RouterSession::clientReply(std::move(err), route, reply);
             return -1;
         }
         else if (rc == SHOWDB_PARTIAL_RESPONSE)
@@ -1067,12 +1069,12 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
                  * if there is a queued query from the client. */
                 if (!m_queue.empty())
                 {
-                    auto err = mariadb::create_error_packet_ptr(
+                    auto err = mariadb::create_error_packet(
                         1, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
                         "Error: duplicate tables found on two different shards.");
 
                     mxs::ReplyRoute route;
-                    RouterSession::clientReply(err, route, mxs::Reply());
+                    RouterSession::clientReply(std::move(err), route, mxs::Reply());
                 }
             }
 
@@ -1299,7 +1301,7 @@ void SchemaRouterSession::query_databases()
     {
         if (b->in_use() && !b->is_closed() && b->target()->is_usable())
         {
-            if (!b->write(gwbuf_clone_shallow(buffer)))
+            if (!b->write(buffer->shallow_clone()))
             {
                 MXB_ERROR("Failed to write mapping query to '%s'", b->name());
             }
@@ -1461,7 +1463,7 @@ void SchemaRouterSession::send_databases()
 
     const mxs::ReplyRoute down;
     const mxs::Reply reply;
-    mxs::RouterSession::clientReply(set->as_buffer().release(), down, reply);
+    mxs::RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(set->as_buffer().release()), down, reply);
 }
 
 mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)

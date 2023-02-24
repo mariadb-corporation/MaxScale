@@ -194,12 +194,12 @@ public:
         return rval;
     }
 
-    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
     {
-        return mxs::FilterSession::clientReply(buffer, down, reply);
+        return mxs::FilterSession::clientReply(std::move(buffer), down, reply);
     }
 
-    bool routeQuery(GWBUF* buffer) override;
+    bool routeQuery(GWBUF&& buffer) override;
 
 private:
     bool matching_connection(MXS_SESSION* session);
@@ -248,8 +248,9 @@ bool RegexSession::matching_connection(MXS_SESSION* session)
            && (m_config.user.empty() || session->user() == m_config.user);
 }
 
-bool RegexSession::routeQuery(GWBUF* queue)
+bool RegexSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_active)
     {
         const auto& sql = queue->get_sql();
@@ -272,7 +273,7 @@ bool RegexSession::routeQuery(GWBUF* queue)
         }
     }
 
-    return mxs::FilterSession::routeQuery(queue);
+    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
 }
 
 void RegexSession::log_match(const std::string& old, const std::string& newsql)

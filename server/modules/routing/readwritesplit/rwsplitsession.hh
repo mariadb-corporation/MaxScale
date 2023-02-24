@@ -87,9 +87,9 @@ public:
      */
     static RWSplitSession* create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints);
 
-    bool routeQuery(GWBUF* pPacket) override;
+    bool routeQuery(GWBUF&& packet) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,
                      mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;

@@ -43,8 +43,8 @@ public:
     SmartRouterSession(const SmartRouterSession&) = delete;
     SmartRouterSession& operator=(const SmartRouterSession&) = delete;
 
-    bool routeQuery(GWBUF* pBuf) override;
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool routeQuery(GWBUF&& buf) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool handleError(mxs::ErrorType type, GWBUF* pPacket,
                      mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 

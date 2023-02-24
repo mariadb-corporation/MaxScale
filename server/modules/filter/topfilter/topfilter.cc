@@ -156,8 +156,8 @@ class TopSession : public mxs::FilterSession
 public:
     TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service);
     ~TopSession();
-    bool    routeQuery(GWBUF* buffer) override;
-    bool    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool    routeQuery(GWBUF&& buffer) override;
+    bool    clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     json_t* diagnostics() const;
 
 private:
@@ -264,11 +264,11 @@ TopSession::~TopSession()
     }
 }
 
-bool TopSession::routeQuery(GWBUF* queue)
+bool TopSession::routeQuery(GWBUF&& queue)
 {
     if (m_active)
     {
-        const auto& sql = queue->get_sql();
+        const auto& sql = queue.get_sql();
 
         if (!sql.empty()
             && (!m_config.match || m_config.match.match(sql))
@@ -280,10 +280,10 @@ bool TopSession::routeQuery(GWBUF* queue)
         }
     }
 
-    return mxs::FilterSession::routeQuery(queue);
+    return mxs::FilterSession::routeQuery(std::move(queue));
 }
 
-bool TopSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool TopSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (!m_current.empty())
     {
@@ -301,7 +301,7 @@ bool TopSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const m
     }
 
     /* Pass the result upstream */
-    return mxs::FilterSession::clientReply(buffer, down, reply);
+    return mxs::FilterSession::clientReply(std::move(buffer), down, reply);
 }
 
 json_t* TopSession::diagnostics() const

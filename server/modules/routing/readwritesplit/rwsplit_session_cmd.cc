@@ -31,7 +31,7 @@ void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type
     {
         if (backend->in_use())
         {
-            backend->write(gwbuf_clone_shallow(querybuf), mxs::Backend::NO_RESPONSE);
+            backend->write(querybuf->shallow_clone(), mxs::Backend::NO_RESPONSE);
         }
     }
 }

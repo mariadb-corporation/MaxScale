@@ -39,9 +39,8 @@ public:
     {
     }
 
-    bool clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) override
+    bool clientReply(GWBUF&& buffer, ReplyRoute& down, const mxs::Reply& reply) override
     {
-        gwbuf_free(buffer);
         return true;
     }
 
@@ -91,12 +90,12 @@ private:
     MariaDBParser m_parser;
 };
 
-bool Session::Endpoint::routeQuery(GWBUF* buffer)
+bool Session::Endpoint::routeQuery(GWBUF&& buffer)
 {
-    return m_session.routeQuery(buffer);
+    return m_session.routeQuery(std::move(buffer));
 }
 
-bool Session::Endpoint::clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply)
+bool Session::Endpoint::clientReply(GWBUF&& buffer, ReplyRoute& down, const mxs::Reply& reply)
 {
     return 0;
 }

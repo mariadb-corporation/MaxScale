@@ -74,8 +74,9 @@ TeeSession::~TeeSession()
     delete m_client;
 }
 
-bool TeeSession::routeQuery(GWBUF* queue)
+bool TeeSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_client && m_sync && m_branch_replies + m_main_replies > 0)
     {
         MXB_INFO("Waiting for replies: %d from branch, %d from main", m_branch_replies, m_main_replies);
@@ -83,7 +84,7 @@ bool TeeSession::routeQuery(GWBUF* queue)
         return true;
     }
 
-    if (m_client && query_matches(queue) && m_client->queue_query(gwbuf_clone_shallow(queue)))
+    if (m_client && query_matches(queue) && m_client->queue_query(queue->shallow_clone()))
     {
         if (m_sync && mxs_mysql_command_will_respond(mxs_mysql_get_command(queue)))
         {
@@ -95,7 +96,7 @@ bool TeeSession::routeQuery(GWBUF* queue)
         }
     }
 
-    return mxs::FilterSession::routeQuery(queue);
+    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
 }
 
 void TeeSession::handle_reply(const mxs::Reply& reply, bool is_branch)
@@ -113,15 +114,15 @@ void TeeSession::handle_reply(const mxs::Reply& reply, bool is_branch)
     {
         MXB_INFO("Both replies received, routing queued query: %s",
                  m_queue.front().get_sql().c_str());
-        m_pSession->delay_routing(this, m_queue.front().release(), 0);
+        m_pSession->delay_routing(this, mxs::gwbufptr_to_gwbuf(m_queue.front().release()), 0);
         m_queue.pop_front();
     }
 }
 
-bool TeeSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool TeeSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     handle_reply(reply, false);
-    return mxs::FilterSession::clientReply(pPacket, down, reply);
+    return mxs::FilterSession::clientReply(std::move(packet), down, reply);
 }
 
 json_t* TeeSession::diagnostics() const

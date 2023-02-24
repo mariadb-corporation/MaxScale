@@ -81,9 +81,9 @@ public:
 
     ~SchemaRouterSession();
 
-    bool routeQuery(GWBUF* pPacket) override;
+    bool routeQuery(GWBUF&& packet) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& pBackend, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& pBackend, const mxs::Reply& reply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,
                      mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;

@@ -160,7 +160,7 @@ int test(mock::Session& session,
     pStatement = mock::create_com_query(select);
 
     cout << "Performing select: \"" << select << "\"" << flush;
-    session.route_query(pStatement);
+    session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
 
     if (!router_session.idle())
     {
@@ -178,7 +178,7 @@ int test(mock::Session& session,
         pStatement = mock::create_com_query(select);
 
         cout << "Performing same select: \"" << select << "\"" << flush;
-        session.route_query(pStatement);
+        session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
 
         if (tc.should_use)
         {
@@ -219,7 +219,7 @@ int test(mock::Session& session,
             pStatement = mock::create_com_query("UPDATE tbl SET a=1;");
 
             cout << "Performing update: \"" << update << "\"" << flush;
-            session.route_query(pStatement);
+            session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
 
             if (router_session.idle())
             {
@@ -236,7 +236,7 @@ int test(mock::Session& session,
                 pStatement = mock::create_com_query(select);
 
                 cout << "Performing select: \"" << select << "\"" << flush;
-                session.route_query(pStatement);
+                session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
 
                 if (router_session.idle())
                 {
@@ -263,7 +263,7 @@ int test(mock::Session& session,
         pStatement = mock::create_com_query(select);
 
         cout << "Performing select: \"" << select << "\"" << flush;
-        session.route_query(pStatement);
+        session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
 
         if (router_session.idle())
         {

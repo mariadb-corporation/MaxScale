@@ -55,8 +55,9 @@ RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession,
     return new RewriteFilterSession(pSession, pService, sSettings);
 }
 
-bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
+bool RewriteFilterSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* pBuffer = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     auto& session_data = *m_sSession_data.get();
     const auto& sql = pBuffer->get_sql();
     const auto* pSql_to_match = &sql;
@@ -99,5 +100,5 @@ bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
         }
     }
 
-    return mxs::FilterSession::routeQuery(pBuffer);
+    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pBuffer));
 }

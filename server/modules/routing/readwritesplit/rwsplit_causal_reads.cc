@@ -274,8 +274,8 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
        << "KILL (SELECT CONNECTION_ID());"
        << "END IF";
 
-    GWBUF* query = modutil_create_query(ss.str().c_str());
-    target->write(query, mxs::Backend::IGNORE_RESPONSE);
+    target->write(mxs::gwbufptr_to_gwbuf(modutil_create_query(ss.str().c_str())),
+                  mxs::Backend::IGNORE_RESPONSE);
 }
 
 std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()

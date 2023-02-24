@@ -106,10 +106,11 @@ PinlokiSession::~PinlokiSession()
     }
 }
 
-bool PinlokiSession::routeQuery(GWBUF* pPacket)
+bool PinlokiSession::routeQuery(GWBUF&& packet)
 {
     int rval = 0;
     GWBUF* response = nullptr;
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     mxs::Buffer buf(pPacket);
     auto cmd = mxs_mysql_get_command(buf.get());
 
@@ -199,7 +200,7 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-bool PinlokiSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool PinlokiSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert_message(!true, "This should not happen");
     return 0;
@@ -253,7 +254,7 @@ void PinlokiSession::send(GWBUF* buffer)
 {
     const mxs::ReplyRoute down;
     const mxs::Reply reply;
-    mxs::RouterSession::clientReply(buffer, down, reply);
+    mxs::RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(buffer), down, reply);
 }
 
 int PinlokiSession::high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata)

@@ -65,19 +65,19 @@ HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
 {
 }
 
-bool HintSession::routeQuery(GWBUF* queue)
+bool HintSession::routeQuery(GWBUF&& queue)
 {
-    auto hints = process_hints(queue);
+    auto hints = process_hints(&queue);
     if (!hints.empty())
     {
-        auto& dest = queue->hints;
+        auto& dest = queue.hints;
         dest.insert(dest.end(), hints.begin(), hints.end());
     }
 
-    return mxs::FilterSession::routeQuery(queue);
+    return mxs::FilterSession::routeQuery(std::move(queue));
 }
 
-bool HintSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool HintSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (reply.is_complete() && m_current_id)
     {
@@ -90,7 +90,7 @@ bool HintSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const
         m_current_id = 0;
     }
 
-    return mxs::FilterSession::clientReply(pPacket, down, reply);
+    return mxs::FilterSession::clientReply(std::move(packet), down, reply);
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()

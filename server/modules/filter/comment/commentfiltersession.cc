@@ -44,8 +44,10 @@ CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
     return new CommentFilterSession(pSession, pService, pFilter);
 }
 
-bool CommentFilterSession::routeQuery(GWBUF* pPacket)
+bool CommentFilterSession::routeQuery(GWBUF&& packet)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
+
     if (mariadb::is_com_query(*pPacket))
     {
         const auto& sql = pPacket->get_sql();
@@ -55,12 +57,12 @@ bool CommentFilterSession::routeQuery(GWBUF* pPacket)
         pPacket = modutil_create_query(newsql.c_str());
     }
 
-    return pPacket ? mxs::FilterSession::routeQuery(pPacket) : 1;
+    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
 }
 
-bool CommentFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool CommentFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return mxs::FilterSession::clientReply(pPacket, down, reply);
+    return mxs::FilterSession::clientReply(std::move(packet), down, reply);
 }
 // TODO this probably should be refactored in some way in case we add more variables
 string CommentFilterSession::parseComment(string comment)

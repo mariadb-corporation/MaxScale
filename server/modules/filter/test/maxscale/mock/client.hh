@@ -52,7 +52,7 @@ public:
          *
          * @return 1 if processing should continue, 0 otherwise.
          */
-        virtual int32_t backend_reply(GWBUF* pResponse, const mxs::ReplyRoute& down,
+        virtual int32_t backend_reply(GWBUF&& response, const mxs::ReplyRoute& down,
                                       const mxs::Reply& reply) = 0;
 
         /**
@@ -62,7 +62,7 @@ public:
          *
          * @return 1 if processing should continue, 0 otherwise.
          */
-        virtual int32_t maxscale_reply(GWBUF* pResponse) = 0;
+        virtual int32_t maxscale_reply(GWBUF&& response) = 0;
 
         /**
          * Called when @reset is called on the @c Client instance.
@@ -123,12 +123,12 @@ public:
         return this;
     }
 
-    bool routeQuery(GWBUF* pPacket) override
+    bool routeQuery(GWBUF&& packet) override
     {
         return 0;
     }
 
-    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     static bool clientReply(mxs::Filter* pInstance,
@@ -138,7 +138,7 @@ private:
                             const mxs::Reply& reply);
 
     // Dcb::Handler
-    int32_t write(GWBUF* pBuffer) override;
+    int32_t write(GWBUF&& buffer) override;
 
 private:
     std::string    m_user;

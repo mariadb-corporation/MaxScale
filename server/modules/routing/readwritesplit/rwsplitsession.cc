@@ -89,16 +89,16 @@ RWSplitSession::~RWSplitSession()
     m_router->local_avg_sescmd_sz().add(protocol_data()->history.size());
 }
 
-bool RWSplitSession::routeQuery(GWBUF* querybuf)
+bool RWSplitSession::routeQuery(GWBUF&& querybuf)
 {
-    if (!querybuf)
+    if (querybuf.empty())
     {
         MXB_ERROR("MXS-2585: Null buffer passed to routeQuery, closing session");
         mxb_assert(!true);
         return 0;
     }
 
-    mxs::Buffer buffer(querybuf);
+    mxs::Buffer buffer(mxs::gwbuf_to_gwbufptr(std::move(querybuf)));
 
     if (m_state == TRX_REPLAY || m_pending_retries > 0 || !m_query_queue.empty())
     {
@@ -200,7 +200,7 @@ bool RWSplitSession::route_stored_query()
         decltype(m_query_queue) temp_storage;
         temp_storage.swap(m_query_queue);
 
-        if (!routeQuery(query.release()))
+        if (!routeQuery(mxs::gwbufptr_to_gwbuf(query.release())))
         {
             rval = false;
             MXB_ERROR("Failed to route queued query.");
@@ -479,8 +479,9 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     m_can_replay_trx = true;
 }
 
-bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool RWSplitSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    GWBUF* writebuf = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
     if (!backend->should_ignore_response())
@@ -658,7 +659,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     {
         mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
-        rc = RouterSession::clientReply(writebuf, down, reply);
+        rc = RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(writebuf), down, reply);
     }
 
     if (reply.is_complete() && m_expected_responses == 0 && m_state != TRX_REPLAY)
@@ -1058,8 +1059,9 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
         else
         {
             // Send an error so that the client knows to proceed.
+            // TODO: This is wrong and the session should be killed if read retrying is not enabled.
             mxs::ReplyRoute route;
-            RouterSession::clientReply(gwbuf_clone_shallow(errmsg), route, mxs::Reply());
+            RouterSession::clientReply(errmsg->shallow_clone(), route, mxs::Reply());
             m_current_query.reset();
             route_stored = true;
         }

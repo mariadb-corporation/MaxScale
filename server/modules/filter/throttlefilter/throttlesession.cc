@@ -105,7 +105,7 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
 
     m_query_count.increment();
 
-    return mxs::FilterSession::routeQuery(buffer);
+    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(buffer));
 }
 
 bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Callable::Action action, GWBUF* buffer)
@@ -129,8 +129,8 @@ bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Callable::Action actio
     return false;
 }
 
-bool ThrottleSession::routeQuery(GWBUF* buffer)
+bool ThrottleSession::routeQuery(GWBUF&& buffer)
 {
-    return real_routeQuery(buffer, false);
+    return real_routeQuery(mxs::gwbuf_to_gwbufptr(std::move(buffer)), false);
 }
 }   // throttle

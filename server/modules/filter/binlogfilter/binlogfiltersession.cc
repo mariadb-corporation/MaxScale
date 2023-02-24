@@ -127,8 +127,9 @@ static bool is_using_gtid(GWBUF* buffer)
  * @param pPacket    The inout data from client
  * @return           False on errors, true otherwise.
  */
-bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
+bool BinlogFilterSession::routeQuery(GWBUF&& packet)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     uint8_t* data = GWBUF_DATA(pPacket);
 
     switch (MYSQL_GET_COMMAND(data))
@@ -158,8 +159,8 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
             mxs::ReplyRoute rr;
             mxs::Reply reply;
             mxs::FilterSession::clientReply(
-                mariadb::create_error_packet_ptr(1, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000",
-                                                 ss.str().c_str()), rr, reply);
+                mariadb::create_error_packet(1, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000",
+                                             ss.str().c_str()), rr, reply);
             return 0;
         }
         break;
@@ -182,7 +183,7 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
     }
 
     // Route input data
-    return mxs::FilterSession::routeQuery(pPacket);
+    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
 }
 
 /**
@@ -219,8 +220,9 @@ static void extract_header(const uint8_t* event, REP_HEADER* hdr)
  * @param pPacket    GWBUF with binlog event
  * @return           False on error, true otherwise.
  */
-bool BinlogFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     uint8_t* event = GWBUF_DATA(pPacket);
     uint32_t len = MYSQL_GET_PAYLOAD_LEN(event);
     REP_HEADER hdr;
@@ -276,7 +278,7 @@ bool BinlogFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     }
 
     // Send data
-    return mxs::FilterSession::clientReply(pPacket, down, reply);
+    return mxs::FilterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
 }
 
 /**

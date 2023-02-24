@@ -48,7 +48,7 @@ public:
      * @param pSession    The originating router session.
      * @param pStatement  A buffer containing a statement.
      */
-    virtual void handle_statement(RouterSession* pSession, GWBUF* pStatement) = 0;
+    virtual void handle_statement(RouterSession* pSession, GWBUF&& statement) = 0;
 
     /**
      * Called when the backend should respond to the client.
@@ -141,7 +141,7 @@ class OkBackend : public BufferBackend
 public:
     OkBackend();
 
-    void handle_statement(RouterSession* pSession, GWBUF* pStatement) override;
+    void handle_statement(RouterSession* pSession, GWBUF&& statement) override;
 };
 
 /**
@@ -161,7 +161,7 @@ public:
     }
 
     bool respond(RouterSession* pSession, const mxs::Reply& reply) override final;
-    void handle_statement(RouterSession* pSession, GWBUF* pStatement) override;
+    void handle_statement(RouterSession* pSession, GWBUF&& statement) override;
 
     int           m_counter;
     bool          m_created;

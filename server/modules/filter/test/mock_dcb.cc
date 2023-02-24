@@ -49,7 +49,7 @@ int32_t Dcb::Protocol::write(GWBUF* pData)
 
     if (m_pHandler)
     {
-        rv = m_pHandler->write(pData);
+        rv = m_pHandler->write(mxs::gwbufptr_to_gwbuf(pData));
     }
     else
     {

@@ -459,12 +459,12 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
     }
 }
 
-bool QlaFilterSession::routeQuery(GWBUF* queue)
+bool QlaFilterSession::routeQuery(GWBUF&& queue)
 {
     const char* query = NULL;
     int query_len = 0;
 
-    if (m_active && modutil_extract_SQL(*queue, &query, &query_len)
+    if (m_active && modutil_extract_SQL(queue, &query, &query_len)
         && m_log->match_exclude(query, query_len))
     {
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
@@ -473,13 +473,13 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
         m_qc_type_mask = 0;     // only set if needed
 
         m_sql = m_log->settings().use_canonical_form ?
-            queue->get_canonical() : queue->get_sql();
+            queue.get_canonical() : queue.get_sql();
 
         m_begin_time = m_pSession->worker()->epoll_tick_now();
 
         if (data_flags & (QlaInstance::LOG_DATA_TRANSACTION | QlaInstance::LOG_DATA_TRANSACTION_DUR))
         {
-            m_qc_type_mask = parser().get_type_mask(queue);
+            m_qc_type_mask = parser().get_type_mask(&queue);
 
             if (m_qc_type_mask & QUERY_TYPE_BEGIN_TRX)
             {
@@ -500,10 +500,10 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
         }
     }
     /* Pass the query downstream */
-    return mxs::FilterSession::routeQuery(queue);
+    return mxs::FilterSession::routeQuery(std::move(queue));
 }
 
-bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool QlaFilterSession::clientReply(GWBUF&& queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_active)
     {
@@ -525,7 +525,7 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
         }
     }
 
-    return mxs::FilterSession::clientReply(queue, down, reply);
+    return mxs::FilterSession::clientReply(std::move(queue), down, reply);
 }
 
 SFile QlaInstance::LogManager::open_session_log_file(const string& filename) const

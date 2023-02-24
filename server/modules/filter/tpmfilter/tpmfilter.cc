@@ -178,8 +178,8 @@ class TpmSession : public mxs::FilterSession
 public:
     TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instance);
     ~TpmSession();
-    bool routeQuery(GWBUF* pPacket) override;
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool routeQuery(GWBUF&& packet) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     bool                     m_active = true;
@@ -284,8 +284,9 @@ TpmSession::~TpmSession()
     m_instance->flush();
 }
 
-bool TpmSession::routeQuery(GWBUF* queue)
+bool TpmSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_active && mxs_mysql_get_command(queue) == MXS_COM_QUERY)
     {
         const auto& sql = queue->get_sql();
@@ -323,10 +324,10 @@ bool TpmSession::routeQuery(GWBUF* queue)
         }
     }
 
-    return mxs::FilterSession::routeQuery(queue);
+    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
 }
 
-bool TpmSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool TpmSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     /* records latency of the SQL statement. */
     if (!m_sql.empty())
@@ -359,7 +360,7 @@ bool TpmSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const m
     }
 
     /* Pass the result upstream */
-    return mxs::FilterSession::clientReply(buffer, down, reply);
+    return mxs::FilterSession::clientReply(std::move(buffer), down, reply);
 }
 
 json_t* TpmFilter::diagnostics() const

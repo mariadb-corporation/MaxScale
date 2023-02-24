@@ -72,7 +72,7 @@ bool BufferBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
     if (pResponse)
     {
         mxs::ReplyRoute down;
-        pSession->clientReply(pResponse, down, reply);
+        pSession->clientReply(mxs::gwbufptr_to_gwbuf(pResponse), down, reply);
     }
 
     return !empty;
@@ -154,11 +154,9 @@ OkBackend::OkBackend()
 {
 }
 
-void OkBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)
+void OkBackend::handle_statement(RouterSession* pSession, GWBUF&& statement)
 {
     enqueue_response(pSession, create_ok_response());
-
-    gwbuf_free(pStatement);
 }
 
 //
@@ -268,9 +266,9 @@ private:
             return true;
         }
 
-        bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override
+        bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override
         {
-            return write(buffer);
+            return write(std::move(buffer));
         }
 
         size_t sizeof_buffers() const override
@@ -315,10 +313,9 @@ bool ResultSetBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
     return BufferBackend::respond(pSession, r);
 }
 
-void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)
+void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF&& statement)
 {
-    qc_query_op_t op = m_parser.get_operation(pStatement);
-    gwbuf_free(pStatement);
+    qc_query_op_t op = m_parser.get_operation(&statement);
 
     if (op == QUERY_OP_SELECT)
     {

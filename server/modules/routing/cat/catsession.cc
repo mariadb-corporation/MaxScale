@@ -50,27 +50,28 @@ bool CatSession::next_backend()
     return m_current != m_backends.end();
 }
 
-bool CatSession::routeQuery(GWBUF* pPacket)
+bool CatSession::routeQuery(GWBUF&& packet)
 {
     int32_t rval = 0;
 
     m_completed = 0;
     m_packet_num = 0;
-    m_query = pPacket;
+    m_query = mxs::gwbuf_to_gwbufptr(std::move(packet));
     m_current = m_backends.begin();
 
     if (next_backend())
     {
         // We have a backend, write the query only to this one. It will be
         // propagated onwards in clientReply.
-        rval = (*m_current)->write(gwbuf_clone_shallow(pPacket));
+        rval = (*m_current)->write(m_query->shallow_clone());
     }
 
     return rval;
 }
 
-bool CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     auto& backend = *m_current;
     mxb_assert(backend->backend() == down.back());
     bool send = false;
@@ -88,7 +89,7 @@ bool CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
         }
         else
         {
-            (*m_current)->write(gwbuf_clone_shallow(m_query));
+            (*m_current)->write(m_query->shallow_clone());
         }
     }
 
@@ -108,7 +109,7 @@ bool CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
     {
         // Increment the packet sequence number and send it to the client
         GWBUF_DATA(pPacket)[3] = m_packet_num++;
-        rc = RouterSession::clientReply(pPacket, down, reply);
+        rc = RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
     }
     else
     {

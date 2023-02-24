@@ -36,7 +36,7 @@ public:
     class Handler
     {
     public:
-        virtual int32_t write(GWBUF* pBuffer) = 0;
+        virtual int32_t write(GWBUF&& buffer) = 0;
     };
 
     /**
@@ -152,9 +152,9 @@ private:
             return true;
         }
 
-        bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override
+        bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override
         {
-            return write(buffer);
+            return write(std::move(buffer));
         }
 
         size_t sizeof_buffers() const override

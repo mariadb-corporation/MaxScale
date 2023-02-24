@@ -38,9 +38,9 @@ public:
                const mxs::Endpoints& endpoints, uint32_t bitvalue);
     ~RCRSession();
 
-    bool routeQuery(GWBUF* queue) override;
+    bool routeQuery(GWBUF&& queue) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& pReply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,
                      mxs::Endpoint* pProblem, const mxs::Reply& pReply) override

@@ -28,7 +28,7 @@ public:
                                         const std::shared_ptr<const SessionData>& sSettings
                                         );
 
-    bool routeQuery(GWBUF* pBuffer) override final;
+    bool routeQuery(GWBUF&& pBuffer) override final;
 
 private:
     RewriteFilterSession(MXS_SESSION* pSession,

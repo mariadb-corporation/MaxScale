@@ -59,14 +59,14 @@ public:
     private:
         friend class Session;
 
-        bool routeQuery(mxs::Routable* pFilter_session, GWBUF* pStatement)
+        bool routeQuery(mxs::Routable* pFilter_session, GWBUF&& statement)
         {
-            return m_module.routeQuery(m_pInstance, pFilter_session, pStatement);
+            return m_module.routeQuery(m_pInstance, pFilter_session, std::move(statement));
         }
 
-        bool clientReply(mxs::Routable* pFilter_session, GWBUF* pStatement, const mxs::Reply& reply)
+        bool clientReply(mxs::Routable* pFilter_session, GWBUF&& statement, const mxs::Reply& reply)
         {
-            return m_module.clientReply(m_pInstance, pFilter_session, pStatement, reply);
+            return m_module.clientReply(m_pInstance, pFilter_session, std::move(statement), reply);
         }
 
     private:
@@ -85,14 +85,14 @@ public:
         /**
          * The following member functions correspond to the MaxScale filter API.
          */
-        bool routeQuery(GWBUF* pStatement)
+        bool routeQuery(GWBUF&& statement)
         {
-            return m_instance.routeQuery(m_pFilter_session, pStatement);
+            return m_instance.routeQuery(m_pFilter_session, std::move(statement));
         }
 
-        bool clientReply(GWBUF* pBuffer, const mxs::Reply& reply)
+        bool clientReply(GWBUF&& buffer, const mxs::Reply& reply)
         {
-            return m_instance.clientReply(m_pFilter_session, pBuffer, reply);
+            return m_instance.clientReply(m_pFilter_session, std::move(buffer), reply);
         }
 
     private:
@@ -129,18 +129,18 @@ private:
         return pInstance->newSession(pSession, pService);
     }
 
-    bool routeQuery(mxs::Filter* pInstance, mxs::Routable* pFilter_session, GWBUF* pStatement)
+    bool routeQuery(mxs::Filter* pInstance, mxs::Routable* pFilter_session, GWBUF&& statement)
     {
-        return pFilter_session->routeQuery(pStatement);
+        return pFilter_session->routeQuery(std::move(statement));
     }
 
     bool clientReply(mxs::Filter* pInstance,
                      mxs::Routable* pFilter_session,
-                     GWBUF* pStatement,
+                     GWBUF&& statement,
                      const mxs::Reply& reply)
     {
         mxs::ReplyRoute route;
-        return pFilter_session->clientReply(pStatement, route, reply);
+        return pFilter_session->clientReply(std::move(statement), route, reply);
     }
 
 private:

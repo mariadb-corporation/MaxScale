@@ -347,8 +347,9 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
     return pCacheFilterSession;
 }
 
-bool CacheFilterSession::routeQuery(GWBUF* pPacket)
+bool CacheFilterSession::routeQuery(GWBUF&& packet)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     int rv = 1;
 
     if (m_processing)
@@ -513,8 +514,10 @@ void CacheFilterSession::invalidate_handler(cache_result_t result)
     }
 }
 
-bool CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    GWBUF* pData = mxs::gwbuf_to_gwbufptr(std::move(data));
+
     if (reply.state() == mxs::ReplyState::LOAD_DATA)
     {
         m_load_active = true;
@@ -750,7 +753,7 @@ int CacheFilterSession::flush_response(const mxs::ReplyRoute& down, const mxs::R
 
     if (next_response)
     {
-        rv = FilterSession::clientReply(next_response, down, reply);
+        rv = FilterSession::clientReply(mxs::gwbufptr_to_gwbuf(next_response), down, reply);
         ready_for_another_call();
     }
 
@@ -1196,7 +1199,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                         mxs::ReplyRoute down;
                         mxs::Reply reply;
 
-                        sThis->m_up->clientReply(pResponse, down, reply);
+                        sThis->m_up->clientReply(mxs::gwbufptr_to_gwbuf(pResponse), down, reply);
                         sThis->ready_for_another_call();
                     }
                 }
@@ -1665,7 +1668,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         m_processing = false;
     }
 
-    return FilterSession::routeQuery(pPacket);
+    return FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
 }
 
 void CacheFilterSession::ready_for_another_call()
@@ -1688,7 +1691,7 @@ void CacheFilterSession::ready_for_another_call()
                         mxb_assert(pPacket);
                         m_queued_packets.pop_front();
 
-                        routeQuery(pPacket);
+                        routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
                     }
                 }
             });

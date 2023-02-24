@@ -33,8 +33,8 @@ public:
     ~TeeSession();
     static TeeSession* create(Tee* my_instance, MXS_SESSION* session, SERVICE* service);
 
-    bool    routeQuery(GWBUF* pPacket) override;
-    bool    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool    routeQuery(GWBUF&& packet) override;
+    bool    clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     json_t* diagnostics() const;
 
 private:

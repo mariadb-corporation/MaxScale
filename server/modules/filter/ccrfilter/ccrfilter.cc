@@ -171,7 +171,7 @@ public:
     CCRSession& operator=(const CCRSession&) = delete;
 
     static CCRSession* create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
-    bool               routeQuery(GWBUF* queue) override;
+    bool               routeQuery(GWBUF&& queue) override;
 
 private:
     CCRFilter& m_instance;
@@ -279,8 +279,9 @@ CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter
     return new CCRSession(session, service, instance);
 }
 
-bool CCRSession::routeQuery(GWBUF* queue)
+bool CCRSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (mariadb::is_com_query(*queue))
     {
         auto filter = &this->m_instance;
@@ -356,7 +357,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
         }
     }
 
-    return FilterSession::routeQuery(queue);
+    return FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
 }
 
 /**

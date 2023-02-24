@@ -53,9 +53,9 @@ public:
         return new(std::nothrow) MaxRowsSession(pSession, pService, pFilter);
     }
 
-    bool routeQuery(GWBUF* pPacket) override;
+    bool routeQuery(GWBUF&& packet) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter);

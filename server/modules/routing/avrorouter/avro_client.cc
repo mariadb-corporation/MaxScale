@@ -46,8 +46,9 @@ enum
     AVRO_CLIENT_ERRORED,
 };
 
-bool AvroSession::routeQuery(GWBUF* queue)
+bool AvroSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     int rval = 1;
 
     switch (m_state)

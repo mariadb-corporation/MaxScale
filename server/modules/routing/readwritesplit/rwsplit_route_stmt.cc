@@ -72,11 +72,11 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 
     // Route the query again later
     m_pSession->delay_routing(
-        this, querybuf, delay, [this](GWBUF* buffer){
+        this, mxs::gwbufptr_to_gwbuf(querybuf), delay, [this](GWBUF&& buffer){
         mxb_assert(m_pending_retries > 0);
         --m_pending_retries;
 
-        return route_query(buffer);
+        return route_query(mxs::gwbuf_to_gwbufptr(std::move(buffer)));
     });
 
     ++m_retry_duration;
@@ -231,7 +231,7 @@ void RWSplitSession::send_readonly_error()
     mxs::ReplyRoute route;
     mxs::Reply reply;
     reply.set_error(errnum, sqlstate, sqlstate + sizeof(sqlstate) - 1, errmsg, errmsg + sizeof(errmsg) - 1);
-    RouterSession::clientReply(mariadb::create_error_packet_ptr(1, errnum, sqlstate, errmsg), route, reply);
+    RouterSession::clientReply(mariadb::create_error_packet(1, errnum, sqlstate, errmsg), route, reply);
 }
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)
@@ -486,11 +486,12 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
         type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
     }
 
-    if (backend->write(buffer.release(), type))
+    if (backend->write(mxs::gwbufptr_to_gwbuf(buffer.release()), type))
     {
         m_server_stats[backend->target()].inc_total();
         m_server_stats[backend->target()].inc_read();
-        MXB_INFO("Route query to %s: %s", backend == m_current_master ? "primary" : "replica", backend->name());
+        MXB_INFO("Route query to %s: %s", backend == m_current_master ? "primary" : "replica",
+                 backend->name());
     }
     else
     {
@@ -1202,5 +1203,5 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         send_sync_query(target);
     }
 
-    return target->write(buffer.release(), response);
+    return target->write(mxs::gwbufptr_to_gwbuf(buffer.release()), response);
 }

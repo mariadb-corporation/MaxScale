@@ -61,9 +61,9 @@ public:
         return this;
     }
 
-    bool routeQuery(GWBUF* pStatement) override;
+    bool routeQuery(GWBUF&& statement) override;
 
-    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
      * Causes the router to make its associated backend deliver a response

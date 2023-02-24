@@ -44,8 +44,9 @@ MirrorSession::~MirrorSession()
     }
 }
 
-bool MirrorSession::routeQuery(GWBUF* pPacket)
+bool MirrorSession::routeQuery(GWBUF&& packet)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     int rc = 0;
 
     if (m_responses)
@@ -68,7 +69,7 @@ bool MirrorSession::routeQuery(GWBUF* pPacket)
                 type = a.get() == m_main ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
             }
 
-            if (a->in_use() && a->write(gwbuf_clone_shallow(pPacket), type))
+            if (a->in_use() && a->write(pPacket->shallow_clone(), type))
             {
                 if (a.get() == m_main)
                 {
@@ -97,7 +98,7 @@ void MirrorSession::route_queued_queries()
         auto query = m_queue.front().release();
         m_queue.pop_front();
 
-        if (!routeQuery(query))
+        if (!routeQuery(mxs::gwbufptr_to_gwbuf(query)))
         {
             break;
         }
@@ -116,14 +117,15 @@ void MirrorSession::finalize_reply()
     // that we've been storing in the session.
     MXB_INFO("All replies received, routing last chunk to the client.");
 
-    RouterSession::clientReply(m_last_chunk.release(), m_last_route, m_main->reply());
+    RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(m_last_chunk.release()), m_last_route, m_main->reply());
 
     generate_report();
     route_queued_queries();
 }
 
-bool MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool MirrorSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     auto backend = static_cast<MyBackend*>(down.back()->get_userdata());
     backend->process_result(pPacket, reply);
 
@@ -159,7 +161,7 @@ bool MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, con
     {
         if (backend == m_main)
         {
-            rc = RouterSession::clientReply(pPacket, down, reply);
+            rc = RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
         }
         else
         {

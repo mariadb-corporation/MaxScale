@@ -175,9 +175,9 @@ public:
     static AvroSession* create(Avro* router, MXS_SESSION* session);
     virtual ~AvroSession();
 
-    bool routeQuery(GWBUF* buffer) override;
+    bool routeQuery(GWBUF&& buffer) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
     {
         mxb_assert(!true);
         return 0;

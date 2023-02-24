@@ -221,9 +221,9 @@ public:
      */
     bool prepare();
 
-    bool routeQuery(GWBUF* query) override;
+    bool routeQuery(GWBUF&& query) override;
 
-    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     json_t* diagnostics() const;
 

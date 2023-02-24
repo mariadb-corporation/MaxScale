@@ -127,8 +127,8 @@ public:
     ~RegexHintFSession();
 
     json_t* diagnostics() const;
-    bool    routeQuery(GWBUF* buffer) override;
-    bool    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool    routeQuery(GWBUF&& buffer) override;
+    bool    clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     RegexHintFilter&  m_fil_inst;

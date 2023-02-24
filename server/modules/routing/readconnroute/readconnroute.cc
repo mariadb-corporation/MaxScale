@@ -370,8 +370,9 @@ bool RCRSession::connection_is_valid() const
     return rval;
 }
 
-bool RCRSession::routeQuery(GWBUF* queue)
+bool RCRSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     uint8_t mysql_command = mxs_mysql_get_command(queue);
 
     if (!connection_is_valid())
@@ -402,14 +403,14 @@ bool RCRSession::routeQuery(GWBUF* queue)
 
     ++m_session_queries;
 
-    return m_backend->routeQuery(queue);
+    return m_backend->routeQuery(mxs::gwbufptr_to_gwbuf(queue));
 }
 
-bool RCRSession::clientReply(GWBUF* pPacket,
+bool RCRSession::clientReply(GWBUF&& packet,
                              const maxscale::ReplyRoute& down,
                              const maxscale::Reply& pReply)
 {
-    auto rc = RouterSession::clientReply(pPacket, down, pReply);
+    auto rc = RouterSession::clientReply(std::move(packet), down, pReply);
     m_query_timer.end_interval();
     return rc;
 }

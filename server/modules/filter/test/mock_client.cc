@@ -69,7 +69,7 @@ void Client::reset()
     }
 }
 
-bool Client::clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool Client::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     int32_t rv = 1;
 
@@ -77,17 +77,13 @@ bool Client::clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mx
 
     if (m_pHandler)
     {
-        rv = m_pHandler->backend_reply(pResponse, down, reply);
-    }
-    else
-    {
-        gwbuf_free(pResponse);
+        rv = m_pHandler->backend_reply(std::move(response), down, reply);
     }
 
     return rv;
 }
 
-int32_t Client::write(GWBUF* pResponse)
+int32_t Client::write(GWBUF&& response)
 {
     int32_t rv = 1;
 
@@ -95,11 +91,7 @@ int32_t Client::write(GWBUF* pResponse)
 
     if (m_pHandler)
     {
-        rv = m_pHandler->maxscale_reply(pResponse);
-    }
-    else
-    {
-        gwbuf_free(pResponse);
+        rv = m_pHandler->maxscale_reply(std::move(response));
     }
 
     return rv;

@@ -34,7 +34,7 @@ public:
 
     static SMyBackends from_endpoints(const mxs::Endpoints& endpoints);
 
-    bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE) override;
+    bool write(GWBUF&& buffer, response_type type = EXPECT_RESPONSE) override;
 
     void process_result(GWBUF* buffer, const mxs::Reply& reply);
 

@@ -274,13 +274,14 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
     return rv;
 }
 
-bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
+bool MaskingFilterSession::routeQuery(GWBUF&& packet)
 {
     if (m_bypass)
     {
-        return FilterSession::routeQuery(pPacket);
+        return FilterSession::routeQuery(std::move(packet));
     }
 
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     ComRequest request(pPacket);
 
     // TODO: Breaks if responses are not waited for, before the next request is sent.
@@ -337,7 +338,7 @@ bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
 
     if (m_state != EXPECTING_NOTHING)
     {
-        rv = FilterSession::routeQuery(pPacket);
+        rv = FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
     }
     else
     {
@@ -347,13 +348,14 @@ bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-bool MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool MaskingFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_bypass)
     {
-        return FilterSession::clientReply(pPacket, down, reply);
+        return FilterSession::clientReply(std::move(packet), down, reply);
     }
 
+    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     ComResponse response(pPacket);
 
     if (response.is_err())
@@ -397,7 +399,7 @@ bool MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& do
     int rv;
     if (m_state != SUPPRESSING_RESPONSE)
     {
-        rv = FilterSession::clientReply(pPacket, down, reply);
+        rv = FilterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
     }
     else
     {

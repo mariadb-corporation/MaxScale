@@ -353,8 +353,9 @@ RegexHintFSession::~RegexHintFSession()
  * @param queue     The query data
  * @return True on success, false on failure
  */
-bool RegexHintFSession::routeQuery(GWBUF* queue)
+bool RegexHintFSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_active)
     {
         const char* sql = nullptr;
@@ -466,7 +467,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
         }
     }
 
-    return FilterSession::routeQuery(queue);
+    return FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
 }
 
 /**
@@ -581,7 +582,7 @@ json_t* RegexHintFSession::diagnostics() const
     return rval;
 }
 
-bool RegexHintFSession::clientReply(GWBUF* packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool RegexHintFSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (reply.is_complete() && m_current_prep_id > 0)
     {
@@ -593,7 +594,7 @@ bool RegexHintFSession::clientReply(GWBUF* packet, const mxs::ReplyRoute& down, 
         }
         m_current_prep_id = 0;
     }
-    return mxs::FilterSession::clientReply(packet, down, reply);
+    return mxs::FilterSession::clientReply(std::move(packet), down, reply);
 }
 
 /**

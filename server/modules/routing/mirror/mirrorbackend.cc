@@ -27,11 +27,11 @@ SMyBackends MyBackend::from_endpoints(const mxs::Endpoints& endpoints)
     return backends;
 }
 
-bool MyBackend::write(GWBUF* buffer, response_type type)
+bool MyBackend::write(GWBUF&& buffer, response_type type)
 {
     m_start = Clock::now();
     m_checksum.reset();
-    return Backend::write(buffer, type);
+    return Backend::write(std::move(buffer), type);
 }
 
 void MyBackend::process_result(GWBUF* buffer, const mxs::Reply& reply)
