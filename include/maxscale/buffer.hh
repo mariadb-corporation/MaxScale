@@ -88,8 +88,10 @@ public:
     using iterator = uint8_t*;
     using const_iterator = const uint8_t*;
 
-    HintVector hints;                               /*< Hint data for this buffer */
+    // TODO: make private?
+    HintVector hints;   /*< Hint data for this buffer */
 
+    // TODO: Move out from here?
     const std::string& get_sql() const;
     const std::string& get_canonical() const;
 
@@ -124,7 +126,7 @@ public:
      */
     GWBUF shallow_clone() const;
 
-    /*
+    /**
      * Deep-clones the source buffer. Only allocates minimal capacity. Is best used when the GWBUF is
      * stored for later use.
      *
@@ -162,10 +164,11 @@ public:
     uint8_t*       data();
     size_t         length() const;
     bool           empty() const;
-    uint32_t       id() const;
 
+    // Sets the buffer type
     void set_type(Type type);
 
+    // Checks if the buffer is of the given type
     bool type_is_undefined() const;
     bool type_is_replayed() const;
     bool type_is_collect_result() const;
@@ -294,7 +297,22 @@ public:
      */
     int compare(const GWBUF& rhs) const;
 
+    /**
+     * Set the buffer ID
+     *
+     * The buffer ID is used to logically label the contents of a buffer so that they can later on be referred
+     * to by it. Currently only used by session commands in the MariaDB protocol.
+     *
+     * @param new_id The ID to set
+     */
     void set_id(uint32_t new_id);
+
+    /**
+     * Get the buffer ID, if iset
+     *
+     * @return The ID if set, otherwise 0
+     */
+    uint32_t id() const;
 
 #ifdef SS_DEBUG
     void set_owner(mxb::Worker* owner);
@@ -316,8 +334,32 @@ public:
      */
     size_t runtime_size() const;
 
+    /**
+     * Appends a byte to the buffer
+     *
+     * @param byte Byte to append
+     *
+     * @return *this
+     */
     GWBUF& add_byte(uint8_t byte);
+
+    /**
+     * Appends a 16-bit integer to the buffer in little-endian order
+     *
+     * @param bytes Value to append
+     *
+     * @return *this
+     */
     GWBUF& add_lsbyte2(uint16_t bytes);
+
+    /**
+     * Appends a string into the buffer
+     *
+     * @param str     String to append
+     * @param n_bytes How many bytes to copy
+     *
+     * @return *this
+     */
     GWBUF& add_chars(const char* str, size_t n_bytes);
 
 private:
@@ -330,7 +372,7 @@ private:
     uint32_t m_type {TYPE_UNDEFINED};   /**< Data type information */
 
 #ifdef SS_DEBUG
-    mxb::Worker* m_owner {nullptr};   /**< Owning thread. Used for debugging */
+    mxb::Worker* m_owner {nullptr};     /**< Owning thread. Used for debugging */
 #endif
 
     mutable std::string      m_sql;
@@ -586,11 +628,11 @@ public:
     // reference_type: The type of a reference to an element, either "uint8_t&" or "const uint8_t&".
     template<class buf_type, class pointer_type, class reference_type>
     class iterator_base : public std::iterator<
-                            std::forward_iterator_tag   // The type of the iterator
-                            , uint8_t                   // The type of the elems
-                            , std::ptrdiff_t            // Difference between two its
-                            , pointer_type              // The type of pointer to an elem
-                            , reference_type>           // The reference type of an elem
+        std::forward_iterator_tag                       // The type of the iterator
+        , uint8_t                                       // The type of the elems
+        , std::ptrdiff_t                                // Difference between two its
+        , pointer_type                                  // The type of pointer to an elem
+        , reference_type>                               // The reference type of an elem
     {
     public:
         /**
