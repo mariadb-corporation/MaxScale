@@ -132,7 +132,7 @@ public:
      *
      * @return True for success, false for error
      */
-    bool routeQuery(GWBUF* pPacket) override;
+    bool routeQuery(GWBUF&& packet) override;
 
     /**
      * Called when a packet is routed to the client. The filter should
@@ -144,7 +144,7 @@ public:
      *
      * @return True for success, false for error
      */
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
      * Called for obtaining diagnostics about the filter session.

@@ -328,7 +328,7 @@ void Session::deliver_response()
     // The reply will always be complete
     mxs::ReplyRoute route;
     mxs::Reply reply;
-    response.up->clientReply(mxs::gwbuf_to_gwbufptr(std::move(response.buffer)), route, reply);
+    response.up->clientReply(std::move(response.buffer), route, reply);
 
     response.up = NULL;
     response.buffer.clear();
@@ -657,25 +657,23 @@ uint32_t session_get_session_trace()
     return this_unit.session_trace;
 }
 
-void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds,
-                                std::function<bool(GWBUF*)>&& fn)
+void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds,
+                                std::function<bool(GWBUF &&)>&& fn)
 {
     auto session = this;
-    auto cb = [session, fn, buffer, ep = &down->endpoint()](mxb::Worker::Callable::Action action){
+    auto sbuf = std::make_shared<GWBUF>(std::move(buffer));
+    auto cb = [session, fn, sbuf = std::move(sbuf), ep = &down->endpoint()]
+        (mxb::Worker::Callable::Action action){
         if (action == mxb::Worker::Callable::EXECUTE && ep->is_open())
         {
             MXS_SESSION::Scope scope(session);
             mxb_assert(session->state() == MXS_SESSION::State::STARTED);
 
-            if (!fn(buffer))
+            if (!fn(std::move(*sbuf)))
             {
                 // Routing failed, send a hangup to the client.
                 session->client_connection()->dcb()->trigger_hangup_event();
             }
-        }
-        else
-        {
-            gwbuf_free(buffer);
         }
 
         return false;
@@ -683,13 +681,13 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds,
 
     int32_t delay = 1 + seconds * 1000;
 
-    dcall(std::chrono::milliseconds(delay), cb);
+    dcall(std::chrono::milliseconds(delay), std::move(cb));
 }
 
-void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds)
+void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds)
 {
-    delay_routing(down, buffer, seconds, [down](GWBUF* buffer){
-        return down->routeQuery(buffer);
+    delay_routing(down, std::move(buffer), seconds, [down](GWBUF&& buffer){
+        return down->routeQuery(std::move(buffer));
     });
 }
 
@@ -1263,7 +1261,7 @@ void Session::dump_session_log()
     }
 }
 
-bool Session::routeQuery(GWBUF* buffer)
+bool Session::routeQuery(GWBUF&& buffer)
 {
     if (std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
                     std::mem_fn(&mxs::BackendConnection::is_idle)))
@@ -1282,7 +1280,7 @@ bool Session::routeQuery(GWBUF* buffer)
         }
     }
 
-    auto rv = m_head->routeQuery(buffer);
+    auto rv = m_head->routeQuery(std::move(buffer));
 
     if (!response.buffer.empty())
     {
@@ -1293,9 +1291,9 @@ bool Session::routeQuery(GWBUF* buffer)
     return rv;
 }
 
-bool Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool Session::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return m_tail->clientReply(buffer, down, reply);
+    return m_tail->clientReply(std::move(buffer), down, reply);
 }
 
 bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply)

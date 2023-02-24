@@ -37,7 +37,7 @@ public:
      * @param pPacket Packet to route
      * @return True for success, false for error
      */
-    virtual bool routeQuery(GWBUF* pPacket) = 0;
+    virtual bool routeQuery(GWBUF&& packet) = 0;
 
     /**
      * Called when a packet is traveling upstream, towards the client.
@@ -47,7 +47,7 @@ public:
      * @param reply Reply information
      * @return True for success, false for error
      */
-    virtual bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
+    virtual bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
 
     /**
      * Set the Endpoint that this Routable is a part of

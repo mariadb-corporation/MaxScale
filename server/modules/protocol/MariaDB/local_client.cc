@@ -23,17 +23,13 @@ LocalClient::~LocalClient()
     }
 }
 
-bool LocalClient::queue_query(GWBUF* buffer)
+bool LocalClient::queue_query(GWBUF&& buffer)
 {
     bool rval = false;
 
     if (m_down->is_open())
     {
-        rval = m_down->routeQuery(buffer);
-    }
-    else
-    {
-        gwbuf_free(buffer);
+        rval = m_down->routeQuery(std::move(buffer));
     }
 
 
@@ -64,20 +60,19 @@ bool LocalClient::connect()
     return m_down->connect();
 }
 
-bool LocalClient::routeQuery(GWBUF* buffer)
+bool LocalClient::routeQuery(GWBUF&& buffer)
 {
     mxb_assert(!true);
     return 0;
 }
 
-bool LocalClient::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool LocalClient::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_cb)
     {
-        m_cb(buffer, down, reply);
+        m_cb(&buffer, down, reply);
     }
 
-    gwbuf_free(buffer);
     return 0;
 }
 

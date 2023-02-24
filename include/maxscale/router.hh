@@ -59,7 +59,7 @@ public:
      * @param down    The route the reply took
      * @param reply   The reply object
      */
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
      * Handle backend connection network errors

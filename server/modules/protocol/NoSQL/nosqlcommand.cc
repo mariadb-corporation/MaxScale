@@ -105,7 +105,7 @@ void Command::send_downstream(const string& sql)
 
     GWBUF* pPacket = create_packet(zSql, sql_len, seq_no++);
 
-    m_database.context().downstream().routeQuery(pPacket);
+    m_database.context().downstream().routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
 
     zSql += sql_len;
     nRemaining -= sql_len;
@@ -117,7 +117,7 @@ void Command::send_downstream(const string& sql)
 
         pPacket = create_packet(zSql, sql_len, seq_no++);
 
-        m_database.context().downstream().routeQuery(pPacket);
+        m_database.context().downstream().routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
 
         zSql += sql_len;
         nRemaining -= sql_len;

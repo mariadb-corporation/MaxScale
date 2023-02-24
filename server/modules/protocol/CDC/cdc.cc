@@ -219,7 +219,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                          (char*)GWBUF_DATA(head));
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                m_downstream->routeQuery(head);
+                m_downstream->routeQuery(mxs::gwbufptr_to_gwbuf(head));
             }
             break;
 
@@ -316,9 +316,9 @@ bool CDCClientConnection::write(const char* msg)
     return write(buf);
 }
 
-bool CDCClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
+bool CDCClientConnection::clientReply(GWBUF&& buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return write(buffer);
+    return write(std::move(buffer));
 }
 
 bool CDCClientConnection::safe_to_restart() const

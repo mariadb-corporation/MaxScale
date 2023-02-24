@@ -1298,7 +1298,7 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
         m_routing_state = RoutingState::RECORD_HISTORY;
     }
 
-    return m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
+    return m_downstream->routeQuery(move(buffer)) != 0;
 }
 
 void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply)
@@ -1431,7 +1431,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // No command bytes, just continue routing large packet.
             bool is_large = large_query_continues(buffer);
-            routed = m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
+            routed = m_downstream->routeQuery(move(buffer)) != 0;
 
             if (!is_large)
             {
@@ -1446,7 +1446,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
             // A continuation of a recoded command, append it to the current command and route it forward
             bool is_large = large_query_continues(buffer);
             m_pending_cmd.append(buffer);
-            routed = m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
+            routed = m_downstream->routeQuery(move(buffer)) != 0;
 
             if (!is_large)
             {
@@ -1461,7 +1461,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
             // but this time on the downstream side.
-            routed = m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
+            routed = m_downstream->routeQuery(move(buffer)) != 0;
         }
         break;
 
@@ -1882,7 +1882,8 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
                         // one connection per server is killed.
                         MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
 
-                        if (!client->queue_query(modutil_create_query(a.second.c_str())))
+                        if (!client->queue_query(
+                            mxs::gwbufptr_to_gwbuf(modutil_create_query(a.second.c_str()))))
                         {
                             MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
                         }
@@ -2893,7 +2894,7 @@ bool MariaDBClientConnection::send_mysql_err_packet(int mysql_errno, const char*
 }
 
 bool
-MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
+MariaDBClientConnection::clientReply(GWBUF&& buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_num_responses == 1)
     {
@@ -2934,7 +2935,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
 
         case RoutingState::CHANGING_USER:
             // Route the reply to client. The sequence in the server packet may be wrong, fix it.
-            GWBUF_DATA(buffer)[3] = m_next_sequence;
+            buffer.data()[3] = m_next_sequence;
             if (reply.is_ok())
             {
                 complete_change_user_p2();
@@ -2943,7 +2944,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             else
             {
                 // Change user succeeded on MaxScale but failed on backends. Cancel it.
-                cancel_change_user_p2(buffer);
+                cancel_change_user_p2(&buffer);
             }
             m_routing_state = RoutingState::PACKET_START;
             m_dcb->trigger_read_event();
@@ -2957,7 +2958,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             break;
 
         case RoutingState::RECORD_HISTORY:
-            finish_recording_history(buffer, reply);
+            finish_recording_history(&buffer, reply);
             break;
 
         default:
@@ -3014,7 +3015,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         }
     }
 
-    return write(buffer);
+    return write(std::move(buffer));
 }
 
 // Use SESSION_TRACK_STATE_CHANGE, SESSION_TRACK_TRANSACTION_TYPE and

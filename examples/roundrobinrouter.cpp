@@ -119,8 +119,8 @@ public:
     // The API functions must be public
     RRRouterSession(RRRouter*, const mxs::Endpoints&, mxs::Endpoint*, MXS_SESSION*);
     ~RRRouterSession();
-    bool routeQuery(GWBUF* buffer) override;
-    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool routeQuery(GWBUF&& buffer) override;
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool handleError(mxs::ErrorType type, GWBUF* message,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
@@ -314,8 +314,9 @@ json_t* RRRouter::diagnostics() const
  * @param buffer       Buffer containing the query (or command)
  * @return True on success, false on error
  */
-bool RRRouterSession::routeQuery(GWBUF* querybuf)
+bool RRRouterSession::routeQuery(GWBUF&& buffer)
 {
+    GWBUF* querybuf = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     int rval = 0;
     const bool print = m_router->m_config.print_on_routing;
     mxs::Endpoint* target = nullptr;
@@ -336,7 +337,7 @@ bool RRRouterSession::routeQuery(GWBUF* querybuf)
                        gwbuf_length(querybuf), target->target()->name());
         }
 
-        rval = target->routeQuery(querybuf);
+        rval = target->routeQuery(mxs::gwbufptr_to_gwbuf(querybuf));
     }
     else if (route_to_all)
     {
@@ -355,7 +356,7 @@ bool RRRouterSession::routeQuery(GWBUF* querybuf)
             {
                 ++n_targets;
 
-                if (b->routeQuery(gwbuf_clone_shallow(querybuf)))
+                if (b->routeQuery(querybuf->shallow_clone()))
                 {
                     ++route_success;
                 }
@@ -395,7 +396,7 @@ bool RRRouterSession::routeQuery(GWBUF* querybuf)
  * @param   queue       The GWBUF with reply data
  * @param   backend_dcb The backend DCB (data source)
  */
-bool RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool RRRouterSession::clientReply(GWBUF&& buf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_replies_to_ignore > 0)
     {
@@ -404,11 +405,10 @@ bool RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const
          * previous has been answered.
          */
         m_replies_to_ignore--;
-        gwbuf_free(buf);
         return 1;
     }
 
-    int32_t rc = RouterSession::clientReply(buf, down, reply);
+    int32_t rc = RouterSession::clientReply(std::move(buf), down, reply);
 
     m_router->m_routing_c++;
     if (m_router->m_config.print_on_routing)

@@ -99,10 +99,10 @@ bool Backend::connect()
     return rval;
 }
 
-bool Backend::write(GWBUF* buffer, response_type type)
+bool Backend::write(GWBUF&& buffer, response_type type)
 {
     mxb_assert(in_use());
-    bool rval = m_backend->routeQuery(buffer);
+    bool rval = m_backend->routeQuery(std::move(buffer));
 
     if (rval && type != NO_RESPONSE)
     {

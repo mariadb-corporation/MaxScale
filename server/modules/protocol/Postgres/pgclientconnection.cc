@@ -73,7 +73,7 @@ void PgClientConnection::finish_connection()
     mxb_assert(!true);
 }
 
-bool PgClientConnection::clientReply(GWBUF* buffer,
+bool PgClientConnection::clientReply(GWBUF&& buffer,
                                      mxs::ReplyRoute& down,
                                      const mxs::Reply& reply)
 {

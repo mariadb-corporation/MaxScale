@@ -442,7 +442,7 @@ public:
      * @param buffer  The buffer to route
      * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
      */
-    void delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds);
+    void delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds);
 
     /**
      * @brief Route the query again but using a custom function
@@ -454,7 +454,7 @@ public:
      * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
      * @param fn      The function to call
      */
-    void delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn);
+    void delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds, std::function<bool(GWBUF &&)>&& fn);
 
     /**
      * Returns memory statistics of the session.

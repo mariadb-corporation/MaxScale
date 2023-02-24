@@ -1434,19 +1434,19 @@ ServiceEndpoint::~ServiceEndpoint()
 // static
 int32_t ServiceEndpoint::upstream_function(Filter* instance,
                                            mxs::Routable* session,
-                                           GWBUF* buffer,
+                                           GWBUF&& buffer,
                                            const mxs::ReplyRoute& down,
                                            const mxs::Reply& reply)
 {
     ServiceEndpoint* self = reinterpret_cast<ServiceEndpoint*>(session);
-    return self->send_upstream(buffer, down, reply);
+    return self->send_upstream(std::move(buffer), down, reply);
 }
 
-int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t ServiceEndpoint::send_upstream(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxs::ReplyRoute& d = const_cast<mxs::ReplyRoute&>(down);
     d.push_back(this);
-    return m_up->clientReply(buffer, d, reply);
+    return m_up->clientReply(std::move(buffer), d, reply);
 }
 
 void ServiceEndpoint::set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down)
@@ -1577,7 +1577,7 @@ bool ServiceEndpoint::is_open() const
     return m_open;
 }
 
-bool ServiceEndpoint::routeQuery(GWBUF* buffer)
+bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
@@ -1586,14 +1586,14 @@ bool ServiceEndpoint::routeQuery(GWBUF* buffer)
     // packets in some cases, most of the time the packet count statistic is close to the real packet count.
     m_service->stats().add_packet();
 
-    return m_head->routeQuery(buffer);
+    return m_head->routeQuery(std::move(buffer));
 }
 
-bool ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ServiceEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    return m_router_session->clientReply(buffer, down, reply);
+    return m_router_session->clientReply(std::move(buffer), down, reply);
 }
 
 bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,

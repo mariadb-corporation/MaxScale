@@ -1215,7 +1215,7 @@ bool ServerEndpoint::is_open() const
     return m_connstatus != ConnStatus::NO_CONN;
 }
 
-bool ServerEndpoint::routeQuery(GWBUF* buffer)
+bool ServerEndpoint::routeQuery(GWBUF&& buffer)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
@@ -1226,9 +1226,9 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
 
     uint32_t type_mask = 0;
 
-    if (mariadb::is_com_query_or_prepare(*buffer))
+    if (mariadb::is_com_query_or_prepare(buffer))
     {
-        type_mask = qc_get_type_mask(buffer);
+        type_mask = qc_get_type_mask(&buffer);
     }
 
     auto is_read_only = !(type_mask & ~read_only_types);
@@ -1244,7 +1244,7 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
         break;
 
     case ConnStatus::CONNECTED:
-        rval = m_conn->write(buffer);
+        rval = m_conn->write(std::move(buffer));
         m_server->stats().add_packet();
         break;
 
@@ -1256,27 +1256,26 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
             {
                 MXB_INFO("Session %lu connection to %s restored from pool.",
                          m_session->id(), m_server->name());
-                rval = m_conn->write(buffer);
+                rval = m_conn->write(std::move(buffer));
                 m_server->stats().add_packet();
             }
             else
             {
                 // Waiting for another one.
-                m_delayed_packets.emplace_back(buffer);
+                m_delayed_packets.emplace_back(std::move(buffer));
                 rval = 1;
             }
         }
         else
         {
             // Connection failed, return error.
-            gwbuf_free(buffer);
         }
         break;
 
     case ConnStatus::WAITING_FOR_CONN:
         // Already waiting for a connection. Save incoming buffer so it can be sent once a connection
         // is available.
-        m_delayed_packets.emplace_back(buffer);
+        m_delayed_packets.emplace_back(std::move(buffer));
         rval = 1;
         break;
     }
@@ -1284,7 +1283,7 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     return rval;
 }
 
-bool ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ServerEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
@@ -1301,7 +1300,7 @@ bool ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs
         m_write_distribution.add(m_query_time.duration());
     }
 
-    return m_up->clientReply(buffer, down, reply);
+    return m_up->clientReply(std::move(buffer), down, reply);
 }
 
 bool ServerEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
@@ -1346,7 +1345,7 @@ ServerEndpoint::ContinueRes ServerEndpoint::continue_connecting()
         bool success = true;
         for (auto& packet : m_delayed_packets)
         {
-            if (m_conn->write(packet.release()) == 0)
+            if (m_conn->write(std::move(packet)) == 0)
             {
                 success = false;
                 break;

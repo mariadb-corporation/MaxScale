@@ -31,19 +31,19 @@ RWBackend::RWBackend(mxs::Endpoint* ref)
 {
 }
 
-bool RWBackend::write(GWBUF* buffer, response_type type)
+bool RWBackend::write(GWBUF&& buffer, response_type type)
 {
     m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);
-    uint32_t len = mariadb::get_packet_length(buffer->data());
+    uint32_t len = mariadb::get_packet_length(buffer.data());
     bool was_large_query = m_large_query;
     m_large_query = len == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
     if (was_large_query)
     {
-        return mxs::Backend::write(buffer, Backend::NO_RESPONSE);
+        type = Backend::NO_RESPONSE;
     }
 
-    return mxs::Backend::write(buffer, type);
+    return mxs::Backend::write(std::move(buffer), type);
 }
 
 void RWBackend::close(close_type type)

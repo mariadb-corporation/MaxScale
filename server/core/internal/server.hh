@@ -469,9 +469,9 @@ public:
 
     bool is_open() const override;
 
-    bool routeQuery(GWBUF* buffer) override;
+    bool routeQuery(GWBUF&& buffer) override;
 
-    bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* error,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
@@ -488,7 +488,7 @@ private:
     Session*        m_session;
     Server*         m_server;
 
-    std::vector<mxs::Buffer> m_delayed_packets;     /**< Packets waiting for a connection */
+    std::vector<GWBUF> m_delayed_packets;     /**< Packets waiting for a connection */
 
     enum class ConnStatus
     {

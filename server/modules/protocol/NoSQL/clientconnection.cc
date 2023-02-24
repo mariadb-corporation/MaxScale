@@ -203,7 +203,7 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 
     if (m_nosql.is_busy())
     {
-        rv = m_nosql.clientReply(pMariaDB_response, m_pDcb);
+        rv = m_nosql.clientReply(mxs::gwbufptr_to_gwbuf(pMariaDB_response), m_pDcb);
     }
     else
     {
@@ -351,8 +351,9 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     return m_nosql.handle_request(pPacket);
 }
 
-bool ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ClientConnection::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    GWBUF* pBuffer = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     int32_t rv = 0;
 
     if (m_nosql.is_busy())

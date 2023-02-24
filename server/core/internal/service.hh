@@ -375,9 +375,9 @@ public:
 
     bool is_open() const override;
 
-    bool routeQuery(GWBUF* buffer) override;
+    bool routeQuery(GWBUF&& buffer) override;
 
-    bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* error,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
@@ -413,15 +413,15 @@ private:
         {
         }
 
-        bool routeQuery(GWBUF* pPacket) override
+        bool routeQuery(GWBUF&& packet) override
         {
             mxb_assert_message(false, "Should never be called");
             return 0;
         }
 
-        bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
+        bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
         {
-            return m_endpoint->send_upstream(pPacket, down, reply);
+            return m_endpoint->send_upstream(std::move(packet), down, reply);
         }
 
     private:
@@ -430,9 +430,9 @@ private:
 
     friend class Service;
 
-    static int32_t upstream_function(mxs::Filter*, mxs::Routable*, GWBUF*,
+    static int32_t upstream_function(mxs::Filter*, mxs::Routable*, GWBUF&&,
                                      const mxs::ReplyRoute&, const mxs::Reply&);
-    int32_t send_upstream(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply&);
+    int32_t send_upstream(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply&);
     void    set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
 
     bool                m_open {false};

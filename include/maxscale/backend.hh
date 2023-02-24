@@ -115,7 +115,7 @@ public:
      *
      * @return True if data was written successfully
      */
-    virtual bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
+    virtual bool write(GWBUF&& buffer, response_type type = EXPECT_RESPONSE);
 
     /**
      * @brief Mark that a reply to a query was received and processed

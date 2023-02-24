@@ -831,7 +831,7 @@ void MariaDBBackendConnection::normal_read()
 
             thread_local mxs::ReplyRoute route;
             route.clear();
-            m_upstream->clientReply(mxs::gwbuf_to_gwbufptr(std::move(stmt)), route, m_reply);
+            m_upstream->clientReply(std::move(stmt), route, m_reply);
             m_reply.clear_row_data();
         }
         else
@@ -1074,7 +1074,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
             mxs::ReplyRoute route;
             m_reply.clear();
             m_reply.set_is_ok(cmd == MYSQL_REPLY_OK);
-            if (m_upstream->clientReply(mxs::gwbuf_to_gwbufptr(move(buffer)), route, m_reply))
+            if (m_upstream->clientReply(move(buffer), route, m_reply))
             {
                 // If packets were received from the router while the COM_CHANGE_USER was in progress,
                 // they are stored in the same delayed queue that is used for the initial connection.

@@ -27,9 +27,9 @@ RouterSession::RouterSession(MXS_SESSION* pSession)
 {
 }
 
-bool RouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool RouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return m_pUp->clientReply(pPacket, down, reply);
+    return m_pUp->clientReply(std::move(packet), down, reply);
 }
 
 bool RouterSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem,

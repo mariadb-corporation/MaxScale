@@ -43,20 +43,20 @@ void ExampleFilterSession::close()
     MXB_NOTICE("Session %lu routed %i queries and %i replies.", m_session_id, m_queries, m_replies);
 }
 
-bool ExampleFilterSession::routeQuery(GWBUF* pPacket)
+bool ExampleFilterSession::routeQuery(GWBUF&& packet)
 {
     m_queries++;
     m_filter.query_seen();
 
     // Pass the query forward.
-    return mxs::FilterSession::routeQuery(pPacket);
+    return mxs::FilterSession::routeQuery(std::move(packet));
 }
 
-bool ExampleFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ExampleFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     m_replies++;
     m_filter.reply_seen();
 
     // Pass the reply forward.
-    return mxs::FilterSession::clientReply(pPacket, down, reply);
+    return mxs::FilterSession::clientReply(std::move(packet), down, reply);
 }
