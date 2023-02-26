@@ -365,6 +365,8 @@ private:
     using QueryInfos = std::deque<QueryInfo>;
     using Log = std::deque<std::string>;
 
+    MXB_AT_DEBUG(bool m_routing {false});
+
     FilterList        m_filters;
     SessionVarsByName m_variables;
     QueryInfos        m_last_queries;           /*< The N last queries by the client */

@@ -1280,7 +1280,12 @@ bool Session::routeQuery(GWBUF&& buffer)
         }
     }
 
+    mxb_assert(!m_routing);
+    MXB_AT_DEBUG(m_routing = true);
+
     auto rv = m_head->routeQuery(std::move(buffer));
+
+    MXB_AT_DEBUG(m_routing = false);
 
     if (!response.buffer.empty())
     {
@@ -1293,6 +1298,7 @@ bool Session::routeQuery(GWBUF&& buffer)
 
 bool Session::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    mxb_assert(!m_routing);
     return m_tail->clientReply(std::move(buffer), down, reply);
 }
 
