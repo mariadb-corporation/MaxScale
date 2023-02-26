@@ -120,12 +120,12 @@ private:
 
     bool open_connections();
 
-    bool route_query(mxs::Buffer&& buffer);
-    bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
-    void continue_large_session_write(GWBUF* querybuf, uint32_t type);
-    bool write_session_command(mxs::RWBackend* backend, mxs::Buffer buffer, uint8_t cmd);
-    bool route_stmt(mxs::Buffer&& querybuf, const RoutingPlan& res);
-    bool route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& res);
+    bool route_query(GWBUF&& buffer);
+    bool route_session_write(GWBUF&& querybuf, uint8_t command, uint32_t type);
+    void continue_large_session_write(GWBUF&& querybuf, uint32_t type);
+    bool write_session_command(mxs::RWBackend* backend, GWBUF&& buffer, uint8_t cmd);
+    bool route_stmt(GWBUF&& querybuf, const RoutingPlan& res);
+    bool route_single_stmt(GWBUF&& buffer, const RoutingPlan& res);
     bool route_stored_query();
     void close_stale_connections();
 
@@ -139,20 +139,20 @@ private:
     bool            is_gtid_synced(mxs::RWBackend* backend);
 
     // The main target selection function
-    mxs::RWBackend* get_target(const mxs::Buffer& buffer, route_target_t route_target);
+    mxs::RWBackend* get_target(const GWBUF& buffer, route_target_t route_target);
 
-    RoutingPlan resolve_route(const mxs::Buffer& buffer, const mariadb::QueryClassifier::RouteInfo&);
+    RoutingPlan resolve_route(const GWBUF& buffer, const mariadb::QueryClassifier::RouteInfo&);
 
-    bool            handle_target_is_all(mxs::Buffer&& buffer, const RoutingPlan& res);
-    mxs::RWBackend* handle_hinted_target(const GWBUF* querybuf, route_target_t route_target);
+    bool            handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res);
+    mxs::RWBackend* handle_hinted_target(const GWBUF& querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
-    bool            handle_got_target(mxs::Buffer&& buffer, mxs::RWBackend* target, bool store);
-    bool            handle_routing_failure(mxs::Buffer&& buffer, const RoutingPlan& res);
+    bool            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, bool store);
+    bool            handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res);
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
-    void            retry_query(GWBUF* querybuf, int delay = 1);
+    void            retry_query(GWBUF&& querybuf, int delay = 1);
 
     // Transaction state helpers
     bool trx_is_starting() const;
@@ -166,13 +166,13 @@ private:
     void discard_connection(mxs::RWBackend* target, const std::string& error);
     bool trx_target_still_valid() const;
     bool should_migrate_trx() const;
-    bool start_trx_migration(GWBUF* querybuf);
+    bool start_trx_migration(GWBUF&& querybuf);
     void log_master_routing_failure(bool found,
                                     mxs::RWBackend* old_master,
                                     mxs::RWBackend* curr_master);
 
     void send_readonly_error();
-    bool query_not_supported(GWBUF* querybuf);
+    bool query_not_supported(const GWBUF& querybuf);
 
     bool handle_causal_read_reply(GWBUF& writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
     bool should_do_causal_read() const;
@@ -182,19 +182,19 @@ private:
     void discard_master_wait_gtid_result(GWBUF& buffer);
     void send_sync_query(mxs::RWBackend* target);
 
-    bool                                need_gtid_probe(const RoutingPlan& plan) const;
-    std::pair<mxs::Buffer, RoutingPlan> start_gtid_probe();
-    mxs::Buffer                         reset_gtid_probe();
-    void                                parse_gtid_result(GWBUF& buffer, const mxs::Reply& reply);
+    bool                          need_gtid_probe(const RoutingPlan& plan) const;
+    std::pair<GWBUF, RoutingPlan> start_gtid_probe();
+    GWBUF                         reset_gtid_probe();
+    void                          parse_gtid_result(GWBUF& buffer, const mxs::Reply& reply);
 
     int get_max_replication_lag();
 
-    bool reuse_prepared_stmt(const mxs::Buffer& buffer);
+    bool reuse_prepared_stmt(const GWBUF& buffer);
 
     bool retry_master_query(mxs::RWBackend* backend);
-    bool handle_error_new_connection(mxs::RWBackend* backend, GWBUF* errmsg,
+    bool handle_error_new_connection(mxs::RWBackend* backend, const GWBUF& errmsg,
                                      mxs::RWBackend::close_type failure_type);
-    void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf, const mxs::Reply& reply);
+    void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
 
     void trx_replay_next_stmt();
@@ -227,7 +227,7 @@ private:
      * @param buffer Current query
      * @param res    Routing result
      */
-    void track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan& res);
+    void track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res);
 
 private:
     // QueryClassifier::Handler
@@ -353,7 +353,7 @@ private:
         return status;
     }
 
-    inline bool can_route_query(const mxs::Buffer& buffer, const RoutingPlan& res) const
+    inline bool can_route_query(const GWBUF& buffer, const RoutingPlan& res) const
     {
         bool can_route = false;
 
@@ -425,15 +425,9 @@ private:
         }
     }
 
-    void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
+    uint32_t extract_binary_ps_id(const GWBUF& buffer)
     {
-        uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-        mariadb::set_byte4(ptr, id);
-    }
-
-    uint32_t extract_binary_ps_id(GWBUF* buffer)
-    {
-        uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+        const uint8_t* ptr = buffer.data() + MYSQL_PS_ID_OFFSET;
         return mariadb::get_byte4(ptr);
     }
 
@@ -468,9 +462,9 @@ private:
     int  m_expected_responses;          /**< Number of expected responses to the current query */
     bool m_locked_to_master {false};    /**< Whether session is permanently locked to the master */
 
-    std::deque<mxs::Buffer> m_query_queue;  /**< Queued commands waiting to be executed */
-    RWSplit*                m_router;       /**< The router instance */
-    mxs::RWBackend*         m_sescmd_replier {nullptr};
+    std::deque<GWBUF> m_query_queue;    /**< Queued commands waiting to be executed */
+    RWSplit*          m_router;         /**< The router instance */
+    mxs::RWBackend*   m_sescmd_replier {nullptr};
 
     ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
 
@@ -480,15 +474,15 @@ private:
 
     mariadb::QueryClassifier m_qc;      /**< The query classifier. */
 
-    int64_t     m_retry_duration;       /**< Total time spent retrying queries */
-    mxs::Buffer m_current_query;        /**< Current query being executed */
-    Trx         m_trx;                  /**< Current transaction */
-    bool        m_can_replay_trx;       /**< Whether the transaction can be replayed */
-    Trx         m_replayed_trx;         /**< The transaction we are replaying */
-    mxs::Buffer m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
-    Trx         m_orig_trx;             /**< The backup of the transaction we're replaying */
-    mxs::Buffer m_orig_stmt;            /**< The backup of the statement that was interrupted */
-    int64_t     m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
+    int64_t m_retry_duration;       /**< Total time spent retrying queries */
+    GWBUF   m_current_query;        /**< Current query being executed */
+    Trx     m_trx;                  /**< Current transaction */
+    bool    m_can_replay_trx;       /**< Whether the transaction can be replayed */
+    Trx     m_replayed_trx;         /**< The transaction we are replaying */
+    GWBUF   m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
+    Trx     m_orig_trx;             /**< The backup of the transaction we're replaying */
+    GWBUF   m_orig_stmt;            /**< The backup of the statement that was interrupted */
+    int64_t m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
 
     mxb::StopWatch m_trx_replay_timer;      /**< When the last transaction replay started */
 
@@ -501,18 +495,8 @@ private:
     int m_pending_retries {0};
 
     // Map of COM_STMT_PREPARE responses mapped to their SQL
-    std::unordered_map<std::string, mxs::Buffer> m_ps_cache;
+    std::unordered_map<std::string, GWBUF> m_ps_cache;
 };
-
-/**
- * @brief Get the internal ID for the given binary prepared statement
- *
- * @param rses   Router client session
- * @param buffer Buffer containing a binary protocol statement other than COM_STMT_PREPARE
- *
- * @return The internal ID of the prepared statement that the buffer contents refer to
- */
-uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer);
 
 static inline const char* route_target_to_string(route_target_t target)
 {

@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <utility>
 
 #include <mysqld_error.h>
 
@@ -63,20 +64,21 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
     return target->in_use() || prepare_connection(target);
 }
 
-void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
+void RWSplitSession::retry_query(GWBUF&& querybuf, int delay)
 {
+    mxb_assert(querybuf);
     // TODO: Make sure this is no longer needed. The only place where it might matter is when a retried query
     // is put into the query queue. This should not be possible as no retried query should be put into the
     // pool. If it does happen, there are debug assertions that catch it.
-    querybuf->set_type(GWBUF::TYPE_REPLAYED);
+    querybuf.set_type(GWBUF::TYPE_REPLAYED);
 
     // Route the query again later
     m_pSession->delay_routing(
-        this, mxs::gwbufptr_to_gwbuf(querybuf), delay, [this](GWBUF&& buffer){
+        this, std::move(querybuf), delay, [this](GWBUF&& buffer){
         mxb_assert(m_pending_retries > 0);
         --m_pending_retries;
 
-        return route_query(mxs::gwbuf_to_gwbufptr(std::move(buffer)));
+        return route_query(std::move(buffer));
     });
 
     ++m_retry_duration;
@@ -102,7 +104,7 @@ bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
            && route_info().is_trx_still_read_only();// The start of the transaction is a read-only statement
 }
 
-void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan& res)
+void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res)
 {
     if (res.type == RoutingPlan::Type::OTRX_START)
     {
@@ -127,9 +129,7 @@ void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan
              * replace it with a ROLLBACK. The storing of the statement is
              * done here to avoid storage of the ROLLBACK.
              */
-            m_current_query.reset(buffer->release());
-            buffer->reset(modutil_create_query("ROLLBACK"));
-
+            m_current_query = std::exchange(buffer, mariadb::create_query("ROLLBACK"));
             m_state = OTRX_ROLLBACK;
         }
     }
@@ -147,17 +147,17 @@ void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan
  *
  * @return True if routing was successful
  */
-bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPlan& res)
+bool RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res)
 {
     const RouteInfo& info = route_info();
     bool result = false;
 
     if (route_info().large_query())
     {
-        continue_large_session_write(buffer.get(), info.type_mask());
+        continue_large_session_write(std::move(buffer), info.type_mask());
         result = true;
     }
-    else if (route_session_write(buffer.release(), info.command(), info.type_mask()))
+    else if (route_session_write(std::move(buffer), info.command(), info.type_mask()))
     {
         // Session command routed, reset retry duration
         m_retry_duration = 0;
@@ -171,7 +171,7 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPla
     return result;
 }
 
-bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingPlan& res)
+bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res)
 {
     bool ok = true;
     auto old_wait_gtid = m_wait_gtid;
@@ -188,12 +188,12 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
         // transaction from being accidentally committed whenever a new transaction is started on it.
         discard_connection(m_trx.target(), "Closed due to transaction migration");
 
-        ok = start_trx_migration(buffer.get());
+        ok = start_trx_migration(std::move(buffer));
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
         MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
-        retry_query(buffer.release());
+        retry_query(std::move(buffer));
     }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
     {
@@ -234,7 +234,7 @@ void RWSplitSession::send_readonly_error()
     RouterSession::clientReply(mariadb::create_error_packet(1, errnum, sqlstate, errmsg), route, reply);
 }
 
-bool RWSplitSession::query_not_supported(GWBUF* querybuf)
+bool RWSplitSession::query_not_supported(const GWBUF& querybuf)
 {
     bool unsupported = false;
     const RouteInfo& info = route_info();
@@ -263,7 +263,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
         // Conflicting routing targets. Return an error to the client.
         MXB_ERROR("Can't route %s '%s'. SELECT with session data modification is not "
                   "supported with `use_sql_variables_in=all`.",
-                  STRPACKETTYPE(info.command()), querybuf->get_sql().c_str());
+                  STRPACKETTYPE(info.command()), querybuf.get_sql().c_str());
 
         err = mariadb::create_error_packet(1, 1064, "42000", "Routing query to backend failed. "
                                                              "See the error log for further details.");
@@ -278,7 +278,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
     return unsupported;
 }
 
-bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
+bool RWSplitSession::reuse_prepared_stmt(const GWBUF& buffer)
 {
     const RouteInfo& info = route_info();
 
@@ -288,8 +288,7 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
 
         if (it != m_ps_cache.end())
         {
-            // Cannot reuse the GWBUF* stored in the ps cache.
-            set_response(it->second.get()->shallow_clone());
+            set_response(it->second.shallow_clone());
             return true;
         }
     }
@@ -309,7 +308,7 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
  * @return True if routing succeed or if it failed due to unsupported query.
  *         false if backend failure was encountered.
  */
-bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
+bool RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& res)
 {
     const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
@@ -321,7 +320,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
         return true;
     }
 
-    if (query_not_supported(buffer.get()))
+    if (query_not_supported(buffer))
     {
         return true;
     }
@@ -335,7 +334,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
     }
 }
 
-bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
+bool RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
 {
     bool ok = true;
     auto target = res.target;
@@ -360,7 +359,7 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
     {
         update_statistics(res);
 
-        track_optimistic_trx(&buffer, res);
+        track_optimistic_trx(buffer, res);
 
         // We have a valid target, reset retry duration
         m_retry_duration = 0;
@@ -398,7 +397,7 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
     return ok;
 }
 
-RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t route_target)
+RWBackend* RWSplitSession::get_target(const GWBUF& buffer, route_target_t route_target)
 {
     RWBackend* rval = nullptr;
     const RouteInfo& info = route_info();
@@ -416,7 +415,7 @@ RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t 
         }
         else
         {
-            return handle_hinted_target(buffer.get(), route_target);
+            return handle_hinted_target(buffer, route_target);
         }
     }
 
@@ -441,7 +440,7 @@ RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t 
     return rval;
 }
 
-RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buffer, const RouteInfo& info)
+RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const GWBUF& buffer, const RouteInfo& info)
 {
     RoutingPlan rval;
     rval.route_target = info.target();
@@ -476,7 +475,7 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buf
     return rval;
 }
 
-bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffer, uint8_t cmd)
+bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, uint8_t cmd)
 {
     bool ok = true;
     mxs::Backend::response_type type = mxs::Backend::NO_RESPONSE;
@@ -486,7 +485,7 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
         type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
     }
 
-    if (backend->write(mxs::gwbufptr_to_gwbuf(buffer.release()), type))
+    if (backend->write(std::move(buffer), type))
     {
         m_server_stats[backend->target()].inc_total();
         m_server_stats[backend->target()].inc_read();
@@ -526,10 +525,9 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
  * backends being used, otherwise false.
  *
  */
-bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type)
+bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32_t type)
 {
     MXB_INFO("Session write, routing to all servers.");
-    mxs::Buffer buffer(querybuf);
     bool ok = true;
     std::ostringstream error;
 
@@ -583,7 +581,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         for (RWBackend* backend : m_raw_backends)
         {
-            if (backend->in_use() && !write_session_command(backend, buffer, command))
+            if (backend->in_use() && !write_session_command(backend, buffer.shallow_clone(), command))
             {
                 ok = false;
             }
@@ -594,20 +592,20 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             if (command == MXS_COM_STMT_CLOSE)
             {
                 // Remove the command from the PS mapping
-                m_qc.ps_erase(buffer.get());
+                m_qc.ps_erase(&buffer);
                 m_exec_map.erase(route_info().stmt_id());
             }
             else if (Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_NAMED_STMT)
                      || Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_STMT))
             {
-                mxb_assert(buffer.id() != 0 ||
-                           Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_NAMED_STMT));
-                m_qc.ps_store(buffer.get(), buffer.id());
+                mxb_assert(buffer.id() != 0
+                           || Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_NAMED_STMT));
+                m_qc.ps_store(&buffer, buffer.id());
             }
             else if (Parser::type_mask_contains(type, QUERY_TYPE_DEALLOC_PREPARE))
             {
                 mxb_assert(!mxs_mysql_is_ps_command(route_info().command()));
-                m_qc.ps_erase(buffer.get());
+                m_qc.ps_erase(&buffer);
             }
 
             m_router->update_max_sescmd_sz(protocol_data()->history.size());
@@ -651,7 +649,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         if (can_retry_query() || can_continue_trx_replay())
         {
             MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
-            retry_query(buffer.release());
+            retry_query(std::move(buffer));
             ok = true;
         }
         else
@@ -777,14 +775,14 @@ int RWSplitSession::get_max_replication_lag()
  *
  *  @return bool - true if succeeded, false otherwise
  */
-RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_target_t route_target)
+RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_target_t route_target)
 {
     const char rlag_hint_tag[] = "max_slave_replication_lag";
     const int comparelen = sizeof(rlag_hint_tag);
     int config_max_rlag = get_max_replication_lag();    // From router configuration.
     RWBackend* target = nullptr;
 
-    for (const Hint& hint : querybuf->hints)
+    for (const Hint& hint : querybuf.hints)
     {
         if (hint.type == Hint::Type::ROUTE_TO_NAMED_SERVER)
         {
@@ -1047,7 +1045,7 @@ bool RWSplitSession::should_migrate_trx() const
     return migrate;
 }
 
-bool RWSplitSession::start_trx_migration(GWBUF* querybuf)
+bool RWSplitSession::start_trx_migration(GWBUF&& querybuf)
 {
     if (mxb_log_should_log(LOG_INFO) && m_trx.target())
     {
@@ -1058,7 +1056,7 @@ bool RWSplitSession::start_trx_migration(GWBUF* querybuf)
      * Stash the current query so that the transaction replay treats
      * it as if the query was interrupted.
      */
-    m_current_query.copy_from(querybuf);
+    m_current_query = std::move(querybuf);
 
     /**
      * After the transaction replay has been started, the rest of
@@ -1090,13 +1088,13 @@ RWBackend* RWSplitSession::handle_master_is_target()
  *
  *  @return True on success
  */
-bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, bool store)
+bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool store)
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
     MXB_INFO("Route query to %s: %s <", target == m_current_master ? "primary" : "replica", target->name());
 
-    uint8_t cmd = mxs_mysql_get_command(buffer.get());
+    uint8_t cmd = mxs_mysql_get_command(&buffer);
 
     bool attempting_causal_read = false;
 
@@ -1108,17 +1106,15 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
     else if (!is_locked_to_master())
     {
         mxb_assert(!mxs_mysql_is_ps_command(cmd)
-                   || extract_binary_ps_id(buffer.get()) == route_info().stmt_id()
-                   || extract_binary_ps_id(buffer.get()) == MARIADB_PS_DIRECT_EXEC_ID);
+                   || extract_binary_ps_id(buffer) == route_info().stmt_id()
+                   || extract_binary_ps_id(buffer) == MARIADB_PS_DIRECT_EXEC_ID);
 
         // Attempt a causal read only when the query is routed to a slave
         attempting_causal_read = target->is_slave() && should_do_causal_read();
 
         if (cmd == MXS_COM_QUERY && attempting_causal_read)
         {
-            GWBUF tmp = mxs::gwbufptr_to_gwbuf(buffer.release());
-            add_prefix_wait_gtid(tmp);
-            buffer = mxs::gwbuf_to_gwbufptr(std::move(tmp));
+            add_prefix_wait_gtid(buffer);
             store = false;      // The storage for causal reads is done inside add_prefix_wait_gtid
         }
 
@@ -1153,12 +1149,12 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         // to the master due to strict_multi_stmt or strict_sp_calls and the user executes a prepared
         // statement. The previous PS ID is tracked in ps_store and asserted to be the same in
         // ps_store_result.
-        m_qc.ps_store(buffer.get(), buffer.id());
+        m_qc.ps_store(&buffer, buffer.id());
     }
 
     if (store)
     {
-        m_current_query.copy_from(buffer);
+        m_current_query = buffer.shallow_clone();
     }
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
@@ -1204,5 +1200,5 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         send_sync_query(target);
     }
 
-    return target->write(mxs::gwbufptr_to_gwbuf(buffer.release()), response);
+    return target->write(std::move(buffer), response);
 }

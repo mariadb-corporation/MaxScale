@@ -162,7 +162,7 @@ bool RWSplitSession::continue_causal_read()
         mxb_assert(m_current_query.empty());
         mxb_assert(!m_query_queue.empty());
 
-        retry_query(m_query_queue.front().release(), 0);
+        retry_query(std::move(m_query_queue.front()), 0);
         m_query_queue.pop_front();
         rval = true;
     }
@@ -171,9 +171,9 @@ bool RWSplitSession::continue_causal_read()
         if (m_wait_gtid == RETRYING_ON_MASTER)
         {
             // Retry the query on the master
-            GWBUF* buf = m_current_query.release();
-            buf->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
-            retry_query(buf, 0);
+            m_current_query.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+            retry_query(std::move(m_current_query), 0);
+            m_current_query.clear();
             rval = true;
         }
 
@@ -221,7 +221,7 @@ void RWSplitSession::add_prefix_wait_gtid(GWBUF& origin)
     // Only do the replacement if it fits into one packet
     if (origin.length() + sql.size() < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
-        m_current_query.copy_from(&origin);
+        m_current_query = origin.shallow_clone();
         origin = mariadb::create_query(mxb::cat(sql, origin.get_sql()));
         m_wait_gtid = WAITING_FOR_HEADER;
     }
@@ -231,7 +231,7 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
 {
     // Add a routing hint to the copy of the current query to prevent it from being routed to a slave if it
     // has to be retried.
-    m_current_query.get()->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+    m_current_query.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
 
     int64_t timeout = m_config.causal_reads_timeout.count();
     std::string gtid = m_config.causal_reads == CausalReads::GLOBAL ?
@@ -246,22 +246,23 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
        << "KILL (SELECT CONNECTION_ID());"
        << "END IF";
 
-    target->write(mxs::gwbufptr_to_gwbuf(modutil_create_query(ss.str().c_str())),
-                  mxs::Backend::IGNORE_RESPONSE);
+    target->write(mariadb::create_query(ss.str()), mxs::Backend::IGNORE_RESPONSE);
 }
 
-std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
+std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
 {
+    std::pair<GWBUF, RWSplitSession::RoutingPlan> rval;
     MXB_INFO("Starting GTID probe");
 
     m_wait_gtid = READING_GTID;
-    mxs::Buffer buffer(modutil_create_query("SELECT @@gtid_current_pos"));
-    buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+    auto& [buffer, plan] = rval;
+    buffer = mariadb::create_query("SELECT @@gtid_current_pos");
+    buffer.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
     buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
 
     m_qc.revert_update();
-    m_qc.update_route_info(get_current_target(), buffer.get());
-    RoutingPlan plan = resolve_route(buffer, route_info());
+    m_qc.update_route_info(get_current_target(), &buffer);
+    plan = resolve_route(buffer, route_info());
 
     // Now with MXS-4260 fixed, the attached routing hint will be more of a suggestion to the downstream
     // components rather than something that must be followed. For this reason, the target type must be
@@ -271,10 +272,10 @@ std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_p
     plan.route_target = TARGET_MASTER;
     plan.target = handle_master_is_target();
 
-    return {buffer, plan};
+    return rval;
 }
 
-mxs::Buffer RWSplitSession::reset_gtid_probe()
+GWBUF RWSplitSession::reset_gtid_probe()
 {
     mxb_assert_message(m_current_query.empty(), "Current query should be empty but it contains: %s",
                        m_current_query.get_sql().c_str());

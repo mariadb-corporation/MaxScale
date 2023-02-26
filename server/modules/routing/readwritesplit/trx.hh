@@ -27,12 +27,45 @@ class Trx
 {
 public:
     // A log of executed queries, for transaction replay
-    typedef std::list<mxs::Buffer> TrxLog;
+    typedef std::list<GWBUF> TrxLog;
 
     Trx()
         : m_size(0)
         , m_target(nullptr)
     {
+    }
+
+    Trx(const Trx& rhs)
+    {
+        m_checksum = rhs.m_checksum;
+        m_size = rhs.m_size;
+        m_target = rhs.m_target;
+
+        m_log.clear();
+
+        for (const auto& buffer : rhs.m_log)
+        {
+            m_log.emplace_back(buffer.shallow_clone());
+        }
+    }
+
+    Trx& operator=(const Trx& rhs)
+    {
+        if (this != &rhs)
+        {
+            m_checksum = rhs.m_checksum;
+            m_size = rhs.m_size;
+            m_target = rhs.m_target;
+
+            m_log.clear();
+
+            for (const auto& buffer : rhs.m_log)
+            {
+                m_log.emplace_back(buffer.shallow_clone());
+            }
+        }
+
+        return *this;
     }
 
     mxs::RWBackend* target() const
@@ -50,13 +83,13 @@ public:
      *
      * @param buf Statement to add
      */
-    void add_stmt(mxs::RWBackend* target, GWBUF* buf)
+    void add_stmt(mxs::RWBackend* target, GWBUF&& buf)
     {
         mxb_assert_message(buf, "Trx::add_stmt: Buffer must not be empty");
         mxb_assert(target);
 
-        m_size += gwbuf_length(buf);
-        m_log.emplace_back(buf);
+        m_size += buf.length();
+        m_log.emplace_back(std::move(buf));
 
         mxb_assert_message(target == m_target, "Target should be '%s', not '%s'",
                            m_target ? m_target->name() : "<no target>", target->name());
@@ -69,7 +102,7 @@ public:
      *
      * @param buf Result to add
      */
-    void add_result(GWBUF* buf)
+    void add_result(const GWBUF& buf)
     {
         m_checksum.update(buf);
     }
@@ -82,10 +115,10 @@ public:
      *
      * @return The oldest statement in this transaction
      */
-    GWBUF* pop_stmt()
+    GWBUF pop_stmt()
     {
         mxb_assert(!m_log.empty());
-        GWBUF* rval = m_log.front().release();
+        GWBUF rval = std::move(m_log.front());
         m_log.pop_front();
         return rval;
     }

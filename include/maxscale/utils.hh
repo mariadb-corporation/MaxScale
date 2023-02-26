@@ -594,6 +594,11 @@ public:
         update(buffer->data(), buffer->length());
     }
 
+    void update(const GWBUF& buffer)
+    {
+        update(&buffer);
+    }
+
     /**
      * Update the checksum calculation
      *
@@ -617,10 +622,15 @@ public:
     virtual void finalize() = 0;
 
     // Overload with an update before finalize
-    void finalize(GWBUF* buffer)
+    void finalize(const GWBUF* buffer)
     {
         update(buffer);
         finalize();
+    }
+
+    void finalize(const GWBUF& buffer)
+    {
+        finalize(&buffer);
     }
 
     /**
