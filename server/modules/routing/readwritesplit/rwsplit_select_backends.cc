@@ -110,8 +110,8 @@ RWBackend* best_score(PRWBackends& sBackends, const std::function<double(mxs::En
 RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 {
     auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->stats().n_current_conns();
-        };
+        return e->target()->stats().n_current_conns();
+    };
 
     return best_score(sBackends, server_score);
 }
@@ -120,8 +120,8 @@ RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 {
     static auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->replication_lag();
-        };
+        return e->target()->replication_lag();
+    };
 
     return best_score(sBackends, server_score);
 }
@@ -130,8 +130,8 @@ RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
 {
     auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->stats().n_current_ops();
-        };
+        return e->target()->stats().n_current_ops();
+    };
 
     return best_score(sBackends, server_score);
 }
@@ -283,19 +283,19 @@ int64_t RWSplitSession::get_current_rank()
     else
     {
         auto compare = [](RWBackend* a, RWBackend* b) {
-                if (a->in_use() != b->in_use())
-                {
-                    return a->in_use();
-                }
-                else if (a->can_connect() != b->can_connect())
-                {
-                    return a->can_connect();
-                }
-                else
-                {
-                    return a->target()->rank() < b->target()->rank();
-                }
-            };
+            if (a->in_use() != b->in_use())
+            {
+                return a->in_use();
+            }
+            else if (a->can_connect() != b->can_connect())
+            {
+                return a->can_connect();
+            }
+            else
+            {
+                return a->target()->rank() < b->target()->rank();
+            }
+        };
         auto it = std::min_element(m_raw_backends.begin(), m_raw_backends.end(), compare);
 
         if (it != m_raw_backends.end())

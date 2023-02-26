@@ -38,9 +38,7 @@ using namespace maxscale;
 
 namespace
 {
-
 const char* CN_SESSION_TRACK_SYSTEM_VARIABLES = "session_track_system_variables";
-
 }
 
 /**

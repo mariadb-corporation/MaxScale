@@ -300,15 +300,15 @@ private:
     inline bool have_open_connections() const
     {
         return std::any_of(m_raw_backends.begin(), m_raw_backends.end(), [](mxs::RWBackend* b) {
-                               return b->in_use();
-                           });
+            return b->in_use();
+        });
     }
 
     inline bool is_last_backend(mxs::RWBackend* backend)
     {
         return std::none_of(m_raw_backends.begin(), m_raw_backends.end(), [&](mxs::RWBackend* b) {
-                                return b->in_use() && b != backend;
-                            });
+            return b->in_use() && b != backend;
+        });
     }
 
     inline bool need_master_for_sescmd()
