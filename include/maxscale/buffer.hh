@@ -117,6 +117,18 @@ public:
     explicit GWBUF(const uint8_t* data, size_t datasize);
 
     GWBUF(GWBUF&& rhs) noexcept;
+
+    /**
+     * Move-assignment operator
+     *
+     * A move from a GWBUF guarantees that the moved-from object will be empty if the move took place.
+     * However, this still means that in order to bring the moved-from variable into a known state after a
+     * call to std::move, a call to clear() must be made.
+     *
+     * @param rhs prvalue to assign
+     *
+     * @return *this
+     */
     GWBUF& operator=(GWBUF&& rhs) noexcept;
 
     /**
@@ -164,6 +176,11 @@ public:
     uint8_t*       data();
     size_t         length() const;
     bool           empty() const;
+
+    /**
+     * @return True if buffer is not empty
+     */
+    explicit operator bool() const;
 
     // Sets the buffer type
     void set_type(Type type);
@@ -464,6 +481,11 @@ inline size_t GWBUF::length() const
 inline bool GWBUF::empty() const
 {
     return m_start == m_end;
+}
+
+inline GWBUF::operator bool() const
+{
+    return !empty();
 }
 
 inline void GWBUF::write_complete(size_t n_bytes)

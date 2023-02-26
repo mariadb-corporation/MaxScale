@@ -166,6 +166,7 @@ GWBUF::GWBUF(GWBUF&& rhs) noexcept
     : GWBUF()
 {
     move_helper(move(rhs));
+    mxb_assert(rhs.empty());
 }
 
 GWBUF& GWBUF::operator=(GWBUF&& rhs) noexcept
@@ -173,6 +174,7 @@ GWBUF& GWBUF::operator=(GWBUF&& rhs) noexcept
     if (this != &rhs)
     {
         move_helper(move(rhs));
+        mxb_assert(rhs.empty());
     }
     return *this;
 }
