@@ -123,7 +123,7 @@ bool RWSplitSession::route_query(mxs::Buffer&& buffer)
 
     if (can_route_query(buffer, res))
     {
-        if (need_gtid_probe(buffer.get(), res))
+        if (need_gtid_probe(res))
         {
             m_query_queue.push_front(std::move(buffer));
             std::tie(buffer, res) = start_gtid_probe();
@@ -481,15 +481,11 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
 
 bool RWSplitSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* writebuf = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
-    if (!backend->should_ignore_response())
+    if (!backend->should_ignore_response() && handle_causal_read_reply(buffer, reply, backend))
     {
-        if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == nullptr)
-        {
-            return 1;       // Nothing to route, return
-        }
+        return 1;   // Nothing to route, return
     }
 
     const auto& error = reply.error();
@@ -507,7 +503,6 @@ bool RWSplitSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, co
             // resultset with a trailing ERR packet. The full resultset can be discarded as the client hasn't
             // received it yet. In theory we could return this to the client but we don't know if it was
             // interrupted or not so the safer option is to retry it.
-            gwbuf_free(writebuf);
             return 1;
         }
     }
@@ -516,9 +511,10 @@ bool RWSplitSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, co
         && handle_ignorable_error(backend, error))
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
-        gwbuf_free(writebuf);
         return 1;
     }
+
+    GWBUF* writebuf = mxs::gwbuf_to_gwbufptr(std::move(buffer));
 
     m_qc.update_from_reply(reply);
 
@@ -1157,7 +1153,7 @@ bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
     return rval;
 }
 
-bool RWSplitSession::need_gtid_probe(GWBUF* buffer, const RoutingPlan& plan) const
+bool RWSplitSession::need_gtid_probe(const RoutingPlan& plan) const
 {
     uint8_t cmd = route_info().command();
 

@@ -1116,8 +1116,9 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 
         if (cmd == MXS_COM_QUERY && attempting_causal_read)
         {
-            GWBUF* tmp = buffer.release();
-            buffer = add_prefix_wait_gtid(tmp);
+            GWBUF tmp = mxs::gwbufptr_to_gwbuf(buffer.release());
+            add_prefix_wait_gtid(tmp);
+            buffer = mxs::gwbuf_to_gwbufptr(std::move(tmp));
             store = false;      // The storage for causal reads is done inside add_prefix_wait_gtid
         }
 

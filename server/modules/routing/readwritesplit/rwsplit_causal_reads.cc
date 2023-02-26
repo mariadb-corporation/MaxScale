@@ -15,18 +15,16 @@
 #include "rwsplitsession.hh"
 
 /**
- * @bref discard the result of MASTER_GTID_WAIT statement
+ * Discard the result of MASTER_GTID_WAIT statement
  *
  * The result will be an error or an OK packet.
  *
  * @param buffer Original reply buffer
- *
- * @return Any data after the ERR/OK packet, nullptr for no data
  */
-GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
+void RWSplitSession::discard_master_wait_gtid_result(GWBUF& buffer)
 {
     uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
-    buffer->copy_data(0, MYSQL_HEADER_LEN + 1, header_and_command);
+    buffer.copy_data(0, MYSQL_HEADER_LEN + 1, header_and_command);
 
     if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK)
     {
@@ -36,7 +34,7 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
         // Discard the OK packet and start updating sequence numbers
         uint8_t packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
         m_next_seq = 1;
-        buffer = gwbuf_consume(buffer, packet_len);
+        buffer.consume(packet_len);
     }
     else if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
     {
@@ -44,8 +42,7 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
         {
             // If a causal read fails inside of a read-only transaction, it cannot be retried on the master.
             m_wait_gtid = NONE;
-            gwbuf_free(buffer);
-            buffer = mariadb::create_error_packet_ptr(
+            buffer = mariadb::create_error_packet(
                 0, 1792, "25006",
                 "Causal read timed out while in a read-only transaction, cannot retry command.");
         }
@@ -55,8 +52,6 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
             m_wait_gtid = RETRYING_ON_MASTER;
         }
     }
-
-    return buffer;
 }
 
 /**
@@ -65,11 +60,11 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
  * @param buffer origin reply buffer
  *
  */
-void RWSplitSession::correct_packet_sequence(GWBUF* buffer)
+void RWSplitSession::correct_packet_sequence(GWBUF& buffer)
 {
-    auto it = buffer->begin();
-    auto end = buffer->end();
-    mxb_assert_message(buffer->length() > MYSQL_HEADER_LEN, "Should never receive partial packets");
+    auto it = buffer.begin();
+    auto end = buffer.end();
+    mxb_assert_message(buffer.length() > MYSQL_HEADER_LEN, "Should never receive partial packets");
 
     while (it < end)
     {
@@ -86,9 +81,9 @@ void RWSplitSession::correct_packet_sequence(GWBUF* buffer)
     }
 }
 
-GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
-                                                const mxs::Reply& reply,
-                                                mxs::RWBackend* backend)
+bool RWSplitSession::handle_causal_read_reply(GWBUF& writebuf,
+                                              const mxs::Reply& reply,
+                                              mxs::RWBackend* backend)
 {
     if (m_config.causal_reads != CausalReads::NONE)
     {
@@ -112,23 +107,23 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
 
         if (m_wait_gtid == READING_GTID)
         {
-            writebuf = parse_gtid_result(writebuf, reply);
+            parse_gtid_result(writebuf, reply);
         }
 
         if (m_wait_gtid == WAITING_FOR_HEADER)
         {
             mxb_assert(m_prev_plan.target == backend);
-            writebuf = discard_master_wait_gtid_result(writebuf);
+            discard_master_wait_gtid_result(writebuf);
         }
 
-        if (m_wait_gtid == UPDATING_PACKETS && writebuf)
+        if (m_wait_gtid == UPDATING_PACKETS && !writebuf.empty())
         {
             mxb_assert(m_prev_plan.target == backend);
             correct_packet_sequence(writebuf);
         }
     }
 
-    return writebuf;
+    return writebuf.empty();
 }
 
 bool RWSplitSession::should_do_causal_read() const
@@ -190,14 +185,12 @@ bool RWSplitSession::continue_causal_read()
     return rval;
 }
 
-/*
+/**
  * Add a wait gitd query in front of user's query to achive causal read
  *
- * @param origin  Original buffer
- *
- * @return       A new buffer contains wait statement and origin query
+ * @param origin The reply buffer
  */
-GWBUF* RWSplitSession::add_prefix_wait_gtid(GWBUF* origin)
+void RWSplitSession::add_prefix_wait_gtid(GWBUF& origin)
 {
     /**
      * Pack wait function and client query into a multistatments will save a round trip latency,
@@ -212,7 +205,6 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(GWBUF* origin)
 
     uint64_t version = m_router->service()->get_version(SERVICE_VERSION_MIN);
 
-    GWBUF* rval = origin;
     std::ostringstream ss;
     const char* wait_func = version > 50700 && version < 100000 ?
         "WAIT_FOR_EXECUTED_GTID_SET" : "MASTER_GTID_WAIT";
@@ -227,39 +219,19 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(GWBUF* origin)
     auto sql = ss.str();
 
     // Only do the replacement if it fits into one packet
-    if (gwbuf_length(origin) + sql.size() < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
+    if (origin.length() + sql.size() < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
-        GWBUF* prefix_buff = modutil_create_query(sql.c_str());
-
-        // Copy the original query in case it fails on the slave
-        m_current_query.copy_from(origin);
-
-        /* Trim origin to sql, Append origin buffer to the prefix buffer */
-        uint8_t header[MYSQL_HEADER_LEN];
-        origin->copy_data(0, MYSQL_HEADER_LEN, header);
-        /* Command length = 1 */
-        size_t origin_sql_len = MYSQL_GET_PAYLOAD_LEN(header) - 1;
-        /* Trim mysql header and command */
-        origin = gwbuf_consume(origin, MYSQL_HEADER_LEN + 1);
-        rval = gwbuf_append(prefix_buff, origin);
-
-        /* Modify totol length: Prefix sql len + origin sql len + command len */
-        size_t new_payload_len = sql.size() + origin_sql_len + 1;
-        mariadb::set_byte3(GWBUF_DATA(rval), new_payload_len);
-
+        m_current_query.copy_from(&origin);
+        origin = mariadb::create_query(mxb::cat(sql, origin.get_sql()));
         m_wait_gtid = WAITING_FOR_HEADER;
     }
-
-    return rval;
 }
 
 void RWSplitSession::send_sync_query(mxs::RWBackend* target)
 {
     // Add a routing hint to the copy of the current query to prevent it from being routed to a slave if it
     // has to be retried.
-    GWBUF* buf = m_current_query.release();
-    buf->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
-    m_current_query.reset(buf);
+    m_current_query.get()->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
 
     int64_t timeout = m_config.causal_reads_timeout.count();
     std::string gtid = m_config.causal_reads == CausalReads::GLOBAL ?
@@ -319,10 +291,9 @@ mxs::Buffer RWSplitSession::reset_gtid_probe()
     return buffer;
 }
 
-GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
+void RWSplitSession::parse_gtid_result(GWBUF& buffer, const mxs::Reply& reply)
 {
     mxb_assert(!reply.error());
-    GWBUF* rval = nullptr;
 
     if (!reply.row_data().empty())
     {
@@ -339,9 +310,11 @@ GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
         MXB_INFO("GTID probe complete, GTID is: %s", m_gtid_pos.to_string().c_str());
 
         // We need to return something for the upper layer, an OK packet should be adequate
-        rval = modutil_create_ok();
+        buffer = mxs::gwbufptr_to_gwbuf(modutil_create_ok());
     }
-
-    gwbuf_free(buffer);
-    return rval;
+    else
+    {
+        // Discard the partial result
+        buffer.clear();
+    }
 }
