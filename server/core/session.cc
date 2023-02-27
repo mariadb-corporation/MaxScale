@@ -654,22 +654,27 @@ uint32_t session_get_session_trace()
     return this_unit.session_trace;
 }
 
-void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds,
-                                std::function<bool(GWBUF &&)>&& fn)
+void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds,
+                            std::function<bool(GWBUF &&)>&& fn)
 {
-    auto session = this;
     auto sbuf = std::make_shared<GWBUF>(std::move(buffer));
-    auto cb = [session, fn, sbuf = std::move(sbuf), ep = &down->endpoint()]
+    auto cb = [this, fn, sbuf = std::move(sbuf), ep = &down->endpoint()]
         (mxb::Worker::Callable::Action action){
         if (action == mxb::Worker::Callable::EXECUTE && ep->is_open())
         {
-            MXS_SESSION::Scope scope(session);
-            mxb_assert(session->state() == MXS_SESSION::State::STARTED);
+            MXS_SESSION::Scope scope(this);
+            mxb_assert(state() == MXS_SESSION::State::STARTED);
 
             if (!fn(std::move(*sbuf)))
             {
                 // Routing failed, send a hangup to the client.
-                session->client_connection()->dcb()->trigger_hangup_event();
+                client_connection()->dcb()->trigger_hangup_event();
+            }
+
+            if (!response.buffer.empty())
+            {
+                // Something interrupted the routing and queued a response
+                deliver_response();
             }
         }
 
@@ -681,9 +686,9 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds
     dcall(std::chrono::milliseconds(delay), std::move(cb));
 }
 
-void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds)
+void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds)
 {
-    delay_routing(down, std::move(buffer), seconds, [down](GWBUF&& buffer){
+    delay_routing(down, std::move(buffer), seconds, [this, down](GWBUF&& buffer){
         return down->routeQuery(std::move(buffer));
     });
 }
