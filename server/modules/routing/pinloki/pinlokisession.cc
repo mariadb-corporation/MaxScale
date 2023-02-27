@@ -122,7 +122,6 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_XPAND_REPL:
-        gwbuf_free(pPacket);
         send(mariadb::create_error_packet_ptr(1, 1236, "HY000",
                                               "XPand replication is not supported."));
         rval = 1;
