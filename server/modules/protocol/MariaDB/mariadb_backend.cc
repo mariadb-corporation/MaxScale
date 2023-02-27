@@ -605,9 +605,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
     mysql_session()->history_info.erase(this);
 
     mxb_assert(!dcb->hanged_up());
-    GWBUF errbuf = mysql_create_custom_error(1, 0, ER_CONNECTION_KILLED, ss.str().c_str());
-
-    MXB_AT_DEBUG(bool res = ) m_upstream->handleError(type, &errbuf, nullptr, m_reply);
+    MXB_AT_DEBUG(bool res = ) m_upstream->handleError(type, ss.str(), nullptr, m_reply);
 
     mxb_assert_message(res || m_session->state() == MXS_SESSION::State::STOPPING,
                        "The session should be stopping when handleError fails");

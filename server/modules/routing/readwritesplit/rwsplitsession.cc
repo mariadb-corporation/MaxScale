@@ -19,6 +19,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxbase/format.hh>
 
 using namespace maxscale;
 using namespace std::chrono;
@@ -807,31 +808,28 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     return can_continue;
 }
 
-bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::Endpoint* endpoint,
-                                 const mxs::Reply& reply)
+bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message,
+                                 mxs::Endpoint* endpoint, const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
     mxb_assert(backend && backend->in_use());
+    std::string errmsg;
 
     if (reply.has_started())
     {
-        MXB_ERROR("Server '%s' was lost in the middle of a resultset, cannot continue the session: %s",
-                  backend->name(), mxs::extract_error(errmsgbuf).c_str());
-
-        // This effectively causes an instant termination of the client connection and prevents any errors
-        // from being sent to the client (MXS-2562).
-        m_pSession->kill();
-        return mxs::RouterSession::handleError(type, errmsgbuf, endpoint, reply);
+        errmsg = mxb::string_printf(
+            "Server '%s' was lost in the middle of a resultset, cannot continue the session: %s",
+            backend->name(), message.c_str());
+        return mxs::RouterSession::handleError(type, errmsg, endpoint, reply);
     }
 
     auto failure_type = type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL;
 
-    std::string errmsg;
     bool can_continue = false;
 
     if (m_current_master && m_current_master->in_use() && m_current_master == backend)
     {
-        MXB_INFO("Primary '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
+        MXB_INFO("Primary '%s' failed: %s", backend->name(), message.c_str());
         /** The connection to the master has failed */
 
         if (mxs_mysql_is_binlog_dump(reply.command()) || reply.command() == MXS_COM_REGISTER_SLAVE)
@@ -915,15 +913,14 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
         if (!can_continue)
         {
-
-            int idle = duration_cast<seconds>(
-                maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write()).count();
-            MXB_ERROR("Lost connection to the primary server, closing session.%s "
-                      "Connection has been idle for %d seconds. Error caused by: %s. "
-                      "Last close reason: %s. Last error: %s", errmsg.c_str(), idle,
-                      mxs::extract_error(errmsgbuf).c_str(),
-                      backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str(),
-                      reply.error().message().c_str());
+            auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write();
+            int idle = duration_cast<seconds>(diff).count();
+            errmsg = mxb::string_printf(
+                "Lost connection to the primary server, closing session.%s "
+                "Connection has been idle for %d seconds. Error caused by: %s. "
+                "Last close reason: %s. Last error: %s", errmsg.c_str(), idle, message.c_str(),
+                backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str(),
+                reply.error().message().c_str());
         }
 
         // Decrement the expected response count only if we know we can continue the sesssion.
@@ -935,11 +932,11 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         }
 
         backend->close(failure_type);
-        backend->set_close_reason("Primary connection failed: " + mxs::extract_error(errmsgbuf));
+        backend->set_close_reason("Primary connection failed: " + message);
     }
     else
     {
-        MXB_INFO("Replica '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
+        MXB_INFO("Replica '%s' failed: %s", backend->name(), message.c_str());
 
         if (backend->is_waiting_result())
         {
@@ -957,12 +954,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             // Try to replay the transaction on another node
             can_continue = start_trx_replay();
             backend->close(failure_type);
-            backend->set_close_reason("Read-only trx failed: " + mxs::extract_error(errmsgbuf));
+            backend->set_close_reason("Read-only trx failed: " + message);
 
             if (!can_continue)
             {
-                MXB_ERROR("Connection to server %s failed while executing a read-only transaction",
-                          backend->name());
+                errmsg = mxb::string_printf("Connection to server %s failed while executing "
+                                            "a read-only transaction", backend->name());
             }
         }
         else if (in_optimistic_trx())
@@ -977,16 +974,25 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             mxb_assert(trx_is_open());
             can_continue = start_trx_replay();
             backend->close(failure_type);
-            backend->set_close_reason("Optimistic trx failed: " + mxs::extract_error(errmsgbuf));
+            backend->set_close_reason("Optimistic trx failed: " + message);
         }
         else
         {
-            /** Try to replace the failed connection with a new one */
-            can_continue = handle_error_new_connection(backend, *errmsgbuf, failure_type);
+            can_continue = handle_error_new_connection(backend, message, failure_type);
+
+            if (!can_continue)
+            {
+                errmsg = mxb::string_printf("Unable to continue session as all connections have failed and "
+                                            "new connections cannot be created. Last server to fail was '%s'.",
+                                            backend->name());
+            }
         }
     }
 
-    return can_continue || mxs::RouterSession::handleError(type, errmsgbuf, endpoint, reply);
+    mxb_assert_message(can_continue || !errmsg.empty(), "We should always return a custom error");
+
+    return can_continue || mxs::RouterSession::handleError(
+        type, errmsg.empty() ? message : errmsg, endpoint, reply);
 }
 
 void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
@@ -1014,10 +1020,11 @@ void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
  * @return true if there are enough backend connections to continue, false if
  * not
  */
-bool RWSplitSession::handle_error_new_connection(RWBackend* backend, const GWBUF& errmsg,
+bool RWSplitSession::handle_error_new_connection(RWBackend* backend, const std::string& errmsg,
                                                  RWBackend::close_type failure_type)
 {
     bool route_stored = false;
+    bool can_be_fixed = true;
 
     if (backend->is_waiting_result())
     {
@@ -1026,24 +1033,22 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, const GWBUF
         {
             if (!m_config.delayed_retry && is_last_backend(backend))
             {
+                can_be_fixed = false;
                 MXB_INFO("Cannot retry failed read as there are no candidates to "
                          "try it on and delayed_retry is not enabled");
-                return false;
             }
+            else
+            {
 
-            MXB_INFO("Re-routing failed read after server '%s' failed", backend->name());
-            route_stored = false;
-            retry_query(std::move(m_current_query));
-            m_current_query.clear();
+                MXB_INFO("Re-routing failed read after server '%s' failed", backend->name());
+                route_stored = false;
+                retry_query(std::move(m_current_query));
+                m_current_query.clear();
+            }
         }
         else
         {
-            // Send an error so that the client knows to proceed.
-            // TODO: This is wrong and the session should be killed if read retrying is not enabled.
-            mxs::ReplyRoute route;
-            RouterSession::clientReply(errmsg.shallow_clone(), route, mxs::Reply());
-            m_current_query.clear();
-            route_stored = true;
+            can_be_fixed = false;
         }
     }
 
@@ -1052,24 +1057,14 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, const GWBUF
      * is closed, it's possible that the routing logic will pick the failed
      * server as the target. */
     backend->close(failure_type);
-    backend->set_close_reason("Replica connection failed: " + mxs::extract_error(&errmsg));
+    backend->set_close_reason("Replica connection failed: " + errmsg);
 
-    if (route_stored)
+    if (can_be_fixed && route_stored)
     {
         route_stored_query();
     }
 
-    bool ok = can_recover_servers() || have_open_connections();
-
-    if (!ok)
-    {
-        MXB_ERROR("Unable to continue session as all connections have failed and "
-                  "new connections cannot be created. Last server to fail was '%s'.",
-                  backend->name());
-        MXB_INFO("Connection status: %s", get_verbose_status().c_str());
-    }
-
-    return ok;
+    return can_be_fixed && (can_recover_servers() || have_open_connections());
 }
 
 bool RWSplitSession::lock_to_master()

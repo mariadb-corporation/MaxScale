@@ -1597,7 +1597,7 @@ bool ServiceEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const m
     return m_router_session->clientReply(std::move(buffer), down, reply);
 }
 
-bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
+bool ServiceEndpoint::handleError(mxs::ErrorType type, const std::string& error,
                                   mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_service->name());

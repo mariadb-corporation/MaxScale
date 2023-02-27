@@ -101,7 +101,7 @@ bool Session::Endpoint::clientReply(GWBUF&& buffer, ReplyRoute& down, const mxs:
 }
 
 bool Session::Endpoint::handleError(mxs::ErrorType type,
-                                    GWBUF* error,
+                                    const std::string& error,
                                     mxs::Endpoint* down,
                                     const mxs::Reply& reply)
 {

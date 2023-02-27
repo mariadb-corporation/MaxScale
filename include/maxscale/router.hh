@@ -68,14 +68,15 @@ public:
      * component in the routing chain. For top-level services, this means that the MXS_SESSION handles it
      * which will cause the connection to be killed.
      *
-     * @param pMessage  The error message.
+     * @param type      The type of the error, either temporary or permanent.
+     * @param message   The error message.
      * @param pProblem  The DCB on which the error occurred.
-     * @param reply     The reply object for this endpoint
+     * @param reply     The reply object for this endpoint.
      *
      * @return True if the session can continue, false if the session should be closed
      */
     virtual bool
-    handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply);
+    handleError(mxs::ErrorType type, const std::string& message, mxs::Endpoint* pProblem, const mxs::Reply& reply);
 
     /**
      * Called by the service when a ServerEndpoint connection has been released and placed to the pool.

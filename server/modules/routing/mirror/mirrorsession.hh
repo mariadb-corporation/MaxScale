@@ -38,8 +38,8 @@ public:
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
-                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override final;
+    bool handleError(mxs::ErrorType type, const std::string& message,
+                     mxs::Endpoint* pProblem, const mxs::Reply& reply) override final;
 
 private:
     SMyBackends             m_backends;

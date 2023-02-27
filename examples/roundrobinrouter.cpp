@@ -121,7 +121,7 @@ public:
     ~RRRouterSession();
     bool routeQuery(GWBUF&& buffer) override;
     bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-    bool handleError(mxs::ErrorType type, GWBUF* message,
+    bool handleError(mxs::ErrorType type, const std::string& message,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:
@@ -420,7 +420,7 @@ bool RRRouterSession::clientReply(GWBUF&& buf, const mxs::ReplyRoute& down, cons
 }
 
 bool RRRouterSession::handleError(mxs::ErrorType type,
-                                  GWBUF* message,
+                                  const std::string& message,
                                   mxs::Endpoint* down,
                                   const mxs::Reply& reply)
 {

@@ -40,7 +40,7 @@ public:
 
     bool routeQuery(GWBUF&& queue) override;
 
-    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& pReply) override;
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     uint32_t       m_bitvalue;  /**< Session specific required value of server->status */

@@ -408,9 +408,9 @@ bool RCRSession::routeQuery(GWBUF&& buffer)
 
 bool RCRSession::clientReply(GWBUF&& packet,
                              const maxscale::ReplyRoute& down,
-                             const maxscale::Reply& pReply)
+                             const maxscale::Reply& reply)
 {
-    auto rc = RouterSession::clientReply(std::move(packet), down, pReply);
+    auto rc = RouterSession::clientReply(std::move(packet), down, reply);
     m_query_timer.end_interval();
     return rc;
 }

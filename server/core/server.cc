@@ -1194,18 +1194,16 @@ void ServerEndpoint::handle_failed_continue()
     mxs::Reply dummy;
     // Need to give some kind of error packet or handleError will crash. The Endpoint will be closed
     // after the call.
-    auto errorbuf = mysql_create_custom_error(
-        1, 0, 1927, "Lost connection to server when reusing connection.");
-    m_up->handleError(mxs::ErrorType::PERMANENT, &errorbuf, this, dummy);
+    auto error = "Lost connection to server when reusing connection.";
+    m_up->handleError(mxs::ErrorType::PERMANENT, error, this, dummy);
 }
 
 void ServerEndpoint::handle_timed_out_continue()
 {
     m_connstatus = ConnStatus::NO_CONN;
     mxs::Reply dummy;
-    auto errorbuf = mysql_create_custom_error(
-        1, 0, 1927, "Timed out when waiting for a connection.");
-    m_up->handleError(mxs::ErrorType::PERMANENT, &errorbuf, this, dummy);
+    auto error = "Timed out when waiting for a connection.";
+    m_up->handleError(mxs::ErrorType::PERMANENT, error, this, dummy);
 }
 
 bool ServerEndpoint::is_open() const
@@ -1301,7 +1299,7 @@ bool ServerEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mx
     return m_up->clientReply(std::move(buffer), down, reply);
 }
 
-bool ServerEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
+bool ServerEndpoint::handleError(mxs::ErrorType type, const std::string& error,
                                  mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_server->name());

@@ -32,10 +32,10 @@ bool RouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, con
     return m_pUp->clientReply(std::move(packet), down, reply);
 }
 
-bool RouterSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem,
-                                const mxs::Reply& pReply)
+bool RouterSession::handleError(mxs::ErrorType type, const std::string& message, mxs::Endpoint* pProblem,
+                                const mxs::Reply& reply)
 {
-    return m_pUpstream->handleError(type, pMessage, m_endpoint, pReply);
+    return m_pUpstream->handleError(type, message, m_endpoint, reply);
 }
 
 void RouterSession::set_response(GWBUF&& response) const

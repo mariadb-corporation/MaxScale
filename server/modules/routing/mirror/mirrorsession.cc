@@ -173,9 +173,9 @@ bool MirrorSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, con
 }
 
 bool MirrorSession::handleError(mxs::ErrorType type,
-                                GWBUF* pMessage,
+                                const std::string& message,
                                 mxs::Endpoint* pProblem,
-                                const mxs::Reply& pReply)
+                                const mxs::Reply& reply)
 {
     Backend* backend = static_cast<Backend*>(pProblem->get_userdata());
 
@@ -193,7 +193,7 @@ bool MirrorSession::handleError(mxs::ErrorType type,
 
     // We can continue as long as the main connection isn't dead
     bool ok = m_router->config().on_error.get() == ErrorAction::ERRACT_IGNORE && backend != m_main;
-    return ok || mxs::RouterSession::handleError(type, pMessage, pProblem, pReply);
+    return ok || mxs::RouterSession::handleError(type, message, pProblem, reply);
 }
 
 bool MirrorSession::should_report() const

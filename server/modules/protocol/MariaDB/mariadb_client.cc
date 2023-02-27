@@ -1871,8 +1871,8 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
                             kill_complete(cb, cl);
                         };
                         auto err_cb = [this, cb, cl = client.get()](
-                            GWBUF* buf, mxs::Target* tgt, const mxs::Reply& reply) {
-                            MXB_INFO("KILL error on '%s'", tgt->name());
+                            const std::string& err, mxs::Target* tgt, const mxs::Reply& reply) {
+                            MXB_INFO("KILL error on '%s': %s", tgt->name(), err.c_str());
                             kill_complete(cb, cl);
                         };
 

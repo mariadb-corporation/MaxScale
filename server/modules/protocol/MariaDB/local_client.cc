@@ -76,7 +76,7 @@ bool LocalClient::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::
     return 0;
 }
 
-bool LocalClient::handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
+bool LocalClient::handleError(mxs::ErrorType type, const std::string& error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
     if (m_down->is_open())
     {

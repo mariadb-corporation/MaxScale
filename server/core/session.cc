@@ -1299,9 +1299,12 @@ bool Session::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Repl
     return m_tail->clientReply(std::move(buffer), down, reply);
 }
 
-bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply)
+bool Session::handleError(mxs::ErrorType type, const std::string& error,
+                          Endpoint* down, const mxs::Reply& reply)
 {
-    kill(mxs::extract_error(error));
+    // Log the error since it is what caused the session to close
+    MXB_ERROR("%s", error.c_str());
+    kill();
     return false;
 }
 

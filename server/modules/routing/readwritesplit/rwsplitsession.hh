@@ -91,8 +91,8 @@ public:
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
-                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override final;
+    bool handleError(mxs::ErrorType type, const std::string& message,
+                     mxs::Endpoint* pProblem, const mxs::Reply& reply) override final;
 
     void endpointConnReleased(mxs::Endpoint* down) override;
 
@@ -192,7 +192,7 @@ private:
     bool reuse_prepared_stmt(const GWBUF& buffer);
 
     bool retry_master_query(mxs::RWBackend* backend);
-    bool handle_error_new_connection(mxs::RWBackend* backend, const GWBUF& errmsg,
+    bool handle_error_new_connection(mxs::RWBackend* backend, const std::string& errmsg,
                                      mxs::RWBackend::close_type failure_type);
     void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);

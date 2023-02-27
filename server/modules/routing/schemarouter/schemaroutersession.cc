@@ -593,9 +593,9 @@ bool SchemaRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
 }
 
 bool SchemaRouterSession::handleError(mxs::ErrorType type,
-                                      GWBUF* pMessage,
+                                      const std::string& message,
                                       mxs::Endpoint* pProblem,
-                                      const mxs::Reply& pReply)
+                                      const mxs::Reply& reply)
 {
     SRBackend* bref = static_cast<SRBackend*>(pProblem->get_userdata());
     mxb_assert(bref);
@@ -612,10 +612,9 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
             // An error during the shard mapping is not a fatal response. Broken servers are allowed to exist
             // as the user might not exist on all backends.
             mxs::Reply tmp;
-            uint16_t errcode = mxs_mysql_get_mysql_errno(*pMessage);
-            std::string errmsg = mxs::extract_error(pMessage);
+            uint16_t errcode = 1927;    // ER_CONNECTION_KILLED
             std::string sqlstate = "HY000";
-            tmp.set_error(errcode, sqlstate.begin(), sqlstate.end(), errmsg.begin(), errmsg.end());
+            tmp.set_error(errcode, sqlstate.begin(), sqlstate.end(), message.begin(), message.end());
             handle_mapping_reply(bref, tmp);
         }
         else if (!bref->should_ignore_response())
@@ -628,7 +627,8 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
 
     bref->close(type == mxs::ErrorType::PERMANENT ? Backend::CLOSE_FATAL : Backend::CLOSE_NORMAL);
 
-    return have_servers() || mxs::RouterSession::handleError(type, pMessage, pProblem, pReply);
+    return have_servers() || mxs::RouterSession::handleError(
+        type, "All connections have failed: " + message, pProblem, reply);
 }
 
 /**

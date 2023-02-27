@@ -31,7 +31,7 @@ public:
     ~LocalClient();
 
     using NotifyCB = std::function<void (GWBUF*, const mxs::ReplyRoute&, const mxs::Reply&)>;
-    using ErrorCB = std::function<void (GWBUF*, mxs::Target*, const mxs::Reply&)>;
+    using ErrorCB = std::function<void (const std::string&, mxs::Target*, const mxs::Reply&)>;
 
     /**
      * Create a local client for a service
@@ -95,7 +95,7 @@ public:
 
     bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* error,
+    bool handleError(mxs::ErrorType type, const std::string& error,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:

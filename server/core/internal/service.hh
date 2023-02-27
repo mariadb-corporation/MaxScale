@@ -379,7 +379,7 @@ public:
 
     bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* error,
+    bool handleError(mxs::ErrorType type, const std::string& error,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
     void endpointConnReleased(Endpoint* down) override;

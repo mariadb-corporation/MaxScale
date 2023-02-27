@@ -139,7 +139,8 @@ public:
 
     virtual bool clientReply(GWBUF&& buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
 
-    virtual bool handleError(ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply) = 0;
+    virtual bool handleError(ErrorType type, const std::string& error, Endpoint* down,
+                             const mxs::Reply& reply) = 0;
 
     virtual void endpointConnReleased(Endpoint* down)
     {
@@ -523,10 +524,10 @@ public:
     // The human readable error message
     const std::string& message() const;
 
-    template<class InputIterator>
+    template<class InputIterator, class SecondInputIterator>
     void set(uint32_t code,
              InputIterator sql_state_begin, InputIterator sql_state_end,
-             InputIterator message_begin, InputIterator message_end)
+             SecondInputIterator message_begin, SecondInputIterator message_end)
     {
         mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
         m_code = code;
