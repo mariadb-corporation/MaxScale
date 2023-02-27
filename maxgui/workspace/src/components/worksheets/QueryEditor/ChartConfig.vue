@@ -298,13 +298,6 @@ export default {
                     break
                 }
             }
-            if (this.hasLinearAxis && this.showTrendline && this.supportTrendLine)
-                dataset.trendlineLinear = {
-                    colorMin: '#2d9cdb',
-                    colorMax: '#2d9cdb',
-                    lineStyle: 'solid',
-                    width: 2,
-                }
             return dataset
         },
         /** This mutates sorting chart data for LINEAR or TIME axis
@@ -354,6 +347,7 @@ export default {
                 axesType,
                 tableData,
                 isHorizChart,
+                hasTrendline: this.hasLinearAxis && this.showTrendline && this.supportTrendLine,
             }
         },
     },

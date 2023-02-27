@@ -147,6 +147,7 @@ export default {
                 axisKeys: { x: '', y: '' },
                 axesType: { x: '', y: '' },
                 tableData: [],
+                hasTrendline: false,
                 isHorizChart: false,
                 isMaximized: false,
             },

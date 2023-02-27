@@ -40,7 +40,7 @@
         <div v-if="chartToolHeight" ref="chartWrapper" class="chart-wrapper">
             <mxs-line-chart
                 v-if="type === chartTypes.LINE"
-                id="query-chart"
+                ref="chart"
                 :style="chartStyle"
                 hasVertCrossHair
                 :chartData="chartData"
@@ -48,14 +48,14 @@
             />
             <mxs-scatter-chart
                 v-else-if="type === chartTypes.SCATTER"
-                id="query-chart"
+                ref="chart"
                 :style="chartStyle"
                 :chartData="chartData"
                 :opts="chartOptions"
             />
             <mxs-bar-chart
                 v-else-if="type === chartTypes.BAR_VERT || type === chartTypes.BAR_HORIZ"
-                id="query-chart"
+                ref="chart"
                 :style="chartStyle"
                 :chartData="chartData"
                 :opts="chartOptions"
@@ -129,6 +129,9 @@ export default {
         },
         type() {
             return this.chartOpt.type
+        },
+        hasTrendline() {
+            return this.chartOpt.hasTrendline
         },
         chartWidth() {
             if (this.autoSkipTick(this.axesType.x)) return 'unset'
@@ -208,6 +211,22 @@ export default {
         chartData(v) {
             if (!this.$typy(v, 'datasets[0].data[0]').safeObject) this.removeTooltip()
         },
+        /**
+         * A workaround for toggling the trendline.
+         * There is a bug in vue-chartjs v4: https://github.com/apertureless/vue-chartjs/issues/1006
+         */
+        hasTrendline(v) {
+            let dataset = this.$typy(this.$refs, 'chart.chartInstance.data.datasets[0]')
+                .safeObjectOrEmpty
+            if (v)
+                dataset.trendlineLinear = {
+                    colorMin: '#2d9cdb',
+                    colorMax: '#2d9cdb',
+                    lineStyle: 'solid',
+                    width: 2,
+                }
+            else delete dataset.trendlineLinear
+        },
     },
     mounted() {
         this.$nextTick(() => {
@@ -264,7 +283,7 @@ export default {
             })}`
         },
         createCanvasFrame() {
-            const chart = document.querySelector('#query-chart')
+            const chart = this.$refs.chart.$el
             const srcCanvas = chart.getElementsByTagName('canvas')[0]
 
             // create new canvas with white background
