@@ -54,7 +54,7 @@ const std::map<std::string, std::string> constant_variables =
     {"@@wait_timeout",                     "28800"             },
 };
 
-GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
+GWBUF create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
 {
     auto rset = ResultSet::create(columns);
 
@@ -63,7 +63,7 @@ GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vect
         rset->add_row(row);
     }
 
-    return rset->as_buffer().release();
+    return mxs::gwbufptr_to_gwbuf(rset->as_buffer().release());
 }
 
 GWBUF* create_slave_running_error()
@@ -123,8 +123,8 @@ bool PinlokiSession::routeQuery(GWBUF&& packet)
         break;
 
     case MXS_COM_XPAND_REPL:
-        send(mariadb::create_error_packet_ptr(1, 1236, "HY000",
-                                              "XPand replication is not supported."));
+        response = mariadb::create_error_packet_ptr(1, 1236, "HY000",
+                                                    "XPand replication is not supported.");
         rval = 1;
         break;
 
@@ -152,7 +152,7 @@ bool PinlokiSession::routeQuery(GWBUF&& packet)
         catch (const GtidNotFoundError& err)
         {
             MXB_SINFO("Could not find GTID: " << err.what());
-            send(mariadb::create_error_packet_ptr(1, 1236, "HY000", err.what()));
+            response = mariadb::create_error_packet_ptr(1, 1236, "HY000", err.what());
             rval = 1;
         }
         catch (const BinlogReadError& err)
@@ -206,9 +206,10 @@ bool PinlokiSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
     return 0;
 }
 
-mxs::Buffer PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_t size)
+GWBUF PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_t size)
 {
-    mxs::Buffer buffer(MYSQL_HEADER_LEN + size + prefix);
+    size_t total_size = MYSQL_HEADER_LEN + size + prefix;
+    GWBUF buffer(total_size);
 
     mariadb::set_byte3(buffer.data(), size + prefix);
     buffer.data()[3] = m_seq++;
@@ -217,6 +218,7 @@ mxs::Buffer PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_
         buffer.data()[MYSQL_HEADER_LEN] = 0;
     }
     memcpy(buffer.data() + MYSQL_HEADER_LEN + prefix, ptr, size);
+    buffer.write_complete(total_size);
 
     return buffer;
 }
@@ -230,11 +232,11 @@ void PinlokiSession::send_event(const maxsql::RplEvent& event)
     while (size > 0)
     {
         size_t payload_len = std::min(size, GW_MYSQL_MAX_PACKET_LEN - prefix);
-        send(make_buffer(prefix, ptr, payload_len).release());
+        send(make_buffer(prefix, ptr, payload_len));
 
         if (size == GW_MYSQL_MAX_PACKET_LEN - prefix)
         {
-            send(make_buffer(PREFIX_NONE, nullptr, 0).release());
+            send(make_buffer(PREFIX_NONE, nullptr, 0));
         }
 
         prefix = PREFIX_NONE;
@@ -243,11 +245,11 @@ void PinlokiSession::send_event(const maxsql::RplEvent& event)
     }
 }
 
-void PinlokiSession::send(GWBUF* buffer)
+void PinlokiSession::send(GWBUF&& buffer)
 {
     const mxs::ReplyRoute down;
     const mxs::Reply reply;
-    mxs::RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(buffer), down, reply);
+    mxs::RouterSession::clientReply(std::move(buffer), down, reply);
 }
 
 int PinlokiSession::high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata)
@@ -351,7 +353,7 @@ void PinlokiSession::select(const std::vector<std::string>& fields, const std::v
         }
     }
 
-    send(create_resultset(aliases, values));
+    set_response(create_resultset(aliases, values));
 }
 
 void PinlokiSession::set(const std::string& key, const std::string& value)
@@ -408,7 +410,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         buf = modutil_create_ok();
     }
 
-    send(buf);
+    set_response(mxs::gwbufptr_to_gwbuf(buf));
 }
 
 void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
@@ -432,7 +434,7 @@ void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
         }
     }
 
-    send(buf);
+    set_response(mxs::gwbufptr_to_gwbuf(buf));
 }
 
 void PinlokiSession::start_slave()
@@ -453,7 +455,7 @@ void PinlokiSession::start_slave()
             err_str.c_str());
     }
 
-    send(buf);
+    set_response(mxs::gwbufptr_to_gwbuf(buf));
 }
 
 void PinlokiSession::stop_slave()
@@ -463,7 +465,7 @@ void PinlokiSession::stop_slave()
         m_router->stop_slave();
     }
 
-    send(modutil_create_ok());
+    set_response(mxs::gwbufptr_to_gwbuf(modutil_create_ok()));
 }
 
 void PinlokiSession::reset_slave()
@@ -484,12 +486,12 @@ void PinlokiSession::reset_slave()
         buf = modutil_create_ok();
     }
 
-    send(buf);
+    set_response(mxs::gwbufptr_to_gwbuf(buf));
 }
 
 void PinlokiSession::show_slave_status(bool all)
 {
-    send(m_router->show_slave_status(all));
+    set_response(mxs::gwbufptr_to_gwbuf(m_router->show_slave_status(all)));
 }
 
 void PinlokiSession::show_master_status()
@@ -503,7 +505,7 @@ void PinlokiSession::show_master_status()
         rset->add_row({a.first, a.second, "", ""});
     }
 
-    send(rset->as_buffer().release());
+    set_response(mxs::gwbufptr_to_gwbuf(rset->as_buffer().release()));
 }
 
 void PinlokiSession::show_binlogs()
@@ -516,7 +518,7 @@ void PinlokiSession::show_binlogs()
         rset->add_row({a.first, a.second});
     }
 
-    send(rset->as_buffer().release());
+    set_response(mxs::gwbufptr_to_gwbuf(rset->as_buffer().release()));
 }
 
 void PinlokiSession::show_variables(const std::string& like)
@@ -538,7 +540,7 @@ void PinlokiSession::show_variables(const std::string& like)
         values = {like, m_router->gtid_io_pos().to_string()};
     }
 
-    send(create_resultset({"Variable_name", "Value"}, values));
+    set_response(create_resultset({"Variable_name", "Value"}, values));
 }
 
 void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
@@ -578,7 +580,7 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     }
     else
     {
-        send(create_resultset({header}, {"-1"}));
+        set_response(create_resultset({header}, {"-1"}));
     }
 }
 
@@ -587,24 +589,23 @@ void PinlokiSession::purge_logs(const std::string& up_to)
     switch (purge_binlogs(m_router->inventory(), up_to))
     {
     case PurgeResult::Ok:
-        send(modutil_create_ok());
+        set_response(mxs::gwbufptr_to_gwbuf(modutil_create_ok()));
         break;
 
     case PurgeResult::PartialPurge:
         MXB_SINFO("Could not purge all requested binlogs");
-        send(modutil_create_ok());
+        set_response(mxs::gwbufptr_to_gwbuf(modutil_create_ok()));
         break;
 
     case PurgeResult::UpToFileNotFound:
-        auto buf = mariadb::create_error_packet_ptr(1, 1373, "HY000",
-                                                    MAKE_STR("Target log " << up_to
-                                                             << " not found in binlog index").c_str());
-        send(buf);
+        set_response(mariadb::create_error_packet(
+            1, 1373, "HY000",
+            MAKE_STR("Target log " << up_to << " not found in binlog index").c_str()));
     }
 }
 
 void PinlokiSession::error(const std::string& err)
 {
-    send(mariadb::create_error_packet_ptr(1, 1064, "42000", err.c_str()));
+    set_response(mariadb::create_error_packet(1, 1064, "42000", err.c_str()));
 }
 }

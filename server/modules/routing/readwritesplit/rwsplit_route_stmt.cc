@@ -199,7 +199,9 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
     {
         MXB_INFO("Sending read-only error, no valid target found for %s",
                  route_target_to_string(res.route_target));
-        send_readonly_error();
+        set_response(mariadb::create_error_packet(1, ER_OPTION_PREVENTS_STATEMENT, "HY000",
+                                                  "The MariaDB server is running with the --read-only"
+                                                  " option so it cannot execute this statement"));
         discard_connection(m_current_master, "The original primary is not available");
     }
     else if (res.route_target == TARGET_MASTER

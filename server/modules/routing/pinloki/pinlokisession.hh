@@ -70,10 +70,10 @@ private:
         PREFIX_OK   = 1
     };
 
-    mxs::Buffer make_buffer(Prefix prefix, const uint8_t* ptr, size_t size);
+    GWBUF make_buffer(Prefix prefix, const uint8_t* ptr, size_t size);
 
     void send_event(const maxsql::RplEvent& event);
-    void send(GWBUF* buffer);
+    void send(GWBUF&& buffer);
 
     static int high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
     static int low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
