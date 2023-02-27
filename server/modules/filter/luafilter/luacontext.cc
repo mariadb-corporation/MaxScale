@@ -15,8 +15,9 @@
 #include "luacontext.hh"
 
 #include <maxsimd/canonical.hh>
-#include <maxscale/modutil.hh>
 #include <maxbase/alloc.hh>
+#include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
 
 namespace
 {
@@ -93,8 +94,8 @@ static int lua_get_type_mask(lua_State* state)
 
     if (data.buffer)
     {
-        uint32_t type = qc_get_type_mask(data.buffer);
-        std::string mask = qc_typemask_to_string(type);
+        uint32_t type = data.session->client_connection()->parser()->get_type_mask(data.buffer);
+        std::string mask = mxs::Parser::type_mask_to_string(type);
         lua_pushstring(state, mask.c_str());
     }
     else
@@ -112,8 +113,8 @@ static int lua_get_operation(lua_State* state)
 
     if (data.buffer)
     {
-        qc_query_op_t op = qc_get_operation(data.buffer);
-        opstring = qc_op_to_string(op);
+        qc_query_op_t op = data.session->client_connection()->parser()->get_operation(data.buffer);
+        opstring = mxs::Parser::op_to_string(op);
     }
 
     lua_pushstring(state, opstring);

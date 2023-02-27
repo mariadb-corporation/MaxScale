@@ -37,6 +37,11 @@ public:
         return qc_typemask_to_string(type_mask);
     }
 
+    static const char* op_to_string(qc_query_op_t op)
+    {
+        return qc_op_to_string(op);
+    }
+
     virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
 
     virtual DatabaseNames    get_database_names(GWBUF* pStmt) const = 0;
