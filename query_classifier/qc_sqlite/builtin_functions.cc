@@ -491,12 +491,7 @@ static const char* BUILTIN_FUNCTIONS[] =
      * http://dev.mysql.com/doc/refman/5.7/en/row-subqueries.html
      */
     "row"
-};
 
-const size_t N_BUILTIN_FUNCTIONS = sizeof(BUILTIN_FUNCTIONS) / sizeof(BUILTIN_FUNCTIONS[0]);
-
-static const char* BUILTIN_10_2_3_FUNCTIONS[] =
-{
     //
     // JSON functions: https://mariadb.com/kb/en/mariadb/json-functions
     //
@@ -543,8 +538,7 @@ static const char* BUILTIN_10_2_3_FUNCTIONS[] =
     "row_number",
 };
 
-const size_t N_BUILTIN_10_2_3_FUNCTIONS =
-    sizeof(BUILTIN_10_2_3_FUNCTIONS) / sizeof(BUILTIN_10_2_3_FUNCTIONS[0]);
+const size_t N_BUILTIN_FUNCTIONS = sizeof(BUILTIN_FUNCTIONS) / sizeof(BUILTIN_FUNCTIONS[0]);
 
 static const char* ORACLE_FUNCTIONS[] =
 {
@@ -575,7 +569,6 @@ void init_builtin_functions()
     mxb_assert(!unit.inited);
 
     qsort(BUILTIN_FUNCTIONS, N_BUILTIN_FUNCTIONS, sizeof(char*), sort_compare);
-    qsort(BUILTIN_10_2_3_FUNCTIONS, N_BUILTIN_10_2_3_FUNCTIONS, sizeof(char*), sort_compare);
     qsort(ORACLE_FUNCTIONS, N_ORACLE_FUNCTIONS, sizeof(char*), sort_compare);
 
     unit.inited = true;
@@ -596,20 +589,6 @@ bool is_builtin_readonly_function(const char* key,
     mxb_assert(unit.inited);
 
     void* value = bsearch(key, BUILTIN_FUNCTIONS, N_BUILTIN_FUNCTIONS, sizeof(char*), search_compare);
-
-    if (!value)
-    {
-        if ((major > 10)
-            || ((major == 10) && (minor > 2))
-            || ((major == 10) && (minor == 2) && (patch >= 3)))
-        {
-            value = bsearch(key,
-                            BUILTIN_10_2_3_FUNCTIONS,
-                            N_BUILTIN_10_2_3_FUNCTIONS,
-                            sizeof(char*),
-                            search_compare);
-        }
-    }
 
     if (!value && check_oracle)
     {

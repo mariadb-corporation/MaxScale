@@ -40,16 +40,6 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
-#if !defined (MYSQL_VERSION_MAJOR)
-#define USING_MARIADB_103
-#else
-#if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
-#define USING_MARIADB_103
-#else
-#undef USING_MARIADB_103
-#endif
-#endif
-
 namespace
 {
 
@@ -1406,14 +1396,7 @@ int main(int argc, char* argv[])
     const char* zClassifier1 = "qc_mysqlembedded";
     const char* zClassifier2 = "qc_sqlite";
     string classifier1Args;
-    uint64_t version;
-#if defined (USING_MARIADB_103)
-    string classifier2Args("parse_as=10.3,log_unrecognized_statements=1");
-    version = 10 * 1000 * 3 * 100;
-#else
     string classifier2Args("log_unrecognized_statements=1");
-    version = 10 * 1000 * 2 * 100;
-#endif
     string statement;
     const char* zStatement = NULL;
     qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
@@ -1562,9 +1545,6 @@ int main(int argc, char* argv[])
                     {
                         pClassifier2 = pClassifier1;
                     }
-
-                    pClassifier1->qc_set_server_version(version);
-                    pClassifier2->qc_set_server_version(version);
 
                     do
                     {

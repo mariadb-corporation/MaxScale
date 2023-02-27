@@ -80,12 +80,6 @@ typedef enum qc_log_level
     QC_LOG_NON_TOKENIZED,
 } qc_log_level_t;
 
-typedef enum qc_parse_as
-{
-    QC_PARSE_AS_DEFAULT,// Parse as embedded lib does before 10.3
-    QC_PARSE_AS_103     // Parse as embedded lib does in 10.3
-} qc_parse_as_t;
-
 /**
  * Defines what a particular name should be mapped to.
  */
@@ -96,11 +90,6 @@ typedef struct qc_name_mapping
 } QC_NAME_MAPPING;
 
 static QC_NAME_MAPPING function_name_mappings_default[] =
-{
-    {NULL, NULL}
-};
-
-static QC_NAME_MAPPING function_name_mappings_103[] =
 {
     // NOTE: If something is added here, add it to function_name_mappings_oracle as well.
     {"now", "current_timestamp"},
@@ -144,7 +133,6 @@ static struct
     bool             setup;
     qc_log_level_t   log_level;
     qc_sql_mode_t    sql_mode;
-    qc_parse_as_t    parse_as;
     QC_NAME_MAPPING* pFunction_name_mappings;
     std::mutex       lock;
 } this_unit;
@@ -168,7 +156,12 @@ static thread_local struct
     QC_NAME_MAPPING* pFunction_name_mappings;   // How function names should be mapped.
 } this_thread;
 
-const uint64_t VERSION_103 = 10 * 10000 + 3 * 100;
+const uint32_t VERSION_MAJOR_DEFAULT = 10;
+const uint32_t VERSION_MINOR_DEFAULT = 3;
+const uint32_t VERSION_PATCH_DEFAULT = 0;
+const uint64_t VERSION_DEFAULT = VERSION_MAJOR_DEFAULT * 10000
+    + VERSION_MINOR_DEFAULT * 100
+    + VERSION_PATCH_DEFAULT;
 
 /**
  * HELPERS
@@ -502,20 +495,6 @@ public:
     // PUBLIC for now at least.
 
     /**
-     * Returns whether sequence related functions should be checked for.
-     *
-     * Only if we are in Oracle mode or parsing as 10.3 we need to check.
-     *
-     * @return True, if they need to be checked for, false otherwise.
-     */
-    bool must_check_sequence_related_functions() const
-    {
-        return (m_sql_mode == QC_SQL_MODE_ORACLE)
-               || (this_unit.parse_as == QC_PARSE_AS_103)
-               || (this_thread.version >= VERSION_103);
-    }
-
-    /**
      * Returns whether fields should be collected.
      *
      * @return True, if should be, false otherwise.
@@ -550,7 +529,7 @@ public:
             }
         }
 
-        if (!rv && ((this_unit.parse_as == QC_PARSE_AS_103) || (this_thread.version >= VERSION_103)))
+        if (!rv)
         {
             if ((strcasecmp(zFunc_name, "lastval") == 0)
                 || (strcasecmp(zFunc_name, "nextval") == 0))
@@ -660,8 +639,7 @@ public:
 
         // NOTE: This must be first, so that the type mask is properly updated
         // NOTE: in case zColumn is "currval" etc.
-        if (must_check_sequence_related_functions()
-            && is_sequence_related_field(zDatabase, zTable, zColumn))
+        if (is_sequence_related_field(zDatabase, zTable, zColumn))
         {
             m_type_mask |= QUERY_TYPE_WRITE;
             return;
@@ -1026,19 +1004,6 @@ public:
                 break;
 
             case TK_UMINUS:
-                switch (this_unit.parse_as)
-                {
-                case QC_PARSE_AS_DEFAULT:
-                    update_function_info(pAliases, get_token_symbol(pExpr->op), pExclude);
-                    break;
-
-                case QC_PARSE_AS_103:
-                    // In MariaDB 10.3 a unary minus is not considered a function.
-                    break;
-
-                default:
-                    mxb_assert(!true);
-                }
                 break;
 
             case TK_FUNCTION:
@@ -1238,12 +1203,9 @@ public:
         const char* zTable;
         const char* zColumn;
 
-        if (must_check_sequence_related_functions() || must_collect_fields())
+        if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
         {
-            if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
-            {
-                update_field_info(pAliases, context, zDatabase, zTable, zColumn, pExclude);
-            }
+            update_field_info(pAliases, context, zDatabase, zTable, zColumn, pExclude);
         }
     }
 
@@ -1252,10 +1214,7 @@ public:
                                         const char* zColumn,
                                         const ExprList* pExclude)
     {
-        if (must_check_sequence_related_functions() || must_collect_fields())
-        {
-            update_field_info(pAliases, context, nullptr, nullptr, zColumn, pExclude);
-        }
+        update_field_info(pAliases, context, nullptr, nullptr, zColumn, pExclude);
     }
 
     void update_field_infos_from_exprlist(QcAliases* pAliases,
@@ -1276,14 +1235,11 @@ public:
                                         const IdList* pIds,
                                         const ExprList* pExclude)
     {
-        if (must_check_sequence_related_functions() || must_collect_fields())
+        for (int i = 0; i < pIds->nId; ++i)
         {
-            for (int i = 0; i < pIds->nId; ++i)
-            {
-                IdList::IdList_item* pItem = &pIds->a[i];
+            IdList::IdList_item* pItem = &pIds->a[i];
 
-                update_field_info(pAliases, context, NULL, NULL, pItem->zName, pExclude);
-            }
+            update_field_info(pAliases, context, NULL, NULL, pItem->zName, pExclude);
         }
     }
 
@@ -4895,7 +4851,6 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 }
 
 static const char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
-static const char ARG_PARSE_AS[] = "parse_as";
 
 static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
 {
@@ -4903,7 +4858,6 @@ static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
     assert(!this_unit.setup);
 
     qc_log_level_t log_level = QC_LOG_NOTHING;
-    qc_parse_as_t parse_as = (sql_mode == QC_SQL_MODE_ORACLE) ? QC_PARSE_AS_103 : QC_PARSE_AS_DEFAULT;
     QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
 
     if (cargs)
@@ -4939,21 +4893,6 @@ static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
                                     QC_LOG_NON_TOKENIZED);
                     }
                 }
-                else if (strcmp(key, ARG_PARSE_AS) == 0)
-                {
-                    if (strcmp(value, "10.3") == 0)
-                    {
-                        parse_as = QC_PARSE_AS_103;
-                        MXB_NOTICE("Parsing as 10.3.");
-                    }
-                    else
-                    {
-                        MXB_WARNING("'%s' is not a recognized value for '%s'. "
-                                    "Parsing as pre-10.3.",
-                                    value,
-                                    key);
-                    }
-                }
                 else
                 {
                     MXB_WARNING("'%s' is not a recognized argument.", key);
@@ -4972,15 +4911,10 @@ static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
     {
         function_name_mappings = function_name_mappings_oracle;
     }
-    else if (parse_as == QC_PARSE_AS_103)
-    {
-        function_name_mappings = function_name_mappings_103;
-    }
 
     this_unit.setup = true;
     this_unit.log_level = log_level;
     this_unit.sql_mode = sql_mode;
-    this_unit.parse_as = parse_as;
     this_unit.pFunction_name_mappings = function_name_mappings;
 
     return this_unit.setup ? QC_RESULT_OK : QC_RESULT_ERROR;
@@ -5083,9 +5017,10 @@ static int32_t qc_sqlite_thread_init(void)
             this_thread.pInfo = NULL;
 
             this_thread.initialized = true;
-            this_thread.version_major = 0;
-            this_thread.version_minor = 0;
-            this_thread.version_patch = 0;
+            this_thread.version = VERSION_DEFAULT;
+            this_thread.version_major = VERSION_MAJOR_DEFAULT;
+            this_thread.version_minor = VERSION_MINOR_DEFAULT;
+            this_thread.version_patch = VERSION_PATCH_DEFAULT;
         }
         else
         {
@@ -5501,14 +5436,7 @@ int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
     {
     case QC_SQL_MODE_DEFAULT:
         this_thread.sql_mode = sql_mode;
-        if (this_unit.parse_as == QC_PARSE_AS_103)
-        {
-            this_thread.pFunction_name_mappings = function_name_mappings_103;
-        }
-        else
-        {
-            this_thread.pFunction_name_mappings = function_name_mappings_default;
-        }
+        this_thread.pFunction_name_mappings = function_name_mappings_default;
         break;
 
     case QC_SQL_MODE_ORACLE:
