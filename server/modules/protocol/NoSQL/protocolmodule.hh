@@ -39,7 +39,8 @@ public:
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 
     std::string auth_default() const override;
-    GWBUF       reject(const std::string& host) override final;
+    GWBUF       make_error(int errnum, const std::string& sqlstate,
+                           const std::string& message) const override final;
 
     uint64_t    capabilities() const override;
     std::string name() const override;

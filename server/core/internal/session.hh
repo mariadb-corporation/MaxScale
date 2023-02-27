@@ -212,7 +212,8 @@ public:
     mxs::ClientConnection*       client_connection() override;
     const mxs::ClientConnection* client_connection() const override;
 
-    const mxs::ListenerData* listener_data() override;
+    const mxs::ListenerData*   listener_data() const override final;
+    const mxs::ProtocolModule* protocol() const override final;
 
     void set_client_connection(mxs::ClientConnection* client_conn) override;
 

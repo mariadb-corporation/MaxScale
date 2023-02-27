@@ -85,7 +85,7 @@ public:
         return m_auth_module.diagnostics();
     }
 
-    GWBUF reject(const std::string& host) override
+    GWBUF make_error(int errnum, const std::string& sqlstate, const std::string& message) const override
     {
         mxb_assert(!true);
         return GWBUF{};

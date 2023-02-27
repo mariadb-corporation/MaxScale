@@ -38,7 +38,7 @@ TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* clie
         auto err = [this](GWBUF* err, mxs::Target* target, const mxs::Reply& reply) {
                 MXB_INFO("Branch connection failed: %s", mxs::extract_error(err).c_str());
                 // Note: we don't own the error passed to this function
-                m_pSession->kill(gwbuf_clone_shallow(err));
+                m_pSession->kill(mxs::extract_error(err));
             };
 
         m_client->set_notify(reply, err);

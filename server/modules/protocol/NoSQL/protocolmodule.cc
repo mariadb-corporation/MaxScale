@@ -91,7 +91,7 @@ string ProtocolModule::auth_default() const
     return "";
 }
 
-GWBUF ProtocolModule::reject(const string& host)
+GWBUF ProtocolModule::make_error(int errnum, const std::string& sqlstate, const std::string& message) const
 {
     mxb_assert(!true);
     return GWBUF{};

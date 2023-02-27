@@ -59,7 +59,7 @@ std::string PgProtocolModule::auth_default() const
     return "";
 }
 
-GWBUF PgProtocolModule::reject(const std::string& host)
+GWBUF PgProtocolModule::make_error(int errnum, const std::string& sqlstate, const std::string& message) const
 {
     MXB_ALERT("Not implemented yet: %s", __func__);
     mxb_assert(!true);

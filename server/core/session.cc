@@ -106,7 +106,7 @@ MXS_SESSION::~MXS_SESSION()
     mxs::RoutingWorker::get_current()->deregister_session(m_id);
 }
 
-void MXS_SESSION::kill(GWBUF* error)
+void MXS_SESSION::kill(const std::string& errmsg)
 {
     if (!m_killed && (m_state == State::CREATED || m_state == State::STARTED))
     {
@@ -133,17 +133,14 @@ void MXS_SESSION::kill(GWBUF* error)
             m_state = State::STOPPING;
         }
 
-        if (error)
+        if (!errmsg.empty())
         {
             // Write the error to the client before closing the DCB
-            client_connection()->write(error);
+            int errnum = 1927;      // This is ER_CONNECTION_KILLED
+            client_connection()->write(protocol()->make_error(errnum, "HY000", errmsg));
         }
 
         ClientDCB::close(client_dcb);
-    }
-    else
-    {
-        gwbuf_free(error);
     }
 }
 
@@ -1304,7 +1301,7 @@ bool Session::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Repl
 
 bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply)
 {
-    kill(gwbuf_clone_shallow(error));
+    kill(mxs::extract_error(error));
     return false;
 }
 
@@ -1593,9 +1590,14 @@ void Session::kill_all(Listener* listener)
     });
 }
 
-const ListenerData* Session::listener_data()
+const ListenerData* Session::listener_data() const
 {
     return m_listener_data.get();
+}
+
+const mxs::ProtocolModule* Session::protocol() const
+{
+    return listener_data()->m_proto_module.get();
 }
 
 void Session::adjust_io_activity(time_t now) const

@@ -91,13 +91,19 @@ public:
     virtual std::string auth_default() const = 0;
 
     /**
-     * Get rejection message. The protocol should return an error indicating that access to MaxScale
-     * has been temporarily suspended.
+     * Create an error message
      *
-     * @param host The host that is blocked
+     * The protocol should return an error with the given human-readable error message. Non-MariaDB protocols
+     * can ignore the error number if the protocol does not have a concept of error numbers or no suitable
+     * mapping is found.
+     *
+     * @param errnum   The MariaDB error code
+     * @param sqlstate The SQLSTATE of the error
+     * @param message  The message to send to the client.
+     *
      * @return A buffer containing the error message
      */
-    virtual GWBUF reject(const std::string& host) = 0;
+    virtual GWBUF make_error(int errnum, const std::string& sqlstate, const std::string& message) const = 0;
 
     /**
      * Get protocol module name.

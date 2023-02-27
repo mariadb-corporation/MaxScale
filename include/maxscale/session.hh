@@ -291,7 +291,7 @@ public:
      *
      * @param error An optionl error message that is sent to the client before the session is terminated
      */
-    void kill(GWBUF* error = nullptr);
+    void kill(const std::string& errmsg = {});
 
     // Convenience function for client identification
     std::string user_and_host() const
@@ -310,7 +310,8 @@ public:
     virtual const mxs::ClientConnection* client_connection() const = 0;
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
 
-    virtual const mxs::ListenerData* listener_data() = 0;
+    virtual const mxs::ListenerData*   listener_data() const = 0;
+    virtual const mxs::ProtocolModule* protocol() const = 0;
 
     /**
      * Start the session. Called after the session is initialized and authentication is complete.

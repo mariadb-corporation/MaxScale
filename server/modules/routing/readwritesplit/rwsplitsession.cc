@@ -276,10 +276,7 @@ void RWSplitSession::trx_replay_next_stmt()
                 else
                 {
                     MXB_INFO("Checksum mismatch, transaction replay failed. Closing connection.");
-                    GWBUF buf = mariadb::create_error_packet(
-                        1, 1927, "08S01", "Transaction checksum mismatch encountered when replaying "
-                                          "transaction.");
-                    m_pSession->kill(mxs::gwbuf_to_gwbufptr(std::move(buf)));
+                    m_pSession->kill("Transaction checksum mismatch encountered when replaying transaction.");
                 }
             }
         }

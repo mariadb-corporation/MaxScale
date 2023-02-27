@@ -1301,7 +1301,10 @@ uint32_t Listener::handle_poll_events(mxb::Worker* worker, uint32_t events, Poll
 
 void Listener::reject_connection(int fd, const char* host)
 {
-    if (GWBUF buf = m_shared_data->m_proto_module->reject(host); !buf.empty())
+    std::string message = mxb::cat("Host '", host, "' is temporarily blocked due ",
+                                   "to too many authentication failures.");
+    int errnum = 1129;      // This is ER_HOST_IS_BLOCKED
+    if (GWBUF buf = m_shared_data->m_proto_module->make_error(errnum, "HY000", message); !buf.empty())
     {
         write(fd, buf.data(), buf.length());
     }
