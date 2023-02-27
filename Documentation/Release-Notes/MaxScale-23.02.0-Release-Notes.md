@@ -1,4 +1,4 @@
-# MariaDB MaxScale 23.02 Release Notes -- 2023-02-
+# MariaDB MaxScale 23.02 Release Notes -- 2023-02-27
 
 Release 23.02.0 is a Beta release.
 
