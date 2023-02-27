@@ -35,15 +35,7 @@ export default {
             )
         },
         chartInstance() {
-            return this.$typy(this.$refs, 'wrapper.$data._chart').safeObject
-        },
-    },
-    watch: {
-        opts: {
-            deep: true,
-            handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.chartInstance.update('none')
-            },
+            return this.$typy(this.$refs, 'wrapper.getCurrentChart').safeFunction()
         },
     },
 }

@@ -89,9 +89,6 @@ export default {
         }),
     },
     methods: {
-        update(chart) {
-            chart.update('none')
-        },
         updateSessionsGraph(chart, timestamp) {
             const self = this
             chart.data.datasets.forEach(function(dataset) {
@@ -100,7 +97,6 @@ export default {
                     y: self.getTotalSessions,
                 })
             })
-            this.update(chart)
         },
         updateConnsGraph(chart, timestamp) {
             const scope = this
@@ -130,7 +126,6 @@ export default {
                     })
                 }
             })
-            this.update(chart)
         },
         updateThreadsGraph(chart, timestamp) {
             const { genLineStreamDataset } = this.$helpers
@@ -155,7 +150,6 @@ export default {
                     datasets.push(newDataSet)
                 }
             })
-            this.update(chart)
         },
         /**
          * Method  to be called by parent component to update the chart
