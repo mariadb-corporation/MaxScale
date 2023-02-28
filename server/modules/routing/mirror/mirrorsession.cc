@@ -46,18 +46,17 @@ MirrorSession::~MirrorSession()
 
 bool MirrorSession::routeQuery(GWBUF&& packet)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     int rc = 0;
 
     if (m_responses)
     {
-        m_queue.push_back(pPacket);
+        m_queue.push_back(std::move(packet));
         rc = 1;
     }
     else
     {
-        m_query = pPacket->get_sql();
-        m_command = GWBUF_DATA(pPacket)[4];
+        m_query = packet.get_sql();
+        m_command = mxs_mysql_get_command(packet);
         bool expecting_response = mxs_mysql_command_will_respond(m_command);
 
         for (const auto& a : m_backends)
@@ -69,7 +68,7 @@ bool MirrorSession::routeQuery(GWBUF&& packet)
                 type = a.get() == m_main ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
             }
 
-            if (a->in_use() && a->write(pPacket->shallow_clone(), type))
+            if (a->in_use() && a->write(packet.shallow_clone(), type))
             {
                 if (a.get() == m_main)
                 {
@@ -83,8 +82,6 @@ bool MirrorSession::routeQuery(GWBUF&& packet)
                 }
             }
         }
-
-        gwbuf_free(pPacket);
     }
 
     return rc;
@@ -95,10 +92,12 @@ void MirrorSession::route_queued_queries()
     while (!m_queue.empty() && m_responses == 0)
     {
         MXB_INFO(">>> Routing queued queries");
-        auto query = m_queue.front().release();
+        auto query = std::move(m_queue.front());
         m_queue.pop_front();
 
-        if (!routeQuery(mxs::gwbufptr_to_gwbuf(query)))
+        MXB_AT_DEBUG(std::string query_sql = query.get_sql());
+
+        if (!routeQuery(std::move(query)))
         {
             break;
         }
@@ -107,7 +106,7 @@ void MirrorSession::route_queued_queries()
 
         // Routing of queued queries should never cause the same query to be put back into the queue. The
         // check for m_responses should prevent it.
-        mxb_assert(m_queue.empty() || m_queue.back().get() != query);
+        mxb_assert(m_queue.empty() || m_queue.back().get_sql() != query_sql);
     }
 }
 
@@ -117,7 +116,8 @@ void MirrorSession::finalize_reply()
     // that we've been storing in the session.
     MXB_INFO("All replies received, routing last chunk to the client.");
 
-    RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(m_last_chunk.release()), m_last_route, m_main->reply());
+    RouterSession::clientReply(std::move(m_last_chunk), m_last_route, m_main->reply());
+    m_last_chunk.clear();
 
     generate_report();
     route_queued_queries();
@@ -125,9 +125,8 @@ void MirrorSession::finalize_reply()
 
 bool MirrorSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     auto backend = static_cast<MyBackend*>(down.back()->get_userdata());
-    backend->process_result(pPacket, reply);
+    backend->process_result(packet, reply);
 
     if (reply.is_complete())
     {
@@ -139,34 +138,26 @@ bool MirrorSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, con
 
         if (backend == m_main)
         {
-            m_last_chunk.reset(pPacket);
+            m_last_chunk = std::move(packet);
             m_last_route = down;
-            pPacket = nullptr;
+            packet.clear();
         }
 
         if (m_responses == 0)
         {
             mxb_assert(!m_last_chunk.empty());
-            mxb_assert(!pPacket || backend != m_main);
+            mxb_assert(!packet || backend != m_main);
 
-            gwbuf_free(pPacket);
-            pPacket = nullptr;
+            packet.clear();
             finalize_reply();
         }
     }
 
-    int rc = 1;
+    bool rc = true;
 
-    if (pPacket)
+    if (packet && backend == m_main)
     {
-        if (backend == m_main)
-        {
-            rc = RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
-        }
-        else
-        {
-            gwbuf_free(pPacket);
-        }
+        rc = RouterSession::clientReply(std::move(packet), down, reply);
     }
 
     return rc;

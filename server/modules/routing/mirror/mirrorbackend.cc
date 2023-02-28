@@ -34,7 +34,7 @@ bool MyBackend::write(GWBUF&& buffer, response_type type)
     return Backend::write(std::move(buffer), type);
 }
 
-void MyBackend::process_result(GWBUF* buffer, const mxs::Reply& reply)
+void MyBackend::process_result(const GWBUF& buffer, const mxs::Reply& reply)
 {
     m_checksum.update(buffer);
     m_reply = reply;

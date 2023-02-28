@@ -44,7 +44,7 @@ private:
     uint64_t                   m_completed;
     uint8_t                    m_packet_num;
     mxs::SRWBackends::iterator m_current;
-    GWBUF*                     m_query;
+    GWBUF                      m_query;
 
     /**
      * Iterate to next backend

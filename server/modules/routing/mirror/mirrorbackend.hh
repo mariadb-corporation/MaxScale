@@ -36,7 +36,7 @@ public:
 
     bool write(GWBUF&& buffer, response_type type = EXPECT_RESPONSE) override;
 
-    void process_result(GWBUF* buffer, const mxs::Reply& reply);
+    void process_result(const GWBUF& buffer, const mxs::Reply& reply);
 
     const mxs::CRC32Checksum& checksum() const
     {

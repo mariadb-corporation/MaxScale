@@ -24,7 +24,6 @@ CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backe
     , m_backends(std::move(backends))
     , m_completed(0)
     , m_packet_num(0)
-    , m_query(NULL)
 {
 }
 
@@ -56,14 +55,14 @@ bool CatSession::routeQuery(GWBUF&& packet)
 
     m_completed = 0;
     m_packet_num = 0;
-    m_query = mxs::gwbuf_to_gwbufptr(std::move(packet));
+    m_query = std::move(packet);
     m_current = m_backends.begin();
 
     if (next_backend())
     {
         // We have a backend, write the query only to this one. It will be
         // propagated onwards in clientReply.
-        rval = (*m_current)->write(m_query->shallow_clone());
+        rval = (*m_current)->write(m_query.shallow_clone());
     }
 
     return rval;
@@ -71,7 +70,6 @@ bool CatSession::routeQuery(GWBUF&& packet)
 
 bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     auto& backend = *m_current;
     mxb_assert(backend->backend() == down.back());
     bool send = false;
@@ -84,12 +82,11 @@ bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const 
         if (!next_backend())
         {
             send = true;
-            gwbuf_free(m_query);
-            m_query = NULL;
+            m_query.clear();
         }
         else
         {
-            (*m_current)->write(m_query->shallow_clone());
+            (*m_current)->write(m_query.shallow_clone());
         }
     }
 
@@ -98,7 +95,7 @@ bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const 
         send = reply.state() != mxs::ReplyState::DONE;
     }
     else if (reply.state() == mxs::ReplyState::RSET_ROWS
-             && mxs_mysql_get_command(*pPacket) != MYSQL_REPLY_EOF)
+             && mxs_mysql_get_command(packet) != MYSQL_REPLY_EOF)
     {
         send = true;
     }
@@ -108,12 +105,8 @@ bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const 
     if (send)
     {
         // Increment the packet sequence number and send it to the client
-        GWBUF_DATA(pPacket)[3] = m_packet_num++;
-        rc = RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
-    }
-    else
-    {
-        gwbuf_free(pPacket);
+        packet.data()[3] = m_packet_num++;
+        rc = RouterSession::clientReply(std::move(packet), down, reply);
     }
 
     return rc;
