@@ -85,7 +85,7 @@ bool RewriteFilterSession::routeQuery(GWBUF&& buffer)
             if (!r->template_def().what_if)
             {
                 gwbuf_free(pBuffer);
-                pBuffer = modutil_create_query(new_sql.c_str());
+                pBuffer = mxs::gwbuf_to_gwbufptr(mariadb::create_query(new_sql));
             }
 
             if (r->template_def().continue_if_matched)

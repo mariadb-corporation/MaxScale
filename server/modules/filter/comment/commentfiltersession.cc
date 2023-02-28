@@ -46,18 +46,13 @@ CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
 
 bool CommentFilterSession::routeQuery(GWBUF&& packet)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
-
-    if (mariadb::is_com_query(*pPacket))
+    if (mariadb::is_com_query(packet))
     {
-        const auto& sql = pPacket->get_sql();
         string comment = parseComment(m_inject);
-        string newsql = string("/* ").append(comment).append(" */").append(sql);
-        gwbuf_free(pPacket);
-        pPacket = modutil_create_query(newsql.c_str());
+        packet = mariadb::create_query(mxb::cat("/* ", comment, " */", packet.get_sql()));
     }
 
-    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+    return mxs::FilterSession::routeQuery(std::move(packet));
 }
 
 bool CommentFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)

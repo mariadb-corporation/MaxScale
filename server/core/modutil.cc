@@ -77,31 +77,6 @@ char* modutil_get_SQL(GWBUF* buf)
     return rval;
 }
 
-/**
- * Create a COM_QUERY packet from a string.
- * @param query Query to create.
- * @return Pointer to GWBUF with the query or NULL if memory allocation failed
- */
-GWBUF* modutil_create_query(const char* query)
-{
-    mxb_assert(query);
-    size_t len = strlen(query) + 1;     // Query plus the command byte
-    GWBUF* rval = gwbuf_alloc(len + MYSQL_HEADER_LEN);
-
-    if (rval)
-    {
-        uint8_t* ptr = rval->data();
-        *ptr++ = (len);
-        *ptr++ = (len) >> 8;
-        *ptr++ = (len) >> 16;
-        *ptr++ = 0x0;
-        *ptr++ = 0x03;
-        memcpy(ptr, query, strlen(query));
-    }
-
-    return rval;
-}
-
 // See: https://mariadb.com/kb/en/library/ok_packet/
 GWBUF modutil_create_ok()
 {

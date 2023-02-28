@@ -52,10 +52,10 @@ public:
 
     qc_query_op_t get_operation(const std::string& sql)
     {
-        mxs::Buffer buffer(modutil_create_query(sql.c_str()));
+        GWBUF buffer = mariadb::create_query(sql);
         int32_t op = QUERY_OP_UNDEFINED;
 
-        if (m_qc->qc_get_operation(buffer.get(), &op) != QC_RESULT_OK)
+        if (m_qc->qc_get_operation(&buffer, &op) != QC_RESULT_OK)
         {
             std::cout << "failed to get operation for: " << sql << std::endl;
         }
@@ -65,10 +65,10 @@ public:
 
     uint32_t get_type(const std::string& sql)
     {
-        mxs::Buffer buffer(modutil_create_query(sql.c_str()));
+        GWBUF buffer = mariadb::create_query(sql);
         uint32_t type = 0;
 
-        if (m_qc->qc_get_type_mask(buffer.get(), &type) != QC_RESULT_OK)
+        if (m_qc->qc_get_type_mask(&buffer, &type) != QC_RESULT_OK)
         {
             std::cout << "failed to get type for: " << sql << std::endl;
         }
@@ -78,10 +78,10 @@ public:
 
     QC_KILL get_kill(const std::string& sql)
     {
-        mxs::Buffer buffer(modutil_create_query(sql.c_str()));
+        GWBUF buffer = mariadb::create_query(sql);
         QC_KILL rval;
 
-        if (m_qc->qc_get_kill_info(buffer.get(), &rval) != QC_RESULT_OK)
+        if (m_qc->qc_get_kill_info(&buffer, &rval) != QC_RESULT_OK)
         {
             std::cout << "failed to get kill info for: " << sql << std::endl;
         }

@@ -1584,8 +1584,8 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 {
     json_t* pAttributes = json_object();
 
-    std::unique_ptr<GWBUF> sBuffer(modutil_create_query(statement.c_str()));
-    GWBUF* pBuffer = sBuffer.get();
+    GWBUF buffer = mariadb::create_query(statement);
+    GWBUF* pBuffer = &buffer;
 
     qc_parse_result_t result = qc_parse(pBuffer, QC_COLLECT_ALL);
 

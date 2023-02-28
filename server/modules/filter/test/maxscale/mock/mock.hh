@@ -35,7 +35,7 @@ namespace mock
  */
 inline GWBUF* create_com_query(const char* zStatement)
 {
-    return modutil_create_query(zStatement);
+    return mxs::gwbuf_to_gwbufptr(mariadb::create_query(zStatement));
 }
 
 /**

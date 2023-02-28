@@ -267,7 +267,7 @@ bool LuaContext::route_query(MXS_SESSION* session, GWBUF** buffer)
             if (lua_isstring(m_state, -1))
             {
                 gwbuf_free(*buffer);
-                *buffer = modutil_create_query(lua_tostring(m_state, -1));
+                *buffer = mxs::gwbuf_to_gwbufptr(mariadb::create_query(lua_tostring(m_state, -1)));
             }
             else if (lua_isboolean(m_state, -1))
             {

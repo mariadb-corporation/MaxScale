@@ -424,11 +424,11 @@ static bool should_skip_query(const mxs::Parser& parser,
                               const std::string& sql,
                               const std::string& db = "")
 {
-    GWBUF* buf = modutil_create_query(sql.c_str());
+    GWBUF buf = mariadb::create_query(sql);
     bool rval = false;
-    std::vector<QcTableName> tables = parser.get_table_names(buf);
+    std::vector<QcTableName> tables = parser.get_table_names(&buf);
 
-    if (parser.get_trx_type_mask(buf) == 0)
+    if (parser.get_trx_type_mask(&buf) == 0)
     {
         // Not a transaction management related command
         for (const auto& t : tables)
@@ -450,7 +450,6 @@ static bool should_skip_query(const mxs::Parser& parser,
         }
     }
 
-    gwbuf_free(buf);
     return rval;
 }
 

@@ -248,12 +248,11 @@ bool RegexSession::matching_connection(MXS_SESSION* session)
            && (m_config.user.empty() || session->user() == m_config.user);
 }
 
-bool RegexSession::routeQuery(GWBUF&& buffer)
+bool RegexSession::routeQuery(GWBUF&& queue)
 {
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_active)
     {
-        const auto& sql = queue->get_sql();
+        const auto& sql = queue.get_sql();
 
         if (!sql.empty())
         {
@@ -261,8 +260,7 @@ bool RegexSession::routeQuery(GWBUF&& buffer)
             {
                 auto newsql = m_config.match.replace(sql, m_config.replace.c_str());
                 log_match(sql, newsql);
-                gwbuf_free(queue);
-                queue = modutil_create_query(newsql.c_str());
+                queue = mariadb::create_query(newsql);
                 m_replacements++;
             }
             else
@@ -273,7 +271,7 @@ bool RegexSession::routeQuery(GWBUF&& buffer)
         }
     }
 
-    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
+    return mxs::FilterSession::routeQuery(std::move(queue));
 }
 
 void RegexSession::log_match(const std::string& old, const std::string& newsql)

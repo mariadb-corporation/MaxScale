@@ -1882,8 +1882,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
                         // one connection per server is killed.
                         MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
 
-                        if (!client->queue_query(
-                            mxs::gwbufptr_to_gwbuf(modutil_create_query(a.second.c_str()))))
+                        if (!client->queue_query(mariadb::create_query(a.second.c_str())))
                         {
                             MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
                         }
