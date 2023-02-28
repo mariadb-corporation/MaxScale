@@ -134,7 +134,7 @@ private:
     mxs::Endpoints m_backends;
     mxs::Endpoint* m_write_backend;
 
-    void decide_target(GWBUF* querybuf, mxs::Endpoint*& target, bool& route_to_all);
+    void decide_target(const GWBUF& querybuf, mxs::Endpoint*& target, bool& route_to_all);
 };
 
 struct Config : public mxs::config::Configuration
@@ -314,9 +314,8 @@ json_t* RRRouter::diagnostics() const
  * @param buffer       Buffer containing the query (or command)
  * @return True on success, false on error
  */
-bool RRRouterSession::routeQuery(GWBUF&& buffer)
+bool RRRouterSession::routeQuery(GWBUF&& querybuf)
 {
-    GWBUF* querybuf = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     int rval = 0;
     const bool print = m_router->m_config.print_on_routing;
     mxs::Endpoint* target = nullptr;
@@ -333,18 +332,18 @@ bool RRRouterSession::routeQuery(GWBUF&& buffer)
         /* We have one target backend */
         if (print)
         {
-            MXB_NOTICE("Routing statement of length %du  to backend '%s'.",
-                       gwbuf_length(querybuf), target->target()->name());
+            MXB_NOTICE("Routing statement of length %lu  to backend '%s'.",
+                       querybuf.length(), target->target()->name());
         }
 
-        rval = target->routeQuery(mxs::gwbufptr_to_gwbuf(querybuf));
+        rval = target->routeQuery(std::move(querybuf));
     }
     else if (route_to_all)
     {
         if (print)
         {
-            MXB_NOTICE("Routing statement of length %du to %lu backends.",
-                       gwbuf_length(querybuf), m_backends.size());
+            MXB_NOTICE("Routing statement of length %lu to %lu backends.",
+                       querybuf.length(), m_backends.size());
         }
 
         int n_targets = 0;
@@ -356,7 +355,7 @@ bool RRRouterSession::routeQuery(GWBUF&& buffer)
             {
                 ++n_targets;
 
-                if (b->routeQuery(querybuf->shallow_clone()))
+                if (b->routeQuery(querybuf.shallow_clone()))
                 {
                     ++route_success;
                 }
@@ -365,14 +364,12 @@ bool RRRouterSession::routeQuery(GWBUF&& buffer)
 
         m_replies_to_ignore += route_success - 1;
         rval = (route_success == n_targets) ? 1 : 0;
-        gwbuf_free(querybuf);
     }
     else
     {
         MXB_ERROR("Could not find a valid routing backend. Either the "
                   "'%s' is not set or the command is not recognized.",
                   s_write_backend.name().c_str());
-        gwbuf_free(querybuf);
     }
     if (rval == 1)
     {
@@ -466,10 +463,10 @@ RRRouterSession::~RRRouterSession()
     mxb_assert(m_closed);
 }
 
-void RRRouterSession::decide_target(GWBUF* querybuf, mxs::Endpoint*& target, bool& route_to_all)
+void RRRouterSession::decide_target(const GWBUF& querybuf, mxs::Endpoint*& target, bool& route_to_all)
 {
     /* Extract the command type from the SQL-buffer */
-    mxs_mysql_cmd_t cmd_type = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
+    mxs_mysql_cmd_t cmd_type = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(querybuf));
     /* The "query_types" is only really valid for query-commands but let's use
      * it here for all command types.
      */
@@ -482,14 +479,10 @@ void RRRouterSession::decide_target(GWBUF* querybuf, mxs::Endpoint*& target, boo
             /* Use the inbuilt query_classifier to get information about
              * the query. The default qc works with mySQL-queries.
              */
-            query_types = qc_get_type_mask(querybuf);
+            query_types = qc_get_type_mask(const_cast<GWBUF*>(&querybuf));
 
 #ifdef DEBUG_RRROUTER
-            char* zSql_query = NULL;
-            int length = 0;
-            modutil_extract_SQL(querybuf, &zSql_query, &length);
-            string sql_query(zSql_query, length);
-            RR_DEBUG("QUERY: %s", sql_query.c_str());
+            RR_DEBUG("QUERY: %s", querybuf.get_sql().c_str());
 #endif
         }
         break;
