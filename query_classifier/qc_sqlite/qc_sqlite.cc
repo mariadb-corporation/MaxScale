@@ -4855,7 +4855,7 @@ static const char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statemen
 static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
 {
     QC_TRACE();
-    assert(!this_unit.setup);
+    mxb_assert(!this_unit.setup);
 
     qc_log_level_t log_level = QC_LOG_NOTHING;
     QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
