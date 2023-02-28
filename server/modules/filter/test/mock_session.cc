@@ -13,6 +13,7 @@
  */
 
 #include "maxscale/mock/session.hh"
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 
 namespace maxscale
 {
@@ -80,6 +81,14 @@ public:
     {
         return 0;
     }
+
+    Parser* parser() override
+    {
+        return &m_parser;
+    };
+
+private:
+    MariaDBParser m_parser;
 };
 
 bool Session::Endpoint::routeQuery(GWBUF* buffer)
