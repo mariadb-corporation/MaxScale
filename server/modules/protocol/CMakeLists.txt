@@ -10,5 +10,5 @@ if(BUILD_NOSQL)
 endif()
 
 if(BUILD_POSTGRES)
-  add_subdirectory(PostGres)
+  add_subdirectory(Postgres)
 endif()
