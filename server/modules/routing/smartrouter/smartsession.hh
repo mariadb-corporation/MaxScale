@@ -74,10 +74,10 @@ private:
     SmartRouterSession(SmartRouter*, MXS_SESSION* pSession, Clusters clusters);
 
     // The write functions initialize Cluster flags and Cluster::ProtocolTracker.
-    bool write_to_target(mxs::Target* target, GWBUF* pBuf);
-    bool write_to_master(GWBUF* pBuf);
-    bool write_to_all(GWBUF* pBuf, Mode mode);
-    bool write_split_packets(GWBUF* pBuf);
+    bool write_to_target(mxs::Target* target, GWBUF&& buffer);
+    bool write_to_master(GWBUF&& buffer);
+    bool write_to_all(GWBUF&& buffer, Mode mode);
+    bool write_split_packets(GWBUF&& buffer);
 
     void kill_all_others(const Cluster& cluster);
 
@@ -92,12 +92,12 @@ private:
 
     SmartRouter& m_router;
 
-    Mode   m_mode = Mode::Idle;
-    GWBUF* m_pDelayed_packet = nullptr;
+    Mode  m_mode = Mode::Idle;
+    GWBUF m_delayed_packet;
 
     Clusters                 m_clusters;
     mariadb::QueryClassifier m_qc;
-    mxs::Buffer              m_queued;
+    GWBUF                    m_queued;
     struct Measurement
     {
         maxbase::TimePoint start;

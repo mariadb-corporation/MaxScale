@@ -35,7 +35,6 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
 
 SmartRouterSession::~SmartRouterSession()
 {
-    gwbuf_free(m_pDelayed_packet);
 }
 
 // static
@@ -88,10 +87,9 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
 
 bool SmartRouterSession::routeQuery(GWBUF&& buffer)
 {
-    GWBUF* pBuf = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     bool ret = false;
 
-    MXB_SDEBUG("routeQuery() buffer size " << maxbase::pretty_size(gwbuf_length(pBuf)));
+    MXB_SDEBUG("routeQuery() buffer size " << maxbase::pretty_size(buffer.length()));
 
     if (m_mode == Mode::Kill)
     {
@@ -105,13 +103,12 @@ bool SmartRouterSession::routeQuery(GWBUF&& buffer)
         {
             MXB_ERROR("routeQuery() in wrong state, multiple in-progress queries are not supported.");
             mxb_assert(false);
-            gwbuf_free(pBuf);
             return 0;
         }
         else
         {
-            MXB_INFO("Queuing query while KILL command is in progress: %s", pBuf->get_sql().c_str());
-            m_queued.reset(pBuf);
+            MXB_INFO("Queuing query while KILL command is in progress: %s", buffer.get_sql().c_str());
+            m_queued = std::move(buffer);
             return 1;
         }
     }
@@ -122,7 +119,7 @@ bool SmartRouterSession::routeQuery(GWBUF&& buffer)
 
     if (expecting_request_packets())
     {
-        ret = write_split_packets(pBuf);
+        ret = write_split_packets(std::move(buffer));
         if (all_clusters_are_idle())
         {
             m_mode = Mode::Idle;
@@ -136,20 +133,20 @@ bool SmartRouterSession::routeQuery(GWBUF&& buffer)
     }
     else
     {
-        auto route_info = m_qc.update_route_info(mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
-        std::string canonical = pBuf->get_canonical();
+        auto route_info = m_qc.update_route_info(mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED, &buffer);
+        std::string canonical = buffer.get_canonical();
 
         m_measurement = {maxbase::Clock::now(maxbase::NowType::EPollTick), canonical};
 
         if (m_qc.target_is_all(route_info.target()))
         {
             MXB_SDEBUG("Write all");
-            ret = write_to_all(pBuf, Mode::Query);
+            ret = write_to_all(std::move(buffer), Mode::Query);
         }
         else if (m_qc.target_is_master(route_info.target()) || m_pSession->protocol_data()->is_trx_active())
         {
             MXB_SDEBUG("Write to primary");
-            ret = write_to_master(pBuf);
+            ret = write_to_master(std::move(buffer));
         }
         else
         {
@@ -159,17 +156,17 @@ bool SmartRouterSession::routeQuery(GWBUF&& buffer)
             {
                 MXB_SDEBUG("Smart route to " << perf.target()->name()
                                              << ", canonical = " << maxbase::show_some(canonical));
-                ret = write_to_target(perf.target(), pBuf);
+                ret = write_to_target(perf.target(), std::move(buffer));
             }
-            else if (mariadb::is_com_query(*pBuf))
+            else if (mariadb::is_com_query(buffer))
             {
                 MXB_SDEBUG("Start measurement");
-                ret = write_to_all(pBuf, Mode::MeasureQuery);
+                ret = write_to_all(std::move(buffer), Mode::MeasureQuery);
             }
             else
             {
                 MXB_SWARNING("Could not determine target (non-sql query), goes to master");
-                ret = write_to_master(pBuf);
+                ret = write_to_master(std::move(buffer));
             }
         }
     }
@@ -181,13 +178,12 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
 {
     using maxbase::operator<<;
 
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     Cluster& cluster = *static_cast<Cluster*>(down.back()->get_userdata());
 
     auto tracker_state_before = cluster.tracker.state();
 
     m_qc.update_from_reply(reply);
-    cluster.tracker.update_response(pPacket);
+    cluster.tracker.update_response(&packet);
 
     // these flags can all be true at the same time
     bool first_response_packet = (m_mode == Mode::Query || m_mode == Mode::MeasureQuery);
@@ -200,7 +196,7 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
                              << " first_packet=" << first_response_packet
                              << " last_packet=" << last_packet_for_this_cluster
                              << " very_last_packet=" << very_last_response_packet
-                             << " delayed_response=" << (m_pDelayed_packet != nullptr)
+                             << " delayed_response=" << (!m_delayed_packet.empty())
                              << " tracker_state: " << tracker_state_before << " => "
                              << cluster.tracker.state());
 
@@ -211,13 +207,13 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
     // are routers).
     if (cluster.tracker.state() == maxsql::PacketTracker::State::ErrorPacket)
     {
-        auto err_code = mxs_mysql_get_mysql_errno(*pPacket);
+        auto err_code = mxs_mysql_get_mysql_errno(packet);
         switch (err_code)
         {
         case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
             MXB_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
                                                             << " Error code=" << err_code
-                                                            << ' ' << mxs::extract_error(pPacket));
+                                                            << ' ' << mxs::extract_error(&packet));
             m_pSession->kill();
             return 1;
         }
@@ -264,14 +260,13 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
         {
             m_mode = Mode::Idle;
         }
-        mxb_assert(cluster.is_replying_to_client || m_pDelayed_packet);
-        if (m_pDelayed_packet)
+        mxb_assert(cluster.is_replying_to_client || m_delayed_packet);
+        if (m_delayed_packet)
         {
             MXB_SDEBUG("Picking up delayed packet, discarding response from "
                        << cluster.pBackend->target()->name());
-            gwbuf_free(pPacket);
-            pPacket = m_pDelayed_packet;
-            m_pDelayed_packet = nullptr;
+            packet = std::move(m_delayed_packet);
+            m_delayed_packet.clear();
         }
     }
     else if (cluster.is_replying_to_client)
@@ -281,8 +276,8 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
             // Delay sending the last packet until all clusters have responded. The code currently
             // does not allow multiple client-queries at the same time (no query buffer)
             MXB_SDEBUG("Delaying last packet");
-            mxb_assert(!m_pDelayed_packet);
-            m_pDelayed_packet = pPacket;
+            mxb_assert(!m_delayed_packet);
+            m_delayed_packet = std::move(packet);
             will_reply = false;
         }
         else
@@ -293,7 +288,6 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
     else
     {
         MXB_SDEBUG("Discarding response from " << cluster.pBackend->target()->name());
-        gwbuf_free(pPacket);
     }
 
     int32_t rc = 1;
@@ -301,7 +295,7 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
     if (will_reply)
     {
         MXB_SDEBUG("Forward response to client");
-        rc = RouterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
+        rc = RouterSession::clientReply(std::move(packet), down, reply);
     }
 
     return rc;
@@ -331,12 +325,12 @@ bool SmartRouterSession::all_clusters_are_idle() const
                        });
 }
 
-bool SmartRouterSession::write_to_master(GWBUF* pBuf)
+bool SmartRouterSession::write_to_master(GWBUF&& buffer)
 {
     mxb_assert(!m_clusters.empty());
     auto& cluster = m_clusters[0];
     mxb_assert(cluster.is_master);
-    cluster.tracker = maxsql::PacketTracker(pBuf);
+    cluster.tracker = maxsql::PacketTracker(&buffer);
     cluster.is_replying_to_client = false;
 
     if (cluster.tracker.expecting_response_packets())
@@ -344,17 +338,17 @@ bool SmartRouterSession::write_to_master(GWBUF* pBuf)
         m_mode = Mode::Query;
     }
 
-    return cluster.pBackend->routeQuery(mxs::gwbufptr_to_gwbuf(pBuf));
+    return cluster.pBackend->routeQuery(std::move(buffer));
 }
 
-bool SmartRouterSession::write_to_target(mxs::Target* target, GWBUF* pBuf)
+bool SmartRouterSession::write_to_target(mxs::Target* target, GWBUF&& buffer)
 {
     auto it = std::find_if(begin(m_clusters), end(m_clusters), [target](const Cluster& cluster) {
                                return cluster.pBackend->target() == target;
                            });
     mxb_assert(it != end(m_clusters));
     auto& cluster = *it;
-    cluster.tracker = maxsql::PacketTracker(pBuf);
+    cluster.tracker = maxsql::PacketTracker(&buffer);
     if (cluster.tracker.expecting_response_packets())
     {
         m_mode = Mode::Query;
@@ -362,25 +356,23 @@ bool SmartRouterSession::write_to_target(mxs::Target* target, GWBUF* pBuf)
 
     cluster.is_replying_to_client = false;
 
-    return cluster.pBackend->routeQuery(mxs::gwbufptr_to_gwbuf(pBuf));
+    return cluster.pBackend->routeQuery(std::move(buffer));
 }
 
-bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
+bool SmartRouterSession::write_to_all(GWBUF&& buffer, Mode mode)
 {
     bool success = true;
 
     for (auto& a : m_clusters)
     {
-        a.tracker = maxsql::PacketTracker(pBuf);
+        a.tracker = maxsql::PacketTracker(&buffer);
         a.is_replying_to_client = false;
 
-        if (!a.pBackend->routeQuery(pBuf->shallow_clone()))
+        if (!a.pBackend->routeQuery(buffer.shallow_clone()))
         {
             success = false;
         }
     }
-
-    gwbuf_free(pBuf);
 
     if (expecting_response_packets())
     {
@@ -390,7 +382,7 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
     return success;
 }
 
-bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
+bool SmartRouterSession::write_split_packets(GWBUF&& buffer)
 {
     bool success = true;
 
@@ -398,17 +390,15 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
     {
         if (a.tracker.expecting_request_packets())
         {
-            a.tracker.update_request(pBuf);
+            a.tracker.update_request(&buffer);
 
-            if (!a.pBackend->routeQuery(pBuf->shallow_clone()))
+            if (!a.pBackend->routeQuery(buffer.shallow_clone()))
             {
                 success = false;
                 break;
             }
         }
     }
-
-    gwbuf_free(pBuf);
 
     return success;
 }
@@ -420,10 +410,11 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
         mxb_assert(m_mode == Mode::Kill);
         m_mode = Mode::KillDone;
 
-        if (GWBUF* pBuf = m_queued.release())
+        if (m_queued)
         {
-            MXB_INFO("Routing queued query: %s", pBuf->get_sql().c_str());
-            m_pSession->delay_routing(this, mxs::gwbufptr_to_gwbuf(pBuf), 0);
+            MXB_INFO("Routing queued query: %s", m_queued.get_sql().c_str());
+            m_pSession->delay_routing(this, std::move(m_queued), 0);
+            m_queued.clear();
         }
     });
 }
