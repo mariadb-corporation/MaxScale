@@ -539,7 +539,7 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
     uint8_t* ptr = event->raw_data + ev_offset;
 
     MARIADB_RPL_EVENT& ev = *event;
-    hdr.event_size = ev.event_length + (m_rpl.have_checksums() ? 4 : 0);
+    hdr.event_size = ev.event_length - (m_rpl.have_checksums() ? 4 : 0);
     hdr.event_type = ev.event_type;
     hdr.flags = ev.flags;
     hdr.next_pos = ev.next_event_pos;
