@@ -1932,10 +1932,7 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!qc_setup(&cnf.qc_cache_properties,
-                  cnf.qc_sql_mode,
-                  cnf.qc_name.c_str(),
-                  cnf.qc_args.c_str()))
+    if (!qc_setup(&cnf.qc_cache_properties))
     {
         MXB_ALERT("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;

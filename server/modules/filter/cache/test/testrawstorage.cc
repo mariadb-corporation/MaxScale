@@ -17,6 +17,7 @@
 #include <maxscale/paths.hh>
 #include "teststorage.hh"
 #include "testerrawstorage.hh"
+#include "../../../../core/test/test_utils.hh"
 
 using namespace std;
 
@@ -48,7 +49,7 @@ private:
 
 int main(int argc, char* argv[])
 {
-    mxs::set_libdir("../../../../../query_classifier/qc_sqlite/");
+    init_test_env();
 
     TestRawStorage test(&cout);
     int rv = test.run(argc, argv);

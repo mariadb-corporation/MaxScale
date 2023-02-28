@@ -483,6 +483,7 @@ private:
 };
 }
 
+// TODO: To be removed. Only needed by qc_init below.
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,
               const char* plugin_name,
@@ -526,10 +527,36 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
         else
         {
             qc_unload(this_unit.classifier);
+            this_unit.classifier = nullptr;
         }
     }
 
     return (rv == QC_RESULT_OK) ? true : false;
+}
+
+bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties)
+{
+    QC_TRACE();
+    mxb_assert(!this_unit.classifier);
+
+    int64_t cache_max_size = (cache_properties ? cache_properties->max_size : 0);
+    mxb_assert(cache_max_size >= 0);
+
+    if (cache_max_size)
+    {
+        // Config::n_threads as MaxScale is not yet running.
+        int64_t size_per_thr = cache_max_size / mxs::Config::get().n_threads;
+        MXB_NOTICE("Query classification results are cached and reused. "
+                   "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
+    }
+    else
+    {
+        MXB_NOTICE("Query classification results are not cached.");
+    }
+
+    this_unit.set_cache_max_size(cache_max_size);
+
+    return true;
 }
 
 bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
@@ -1692,4 +1719,10 @@ int64_t qc_clear_thread_cache()
     }
 
     return rv;
+}
+
+void qc_set_classifier(QUERY_CLASSIFIER* pClassifier)
+{
+    mxb_assert(!this_unit.classifier);
+    this_unit.classifier = pClassifier;
 }

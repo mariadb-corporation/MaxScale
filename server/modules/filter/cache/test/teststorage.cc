@@ -51,90 +51,72 @@ int TestStorage::run(int argc, char** argv)
 
     if ((argc >= 2) && (argc <= 7))
     {
-        if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
+        const char* zModule = NULL;
+        size_t threads = m_threads;
+        size_t seconds = m_seconds;
+        size_t items = m_items;
+        size_t min_size = m_min_size;
+        size_t max_size = m_max_size;
+
+        switch (argc)
         {
-            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL) && qc_process_init(QC_INIT_BOTH))
-            {
-                const char* zModule = NULL;
-                size_t threads = m_threads;
-                size_t seconds = m_seconds;
-                size_t items = m_items;
-                size_t min_size = m_min_size;
-                size_t max_size = m_max_size;
+        default:
+            mxb_assert(!true);
 
-                switch (argc)
-                {
-                default:
-                    mxb_assert(!true);
+        case 7:
+            max_size = atoi(argv[6]);
 
-                case 7:
-                    max_size = atoi(argv[6]);
+        case 6:
+            min_size = atoi(argv[5]);
 
-                case 6:
-                    min_size = atoi(argv[5]);
+        case 5:
+            items = atoi(argv[4]);
 
-                case 5:
-                    items = atoi(argv[4]);
+        case 4:
+            seconds = atoi(argv[3]);
 
-                case 4:
-                    seconds = atoi(argv[3]);
+        case 3:
+            threads = atoi(argv[2]);
 
-                case 3:
-                    threads = atoi(argv[2]);
+        case 2:
+            zModule = argv[1];
+        }
 
-                case 2:
-                    zModule = argv[1];
-                }
+        if (threads == 0)
+        {
+            threads = get_processor_count() + 1;
+        }
 
-                if (threads == 0)
-                {
-                    threads = get_processor_count() + 1;
-                }
+        if (items == 0)
+        {
+            items = threads * seconds * 10;
+        }
 
-                if (items == 0)
-                {
-                    items = threads * seconds * 10;
-                }
+        const char FORMAT[] = "../storage/%s";
+        char libdir[sizeof(FORMAT) + strlen(zModule)];
+        sprintf(libdir, FORMAT, zModule);
 
-                const char FORMAT[] = "../storage/%s";
-                char libdir[sizeof(FORMAT) + strlen(zModule)];
-                sprintf(libdir, FORMAT, zModule);
+        mxs::set_libdir(libdir);
 
-                mxs::set_libdir(libdir);
+        StorageFactory* pFactory = StorageFactory::open(zModule);
 
-                StorageFactory* pFactory = StorageFactory::open(zModule);
+        if (pFactory)
+        {
+            out() << "Module  : " << zModule << "\n"
+                  << "Threads : " << threads << "\n"
+                  << "Seconds : " << seconds << "\n"
+                  << "Items   : " << items << "\n"
+                  << "Min-Size: " << min_size << "\n"
+                  << "Max-Size: " << max_size << "\n"
+                  << endl;
 
-                if (pFactory)
-                {
-                    out() << "Module  : " << zModule << "\n"
-                          << "Threads : " << threads << "\n"
-                          << "Seconds : " << seconds << "\n"
-                          << "Items   : " << items << "\n"
-                          << "Min-Size: " << min_size << "\n"
-                          << "Max-Size: " << max_size << "\n"
-                          << endl;
+            rv = execute(*pFactory, threads, seconds, items, min_size, max_size);
 
-                    rv = execute(*pFactory, threads, seconds, items, min_size, max_size);
-
-                    delete pFactory;
-                }
-                else
-                {
-                    cerr << "error: Could not initialize factory " << zModule << "." << endl;
-                }
-
-                qc_process_end(QC_INIT_BOTH);
-            }
-            else
-            {
-                cerr << "error: Could not initialize query classifier." << endl;
-            }
-
-            mxs_log_finish();
+            delete pFactory;
         }
         else
         {
-            cerr << "error: Could not initialize log." << endl;
+            cerr << "error: Could not initialize factory " << zModule << "." << endl;
         }
     }
     else

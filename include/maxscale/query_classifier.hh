@@ -352,10 +352,13 @@ struct QC_CACHE_STATS
  *
  * @see qc_process_init qc_thread_init
  */
+// TODO: To be removed.
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,
               const char* plugin_name,
               const char* plugin_args);
+
+bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties);
 
 /**
  * Loads and setups the default query classifier, and performs
@@ -585,3 +588,12 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
  * @return The amount of memory freed.
  */
 int64_t qc_clear_thread_cache();
+
+/**
+ * Set the global query classifier.
+ *
+ * NOTE: Temporary function needed during refactoring.
+ *
+ * @param pClassifier  The query classifier.
+ */
+void qc_set_classifier(QUERY_CLASSIFIER* pClassifier);

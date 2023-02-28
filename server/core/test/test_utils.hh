@@ -125,8 +125,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     atexit(mxs_log_finish);
     std::string old_libdir = mxs::libdir();
     mxs::set_libdir(TEST_DIR "/query_classifier/qc_sqlite/");
-    qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
-    qc_process_init(init_type);
+    qc_setup(NULL);
     maxbase::init();
     watchdog_notifier = new mxb::WatchdogNotifier(0);
     maxscale::RoutingWorker::init(watchdog_notifier);
@@ -134,6 +133,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
 
     add_built_in_module(mariadbprotocol_info());
     add_built_in_module(mariadbauthenticator_info());
+    qc_process_init(init_type);
     preload_module("readconnroute", "server/modules/routing/readconnroute/", mxs::ModuleType::ROUTER);
 }
 

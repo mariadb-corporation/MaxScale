@@ -27,6 +27,8 @@ using std::string;
 
 namespace
 {
+const char DEFAULT_QC_NAME[] = "qc_sqlite";
+
 mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL);
 }
 
@@ -316,7 +318,37 @@ namespace
 {
 int module_init()
 {
-    return MariaDBClientConnection::module_init() ? 0 : 1;
+    int rv = 1;
+
+    const auto& config = mxs::Config::get();
+
+    QUERY_CLASSIFIER* pClassifier = qc_load(DEFAULT_QC_NAME);
+
+    if (pClassifier)
+    {
+        MXB_NOTICE("Classifier loaded.");
+
+        if (pClassifier->qc_setup(config.qc_sql_mode, config.qc_args.c_str()) == QC_RESULT_OK)
+        {
+            qc_set_classifier(pClassifier);
+            rv = 0;
+        }
+        else
+        {
+            qc_unload(pClassifier);
+        }
+    }
+    else
+    {
+        MXB_NOTICE("Could not load classifier.");
+    }
+
+    if (rv == 0)
+    {
+        rv = MariaDBClientConnection::module_init() ? 0 : 1;
+    }
+
+    return rv;
 }
 }
 

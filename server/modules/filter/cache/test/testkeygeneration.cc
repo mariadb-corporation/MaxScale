@@ -22,6 +22,7 @@
 #include "cache.hh"
 #include "cache_storage_api.hh"
 #include "tester.hh"
+#include "../../../../core/test/test_utils.hh"
 
 using namespace std;
 
@@ -125,57 +126,39 @@ int main(int argc, char* argv[])
     StorageFactory* pFactory = nullptr;
     if ((argc == 2) || (argc == 3))
     {
-        mxs::set_libdir("../../../../../query_classifier/qc_sqlite/");
+        init_test_env();
 
-        if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
+        const char* zModule = argv[1];
+        mxs::set_libdir("../storage/storage_inmemory/");
+
+        pFactory = StorageFactory::open(zModule);
+
+        if (pFactory)
         {
-            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL) && qc_process_init(QC_INIT_BOTH))
+            if (argc == 2)
             {
-                const char* zModule = argv[1];
-                mxs::set_libdir("../storage/storage_inmemory/");
-
-                pFactory = StorageFactory::open(zModule);
-
-                if (pFactory)
-                {
-                    if (argc == 2)
-                    {
-                        rv = test(*pFactory, cin);
-                    }
-                    else
-                    {
-                        fstream in(argv[2]);
-
-                        if (in)
-                        {
-                            rv = test(*pFactory, in);
-                        }
-                        else
-                        {
-                            cerr << "error: Could not open " << argv[2] << "." << endl;
-                        }
-                    }
-                }
-                else
-                {
-                    cerr << "error: Could not initialize factory." << endl;
-                }
-
-                qc_process_end(QC_INIT_BOTH);
+                rv = test(*pFactory, cin);
             }
             else
             {
-                cerr << "error: Could not initialize query classifier." << endl;
+                fstream in(argv[2]);
+
+                if (in)
+                {
+                    rv = test(*pFactory, in);
+                }
+                else
+                {
+                    cerr << "error: Could not open " << argv[2] << "." << endl;
+                }
             }
 
-            mxs_log_finish();
+            delete pFactory;
         }
         else
         {
-            cerr << "error: Could not initialize log." << endl;
+            cerr << "error: Could not initialize factory." << endl;
         }
-
-        delete pFactory;
     }
     else
     {
