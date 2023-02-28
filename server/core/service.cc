@@ -1882,15 +1882,9 @@ void Service::add_target(Service* target)
 
 void Service::update_targets(const Monitor& mon)
 {
-    // TODO: ensure that this is only called from MainWorker, even for XpandMon
-    auto& targets = m_data->targets;
-    targets.clear();
-    const auto& servers = mon.active_servers();
-    targets.resize(servers.size());
-    for (size_t i = 0; i < servers.size(); i++)
-    {
-        targets[i] = servers[i]->server;
-    }
+    mxb_assert(mxs::MainWorker::is_current());
+    const auto& servers = mon.active_routing_servers();
+    m_data->targets.assign(servers.begin(), servers.end());
     propagate_target_update();
 }
 
@@ -2287,11 +2281,8 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
 
 void Service::set_cluster(mxs::Monitor* monitor)
 {
-    for (SERVER* server : monitor->real_servers())
-    {
-        m_data->targets.push_back(server);
-    }
-
+    const auto& servers = monitor->active_routing_servers();
+    m_data->targets.assign(servers.begin(), servers.end());
     m_monitor = monitor;
 }
 

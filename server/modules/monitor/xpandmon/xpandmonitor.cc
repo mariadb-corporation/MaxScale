@@ -358,12 +358,6 @@ bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
     return true;
 }
 
-std::vector<SERVER*> XpandMonitor::real_servers() const
-{
-    mxb_assert(mxs::MainWorker::is_current());
-    return m_cluster_servers;
-}
-
 json_t* XpandMonitor::diagnostics() const
 {
     json_t* obj = json_object();

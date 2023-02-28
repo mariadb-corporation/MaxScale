@@ -494,13 +494,6 @@ bool Monitor::post_configure()
     return ok;
 }
 
-void Monitor::set_active_servers(std::vector<MonitorServer*>&& servers)
-{
-    m_servers = std::move(servers);
-    // Update any services which use this monitor as a source of routing targets.
-    active_servers_updated();
-}
-
 mxs::config::Configuration& Monitor::base_configuration()
 {
     return m_settings;
@@ -534,12 +527,6 @@ const char* Monitor::state_string() const
 Monitor::~Monitor()
 {
     m_callable.cancel_dcalls();
-    for (auto server : m_servers)
-    {
-        // TODO: store unique pointers in the array
-        delete server;
-    }
-    m_servers.clear();
 }
 
 /**
@@ -585,18 +572,37 @@ bool Monitor::prepare_servers()
     return claim_ok;
 }
 
+void Monitor::set_active_servers(std::vector<MonitorServer*>&& servers)
+{
+    mxb_assert(!is_running() && is_main_worker());
+    m_servers = std::move(servers);
+    auto n_servers = m_servers.size();
+    m_routing_servers.resize(n_servers);
+    for (size_t i = 0; i < n_servers; i++)
+    {
+        m_routing_servers[i] = m_servers[i]->server;
+    }
+    // Update any services which use this monitor as a source of routing targets.
+    active_servers_updated();
+}
+
 void Monitor::active_servers_updated()
 {
-    // This should either be called when monitor is stopped for configuration change or by the running
-    // monitor.
-    mxb_assert(!is_running() || mxb::Worker::get_current() == m_worker.get());
+    mxb_assert(!is_running() && is_main_worker());
     service_update_targets(*this);
 }
 
 const std::vector<MonitorServer*>& Monitor::active_servers() const
 {
-    mxb_assert(!is_running() || mxb::Worker::get_current() == m_worker.get());
+    // Should only be called by a running monitor.
+    mxb_assert(mxb::Worker::get_current() == m_worker.get());
     return m_servers;
+}
+
+const std::vector<SERVER*>& Monitor::active_routing_servers() const
+{
+    mxb_assert(is_main_worker());
+    return m_routing_servers;
 }
 
 /**
@@ -1555,6 +1561,7 @@ void Monitor::remove_old_journal()
 
 MonitorServer* Monitor::get_monitored_server(SERVER* search_server)
 {
+    mxb_assert(mxs::MainWorker::is_current());
     mxb_assert(search_server);
     for (const auto iter : m_servers)
     {
@@ -1745,20 +1752,10 @@ bool Monitor::server_status_request_waiting() const
     return m_status_change_pending.load(std::memory_order_acquire);
 }
 
-const Monitor::ServerVector& Monitor::servers() const
+const std::vector<SERVER*>& Monitor::configured_servers() const
 {
-    return m_servers;
-}
-
-std::vector<SERVER*> Monitor::real_servers() const
-{
-    return Monitor::configured_servers();
-}
-
-std::vector<SERVER*> Monitor::configured_servers() const
-{
-    mxb_assert(!is_running());
-    return m_settings.servers;
+    mxb_assert(is_main_worker());
+    return m_conf_servers;
 }
 
 namespace journal_fields

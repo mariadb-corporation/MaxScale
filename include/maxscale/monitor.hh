@@ -416,33 +416,16 @@ public:
     const char* name() const;
 
     /**
-     * Get the configured servers for this monitor
-     *
-     * @return The list of servers the monitor was configured with
-     */
-    const ServerVector& servers() const;
-
-    /**
-     * Get the real list of servers that are a part of this cluster
-     *
-     * For dynamic monitors, this is the set of servers that were derived from the initial set of bootstrap
-     * servers. For static monitors, this is the same as the list of servers returned by servers().
-     *
-     * @return The real list of servers that are a part of this cluster. This should be used whenever a set of
-     *         servers is needed for routing or querying purposes.
-     */
-    virtual std::vector<SERVER*> real_servers() const;
-
-    /**
      * Get the list of servers that were configured for this monitor
      *
      * This list is identical to the one given as the `servers` parameter in the configuration file or the
      * `servers` relationship in the JSON representation. For dynamic monitors, this list of servers is not
-     * necessarily actively monitored if they are only used to bootstrap the cluster.
+     * necessarily actively monitored if they are only used to bootstrap the cluster. Should only be called
+     * from the main worker.
      *
      * @return The list of servers this monitor was configured with.
      */
-    std::vector<SERVER*> configured_servers() const;
+    const std::vector<SERVER*>& configured_servers() const;
 
     /**
      * Specification for the common monitor parameters
@@ -576,9 +559,11 @@ public:
      */
     void active_servers_updated();
 
-    const std::vector<MonitorServer*>& active_servers() const;
+    const std::vector<SERVER*>& active_routing_servers() const;
 
 protected:
+
+    const std::vector<MonitorServer*>& active_servers() const;
 
     /**
      * Check if the monitor user can execute a query. The query should be such that it only succeeds if
@@ -760,7 +745,8 @@ protected:
 
     /**
      * Tells the base class which servers are actually monitored. The servers will have their events logged
-     * etc.
+     * etc. Should only be called from MainWorker when monitor is stopped (or otherwise not reading the
+     * array) to prevent concurrency issues.
      *
      * @param servers Monitored servers
      */
@@ -797,7 +783,7 @@ private:
     /**
      * Called by base class whenever configuration has changed. The implementation should generate its
      * own bookkeeping of servers and then call 'set_active_servers' to tell base-class what servers
-     * are actually monitored.
+     * are actually monitored. Only called from MainWorker when monitor is stopped.
      *
      * @param servers Servers in monitor configuration
      */
@@ -868,8 +854,6 @@ private:
     time_t m_journal_max_save_interval {5 * 60};/**< How often to update journal at minimum */
 
     std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
-    std::vector<MonitorServer*>  m_servers;     /** Actively monitored servers. Set by implementation */
-    std::vector<SERVER*>         m_conf_servers;/** Currently configured servers */
 
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
@@ -879,6 +863,15 @@ private:
 
     int64_t          m_loop_called; /**< When was the loop called the last time. */
     std::atomic_long m_ticks {0};   /**< Number of monitor ticks ran. */
+
+    /** Currently configured servers. Only written to and accessed from MainWorker. Changes only when
+     * monitor is stopped for reconfiguration. */
+    std::vector<SERVER*> m_conf_servers;
+    /** Actively monitored servers. Set by implementation during reconfiguration. Read by monitor when
+     * running and also by MainWorker (e.g. diagnostics). */
+    std::vector<MonitorServer*> m_servers;
+    /**< Same as above. Usually accessed by services and only from MainWorker. */
+    std::vector<SERVER*> m_routing_servers;
 
     std::string journal_filepath() const;
     bool        call_run_one_tick();

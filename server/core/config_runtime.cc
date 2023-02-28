@@ -1613,7 +1613,7 @@ bool runtime_destroy_monitor(Monitor* monitor, bool force)
         prepare_for_destruction(monitor);
     }
 
-    if (!monitor->servers().empty() && !force)
+    if (!monitor->configured_servers().empty() && !force)
     {
         MXB_ERROR("Cannot destroy monitor '%s', it is monitoring servers.", monitor->name());
     }

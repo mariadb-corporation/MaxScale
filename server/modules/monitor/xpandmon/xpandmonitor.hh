@@ -74,8 +74,6 @@ public:
     bool softfail(SERVER* pServer, json_t** ppError);
     bool unsoftfail(SERVER* pServer, json_t** ppError);
 
-    std::vector<SERVER*> real_servers() const override final;
-
     json_t* diagnostics() const override;
 
     mxs::config::Configuration& configuration() override final;

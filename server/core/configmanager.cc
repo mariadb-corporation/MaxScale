@@ -1217,16 +1217,14 @@ SERVER* ConfigManager::get_server() const
     SERVER* rval = nullptr;
     auto monitor = MonitorManager::find_monitor(m_cluster.c_str());
     mxb_assert(monitor);
-
-    for (const auto& server : monitor->servers())
+    for (auto* server : monitor->active_routing_servers())
     {
-        if (server->server->is_master())
+        if (server->is_master())
         {
-            rval = server->server;
+            rval = server;
             break;
         }
     }
-
     return rval;
 }
 
