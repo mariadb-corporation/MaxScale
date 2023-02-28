@@ -15,6 +15,7 @@
 #include <maxscale/listener.hh>
 #include "pgauthenticatormodule.hh"
 #include "pgclientconnection.hh"
+#include "pgbackendconnection.hh"
 #include "pgprotocoldata.hh"
 
 
@@ -45,10 +46,7 @@ PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* 
 std::unique_ptr<mxs::BackendConnection>
 PgProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
-    return nullptr;
+    return std::make_unique<PgBackendConnection>(session, server, component);
 }
 
 std::string PgProtocolModule::auth_default() const

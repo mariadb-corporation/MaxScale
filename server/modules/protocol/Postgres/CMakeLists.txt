@@ -1,10 +1,10 @@
 add_library(postgresprotocol SHARED
   pgauthenticatormodule.cc
+  pgbackendconnection.cc
   pgclientconnection.cc
   pgconfiguration.cc
   pgprotocoldata.cc
   pgprotocolmodule.cc
-
   postgresprotocol.cc
   )
 
