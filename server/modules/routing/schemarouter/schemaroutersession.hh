@@ -94,20 +94,20 @@ private:
      */
 
     /** Helper functions */
-    mxs::Target* get_shard_target(GWBUF* buffer, uint32_t qtype);
+    mxs::Target* get_shard_target(const GWBUF& buffer, uint32_t qtype);
     SRBackend*   get_shard_backend(const char* name);
     bool         have_servers();
     bool         handle_default_db();
     void         handle_default_db_response();
     bool         ignore_duplicate_table(std::string_view data) const;
-    mxs::Target* get_query_target(GWBUF* buffer);
-    mxs::Target* get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
+    mxs::Target* get_query_target(const GWBUF& buffer);
+    mxs::Target* get_ps_target(const GWBUF& buffer, uint32_t qtype, qc_query_op_t op);
 
     /** Routing functions */
-    bool         route_session_write(GWBUF* querybuf, uint8_t command);
+    bool         route_session_write(GWBUF&& querybuf, uint8_t command);
     SRBackend*   get_any_backend();
-    bool         write_session_command(SRBackend* backend, mxs::Buffer buffer, uint8_t cmd);
-    mxs::Target* resolve_query_target(GWBUF* pPacket,
+    bool         write_session_command(SRBackend* backend, GWBUF&& buffer, uint8_t cmd);
+    mxs::Target* resolve_query_target(const GWBUF& pPacket,
                                       uint32_t type,
                                       uint8_t command,
                                       enum route_target& route_target);
@@ -125,7 +125,7 @@ private:
     void                 handle_mapping_reply(SRBackend* bref, const mxs::Reply& reply);
     std::string          get_cache_key() const;
     void                 write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg);
-    bool                 change_current_db(GWBUF* buf, uint8_t cmd);
+    bool                 change_current_db(const GWBUF& buf, uint8_t cmd);
     mxs::Target*         get_valid_target(const std::set<mxs::Target*>& candidates);
 
     template<class T>
@@ -145,21 +145,21 @@ private:
     bool                     m_closed;          /**< True if session closed */
     MariaDBClientConnection* m_client {nullptr};/**< Client connection */
 
-    MYSQL_session*         m_mysql_session; /**< Session client data (username, password, SHA1). */
-    SRBackendList          m_backends;      /**< Backend references */
-    Config::Values         m_config;        /**< Session specific configuration */
-    SchemaRouter*          m_router;        /**< The router instance */
-    std::string            m_key;           /**< Shard cache key */
-    Shard                  m_shard;         /**< Database to server mapping */
-    std::string            m_connect_db;    /**< Database the user was trying to connect to */
-    std::string            m_current_db;    /**< Current active database */
-    int                    m_state;         /**< Initialization state bitmask */
-    std::list<mxs::Buffer> m_queue;         /**< Query that was received before the session was ready */
-    Stats                  m_stats;         /**< Statistics for this router */
-    mxs::Target*           m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
-    SRBackend*             m_sescmd_replier {nullptr};
-    int                    m_num_init_db = 0;
-    mxb::Worker::DCId      m_dcid {0};
-    SRBackend*             m_prev_target {nullptr};
+    MYSQL_session*    m_mysql_session;  /**< Session client data (username, password, SHA1). */
+    SRBackendList     m_backends;       /**< Backend references */
+    Config::Values    m_config;         /**< Session specific configuration */
+    SchemaRouter*     m_router;         /**< The router instance */
+    std::string       m_key;            /**< Shard cache key */
+    Shard             m_shard;          /**< Database to server mapping */
+    std::string       m_connect_db;     /**< Database the user was trying to connect to */
+    std::string       m_current_db;     /**< Current active database */
+    int               m_state;          /**< Initialization state bitmask */
+    std::list<GWBUF>  m_queue;          /**< Query that was received before the session was ready */
+    Stats             m_stats;          /**< Statistics for this router */
+    mxs::Target*      m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
+    SRBackend*        m_sescmd_replier {nullptr};
+    int               m_num_init_db = 0;
+    mxb::Worker::DCId m_dcid {0};
+    SRBackend*        m_prev_target {nullptr};
 };
 }
