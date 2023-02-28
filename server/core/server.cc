@@ -1215,6 +1215,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
+    mxb_assert(buffer);
     int32_t rval = 0;
 
     const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
@@ -1283,6 +1284,7 @@ bool ServerEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mx
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
+    mxb_assert(buffer);
     down.push_back(this);
 
     m_query_time.stop();    // always measure

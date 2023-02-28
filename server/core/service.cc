@@ -1582,6 +1582,7 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
+    mxb_assert(buffer);
 
     // Track the number of packets sent through this service. Although the traffic can consist of multiple
     // packets in some cases, most of the time the packet count statistic is close to the real packet count.
@@ -1594,6 +1595,7 @@ bool ServiceEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const m
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
+    mxb_assert(buffer);
     return m_router_session->clientReply(std::move(buffer), down, reply);
 }
 

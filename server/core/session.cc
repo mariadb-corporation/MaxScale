@@ -1265,6 +1265,8 @@ void Session::dump_session_log()
 
 bool Session::routeQuery(GWBUF&& buffer)
 {
+    mxb_assert(buffer);
+
     if (std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
                     std::mem_fn(&mxs::BackendConnection::is_idle)))
     {
@@ -1301,6 +1303,7 @@ bool Session::routeQuery(GWBUF&& buffer)
 bool Session::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(!m_routing);
+    mxb_assert(buffer);
     return m_tail->clientReply(std::move(buffer), down, reply);
 }
 
