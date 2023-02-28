@@ -206,8 +206,8 @@ private:
 
     AvroSession(Avro* instance, MXS_SESSION* session);
 
-    int  do_registration(GWBUF* data);
-    void process_command(GWBUF* queue);
+    int  do_registration(const GWBUF& data);
+    void process_command(GWBUF&& queue);
     void send_gtid_info(gtid_pos_t* gtid_pos);
     void set_current_gtid(json_t* row);
     bool stream_json();

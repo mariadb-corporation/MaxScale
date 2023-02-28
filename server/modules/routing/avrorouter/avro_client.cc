@@ -46,9 +46,8 @@ enum
     AVRO_CLIENT_ERRORED,
 };
 
-bool AvroSession::routeQuery(GWBUF&& buffer)
+bool AvroSession::routeQuery(GWBUF&& queue)
 {
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     int rval = 1;
 
     switch (m_state)
@@ -87,7 +86,7 @@ bool AvroSession::routeQuery(GWBUF&& buffer)
         }
 
         /* Process command from client */
-        process_command(queue);
+        process_command(std::move(queue));
 
         break;
 
@@ -96,8 +95,6 @@ bool AvroSession::routeQuery(GWBUF&& buffer)
         rval = 0;
         break;
     }
-
-    gwbuf_free(queue);
 
     return rval;
 }
@@ -109,12 +106,12 @@ bool AvroSession::routeQuery(GWBUF&& buffer)
  *
  * @return 1 on successful registration, 0 on error
  */
-int AvroSession::do_registration(GWBUF* data)
+int AvroSession::do_registration(const GWBUF& data)
 {
     const char reg_uuid[] = "REGISTER UUID=";
     const int reg_uuid_len = strlen(reg_uuid);
-    int data_len = gwbuf_link_length(data) - reg_uuid_len;
-    char* request = (char*)GWBUF_DATA(data);
+    int data_len = data.length() - reg_uuid_len;
+    char* request = (char*)data.data();
     int ret = 0;
 
     if (strstr(request, reg_uuid) != NULL)
@@ -311,20 +308,17 @@ std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file)
  * @param data Buffer containing the command
  *
  */
-void AvroSession::process_command(GWBUF* queue)
+void AvroSession::process_command(GWBUF&& queue)
 {
     const char req_data[] = "REQUEST-DATA";
     const size_t req_data_len = sizeof(req_data) - 1;
-    size_t buflen = gwbuf_length(queue);
-    uint8_t data[buflen + 1];
-    queue->copy_data(0, buflen, data);
-    data[buflen] = '\0';
-    char* command_ptr = strstr((char*)data, req_data);
+    queue.add_byte(0x0);
+    char* command_ptr = strstr((char*)queue.data(), req_data);
 
     if (command_ptr != NULL)
     {
         char* file_ptr = command_ptr + req_data_len;
-        int data_len = gwbuf_link_length(queue) - req_data_len;
+        int data_len = queue.length() - req_data_len;
 
         if (data_len > 1)
         {
@@ -361,8 +355,7 @@ void AvroSession::process_command(GWBUF* queue)
     else
     {
         const char err[] = "ERR: Unknown command\n";
-        GWBUF* reply = gwbuf_alloc_and_load(sizeof(err), err);
-        m_client->write(reply);
+        m_client->write(GWBUF((const uint8_t*)err, sizeof(err)));
     }
 }
 
