@@ -26,7 +26,7 @@ extern char* modutil_get_SQL(GWBUF*);
 
 GWBUF* modutil_create_query(const char* query);
 
-GWBUF* modutil_create_ok();
+GWBUF  modutil_create_ok();
 GWBUF* modutil_create_eof(uint8_t sequence);
 
 /**

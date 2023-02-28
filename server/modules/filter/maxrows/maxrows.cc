@@ -128,7 +128,7 @@ bool MaxRowsSession::clientReply(GWBUF&& buf, const mxs::ReplyRoute& down, const
                 break;
 
             case MaxRowsConfig::Mode::OK:
-                m_buffer.reset(modutil_create_ok());
+                m_buffer.reset(mxs::gwbuf_to_gwbufptr(modutil_create_ok()));
                 m_collect = false;
                 break;
 

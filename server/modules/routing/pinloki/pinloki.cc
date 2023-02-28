@@ -582,7 +582,7 @@ void Pinloki::reset_slave()
     m_master_config = MasterConfig();
 }
 
-GWBUF* Pinloki::show_slave_status(bool all) const
+GWBUF Pinloki::show_slave_status(bool all) const
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -691,7 +691,7 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     }
 
 
-    return rset->as_buffer().release();
+    return mxs::gwbufptr_to_gwbuf(rset->as_buffer().release());
 }
 
 void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)

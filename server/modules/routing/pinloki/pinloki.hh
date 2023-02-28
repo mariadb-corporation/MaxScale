@@ -72,7 +72,7 @@ public:
     std::string   start_slave();
     void          stop_slave();
     void          reset_slave();
-    GWBUF*        show_slave_status(bool all) const;
+    GWBUF         show_slave_status(bool all) const;
     mxq::GtidList gtid_io_pos() const;
     void          set_gtid_slave_pos(const maxsql::GtidList& gtid);
 

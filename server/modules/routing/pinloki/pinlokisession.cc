@@ -66,25 +66,23 @@ GWBUF create_resultset(const std::vector<std::string>& columns, const std::vecto
     return mxs::gwbufptr_to_gwbuf(rset->as_buffer().release());
 }
 
-GWBUF* create_slave_running_error()
+ GWBUF create_slave_running_error()
 {
-    return mariadb::create_error_packet_ptr(
+    return mariadb::create_error_packet(
         1, 1198, "HY000",
         "This operation cannot be performed as you have a running replica; run STOP SLAVE first");
 }
 
-GWBUF* create_select_master_error()
+GWBUF create_select_master_error()
 {
-    return mariadb::create_error_packet_ptr(
+    return mariadb::create_error_packet(
         1, 1198, "HY000",
         "Manual master configuration is not possible when `select_master=true` is used.");
 }
 
-GWBUF* create_change_master_error(const std::string& err)
+GWBUF create_change_master_error(const std::string& err)
 {
-    return mariadb::create_error_packet_ptr(
-        1, 1198, "HY000",
-        err.c_str());
+    return mariadb::create_error_packet(1, 1198, "HY000", err.c_str());
 }
 }
 
@@ -106,13 +104,11 @@ PinlokiSession::~PinlokiSession()
     }
 }
 
-bool PinlokiSession::routeQuery(GWBUF&& packet)
+bool PinlokiSession::routeQuery(GWBUF&& buf)
 {
     int rval = 0;
-    auto cmd = mxs_mysql_get_command(packet);
-    GWBUF* response = nullptr;
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
-    mxs::Buffer buf(pPacket);
+    auto cmd = mxs_mysql_get_command(buf);
+    GWBUF response;
 
     switch (cmd)
     {
@@ -123,7 +119,7 @@ bool PinlokiSession::routeQuery(GWBUF&& packet)
         break;
 
     case MXS_COM_XPAND_REPL:
-        response = mariadb::create_error_packet_ptr(1, 1236, "HY000",
+        response = mariadb::create_error_packet(1, 1236, "HY000",
                                                     "XPand replication is not supported.");
         rval = 1;
         break;
@@ -152,7 +148,7 @@ bool PinlokiSession::routeQuery(GWBUF&& packet)
         catch (const GtidNotFoundError& err)
         {
             MXB_SINFO("Could not find GTID: " << err.what());
-            response = mariadb::create_error_packet_ptr(1, 1236, "HY000", err.what());
+            response = mariadb::create_error_packet(1, 1236, "HY000", err.what());
             rval = 1;
         }
         catch (const BinlogReadError& err)
@@ -168,7 +164,7 @@ bool PinlokiSession::routeQuery(GWBUF&& packet)
     case MXS_COM_QUERY:
         try
         {
-            const auto& sql = buf.get()->get_sql();
+            const auto& sql = buf.get_sql();
             MXB_DEBUG("COM_QUERY: %s", sql.c_str());
             parser::parse(sql, this);
             rval = 1;
@@ -193,7 +189,7 @@ bool PinlokiSession::routeQuery(GWBUF&& packet)
 
     if (response)
     {
-        set_response(mxs::gwbufptr_to_gwbuf(response));
+        set_response(std::move(response));
         rval = 1;
     }
 
@@ -358,7 +354,7 @@ void PinlokiSession::select(const std::vector<std::string>& fields, const std::v
 
 void PinlokiSession::set(const std::string& key, const std::string& value)
 {
-    GWBUF* buf = nullptr;
+    GWBUF buf;
 
     if (key == "@slave_connect_state")
     {
@@ -369,7 +365,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
             const char* const msg = "Replica trying to connect with "
                                     "invalid GTID (@@slave_connect_state)";
             MXB_WARNING(msg);
-            buf = mariadb::create_error_packet_ptr(1, 1941, "HY000", msg);
+            buf = mariadb::create_error_packet(1, 1941, "HY000", msg);
         }
         else
         {
@@ -388,12 +384,12 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
 
         if (!gtid_list.is_valid())
         {
-            buf = mariadb::create_error_packet_ptr(1, 1941, "HY000",
+            buf = mariadb::create_error_packet(1, 1941, "HY000",
                                                    "Could not parse GTID");
         }
         else if (m_router->is_slave_running())
         {
-            buf = mariadb::create_error_packet_ptr(
+            buf = mariadb::create_error_packet(
                 1, 1198, "HY000",
                 "This operation cannot be performed as you have a running replica;"
                 " run STOP SLAVE first");
@@ -410,12 +406,12 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         buf = modutil_create_ok();
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(buf));
+    set_response(std::move(buf));
 }
 
 void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
 {
-    GWBUF* buf = nullptr;
+    GWBUF buf;
 
     if (m_router->is_slave_running())
     {
@@ -434,12 +430,12 @@ void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
         }
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(buf));
+    set_response(std::move(buf));
 }
 
 void PinlokiSession::start_slave()
 {
-    GWBUF* buf = nullptr;
+    GWBUF buf;
 
     std::string err_str = m_router->start_slave();
 
@@ -450,12 +446,12 @@ void PinlokiSession::start_slave()
     else
     {
         // Slave not configured
-        buf = mariadb::create_error_packet_ptr(
+        buf = mariadb::create_error_packet(
             1, 1200, "HY000",
             err_str.c_str());
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(buf));
+    set_response(std::move(buf));
 }
 
 void PinlokiSession::stop_slave()
@@ -465,12 +461,12 @@ void PinlokiSession::stop_slave()
         m_router->stop_slave();
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(modutil_create_ok()));
+    set_response(modutil_create_ok());
 }
 
 void PinlokiSession::reset_slave()
 {
-    GWBUF* buf = nullptr;
+    GWBUF buf;
 
     if (m_router->is_slave_running())
     {
@@ -486,12 +482,12 @@ void PinlokiSession::reset_slave()
         buf = modutil_create_ok();
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(buf));
+    set_response(std::move(buf));
 }
 
 void PinlokiSession::show_slave_status(bool all)
 {
-    set_response(mxs::gwbufptr_to_gwbuf(m_router->show_slave_status(all)));
+    set_response(m_router->show_slave_status(all));
 }
 
 void PinlokiSession::show_master_status()
@@ -589,12 +585,12 @@ void PinlokiSession::purge_logs(const std::string& up_to)
     switch (purge_binlogs(m_router->inventory(), up_to))
     {
     case PurgeResult::Ok:
-        set_response(mxs::gwbufptr_to_gwbuf(modutil_create_ok()));
+        set_response(modutil_create_ok());
         break;
 
     case PurgeResult::PartialPurge:
         MXB_SINFO("Could not purge all requested binlogs");
-        set_response(mxs::gwbufptr_to_gwbuf(modutil_create_ok()));
+        set_response(modutil_create_ok());
         break;
 
     case PurgeResult::UpToFileNotFound:

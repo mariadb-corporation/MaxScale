@@ -103,7 +103,7 @@ GWBUF* modutil_create_query(const char* query)
 }
 
 // See: https://mariadb.com/kb/en/library/ok_packet/
-GWBUF* modutil_create_ok()
+GWBUF modutil_create_ok()
 {
     uint8_t ok[] =
     {0x7, 0x0, 0x0, 0x1,// packet header
@@ -114,7 +114,7 @@ GWBUF* modutil_create_ok()
      0x0, 0x0           // warnings
     };
 
-    return gwbuf_alloc_and_load(sizeof(ok), ok);
+    return GWBUF(ok, sizeof(ok));
 }
 
 // See: https://mariadb.com/kb/en/library/eof_packet/
