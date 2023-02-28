@@ -48,8 +48,8 @@ private:
     HintRouterSession(const HintRouterSession&);            // denied
     HintRouterSession& operator=(const HintRouterSession&); // denied
 private:
-    bool route_by_hint(GWBUF* pPacket, const Hint& current_hint, bool ignore_errors);
-    bool route_to_slave(GWBUF* pPacket, bool print_errors);
+    bool route_by_hint(const GWBUF& packet, const Hint& current_hint, bool ignore_errors);
+    bool route_to_slave(GWBUF&& packet, bool print_errors);
     void update_connections();
 
     HintRouter*    m_router;

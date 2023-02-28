@@ -20,34 +20,6 @@
 
 #include "hintrouter.hh"
 
-namespace
-{
-/**
- * Writer is a function object that writes a clone of a provided GWBUF,
- * to each dcb it is called with.
- */
-class Writer : std::unary_function<HintRouterSession::MapElement, bool>
-{
-public:
-    Writer(GWBUF* pPacket)
-        : m_pPacket(pPacket)
-    {
-    }
-
-    bool operator()(HintRouterSession::MapElement& elem)
-    {
-        bool rv = false;
-        auto endpoint = elem.second;
-        HR_DEBUG("Writing packet to %p %s.", endpoint, endpoint->target()->name());
-        rv = endpoint->routeQuery(m_pPacket->shallow_clone());
-        return rv;
-    }
-
-private:
-    GWBUF* m_pPacket;
-};
-}
-
 HintRouterSession::HintRouterSession(MXS_SESSION* pSession,
                                      HintRouter* pRouter,
                                      const BackendMap& backends)
@@ -74,16 +46,15 @@ HintRouterSession::~HintRouterSession()
 
 bool HintRouterSession::routeQuery(GWBUF&& packet)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     HR_ENTRY();
 
     bool success = false;
 
-    const auto& hints = pPacket->hints;
+    const auto& hints = packet.hints;
     for (auto it = hints.begin(); !success && it != hints.end(); it++)
     {
         // Look for matching hint.
-        success = route_by_hint(pPacket, *it, false);
+        success = route_by_hint(packet, *it, false);
     }
 
     if (!success)
@@ -95,13 +66,9 @@ bool HintRouterSession::routeQuery(GWBUF&& packet)
         {
             default_hint.data = m_router->get_default_server();
         }
-        success = route_by_hint(pPacket, default_hint, true);
+        success = route_by_hint(std::move(packet), default_hint, true);
     }
 
-    if (!success)
-    {
-        gwbuf_free(pPacket);
-    }
     return success;
 }
 
@@ -130,7 +97,7 @@ bool HintRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down,
     return rc;
 }
 
-bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool print_errors)
+bool HintRouterSession::route_by_hint(const GWBUF& packet, const Hint& hint, bool print_errors)
 {
     using Type = Hint::Type;
     bool success = false;
@@ -156,7 +123,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
             if (master_ok)
             {
                 HR_DEBUG("Writing packet to primary: '%s'.", m_master->target()->name());
-                success = m_master->routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+                success = m_master->routeQuery(packet.shallow_clone());
                 if (success)
                 {
                     m_router->m_routed_to_master++;
@@ -174,7 +141,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
         break;
 
     case Type::ROUTE_TO_SLAVE:
-        success = route_to_slave(pPacket, print_errors);
+        success = route_to_slave(packet.shallow_clone(), print_errors);
         break;
 
     case Type::ROUTE_TO_NAMED_SERVER:
@@ -184,7 +151,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
             if (iter != m_backends.end())
             {
                 HR_DEBUG("Writing packet to %s.", iter->second.server()->name());
-                success = iter->second->routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+                success = iter->second->routeQuery(packet.shallow_clone());
                 if (success)
                 {
                     m_router->m_routed_to_named++;
@@ -208,8 +175,14 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
     case Type::ROUTE_TO_ALL:
         {
             HR_DEBUG("Writing packet to %lu backends.", m_backends.size());
-            BackendMap::size_type n_writes =
-                std::count_if(m_backends.begin(), m_backends.end(), Writer(pPacket));
+            auto do_write = [&packet](auto& elem){
+                auto endpoint = elem.second;
+                HR_DEBUG("Writing packet to %p %s.", endpoint, endpoint->target()->name());
+                return endpoint->routeQuery(packet.shallow_clone());
+            };
+
+            BackendMap::size_type n_writes = std::count_if(m_backends.begin(), m_backends.end(), do_write);
+
             if (n_writes != 0)
             {
                 m_surplus_replies = n_writes - 1;
@@ -218,7 +191,6 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
             success = (n_writes == size);
             if (success)
             {
-                gwbuf_free(pPacket);
                 m_router->m_routed_to_all++;
             }
             else
@@ -241,7 +213,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
     return success;
 }
 
-bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
+bool HintRouterSession::route_to_slave(GWBUF&& packet, bool print_errors)
 {
     bool success = false;
     // Find a valid slave
@@ -256,7 +228,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
             if (candidate->target()->is_slave())
             {
                 HR_DEBUG("Writing packet to replica: '%s'.", candidate->target()->name());
-                success = candidate->routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+                success = candidate->routeQuery(packet.shallow_clone());
                 if (success)
                 {
                     break;
@@ -284,7 +256,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
             {
                 auto candidate = m_slaves.at(curr % size);
                 HR_DEBUG("Writing packet to slave: '%s'.", candidate->target()->name());
-                success = candidate->routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+                success = candidate->routeQuery(packet.shallow_clone());
                 if (success)
                 {
                     break;
