@@ -62,7 +62,7 @@ public:
      *
      * @return The resultset as a mxs::Buffer
      */
-    mxs::Buffer as_buffer() const;
+    GWBUF as_buffer() const;
 
 private:
     std::vector<std::string>              m_columns;

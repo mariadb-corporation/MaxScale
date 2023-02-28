@@ -691,7 +691,7 @@ GWBUF Pinloki::show_slave_status(bool all) const
     }
 
 
-    return mxs::gwbufptr_to_gwbuf(rset->as_buffer().release());
+    return rset->as_buffer();
 }
 
 void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)

@@ -819,7 +819,7 @@ bool SchemaRouterSession::send_shards()
         }
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(set->as_buffer().release()));
+    set_response(set->as_buffer());
 
     return true;
 }
@@ -1398,7 +1398,7 @@ void SchemaRouterSession::send_databases()
         set->add_row({name});
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(set->as_buffer().release()));
+    set_response(set->as_buffer());
 }
 
 mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)

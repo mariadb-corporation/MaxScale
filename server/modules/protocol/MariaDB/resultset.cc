@@ -157,25 +157,35 @@ void ResultSet::add_column(const std::string& name, const std::string& value)
     }
 }
 
-mxs::Buffer ResultSet::as_buffer() const
+GWBUF ResultSet::as_buffer() const
 {
-    mxs::Buffer buf;
-    buf.append(create_fieldcount(m_columns.size()));
+    std::vector<Data> buffers;
+    buffers.push_back(create_fieldcount(m_columns.size()));
 
     uint8_t seqno = 2;      // The second packet after field count
 
     for (const auto& c : m_columns)
     {
-        buf.append(create_columndef(c, seqno++));
+        buffers.push_back(create_columndef(c, seqno++));
     }
 
-    buf.append(create_eof(seqno++));
+    buffers.push_back(create_eof(seqno++));
 
     for (const auto& r : m_rows)
     {
-        buf.append(create_row(r, seqno++));
+        buffers.push_back(create_row(r, seqno++));
     }
 
-    buf.append(create_eof(seqno));
+    buffers.push_back(create_eof(seqno));
+
+    GWBUF buf;
+
+    for (const auto& b : buffers)
+    {
+        auto [ptr, _] = buf.prepare_to_write(b.size());
+        memcpy(ptr, b.data(), b.size());
+        buf.write_complete(b.size());
+    }
+
     return buf;
 }

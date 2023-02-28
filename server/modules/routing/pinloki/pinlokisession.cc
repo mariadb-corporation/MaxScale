@@ -63,7 +63,7 @@ GWBUF create_resultset(const std::vector<std::string>& columns, const std::vecto
         rset->add_row(row);
     }
 
-    return mxs::gwbufptr_to_gwbuf(rset->as_buffer().release());
+    return rset->as_buffer();
 }
 
  GWBUF create_slave_running_error()
@@ -501,7 +501,7 @@ void PinlokiSession::show_master_status()
         rset->add_row({a.first, a.second, "", ""});
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(rset->as_buffer().release()));
+    set_response(rset->as_buffer());
 }
 
 void PinlokiSession::show_binlogs()
@@ -514,7 +514,7 @@ void PinlokiSession::show_binlogs()
         rset->add_row({a.first, a.second});
     }
 
-    set_response(mxs::gwbufptr_to_gwbuf(rset->as_buffer().release()));
+    set_response(rset->as_buffer());
 }
 
 void PinlokiSession::show_variables(const std::string& like)
