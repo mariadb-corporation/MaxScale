@@ -38,7 +38,7 @@ PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* 
 
     pSession->set_protocol_data(std::move(sProtocol_data));
 
-    auto sClient_connection = std::make_unique<PgClientConnection>();
+    auto sClient_connection = std::make_unique<PgClientConnection>(pSession, pComponent);
 
     return sClient_connection;
 }

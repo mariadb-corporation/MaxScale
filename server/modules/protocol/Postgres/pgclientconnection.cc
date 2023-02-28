@@ -14,15 +14,24 @@
 #include "pgclientconnection.hh"
 #include <maxscale/dcb.hh>
 
+PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent)
+    : m_session(pSession)
+    , m_down(pComponent)
+{
+}
+
 void PgClientConnection::ready_for_reading(DCB* dcb)
 {
     mxb_assert(m_dcb == dcb);
 
-    // TODO: Depending on state (authentication not yet done, in process, or done, etc.)
-    // TODO: do whatever should be done.
-
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
+    if (m_session->state() == MXS_SESSION::State::CREATED && !m_session->start())
+    {
+        m_session->kill();
+    }
+    else if (auto [ok, buf] = m_dcb->read(0, 0); ok && buf)
+    {
+        m_down->routeQuery(std::move(buf));
+    }
 }
 
 void PgClientConnection::write_ready(DCB* dcb)
@@ -37,28 +46,24 @@ void PgClientConnection::write_ready(DCB* dcb)
 
 void PgClientConnection::error(DCB* dcb)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
+    // TODO: Add some logging in case we didn't expect this
+    m_session->kill();
 }
 
 void PgClientConnection::hangup(DCB* dcb)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
+    // TODO: Add some logging in case we didn't expect this
+    m_session->kill();
 }
 
 int32_t PgClientConnection::write(GWBUF* buffer)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-    return 0;
+    return m_dcb->writeq_append(buffer);
 }
 
 bool PgClientConnection::write(GWBUF&& buffer)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-    return 0;
+    return m_dcb->writeq_append(std::move(buffer));
 }
 
 bool PgClientConnection::init_connection()
@@ -69,29 +74,23 @@ bool PgClientConnection::init_connection()
 
 void PgClientConnection::finish_connection()
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
+    // TODO: Do something?
 }
 
 bool PgClientConnection::clientReply(GWBUF&& buffer,
                                      mxs::ReplyRoute& down,
                                      const mxs::Reply& reply)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-    return false;
+    return write(std::move(buffer));
 }
 
 bool PgClientConnection::safe_to_restart() const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-    return true;
+    // TODO: Add support for restarting
+    return false;
 }
 
 size_t PgClientConnection::sizeof_buffers() const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
     return 0;
 }

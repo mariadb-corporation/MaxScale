@@ -19,33 +19,21 @@ PgProtocolData::~PgProtocolData()
 
 bool PgProtocolData::is_trx_starting() const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
     return false;
 }
 
 bool PgProtocolData::is_trx_active() const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
     return false;
 }
 
 bool PgProtocolData::is_trx_read_only() const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
     return false;
 }
 
 bool PgProtocolData::is_trx_ending() const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
     return false;
 }
 

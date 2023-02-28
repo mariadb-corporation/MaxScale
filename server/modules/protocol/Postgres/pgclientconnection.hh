@@ -15,13 +15,12 @@
 
 #include "postgresprotocol.hh"
 #include <maxscale/protocol2.hh>
+#include <maxscale/session.hh>
 
 class PgClientConnection : public mxs::ClientConnectionBase
 {
 public:
-    PgClientConnection()
-    {
-    }
+    PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent);
 
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;
@@ -41,4 +40,8 @@ public:
 
     // mxs::ClientConnectionBase
     size_t sizeof_buffers() const override;
+
+private:
+    MXS_SESSION*    m_session;
+    mxs::Component* m_down;
 };
