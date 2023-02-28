@@ -57,6 +57,10 @@
   key has been modified. As a result, the query history, snippets, and user
   preferences settings are restored to their default values.
 
+For more details, please refer to:
+
+* [MariaDB MaxScale 23.02.0 Release Notes](Release-Notes/MaxScale-23.02.0-Release-Notes.md)
+
 ## MariaDB MaxScale 22.08
 
 * Sessions can now be restarted so that added server are taken into use.
