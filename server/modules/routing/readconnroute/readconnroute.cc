@@ -373,19 +373,17 @@ bool RCRSession::connection_is_valid() const
 bool RCRSession::routeQuery(GWBUF&& buffer)
 {
     uint8_t mysql_command = mxs_mysql_get_command(buffer);
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
 
     if (!connection_is_valid())
     {
         log_closed_session(mysql_command, m_backend->target());
-        gwbuf_free(queue);
         return 0;
     }
 
     MXB_INFO("Routed [%s] to '%s' %s",
              STRPACKETTYPE(mysql_command),
              m_backend->target()->name(),
-             queue->get_sql().c_str());
+             buffer.get_sql().c_str());
 
     m_query_timer.start_interval();
 
@@ -403,7 +401,7 @@ bool RCRSession::routeQuery(GWBUF&& buffer)
 
     ++m_session_queries;
 
-    return m_backend->routeQuery(mxs::gwbufptr_to_gwbuf(queue));
+    return m_backend->routeQuery(std::move(buffer));
 }
 
 bool RCRSession::clientReply(GWBUF&& packet,
