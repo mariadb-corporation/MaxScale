@@ -909,7 +909,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         m_session_data->next_trx_mode = m_session_data->default_trx_mode;
     }
 
-    if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
+    if (mxs_mysql_get_command(*packetbuf) == MXS_COM_QUERY)
     {
         bool use_qc = rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION);
         const auto parser_type = use_qc ? QC_TRX_PARSE_USING_QC : QC_TRX_PARSE_USING_PARSER;
@@ -1248,7 +1248,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
 bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
 {
     bool recording = false;
-    uint8_t cmd = mxs_mysql_get_command(&buffer);
+    uint8_t cmd = mxs_mysql_get_command(buffer);
 
     if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
     {
@@ -2345,7 +2345,7 @@ void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
     MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' succeeded on MaxScale but "
                 "returned (0x%0hhx) on backends: %s",
                 orig_auth_data->user.c_str(), curr_auth_data->user.c_str(),
-                mxs_mysql_get_command(buffer), mxs::extract_error(buffer).c_str());
+                mxs_mysql_get_command(*buffer), mxs::extract_error(buffer).c_str());
 
     // Restore original auth data from backup.
     curr_auth_data = move(orig_auth_data);

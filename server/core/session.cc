@@ -788,7 +788,7 @@ void get_cmd_and_stmt(const GWBUF& buffer, const char** ppCmd, const char** ppSt
 
     if (!sql.empty())
     {
-        auto cmd = mxs_mysql_get_command(&buffer);
+        auto cmd = mxs_mysql_get_command(buffer);
         *ppCmd = STRPACKETTYPE(cmd);
         *ppStmt = sql.c_str();
         *pLen = sql.length();

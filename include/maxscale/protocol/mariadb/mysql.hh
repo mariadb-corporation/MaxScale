@@ -440,7 +440,7 @@ bool mxs_mysql_is_ps_command(uint8_t cmd);
  *
  * @return The command byte, or MXS_COM_UNDEFINED if packet does not have a payload.
  */
-uint8_t mxs_mysql_get_command(const GWBUF* buffer);
+uint8_t mxs_mysql_get_command(const GWBUF& buffer);
 
 /**
  * @brief Extract the ID from a COM_STMT command

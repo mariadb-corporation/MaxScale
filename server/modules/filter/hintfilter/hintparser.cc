@@ -413,7 +413,7 @@ std::vector<Hint> HintSession::process_hints(GWBUF* data)
 {
     HintParser::HintVector hints;
     mxs::Buffer buffer(data);
-    uint8_t cmd = mxs_mysql_get_command(buffer.get());
+    uint8_t cmd = mxs_mysql_get_command(*buffer.get());
 
     if (cmd == MXS_COM_QUERY)
     {

@@ -228,7 +228,7 @@ void RWSplitSession::trx_replay_next_stmt()
     {
         // More statements to replay, pop the oldest one and execute it
         GWBUF buf = m_replayed_trx.pop_stmt();
-        const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(&buf));
+        const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
         MXB_INFO("Replaying %s: %s", cmd, buf.get_sql().c_str());
         retry_query(std::move(buf), 0);
     }
@@ -334,7 +334,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
 
                 if (m_current_query)
                 {
-                    const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(&m_current_query));
+                    const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(m_current_query));
                     MXB_INFO("Adding %s to trx: %s", cmd, m_current_query.get_sql().c_str());
 
                     // Add the statement to the transaction once the first part of the result is received.
@@ -750,7 +750,7 @@ bool RWSplitSession::start_trx_replay()
             {
                 // Pop the first statement and start replaying the transaction
                 GWBUF buf = m_replayed_trx.pop_stmt();
-                const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(&buf));
+                const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
                 MXB_INFO("Replaying %s: %s", cmd, buf.get_sql().c_str());
                 retry_query(std::move(buf), 1);
             }

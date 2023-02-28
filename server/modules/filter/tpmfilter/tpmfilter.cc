@@ -287,7 +287,7 @@ TpmSession::~TpmSession()
 bool TpmSession::routeQuery(GWBUF&& buffer)
 {
     GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
-    if (m_active && mxs_mysql_get_command(queue) == MXS_COM_QUERY)
+    if (m_active && mxs_mysql_get_command(*queue) == MXS_COM_QUERY)
     {
         const auto& sql = queue->get_sql();
 

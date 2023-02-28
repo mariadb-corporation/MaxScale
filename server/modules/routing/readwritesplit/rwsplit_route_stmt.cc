@@ -1096,7 +1096,7 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
 
     MXB_INFO("Route query to %s: %s <", target == m_current_master ? "primary" : "replica", target->name());
 
-    uint8_t cmd = mxs_mysql_get_command(&buffer);
+    uint8_t cmd = mxs_mysql_get_command(buffer);
 
     bool attempting_causal_read = false;
 

@@ -647,7 +647,7 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
 
 static inline bool auth_change_requested(const GWBUF& buf)
 {
-    return mxs_mysql_get_command(&buf) == MYSQL_REPLY_AUTHSWITCHREQUEST
+    return mxs_mysql_get_command(buf) == MYSQL_REPLY_AUTHSWITCHREQUEST
            && buf.length() > MYSQL_EOF_PACKET_LEN;
 }
 
@@ -1059,7 +1059,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
     }
     else
     {
-        int cmd = mxs_mysql_get_command(&buffer);
+        int cmd = mxs_mysql_get_command(buffer);
 
         if (m_state == State::READ_CHANGE_USER)
         {
@@ -1121,7 +1121,7 @@ void MariaDBBackendConnection::read_com_ping_response()
     }
     else
     {
-        mxb_assert(mxs_mysql_get_command(&buffer) == MYSQL_REPLY_OK);
+        mxb_assert(mxs_mysql_get_command(buffer) == MYSQL_REPLY_OK);
         // Route any packets that were received while we were pinging the backend
         m_state = m_delayed_packets.empty() ? State::ROUTING : State::SEND_DELAYQ;
     }
@@ -1226,7 +1226,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
                 return m_dcb->writeq_append(std::move(queue));
             }
 
-            uint8_t cmd = mxs_mysql_get_command(&queue);
+            uint8_t cmd = mxs_mysql_get_command(queue);
 
             if (cmd == MXS_COM_CHANGE_USER)
             {
@@ -1351,7 +1351,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
             }
             else
             {
-                MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(&queue)),
+                MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
                          to_string(m_state).c_str(), queue.get_sql().c_str());
                 m_delayed_packets.emplace_back(std::move(queue));
                 rc = 1;
@@ -1361,7 +1361,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
 
     default:
         {
-            MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(&queue)),
+            MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
                      to_string(m_state).c_str(), queue.get_sql().c_str());
             m_delayed_packets.emplace_back(std::move(queue));
             rc = 1;
@@ -2743,7 +2743,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                         m_hs_state = HandShakeState::FAIL;
                     }
                 }
-                else if (mxs_mysql_get_command(&buffer) == MYSQL_REPLY_ERR)
+                else if (mxs_mysql_get_command(buffer) == MYSQL_REPLY_ERR)
                 {
                     // Server responded with an error instead of a handshake, probably too many connections.
                     do_handle_error(m_dcb, "Connection rejected: " + mxs::extract_error(&buffer),

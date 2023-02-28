@@ -66,7 +66,7 @@ uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
 {
     uint32_t type = QUERY_TYPE_UNKNOWN;
 
-    if (mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE)
+    if (mxs_mysql_get_command(*buffer) == MXS_COM_STMT_PREPARE)
     {
 #ifdef SS_DEBUG
         GWBUF stmt = buffer->deep_clone();
@@ -174,7 +174,7 @@ public:
 
     void store(GWBUF* buffer, uint32_t id)
     {
-        mxb_assert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE
+        mxb_assert(mxs_mysql_get_command(*buffer) == MXS_COM_STMT_PREPARE
                    || Parser::type_mask_contains(m_parser.get_type_mask(buffer),
                                                  QUERY_TYPE_PREPARE_NAMED_STMT));
 
@@ -182,7 +182,7 @@ public:
         stmt.type = get_prepare_type(m_parser, buffer);
         stmt.route_to_last_used = relates_to_previous_stmt(m_parser, buffer);
 
-        switch (mxs_mysql_get_command(buffer))
+        switch (mxs_mysql_get_command(*buffer))
         {
         case MXS_COM_QUERY:
             m_text_ps.emplace(get_text_ps_id(m_parser, buffer), std::move(stmt));
@@ -259,7 +259,7 @@ public:
 
     void erase(GWBUF* buffer)
     {
-        uint8_t cmd = mxs_mysql_get_command(buffer);
+        uint8_t cmd = mxs_mysql_get_command(*buffer);
 
         if (cmd == MXS_COM_QUERY)
         {
@@ -331,7 +331,7 @@ void QueryClassifier::ps_store(GWBUF* pBuffer, uint32_t id)
 
 void QueryClassifier::ps_erase(GWBUF* buffer)
 {
-    if (is_ps_command(mxs_mysql_get_command(buffer)))
+    if (is_ps_command(mxs_mysql_get_command(*buffer)))
     {
         // Erase the type of the statement stored with the internal ID
         m_sPs_manager->erase(ps_id_internal_get(buffer));
@@ -862,7 +862,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     }
     else if (len > MYSQL_HEADER_LEN)
     {
-        command = mxs_mysql_get_command(pBuffer);
+        command = mxs_mysql_get_command(*pBuffer);
 
         if (is_ps_command(command))
         {

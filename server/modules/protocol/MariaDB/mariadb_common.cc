@@ -333,16 +333,9 @@ bool mxs_mysql_is_ps_command(uint8_t cmd)
            || cmd == MXS_COM_STMT_RESET;
 }
 
-uint8_t mxs_mysql_get_command(const GWBUF* buffer)
+uint8_t mxs_mysql_get_command(const GWBUF& buffer)
 {
-    // This function is sometimes called with 0-length packets. Should perhaps be fixed by modifying
-    // the callers.
-    uint8_t rval = MXS_COM_UNDEFINED;
-    if (buffer->length() > MYSQL_HEADER_LEN)
-    {
-        rval = (*buffer)[MYSQL_HEADER_LEN];
-    }
-    return rval;
+    return buffer.length() > MYSQL_HEADER_LEN ? buffer[MYSQL_HEADER_LEN] : MXS_COM_UNDEFINED;
 }
 
 uint32_t mxs_mysql_extract_ps_id(const GWBUF* buffer)

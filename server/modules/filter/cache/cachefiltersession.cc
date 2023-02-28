@@ -663,7 +663,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
     }
     else
     {
-        mxb_assert(mxs_mysql_get_command(m_res) == MYSQL_REPLY_OK);
+        mxb_assert(mxs_mysql_get_command(*m_res) == MYSQL_REPLY_OK);
         // In case m_zUseDb could not be allocated in routeQuery(), we will
         // in fact reset the default db here. That's ok as it will prevent broken
         // entries in the cache.

@@ -35,7 +35,7 @@ std::string extract_sql_real(const GWBUF* pBuf)
     mxb_assert(pBuf != nullptr);
 
     std::string rval;
-    uint8_t cmd = mxs_mysql_get_command(pBuf);
+    uint8_t cmd = mxs_mysql_get_command(*pBuf);
 
     if (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE)
     {

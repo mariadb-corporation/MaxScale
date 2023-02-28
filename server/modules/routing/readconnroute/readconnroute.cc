@@ -372,8 +372,8 @@ bool RCRSession::connection_is_valid() const
 
 bool RCRSession::routeQuery(GWBUF&& buffer)
 {
+    uint8_t mysql_command = mxs_mysql_get_command(buffer);
     GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
-    uint8_t mysql_command = mxs_mysql_get_command(queue);
 
     if (!connection_is_valid())
     {

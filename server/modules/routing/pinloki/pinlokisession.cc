@@ -109,10 +109,10 @@ PinlokiSession::~PinlokiSession()
 bool PinlokiSession::routeQuery(GWBUF&& packet)
 {
     int rval = 0;
+    auto cmd = mxs_mysql_get_command(packet);
     GWBUF* response = nullptr;
     GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     mxs::Buffer buf(pPacket);
-    auto cmd = mxs_mysql_get_command(buf.get());
 
     switch (cmd)
     {

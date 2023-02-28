@@ -433,7 +433,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 
     if (TARGET_IS_NAMED_SERVER(route_target) && target)
     {
-        uint8_t cmd = mxs_mysql_get_command(pPacket);
+        uint8_t cmd = mxs_mysql_get_command(*pPacket);
 
         if (SRBackend* bref = get_shard_backend(target->name()))
         {
@@ -670,7 +670,7 @@ bool extract_database(const Parser& parser, GWBUF* buf, char* str)
     plen = mariadb::get_byte3(packet) - 1;
 
     /** Copy database name from MySQL packet to session */
-    if (mxs_mysql_get_command(buf) == MXS_COM_QUERY
+    if (mxs_mysql_get_command(*buf) == MXS_COM_QUERY
         && parser.get_operation(buf) == QUERY_OP_CHANGE_DB)
     {
         const char* delim = "` \n\t;";
@@ -1319,7 +1319,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
 {
     mxs::Target* rval = NULL;
     qc_query_op_t op = QUERY_OP_UNDEFINED;
-    uint8_t command = mxs_mysql_get_command(buffer);
+    uint8_t command = mxs_mysql_get_command(*buffer);
 
     if (command == MXS_COM_QUERY)
     {
@@ -1504,7 +1504,7 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op)
 {
     mxs::Target* rval = NULL;
-    uint8_t command = mxs_mysql_get_command(buffer);
+    uint8_t command = mxs_mysql_get_command(*buffer);
 
     if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
     {
