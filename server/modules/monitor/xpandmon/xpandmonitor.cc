@@ -400,6 +400,16 @@ void XpandMonitor::post_loop()
 
     m_pHub_con = nullptr;
     m_pHub_server = nullptr;
+
+    // Close connections to both the configured servers and any discovered servers.
+    for (auto srv : m_servers)
+    {
+        srv->close_conn();
+    }
+    for (auto& kv : m_nodes_by_id)
+    {
+        kv.second.close_connection();
+    }
 }
 
 void XpandMonitor::tick()

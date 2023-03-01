@@ -627,17 +627,6 @@ void MariaDBMonitor::pre_loop()
     // Read the journal and the last known master.
     read_journal();
 
-    /* This loop can be removed if/once the replication check code is inside tick. It's required so that
-     * the monitor makes new connections when starting. */
-    for (MariaDBServer* server : m_servers)
-    {
-        if (server->con)
-        {
-            mysql_close(server->con);
-            server->con = nullptr;
-        }
-    }
-
     m_locks_info.reset();
     m_op_info.monitor_stopping = false;
 }
@@ -650,14 +639,18 @@ void MariaDBMonitor::post_loop()
     // server rebuild.
     m_running_op = nullptr;
     m_op_info.monitor_stopping = true;
+
+    for (auto srv : m_servers)
+    {
+        srv->close_conn();
+    }
 }
 
-std::tuple<bool, std::string> MariaDBMonitor::do_soft_stop()
+std::tuple<bool, std::string> MariaDBMonitor::prepare_to_stop()
 {
     using ExecState = mon_op::ExecState;
     mxb_assert(Monitor::is_main_worker());
     mxb_assert(is_running());
-    mxb_assert(m_thread_running.load() == true);
 
     bool stopping = false;
     string errmsg;
@@ -676,12 +669,6 @@ std::tuple<bool, std::string> MariaDBMonitor::do_soft_stop()
     }
     lock.unlock();
 
-    if (stopping)
-    {
-        m_worker->shutdown();
-        m_worker->join();
-        m_thread_running.store(false, std::memory_order_release);
-    }
     return {stopping, errmsg};
 }
 

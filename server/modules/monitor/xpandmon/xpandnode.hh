@@ -217,6 +217,15 @@ public:
         return m_pCon;
     }
 
+    void close_connection()
+    {
+        if (m_pCon)
+        {
+            mysql_close(m_pCon);
+            m_pCon = nullptr;
+        }
+    }
+
     MYSQL* release_connection()
     {
         MYSQL* pCon = m_pCon;

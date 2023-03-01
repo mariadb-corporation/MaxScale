@@ -279,14 +279,10 @@ protected:
     bool can_be_disabled(const mxs::MonitorServer& server, DisableType type,
                          std::string* errmsg_out) const override;
 
-    void        pre_loop() override;
-    void        post_loop() override;
     void        tick() override;
     void        process_state_changes();
     void        flush_mdb_server_status();
     std::string annotate_state_change(mxs::MonitorServer* server) override final;
-
-    std::tuple<bool, std::string> do_soft_stop() override;
 
 private:
     using ServerFunction = std::function<void (MariaDBServer*)>;
@@ -499,6 +495,9 @@ private:
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
+    std::tuple<bool, std::string> prepare_to_stop() override;
+    void                          pre_loop() override;
+    void                          post_loop() override;
 
     void reset_server_info();
     void reset_node_index_info();

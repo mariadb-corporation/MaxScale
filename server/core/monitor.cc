@@ -420,32 +420,6 @@ Monitor::Monitor(const string& name, const string& module)
 {
 }
 
-void Monitor::stop()
-{
-    do_stop();
-
-    for (auto db : m_servers)
-    {
-        // TODO: Should be db->close().
-        mysql_close(db->con);
-        db->con = NULL;
-    }
-}
-
-std::tuple<bool, string> Monitor::soft_stop()
-{
-    auto [ok, errmsg] = do_soft_stop();
-    if (ok)
-    {
-        for (auto db : m_servers)
-        {
-            mysql_close(db->con);
-            db->con = nullptr;
-        }
-    }
-    return {ok, errmsg};
-}
-
 const char* Monitor::name() const
 {
     return m_name.c_str();
@@ -1977,24 +1951,6 @@ void Monitor::load_monitor_specific_journal_data(const mxb::Json& data)
 {
 }
 
-void Monitor::do_stop()
-{
-    // This should only be called by monitor_stop().
-    mxb_assert(Monitor::is_main_worker());
-    mxb_assert(is_running());
-    mxb_assert(m_thread_running.load() == true);
-
-    m_worker->shutdown();
-    m_worker->join();
-    m_thread_running.store(false, std::memory_order_release);
-}
-
-std::tuple<bool, std::string> Monitor::do_soft_stop()
-{
-    do_stop();
-    return {true, ""};
-}
-
 json_t* Monitor::diagnostics() const
 {
     return json_object();
@@ -2052,6 +2008,33 @@ bool Monitor::start()
         }
     }
     return started;
+}
+
+void Monitor::stop()
+{
+    // This should only be called by monitor_stop().
+    mxb_assert(Monitor::is_main_worker());
+    mxb_assert(is_running());
+    mxb_assert(m_thread_running.load() == true);
+
+    m_worker->shutdown();
+    m_worker->join();
+    m_thread_running.store(false, std::memory_order_release);
+}
+
+std::tuple<bool, string> Monitor::soft_stop()
+{
+    auto [ok, errmsg] = prepare_to_stop();
+    if (ok)
+    {
+        stop();
+    }
+    return {ok, errmsg};
+}
+
+std::tuple<bool, std::string> Monitor::prepare_to_stop()
+{
+    return {true, ""};
 }
 
 // static
@@ -2206,6 +2189,10 @@ void SimpleMonitor::pre_loop()
 void SimpleMonitor::post_loop()
 {
     write_journal();
+    for (auto srv : m_servers)
+    {
+        srv->close_conn();
+    }
 }
 
 void SimpleMonitor::pre_tick()
@@ -2298,14 +2285,6 @@ void SimpleMonitor::configured_servers_updated(const std::vector<SERVER*>& serve
 
     // The configured servers and the active servers are the same.
     set_active_servers(std::vector<MonitorServer*>(m_servers));
-}
-
-void Monitor::pre_loop()
-{
-}
-
-void Monitor::post_loop()
-{
 }
 
 bool Monitor::pre_run()
@@ -2409,10 +2388,7 @@ MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
 
 MonitorServer::~MonitorServer()
 {
-    if (con)
-    {
-        mysql_close(con);
-    }
+    close_conn();
 }
 
 void MonitorServer::apply_status_requests()
@@ -2526,6 +2502,15 @@ const MonitorServer::ConnectionSettings& MonitorServer::conn_settings() const
 bool MonitorServer::is_access_denied_error(int64_t errornum)
 {
     return errornum == ER_ACCESS_DENIED_ERROR || errornum == ER_ACCESS_DENIED_NO_PASSWORD_ERROR;
+}
+
+void MonitorServer::close_conn()
+{
+    if (con)
+    {
+        mysql_close(con);
+        con = nullptr;
+    }
 }
 }
 

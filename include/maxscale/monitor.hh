@@ -114,7 +114,7 @@ namespace maxscale
 {
 
 /**
- * The linked list of servers that are being monitored by the monitor module.
+ * Base class for a monitored server. A monitor may inherit and implement its own server-class.
  */
 class MonitorServer
 {
@@ -305,6 +305,8 @@ public:
     const ConnectionSettings& conn_settings() const;
 
     static bool is_access_denied_error(int64_t errornum);
+
+    void close_conn();
 
     SERVER* server = nullptr;       /**< The server being monitored */
     MYSQL*  con = nullptr;          /**< The MySQL connection */
@@ -547,27 +549,6 @@ public:
     const std::vector<MonitorServer*>& active_servers() const;
 
 protected:
-    /**
-     * Stop the monitor. If the monitor uses a polling thread, the thread should be stopped.
-     */
-    void do_stop();
-
-    /**
-     * Subclass-specific soft-stop.
-     *
-     * @return True if success. On fail, also return an error message.
-     */
-    virtual std::tuple<bool, std::string> do_soft_stop();
-
-    /**
-     * Called before the monitor loop is started. The default implementation does nothing.
-     */
-    virtual void pre_loop();
-
-    /**
-     * Called after the monitor loop has ended. The default implementation does nothing.
-     */
-    virtual void post_loop();
 
     /**
      * Check if the monitor user can execute a query. The query should be such that it only succeeds if
@@ -767,7 +748,6 @@ protected:
     virtual void tick() = 0;
 
     mxb::Worker::Callable m_callable;               /**< Context for own dcalls */
-    std::atomic<bool>     m_thread_running {false}; /**< Thread state. */
 
 private:
     /**
@@ -812,6 +792,28 @@ private:
      * @param servers Servers in monitor configuration
      */
     virtual void configured_servers_updated(const std::vector<SERVER*>& servers) = 0;
+
+    /**
+     * Called before the monitor loop is started. Should initialize internal data, e.g. read journal.
+     * Ran in the monitor worker thread.
+     */
+    virtual void pre_loop() = 0;
+
+    /**
+     * Called after the monitor loop has ended. Should save internal data and release resources, e.g. save
+     * journal and close connections. Deleting server information is optional, depending on what 'pre_loop'
+     * does. Ran in the monitor worker thread.
+     */
+    virtual void post_loop() = 0;
+
+    /**
+     * Subclass-specific stop preparation. Typically not required and the default version returns true.
+     * This is meant to stop the user from accidentally stopping or reconfiguring the monitor when the
+     * monitor is doing something important.
+     *
+     * @return True if success. On fail, also return an error message.
+     */
+    virtual std::tuple<bool, std::string> prepare_to_stop();
 
     bool prepare_servers();
     void release_all_servers();
@@ -862,9 +864,11 @@ private:
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
 
-    bool           m_checked {false};   /**< Whether server access has been checked. */
-    mxb::Semaphore m_semaphore;         /**< Semaphore for synchronizing with monitor thread. */
-    int64_t        m_loop_called;       /**< When was the loop called the last time. */
+    mxb::Semaphore    m_semaphore;              /**< Semaphore for synchronizing with monitor thread. */
+    std::atomic<bool> m_thread_running {false}; /**< Thread state. */
+
+    bool    m_checked {false};  /**< Whether server access has been checked. */
+    int64_t m_loop_called;      /**< When was the loop called the last time. */
 
     std::string journal_filepath() const;
     bool        call_run_one_tick();
@@ -905,16 +909,6 @@ protected:
      */
     virtual void post_tick();
 
-    /**
-     * A derived class overriding this function should first call this base version.
-     */
-    void pre_loop() override;
-
-    /**
-     * A derived class overriding this function should last call this base version.
-     */
-    void post_loop() override;
-
     MonitorServer*              m_master {nullptr}; /**< Master server */
     std::vector<MonitorServer*> m_servers;          /**< Active servers */
 
@@ -945,6 +939,16 @@ private:
     void tick() override final;
 
     void configured_servers_updated(const std::vector<SERVER*>& servers) override;
+
+    /**
+     * A derived class overriding this function should first call this base version.
+     */
+    void pre_loop() override;
+
+    /**
+     * A derived class overriding this function should last call this base version.
+     */
+    void post_loop() override;
 };
 
 /**
