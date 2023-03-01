@@ -18,6 +18,9 @@
 #include <maxbase/assert.hh>
 #include <maxscale/log.hh>
 
+#include <endian.h>
+#include <string_view>
+
 namespace postgres
 {
 //
@@ -97,4 +100,99 @@ enum BidirectionalCommand : uint8_t
 //                 secret key.
 //
 // GSSENCRequest - StartupMessage with 80877104 as the version. GSSAPI encryption request.
+
+/**
+ * Extract a 16-bit unsigned integer
+ *
+ * Postgres integers are stored in network order (big-endian).
+ *
+ * @param ptr Pointer to memory
+ *
+ * @return The value in host endianness
+ */
+static inline uint16_t get_uint16(const uint8_t* ptr)
+{
+    uint16_t value;
+    memcpy(&value, ptr, sizeof(value));
+    return be16toh(value);
 }
+
+/**
+ * Extract a 32-bit unsigned integer
+ *
+ * Postgres integers are stored in network order (big-endian).
+ *
+ * @param ptr Pointer to memory
+ *
+ * @return The value in host endianness
+ */
+static inline uint32_t get_uint32(const uint8_t* ptr)
+{
+    uint32_t value;
+    memcpy(&value, ptr, sizeof(value));
+    return be32toh(value);
+}
+
+/**
+ * Get a null-terminated string
+ *
+ * @warning The caller must ensure that the pointed to memory must contain a null-terminating character.
+ *
+ * @param ptr Pointer to memory
+ *
+ * @return The value as a std::string_view
+ */
+static inline std::string_view get_string(const uint8_t* ptr)
+{
+    const char* str = reinterpret_cast<const char*>(ptr);
+    return std::string_view(str, strlen(str));
+}
+
+/**
+ * Set a 16-bit unsigned integer
+ *
+ * @param ptr Pointer to memory
+ * @param val Value to set
+ *
+ * @return sizeof(uint16_t)
+ */
+static inline size_t set_uint16(uint8_t* ptr, uint16_t val)
+{
+    uint16_t value = htobe16(val);
+    memcpy(ptr, &value, sizeof(value));
+    return sizeof(value);
+}
+
+/**
+ * Set a 32-bit unsigned integer
+ *
+ * @param ptr Pointer to memory
+ * @param val Value to set
+ *
+ * @return sizeof(uint32_t)
+ */
+static inline size_t set_uint32(uint8_t* ptr, uint32_t val)
+{
+    uint32_t value = htobe32(val);
+    memcpy(ptr, &value, sizeof(value));
+    return sizeof(value);
+}
+
+/**
+ * Set a null-terminated string
+ *
+ * @param ptr Pointer to memory
+ * @param str The string to set
+ *
+ * @return Length of the string plus one
+ */
+static inline size_t set_string(uint8_t* ptr, std::string_view str)
+{
+    memcpy(ptr, str.data(), str.size());
+    ptr[str.size()] = 0x0;
+    return str.size() + 1;
+}
+}
+
+// Convenience alias for the namespace
+namespace pg = postgres;
