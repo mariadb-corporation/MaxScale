@@ -193,7 +193,7 @@ private:
 
     CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
 
-    static CcrHintValue search_ccr_hint(GWBUF* buffer);
+    static CcrHintValue search_ccr_hint(GWBUF& buffer);
 };
 
 class CCRFilter : public mxs::Filter
@@ -279,20 +279,19 @@ CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter
     return new CCRSession(session, service, instance);
 }
 
-bool CCRSession::routeQuery(GWBUF&& buffer)
+bool CCRSession::routeQuery(GWBUF&& queue)
 {
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
-    if (mariadb::is_com_query(*queue))
+    if (mariadb::is_com_query(queue))
     {
         auto filter = &this->m_instance;
         time_t now = time(NULL);
         /* Not a simple SELECT statement, possibly modifies data. If we're processing a statement
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement. */
-        if (mxs::Parser::type_mask_contains(parser().get_type_mask(queue), QUERY_TYPE_WRITE))
+        if (mxs::Parser::type_mask_contains(parser().get_type_mask(&queue), QUERY_TYPE_WRITE))
         {
-            const char* sql;
-            int length;
-            if (modutil_extract_SQL(*queue, &sql, &length))
+            auto sql = queue.get_sql();
+
+            if (!sql.empty())
             {
                 bool trigger_ccr = true;
                 bool decided = false;   // Set by hints to take precedence.
@@ -308,8 +307,8 @@ bool CCRSession::routeQuery(GWBUF&& buffer)
                 }
                 if (!decided)
                 {
-                    trigger_ccr = (!m_match || m_match.match(sql, (size_t)length))
-                        && (!m_ignore || !m_ignore.match(sql, (size_t)length));
+                    trigger_ccr = (!m_match || m_match.match(sql))
+                        && (!m_ignore || !m_ignore.match(sql));
                 }
                 if (trigger_ccr)
                 {
@@ -338,7 +337,7 @@ bool CCRSession::routeQuery(GWBUF&& buffer)
         }
         else if (m_hints_left > 0)
         {
-            queue->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+            queue.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
             m_hints_left--;
             filter->m_stats.n_add_count++;
             MXB_INFO("%d queries left", m_hints_left);
@@ -350,14 +349,14 @@ bool CCRSession::routeQuery(GWBUF&& buffer)
 
             if (dt < m_time.count())
             {
-                queue->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+                queue.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
                 filter->m_stats.n_add_time++;
                 MXB_INFO("%.0f seconds left", m_time.count() - dt);
             }
         }
     }
 
-    return FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
+    return FilterSession::routeQuery(std::move(queue));
 }
 
 /**
@@ -367,13 +366,13 @@ bool CCRSession::routeQuery(GWBUF&& buffer)
  * @param buffer Input buffer
  * @return The found ccr hint value
  */
-CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
+CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF& buffer)
 {
     const char CCR[] = "ccr";
     CcrHintValue rval = CCR_HINT_NONE;
     bool found_ccr = false;
-    auto it = buffer->hints.begin();
-    auto end = buffer->hints.end();
+    auto it = buffer.hints.begin();
+    auto end = buffer.hints.end();
 
     while (it != end && !found_ccr)
     {
@@ -404,7 +403,7 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
     // Remove the ccr-hint from the hint chain. Otherwise, rwsplit will complain.
     if (found_ccr)
     {
-        buffer->hints.erase(it);
+        buffer.hints.erase(it);
     }
     return rval;
 }

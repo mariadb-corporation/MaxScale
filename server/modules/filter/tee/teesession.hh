@@ -44,14 +44,14 @@ private:
                const mxb::Regex& match,
                const mxb::Regex& exclude,
                bool sync);
-    bool query_matches(GWBUF* buffer);
+    bool query_matches(const GWBUF& buffer);
     void handle_reply(const mxs::Reply& reply, bool is_branch);
 
-    LocalClient*            m_client;   /**< The client connection to the local service */
-    const mxb::Regex&       m_match;
-    const mxb::Regex&       m_exclude;
-    bool                    m_sync;
-    uint8_t                 m_main_replies {0};
-    uint8_t                 m_branch_replies {0};
-    std::deque<mxs::Buffer> m_queue;
+    LocalClient*      m_client;         /**< The client connection to the local service */
+    const mxb::Regex& m_match;
+    const mxb::Regex& m_exclude;
+    bool              m_sync;
+    uint8_t           m_main_replies {0};
+    uint8_t           m_branch_replies {0};
+    std::deque<GWBUF> m_queue;
 };

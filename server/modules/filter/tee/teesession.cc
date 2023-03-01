@@ -73,19 +73,18 @@ TeeSession::~TeeSession()
     delete m_client;
 }
 
-bool TeeSession::routeQuery(GWBUF&& buffer)
+bool TeeSession::routeQuery(GWBUF&& queue)
 {
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_client && m_sync && m_branch_replies + m_main_replies > 0)
     {
         MXB_INFO("Waiting for replies: %d from branch, %d from main", m_branch_replies, m_main_replies);
-        m_queue.push_back(queue);
+        m_queue.push_back(std::move(queue));
         return true;
     }
 
-    if (m_client && query_matches(queue) && m_client->queue_query(queue->shallow_clone()))
+    if (m_client && query_matches(queue) && m_client->queue_query(queue.shallow_clone()))
     {
-        if (m_sync && mxs_mysql_command_will_respond(mxs_mysql_get_command(*queue)))
+        if (m_sync && mxs_mysql_command_will_respond(mxs_mysql_get_command(queue)))
         {
             // These two could be combined into one uint8_t as they never go above one but having them as
             // separate variables makes debugging easier.
@@ -95,7 +94,7 @@ bool TeeSession::routeQuery(GWBUF&& buffer)
         }
     }
 
-    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
+    return mxs::FilterSession::routeQuery(std::move(queue));
 }
 
 void TeeSession::handle_reply(const mxs::Reply& reply, bool is_branch)
@@ -113,7 +112,7 @@ void TeeSession::handle_reply(const mxs::Reply& reply, bool is_branch)
     {
         MXB_INFO("Both replies received, routing queued query: %s",
                  m_queue.front().get_sql().c_str());
-        m_pSession->delay_routing(this, mxs::gwbufptr_to_gwbuf(m_queue.front().release()), 0);
+        m_pSession->delay_routing(this, std::move(m_queue.front()), 0);
         m_queue.pop_front();
     }
 }
@@ -129,13 +128,13 @@ json_t* TeeSession::diagnostics() const
     return NULL;
 }
 
-bool TeeSession::query_matches(GWBUF* buffer)
+bool TeeSession::query_matches(const GWBUF& buffer)
 {
     bool rval = true;
 
     if (m_match || m_exclude)
     {
-        const auto& sql = buffer->get_sql();
+        const auto& sql = buffer.get_sql();
 
         if (!sql.empty())
         {
