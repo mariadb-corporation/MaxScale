@@ -136,7 +136,6 @@ public:
 
     ~QCInfoCache()
     {
-        mxb_assert(this_unit.classifier);
     }
 
     QC_STMT_INFO* peek(std::string_view canonical_stmt) const
@@ -146,10 +145,11 @@ public:
         return i != m_infos.end() ? i->second.sInfo.get() : nullptr;
     }
 
-    std::shared_ptr<QC_STMT_INFO> get(std::string_view canonical_stmt)
+    std::shared_ptr<QC_STMT_INFO> get(QUERY_CLASSIFIER* pClassifier, std::string_view canonical_stmt)
     {
         std::shared_ptr<QC_STMT_INFO> sInfo;
-        qc_sql_mode_t sql_mode = qc_get_sql_mode();
+        qc_sql_mode_t sql_mode;
+        pClassifier->qc_get_sql_mode(&sql_mode);
 
         auto i = m_infos.find(canonical_stmt);
 
@@ -160,7 +160,6 @@ public:
             if ((entry.sql_mode == sql_mode)
                 && (entry.options == this_thread.options))
             {
-                mxb_assert(this_unit.classifier);
                 sInfo = entry.sInfo;
 
                 ++entry.hits;
@@ -182,10 +181,9 @@ public:
         return sInfo;
     }
 
-    void insert(std::string_view canonical_stmt, std::shared_ptr<QC_STMT_INFO> sInfo)
+    void insert(QUERY_CLASSIFIER* pClassifier, std::string_view canonical_stmt, std::shared_ptr<QC_STMT_INFO> sInfo)
     {
         mxb_assert(peek(canonical_stmt) == nullptr);
-        mxb_assert(this_unit.classifier);
 
         // 0xffffff is the maximum packet size, 4 is for packet header and 1 is for command byte. These are
         // MariaDB/MySQL protocol specific values that are also defined in <maxscale/protocol/mysql.h> but
@@ -216,8 +214,11 @@ public:
 
             if (m_stats.size + size <= cache_max_size)
             {
+                qc_sql_mode_t sql_mode;
+                pClassifier->qc_get_sql_mode(&sql_mode);
+
                 m_infos.emplace(canonical_stmt,
-                                Entry(std::move(sInfo), qc_get_sql_mode(), this_thread.options));
+                                Entry(pClassifier, std::move(sInfo), sql_mode, this_thread.options));
 
                 ++m_stats.inserts;
                 m_stats.size += size;
@@ -249,7 +250,7 @@ public:
                 QC_CACHE_ENTRY e {};
 
                 e.hits = entry.hits;
-                e.result = this_unit.classifier->qc_get_result_from_info(entry.sInfo.get());
+                e.result = entry.pClassifier->qc_get_result_from_info(entry.sInfo.get());
 
                 state.insert(std::make_pair(stmt, e));
             }
@@ -259,7 +260,7 @@ public:
 
                 e.hits += entry.hits;
 #if defined (SS_DEBUG)
-                QC_STMT_RESULT result = this_unit.classifier->qc_get_result_from_info(entry.sInfo.get());
+                QC_STMT_RESULT result = entry.pClassifier->qc_get_result_from_info(entry.sInfo.get());
 
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
@@ -286,14 +287,16 @@ public:
 private:
     struct Entry
     {
-        Entry(std::shared_ptr<QC_STMT_INFO> sInfo, qc_sql_mode_t sql_mode, uint32_t options)
-            : sInfo(std::move(sInfo))
+        Entry(QUERY_CLASSIFIER* pClassifier, std::shared_ptr<QC_STMT_INFO> sInfo, qc_sql_mode_t sql_mode, uint32_t options)
+            : pClassifier(pClassifier)
+            , sInfo(std::move(sInfo))
             , sql_mode(sql_mode)
             , options(options)
             , hits(0)
         {
         }
 
+        QUERY_CLASSIFIER*             pClassifier;
         std::shared_ptr<QC_STMT_INFO> sInfo;
         qc_sql_mode_t                 sql_mode;
         uint32_t                      options;
@@ -321,7 +324,6 @@ private:
 
         m_stats.size -= entry_size(*i);
 
-        mxb_assert(this_unit.classifier);
         m_infos.erase(i);
 
         ++m_stats.evictions;
@@ -412,8 +414,9 @@ public:
     QCInfoCacheScope(const QCInfoCacheScope&) = delete;
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
-    QCInfoCacheScope(GWBUF* pStmt)
-        : m_pStmt(pStmt)
+    QCInfoCacheScope(QUERY_CLASSIFIER* pClassifier, GWBUF* pStmt)
+        : m_pClassifier(pClassifier)
+        , m_pStmt(pStmt)
     {
         auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data_ptr());
         m_info_size_before = pInfo ? pInfo->size() : 0;
@@ -429,7 +432,7 @@ public:
                 m_canonical += ":P";
             }
 
-            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(m_canonical);
+            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(m_pClassifier, m_canonical);
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
@@ -450,10 +453,10 @@ public:
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
             // contained a COM_STMT_PREPARE.
-            std::string_view canonical = this_unit.classifier->qc_info_get_canonical(sInfo.get());
+            std::string_view canonical = m_pClassifier->qc_info_get_canonical(sInfo.get());
             mxb_assert(m_canonical == canonical);
 
-            this_thread.pInfo_cache->insert(canonical, std::move(sInfo));
+            this_thread.pInfo_cache->insert(m_pClassifier, canonical, std::move(sInfo));
         }
         else if (!exclude)
         {   // The size might have changed
@@ -469,15 +472,16 @@ public:
     }
 
 private:
-    GWBUF*      m_pStmt;
-    std::string m_canonical;
-    size_t      m_info_size_before;
+    QUERY_CLASSIFIER* m_pClassifier;
+    GWBUF*            m_pStmt;
+    std::string       m_canonical;
+    size_t            m_info_size_before;
 
     bool exclude_from_cache() const
     {
         constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
         uint32_t type_mask = QUERY_TYPE_UNKNOWN;
-        this_unit.classifier->qc_get_type_mask(m_pStmt, &type_mask);
+        m_pClassifier->qc_get_type_mask(m_pStmt, &type_mask);
         return (type_mask & is_autocommit) != 0;
     }
 };
@@ -695,7 +699,7 @@ qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
 
     int32_t result = QC_QUERY_INVALID;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_parse(query, collect, &result);
 
     return (qc_parse_result_t)result;
@@ -708,7 +712,7 @@ uint32_t qc_get_type_mask(GWBUF* query)
 
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_type_mask(query, &type_mask);
 
     return type_mask;
@@ -721,7 +725,7 @@ qc_query_op_t qc_get_operation(GWBUF* query)
 
     int32_t op = QUERY_OP_UNDEFINED;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_operation(query, &op);
 
     return (qc_query_op_t)op;
@@ -734,7 +738,7 @@ std::string_view qc_get_created_table_name(GWBUF* query)
 
     std::string_view name;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_created_table_name(query, &name);
 
     return name;
@@ -747,7 +751,7 @@ bool qc_is_drop_table_query(GWBUF* query)
 
     int32_t is_drop_table = 0;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_is_drop_table_query(query, &is_drop_table);
 
     return (is_drop_table != 0) ? true : false;
@@ -760,7 +764,7 @@ std::vector<QcTableName> qc_get_table_names(GWBUF* query)
 
     std::vector<QcTableName> names;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_table_names(query, &names);
 
     return names;
@@ -776,7 +780,7 @@ void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_info
 
     uint32_t n = 0;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_field_info(query, infos, &n);
 
     *n_infos = n;
@@ -791,7 +795,7 @@ void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* 
 
     uint32_t n = 0;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_function_info(query, infos, &n);
 
     *n_infos = n;
@@ -804,7 +808,7 @@ std::vector<std::string_view> qc_get_database_names(GWBUF* query)
 
     std::vector<std::string_view> names;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_database_names(query, &names);
 
     return names;
@@ -817,7 +821,7 @@ QC_KILL qc_get_kill_info(GWBUF* query)
 
     QC_KILL rval;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_kill_info(query, &rval);
 
     return rval;
@@ -830,7 +834,7 @@ std::string_view qc_get_prepare_name(GWBUF* query)
 
     std::string_view name;
 
-    QCInfoCacheScope scope(query);
+    QCInfoCacheScope scope(this_unit.classifier, query);
     this_unit.classifier->qc_get_prepare_name(query, &name);
 
     return name;
@@ -843,7 +847,7 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt)
 
     GWBUF* preparable_stmt = NULL;
 
-    QCInfoCacheScope scope(stmt);
+    QCInfoCacheScope scope(this_unit.classifier, stmt);
     this_unit.classifier->qc_get_preparable_stmt(stmt, &preparable_stmt);
 
     return preparable_stmt;
