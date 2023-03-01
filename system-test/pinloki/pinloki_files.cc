@@ -13,6 +13,8 @@ public:
         master.query("FLUSH LOGS");
         master.query("FLUSH LOGS");
         master.query("FLUSH LOGS");
+        master.query("CREATE TABLE test.t1(id INT)");
+        master.query("DROP TABLE test.t1");
         sync(master, maxscale);
     }
 

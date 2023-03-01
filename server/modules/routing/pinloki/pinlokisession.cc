@@ -66,7 +66,7 @@ GWBUF create_resultset(const std::vector<std::string>& columns, const std::vecto
     return rset->as_buffer();
 }
 
- GWBUF create_slave_running_error()
+GWBUF create_slave_running_error()
 {
     return mariadb::create_error_packet(
         1, 1198, "HY000",
@@ -120,7 +120,7 @@ bool PinlokiSession::routeQuery(GWBUF&& buf)
 
     case MXS_COM_XPAND_REPL:
         response = mariadb::create_error_packet(1, 1236, "HY000",
-                                                    "XPand replication is not supported.");
+                                                "XPand replication is not supported.");
         rval = 1;
         break;
 
@@ -142,7 +142,15 @@ bool PinlokiSession::routeQuery(GWBUF&& buf)
             m_reader = std::make_unique<Reader>(
                 send_cb, worker_cb, abort_cb, m_router->inventory()->config(),
                 m_gtid_list, std::chrono::seconds(m_heartbeat_period));
-            m_reader->start();
+
+            // The call to start() can end up sending events to the client. To make sure we don't call
+            // clientReply inside routeQuery, do the actual start inside of a lcall. If the session is closed
+            // right after routeQuery returns, we might end up starting and stopping the reader but it'll
+            // still function as expected.
+            m_pSession->lcall([this](){
+                m_reader->start();
+            });
+
             rval = 1;
         }
         catch (const GtidNotFoundError& err)
@@ -383,7 +391,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         if (!gtid_list.is_valid())
         {
             buf = mariadb::create_error_packet(1, 1941, "HY000",
-                                                   "Could not parse GTID");
+                                               "Could not parse GTID");
         }
         else if (m_router->is_slave_running())
         {
@@ -537,6 +545,23 @@ void PinlokiSession::show_variables(const std::string& like)
     set_response(create_resultset({"Variable_name", "Value"}, values));
 }
 
+GWBUF PinlokiSession::check_mgw_status(const std::string& header, const mxq::GtidList& target,
+                                       std::chrono::steady_clock::time_point start, int timeout)
+{
+    GWBUF result;
+
+    if (m_router->gtid_io_pos().is_included(target))
+    {
+        result = create_resultset({header}, {"0"});
+    }
+    else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
+    {
+        result = create_resultset({header}, {"-1"});
+    }
+
+    return result;
+}
+
 void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 {
     mxb_assert(m_mgw_dcid == 0);
@@ -545,21 +570,13 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     auto start = steady_clock::now();
 
     auto cb = [this, start, target, timeout, header]() {
-        bool again = false;
+        bool again = true;
 
-        if (m_router->gtid_io_pos().is_included(target))
+        if (GWBUF buf = check_mgw_status(header, target, start, timeout))
         {
-            send(create_resultset({header}, {"0"}));
+            send(std::move(buf));
             m_mgw_dcid = 0;
-        }
-        else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
-        {
-            send(create_resultset({header}, {"-1"}));
-            m_mgw_dcid = 0;
-        }
-        else
-        {
-            again = true;
+            again = false;
         }
 
         return again;
@@ -567,7 +584,11 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 
     if (target.is_valid())
     {
-        if (cb())
+        if (GWBUF buf = check_mgw_status(header, target, start, timeout))
+        {
+            set_response(std::move(buf));
+        }
+        else
         {
             m_mgw_dcid = m_pSession->dcall(1000ms, cb);
         }

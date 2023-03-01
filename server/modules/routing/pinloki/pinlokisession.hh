@@ -75,6 +75,9 @@ private:
     void send_event(const maxsql::RplEvent& event);
     void send(GWBUF&& buffer);
 
+    GWBUF check_mgw_status(const std::string& header, const mxq::GtidList& target,
+                           std::chrono::steady_clock::time_point start, int timeout);
+
     static int high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
     static int low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
 };
