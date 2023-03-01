@@ -16,30 +16,14 @@
 #include <maxscale/parser.hh>
 
 
-class MariaDBParser : public maxscale::Parser
+class MariaDBParser : public maxscale::CachingParser
 {
 public:
-    MariaDBParser();
+    MariaDBParser(const MariaDBParser&) = delete;
+    MariaDBParser& operator=(const MariaDBParser&) = delete;
 
+    MariaDBParser(QUERY_CLASSIFIER* pClassifier);
     ~MariaDBParser();
 
-    qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override;
-
-    DatabaseNames    get_database_names(GWBUF* pStmt) const override;
-    void             get_field_info(GWBUF* pStmt,
-                                    const QC_FIELD_INFO** ppInfos,
-                                    size_t* pnInfos) const override;
-    void             get_function_info(GWBUF* pStmt,
-                                       const QC_FUNCTION_INFO** ppInfos,
-                                       size_t* pninfos) const override;
-    uint32_t         get_options() const override;
-    qc_query_op_t    get_operation(GWBUF* pStmt) const override;
-    GWBUF*           get_preparable_stmt(GWBUF* pStmt) const override;
-    std::string_view get_prepare_name(GWBUF* pStmt) const override;
-    TableNames       get_table_names(GWBUF* pStmt) const override;
-    uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
-    uint32_t         get_type_mask(GWBUF* pStmt) const override;
-    bool             is_drop_table_query(GWBUF* pStmt) const override;
-
-    bool set_options(uint32_t options) override;
+    static MariaDBParser& get();
 };

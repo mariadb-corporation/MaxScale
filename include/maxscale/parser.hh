@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/query_classifier.hh>
 
 
 namespace maxscale
@@ -42,6 +42,9 @@ public:
         return qc_op_to_string(op);
     }
 
+    // Only for testing purposes, not to be used for anything else.
+    virtual QUERY_CLASSIFIER& classifier() const = 0;
+
     virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
 
     virtual DatabaseNames    get_database_names(GWBUF* pStmt) const = 0;
@@ -61,6 +64,47 @@ public:
     virtual bool             is_drop_table_query(GWBUF* pStmt) const = 0;
 
     virtual bool set_options(uint32_t options) = 0;
+    virtual void set_server_version(uint64_t version) = 0;
+    virtual void set_sql_mode(qc_sql_mode_t sql_mode) = 0;
+};
+
+class CachingParser : public mxs::Parser
+{
+public:
+    CachingParser(const CachingParser&) = delete;
+    CachingParser& operator = (const CachingParser&) = delete;
+
+    QUERY_CLASSIFIER& classifier() const override;
+
+    qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override;
+
+    DatabaseNames    get_database_names(GWBUF* pStmt) const override;
+    void             get_field_info(GWBUF* pStmt,
+                                    const QC_FIELD_INFO** ppInfos,
+                                    size_t* pnInfos) const override;
+    void             get_function_info(GWBUF* pStmt,
+                                       const QC_FUNCTION_INFO** infos,
+                                       size_t* n_infos) const override;
+    qc_query_op_t    get_operation(GWBUF* pStmt) const override;
+    uint32_t         get_options() const override;
+    GWBUF*           get_preparable_stmt(GWBUF* pStmt) const override;
+    std::string_view get_prepare_name(GWBUF* pStmt) const override;
+    TableNames       get_table_names(GWBUF* pStmt) const override;
+    uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
+    uint32_t         get_type_mask(GWBUF* pStmt) const override;
+    bool             is_drop_table_query(GWBUF* pStmt) const override;
+
+    bool set_options(uint32_t options) override;
+    void set_sql_mode(qc_sql_mode_t sql_mode) override;
+    void set_server_version(uint64_t version) override;
+
+protected:
+    CachingParser(QUERY_CLASSIFIER* pClassifier)
+        : m_classifier(*pClassifier)
+    {
+    }
+
+    QUERY_CLASSIFIER& m_classifier;
 };
 
 }

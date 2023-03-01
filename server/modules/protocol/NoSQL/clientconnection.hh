@@ -15,7 +15,6 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/protocol2.hh>
-#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include "nosql.hh"
 #include "nosqlconfig.hh"
 #include "nosqlusermanager.hh"
@@ -89,5 +88,4 @@ private:
     DCB*           m_pDcb = nullptr;
     nosql::NoSQL   m_nosql;
     bool           m_ssl_required;
-    MariaDBParser  m_parser;
 };

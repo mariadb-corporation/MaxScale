@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <vector>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <iostream>
@@ -304,7 +305,7 @@ bool ResultSetBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
 
 void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF&& statement)
 {
-    qc_query_op_t op = m_parser.get_operation(&statement);
+    qc_query_op_t op = MariaDBParser::get().get_operation(&statement);
 
     if (op == QUERY_OP_SELECT)
     {

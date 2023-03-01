@@ -30,6 +30,8 @@
 #include <utility>
 
 #include <maxbase/proxy_protocol.hh>
+#include <maxbase/format.hh>
+#include <maxscale/event.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -37,21 +39,20 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
-#include <maxbase/format.hh>
-#include <maxscale/event.hh>
 #include <maxscale/version.hh>
 
+#include "detect_special_query.hh"
+#include "packet_parser.hh"
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
 #include "user_data.hh"
-#include "packet_parser.hh"
-#include "detect_special_query.hh"
 
 namespace
 {
@@ -1262,10 +1263,10 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
 
     // Must be done whether or not there were any changes, as the query classifier
     // is thread and not session specific.
-    qc_set_sql_mode(m_sql_mode);
+    parser()->set_sql_mode(m_sql_mode);
     // The query classifier classifies according to the service's server that has
     // the smallest version number.
-    qc_set_server_version(m_version);
+    parser()->set_server_version(m_version);
 
     auto service = m_session->service;
     auto capabilities = m_session->capabilities();
@@ -1664,7 +1665,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
-    , m_qc(m_parser, this, session, TYPE_ALL, mariadb::QueryClassifier::Log::NONE)
+    , m_qc(MariaDBParser::get(), this, session, TYPE_ALL, mariadb::QueryClassifier::Log::NONE)
 {
     m_qc.set_verbose(false);
     const auto& svc_config = *m_session->service->config();
@@ -3125,7 +3126,7 @@ void MariaDBClientConnection::kill()
 
 mxs::Parser* MariaDBClientConnection::parser()
 {
-    return &m_parser;
+    return &MariaDBParser::get();
 }
 
 bool MariaDBClientConnection::module_init()

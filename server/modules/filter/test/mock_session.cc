@@ -77,11 +77,8 @@ public:
 
     Parser* parser() override
     {
-        return &m_parser;
+        return &MariaDBParser::get();
     };
-
-private:
-    MariaDBParser m_parser;
 };
 
 bool Session::Endpoint::routeQuery(GWBUF&& buffer)

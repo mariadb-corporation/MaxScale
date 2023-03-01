@@ -22,12 +22,13 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
+#include <maxscale/buffer.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/buffer.hh>
 #include <maxsimd/canonical.hh>
 
 #include "trxboundaryparser.hh"
@@ -599,7 +600,6 @@ void qc_end()
 bool qc_process_init(uint32_t kind)
 {
     QC_TRACE();
-    mxb_assert(this_unit.classifier);
 
     const char* parse_using = getenv(QC_TRX_PARSE_USING);
 
@@ -629,10 +629,10 @@ bool qc_process_init(uint32_t kind)
 void qc_process_end(uint32_t kind)
 {
     QC_TRACE();
-    mxb_assert(this_unit.classifier);
 
     if (kind & QC_INIT_PLUGIN)
     {
+        mxb_assert(this_unit.classifier);
         this_unit.classifier->qc_process_end();
     }
 }
@@ -640,7 +640,6 @@ void qc_process_end(uint32_t kind)
 bool qc_thread_init(uint32_t kind)
 {
     QC_TRACE();
-    mxb_assert(this_unit.classifier);
 
     bool rc = false;
 
@@ -659,6 +658,7 @@ bool qc_thread_init(uint32_t kind)
     {
         if (kind & QC_INIT_PLUGIN)
         {
+            mxb_assert(this_unit.classifier);
             rc = this_unit.classifier->qc_thread_init() == 0;
         }
 
@@ -678,10 +678,10 @@ bool qc_thread_init(uint32_t kind)
 void qc_thread_end(uint32_t kind)
 {
     QC_TRACE();
-    mxb_assert(this_unit.classifier);
 
     if (kind & QC_INIT_PLUGIN)
     {
+        mxb_assert(this_unit.classifier);
         this_unit.classifier->qc_thread_end();
     }
 
@@ -1725,8 +1725,153 @@ int64_t qc_clear_thread_cache()
     return rv;
 }
 
-void qc_set_classifier(QUERY_CLASSIFIER* pClassifier)
+//
+// mxs::CachingParser
+//
+QUERY_CLASSIFIER& mxs::CachingParser::classifier() const
 {
-    mxb_assert(!this_unit.classifier);
-    this_unit.classifier = pClassifier;
+    return m_classifier;
+}
+
+qc_parse_result_t mxs::CachingParser::parse(GWBUF* pStmt, uint32_t collect) const
+{
+    int32_t result = QC_QUERY_INVALID;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_parse(pStmt, collect, &result);
+
+    return (qc_parse_result_t)result;
+}
+
+mxs::CachingParser::DatabaseNames mxs::CachingParser::get_database_names(GWBUF* pStmt) const
+{
+    std::vector<std::string_view> names;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_database_names(pStmt, &names);
+
+    return names;
+}
+
+void mxs::CachingParser::get_field_info(GWBUF* pStmt,
+                                 const QC_FIELD_INFO** ppInfos,
+                                 size_t* pnInfos) const
+{
+    *ppInfos = NULL;
+
+    uint32_t n = 0;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_field_info(pStmt, ppInfos, &n);
+
+    *pnInfos = n;
+}
+
+void mxs::CachingParser::get_function_info(GWBUF* pStmt,
+                                    const QC_FUNCTION_INFO** ppInfos,
+                                    size_t* pnInfos) const
+{
+    *ppInfos = NULL;
+
+    uint32_t n = 0;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_function_info(pStmt, ppInfos, &n);
+
+    *pnInfos = n;
+
+}
+
+qc_query_op_t mxs::CachingParser::get_operation(GWBUF* pStmt) const
+{
+    int32_t op = QUERY_OP_UNDEFINED;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_operation(pStmt, &op);
+
+    return (qc_query_op_t)op;
+}
+
+uint32_t mxs::CachingParser::get_options() const
+{
+    return m_classifier.qc_get_options();
+}
+
+GWBUF* mxs::CachingParser::get_preparable_stmt(GWBUF* pStmt) const
+{
+    GWBUF* pPreparable_stmt = NULL;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_preparable_stmt(pStmt, &pPreparable_stmt);
+
+    return pPreparable_stmt;
+}
+
+std::string_view mxs::CachingParser::get_prepare_name(GWBUF* pStmt) const
+{
+    std::string_view name;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_prepare_name(pStmt, &name);
+
+    return name;
+}
+
+mxs::CachingParser::TableNames mxs::CachingParser::get_table_names(GWBUF* pStmt) const
+{
+    std::vector<QcTableName> names;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_table_names(pStmt, &names);
+
+    return names;
+}
+
+uint32_t mxs::CachingParser::get_trx_type_mask(GWBUF* pStmt) const
+{
+    maxscale::TrxBoundaryParser parser;
+
+    return parser.type_mask_of(pStmt);
+}
+
+uint32_t mxs::CachingParser::get_type_mask(GWBUF* pStmt) const
+{
+    uint32_t type_mask = QUERY_TYPE_UNKNOWN;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_get_type_mask(pStmt, &type_mask);
+
+    return type_mask;
+}
+
+bool mxs::CachingParser::is_drop_table_query(GWBUF* pStmt) const
+{
+    int32_t is_drop_table = 0;
+
+    QCInfoCacheScope scope(&m_classifier, pStmt);
+    m_classifier.qc_is_drop_table_query(pStmt, &is_drop_table);
+
+    return (is_drop_table != 0) ? true : false;
+}
+
+bool mxs::CachingParser::set_options(uint32_t options)
+{
+    int32_t rv = m_classifier.qc_set_options(options);
+
+    if (rv == QC_RESULT_OK)
+    {
+        this_thread.options = options;
+    }
+
+    return rv == QC_RESULT_OK;
+}
+
+void mxs::CachingParser::set_sql_mode(qc_sql_mode_t sql_mode)
+{
+    m_classifier.qc_set_sql_mode(sql_mode);
+}
+
+void mxs::CachingParser::set_server_version(uint64_t version)
+{
+    m_classifier.qc_set_server_version(version);
 }

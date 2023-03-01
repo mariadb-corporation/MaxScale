@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
-#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 
@@ -353,6 +352,4 @@ private:
 
     bool m_track_pooling_status {false};        /**< Does pooling status need to be tracked? */
     bool m_pooling_permanent_disable {false};   /**< Is pooling disabled permanently for this session? */
-
-    MariaDBParser m_parser;
 };

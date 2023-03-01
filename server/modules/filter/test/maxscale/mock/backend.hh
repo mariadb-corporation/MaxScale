@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <map>
-#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include "routersession.hh"
 
 namespace maxscale
@@ -163,9 +162,8 @@ public:
     bool respond(RouterSession* pSession, const mxs::Reply& reply) override final;
     void handle_statement(RouterSession* pSession, GWBUF&& statement) override;
 
-    int           m_counter;
-    bool          m_created;
-    MariaDBParser m_parser;
+    int  m_counter;
+    bool m_created;
 };
 }
 }

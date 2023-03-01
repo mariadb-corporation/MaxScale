@@ -29,6 +29,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
@@ -1225,7 +1226,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
 
     if (mariadb::is_com_query_or_prepare(buffer))
     {
-        type_mask = qc_get_type_mask(&buffer);
+        type_mask = session()->client_connection()->parser()->get_type_mask(&buffer);
     }
 
     auto is_read_only = !(type_mask & ~read_only_types);

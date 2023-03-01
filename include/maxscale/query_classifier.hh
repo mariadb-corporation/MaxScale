@@ -588,12 +588,3 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
  * @return The amount of memory freed.
  */
 int64_t qc_clear_thread_cache();
-
-/**
- * Set the global query classifier.
- *
- * NOTE: Temporary function needed during refactoring.
- *
- * @param pClassifier  The query classifier.
- */
-void qc_set_classifier(QUERY_CLASSIFIER* pClassifier);

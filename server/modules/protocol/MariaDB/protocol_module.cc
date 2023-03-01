@@ -15,12 +15,13 @@
 #define MXB_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
 
 #include "protocol_module.hh"
-#include <maxscale/protocol/mariadb/client_connection.hh>
-#include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/backend_connection.hh>
+#include <maxscale/protocol/mariadb/client_connection.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include "user_data.hh"
 
 using std::string;
@@ -29,9 +30,27 @@ namespace
 {
 const char DEFAULT_QC_NAME[] = "qc_sqlite";
 
+struct ThisUnit
+{
+    MariaDBParser* pParser = nullptr;
+} this_unit;
+
 mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL);
 }
 
+//
+// MariaDBParser
+//
+MariaDBParser& MariaDBParser::get()
+{
+    mxb_assert(this_unit.pParser);
+
+    return *this_unit.pParser;
+}
+
+//
+// MySQLProtocolModule
+//
 MySQLProtocolModule::MySQLProtocolModule(const std::string& name)
     : m_config(name, &s_spec)
 {
@@ -318,6 +337,8 @@ namespace
 {
 int module_init()
 {
+    mxb_assert(!this_unit.pParser);
+
     int rv = 1;
 
     const auto& config = mxs::Config::get();
@@ -330,7 +351,7 @@ int module_init()
 
         if (pClassifier->qc_setup(config.qc_sql_mode, config.qc_args.c_str()) == QC_RESULT_OK)
         {
-            qc_set_classifier(pClassifier);
+            this_unit.pParser = new MariaDBParser(pClassifier);
             rv = 0;
         }
         else
@@ -349,6 +370,11 @@ int module_init()
     }
 
     return rv;
+}
+
+void module_finish()
+{
+    delete this_unit.pParser;
 }
 }
 
@@ -371,7 +397,7 @@ MXS_MODULE* mariadbprotocol_info()
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::ProtocolApiGenerator<MySQLProtocolModule>::s_api,
         module_init,
-        nullptr,
+        module_finish,
         nullptr,
         nullptr,
         &s_spec

@@ -24,6 +24,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "nosqlconfig.hh"
 #include "nosqldatabase.hh"
@@ -279,7 +280,7 @@ size_t ClientConnection::sizeof_buffers() const
 
 mxs::Parser* ClientConnection::parser()
 {
-    return &m_parser;
+    return &MariaDBParser::get();
 }
 
 void ClientConnection::setup_session(const string& user, const vector<uint8_t>& password)

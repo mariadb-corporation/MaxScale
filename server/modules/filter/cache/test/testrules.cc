@@ -21,6 +21,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/query_classifier.hh>
+#include "../../../../core/test/test_utils.hh"
 
 using namespace std;
 
@@ -382,7 +383,7 @@ int CacheRules::Tester::test_store()
 {
     int errors = 0;
 
-    MariaDBParser parser;
+    MariaDBParser& parser = MariaDBParser::get();
     for (int i = 0; i < n_store_test_cases; ++i)
     {
         printf("TC      : %d\n", (int)(i + 1));
@@ -499,11 +500,10 @@ struct ShouldStore
 
     bool operator()(SCacheRules sRules)
     {
-        return sRules->should_store(parser, NULL, pStmt);
+        return sRules->should_store(MariaDBParser::get(), NULL, pStmt);
     }
 
-    GWBUF*        pStmt;
-    MariaDBParser parser;
+    GWBUF* pStmt;
 };
 
 int CacheRules::Tester::test_array_store()
@@ -575,32 +575,14 @@ int CacheRules::Tester::test_all()
 int main(int argc, char** argv)
 {
     int rc = EXIT_FAILURE;
-    mxs::Config::init(argc, argv);
 
-    if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
-    {
-        mxs::Config& config = mxs::Config::get();
-        config.n_threads = 1;
+    init_test_env();
 
-        mxs::set_libdir("../../../../../query_classifier/qc_sqlite/");
-        if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", ""))
-        {
-            mxs::set_libdir("../");
-            rc = CacheRules::Tester::test_all();
+    mxs::Config& config = mxs::Config::get();
+    config.n_threads = 1;
 
-            qc_end();
-        }
-        else
-        {
-            MXB_ERROR("Could not initialize query classifier.");
-        }
+    qc_thread_init(QC_INIT_SELF);
+    MariaDBParser::get().classifier().qc_thread_init();
 
-        mxs_log_finish();
-    }
-    else
-    {
-        printf("error: Could not initialize log.");
-    }
-
-    return rc;
+    return CacheRules::Tester::test_all();
 }
