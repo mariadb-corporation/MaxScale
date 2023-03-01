@@ -56,11 +56,6 @@ void PgClientConnection::hangup(DCB* dcb)
     m_session->kill();
 }
 
-int32_t PgClientConnection::write(GWBUF* buffer)
-{
-    return m_dcb->writeq_append(buffer);
-}
-
 bool PgClientConnection::write(GWBUF&& buffer)
 {
     return m_dcb->writeq_append(std::move(buffer));

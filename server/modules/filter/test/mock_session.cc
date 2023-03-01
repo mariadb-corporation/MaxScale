@@ -52,12 +52,6 @@ public:
     {
     }
 
-    int32_t write(GWBUF* buffer)override
-    {
-        gwbuf_free(buffer);
-        return 0;
-    }
-
     bool write(GWBUF&& buffer)override
     {
         return true;

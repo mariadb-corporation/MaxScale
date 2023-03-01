@@ -600,15 +600,13 @@ bool MariaDBClientConnection::send_server_handshake()
     bool rval = false;
     // Allocate buffer and send.
     auto pl_size = payload.size();
-    GWBUF* buf = gwbuf_alloc(MYSQL_HEADER_LEN + pl_size);
-    if (buf)
-    {
-        ptr = GWBUF_DATA(buf);
-        ptr = mariadb::write_header(ptr, pl_size, 0);
-        memcpy(ptr, payload.data(), pl_size);
-        rval = (write(buf) == 1);
-    }
-    return rval;
+    size_t total_size = MYSQL_HEADER_LEN + pl_size;
+    GWBUF buf(total_size);
+    buf.write_complete(total_size);
+    ptr = buf.data();
+    ptr = mariadb::write_header(ptr, pl_size, 0);
+    memcpy(ptr, payload.data(), pl_size);
+    return write(std::move(buf));
 }
 
 /**
@@ -1589,11 +1587,6 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
     }
 }
 
-int32_t MariaDBClientConnection::write(GWBUF* queue)
-{
-    return m_dcb->writeq_append(queue);
-}
-
 bool MariaDBClientConnection::write(GWBUF&& buffer)
 {
     return m_dcb->writeq_append(move(buffer));
@@ -1754,7 +1747,7 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
     // writing data in the Client buffer queue
-    write(buf);
+    write(mxs::gwbufptr_to_gwbuf(buf));
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
@@ -1776,7 +1769,7 @@ int MariaDBClientConnection::send_standard_error(int packet_number, int error_nu
                                                  const char* error_message)
 {
     GWBUF* buf = create_standard_error(packet_number, error_number, error_message);
-    return buf ? write(buf) : 0;
+    return buf ? write(mxs::gwbufptr_to_gwbuf(buf)) : 0;
 }
 
 /**

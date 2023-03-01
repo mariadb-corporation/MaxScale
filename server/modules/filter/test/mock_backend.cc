@@ -226,14 +226,9 @@ private:
             mxb_assert(!true);
         }
 
-        int32_t write(GWBUF* pBuffer) override
-        {
-            return m_owner.write(pBuffer);
-        }
-
         bool write(GWBUF&& buffer) override
         {
-            return write(mxs::gwbuf_to_gwbufptr(std::move(buffer)));
+            return m_owner.write(std::move(buffer));
         }
 
         json_t* diagnostics() const override
@@ -289,16 +284,10 @@ public:
     }
 
 private:
-    int32_t write(GWBUF* pBuffer)
+    bool write(GWBUF&& buffer)
     {
-        mxb_assert(pBuffer);
-        unsigned char* begin = GWBUF_DATA(pBuffer);
-        unsigned char* end = begin + gwbuf_link_length(pBuffer);
-
-        m_response.insert(m_response.end(), begin, end);
-
-        gwbuf_free(pBuffer);
-        return 1;
+        m_response.insert(m_response.end(), buffer.begin(), buffer.end());
+        return true;
     }
 
     mutable Protocol  m_protocol;

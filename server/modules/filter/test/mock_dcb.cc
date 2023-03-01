@@ -43,25 +43,16 @@ Dcb::Handler* Dcb::set_handler(Handler* pHandler)
     return m_protocol.set_handler(pHandler);
 }
 
-int32_t Dcb::Protocol::write(GWBUF* pData)
+bool Dcb::Protocol::write(GWBUF&& data)
 {
     int32_t rv = 1;
 
     if (m_pHandler)
     {
-        rv = m_pHandler->write(mxs::gwbufptr_to_gwbuf(pData));
-    }
-    else
-    {
-        gwbuf_free(pData);
+        rv = m_pHandler->write(std::move(data));
     }
 
     return rv;
-}
-
-bool Dcb::Protocol::write(GWBUF&& data)
-{
-    return write(mxs::gwbuf_to_gwbufptr(std::move(data)));
 }
 }
 }

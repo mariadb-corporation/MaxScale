@@ -27,7 +27,6 @@ public:
     void error(DCB* dcb) override final;
     void hangup(DCB* dcb) override final;
 
-    int32_t write(GWBUF* buffer) override final;
     bool    write(GWBUF&& buffer) override final;
 
     void finish_connection() override final;

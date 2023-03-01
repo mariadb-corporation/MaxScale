@@ -363,15 +363,17 @@ int AvroSession::send_row(json_t* row)
 {
     char* json = json_dumps(row, JSON_PRESERVE_ORDER);
     size_t len = strlen(json);
-    GWBUF* buf = gwbuf_alloc(len + 1);
+    size_t total_len = len + 1;
+    GWBUF buf(total_len);
+    buf.write_complete(total_len);
     int rc = 0;
 
     if (json && buf)
     {
-        uint8_t* data = GWBUF_DATA(buf);
+        uint8_t* data = buf.data();
         memcpy(data, json, len);
         data[len] = '\n';
-        rc = m_client->write(buf);
+        rc = m_client->write(std::move(buf));
     }
     else
     {
@@ -462,7 +464,7 @@ bool AvroSession::stream_binary()
         bytes += m_file_handle->buffer_size;
         if ((buffer = maxavro_record_read_binary(m_file_handle)))
         {
-            rc = m_client->write(buffer);
+            rc = m_client->write(mxs::gwbufptr_to_gwbuf(buffer));
         }
         else
         {
@@ -743,7 +745,7 @@ void AvroSession::client_callback()
 
             if (schema)
             {
-                m_client->write(schema);
+                m_client->write(mxs::gwbufptr_to_gwbuf(schema));
             }
         }
 

@@ -247,11 +247,6 @@ void CDCClientConnection::write_ready(DCB* event_dcb)
     m_dcb->writeq_drain();
 }
 
-int32_t CDCClientConnection::write(GWBUF* buffer)
-{
-    return m_dcb->writeq_append(buffer);
-}
-
 bool CDCClientConnection::write(GWBUF&& buffer)
 {
     return m_dcb->writeq_append(std::move(buffer));
@@ -296,8 +291,9 @@ CDCClientConnection::CDCClientConnection(CDCAuthenticatorModule& auth_module, mx
 void CDCClientConnection::write_auth_ack()
 {
     const char msg[] = "OK\n";
-    auto buf = gwbuf_alloc_and_load(sizeof(msg) - 1, msg);
-    write(buf);
+    GWBUF buf;
+    buf.add_chars(msg, sizeof(msg) - 1);
+    write(std::move(buf));
 }
 
 /**
@@ -306,20 +302,18 @@ void CDCClientConnection::write_auth_ack()
 void CDCClientConnection::write_auth_err()
 {
     const char msg[] = "ERROR: Authentication failed\n";
-    auto buf = gwbuf_alloc_and_load(sizeof(msg) - 1, msg);
-    write(buf);
+    GWBUF buf;
+    buf.add_chars(msg, sizeof(msg) - 1);
+    write(std::move(buf));
 }
 
 bool CDCClientConnection::write(const char* msg)
 {
     // CDC-protocol messages end in \n. The ending 0-char need not be written.
-    auto len = strlen(msg);
-    auto buf = gwbuf_alloc(len + 1);
-    auto* ptr = GWBUF_DATA(buf);
-    memcpy(ptr, msg, len);
-    ptr += len;
-    *ptr = '\n';
-    return write(buf);
+    GWBUF buf;
+    buf.add_chars(msg, strlen(msg));
+    buf.add_byte('\n');
+    return write(std::move(buf));
 }
 
 bool CDCClientConnection::clientReply(GWBUF&& buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)

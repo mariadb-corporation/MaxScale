@@ -1177,17 +1177,6 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
     }
 }
 
-/*
- * Write function for backend DCB. Store command to protocol.
- *
- * @param queue Queue of buffers to write
- * @return      0 on failure, 1 on success
- */
-int32_t MariaDBBackendConnection::write(GWBUF* queue)
-{
-    return write(mxs::gwbufptr_to_gwbuf(queue)) ? 1 : 0;
-}
-
 bool MariaDBBackendConnection::write(GWBUF&& queue)
 {
     int rc = 0;

@@ -83,7 +83,6 @@ public:
     void error(DCB* dcb) override;
     void hangup(DCB* dcb) override;
 
-    int32_t write(GWBUF* buffer) override;
     bool    write(GWBUF&& buffer) override;
 
     /**

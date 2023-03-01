@@ -197,8 +197,9 @@ void ClientConnection::hangup(DCB* pDcb)
 
 const char* dbg_decode_response(GWBUF* pPacket);
 
-int32_t ClientConnection::write(GWBUF* pMariaDB_response)
+bool ClientConnection::write(GWBUF&& buffer)
 {
+    GWBUF* pMariaDB_response = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     int32_t rv = 1;
 
     if (m_nosql.is_busy())
@@ -248,11 +249,6 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
     }
 
     return rv;
-}
-
-bool ClientConnection::write(GWBUF&& buffer)
-{
-    return write(mxs::gwbuf_to_gwbufptr(move(buffer)));
 }
 
 json_t* ClientConnection::diagnostics() const
@@ -353,15 +349,16 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 
 bool ClientConnection::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* pBuffer = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     int32_t rv = 0;
 
     if (m_nosql.is_busy())
     {
-        rv = write(pBuffer);
+        rv = write(std::move(buffer));
     }
     else
     {
+        GWBUF* pBuffer = mxs::gwbuf_to_gwbufptr(std::move(buffer));
+
         // If there is not a pending command, this is likely to be a server hangup
         // caused e.g. by an authentication error.
         // TODO: However, currently 'reply' does not contain anything, but the information

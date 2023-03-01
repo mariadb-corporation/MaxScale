@@ -43,11 +43,6 @@ void PgBackendConnection::hangup(DCB* dcb)
     m_upstream->handleError(mxs::ErrorType::TRANSIENT, "Hangup", nullptr, m_reply);
 }
 
-int32_t PgBackendConnection::write(GWBUF* buffer)
-{
-    return m_dcb->writeq_append(buffer);
-}
-
 bool PgBackendConnection::write(GWBUF&& buffer)
 {
     return m_dcb->writeq_append(std::move(buffer));
