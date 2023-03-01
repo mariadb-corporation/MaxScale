@@ -677,13 +677,9 @@ void MariaDBMonitor::tick()
     m_state = State::MONITOR;
     check_maintenance_requests();
 
-    /* Update MonitorServer->pending_status. This is where the monitor loop writes it's findings.
-     * Also, backup current status so that it can be compared to any deduced state. */
     for (auto srv : m_servers)
     {
-        auto status = srv->server->status();
-        srv->pending_status = status;
-        srv->mon_prev_status = status;
+        srv->stash_current_status();
     }
 
     // Query all servers for their status.
@@ -1218,11 +1214,11 @@ void MariaDBMonitor::flush_mdb_server_status()
     {
         SERVER* srv = server->server;
         srv->set_replication_lag(server->m_replication_lag);
-        if (server->pending_status != srv->status())
+        if (server->flush_status())
         {
             status_changed = true;
-            srv->assign_status(server->pending_status);
         }
+
         if (rlag_limit >= 0)
         {
             server->update_rlag_state(rlag_limit);

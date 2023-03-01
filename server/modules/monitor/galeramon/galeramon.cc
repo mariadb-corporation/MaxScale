@@ -465,7 +465,7 @@ void GaleraMonitor::post_tick()
         ptr->server->set_replication_lag(0);
 
         const int repl_bits = (SERVER_SLAVE | SERVER_MASTER);
-        if ((ptr->pending_status & SERVER_JOINED) && !m_config.disable_master_role_setting)
+        if (ptr->has_status(SERVER_JOINED) && !m_config.disable_master_role_setting)
         {
             if (ptr != m_master)
             {
@@ -497,7 +497,7 @@ void GaleraMonitor::post_tick()
             ptr->clear_pending_status(repl_bits);
 
             if (std::any_of(m_info.begin(), m_info.end(), [master_id](decltype(m_info)::const_reference r) {
-                                return r.first->pending_status & SERVER_JOINED
+                                return r.first->has_status(SERVER_JOINED)
                                        && r.second.server_id == master_id;
                             }))
             {
@@ -592,7 +592,7 @@ MonitorServer* GaleraMonitor::get_candidate_master()
     for (auto moitor_servers : m_servers)
     {
         if (!moitor_servers->server->is_in_maint()
-            && (moitor_servers->pending_status & SERVER_JOINED))
+            && (moitor_servers->has_status(SERVER_JOINED)))
         {
             int64_t priority = moitor_servers->server->priority();
 
@@ -668,11 +668,8 @@ static MonitorServer* set_cluster_master(MonitorServer* current_master,
     }
     else
     {
-        /*
-         * if current_master is still a cluster member use it
-         *
-         */
-        if ((current_master->pending_status & SERVER_JOINED)
+        // If current_master is still a cluster member use it
+        if ((current_master->has_status(SERVER_JOINED))
             && (!current_master->server->is_in_maint()))
         {
             return current_master;
@@ -734,7 +731,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     /* Create an array of slave nodes */
     for (auto ptr : m_servers)
     {
-        if ((ptr->pending_status & SERVER_JOINED) && (ptr->pending_status & SERVER_SLAVE))
+        if ((ptr->has_status(SERVER_JOINED | SERVER_SLAVE)))
         {
             node_list[found_slaves] = (MonitorServer*)ptr;
             found_slaves++;

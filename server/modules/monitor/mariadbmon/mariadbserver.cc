@@ -655,52 +655,42 @@ bool MariaDBServer::binlog_on() const
 
 bool MariaDBServer::is_master() const
 {
-    return status_is_master(pending_status);
+    return status_is_master(m_pending_status);
 }
 
 bool MariaDBServer::is_slave() const
 {
-    return status_is_slave(pending_status);
+    return status_is_slave(m_pending_status);
 }
 
 bool MariaDBServer::is_usable() const
 {
-    return status_is_usable(pending_status);
+    return status_is_usable(m_pending_status);
 }
 
 bool MariaDBServer::is_running() const
 {
-    return status_is_running(pending_status);
+    return status_is_running(m_pending_status);
 }
 
 bool MariaDBServer::is_down() const
 {
-    return status_is_down(pending_status);
+    return status_is_down(m_pending_status);
 }
 
 bool MariaDBServer::is_in_maintenance() const
 {
-    return status_is_in_maint(pending_status);
+    return status_is_in_maint(m_pending_status);
 }
 
 bool MariaDBServer::is_relay_master() const
 {
-    return status_is_relay(pending_status);
+    return status_is_relay(m_pending_status);
 }
 
 bool MariaDBServer::is_low_on_disk_space() const
 {
-    return status_is_disk_space_exhausted(pending_status);
-}
-
-bool MariaDBServer::has_status(uint64_t bits) const
-{
-    return (pending_status & bits) == bits;
-}
-
-bool MariaDBServer::had_status(uint64_t bits) const
-{
-    return (mon_prev_status & bits) == bits;
+    return status_is_disk_space_exhausted(m_pending_status);
 }
 
 bool MariaDBServer::is_read_only() const

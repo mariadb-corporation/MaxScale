@@ -776,18 +776,21 @@ void Monitor::wait_for_status_change()
 
 void MonitorServer::stash_current_status()
 {
-    mon_prev_status = server->status();
-    pending_status = server->status();
+    // Should be run at the start of a monitor tick to both prepare next pending status and save the previous
+    // status.
+    auto status = server->status();
+    m_prev_status = status;
+    m_pending_status = status;
 }
 
 void MonitorServer::set_pending_status(uint64_t bits)
 {
-    pending_status |= bits;
+    m_pending_status |= bits;
 }
 
 void MonitorServer::clear_pending_status(uint64_t bits)
 {
-    pending_status &= ~bits;
+    m_pending_status &= ~bits;
 }
 
 /*
@@ -800,11 +803,11 @@ void MonitorServer::clear_pending_status(uint64_t bits)
  */
 mxs_monitor_event_t MonitorServer::get_event_type() const
 {
-    auto rval = event_type(mon_prev_status, server->status());
+    auto rval = event_type(m_prev_status, server->status());
 
     mxb_assert_message(rval != UNDEFINED_EVENT,
                        "No event for state transition: [%s] -> [%s]",
-                       Target::status_to_string(mon_prev_status, server->stats().n_current_conns()).c_str(),
+                       Target::status_to_string(m_prev_status, server->stats().n_current_conns()).c_str(),
                        server->status_string().c_str());
 
     return rval;
@@ -1009,7 +1012,7 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
  */
 bool MonitorServer::status_changed()
 {
-    return status_changed(mon_prev_status, server->status());
+    return status_changed(m_prev_status, server->status());
 }
 
 // static
@@ -1042,7 +1045,7 @@ bool MonitorServer::status_changed(uint64_t before, uint64_t after)
 
 bool MonitorServer::auth_status_changed()
 {
-    uint64_t old_status = mon_prev_status;
+    uint64_t old_status = m_prev_status;
     uint64_t new_status = server->status();
 
     return old_status != static_cast<uint64_t>(-1) && old_status != new_status
@@ -1463,7 +1466,7 @@ void MonitorServer::log_connect_error(ConnectResult rval)
 
 void MonitorServer::log_state_change(const std::string& reason)
 {
-    string prev = Target::status_to_string(mon_prev_status, server->stats().n_current_conns());
+    string prev = Target::status_to_string(m_prev_status, server->stats().n_current_conns());
     string next = server->status_string();
     MXB_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
                server->name(), server->address(), server->port(),
@@ -2084,11 +2087,11 @@ void MonitorServer::update_disk_space_status()
 
         if (disk_space_exhausted)
         {
-            pMs->pending_status |= SERVER_DISK_SPACE_EXHAUSTED;
+            pMs->m_pending_status |= SERVER_DISK_SPACE_EXHAUSTED;
         }
         else
         {
-            pMs->pending_status &= ~SERVER_DISK_SPACE_EXHAUSTED;
+            pMs->m_pending_status &= ~SERVER_DISK_SPACE_EXHAUSTED;
         }
     }
     else
@@ -2118,15 +2121,35 @@ void MonitorServer::update_disk_space_status()
     }
 }
 
+bool MonitorServer::flush_status()
+{
+    bool status_changed = false;
+    if (m_pending_status != server->status())
+    {
+        server->assign_status(m_pending_status);
+        status_changed = true;
+    }
+    return status_changed;
+}
+
+bool MonitorServer::has_status(uint64_t bits) const
+{
+    return (m_pending_status & bits) == bits;
+}
+
+bool MonitorServer::had_status(uint64_t bits) const
+{
+    return (m_prev_status & bits) == bits;
+}
+
 void Monitor::flush_server_status()
 {
     bool status_changed = false;
     for (MonitorServer* pMs : m_servers)
     {
-        if (pMs->pending_status != pMs->server->status())
+        if (pMs->flush_status())
         {
             status_changed = true;
-            pMs->server->assign_status(pMs->pending_status);
         }
     }
 
@@ -2176,8 +2199,7 @@ void SimpleMonitor::tick()
 
     for (MonitorServer* pMs : m_servers)
     {
-        pMs->mon_prev_status = pMs->server->status();
-        pMs->pending_status = pMs->server->status();
+        pMs->stash_current_status();
 
         ConnectResult rval = pMs->ping_or_connect();
 
@@ -2454,7 +2476,7 @@ void MonitorServer::read_journal_data(const mxb::Json& data)
     // is restarted. This should make it easier to spot authentication related problems during startup.
     status &= ~SERVER_AUTH_ERROR;
 
-    mon_prev_status = status;
+    m_prev_status = status;
     server->set_status(status);
 }
 

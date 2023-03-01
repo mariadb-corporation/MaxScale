@@ -521,22 +521,6 @@ public:
     bool is_low_on_disk_space() const;
 
     /**
-     * Check if server has the given bits on in 'pending_status'.
-     *
-     * @param bits Bits to check
-     * @return True if all given bits are on
-     */
-    bool has_status(uint64_t bits) const;
-
-    /**
-     * Check if server has the given bits on in 'mon_prev_status'.
-     *
-     * @param bits Bits to check
-     * @return True if all given bits are on
-     */
-    bool had_status(uint64_t bits) const;
-
-    /**
      * Getter for m_read_only.
      *
      * @return True if server is in read_only mode

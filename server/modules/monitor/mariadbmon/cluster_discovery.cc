@@ -505,8 +505,8 @@ int MariaDBMonitor::running_slaves(MariaDBServer* search_root)
  */
 void MariaDBMonitor::assign_server_roles()
 {
-    // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
-    // 'mon_prev_status'.
+    // Remove any existing [Master], [Slave] etc flags from 'm_pending_status', they are still available in
+    // 'm_prev_status'.
     const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_BLR;
     for (auto server : m_servers)
     {

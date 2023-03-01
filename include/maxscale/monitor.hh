@@ -210,9 +210,20 @@ public:
      */
     void stash_current_status();
 
+    /**
+     * Check if server has all the given bits on in 'm_pending_status'.
+     */
+    bool has_status(uint64_t bits) const;
+
+    /**
+     * Check if server has all the given bits on in 'm_prev_status'.
+     */
+    bool had_status(uint64_t bits) const;
+
     static bool status_changed(uint64_t before, uint64_t after);
 
     bool        status_changed();
+    bool        flush_status();
     bool        auth_status_changed();
     bool        should_print_fail_status();
     std::string get_connect_error(ConnectResult rval);
@@ -282,7 +293,7 @@ public:
      * @brief Update the disk space status of a server.
      *
      * After the call, the bit @c SERVER_DISK_SPACE_EXHAUSTED will be set on
-     * @c pMonitored_server->pending_status if the disk space is exhausted
+     * @c pMonitored_server->m_pending_status if the disk space is exhausted
      * or cleared if it is not.
      */
     void update_disk_space_status();
@@ -317,14 +328,15 @@ public:
     MYSQL*  con = nullptr;          /**< The MySQL connection */
     int     mon_err_count = 0;
 
-    uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
-    uint64_t pending_status = 0;        /**< Status during current monitor loop */
-
     int64_t node_id = -1;           /**< Node id, server_id for M/S or local_index for Galera */
     int64_t master_id = -1;         /**< Master server id of this node */
 
     mxs_monitor_event_t last_event {SERVER_DOWN_EVENT}; /**< The last event that occurred on this server */
     time_t              triggered_at {time(nullptr)};   /**< Time when the last event was triggered */
+
+protected:
+    uint64_t m_prev_status = -1;        /**< Status at start of current monitor loop */
+    uint64_t m_pending_status = 0;      /**< Status during current monitor loop */
 
 private:
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
@@ -565,7 +577,7 @@ protected:
     void test_permissions(const std::string& query);
 
     /**
-     * Copy monitored_server->pending_status to server->status. If status changed, request journal update.
+     * Copy monitored_server->m_pending_status to server->status. If status changed, request journal update.
      */
     void flush_server_status();
 
