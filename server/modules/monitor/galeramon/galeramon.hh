@@ -55,7 +55,6 @@ public:
     mxs::config::Configuration& configuration() override final;
 
 protected:
-    bool has_sufficient_permissions() override;
     void update_server_status(mxs::MonitorServer* monitored_server) override;
     void pre_tick() override;
     void post_tick() override;
@@ -101,4 +100,6 @@ private:
 
     bool        post_configure();
     friend bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
+
+    std::string permission_test_query() const override;
 };

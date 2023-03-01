@@ -685,70 +685,47 @@ json_t* Monitor::parameters_to_json() const
     return rval;
 }
 
-bool Monitor::test_permissions(const string& query)
+void Monitor::test_permissions(const string& query)
 {
-    if (m_servers.empty() || mxs::Config::get().skip_permission_checks.get())
+    if (m_servers.empty() || mxs::Config::get().skip_permission_checks.get() || query.empty())
     {
-        return true;
+        return;
     }
 
     mxb::LogScope scope(name());
-    bool rval = false;
-
     for (MonitorServer* mondb : m_servers)
     {
-        auto result = mondb->ping_or_connect();
+        mondb->test_permissions(query);
+    }
+}
 
-        if (!connection_is_ok(result))
+void MonitorServer::test_permissions(const string& query)
+{
+    auto mondb = this;
+    auto result = mondb->ping_or_connect();
+    if (!Monitor::connection_is_ok(result))
+    {
+        MXB_ERROR("Failed to check monitor user credentials and permissions on '%s': %s",
+                  mondb->server->name(), mondb->get_connect_error(result).c_str());
+    }
+    else if (mxs_mysql_query(mondb->con, query.c_str()) != 0)
+    {
+        MXB_ERROR("Failed to execute query '%s' with user '%s'. MySQL error message: %s",
+                  query.c_str(), conn_settings().username.c_str(), mysql_error(mondb->con));
+    }
+    else
+    {
+        MYSQL_RES* res = mysql_use_result(mondb->con);
+        if (res == NULL)
         {
-            MXB_ERROR("Failed to check monitor user credentials and permissions on '%s': %s",
-                      mondb->server->name(), mondb->get_connect_error(result).c_str());
-
-            if (result != ConnectResult::ACCESS_DENIED)
-            {
-                rval = true;
-            }
-        }
-        else if (mxs_mysql_query(mondb->con, query.c_str()) != 0)
-        {
-            switch (mysql_errno(mondb->con))
-            {
-            case ER_TABLEACCESS_DENIED_ERROR:
-            case ER_COLUMNACCESS_DENIED_ERROR:
-            case ER_SPECIFIC_ACCESS_DENIED_ERROR:
-            case ER_PROCACCESS_DENIED_ERROR:
-            case ER_KILL_DENIED_ERROR:
-                rval = false;
-                break;
-
-            default:
-                rval = true;
-                break;
-            }
-
-            MXB_ERROR("Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      query.c_str(), conn_settings().username.c_str(), mysql_error(mondb->con));
+            MXB_ERROR("Result retrieval failed when checking monitor permissions: %s",
+                      mysql_error(mondb->con));
         }
         else
         {
-            rval = true;
-            MYSQL_RES* res = mysql_use_result(mondb->con);
-            if (res == NULL)
-            {
-                MXB_ERROR("Result retrieval failed when checking monitor permissions: %s",
-                          mysql_error(mondb->con));
-            }
-            else
-            {
-                mysql_free_result(res);
-            }
-
-            mondb->maybe_fetch_variables();
-            mondb->fetch_uptime();
+            mysql_free_result(res);
         }
     }
-
-    return rval;
 }
 
 json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
@@ -1971,40 +1948,25 @@ bool Monitor::start()
 
     remove_old_journal();
 
-    if (!m_checked)
-    {
-        if (!has_sufficient_permissions())
-        {
-            MXB_ERROR("Failed to start monitor. See earlier errors for more information.");
-        }
-        else
-        {
-            m_checked = true;
-        }
-    }
-
     bool started = false;
-    if (m_checked)
+    // Next tick should happen immediately.
+    m_loop_called = get_time_ms() - settings().interval.count();
+    if (!m_worker->start(name()))
     {
-        // Next tick should happen immediately.
-        m_loop_called = get_time_ms() - settings().interval.count();
-        if (!m_worker->start(name()))
-        {
-            MXB_ERROR("Failed to start worker for monitor '%s'.", name());
-        }
-        else
-        {
-            // Ok, so the thread started. Let's wait until we can be certain the
-            // state has been updated.
-            m_semaphore.wait();
+        MXB_ERROR("Failed to start worker for monitor '%s'.", name());
+    }
+    else
+    {
+        // Ok, so the thread started. Let's wait until we can be certain the
+        // state has been updated.
+        m_semaphore.wait();
 
-            started = m_thread_running.load(std::memory_order_acquire);
-            if (!started)
-            {
-                // Ok, so the initialization failed and the thread will exit.
-                // We need to wait on it so that the thread resources will not leak.
-                m_worker->join();
-            }
+        started = m_thread_running.load(std::memory_order_acquire);
+        if (!started)
+        {
+            // Ok, so the initialization failed and the thread will exit.
+            // We need to wait on it so that the thread resources will not leak.
+            m_worker->join();
         }
     }
     return started;
@@ -2156,11 +2118,6 @@ void MonitorServer::update_disk_space_status()
     }
 }
 
-bool Monitor::has_sufficient_permissions()
-{
-    return true;
-}
-
 void Monitor::flush_server_status()
 {
     bool status_changed = false;
@@ -2207,6 +2164,13 @@ void SimpleMonitor::tick()
 {
     check_maintenance_requests();
     pre_tick();
+
+    if (ticks() == 0)
+    {
+        // Check monitor user permissions only on the first tick. This is not essential, as any missing
+        // privs will cause other errors. Any servers which cannot be connected to at all will be skipped.
+        test_permissions(permission_test_query());
+    }
 
     const bool should_update_disk_space = check_disk_space_this_tick();
 
@@ -2349,7 +2313,7 @@ bool Monitor::call_run_one_tick()
 void Monitor::run_one_tick()
 {
     tick();
-    m_ticks.store(ticks() + 1, std::memory_order_release);
+    m_ticks.fetch_add(1, std::memory_order_acq_rel);
 }
 
 bool Monitor::immediate_tick_required()

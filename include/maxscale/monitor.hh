@@ -224,6 +224,11 @@ public:
     void mon_report_query_error();
 
     /**
+     * Try run query, log errors.
+     */
+    void test_permissions(const std::string& query);
+
+    /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
      * This will always leave a valid database handle in the database->con pointer, allowing the user to call
      * MySQL C API functions to find out the reason of the failure.
@@ -557,7 +562,7 @@ protected:
      * @param query Query to test with
      * @return True on success, false if monitor credentials lack permissions
      */
-    bool test_permissions(const std::string& query);
+    void test_permissions(const std::string& query);
 
     /**
      * Copy monitored_server->pending_status to server->status. If status changed, request journal update.
@@ -685,9 +690,6 @@ protected:
     const Settings&                          settings() const;
     const MonitorServer::ConnectionSettings& conn_settings() const;
 
-    /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
-    std::atomic_long m_ticks {0};
-
     std::unique_ptr<mxb::Worker> m_worker;      /**< The worker thread running this monitor */
 
     /**
@@ -777,14 +779,6 @@ private:
     virtual void load_monitor_specific_journal_data(const mxb::Json& data);
 
     /**
-     * Check whether the monitor user has sufficient rights to access the servers. The default
-     * implementation returns True.
-     *
-     * @return True, if the monitor user has sufficient rights.
-     */
-    virtual bool has_sufficient_permissions();
-
-    /**
      * Called by base class whenever configuration has changed. The implementation should generate its
      * own bookkeeping of servers and then call 'set_active_servers' to tell base-class what servers
      * are actually monitored.
@@ -867,8 +861,8 @@ private:
     mxb::Semaphore    m_semaphore;              /**< Semaphore for synchronizing with monitor thread. */
     std::atomic<bool> m_thread_running {false}; /**< Thread state. */
 
-    bool    m_checked {false};  /**< Whether server access has been checked. */
-    int64_t m_loop_called;      /**< When was the loop called the last time. */
+    int64_t          m_loop_called; /**< When was the loop called the last time. */
+    std::atomic_long m_ticks {0};   /**< Number of monitor ticks ran. */
 
     std::string journal_filepath() const;
     bool        call_run_one_tick();
@@ -949,6 +943,8 @@ private:
      * A derived class overriding this function should last call this base version.
      */
     void post_loop() override;
+
+    virtual std::string permission_test_query() const = 0;
 };
 
 /**

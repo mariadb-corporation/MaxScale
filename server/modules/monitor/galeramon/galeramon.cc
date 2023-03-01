@@ -204,11 +204,6 @@ bool GaleraMonitor::post_configure()
     return true;
 }
 
-bool GaleraMonitor::has_sufficient_permissions()
-{
-    return test_permissions("SHOW STATUS LIKE 'wsrep_local_state'");
-}
-
 void get_gtid(MonitorServer* srv, GaleraNode* info)
 {
     if (mxs_mysql_query(srv->con,
@@ -941,6 +936,10 @@ bool GaleraMonitor::can_be_disabled(const MonitorServer& server, DisableType typ
     return rval;
 }
 
+std::string GaleraMonitor::permission_test_query() const
+{
+    return "SHOW STATUS LIKE 'wsrep_local_state'";
+}
 
 /**
  * The module entry point routine. It is this routine that
