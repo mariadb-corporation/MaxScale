@@ -120,8 +120,7 @@ static GWBUF gen_auth_switch_request_packet(const MYSQL_session* client_data)
     bufdata = mariadb::copy_chars(bufdata, plugin, sizeof(plugin));
     bufdata = mariadb::copy_bytes(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
     *bufdata++ = '\0';
-    buffer.write_complete(bufdata - buffer.data());
-    mxb_assert(buffer.length() == buflen);
+    mxb_assert(bufdata - buffer.data() == buflen);
     return buffer;
 }
 
@@ -346,7 +345,7 @@ GWBUF MariaDBBackendSession::generate_auth_response(uint8_t seqno)
     const uint8_t* curr_passwd = sha_pw.empty() ? null_client_sha1 : sha_pw.data();
     mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, ptr);
     ptr += SHA_DIGEST_LENGTH;
-    rval.write_complete(ptr - rval.data());
+    mxb_assert(ptr - rval.data() == (ptrdiff_t)total_len);
     return rval;
 }
 

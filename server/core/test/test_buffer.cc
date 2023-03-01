@@ -55,9 +55,7 @@ void test_split()
     size_t tailsize = 20;
 
     GWBUF head(headsize);
-    head.write_complete(headsize);
     GWBUF tail(tailsize);
-    tail.write_complete(tailsize);
     head.append(tail);
     TEST(head.length() == headsize + tailsize);
     GWBUF newchain = head.split(headsize + 5);
@@ -66,7 +64,6 @@ void test_split()
 
     /** Bad parameter tests */
     GWBUF buffer(headsize);
-    buffer.write_complete(headsize);
     auto splitted = buffer.split(0);
     TEST(splitted.length() == 0);
     TEST(buffer.length() == headsize);
@@ -165,8 +162,7 @@ void test_basics()
     printf("Testing basics\n");
     size_t size = 100;
     GWBUF buffer(size);
-    TEST(buffer.empty());
-    buffer.write_complete(size);
+    TEST(!buffer.empty());
     TEST(buffer.length() == size);
     TEST(!buffer.empty());
     TEST(buffer.type_is_undefined());
@@ -191,12 +187,10 @@ void test_basics()
     printf("Testing append and trim\n");
     size = 100000;
     buffer = GWBUF(size);
-    TEST(buffer.empty());
-    buffer.write_complete(size);
+    TEST(!buffer.empty());
     TEST(buffer.length() == size);
     TEST(buffer.type_is_undefined());
     GWBUF extra(size);
-    extra.write_complete(size);
     buffer.append(extra);
     test(buffer.length() == 2 * size, "Incorrect size for extended buffer");
     buffer.rtrim(60000);

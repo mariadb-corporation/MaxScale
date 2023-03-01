@@ -106,7 +106,7 @@ GWBUF PamBackendAuthenticator::generate_pw_packet(PromptType pw_type) const
     {
         ptr = mariadb::copy_bytes(ptr, source.data(), auth_token_len);
     }
-    rval.write_complete(ptr - rval.data());
+    mxb_assert(ptr - rval.data() == (ptrdiff_t)buflen);
     return rval;
 }
 

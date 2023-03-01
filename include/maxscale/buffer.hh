@@ -102,11 +102,15 @@ public:
     GWBUF();
 
     /**
-     * Create an empty buffer. The buffer has no data initially.
+     * Create an uninitialized buffer.
      *
-     * @param reserve_size Reserved size of the underlying buffer
+     * The buffer allocates `size` bytes of storage to which data can be written. The newly constructed buffer
+     * will not be empty but the data allocated for it will be uninitialized. The caller must make sure that
+     * the allocated data is correctly initialized.
+     *
+     * @param size Allocated size of the underlying buffer
      */
-    explicit GWBUF(size_t reserve_size);
+    explicit GWBUF(size_t size);
 
     /**
      * Create a buffer with the given data.

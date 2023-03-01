@@ -44,7 +44,6 @@ void test1()
     const int writelen = 100;
     GWBUF buffer(writelen);
     memset(buffer.data(), 0, writelen);
-    buffer.write_complete(writelen);
     expect(buffer.length() == writelen, "Length should be correct");
     expect(mariadb::is_com_query(buffer) == false, "Default buffer should not be diagnosed as SQL");
     const char* sql;
@@ -58,7 +57,6 @@ void test2()
     /** Allocate space for the COM_QUERY header and payload */
     auto total_len = MYSQL_HEADER_LEN + 1 + len;
     GWBUF buffer(total_len);
-    expect((buffer.empty()), "Buffer should be empty");
 
     char query[len + 1];
     memset(query, ';', len);
@@ -67,7 +65,6 @@ void test2()
     ptr = mariadb::write_header(ptr, len, 1);
     *ptr++ = 0x03;
     mariadb::copy_chars(ptr, query, strlen(query));
-    buffer.write_complete(total_len);
 
     const char* sql;
     int length;
@@ -484,10 +481,8 @@ void test_strnchr_esc()
 
 GWBUF create_buffer(size_t size)
 {
-    GWBUF buffer;
-    auto [ptr, _] = buffer.prepare_to_write(size + MYSQL_HEADER_LEN);
-    mariadb::write_header(ptr, size, 0);
-    buffer.write_complete(size + MYSQL_HEADER_LEN);
+    GWBUF buffer(size + MYSQL_HEADER_LEN);
+    mariadb::write_header(buffer.data(), size, 0);
     return buffer;
 }
 

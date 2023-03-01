@@ -600,9 +600,7 @@ bool MariaDBClientConnection::send_server_handshake()
     bool rval = false;
     // Allocate buffer and send.
     auto pl_size = payload.size();
-    size_t total_size = MYSQL_HEADER_LEN + pl_size;
-    GWBUF buf(total_size);
-    buf.write_complete(total_size);
+    GWBUF buf(MYSQL_HEADER_LEN + pl_size);
     ptr = buf.data();
     ptr = mariadb::write_header(ptr, pl_size, 0);
     memcpy(ptr, payload.data(), pl_size);

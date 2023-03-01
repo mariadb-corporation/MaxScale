@@ -105,7 +105,6 @@ GWBUF* gwbuf_alloc(unsigned int size)
 {
     mxb_assert(size > 0);
     auto rval = new GWBUF(size);
-    rval->write_complete(size);     // Callers expect the end-pointer to point to buffer end
     return rval;
 }
 
@@ -137,12 +136,12 @@ GWBUF::GWBUF()
 #endif
 }
 
-GWBUF::GWBUF(size_t reserve_size)
+GWBUF::GWBUF(size_t size)
     : GWBUF()
 {
-    m_sbuf = std::make_shared<SHARED_BUF>(reserve_size);
+    m_sbuf = std::make_shared<SHARED_BUF>(size);
     m_start = m_sbuf->buf_start.get();
-    m_end = m_start;
+    m_end = m_start + size;
 }
 
 GWBUF::GWBUF(const uint8_t* data, size_t datasize)

@@ -367,9 +367,7 @@ void MariaDBBackendConnection::process_stmt_execute(GWBUF& original, uint32_t id
             {
                 const auto& metadata = it->second;
 
-                auto newsize = original.length() + metadata.size();
-                GWBUF newbuf(newsize);
-                newbuf.write_complete(newsize);
+                GWBUF newbuf(original.length() + metadata.size());
                 auto dataptr = newbuf.data();
 
                 memcpy(dataptr, original.data(), types_offset);
@@ -1509,9 +1507,7 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
     auto& attr = client_auth_data.attributes;
     payload.insert(payload.end(), attr.begin(), attr.end());
 
-    auto buflen = MYSQL_HEADER_LEN + payload.size();
-    GWBUF buffer(buflen);
-    buffer.write_complete(buflen);
+    GWBUF buffer(MYSQL_HEADER_LEN + payload.size());
     auto data = buffer.data();
     data = mariadb::write_header(data, payload.size(), 0);
     mariadb::copy_bytes(data, payload.data(), payload.size());
@@ -1879,7 +1875,6 @@ GWBUF MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ss
 
     // allocating the GWBUF
     GWBUF buffer(bytes);
-    buffer.write_complete(bytes);
     uint8_t* payload = buffer.data();
 
     // clearing data

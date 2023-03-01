@@ -34,7 +34,7 @@ GWBUF GSSAPIBackendAuthenticator::generate_auth_token_packet() const
     {
         ptr = mariadb::copy_bytes(ptr, auth_token.data(), auth_token_len);
     }
-    rval.write_complete(ptr - rval.data());
+    mxb_assert(ptr - rval.data() == (ptrdiff_t)buflen);
     return rval;
 }
 

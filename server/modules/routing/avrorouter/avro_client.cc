@@ -363,9 +363,7 @@ int AvroSession::send_row(json_t* row)
 {
     char* json = json_dumps(row, JSON_PRESERVE_ORDER);
     size_t len = strlen(json);
-    size_t total_len = len + 1;
-    GWBUF buf(total_len);
-    buf.write_complete(total_len);
+    GWBUF buf(len + 1);
     int rc = 0;
 
     if (json && buf)

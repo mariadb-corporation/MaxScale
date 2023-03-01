@@ -204,8 +204,7 @@ bool PinlokiSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
 
 GWBUF PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_t size)
 {
-    size_t total_size = MYSQL_HEADER_LEN + size + prefix;
-    GWBUF buffer(total_size);
+    GWBUF buffer(MYSQL_HEADER_LEN + size + prefix);
 
     mariadb::set_byte3(buffer.data(), size + prefix);
     buffer.data()[3] = m_seq++;
@@ -214,7 +213,6 @@ GWBUF PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_t size
         buffer.data()[MYSQL_HEADER_LEN] = 0;
     }
     memcpy(buffer.data() + MYSQL_HEADER_LEN + prefix, ptr, size);
-    buffer.write_complete(total_size);
 
     return buffer;
 }

@@ -118,9 +118,7 @@ GWBUF mysql_create_custom_error(int packet_number, int affected_rows, uint16_t e
         + strlen(errmsg);
 
     /** allocate memory for packet header + payload */
-    size_t total_size = sizeof(mysql_packet_header) + mysql_payload_size;
-    GWBUF errbuf(total_size);
-    errbuf.write_complete(total_size);
+    GWBUF errbuf(sizeof(mysql_packet_header) + mysql_payload_size);
     uint8_t* outbuf = errbuf.data();
 
     /** write packet header and packet number */
@@ -672,9 +670,9 @@ GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows)
     *ptr++ = 0;
     *ptr++ = affected_rows;
     *ptr++ = 0;
-    ptr += mariadb::set_byte2(ptr, 2);   // autocommit is on
-    ptr += mariadb::set_byte2(ptr, 0);   // no warnings
-    buffer.write_complete(ptr - buffer.data());
+    ptr += mariadb::set_byte2(ptr, 2);      // autocommit is on
+    ptr += mariadb::set_byte2(ptr, 0);      // no warnings
+    mxb_assert(ptr - buffer.data() == total_size);
     return buffer;
 }
 
@@ -692,8 +690,7 @@ GWBUF create_query(const string& query)
     auto ptr = mariadb::write_header(rval.data(), plen, 0);
     *ptr++ = MXS_COM_QUERY;
     ptr = mariadb::copy_chars(ptr, query.c_str(), query.length());
-    rval.write_complete(ptr - rval.data());
-    mxb_assert(rval.length() == total_len);
+    mxb_assert(ptr - rval.data() == (ptrdiff_t)total_len);
     return rval;
 }
 
@@ -763,7 +760,8 @@ GWBUF get_next_MySQL_packet(GWBUF& buffer)
 GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg)
 {
     mxb_assert(statemsg && strlen(statemsg) == 5 && msg);
-    GWBUF errbuf(100);                      // reserve guess
+    GWBUF errbuf;                      // reserve guess
+    errbuf.prepare_to_write(100);
     errbuf.write_complete(MYSQL_HEADER_LEN);// write header last
     auto msglen = strlen(msg);
     errbuf.add_byte(0xff).add_lsbyte2(err_num).add_byte('#').add_chars(statemsg, 5).add_chars(msg, msglen);

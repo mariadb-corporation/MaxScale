@@ -843,9 +843,7 @@ bool SchemaRouterSession::handle_default_db()
         /* Send a COM_INIT_DB packet to the server with the right database
          * and set it as the client's active database */
         unsigned int qlen = m_connect_db.length();
-        size_t total_len = qlen + 5;
-        GWBUF buffer(total_len);
-        buffer.write_complete(total_len);
+        GWBUF buffer(qlen + 5);
         uint8_t* data = buffer.data();
 
         mariadb::set_byte3(data, qlen + 1);
