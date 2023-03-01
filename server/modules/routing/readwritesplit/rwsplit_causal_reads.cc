@@ -311,7 +311,7 @@ void RWSplitSession::parse_gtid_result(GWBUF& buffer, const mxs::Reply& reply)
         MXB_INFO("GTID probe complete, GTID is: %s", m_gtid_pos.to_string().c_str());
 
         // We need to return something for the upper layer, an OK packet should be adequate
-        buffer = modutil_create_ok();
+        buffer = mariadb::create_ok_packet();
     }
     else
     {

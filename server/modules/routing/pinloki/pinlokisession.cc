@@ -115,7 +115,7 @@ bool PinlokiSession::routeQuery(GWBUF&& buf)
     case MXS_COM_REGISTER_SLAVE:
         // Register slave (maybe grab the slave's server_id if we need it)
         MXB_INFO("COM_REGISTER_SLAVE");
-        response = modutil_create_ok();
+        response = mariadb::create_ok_packet();
         break;
 
     case MXS_COM_XPAND_REPL:
@@ -188,7 +188,7 @@ bool PinlokiSession::routeQuery(GWBUF&& buf)
         break;
 
     case MXS_COM_PING:
-        response = modutil_create_ok();
+        response = mariadb::create_ok_packet();
         break;
 
     default:
@@ -376,13 +376,13 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         else
         {
             m_gtid_list = std::move(gtid_list);
-            buf = modutil_create_ok();
+            buf = mariadb::create_ok_packet();
         }
     }
     else if (key == "@master_heartbeat_period")
     {
         m_heartbeat_period = strtol(value.c_str(), nullptr, 10) / 1000000000;
-        buf = modutil_create_ok();
+        buf = mariadb::create_ok_packet();
     }
     else if (key == "gtid_slave_pos")
     {
@@ -403,13 +403,13 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         else
         {
             m_router->set_gtid_slave_pos(gtid_list);
-            buf = modutil_create_ok();
+            buf = mariadb::create_ok_packet();
         }
     }
     else
     {
         MXB_SINFO("Ignore set " << key << " = " << value);
-        buf = modutil_create_ok();
+        buf = mariadb::create_ok_packet();
     }
 
     set_response(std::move(buf));
@@ -428,7 +428,7 @@ void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
         auto err_str = m_router->change_master(values);
         if (err_str.empty())
         {
-            buf = modutil_create_ok();
+            buf = mariadb::create_ok_packet();
         }
         else
         {
@@ -447,7 +447,7 @@ void PinlokiSession::start_slave()
 
     if (err_str.empty())
     {
-        buf = modutil_create_ok();
+        buf = mariadb::create_ok_packet();
     }
     else
     {
@@ -467,7 +467,7 @@ void PinlokiSession::stop_slave()
         m_router->stop_slave();
     }
 
-    set_response(modutil_create_ok());
+    set_response(mariadb::create_ok_packet());
 }
 
 void PinlokiSession::reset_slave()
@@ -485,7 +485,7 @@ void PinlokiSession::reset_slave()
     else
     {
         m_router->reset_slave();
-        buf = modutil_create_ok();
+        buf = mariadb::create_ok_packet();
     }
 
     set_response(std::move(buf));
@@ -604,12 +604,12 @@ void PinlokiSession::purge_logs(const std::string& up_to)
     switch (purge_binlogs(m_router->inventory(), up_to))
     {
     case PurgeResult::Ok:
-        set_response(modutil_create_ok());
+        set_response(mariadb::create_ok_packet());
         break;
 
     case PurgeResult::PartialPurge:
         MXB_SINFO("Could not purge all requested binlogs");
-        set_response(modutil_create_ok());
+        set_response(mariadb::create_ok_packet());
         break;
 
     case PurgeResult::UpToFileNotFound:

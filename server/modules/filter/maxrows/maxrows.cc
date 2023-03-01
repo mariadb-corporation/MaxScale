@@ -64,6 +64,57 @@ config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
     MaxRowsConfig::Mode::EMPTY,
     config::Param::AT_RUNTIME);
 }
+
+// See: https://mariadb.com/kb/en/library/eof_packet/
+GWBUF* modutil_create_eof(uint8_t seq)
+{
+    uint8_t eof[] = {0x5, 0x0, 0x0, seq, 0xfe, 0x0, 0x0, 0x0, 0x0};
+    return gwbuf_alloc_and_load(sizeof(eof), eof);
+}
+
+GWBUF* truncate_packets(GWBUF* buffer, uint64_t packets)
+{
+    auto it = buffer->begin();
+    size_t total_bytes = buffer->length();
+    size_t bytes_used = 0;
+
+    while (it != buffer->end())
+    {
+        size_t bytes_left = total_bytes - bytes_used;
+
+        if (bytes_left < MYSQL_HEADER_LEN)
+        {
+            // Partial header
+            break;
+        }
+
+        // Extract packet length and command byte
+        uint32_t len = *it++;
+        len |= (*it++) << 8;
+        len |= (*it++) << 16;
+        ++it;   // Skip the sequence
+
+        if (bytes_left < len + MYSQL_HEADER_LEN)
+        {
+            // Partial packet payload
+            break;
+        }
+
+        bytes_used += len + MYSQL_HEADER_LEN;
+
+        mxb_assert(it != buffer->end());
+        it += len;
+
+        if (--packets == 0)
+        {
+            // Trim off the extra data at the end
+            buffer->rtrim(std::distance(it, buffer->end()));
+            break;
+        }
+    }
+
+    return buffer;
+}
 }
 
 MaxRowsConfig::MaxRowsConfig(const char* zName)
@@ -111,7 +162,7 @@ bool MaxRowsSession::clientReply(GWBUF&& buf, const mxs::ReplyRoute& down, const
                     // to contain the start of the first resultset with no rows and inject an EOF packet into
                     // it.
                     uint64_t num_packets = reply.field_counts()[0] + 2;
-                    auto tmp = mxs::truncate_packets(m_buffer.release(), num_packets);
+                    auto tmp = truncate_packets(m_buffer.release(), num_packets);
                     m_buffer.append(tmp);
                     m_buffer.append(modutil_create_eof(num_packets + 1));
                     m_collect = false;
@@ -128,7 +179,7 @@ bool MaxRowsSession::clientReply(GWBUF&& buf, const mxs::ReplyRoute& down, const
                 break;
 
             case MaxRowsConfig::Mode::OK:
-                m_buffer.reset(mxs::gwbuf_to_gwbufptr(modutil_create_ok()));
+                m_buffer.reset(mxs::gwbuf_to_gwbufptr(mariadb::create_ok_packet()));
                 m_collect = false;
                 break;
 

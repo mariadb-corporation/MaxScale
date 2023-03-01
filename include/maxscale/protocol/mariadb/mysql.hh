@@ -207,9 +207,20 @@ GWBUF get_complete_packets(GWBUF& buffer);
 
 GWBUF get_next_MySQL_packet(GWBUF& buffer);
 
+GWBUF  create_ok_packet();
+
 GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg);
 
 GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg);
+
+/**
+ * Extract error messages from buffers
+ *
+ * @param buffer Buffer containing an error
+ *
+ * @return String representation of the error
+ */
+std::string extract_error(const GWBUF* buffer);
 }
 
 /** MySQL protocol constants */

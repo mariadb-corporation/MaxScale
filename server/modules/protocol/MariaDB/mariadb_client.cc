@@ -2337,7 +2337,7 @@ void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
     MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' succeeded on MaxScale but "
                 "returned (0x%0hhx) on backends: %s",
                 orig_auth_data->user.c_str(), curr_auth_data->user.c_str(),
-                mxs_mysql_get_command(*buffer), mxs::extract_error(buffer).c_str());
+                mxs_mysql_get_command(*buffer), mariadb::extract_error(buffer).c_str());
 
     // Restore original auth data from backup.
     curr_auth_data = move(orig_auth_data);

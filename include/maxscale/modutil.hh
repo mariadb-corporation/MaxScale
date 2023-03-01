@@ -22,11 +22,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-extern char* modutil_get_SQL(GWBUF*);
-
-GWBUF  modutil_create_ok();
-GWBUF* modutil_create_eof(uint8_t sequence);
-
 /**
  * Given a buffer containing a MySQL statement, this function will return
  * a pointer to the first character that is not whitespace. In this context,
@@ -48,29 +43,6 @@ const char* modutil_MySQL_bypass_whitespace(const char* sql, size_t len);
 
 // TODO: Move modutil out of the core
 const char* STRPACKETTYPE(int p);
-
-namespace maxscale
-{
-
-/**
- * Extract error messages from buffers
- *
- * @param buffer Buffer containing an error
- *
- * @return String representation of the error
- */
-std::string extract_error(const GWBUF* buffer);
-
-/**
- * Truncate buffers at packet boundaries
- *
- * @param b   Buffer to truncate
- * @param pkt Upper limit of how many packets to return
- *
- * @return A buffer with at most `ptk` packets in it
- */
-GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
-}
 
 /**
  * Extract the SQL portion of a COM_QUERY packet

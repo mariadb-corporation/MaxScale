@@ -372,7 +372,7 @@ bool ClientConnection::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const 
         else if (mxs_mysql_is_err_packet(*pBuffer))
         {
             MXB_ERROR("Error received from backend, session is likely to be closed: %s",
-                      mxs::extract_error(pBuffer).c_str());
+                      mariadb::extract_error(pBuffer).c_str());
         }
         else
         {

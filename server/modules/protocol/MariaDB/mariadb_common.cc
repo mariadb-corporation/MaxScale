@@ -91,7 +91,54 @@ constexpr const auto s_valid_commands = create_command_lut();
 static_assert(s_valid_commands[MXS_COM_QUERY], "COM_QUERY should be valid");
 static_assert(s_valid_commands[MXS_COM_PING], "COM_PING should be valid");
 static_assert(!s_valid_commands[0x50], "0x50 should not be a valid command");
+
+/**
+ * Extract the SQL state from an error packet.
+ *
+ * @param pBuffer  Pointer to an error packet.
+ * @param ppState  On return will point to the state in @c pBuffer.
+ * @param pnState  On return the pointed to value will be 6.
+ */
+void extract_error_state(const uint8_t* pBuffer, const uint8_t** ppState, uint16_t* pnState)
+{
+    mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
+
+    // The payload starts with a one byte command followed by a two byte error code,
+    // followed by a 1 byte sql state marker and 5 bytes of sql state. In this context
+    // the marker and the state itself are combined.
+    *ppState = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
+    // The SQLSTATE is optional and, if present, starts with the hash sign
+    *pnState = **ppState == '#' ? 6 : 0;
 }
+
+/**
+ * Extract the message from an error packet.
+ *
+ * @param pBuffer    Pointer to an error packet.
+ * @param ppMessage  On return will point to the start of the message in @c pBuffer.
+ * @param pnMessage  On return the pointed to value will be the length of the message.
+ */
+void extract_error_message(const uint8_t* pBuffer, const uint8_t** ppMessage,
+                           uint16_t* pnMessage)
+{
+    mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
+
+    int packet_len = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer);
+
+    // The payload starts with a one byte command followed by a two byte error code,
+    // followed by a 1 byte sql state marker and 5 bytes of sql state, followed by
+    // a message until the end of the packet.
+    *ppMessage = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
+    *pnMessage = packet_len - MYSQL_HEADER_LEN - 1 - 2;
+
+    if (**ppMessage == '#')     // The SQLSTATE is optional
+    {
+        (*ppMessage) += 6;
+        (*pnMessage) -= 6;
+    }
+}
+}
+
 GWBUF mysql_create_com_quit()
 {
     uint8_t packet[] = {0x1, 0x0, 0x0, 0x0, 0x1};
@@ -773,5 +820,43 @@ GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, const char* statem
 GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg)
 {
     return mxs::gwbuf_to_gwbufptr(create_error_packet(sequence, err_num, statemsg, msg));
+}
+
+// See: https://mariadb.com/kb/en/ok_packet/
+GWBUF create_ok_packet()
+{
+    uint8_t ok[] =
+    {0x7, 0x0, 0x0, 0x1,// packet header
+     0x0,               // OK header byte
+     0x0,               // affected rows
+     0x0,               // last_insert_id
+     0x0, 0x0,          // server status
+     0x0, 0x0           // warnings
+    };
+
+    return GWBUF(ok, sizeof(ok));
+}
+
+std::string extract_error(const GWBUF* buffer)
+{
+    std::string rval;
+    auto* data = buffer->data();
+    if (MYSQL_IS_ERROR_PACKET(data))
+    {
+        const uint8_t* pState;
+        uint16_t nState;
+        extract_error_state(data, &pState, &nState);
+
+        const uint8_t* pMessage;
+        uint16_t nMessage;
+        extract_error_message(data, &pMessage, &nMessage);
+
+        std::string err((const char*)pState, nState);
+        std::string msg((const char*)pMessage, nMessage);
+
+        rval = err.empty() ? msg : err + ": " + msg;
+    }
+
+    return rval;
 }
 }
