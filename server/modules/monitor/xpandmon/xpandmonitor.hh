@@ -25,6 +25,7 @@
 
 namespace config = maxscale::config;
 
+class XpandServer;
 class XpandMonitor : public maxscale::Monitor
                    , private XpandNode::Persister
 {
@@ -189,7 +190,13 @@ private:
     bool                     m_is_group_change {false};
     mxs::ConfigParameters    m_extra;
 
-    std::vector<mxs::MonitorServer*> m_servers;     /**< Configured servers */
+    std::vector<XpandServer*> m_servers;    /**< Configured servers */
 
     void configured_servers_updated(const std::vector<SERVER*>& servers) override;
+};
+
+class XpandServer : public mxs::MariaServer
+{
+public:
+    XpandServer(SERVER* server, const SharedSettings& shared);
 };

@@ -994,7 +994,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 }
 
 GaleraServer::GaleraServer(SERVER* server, const MonitorServer::SharedSettings& shared)
-    : MonitorServer(server, shared)
+    : MariaServer(server, shared)
 {
 }
 

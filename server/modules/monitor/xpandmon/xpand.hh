@@ -82,21 +82,6 @@ Result query(const char* zName, MYSQL* pCon, const char* zQuery);
 std::pair<Result, bool> is_part_of_the_quorum(const char* zName, MYSQL* pCon);
 
 /**
- * Is a particular Xpand node part of the quorum.
- *
- * @param zName   The name of the Xpand monitor instance.
- * @param ms      The monitored server object of a Xpand node.
- *
- * @return True, if the node is part of the quorum, false otherwise.
- */
-inline std::pair<Result, bool> is_part_of_the_quorum(const char* zName, mxs::MonitorServer& ms)
-{
-    mxb_assert(ms.con);
-
-    return is_part_of_the_quorum(zName, ms.con);
-}
-
-/**
  * Is a particular Xpand node being softfailed.
  *
  * @param zName  The name of the Xpand monitor instance.
@@ -141,7 +126,7 @@ Result ping_or_connect_to_hub(const char* zName,
 inline Result ping_or_connect_to_hub(const char* zName,
                                      const mxs::MonitorServer::ConnectionSettings& settings,
                                      Softfailed softfailed,
-                                     mxs::MonitorServer& ms)
+                                     mxs::MariaServer& ms)
 {
     return ping_or_connect_to_hub(zName, settings, softfailed, *ms.server, &ms.con);
 }

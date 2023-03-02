@@ -1662,6 +1662,11 @@ void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& server
     m_servers.resize(servers.size());
     for (size_t i = 0; i < servers.size(); i++)
     {
-        m_servers[i] = new mxs::MonitorServer(servers[i], shared_settings);
+        m_servers[i] = new XpandServer(servers[i], shared_settings);
     }
+}
+
+XpandServer::XpandServer(SERVER* server, const MonitorServer::SharedSettings& shared)
+    : MariaServer(server, shared)
+{
 }

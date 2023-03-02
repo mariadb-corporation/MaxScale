@@ -42,7 +42,7 @@ const char not_a_db[] = "it is not a valid database.";
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
                              const MonitorServer::SharedSettings& base_settings,
                              const MariaDBServer::SharedSettings& settings)
-    : MonitorServer(server, base_settings)
+    : MariaServer(server, base_settings)
     , m_config_index(config_index)
     , m_settings(settings)
 {

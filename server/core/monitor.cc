@@ -699,7 +699,7 @@ void Monitor::test_permissions(const string& query)
     }
 }
 
-void MonitorServer::test_permissions(const string& query)
+void MariaServer::test_permissions(const string& query)
 {
     auto mondb = this;
     auto result = mondb->ping_or_connect();
@@ -1187,8 +1187,8 @@ int Monitor::launch_command(MonitorServer* ptr, const std::string& event_name)
 }
 
 MonitorServer::ConnectResult
-MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server,
-                                     MYSQL** ppConn, std::string* pError)
+MariaServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server,
+                                   MYSQL** ppConn, std::string* pError)
 {
     mxb_assert(ppConn);
     mxb_assert(pError);
@@ -1310,7 +1310,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
     return conn_result;
 }
 
-ConnectResult MonitorServer::ping_or_connect()
+ConnectResult MariaServer::ping_or_connect()
 {
     auto old_type = server->info().type();
     auto connect = [this] {
@@ -1347,7 +1347,7 @@ bool MonitorServer::should_fetch_variables()
 /**
  * Fetch variables from the server. The values are stored in the SERVER object.
  */
-bool MonitorServer::fetch_variables()
+bool MariaServer::fetch_variables()
 {
     bool rv = true;
 
@@ -1413,7 +1413,7 @@ bool MonitorServer::fetch_variables()
     return rv;
 }
 
-void MonitorServer::fetch_uptime()
+void MariaServer::fetch_uptime()
 {
     if (auto r = mxs::execute_query(con, "SHOW STATUS LIKE 'Uptime'"))
     {
@@ -1761,11 +1761,6 @@ std::vector<SERVER*> Monitor::configured_servers() const
     return m_settings.servers;
 }
 
-MonitorServer* Monitor::create_server(SERVER* server, const MonitorServer::SharedSettings& shared)
-{
-    return new MonitorServer(server, shared);
-}
-
 namespace journal_fields
 {
 const char FIELD_MXSVERSION[] = "maxscale_version";
@@ -2010,7 +2005,7 @@ bool MonitorServer::can_update_disk_space_status() const
            && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
 }
 
-void MonitorServer::update_disk_space_status()
+void MariaServer::update_disk_space_status()
 {
     auto pMs = this;    // TODO: Clean
     std::map<std::string, disk::SizesAndName> info;
@@ -2344,11 +2339,6 @@ MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
     m_last_variables_update = mxb::Clock::now() - this_unit.variables_update_interval + 1s;
 }
 
-MonitorServer::~MonitorServer()
-{
-    close_conn();
-}
-
 void MonitorServer::apply_status_requests()
 {
     // The admin can only modify the [Maintenance] and [Drain] bits.
@@ -2462,13 +2452,23 @@ bool MonitorServer::is_access_denied_error(int64_t errornum)
     return errornum == ER_ACCESS_DENIED_ERROR || errornum == ER_ACCESS_DENIED_NO_PASSWORD_ERROR;
 }
 
-void MonitorServer::close_conn()
+void MariaServer::close_conn()
 {
     if (con)
     {
         mysql_close(con);
         con = nullptr;
     }
+}
+
+MariaServer::MariaServer(SERVER* server, const MonitorServer::SharedSettings& shared)
+    : MonitorServer(server, shared)
+{
+}
+
+MariaServer::~MariaServer()
+{
+    close_conn();
 }
 }
 

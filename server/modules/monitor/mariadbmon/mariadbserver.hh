@@ -72,7 +72,7 @@ struct NodeData
  * Monitor specific information about a server. Eventually, this will be the primary data structure handled
  * by the monitor. These are initialized in @c init_server_info.
  */
-class MariaDBServer : public mxs::MonitorServer
+class MariaDBServer : public mxs::MariaServer
 {
 public:
     class SharedSettings;

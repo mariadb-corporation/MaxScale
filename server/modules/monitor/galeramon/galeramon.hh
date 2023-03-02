@@ -111,7 +111,7 @@ private:
     void pre_loop() override;
 };
 
-class GaleraServer : public mxs::MonitorServer
+class GaleraServer : public mxs::MariaServer
 {
 public:
     GaleraServer(SERVER* server, const SharedSettings& shared);

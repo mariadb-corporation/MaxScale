@@ -169,26 +169,8 @@ public:
                                                       | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED
                                                       | SERVER_BLR};
 
-    /**
-     * Ping or connect to a database. If connection does not exist or ping fails, a new connection
-     * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
-     * to call MySQL C API functions to find out the reason of the failure. Also measures server ping.
-     *
-     * @param sett        Connection settings
-     * @param pServer     A server
-     * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
-     *                    valid or NULL.
-     * @param pError      Pointer where the error message is stored
-     *
-     * @return Connection status.
-     */
-    static ConnectResult
-    ping_or_connect_to_db(const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn,
-                          std::string* pError);
-
     MonitorServer(SERVER* server, const SharedSettings& shared);
-
-    virtual ~MonitorServer();
+    virtual ~MonitorServer() = default;
 
     /**
      * Set pending status bits in the monitor server
@@ -232,16 +214,19 @@ public:
     /**
      * Try run query, log errors.
      */
-    void test_permissions(const std::string& query);
+    virtual void test_permissions(const std::string& query) = 0;
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
-     * This will always leave a valid database handle in the database->con pointer, allowing the user to call
-     * MySQL C API functions to find out the reason of the failure.
      *
      * @return Connection status
      */
-    ConnectResult ping_or_connect();
+    virtual ConnectResult ping_or_connect() = 0;
+
+    /**
+     * Close db connection if currently open.
+     */
+    virtual void close_conn() = 0;
 
     /**
      * Fetch 'session_track_system_variables' and other variables from the server, if they have not
@@ -254,7 +239,7 @@ public:
     /**
      * Update the Uptime status variable of the server
      */
-    void fetch_uptime();
+    virtual void fetch_uptime() = 0;
 
     const char* get_event_name();
 
@@ -291,7 +276,7 @@ public:
      * @c pMonitored_server->m_pending_status if the disk space is exhausted
      * or cleared if it is not.
      */
-    void update_disk_space_status();
+    virtual void update_disk_space_status() = 0;
 
     void add_status_request(StatusRequest request);
     void apply_status_requests();
@@ -317,10 +302,7 @@ public:
 
     static bool is_access_denied_error(int64_t errornum);
 
-    void close_conn();
-
     SERVER* server = nullptr;       /**< The server being monitored */
-    MYSQL*  con = nullptr;          /**< The MySQL connection */
     int     mon_err_count = 0;
 
     int64_t node_id = -1;           /**< Node id, server_id for M/S or local_index for Galera */
@@ -330,22 +312,58 @@ public:
     time_t              triggered_at {time(nullptr)};   /**< Time when the last event was triggered */
 
 protected:
-    uint64_t m_prev_status = -1;        /**< Status at start of current monitor loop */
-    uint64_t m_pending_status = 0;      /**< Status during current monitor loop */
+    uint64_t m_prev_status = -1;    /**< Status at start of current monitor loop */
+    uint64_t m_pending_status = 0;  /**< Status during current monitor loop */
 
-private:
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
 
-    std::atomic_int m_status_request {NO_CHANGE};       /**< Status change request from admin */
-    bool            m_ok_to_check_disk_space {true};    /**< Set to false if check fails */
-
+    std::string    m_latest_error;                  /**< Latest connection error */
     mxb::TimePoint m_last_variables_update;
+    bool           m_ok_to_check_disk_space {true}; /**< Set to false if check fails */
 
-    // Latest connection error
-    std::string m_latest_error;
+private:
+    std::atomic_int m_status_request {NO_CHANGE};   /**< Status change request from admin */
 
-    bool should_fetch_variables();
-    bool fetch_variables();
+    bool         should_fetch_variables();
+    virtual bool fetch_variables() = 0;
+};
+
+/**
+ * Base class for all MariaDB-compatible monitor server objects.
+ */
+class MariaServer : public MonitorServer
+{
+public:
+    MariaServer(SERVER* server, const SharedSettings& shared);
+    ~MariaServer();
+
+    /**
+     * Ping or connect to a database. If connection does not exist or ping fails, a new connection
+     * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
+     * to call MySQL C API functions to find out the reason of the failure. Also measures server ping.
+     *
+     * @param sett        Connection settings
+     * @param pServer     A server
+     * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
+     *                    valid or NULL.
+     * @param pError      Pointer where the error message is stored
+     *
+     * @return Connection status.
+     */
+    static ConnectResult
+    ping_or_connect_to_db(const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn,
+                          std::string* pError);
+
+    ConnectResult ping_or_connect() override;
+    void          close_conn() override;
+    virtual void  fetch_uptime() override;
+    void          test_permissions(const std::string& query) override;
+    void          update_disk_space_status() override;
+
+    MYSQL* con {nullptr};   /**< The MySQL connection */
+
+private:
+    bool fetch_variables() override;
 };
 
 /**
@@ -759,15 +777,6 @@ protected:
     mxb::Worker::Callable m_callable;               /**< Context for own dcalls */
 
 private:
-    /**
-     * Creates a new monitored server object. Called by monitor configuration code. If a monitor wants to
-     * implements its own server-class, it must override this function.
-     *
-     * @param server The base server object
-     * @param shared Base class settings shared with servers
-     * @return A new monitored server
-     */
-    virtual MonitorServer* create_server(SERVER* server, const MonitorServer::SharedSettings& shared);
 
     /**
      * A derived class should override this function if it wishes to save its own journal data.

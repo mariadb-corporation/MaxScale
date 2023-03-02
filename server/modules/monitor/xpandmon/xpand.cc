@@ -252,7 +252,7 @@ xpand::Result xpand::ping_or_connect_to_hub(const char* zName,
 {
     Result rv = Result::ERROR;
     std::string err;
-    MonitorServer::ConnectResult rv2 = MonitorServer::ping_or_connect_to_db(settings, server, ppCon, &err);
+    auto rv2 = mxs::MariaServer::ping_or_connect_to_db(settings, server, ppCon, &err);
 
     if (Monitor::connection_is_ok(rv2))
     {
