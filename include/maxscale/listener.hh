@@ -18,7 +18,7 @@
 #include <maxbase/proxy_protocol.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/workerlocal.hh>
 

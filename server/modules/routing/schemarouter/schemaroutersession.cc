@@ -22,9 +22,9 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/alloc.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/query_classifier.hh>
 
 #include <mysqld_error.h>
 

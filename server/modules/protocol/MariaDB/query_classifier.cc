@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/query_classifier.hh>
 
 #include <inttypes.h>
 #include <algorithm>

@@ -14,12 +14,12 @@
 
 #include "maxscale/mock/backend.hh"
 #include <algorithm>
+#include <iostream>
 #include <vector>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/resultset.hh>
-#include <iostream>
+#include <maxscale/query_classifier.hh>
 
 using namespace std;
 

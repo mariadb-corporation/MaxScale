@@ -20,8 +20,8 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/query_classifier.hh>
 #include <maxsimd/multistmt.hh>
 #include "storage.hh"
 

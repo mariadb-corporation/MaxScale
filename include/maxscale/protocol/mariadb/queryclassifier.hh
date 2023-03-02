@@ -20,8 +20,8 @@
 #include <unordered_set>
 #include <maxscale/hint.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/session.hh>
 
