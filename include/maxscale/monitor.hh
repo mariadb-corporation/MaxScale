@@ -915,8 +915,15 @@ protected:
      */
     virtual void post_tick();
 
-    MonitorServer*              m_master {nullptr}; /**< Master server */
-    std::vector<MonitorServer*> m_servers;          /**< Active servers */
+    /**
+     * A derived class overriding this function should first call this base version.
+     */
+    void pre_loop() override;
+
+    /**
+     * A derived class overriding this function should last call this base version.
+     */
+    void post_loop() override;
 
 private:
     /**
@@ -943,18 +950,6 @@ private:
      * - Store monitor journal
      */
     void tick() override final;
-
-    void configured_servers_updated(const std::vector<SERVER*>& servers) override;
-
-    /**
-     * A derived class overriding this function should first call this base version.
-     */
-    void pre_loop() override;
-
-    /**
-     * A derived class overriding this function should last call this base version.
-     */
-    void post_loop() override;
 
     virtual std::string permission_test_query() const = 0;
 };

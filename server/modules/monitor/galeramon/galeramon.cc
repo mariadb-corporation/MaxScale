@@ -72,10 +72,10 @@ using maxscale::MonitorServer;
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static MonitorServer* set_cluster_master(MonitorServer*, MonitorServer*, int);
-static int            compare_node_index(const void*, const void*);
-static int            compare_node_priority(const void*, const void*);
-static bool           using_xtrabackup(MonitorServer* database, const char* server_string);
+static GaleraServer* set_cluster_master(GaleraServer*, GaleraServer*, int);
+static int           compare_node_index(const void*, const void*);
+static int           compare_node_priority(const void*, const void*);
+static bool          using_xtrabackup(MonitorServer* database, const char* server_string);
 
 GaleraMonitor::Config::Config(const std::string& name, GaleraMonitor* monitor)
     : mxs::config::Configuration(name, &s_spec)
@@ -453,7 +453,7 @@ void GaleraMonitor::post_tick()
      */
 
     /* get the candidate master, following MXS_MIN(node_id) rule */
-    MonitorServer* candidate_master = get_candidate_master();
+    auto* candidate_master = get_candidate_master();
 
     m_master = set_cluster_master(m_master, candidate_master, m_config.disable_master_failback);
 
@@ -582,9 +582,9 @@ static bool using_xtrabackup(MonitorServer* database, const char* server_string)
  * @param   servers The monitored servers list
  * @return  The candidate master on success, NULL on failure
  */
-MonitorServer* GaleraMonitor::get_candidate_master()
+GaleraServer* GaleraMonitor::get_candidate_master()
 {
-    MonitorServer* candidate_master = NULL;
+    GaleraServer* candidate_master = NULL;
     long min_id = -1;
     int minval = INT_MAX;
 
@@ -654,9 +654,8 @@ MonitorServer* GaleraMonitor::get_candidate_master()
  * @param   candidate_master The candidate master server accordingly to the selection rule
  * @return  The  master node pointer (could be NULL)
  */
-static MonitorServer* set_cluster_master(MonitorServer* current_master,
-                                         MonitorServer* candidate_master,
-                                         int master_stickiness)
+static GaleraServer* set_cluster_master(GaleraServer* current_master, GaleraServer* candidate_master,
+                                        int master_stickiness)
 {
     /*
      * if current master is not set or master_stickiness is not enable
@@ -938,6 +937,30 @@ std::string GaleraMonitor::permission_test_query() const
     return "SHOW STATUS LIKE 'wsrep_local_state'";
 }
 
+void GaleraMonitor::configured_servers_updated(const std::vector<SERVER*>& servers)
+{
+    for (auto srv : m_servers)
+    {
+        delete srv;
+    }
+
+    auto& shared_settings = settings().shared;
+    m_servers.resize(servers.size());
+    for (size_t i = 0; i < servers.size(); i++)
+    {
+        m_servers[i] = new GaleraServer(servers[i], shared_settings);
+    }
+
+    // The configured servers and the active servers are the same.
+    set_active_servers(std::vector<MonitorServer*>(m_servers.begin(), m_servers.end()));
+}
+
+void GaleraMonitor::pre_loop()
+{
+    m_master = nullptr;
+    SimpleMonitor::pre_loop();
+}
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -967,4 +990,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
+GaleraServer::GaleraServer(SERVER* server, const MonitorServer::SharedSettings& shared)
+    : MonitorServer(server, shared)
+{
 }

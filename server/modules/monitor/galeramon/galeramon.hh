@@ -40,6 +40,7 @@ struct GaleraNode
 };
 
 typedef std::unordered_map<mxs::MonitorServer*, GaleraNode> NodeMap;
+class GaleraServer;
 
 class GaleraMonitor : public maxscale::SimpleMonitor
 {
@@ -91,15 +92,27 @@ private:
     // Prevents concurrent use that might occur during the diagnostics_json call
     mutable std::mutex m_lock;
 
+    std::vector<GaleraServer*> m_servers;           /**< Active/configured servers */
+    GaleraServer*              m_master {nullptr};  /**< Master server */
+
     GaleraMonitor(const std::string& name, const std::string& module);
 
-    mxs::MonitorServer* get_candidate_master();
-    void                set_galera_cluster();
-    void                update_sst_donor_nodes(int is_cluster);
-    void                calculate_cluster();
+    GaleraServer* get_candidate_master();
+    void          set_galera_cluster();
+    void          update_sst_donor_nodes(int is_cluster);
+    void          calculate_cluster();
 
     bool        post_configure();
     friend bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
     std::string permission_test_query() const override;
+    void        configured_servers_updated(const std::vector<SERVER*>& servers) override;
+
+    void pre_loop() override;
+};
+
+class GaleraServer : public mxs::MonitorServer
+{
+public:
+    GaleraServer(SERVER* server, const SharedSettings& shared);
 };

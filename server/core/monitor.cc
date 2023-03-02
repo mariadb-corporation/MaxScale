@@ -2161,7 +2161,6 @@ void Monitor::flush_server_status()
 
 void SimpleMonitor::pre_loop()
 {
-    m_master = nullptr;
     read_journal();
     // Add another overridable function for derived classes (e.g. pre_loop_monsimple) if required.
 }
@@ -2169,7 +2168,7 @@ void SimpleMonitor::pre_loop()
 void SimpleMonitor::post_loop()
 {
     write_journal();
-    for (auto srv : m_servers)
+    for (auto srv : active_servers())
     {
         srv->close_conn();
     }
@@ -2197,7 +2196,7 @@ void SimpleMonitor::tick()
 
     const bool should_update_disk_space = check_disk_space_this_tick();
 
-    for (MonitorServer* pMs : m_servers)
+    for (MonitorServer* pMs : active_servers())
     {
         pMs->stash_current_status();
 
@@ -2253,24 +2252,6 @@ void SimpleMonitor::tick()
     detect_handle_state_changes();
     hangup_failed_servers();
     write_journal_if_needed();
-}
-
-void SimpleMonitor::configured_servers_updated(const std::vector<SERVER*>& servers)
-{
-    for (auto srv : m_servers)
-    {
-        delete srv;
-    }
-
-    auto& shared_settings = settings().shared;
-    m_servers.resize(servers.size());
-    for (size_t i = 0; i < servers.size(); i++)
-    {
-        m_servers[i] = new MonitorServer(servers[i], shared_settings);
-    }
-
-    // The configured servers and the active servers are the same.
-    set_active_servers(std::vector<MonitorServer*>(m_servers));
 }
 
 bool Monitor::pre_run()
