@@ -129,11 +129,11 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     maxbase::init();
     watchdog_notifier = new mxb::WatchdogNotifier(0);
     maxscale::RoutingWorker::init(watchdog_notifier);
-    mxs::set_libdir(old_libdir.c_str());
 
     add_built_in_module(mariadbprotocol_info());
     add_built_in_module(mariadbauthenticator_info());
     qc_process_init(init_type);
+    mxs::set_libdir(old_libdir.c_str());
     preload_module("readconnroute", "server/modules/routing/readconnroute/", mxs::ModuleType::ROUTER);
 }
 
