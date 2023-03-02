@@ -27,7 +27,7 @@ public:
     void error(DCB* dcb) override final;
     void hangup(DCB* dcb) override final;
 
-    bool    write(GWBUF&& buffer) override final;
+    bool write(GWBUF&& buffer) override final;
 
     void finish_connection() override final;
 
@@ -47,8 +47,30 @@ public:
     size_t  sizeof_buffers() const override final;
 
 private:
+    enum class State
+    {
+        INIT,
+        SSL_REQUEST,
+        SSL_HANDSHAKE,
+        STARTUP,
+        AUTH,
+        BACKLOG,
+        ROUTING,
+        FAILED,
+    };
+
+    void handle_error(const std::string& error, mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
+
+    bool handle_ssl_request();
+    bool handle_ssl_handshake();
+    bool handle_startup();
+    bool handle_auth();
+    bool handle_backlog();
+    bool handle_routing();
+
     MXS_SESSION*    m_session;
     mxs::Component* m_upstream;
     BackendDCB*     m_dcb;
     mxs::Reply      m_reply;
+    State           m_state {State::INIT};
 };

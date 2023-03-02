@@ -55,10 +55,46 @@ PgBackendConnection::PgBackendConnection(MXS_SESSION* session, SERVER* server, m
 
 void PgBackendConnection::ready_for_reading(DCB* dcb)
 {
-    if (auto [ok, buf] = m_dcb->read(0, 0); ok)
+    bool keep_going = true;
+
+    while (keep_going)
     {
-        mxs::ReplyRoute down;
-        m_upstream->clientReply(std::move(buf), down, m_reply);
+        switch (m_state)
+        {
+        case State::SSL_REQUEST:
+            keep_going = handle_ssl_request();
+            break;
+
+        case State::SSL_HANDSHAKE:
+            keep_going = handle_ssl_handshake();
+            break;
+
+        case State::STARTUP:
+            keep_going = handle_startup();
+            break;
+
+        case State::AUTH:
+            keep_going = handle_auth();
+            break;
+
+        case State::BACKLOG:
+            keep_going = handle_backlog();
+            break;
+
+        case State::ROUTING:
+            keep_going = handle_routing();
+            break;
+
+        case State::FAILED:
+            keep_going = false;
+            break;
+
+        case State::INIT:
+            mxb_assert_message(!true, "We should not end up here");
+            handle_error("Internal error");
+            keep_going = false;
+            break;
+        }
     }
 }
 
@@ -148,4 +184,46 @@ json_t* PgBackendConnection::diagnostics() const
 size_t PgBackendConnection::sizeof_buffers() const
 {
     return 0;
+}
+
+void PgBackendConnection::handle_error(const std::string& error, mxs::ErrorType type)
+{
+    m_upstream->handleError(type, error, nullptr, m_reply);
+    m_state = State::FAILED;
+}
+
+bool PgBackendConnection::handle_ssl_request()
+{
+    handle_error("Not yet implemented");
+    return false;
+}
+
+bool PgBackendConnection::handle_ssl_handshake()
+{
+    handle_error("Not yet implemented");
+    return false;
+}
+
+bool PgBackendConnection::handle_startup()
+{
+    handle_error("Not yet implemented");
+    return false;
+}
+
+bool PgBackendConnection::handle_auth()
+{
+    handle_error("Not yet implemented");
+    return false;
+}
+
+bool PgBackendConnection::handle_backlog()
+{
+    handle_error("Not yet implemented");
+    return false;
+}
+
+bool PgBackendConnection::handle_routing()
+{
+    handle_error("Not yet implemented");
+    return false;
 }
