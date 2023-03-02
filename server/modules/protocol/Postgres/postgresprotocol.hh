@@ -22,7 +22,9 @@
 
 #include <endian.h>
 #include <string_view>
+#include <map>
 
+// PostgreSQL protocol documentation: https://www.postgresql.org/docs/current/protocol.html
 namespace postgres
 {
 //
@@ -253,6 +255,20 @@ std::tuple<bool, GWBUF> read_packet(DCB* dcb, ExpectCmdByte expect_cmd_byte = Ex
  * @return The formatted message
  */
 std::string format_response(const GWBUF& buffer);
+
+/**
+ * Extract fields from a ErrorResponse or NoticeResponse message
+ *
+ * The values are mapped based on their field type. The field types and their meanings are documented here:
+ *
+ *   https://www.postgresql.org/docs/current/protocol-error-fields.html
+ *
+ * @param ptr Pointer to memory where the packet is
+ * @param len Length of the memory area
+ *
+ * @return The values mapped according to the field values
+ */
+std::map<uint8_t, std::string_view> extract_response_fields(const uint8_t* ptr, size_t len);
 }
 
 // Convenience alias for the namespace

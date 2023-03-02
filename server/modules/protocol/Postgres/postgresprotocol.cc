@@ -51,21 +51,18 @@ std::tuple<bool, GWBUF> read_packet(DCB* dcb, ExpectCmdByte expect_cmd_byte)
     return res;
 }
 
-std::string format_response(const GWBUF& buffer)
+std::map<uint8_t, std::string_view> extract_response_fields(const uint8_t* buffer, size_t size)
 {
+    mxb_assert(size > 0);
     mxb_assert(buffer[0] == pg::ERROR_RESPONSE || buffer[0] == pg::NOTICE_RESPONSE);
 
-    const uint8_t* ptr = buffer.data() + 1;
+    const uint8_t* ptr = buffer + 1;
     uint32_t len = pg::get_uint32(ptr);
     const uint8_t* end = ptr + len;
-    mxb_assert(end == buffer.end());
+    mxb_assert(end == buffer + size);
     ptr += 4;
 
-    std::string_view severity;
-    std::string_view msg;
-    std::string_view sqlstate;
-    std::string_view detail;
-    std::string_view hint;
+    std::map<uint8_t, std::string_view> rval;
 
     // The ErrorResponse and NoticeResponse are a list of values, each consisting of a one byte "field type"
     // value followed by a null-terminated string. To extract all the information, the payload must be
@@ -80,45 +77,22 @@ std::string format_response(const GWBUF& buffer)
         // Null-terminated string
         auto str = reinterpret_cast<const char*>(ptr);
         size_t len = strnlen(str, end - ptr);
-        std::string_view value(str, len);
+        rval[type] = std::string_view(str, len);
         ptr += len + 1;
-
-        switch (type)
-        {
-        case 'M':   // Message
-            msg = value;
-            break;
-
-        case 'C':   // SQLSTATE
-            sqlstate = value;
-            break;
-
-        case 'D':   // Detailed error
-            detail = value;
-            break;
-
-        case 'H':   // Hint
-            hint = value;
-            break;
-
-        case 'S':   // Severity
-            // This is an older version of the severity which might be localized. Prefer the non-localized
-            // version if one exists.
-            if (severity.empty())
-            {
-                severity = value;
-            }
-            break;
-
-        case 'V':   // Non-localized severity
-            severity = value;
-            break;
-
-        default:
-            // Something else, just ignore it.
-            break;
-        }
     }
+
+    return rval;
+}
+
+std::string format_response(const GWBUF& buffer)
+{
+    auto values = extract_response_fields(buffer.data(), buffer.length());
+
+    std::string_view severity = values.count('V') ? values['V'] : values['S'];
+    std::string_view msg = values['M'];
+    std::string_view sqlstate = values['C'];
+    std::string_view detail = values['D'];
+    std::string_view hint = values['H'];
 
     return mxb::rtrimmed_copy(mxb::cat(severity, ": ", sqlstate, " ", msg, " ", detail, " ", hint));
 }
