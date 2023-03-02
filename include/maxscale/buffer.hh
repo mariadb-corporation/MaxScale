@@ -362,34 +362,6 @@ public:
      */
     size_t runtime_size() const;
 
-    /**
-     * Appends a byte to the buffer
-     *
-     * @param byte Byte to append
-     *
-     * @return *this
-     */
-    GWBUF& add_byte(uint8_t byte);
-
-    /**
-     * Appends a 16-bit integer to the buffer in little-endian order
-     *
-     * @param bytes Value to append
-     *
-     * @return *this
-     */
-    GWBUF& add_lsbyte2(uint16_t bytes);
-
-    /**
-     * Appends a string into the buffer
-     *
-     * @param str     String to append
-     * @param n_bytes How many bytes to copy
-     *
-     * @return *this
-     */
-    GWBUF& add_chars(const char* str, size_t n_bytes);
-
 private:
     std::shared_ptr<SHARED_BUF>   m_sbuf;       /**< The shared buffer with the real data */
     std::shared_ptr<QC_STMT_INFO> m_stmt_info;  /**< Classifier data */

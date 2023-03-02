@@ -795,26 +795,28 @@ GWBUF get_next_MySQL_packet(GWBUF& buffer)
     return packet;
 }
 
-/**
- * Create a MySQL ERR packet.
- *
- * @param sequence Packet sequence number
- * @param err_num  MySQL error number
- * @param statemsg MySQL State Message
- * @param msg      Human-readable error message
- * @return         The buffer
- */
-GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg)
+GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, std::string_view sqlstate, std::string_view msg)
 {
-    mxb_assert(statemsg && strlen(statemsg) == 5 && msg);
-    GWBUF errbuf;                      // reserve guess
-    errbuf.prepare_to_write(100);
-    errbuf.write_complete(MYSQL_HEADER_LEN);// write header last
-    auto msglen = strlen(msg);
-    errbuf.add_byte(0xff).add_lsbyte2(err_num).add_byte('#').add_chars(statemsg, 5).add_chars(msg, msglen);
-    auto pl_size = errbuf.length() - MYSQL_HEADER_LEN;
-    mariadb::write_header(errbuf.data(), pl_size, sequence);
-    return errbuf;
+    mxb_assert(sqlstate.size() == 5 && !msg.empty());
+    // Command byte [1](0xff)
+    // Error number [2]
+    // SQLSTATE marker [1](#)
+    // SQLSTATE [5]
+    // Error message [EOF]
+    size_t payload_len = 1 + 2 + 1 + sqlstate.size() + msg.size();
+
+    GWBUF buffer(payload_len + MYSQL_HEADER_LEN);
+    uint8_t* ptr = buffer.data();
+
+    ptr = mariadb::write_header(ptr, payload_len, sequence);
+    *ptr++ = 0xff;
+    ptr += mariadb::set_byte2(ptr, err_num);
+    *ptr++ = '#';
+    memcpy(ptr, sqlstate.data(), sqlstate.size());
+    ptr += sqlstate.size();
+    memcpy(ptr, msg.data(), msg.size());
+
+    return buffer;
 }
 
 GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg)

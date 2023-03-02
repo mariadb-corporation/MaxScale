@@ -553,30 +553,6 @@ const uint8_t& GWBUF::operator[](size_t ind) const
     return *ptr;
 }
 
-GWBUF& GWBUF::add_byte(uint8_t byte)
-{
-    auto [ptr, _] = prepare_to_write(1);
-    *ptr = byte;
-    write_complete(1);
-    return *this;
-}
-
-GWBUF& GWBUF::add_lsbyte2(uint16_t bytes)
-{
-    auto [ptr, _] = prepare_to_write(2);
-    mariadb::set_byte2(ptr, bytes);
-    write_complete(2);
-    return *this;
-}
-
-GWBUF& GWBUF::add_chars(const char* str, size_t n_bytes)
-{
-    auto [ptr, _] = prepare_to_write(n_bytes);
-    mariadb::copy_chars(ptr, str, n_bytes);
-    write_complete(n_bytes);
-    return *this;
-}
-
 size_t GWBUF::varying_size() const
 {
     size_t rv = 0;

@@ -91,7 +91,7 @@ public:
      * @param msg String to write
      * @return True on success
      */
-    bool write(const char* msg);
+    bool write(std::string_view msg);
 
     bool init_connection() override;
     void finish_connection() override;

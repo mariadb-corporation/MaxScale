@@ -207,9 +207,20 @@ GWBUF get_complete_packets(GWBUF& buffer);
 
 GWBUF get_next_MySQL_packet(GWBUF& buffer);
 
-GWBUF  create_ok_packet();
+GWBUF create_ok_packet();
 
-GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg);
+/**
+ * Create a MySQL ERR packet.
+ *
+ * @param sequence Packet sequence number
+ * @param err_num  MySQL error number
+ * @param statemsg MySQL State Message
+ * @param msg      Human-readable error message
+ *
+ * @return The buffer
+ */
+GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, std::string_view sqlstate,
+                          std::string_view msg);
 
 GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg);
 

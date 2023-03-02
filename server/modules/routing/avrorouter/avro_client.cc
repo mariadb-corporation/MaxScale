@@ -312,7 +312,11 @@ void AvroSession::process_command(GWBUF&& queue)
 {
     const char req_data[] = "REQUEST-DATA";
     const size_t req_data_len = sizeof(req_data) - 1;
-    queue.add_byte(0x0);
+
+    // Null-terminate the input just in case
+    auto [ptr, _] = queue.prepare_to_write(1);
+    *ptr = 0;
+
     char* command_ptr = strstr((char*)queue.data(), req_data);
 
     if (command_ptr != NULL)
