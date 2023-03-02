@@ -238,6 +238,15 @@ static inline size_t set_string(uint8_t* ptr, std::string_view str)
  *         the buffer will contain it. If no complete packets are available an empty buffer is returned.
  */
 std::tuple<bool, GWBUF> read_packet(DCB* dcb);
+
+/**
+ * Formats ErrorResponse or NoticeResponse messages into human-readable errors
+ *
+ * @param buffer Buffer that contains the message
+ *
+ * @return The formatted message
+ */
+std::string format_response(const GWBUF& buffer);
 }
 
 // Convenience alias for the namespace

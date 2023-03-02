@@ -43,6 +43,78 @@ std::tuple<bool, GWBUF> read_packet(DCB* dcb)
 
     return res;
 }
+
+std::string format_response(const GWBUF& buffer)
+{
+    mxb_assert(buffer[0] == pg::ERROR_RESPONSE || buffer[0] == pg::NOTICE_RESPONSE);
+
+    const uint8_t* ptr = buffer.data() + 1;
+    uint32_t len = pg::get_uint32(ptr);
+    const uint8_t* end = ptr + len;
+    mxb_assert(end == buffer.end());
+    ptr += 4;
+
+    std::string_view severity;
+    std::string_view msg;
+    std::string_view sqlstate;
+    std::string_view detail;
+    std::string_view hint;
+
+    // The ErrorResponse and NoticeResponse are a list of values, each consisting of a one byte "field type"
+    // value followed by a null-terminated string. To extract all the information, the payload must be
+    // iterated through until a field type of 0 is found. The field descriptions can be found here:
+    // https://www.postgresql.org/docs/current/protocol-error-fields.html
+
+    while (ptr < end && *ptr)
+    {
+        // Field type
+        uint8_t type = *ptr++;
+
+        // Null-terminated string
+        auto str = reinterpret_cast<const char*>(ptr);
+        size_t len = strnlen(str, end - ptr);
+        std::string_view value(str, len);
+        ptr += len + 1;
+
+        switch (type)
+        {
+        case 'M':   // Message
+            msg = value;
+            break;
+
+        case 'C':   // SQLSTATE
+            sqlstate = value;
+            break;
+
+        case 'D':   // Detailed error
+            detail = value;
+            break;
+
+        case 'H':   // Hint
+            hint = value;
+            break;
+
+        case 'S':   // Severity
+            // This is an older version of the severity which might be localized. Prefer the non-localized
+            // version if one exists.
+            if (severity.empty())
+            {
+                severity = value;
+            }
+            break;
+
+        case 'V':   // Non-localized severity
+            severity = value;
+            break;
+
+        default:
+            // Something else, just ignore it.
+            break;
+        }
+    }
+
+    return mxb::rtrimmed_copy(mxb::cat(severity, ": ", sqlstate, " ", msg, " ", detail, " ", hint));
+}
 }
 
 /**
