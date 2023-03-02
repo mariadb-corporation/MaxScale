@@ -16,7 +16,7 @@
 #include <map>
 #include <maxscale/ccdefs.hh>
 #include <maxscale/qc_stmt_info.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/parser.hh>
 
 /**
  * qc_init_kind_t specifies what kind of initialization should be performed.
@@ -588,3 +588,13 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
  * @return The amount of memory freed.
  */
 int64_t qc_clear_thread_cache();
+
+/**
+ * Classify statement
+ *
+ * @param zHost      The MaxScale host.
+ * @param statement  The statement to be classified.
+ *
+ * @return A json object containing information about the statement.
+ */
+std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement);
