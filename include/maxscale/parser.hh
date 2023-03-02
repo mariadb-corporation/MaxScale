@@ -41,17 +41,21 @@ public:
 
     virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
 
+    virtual std::string_view get_created_table_name(GWBUF* pStmt) const = 0;
     virtual DatabaseNames    get_database_names(GWBUF* pStmt) const = 0;
     virtual void             get_field_info(GWBUF* pStmt,
                                             const QC_FIELD_INFO** ppInfos,
                                             size_t* pnInfos) const = 0;
     virtual void             get_function_info(GWBUF* pStmt,
-                                               const QC_FUNCTION_INFO** infos,
-                                               size_t* n_infos) const = 0;
+                                               const QC_FUNCTION_INFO** ppInfos,
+                                               size_t* pnInfos) const = 0;
+    virtual QC_KILL          get_kill_info(GWBUF* pStmt) const = 0;
     virtual qc_query_op_t    get_operation(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_options() const = 0;
     virtual GWBUF*           get_preparable_stmt(GWBUF* pStmt) const = 0;
     virtual std::string_view get_prepare_name(GWBUF* pStmt) const = 0;
+    virtual uint64_t         get_server_version() const = 0;
+    virtual qc_sql_mode_t    get_sql_mode() const = 0;
     virtual TableNames       get_table_names(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_trx_type_mask(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_type_mask(GWBUF* pStmt) const = 0;
@@ -72,6 +76,7 @@ public:
 
     qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override;
 
+    std::string_view get_created_table_name(GWBUF* pStmt) const override;
     DatabaseNames    get_database_names(GWBUF* pStmt) const override;
     void             get_field_info(GWBUF* pStmt,
                                     const QC_FIELD_INFO** ppInfos,
@@ -79,10 +84,13 @@ public:
     void             get_function_info(GWBUF* pStmt,
                                        const QC_FUNCTION_INFO** infos,
                                        size_t* n_infos) const override;
+    QC_KILL          get_kill_info(GWBUF* pStmt) const override;
     qc_query_op_t    get_operation(GWBUF* pStmt) const override;
     uint32_t         get_options() const override;
     GWBUF*           get_preparable_stmt(GWBUF* pStmt) const override;
     std::string_view get_prepare_name(GWBUF* pStmt) const override;
+    uint64_t         get_server_version() const override;
+    qc_sql_mode_t    get_sql_mode() const override;
     TableNames       get_table_names(GWBUF* pStmt) const override;
     uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
     uint32_t         get_type_mask(GWBUF* pStmt) const override;

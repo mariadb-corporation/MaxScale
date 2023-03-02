@@ -692,167 +692,6 @@ void qc_thread_end(uint32_t kind)
     }
 }
 
-qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    int32_t result = QC_QUERY_INVALID;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_parse(query, collect, &result);
-
-    return (qc_parse_result_t)result;
-}
-
-uint32_t qc_get_type_mask(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    uint32_t type_mask = QUERY_TYPE_UNKNOWN;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_type_mask(query, &type_mask);
-
-    return type_mask;
-}
-
-qc_query_op_t qc_get_operation(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    int32_t op = QUERY_OP_UNDEFINED;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_operation(query, &op);
-
-    return (qc_query_op_t)op;
-}
-
-std::string_view qc_get_created_table_name(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    std::string_view name;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_created_table_name(query, &name);
-
-    return name;
-}
-
-bool qc_is_drop_table_query(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    int32_t is_drop_table = 0;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_is_drop_table_query(query, &is_drop_table);
-
-    return (is_drop_table != 0) ? true : false;
-}
-
-std::vector<QcTableName> qc_get_table_names(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    std::vector<QcTableName> names;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_table_names(query, &names);
-
-    return names;
-}
-
-
-void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    *infos = NULL;
-
-    uint32_t n = 0;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_field_info(query, infos, &n);
-
-    *n_infos = n;
-}
-
-void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* n_infos)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    *infos = NULL;
-
-    uint32_t n = 0;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_function_info(query, infos, &n);
-
-    *n_infos = n;
-}
-
-std::vector<std::string_view> qc_get_database_names(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    std::vector<std::string_view> names;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_database_names(query, &names);
-
-    return names;
-}
-
-QC_KILL qc_get_kill_info(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    QC_KILL rval;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_kill_info(query, &rval);
-
-    return rval;
-}
-
-std::string_view qc_get_prepare_name(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    std::string_view name;
-
-    QCInfoCacheScope scope(this_unit.classifier, query);
-    this_unit.classifier->qc_get_prepare_name(query, &name);
-
-    return name;
-}
-
-GWBUF* qc_get_preparable_stmt(GWBUF* stmt)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    GWBUF* preparable_stmt = NULL;
-
-    QCInfoCacheScope scope(this_unit.classifier, stmt);
-    this_unit.classifier->qc_get_preparable_stmt(stmt, &preparable_stmt);
-
-    return preparable_stmt;
-}
-
 const char* qc_result_to_string(qc_parse_result_t result)
 {
     switch (result)
@@ -896,7 +735,8 @@ const char* qc_kill_type_to_string(qc_kill_type_t type)
 
 static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
 {
-    uint32_t type_mask = qc_get_type_mask(stmt);
+    uint32_t type_mask;
+    this_unit.classifier->qc_get_type_mask(stmt, &type_mask);
 
     if (mxs::Parser::type_mask_contains(type_mask, QUERY_TYPE_WRITE)
         && mxs::Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
@@ -962,70 +802,6 @@ uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
 uint32_t qc_get_trx_type_mask(GWBUF* stmt)
 {
     return qc_get_trx_type_mask_using(stmt, this_unit.qc_trx_parse_using);
-}
-
-void qc_set_server_version(uint64_t version)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    this_unit.classifier->qc_set_server_version(version);
-}
-
-uint64_t qc_get_server_version()
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    uint64_t version;
-
-    this_unit.classifier->qc_get_server_version(&version);
-
-    return version;
-}
-
-qc_sql_mode_t qc_get_sql_mode()
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
-    int32_t rv = this_unit.classifier->qc_get_sql_mode(&sql_mode);
-    mxb_assert(rv == QC_RESULT_OK);
-
-    return sql_mode;
-}
-
-void qc_set_sql_mode(qc_sql_mode_t sql_mode)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    int32_t rv = this_unit.classifier->qc_set_sql_mode(sql_mode);
-    mxb_assert(rv == QC_RESULT_OK);
-}
-
-uint32_t qc_get_options()
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    return this_unit.classifier->qc_get_options();
-}
-
-bool qc_set_options(uint32_t options)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    int32_t rv = this_unit.classifier->qc_set_options(options);
-
-    if (rv == QC_RESULT_OK)
-    {
-        this_thread.options = options;
-    }
-
-    return rv == QC_RESULT_OK;
 }
 
 bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
@@ -1208,27 +984,28 @@ void append_field_info(json_t* pParent,
     json_object_set_new(pParent, zName, pFields);
 }
 
-void append_field_info(json_t* pParams, GWBUF* pBuffer)
+void append_field_info(mxs::Parser& parser, json_t* pParams, GWBUF* pBuffer)
 {
     const QC_FIELD_INFO* begin;
     size_t n;
-    qc_get_field_info(pBuffer, &begin, &n);
+    parser.get_field_info(pBuffer, &begin, &n);
 
     append_field_info(pParams, CN_FIELDS, begin, begin + n);
 }
 
-void append_function_info(json_t* pParams, GWBUF* pBuffer)
+void append_function_info(mxs::Parser& parser, json_t* pParams, GWBUF* pBuffer)
 {
     json_t* pFunctions = json_array();
 
     const QC_FUNCTION_INFO* begin;
     size_t n;
-    qc_get_function_info(pBuffer, &begin, &n);
+    parser.get_function_info(pBuffer, &begin, &n);
 
-    std::for_each(begin, begin + n, [pFunctions](const QC_FUNCTION_INFO& info) {
+    std::for_each(begin, begin + n, [&parser, pFunctions](const QC_FUNCTION_INFO& info) {
                       json_t* pFunction = json_object();
 
-                      json_object_set_new(pFunction, CN_NAME, json_stringn(info.name.data(), info.name.length()));
+                      json_object_set_new(pFunction, CN_NAME,
+                                          json_stringn(info.name.data(), info.name.length()));
 
                       append_field_info(pFunction, CN_ARGUMENTS, info.fields, info.fields + info.n_fields);
 
@@ -1254,14 +1031,14 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 
     if (result != QC_QUERY_INVALID)
     {
-        std::string type_mask = mxs::Parser::type_mask_to_string(qc_get_type_mask(pBuffer));
+        std::string type_mask = mxs::Parser::type_mask_to_string(parser.get_type_mask(pBuffer));
         json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(type_mask.c_str()));
 
         json_object_set_new(pAttributes, CN_OPERATION,
                             json_string(mxs::Parser::op_to_string(parser.get_operation(pBuffer))));
 
-        append_field_info(pAttributes, pBuffer);
-        append_function_info(pAttributes, pBuffer);
+        append_field_info(parser, pAttributes, pBuffer);
+        append_function_info(parser, pAttributes, pBuffer);
 
         json_object_set_new(pAttributes, CN_CANONICAL, json_string(pBuffer->get_canonical().c_str()));
     }
@@ -1373,6 +1150,16 @@ qc_parse_result_t mxs::CachingParser::parse(GWBUF* pStmt, uint32_t collect) cons
     return (qc_parse_result_t)result;
 }
 
+std::string_view mxs::CachingParser::get_created_table_name(GWBUF* query) const
+{
+    std::string_view name;
+
+    QCInfoCacheScope scope(&m_classifier, query);
+    m_classifier.qc_get_created_table_name(query, &name);
+
+    return name;
+}
+
 mxs::CachingParser::DatabaseNames mxs::CachingParser::get_database_names(GWBUF* pStmt) const
 {
     std::vector<std::string_view> names;
@@ -1384,8 +1171,8 @@ mxs::CachingParser::DatabaseNames mxs::CachingParser::get_database_names(GWBUF* 
 }
 
 void mxs::CachingParser::get_field_info(GWBUF* pStmt,
-                                 const QC_FIELD_INFO** ppInfos,
-                                 size_t* pnInfos) const
+                                        const QC_FIELD_INFO** ppInfos,
+                                        size_t* pnInfos) const
 {
     *ppInfos = NULL;
 
@@ -1398,8 +1185,8 @@ void mxs::CachingParser::get_field_info(GWBUF* pStmt,
 }
 
 void mxs::CachingParser::get_function_info(GWBUF* pStmt,
-                                    const QC_FUNCTION_INFO** ppInfos,
-                                    size_t* pnInfos) const
+                                           const QC_FUNCTION_INFO** ppInfos,
+                                           size_t* pnInfos) const
 {
     *ppInfos = NULL;
 
@@ -1410,6 +1197,16 @@ void mxs::CachingParser::get_function_info(GWBUF* pStmt,
 
     *pnInfos = n;
 
+}
+
+QC_KILL mxs::CachingParser::get_kill_info(GWBUF* query) const
+{
+    QC_KILL rval;
+
+    QCInfoCacheScope scope(&m_classifier, query);
+    m_classifier.qc_get_kill_info(query, &rval);
+
+    return rval;
 }
 
 qc_query_op_t mxs::CachingParser::get_operation(GWBUF* pStmt) const
@@ -1445,6 +1242,22 @@ std::string_view mxs::CachingParser::get_prepare_name(GWBUF* pStmt) const
     m_classifier.qc_get_prepare_name(pStmt, &name);
 
     return name;
+}
+
+uint64_t mxs::CachingParser::get_server_version() const
+{
+    uint64_t version;
+    m_classifier.qc_get_server_version(&version);
+
+    return version;
+}
+
+qc_sql_mode_t mxs::CachingParser::get_sql_mode() const
+{
+    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
+    m_classifier.qc_get_sql_mode(&sql_mode);
+
+    return sql_mode;
 }
 
 mxs::CachingParser::TableNames mxs::CachingParser::get_table_names(GWBUF* pStmt) const

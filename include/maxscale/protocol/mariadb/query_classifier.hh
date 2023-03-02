@@ -202,26 +202,6 @@ struct QC_KILL
 };
 
 /**
- * Returns the name of the created table.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return The name of the created table or an empty string if the statement
- *         does not create a table or a memory allocation failed.
- *         The string must be freed by the caller.
- */
-std::string_view qc_get_created_table_name(GWBUF* stmt);
-
-/**
- * Returns the information associated with a KILL command.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return The information for the KILL command
- */
-QC_KILL qc_get_kill_info(GWBUF* stmt);
-
-/**
  * Returns the tables accessed by the statement.
  *
  * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
@@ -286,22 +266,6 @@ inline std::ostream& operator << (std::ostream& out, const QcTableName& x)
     return out;
 }
 
-/**
- * Gets the options of the *calling* thread.
- *
- * @return Bit mask of values from qc_option_t.
- */
-uint32_t qc_get_options();
-
-/**
- * Sets the options for the *calling* thread.
- *
- * @param options Bits from qc_option_t.
- *
- * @return true if the options were valid, false otherwise.
- */
-bool qc_set_options(uint32_t options);
-
 enum qc_trx_parse_using_t
 {
     QC_TRX_PARSE_USING_QC,      /**< Use the query classifier. */
@@ -322,31 +286,6 @@ enum qc_trx_parse_using_t
 uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use);
 
 /**
- * Gets the sql mode of the *calling* thread.
- *
- * @return The mode.
- */
-qc_sql_mode_t qc_get_sql_mode();
-
-/**
- * Sets the sql mode for the *calling* thread.
- *
- * @param sql_mode  The mode.
- */
-void qc_set_sql_mode(qc_sql_mode_t sql_mode);
-
-/**
- * Returns whether the statement is a DROP TABLE statement.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return True if the statement is a DROP TABLE statement, false otherwise.
- *
- * @todo This function is far too specific.
- */
-bool qc_is_drop_table_query(GWBUF* stmt);
-
-/**
  * Returns the string representation of a query type.
  *
  * @param type  A query type (not a bitmask of several).
@@ -356,25 +295,6 @@ bool qc_is_drop_table_query(GWBUF* stmt);
  * @note The returned string is statically allocated and must @b not be freed.
  */
 const char* qc_type_to_string(qc_query_type_t type);
-
-/**
- * Set the version of the server. The version may affect how a statement
- * is classified. Note that the server version is maintained separately
- * for each thread.
- *
- * @param version  Version encoded as MariaDB encodes the version, i.e.:
- *                 version = major * 10000 + minor * 100 + patch
- */
-void qc_set_server_version(uint64_t version);
-
-/**
- * Get the thread specific version assumed of the server. If the version has
- * not been set, all values are 0.
- *
- * @return The version as MariaDB encodes the version, i.e:
- *         version = major * 10000 + minor * 100 + patch
- */
-uint64_t qc_get_server_version();
 
 /**
  * String represenation for the parse result.
