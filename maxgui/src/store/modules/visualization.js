@@ -13,7 +13,6 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
-import { insertQueryEditorWke } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -111,7 +110,7 @@ export default {
                 // Use a blank query editor wke if there is one, otherwise create a new one
                 if (blankQueryEditorWke)
                     Worksheet.commit(state => (state.active_wke_id = blankQueryEditorWke.id))
-                else insertQueryEditorWke()
+                else Worksheet.dispatch('insertQueryEditorWke')
                 commit(
                     'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',
                     { type, id: conn_name },

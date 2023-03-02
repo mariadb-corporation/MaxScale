@@ -18,7 +18,6 @@ import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
-import { insertQueryTab } from '@wsSrc/store/orm/initEntities'
 import queryHelper from '@wsSrc/store/queryHelper'
 import connection from '@wsSrc/api/connection'
 
@@ -63,17 +62,54 @@ export default {
             })
         },
         /**
+         * Initialize a blank QueryTab and its mandatory relational entities
+         * @param {String} query_editor_id  - id of the QueryEditor has QueryTab being inserted
+         * @param {Object} [ fields = { query_tab_id: uuidv1(), name: '' } ] - fields
+         */
+        insertQueryTab(
+            _,
+            query_editor_id,
+            fields = { query_tab_id: this.vue.$helpers.uuidv1(), name: '' }
+        ) {
+            let tabName = 'Query Tab 1',
+                count = 1
+
+            const lastQueryTabOfWke = QueryTab.query()
+                .where(t => t.query_editor_id === query_editor_id)
+                .last()
+            if (lastQueryTabOfWke) {
+                count = lastQueryTabOfWke.count + 1
+                tabName = `Query Tab ${count}`
+            }
+            if (fields.name) tabName = fields.name
+            QueryTab.insert({
+                data: {
+                    id: fields.query_tab_id,
+                    count,
+                    name: tabName,
+                    query_editor_id,
+                },
+            })
+            Editor.insert({ data: { id: fields.query_tab_id } })
+            QueryResult.insert({ data: { id: fields.query_tab_id } })
+            QueryTabTmp.insert({ data: { id: fields.query_tab_id } })
+            QueryEditor.update({
+                where: query_editor_id,
+                data: { active_query_tab_id: fields.query_tab_id },
+            })
+        },
+        /**
          * This action add new queryTab to the provided QueryEditor id.
          * It uses the QueryEditor connection to clone into a new connection and bind it
          * to the queryTab being created.
          * @param {String} param.query_editor_id - QueryEditor id
          * @param {String} param.name - queryTab name. If not provided, it'll be auto generated
          */
-        async handleAddQueryTab(_, { query_editor_id, name }) {
+        async handleAddQueryTab({ dispatch }, { query_editor_id, name }) {
             const query_tab_id = this.vue.$helpers.uuidv1()
             let fields = { query_tab_id }
             if (name) fields.name = name
-            insertQueryTab(query_editor_id, fields)
+            dispatch('insertQueryTab', query_editor_id, fields)
             const queryEditorConn = QueryConn.getters('getQueryEditorConn')
             // Clone the QueryEditor conn and bind it to the new queryTab
             if (queryEditorConn.id)

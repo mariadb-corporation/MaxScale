@@ -18,7 +18,6 @@ import QueryConn from '@wsModels/QueryConn'
 import queries from '@wsSrc/api/queries'
 import etl from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { insertEtlTask } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -36,9 +35,14 @@ export default {
                 EtlTaskTmp.delete(id)
             })
         },
+        /**
+         * Create an EtlTask and its mandatory relational entities
+         * @param {String} name - etl task name
+         */
         createEtlTask({ dispatch, getters }, name) {
             const id = this.vue.$helpers.uuidv1()
-            insertEtlTask({ id, name })
+            EtlTask.insert({ data: { id, name, created: Date.now() } })
+            EtlTaskTmp.insert({ data: { id } })
             dispatch('viewEtlTask', getters.getEtlTask(id))
         },
         /**

@@ -13,7 +13,12 @@
  */
 import * as config from '@wsSrc/store/config'
 import commonConfig from '@share/config'
-import initEntities from '@wsSrc/store/orm/initEntities'
+import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
+import Worksheet from '@wsModels/Worksheet'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 
 export default {
     namespaced: true,
@@ -41,8 +46,29 @@ export default {
     },
     actions: {
         async initWorkspace({ dispatch }) {
-            initEntities()
+            dispatch('initEntities')
             await dispatch('fileSysAccess/initStorage', {}, { root: true })
+        },
+        initEntities({ dispatch }) {
+            if (Worksheet.all().length === 0) Worksheet.dispatch('insertBlankWke')
+            else dispatch('initMemEntities')
+        },
+        /**
+         * Initialize entities that will be kept only in memory for all worksheets and queryTabs
+         */
+        initMemEntities() {
+            const worksheets = Worksheet.all()
+            worksheets.forEach(w => {
+                WorksheetTmp.insert({ data: { id: w.id } })
+                if (w.query_editor_id) {
+                    const queryEditor = QueryEditor.query()
+                        .where('id', w.query_editor_id)
+                        .with('queryTabs')
+                        .first()
+                    QueryEditorTmp.insert({ data: { id: queryEditor.id } })
+                    queryEditor.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
+                } else if (w.etl_task_id) EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
+            })
         },
     },
 }

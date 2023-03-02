@@ -56,7 +56,7 @@
  * Emits
  * $emit('get-total-btn-width', v:number)
  */
-import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
+import Worksheet from '@wsModels/Worksheet'
 import { mapMutations, mapState } from 'vuex'
 import QueryCnfDlgCtr from '@wsComps/QueryCnfDlgCtr.vue'
 
@@ -93,7 +93,7 @@ export default {
     methods: {
         ...mapMutations({ SET_IS_FULLSCREEN: 'prefAndStorage/SET_IS_FULLSCREEN' }),
         add() {
-            insertBlankWke()
+            Worksheet.dispatch('insertBlankWke')
         },
     },
 }

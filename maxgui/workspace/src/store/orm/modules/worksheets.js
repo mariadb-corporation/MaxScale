@@ -17,7 +17,6 @@ import QueryTab from '@wsModels/QueryTab'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 import queryHelper from '@wsSrc/store/queryHelper'
-import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -40,12 +39,32 @@ export default {
             }
         },
         /**
+         * Initialize a blank worksheet
+         * @param {Object} [fields = { worksheet_id: uuidv1(), name: 'WORKSHEET'}] - fields
+         */
+        insertBlankWke(
+            _,
+            fields = { worksheet_id: this.vue.$helpers.uuidv1(), name: 'WORKSHEET' }
+        ) {
+            Worksheet.insert({ data: { id: fields.worksheet_id, name: fields.name } })
+            WorksheetTmp.insert({ data: { id: fields.worksheet_id } })
+            Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
+        },
+        /**
+         * Insert a QueryEditor worksheet with its relational entities
+         */
+        insertQueryEditorWke({ dispatch }) {
+            const worksheet_id = this.vue.$helpers.uuidv1()
+            dispatch('insertBlankWke', { worksheet_id, name: 'QUERY EDITOR' })
+            QueryEditor.dispatch('insertQueryEditor', worksheet_id)
+        },
+        /**
          * @param {String} id - worksheet_id
          */
         async handleDeleteWke({ dispatch }, id) {
             await dispatch('cascadeDelete', id)
             //Auto insert a new blank wke
-            if (Worksheet.all().length === 0) insertBlankWke()
+            if (Worksheet.all().length === 0) dispatch('insertBlankWke')
         },
     },
     getters: {

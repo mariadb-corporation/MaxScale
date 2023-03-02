@@ -19,7 +19,6 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
 import queries from '@wsSrc/api/queries'
-import { insertQueryEditor } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -68,12 +67,21 @@ export default {
             })
         },
         /**
-         * Init QueryEditor entities if they aren't existed for
-         * the active worksheet.
+         * Insert a QueryEditor with its relational entities
+         * @param {String} query_editor_id - QueryEditor id
          */
-        initQueryEditorEntities() {
+        insertQueryEditor(_, query_editor_id) {
+            QueryEditor.insert({ data: { id: query_editor_id } })
+            QueryEditorTmp.insert({ data: { id: query_editor_id } })
+            SchemaSidebar.insert({ data: { id: query_editor_id } })
+            QueryTab.dispatch('insertQueryTab', query_editor_id)
+        },
+        /**
+         * Init QueryEditor entities if they don't exist in the active worksheet.
+         */
+        initQueryEditorEntities({ dispatch }) {
             const wkeId = Worksheet.getters('getActiveWkeId')
-            if (!QueryEditor.find(wkeId)) insertQueryEditor(wkeId)
+            if (!QueryEditor.find(wkeId)) dispatch('insertQueryEditor', wkeId)
             Worksheet.update({ where: wkeId, data: { query_editor_id: wkeId } })
         },
         /**
