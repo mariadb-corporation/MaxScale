@@ -115,6 +115,13 @@ void PgBackendConnection::hangup(DCB* dcb)
 
 bool PgBackendConnection::write(GWBUF&& buffer)
 {
+    if (m_state != State::ROUTING)
+    {
+        MXB_INFO("Delaying routing of '%c'", (char)buffer[0]);
+        m_backlog.emplace_back(std::move(buffer));
+        return true;
+    }
+
     return m_dcb->writeq_append(std::move(buffer));
 }
 
@@ -298,8 +305,61 @@ bool PgBackendConnection::handle_ssl_handshake()
 
 bool PgBackendConnection::handle_startup()
 {
-    handle_error("Not yet implemented");
-    return false;
+    if (auto [ok, buf] = pg::read_packet(m_dcb); ok)
+    {
+        if (!buf)
+        {
+            // Partial read, try again later
+            return false;
+        }
+
+        uint8_t command = buf[0];
+
+        switch (command)
+        {
+        case pg::AUTHENTICATION:
+            m_auth_method = pg::get_uint32(buf.data() + pg::HEADER_LEN);
+
+            if (m_auth_method != 0)
+            {
+                // TODO: This is where we'd go into the AUTH state and start the authentication process.
+                handle_error(mxb::cat("Unsupported authentication mechanism: ",
+                                      std::to_string(m_auth_method)));
+            }
+            break;
+
+        case pg::BACKEND_KEY_DATA:
+            // Stash the process ID and the key, we'll need it to kill this connection
+            m_process_id = pg::get_uint32(buf.data() + pg::HEADER_LEN);
+            m_secret_key = pg::get_uint32(buf.data() + pg::HEADER_LEN + 4);
+            break;
+
+        case pg::PARAMETER_STATUS:
+            // Server parameters, ignore these for now
+            break;
+
+        case pg::NOTICE_RESPONSE:
+            // Notification of some sorts, ignore it
+            MXB_INFO("Server notification: %s", pg::format_response(buf).c_str());
+            break;
+
+        case pg::READY_FOR_QUERY:
+            // Authentication is successful.
+            // TODO: Track the transaction status from this packet
+            m_state = State::BACKLOG;
+            break;
+
+        case pg::ERROR_RESPONSE:
+            handle_error("Authentication failed: " + pg::format_response(buf), mxs::ErrorType::PERMANENT);
+            break;
+        }
+    }
+    else
+    {
+        handle_error("Network read failed");
+    }
+
+    return true;
 }
 
 bool PgBackendConnection::handle_auth()
@@ -310,12 +370,29 @@ bool PgBackendConnection::handle_auth()
 
 bool PgBackendConnection::handle_backlog()
 {
-    handle_error("Not yet implemented");
-    return false;
+    m_state = State::ROUTING;
+    auto packets = std::move(m_backlog);
+    m_backlog.clear();
+
+    for (auto& p : packets)
+    {
+        if (!write(std::move(p)))
+        {
+            handle_error("Failed to process delayed packets");
+            break;
+        }
+    }
+
+    return true;
 }
 
 bool PgBackendConnection::handle_routing()
 {
-    handle_error("Not yet implemented");
+    if (auto [ok, buf] = m_dcb->read(0, 0); ok && buf)
+    {
+        mxs::ReplyRoute down;
+        m_upstream->clientReply(std::move(buf), down, m_reply);
+    }
+
     return false;
 }
