@@ -147,7 +147,7 @@ bool PinlokiSession::routeQuery(GWBUF&& buf)
             // clientReply inside routeQuery, do the actual start inside of a lcall. If the session is closed
             // right after routeQuery returns, we might end up starting and stopping the reader but it'll
             // still function as expected.
-            m_pSession->lcall([this](){
+            m_pSession->worker()->lcall([this](){
                 m_reader->start();
             });
 
