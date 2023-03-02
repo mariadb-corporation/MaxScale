@@ -13,6 +13,40 @@
 
 #include "pgbackendconnection.hh"
 
+namespace
+{
+GWBUF create_ssl_request()
+{
+    std::array<uint8_t, 8> buf{};
+    pg::set_uint32(buf.data(), 8);
+    pg::set_uint32(buf.data() + 4, pg::SSLREQ_MAGIC);
+    return GWBUF(buf.data(), buf.size());
+}
+
+GWBUF create_startup_message(const uint8_t* params, size_t size)
+{
+    // The parameters should be null-terminated
+    mxb_assert(params[size - 1] == 0x0);
+
+    GWBUF rval(8 + size);
+    uint8_t* ptr = rval.data();
+
+    ptr += pg::set_uint32(ptr, 8 + size);
+    ptr += pg::set_uint32(ptr, pg::PROTOCOL_V3_MAGIC);
+    memcpy(ptr, params, size);
+
+    return rval;
+}
+
+GWBUF create_terminate()
+{
+    std::array<uint8_t, 5> buf{};
+    buf[0] = 'X';
+    pg::set_uint32(buf.data() + 1, 4);
+    return GWBUF(buf.data(), buf.size());
+}
+}
+
 PgBackendConnection::PgBackendConnection(MXS_SESSION* session, SERVER* server, mxs::Component* component)
     : m_session(session)
     , m_upstream(component)
@@ -50,6 +84,7 @@ bool PgBackendConnection::write(GWBUF&& buffer)
 
 void PgBackendConnection::finish_connection()
 {
+    m_dcb->writeq_append(create_terminate());
 }
 
 uint64_t PgBackendConnection::can_reuse(MXS_SESSION* session) const

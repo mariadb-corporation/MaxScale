@@ -24,6 +24,26 @@
 namespace postgres
 {
 //
+// Constants
+//
+
+// The protocol version for a normal StartupMessage for the v3 protocol.
+// 3 in the most significant 16 bits (major version) and 0 in the least significant 16 bits (minor version).
+static constexpr uint32_t PROTOCOL_V3_MAGIC = 196608;
+
+// The protocol version for a SSLRequest message.
+// 1234 in the most significant 16 bits and 5679 in the least significant 16 bits.
+static constexpr uint32_t SSLREQ_MAGIC = 80877103;
+
+// The protocol version for a CancelRequest message.
+// 1234 in the most significant 16 bits and 5678 in the least significant 16 bits.
+static constexpr uint32_t CANCEL_MAGIC = 80877102;
+
+// The protocol version for a GSSENCRequest message.
+// 1234 in the most significant 16 bits and 5680 in the least significant 16 bits.
+static constexpr uint32_t GSSENC_MAGIC = 80877104;
+
+//
 // Message types: https://www.postgresql.org/docs/current/protocol-message-formats.html
 //
 
