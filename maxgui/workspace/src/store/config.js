@@ -16,6 +16,7 @@ import { isMAC } from '@share/utils/helpers'
 export const ORM_NAMESPACE = 'ORM'
 export const ORM_PERSISTENT_ENTITIES = {
     EDITORS: 'editors',
+    ERD_TASKS: 'erdTasks',
     ETL_TASKS: 'etlTasks',
     QUERY_CONNS: 'queryConns',
     QUERY_EDITORS: 'queryEditors',
@@ -25,6 +26,7 @@ export const ORM_PERSISTENT_ENTITIES = {
     WORKSHEETS: 'worksheets',
 }
 export const ORM_TMP_ENTITIES = {
+    ERD_TASKS_TMP: 'erdTasksTmp',
     ETL_TASKS_TMP: 'etlTasksTmp',
     QUERY_EDITORS_TMP: 'queryEditorsTmp',
     QUERY_TABS_TMP: 'queryTabsTmp',
@@ -33,11 +35,12 @@ export const ORM_TMP_ENTITIES = {
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
+    ERD: 'ERD',
+    ETL_SRC: 'ETL_SOURCE',
+    ETL_DEST: 'ETL_DESTINATION',
     QUERY_TAB: 'QUERY_TAB',
     // QueryEditor connection using for cloning query tabs and stopping query tab query
     QUERY_EDITOR: 'QUERY_EDITOR',
-    ETL_SRC: 'ETL_SOURCE',
-    ETL_DEST: 'ETL_DESTINATION',
 })
 export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'ctrl-d': ['ctrl', 'd'],

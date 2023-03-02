@@ -13,6 +13,7 @@
  */
 import * as config from '@wsSrc/store/config'
 import commonConfig from '@share/config'
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
@@ -68,6 +69,7 @@ export default {
                     QueryEditorTmp.insert({ data: { id: queryEditor.id } })
                     queryEditor.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
                 } else if (w.etl_task_id) EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
+                else if (w.erd_task_id) ErdTaskTmp.insert({ data: { id: w.erd_task_id } })
             })
         },
     },

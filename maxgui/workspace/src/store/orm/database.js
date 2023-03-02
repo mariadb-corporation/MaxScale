@@ -13,6 +13,7 @@
  */
 import { Database } from '@vuex-orm/core'
 import Editor from '@wsModels/Editor'
+import ErdTask from '@wsModels/ErdTask'
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
@@ -21,12 +22,14 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 // entities to be stored only in memory
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 // Store modules
 import editors from '@wsSrc/store/orm/modules/editors'
+import erdTasks from '@wsSrc/store/orm/modules/erdTasks'
 import etlTasks from '@wsSrc/store/orm/modules/etlTasks'
 import queryConns from '@wsSrc/store/orm/modules/queryConns'
 import queryEditors from '@wsSrc/store/orm/modules/queryEditors'
@@ -37,6 +40,7 @@ import worksheets from '@wsSrc/store/orm/modules/worksheets'
 
 const database = new Database()
 database.register(Editor, editors)
+database.register(ErdTask, erdTasks)
 database.register(EtlTask, etlTasks)
 database.register(QueryConn, queryConns)
 database.register(QueryEditor, queryEditors)
@@ -44,6 +48,7 @@ database.register(QueryResult, queryResults)
 database.register(QueryTab, queryTabs)
 database.register(SchemaSidebar, schemaSidebars)
 database.register(Worksheet, worksheets)
+database.register(ErdTaskTmp)
 database.register(EtlTaskTmp)
 database.register(QueryTabTmp)
 database.register(QueryEditorTmp)

@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
@@ -32,7 +33,8 @@ export default {
         async cascadeDelete(_, payload) {
             const entityIds = queryHelper.filterEntity(Worksheet, payload).map(entity => entity.id)
             for (const id of entityIds) {
-                const { query_editor_id } = Worksheet.find(id) || {}
+                const { erd_task_id, query_editor_id } = Worksheet.find(id) || {}
+                if (erd_task_id) await ErdTask.dispatch('cascadeDelete', erd_task_id)
                 if (query_editor_id) await QueryEditor.dispatch('cascadeDelete', query_editor_id)
                 WorksheetTmp.delete(id)
                 Worksheet.delete(id) // delete itself

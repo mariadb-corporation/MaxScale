@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2020 MariaDB Corporation Ab
- * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ * Copyright (c) 2023 MariaDB plc
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
@@ -12,30 +11,27 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
+import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@wsSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
-import { ORM_PERSISTENT_ENTITIES } from '@wsSrc/store/config'
 
-export default class Worksheet extends Extender {
-    static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
+export default class ErdTask extends Extender {
+    static entity = ORM_PERSISTENT_ENTITIES.ERD_TASKS
 
     /**
      * @returns {Object} - return fields that are not key, relational fields
      */
     static getNonKeyFields() {
-        return { name: this.string('WORKSHEET') }
+        return {
+            data: this.attr([]),
+        }
     }
 
     static fields() {
         return {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
-            /**
-             * id field value is used as value for either erd_task_id or query_editor_id
-             * as there is no need to keep ErdTask or QueryEditor worksheet after deleting it
-             */
-            erd_task_id: this.attr(null).nullable(),
-            etl_task_id: this.attr(null).nullable(),
-            query_editor_id: this.attr(null).nullable(),
+            connection: this.hasOne(ORM_PERSISTENT_ENTITIES.QUERY_CONNS, 'erd_task_id'),
+            erdTaskTmp: this.hasOne(ORM_TMP_ENTITIES.ERD_TASKS_TMP, 'id'),
         }
     }
 }

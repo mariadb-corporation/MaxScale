@@ -41,6 +41,7 @@ export default class QueryConn extends Extender {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
             //FK
+            erd_task_id: this.attr(null).nullable(),
             etl_task_id: this.attr(null).nullable(),
             query_tab_id: this.attr(null).nullable(),
             query_editor_id: this.attr(null).nullable(),

@@ -26,6 +26,7 @@
                     >
                         <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                     </blank-wke>
+                    <erd-wke v-else-if="isErdWke(activeWke)" :ctrDim="ctrDim" />
                     <!-- Keep alive worksheets -->
                     <keep-alive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
                         <template v-if="activeWkeId === wke.id">
@@ -59,21 +60,24 @@
  * Public License.
  */
 import { mapActions, mapState, mapMutations } from 'vuex'
+import ErdTask from '@wsModels/ErdTask'
 import Worksheet from '@wsModels/Worksheet'
-import '@wsSrc/styles/workspace.scss'
-import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke'
-import QueryEditor from '@wkeComps/QueryEditor'
 import DataMigration from '@wkeComps/DataMigration'
+import ErdWke from '@wkeComps/ErdWke'
+import QueryEditor from '@wkeComps/QueryEditor'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
+import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
+import '@wsSrc/styles/workspace.scss'
 
 export default {
     name: 'workspace-ctr',
     components: {
         WkeNavCtr,
         BlankWke,
+        ErdWke,
         MigrDeleteDlg,
         QueryEditor,
         DataMigration,
@@ -137,12 +141,12 @@ export default {
                     click: () =>
                         this.SET_MIGR_DLG({ type: this.MIGR_DLG_TYPES.CREATE, is_opened: true }),
                 },
-                /*  {
+                {
                     title: this.$mxs_t('createAnErd'),
                     icon: '$vuetify.icons.mxs_erd',
                     iconSize: 32,
-                    click: () => null,
-                }, */
+                    click: () => ErdTask.dispatch('initErdEntities'),
+                },
             ]
         },
         eventBus() {
@@ -177,14 +181,17 @@ export default {
             const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
             this.dim = { width, height }
         },
-        isQueryEditorWke(wke) {
-            return Boolean(this.$typy(wke, 'query_editor_id').safeString)
+        isErdWke(wke) {
+            return Boolean(this.$typy(wke, 'erd_task_id').safeString)
         },
         isEtlWke(wke) {
             return Boolean(this.$typy(wke, 'etl_task_id').safeString)
         },
+        isQueryEditorWke(wke) {
+            return Boolean(this.$typy(wke, 'query_editor_id').safeString)
+        },
         isBlankWke(wke) {
-            return !this.isQueryEditorWke(wke) && !this.isEtlWke(wke)
+            return !this.isQueryEditorWke(wke) && !this.isEtlWke(wke) && !this.isErdWke(wke)
         },
     },
 }

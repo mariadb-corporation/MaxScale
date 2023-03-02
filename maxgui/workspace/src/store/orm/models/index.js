@@ -12,6 +12,8 @@
  * Public License.
  */
 import Editor from '@wsModels/Editor'
+import ErdTask from '@wsModels/ErdTask'
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
@@ -26,6 +28,8 @@ import WorksheetTmp from '@wsModels/WorksheetTmp'
 
 export default {
     Editor,
+    ErdTask,
+    ErdTaskTmp,
     EtlTask,
     EtlTaskTmp,
     QueryConn,
