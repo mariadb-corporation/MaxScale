@@ -390,7 +390,7 @@ public:
      */
     bool is_trx_starting() const
     {
-        return qc_query_is_type(m_route_info.type_mask(), QUERY_TYPE_BEGIN_TRX);
+        return mxs::Parser::type_mask_contains(m_route_info.type_mask(), QUERY_TYPE_BEGIN_TRX);
     }
 
     /**

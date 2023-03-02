@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include <maxbase/assert.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/modutil.hh>
@@ -512,10 +513,10 @@ void test_set_transaction(Tester& tester)
                     auto op = tester.get_operation(sql);
 
                     expect(op == QUERY_OP_SET_TRANSACTION, "Expected %s, got %s",
-                           qc_op_to_string(QUERY_OP_SET_TRANSACTION), qc_op_to_string(op));
+                           mxs::Parser::op_to_string(QUERY_OP_SET_TRANSACTION), mxs::Parser::op_to_string(op));
 
                     auto type = tester.get_type(sql);
-                    auto type_str = qc_typemask_to_string(type);
+                    auto type_str = mxs::Parser::type_mask_to_string(type);
 
                     expect(type & QUERY_TYPE_SESSION_WRITE, "Query should be QUERY_TYPE_SESSION_WRITE");
 
@@ -572,11 +573,11 @@ int main(int argc, char** argv)
 
             auto op = tester.get_operation(sql);
             expect(op == expected_op, "Expected %s, got %s for: %s",
-                   qc_op_to_string(expected_op), qc_op_to_string(op), sql.c_str());
+                   mxs::Parser::op_to_string(expected_op), mxs::Parser::op_to_string(op), sql.c_str());
 
             auto type = tester.get_type(sql);
-            auto type_str = qc_typemask_to_string(type);
-            auto expected_type_str = qc_typemask_to_string(expected_type);
+            auto type_str = mxs::Parser::type_mask_to_string(type);
+            auto expected_type_str = mxs::Parser::type_mask_to_string(expected_type);
 
             expect(type == expected_type, "Expected %s, got %s for: %s",
                    expected_type_str.c_str(), type_str.c_str(), sql.c_str());

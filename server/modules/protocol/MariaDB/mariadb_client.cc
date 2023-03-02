@@ -951,7 +951,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         else if (type & (QUERY_TYPE_READWRITE | QUERY_TYPE_READONLY))
         {
             // Currently only qc_sqlite should return these types
-            mxb_assert(use_qc && qc_get_operation(packetbuf) == QUERY_OP_SET_TRANSACTION);
+            mxb_assert(use_qc && parser()->get_operation(packetbuf) == QUERY_OP_SET_TRANSACTION);
             uint32_t mode = type & QUERY_TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
             m_session_data->next_trx_mode = mode;
 
@@ -1047,7 +1047,7 @@ MariaDBClientConnection::parse_kill_query_elems(const char* sql)
 
 void MariaDBClientConnection::handle_use_database(GWBUF& read_buffer)
 {
-    auto databases = qc_get_database_names(&read_buffer);
+    auto databases = parser()->get_database_names(&read_buffer);
     if (!databases.empty())
     {
         start_change_db(string(databases[0]));
@@ -1058,9 +1058,9 @@ bool MariaDBClientConnection::should_inspect_query(GWBUF& buffer) const
 {
     bool rval = true;
 
-    if (qc_parse(&buffer, QC_COLLECT_ALL) == QC_QUERY_PARSED)
+    if (parser()->parse(&buffer, QC_COLLECT_ALL) == QC_QUERY_PARSED)
     {
-        auto op = qc_get_operation(&buffer);
+        auto op = parser()->get_operation(&buffer);
 
         if (op != QUERY_OP_KILL && op != QUERY_OP_SET && op != QUERY_OP_CHANGE_DB)
         {
@@ -1218,7 +1218,8 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
         m_pending_cmd = buffer.deep_clone();
         should_record = true;
 
-        if (cmd == MXS_COM_STMT_PREPARE || qc_query_is_type(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
+        if (cmd == MXS_COM_STMT_PREPARE
+            || mxs::Parser::type_mask_contains(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
             // This will silence the warnings about unknown PS IDs
             m_qc.ps_store(&buffer, m_next_id);

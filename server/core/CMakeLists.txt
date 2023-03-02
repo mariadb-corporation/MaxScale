@@ -36,6 +36,7 @@ add_library(maxscale-common SHARED
   monitormanager.cc
   mysql_utils.cc
   packet_tracker.cc
+  parser.cc
   paths.cc
   resource.cc
   response_stat.cc

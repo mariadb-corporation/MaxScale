@@ -14,9 +14,11 @@
 
 #include <stdio.h>
 #include <maxbase/maxbase.hh>
+#include <maxscale/built_in_modules.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
+#include "../../server/core/internal/modules.hh"
 
 #define MYSQL_HEADER_LEN 4
 
@@ -45,8 +47,12 @@ int main()
 
     mxs::set_libdir("../qc_sqlite");
 
-    if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
+    QUERY_CLASSIFIER* pClassifier = qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
+
+    if (pClassifier)
     {
+        MariaDBParser parser(pClassifier);
+
         const char s[] = "SELECT @@global.max_allowed_packet";
 
         GWBUF* stmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
@@ -55,7 +61,7 @@ int main()
         // being of the opinion that the statement was not the one to be
         // classified and hence an alien parse-tree being passed to sqlite3's
         // code generator.
-        qc_parse(stmt, QC_COLLECT_ALL);
+        parser.parse(stmt, QC_COLLECT_ALL);
 
         qc_end();
 

@@ -19,6 +19,7 @@
 #include <maxscale/log.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 using namespace std;
@@ -57,7 +58,7 @@ int run(const char* zStatement, int n)
         GWBUF* pStatement = create_gwbuf(zStatement);
 
         maxbase::StopWatch sw;
-        int rc = qc_parse(pStatement, QC_COLLECT_ALL);
+        int rc = MariaDBParser::get().parse(pStatement, QC_COLLECT_ALL);
         diff += sw.split();
 
         gwbuf_free(pStatement);

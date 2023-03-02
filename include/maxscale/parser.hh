@@ -29,18 +29,12 @@ public:
 
     static bool type_mask_contains(uint32_t type_mask, qc_query_type_t type)
     {
-        return qc_query_is_type(type_mask, type);
+        return (type_mask & (uint32_t)type) == (uint32_t)type;
     }
 
-    static std::string type_mask_to_string(uint32_t type_mask)
-    {
-        return qc_typemask_to_string(type_mask);
-    }
+    static std::string type_mask_to_string(uint32_t type_mask);
 
-    static const char* op_to_string(qc_query_op_t op)
-    {
-        return qc_op_to_string(op);
-    }
+    static const char* op_to_string(qc_query_op_t op);
 
     // Only for testing purposes, not to be used for anything else.
     virtual QUERY_CLASSIFIER& classifier() const = 0;

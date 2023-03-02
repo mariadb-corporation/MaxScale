@@ -24,6 +24,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/log.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
@@ -387,7 +388,7 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << qc_typemask_to_string(rv1);
+        ss << "Ok : " << mxs::Parser::type_mask_to_string(rv1);
         success = true;
     }
     else
@@ -416,8 +417,8 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
             rv2b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
         }
 
-        auto types1 = qc_typemask_to_string(rv1);
-        auto types2 = qc_typemask_to_string(rv2);
+        auto types1 = mxs::Parser::type_mask_to_string(rv1);
+        auto types2 = mxs::Parser::type_mask_to_string(rv2);
 
         if (rv1b == rv2b)
         {
@@ -453,15 +454,15 @@ bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << qc_op_to_string(static_cast<qc_query_op_t>(rv1));
+        ss << "Ok : " << mxs::Parser::op_to_string(static_cast<qc_query_op_t>(rv1));
         success = true;
     }
     else
     {
         ss << "ERR: "
-           << qc_op_to_string(static_cast<qc_query_op_t>(rv1))
+           << mxs::Parser::op_to_string(static_cast<qc_query_op_t>(rv1))
            << " != "
-           << qc_op_to_string(static_cast<qc_query_op_t>(rv2));
+           << mxs::Parser::op_to_string(static_cast<qc_query_op_t>(rv2));
     }
 
     report(success, ss.str());

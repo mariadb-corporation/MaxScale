@@ -69,6 +69,7 @@
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 #include <maxscale/log.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/paths.hh>
@@ -1449,12 +1450,12 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 #endif
     // TODO: This test is meaningless, since at this point
     // TODO: qtype (not type) is QUERY_TYPE_UNKNOWN.
-    if (qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN)
-        || qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ)
-        || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
+    if (mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_UNKNOWN)
+        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_LOCAL_READ)
+        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
+        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
+        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
+        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
         /**
          * These values won't change qtype more restrictive than write.

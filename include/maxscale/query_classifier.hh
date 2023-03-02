@@ -353,10 +353,10 @@ struct QC_CACHE_STATS
  * @see qc_process_init qc_thread_init
  */
 // TODO: To be removed.
-bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
-              qc_sql_mode_t sql_mode,
-              const char* plugin_name,
-              const char* plugin_args);
+QUERY_CLASSIFIER* qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
+                           qc_sql_mode_t sql_mode,
+                           const char* plugin_name,
+                           const char* plugin_args);
 
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties);
 
@@ -378,10 +378,10 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties);
  *
  * @see qc_end.
  */
-bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
-             qc_sql_mode_t sql_mode,
-             const char* plugin_name,
-             const char* plugin_args);
+QUERY_CLASSIFIER* qc_init(const QC_CACHE_PROPERTIES* cache_properties,
+                          qc_sql_mode_t sql_mode,
+                          const char* plugin_name,
+                          const char* plugin_args);
 
 /**
  * Performs thread and process finalization.

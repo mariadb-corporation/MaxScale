@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string>
 #include <maxbase/alloc.hh>
+#include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
@@ -90,7 +91,7 @@ public:
             if ((m_verbosity & VERBOSITY_SUCCESSFUL)
                 || ((m_verbosity & VERBOSITY_SUCCESSFUL_TRANSACTIONAL) && (type_mask_qc != 0)))
             {
-                string type_mask_qc_str = qc_typemask_to_string(type_mask_qc);
+                string type_mask_qc_str = mxs::Parser::type_mask_to_string(type_mask_qc);
 
                 cout << zStmt << ": " << type_mask_qc_str << endl;
             }
@@ -99,8 +100,8 @@ public:
         {
             if (m_verbosity & VERBOSITY_FAILED)
             {
-                string type_mask_qc_str = qc_typemask_to_string(type_mask_qc);
-                string type_mask_parser_str = qc_typemask_to_string(type_mask_parser);
+                string type_mask_qc_str = mxs::Parser::type_mask_to_string(type_mask_qc);
+                string type_mask_parser_str = mxs::Parser::type_mask_to_string(type_mask_parser);
 
                 cout << zStmt << "\n"
                      << "  QC    : " << type_mask_qc_str << "\n"
