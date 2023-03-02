@@ -65,8 +65,8 @@ private:
     int64_t             m_debug;
     MaxRowsConfig::Mode m_mode;
 
-    mxs::Buffer m_buffer;   // Contains the partial resultset
-    bool        m_collect {true};
+    GWBUF m_buffer;     // Contains the partial resultset
+    bool  m_collect {true};
 };
 
 class MaxRows : public mxs::Filter
