@@ -53,6 +53,12 @@ static constexpr uint32_t CANCEL_MAGIC = 80877102;
 // 1234 in the most significant 16 bits and 5680 in the least significant 16 bits.
 static constexpr uint32_t GSSENC_MAGIC = 80877104;
 
+// The one byte response sent for the SSLRequest message when SSL is enabled
+static constexpr uint8_t SSLREQ_YES = 'S';
+
+// The one byte response sent for the SSLRequest message when SSL is disable
+static constexpr uint8_t SSLREQ_NO = 'N';
+
 //
 // Message types: https://www.postgresql.org/docs/current/protocol-message-formats.html
 //

@@ -60,6 +60,8 @@ private:
     };
 
     void handle_error(const std::string& error, mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
+    void send_ssl_request();
+    void send_startup_message();
 
     bool handle_ssl_request();
     bool handle_ssl_handshake();
