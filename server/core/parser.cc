@@ -300,6 +300,47 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
 namespace maxscale
 {
 
+const char* parser::to_string(qc_parse_result_t result)
+{
+    switch (result)
+    {
+    case QC_QUERY_INVALID:
+        return "QC_QUERY_INVALID";
+
+    case QC_QUERY_TOKENIZED:
+        return "QC_QUERY_TOKENIZED";
+
+    case QC_QUERY_PARTIALLY_PARSED:
+        return "QC_QUERY_PARTIALLY_PARSED";
+
+    case QC_QUERY_PARSED:
+        return "QC_QUERY_PARSED";
+
+    default:
+        mxb_assert(!true);
+        return "Unknown";
+    }
+}
+
+const char* parser::to_string(qc_kill_type_t type)
+{
+    switch (type)
+    {
+    case QC_KILL_CONNECTION:
+        return "QC_KILL_CONNECTION";
+
+    case QC_KILL_QUERY:
+        return "QC_KILL_QUERY";
+
+    case QC_KILL_QUERY_ID:
+        return "QC_KILL_QUERY_ID";
+
+    default:
+        mxb_assert(!true);
+        return "Unknown";
+    }
+}
+
 //static
 std::string Parser::type_mask_to_string(uint32_t type_mask)
 {

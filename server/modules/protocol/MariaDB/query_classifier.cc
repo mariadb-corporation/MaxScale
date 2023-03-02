@@ -692,118 +692,6 @@ void qc_thread_end(uint32_t kind)
     }
 }
 
-const char* qc_result_to_string(qc_parse_result_t result)
-{
-    switch (result)
-    {
-    case QC_QUERY_INVALID:
-        return "QC_QUERY_INVALID";
-
-    case QC_QUERY_TOKENIZED:
-        return "QC_QUERY_TOKENIZED";
-
-    case QC_QUERY_PARTIALLY_PARSED:
-        return "QC_QUERY_PARTIALLY_PARSED";
-
-    case QC_QUERY_PARSED:
-        return "QC_QUERY_PARSED";
-
-    default:
-        mxb_assert(!true);
-        return "Unknown";
-    }
-}
-
-const char* qc_kill_type_to_string(qc_kill_type_t type)
-{
-    switch (type)
-    {
-    case QC_KILL_CONNECTION:
-        return "QC_KILL_CONNECTION";
-
-    case QC_KILL_QUERY:
-        return "QC_KILL_QUERY";
-
-    case QC_KILL_QUERY_ID:
-        return "QC_KILL_QUERY_ID";
-
-    default:
-        mxb_assert(!true);
-        return "Unknown";
-    }
-}
-
-static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
-{
-    uint32_t type_mask;
-    this_unit.classifier->qc_get_type_mask(stmt, &type_mask);
-
-    if (mxs::Parser::type_mask_contains(type_mask, QUERY_TYPE_WRITE)
-        && mxs::Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
-    {
-        // This is a commit reported for "CREATE TABLE...",
-        // "DROP TABLE...", etc. that cause an implicit commit.
-        type_mask = 0;
-    }
-    else
-    {
-        // Only START TRANSACTION can be explicitly READ or WRITE.
-        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
-        {
-            // So, strip them away for everything else.
-            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
-        }
-
-        // Then leave only the bits related to transaction and
-        // autocommit state.
-        type_mask &= (QUERY_TYPE_BEGIN_TRX
-                      | QUERY_TYPE_WRITE
-                      | QUERY_TYPE_READ
-                      | QUERY_TYPE_COMMIT
-                      | QUERY_TYPE_ROLLBACK
-                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
-                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
-                      | QUERY_TYPE_READONLY
-                      | QUERY_TYPE_READWRITE
-                      | QUERY_TYPE_NEXT_TRX);
-    }
-
-    return type_mask;
-}
-
-static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* stmt)
-{
-    maxscale::TrxBoundaryParser parser;
-
-    return parser.type_mask_of(stmt);
-}
-
-uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
-{
-    uint32_t type_mask = 0;
-
-    switch (use)
-    {
-    case QC_TRX_PARSE_USING_QC:
-        type_mask = qc_get_trx_type_mask_using_qc(stmt);
-        break;
-
-    case QC_TRX_PARSE_USING_PARSER:
-        type_mask = qc_get_trx_type_mask_using_parser(stmt);
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    return type_mask;
-}
-
-uint32_t qc_get_trx_type_mask(GWBUF* stmt)
-{
-    return qc_get_trx_type_mask_using(stmt, this_unit.qc_trx_parse_using);
-}
-
 bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
 {
     QC_TRACE();
@@ -1027,7 +915,7 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 
     qc_parse_result_t result = parser.parse(pBuffer, QC_COLLECT_ALL);
 
-    json_object_set_new(pAttributes, CN_PARSE_RESULT, json_string(qc_result_to_string(result)));
+    json_object_set_new(pAttributes, CN_PARSE_RESULT, json_string(mxs::parser::to_string(result)));
 
     if (result != QC_QUERY_INVALID)
     {
@@ -1060,7 +948,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
 
     json_t* pClassification = json_object();
     json_object_set_new(pClassification,
-                        CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
+                        CN_PARSE_RESULT, json_string(mxs::parser::to_string(entry.result.status)));
     std::string type_mask = mxs::Parser::type_mask_to_string(entry.result.type_mask);
     json_object_set_new(pClassification, CN_TYPE_MASK, json_string(type_mask.c_str()));
     json_object_set_new(pClassification,
@@ -1272,9 +1160,81 @@ mxs::CachingParser::TableNames mxs::CachingParser::get_table_names(GWBUF* pStmt)
 
 uint32_t mxs::CachingParser::get_trx_type_mask(GWBUF* pStmt) const
 {
+ 
     maxscale::TrxBoundaryParser parser;
 
     return parser.type_mask_of(pStmt);
+}
+
+namespace
+{
+
+uint32_t get_trx_type_mask_using_parser(GWBUF* pStmt)
+{
+    maxscale::TrxBoundaryParser parser;
+
+    return parser.type_mask_of(pStmt);
+}
+
+uint32_t get_trx_type_mask_using_qc(QUERY_CLASSIFIER& m_classifier, GWBUF* pStmt)
+{
+    uint32_t type_mask;
+    m_classifier.qc_get_type_mask(pStmt, &type_mask);
+
+    if (mxs::Parser::type_mask_contains(type_mask, QUERY_TYPE_WRITE)
+        && mxs::Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
+    {
+        // This is a commit reported for "CREATE TABLE...",
+        // "DROP TABLE...", etc. that cause an implicit commit.
+        type_mask = 0;
+    }
+    else
+    {
+        // Only START TRANSACTION can be explicitly READ or WRITE.
+        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+        {
+            // So, strip them away for everything else.
+            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+        }
+
+        // Then leave only the bits related to transaction and
+        // autocommit state.
+        type_mask &= (QUERY_TYPE_BEGIN_TRX
+                      | QUERY_TYPE_WRITE
+                      | QUERY_TYPE_READ
+                      | QUERY_TYPE_COMMIT
+                      | QUERY_TYPE_ROLLBACK
+                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
+                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
+                      | QUERY_TYPE_READONLY
+                      | QUERY_TYPE_READWRITE
+                      | QUERY_TYPE_NEXT_TRX);
+    }
+
+    return type_mask;
+}
+
+}
+
+uint32_t mxs::CachingParser::get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const
+{
+    uint32_t type_mask = 0;
+
+    switch (use)
+    {
+    case QC_TRX_PARSE_USING_QC:
+        type_mask = get_trx_type_mask_using_qc(m_classifier, pStmt);
+        break;
+
+    case QC_TRX_PARSE_USING_PARSER:
+        type_mask = get_trx_type_mask_using_parser(pStmt);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return type_mask;
 }
 
 uint32_t mxs::CachingParser::get_type_mask(GWBUF* pStmt) const

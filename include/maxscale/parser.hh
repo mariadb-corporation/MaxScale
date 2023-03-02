@@ -19,6 +19,14 @@
 namespace maxscale
 {
 
+namespace parser
+{
+
+const char* to_string(qc_parse_result_t result);
+const char* to_string(qc_kill_type_t type);
+
+}
+
 class Parser
 {
 public:
@@ -58,6 +66,7 @@ public:
     virtual qc_sql_mode_t    get_sql_mode() const = 0;
     virtual TableNames       get_table_names(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_trx_type_mask(GWBUF* pStmt) const = 0;
+    virtual uint32_t         get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const = 0;
     virtual uint32_t         get_type_mask(GWBUF* pStmt) const = 0;
     virtual bool             is_drop_table_query(GWBUF* pStmt) const = 0;
 
@@ -93,6 +102,7 @@ public:
     qc_sql_mode_t    get_sql_mode() const override;
     TableNames       get_table_names(GWBUF* pStmt) const override;
     uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
+    uint32_t         get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const override;
     uint32_t         get_type_mask(GWBUF* pStmt) const override;
     bool             is_drop_table_query(GWBUF* pStmt) const override;
 

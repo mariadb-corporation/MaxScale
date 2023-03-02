@@ -467,7 +467,9 @@ void test_kill(Tester& tester)
             expect(res_id.user == false, "User should be false for: %s", sql_user.c_str());
 
             expect(res_id.type == qtype, "Type should be '%s', not '%s' for: %s",
-                   qc_kill_type_to_string(res_id.type), qc_kill_type_to_string(qtype), sql_user.c_str());
+                   mxs::parser::to_string(res_id.type),
+                   mxs::parser::to_string(qtype),
+                   sql_user.c_str());
 
             expect(res_id.target == id, "Target should be '%s', not '%s' for: %s",
                    id.c_str(), res_id.target.c_str(), sql_user.c_str());
@@ -481,7 +483,8 @@ void test_kill(Tester& tester)
                 expect(res_user.user == true, "User should be true for: %s", sql_user.c_str());
 
                 expect(res_user.type == qtype, "Type should be '%s', not '%s' for: %s",
-                       qc_kill_type_to_string(res_user.type), qc_kill_type_to_string(qtype),
+                       mxs::parser::to_string(res_user.type),
+                       mxs::parser::to_string(qtype),
                        sql_user.c_str());
 
                 expect(res_user.target == "bob", "Target should be 'bob', not '%s' for: %s",

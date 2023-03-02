@@ -911,7 +911,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         bool use_qc = rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION);
         const auto parser_type = use_qc ? QC_TRX_PARSE_USING_QC : QC_TRX_PARSE_USING_PARSER;
 
-        uint32_t type = qc_get_trx_type_mask_using(packetbuf, parser_type);
+        uint32_t type = parser()->get_trx_type_mask_using(packetbuf, parser_type);
 
         if (type & QUERY_TYPE_BEGIN_TRX)
         {

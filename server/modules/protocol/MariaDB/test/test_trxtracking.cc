@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <iostream>
 #include <maxscale/paths.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 
@@ -23,6 +24,8 @@ using namespace std;
 
 namespace
 {
+
+const mxs::Parser* pParser = nullptr;
 
 enum test_target_t
 {
@@ -51,12 +54,12 @@ GWBUF* create_gwbuf(const char* zStmt)
 
 uint32_t get_qc_trx_type_mask(GWBUF* pBuf)
 {
-    return qc_get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_QC);
+    return pParser->get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_QC);
 }
 
 uint32_t get_parser_trx_type_mask(GWBUF* pBuf)
 {
-    return qc_get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_PARSER);
+    return pParser->get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_PARSER);
 }
 }
 
@@ -451,9 +454,13 @@ int main(int argc, char* argv[])
             mxs::set_libdir("../../../../../query_classifier/qc_sqlite");
 
             // We have to setup something in order for the regexes to be compiled.
-            if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
+            QUERY_CLASSIFIER* pClassifier = qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
+            if (pClassifier)
             {
                 rc = EXIT_SUCCESS;
+
+                MariaDBParser parser(pClassifier);
+                pParser = &parser;
 
                 if (test_target & TEST_QC)
                 {

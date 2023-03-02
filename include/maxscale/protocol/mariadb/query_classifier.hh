@@ -273,48 +273,6 @@ enum qc_trx_parse_using_t
 };
 
 /**
- * Returns the type bitmask of transaction related statements.
- *
- * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
- * @param use   What method should be used.
- *
- * @return The relevant type bits if the statement is transaction
- *         related, otherwise 0.
- *
- * @see qc_get_trx_type_mask
- */
-uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use);
-
-/**
- * Returns the string representation of a query type.
- *
- * @param type  A query type (not a bitmask of several).
- *
- * @return The corresponding string.
- *
- * @note The returned string is statically allocated and must @b not be freed.
- */
-const char* qc_type_to_string(qc_query_type_t type);
-
-/**
- * String represenation for the parse result.
- *
- * @param result A parsing result.
- *
- * @return The corresponding string.
- */
-const char* qc_result_to_string(qc_parse_result_t result);
-
-/**
- * String represenation for the kill type.
- *
- * @param type A kill type.
- *
- * @return The corresponding string.
- */
-const char* qc_kill_type_to_string(qc_kill_type_t type);
-
-/**
  * Classify statement
  *
  * @param zHost      The MaxScale host.

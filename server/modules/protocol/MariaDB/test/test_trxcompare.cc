@@ -20,6 +20,7 @@
 #include <maxbase/alloc.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include "../../../query_classifier/test/testreader.hh"
@@ -70,8 +71,9 @@ GWBUF* create_gwbuf(const char* zStmt)
 class Tester
 {
 public:
-    Tester(uint32_t verbosity)
-        : m_verbosity(verbosity)
+    Tester(const mxs::Parser& parser, uint32_t verbosity)
+        : m_parser(parser)
+        , m_verbosity(verbosity)
     {
     }
 
@@ -81,8 +83,8 @@ public:
 
         GWBUF* pStmt = create_gwbuf(zStmt);
 
-        uint32_t type_mask_qc = qc_get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_QC);
-        uint32_t type_mask_parser = qc_get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_PARSER);
+        uint32_t type_mask_qc = m_parser.get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_QC);
+        uint32_t type_mask_parser = m_parser.get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_PARSER);
 
         gwbuf_free(pStmt);
 
@@ -138,7 +140,8 @@ private:
     Tester& operator=(const Tester&);
 
 private:
-    uint32_t m_verbosity;
+    const mxs::Parser& m_parser;
+    uint32_t           m_verbosity;
 };
 }
 
@@ -182,9 +185,12 @@ int main(int argc, char* argv[])
             mxs::set_libdir("../../../../../query_classifier/qc_sqlite");
 
             // We have to setup something in order for the regexes to be compiled.
-            if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
+            QUERY_CLASSIFIER* pClassifier = qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
+            if (pClassifier)
             {
-                Tester tester(verbosity);
+                MariaDBParser parser(pClassifier);
+
+                Tester tester(parser, verbosity);
 
                 int n = argc - (optind - 1);
 
