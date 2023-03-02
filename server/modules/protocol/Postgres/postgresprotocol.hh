@@ -17,6 +17,8 @@
 #include <maxscale/ccdefs.hh>
 #include <maxbase/assert.hh>
 #include <maxscale/log.hh>
+#include <maxscale/buffer.hh>
+#include <maxscale/dcb.hh>
 
 #include <endian.h>
 #include <string_view>
@@ -26,6 +28,14 @@ namespace postgres
 //
 // Constants
 //
+
+// Length of the message header
+//
+// The header consists of a one byte command followed by network order 32-bit integer for the message length.
+// The message length always includes the length itself so it'll always have a value of at least 4.
+//
+// Note that the first packet sent by a client does not have the command byte and is only 4 bytes long.
+static constexpr size_t HEADER_LEN = 5;
 
 // The protocol version for a normal StartupMessage for the v3 protocol.
 // 3 in the most significant 16 bits (major version) and 0 in the least significant 16 bits (minor version).
@@ -212,6 +222,16 @@ static inline size_t set_string(uint8_t* ptr, std::string_view str)
     ptr[str.size()] = 0x0;
     return str.size() + 1;
 }
+
+/**
+ * Reads a complete packet from the socket
+ *
+ * @param dcb DCB to read from
+ *
+ * @return True if the read was successful, false if an error occurred. If a complete packet was available,
+ *         the buffer will contain it. If no complete packets are available an empty buffer is returned.
+ */
+std::tuple<bool, GWBUF> read_packet(DCB* dcb);
 }
 
 // Convenience alias for the namespace
