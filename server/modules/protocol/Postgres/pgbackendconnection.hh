@@ -16,6 +16,7 @@
 #include "postgresprotocol.hh"
 #include "pgprotocoldata.hh"
 #include <maxscale/protocol2.hh>
+#include <deque>
 
 class PgBackendConnection : public mxs::BackendConnection
 {
@@ -70,6 +71,8 @@ private:
     bool handle_backlog();
     bool handle_routing();
 
+    GWBUF process_packets(GWBUF& buffer);
+
     MXS_SESSION*    m_session;
     mxs::Component* m_upstream;
     BackendDCB*     m_dcb;
@@ -83,4 +86,7 @@ private:
     // Backlog of packets that need to be written again. These are only buffered for the duratio of the
     // connection creation and authentication after which they are re-sent to the write() function.
     std::vector<GWBUF> m_backlog;
+
+    // A queue of commands that are being executed. The queue will be empty if only one result is expected.
+    std::deque<uint8_t> m_track_queue;
 };

@@ -122,6 +122,20 @@ bool PgBackendConnection::write(GWBUF&& buffer)
         return true;
     }
 
+    if (m_reply.is_complete())
+    {
+        // The connection is idle, start tracking the result state
+        m_reply.clear();
+        m_reply.set_reply_state(mxs::ReplyState::START);
+        m_reply.set_command(buffer[0]);
+    }
+    else
+    {
+        // Something else is already going on, push the command byte so that we can start tracking it once the
+        // current command completes.
+        m_track_queue.push_back(buffer[0]);
+    }
+
     return m_dcb->writeq_append(std::move(buffer));
 }
 
@@ -388,11 +402,89 @@ bool PgBackendConnection::handle_backlog()
 
 bool PgBackendConnection::handle_routing()
 {
-    if (auto [ok, buf] = m_dcb->read(0, 0); ok && buf)
+    bool keep_going = false;
+
+    if (auto [ok, buf] = m_dcb->read(pg::HEADER_LEN, 0); ok)
     {
-        mxs::ReplyRoute down;
-        m_upstream->clientReply(std::move(buf), down, m_reply);
+        if (buf)
+        {
+            if (GWBUF complete_packets = process_packets(buf))
+            {
+                mxs::ReplyRoute down;
+                m_upstream->clientReply(std::move(complete_packets), down, m_reply);
+
+                if (m_reply.is_complete() && !m_track_queue.empty())
+                {
+                    // Another command was executed, try to route a response again
+                    m_reply.set_reply_state(mxs::ReplyState::START);
+                    m_reply.set_command(m_track_queue.front());
+                    m_track_queue.pop_front();
+                    keep_going = true;
+                }
+            }
+
+            if (buf)
+            {
+                // Leftover data, either partial packets or a part of another result. Push it back into the
+                // DCB and read it on the next loop. If another result is expected, the check done after
+                // clientReply will cause this function to be called again.
+                m_dcb->unread(std::move(buf));
+            }
+        }
+        else
+        {
+            // Not even the packet header could be read
+        }
+    }
+    else
+    {
+        handle_error("Network read failed");
     }
 
-    return false;
+    return keep_going;
+}
+
+GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
+{
+    mxb_assert(!m_reply.is_complete());
+    size_t size = 0;
+    auto it = buffer.begin();
+
+    while (it < buffer.end() && !m_reply.is_complete())
+    {
+        uint8_t command = *it;
+        uint32_t len = pg::get_uint32(it + 1);
+
+        switch (command)
+        {
+        case pg::ERROR_RESPONSE:
+            {
+                auto values = pg::extract_response_fields(it, len + 1);
+                std::string_view sqlstate = values['C'];
+                std::string_view errmsg = values['M'];
+                m_reply.set_error(0, sqlstate.begin(), sqlstate.end(), errmsg.begin(), errmsg.end());
+            }
+            break;
+
+        case pg::READY_FOR_QUERY:
+            // Result complete, the next result will be delivered in a separate clientReply call.
+            m_reply.set_reply_state(mxs::ReplyState::DONE);
+            break;
+
+        case pg::DATA_ROW:
+            m_reply.set_reply_state(mxs::ReplyState::RSET_ROWS);
+            m_reply.add_rows(1);
+            break;
+
+        case pg::ROW_DESCRIPTION:
+            m_reply.set_reply_state(mxs::ReplyState::RSET_COLDEF);
+            break;
+        }
+
+        size += len + 1;
+        it += len + 1;
+    }
+
+    mxb_assert(size <= buffer.length());
+    return buffer.split(size);
 }
