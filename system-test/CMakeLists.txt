@@ -918,6 +918,9 @@ add_test_executable(mxs4440_long_query_keepalive.cc mxs4440_long_query_keepalive
 # MXS-4474: MaxScale hangs when worker writes messages to itself
 add_test_executable(mxs4474_worker_messages.cc mxs4474_worker_messages replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4540: transaction_replay_retry_on_mismatch=true leads to infinite replays
+add_test_executable(mxs4540_mismatch_replay.cc mxs4540_mismatch_replay mxs4540_mismatch_replay LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

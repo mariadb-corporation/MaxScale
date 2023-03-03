@@ -254,7 +254,6 @@ void RWSplitSession::trx_replay_next_stmt()
         // No more statements to execute, return to normal routing mode
         m_state = ROUTING;
         mxb::atomic::add(&m_router->stats().n_trx_replay, 1, mxb::atomic::RELAXED);
-        m_num_trx_replays = 0;
 
         if (!m_replayed_trx.empty())
         {
@@ -266,6 +265,7 @@ void RWSplitSession::trx_replay_next_stmt()
             {
                 MXS_INFO("Checksums match, replay successful. Replay took %ld seconds.",
                          trx_replay_seconds());
+                m_num_trx_replays = 0;
 
                 if (m_interrupted_query.get())
                 {
@@ -312,6 +312,7 @@ void RWSplitSession::trx_replay_next_stmt()
              * the checksums would not match if they were to be compared.
              */
             mxb_assert_message(!m_interrupted_query.get(), "Interrupted query should be empty");
+            m_num_trx_replays = 0;
         }
     }
 }
