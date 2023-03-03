@@ -29,8 +29,9 @@
 #include <fcntl.h>
 
 #include <maxbase/threadpool.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/cachingparser.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/routingworker.hh>
 
 // Private headers
@@ -297,7 +298,11 @@ void Replicator::Imp::process_events()
         m_running = false;
     }
 
-    qc_thread_init(QC_INIT_BOTH);
+    // TODO: Make the initialization less errorprone.
+    mxs::CachingParser::thread_init();
+    auto& parser = MariaDBParser::get();
+
+    parser.classifier().qc_thread_init();
 
     m_rpl.load_metadata(m_cnf.statedir);
     update_gtid();
@@ -403,7 +408,8 @@ void Replicator::Imp::process_events()
         m_state_fd = -1;
     }
 
-    qc_thread_end(QC_INIT_BOTH);
+    parser.classifier().qc_thread_end();
+    mxs::CachingParser::thread_finish();
 }
 
 std::string to_gtid_string(const MARIADB_RPL_EVENT& event)
