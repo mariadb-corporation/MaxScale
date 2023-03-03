@@ -1,0 +1,5 @@
+find_package(PostgreSQL REQUIRED)
+message(STATUS "Using PostgreSQL version ${PostgreSQL_VERSION_STRING}.")
+message(STATUS "PostgreSQL library: ${PostgreSQL_LIBRARIES}, headers: ${PostgreSQL_INCLUDE_DIRS}")
+include_directories(include)
+add_subdirectory(src)
