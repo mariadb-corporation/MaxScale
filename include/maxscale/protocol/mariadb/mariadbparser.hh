@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/parser.hh>
+#include <maxscale/cachingparser.hh>
 
 
 class MariaDBParser : public maxscale::CachingParser

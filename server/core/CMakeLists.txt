@@ -6,6 +6,7 @@ add_library(maxscale-common SHARED
   adminusers.cc
   backend.cc
   buffer.cc
+  cachingparser.cc
   config.cc
   config2.cc
   config_runtime.cc

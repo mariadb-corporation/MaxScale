@@ -21,6 +21,18 @@ class GWBUF;
 struct json_t;
 
 /**
+ * QC_CACHE_STATS provides statistics of the cache.
+ */
+struct QC_CACHE_STATS
+{
+    int64_t size;       /** The current size of the cache. */
+    int64_t inserts;    /** The number of inserts. */
+    int64_t hits;       /** The number of hits. */
+    int64_t misses;     /** The number of misses. */
+    int64_t evictions;  /** The number of evictions. */
+};
+
+/**
  * qc_option_t defines options that affect the classification.
  */
 enum qc_option_t
@@ -190,6 +202,23 @@ enum qc_kill_type_t
 };
 
 /**
+ * Public interface to query classifier cache state.
+ */
+struct QC_CACHE_ENTRY
+{
+    int64_t        hits;
+    QC_STMT_RESULT result;
+};
+
+/**
+ * QC_CACHE_PROPERTIES specifies the limits of the query classification cache.
+ */
+struct QC_CACHE_PROPERTIES
+{
+    int64_t max_size;   /** The maximum size of the cache. */
+};
+
+/**
  * Contains the information about a KILL command.
  */
 struct QC_KILL
@@ -328,50 +357,6 @@ public:
     virtual bool set_options(uint32_t options) = 0;
     virtual void set_server_version(uint64_t version) = 0;
     virtual void set_sql_mode(qc_sql_mode_t sql_mode) = 0;
-};
-
-class CachingParser : public mxs::Parser
-{
-public:
-    CachingParser(const CachingParser&) = delete;
-    CachingParser& operator = (const CachingParser&) = delete;
-
-    QUERY_CLASSIFIER& classifier() const override;
-
-    qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override;
-
-    std::string_view get_created_table_name(GWBUF* pStmt) const override;
-    DatabaseNames    get_database_names(GWBUF* pStmt) const override;
-    void             get_field_info(GWBUF* pStmt,
-                                    const QC_FIELD_INFO** ppInfos,
-                                    size_t* pnInfos) const override;
-    void             get_function_info(GWBUF* pStmt,
-                                       const QC_FUNCTION_INFO** infos,
-                                       size_t* n_infos) const override;
-    QC_KILL          get_kill_info(GWBUF* pStmt) const override;
-    qc_query_op_t    get_operation(GWBUF* pStmt) const override;
-    uint32_t         get_options() const override;
-    GWBUF*           get_preparable_stmt(GWBUF* pStmt) const override;
-    std::string_view get_prepare_name(GWBUF* pStmt) const override;
-    uint64_t         get_server_version() const override;
-    qc_sql_mode_t    get_sql_mode() const override;
-    TableNames       get_table_names(GWBUF* pStmt) const override;
-    uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
-    uint32_t         get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const override;
-    uint32_t         get_type_mask(GWBUF* pStmt) const override;
-    bool             is_drop_table_query(GWBUF* pStmt) const override;
-
-    bool set_options(uint32_t options) override;
-    void set_sql_mode(qc_sql_mode_t sql_mode) override;
-    void set_server_version(uint64_t version) override;
-
-protected:
-    CachingParser(QUERY_CLASSIFIER* pClassifier)
-        : m_classifier(*pClassifier)
-    {
-    }
-
-    QUERY_CLASSIFIER& m_classifier;
 };
 
 }
