@@ -35,8 +35,9 @@ enum qc_init_kind_t
  * To a user of the query classifier functionality, it can in general
  * be ignored.
  */
-struct QUERY_CLASSIFIER
+class QUERY_CLASSIFIER
 {
+public:
     /**
      * Called once to setup the query classifier
      *
@@ -46,7 +47,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
      *         some specific error code.
      */
-    int32_t (* qc_setup)(qc_sql_mode_t sql_mode, const char* args);
+    virtual int32_t qc_setup(qc_sql_mode_t sql_mode, const char* args) = 0;
 
     /**
      * Called once at process startup. Typically not required, as the standard module loader already
@@ -54,24 +55,24 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK, if the process initialization succeeded.
      */
-    int32_t (* qc_process_init)(void);
+    virtual int32_t qc_process_init(void) = 0;
 
     /**
      * Called once at process shutdown.
      */
-    void (* qc_process_end)(void);
+    virtual void qc_process_end(void) = 0;
 
     /**
      * Called once per each thread.
      *
      * @return QC_RESULT_OK, if the thread initialization succeeded.
      */
-    int32_t (* qc_thread_init)(void);
+    virtual int32_t qc_thread_init(void) = 0;
 
     /**
      * Called once when a thread finishes.
      */
-    void (* qc_thread_end)(void);
+    virtual void qc_thread_end(void) = 0;
 
     /**
      * Called to explicitly parse a statement.
@@ -85,7 +86,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_parse)(GWBUF* stmt, uint32_t collect, int32_t* result);
+    virtual int32_t qc_parse(GWBUF* stmt, uint32_t collect, int32_t* result) = 0;
 
     /**
      * Reports the type of the statement.
@@ -97,7 +98,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_type_mask)(GWBUF* stmt, uint32_t* type);
+    virtual int32_t qc_get_type_mask(GWBUF* stmt, uint32_t* type) = 0;
 
     /**
      * Reports the operation of the statement.
@@ -109,7 +110,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_operation)(GWBUF* stmt, int32_t* op);
+    virtual int32_t qc_get_operation(GWBUF* stmt, int32_t* op) = 0;
 
     /**
      * Reports the name of a created table.
@@ -121,7 +122,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_created_table_name)(GWBUF* stmt, std::string_view* name);
+    virtual int32_t qc_get_created_table_name(GWBUF* stmt, std::string_view* name) = 0;
 
     /**
      * Reports whether a statement is a "DROP TABLE ..." statement.
@@ -133,7 +134,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_is_drop_table_query)(GWBUF* stmt, int32_t* is_drop_table);
+    virtual int32_t qc_is_drop_table_query(GWBUF* stmt, int32_t* is_drop_table) = 0;
 
     /**
      * Returns all table names.
@@ -145,7 +146,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_table_names)(GWBUF* stmt, std::vector<QcTableName>* names);
+    virtual int32_t qc_get_table_names(GWBUF* stmt, std::vector<QcTableName>* names) = 0;
 
     /**
      * Reports the database names.
@@ -157,7 +158,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_database_names)(GWBUF* stmt, std::vector<std::string_view>* names);
+    virtual int32_t qc_get_database_names(GWBUF* stmt, std::vector<std::string_view>* names) = 0;
 
     /**
      * Reports KILL information.
@@ -167,7 +168,7 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource exhaustion or equivalent.
      */
-    int32_t (* qc_get_kill_info)(GWBUF* stmt, QC_KILL* pKill);
+    virtual int32_t qc_get_kill_info(GWBUF* stmt, QC_KILL* pKill) = 0;
 
     /**
      * Reports the prepare name.
@@ -179,7 +180,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_prepare_name)(GWBUF* stmt, std::string_view* name);
+    virtual int32_t qc_get_prepare_name(GWBUF* stmt, std::string_view* name) = 0;
 
     /**
      * Reports field information.
@@ -191,7 +192,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos);
+    virtual int32_t qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos) = 0;
 
     /**
      * Reports function information.
@@ -203,7 +204,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos);
+    virtual int32_t qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos) = 0;
 
     /**
      * Return the preparable statement of a PREPARE statement.
@@ -220,7 +221,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_preparable_stmt)(GWBUF* stmt, GWBUF** preparable_stmt);
+    virtual int32_t qc_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt) = 0;
 
     /**
      * Set the version of the server. The version may affect how a statement
@@ -230,7 +231,7 @@ struct QUERY_CLASSIFIER
      * @param version  Version encoded as MariaDB encodes the version, i.e.:
      *                 version = major * 10000 + minor * 100 + patch
      */
-    void (* qc_set_server_version)(uint64_t version);
+    virtual void qc_set_server_version(uint64_t version) = 0;
 
     /**
      * Get the thread specific version assumed of the server. If the version has
@@ -239,7 +240,7 @@ struct QUERY_CLASSIFIER
      * @param version  The version encoded as MariaDB encodes the version, i.e.:
      *                 version = major * 10000 + minor * 100 + patch
      */
-    void (* qc_get_server_version)(uint64_t* version);
+    virtual void qc_get_server_version(uint64_t* version) = 0;
 
     /**
      * Gets the sql mode of the *calling* thread.
@@ -248,7 +249,7 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK
      */
-    int32_t (* qc_get_sql_mode)(qc_sql_mode_t* sql_mode);
+    virtual int32_t qc_get_sql_mode(qc_sql_mode_t* sql_mode) = 0;
 
     /**
      * Sets the sql mode for the *calling* thread.
@@ -257,14 +258,14 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK if @sql_mode is valid, otherwise QC_RESULT_ERROR.
      */
-    int32_t (* qc_set_sql_mode)(qc_sql_mode_t sql_mode);
+    virtual int32_t qc_set_sql_mode(qc_sql_mode_t sql_mode) = 0;
 
     /**
      * Gets the options of the *calling* thread.
      *
      * @return Bit mask of values from qc_option_t.
      */
-    uint32_t (* qc_get_options)();
+    virtual uint32_t qc_get_options() = 0;
 
     /**
      * Sets the options for the *calling* thread.
@@ -273,7 +274,7 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK if @c options is valid, otherwise QC_RESULT_ERROR.
      */
-    int32_t (* qc_set_options)(uint32_t options);
+    virtual int32_t qc_set_options(uint32_t options) = 0;
 
     /**
      * Get result from info.
@@ -282,7 +283,7 @@ struct QUERY_CLASSIFIER
      *
      * @return The result of the provided info.
      */
-    QC_STMT_RESULT (* qc_get_result_from_info)(const QC_STMT_INFO* info);
+    virtual QC_STMT_RESULT qc_get_result_from_info(const QC_STMT_INFO* info) = 0;
 
     /**
      * Return statement currently being classified.
@@ -295,7 +296,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
      *         classified), QC_RESULT_ERROR otherwise.
      */
-    int32_t (* qc_get_current_stmt)(const char** ppStmt, size_t* pLen);
+    virtual int32_t qc_get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
 
     /**
      * Get canonical statement
@@ -309,7 +310,7 @@ struct QUERY_CLASSIFIER
      *
      * @return The canonical statement.
      */
-    std::string_view (* qc_info_get_canonical)(const QC_STMT_INFO* info);
+    virtual std::string_view qc_info_get_canonical(const QC_STMT_INFO* info) = 0;
 };
 
 /**
