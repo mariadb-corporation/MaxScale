@@ -14,6 +14,7 @@
 
 #define MXB_MODULE_NAME "masking"
 #include "maskingfilterconfig.hh"
+#include <maxscale/cachingparser.hh>
 #include "maskingfilter.hh"
 #include "maskingrules.hh"
 
@@ -137,7 +138,7 @@ bool MaskingFilterConfig::post_configure(const std::map<std::string, mxs::Config
         if (m_v.treat_string_arg_as_field)
         {
             QC_CACHE_PROPERTIES cache_properties;
-            qc_get_cache_properties(&cache_properties);
+            mxs::CachingParser::get_properties(&cache_properties);
 
             if (cache_properties.max_size != 0)
             {
@@ -146,7 +147,7 @@ bool MaskingFilterConfig::post_configure(const std::map<std::string, mxs::Config
                            name().c_str());
 
                 cache_properties.max_size = 0;
-                qc_set_cache_properties(&cache_properties);
+                mxs::CachingParser::set_properties(cache_properties);
             }
         }
     }

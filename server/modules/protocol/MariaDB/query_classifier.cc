@@ -293,21 +293,6 @@ bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
     //return this_unit.classifier->qc_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
 }
 
-void qc_get_cache_properties(QC_CACHE_PROPERTIES* properties)
-{
-    mxs::CachingParser::get_properties(properties);
-}
-
-bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
-{
-    return mxs::CachingParser::set_properties(*properties);
-}
-
-void qc_use_local_cache(bool enabled)
-{
-    mxs::CachingParser::set_thread_cache_enabled(enabled);
-}
-
 bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
 {
     return mxs::CachingParser::get_thread_cache_stats(pStats);
@@ -380,7 +365,7 @@ bool qc_alter_from_json(json_t* pJson)
         rv = true;
 
         QC_CACHE_PROPERTIES cache_properties;
-        qc_get_cache_properties(&cache_properties);
+        mxs::CachingParser::get_properties(&cache_properties);
 
         json_t* pValue;
 
@@ -394,7 +379,7 @@ bool qc_alter_from_json(json_t* pJson)
 
         if (rv)
         {
-            MXB_AT_DEBUG(bool set = ) qc_set_cache_properties(&cache_properties);
+            MXB_AT_DEBUG(bool set = ) mxs::CachingParser::set_properties(cache_properties);
             mxb_assert(set);
         }
     }
@@ -544,7 +529,7 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
     // parallel and then coalesced here.
 
     mxs::RoutingWorker::execute_serially([&state]() {
-                                             qc_get_cache_state(state);
+                                             mxs::CachingParser::get_thread_cache_state(state);
                                          });
 
     json_t* pData = json_array();
@@ -560,14 +545,4 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
     }
 
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pData));
-}
-
-void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state)
-{
-    return mxs::CachingParser::get_thread_cache_state(state);
-}
-
-int64_t qc_clear_thread_cache()
-{
-    return mxs::CachingParser::clear_thread_cache();
 }

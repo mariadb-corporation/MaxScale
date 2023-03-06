@@ -19,6 +19,7 @@
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
+#include <maxscale/cachingparser.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/listener.hh>
@@ -133,7 +134,8 @@ bool MainWorker::pre_run()
 
     if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
     {
-        qc_use_local_cache(false);
+        // No point in wasting memory for the parser cache in the main thread.
+        mxs::CachingParser::set_thread_cache_enabled(false);
 
         m_callable.dcall(100ms, &MainWorker::inc_ticks);
         update_rebalancing();

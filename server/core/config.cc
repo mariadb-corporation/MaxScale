@@ -42,6 +42,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/ini.hh>
 #include <maxbase/pretty_print.hh>
+#include <maxscale/cachingparser.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
@@ -1036,7 +1037,7 @@ Config::Config(int argc, char** argv)
 }),
     qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
     Config::get().qc_cache_properties.max_size = size;
-    qc_set_cache_properties(&Config::get().qc_cache_properties);
+    mxs::CachingParser::set_properties(Config::get().qc_cache_properties);
 }),
     admin_log_auth_failures(this, &s_admin_log_auth_failures),
     query_retries(this, &s_query_retries),
