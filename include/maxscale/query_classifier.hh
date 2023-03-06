@@ -163,37 +163,6 @@ QUERY_CLASSIFIER* qc_init(const QC_CACHE_PROPERTIES* cache_properties,
                           const char* plugin_args);
 
 /**
- * Intializes the query classifier.
- *
- * This function should be called once, provided @c qc_setup returned true,
- * before the query classifier functionality is used.
- *
- * MaxScale calls this functions, so plugins should not do that.
- *
- * @param kind  What kind of initialization should be performed.
- *              Combination of qc_init_kind_t.
- *
- * @return True, if the process wide initialization could be performed.
- *
- * @see qc_process_end qc_thread_init
- */
-bool qc_process_init(uint32_t kind);
-
-/**
- * Finalizes the query classifier.
- *
- * A successful call of @c qc_process_init should before program exit be
- * followed by a call to this function. MaxScale calls this function, so
- * plugins should not do that.
- *
- * @param kind  What kind of finalization should be performed.
- *              Combination of qc_init_kind_t.
- *
- * @see qc_process_init qc_thread_end
- */
-void qc_process_end(uint32_t kind);
-
-/**
  * Loads a particular query classifier.
  *
  * In general there is no need to use this function, but rely upon qc_init().

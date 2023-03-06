@@ -164,48 +164,22 @@ QUERY_CLASSIFIER* qc_init(const QC_CACHE_PROPERTIES* cache_properties,
 {
     QC_TRACE();
 
-    QUERY_CLASSIFIER* classifier = qc_setup(cache_properties, sql_mode, plugin_name, plugin_args);
+    QUERY_CLASSIFIER* pClassifier = qc_setup(cache_properties, sql_mode, plugin_name, plugin_args);
 
-    if (classifier)
+    if (pClassifier)
     {
-        bool rc = qc_process_init(QC_INIT_BOTH);
+        mxs::CachingParser::init();
 
-        if (rc)
-        {
-            rc = qc_thread_init(QC_INIT_BOTH);
-
-            if (!rc)
-            {
-                qc_process_end(QC_INIT_BOTH);
-            }
-        }
+        bool rc = qc_thread_init(QC_INIT_BOTH);
 
         if (!rc)
         {
-            classifier = nullptr;
+            pClassifier->process_end();
+            pClassifier = nullptr;
         }
     }
 
-    return classifier;
-}
-
-bool qc_process_init(uint32_t kind)
-{
-    QC_TRACE();
-
-    mxs::CachingParser::init();
-    return true;
-}
-
-void qc_process_end(uint32_t kind)
-{
-    QC_TRACE();
-
-    if (kind & QC_INIT_PLUGIN)
-    {
-        mxb_assert(this_unit.classifier);
-        this_unit.classifier->process_end();
-    }
+    return pClassifier;
 }
 
 bool qc_thread_init(uint32_t kind)

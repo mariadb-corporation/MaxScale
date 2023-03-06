@@ -16,6 +16,7 @@
 #include <chrono>
 #include <iostream>
 #include <maxbase/stopwatch.hh>
+#include <maxscale/cachingparser.hh>
 #include <maxscale/log.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
@@ -127,8 +128,9 @@ int main(int argc, char* argv[])
                  << (pCache_properties ? "using " : "NOT using ")
                  << "the query classification cache." << endl;
 
+            mxs::CachingParser::init();
+
             if (qc_setup(pCache_properties, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL)
-                && qc_process_init(QC_INIT_BOTH)
                 && qc_thread_init(QC_INIT_BOTH))
             {
                 rv = run(zStatement, n);

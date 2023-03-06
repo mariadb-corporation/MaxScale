@@ -443,7 +443,6 @@ int main(int argc, char* argv[])
 
         maxscale_start_teardown();
         service_destroy_instances();
-        qc_process_end(QC_INIT_SELF);
     }
     else
     {
