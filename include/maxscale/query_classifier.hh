@@ -75,6 +75,42 @@ public:
     virtual void thread_end(void) = 0;
 
     /**
+     * Return statement currently being classified.
+     *
+     * @param ppStmp  Pointer to pointer that on return will point to the
+     *                statement being classified.
+     * @param pLen    Pointer to value that on return will contain the length
+     *                of the returned string.
+     *
+     * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
+     *         classified), QC_RESULT_ERROR otherwise.
+     */
+    virtual int32_t get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
+
+    /**
+     * Get result from info.
+     *
+     * @param  The info whose result should be returned.
+     *
+     * @return The result of the provided info.
+     */
+    virtual QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) = 0;
+
+    /**
+     * Get canonical statement
+     *
+     * @param info  The info whose canonical statement should be returned.
+     *
+     * @attention - The string_view refers to data that remains valid only as long
+     *              as @c info remains valid.
+     *            - If @c info is of a COM_STMT_PREPARE, then the canonical string will
+     *              be suffixed by ":P".
+     *
+     * @return The canonical statement.
+     */
+    virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
+
+    /**
      * Called to explicitly parse a statement.
      *
      * @param stmt     The statement to be parsed.
@@ -275,42 +311,6 @@ public:
      * @return QC_RESULT_OK if @c options is valid, otherwise QC_RESULT_ERROR.
      */
     virtual int32_t set_options(uint32_t options) = 0;
-
-    /**
-     * Get result from info.
-     *
-     * @param  The info whose result should be returned.
-     *
-     * @return The result of the provided info.
-     */
-    virtual QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) = 0;
-
-    /**
-     * Return statement currently being classified.
-     *
-     * @param ppStmp  Pointer to pointer that on return will point to the
-     *                statement being classified.
-     * @param pLen    Pointer to value that on return will contain the length
-     *                of the returned string.
-     *
-     * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
-     *         classified), QC_RESULT_ERROR otherwise.
-     */
-    virtual int32_t get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
-
-    /**
-     * Get canonical statement
-     *
-     * @param info  The info whose canonical statement should be returned.
-     *
-     * @attention - The string_view refers to data that remains valid only as long
-     *              as @c info remains valid.
-     *            - If @c info is of a COM_STMT_PREPARE, then the canonical string will
-     *              be suffixed by ":P".
-     *
-     * @return The canonical statement.
-     */
-    virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
 };
 
 /**

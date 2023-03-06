@@ -4099,6 +4099,22 @@ public:
         qc_mysql_thread_end();
     }
 
+    int32_t get_current_stmt(const char** ppStmt, size_t* pLen) override
+    {
+        return qc_mysql_get_current_stmt(ppStmt, pLen);
+    }
+
+    QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
+    {
+        // Not supported.
+        return QC_STMT_RESULT {};
+    }
+
+    std::string_view info_get_canonical(const QC_STMT_INFO* info) override
+    {
+        // Not supported.
+        return std::string_view {};
+    }
     int32_t parse(GWBUF* stmt, uint32_t collect, int32_t* result) override
     {
         return qc_mysql_parse(stmt, collect, result);
@@ -4187,23 +4203,6 @@ public:
     int32_t set_options(uint32_t options) override
     {
         return qc_mysql_set_options(options);
-    }
-
-    QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
-    {
-        // Not supported.
-        return QC_STMT_RESULT {};
-    }
-
-    int32_t get_current_stmt(const char** ppStmt, size_t* pLen) override
-    {
-        return qc_mysql_get_current_stmt(ppStmt, pLen);
-    }
-
-    std::string_view info_get_canonical(const QC_STMT_INFO* info) override
-    {
-        // Not supported.
-        return std::string_view {};
     }
 };
 
