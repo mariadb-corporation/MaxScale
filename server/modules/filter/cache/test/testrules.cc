@@ -581,7 +581,7 @@ int main(int argc, char** argv)
     mxs::Config& config = mxs::Config::get();
     config.n_threads = 1;
 
-    qc_thread_init(QC_INIT_SELF);
+    mxs::CachingParser::thread_init();
     MariaDBParser::get().classifier().thread_init();
 
     return CacheRules::Tester::test_all();

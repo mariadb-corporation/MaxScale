@@ -132,8 +132,9 @@ bool MainWorker::pre_run()
 {
     bool rval = false;
 
-    if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
+    if (modules_thread_init())
     {
+        mxs::CachingParser::thread_init();
         // No point in wasting memory for the parser cache in the main thread.
         mxs::CachingParser::set_thread_cache_enabled(false);
 
@@ -191,7 +192,7 @@ void MainWorker::post_run()
     // MaxScale should be destroyed before the workers are destroyed.
     m_storage.clear();
 
-    qc_thread_end(QC_INIT_SELF);
+    mxs::CachingParser::thread_finish();
     modules_thread_finish();
 }
 
