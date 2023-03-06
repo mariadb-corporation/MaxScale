@@ -118,7 +118,7 @@ export default {
     props: {
         node: { type: Object, required: true },
         nodeWidth: { type: Number, required: true },
-        recompute: { type: Function, required: true },
+        draw: { type: Function, required: true },
     },
     data() {
         return {
@@ -235,7 +235,7 @@ export default {
         },
         handleVisFilters() {
             this.isVisualizingFilters = !this.isVisualizingFilters
-            this.recompute()
+            this.draw()
         },
     },
 }

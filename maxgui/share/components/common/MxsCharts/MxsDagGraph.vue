@@ -36,7 +36,7 @@
                 >
                     <slot
                         name="rect-node-content"
-                        :data="{ node, recompute, isDragging: draggingStates.isDragging }"
+                        :data="{ node, draw, isDragging: draggingStates.isDragging }"
                     />
                 </div>
             </div>
@@ -108,28 +108,27 @@ export default {
         defNodeSize() {
             return { width: this.nodeWidth, height: this.maxNodeHeight }
         },
+        nodeIds() {
+            return this.data.map(n => n.id)
+        },
     },
     watch: {
-        data: {
+        nodeIds: {
             deep: true,
-            handler() {
-                this.recompute()
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.draw()
             },
         },
         dynNodeHeightMap: {
             deep: true,
             handler() {
-                this.computeLayout(this.data)
-                this.update()
+                this.draw()
             },
         },
     },
     mounted() {
         if (this.draggable) this.setDefDraggingStates()
-        if (this.data.length) {
-            this.computeLayout(this.data)
-            this.update()
-        }
+        if (this.data.length) this.draw()
     },
     beforeDestroy() {
         if (this.draggable) this.rmMouseUpEvt()
@@ -137,6 +136,10 @@ export default {
     methods: {
         setDefDraggingStates() {
             this.draggingStates = this.$helpers.lodash.cloneDeep(this.defDraggingStates)
+        },
+        draw() {
+            this.computeLayout(this.data)
+            this.render()
         },
         /**
          * compute dag layout
@@ -165,13 +168,9 @@ export default {
             this.dagDim = { width, height }
             this.repositioning()
         },
-        update() {
+        render() {
             this.renderNodeDivs(this.dag.descendants())
             this.drawLinks(this.dag.links())
-        },
-        recompute() {
-            this.computeLayout(this.data)
-            this.update()
         },
         /**
          * Either return dynamic node size of a node or defNodeSize

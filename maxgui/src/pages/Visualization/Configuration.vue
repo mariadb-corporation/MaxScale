@@ -13,13 +13,13 @@
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
             >
-                <template v-slot:rect-node-content="{ data: { node, recompute, isDragging } }">
+                <template v-slot:rect-node-content="{ data: { node, draw, isDragging } }">
                     <conf-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :class="{ 'no-pointerEvent': isDragging }"
                         :node="node"
                         :nodeWidth="nodeWidth"
-                        :recompute="recompute"
+                        :draw="draw"
                     />
                 </template>
             </mxs-dag-graph>
