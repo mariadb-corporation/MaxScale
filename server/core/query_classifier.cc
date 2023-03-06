@@ -189,12 +189,6 @@ QUERY_CLASSIFIER* qc_init(const QC_CACHE_PROPERTIES* cache_properties,
     return classifier;
 }
 
-void qc_end()
-{
-    qc_thread_end(QC_INIT_BOTH);
-    qc_process_end(QC_INIT_BOTH);
-}
-
 bool qc_process_init(uint32_t kind)
 {
     QC_TRACE();
