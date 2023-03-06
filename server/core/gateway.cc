@@ -53,6 +53,7 @@
 #include <maxbase/watchdognotifier.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/built_in_modules.hh>
+#include <maxscale/cachingparser.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
@@ -2115,72 +2116,63 @@ int main(int argc, char** argv)
 
     add_built_in_module(mariadbprotocol_info());
     add_built_in_module(mariadbauthenticator_info());
-    // Initialize the internal query classifier. The actual plugin will be
-    // initialized via the module initialization below.
-    if (qc_process_init(QC_INIT_SELF))
+
+    mxs::CachingParser::init();
+
+    if (RoutingWorker::init(&watchdog_notifier))
     {
-        if (RoutingWorker::init(&watchdog_notifier))
+        if (configure_normal_signals())
         {
-            if (configure_normal_signals())
+            if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
             {
-                if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
-                {
-                    // This call will block until MaxScale is shut down.
-                    main_worker.run();
-                    MXB_NOTICE("MaxScale is shutting down.");
+                // This call will block until MaxScale is shut down.
+                main_worker.run();
+                MXB_NOTICE("MaxScale is shutting down.");
 
-                    // Stop the threadpool before shutting down the REST-API. The pool might still
-                    // have queued responses in it that use it and thus they should be allowed to
-                    // finish before we shut down. New REST-API responses are not possible as they
-                    // are actively being refused by the thread that would otherwise accept them.
-                    mxs::thread_pool().stop(false);
+                // Stop the threadpool before shutting down the REST-API. The pool might still
+                // have queued responses in it that use it and thus they should be allowed to
+                // finish before we shut down. New REST-API responses are not possible as they
+                // are actively being refused by the thread that would otherwise accept them.
+                mxs::thread_pool().stop(false);
 
-                    disable_normal_signals();
-                    mxs_admin_finish();
+                disable_normal_signals();
+                mxs_admin_finish();
 
-                    // Shutting down started, wait for all routing workers.
-                    RoutingWorker::join_workers();
-                    MXB_NOTICE("All workers have shut down.");
+                // Shutting down started, wait for all routing workers.
+                RoutingWorker::join_workers();
+                MXB_NOTICE("All workers have shut down.");
 
-                    MonitorManager::destroy_all_monitors();
+                MonitorManager::destroy_all_monitors();
 
-                    maxscale_start_teardown();
-                    service_destroy_instances();
-                    filter_destroy_instances();
-                    Listener::clear();
-                    ServerManager::destroy_all();
+                maxscale_start_teardown();
+                service_destroy_instances();
+                filter_destroy_instances();
+                Listener::clear();
+                ServerManager::destroy_all();
 
-                    MXB_NOTICE("MaxScale shutdown completed.");
-                }
-                else
-                {
-                    MXB_ALERT("Failed to queue startup task.");
-                    rc = MAXSCALE_INTERNALERROR;
-                }
+                MXB_NOTICE("MaxScale shutdown completed.");
             }
             else
             {
-                MXB_ALERT("Failed to install signal handlers.");
+                MXB_ALERT("Failed to queue startup task.");
                 rc = MAXSCALE_INTERNALERROR;
             }
-
-            RoutingWorker::finish();
         }
         else
         {
-            MXB_ALERT("Failed to initialize routing workers.");
+            MXB_ALERT("Failed to install signal handlers.");
             rc = MAXSCALE_INTERNALERROR;
         }
 
-        // Finalize the internal query classifier. The actual plugin was finalized
-        // via the module finalizarion above.
-        qc_process_end(QC_INIT_SELF);
+        RoutingWorker::finish();
     }
     else
     {
-        MXB_ALERT("Failed to initialize the internal query classifier.");
+        MXB_ALERT("Failed to initialize routing workers.");
         rc = MAXSCALE_INTERNALERROR;
     }
+
+    // Here we would call mxs::CachingParser::finish() if there was one.
 
     watchdog_notifier.stop();
 
