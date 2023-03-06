@@ -1,42 +1,47 @@
 <template>
-    <div class="mxs-dag-graph-container fill-height" :style="revertGraphStyle">
-        <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.mxs_gridBg</v-icon>
-        <svg ref="svg" class="mxs-dag-graph" :width="dim.width" height="100%">
-            <g id="dag-node-group" :style="{ transform: nodeGroupTransformStyle }" />
-        </svg>
-        <div class="node-div-wrapper" :style="{ transform: nodeGroupTransformStyle }">
-            <div
-                v-for="node in nodeDivData"
-                ref="rectNode"
-                :key="node.data.id"
-                class="rect-node"
-                :class="{
-                    move: draggable,
-                    'no-userSelect': draggingStates.isDragging,
-                }"
-                :node_id="node.data.id"
-                :style="{
-                    top: `${node.y}px`,
-                    left: `${node.x}px`,
-                    ...revertGraphStyle,
-                    zIndex: draggingStates.draggingNodeId === node.data.id ? 4 : 3,
-                }"
-                v-on="
-                    draggable
-                        ? {
-                              mousedown: e => onNodeDragStart({ e, node }),
-                              mousemove: e => onNodeDragging({ e, node }),
-                          }
-                        : null
-                "
-            >
-                <slot
-                    name="rect-node-content"
-                    :data="{ node, recompute, isDragging: draggingStates.isDragging }"
-                />
+    <graph-board
+        class="mxs-dag-graph-container"
+        :style="revertGraphStyle"
+        :dim="dim"
+        :graphDim="dagDim"
+        @get-graph-ctr="svgGroup = $event"
+        @get-zoom="zoom = $event"
+    >
+        <template v-slot:append="{ transform }">
+            <div class="node-div-wrapper" :style="{ transform }">
+                <div
+                    v-for="node in nodeDivData"
+                    ref="rectNode"
+                    :key="node.data.id"
+                    class="rect-node"
+                    :class="{
+                        move: draggable,
+                        'no-userSelect': draggingStates.isDragging,
+                    }"
+                    :node_id="node.data.id"
+                    :style="{
+                        top: `${node.y}px`,
+                        left: `${node.x}px`,
+                        ...revertGraphStyle,
+                        zIndex: draggingStates.draggingNodeId === node.data.id ? 4 : 3,
+                    }"
+                    v-on="
+                        draggable
+                            ? {
+                                  mousedown: e => onNodeDragStart({ e, node }),
+                                  mousemove: e => onNodeDragging({ e, node }),
+                              }
+                            : null
+                    "
+                >
+                    <slot
+                        name="rect-node-content"
+                        :data="{ node, recompute, isDragging: draggingStates.isDragging }"
+                    />
+                </div>
             </div>
-        </div>
-    </div>
+        </template>
+    </graph-board>
 </template>
 
 <script>
@@ -56,10 +61,13 @@
 import { select as d3Select } from 'd3-selection'
 import * as d3d from 'd3-dag'
 import 'd3-transition'
-import { zoom, zoomIdentity } from 'd3-zoom'
+import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
 
 export default {
     name: 'mxs-dag-graph',
+    components: {
+        'graph-board': GraphBoard,
+    },
     props: {
         data: { type: Array, required: true },
         dim: { type: Object, required: true },
@@ -72,12 +80,12 @@ export default {
     },
     data() {
         return {
-            dagDim: { width: 0, height: 0 }, // dag-node-group dim
-            nodeGroupTransform: { x: 24, y: this.dim.height / 2, k: 1 },
+            svgGroup: null,
+            zoom: { x: 0, y: 0, k: 1 },
+            dagDim: { width: 0, height: 0 },
             nodeDivData: [],
             defNodeHeight: 100,
             dynNodeHeightMap: {},
-            heightChangesCount: 0,
             arrowHeadHeight: 12,
             // states for dragging conf-node
             defDraggingStates: {
@@ -89,10 +97,6 @@ export default {
         }
     },
     computed: {
-        nodeGroupTransformStyle() {
-            const { x, y, k } = this.nodeGroupTransform
-            return `translate(${x}px, ${y}px) scale(${k})`
-        },
         revertGraphStyle() {
             return { transform: this.revert ? 'rotate(180deg)' : 'rotate(0d)' }
         },
@@ -116,14 +120,6 @@ export default {
             deep: true,
             handler() {
                 this.computeLayout(this.data)
-                /**
-                 * Because dynNodeHeightMap is computed after the first render of `rect-node-content`,
-                 * the graph can only be centered accurately in the second render
-                 */
-                if (this.heightChangesCount === 0 || this.heightChangesCount === 1) {
-                    this.heightChangesCount += 1
-                    this.centerGraph()
-                }
                 this.update()
             },
         },
@@ -132,7 +128,6 @@ export default {
         if (this.draggable) this.setDefDraggingStates()
         if (this.data.length) {
             this.computeLayout(this.data)
-            this.initSvg()
             this.update()
         }
     },
@@ -170,14 +165,6 @@ export default {
             this.dagDim = { width, height }
             this.repositioning()
         },
-        initSvg() {
-            this.centerGraph()
-            // Draw svg mxs-dag-graph
-            this.svg = d3Select(this.$refs.svg)
-                .call(zoom().on('zoom', e => (this.nodeGroupTransform = e.transform)))
-                .on('dblclick.zoom', null)
-            this.svgGroup = this.svg.select('g#dag-node-group')
-        },
         update() {
             this.renderNodeDivs(this.dag.descendants())
             this.drawLinks(this.dag.links())
@@ -196,17 +183,6 @@ export default {
             const nodeHeight = this.$typy(this.dynNodeHeightMap, `[${nodeId}]`).safeNumber
             if (nodeHeight) return { width: this.defNodeSize.width, height: nodeHeight }
             return this.defNodeSize
-        },
-        // Vertically and horizontally Center graph
-        centerGraph() {
-            this.nodeGroupTransform = zoomIdentity
-                .translate(
-                    (this.dim.width - this.dagDim.width) / 2,
-                    (this.dim.height - this.dagDim.height) / 2
-                )
-                .scale(1)
-            // set initial transform
-            this.svg = d3Select(this.$refs.svg).call(zoom().transform, this.nodeGroupTransform)
         },
         computeDynNodeHeight() {
             const rectNode = this.$typy(this.$refs, 'rectNode').safeArray
@@ -501,7 +477,6 @@ export default {
                 draggingNodeId: node.data.id,
                 startPos: { x: e.clientX, y: e.clientY },
             }
-
             this.addMouseUpEvt()
         },
         /**
@@ -529,8 +504,8 @@ export default {
             if (startPos && draggingNodeId === node.data.id) {
                 const offsetPos = { x: e.clientX - startPos.x, y: e.clientY - startPos.y }
                 // calc offset position
-                let offsetPosX = offsetPos.x / this.nodeGroupTransform.k,
-                    offsetPosY = offsetPos.y / this.nodeGroupTransform.k
+                let offsetPosX = offsetPos.x / this.zoom.k,
+                    offsetPosY = offsetPos.y / this.zoom.k
                 // update startPos
                 this.draggingStates = {
                     ...this.draggingStates,
@@ -592,23 +567,6 @@ export default {
 
 <style lang="scss" scoped>
 .mxs-dag-graph-container {
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-    .svg-grid-bg {
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-        pointer-events: none;
-        background: transparent;
-        position: absolute;
-        left: 0;
-    }
-    ::v-deep.mxs-dag-graph {
-        position: relative;
-        left: 0;
-        z-index: 2;
-    }
     .node-div-wrapper {
         top: 0;
         height: 0;
