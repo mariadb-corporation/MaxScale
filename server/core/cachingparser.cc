@@ -20,8 +20,6 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
-// TODO: Remove this dependency.
-#include "../modules/protocol/MariaDB/trxboundaryparser.hh"
 
 namespace
 {
@@ -114,8 +112,7 @@ public:
     std::shared_ptr<QC_STMT_INFO> get(QUERY_CLASSIFIER* pClassifier, std::string_view canonical_stmt)
     {
         std::shared_ptr<QC_STMT_INFO> sInfo;
-        qc_sql_mode_t sql_mode;
-        pClassifier->get_sql_mode(&sql_mode);
+        qc_sql_mode_t sql_mode = pClassifier->parser().get_sql_mode();
 
         auto i = m_infos.find(canonical_stmt);
 
@@ -180,8 +177,7 @@ public:
 
             if (m_stats.size + size <= cache_max_size)
             {
-                qc_sql_mode_t sql_mode;
-                pClassifier->get_sql_mode(&sql_mode);
+                qc_sql_mode_t sql_mode = pClassifier->parser().get_sql_mode();
 
                 m_infos.emplace(canonical_stmt,
                                 Entry(pClassifier, std::move(sInfo), sql_mode, this_thread.options));
@@ -436,8 +432,7 @@ private:
     bool exclude_from_cache() const
     {
         constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
-        uint32_t type_mask = QUERY_TYPE_UNKNOWN;
-        m_pClassifier->get_type_mask(m_pStmt, &type_mask);
+        uint32_t type_mask = m_pClassifier->parser().get_type_mask(m_pStmt);
         return (type_mask & is_autocommit) != 0;
     }
 };
@@ -446,6 +441,12 @@ private:
 
 namespace maxscale
 {
+
+CachingParser::CachingParser(QUERY_CLASSIFIER* pClassifier)
+    : m_classifier(*pClassifier)
+    , m_parser(pClassifier->parser())
+{
+}
 
 //static
 void CachingParser::init()
@@ -573,233 +574,104 @@ QUERY_CLASSIFIER& CachingParser::classifier() const
 
 qc_parse_result_t CachingParser::parse(GWBUF* pStmt, uint32_t collect) const
 {
-    int32_t result = QC_QUERY_INVALID;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.parse(pStmt, collect, &result);
 
-    return (qc_parse_result_t)result;
+    return m_parser.parse(pStmt, collect);
 }
 
 std::string_view CachingParser::get_created_table_name(GWBUF* query) const
 {
-    std::string_view name;
-
     QCInfoCacheScope scope(&m_classifier, query);
-    m_classifier.get_created_table_name(query, &name);
-
-    return name;
+    return m_parser.get_created_table_name(query);
 }
 
 CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF* pStmt) const
 {
-    std::vector<std::string_view> names;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_database_names(pStmt, &names);
-
-    return names;
+    return m_parser.get_database_names(pStmt);
 }
 
 void CachingParser::get_field_info(GWBUF* pStmt,
                                    const QC_FIELD_INFO** ppInfos,
                                    size_t* pnInfos) const
 {
-    *ppInfos = NULL;
-
-    uint32_t n = 0;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_field_info(pStmt, ppInfos, &n);
-
-    *pnInfos = n;
+    m_parser.get_field_info(pStmt, ppInfos, pnInfos);
 }
 
 void CachingParser::get_function_info(GWBUF* pStmt,
                                       const QC_FUNCTION_INFO** ppInfos,
                                       size_t* pnInfos) const
 {
-    *ppInfos = NULL;
-
-    uint32_t n = 0;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_function_info(pStmt, ppInfos, &n);
-
-    *pnInfos = n;
-
+    m_parser.get_function_info(pStmt, ppInfos, pnInfos);
 }
 
 QC_KILL CachingParser::get_kill_info(GWBUF* query) const
 {
-    QC_KILL rval;
-
     QCInfoCacheScope scope(&m_classifier, query);
-    m_classifier.get_kill_info(query, &rval);
-
-    return rval;
+    return m_parser.get_kill_info(query);
 }
 
 qc_query_op_t CachingParser::get_operation(GWBUF* pStmt) const
 {
-    int32_t op = QUERY_OP_UNDEFINED;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_operation(pStmt, &op);
-
-    return (qc_query_op_t)op;
+    return m_parser.get_operation(pStmt);
 }
 
 uint32_t CachingParser::get_options() const
 {
-    return m_classifier.get_options();
+    return m_parser.get_options();
 }
 
 GWBUF* CachingParser::get_preparable_stmt(GWBUF* pStmt) const
 {
-    GWBUF* pPreparable_stmt = NULL;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_preparable_stmt(pStmt, &pPreparable_stmt);
-
-    return pPreparable_stmt;
+    return m_parser.get_preparable_stmt(pStmt);
 }
 
 std::string_view CachingParser::get_prepare_name(GWBUF* pStmt) const
 {
-    std::string_view name;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_prepare_name(pStmt, &name);
-
-    return name;
+    return m_parser.get_prepare_name(pStmt);
 }
 
 uint64_t CachingParser::get_server_version() const
 {
-    uint64_t version;
-    m_classifier.get_server_version(&version);
-
-    return version;
+    return m_parser.get_server_version();
 }
 
 qc_sql_mode_t CachingParser::get_sql_mode() const
 {
-    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
-    m_classifier.get_sql_mode(&sql_mode);
-
-    return sql_mode;
+    return m_parser.get_sql_mode();
 }
 
 CachingParser::TableNames CachingParser::get_table_names(GWBUF* pStmt) const
 {
-    std::vector<QcTableName> names;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_table_names(pStmt, &names);
-
-    return names;
-}
-
-namespace
-{
-
-uint32_t get_trx_type_mask_using_parser(GWBUF* pStmt)
-{
-    maxscale::TrxBoundaryParser parser;
-
-    return parser.type_mask_of(pStmt);
-}
-
-uint32_t get_trx_type_mask_using_qc(QUERY_CLASSIFIER& m_classifier, GWBUF* pStmt)
-{
-    uint32_t type_mask;
-    m_classifier.get_type_mask(pStmt, &type_mask);
-
-    if (Parser::type_mask_contains(type_mask, QUERY_TYPE_WRITE)
-        && Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
-    {
-        // This is a commit reported for "CREATE TABLE...",
-        // "DROP TABLE...", etc. that cause an implicit commit.
-        type_mask = 0;
-    }
-    else
-    {
-        // Only START TRANSACTION can be explicitly READ or WRITE.
-        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
-        {
-            // So, strip them away for everything else.
-            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
-        }
-
-        // Then leave only the bits related to transaction and
-        // autocommit state.
-        type_mask &= (QUERY_TYPE_BEGIN_TRX
-                      | QUERY_TYPE_WRITE
-                      | QUERY_TYPE_READ
-                      | QUERY_TYPE_COMMIT
-                      | QUERY_TYPE_ROLLBACK
-                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
-                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
-                      | QUERY_TYPE_READONLY
-                      | QUERY_TYPE_READWRITE
-                      | QUERY_TYPE_NEXT_TRX);
-    }
-
-    return type_mask;
-}
-
+    return m_parser.get_table_names(pStmt);
 }
 
 uint32_t CachingParser::get_trx_type_mask(GWBUF* pStmt) const
 {
-    return get_trx_type_mask_using_parser(pStmt);
-}
-
-uint32_t CachingParser::get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const
-{
-    uint32_t type_mask = 0;
-
-    switch (use)
-    {
-    case QC_TRX_PARSE_USING_QC:
-        type_mask = get_trx_type_mask_using_qc(m_classifier, pStmt);
-        break;
-
-    case QC_TRX_PARSE_USING_PARSER:
-        type_mask = get_trx_type_mask_using_parser(pStmt);
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    return type_mask;
+    return m_parser.get_trx_type_mask(pStmt);
 }
 
 uint32_t CachingParser::get_type_mask(GWBUF* pStmt) const
 {
-    uint32_t type_mask = QUERY_TYPE_UNKNOWN;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.get_type_mask(pStmt, &type_mask);
-
-    return type_mask;
+    return m_parser.get_type_mask(pStmt);
 }
 
 bool CachingParser::is_drop_table_query(GWBUF* pStmt) const
 {
-    int32_t is_drop_table = 0;
-
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.is_drop_table_query(pStmt, &is_drop_table);
-
-    return (is_drop_table != 0) ? true : false;
+    return m_parser.is_drop_table_query(pStmt);
 }
 
 bool CachingParser::set_options(uint32_t options)
 {
-    int32_t rv = m_classifier.set_options(options);
+    int32_t rv = m_parser.set_options(options);
 
     if (rv == QC_RESULT_OK)
     {
@@ -811,12 +683,12 @@ bool CachingParser::set_options(uint32_t options)
 
 void CachingParser::set_sql_mode(qc_sql_mode_t sql_mode)
 {
-    m_classifier.set_sql_mode(sql_mode);
+    m_parser.set_sql_mode(sql_mode);
 }
 
 void CachingParser::set_server_version(uint64_t version)
 {
-    m_classifier.set_server_version(version);
+    m_parser.set_server_version(version);
 }
 
 }

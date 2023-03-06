@@ -54,40 +54,22 @@ public:
     qc_query_op_t get_operation(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
-        int32_t op = QUERY_OP_UNDEFINED;
 
-        if (m_qc->get_operation(&buffer, &op) != QC_RESULT_OK)
-        {
-            std::cout << "failed to get operation for: " << sql << std::endl;
-        }
-
-        return (qc_query_op_t)op;
+        return m_qc->parser().get_operation(&buffer);
     }
 
     uint32_t get_type(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
-        uint32_t type = 0;
 
-        if (m_qc->get_type_mask(&buffer, &type) != QC_RESULT_OK)
-        {
-            std::cout << "failed to get type for: " << sql << std::endl;
-        }
-
-        return type;
+        return m_qc->parser().get_type_mask(&buffer);
     }
 
     QC_KILL get_kill(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
-        QC_KILL rval;
 
-        if (m_qc->get_kill_info(&buffer, &rval) != QC_RESULT_OK)
-        {
-            std::cout << "failed to get kill info for: " << sql << std::endl;
-        }
-
-        return rval;
+        return m_qc->parser().get_kill_info(&buffer);
     }
 
 private:
@@ -112,7 +94,7 @@ private:
             else
             {
                 uint64_t version = 10 * 1000 * 3 * 100;
-                pClassifier->set_server_version(version);
+                pClassifier->parser().set_server_version(version);
             }
         }
         else

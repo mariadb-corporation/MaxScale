@@ -76,6 +76,8 @@
 #include <maxscale/utils.hh>
 #undef UNKNOWN
 #include <maxscale/modinfo.hh>
+// TODO: Remove this dependency.
+#include "../../server/modules/protocol/MariaDB/trxboundaryparser.hh"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -4071,6 +4073,159 @@ int32_t qc_mysql_get_current_stmt(const char** ppStmt, size_t* pLen)
 namespace
 {
 
+class MysqlParser : public mxs::Parser
+{
+public:
+    QUERY_CLASSIFIER& classifier() const override;
+
+    qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override
+    {
+        int32_t result = QC_QUERY_INVALID;
+
+        qc_mysql_parse(pStmt, collect, &result);
+
+        return static_cast<qc_parse_result_t>(result);
+    }
+
+    std::string_view get_created_table_name(GWBUF* pStmt) const override
+    {
+        std::string_view name;
+
+        qc_mysql_get_created_table_name(pStmt, &name);
+
+        return name;
+    }
+
+    mxs::Parser::DatabaseNames get_database_names(GWBUF* pStmt) const override
+    {
+        mxs::Parser::DatabaseNames names;
+
+        qc_mysql_get_database_names(pStmt, &names);
+
+        return names;
+    }
+
+    void get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, size_t* pnInfos) const override
+    {
+        uint32_t n = 0;
+        qc_mysql_get_field_info(pStmt, ppInfos, &n);
+        *pnInfos = n;
+    }
+
+    void get_function_info(GWBUF* pStmt, const QC_FUNCTION_INFO** ppInfos, size_t* pnInfos) const override
+    {
+        uint32_t n = 0;
+        qc_mysql_get_function_info(pStmt, ppInfos, &n);
+        *pnInfos = n;
+    }
+
+    QC_KILL get_kill_info(GWBUF* pStmt) const override
+    {
+        QC_KILL kill;
+
+        qc_mysql_get_kill_info(pStmt, &kill);
+
+        return kill;
+    }
+
+    qc_query_op_t get_operation(GWBUF* pStmt) const override
+    {
+        int32_t op = 0;
+
+        qc_mysql_get_operation(pStmt, &op);
+
+        return static_cast<qc_query_op_t>(op);
+    }
+
+    uint32_t get_options() const override
+    {
+        return qc_mysql_get_options();
+    }
+
+    GWBUF* get_preparable_stmt(GWBUF* pStmt) const override
+    {
+        GWBUF* pPreparable_stmt = nullptr;
+
+        qc_mysql_get_preparable_stmt(pStmt, &pPreparable_stmt);
+
+        return pPreparable_stmt;
+    }
+
+    std::string_view get_prepare_name(GWBUF* pStmt) const override
+    {
+        std::string_view name;
+
+        qc_mysql_get_prepare_name(pStmt, &name);
+
+        return name;
+    }
+
+    uint64_t get_server_version() const override
+    {
+        uint64_t version = 0;
+        qc_mysql_get_server_version(&version);
+
+        return version;
+    }
+
+    qc_sql_mode_t get_sql_mode() const override
+    {
+        qc_sql_mode_t sql_mode;
+
+        qc_mysql_get_sql_mode(&sql_mode);
+
+        return sql_mode;
+    }
+
+    mxs::Parser::TableNames get_table_names(GWBUF* pStmt) const override
+    {
+        mxs::Parser::TableNames names;
+
+        qc_mysql_get_table_names(pStmt, &names);
+
+        return names;
+    }
+
+    uint32_t get_trx_type_mask(GWBUF* pStmt) const override
+    {
+        maxscale::TrxBoundaryParser parser;
+        return parser.type_mask_of(pStmt);
+    }
+
+    uint32_t get_type_mask(GWBUF* pStmt) const override
+    {
+        uint32_t type_mask = 0;
+
+        qc_mysql_get_type_mask(pStmt, &type_mask);
+
+        return type_mask;
+    }
+
+    bool is_drop_table_query(GWBUF* pStmt) const override
+    {
+        int32_t is_drop_table = false;
+
+        qc_mysql_is_drop_table_query(pStmt, &is_drop_table);
+
+        return is_drop_table;
+    }
+
+    void set_sql_mode(qc_sql_mode_t sql_mode) override
+    {
+        qc_mysql_set_sql_mode(sql_mode);
+    }
+
+    bool set_options(uint32_t options) override
+    {
+        return qc_mysql_set_options(options) == QC_RESULT_OK;
+    }
+
+    void set_server_version(uint64_t version) override
+    {
+        qc_mysql_set_server_version(version);
+    }
+};
+
 class MysqlQueryClassifier : public QUERY_CLASSIFIER
 {
 public:
@@ -4115,96 +4270,22 @@ public:
         // Not supported.
         return std::string_view {};
     }
-    int32_t parse(GWBUF* stmt, uint32_t collect, int32_t* result) override
+
+    mxs::Parser& parser() override
     {
-        return qc_mysql_parse(stmt, collect, result);
+        return m_parser;
     }
 
-    int32_t get_type_mask(GWBUF* stmt, uint32_t* type) override
-    {
-        return qc_mysql_get_type_mask(stmt, type);
-    }
-
-    int32_t get_operation(GWBUF* stmt, int32_t* op) override
-    {
-        return qc_mysql_get_operation(stmt, op);
-    }
-
-    int32_t get_created_table_name(GWBUF* stmt, std::string_view* name) override
-    {
-        return qc_mysql_get_created_table_name(stmt, name);
-    }
-
-    int32_t is_drop_table_query(GWBUF* stmt, int32_t* is_drop_table) override
-    {
-        return qc_mysql_is_drop_table_query(stmt, is_drop_table);
-    }
-
-    int32_t get_table_names(GWBUF* stmt, std::vector<QcTableName>* names) override
-    {
-        return qc_mysql_get_table_names(stmt, names);
-    }
-
-    int32_t get_database_names(GWBUF* stmt, std::vector<std::string_view>* names) override
-    {
-        return qc_mysql_get_database_names(stmt, names);
-    }
-
-    int32_t get_kill_info(GWBUF* stmt, QC_KILL* pKill) override
-    {
-        return qc_mysql_get_kill_info(stmt, pKill);
-    }
-
-    int32_t get_prepare_name(GWBUF* stmt, std::string_view* name) override
-    {
-        return qc_mysql_get_prepare_name(stmt, name);
-    }
-
-    int32_t get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos) override
-    {
-        return qc_mysql_get_field_info(stmt, infos, n_infos);
-    }
-
-    int32_t get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos) override
-    {
-        return qc_mysql_get_function_info(stmt, infos, n_infos);
-    }
-
-    int32_t get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt) override
-    {
-        return qc_mysql_get_preparable_stmt(stmt, preparable_stmt);
-    }
-
-    void set_server_version(uint64_t version) override
-    {
-        qc_mysql_set_server_version(version);
-    }
-
-    void get_server_version(uint64_t* version) override
-    {
-        qc_mysql_get_server_version(version);
-    }
-
-    int32_t get_sql_mode(qc_sql_mode_t* sql_mode) override
-    {
-        return qc_mysql_get_sql_mode(sql_mode);
-    }
-
-    int32_t set_sql_mode(qc_sql_mode_t sql_mode) override
-    {
-        return qc_mysql_set_sql_mode(sql_mode);
-    }
-
-    uint32_t get_options() override
-    {
-        return qc_mysql_get_options();
-    }
-
-    int32_t set_options(uint32_t options) override
-    {
-        return qc_mysql_set_options(options);
-    }
+private:
+    MysqlParser m_parser;
 };
+
+MysqlQueryClassifier qc;
+
+QUERY_CLASSIFIER& MysqlParser::classifier() const
+{
+    return qc;
+}
 
 }
 
@@ -4217,8 +4298,6 @@ extern "C"
 
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MysqlQueryClassifier qc;
-
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
