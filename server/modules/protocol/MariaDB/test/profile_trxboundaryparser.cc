@@ -16,7 +16,7 @@
 #include <iomanip>
 #include <iostream>
 #include <maxscale/paths.hh>
-#include "../trxboundaryparser.hh"
+#include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 
 using namespace std;
 

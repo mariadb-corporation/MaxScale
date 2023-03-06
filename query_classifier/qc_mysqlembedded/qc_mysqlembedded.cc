@@ -72,12 +72,11 @@
 #include <maxscale/parser.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
 #undef UNKNOWN
 #include <maxscale/modinfo.hh>
-// TODO: Remove this dependency.
-#include "../../server/modules/protocol/MariaDB/trxboundaryparser.hh"
 
 #include <stdio.h>
 #include <stdlib.h>
