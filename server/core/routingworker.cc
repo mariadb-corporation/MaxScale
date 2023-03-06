@@ -24,6 +24,7 @@
 #include <maxbase/average.hh>
 #include <maxbase/pretty_print.hh>
 #include <maxbase/semaphore.hh>
+#include <maxscale/cachingparser.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
@@ -1504,7 +1505,7 @@ void RoutingWorker::post_run()
 
     cancel_dcalls();
 
-    int64_t cleared = qc_clear_thread_cache();
+    int64_t cleared = mxs::CachingParser::clear_thread_cache();
     size_t nClosed = pool_close_all_conns();
 
     finish_datas();
@@ -1874,7 +1875,7 @@ bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
 
         void execute(Worker&) override final
         {
-            qc_get_cache_stats(&m_stats);
+            mxs::CachingParser::get_thread_cache_stats(&m_stats);
         }
 
     private:
@@ -1914,7 +1915,7 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 
             QC_CACHE_STATS& stats = m_all_stats[index];
 
-            qc_get_cache_stats(&stats);
+            mxs::CachingParser::get_thread_cache_stats(&stats);
         }
 
     private:
@@ -2358,7 +2359,7 @@ RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
     MemoryUsage rv;
 
     QC_CACHE_STATS qc;
-    if (qc_get_cache_stats(&qc))
+    if (mxs::CachingParser::get_thread_cache_stats(&qc))
     {
         rv.query_classifier = qc.size;
     }

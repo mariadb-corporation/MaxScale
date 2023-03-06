@@ -457,56 +457,11 @@ bool qc_thread_init(uint32_t kind);
 void qc_thread_end(uint32_t kind);
 
 /**
- * Enable or disable the query classifier cache on this thread
- *
- * @param enabled If set to true, the cache is enabled. If set to false, the cache id disabled.
- */
-void qc_use_local_cache(bool enabled);
-
-/**
- * Get cache statistics for the calling thread.
- *
- * @param stats[out]  Cache statistics.
- *
- * @return True, if caching is enabled, false otherwise.
- */
-bool qc_get_cache_stats(QC_CACHE_STATS* stats);
-
-/**
  * Get cache statistics for the calling thread.
  *
  * @return An object if caching is enabled, NULL otherwise.
  */
 json_t* qc_get_cache_stats_as_json();
-
-/**
- * Get the cache properties.
- *
- * @param[out] properties  Cache properties.
- */
-void qc_get_cache_properties(QC_CACHE_PROPERTIES* properties);
-
-/**
- * Set the cache properties.
- *
- * @param properties  Cache properties.
- *
- * @return True, if the properties could be set, false if at least
- *         one property is invalid or if the combination of property
- *         values is invalid.
- */
-bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties);
-
-/**
- * Obtain query classifier cache information for the @b calling thread.
- *
- * @param state  Map where information is added.
- *
- * @note Calling with a non-empty @c state means that a cumulative result
- *       will be obtained, that is, the hits of a particular key will
- *       be added the hits of that key if it already is in the map.
- */
-void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state);
 
 /**
  * Return statement currently being classified.
@@ -552,13 +507,6 @@ bool qc_alter_from_json(json_t* pJson);
  * @return A json object containing information about the query classifier cache.
  */
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
-
-/**
- * Clear query classifier cache for current thread.
- *
- * @return The amount of memory freed.
- */
-int64_t qc_clear_thread_cache();
 
 /**
  * Classify statement
