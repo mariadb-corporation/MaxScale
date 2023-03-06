@@ -59,7 +59,6 @@ public:
     qc_sql_mode_t    get_sql_mode() const override;
     TableNames       get_table_names(GWBUF* pStmt) const override;
     uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
-    uint32_t         get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const override;
     uint32_t         get_type_mask(GWBUF* pStmt) const override;
     bool             is_drop_table_query(GWBUF* pStmt) const override;
 
@@ -68,12 +67,10 @@ public:
     void set_server_version(uint64_t version) override;
 
 protected:
-    CachingParser(QUERY_CLASSIFIER* pClassifier)
-        : m_classifier(*pClassifier)
-    {
-    }
+    CachingParser(QUERY_CLASSIFIER* pClassifier);
 
     QUERY_CLASSIFIER& m_classifier;
+    mxs::Parser&      m_parser;
 };
 
 }

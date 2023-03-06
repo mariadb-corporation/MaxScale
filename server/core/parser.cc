@@ -435,4 +435,68 @@ const char* Parser::op_to_string(qc_query_op_t op)
         return "UNKNOWN_QUERY_OP";
     }
 }
+
+namespace
+{
+
+uint32_t get_trx_type_mask_using_qc(const mxs::Parser& parser, GWBUF* pStmt)
+{
+    uint32_t type_mask = parser.get_type_mask(pStmt);
+
+    if (Parser::type_mask_contains(type_mask, QUERY_TYPE_WRITE)
+        && Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
+    {
+        // This is a commit reported for "CREATE TABLE...",
+        // "DROP TABLE...", etc. that cause an implicit commit.
+        type_mask = 0;
+    }
+    else
+    {
+        // Only START TRANSACTION can be explicitly READ or WRITE.
+        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+        {
+            // So, strip them away for everything else.
+            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+        }
+
+        // Then leave only the bits related to transaction and
+        // autocommit state.
+        type_mask &= (QUERY_TYPE_BEGIN_TRX
+                      | QUERY_TYPE_WRITE
+                      | QUERY_TYPE_READ
+                      | QUERY_TYPE_COMMIT
+                      | QUERY_TYPE_ROLLBACK
+                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
+                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
+                      | QUERY_TYPE_READONLY
+                      | QUERY_TYPE_READWRITE
+                      | QUERY_TYPE_NEXT_TRX);
+    }
+
+    return type_mask;
+}
+
+}
+
+uint32_t Parser::get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const
+{
+    uint32_t type_mask = 0;
+
+    switch (use)
+    {
+    case QC_TRX_PARSE_USING_QC:
+        type_mask = get_trx_type_mask_using_qc(*this, pStmt);
+        break;
+
+    case QC_TRX_PARSE_USING_PARSER:
+        type_mask = get_trx_type_mask(pStmt);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return type_mask;
+}
+
 }
