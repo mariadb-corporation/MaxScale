@@ -46,39 +46,40 @@ class TrxBoundaryParser : public maxscale::CustomParser
 public:
     enum token_t
     {
-        TK_AUTOCOMMIT,
-        TK_BEGIN,
-        TK_COMMA,
-        TK_COMMIT,
-        TK_COMMITTED,
-        TK_CONSISTENT,
-        TK_DOT,
-        TK_END,
-        TK_EQ,
-        TK_FALSE,
-        TK_GLOBAL,
-        TK_GLOBAL_VAR,
-        TK_ISOLATION,
-        TK_LEVEL,
-        TK_ONE,
-        TK_ONLY,
-        TK_READ,
-        TK_REPEATABLE,
-        TK_ROLLBACK,
-        TK_SESSION,
-        TK_SESSION_VAR,
-        TK_SET,
-        TK_SERIALIZABLE,
-        TK_SNAPSHOT,
-        TK_START,
-        TK_TRANSACTION,
-        TK_TRUE,
-        TK_UNCOMMITTED,
-        TK_WITH,
-        TK_WORK,
-        TK_WRITE,
-        TK_XA,
-        TK_ZERO,
+        // TK_ would conflict with tokens of sqlite.
+        TOK_AUTOCOMMIT,
+        TOK_BEGIN,
+        TOK_COMMA,
+        TOK_COMMIT,
+        TOK_COMMITTED,
+        TOK_CONSISTENT,
+        TOK_DOT,
+        TOK_END,
+        TOK_EQ,
+        TOK_FALSE,
+        TOK_GLOBAL,
+        TOK_GLOBAL_VAR,
+        TOK_ISOLATION,
+        TOK_LEVEL,
+        TOK_ONE,
+        TOK_ONLY,
+        TOK_READ,
+        TOK_REPEATABLE,
+        TOK_ROLLBACK,
+        TOK_SESSION,
+        TOK_SESSION_VAR,
+        TOK_SET,
+        TOK_SERIALIZABLE,
+        TOK_SNAPSHOT,
+        TOK_START,
+        TOK_TRANSACTION,
+        TOK_TRUE,
+        TOK_UNCOMMITTED,
+        TOK_WITH,
+        TOK_WORK,
+        TOK_WRITE,
+        TOK_XA,
+        TOK_ZERO,
 
         PARSER_UNKNOWN_TOKEN,
         PARSER_EXHAUSTED,
@@ -185,27 +186,27 @@ private:
 
         switch (token)
         {
-        case TK_BEGIN:
+        case TOK_BEGIN:
             type_mask = parse_begin(type_mask);
             break;
 
-        case TK_COMMIT:
+        case TOK_COMMIT:
             type_mask = parse_commit(type_mask);
             break;
 
-        case TK_ROLLBACK:
+        case TOK_ROLLBACK:
             type_mask = parse_rollback(type_mask);
             break;
 
-        case TK_START:
+        case TOK_START:
             type_mask = parse_start(type_mask);
             break;
 
-        case TK_SET:
+        case TOK_SET:
             type_mask = parse_set(0);
             break;
 
-        case TK_XA:
+        case TOK_XA:
             type_mask = parse_xa(type_mask);
             break;
 
@@ -224,7 +225,7 @@ private:
 
         switch (token)
         {
-        case TK_WORK:
+        case TOK_WORK:
             type_mask = parse_work(type_mask);
             break;
 
@@ -247,7 +248,7 @@ private:
 
         switch (token)
         {
-        case TK_WORK:
+        case TOK_WORK:
             type_mask = parse_work(type_mask);
             break;
 
@@ -270,7 +271,7 @@ private:
 
         switch (token)
         {
-        case TK_COMMA:
+        case TOK_COMMA:
             type_mask = parse_transaction(type_mask);
             break;
 
@@ -291,11 +292,11 @@ private:
 
         switch (token)
         {
-        case TK_ONLY:
+        case TOK_ONLY:
             type_mask = parse_only(type_mask);
             break;
 
-        case TK_WRITE:
+        case TOK_WRITE:
             type_mask = parse_write(type_mask);
             break;
 
@@ -319,7 +320,7 @@ private:
 
         switch (token)
         {
-        case TK_WORK:
+        case TOK_WORK:
             type_mask = parse_work(type_mask);
             break;
 
@@ -340,13 +341,13 @@ private:
 
         switch (token)
         {
-        case TK_EQ:
+        case TOK_EQ:
             token = next_token(TOKEN_REQUIRED);
-            if (token == TK_ONE || token == TK_TRUE)
+            if (token == TOK_ONE || token == TOK_TRUE)
             {
                 type_mask |= (QUERY_TYPE_COMMIT | QUERY_TYPE_ENABLE_AUTOCOMMIT);
             }
-            else if (token == TK_ZERO || token == TK_FALSE)
+            else if (token == TOK_ZERO || token == TOK_FALSE)
             {
                 type_mask = (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT);
             }
@@ -379,19 +380,19 @@ private:
 
         switch (token)
         {
-        case TK_REPEATABLE:
-            if (next_token(TOKEN_REQUIRED) != TK_READ)
+        case TOK_REPEATABLE:
+            if (next_token(TOKEN_REQUIRED) != TOK_READ)
             {
                 type_mask = 0;
                 log_unexpected();
             }
             break;
 
-        case TK_READ:
+        case TOK_READ:
             switch (next_token(TOKEN_REQUIRED))
             {
-            case TK_COMMITTED:
-            case TK_UNCOMMITTED:
+            case TOK_COMMITTED:
+            case TOK_UNCOMMITTED:
                 break;
 
             case PARSER_EXHAUSTED:
@@ -405,7 +406,7 @@ private:
             }
             break;
 
-        case TK_SERIALIZABLE:
+        case TOK_SERIALIZABLE:
             break;
 
         case PARSER_EXHAUSTED:
@@ -427,9 +428,9 @@ private:
 
         switch (token)
         {
-        case TK_WRITE:
-        case TK_ONLY:
-            type_mask |= (token == TK_WRITE ? QUERY_TYPE_READWRITE : QUERY_TYPE_READONLY);
+        case TOK_WRITE:
+        case TOK_ONLY:
+            type_mask |= (token == TOK_WRITE ? QUERY_TYPE_READWRITE : QUERY_TYPE_READONLY);
             break;
 
         case PARSER_EXHAUSTED:
@@ -451,12 +452,12 @@ private:
 
         switch (token)
         {
-        case TK_READ:
+        case TOK_READ:
             type_mask = parse_access_mode(type_mask);
 
-            if (next_token() == TK_COMMA)
+            if (next_token() == TOK_COMMA)
             {
-                if (next_token(TOKEN_REQUIRED) == TK_ISOLATION && next_token(TOKEN_REQUIRED) == TK_LEVEL)
+                if (next_token(TOKEN_REQUIRED) == TOK_ISOLATION && next_token(TOKEN_REQUIRED) == TOK_LEVEL)
                 {
                     type_mask = parse_isolation_level(type_mask);
                 }
@@ -467,16 +468,16 @@ private:
             }
             break;
 
-        case TK_ISOLATION:
+        case TOK_ISOLATION:
             token = next_token(TOKEN_REQUIRED);
 
-            if (token == TK_LEVEL)
+            if (token == TOK_LEVEL)
             {
                 type_mask = parse_isolation_level(type_mask);
 
-                if (next_token() == TK_COMMA)
+                if (next_token() == TOK_COMMA)
                 {
-                    if (next_token(TOKEN_REQUIRED) == TK_READ)
+                    if (next_token(TOKEN_REQUIRED) == TOK_READ)
                     {
                         type_mask = parse_access_mode(type_mask);
                     }
@@ -511,17 +512,17 @@ private:
 
         switch (token)
         {
-        case TK_AUTOCOMMIT:
+        case TOK_AUTOCOMMIT:
             type_mask = parse_set_autocommit(type_mask);
             break;
 
-        case TK_SESSION:
+        case TOK_SESSION:
             token = next_token(TOKEN_REQUIRED);
-            if (token == TK_AUTOCOMMIT)
+            if (token == TOK_AUTOCOMMIT)
             {
                 type_mask = parse_set_autocommit(type_mask);
             }
-            else if (token == TK_TRANSACTION)
+            else if (token == TOK_TRANSACTION)
             {
                 type_mask = parse_set_transaction(type_mask);
             }
@@ -535,12 +536,12 @@ private:
             }
             break;
 
-        case TK_SESSION_VAR:
+        case TOK_SESSION_VAR:
             token = next_token(TOKEN_REQUIRED);
-            if (token == TK_DOT)
+            if (token == TOK_DOT)
             {
                 token = next_token(TOKEN_REQUIRED);
-                if (token == TK_AUTOCOMMIT)
+                if (token == TOK_AUTOCOMMIT)
                 {
                     type_mask = parse_set_autocommit(type_mask);
                 }
@@ -563,13 +564,13 @@ private:
             }
             break;
 
-        case TK_GLOBAL_VAR:
-        case TK_GLOBAL:
+        case TOK_GLOBAL_VAR:
+        case TOK_GLOBAL:
             // Modifications to global variables do not affect the current session.
             type_mask = 0;
             break;
 
-        case TK_TRANSACTION:
+        case TOK_TRANSACTION:
             type_mask |= QUERY_TYPE_NEXT_TRX;
             type_mask = parse_set_transaction(type_mask);
             break;
@@ -592,7 +593,7 @@ private:
 
         switch (token)
         {
-        case TK_TRANSACTION:
+        case TOK_TRANSACTION:
             type_mask = parse_transaction(type_mask);
             break;
 
@@ -616,11 +617,11 @@ private:
 
         switch (token)
         {
-        case TK_READ:
+        case TOK_READ:
             type_mask = parse_read(type_mask);
             break;
 
-        case TK_WITH:
+        case TOK_WITH:
             type_mask = parse_with_consistent_snapshot(type_mask);
             break;
 
@@ -639,17 +640,17 @@ private:
     {
         token_t token = next_token(TOKEN_REQUIRED);
 
-        if (token == TK_CONSISTENT)
+        if (token == TOK_CONSISTENT)
         {
             token = next_token(TOKEN_REQUIRED);
 
-            if (token == TK_SNAPSHOT)
+            if (token == TOK_SNAPSHOT)
             {
                 token = next_token();
 
                 switch (token)
                 {
-                case TK_COMMA:
+                case TOK_COMMA:
                     type_mask = parse_transaction(type_mask);
                     break;
 
@@ -691,7 +692,7 @@ private:
 
         switch (token)
         {
-        case TK_COMMA:
+        case TOK_COMMA:
             type_mask = parse_transaction(type_mask);
             break;
 
@@ -710,12 +711,12 @@ private:
     {
         switch (next_token(TOKEN_REQUIRED))
         {
-        case TK_START:
-        case TK_BEGIN:
+        case TOK_START:
+        case TOK_BEGIN:
             type_mask |= QUERY_TYPE_BEGIN_TRX;
             break;
 
-        case TK_END:
+        case TOK_END:
             type_mask |= QUERY_TYPE_COMMIT;
             break;
 
@@ -808,31 +809,31 @@ private:
             case '@':
                 if (is_next_alpha('A', 2))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("@@AUTOCOMMIT"), TK_AUTOCOMMIT);
+                    token = expect_token(TBP_EXPECT_TOKEN("@@AUTOCOMMIT"), TOK_AUTOCOMMIT);
                 }
                 else if (is_next_alpha('S', 2))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("@@SESSION"), TK_SESSION_VAR);
+                    token = expect_token(TBP_EXPECT_TOKEN("@@SESSION"), TOK_SESSION_VAR);
                 }
                 else if (is_next_alpha('G', 2))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("@@GLOBAL"), TK_GLOBAL_VAR);
+                    token = expect_token(TBP_EXPECT_TOKEN("@@GLOBAL"), TOK_GLOBAL_VAR);
                 }
                 break;
 
             case 'a':
             case 'A':
-                token = expect_token(TBP_EXPECT_TOKEN("AUTOCOMMIT"), TK_AUTOCOMMIT);
+                token = expect_token(TBP_EXPECT_TOKEN("AUTOCOMMIT"), TOK_AUTOCOMMIT);
                 break;
 
             case 'b':
             case 'B':
-                token = expect_token(TBP_EXPECT_TOKEN("BEGIN"), TK_BEGIN);
+                token = expect_token(TBP_EXPECT_TOKEN("BEGIN"), TOK_BEGIN);
                 break;
 
             case ',':
                 ++m_pI;
-                token = TK_COMMA;
+                token = TOK_COMMA;
                 break;
 
             case 'c':
@@ -841,43 +842,43 @@ private:
                 {
                     if (is_next_alpha('M', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("COMMITTED"), TK_COMMITTED);
+                        token = expect_token(TBP_EXPECT_TOKEN("COMMITTED"), TOK_COMMITTED);
 
                         if (token == PARSER_UNKNOWN_TOKEN)
                         {
-                            token = expect_token(TBP_EXPECT_TOKEN("COMMIT"), TK_COMMIT);
+                            token = expect_token(TBP_EXPECT_TOKEN("COMMIT"), TOK_COMMIT);
                         }
                     }
                     else if (is_next_alpha('N', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("CONSISTENT"), TK_CONSISTENT);
+                        token = expect_token(TBP_EXPECT_TOKEN("CONSISTENT"), TOK_CONSISTENT);
                     }
                 }
                 break;
 
             case '.':
                 ++m_pI;
-                token = TK_DOT;
+                token = TOK_DOT;
                 break;
 
             case '=':
                 ++m_pI;
-                token = TK_EQ;
+                token = TOK_EQ;
                 break;
 
             case 'e':
             case 'E':
-                token = expect_token(TBP_EXPECT_TOKEN("END"), TK_END);
+                token = expect_token(TBP_EXPECT_TOKEN("END"), TOK_END);
                 break;
 
             case 'f':
             case 'F':
-                token = expect_token(TBP_EXPECT_TOKEN("FALSE"), TK_FALSE);
+                token = expect_token(TBP_EXPECT_TOKEN("FALSE"), TOK_FALSE);
                 break;
 
             case 'g':
             case 'G':
-                token = expect_token(TBP_EXPECT_TOKEN("GLOBAL"), TK_GLOBAL);
+                token = expect_token(TBP_EXPECT_TOKEN("GLOBAL"), TOK_GLOBAL);
                 break;
 
             case '1':
@@ -886,36 +887,36 @@ private:
                     if (!peek_next_char(&c) || !isdigit(c))
                     {
                         ++m_pI;
-                        token = TK_ONE;
+                        token = TOK_ONE;
                     }
                 }
                 break;
 
             case 'i':
             case 'I':
-                token = expect_token(TBP_EXPECT_TOKEN("ISOLATION"), TK_ISOLATION);
+                token = expect_token(TBP_EXPECT_TOKEN("ISOLATION"), TOK_ISOLATION);
                 break;
 
             case 'l':
             case 'L':
-                token = expect_token(TBP_EXPECT_TOKEN("LEVEL"), TK_LEVEL);
+                token = expect_token(TBP_EXPECT_TOKEN("LEVEL"), TOK_LEVEL);
                 break;
 
             case 'o':
             case 'O':
                 if (is_next_alpha('F'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("OFF"), TK_ZERO);
+                    token = expect_token(TBP_EXPECT_TOKEN("OFF"), TOK_ZERO);
                 }
                 else if (is_next_alpha('N'))
                 {
                     if (is_next_alpha('L', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("ONLY"), TK_ONLY);
+                        token = expect_token(TBP_EXPECT_TOKEN("ONLY"), TOK_ONLY);
                     }
                     else
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("ON"), TK_ONE);
+                        token = expect_token(TBP_EXPECT_TOKEN("ON"), TOK_ONE);
                     }
                 }
                 break;
@@ -926,16 +927,16 @@ private:
                 {
                     if (is_next_alpha('P', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("REPEATABLE"), TK_REPEATABLE);
+                        token = expect_token(TBP_EXPECT_TOKEN("REPEATABLE"), TOK_REPEATABLE);
                     }
                     else
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("READ"), TK_READ);
+                        token = expect_token(TBP_EXPECT_TOKEN("READ"), TOK_READ);
                     }
                 }
                 else if (is_next_alpha('O'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("ROLLBACK"), TK_ROLLBACK);
+                    token = expect_token(TBP_EXPECT_TOKEN("ROLLBACK"), TOK_ROLLBACK);
                 }
                 break;
 
@@ -945,24 +946,24 @@ private:
                 {
                     if (is_next_alpha('S', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("SESSION"), TK_SESSION);
+                        token = expect_token(TBP_EXPECT_TOKEN("SESSION"), TOK_SESSION);
                     }
                     else if (is_next_alpha('R', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("SERIALIZABLE"), TK_SERIALIZABLE);
+                        token = expect_token(TBP_EXPECT_TOKEN("SERIALIZABLE"), TOK_SERIALIZABLE);
                     }
                     else
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("SET"), TK_SET);
+                        token = expect_token(TBP_EXPECT_TOKEN("SET"), TOK_SET);
                     }
                 }
                 else if (is_next_alpha('N'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("SNAPSHOT"), TK_SNAPSHOT);
+                    token = expect_token(TBP_EXPECT_TOKEN("SNAPSHOT"), TOK_SNAPSHOT);
                 }
                 else if (is_next_alpha('T'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("START"), TK_START);
+                    token = expect_token(TBP_EXPECT_TOKEN("START"), TOK_START);
                 }
                 break;
 
@@ -972,39 +973,39 @@ private:
                 {
                     if (is_next_alpha('A', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("TRANSACTION"), TK_TRANSACTION);
+                        token = expect_token(TBP_EXPECT_TOKEN("TRANSACTION"), TOK_TRANSACTION);
                     }
                     else if (is_next_alpha('U', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("TRUE"), TK_TRUE);
+                        token = expect_token(TBP_EXPECT_TOKEN("TRUE"), TOK_TRUE);
                     }
                 }
                 break;
 
             case 'u':
             case 'U':
-                token = expect_token(TBP_EXPECT_TOKEN("UNCOMMITTED"), TK_UNCOMMITTED);
+                token = expect_token(TBP_EXPECT_TOKEN("UNCOMMITTED"), TOK_UNCOMMITTED);
                 break;
 
             case 'w':
             case 'W':
                 if (is_next_alpha('I'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("WITH"), TK_WITH);
+                    token = expect_token(TBP_EXPECT_TOKEN("WITH"), TOK_WITH);
                 }
                 else if (is_next_alpha('O'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("WORK"), TK_WORK);
+                    token = expect_token(TBP_EXPECT_TOKEN("WORK"), TOK_WORK);
                 }
                 else if (is_next_alpha('R'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("WRITE"), TK_WRITE);
+                    token = expect_token(TBP_EXPECT_TOKEN("WRITE"), TOK_WRITE);
                 }
                 break;
 
             case 'x':
             case 'X':
-                token = expect_token(TBP_EXPECT_TOKEN("XA"), TK_XA);
+                token = expect_token(TBP_EXPECT_TOKEN("XA"), TOK_XA);
                 break;
 
             case '0':
@@ -1013,7 +1014,7 @@ private:
                     if (!peek_next_char(&c) || !isdigit(c))
                     {
                         ++m_pI;
-                        token = TK_ZERO;
+                        token = TOK_ZERO;
                     }
                 }
                 break;
