@@ -1477,10 +1477,11 @@ bool RoutingWorker::pre_run()
 
     this_thread.pCurrent_worker = this;
 
-    bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
+    bool rv = modules_thread_init();
 
     if (rv)
     {
+        mxs::CachingParser::thread_init();
         init_datas();
 
         make_dcalls();
@@ -1513,7 +1514,7 @@ void RoutingWorker::post_run()
     // See MainWorker::post_run for an explanation why this is done here
     m_storage.clear();
 
-    qc_thread_end(QC_INIT_SELF);
+    mxs::CachingParser::thread_finish();
     modules_thread_finish();
     // TODO: Add service_thread_finish().
 
