@@ -156,21 +156,11 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties);
  *
  * @return True if the query classifier could be loaded and initialized,
  *         false otherwise.
- *
- * @see qc_end.
  */
 QUERY_CLASSIFIER* qc_init(const QC_CACHE_PROPERTIES* cache_properties,
                           qc_sql_mode_t sql_mode,
                           const char* plugin_name,
                           const char* plugin_args);
-
-/**
- * Performs thread and process finalization.
- *
- * This is primary intended for making the tear-down of stand-alone
- * test-programs simpler.
- */
-void qc_end();
 
 /**
  * Intializes the query classifier.

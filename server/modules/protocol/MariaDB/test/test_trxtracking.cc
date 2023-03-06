@@ -484,7 +484,8 @@ int main(int argc, char* argv[])
                     cout << endl;
                 }
 
-                qc_end();
+                pClassifier->thread_end();
+                mxs::CachingParser::thread_finish();
             }
             else
             {

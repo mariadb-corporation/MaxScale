@@ -64,7 +64,8 @@ int main()
         // code generator.
         parser.parse(stmt, QC_COLLECT_ALL);
 
-        qc_end();
+        pClassifier->thread_end();
+        mxs::CachingParser::thread_finish();
 
         gwbuf_free(stmt);
 
