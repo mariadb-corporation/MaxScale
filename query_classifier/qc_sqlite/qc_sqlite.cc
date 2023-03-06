@@ -5535,6 +5535,20 @@ public:
         qc_sqlite_thread_end();
     }
 
+    int32_t get_current_stmt(const char** ppStmt, size_t* pLen) override
+    {
+        return qc_sqlite_get_current_stmt(ppStmt, pLen);
+    }
+
+    QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
+    {
+        return qc_sqlite_get_result_from_info(info);
+    }
+
+    std::string_view info_get_canonical(const QC_STMT_INFO* info) override
+    {
+        return qc_sqlite_info_get_canonical(info);
+    }
     int32_t parse(GWBUF* stmt, uint32_t collect, int32_t* result) override
     {
         return qc_sqlite_parse(stmt, collect, result);
@@ -5623,21 +5637,6 @@ public:
     int32_t set_options(uint32_t options) override
     {
         return qc_sqlite_set_options(options);
-    }
-
-    QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
-    {
-        return qc_sqlite_get_result_from_info(info);
-    }
-
-    int32_t get_current_stmt(const char** ppStmt, size_t* pLen) override
-    {
-        return qc_sqlite_get_current_stmt(ppStmt, pLen);
-    }
-
-    std::string_view info_get_canonical(const QC_STMT_INFO* info) override
-    {
-        return qc_sqlite_info_get_canonical(info);
     }
 };
 
