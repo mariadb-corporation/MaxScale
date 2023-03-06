@@ -34,10 +34,9 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/utils.hh>
-// TODO: Remove this dependency.
-#include "../../server/modules/protocol/MariaDB/trxboundaryparser.hh"
 
 #include "builtin_functions.hh"
 

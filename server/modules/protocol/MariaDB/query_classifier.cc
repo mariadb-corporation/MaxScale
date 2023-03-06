@@ -32,8 +32,6 @@
 #include <maxscale/routingworker.hh>
 #include <maxsimd/canonical.hh>
 
-#include "trxboundaryparser.hh"
-
 // #define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
 
