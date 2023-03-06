@@ -71,6 +71,68 @@ user=john
 source=127.0.0.1
 ```
 
+### `user_match`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+
+Only log queries from users that match this pattern. If the `user` parameter is
+used, the value of `user_match` is ignored.
+
+Here is an example pattern that matches the users `alice` and `bob`:
+
+```
+user_match=/(^alice$)|(^bob$)/
+```
+
+### `user_exclude`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+
+Exclude all queries from users that match this pattern. If the `user` parameter
+is used, the value of `user_exclude` is ignored.
+
+Here is an example pattern that excludes the users `alice` and `bob`:
+
+```
+user_exclude=/(^alice$)|(^bob$)/
+```
+
+### `source_match`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+
+Only log queries from hosts that match this pattern. If the `source` parameter
+is used, the value of `source_match` is ignored.
+
+Here is an example pattern that matches the loopback interface as well as the
+address `192.168.0.109`:
+
+```
+source_match=/(^127[.]0[.]0[.]1)|(^192[.]168[.]0[.]109)/
+```
+
+### `source_exclude`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+
+Exclude all queries from hosts that match this pattern. If the `source`
+parameter is used, the value of `source_exclude` is ignored.
+
+Here is an example pattern that excludes the loopback interface as well as the
+address `192.168.0.109`:
+
+```
+source_exclude=/(^127[.]0[.]0[.]1)|(^192[.]168[.]0[.]109)/
+```
+
 ### `log_type`
 
 The type of log file to use. The default value is _session_.
