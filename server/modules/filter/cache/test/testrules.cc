@@ -582,7 +582,7 @@ int main(int argc, char** argv)
     config.n_threads = 1;
 
     qc_thread_init(QC_INIT_SELF);
-    MariaDBParser::get().classifier().qc_thread_init();
+    MariaDBParser::get().classifier().thread_init();
 
     return CacheRules::Tester::test_all();
 }

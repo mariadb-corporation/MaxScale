@@ -115,7 +115,7 @@ public:
     {
         std::shared_ptr<QC_STMT_INFO> sInfo;
         qc_sql_mode_t sql_mode;
-        pClassifier->qc_get_sql_mode(&sql_mode);
+        pClassifier->get_sql_mode(&sql_mode);
 
         auto i = m_infos.find(canonical_stmt);
 
@@ -181,7 +181,7 @@ public:
             if (m_stats.size + size <= cache_max_size)
             {
                 qc_sql_mode_t sql_mode;
-                pClassifier->qc_get_sql_mode(&sql_mode);
+                pClassifier->get_sql_mode(&sql_mode);
 
                 m_infos.emplace(canonical_stmt,
                                 Entry(pClassifier, std::move(sInfo), sql_mode, this_thread.options));
@@ -216,7 +216,7 @@ public:
                 QC_CACHE_ENTRY e {};
 
                 e.hits = entry.hits;
-                e.result = entry.pClassifier->qc_get_result_from_info(entry.sInfo.get());
+                e.result = entry.pClassifier->get_result_from_info(entry.sInfo.get());
 
                 state.insert(std::make_pair(stmt, e));
             }
@@ -226,7 +226,7 @@ public:
 
                 e.hits += entry.hits;
 #if defined (SS_DEBUG)
-                QC_STMT_RESULT result = entry.pClassifier->qc_get_result_from_info(entry.sInfo.get());
+                QC_STMT_RESULT result = entry.pClassifier->get_result_from_info(entry.sInfo.get());
 
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
@@ -409,7 +409,7 @@ public:
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
             // contained a COM_STMT_PREPARE.
-            std::string_view canonical = m_pClassifier->qc_info_get_canonical(sInfo.get());
+            std::string_view canonical = m_pClassifier->info_get_canonical(sInfo.get());
             mxb_assert(m_canonical == canonical);
 
             this_thread.pInfo_cache->insert(m_pClassifier, canonical, std::move(sInfo));
@@ -437,7 +437,7 @@ private:
     {
         constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
         uint32_t type_mask = QUERY_TYPE_UNKNOWN;
-        m_pClassifier->qc_get_type_mask(m_pStmt, &type_mask);
+        m_pClassifier->get_type_mask(m_pStmt, &type_mask);
         return (type_mask & is_autocommit) != 0;
     }
 };
@@ -576,7 +576,7 @@ qc_parse_result_t CachingParser::parse(GWBUF* pStmt, uint32_t collect) const
     int32_t result = QC_QUERY_INVALID;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_parse(pStmt, collect, &result);
+    m_classifier.parse(pStmt, collect, &result);
 
     return (qc_parse_result_t)result;
 }
@@ -586,7 +586,7 @@ std::string_view CachingParser::get_created_table_name(GWBUF* query) const
     std::string_view name;
 
     QCInfoCacheScope scope(&m_classifier, query);
-    m_classifier.qc_get_created_table_name(query, &name);
+    m_classifier.get_created_table_name(query, &name);
 
     return name;
 }
@@ -596,7 +596,7 @@ CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF* pStmt) con
     std::vector<std::string_view> names;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_database_names(pStmt, &names);
+    m_classifier.get_database_names(pStmt, &names);
 
     return names;
 }
@@ -610,7 +610,7 @@ void CachingParser::get_field_info(GWBUF* pStmt,
     uint32_t n = 0;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_field_info(pStmt, ppInfos, &n);
+    m_classifier.get_field_info(pStmt, ppInfos, &n);
 
     *pnInfos = n;
 }
@@ -624,7 +624,7 @@ void CachingParser::get_function_info(GWBUF* pStmt,
     uint32_t n = 0;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_function_info(pStmt, ppInfos, &n);
+    m_classifier.get_function_info(pStmt, ppInfos, &n);
 
     *pnInfos = n;
 
@@ -635,7 +635,7 @@ QC_KILL CachingParser::get_kill_info(GWBUF* query) const
     QC_KILL rval;
 
     QCInfoCacheScope scope(&m_classifier, query);
-    m_classifier.qc_get_kill_info(query, &rval);
+    m_classifier.get_kill_info(query, &rval);
 
     return rval;
 }
@@ -645,14 +645,14 @@ qc_query_op_t CachingParser::get_operation(GWBUF* pStmt) const
     int32_t op = QUERY_OP_UNDEFINED;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_operation(pStmt, &op);
+    m_classifier.get_operation(pStmt, &op);
 
     return (qc_query_op_t)op;
 }
 
 uint32_t CachingParser::get_options() const
 {
-    return m_classifier.qc_get_options();
+    return m_classifier.get_options();
 }
 
 GWBUF* CachingParser::get_preparable_stmt(GWBUF* pStmt) const
@@ -660,7 +660,7 @@ GWBUF* CachingParser::get_preparable_stmt(GWBUF* pStmt) const
     GWBUF* pPreparable_stmt = NULL;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_preparable_stmt(pStmt, &pPreparable_stmt);
+    m_classifier.get_preparable_stmt(pStmt, &pPreparable_stmt);
 
     return pPreparable_stmt;
 }
@@ -670,7 +670,7 @@ std::string_view CachingParser::get_prepare_name(GWBUF* pStmt) const
     std::string_view name;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_prepare_name(pStmt, &name);
+    m_classifier.get_prepare_name(pStmt, &name);
 
     return name;
 }
@@ -678,7 +678,7 @@ std::string_view CachingParser::get_prepare_name(GWBUF* pStmt) const
 uint64_t CachingParser::get_server_version() const
 {
     uint64_t version;
-    m_classifier.qc_get_server_version(&version);
+    m_classifier.get_server_version(&version);
 
     return version;
 }
@@ -686,7 +686,7 @@ uint64_t CachingParser::get_server_version() const
 qc_sql_mode_t CachingParser::get_sql_mode() const
 {
     qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
-    m_classifier.qc_get_sql_mode(&sql_mode);
+    m_classifier.get_sql_mode(&sql_mode);
 
     return sql_mode;
 }
@@ -696,7 +696,7 @@ CachingParser::TableNames CachingParser::get_table_names(GWBUF* pStmt) const
     std::vector<QcTableName> names;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_table_names(pStmt, &names);
+    m_classifier.get_table_names(pStmt, &names);
 
     return names;
 }
@@ -714,7 +714,7 @@ uint32_t get_trx_type_mask_using_parser(GWBUF* pStmt)
 uint32_t get_trx_type_mask_using_qc(QUERY_CLASSIFIER& m_classifier, GWBUF* pStmt)
 {
     uint32_t type_mask;
-    m_classifier.qc_get_type_mask(pStmt, &type_mask);
+    m_classifier.get_type_mask(pStmt, &type_mask);
 
     if (Parser::type_mask_contains(type_mask, QUERY_TYPE_WRITE)
         && Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
@@ -782,7 +782,7 @@ uint32_t CachingParser::get_type_mask(GWBUF* pStmt) const
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_get_type_mask(pStmt, &type_mask);
+    m_classifier.get_type_mask(pStmt, &type_mask);
 
     return type_mask;
 }
@@ -792,14 +792,14 @@ bool CachingParser::is_drop_table_query(GWBUF* pStmt) const
     int32_t is_drop_table = 0;
 
     QCInfoCacheScope scope(&m_classifier, pStmt);
-    m_classifier.qc_is_drop_table_query(pStmt, &is_drop_table);
+    m_classifier.is_drop_table_query(pStmt, &is_drop_table);
 
     return (is_drop_table != 0) ? true : false;
 }
 
 bool CachingParser::set_options(uint32_t options)
 {
-    int32_t rv = m_classifier.qc_set_options(options);
+    int32_t rv = m_classifier.set_options(options);
 
     if (rv == QC_RESULT_OK)
     {
@@ -811,12 +811,12 @@ bool CachingParser::set_options(uint32_t options)
 
 void CachingParser::set_sql_mode(qc_sql_mode_t sql_mode)
 {
-    m_classifier.qc_set_sql_mode(sql_mode);
+    m_classifier.set_sql_mode(sql_mode);
 }
 
 void CachingParser::set_server_version(uint64_t version)
 {
-    m_classifier.qc_set_server_version(version);
+    m_classifier.set_server_version(version);
 }
 
 }

@@ -178,8 +178,8 @@ QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, cons
 
         if (pClassifier)
         {
-            if (pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK
-                || pClassifier->qc_thread_init() != QC_RESULT_OK)
+            if (pClassifier->setup(sql_mode, zArgs) != QC_RESULT_OK
+                || pClassifier->thread_init() != QC_RESULT_OK)
             {
                 cerr << "error: Could not setup or init classifier " << zName << "." << endl;
                 qc_unload(pClassifier);
@@ -195,7 +195,7 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
 {
     if (pClassifier)
     {
-        pClassifier->qc_process_end();
+        pClassifier->process_end();
         qc_unload(pClassifier);
     }
 }
@@ -329,13 +329,13 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1,
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     int32_t rv1;
-    pClassifier1->qc_parse(pCopy1, QC_COLLECT_ESSENTIALS, &rv1);
+    pClassifier1->parse(pCopy1, QC_COLLECT_ESSENTIALS, &rv1);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time1, start, finish);
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     int32_t rv2;
-    pClassifier2->qc_parse(pCopy2, QC_COLLECT_ESSENTIALS, &rv2);
+    pClassifier2->parse(pCopy2, QC_COLLECT_ESSENTIALS, &rv2);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time2, start, finish);
 
@@ -379,9 +379,9 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
     const char HEADING[] = "qc_get_type_mask         : ";
 
     uint32_t rv1;
-    pClassifier1->qc_get_type_mask(pCopy1, &rv1);
+    pClassifier1->get_type_mask(pCopy1, &rv1);
     uint32_t rv2;
-    pClassifier2->qc_get_type_mask(pCopy2, &rv2);
+    pClassifier2->get_type_mask(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -445,9 +445,9 @@ bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1,
     const char HEADING[] = "qc_get_operation         : ";
 
     int32_t rv1;
-    pClassifier1->qc_get_operation(pCopy1, &rv1);
+    pClassifier1->get_operation(pCopy1, &rv1);
     int32_t rv2;
-    pClassifier2->qc_get_operation(pCopy2, &rv2);
+    pClassifier2->get_operation(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -479,9 +479,9 @@ bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1,
     const char HEADING[] = "qc_get_created_table_name: ";
 
     std::string_view rv1;
-    pClassifier1->qc_get_created_table_name(pCopy1, &rv1);
+    pClassifier1->get_created_table_name(pCopy1, &rv1);
     std::string_view rv2;
-    pClassifier2->qc_get_created_table_name(pCopy2, &rv2);
+    pClassifier2->get_created_table_name(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -510,9 +510,9 @@ bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1,
     const char HEADING[] = "qc_is_drop_table_query   : ";
 
     int32_t rv1;
-    pClassifier1->qc_is_drop_table_query(pCopy1, &rv1);
+    pClassifier1->is_drop_table_query(pCopy1, &rv1);
     int32_t rv2;
-    pClassifier2->qc_is_drop_table_query(pCopy2, &rv2);
+    pClassifier2->is_drop_table_query(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -546,9 +546,9 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
     int n2 = 0;
 
     std::vector<QcTableName> rv1;
-    pClassifier1->qc_get_table_names(pCopy1, &rv1);
+    pClassifier1->get_table_names(pCopy1, &rv1);
     std::vector<QcTableName> rv2;
-    pClassifier2->qc_get_table_names(pCopy2, &rv2);
+    pClassifier2->get_table_names(pCopy2, &rv2);
 
     // The order need not be the same, so let's compare a set.
     std::set<QcTableName> names1(rv1.begin(), rv1.end());
@@ -648,8 +648,8 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1,
 
     std::vector<std::string_view> rv1;
     std::vector<std::string_view> rv2;
-    pClassifier1->qc_get_database_names(pCopy1, &rv1);
-    pClassifier2->qc_get_database_names(pCopy2, &rv2);
+    pClassifier1->get_database_names(pCopy1, &rv1);
+    pClassifier2->get_database_names(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -678,9 +678,9 @@ bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1,
     const char HEADING[] = "qc_get_prepare_name      : ";
 
     std::string_view rv1;
-    pClassifier1->qc_get_prepare_name(pCopy1, &rv1);
+    pClassifier1->get_prepare_name(pCopy1, &rv1);
     std::string_view rv2;
-    pClassifier2->qc_get_prepare_name(pCopy2, &rv2);
+    pClassifier2->get_prepare_name(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -875,8 +875,8 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1,
     uint32_t n_infos1;
     uint32_t n_infos2;
 
-    pClassifier1->qc_get_field_info(pCopy1, &infos1, &n_infos1);
-    pClassifier2->qc_get_field_info(pCopy2, &infos2, &n_infos2);
+    pClassifier1->get_field_info(pCopy1, &infos1, &n_infos1);
+    pClassifier2->get_field_info(pCopy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1113,8 +1113,8 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1,
     uint32_t n_infos1;
     uint32_t n_infos2;
 
-    pClassifier1->qc_get_function_info(pCopy1, &infos1, &n_infos1);
-    pClassifier2->qc_get_function_info(pCopy2, &infos2, &n_infos2);
+    pClassifier1->get_function_info(pCopy1, &infos1, &n_infos1);
+    pClassifier2->get_function_info(pCopy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1231,19 +1231,19 @@ bool compare(QUERY_CLASSIFIER* pClassifier1,
     bool success = (errors == 0);
 
     uint32_t type_mask1;
-    pClassifier1->qc_get_type_mask(pBuf1, &type_mask1);
+    pClassifier1->get_type_mask(pBuf1, &type_mask1);
 
     uint32_t type_mask2;
-    pClassifier2->qc_get_type_mask(pBuf2, &type_mask2);
+    pClassifier2->get_type_mask(pBuf2, &type_mask2);
 
     if ((type_mask1 == type_mask2)
         && ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
     {
         GWBUF* pPreparable1;
-        pClassifier1->qc_get_preparable_stmt(pBuf1, &pPreparable1);
+        pClassifier1->get_preparable_stmt(pBuf1, &pPreparable1);
 
         GWBUF* pPreparable2;
-        pClassifier2->qc_get_preparable_stmt(pBuf2, &pPreparable2);
+        pClassifier2->get_preparable_stmt(pBuf2, &pPreparable2);
 
         if (pPreparable1 && pPreparable2)
         {
@@ -1279,13 +1279,13 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
             switch (sql_mode)
             {
             case SetSqlModeParser::DEFAULT:
-                pClassifier1->qc_set_sql_mode(QC_SQL_MODE_DEFAULT);
-                pClassifier2->qc_set_sql_mode(QC_SQL_MODE_DEFAULT);
+                pClassifier1->set_sql_mode(QC_SQL_MODE_DEFAULT);
+                pClassifier2->set_sql_mode(QC_SQL_MODE_DEFAULT);
                 break;
 
             case SetSqlModeParser::ORACLE:
-                pClassifier1->qc_set_sql_mode(QC_SQL_MODE_ORACLE);
-                pClassifier2->qc_set_sql_mode(QC_SQL_MODE_ORACLE);
+                pClassifier1->set_sql_mode(QC_SQL_MODE_ORACLE);
+                pClassifier2->set_sql_mode(QC_SQL_MODE_ORACLE);
                 break;
 
             default:
