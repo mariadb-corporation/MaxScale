@@ -239,6 +239,9 @@ public:
     //       via ServerManager (currently needed by xpandmon)
     virtual void deactivate() = 0;
 
+    virtual std::string monitor_user() const = 0;
+    virtual std::string monitor_password() const = 0;
+
     /**
      * Set a status bit in the server without locking
      *

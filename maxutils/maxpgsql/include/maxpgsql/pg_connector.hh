@@ -35,10 +35,42 @@ public:
     PgSQL(PgSQL&& conn) noexcept;
     PgSQL& operator=(PgSQL&& rhs) noexcept;
 
+    struct ConnectionSettings
+    {
+        std::string user;
+        std::string password;
+
+        int timeout {0};
+    };
+    /**
+     * Open a new database connection.
+     *
+     * @param host Server host/ip
+     * @param port Server port
+     * @param db Database to connect to
+     * @return True on success
+     */
+    bool open(const std::string& host, int port, const std::string& db = "");
+
+    /**
+     * Close connection.
+     */
     void close();
 
+    /**
+     * Ping the server.
+     * @return True on success
+     */
+    bool ping();
+
+    bool        is_open() const;
+    const char* error() const;
+
+    ConnectionSettings& connection_settings();
+
 private:
-    pg_conn* m_conn;
+    pg_conn*           m_conn {nullptr};
+    ConnectionSettings m_settings;
 
     void move_helper(PgSQL&& other);
 };

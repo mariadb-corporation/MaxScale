@@ -198,8 +198,8 @@ public:
      */
     bool set_monitor_password(const std::string& password);
 
-    std::string monitor_user() const;
-    std::string monitor_password() const;
+    std::string monitor_user() const override;
+    std::string monitor_password() const override;
 
     /**
      * Convert a status string to a status bit. Only converts one status element.
