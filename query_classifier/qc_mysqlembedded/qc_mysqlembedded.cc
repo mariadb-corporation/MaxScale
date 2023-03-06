@@ -4068,6 +4068,146 @@ int32_t qc_mysql_get_current_stmt(const char** ppStmt, size_t* pLen)
     return QC_RESULT_ERROR;
 }
 
+namespace
+{
+
+class MysqlQueryClassifier : public QUERY_CLASSIFIER
+{
+public:
+    int32_t qc_setup(qc_sql_mode_t sql_mode, const char* args) override
+    {
+        return qc_mysql_setup(sql_mode, args);
+    }
+
+    int32_t qc_process_init(void) override
+    {
+        return qc_mysql_process_init();
+    }
+
+    void qc_process_end(void) override
+    {
+        qc_mysql_process_end();
+    }
+
+    int32_t qc_thread_init(void) override
+    {
+        return qc_mysql_thread_init();
+    }
+
+    void qc_thread_end(void) override
+    {
+        qc_mysql_thread_end();
+    }
+
+    int32_t qc_parse(GWBUF* stmt, uint32_t collect, int32_t* result) override
+    {
+        return qc_mysql_parse(stmt, collect, result);
+    }
+
+    int32_t qc_get_type_mask(GWBUF* stmt, uint32_t* type) override
+    {
+        return qc_mysql_get_type_mask(stmt, type);
+    }
+
+    int32_t qc_get_operation(GWBUF* stmt, int32_t* op) override
+    {
+        return qc_mysql_get_operation(stmt, op);
+    }
+
+    int32_t qc_get_created_table_name(GWBUF* stmt, std::string_view* name) override
+    {
+        return qc_mysql_get_created_table_name(stmt, name);
+    }
+
+    int32_t qc_is_drop_table_query(GWBUF* stmt, int32_t* is_drop_table) override
+    {
+        return qc_mysql_is_drop_table_query(stmt, is_drop_table);
+    }
+
+    int32_t qc_get_table_names(GWBUF* stmt, std::vector<QcTableName>* names) override
+    {
+        return qc_mysql_get_table_names(stmt, names);
+    }
+
+    int32_t qc_get_database_names(GWBUF* stmt, std::vector<std::string_view>* names) override
+    {
+        return qc_mysql_get_database_names(stmt, names);
+    }
+
+    int32_t qc_get_kill_info(GWBUF* stmt, QC_KILL* pKill) override
+    {
+        return qc_mysql_get_kill_info(stmt, pKill);
+    }
+
+    int32_t qc_get_prepare_name(GWBUF* stmt, std::string_view* name) override
+    {
+        return qc_mysql_get_prepare_name(stmt, name);
+    }
+
+    int32_t qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos) override
+    {
+        return qc_mysql_get_field_info(stmt, infos, n_infos);
+    }
+
+    int32_t qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos) override
+    {
+        return qc_mysql_get_function_info(stmt, infos, n_infos);
+    }
+
+    int32_t qc_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt) override
+    {
+        return qc_mysql_get_preparable_stmt(stmt, preparable_stmt);
+    }
+
+    void qc_set_server_version(uint64_t version) override
+    {
+        qc_mysql_set_server_version(version);
+    }
+
+    void qc_get_server_version(uint64_t* version) override
+    {
+        qc_mysql_get_server_version(version);
+    }
+
+    int32_t qc_get_sql_mode(qc_sql_mode_t* sql_mode) override
+    {
+        return qc_mysql_get_sql_mode(sql_mode);
+    }
+
+    int32_t qc_set_sql_mode(qc_sql_mode_t sql_mode) override
+    {
+        return qc_mysql_set_sql_mode(sql_mode);
+    }
+
+    uint32_t qc_get_options() override
+    {
+        return qc_mysql_get_options();
+    }
+
+    int32_t qc_set_options(uint32_t options) override
+    {
+        return qc_mysql_set_options(options);
+    }
+
+    QC_STMT_RESULT qc_get_result_from_info(const QC_STMT_INFO* info) override
+    {
+        // Not supported.
+        return QC_STMT_RESULT {};
+    }
+
+    int32_t qc_get_current_stmt(const char** ppStmt, size_t* pLen) override
+    {
+        return qc_mysql_get_current_stmt(ppStmt, pLen);
+    }
+
+    std::string_view qc_info_get_canonical(const QC_STMT_INFO* info) override
+    {
+        // Not supported.
+        return std::string_view {};
+    }
+};
+
+}
 
 /**
  * EXPORTS
@@ -4078,35 +4218,7 @@ extern "C"
 
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static QUERY_CLASSIFIER qc =
-    {
-        qc_mysql_setup,
-        qc_mysql_process_init,
-        qc_mysql_process_end,
-        qc_mysql_thread_init,
-        qc_mysql_thread_end,
-        qc_mysql_parse,
-        qc_mysql_get_type_mask,
-        qc_mysql_get_operation,
-        qc_mysql_get_created_table_name,
-        qc_mysql_is_drop_table_query,
-        qc_mysql_get_table_names,
-        qc_mysql_get_database_names,
-        qc_mysql_get_kill_info,
-        qc_mysql_get_prepare_name,
-        qc_mysql_get_field_info,
-        qc_mysql_get_function_info,
-        qc_mysql_get_preparable_stmt,
-        qc_mysql_set_server_version,
-        qc_mysql_get_server_version,
-        qc_mysql_get_sql_mode,
-        qc_mysql_set_sql_mode,
-        qc_mysql_get_options,
-        qc_mysql_set_options,
-        nullptr,        // qc_get_result_from_info not supported
-        qc_mysql_get_current_stmt,
-        nullptr,        // qc_info_get_canonical not supported.
-    };
+    static MysqlQueryClassifier qc;
 
     static MXS_MODULE info =
     {
