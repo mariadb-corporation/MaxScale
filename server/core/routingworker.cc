@@ -2841,7 +2841,8 @@ private:
 
         json_object_set_new(pStats, "load", pLoad);
 
-        json_object_set_new(pStats, "query_classifier_cache", qc_get_cache_stats_as_json());
+        auto sStats = CachingParser::get_thread_cache_stats_as_json();
+        json_object_set_new(pStats, "query_classifier_cache", sStats.release());
 
         json_object_set_new(pStats, "sessions", json_integer(rworker.session_registry().size()));
         json_object_set_new(pStats, "zombies", json_integer(rworker.m_zombies.size()));
