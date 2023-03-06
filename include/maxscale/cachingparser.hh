@@ -33,10 +33,11 @@ public:
     static bool set_properties(const QC_CACHE_PROPERTIES& properties);
     static void get_properties(QC_CACHE_PROPERTIES* pProperties);
 
-    static int64_t clear_thread_cache();
-    static void    get_thread_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state);
-    static bool    get_thread_cache_stats(QC_CACHE_STATS* pStats);
-    static void    set_thread_cache_enabled(bool enable);
+    static int64_t                 clear_thread_cache();
+    static void                    get_thread_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state);
+    static bool                    get_thread_cache_stats(QC_CACHE_STATS* pStats);
+    static std::unique_ptr<json_t> get_thread_cache_stats_as_json();
+    static void                    set_thread_cache_enabled(bool enable);
 
     QUERY_CLASSIFIER& classifier() const override;
 

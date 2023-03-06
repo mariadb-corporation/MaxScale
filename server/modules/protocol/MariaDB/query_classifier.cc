@@ -66,7 +66,6 @@ class ThisUnit
 public:
     ThisUnit()
         : classifier(nullptr)
-        , m_cache_max_size(std::numeric_limits<int64_t>::max())
     {
     }
 
@@ -74,16 +73,6 @@ public:
     ThisUnit& operator=(const ThisUnit&) = delete;
 
     QUERY_CLASSIFIER* classifier;
-
-    int64_t cache_max_size() const
-    {
-        // In principle, std::memory_order_acquire should be used here, but that causes
-        // a performance penalty of ~5% when running a sysbench test.
-        return m_cache_max_size.load(std::memory_order_relaxed);
-    }
-
-private:
-    std::atomic<int64_t> m_cache_max_size;
 };
 
 static ThisUnit this_unit;
@@ -291,26 +280,6 @@ bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
     return true;
 
     //return this_unit.classifier->get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
-}
-
-bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
-{
-    return mxs::CachingParser::get_thread_cache_stats(pStats);
-}
-
-json_t* qc_get_cache_stats_as_json()
-{
-    QC_CACHE_STATS stats = {};
-    qc_get_cache_stats(&stats);
-
-    json_t* pStats = json_object();
-    json_object_set_new(pStats, "size", json_integer(stats.size));
-    json_object_set_new(pStats, "inserts", json_integer(stats.inserts));
-    json_object_set_new(pStats, "hits", json_integer(stats.hits));
-    json_object_set_new(pStats, "misses", json_integer(stats.misses));
-    json_object_set_new(pStats, "evictions", json_integer(stats.evictions));
-
-    return pStats;
 }
 
 std::unique_ptr<json_t> qc_as_json(const char* zHost)

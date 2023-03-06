@@ -562,6 +562,22 @@ bool CachingParser::get_thread_cache_stats(QC_CACHE_STATS* pStats)
 }
 
 //static
+std::unique_ptr<json_t> CachingParser::get_thread_cache_stats_as_json()
+{
+    QC_CACHE_STATS stats = {};
+    get_thread_cache_stats(&stats);
+
+    std::unique_ptr<json_t> sStats { json_object() };
+    json_object_set_new(sStats.get(), "size", json_integer(stats.size));
+    json_object_set_new(sStats.get(), "inserts", json_integer(stats.inserts));
+    json_object_set_new(sStats.get(), "hits", json_integer(stats.hits));
+    json_object_set_new(sStats.get(), "misses", json_integer(stats.misses));
+    json_object_set_new(sStats.get(), "evictions", json_integer(stats.evictions));
+
+    return sStats;
+}
+
+//static
 void CachingParser::set_thread_cache_enabled(bool enabled)
 {
     this_thread.use_cache = enabled;
