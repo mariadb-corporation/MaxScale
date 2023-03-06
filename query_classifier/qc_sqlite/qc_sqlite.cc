@@ -5510,132 +5510,132 @@ namespace
 class SqliteQueryClassifier : public QUERY_CLASSIFIER
 {
 public:
-    int32_t qc_setup(qc_sql_mode_t sql_mode, const char* args) override
+    int32_t setup(qc_sql_mode_t sql_mode, const char* args) override
     {
         return qc_sqlite_setup(sql_mode, args);
     }
 
-    int32_t qc_process_init(void) override
+    int32_t process_init(void) override
     {
         return qc_sqlite_process_init();
     }
 
-    void qc_process_end(void) override
+    void process_end(void) override
     {
         qc_sqlite_process_end();
     }
 
-    int32_t qc_thread_init(void) override
+    int32_t thread_init(void) override
     {
         return qc_sqlite_thread_init();
     }
 
-    void qc_thread_end(void) override
+    void thread_end(void) override
     {
         qc_sqlite_thread_end();
     }
 
-    int32_t qc_parse(GWBUF* stmt, uint32_t collect, int32_t* result) override
+    int32_t parse(GWBUF* stmt, uint32_t collect, int32_t* result) override
     {
         return qc_sqlite_parse(stmt, collect, result);
     }
 
-    int32_t qc_get_type_mask(GWBUF* stmt, uint32_t* type) override
+    int32_t get_type_mask(GWBUF* stmt, uint32_t* type) override
     {
         return qc_sqlite_get_type_mask(stmt, type);
     }
 
-    int32_t qc_get_operation(GWBUF* stmt, int32_t* op) override
+    int32_t get_operation(GWBUF* stmt, int32_t* op) override
     {
         return qc_sqlite_get_operation(stmt, op);
     }
 
-    int32_t qc_get_created_table_name(GWBUF* stmt, std::string_view* name) override
+    int32_t get_created_table_name(GWBUF* stmt, std::string_view* name) override
     {
         return qc_sqlite_get_created_table_name(stmt, name);
     }
 
-    int32_t qc_is_drop_table_query(GWBUF* stmt, int32_t* is_drop_table) override
+    int32_t is_drop_table_query(GWBUF* stmt, int32_t* is_drop_table) override
     {
         return qc_sqlite_is_drop_table_query(stmt, is_drop_table);
     }
 
-    int32_t qc_get_table_names(GWBUF* stmt, std::vector<QcTableName>* names) override
+    int32_t get_table_names(GWBUF* stmt, std::vector<QcTableName>* names) override
     {
         return qc_sqlite_get_table_names(stmt, names);
     }
 
-    int32_t qc_get_database_names(GWBUF* stmt, std::vector<std::string_view>* names) override
+    int32_t get_database_names(GWBUF* stmt, std::vector<std::string_view>* names) override
     {
         return qc_sqlite_get_database_names(stmt, names);
     }
 
-    int32_t qc_get_kill_info(GWBUF* stmt, QC_KILL* pKill) override
+    int32_t get_kill_info(GWBUF* stmt, QC_KILL* pKill) override
     {
         return qc_sqlite_get_kill_info(stmt, pKill);
     }
 
-    int32_t qc_get_prepare_name(GWBUF* stmt, std::string_view* name) override
+    int32_t get_prepare_name(GWBUF* stmt, std::string_view* name) override
     {
         return qc_sqlite_get_prepare_name(stmt, name);
     }
 
-    int32_t qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos) override
+    int32_t get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos) override
     {
         return qc_sqlite_get_field_info(stmt, infos, n_infos);
     }
 
-    int32_t qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos) override
+    int32_t get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos) override
     {
         return qc_sqlite_get_function_info(stmt, infos, n_infos);
     }
 
-    int32_t qc_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt) override
+    int32_t get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt) override
     {
         return qc_sqlite_get_preparable_stmt(stmt, preparable_stmt);
     }
 
-    void qc_set_server_version(uint64_t version) override
+    void set_server_version(uint64_t version) override
     {
         qc_sqlite_set_server_version(version);
     }
 
-    void qc_get_server_version(uint64_t* version) override
+    void get_server_version(uint64_t* version) override
     {
         qc_sqlite_get_server_version(version);
     }
 
-    int32_t qc_get_sql_mode(qc_sql_mode_t* sql_mode) override
+    int32_t get_sql_mode(qc_sql_mode_t* sql_mode) override
     {
         return qc_sqlite_get_sql_mode(sql_mode);
     }
 
-    int32_t qc_set_sql_mode(qc_sql_mode_t sql_mode) override
+    int32_t set_sql_mode(qc_sql_mode_t sql_mode) override
     {
         return qc_sqlite_set_sql_mode(sql_mode);
     }
 
-    uint32_t qc_get_options() override
+    uint32_t get_options() override
     {
         return qc_sqlite_get_options();
     }
 
-    int32_t qc_set_options(uint32_t options) override
+    int32_t set_options(uint32_t options) override
     {
         return qc_sqlite_set_options(options);
     }
 
-    QC_STMT_RESULT qc_get_result_from_info(const QC_STMT_INFO* info) override
+    QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
     {
         return qc_sqlite_get_result_from_info(info);
     }
 
-    int32_t qc_get_current_stmt(const char** ppStmt, size_t* pLen) override
+    int32_t get_current_stmt(const char** ppStmt, size_t* pLen) override
     {
         return qc_sqlite_get_current_stmt(ppStmt, pLen);
     }
 
-    std::string_view qc_info_get_canonical(const QC_STMT_INFO* info) override
+    std::string_view info_get_canonical(const QC_STMT_INFO* info) override
     {
         return qc_sqlite_info_get_canonical(info);
     }

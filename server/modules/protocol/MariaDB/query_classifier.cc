@@ -110,7 +110,7 @@ QUERY_CLASSIFIER* qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
     if (this_unit.classifier)
     {
-        rv = this_unit.classifier->qc_setup(sql_mode, plugin_args);
+        rv = this_unit.classifier->setup(sql_mode, plugin_args);
 
         if (rv == QC_RESULT_OK)
         {
@@ -223,7 +223,7 @@ void qc_process_end(uint32_t kind)
     if (kind & QC_INIT_PLUGIN)
     {
         mxb_assert(this_unit.classifier);
-        this_unit.classifier->qc_process_end();
+        this_unit.classifier->process_end();
     }
 }
 
@@ -248,7 +248,7 @@ bool qc_thread_init(uint32_t kind)
         if (kind & QC_INIT_PLUGIN)
         {
             mxb_assert(this_unit.classifier);
-            rc = this_unit.classifier->qc_thread_init() == 0;
+            rc = this_unit.classifier->thread_init() == 0;
         }
 
         if (!rc)
@@ -270,7 +270,7 @@ void qc_thread_end(uint32_t kind)
     if (kind & QC_INIT_PLUGIN)
     {
         mxb_assert(this_unit.classifier);
-        this_unit.classifier->qc_thread_end();
+        this_unit.classifier->thread_end();
     }
 
     if (kind & QC_INIT_SELF)
@@ -290,7 +290,7 @@ bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
 
     return true;
 
-    //return this_unit.classifier->qc_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
+    //return this_unit.classifier->get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
 }
 
 bool qc_get_cache_stats(QC_CACHE_STATS* pStats)

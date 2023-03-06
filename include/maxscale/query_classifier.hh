@@ -47,7 +47,7 @@ public:
      * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
      *         some specific error code.
      */
-    virtual int32_t qc_setup(qc_sql_mode_t sql_mode, const char* args) = 0;
+    virtual int32_t setup(qc_sql_mode_t sql_mode, const char* args) = 0;
 
     /**
      * Called once at process startup. Typically not required, as the standard module loader already
@@ -55,24 +55,24 @@ public:
      *
      * @return QC_RESULT_OK, if the process initialization succeeded.
      */
-    virtual int32_t qc_process_init(void) = 0;
+    virtual int32_t process_init(void) = 0;
 
     /**
      * Called once at process shutdown.
      */
-    virtual void qc_process_end(void) = 0;
+    virtual void process_end(void) = 0;
 
     /**
      * Called once per each thread.
      *
      * @return QC_RESULT_OK, if the thread initialization succeeded.
      */
-    virtual int32_t qc_thread_init(void) = 0;
+    virtual int32_t thread_init(void) = 0;
 
     /**
      * Called once when a thread finishes.
      */
-    virtual void qc_thread_end(void) = 0;
+    virtual void thread_end(void) = 0;
 
     /**
      * Called to explicitly parse a statement.
@@ -86,7 +86,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_parse(GWBUF* stmt, uint32_t collect, int32_t* result) = 0;
+    virtual int32_t parse(GWBUF* stmt, uint32_t collect, int32_t* result) = 0;
 
     /**
      * Reports the type of the statement.
@@ -98,7 +98,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_type_mask(GWBUF* stmt, uint32_t* type) = 0;
+    virtual int32_t get_type_mask(GWBUF* stmt, uint32_t* type) = 0;
 
     /**
      * Reports the operation of the statement.
@@ -110,7 +110,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_operation(GWBUF* stmt, int32_t* op) = 0;
+    virtual int32_t get_operation(GWBUF* stmt, int32_t* op) = 0;
 
     /**
      * Reports the name of a created table.
@@ -122,7 +122,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_created_table_name(GWBUF* stmt, std::string_view* name) = 0;
+    virtual int32_t get_created_table_name(GWBUF* stmt, std::string_view* name) = 0;
 
     /**
      * Reports whether a statement is a "DROP TABLE ..." statement.
@@ -134,7 +134,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_is_drop_table_query(GWBUF* stmt, int32_t* is_drop_table) = 0;
+    virtual int32_t is_drop_table_query(GWBUF* stmt, int32_t* is_drop_table) = 0;
 
     /**
      * Returns all table names.
@@ -146,7 +146,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_table_names(GWBUF* stmt, std::vector<QcTableName>* names) = 0;
+    virtual int32_t get_table_names(GWBUF* stmt, std::vector<QcTableName>* names) = 0;
 
     /**
      * Reports the database names.
@@ -158,7 +158,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_database_names(GWBUF* stmt, std::vector<std::string_view>* names) = 0;
+    virtual int32_t get_database_names(GWBUF* stmt, std::vector<std::string_view>* names) = 0;
 
     /**
      * Reports KILL information.
@@ -168,7 +168,7 @@ public:
      *
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource exhaustion or equivalent.
      */
-    virtual int32_t qc_get_kill_info(GWBUF* stmt, QC_KILL* pKill) = 0;
+    virtual int32_t get_kill_info(GWBUF* stmt, QC_KILL* pKill) = 0;
 
     /**
      * Reports the prepare name.
@@ -180,7 +180,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_prepare_name(GWBUF* stmt, std::string_view* name) = 0;
+    virtual int32_t get_prepare_name(GWBUF* stmt, std::string_view* name) = 0;
 
     /**
      * Reports field information.
@@ -192,7 +192,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos) = 0;
+    virtual int32_t get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos) = 0;
 
     /**
      * Reports function information.
@@ -204,7 +204,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos) = 0;
+    virtual int32_t get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos) = 0;
 
     /**
      * Return the preparable statement of a PREPARE statement.
@@ -221,7 +221,7 @@ public:
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    virtual int32_t qc_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt) = 0;
+    virtual int32_t get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt) = 0;
 
     /**
      * Set the version of the server. The version may affect how a statement
@@ -231,7 +231,7 @@ public:
      * @param version  Version encoded as MariaDB encodes the version, i.e.:
      *                 version = major * 10000 + minor * 100 + patch
      */
-    virtual void qc_set_server_version(uint64_t version) = 0;
+    virtual void set_server_version(uint64_t version) = 0;
 
     /**
      * Get the thread specific version assumed of the server. If the version has
@@ -240,7 +240,7 @@ public:
      * @param version  The version encoded as MariaDB encodes the version, i.e.:
      *                 version = major * 10000 + minor * 100 + patch
      */
-    virtual void qc_get_server_version(uint64_t* version) = 0;
+    virtual void get_server_version(uint64_t* version) = 0;
 
     /**
      * Gets the sql mode of the *calling* thread.
@@ -249,7 +249,7 @@ public:
      *
      * @return QC_RESULT_OK
      */
-    virtual int32_t qc_get_sql_mode(qc_sql_mode_t* sql_mode) = 0;
+    virtual int32_t get_sql_mode(qc_sql_mode_t* sql_mode) = 0;
 
     /**
      * Sets the sql mode for the *calling* thread.
@@ -258,14 +258,14 @@ public:
      *
      * @return QC_RESULT_OK if @sql_mode is valid, otherwise QC_RESULT_ERROR.
      */
-    virtual int32_t qc_set_sql_mode(qc_sql_mode_t sql_mode) = 0;
+    virtual int32_t set_sql_mode(qc_sql_mode_t sql_mode) = 0;
 
     /**
      * Gets the options of the *calling* thread.
      *
      * @return Bit mask of values from qc_option_t.
      */
-    virtual uint32_t qc_get_options() = 0;
+    virtual uint32_t get_options() = 0;
 
     /**
      * Sets the options for the *calling* thread.
@@ -274,7 +274,7 @@ public:
      *
      * @return QC_RESULT_OK if @c options is valid, otherwise QC_RESULT_ERROR.
      */
-    virtual int32_t qc_set_options(uint32_t options) = 0;
+    virtual int32_t set_options(uint32_t options) = 0;
 
     /**
      * Get result from info.
@@ -283,7 +283,7 @@ public:
      *
      * @return The result of the provided info.
      */
-    virtual QC_STMT_RESULT qc_get_result_from_info(const QC_STMT_INFO* info) = 0;
+    virtual QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) = 0;
 
     /**
      * Return statement currently being classified.
@@ -296,7 +296,7 @@ public:
      * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
      *         classified), QC_RESULT_ERROR otherwise.
      */
-    virtual int32_t qc_get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
+    virtual int32_t get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
 
     /**
      * Get canonical statement
@@ -310,7 +310,7 @@ public:
      *
      * @return The canonical statement.
      */
-    virtual std::string_view qc_info_get_canonical(const QC_STMT_INFO* info) = 0;
+    virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
 };
 
 /**

@@ -56,7 +56,7 @@ public:
         GWBUF buffer = mariadb::create_query(sql);
         int32_t op = QUERY_OP_UNDEFINED;
 
-        if (m_qc->qc_get_operation(&buffer, &op) != QC_RESULT_OK)
+        if (m_qc->get_operation(&buffer, &op) != QC_RESULT_OK)
         {
             std::cout << "failed to get operation for: " << sql << std::endl;
         }
@@ -69,7 +69,7 @@ public:
         GWBUF buffer = mariadb::create_query(sql);
         uint32_t type = 0;
 
-        if (m_qc->qc_get_type_mask(&buffer, &type) != QC_RESULT_OK)
+        if (m_qc->get_type_mask(&buffer, &type) != QC_RESULT_OK)
         {
             std::cout << "failed to get type for: " << sql << std::endl;
         }
@@ -82,7 +82,7 @@ public:
         GWBUF buffer = mariadb::create_query(sql);
         QC_KILL rval;
 
-        if (m_qc->qc_get_kill_info(&buffer, &rval) != QC_RESULT_OK)
+        if (m_qc->get_kill_info(&buffer, &rval) != QC_RESULT_OK)
         {
             std::cout << "failed to get kill info for: " << sql << std::endl;
         }
@@ -102,8 +102,8 @@ private:
         {
             const char* args = "parse_as=10.3,log_unrecognized_statements=1";
 
-            if (pClassifier->qc_setup(QC_SQL_MODE_DEFAULT, args) != QC_RESULT_OK
-                || pClassifier->qc_thread_init() != QC_RESULT_OK)
+            if (pClassifier->setup(QC_SQL_MODE_DEFAULT, args) != QC_RESULT_OK
+                || pClassifier->thread_init() != QC_RESULT_OK)
             {
                 std::cerr << "error: Could not setup or init classifier " << name << "." << std::endl;
                 qc_unload(pClassifier);
@@ -112,7 +112,7 @@ private:
             else
             {
                 uint64_t version = 10 * 1000 * 3 * 100;
-                pClassifier->qc_set_server_version(version);
+                pClassifier->set_server_version(version);
             }
         }
         else
