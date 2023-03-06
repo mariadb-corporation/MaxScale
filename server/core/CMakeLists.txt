@@ -39,6 +39,7 @@ add_library(maxscale-common SHARED
   packet_tracker.cc
   parser.cc
   paths.cc
+  query_classifier.cc
   resource.cc
   response_stat.cc
   router.cc
