@@ -485,24 +485,37 @@ static void sigfatal_handler(int i)
     sprintf(str,
             "MaxScale %s received fatal signal %d. "
             "Commit ID: %s, System name: %s, Release string: %s, Thread: %s",
-            MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string, mxb::get_thread_name().c_str());
+            MAXSCALE_VERSION, i, maxscale_commit,
+            cnf.sysname.c_str(), cnf.release_string, mxb::get_thread_name().c_str());
 
     cerr << str << "\n" << endl;
 
     MXB_ALERT("%s", str);
 
-    const char* pStmt;
-    size_t nStmt;
+    const char* pStmt = "none/unknown";
+    size_t nStmt = strlen(pStmt);
 
-    if (!qc_get_current_stmt(&pStmt, &nStmt))
+    DCB* dcb = dcb_get_current();
+    MXS_SESSION* ses = dcb ? dcb->session() : session_get_current();
+
+    if (ses)
     {
-        pStmt = "none/unknown";
-        nStmt = strlen(pStmt);
+        mxs::ClientConnection* cc = ses->client_connection();
+
+        if (cc)
+        {
+            mxs::Parser* parser = cc->parser();
+
+            if (parser)
+            {
+                QUERY_CLASSIFIER& qc = parser->classifier();
+
+                qc.get_current_stmt(&pStmt, &nStmt);
+            }
+        }
     }
 
     MXB_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
-    DCB* dcb = dcb_get_current();
-    MXS_SESSION* ses = dcb ? dcb->session() : session_get_current();
 
     if (ses)
     {

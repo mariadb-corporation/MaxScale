@@ -61,20 +61,6 @@ const char CN_CANONICAL[] = "canonical";
 
 }
 
-bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
-{
-    QC_TRACE();
-    // TODO: This will be NULL. Fix this later.
-    // mxb_assert(this_unit.classifier);
-
-    *ppStmt = 0;
-    *pLen = 0;
-
-    return true;
-
-    //return this_unit.classifier->get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
-}
-
 std::unique_ptr<json_t> qc_as_json(const char* zHost)
 {
     QC_CACHE_PROPERTIES properties;
