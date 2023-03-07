@@ -128,8 +128,6 @@ int main(int argc, char* argv[])
                  << (pCache_properties ? "using " : "NOT using ")
                  << "the query classification cache." << endl;
 
-            mxs::CachingParser::init();
-
             if (qc_setup(pCache_properties, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL)
                 && qc_thread_init(QC_INIT_BOTH))
             {

@@ -133,7 +133,6 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
 
     add_built_in_module(mariadbprotocol_info());
     add_built_in_module(mariadbauthenticator_info());
-    mxs::CachingParser::init();
     mxs::set_libdir(old_libdir.c_str());
     preload_module("readconnroute", "server/modules/routing/readconnroute/", mxs::ModuleType::ROUTER);
 }

@@ -25,8 +25,6 @@ public:
     CachingParser(const CachingParser&) = delete;
     CachingParser& operator = (const CachingParser&) = delete;
 
-    static void init();
-
     static void thread_init();
     static void thread_finish();
 

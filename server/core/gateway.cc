@@ -2117,8 +2117,6 @@ int main(int argc, char** argv)
     add_built_in_module(mariadbprotocol_info());
     add_built_in_module(mariadbauthenticator_info());
 
-    mxs::CachingParser::init();
-
     if (RoutingWorker::init(&watchdog_notifier))
     {
         if (configure_normal_signals())
@@ -2171,8 +2169,6 @@ int main(int argc, char** argv)
         MXB_ALERT("Failed to initialize routing workers.");
         rc = MAXSCALE_INTERNALERROR;
     }
-
-    // Here we would call mxs::CachingParser::finish() if there was one.
 
     watchdog_notifier.stop();
 
