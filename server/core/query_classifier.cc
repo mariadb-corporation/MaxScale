@@ -157,29 +157,6 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties)
     return mxs::CachingParser::set_properties(properties);
 }
 
-QUERY_CLASSIFIER* qc_init(const QC_CACHE_PROPERTIES* cache_properties,
-                          qc_sql_mode_t sql_mode,
-                          const char* plugin_name,
-                          const char* plugin_args)
-{
-    QC_TRACE();
-
-    QUERY_CLASSIFIER* pClassifier = qc_setup(cache_properties, sql_mode, plugin_name, plugin_args);
-
-    if (pClassifier)
-    {
-        bool rc = qc_thread_init(QC_INIT_BOTH);
-
-        if (!rc)
-        {
-            pClassifier->process_end();
-            pClassifier = nullptr;
-        }
-    }
-
-    return pClassifier;
-}
-
 bool qc_thread_init(uint32_t kind)
 {
     QC_TRACE();
