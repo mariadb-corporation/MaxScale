@@ -12,7 +12,8 @@
  */
 #pragma once
 
-#define MXB_MODULE_NAME "postgresprotocol"
+#include <maxscale/protocol/postgresql/module_names.hh>
+#define MXB_MODULE_NAME MXS_POSTGRESQL_PROTOCOL_NAME
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/assert.hh>
