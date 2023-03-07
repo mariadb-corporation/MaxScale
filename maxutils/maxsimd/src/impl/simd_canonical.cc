@@ -395,7 +395,12 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
         }
         else if (lut(IS_COMMENT, *pMarker))
         {
+            auto before = read_ptr;
             read_ptr = maxbase::consume_comment(read_ptr, read_end, true);
+            if (read_ptr - before == 4) // replace comment "/**/" with a space
+            {
+                *write_ptr++ = ' ';
+            }
         }
         else if (*pMarker == '\\')
         {
