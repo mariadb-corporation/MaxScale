@@ -1,6 +1,5 @@
 <template>
     <v-card
-        v-if="!$typy(node, 'data').isEmptyObject"
         outlined
         class="node-card fill-height"
         :width="nodeWidth - 2"
@@ -17,11 +16,11 @@
                 <router-link
                     target="_blank"
                     rel="noopener noreferrer"
-                    :to="`/dashboard/${nodeType}/${node.data.id}`"
+                    :to="`/dashboard/${nodeType}/${node.id}`"
                     class="text-truncate mr-2"
                     :style="{ color: headingColor.txt }"
                 >
-                    {{ node.data.id }}
+                    {{ node.id }}
                 </router-link>
                 <v-spacer />
             </template>
@@ -48,10 +47,10 @@
                 <router-link
                     target="_blank"
                     rel="noopener noreferrer"
-                    :to="`/dashboard/${node.data.type}/${node.data.id}`"
+                    :to="`/dashboard/${node.type}/${node.id}`"
                     class="text-truncate "
                 >
-                    {{ node.data.id }}
+                    {{ node.id }}
                 </router-link>
             </template>
             <div
@@ -118,7 +117,7 @@ export default {
     props: {
         node: { type: Object, required: true },
         nodeWidth: { type: Number, required: true },
-        draw: { type: Function, required: true },
+        changeNodeSize: { type: Function, required: true },
     },
     data() {
         return {
@@ -147,14 +146,14 @@ export default {
             }
         },
         nodeData() {
-            return this.node.data.nodeData
+            return this.node.nodeData
         },
         nodeType() {
-            return this.node.data.type
+            return this.node.type
         },
         // for node type SERVICES
         filters() {
-            return this.$typy(this.node.data.nodeData, 'relationships.filters.data').safeArray
+            return this.$typy(this.node.nodeData, 'relationships.filters.data').safeArray
         },
         isServiceWithFiltersNode() {
             return (
@@ -235,7 +234,7 @@ export default {
         },
         handleVisFilters() {
             this.isVisualizingFilters = !this.isVisualizingFilters
-            this.draw()
+            this.changeNodeSize(this.node)
         },
     },
 }

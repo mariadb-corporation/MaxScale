@@ -11,19 +11,22 @@
             <graph-nodes
                 ref="graphNodes"
                 :nodes="graphNodes"
+                :posMap="graphNodesPosMap"
                 :style="{ transform }"
                 :nodeStyle="revertGraphStyle"
                 :nodeClass="`${draggingStates.isDragging ? 'no-userSelect' : ''}`"
+                :dynNode="dynNodeHeight"
                 draggable
                 :draggingNodeId="draggingStates.draggingNodeId"
+                @node-size-map="dynNodeSizeMap = $event"
                 @drag-start="onNodeDragStart"
                 @drag="onNodeDrag"
                 @drag-end="onNodeDragEnd"
             >
-                <template v-slot:default="{ node }">
+                <template v-slot:default="{ node, changeNodeSize }">
                     <slot
                         name="graph-node-content"
-                        :data="{ node, draw, isDragging: draggingStates.isDragging }"
+                        :data="{ node, changeNodeSize, isDragging: draggingStates.isDragging }"
                     />
                 </template>
             </graph-nodes>
@@ -60,7 +63,7 @@ export default {
     props: {
         data: { type: Array, required: true },
         dim: { type: Object, required: true },
-        nodeWidth: { type: Number, default: 200 },
+        nodeSize: { type: Object, default: () => ({ width: 200, height: 100 }) },
         dynNodeHeight: { type: Boolean, default: false },
         revert: { type: Boolean, default: false },
         colorizingLinkFn: { type: Function, default: () => '' },
@@ -73,8 +76,8 @@ export default {
             zoom: { x: 0, y: 0, k: 1 },
             dagDim: { width: 0, height: 0 },
             graphNodes: [],
-            defNodeHeight: 100,
-            dynNodeHeightMap: {},
+            graphNodesPosMap: {},
+            dynNodeSizeMap: {},
             arrowHeadHeight: 12,
             // states for dragging conf-node
             defDraggingStates: {
@@ -89,29 +92,33 @@ export default {
         revertGraphStyle() {
             return { transform: this.revert ? 'rotate(180deg)' : 'rotate(0d)' }
         },
-        maxNodeHeight() {
-            const v = Math.max(...Object.values(this.dynNodeHeightMap))
-            if (this.$typy(v).isNumber) return v
-            return this.defNodeHeight
-        },
-        defNodeSize() {
-            return { width: this.nodeWidth, height: this.maxNodeHeight }
-        },
         nodeIds() {
             return this.data.map(n => n.id)
         },
     },
     watch: {
+        /**
+         * If the quantity of nodes changes or the size of a node changes, re-draw
+         * the graph.
+         */
         nodeIds: {
             deep: true,
             handler(v, oV) {
                 if (!this.$helpers.lodash.isEqual(v, oV)) this.draw()
             },
         },
-        dynNodeHeightMap: {
+        dynNodeSizeMap: {
             deep: true,
             handler() {
                 this.draw()
+            },
+        },
+        // Assign new data for graphNodes
+        data: {
+            deep: true,
+            immediate: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.graphNodes = v
             },
         },
     },
@@ -127,7 +134,8 @@ export default {
         },
         draw() {
             this.computeLayout(this.data)
-            this.render()
+            this.drawLinks(this.dag.links())
+            this.setGraphNodePos()
         },
         /**
          * compute dag layout
@@ -141,10 +149,10 @@ export default {
                 .decross(d3d.decrossTwoLayer()) // minimize number of crossings
                 .coord(d3d.coordGreedy())
                 .sugiNodeSize(d => {
-                    let width = this.defNodeSize.width,
-                        height = this.defNodeSize.height
+                    let width = this.nodeSize.width,
+                        height = this.nodeSize.height
                     if (d.data.node) {
-                        const nodeSize = this.getDynNodeSize(d.data.node)
+                        const nodeSize = this.getNodeSize(d.data.node)
                         width = nodeSize.width
                         height = nodeSize.height
                     }
@@ -156,25 +164,27 @@ export default {
             this.dagDim = { width, height }
             this.repositioning()
         },
-        render() {
-            this.renderGraphNodes(this.dag.descendants())
-            this.drawLinks(this.dag.links())
+        setGraphNodePos() {
+            this.graphNodesPosMap = this.dag.descendants().reduce((map, n) => {
+                const {
+                    x,
+                    y,
+                    data: { id },
+                } = n
+                if (id) map[id] = { x, y }
+                return map
+            }, {})
         },
         /**
-         * Either return dynamic node size of a node or defNodeSize
+         * Either return dynamic node size of a node or default nodeSize
          * @param {Object} node - dag node
          * @returns {Object} - { width: Number, height: Number}
          */
-        getDynNodeSize(node) {
+        getNodeSize(node) {
             const nodeId = this.$typy(node, 'data.id').safeString
-            const nodeHeight = this.$typy(this.dynNodeHeightMap, `[${nodeId}]`).safeNumber
-            if (nodeHeight) return { width: this.defNodeSize.width, height: nodeHeight }
-            return this.defNodeSize
-        },
-        computeDynNodeHeight() {
-            const heightMap = this.$typy(this.$refs, 'graphNodes.getHeightMap').safeFunction()
-            if (!this.$helpers.lodash.isEqual(this.dynNodeHeightMap, heightMap))
-                this.dynNodeHeightMap = heightMap
+            const dynNodeSize = this.$typy(this.dynNodeSizeMap, `[${nodeId}]`).safeObject
+            if (dynNodeSize) return dynNodeSize
+            return this.nodeSize
         },
         // Repositioning nodes and links by mutating x,y value
         repositioning() {
@@ -182,7 +192,7 @@ export default {
                 links = this.dag.links()
             // repositioning nodes so that they are drawn center
             nodes.forEach(d => {
-                const { width, height } = this.getDynNodeSize(d)
+                const { width, height } = this.getNodeSize(d)
                 d.x = d.x - width / 2
                 d.y = d.y - height / 2
             })
@@ -192,8 +202,8 @@ export default {
                 const src = d.points[0]
                 const target = d.points[d.points.length - 1]
 
-                const srcSize = this.getDynNodeSize(d.source)
-                const targetSize = this.getDynNodeSize(d.target)
+                const srcSize = this.getNodeSize(d.source)
+                const targetSize = this.getNodeSize(d.target)
                 if (shouldRevert) {
                     // src becomes a target point and vice versa
                     src.y = src.y + srcSize.height / 2 + this.arrowHeadHeight
@@ -291,8 +301,8 @@ export default {
             if (shouldChangeConnPoint) {
                 // get src and target node size
                 const sizes = {
-                    src: this.getDynNodeSize(shouldRevert ? data.target : data.source),
-                    target: this.getDynNodeSize(shouldRevert ? data.source : data.target),
+                    src: this.getNodeSize(shouldRevert ? data.target : data.source),
+                    target: this.getNodeSize(shouldRevert ? data.source : data.target),
                 }
                 // Check if src node opposite to target node
                 const isOpposite = shouldRevert
@@ -328,11 +338,6 @@ export default {
         transformArrow(data) {
             let { targetX, targetY, angle } = this.getObtusePoints(data)
             return `translate(${targetX}, ${targetY}) rotate(${angle})`
-        },
-        renderGraphNodes(nodes) {
-            this.graphNodes = nodes
-            // compute node height after nodes are rendered
-            if (this.dynNodeHeight) this.$helpers.doubleRAF(() => this.computeDynNodeHeight())
         },
         /**
          * @param {Object} d - link data or node data
@@ -472,14 +477,14 @@ export default {
         onNodeDragStart({ e, node }) {
             this.draggingStates = {
                 ...this.draggingStates,
-                draggingNodeId: node.data.id,
+                draggingNodeId: node.id,
                 startPos: { x: e.clientX, y: e.clientY },
             }
         },
         onNodeDrag({ e, node }) {
             e.preventDefault()
             const { startPos, draggingNodeId } = this.draggingStates
-            if (startPos && draggingNodeId === node.data.id) {
+            if (startPos && draggingNodeId === node.id) {
                 const offsetPos = { x: e.clientX - startPos.x, y: e.clientY - startPos.y }
                 // calc offset position
                 let offsetPosX = offsetPos.x / this.zoom.k,
@@ -496,10 +501,11 @@ export default {
                     offsetPosX = -offsetPosX // graph is reverted, so minus offset
                     offsetPosY = -offsetPosY // graph is reverted, so minus offset
                 }
-
-                node.x = node.x + offsetPosX
-                node.y = node.y + offsetPosY
-
+                const draggingNodePos = this.graphNodesPosMap[draggingNodeId]
+                this.$set(this.graphNodesPosMap, draggingNodeId, {
+                    x: draggingNodePos.x + offsetPosX,
+                    y: draggingNodePos.y + offsetPosY,
+                })
                 const dagNodes = this.dag.descendants()
                 const dagNode = dagNodes.find(d => d.data.id === draggingNodeId)
                 // change pos of child links

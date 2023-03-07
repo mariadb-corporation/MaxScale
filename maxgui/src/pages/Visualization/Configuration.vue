@@ -6,20 +6,21 @@
                 v-if="ctrDim.height && config_graph_data.length"
                 :data="config_graph_data"
                 :dim="ctrDim"
-                :nodeWidth="nodeWidth"
+                :nodeSize="{ width: nodeWidth, height: 100 }"
                 dynNodeHeight
                 revert
                 draggable
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
             >
-                <template v-slot:graph-node-content="{ data: { node, draw, isDragging } }">
+                <template
+                    v-slot:graph-node-content="{ data: { node, changeNodeSize, isDragging } }"
+                >
                     <conf-node
-                        v-if="!$typy(node, 'data').isEmptyObject"
                         :class="{ 'no-pointerEvent': isDragging }"
                         :node="node"
                         :nodeWidth="nodeWidth"
-                        :draw="draw"
+                        :changeNodeSize="changeNodeSize"
                     />
                 </template>
             </mxs-dag-graph>
