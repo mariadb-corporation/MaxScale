@@ -102,6 +102,18 @@ public:
     {
     }
 
+    void inc_ref()
+    {
+        mxb_assert(m_refs >= 0);
+        ++m_refs;
+    }
+
+    int32_t dec_ref()
+    {
+        mxb_assert(m_refs > 0);
+        return --m_refs;
+    }
+
     QC_STMT_INFO* peek(std::string_view canonical_stmt) const
     {
         auto i = m_infos.find(canonical_stmt);
@@ -144,7 +156,9 @@ public:
         return sInfo;
     }
 
-    void insert(QUERY_CLASSIFIER* pClassifier, std::string_view canonical_stmt, std::shared_ptr<QC_STMT_INFO> sInfo)
+    void insert(QUERY_CLASSIFIER* pClassifier,
+                std::string_view canonical_stmt,
+                std::shared_ptr<QC_STMT_INFO> sInfo)
     {
         mxb_assert(peek(canonical_stmt) == nullptr);
 
@@ -249,7 +263,10 @@ public:
 private:
     struct Entry
     {
-        Entry(QUERY_CLASSIFIER* pClassifier, std::shared_ptr<QC_STMT_INFO> sInfo, qc_sql_mode_t sql_mode, uint32_t options)
+        Entry(QUERY_CLASSIFIER* pClassifier,
+              std::shared_ptr<QC_STMT_INFO> sInfo,
+              qc_sql_mode_t sql_mode,
+              uint32_t options)
             : pClassifier(pClassifier)
             , sInfo(std::move(sInfo))
             , sql_mode(sql_mode)
@@ -345,6 +362,7 @@ private:
     QC_CACHE_STATS     m_stats;
     std::random_device m_rdev;
     std::mt19937       m_reng;
+    int32_t            m_refs { 0 };
 };
 
 /**
@@ -477,16 +495,24 @@ void CachingParser::init()
 //static
 void CachingParser::thread_init()
 {
-    mxb_assert(!this_thread.pInfo_cache);
-    this_thread.pInfo_cache = new QCInfoCache;
+    if (!this_thread.pInfo_cache)
+    {
+        this_thread.pInfo_cache = new QCInfoCache;
+    }
+
+    this_thread.pInfo_cache->inc_ref();
 }
 
 //static
 void CachingParser::thread_finish()
 {
     mxb_assert(this_thread.pInfo_cache);
-    delete this_thread.pInfo_cache;
-    this_thread.pInfo_cache = nullptr;
+
+    if (this_thread.pInfo_cache->dec_ref() == 0)
+    {
+        delete this_thread.pInfo_cache;
+        this_thread.pInfo_cache = nullptr;
+    }
 }
 
 //static
