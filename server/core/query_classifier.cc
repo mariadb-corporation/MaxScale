@@ -168,8 +168,6 @@ QUERY_CLASSIFIER* qc_init(const QC_CACHE_PROPERTIES* cache_properties,
 
     if (pClassifier)
     {
-        mxs::CachingParser::init();
-
         bool rc = qc_thread_init(QC_INIT_BOTH);
 
         if (!rc)

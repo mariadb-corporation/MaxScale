@@ -24,21 +24,16 @@
 namespace
 {
 
-const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
-
 class ThisUnit
 {
 public:
     ThisUnit()
-        : qc_trx_parse_using(QC_TRX_PARSE_USING_PARSER)
-        , m_cache_max_size(std::numeric_limits<int64_t>::max())
+        : m_cache_max_size(std::numeric_limits<int64_t>::max())
     {
     }
 
     ThisUnit(const ThisUnit&) = delete;
     ThisUnit& operator=(const ThisUnit&) = delete;
-
-    qc_trx_parse_using_t qc_trx_parse_using;
 
     int64_t cache_max_size() const
     {
@@ -464,32 +459,6 @@ CachingParser::CachingParser(QUERY_CLASSIFIER* pClassifier)
     : m_classifier(*pClassifier)
     , m_parser(pClassifier->parser())
 {
-}
-
-//static
-void CachingParser::init()
-{
-    const char* zParse_using = getenv(QC_TRX_PARSE_USING);
-
-    if (zParse_using)
-    {
-        if (strcmp(zParse_using, "QC_TRX_PARSE_USING_QC") == 0)
-        {
-            this_unit.qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
-            MXB_NOTICE("Transaction detection using QC.");
-        }
-        else if (strcmp(zParse_using, "QC_TRX_PARSE_USING_PARSER") == 0)
-        {
-            this_unit.qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
-            MXB_NOTICE("Transaction detection using custom PARSER.");
-        }
-        else
-        {
-            MXB_NOTICE("QC_TRX_PARSE_USING set, but the value %s is not known. "
-                       "Parsing using QC.",
-                       zParse_using);
-        }
-    }
 }
 
 //static
