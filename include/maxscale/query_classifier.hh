@@ -146,23 +146,6 @@ void qc_unload(QUERY_CLASSIFIER* classifier);
 json_t* qc_get_cache_stats_as_json();
 
 /**
- * Return statement currently being classified.
- *
- * @param ppStmp  Pointer to pointer that on return will point to the
- *                statement being classified.
- * @param pLen    Pointer to value that on return will contain the length
- *                of the returned string.
- *
- * @return True, if a statement was returned (i.e. a statement is being
- *         classified), false otherwise.
- *
- * @note A string /may/ be returned /only/ when this function is called from
- *       a signal handler that is called due to the classifier causing
- *       a crash.
- */
-bool qc_get_current_stmt(const char** ppStmt, size_t* pLen);
-
-/**
  * Common query classifier properties as JSON.
  *
  * @param zHost  The MaxScale host.
