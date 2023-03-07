@@ -107,6 +107,11 @@ string ProtocolModule::name() const
     return MXB_MODULE_NAME;
 }
 
+string ProtocolModule::protocol_name() const
+{
+    return MXS_MARIADB_PROTOCOL_NAME;
+}
+
 unique_ptr<mxs::UserAccountManager> ProtocolModule::create_user_data_manager()
 {
     return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());

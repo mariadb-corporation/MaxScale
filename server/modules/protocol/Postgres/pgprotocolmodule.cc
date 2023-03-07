@@ -75,6 +75,11 @@ std::string PgProtocolModule::name() const
     return MXB_MODULE_NAME;
 }
 
+std::string PgProtocolModule::protocol_name() const
+{
+    return MXS_POSTGRESQL_PROTOCOL_NAME;
+}
+
 std::unique_ptr<mxs::UserAccountManager> PgProtocolModule::create_user_data_manager()
 {
     MXB_ALERT("Not implemented yet: %s", __func__);

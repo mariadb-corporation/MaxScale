@@ -107,6 +107,11 @@ std::string MySQLProtocolModule::name() const
     return MXB_MODULE_NAME;
 }
 
+std::string MySQLProtocolModule::protocol_name() const
+{
+    return MXS_MARIADB_PROTOCOL_NAME;
+}
+
 std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_manager()
 {
     return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());

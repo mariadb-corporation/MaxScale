@@ -80,6 +80,11 @@ public:
         return MXB_MODULE_NAME;
     }
 
+    std::string protocol_name() const override
+    {
+        return MXS_CDC_PROTOCOL_NAME;
+    }
+
     json_t* print_auth_users_json() override
     {
         return m_auth_module.diagnostics();

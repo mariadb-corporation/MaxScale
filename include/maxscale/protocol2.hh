@@ -113,6 +113,15 @@ public:
     virtual std::string name() const = 0;
 
     /**
+     * Get the name of the network protocol that this module implements
+     *
+     * The set of "registered" protocol names in MaxScale can be found in
+     * `include/maxscale/protocols/.../module_names.hh`. Each protocol should
+     * have a header that defines the network protocol name.
+     */
+    virtual std::string protocol_name() const = 0;
+
+    /**
      * Print a list of authenticator users to json. This should only be implemented by protocols without
      * CAP_AUTHDATA.
      *

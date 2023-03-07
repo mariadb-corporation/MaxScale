@@ -40,6 +40,7 @@ public:
 
     uint64_t    capabilities() const override;
     std::string name() const override;
+    std::string protocol_name() const override;
 
     std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;
 
