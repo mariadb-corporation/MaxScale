@@ -5,29 +5,24 @@
         :dim="dim"
         :graphDim="dagDim"
         @get-graph-ctr="svgGroup = $event"
-        @get-zoom="zoom = $event"
     >
-        <template v-slot:append="{ transform }">
+        <template v-slot:append="{ data: { transform, zoom } }">
             <graph-nodes
                 ref="graphNodes"
                 :nodes="graphNodes"
-                :posMap="graphNodesPosMap"
+                :coordMap.sync="graphNodeCoordMap"
                 :style="{ transform }"
                 :nodeStyle="revertGraphStyle"
-                :nodeClass="`${draggingStates.isDragging ? 'no-userSelect' : ''}`"
                 :dynNode="dynNodeHeight"
                 draggable
-                :draggingNodeId="draggingStates.draggingNodeId"
+                :revertDrag="revert"
+                :boardZoom="zoom"
                 @node-size-map="dynNodeSizeMap = $event"
-                @drag-start="onNodeDragStart"
                 @drag="onNodeDrag"
                 @drag-end="onNodeDragEnd"
             >
-                <template v-slot:default="{ node, changeNodeSize }">
-                    <slot
-                        name="graph-node-content"
-                        :data="{ node, changeNodeSize, isDragging: draggingStates.isDragging }"
-                    />
+                <template v-slot:default="{ data }">
+                    <slot name="graph-node-content" :data="data" />
                 </template>
             </graph-nodes>
         </template>
@@ -73,19 +68,12 @@ export default {
     data() {
         return {
             svgGroup: null,
-            zoom: { x: 0, y: 0, k: 1 },
             dagDim: { width: 0, height: 0 },
             graphNodes: [],
-            graphNodesPosMap: {},
+            graphNodeCoordMap: {},
             dynNodeSizeMap: {},
             arrowHeadHeight: 12,
-            // states for dragging conf-node
-            defDraggingStates: {
-                isDragging: false,
-                draggingNodeId: null,
-                startPos: null,
-            },
-            draggingStates: null,
+            highlightedLinks: [],
         }
     },
     computed: {
@@ -122,20 +110,14 @@ export default {
             },
         },
     },
-    created() {
-        if (this.draggable) this.setDefDraggingStates()
-    },
     mounted() {
         if (this.data.length) this.draw()
     },
     methods: {
-        setDefDraggingStates() {
-            this.draggingStates = this.$helpers.lodash.cloneDeep(this.defDraggingStates)
-        },
         draw() {
             this.computeLayout(this.data)
             this.drawLinks(this.dag.links())
-            this.setGraphNodePos()
+            this.setGraphNodeCoordMap()
         },
         /**
          * compute dag layout
@@ -164,8 +146,8 @@ export default {
             this.dagDim = { width, height }
             this.repositioning()
         },
-        setGraphNodePos() {
-            this.graphNodesPosMap = this.dag.descendants().reduce((map, n) => {
+        setGraphNodeCoordMap() {
+            this.graphNodeCoordMap = this.dag.descendants().reduce((map, n) => {
                 const {
                     x,
                     y,
@@ -265,10 +247,10 @@ export default {
                 : sizes.target.height / 2 + this.arrowHeadHeight
 
             if (isRightward || isLeftward) {
-                // change pos of src point
+                // change coord of src point
                 points.srcX = src.x + srcXOffset
                 points.srcY = src.y + srcYOffset
-                // change pos of target point
+                // change coord of target point
                 points.targetX = target.x + targetXOffset
                 points.targetY = target.y + targetYOffset
                 this.setMidPoint({ points, isOpposite: false })
@@ -474,75 +456,47 @@ export default {
                 .select('path.link_line')
                 .attr('stroke-dasharray', isDragging ? null : '5')
         },
-        onNodeDragStart({ e, node }) {
-            this.draggingStates = {
-                ...this.draggingStates,
-                draggingNodeId: node.id,
-                startPos: { x: e.clientX, y: e.clientY },
+        /**
+         *
+         * @param {String} param.nodeId - id of the node has links being redrawn
+         * @param {Number} param.diffX - difference of old coordinate x and new coordinate x
+         * @param {Number} param.diffY - difference of old coordinate y and new coordinate y
+         */
+        redrawLinks({ nodeId, diffX, diffY }) {
+            const dagNodes = this.dag.descendants()
+            const dagNode = dagNodes.find(d => d.data.id === nodeId)
+            // change coord of child links
+            for (const link of dagNode.ichildLinks()) {
+                let point = link.points[0]
+                point.x = point.x + diffX
+                point.y = point.y + diffY
+                this.changeLinkGroupStyle({ link, isDragging: true })
             }
+            let parentLinks = []
+            // change coord of links to parent nodes
+            dagNode.data.parentIds.forEach(parentId => {
+                const parentNode = dagNodes.find(d => d.data.id === parentId)
+                const linkToParent = parentNode
+                    .childLinks()
+                    .find(link => link.target.data.id === nodeId)
+                parentLinks.push(linkToParent)
+                let point = linkToParent.points[linkToParent.points.length - 1]
+                point.x = point.x + diffX
+                point.y = point.y + diffY
+                this.changeLinkGroupStyle({ link: linkToParent, isDragging: true })
+            })
+            // store links so that style applied to them can be reset to default after finish dragging
+            this.highlightedLinks = [...dagNode.ichildLinks(), ...parentLinks]
+            this.drawLinks(this.dag.links())
         },
-        onNodeDrag({ e, node }) {
-            e.preventDefault()
-            const { startPos, draggingNodeId } = this.draggingStates
-            if (startPos && draggingNodeId === node.id) {
-                const offsetPos = { x: e.clientX - startPos.x, y: e.clientY - startPos.y }
-                // calc offset position
-                let offsetPosX = offsetPos.x / this.zoom.k,
-                    offsetPosY = offsetPos.y / this.zoom.k
-                // update startPos
-                this.draggingStates = {
-                    ...this.draggingStates,
-                    isDragging: true,
-                    startPos: { x: e.clientX, y: e.clientY },
-                }
-
-                // change pos of the dragging node
-                if (this.revert) {
-                    offsetPosX = -offsetPosX // graph is reverted, so minus offset
-                    offsetPosY = -offsetPosY // graph is reverted, so minus offset
-                }
-                const draggingNodePos = this.graphNodesPosMap[draggingNodeId]
-                this.$set(this.graphNodesPosMap, draggingNodeId, {
-                    x: draggingNodePos.x + offsetPosX,
-                    y: draggingNodePos.y + offsetPosY,
-                })
-                const dagNodes = this.dag.descendants()
-                const dagNode = dagNodes.find(d => d.data.id === draggingNodeId)
-                // change pos of child links
-                for (const link of dagNode.ichildLinks()) {
-                    let point = link.points[0]
-                    point.x = point.x + offsetPosX
-                    point.y = point.y + offsetPosY
-                    this.changeLinkGroupStyle({ link, isDragging: true })
-                }
-                let parentLinks = []
-                // change pos of links to parent nodes
-                dagNode.data.parentIds.forEach(parentId => {
-                    const parentNode = dagNodes.find(d => d.data.id === parentId)
-                    const linkToParent = parentNode
-                        .childLinks()
-                        .find(link => link.target.data.id === draggingNodeId)
-                    parentLinks.push(linkToParent)
-                    let point = linkToParent.points[linkToParent.points.length - 1]
-                    point.x = point.x + offsetPosX
-                    point.y = point.y + offsetPosY
-                    this.changeLinkGroupStyle({ link: linkToParent, isDragging: true })
-                })
-                // store links so that style applied to them can be reset to default after finish dragging
-                this.$set(this.draggingStates, 'relatedLinks', [
-                    ...dagNode.ichildLinks(),
-                    ...parentLinks,
-                ])
-
-                this.drawLinks(this.dag.links())
-            }
+        onNodeDrag({ node, diffX, diffY }) {
+            this.redrawLinks({ nodeId: node.id, diffX, diffY })
         },
         onNodeDragEnd() {
-            //  reset style of links to default
-            for (const link of this.$typy(this.draggingStates, 'relatedLinks').safeArray) {
+            //  reset style of highlightedLinks to default
+            for (const link of this.highlightedLinks) {
                 this.changeLinkGroupStyle({ link, isDragging: false })
             }
-            this.setDefDraggingStates()
         },
     },
 }

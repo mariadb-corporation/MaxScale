@@ -4,7 +4,7 @@
         <svg ref="svg" class="mxs-graph" :width="dim.width" height="100%">
             <g id="graph-ctr" :style="{ transform }" />
         </svg>
-        <slot name="append" :transform="transform" />
+        <slot name="append" :data="slotData" />
     </div>
 </template>
 
@@ -25,7 +25,6 @@
 /**
  * Events
  * get-graph-ctr(SVGElement): graph-ctr <g/> element
- * get-zoom({ x, y, k})
  */
 import { select as d3Select } from 'd3-selection'
 import 'd3-transition'
@@ -47,18 +46,15 @@ export default {
             const { x, y, k } = this.graphBoardZoom
             return `translate(${x}px, ${y}px) scale(${k})`
         },
+        slotData() {
+            return { transform: this.transform, zoom: this.graphBoardZoom }
+        },
     },
     watch: {
         graphDim: {
             deep: true,
             handler(v, oV) {
                 if (!this.$helpers.lodash.isEqual(v, oV)) this.centerGraph()
-            },
-        },
-        graphBoardZoom: {
-            immediate: true,
-            handler(v) {
-                this.$emit('get-zoom', v)
             },
         },
     },

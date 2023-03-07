@@ -4,17 +4,18 @@
             v-for="node in nodes"
             ref="graphNode"
             :key="node.id"
-            :class="`graph-node ${nodeClass} ${draggable ? 'move' : ''}`"
+            class="graph-node"
+            :class="{ move: draggable, 'no-userSelect': draggingStates.isDragging }"
             :node_id="node.id"
             :style="{
                 ...getPos(node),
                 ...nodeStyle,
-                zIndex: draggingNodeId === node.id ? 4 : 3,
+                zIndex: draggingStates.draggingNodeId === node.id ? 4 : 3,
                 /**
                  * Graph nodes will be rendered but they won't be visible.
                  * It's done this way so node size can be calculated dynamically
                  */
-                visibility: $typy(posMap).isEmptyObject ? 'hidden' : 'visible',
+                visibility: $typy(nodeCoordMap).isEmptyObject ? 'hidden' : 'visible',
             }"
             v-on="
                 draggable
@@ -25,7 +26,7 @@
                     : null
             "
         >
-            <slot :node="node" :changeNodeSize="changeNodeSize" />
+            <slot :data="{ node, changeNodeSize, isDragging: draggingStates.isDragging }" />
         </div>
     </div>
 </template>
@@ -47,7 +48,7 @@
 /**
  * Events
  * drag-start({ e, node })
- * drag({ e, node })
+ * drag({ e, node, diffX, diffY })
  * drag-end(e)
  * node-size-map(obj): size of nodes, keyed by node id
  */
@@ -63,21 +64,36 @@ export default {
             },
             required: true,
         },
-        posMap: { type: Object, default: () => ({}) },
+        coordMap: { type: Object, default: () => ({}) }, //sync
         nodeStyle: { type: Object, default: () => ({}) },
-        nodeClass: { type: String, default: '' },
         draggable: { type: Boolean, default: false },
-        draggingNodeId: { type: String, default: '' },
         dynNode: { type: Boolean, default: false },
+        revertDrag: { type: Boolean, default: false },
+        boardZoom: { type: Object, required: true },
     },
     data() {
         return {
             dynNodeSizeMap: {},
+            // states for dragging graph-node
+            defDraggingStates: {
+                isDragging: false,
+                draggingNodeId: null,
+                startCoord: null,
+            },
+            draggingStates: null,
         }
     },
     computed: {
         nodeIds() {
             return this.nodes.map(n => n.id)
+        },
+        nodeCoordMap: {
+            get() {
+                return this.coordMap
+            },
+            set(v) {
+                this.$emit('update:coordMap', v)
+            },
         },
     },
     watch: {
@@ -98,10 +114,16 @@ export default {
             },
         },
     },
+    created() {
+        if (this.draggable) this.setDefDraggingStates()
+    },
     beforeDestroy() {
         if (this.draggable) this.rmMouseUpEvt()
     },
     methods: {
+        setDefDraggingStates() {
+            this.draggingStates = this.$helpers.lodash.cloneDeep(this.defDraggingStates)
+        },
         setNodeSizeMap() {
             const graphNode = this.$typy(this.$refs, 'graphNode').safeArray
             let nodeSizeMap = {}
@@ -113,7 +135,7 @@ export default {
                 this.dynNodeSizeMap = nodeSizeMap
         },
         getPos(node) {
-            const { x = 0, y = 0 } = this.$typy(this.posMap, `[${node.id}]`).safeObjectOrEmpty
+            const { x = 0, y = 0 } = this.$typy(this.nodeCoordMap, `[${node.id}]`).safeObjectOrEmpty
             return {
                 left: `${x}px`,
                 top: `${y}px`,
@@ -136,16 +158,47 @@ export default {
         rmMouseUpEvt() {
             document.removeEventListener('mouseup', this.dragEnd)
         },
-        dragStart(param) {
-            this.$emit('drag-start', param)
+        dragStart({ e, node }) {
+            this.draggingStates = {
+                ...this.draggingStates,
+                draggingNodeId: node.id,
+                startCoord: { x: e.clientX, y: e.clientY },
+            }
+            this.$emit('drag-start', { e, node })
             this.addMouseUpEvt()
         },
-        drag(param) {
-            this.$emit('drag', param)
+        drag({ e, node }) {
+            e.preventDefault()
+            const { startCoord, draggingNodeId } = this.draggingStates
+            if (startCoord && draggingNodeId === node.id) {
+                const diffPos = { x: e.clientX - startCoord.x, y: e.clientY - startCoord.y }
+                // calc offset position
+                let diffX = diffPos.x / this.boardZoom.k,
+                    diffY = diffPos.y / this.boardZoom.k
+                // update startCoord
+                this.draggingStates = {
+                    ...this.draggingStates,
+                    isDragging: true,
+                    startCoord: { x: e.clientX, y: e.clientY },
+                }
+
+                //  graph is reverted, so minus offset
+                if (this.revertDrag) {
+                    diffX = -diffX
+                    diffY = -diffY
+                }
+                const coord = this.nodeCoordMap[draggingNodeId]
+                this.$set(this.nodeCoordMap, draggingNodeId, {
+                    x: coord.x + diffX,
+                    y: coord.y + diffY,
+                })
+                this.$emit('drag', { e, node, diffX, diffY })
+            }
         },
         dragEnd(param) {
             this.$emit('drag-end', param)
             this.rmMouseUpEvt()
+            this.setDefDraggingStates()
         },
     },
 }
