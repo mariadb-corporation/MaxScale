@@ -841,7 +841,6 @@ bool link_target_to_objects(const std::string& target, StringSet& relations)
 
     if (!runtime_link_target({target}, relations))
     {
-        runtime_unlink_target({target}, relations);
         rval = false;
     }
 
@@ -987,7 +986,6 @@ bool link_object_to_targets(const std::string& target, StringSet& relations)
 
     if (!runtime_link_target(relations, {target}))
     {
-        runtime_unlink_target(relations, {target});
         rval = false;
     }
 
