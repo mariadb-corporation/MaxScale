@@ -115,4 +115,6 @@ class GaleraServer : public mxs::MonitorServer
 {
 public:
     GaleraServer(SERVER* server, const SharedSettings& shared);
+
+    void report_query_error();
 };

@@ -75,7 +75,7 @@ static bool warn_erange_on_local_index = true;
 static GaleraServer* set_cluster_master(GaleraServer*, GaleraServer*, int);
 static int           compare_node_index(const void*, const void*);
 static int           compare_node_priority(const void*, const void*);
-static bool          using_xtrabackup(MonitorServer* database, const char* server_string);
+static bool          using_xtrabackup(GaleraServer* database, const char* server_string);
 
 GaleraMonitor::Config::Config(const std::string& name, GaleraMonitor* monitor)
     : mxs::config::Configuration(name, &s_spec)
@@ -204,7 +204,7 @@ bool GaleraMonitor::post_configure()
     return true;
 }
 
-void get_gtid(MonitorServer* srv, GaleraNode* info)
+void get_gtid(GaleraServer* srv, GaleraNode* info)
 {
     if (mxs_mysql_query(srv->con,
                         "SELECT @@gtid_current_pos, @@gtid_binlog_pos, @@read_only, @@server_id") == 0)
@@ -224,7 +224,7 @@ void get_gtid(MonitorServer* srv, GaleraNode* info)
     }
 }
 
-void get_slave_status(MonitorServer* srv, GaleraNode* info)
+void get_slave_status(GaleraServer* srv, GaleraNode* info)
 {
     if (mxs_mysql_query(srv->con, "SHOW SLAVE STATUS") == 0)
     {
@@ -240,8 +240,9 @@ void get_slave_status(MonitorServer* srv, GaleraNode* info)
     }
 }
 
-void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
+void GaleraMonitor::update_server_status(MonitorServer* mon_server)
 {
+    auto monitored_server = static_cast<GaleraServer*>(mon_server);
     MYSQL_ROW row;
     MYSQL_RES* result;
 
@@ -390,7 +391,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
         }
         else
         {
-            monitored_server->mon_report_query_error();
+            monitored_server->report_query_error();
             return;
         }
     }
@@ -534,7 +535,7 @@ void GaleraMonitor::post_tick()
     }
 }
 
-static bool using_xtrabackup(MonitorServer* database, const char* server_string)
+static bool using_xtrabackup(GaleraServer* database, const char* server_string)
 {
     bool rval = false;
     MYSQL_RES* result;
@@ -567,7 +568,7 @@ static bool using_xtrabackup(MonitorServer* database, const char* server_string)
     }
     else
     {
-        database->mon_report_query_error();
+        database->report_query_error();
     }
 
     return rval;
@@ -711,7 +712,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     }
 
     unsigned int found_slaves = 0;
-    MonitorServer* node_list[is_cluster - 1];
+    GaleraServer* node_list[is_cluster - 1];
     /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
 
     char* donor_list = static_cast<char*>(MXB_CALLOC(1,
@@ -732,7 +733,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     {
         if ((ptr->has_status(SERVER_JOINED | SERVER_SLAVE)))
         {
-            node_list[found_slaves] = (MonitorServer*)ptr;
+            node_list[found_slaves] = ptr;
             found_slaves++;
 
             /* Check the server parameter "priority"
@@ -753,13 +754,13 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     /* Sort the array */
     qsort(node_list,
           found_slaves,
-          sizeof(MonitorServer*),
+          sizeof(GaleraServer*),
           sort_order ? compare_node_priority : compare_node_index);
 
     /* Select nodename from each server and append it to node_list */
     for (unsigned int k = 0; k < found_slaves; k++)
     {
-        MonitorServer* ptr = node_list[k];
+        auto* ptr = node_list[k];
 
         /* Get the Galera node name */
         if (mxs_mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
@@ -783,7 +784,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
         }
         else
         {
-            ptr->mon_report_query_error();
+            ptr->report_query_error();
         }
     }
 
@@ -798,10 +799,10 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     /* Set now rep_sst_donor in each slave node */
     for (unsigned int k = 0; k < found_slaves; k++)
     {
-        MonitorServer* ptr = node_list[k];
+        auto* ptr = node_list[k];
         if (mxs_mysql_query(ptr->con, donor_list) != 0)
         {
-            ptr->mon_report_query_error();
+            ptr->report_query_error();
         }
     }
 
@@ -851,8 +852,8 @@ static int compare_node_index(const void* a, const void* b)
 
 static int compare_node_priority(const void* a, const void* b)
 {
-    const MonitorServer* s_a = *(MonitorServer* const*)a;
-    const MonitorServer* s_b = *(MonitorServer* const*)b;
+    auto s_a = *(GaleraServer* const*)a;
+    auto s_b = *(GaleraServer* const*)b;
     int pri_val_a = s_a->server->priority();
     int pri_val_b = s_b->server->priority();
     bool have_a = pri_val_a > 0;
@@ -995,4 +996,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 GaleraServer::GaleraServer(SERVER* server, const MonitorServer::SharedSettings& shared)
     : MonitorServer(server, shared)
 {
+}
+
+void GaleraServer::report_query_error()
+{
+    MXB_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
+              server->name(), server->address(), server->port(), mysql_error(con));
 }

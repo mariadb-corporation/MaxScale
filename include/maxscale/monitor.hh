@@ -230,11 +230,6 @@ public:
     void        log_connect_error(ConnectResult rval);
 
     /**
-     * Report query error to log.
-     */
-    void mon_report_query_error();
-
-    /**
      * Try run query, log errors.
      */
     void test_permissions(const std::string& query);

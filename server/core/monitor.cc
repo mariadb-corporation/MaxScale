@@ -1485,15 +1485,6 @@ void Monitor::hangup_failed_servers()
     }
 }
 
-void MonitorServer::mon_report_query_error()
-{
-    MXB_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
-              server->name(),
-              server->address(),
-              server->port(),
-              mysql_error(con));
-}
-
 void Monitor::check_maintenance_requests()
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
