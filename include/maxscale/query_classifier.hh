@@ -133,12 +133,6 @@ public:
  *
  * @see qc_process_init qc_thread_init
  */
-// TODO: To be removed.
-QUERY_CLASSIFIER* qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
-                           qc_sql_mode_t sql_mode,
-                           const char* plugin_name,
-                           const char* plugin_args);
-
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties);
 
 /**
