@@ -56,6 +56,7 @@ add_library(maxscale-common SHARED
   ssl.cc
   target.cc
   test.cc
+  testparser.cc
   threadpool.cc
   users.cc
   utils.cc
