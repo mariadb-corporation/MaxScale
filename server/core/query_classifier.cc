@@ -59,49 +59,6 @@ const char CN_PARSE_RESULT[] = "parse_result";
 const char CN_TYPE_MASK[] = "type_mask";
 const char CN_CANONICAL[] = "canonical";
 
-class ThisUnit
-{
-public:
-    ThisUnit()
-        : classifier(nullptr)
-    {
-    }
-
-    ThisUnit(const ThisUnit&) = delete;
-    ThisUnit& operator=(const ThisUnit&) = delete;
-
-    QUERY_CLASSIFIER* classifier;
-};
-
-static ThisUnit this_unit;
-
-}
-
-
-bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties)
-{
-    QC_TRACE();
-    mxb_assert(!this_unit.classifier);
-
-    int64_t cache_max_size = (cache_properties ? cache_properties->max_size : 0);
-    mxb_assert(cache_max_size >= 0);
-
-    if (cache_max_size)
-    {
-        // Config::n_threads as MaxScale is not yet running.
-        int64_t size_per_thr = cache_max_size / mxs::Config::get().n_threads;
-        MXB_NOTICE("Query classification results are cached and reused. "
-                   "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
-    }
-    else
-    {
-        MXB_NOTICE("Query classification results are not cached.");
-    }
-
-    QC_CACHE_PROPERTIES properties;
-    properties.max_size = cache_max_size;
-
-    return mxs::CachingParser::set_properties(properties);
 }
 
 bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)

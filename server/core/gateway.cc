@@ -1933,9 +1933,17 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!qc_setup(&cnf.qc_cache_properties))
+    if (cnf.qc_cache_properties.max_size)
     {
-        MXB_ALERT("Failed to initialise query classifier library.");
+        // Config::n_threads as MaxScale is not yet running.
+        int64_t size_per_thr = cnf.qc_cache_properties.max_size / mxs::Config::get().n_threads;
+        MXB_NOTICE("Query classification results are cached and reused. "
+                   "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
+    }
+
+    if (!mxs::CachingParser::set_properties(cnf.qc_cache_properties))
+    {
+        MXB_ALERT("Could not set properties of the query classifier.");
         rc = MAXSCALE_INTERNALERROR;
         return rc;
     }
