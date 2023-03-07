@@ -58,6 +58,63 @@ void check_contents(TestConnections& test, const std::string& file,
     }
 }
 
+void test_user_matching(TestConnections& test)
+{
+    test.check_maxctrl("alter filter QLA "
+                       "log_type=unified filebase=/tmp/qla.log.user_match  use_canonical_form=false "
+                       "user_match=/bob/ user_exclude=/bobby/ log_data=query");
+
+    test.maxscale->restart();
+
+    query(test, {"CREATE USER 'alice' IDENTIFIED BY 'alice'", "GRANT ALL ON *.* TO 'alice'",
+                 "CREATE USER 'bob' IDENTIFIED BY 'bob'", "GRANT ALL ON *.* TO 'bob'",
+                 "CREATE USER 'bobby' IDENTIFIED BY 'bobby'", "GRANT ALL ON *.* TO 'bobby'"});
+
+    auto c = test.maxscale->rwsplit();
+
+    // Do the query first with the excluded user, this way if it ends up matching it'll be detected
+    c.set_credentials("bobby", "bobby");
+    test.expect(c.connect() && c.query("SELECT 'bobby'"), "Query with 'bobby' should work: %s", c.error());
+
+    c.set_credentials("alice", "alice");
+    test.expect(c.connect() && c.query("SELECT 'alice'"), "Query with 'alice' should work: %s", c.error());
+
+    c.set_credentials("bob", "bob");
+    test.expect(c.connect() && c.query("SELECT 'bob'"), "Query with 'bob' should work: %s", c.error());
+
+    check_contents(test, "/tmp/qla.log.user_match.unified", {
+        {1, 0, "SELECT 'bob'"}
+    });
+
+    query(test, {"DROP USER 'bob'", "DROP USER 'bobby'"});
+}
+
+void test_source_matching(TestConnections& test)
+{
+    auto run_query = [&](int node, int value){
+        test.repl->ssh_node_f(node, true, "mysql -u maxskysql -pskysql -h %s -P 4006 -e \"SELECT %d\"",
+                              test.maxscale->ip(), value);
+    };
+
+    auto match = mxb::cat("source_match=/(", test.repl->ip(0), ")|(", test.repl->ip(1), ")/");
+    auto exclude = mxb::cat("source_exclude=/", test.repl->ip(0), "/");
+
+    test.check_maxctrl("alter filter QLA log_data=query log_type=unified filebase=/tmp/qla.log.source_match "
+                       "user_match=\"\" user_exclude=\"\" use_canonical_form=false "
+                       "\"" + match + "\" \"" + exclude + "\"");
+
+    test.maxscale->restart();
+
+    for (int i = 0; i < test.repl->N; i++)
+    {
+        run_query(i, i);
+    }
+
+    check_contents(test, "/tmp/qla.log.source_match.unified", {
+        {1, 0, "SELECT 1"}
+    });
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -131,6 +188,11 @@ int main(int argc, char** argv)
         test.add_failure("Failed to parse reply time: %s", e.what());
     }
 
+    test.log_printf("Test user_match and user_exclude");
+    test_user_matching(test);
+
+    test.log_printf("Test source_match and source_exclude");
+    test_source_matching(test);
 
     // Removes the files that were created
     test.maxscale->stop();
