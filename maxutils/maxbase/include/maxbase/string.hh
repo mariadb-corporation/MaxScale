@@ -465,12 +465,12 @@ inline const char* consume_comment(const char* read_ptr, const char* read_end)
     }
     else if (regular_comment)
     {
-        ++read_ptr;
-        while (++read_ptr < read_end)
+        read_ptr += 2;
+        for (; read_ptr != read_end; ++read_ptr)
         {
-            if (*read_ptr == '*' && read_ptr + 1 != read_end && *++read_ptr == '/')
+            if (*read_ptr == '*' && read_ptr + 1 != read_end && *(read_ptr + 1) == '/')
             {
-                ++read_ptr;
+                read_ptr += 2;
                 break;
             }
         }
