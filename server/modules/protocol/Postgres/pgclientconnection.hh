@@ -41,6 +41,21 @@ public:
     size_t sizeof_buffers() const override;
 
 private:
+    enum class State
+    {
+        INIT,          // Expecting either SSL request or Startup msg
+        SSL_HANDSHAKE, // State if SSL was requested
+        AUTH,          // Authentication (not entered if method is trust)
+        ROUTE,         // Entered after Startup msg reply has been sent
+        ERROR
+    };
+
+    State state_init(const GWBUF& gwbuf);
+    State state_ssl_handshake(const GWBUF& gwbuf);
+    State state_auth(const GWBUF& gwbuf);
+    State state_route(GWBUF&& gwbuf);
+
+    State           m_state = State::INIT;
     MXS_SESSION*    m_session;
     mxs::Component* m_down;
 };
