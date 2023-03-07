@@ -16,26 +16,33 @@
 
 namespace postgres
 {
-std::tuple<bool, GWBUF> read_packet(DCB* dcb)
+std::tuple<bool, GWBUF> read_packet(DCB* dcb, ExpectCmdByte expect_cmd_byte)
 {
-    auto res = dcb->read(HEADER_LEN, 0);
+    size_t len_offset = expect_cmd_byte == ExpectCmdByte::YES ? 1 : 0;
+    size_t min_bytes = expect_cmd_byte == ExpectCmdByte::YES ? HEADER_LEN : HEADER_LEN - 1;
+
+    auto res = dcb->read(min_bytes, 0);
     auto& [ok, buf] = res;
 
     if (ok && buf)
     {
-        uint32_t len = get_uint32(buf.data() + 1);
+        uint32_t len = get_uint32(buf.data() + len_offset);
+        if (expect_cmd_byte == ExpectCmdByte::YES)
+        {
+            len += 1;
+        }
 
-        if (buf.length() < len + 1)
+        if (buf.length() < len)
         {
             // Incomplete packet, put it back in the buffer
             // TODO: The packets can be very big. Figure out how to deal with very large packets.
             dcb->unread(std::move(buf));
             buf.clear();
         }
-        else if (buf.length() > len + 1)
+        else if (buf.length() > len)
         {
             // Too much data. Put the remaining back into the DCB.
-            GWBUF tmp = buf.split(len + 1);
+            GWBUF tmp = buf.split(len);
             dcb->unread(std::move(buf));
             buf = std::move(tmp);
         }

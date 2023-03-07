@@ -229,6 +229,12 @@ static inline size_t set_string(uint8_t* ptr, std::string_view str)
     return str.size() + 1;
 }
 
+enum ExpectCmdByte
+{
+    YES,
+    NO
+};
+
 /**
  * Reads a complete packet from the socket
  *
@@ -237,7 +243,7 @@ static inline size_t set_string(uint8_t* ptr, std::string_view str)
  * @return True if the read was successful, false if an error occurred. If a complete packet was available,
  *         the buffer will contain it. If no complete packets are available an empty buffer is returned.
  */
-std::tuple<bool, GWBUF> read_packet(DCB* dcb);
+std::tuple<bool, GWBUF> read_packet(DCB* dcb, ExpectCmdByte expect_cmd_byte = ExpectCmdByte::YES);
 
 /**
  * Formats ErrorResponse or NoticeResponse messages into human-readable errors
