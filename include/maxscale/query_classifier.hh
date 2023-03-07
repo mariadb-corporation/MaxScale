@@ -139,13 +139,6 @@ QUERY_CLASSIFIER* qc_load(const char* plugin_name);
 void qc_unload(QUERY_CLASSIFIER* classifier);
 
 /**
- * Get cache statistics for the calling thread.
- *
- * @return An object if caching is enabled, NULL otherwise.
- */
-json_t* qc_get_cache_stats_as_json();
-
-/**
  * Common query classifier properties as JSON.
  *
  * @param zHost  The MaxScale host.
