@@ -77,59 +77,6 @@ static ThisUnit this_unit;
 
 }
 
-// TODO: To be removed. Only needed by qc_init below.
-QUERY_CLASSIFIER* qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
-                           qc_sql_mode_t sql_mode,
-                           const char* plugin_name,
-                           const char* plugin_args)
-{
-    QC_TRACE();
-    mxb_assert(!this_unit.classifier);
-
-    if (!plugin_name || (*plugin_name == 0))
-    {
-        MXB_NOTICE("No query classifier specified, using default '%s'.", DEFAULT_QC_NAME);
-        plugin_name = DEFAULT_QC_NAME;
-    }
-
-    int32_t rv = QC_RESULT_ERROR;
-    this_unit.classifier = qc_load(plugin_name);
-
-    if (this_unit.classifier)
-    {
-        rv = this_unit.classifier->setup(sql_mode, plugin_args);
-
-        if (rv == QC_RESULT_OK)
-        {
-            int64_t cache_max_size = (cache_properties ? cache_properties->max_size : 0);
-            mxb_assert(cache_max_size >= 0);
-
-            if (cache_max_size)
-            {
-                // Config::n_threads as MaxScale is not yet running.
-                int64_t size_per_thr = cache_max_size / mxs::Config::get().n_threads;
-                MXB_NOTICE("Query classification results are cached and reused. "
-                           "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
-            }
-            else
-            {
-                MXB_NOTICE("Query classification results are not cached.");
-            }
-
-            QC_CACHE_PROPERTIES properties;
-            properties.max_size = cache_max_size;
-
-            mxs::CachingParser::set_properties(properties);
-        }
-        else
-        {
-            qc_unload(this_unit.classifier);
-            this_unit.classifier = nullptr;
-        }
-    }
-
-    return this_unit.classifier;
-}
 
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties)
 {
