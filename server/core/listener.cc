@@ -1356,8 +1356,10 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
 
     auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(m_config.protocol->module_object);
     SProtocolModule protocol_module(protocol_api->create_protocol_module(m_name, this));
+    auto svc = static_cast<Service*>(m_config.service);
 
-    if (protocol_module && protocol_module->getConfiguration().configure(protocol_params))
+    if (protocol_module && svc->protocol_is_compatible(*protocol_module)
+        && protocol_module->getConfiguration().configure(protocol_params))
     {
         // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
         mxs::SSLContext ssl;

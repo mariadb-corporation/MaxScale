@@ -269,6 +269,11 @@ public:
     virtual uint64_t capabilities() const = 0;
 
     /**
+     * Get the protocols supported by this target
+     */
+    virtual const std::set<std::string>& protocols() const = 0;
+
+    /**
      * Get a connection handle to this target
      */
     virtual std::unique_ptr<Endpoint> get_connection(Component* up, MXS_SESSION* session) = 0;

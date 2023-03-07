@@ -317,7 +317,7 @@ bool link_service(Service* service, const StringSet& children)
         }
         else if (auto other = Service::find(child))
         {
-            if (check_link_target(service, other))
+            if (check_link_target(service, other) && service->protocol_is_compatible(other))
             {
                 service->add_target(other);
             }

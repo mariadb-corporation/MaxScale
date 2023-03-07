@@ -310,6 +310,8 @@ public:
 
     mxs::config::Configuration& configuration() override;
 
+    const std::set<std::string>& protocols() const override;
+
 private:
     bool create_server_config(const char* filename) const;
 

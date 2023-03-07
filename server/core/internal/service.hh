@@ -287,6 +287,11 @@ public:
      */
     void check_server_dependencies(const std::set<std::string>& parameters);
 
+    const std::set<std::string>& protocols() const override;
+
+    bool protocol_is_compatible(Service* other) const;
+    bool protocol_is_compatible(const mxs::ProtocolModule& module) const;
+
 private:
     void init_for(mxs::RoutingWorker* pWorker) override final;
     void finish_for(mxs::RoutingWorker* pWorker) override final;
@@ -351,6 +356,7 @@ private:
     mxs::Monitor*           m_monitor {nullptr};    /**< A possibly associated monitor */
     std::vector<Service*>   m_parents;
     std::atomic<int>        m_log_level {0};        /**< Enabled log levels for this service*/
+    std::set<std::string>   m_protocols;
 
     // User account manager. Can only be set once.
     SAccountManager m_usermanager;

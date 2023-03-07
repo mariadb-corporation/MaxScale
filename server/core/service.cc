@@ -318,6 +318,34 @@ bool ServiceSpec::do_post_validate(Params& params) const
 
     return ok;
 }
+
+std::set<std::string> merge_protocols(const std::set<std::string>& lhs, const std::set<std::string>& rhs)
+{
+    if (lhs.count(MXS_ANY_PROTOCOL))
+    {
+        return rhs;
+    }
+    else if (rhs.count(MXS_ANY_PROTOCOL))
+    {
+        return lhs;
+    }
+
+    std::set<std::string> intersection;
+    std::set_intersection(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+                          std::inserter(intersection, intersection.begin()));
+    return intersection;
+}
+
+std::set<std::string> get_target_protocols(std::set<std::string>protocols,
+                                           const std::vector<mxs::Target*>& targets)
+{
+    for (mxs::Target* t : targets)
+    {
+        protocols = merge_protocols(protocols, get_target_protocols(t->protocols(), t->get_children()));
+    }
+
+    return protocols;
+}
 }
 
 // static
@@ -367,6 +395,17 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
     auto cluster = s_cluster.get(params);
     auto filters = s_filters.get(params);
 
+    if (!service->set_filters(filters))
+    {
+        service->state = State::FAILED;
+        return nullptr;
+    }
+
+    // The set of supported protocols is calculated in set_filters()
+    mxb_assert(!service->m_protocols.empty());
+
+    auto ours = service->protocols();
+
     // The values for the various target types and filters are only read from the configuration object when
     // the service is created. At runtime, the servers are added individually via add_target().
     if (!servers.empty())
@@ -388,7 +427,21 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
             }
             else if (auto s = Service::find(mxb::trimmed_copy(a)))
             {
-                service->add_target(s);
+                auto theirs = get_target_protocols(s->m_protocols, s->m_data->targets);
+                auto combined = merge_protocols(ours, theirs);
+
+                if (combined.empty())
+                {
+                    MXB_ERROR("Protocol mismatch: service '%s' supports '%s' but service '%s' requires '%s'.",
+                              service->name(), mxb::join(ours).c_str(), s->name(), mxb::join(theirs).c_str());
+                    service->state = State::FAILED;
+                    return nullptr;
+                }
+                else
+                {
+                    service->add_target(s);
+                    ours = std::move(combined);
+                }
             }
             else
             {
@@ -404,12 +457,6 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
     }
 
     service->targets_updated();
-
-    if (!filters.empty())
-    {
-        MXB_AT_DEBUG(bool ok = ) service->set_filters(filters);
-        mxb_assert(ok);
-    }
 
     // Configure the router as the last step. This makes sure that whenever a router is configured, the
     // service has already been fully configured with a valid configuration. Mostly this helps with cases
@@ -793,7 +840,8 @@ bool Service::set_filters(const std::vector<std::string>& filters)
 {
     bool rval = true;
     std::vector<SFilterDef> flist;
-    uint64_t my_capabilities = 0;
+    uint64_t my_capabilities = m_router->getCapabilities();
+    auto protocols = m_router->protocols();
 
     for (auto f : filters)
     {
@@ -801,6 +849,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
 
         if (auto def = filter_find(f.c_str()))
         {
+            protocols = merge_protocols(protocols, def->instance()->protocols());
             flist.push_back(def);
             my_capabilities |= def->capabilities();
         }
@@ -811,11 +860,19 @@ bool Service::set_filters(const std::vector<std::string>& filters)
         }
     }
 
+    if (protocols.empty())
+    {
+        MXB_ERROR("Filter list '%s' is not compatible with service '%s'",
+                  mxb::join(filters, "|").c_str(), name());
+        rval = false;
+    }
+
     if (rval)
     {
         m_data->filters = flist;
         m_data.assign(*m_data);
-        m_capabilities |= my_capabilities;
+        m_capabilities = my_capabilities;
+        m_protocols = std::move(protocols);
     }
 
     return rval;
@@ -1736,6 +1793,49 @@ void Service::targets_updated()
     }
 }
 
+bool Service::protocol_is_compatible(Service* other) const
+{
+    auto ours = get_target_protocols(m_protocols, m_data->targets);
+    auto theirs = get_target_protocols(other->m_protocols, other->m_data->targets);
+    bool ok = !merge_protocols(ours, theirs).empty();
+
+    if (ok)
+    {
+        for (Service* parent : m_parents)
+        {
+            if (parent->protocol_is_compatible(other))
+            {
+                MXB_ERROR("Protocol mismatch: service '%s' which uses "
+                          "service '%s' is not compatible with service '%s'.",
+                          parent->name(), name(), other->name());
+                ok = false;
+            }
+        }
+    }
+    else
+    {
+        MXB_ERROR("Protocol mismatch: service '%s' supports '%s' but service '%s' requires '%s'.",
+                  name(), mxb::join(ours).c_str(), other->name(), mxb::join(theirs).c_str());
+    }
+
+    return ok;
+}
+
+bool Service::protocol_is_compatible(const mxs::ProtocolModule& module) const
+{
+    auto protocol = module.protocol_name();
+    auto ours = get_target_protocols(m_protocols, m_data->targets);
+    bool ok = ours.count(protocol) || ours.count(MXS_ANY_PROTOCOL);
+
+    if (!ok)
+    {
+        MXB_ERROR("Protocol mismatch: cannot use '%s' with service '%s' which requires '%s'.",
+                  protocol.c_str(), name(), mxb::join(ours).c_str());
+    }
+
+    return ok;
+}
+
 void Service::propagate_target_update()
 {
     targets_updated();
@@ -2259,4 +2359,9 @@ bool Service::post_configure()
     m_log_level.store(m_config.log_levels(), std::memory_order_relaxed);
 
     return true;
+}
+
+const std::set<std::string>& Service::protocols() const
+{
+    return m_protocols;
 }

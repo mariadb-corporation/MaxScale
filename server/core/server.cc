@@ -1388,3 +1388,9 @@ mxb::TimePoint ServerEndpoint::conn_wait_start() const
 {
     return m_conn_wait_start;
 }
+
+const std::set<std::string>& Server::protocols() const
+{
+    static std::set<std::string> any_protocol{MXS_ANY_PROTOCOL};
+    return any_protocol;
+}
