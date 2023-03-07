@@ -442,11 +442,16 @@ char* strnchr_esc_mariadb(const char* ptr, char c, int len);
  * @brief consume_comment - Starting at read_ptr skip sql comment, if it is a comment,
  *                          and return ptr to one past end of comment.
  * @param read_ptr        - Comment start.
- * @param read_end        - End of buffer
+ * @param read_end        - End of buffer.
+ * @param leave_executable_comments
+ *                        - If true, comments starting with "/.*!" or "/.*M" are not consumed
+ *                          (ignore the dot, this is a comment).
  * @return                - One past end of comment, or read_ptr if it was not a comment,
  *                          or read_end.
  */
-inline const char* consume_comment(const char* read_ptr, const char* read_end)
+inline const char* consume_comment(const char* read_ptr,
+                                   const char* read_end,
+                                   bool leave_executable_comments = false)
 {
     bool end_of_line_comment = *read_ptr == '#'
         || (*read_ptr == '-' && read_ptr + 1 != read_end && *(read_ptr + 1) == '-'
@@ -466,12 +471,21 @@ inline const char* consume_comment(const char* read_ptr, const char* read_end)
     else if (regular_comment)
     {
         read_ptr += 2;
-        for (; read_ptr != read_end; ++read_ptr)
+        if (leave_executable_comments
+            && read_ptr != read_end
+            && (*read_ptr == '!' || *read_ptr == 'M'))
         {
-            if (*read_ptr == '*' && read_ptr + 1 != read_end && *(read_ptr + 1) == '/')
+            read_ptr -= 2;
+        }
+        else
+        {
+            for (; read_ptr != read_end; ++read_ptr)
             {
-                read_ptr += 2;
-                break;
+                if (*read_ptr == '*' && read_ptr + 1 != read_end && *(read_ptr + 1) == '/')
+                {
+                    read_ptr += 2;
+                    break;
+                }
             }
         }
     }
