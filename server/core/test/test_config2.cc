@@ -365,6 +365,7 @@ int test_regex(config::Regex& value)
         {"^hello$",   true },
         {"/^hello$/", true },
         {"",          true },
+        {"//",        true },
         {"[",         false},
     };
 
@@ -378,6 +379,12 @@ int test_regex(config::Regex& value)
     pValue = const_cast<config::RegexValue*>(&entries[1].value);
     rv = param_regex.from_string(entries[1].zText, pValue);
     mxb_assert(rv);
+
+    config::RegexValue re;
+    config::RegexValue re_empty;
+    rv = param_regex.from_string("//", &re);
+    mxb_assert(rv);
+    mxb_assert(re.empty() == re_empty.empty());
 
     return test(value, entries, elements_in_array(entries));
 }
