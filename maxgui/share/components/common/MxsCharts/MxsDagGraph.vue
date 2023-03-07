@@ -8,38 +8,25 @@
         @get-zoom="zoom = $event"
     >
         <template v-slot:append="{ transform }">
-            <div class="node-div-wrapper" :style="{ transform }">
-                <div
-                    v-for="node in nodeDivData"
-                    ref="rectNode"
-                    :key="node.data.id"
-                    class="rect-node"
-                    :class="{
-                        move: draggable,
-                        'no-userSelect': draggingStates.isDragging,
-                    }"
-                    :node_id="node.data.id"
-                    :style="{
-                        top: `${node.y}px`,
-                        left: `${node.x}px`,
-                        ...revertGraphStyle,
-                        zIndex: draggingStates.draggingNodeId === node.data.id ? 4 : 3,
-                    }"
-                    v-on="
-                        draggable
-                            ? {
-                                  mousedown: e => onNodeDragStart({ e, node }),
-                                  mousemove: e => onNodeDragging({ e, node }),
-                              }
-                            : null
-                    "
-                >
+            <graph-nodes
+                ref="graphNodes"
+                :nodes="graphNodes"
+                :style="{ transform }"
+                :nodeStyle="revertGraphStyle"
+                :nodeClass="`${draggingStates.isDragging ? 'no-userSelect' : ''}`"
+                draggable
+                :draggingNodeId="draggingStates.draggingNodeId"
+                @drag-start="onNodeDragStart"
+                @drag="onNodeDrag"
+                @drag-end="onNodeDragEnd"
+            >
+                <template v-slot:default="{ node }">
                     <slot
-                        name="rect-node-content"
+                        name="graph-node-content"
                         :data="{ node, draw, isDragging: draggingStates.isDragging }"
                     />
-                </div>
-            </div>
+                </template>
+            </graph-nodes>
         </template>
     </graph-board>
 </template>
@@ -62,11 +49,13 @@ import { select as d3Select } from 'd3-selection'
 import * as d3d from 'd3-dag'
 import 'd3-transition'
 import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
+import GraphNodes from '@share/components/common/MxsCharts/GraphNodes.vue'
 
 export default {
     name: 'mxs-dag-graph',
     components: {
         'graph-board': GraphBoard,
+        'graph-nodes': GraphNodes,
     },
     props: {
         data: { type: Array, required: true },
@@ -83,7 +72,7 @@ export default {
             svgGroup: null,
             zoom: { x: 0, y: 0, k: 1 },
             dagDim: { width: 0, height: 0 },
-            nodeDivData: [],
+            graphNodes: [],
             defNodeHeight: 100,
             dynNodeHeightMap: {},
             arrowHeadHeight: 12,
@@ -126,12 +115,11 @@ export default {
             },
         },
     },
-    mounted() {
+    created() {
         if (this.draggable) this.setDefDraggingStates()
-        if (this.data.length) this.draw()
     },
-    beforeDestroy() {
-        if (this.draggable) this.rmMouseUpEvt()
+    mounted() {
+        if (this.data.length) this.draw()
     },
     methods: {
         setDefDraggingStates() {
@@ -169,7 +157,7 @@ export default {
             this.repositioning()
         },
         render() {
-            this.renderNodeDivs(this.dag.descendants())
+            this.renderGraphNodes(this.dag.descendants())
             this.drawLinks(this.dag.links())
         },
         /**
@@ -184,9 +172,7 @@ export default {
             return this.defNodeSize
         },
         computeDynNodeHeight() {
-            const rectNode = this.$typy(this.$refs, 'rectNode').safeArray
-            let heightMap = {}
-            rectNode.forEach(node => (heightMap[node.getAttribute('node_id')] = node.clientHeight))
+            const heightMap = this.$typy(this.$refs, 'graphNodes.getHeightMap').safeFunction()
             if (!this.$helpers.lodash.isEqual(this.dynNodeHeightMap, heightMap))
                 this.dynNodeHeightMap = heightMap
         },
@@ -343,8 +329,8 @@ export default {
             let { targetX, targetY, angle } = this.getObtusePoints(data)
             return `translate(${targetX}, ${targetY}) rotate(${angle})`
         },
-        renderNodeDivs(nodes) {
-            this.nodeDivData = nodes
+        renderGraphNodes(nodes) {
+            this.graphNodes = nodes
             // compute node height after nodes are rendered
             if (this.dynNodeHeight) this.$helpers.doubleRAF(() => this.computeDynNodeHeight())
         },
@@ -464,20 +450,6 @@ export default {
                 )
         },
         //-------------------------draggable methods---------------------------
-        addMouseUpEvt() {
-            document.addEventListener('mouseup', this.onNodeDragEnd)
-        },
-        rmMouseUpEvt() {
-            document.removeEventListener('mouseup', this.onNodeDragEnd)
-        },
-        onNodeDragStart({ e, node }) {
-            this.draggingStates = {
-                ...this.draggingStates,
-                draggingNodeId: node.data.id,
-                startPos: { x: e.clientX, y: e.clientY },
-            }
-            this.addMouseUpEvt()
-        },
         /**
          * This helps to turn the dashed link to solid while dragging and vice versa.
          * @param {Object} param.link - child link or parent link of a node
@@ -497,7 +469,14 @@ export default {
                 .select('path.link_line')
                 .attr('stroke-dasharray', isDragging ? null : '5')
         },
-        onNodeDragging({ e, node }) {
+        onNodeDragStart({ e, node }) {
+            this.draggingStates = {
+                ...this.draggingStates,
+                draggingNodeId: node.data.id,
+                startPos: { x: e.clientX, y: e.clientY },
+            }
+        },
+        onNodeDrag({ e, node }) {
             e.preventDefault()
             const { startPos, draggingNodeId } = this.draggingStates
             if (startPos && draggingNodeId === node.data.id) {
@@ -558,24 +537,7 @@ export default {
                 this.changeLinkGroupStyle({ link, isDragging: false })
             }
             this.setDefDraggingStates()
-            this.rmMouseUpEvt()
         },
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.mxs-dag-graph-container {
-    .node-div-wrapper {
-        top: 0;
-        height: 0;
-        width: 0;
-        position: absolute;
-        z-index: 3;
-        .rect-node {
-            position: absolute;
-            background: transparent;
-        }
-    }
-}
-</style>

@@ -13,7 +13,7 @@
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
             >
-                <template v-slot:rect-node-content="{ data: { node, draw, isDragging } }">
+                <template v-slot:graph-node-content="{ data: { node, draw, isDragging } }">
                     <conf-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :class="{ 'no-pointerEvent': isDragging }"
