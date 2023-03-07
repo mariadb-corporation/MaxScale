@@ -17,6 +17,7 @@
 #include "../canonical_impl.hh"
 #include "simd256.hh"
 #include <maxbase/assert.h>
+#include <maxbase/string.hh>
 
 #include <array>
 #include <string>
@@ -394,58 +395,7 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
         }
         else if (lut(IS_COMMENT, *pMarker))
         {
-            // These hard to read conditionals are what one pays for branchless code. Unfortunately
-            // -1 is a popular number, so this code is hit before the above IS_DIGIT is.
-            bool end_of_line_comment = *read_ptr == '#'
-                || (*read_ptr == '-' && read_ptr + 1 != read_end && *(read_ptr + 1) == '-'
-                    && read_ptr + 2 != read_end && *(read_ptr + 2) == ' ');
-            bool regular_comment = *read_ptr == '/' && read_ptr + 1 != read_end && *(read_ptr + 1) == '*';
-
-            if (end_of_line_comment)
-            {
-                while (++read_ptr != read_end)
-                {
-                    if (*read_ptr == '\n')
-                    {
-                        break;
-                    }
-                    else if (*read_ptr == '\r' && ++read_ptr != read_end && *read_ptr == '\n')
-                    {
-                        ++read_ptr;
-                        break;
-                    }
-                }
-            }
-            else if (regular_comment)
-            {
-                ++read_ptr;
-                if (++read_ptr == read_end)
-                {
-                    break;
-                }
-                else if (*read_ptr != '!' && *read_ptr != 'M')
-                {
-                    while (++read_ptr != read_end)
-                    {
-                        if (*read_ptr == '*' && read_ptr + 1 != read_end && *++read_ptr == '/')
-                        {
-                            // end of comment
-                            ++read_ptr;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    read_ptr -= 2;
-                    // Executable comment, treat it as normal SQL
-                    *write_ptr++ = *read_ptr++;
-                }
-            }
-            else
-            {
-                // pass, not a comment, memmove will handle it
-            }
+            read_ptr = maxbase::consume_comment(read_ptr, read_end, true);
         }
         else if (*pMarker == '\\')
         {
