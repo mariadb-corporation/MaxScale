@@ -114,28 +114,6 @@ public:
 };
 
 /**
- * Loads and sets up the default query classifier.
- *
- * This must be called once during the execution of a process. The query
- * classifier functions can only be used if this function first and thereafter
- * the @c qc_process_init return true.
- *
- * MaxScale calls this function, so plugins should not do that.
- *
- * @param cache_properties  If non-NULL, specifies the properties of the QC cache.
- * @param sql_mode          The default sql mode.
- * @param plugin_name       The name of the plugin from which the query classifier
- *                          should be loaded.
- * @param plugin_args       The arguments to be provided to the query classifier.
- *
- * @return True if the query classifier could be loaded and initialized,
- *         false otherwise.
- *
- * @see qc_process_init qc_thread_init
- */
-bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties);
-
-/**
  * Loads a particular query classifier.
  *
  * In general there is no need to use this function, but rely upon qc_init().

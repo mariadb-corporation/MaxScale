@@ -126,7 +126,6 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     atexit(mxs_log_finish);
     std::string old_libdir = mxs::libdir();
     mxs::set_libdir(TEST_DIR "/query_classifier/qc_sqlite/");
-    qc_setup(NULL);
     maxbase::init();
     watchdog_notifier = new mxb::WatchdogNotifier(0);
     maxscale::RoutingWorker::init(watchdog_notifier);
