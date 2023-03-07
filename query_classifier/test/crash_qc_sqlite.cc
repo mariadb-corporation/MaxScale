@@ -17,8 +17,8 @@
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/testparser.hh>
 #include "../../server/core/internal/modules.hh"
 
 #define MYSQL_HEADER_LEN 4
@@ -42,39 +42,23 @@ GWBUF* create_gwbuf(const char* s, size_t len)
 
 int main()
 {
-    int rv = EXIT_FAILURE;
-
     maxbase::MaxBase init(MXB_LOG_TARGET_FS);
 
     mxs::set_libdir("../qc_sqlite");
 
-    QUERY_CLASSIFIER* pClassifier = qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
+    mxs::TestParser parser;
 
-    if (pClassifier)
-    {
-        MariaDBParser parser(pClassifier);
+    const char s[] = "SELECT @@global.max_allowed_packet";
 
-        const char s[] = "SELECT @@global.max_allowed_packet";
+    GWBUF* stmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
 
-        GWBUF* stmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
+    // In 2.0.1 this crashed due to is_submitted_query() in qc_sqlite.c
+    // being of the opinion that the statement was not the one to be
+    // classified and hence an alien parse-tree being passed to sqlite3's
+    // code generator.
+    parser.parse(stmt, QC_COLLECT_ALL);
 
-        // In 2.0.1 this crashed due to is_submitted_query() in qc_sqlite.c
-        // being of the opinion that the statement was not the one to be
-        // classified and hence an alien parse-tree being passed to sqlite3's
-        // code generator.
-        parser.parse(stmt, QC_COLLECT_ALL);
+    gwbuf_free(stmt);
 
-        pClassifier->thread_end();
-        mxs::CachingParser::thread_finish();
-
-        gwbuf_free(stmt);
-
-        rv = EXIT_SUCCESS;
-    }
-    else
-    {
-        fprintf(stderr, "error: Could not load query classifier.");
-    }
-
-    return rv;
+    return EXIT_SUCCESS;
 }
