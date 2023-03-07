@@ -16,8 +16,8 @@
 #include <algorithm>
 #include <iostream>
 #include <maxscale/paths.hh>
-#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/testparser.hh>
 #include <maxscale/query_classifier.hh>
 
 using namespace std;
@@ -453,43 +453,34 @@ int main(int argc, char* argv[])
         {
             mxs::set_libdir("../../../../../query_classifier/qc_sqlite");
 
-            // We have to setup something in order for the regexes to be compiled.
-            QUERY_CLASSIFIER* pClassifier = qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
-            if (pClassifier)
+            // TODO: The following line is due to MXS-4548, remove when that has been fixed.
+            mxs::CachingParser::set_thread_cache_enabled(false);
+
+            mxs::TestParser parser;
+            rc = EXIT_SUCCESS;
+
+            pParser = &parser;
+
+            if (test_target & TEST_QC)
             {
-                rc = EXIT_SUCCESS;
-
-                MariaDBParser parser(pClassifier);
-                pParser = &parser;
-
-                if (test_target & TEST_QC)
+                cout << "QC" << endl;
+                cout << "==" << endl;
+                if (!test(get_qc_trx_type_mask, dont_bail_out))
                 {
-                    cout << "QC" << endl;
-                    cout << "==" << endl;
-                    if (!test(get_qc_trx_type_mask, dont_bail_out))
-                    {
-                        rc = EXIT_FAILURE;
-                    }
-                    cout << endl;
+                    rc = EXIT_FAILURE;
                 }
-
-                if (test_target & TEST_PARSER)
-                {
-                    cout << "Parser" << endl;
-                    cout << "======" << endl;
-                    if (!test(get_parser_trx_type_mask, dont_bail_out))
-                    {
-                        rc = EXIT_FAILURE;
-                    }
-                    cout << endl;
-                }
-
-                pClassifier->thread_end();
-                mxs::CachingParser::thread_finish();
+                cout << endl;
             }
-            else
+
+            if (test_target & TEST_PARSER)
             {
-                cerr << "error: Could not initialize qc_sqlite." << endl;
+                cout << "Parser" << endl;
+                cout << "======" << endl;
+                if (!test(get_parser_trx_type_mask, dont_bail_out))
+                {
+                    rc = EXIT_FAILURE;
+                }
+                cout << endl;
             }
 
             mxs_log_finish();

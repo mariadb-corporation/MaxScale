@@ -20,8 +20,8 @@
 #include <maxscale/log.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/testparser.hh>
 
 using namespace std;
 
@@ -50,7 +50,7 @@ inline GWBUF* create_gwbuf(const char* z)
     return create_gwbuf(z, strlen(z));
 }
 
-int run(const char* zStatement, int n)
+int run(const mxs::Parser& parser, const char* zStatement, int n)
 {
     maxbase::Duration diff {};
 
@@ -59,7 +59,7 @@ int run(const char* zStatement, int n)
         GWBUF* pStatement = create_gwbuf(zStatement);
 
         maxbase::StopWatch sw;
-        int rc = MariaDBParser::get().parse(pStatement, QC_COLLECT_ALL);
+        int rc = parser.parse(pStatement, QC_COLLECT_ALL);
         diff += sw.split();
 
         gwbuf_free(pStatement);
@@ -128,19 +128,13 @@ int main(int argc, char* argv[])
                  << (pCache_properties ? "using " : "NOT using ")
                  << "the query classification cache." << endl;
 
-            if (qc_setup(pCache_properties, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL)
-                && qc_thread_init(QC_INIT_BOTH))
-            {
-                rv = run(zStatement, n);
+            mxs::TestParser parser;
 
-                if (rv != EXIT_SUCCESS)
-                {
-                    cerr << "error: Could not parse '" << zStatement << "'." << endl;
-                }
-            }
-            else
+            rv = run(parser, zStatement, n);
+
+            if (rv != EXIT_SUCCESS)
             {
-                cerr << "error: Could not initialize qc_sqlite." << endl;
+                cerr << "error: Could not parse '" << zStatement << "'." << endl;
             }
 
             mxs_log_finish();

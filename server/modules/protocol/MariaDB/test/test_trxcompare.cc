@@ -20,9 +20,8 @@
 #include <maxbase/alloc.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/testparser.hh>
 #include "../../../query_classifier/test/testreader.hh"
 
 using namespace std;
@@ -184,46 +183,34 @@ int main(int argc, char* argv[])
         {
             mxs::set_libdir("../../../../../query_classifier/qc_sqlite");
 
-            // We have to setup something in order for the regexes to be compiled.
-            QUERY_CLASSIFIER* pClassifier = qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
-            if (pClassifier)
+            mxs::TestParser parser;
+
+            Tester tester(parser, verbosity);
+
+            int n = argc - (optind - 1);
+
+            if (zStatement)
             {
-                MariaDBParser parser(pClassifier);
-
-                Tester tester(parser, verbosity);
-
-                int n = argc - (optind - 1);
-
-                if (zStatement)
-                {
-                    rc = tester.run(zStatement);
-                }
-                else if (n == 1)
-                {
-                    rc = tester.run(cin);
-                }
-                else
-                {
-                    mxb_assert(n == 2);
-
-                    ifstream in(argv[argc - 1]);
-
-                    if (in)
-                    {
-                        rc = tester.run(in);
-                    }
-                    else
-                    {
-                        cerr << "error: Could not open " << argv[argc - 1] << "." << endl;
-                    }
-                }
-
-                pClassifier->thread_end();
-                mxs::CachingParser::thread_finish();
+                rc = tester.run(zStatement);
+            }
+            else if (n == 1)
+            {
+                rc = tester.run(cin);
             }
             else
             {
-                cerr << "error: Could not initialize qc_sqlite." << endl;
+                mxb_assert(n == 2);
+
+                ifstream in(argv[argc - 1]);
+
+                if (in)
+                {
+                    rc = tester.run(in);
+                }
+                else
+                {
+                    cerr << "error: Could not open " << argv[argc - 1] << "." << endl;
+                }
             }
 
             mxs_log_finish();
