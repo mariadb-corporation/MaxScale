@@ -89,6 +89,14 @@ struct Filter
      * @return The configuration for the filter instance
      */
     virtual mxs::config::Configuration& getConfiguration() = 0;
+
+    /**
+     * Get the set of supported protocols
+     *
+     * @return The names of the protocols supported by this filter. If the filter is protocol-agnostic,
+     *         the constant MXS_ANY_PROTOCOL can be used.
+     */
+    virtual std::set<std::string> protocols() const = 0;
 };
 
 /**

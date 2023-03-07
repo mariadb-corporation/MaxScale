@@ -17,6 +17,7 @@
 #include <maxscale/hint.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 
 class HintSession;
 
@@ -28,6 +29,11 @@ public:
     json_t*                     diagnostics() const override;
     uint64_t                    getCapabilities() const override;
     mxs::config::Configuration& getConfiguration() override;
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
+    }
 
 private:
     HintInstance(const char* zName);

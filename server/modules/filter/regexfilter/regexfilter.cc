@@ -34,6 +34,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/session.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 
 #include <fstream>
 
@@ -159,6 +160,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
     const Config::Values& config() const

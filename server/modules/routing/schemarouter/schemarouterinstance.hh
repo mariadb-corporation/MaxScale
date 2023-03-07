@@ -21,6 +21,7 @@
 
 #include <maxscale/router.hh>
 #include <maxscale/pcre2.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 
 #include "schemaroutersession.hh"
 
@@ -43,6 +44,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
 private:

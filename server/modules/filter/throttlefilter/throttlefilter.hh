@@ -62,6 +62,11 @@ public:
     uint64_t                    getCapabilities() const override;
     mxs::config::Configuration& getConfiguration() override;
 
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_ANY_PROTOCOL};
+    }
+
     const ThrottleConfig& config() const;
     void                  sessionClose(ThrottleSession* session);
 private:

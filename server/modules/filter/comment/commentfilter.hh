@@ -15,6 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include "commentfiltersession.hh"
 #include <string>
 #include "commentconfig.hh"
@@ -46,6 +47,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
 private:

@@ -85,6 +85,11 @@ public:
      */
     mxs::config::Configuration& getConfiguration() override;
 
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_ANY_PROTOCOL};
+    }
+
     // Specific to ExampleFilter. Called by a session when it sees a query.
     void query_seen();
 

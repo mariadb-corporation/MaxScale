@@ -47,6 +47,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 
@@ -170,6 +171,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
 private:

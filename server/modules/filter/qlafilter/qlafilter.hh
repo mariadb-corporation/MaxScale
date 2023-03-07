@@ -24,6 +24,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxsimd/canonical.hh>
 
 class QlaFilterSession;
@@ -109,6 +110,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_settings;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
     uint64_t getCapabilities() const override;

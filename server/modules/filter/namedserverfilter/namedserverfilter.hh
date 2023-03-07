@@ -26,6 +26,7 @@
 #include <maxscale/pcre2.hh>
 #include <maxscale/hint.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 
 class RegexHintFilter;
 class RegexHintFSession;
@@ -63,6 +64,11 @@ public:
     json_t*                     diagnostics() const override;
     uint64_t                    getCapabilities() const override;
     mxs::config::Configuration& getConfiguration() override;
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
+    }
 
     bool post_configure();
 

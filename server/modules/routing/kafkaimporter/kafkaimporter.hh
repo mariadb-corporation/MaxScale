@@ -50,6 +50,11 @@ public:
         return CAPS;
     }
 
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_ANY_PROTOCOL};
+    }
+
     json_t* diagnostics() const override
     {
         return nullptr;

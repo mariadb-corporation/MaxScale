@@ -30,6 +30,11 @@ class Specification;
 }
 
 /**
+ * The protocol name used by protocol-agnostic modules
+ */
+#define MXS_ANY_PROTOCOL "any"
+
+/**
  * The status of the module. This gives some idea of the module maturity.
  */
 enum class ModuleStatus

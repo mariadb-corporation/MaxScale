@@ -27,6 +27,7 @@
 #include <maxscale/users.hh>
 #include <maxscale/router.hh>
 #include <maxscale/protocol/cdc/cdc.hh>
+#include <maxscale/protocol/cdc/module_names.hh>
 #include <maxavro.hh>
 #include <blr_constants.hh>
 
@@ -127,6 +128,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_CDC_PROTOCOL_NAME};
     }
 
     const AvroConfig& config() const

@@ -18,6 +18,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 
 
 class MaxRowsConfig : public mxs::config::Configuration
@@ -103,6 +104,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
     // Return reference to filter config

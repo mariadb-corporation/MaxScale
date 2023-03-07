@@ -16,6 +16,7 @@
 #include <maxscale/ccdefs.hh>
 #include <stdint.h>
 #include <vector>
+#include <set>
 #include <maxscale/routing.hh>
 #include <maxscale/target.hh>
 
@@ -76,7 +77,8 @@ public:
      * @return True if the session can continue, false if the session should be closed
      */
     virtual bool
-    handleError(mxs::ErrorType type, const std::string& message, mxs::Endpoint* pProblem, const mxs::Reply& reply);
+    handleError(mxs::ErrorType type, const std::string& message, mxs::Endpoint* pProblem,
+                const mxs::Reply& reply);
 
     /**
      * Called by the service when a ServerEndpoint connection has been released and placed to the pool.
@@ -132,8 +134,8 @@ protected:
      */
     void set_response(GWBUF&& response) const;
 
-    MXS_SESSION*   m_pSession; /*< The MXS_SESSION this router session is associated with. */
-    Parser*        m_pParser;  /*< The parser suitable the protocol of this router. */
+    MXS_SESSION* m_pSession;    /*< The MXS_SESSION this router session is associated with. */
+    Parser*      m_pParser;     /*< The parser suitable the protocol of this router. */
 
 private:
     mxs::Routable*  m_pUp;          // The next upstream routable
@@ -184,6 +186,14 @@ public:
      * @return The configuration for the router instance
      */
     virtual mxs::config::Configuration& getConfiguration() = 0;
+
+    /**
+     * Get the set of supported protocols
+     *
+     * @return The names of the protocols supported by this router. If the router is protocol-agnostic,
+     *         the constant MXS_ANY_PROTOCOL can be used.
+     */
+    virtual std::set<std::string> protocols() const = 0;
 };
 
 /**

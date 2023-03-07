@@ -33,6 +33,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
@@ -412,6 +413,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
     void update_max_sescmd_sz(uint64_t maybe_max);

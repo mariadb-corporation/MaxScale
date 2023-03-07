@@ -45,6 +45,11 @@ public:
         return m_config;
     }
 
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_ANY_PROTOCOL};
+    }
+
 private:
     NullFilter(const std::string& name);
 

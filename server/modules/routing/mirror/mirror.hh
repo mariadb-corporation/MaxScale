@@ -17,6 +17,7 @@
 
 #include <maxscale/router.hh>
 #include <maxscale/backend.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxbase/shared_mutex.hh>
 
 #include "exporter.hh"
@@ -46,6 +47,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
     const Config& config() const

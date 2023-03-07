@@ -26,6 +26,7 @@
 #include <maxscale/config2.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 
 #include <future>
 
@@ -78,6 +79,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
     SERVICE* service() const;

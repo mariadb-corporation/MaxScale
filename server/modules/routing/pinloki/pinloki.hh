@@ -22,6 +22,7 @@
 
 #include <maxbase/exception.hh>
 #include <maxscale/router.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 
 #include "writer.hh"
 #include "config.hh"
@@ -60,6 +61,11 @@ public:
     mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
+    }
+
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
     bool post_configure();

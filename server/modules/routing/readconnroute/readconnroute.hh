@@ -118,6 +118,11 @@ public:
         return m_config;
     }
 
+    std::set<std::string> protocols() const override
+    {
+        return {MXS_ANY_PROTOCOL};
+    }
+
     /**
      * @brief session_stats
      *
