@@ -104,58 +104,6 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties)
     return mxs::CachingParser::set_properties(properties);
 }
 
-bool qc_thread_init(uint32_t kind)
-{
-    QC_TRACE();
-
-    bool rc = false;
-
-    if (kind & QC_INIT_SELF)
-    {
-        mxs::CachingParser::thread_init();
-        rc = true;
-    }
-    else
-    {
-        rc = true;
-    }
-
-    if (rc)
-    {
-        if (kind & QC_INIT_PLUGIN)
-        {
-            mxb_assert(this_unit.classifier);
-            rc = this_unit.classifier->thread_init() == 0;
-        }
-
-        if (!rc)
-        {
-            if (kind & QC_INIT_SELF)
-            {
-                mxs::CachingParser::thread_finish();
-            }
-        }
-    }
-
-    return rc;
-}
-
-void qc_thread_end(uint32_t kind)
-{
-    QC_TRACE();
-
-    if (kind & QC_INIT_PLUGIN)
-    {
-        mxb_assert(this_unit.classifier);
-        this_unit.classifier->thread_end();
-    }
-
-    if (kind & QC_INIT_SELF)
-    {
-        mxs::CachingParser::thread_finish();
-    }
-}
-
 bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
 {
     QC_TRACE();
