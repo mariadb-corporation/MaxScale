@@ -83,8 +83,7 @@ private:
         {
             const char* args = "parse_as=10.3,log_unrecognized_statements=1";
 
-            if (pPlugin->setup(QC_SQL_MODE_DEFAULT, args) != QC_RESULT_OK
-                || pPlugin->thread_init() != QC_RESULT_OK)
+            if (!pPlugin->setup(QC_SQL_MODE_DEFAULT, args) || !pPlugin->thread_init())
             {
                 std::cerr << "error: Could not setup or init plugin " << name << "." << std::endl;
                 mxs::Parser::unload(pPlugin);
