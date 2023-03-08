@@ -47,6 +47,7 @@ public:
 
     qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override;
 
+    GWBUF            create_buffer(const std::string& statement) const override;
     std::string_view get_created_table_name(GWBUF* pStmt) const override;
     DatabaseNames    get_database_names(GWBUF* pStmt) const override;
     void             get_field_info(GWBUF* pStmt,

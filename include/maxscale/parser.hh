@@ -333,6 +333,7 @@ public:
 
     virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
 
+    virtual GWBUF            create_buffer(const std::string& statement) const = 0;
     virtual std::string_view get_created_table_name(GWBUF* pStmt) const = 0;
     virtual DatabaseNames    get_database_names(GWBUF* pStmt) const = 0;
     virtual void             get_field_info(GWBUF* pStmt,
