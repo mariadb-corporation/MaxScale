@@ -69,12 +69,12 @@ void PgBackendConnection::ready_for_reading(DCB* dcb)
             keep_going = handle_ssl_handshake();
             break;
 
-        case State::STARTUP:
-            keep_going = handle_startup();
-            break;
-
         case State::AUTH:
             keep_going = handle_auth();
+            break;
+
+        case State::STARTUP:
+            keep_going = handle_startup();
             break;
 
         case State::BACKLOG:
@@ -249,7 +249,7 @@ void PgBackendConnection::send_startup_message()
     // The parameters are a list of null-terminated strings that end with an empty string
     if (m_dcb->writeq_append(create_startup_message((uint8_t*)params, sizeof(params))))
     {
-        m_state = State::STARTUP;
+        m_state = State::AUTH;
     }
     else
     {
@@ -332,13 +332,9 @@ bool PgBackendConnection::handle_startup()
         switch (command)
         {
         case pg::AUTHENTICATION:
-            m_auth_method = pg::get_uint32(buf.data() + pg::HEADER_LEN);
-
-            if (m_auth_method != 0)
             {
-                // TODO: This is where we'd go into the AUTH state and start the authentication process.
-                handle_error(mxb::cat("Unsupported authentication mechanism: ",
-                                      std::to_string(m_auth_method)));
+                auto auth_method = pg::get_uint32(buf.data() + pg::HEADER_LEN);
+                handle_error(mxb::cat("Unexpected authentication message: ", std::to_string(auth_method)));
             }
             break;
 
@@ -378,8 +374,49 @@ bool PgBackendConnection::handle_startup()
 
 bool PgBackendConnection::handle_auth()
 {
-    handle_error("Not yet implemented");
-    return false;
+    if (auto [ok, buf] = pg::read_packet(m_dcb); ok)
+    {
+        if (!buf)
+        {
+            // Partial read, try again later
+            return false;
+        }
+
+        uint8_t command = buf[0];
+
+        switch (command)
+        {
+        case pg::AUTHENTICATION:
+            {
+                auto auth_method = pg::get_uint32(buf.data() + pg::HEADER_LEN);
+
+                if (auth_method == pg::AUTH_OK)
+                {
+                    m_state = State::STARTUP;
+                }
+                else
+                {
+                    handle_error(mxb::cat("Unsupported authentication mechanism: ",
+                                          std::to_string(auth_method)));
+                }
+            }
+            break;
+
+        case pg::ERROR_RESPONSE:
+            handle_error("Authentication failed: " + pg::format_response(buf), mxs::ErrorType::PERMANENT);
+            break;
+
+        default:
+            handle_error("Unknown command: " + std::to_string(command), mxs::ErrorType::PERMANENT);
+            break;
+        }
+    }
+    else
+    {
+        handle_error("Network read failed");
+    }
+
+    return true;
 }
 
 bool PgBackendConnection::handle_backlog()

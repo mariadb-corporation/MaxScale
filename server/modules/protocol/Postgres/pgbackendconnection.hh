@@ -53,8 +53,8 @@ private:
         INIT,
         SSL_REQUEST,
         SSL_HANDSHAKE,
-        STARTUP,
         AUTH,
+        STARTUP,
         BACKLOG,
         ROUTING,
         FAILED,
@@ -79,7 +79,6 @@ private:
     mxs::Reply      m_reply;
     State           m_state {State::INIT};
 
-    uint32_t m_auth_method {0};     // Authentication method
     uint32_t m_process_id {0};      // The process ID on the backend server
     uint32_t m_secret_key {0};      // Secret key for canceling requests
 
