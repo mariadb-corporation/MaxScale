@@ -49,12 +49,6 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
 {
     mxb_assert(m_dcb == dcb);
 
-    if (m_session->state() == MXS_SESSION::State::CREATED && !m_session->start())
-    {
-        // TODO Deal with this occasional timing issue
-        return;
-    }
-
     pg::ExpectCmdByte expect = m_state == State::INIT ? pg::ExpectCmdByte::NO : pg::ExpectCmdByte::YES;
 
     if (auto [ok, gwbuf] = pg::read_packet(m_dcb, expect); ok && gwbuf)
@@ -83,7 +77,6 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
         }
     }
 
-    // TODO check more states and such, kill session on error
     if (m_state == State::ERROR)
     {
         m_session->kill();
@@ -107,7 +100,15 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
         m_dcb->writeq_append(create_startup_reply(gwbuf));
         // TODO: are there more packets that should be read from the dcb
         //       before going to ROUTE or "normal" state.
-        next_state = State::ROUTE;
+        if (m_session->state() == MXS_SESSION::State::CREATED && m_session->start())
+        {
+            next_state = State::ROUTE;
+        }
+        else
+        {
+            MXB_ERROR("Could not start session, closing PG client connection.");
+            next_state = State::ERROR;
+        }
     }
 
     return next_state;
