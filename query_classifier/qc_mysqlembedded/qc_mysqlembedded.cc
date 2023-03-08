@@ -91,6 +91,17 @@ using mxb::sv_case_eq;
 #define WF_SUPPORTED
 #endif
 
+namespace
+{
+
+enum qc_result_t
+{
+    QC_RESULT_OK,
+    QC_RESULT_ERROR
+};
+
+}
+
 extern "C"
 {
 
