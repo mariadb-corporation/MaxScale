@@ -40,6 +40,9 @@ public:
     static std::unique_ptr<json_t> get_thread_cache_stats_as_json();
     static void                    set_thread_cache_enabled(bool enable);
 
+    static std::unique_ptr<json_t> content_as_resource(const char* zHost);
+
+
     QUERY_CLASSIFIER& classifier() const override;
 
     qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override;
