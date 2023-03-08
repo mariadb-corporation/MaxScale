@@ -229,6 +229,21 @@ void PgBackendConnection::handle_error(const std::string& error, mxs::ErrorType 
     m_state = State::FAILED;
 }
 
+bool PgBackendConnection::check_size(const GWBUF& buffer, size_t bytes)
+{
+    bool ok = buffer.length() >= bytes;
+
+    if (!ok)
+    {
+        std::ostringstream ss;
+        ss << "Malformed packet, expected at least " << bytes << " bytes but have only " << buffer.length();
+        handle_error(ss.str(), mxs::ErrorType::PERMANENT);
+        mxb_assert_message(!true, "Not enough bytes");
+    }
+
+    return ok;
+}
+
 void PgBackendConnection::send_ssl_request()
 {
     if (m_dcb->writeq_append(create_ssl_request()))
@@ -332,6 +347,7 @@ bool PgBackendConnection::handle_startup()
         switch (command)
         {
         case pg::AUTHENTICATION:
+            if (check_size(buf, pg::HEADER_LEN + 4))
             {
                 auto auth_method = pg::get_uint32(buf.data() + pg::HEADER_LEN);
                 handle_error(mxb::cat("Unexpected authentication message: ", std::to_string(auth_method)));
@@ -339,9 +355,12 @@ bool PgBackendConnection::handle_startup()
             break;
 
         case pg::BACKEND_KEY_DATA:
-            // Stash the process ID and the key, we'll need it to kill this connection
-            m_process_id = pg::get_uint32(buf.data() + pg::HEADER_LEN);
-            m_secret_key = pg::get_uint32(buf.data() + pg::HEADER_LEN + 4);
+            if (check_size(buf, pg::HEADER_LEN + 8))
+            {
+                // Stash the process ID and the key, we'll need it to kill this connection
+                m_process_id = pg::get_uint32(buf.data() + pg::HEADER_LEN);
+                m_secret_key = pg::get_uint32(buf.data() + pg::HEADER_LEN + 4);
+            }
             break;
 
         case pg::PARAMETER_STATUS:
@@ -387,6 +406,7 @@ bool PgBackendConnection::handle_auth()
         switch (command)
         {
         case pg::AUTHENTICATION:
+            if (check_size(buf, pg::HEADER_LEN + 4))
             {
                 auto auth_method = pg::get_uint32(buf.data() + pg::HEADER_LEN);
 
@@ -484,6 +504,7 @@ bool PgBackendConnection::handle_routing()
 GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
 {
     mxb_assert(!m_reply.is_complete());
+    mxb_assert(buffer.length() >= pg::HEADER_LEN);
     size_t size = 0;
     auto it = buffer.begin();
 

@@ -60,6 +60,7 @@ private:
         FAILED,
     };
 
+    bool check_size(const GWBUF& buffer, size_t bytes);
     void handle_error(const std::string& error, mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void send_ssl_request();
     void send_startup_message();
