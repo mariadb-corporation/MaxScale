@@ -31,7 +31,7 @@ mxs::Parser::Plugin* load_parser(const string& plugin, qc_sql_mode_t sql_mode, c
         throw std::runtime_error(ss.str());
     }
 
-    if (pPlugin->setup(sql_mode, plugin_args.c_str()) != QC_RESULT_OK)
+    if (!pPlugin->setup(sql_mode, plugin_args.c_str()))
     {
         mxs::Parser::unload(pPlugin);
         ostringstream ss;
@@ -41,7 +41,7 @@ mxs::Parser::Plugin* load_parser(const string& plugin, qc_sql_mode_t sql_mode, c
         throw std::runtime_error(ss.str());
     }
 
-    if (pPlugin->thread_init() != QC_RESULT_OK)
+    if (!pPlugin->thread_init())
     {
         mxs::Parser::unload(pPlugin);
         ostringstream ss;

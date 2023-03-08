@@ -180,8 +180,7 @@ Parser::Plugin* get_plugin(const char* zName, qc_sql_mode_t sql_mode, const char
 
         if (pPlugin)
         {
-            if (pPlugin->setup(sql_mode, zArgs) != QC_RESULT_OK
-                || pPlugin->thread_init() != QC_RESULT_OK)
+            if (!pPlugin->setup(sql_mode, zArgs) || !pPlugin->thread_init())
             {
                 cerr << "error: Could not setup or init classifier " << zName << "." << endl;
                 mxs::Parser::unload(pPlugin);

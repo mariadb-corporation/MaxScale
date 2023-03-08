@@ -354,7 +354,7 @@ int module_init()
     {
         MXB_NOTICE("Classifier loaded.");
 
-        if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()) == QC_RESULT_OK)
+        if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()))
         {
             this_unit.pParser = new MariaDBParser(pPlugin);
             rv = 0;

@@ -298,7 +298,6 @@ void Replicator::Imp::process_events()
         m_running = false;
     }
 
-    // TODO: Make the initialization less errorprone.
     mxs::CachingParser::thread_init();
     auto& parser = MariaDBParser::get();
 

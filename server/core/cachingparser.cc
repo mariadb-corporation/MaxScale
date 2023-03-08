@@ -828,14 +828,14 @@ bool CachingParser::is_drop_table_query(GWBUF* pStmt) const
 
 bool CachingParser::set_options(uint32_t options)
 {
-    int32_t rv = m_parser.set_options(options);
+    bool rv = m_parser.set_options(options);
 
-    if (rv == QC_RESULT_OK)
+    if (rv)
     {
         this_thread.options = options;
     }
 
-    return rv == QC_RESULT_OK;
+    return rv;
 }
 
 void CachingParser::set_sql_mode(qc_sql_mode_t sql_mode)

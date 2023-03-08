@@ -325,25 +325,26 @@ public:
     {
     public:
         /**
-         * Called once to setup the query classifier
+         * Must be called once to setup the parser plugin.
          *
          * @param sql_mode  The default sql mode.
          * @param args      The value of `query_classifier_args` in the configuration file.
          *
-         * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
-         *         some specific error code.
+         * @return True, if the parser plugin be setup, otherwise false.
          */
-        virtual int32_t setup(qc_sql_mode_t sql_mode, const char* args) = 0;
+        virtual bool setup(qc_sql_mode_t sql_mode, const char* args) = 0;
 
         /**
-         * Called once per each thread.
+         * Must be called once per thread where the parser will be used. Note that
+         * this will automatically be done in all MaxScale routing threads.
          *
-         * @return QC_RESULT_OK, if the thread initialization succeeded.
+         * @return True, if the thread initialization succeeded, otherwise false.
          */
-        virtual int32_t thread_init(void) = 0;
+        virtual bool thread_init(void) = 0;
 
         /**
-         * Called once when a thread finishes.
+         * Must be called once when a thread finishes. Note that this will
+         * automatically be done in all MaxScale routing threads.
          */
         virtual void thread_end(void) = 0;
 
@@ -355,10 +356,10 @@ public:
          * @param pLen    Pointer to value that on return will contain the length
          *                of the returned string.
          *
-         * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
-         *         classified), QC_RESULT_ERROR otherwise.
+         * @return True, if a statement was returned (i.e. a statement is being
+         *         classified), otherwise false.
          */
-        virtual int32_t get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
+        virtual bool get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
 
         /**
          * Get result from info.

@@ -4232,14 +4232,14 @@ public:
 class MysqlParserPlugin : public mxs::Parser::Plugin
 {
 public:
-    int32_t setup(qc_sql_mode_t sql_mode, const char* args) override
+    bool setup(qc_sql_mode_t sql_mode, const char* args) override
     {
-        return qc_mysql_setup(sql_mode, args);
+        return qc_mysql_setup(sql_mode, args) == QC_RESULT_OK;
     }
 
-    int32_t thread_init(void) override
+    bool thread_init(void) override
     {
-        return qc_mysql_thread_init();
+        return qc_mysql_thread_init() == QC_RESULT_OK;
     }
 
     void thread_end(void) override
@@ -4247,9 +4247,9 @@ public:
         qc_mysql_thread_end();
     }
 
-    int32_t get_current_stmt(const char** ppStmt, size_t* pLen) override
+    bool get_current_stmt(const char** ppStmt, size_t* pLen) override
     {
-        return qc_mysql_get_current_stmt(ppStmt, pLen);
+        return qc_mysql_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
     }
 
     QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
