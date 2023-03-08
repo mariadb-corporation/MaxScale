@@ -481,16 +481,7 @@ size_t MYSQL_session::get_size(size_t* sescmd_history_size, size_t* exec_metadat
 {
     size_t rv = 0;
 
-    size_t sescmd_history = 0;
-    for (const GWBUF& buf : this->history)
-    {
-        sescmd_history += buf.runtime_size();
-    }
-
-    // The map overhead is ignored.
-    sescmd_history += this->history_responses.size() * sizeof(decltype(this->history_responses)::value_type);
-    sescmd_history += this->history_info.size() * sizeof(decltype(this->history_info)::value_type);
-
+    size_t sescmd_history = this->history().runtime_size();
     rv += sescmd_history;
 
     size_t exec_metadata = 0;

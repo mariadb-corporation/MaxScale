@@ -610,7 +610,7 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
                 m_qc.ps_erase(&buffer);
             }
 
-            m_router->update_max_sescmd_sz(protocol_data()->history.size());
+            m_router->update_max_sescmd_sz(protocol_data()->history().size());
 
             m_current_query = std::move(buffer);
 

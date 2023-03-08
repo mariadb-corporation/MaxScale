@@ -36,7 +36,7 @@ public:
     void error(DCB* dcb) override;
     void hangup(DCB* dcb) override;
 
-    bool    write(GWBUF&& buffer) override;
+    bool write(GWBUF&& buffer) override;
 
     void     finish_connection() override;
     uint64_t can_reuse(MXS_SESSION* session) const override;
@@ -148,6 +148,7 @@ private:
     void            send_history();
     StateMachineRes read_history_response();
     bool            compare_responses();
+    void            check_history();
 
     bool            send_change_user_to_backend();
     StateMachineRes read_change_user();

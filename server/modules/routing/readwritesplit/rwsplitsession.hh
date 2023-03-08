@@ -274,7 +274,7 @@ private:
         const auto& config = *m_pSession->service->config();
         bool rval = false;
 
-        if (protocol_data()->history.empty())
+        if (protocol_data()->history().empty())
         {
             // Servers can always be recovered if no session commands have been executed
             rval = true;
@@ -283,7 +283,7 @@ private:
         {
             // Recovery is also possible if history pruning is enabled or the history limit hasn't exceeded
             // the limit
-            if (config.prune_sescmd_history || !protocol_data()->history_pruned)
+            if (config.prune_sescmd_history || !protocol_data()->history().pruned())
             {
                 rval = true;
             }

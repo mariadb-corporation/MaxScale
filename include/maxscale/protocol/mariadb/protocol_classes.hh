@@ -16,6 +16,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol2.hh>
+#include <maxscale/history.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
@@ -77,7 +78,11 @@ std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb);
 class MYSQL_session : public MXS_SESSION::ProtocolData
 {
 public:
-    MYSQL_session() = default;
+    MYSQL_session(size_t limit)
+        : m_history(limit)
+    {
+    }
+
     MYSQL_session(const MYSQL_session& rhs) = delete;
 
     /**
@@ -96,17 +101,6 @@ public:
         uint32_t basic_capabilities {0};        /*< Basic client capabilities */
         uint32_t ext_capabilities {0};          /*< MariaDB 10.2 capabilities (extended capabilities) */
         uint64_t advertised_capabilities {0};   /*< The capabilities that were sent in the handshake packet */
-    };
-
-    // The struct used to communicate information from the backend protocol to the client protocol.
-    struct HistoryInfo
-    {
-        // Callback to call when the current command being recorded completes. Used to verify the responses
-        // from backends that arrived before the accepted answer arrived.
-        std::function<void ()> response_cb;
-
-        // Current position in history. Used to track the responses that are still needed.
-        uint32_t position {0};
     };
 
     bool     ssl_capable() const;
@@ -128,21 +122,18 @@ public:
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;
 
-    // History of all commands that modify the session state
-    std::deque<GWBUF> history;
-
-    // The responses to the executed commands, contains the ID and the result
-    std::map<uint32_t, bool> history_responses;
-
     // Metadata for COM_STMT_EXECUTE
     std::map<uint32_t, std::vector<uint8_t>> exec_metadata;
 
-    // Whether the history has been pruned of old commands. If true, reconnection should only take place if it
-    // is acceptable to lose some state history (i.e. prune_sescmd_history is enabled).
-    bool history_pruned {false};
+    mxs::History& history()
+    {
+        return m_history;
+    }
 
-    // History information for all open backend connections
-    std::unordered_map<mxs::BackendConnection*, HistoryInfo> history_info;
+    const mxs::History& history() const
+    {
+        return m_history;
+    }
 
     /**
      * Tells whether autocommit is ON or not. The value effectively only tells the last value
@@ -280,4 +271,7 @@ private:
     size_t get_size(size_t* sescmd_history_size, size_t* exec_metadata_size) const;
 
     uint64_t m_client_protocol_capabilities {0};
+
+    // The session command history
+    mxs::History m_history;
 };

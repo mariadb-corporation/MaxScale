@@ -396,6 +396,11 @@ public:
     virtual bool remove_variable(const char* name, void** context) = 0;
 
     /**
+     * Get the session command history limit for this session
+     */
+    size_t max_sescmd_history() const;
+
+    /**
      * Check if log level has been explicitly enabled for this session
      *
      * @return True if the log is enabled

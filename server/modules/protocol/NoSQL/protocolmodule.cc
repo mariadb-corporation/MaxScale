@@ -65,7 +65,7 @@ ProtocolModule* ProtocolModule::create(const std::string& name, mxs::Listener* p
 unique_ptr<mxs::ClientConnection>
 ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent)
 {
-    unique_ptr<MYSQL_session> sSession_data(new MYSQL_session());
+    unique_ptr<MYSQL_session> sSession_data(new MYSQL_session(pSession->max_sescmd_history()));
     // TODO: Drop this, operate on whatever data is delivered to clientReply() and
     // TODO: send documents to the client in multiple packets.
     sSession_data->set_client_protocol_capabilities(RCAP_TYPE_RESULTSET_OUTPUT);

@@ -1179,16 +1179,9 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
             // responses.
             uint32_t id = mxs_mysql_extract_ps_id(&buffer);
 
-            auto it = std::find_if(m_session_data->history.begin(),
-                                   m_session_data->history.end(),
-                                   [&](const auto& a) {
-                return a.id() == id;
-            });
-
-            if (it != m_session_data->history.end())
+            if (m_session_data->history().erase(id))
             {
-                mxb_assert(it->id());
-                m_session_data->history.erase(it);
+                mxb_assert(id);
                 m_qc.ps_erase(&buffer);
                 m_session_data->exec_metadata.erase(id);
             }
@@ -1198,7 +1191,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
     case MXS_COM_CHANGE_USER:
         // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
         // credentials which means we can safely reset the history here.
-        m_session_data->history.clear();
+        m_session_data->history().clear();
         break;
 
     case MXS_COM_STMT_PREPARE:
@@ -1315,35 +1308,9 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 
         m_routing_state = RoutingState::COMPARE_RESPONSES;
         m_dcb->trigger_read_event();
-        m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
-        m_session_data->history.emplace_back(move(m_pending_cmd));
-
-        if (m_session_data->history.size() > m_max_sescmd_history)
-        {
-            prune_history();
-        }
+        m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok());
+        m_pending_cmd.clear();
     }
-}
-
-void MariaDBClientConnection::prune_history()
-{
-    // Using the about-to-be-pruned command as the minimum ID prevents the removal of responses that are still
-    // needed when the ID overflows. If only the stored positions were used, the whole history would be
-    // cleared.
-    uint32_t min_id = m_session_data->history.front().id();
-
-    for (const auto& kv : m_session_data->history_info)
-    {
-        if (kv.second.position > 0 && kv.second.position < min_id)
-        {
-            min_id = kv.second.position;
-        }
-    }
-
-    m_session_data->history_responses.erase(m_session_data->history_responses.begin(),
-                                            m_session_data->history_responses.lower_bound(min_id));
-    m_session_data->history.pop_front();
-    m_session_data->history_pruned = true;
 }
 
 /**
@@ -1379,23 +1346,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     }
     else if (m_routing_state == RoutingState::COMPARE_RESPONSES)
     {
-        // A session command that was recorded was just processed. Call the installed callbacks for any
-        // backends that responded before the accepted response was received. Collect the callbacks first into
-        // a separate vector: the callback might end up modifying the history info map.
-        std::vector<std::function<void ()>> callbacks;
-        for (auto& kv : m_session_data->history_info)
-        {
-            if (kv.second.response_cb)
-            {
-                callbacks.push_back(std::exchange(kv.second.response_cb, nullptr));
-            }
-        }
-
-        for (auto& cb : callbacks)
-        {
-            cb();
-        }
-
+        // A session command that was recorded was just processed.
+        m_session_data->history().check_early_responses();
         m_routing_state = RoutingState::PACKET_START;
     }
 
@@ -1665,8 +1617,6 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_qc(MariaDBParser::get(), this, session, TYPE_ALL, mariadb::QueryClassifier::Log::NONE)
 {
     m_qc.set_verbose(false);
-    const auto& svc_config = *m_session->service->config();
-    m_max_sescmd_history = svc_config.disable_sescmd_history ? 0 : svc_config.max_sescmd_history;
     m_track_pooling_status = session->idle_pooling_enabled();
 }
 
@@ -3003,7 +2953,7 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, maxscale::ReplyRoute& down,
         {
             // TODO: Configurable? Also, must be many other situations where backend conns should not be
             // runtime-pooled.
-            if (m_session_data->history.size() > m_max_sescmd_history)
+            if (m_session_data->history().pruned())
             {
                 m_pooling_permanent_disable = true;
                 m_session->set_can_pool_backends(false);

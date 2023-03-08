@@ -80,7 +80,7 @@ RWSplitSession::~RWSplitSession()
                                                  backend->num_selects());
     }
 
-    m_router->local_avg_sescmd_sz().add(protocol_data()->history.size());
+    m_router->local_avg_sescmd_sz().add(protocol_data()->history().size());
 }
 
 bool RWSplitSession::routeQuery(GWBUF&& buffer)

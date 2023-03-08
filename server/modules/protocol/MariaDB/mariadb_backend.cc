@@ -159,7 +159,7 @@ void MariaDBBackendConnection::finish_connection()
 
     if (m_state != State::POOLED)
     {
-        mysql_session()->history_info.erase(this);
+        mysql_session()->history().remove(this);
     }
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
@@ -600,7 +600,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
 
     // Erase history info callback before we do the handleError call. This prevents it from being called while
     // the DCB is in the zombie queue.
-    mysql_session()->history_info.erase(this);
+    mysql_session()->history().remove(this);
 
     mxb_assert(!dcb->hanged_up());
     MXB_AT_DEBUG(bool res = ) m_upstream->handleError(type, ss.str(), nullptr, m_reply);
@@ -838,14 +838,11 @@ void MariaDBBackendConnection::normal_read()
     if (!m_dcb->is_open())
     {
         // The router closed the session, erase the callbacks to prevent the client protocol from calling it.
-        mysql_session()->history_info.erase(this);
+        mysql_session()->history().remove(this);
     }
     else if (m_reply.is_complete())
     {
-        if (!compare_responses())
-        {
-            do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
-        }
+        check_history();
     }
 }
 
@@ -853,27 +850,24 @@ void MariaDBBackendConnection::send_history()
 {
     MYSQL_session* client_data = mysql_session();
 
-    if (!client_data->history.empty())
+    for (const auto& history_query : client_data->history().history())
     {
-        for (const auto& history_query : client_data->history)
+        TrackedQuery query(history_query);
+
+        if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
         {
-            TrackedQuery query(history_query);
-
-            if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
-            {
-                track_query(query);
-            }
-            else
-            {
-                m_track_queue.push(query);
-            }
-
-            MXB_INFO("Execute %s %u on '%s': %s", STRPACKETTYPE(query.command),
-                     history_query.id(), m_server.name(), history_query.get_sql().c_str());
-
-            m_dcb->writeq_append(history_query.shallow_clone());
-            m_history_responses.push_back(history_query.id());
+            track_query(query);
         }
+        else
+        {
+            m_track_queue.push(query);
+        }
+
+        MXB_INFO("Execute %s %u on '%s': %s", STRPACKETTYPE(query.command),
+                 history_query.id(), m_server.name(), history_query.get_sql().c_str());
+
+        m_dcb->writeq_append(history_query.shallow_clone());
+        m_history_responses.push_back(history_query.id());
     }
 }
 
@@ -909,10 +903,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
             {
                 MYSQL_session* client_data = mysql_session();
                 uint32_t id = m_history_responses.front();
-                auto it = client_data->history_responses.find(id);
-                mxb_assert(it != client_data->history_responses.end());
+                auto cmd = client_data->history().get(id);
 
-                if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
+                if (cmd && cmd.value() == m_reply.is_ok())
                 {
                     MXB_INFO("Reply to %u complete", id);
                     m_history_responses.pop_front();
@@ -959,11 +952,14 @@ void MariaDBBackendConnection::pin_history_responses()
     // Mark the start of the history responses that we're interested in. This guarantees that all responses
     // remain in effect while the connection reset is ongoing. This is needed to correctly detect a
     // COM_STMT_CLOSE that arrives after the connection creation and which caused the history to shrink.
-    MYSQL_session* client_data = mysql_session();
+    mysql_session()->history().pin_responses(this);
+}
 
-    if (!client_data->history.empty())
+void MariaDBBackendConnection::check_history()
+{
+    if (!compare_responses())
     {
-        client_data->history_info[this].position = client_data->history.front().id();
+        do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
     }
 }
 
@@ -997,13 +993,11 @@ bool MariaDBBackendConnection::compare_responses()
 
     while (it != m_ids_to_check.end())
     {
-        auto response_it = data->history_responses.find(it->first);
-
-        if (response_it != data->history_responses.end())
+        if (auto cmd = data->history().get(it->first))
         {
-            data->history_info[this].position = it->first;
+            data->history().set_position(this, it->first);
 
-            if (it->second != response_it->second)
+            if (it->second != cmd.value())
             {
                 ok = false;
                 break;
@@ -1020,13 +1014,13 @@ bool MariaDBBackendConnection::compare_responses()
 
     if (ok && !found && !m_ids_to_check.empty())
     {
-        data->history_info[this].response_cb = [this]() {
+        data->history().need_response(this, [this]() {
             if (!compare_responses())
             {
                 do_handle_error(m_dcb, create_response_mismatch_error(),
                                 mxs::ErrorType::PERMANENT);
             }
-        };
+        });
     }
 
     return ok;
@@ -1268,7 +1262,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
                     {
                         auto data = mysql_session();
 
-                        if (data->history_responses.find(ps_id) != data->history_responses.end())
+                        if (data->history().get(ps_id))
                         {
                             // If we haven't executed the COM_STMT_PREPARE that this COM_STMT_CLOSE refers to
                             // but we have the response for it, we know that the COM_STMT_CLOSE was received
@@ -3009,7 +3003,7 @@ void MariaDBBackendConnection::set_to_pooled()
     m_capabilities = ms->full_capabilities();
     m_account = m_session->user_and_host();
     m_db = ms->current_db;
-    ms->history_info.erase(this);
+    ms->history().remove(this);
 
     m_session = nullptr;
     m_upstream = nullptr;

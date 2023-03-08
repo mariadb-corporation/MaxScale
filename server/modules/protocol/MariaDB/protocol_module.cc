@@ -70,7 +70,7 @@ std::unique_ptr<mxs::ClientConnection>
 MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component)
 {
     std::unique_ptr<mxs::ClientConnection> new_client_proto;
-    std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session());
+    std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session(session->max_sescmd_history()));
     if (mdb_session)
     {
         auto& search_sett = mdb_session->user_search_settings;

@@ -16,6 +16,7 @@ add_library(maxscale-common SHARED
   externcmd.cc
   filter.cc
   hint.cc
+  history.cc
   httprequest.cc
   httpresponse.cc
   http_sql.cc

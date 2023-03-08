@@ -1922,3 +1922,9 @@ void MXS_SESSION::set_host(string&& host)
 {
     m_host = std::move(host);
 }
+
+size_t MXS_SESSION::max_sescmd_history() const
+{
+    const auto& cnf = *service->config();
+    return cnf.disable_sescmd_history ? 0 : cnf.max_sescmd_history;
+}
