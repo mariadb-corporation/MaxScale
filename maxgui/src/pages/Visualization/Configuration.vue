@@ -6,7 +6,7 @@
                 v-if="ctrDim.height && config_graph_data.length"
                 :data="config_graph_data"
                 :dim="ctrDim"
-                :nodeSize="{ width: nodeWidth, height: 100 }"
+                :defNodeSize="{ width: 220, height: 100 }"
                 dynNodeHeight
                 revert
                 draggable
@@ -14,12 +14,14 @@
                 :handleRevertDiagonal="handleRevertDiagonal"
             >
                 <template
-                    v-slot:graph-node-content="{ data: { node, changeNodeSize, isDragging } }"
+                    v-slot:graph-node-content="{
+                        data: { node, nodeSize, changeNodeSize, isDragging },
+                    }"
                 >
                     <conf-node
                         :class="{ 'no-pointerEvent': isDragging }"
                         :node="node"
-                        :nodeWidth="nodeWidth"
+                        :nodeSize="nodeSize"
                         :changeNodeSize="changeNodeSize"
                     />
                 </template>
@@ -55,7 +57,6 @@ export default {
         return {
             //states for mxs-dag-graph
             ctrDim: {},
-            nodeWidth: 220,
             dynNodeHeightMap: {},
         }
     },

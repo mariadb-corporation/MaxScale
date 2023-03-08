@@ -8,8 +8,9 @@
             :class="{ move: draggable, 'no-userSelect': draggingStates.isDragging }"
             :node_id="node.id"
             :style="{
-                ...getPos(node),
+                ...getPosStyle(node.id),
                 ...nodeStyle,
+                ...getNodeSizeStyle(node.id),
                 zIndex: draggingStates.draggingNodeId === node.id ? 4 : 3,
                 /**
                  * Graph nodes will be rendered but they won't be visible.
@@ -26,7 +27,14 @@
                     : null
             "
         >
-            <slot :data="{ node, changeNodeSize, isDragging: draggingStates.isDragging }" />
+            <slot
+                :data="{
+                    node,
+                    nodeSize: getNodeSize(node.id),
+                    changeNodeSize,
+                    isDragging: draggingStates.isDragging,
+                }"
+            />
         </div>
     </div>
 </template>
@@ -66,8 +74,9 @@ export default {
         },
         coordMap: { type: Object, default: () => ({}) }, //sync
         nodeStyle: { type: Object, default: () => ({}) },
+        defNodeSize: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
-        dynNode: { type: Boolean, default: false },
+        dynNodeHeight: { type: Boolean, default: false },
         revertDrag: { type: Boolean, default: false },
         boardZoom: { type: Object, required: true },
     },
@@ -102,7 +111,7 @@ export default {
             immediate: true,
             handler(v, oV) {
                 // compute node height after nodes are rendered
-                if (this.dynNode && !this.$helpers.lodash.isEqual(v, oV))
+                if (!this.$helpers.lodash.isEqual(v, oV))
                     this.$helpers.doubleRAF(() => this.setNodeSizeMap())
             },
         },
@@ -134,11 +143,23 @@ export default {
             if (!this.$helpers.lodash.isEqual(this.dynNodeSizeMap, nodeSizeMap))
                 this.dynNodeSizeMap = nodeSizeMap
         },
-        getPos(node) {
-            const { x = 0, y = 0 } = this.$typy(this.nodeCoordMap, `[${node.id}]`).safeObjectOrEmpty
+        getNodeSize(id) {
+            return this.dynNodeSizeMap[id] || this.defNodeSize
+        },
+        getPosStyle(id) {
+            const { x = 0, y = 0 } = this.nodeCoordMap[id] || {}
+            const { width, height } = this.getNodeSize(id)
+            // center rectangular nodes
             return {
-                left: `${x}px`,
-                top: `${y}px`,
+                left: `${x - width / 2}px`,
+                top: `${y - height / 2}px`,
+            }
+        },
+        getNodeSizeStyle(id) {
+            const { width, height } = this.getNodeSize(id)
+            return {
+                width: `${width}px`,
+                height: this.dynNodeHeight ? 'unset' : `${height}px`,
             }
         },
         changeNodeSize(node) {

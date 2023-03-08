@@ -13,7 +13,8 @@
                 :coordMap.sync="graphNodeCoordMap"
                 :style="{ transform }"
                 :nodeStyle="revertGraphStyle"
-                :dynNode="dynNodeHeight"
+                :defNodeSize="defNodeSize"
+                :dynNodeHeight="dynNodeHeight"
                 draggable
                 :revertDrag="revert"
                 :boardZoom="zoom"
@@ -58,7 +59,7 @@ export default {
     props: {
         data: { type: Array, required: true },
         dim: { type: Object, required: true },
-        nodeSize: { type: Object, default: () => ({ width: 200, height: 100 }) },
+        defNodeSize: { type: Object, default: () => ({ width: 200, height: 100 }) },
         dynNodeHeight: { type: Boolean, default: false },
         revert: { type: Boolean, default: false },
         colorizingLinkFn: { type: Function, default: () => '' },
@@ -131,13 +132,7 @@ export default {
                 .decross(d3d.decrossTwoLayer()) // minimize number of crossings
                 .coord(d3d.coordGreedy())
                 .sugiNodeSize(d => {
-                    let width = this.nodeSize.width,
-                        height = this.nodeSize.height
-                    if (d.data.node) {
-                        const nodeSize = this.getNodeSize(d.data.node)
-                        width = nodeSize.width
-                        height = nodeSize.height
-                    }
+                    const { width, height } = this.getDagNodeSize(d.data.node)
                     // plus padding for each node as nodes are densely packed
                     return [width + 20, height + 60]
                 })
@@ -158,34 +153,23 @@ export default {
             }, {})
         },
         /**
-         * Either return dynamic node size of a node or default nodeSize
          * @param {Object} node - dag node
          * @returns {Object} - { width: Number, height: Number}
          */
-        getNodeSize(node) {
-            const nodeId = this.$typy(node, 'data.id').safeString
-            const dynNodeSize = this.$typy(this.dynNodeSizeMap, `[${nodeId}]`).safeObject
-            if (dynNodeSize) return dynNodeSize
-            return this.nodeSize
+        getDagNodeSize(node) {
+            return this.$refs.graphNodes.getNodeSize(this.$typy(node, 'data.id').safeString)
         },
-        // Repositioning nodes and links by mutating x,y value
+        // Repositioning links by mutating x,y value
         repositioning() {
-            let nodes = this.dag.descendants(),
-                links = this.dag.links()
-            // repositioning nodes so that they are drawn center
-            nodes.forEach(d => {
-                const { width, height } = this.getNodeSize(d)
-                d.x = d.x - width / 2
-                d.y = d.y - height / 2
-            })
+            let links = this.dag.links()
             // repositioning links so that links are drawn at the middle point of the edge
             links.forEach(d => {
                 let shouldRevert = this.handleRevertDiagonal(d)
                 const src = d.points[0]
                 const target = d.points[d.points.length - 1]
 
-                const srcSize = this.getNodeSize(d.source)
-                const targetSize = this.getNodeSize(d.target)
+                const srcSize = this.getDagNodeSize(d.source)
+                const targetSize = this.getDagNodeSize(d.target)
                 if (shouldRevert) {
                     // src becomes a target point and vice versa
                     src.y = src.y + srcSize.height / 2 + this.arrowHeadHeight
@@ -283,8 +267,8 @@ export default {
             if (shouldChangeConnPoint) {
                 // get src and target node size
                 const sizes = {
-                    src: this.getNodeSize(shouldRevert ? data.target : data.source),
-                    target: this.getNodeSize(shouldRevert ? data.source : data.target),
+                    src: this.getDagNodeSize(shouldRevert ? data.target : data.source),
+                    target: this.getDagNodeSize(shouldRevert ? data.source : data.target),
                 }
                 // Check if src node opposite to target node
                 const isOpposite = shouldRevert
@@ -397,9 +381,8 @@ export default {
                 .data(data)
                 .join(
                     enter => {
-                        // insert after .node-rect-group
                         const linkGroup = enter
-                            .insert('g', 'g.node-rect-group')
+                            .insert('g')
                             .attr('class', 'link-group pointer')
                             .style('opacity', 0.5)
                             .on('mouseover', function() {

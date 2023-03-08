@@ -1,10 +1,5 @@
 <template>
-    <v-card
-        outlined
-        class="node-card fill-height"
-        :width="nodeWidth - 2"
-        :style="{ borderColor: headingColor.bg }"
-    >
+    <v-card outlined class="node-card fill-height" :style="{ borderColor: headingColor.bg }">
         <div
             class="node-heading d-flex align-center justify-center flex-row px-3 py-1"
             :style="{ backgroundColor: headingColor.bg }"
@@ -35,7 +30,7 @@
             v-if="isServiceWithFiltersNode"
             v-model="isVisualizingFilters"
             :filters="filters"
-            :nodeWidth="nodeWidth / 1.5"
+            :nodeWidth="nodeSize.width / 1.5"
             :handleVisFilters="handleVisFilters"
         />
         <div
@@ -116,7 +111,7 @@ export default {
     },
     props: {
         node: { type: Object, required: true },
-        nodeWidth: { type: Number, required: true },
+        nodeSize: { type: Object, required: true },
         changeNodeSize: { type: Function, required: true },
     },
     data() {
