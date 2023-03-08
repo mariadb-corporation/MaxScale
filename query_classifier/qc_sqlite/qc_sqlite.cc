@@ -5669,16 +5669,6 @@ public:
         return qc_sqlite_setup(sql_mode, args);
     }
 
-    int32_t process_init(void) override
-    {
-        return qc_sqlite_process_init();
-    }
-
-    void process_end(void) override
-    {
-        qc_sqlite_process_end();
-    }
-
     int32_t thread_init(void) override
     {
         return qc_sqlite_thread_init();

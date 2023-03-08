@@ -4233,16 +4233,6 @@ public:
         return qc_mysql_setup(sql_mode, args);
     }
 
-    int32_t process_init(void) override
-    {
-        return qc_mysql_process_init();
-    }
-
-    void process_end(void) override
-    {
-        qc_mysql_process_end();
-    }
-
     int32_t thread_init(void) override
     {
         return qc_mysql_thread_init();
