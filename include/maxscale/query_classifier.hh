@@ -19,16 +19,6 @@
 #include <maxscale/parser.hh>
 
 /**
- * qc_init_kind_t specifies what kind of initialization should be performed.
- */
-enum qc_init_kind_t
-{
-    QC_INIT_SELF   = 0x01,  /*< Initialize/finalize the query classifier itself. */
-    QC_INIT_PLUGIN = 0x02,  /*< Initialize/finalize the plugin. */
-    QC_INIT_BOTH   = 0x03
-};
-
-/**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
  * implement and return.
  *
