@@ -100,7 +100,7 @@ static maxbase::WatchdogNotifier* watchdog_notifier = nullptr;
  * This initializes all libraries required to run unit tests. If worker related functionality is required, use
  *`run_unit_test` instead.
  */
-void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type = QC_INIT_BOTH)
+void init_test_env(char* __attribute((unused))path = nullptr)
 {
     set_signal(SIGSEGV, sigfatal_handler);
     set_signal(SIGABRT, sigfatal_handler);
