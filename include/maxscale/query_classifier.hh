@@ -126,25 +126,6 @@ QUERY_CLASSIFIER* qc_load(const char* plugin_name);
 void qc_unload(QUERY_CLASSIFIER* classifier);
 
 /**
- * Common query classifier properties as JSON.
- *
- * @param zHost  The MaxScale host.
- *
- * @return A json object containing properties.
- */
-std::unique_ptr<json_t> qc_as_json(const char* zHost);
-
-/**
- * Alter common query classifier properties.
- *
- * @param pJson  A JSON object.
- *
- * @return True, if the object was valid and parameters could be changed,
- *         false otherwise.
- */
-bool qc_alter_from_json(json_t* pJson);
-
-/**
  * Return query classifier cache content.
  *
  * @param zHost      The MaxScale host.

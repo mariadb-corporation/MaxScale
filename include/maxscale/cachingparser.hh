@@ -28,8 +28,11 @@ public:
     static void thread_init();
     static void thread_finish();
 
-    static bool set_properties(const QC_CACHE_PROPERTIES& properties);
-    static void get_properties(QC_CACHE_PROPERTIES* pProperties);
+    static bool                    set_properties(const QC_CACHE_PROPERTIES& properties);
+    static void                    get_properties(QC_CACHE_PROPERTIES* pProperties);
+
+    static bool                    set_properties(json_t* pJson);
+    static std::unique_ptr<json_t> get_properties_as_resource(const char* zHost);
 
     static int64_t                 clear_thread_cache();
     static void                    get_thread_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state);
