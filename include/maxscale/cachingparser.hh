@@ -43,7 +43,7 @@ public:
     static std::unique_ptr<json_t> content_as_resource(const char* zHost);
 
 
-    QUERY_CLASSIFIER& classifier() const override;
+    Plugin& plugin() const override;
 
     qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override;
 
@@ -73,10 +73,10 @@ public:
     void set_server_version(uint64_t version) override;
 
 protected:
-    CachingParser(QUERY_CLASSIFIER* pClassifier);
+    CachingParser(Plugin* pPlugin);
 
-    QUERY_CLASSIFIER& m_classifier;
-    mxs::Parser&      m_parser;
+    Plugin&      m_plugin;
+    mxs::Parser& m_parser;
 };
 
 }

@@ -302,7 +302,7 @@ void Replicator::Imp::process_events()
     mxs::CachingParser::thread_init();
     auto& parser = MariaDBParser::get();
 
-    parser.classifier().thread_init();
+    parser.plugin().thread_init();
 
     m_rpl.load_metadata(m_cnf.statedir);
     update_gtid();
@@ -408,7 +408,7 @@ void Replicator::Imp::process_events()
         m_state_fd = -1;
     }
 
-    parser.classifier().thread_end();
+    parser.plugin().thread_end();
     mxs::CachingParser::thread_finish();
 }
 

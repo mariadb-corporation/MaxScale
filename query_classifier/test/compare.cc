@@ -41,6 +41,8 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
+using mxs::Parser;
+
 namespace
 {
 
@@ -148,7 +150,7 @@ GWBUF* create_gwbuf(const string& s)
     return gwbuf;
 }
 
-QUERY_CLASSIFIER* load_classifier(const char* name)
+Parser::Plugin* load_plugin(const char* name)
 {
     bool loaded = false;
     size_t len = strlen(name);
@@ -158,80 +160,80 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
 
     mxs::set_libdir(libdir);
 
-    QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(name);
+    Parser::Plugin* pPlugin = mxs::Parser::load(name);
 
-    if (!pClassifier)
+    if (!pPlugin)
     {
         cerr << "error: Could not load classifier " << name << "." << endl;
     }
 
-    return pClassifier;
+    return pPlugin;
 }
 
-QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, const char* zArgs)
+Parser::Plugin* get_plugin(const char* zName, qc_sql_mode_t sql_mode, const char* zArgs)
 {
-    QUERY_CLASSIFIER* pClassifier = nullptr;
+    Parser::Plugin* pPlugin = nullptr;
 
     if (zName)
     {
-        pClassifier = load_classifier(zName);
+        pPlugin = load_plugin(zName);
 
-        if (pClassifier)
+        if (pPlugin)
         {
-            if (pClassifier->setup(sql_mode, zArgs) != QC_RESULT_OK
-                || pClassifier->thread_init() != QC_RESULT_OK)
+            if (pPlugin->setup(sql_mode, zArgs) != QC_RESULT_OK
+                || pPlugin->thread_init() != QC_RESULT_OK)
             {
                 cerr << "error: Could not setup or init classifier " << zName << "." << endl;
-                mxs::Parser::unload(pClassifier);
-                pClassifier = 0;
+                mxs::Parser::unload(pPlugin);
+                pPlugin = 0;
             }
         }
     }
 
-    return pClassifier;
+    return pPlugin;
 }
 
-void put_classifier(QUERY_CLASSIFIER* pClassifier)
+void put_plugin(Parser::Plugin* pPlugin)
 {
-    if (pClassifier)
+    if (pPlugin)
     {
-        pClassifier->thread_end();
-        mxs::Parser::unload(pClassifier);
+        pPlugin->thread_end();
+        mxs::Parser::unload(pPlugin);
     }
 }
 
-bool get_classifiers(qc_sql_mode_t sql_mode,
-                     const char* zName1,
-                     const char* zArgs1,
-                     QUERY_CLASSIFIER** ppClassifier1,
-                     const char* zName2,
-                     const char* zArgs2,
-                     QUERY_CLASSIFIER** ppClassifier2)
+bool get_plugins(qc_sql_mode_t sql_mode,
+                 const char* zName1,
+                 const char* zArgs1,
+                 Parser::Plugin** ppPlugin1,
+                 const char* zName2,
+                 const char* zArgs2,
+                 Parser::Plugin** ppPlugin2)
 {
     bool rc = false;
 
-    QUERY_CLASSIFIER* pClassifier1 = get_classifier(zName1, sql_mode, zArgs1);
-    QUERY_CLASSIFIER* pClassifier2 = get_classifier(zName2, sql_mode, zArgs2);
+    Parser::Plugin* pPlugin1 = get_plugin(zName1, sql_mode, zArgs1);
+    Parser::Plugin* pPlugin2 = get_plugin(zName2, sql_mode, zArgs2);
 
-    if ((!zName1 || pClassifier1) && (!zName2 || pClassifier2))
+    if ((!zName1 || pPlugin1) && (!zName2 || pPlugin2))
     {
-        *ppClassifier1 = pClassifier1;
-        *ppClassifier2 = pClassifier2;
+        *ppPlugin1 = pPlugin1;
+        *ppPlugin2 = pPlugin2;
         rc = true;
     }
     else
     {
-        put_classifier(pClassifier1);
-        put_classifier(pClassifier2);
+        put_plugin(pPlugin1);
+        put_plugin(pPlugin2);
     }
 
     return rc;
 }
 
-void put_classifiers(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2)
+void put_plugins(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2)
 {
-    put_classifier(pClassifier1);
-    put_classifier(pClassifier2);
+    put_plugin(pPlugin1);
+    put_plugin(pPlugin2);
 }
 
 void report_query()
@@ -316,9 +318,9 @@ static void update_time(timespec* pResult, timespec& start, timespec& finish)
     pResult->tv_sec += difference.tv_sec;
 }
 
-bool compare_parse(QUERY_CLASSIFIER* pClassifier1,
+bool compare_parse(Parser::Plugin* pPlugin1,
                    GWBUF* pCopy1,
-                   QUERY_CLASSIFIER* pClassifier2,
+                   Parser::Plugin* pPlugin2,
                    GWBUF* pCopy2)
 {
     bool success = false;
@@ -328,12 +330,12 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1,
     struct timespec finish;
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    int32_t rv1 = pClassifier1->parser().parse(pCopy1, QC_COLLECT_ESSENTIALS);
+    int32_t rv1 = pPlugin1->parser().parse(pCopy1, QC_COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time1, start, finish);
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    int32_t rv2 = pClassifier2->parser().parse(pCopy2, QC_COLLECT_ESSENTIALS);
+    int32_t rv2 = pPlugin2->parser().parse(pCopy2, QC_COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time2, start, finish);
 
@@ -368,16 +370,16 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_type(Parser::Plugin* pPlugin1,
                       GWBUF* pCopy1,
-                      QUERY_CLASSIFIER* pClassifier2,
+                      Parser::Plugin* pPlugin2,
                       GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_type_mask         : ";
 
-    uint32_t rv1 = pClassifier1->parser().get_type_mask(pCopy1);
-    uint32_t rv2 = pClassifier2->parser().get_type_mask(pCopy2);
+    uint32_t rv1 = pPlugin1->parser().get_type_mask(pCopy1);
+    uint32_t rv2 = pPlugin2->parser().get_type_mask(pCopy2);
 
     stringstream ss;
     ss << HEADING;
@@ -432,16 +434,16 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_operation(Parser::Plugin* pPlugin1,
                            GWBUF* pCopy1,
-                           QUERY_CLASSIFIER* pClassifier2,
+                           Parser::Plugin* pPlugin2,
                            GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_operation         : ";
 
-    int32_t rv1 = pClassifier1->parser().get_operation(pCopy1);
-    int32_t rv2 = pClassifier2->parser().get_operation(pCopy2);
+    int32_t rv1 = pPlugin1->parser().get_operation(pCopy1);
+    int32_t rv2 = pPlugin2->parser().get_operation(pCopy2);
 
     stringstream ss;
     ss << HEADING;
@@ -464,16 +466,16 @@ bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_created_table_name(Parser::Plugin* pPlugin1,
                                     GWBUF* pCopy1,
-                                    QUERY_CLASSIFIER* pClassifier2,
+                                    Parser::Plugin* pPlugin2,
                                     GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_created_table_name: ";
 
-    std::string_view rv1 = pClassifier1->parser().get_created_table_name(pCopy1);
-    std::string_view rv2 = pClassifier2->parser().get_created_table_name(pCopy2);
+    std::string_view rv1 = pPlugin1->parser().get_created_table_name(pCopy1);
+    std::string_view rv2 = pPlugin2->parser().get_created_table_name(pCopy2);
 
     stringstream ss;
     ss << HEADING;
@@ -493,16 +495,16 @@ bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1,
+bool compare_is_drop_table_query(Parser::Plugin* pPlugin1,
                                  GWBUF* pCopy1,
-                                 QUERY_CLASSIFIER* pClassifier2,
+                                 Parser::Plugin* pPlugin2,
                                  GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_is_drop_table_query   : ";
 
-    bool rv1 = pClassifier1->parser().is_drop_table_query(pCopy1);
-    bool rv2 = pClassifier2->parser().is_drop_table_query(pCopy2);
+    bool rv1 = pPlugin1->parser().is_drop_table_query(pCopy1);
+    bool rv2 = pPlugin2->parser().is_drop_table_query(pCopy2);
 
     stringstream ss;
     ss << HEADING;
@@ -522,9 +524,9 @@ bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_table_names(Parser::Plugin* pPlugin1,
                              GWBUF* pCopy1,
-                             QUERY_CLASSIFIER* pClassifier2,
+                             Parser::Plugin* pPlugin2,
                              GWBUF* pCopy2)
 {
     bool success = false;
@@ -535,8 +537,8 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
     int n1 = 0;
     int n2 = 0;
 
-    std::vector<QcTableName> rv1 = pClassifier1->parser().get_table_names(pCopy1);
-    std::vector<QcTableName> rv2 = pClassifier2->parser().get_table_names(pCopy2);
+    std::vector<QcTableName> rv1 = pPlugin1->parser().get_table_names(pCopy1);
+    std::vector<QcTableName> rv2 = pPlugin2->parser().get_table_names(pCopy2);
 
     // The order need not be the same, so let's compare a set.
     std::set<QcTableName> names1(rv1.begin(), rv1.end());
@@ -626,16 +628,16 @@ ostream& operator<<(ostream& o, const std::set<string>& s)
     return o;
 }
 
-bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_database_names(Parser::Plugin* pPlugin1,
                                 GWBUF* pCopy1,
-                                QUERY_CLASSIFIER* pClassifier2,
+                                Parser::Plugin* pPlugin2,
                                 GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_database_names    : ";
 
-    std::vector<std::string_view> rv1 = pClassifier1->parser().get_database_names(pCopy1);
-    std::vector<std::string_view> rv2 = pClassifier2->parser().get_database_names(pCopy2);
+    std::vector<std::string_view> rv1 = pPlugin1->parser().get_database_names(pCopy1);
+    std::vector<std::string_view> rv2 = pPlugin2->parser().get_database_names(pCopy2);
 
     stringstream ss;
     ss << HEADING;
@@ -655,16 +657,16 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_prepare_name(Parser::Plugin* pPlugin1,
                               GWBUF* pCopy1,
-                              QUERY_CLASSIFIER* pClassifier2,
+                              Parser::Plugin* pPlugin2,
                               GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_prepare_name      : ";
 
-    std::string_view rv1 = pClassifier1->parser().get_prepare_name(pCopy1);
-    std::string_view rv2 = pClassifier2->parser().get_prepare_name(pCopy2);
+    std::string_view rv1 = pPlugin1->parser().get_prepare_name(pCopy1);
+    std::string_view rv2 = pPlugin2->parser().get_prepare_name(pCopy2);
 
     stringstream ss;
     ss << HEADING;
@@ -846,9 +848,9 @@ bool operator==(const QcFieldInfo& lhs, const QcFieldInfo& rhs)
     return lhs.eq(rhs);
 }
 
-bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_field_info(Parser::Plugin* pPlugin1,
                             GWBUF* pCopy1,
-                            QUERY_CLASSIFIER* pClassifier2,
+                            Parser::Plugin* pPlugin2,
                             GWBUF* pCopy2)
 {
     bool success = false;
@@ -859,8 +861,8 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1,
     size_t n_infos1;
     size_t n_infos2;
 
-    pClassifier1->parser().get_field_info(pCopy1, &infos1, &n_infos1);
-    pClassifier2->parser().get_field_info(pCopy2, &infos2, &n_infos2);
+    pPlugin1->parser().get_field_info(pCopy1, &infos1, &n_infos1);
+    pPlugin2->parser().get_field_info(pCopy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1084,9 +1086,9 @@ void collect_missing_function_names(const std::set<QcFunctionInfo>& one,
     }
 }
 
-bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1,
+bool compare_get_function_info(Parser::Plugin* pPlugin1,
                                GWBUF* pCopy1,
-                               QUERY_CLASSIFIER* pClassifier2,
+                               Parser::Plugin* pPlugin2,
                                GWBUF* pCopy2)
 {
     bool success = false;
@@ -1097,8 +1099,8 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1,
     size_t n_infos1;
     size_t n_infos2;
 
-    pClassifier1->parser().get_function_info(pCopy1, &infos1, &n_infos1);
-    pClassifier2->parser().get_function_info(pCopy2, &infos2, &n_infos2);
+    pPlugin1->parser().get_function_info(pCopy1, &infos1, &n_infos1);
+    pPlugin2->parser().get_function_info(pCopy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1189,23 +1191,23 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1,
 }
 
 
-bool compare(QUERY_CLASSIFIER* pClassifier1,
+bool compare(Parser::Plugin* pPlugin1,
              GWBUF* pBuf1,
-             QUERY_CLASSIFIER* pClassifier2,
+             Parser::Plugin* pPlugin2,
              GWBUF* pBuf2)
 {
     int errors = 0;
 
-    errors += !compare_parse(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_operation(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_created_table_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_database_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_prepare_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_field_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_function_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_parse(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_type(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_operation(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_created_table_name(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_is_drop_table_query(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_table_names(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_database_names(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_prepare_name(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_field_info(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_get_function_info(pPlugin1, pBuf1, pPlugin2, pBuf2);
 
     if (global.result_printed)
     {
@@ -1214,23 +1216,23 @@ bool compare(QUERY_CLASSIFIER* pClassifier1,
 
     bool success = (errors == 0);
 
-    uint32_t type_mask1 = pClassifier1->parser().get_type_mask(pBuf1);
-    uint32_t type_mask2 = pClassifier2->parser().get_type_mask(pBuf2);
+    uint32_t type_mask1 = pPlugin1->parser().get_type_mask(pBuf1);
+    uint32_t type_mask2 = pPlugin2->parser().get_type_mask(pBuf2);
 
     if ((type_mask1 == type_mask2)
         && ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
     {
-        GWBUF* pPreparable1 = pClassifier1->parser().get_preparable_stmt(pBuf1);
-        GWBUF* pPreparable2 = pClassifier2->parser().get_preparable_stmt(pBuf2);
+        GWBUF* pPreparable1 = pPlugin1->parser().get_preparable_stmt(pBuf1);
+        GWBUF* pPreparable2 = pPlugin2->parser().get_preparable_stmt(pBuf2);
 
         if (pPreparable1 && pPreparable2)
         {
             string indent = global.indent;
             global.indent += string(4, ' ');
 
-            success = compare(pClassifier1,
+            success = compare(pPlugin1,
                               pPreparable1,
-                              pClassifier2,
+                              pPlugin2,
                               pPreparable2);
 
             global.indent = indent;
@@ -1240,12 +1242,12 @@ bool compare(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
+bool compare(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, const string& s)
 {
     GWBUF* pCopy1 = create_gwbuf(s);
     GWBUF* pCopy2 = create_gwbuf(s);
 
-    bool success = compare(pClassifier1, pCopy1, pClassifier2, pCopy2);
+    bool success = compare(pPlugin1, pCopy1, pPlugin2, pCopy2);
 
     if (success)
     {
@@ -1257,13 +1259,13 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
             switch (sql_mode)
             {
             case SetSqlModeParser::DEFAULT:
-                pClassifier1->parser().set_sql_mode(QC_SQL_MODE_DEFAULT);
-                pClassifier2->parser().set_sql_mode(QC_SQL_MODE_DEFAULT);
+                pPlugin1->parser().set_sql_mode(QC_SQL_MODE_DEFAULT);
+                pPlugin2->parser().set_sql_mode(QC_SQL_MODE_DEFAULT);
                 break;
 
             case SetSqlModeParser::ORACLE:
-                pClassifier1->parser().set_sql_mode(QC_SQL_MODE_ORACLE);
-                pClassifier2->parser().set_sql_mode(QC_SQL_MODE_ORACLE);
+                pPlugin1->parser().set_sql_mode(QC_SQL_MODE_ORACLE);
+                pPlugin2->parser().set_sql_mode(QC_SQL_MODE_ORACLE);
                 break;
 
             default:
@@ -1300,7 +1302,7 @@ static void trim(std::string& s)
     rtrim(s);
 }
 
-int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, istream& in)
+int run(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, istream& in)
 {
     bool stop = false;      // Whether we should exit.
 
@@ -1320,7 +1322,7 @@ int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, istream&
             report_query();
         }
 
-        bool success = compare(pClassifier1, pClassifier2, global.query);
+        bool success = compare(pPlugin1, pPlugin2, global.query);
 
         if (!success)
         {
@@ -1338,7 +1340,7 @@ int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, istream&
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& statement)
+int run(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, const string& statement)
 {
     global.query = statement;
 
@@ -1350,7 +1352,7 @@ int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const st
         report_query();
     }
 
-    if (!compare(pClassifier1, pClassifier2, global.query))
+    if (!compare(pPlugin1, pPlugin2, global.query))
     {
         ++global.n_errors;
     }
@@ -1506,23 +1508,23 @@ int main(int argc, char* argv[])
                 const char* zClassifier1Args = classifier1Args.c_str();
                 const char* zClassifier2Args = classifier2Args.c_str();
 
-                QUERY_CLASSIFIER* pClassifier1;
-                QUERY_CLASSIFIER* pClassifier2;
+                Parser::Plugin* pPlugin1;
+                Parser::Plugin* pPlugin2;
 
-                if (get_classifiers(sql_mode,
-                                    zClassifier1,
-                                    zClassifier1Args,
-                                    &pClassifier1,
-                                    zClassifier2,
-                                    zClassifier2Args,
-                                    &pClassifier2))
+                if (get_plugins(sql_mode,
+                                zClassifier1,
+                                zClassifier1Args,
+                                &pPlugin1,
+                                zClassifier2,
+                                zClassifier2Args,
+                                &pPlugin2))
                 {
                     size_t round = 0;
                     bool terminate = false;
 
                     if (solo)
                     {
-                        pClassifier2 = pClassifier1;
+                        pPlugin2 = pPlugin1;
                     }
 
                     do
@@ -1536,11 +1538,11 @@ int main(int argc, char* argv[])
 
                         if (zStatement)
                         {
-                            rc = run(pClassifier1, pClassifier2, zStatement);
+                            rc = run(pPlugin1, pPlugin2, zStatement);
                         }
                         else if (n == 1)
                         {
-                            rc = run(pClassifier1, pClassifier2, cin);
+                            rc = run(pPlugin1, pPlugin2, cin);
                         }
                         else
                         {
@@ -1550,7 +1552,7 @@ int main(int argc, char* argv[])
 
                             if (in)
                             {
-                                rc = run(pClassifier1, pClassifier2, in);
+                                rc = run(pPlugin1, pPlugin2, in);
                             }
                             else
                             {
@@ -1572,10 +1574,10 @@ int main(int argc, char* argv[])
 
                     if (solo)
                     {
-                        pClassifier2 = nullptr;
+                        pPlugin2 = nullptr;
                     }
 
-                    put_classifiers(pClassifier1, pClassifier2);
+                    put_plugins(pPlugin1, pPlugin2);
 
                     cout << "\n";
                     cout << "1st classifier: "

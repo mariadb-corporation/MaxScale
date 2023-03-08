@@ -122,10 +122,10 @@ public:
         return i != m_infos.end() ? i->second.sInfo.get() : nullptr;
     }
 
-    std::shared_ptr<QC_STMT_INFO> get(QUERY_CLASSIFIER* pClassifier, std::string_view canonical_stmt)
+    std::shared_ptr<QC_STMT_INFO> get(mxs::Parser::Plugin* pPlugin, std::string_view canonical_stmt)
     {
         std::shared_ptr<QC_STMT_INFO> sInfo;
-        qc_sql_mode_t sql_mode = pClassifier->parser().get_sql_mode();
+        qc_sql_mode_t sql_mode = pPlugin->parser().get_sql_mode();
 
         auto i = m_infos.find(canonical_stmt);
 
@@ -157,7 +157,7 @@ public:
         return sInfo;
     }
 
-    void insert(QUERY_CLASSIFIER* pClassifier,
+    void insert(mxs::Parser::Plugin* pPlugin,
                 std::string_view canonical_stmt,
                 std::shared_ptr<QC_STMT_INFO> sInfo)
     {
@@ -193,10 +193,10 @@ public:
 
             if (m_stats.size + size <= cache_max_size)
             {
-                qc_sql_mode_t sql_mode = pClassifier->parser().get_sql_mode();
+                qc_sql_mode_t sql_mode = pPlugin->parser().get_sql_mode();
 
                 m_infos.emplace(canonical_stmt,
-                                Entry(pClassifier, std::move(sInfo), sql_mode, this_thread.options));
+                                Entry(pPlugin, std::move(sInfo), sql_mode, this_thread.options));
 
                 ++m_stats.inserts;
                 m_stats.size += size;
@@ -228,7 +228,7 @@ public:
                 QC_CACHE_ENTRY e {};
 
                 e.hits = entry.hits;
-                e.result = entry.pClassifier->get_result_from_info(entry.sInfo.get());
+                e.result = entry.pPlugin->get_result_from_info(entry.sInfo.get());
 
                 state.insert(std::make_pair(stmt, e));
             }
@@ -238,7 +238,7 @@ public:
 
                 e.hits += entry.hits;
 #if defined (SS_DEBUG)
-                QC_STMT_RESULT result = entry.pClassifier->get_result_from_info(entry.sInfo.get());
+                QC_STMT_RESULT result = entry.pPlugin->get_result_from_info(entry.sInfo.get());
 
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
@@ -265,11 +265,11 @@ public:
 private:
     struct Entry
     {
-        Entry(QUERY_CLASSIFIER* pClassifier,
+        Entry(mxs::Parser::Plugin* pPlugin,
               std::shared_ptr<QC_STMT_INFO> sInfo,
               qc_sql_mode_t sql_mode,
               uint32_t options)
-            : pClassifier(pClassifier)
+            : pPlugin(pPlugin)
             , sInfo(std::move(sInfo))
             , sql_mode(sql_mode)
             , options(options)
@@ -277,7 +277,7 @@ private:
         {
         }
 
-        QUERY_CLASSIFIER*             pClassifier;
+        mxs::Parser::Plugin*          pPlugin;
         std::shared_ptr<QC_STMT_INFO> sInfo;
         qc_sql_mode_t                 sql_mode;
         uint32_t                      options;
@@ -385,8 +385,8 @@ public:
     QCInfoCacheScope(const QCInfoCacheScope&) = delete;
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
-    QCInfoCacheScope(QUERY_CLASSIFIER* pClassifier, GWBUF* pStmt)
-        : m_pClassifier(pClassifier)
+    QCInfoCacheScope(mxs::Parser::Plugin* pPlugin, GWBUF* pStmt)
+        : m_pPlugin(pPlugin)
         , m_pStmt(pStmt)
     {
         auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data_ptr());
@@ -404,7 +404,7 @@ public:
                 m_canonical += ":P";
             }
 
-            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(m_pClassifier, m_canonical);
+            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(m_pPlugin, m_canonical);
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
@@ -425,10 +425,10 @@ public:
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
             // contained a COM_STMT_PREPARE.
-            std::string_view canonical = m_pClassifier->info_get_canonical(sInfo.get());
+            std::string_view canonical = m_pPlugin->info_get_canonical(sInfo.get());
             mxb_assert(m_canonical == canonical);
 
-            this_thread.pInfo_cache->insert(m_pClassifier, canonical, std::move(sInfo));
+            this_thread.pInfo_cache->insert(m_pPlugin, canonical, std::move(sInfo));
         }
         else if (!exclude)
         {   // The size might have changed
@@ -444,15 +444,15 @@ public:
     }
 
 private:
-    QUERY_CLASSIFIER* m_pClassifier;
-    GWBUF*            m_pStmt;
-    std::string       m_canonical;
-    size_t            m_info_size_before;
+    mxs::Parser::Plugin* m_pPlugin;
+    GWBUF*               m_pStmt;
+    std::string          m_canonical;
+    size_t               m_info_size_before;
 
     bool exclude_from_cache() const
     {
         constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
-        uint32_t type_mask = m_pClassifier->parser().get_type_mask(m_pStmt);
+        uint32_t type_mask = m_pPlugin->parser().get_type_mask(m_pStmt);
         return (type_mask & is_autocommit) != 0;
     }
 };
@@ -462,9 +462,9 @@ private:
 namespace maxscale
 {
 
-CachingParser::CachingParser(QUERY_CLASSIFIER* pClassifier)
-    : m_classifier(*pClassifier)
-    , m_parser(pClassifier->parser())
+CachingParser::CachingParser(Plugin* pPlugin)
+    : m_plugin(*pPlugin)
+    , m_parser(pPlugin->parser())
 {
 }
 
@@ -719,14 +719,14 @@ void CachingParser::set_thread_cache_enabled(bool enabled)
     this_thread.use_cache = enabled;
 }
 
-QUERY_CLASSIFIER& CachingParser::classifier() const
+mxs::Parser::Plugin& CachingParser::plugin() const
 {
-    return m_classifier;
+    return m_plugin;
 }
 
 qc_parse_result_t CachingParser::parse(GWBUF* pStmt, uint32_t collect) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
 
     return m_parser.parse(pStmt, collect);
 }
@@ -738,13 +738,13 @@ GWBUF CachingParser::create_buffer(const std::string& statement) const
 
 std::string_view CachingParser::get_created_table_name(GWBUF* query) const
 {
-    QCInfoCacheScope scope(&m_classifier, query);
+    QCInfoCacheScope scope(&m_plugin, query);
     return m_parser.get_created_table_name(query);
 }
 
 CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF* pStmt) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     return m_parser.get_database_names(pStmt);
 }
 
@@ -752,7 +752,7 @@ void CachingParser::get_field_info(GWBUF* pStmt,
                                    const QC_FIELD_INFO** ppInfos,
                                    size_t* pnInfos) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     m_parser.get_field_info(pStmt, ppInfos, pnInfos);
 }
 
@@ -760,19 +760,19 @@ void CachingParser::get_function_info(GWBUF* pStmt,
                                       const QC_FUNCTION_INFO** ppInfos,
                                       size_t* pnInfos) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     m_parser.get_function_info(pStmt, ppInfos, pnInfos);
 }
 
 QC_KILL CachingParser::get_kill_info(GWBUF* query) const
 {
-    QCInfoCacheScope scope(&m_classifier, query);
+    QCInfoCacheScope scope(&m_plugin, query);
     return m_parser.get_kill_info(query);
 }
 
 qc_query_op_t CachingParser::get_operation(GWBUF* pStmt) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     return m_parser.get_operation(pStmt);
 }
 
@@ -783,13 +783,13 @@ uint32_t CachingParser::get_options() const
 
 GWBUF* CachingParser::get_preparable_stmt(GWBUF* pStmt) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     return m_parser.get_preparable_stmt(pStmt);
 }
 
 std::string_view CachingParser::get_prepare_name(GWBUF* pStmt) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     return m_parser.get_prepare_name(pStmt);
 }
 
@@ -805,7 +805,7 @@ qc_sql_mode_t CachingParser::get_sql_mode() const
 
 CachingParser::TableNames CachingParser::get_table_names(GWBUF* pStmt) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     return m_parser.get_table_names(pStmt);
 }
 
@@ -816,13 +816,13 @@ uint32_t CachingParser::get_trx_type_mask(GWBUF* pStmt) const
 
 uint32_t CachingParser::get_type_mask(GWBUF* pStmt) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     return m_parser.get_type_mask(pStmt);
 }
 
 bool CachingParser::is_drop_table_query(GWBUF* pStmt) const
 {
-    QCInfoCacheScope scope(&m_classifier, pStmt);
+    QCInfoCacheScope scope(&m_plugin, pStmt);
     return m_parser.is_drop_table_query(pStmt);
 }
 

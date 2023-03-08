@@ -507,9 +507,9 @@ static void sigfatal_handler(int i)
 
             if (parser)
             {
-                QUERY_CLASSIFIER& qc = parser->classifier();
+                mxs::Parser::Plugin& pp = parser->plugin();
 
-                qc.get_current_stmt(&pStmt, &nStmt);
+                pp.get_current_stmt(&pStmt, &nStmt);
             }
         }
     }

@@ -446,16 +446,16 @@ const char* Parser::op_to_string(qc_query_op_t op)
 }
 
 //static
-QUERY_CLASSIFIER* Parser::load(const char* zPlugin_name)
+Parser::Plugin* Parser::load(const char* zPlugin_name)
 {
-    void* pModule = nullptr;
+    void* pModule_object = nullptr;
     auto pModule_info = get_module(zPlugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
     if (pModule_info)
     {
-        pModule = pModule_info->module_object;
+        pModule_object = pModule_info->module_object;
     }
 
-    if (pModule)
+    if (pModule_object)
     {
         MXB_INFO("%s loaded.", zPlugin_name);
     }
@@ -464,11 +464,11 @@ QUERY_CLASSIFIER* Parser::load(const char* zPlugin_name)
         MXB_ERROR("Could not load %s.", zPlugin_name);
     }
 
-    return (QUERY_CLASSIFIER*) pModule;
+    return static_cast<Plugin*>(pModule_object);
 }
 
 //static
-void Parser::unload(QUERY_CLASSIFIER*)
+void Parser::unload(Parser::Plugin*)
 {
     // TODO: The module loading/unloading needs an overhaul before we
     // TODO: actually can unload something.

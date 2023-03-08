@@ -5510,7 +5510,7 @@ namespace
 class SqliteParser : public mxs::Parser
 {
 public:
-    QUERY_CLASSIFIER& classifier() const override;
+    mxs::Parser::Plugin& plugin() const override;
 
     qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override
     {
@@ -5665,7 +5665,7 @@ public:
     }
 };
 
-class SqliteQueryClassifier : public QUERY_CLASSIFIER
+class SqliteParserPlugin : public mxs::Parser::Plugin
 {
 public:
     int32_t setup(qc_sql_mode_t sql_mode, const char* args) override
@@ -5707,11 +5707,11 @@ private:
     SqliteParser m_parser;
 };
 
-SqliteQueryClassifier qc;
+SqliteParserPlugin sqlite3_plugin;
 
-QUERY_CLASSIFIER& SqliteParser::classifier() const
+mxs::Parser::Plugin& SqliteParser::plugin() const
 {
-    return qc;
+    return sqlite3_plugin;
 }
 
 }
@@ -5736,7 +5736,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Query classifier using sqlite.",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &qc,
+        &sqlite3_plugin,
         qc_sqlite_process_init,
         qc_sqlite_process_end,
         qc_sqlite_thread_init,
