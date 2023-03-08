@@ -4086,6 +4086,11 @@ public:
         return static_cast<qc_parse_result_t>(result);
     }
 
+    GWBUF create_buffer(const std::string& statement) const override
+    {
+        return mariadb::create_query(statement);
+    }
+
     std::string_view get_created_table_name(GWBUF* pStmt) const override
     {
         std::string_view name;
