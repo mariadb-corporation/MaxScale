@@ -28,6 +28,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
+#include "../../server/core/internal/modules.hh"
 #include "testreader.hh"
 
 using std::cerr;
@@ -195,7 +196,7 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
 {
     if (pClassifier)
     {
-        pClassifier->process_end();
+        pClassifier->thread_end();
         qc_unload(pClassifier);
     }
 }
@@ -1586,6 +1587,8 @@ int main(int argc, char* argv[])
                          << global.time2.tv_sec << "."
                          << global.time2.tv_nsec
                          << endl;
+
+                    unload_all_modules();
                 }
 
                 mxs_log_finish();

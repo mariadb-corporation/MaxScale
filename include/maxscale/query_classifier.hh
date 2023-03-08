@@ -50,19 +50,6 @@ public:
     virtual int32_t setup(qc_sql_mode_t sql_mode, const char* args) = 0;
 
     /**
-     * Called once at process startup. Typically not required, as the standard module loader already
-     * calls this function through the module interface.
-     *
-     * @return QC_RESULT_OK, if the process initialization succeeded.
-     */
-    virtual int32_t process_init(void) = 0;
-
-    /**
-     * Called once at process shutdown.
-     */
-    virtual void process_end(void) = 0;
-
-    /**
      * Called once per each thread.
      *
      * @return QC_RESULT_OK, if the thread initialization succeeded.
