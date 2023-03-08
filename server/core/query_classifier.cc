@@ -48,12 +48,10 @@ const char DEFAULT_QC_NAME[] = "qc_sqlite";
 const char CN_ARGUMENTS[] = "arguments";
 const char CN_CACHE[] = "cache";
 const char CN_CACHE_SIZE[] = "cache_size";
-const char CN_CLASSIFICATION[] = "classification";
 const char CN_CLASSIFY[] = "classify";
 const char CN_FIELDS[] = "fields";
 const char CN_FUNCTIONS[] = "functions";
 const char CN_HAS_WHERE_CLAUSE[] = "has_where_clause";
-const char CN_HITS[] = "hits";
 const char CN_OPERATION[] = "operation";
 const char CN_PARSE_RESULT[] = "parse_result";
 const char CN_TYPE_MASK[] = "type_mask";
@@ -163,60 +161,3 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CLASSIFY, pSelf));
 }
 
-namespace
-{
-
-json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry)
-{
-    json_t* pHits = json_integer(entry.hits);
-
-    json_t* pClassification = json_object();
-    json_object_set_new(pClassification,
-                        CN_PARSE_RESULT, json_string(mxs::parser::to_string(entry.result.status)));
-    std::string type_mask = mxs::Parser::type_mask_to_string(entry.result.type_mask);
-    json_object_set_new(pClassification, CN_TYPE_MASK, json_string(type_mask.c_str()));
-    json_object_set_new(pClassification,
-                        CN_OPERATION,
-                        json_string(mxs::Parser::op_to_string(entry.result.op)));
-
-    json_t* pAttributes = json_object();
-    json_object_set_new(pAttributes, CN_HITS, pHits);
-    json_object_set_new(pAttributes, CN_CLASSIFICATION, pClassification);
-
-    json_t* pSelf = json_object();
-    json_object_set_new(pSelf, CN_ID, json_string(stmt.c_str()));
-    json_object_set_new(pSelf, CN_TYPE, json_string(CN_CACHE));
-    json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
-
-    return pSelf;
-}
-}
-
-std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
-{
-    std::map<std::string, QC_CACHE_ENTRY> state;
-
-    // Assuming the classification cache of all workers will roughly be similar
-    // (which will be the case unless something is broken), collecting the
-    // information serially from all routing workers will consume 1/N of the
-    // memory that would be consumed if the information were collected in
-    // parallel and then coalesced here.
-
-    mxs::RoutingWorker::execute_serially([&state]() {
-                                             mxs::CachingParser::get_thread_cache_state(state);
-                                         });
-
-    json_t* pData = json_array();
-
-    for (const auto& p : state)
-    {
-        const auto& stmt = p.first;
-        const auto& entry = p.second;
-
-        json_t* pEntry = cache_entry_as_json(stmt, entry);
-
-        json_array_append_new(pData, pEntry);
-    }
-
-    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pData));
-}

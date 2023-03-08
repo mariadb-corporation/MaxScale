@@ -986,7 +986,8 @@ HttpResponse cb_qc_classify(const HttpRequest& request)
 
 HttpResponse cb_qc_cache(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, qc_cache_as_json(request.host()).release());
+    json_t* json = mxs::CachingParser::content_as_resource(request.host()).release();
+    return HttpResponse(MHD_HTTP_OK, json);
 }
 
 HttpResponse cb_thread(const HttpRequest& request)

@@ -126,15 +126,6 @@ QUERY_CLASSIFIER* qc_load(const char* plugin_name);
 void qc_unload(QUERY_CLASSIFIER* classifier);
 
 /**
- * Return query classifier cache content.
- *
- * @param zHost      The MaxScale host.
- *
- * @return A json object containing information about the query classifier cache.
- */
-std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
-
-/**
  * Classify statement
  *
  * @param zHost      The MaxScale host.
