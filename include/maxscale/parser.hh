@@ -174,16 +174,6 @@ struct QC_FUNCTION_INFO
 };
 
 /**
- * Each API function returns @c QC_RESULT_OK if the actual parsing process
- * succeeded, and some error code otherwise.
- */
-enum qc_result_t
-{
-    QC_RESULT_OK,
-    QC_RESULT_ERROR
-};
-
-/**
  * QC_STMT_RESULT contains limited information about a particular
  * statement.
  */

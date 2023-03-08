@@ -62,6 +62,17 @@ using mxb::sv_case_eq;
         catch (...) { \
             MXB_ERROR("Caught unknown exception."); pInfo->m_status = QC_QUERY_INVALID;}} while (false)
 
+namespace
+{
+
+enum qc_result_t
+{
+    QC_RESULT_OK,
+    QC_RESULT_ERROR
+};
+
+}
+
 static inline bool qc_info_was_tokenized(qc_parse_result_t status)
 {
     return status == QC_QUERY_TOKENIZED;
