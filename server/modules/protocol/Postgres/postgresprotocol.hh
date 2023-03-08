@@ -122,6 +122,28 @@ enum BidirectionalCommand : uint8_t
     COPY_DONE = 'c',    // CopyDone
 };
 
+// Authentication mechanisms
+enum Auth : uint32_t
+{
+    // Sent when authentication is complete
+    AUTH_OK = 0,    // AuthenticationOk
+
+    AUTH_KERBEROS  = 2,     // AuthenticationKerberosV5, not supported anymore
+    AUTH_CLEARTEXT = 3,     // AuthenticationCleartextPassword, plaintext passwords
+    AUTH_MD5       = 5,     // AuthenticationMD5Password, old hashed password authentication
+    AUTH_SCM       = 6,     // AuthenticationSCMCredential, sent only by pre-9.1 servers
+
+    // GSSAPI authentication
+    AUTH_GSS          = 7,  // AuthenticationGSS
+    AUTH_GSS_CONTINUE = 8,  // AuthenticationGSSContinue, used by both GSSAPI and SSPI authentication
+    AUTH_SSPI         = 9,  // AuthenticationSSPI
+
+    // SASL authentication: https://www.postgresql.org/docs/current/sasl-authentication.html
+    AUTH_SASL          = 10,// AuthenticationSASL
+    AUTH_SASL_CONTINUE = 11,// AuthenticationSASLContinue
+    AUTH_SASL_FINAL    = 12,// AuthenticationSASLFinal
+};
+
 // A connection can also send a StartupMessage as the first command. The command consists of:
 //
 //   Int32 -  The length of the message.

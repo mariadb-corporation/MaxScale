@@ -15,6 +15,14 @@
 #include "postgresprotocol.hh"
 #include <maxscale/authenticator.hh>
 
+struct ScramUser
+{
+    std::string iter;
+    std::string salt;
+    std::string stored_key;
+    std::string server_key;
+};
+
 class PgAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
