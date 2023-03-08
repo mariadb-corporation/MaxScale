@@ -44,11 +44,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { select as d3Select } from 'd3-selection'
 import * as d3d from 'd3-dag'
 import 'd3-transition'
 import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsCharts/GraphNodes.vue'
+import { drawLinks } from '@share/components/common/MxsCharts/utils'
+
+const LINK_CTR_CLASS = 'link_container'
+const LINK_LINE_CLASS = 'link_line'
 
 export default {
     name: 'mxs-dag-graph',
@@ -117,7 +120,7 @@ export default {
     methods: {
         draw() {
             this.computeLayout(this.data)
-            this.drawLinks(this.dag.links())
+            this.handleDrawLinks()
             this.setGraphNodeCoordMap()
         },
         /**
@@ -298,7 +301,7 @@ export default {
             if (shouldRevert) points = points.reverse()
             return points
         },
-        handleCreateDiagonal(data) {
+        linkPathGenerator(data) {
             return this.obtuseShape(data)
         },
         transformArrow(data) {
@@ -313,47 +316,16 @@ export default {
             return this.colorizingLinkFn(d) || '#0e9bc0'
         },
         /**
-         * @param {Object} linkGroup - linkGroup
-         * @param {String} type - enter or update
-         * @param {Boolean} isInvisible - draw an invisible line with enough thickness so that
-         * mouseover event on `.link-group` can be triggered easily
-         */
-        drawLine({ linkGroup, type, isInvisible }) {
-            const className = isInvisible ? 'link_line__invisible' : 'link_line'
-            const strokeWidth = isInvisible ? 12 : 2.5
-            const strokeDasharray = isInvisible ? 0 : 5
-            const stroke = isInvisible ? 'transparent' : this.colorize
-            const diagonal = d => this.handleCreateDiagonal(d)
-            switch (type) {
-                case 'enter':
-                    linkGroup
-                        .append('path')
-                        .attr('class', className)
-                        .attr('fill', 'none')
-                        .attr('stroke-width', strokeWidth)
-                        .attr('stroke-dasharray', strokeDasharray)
-                        .attr('stroke', stroke)
-                        .attr('d', diagonal)
-                    break
-                case 'update':
-                    linkGroup
-                        .select(`path.${className}`)
-                        .attr('stroke', stroke)
-                        .attr('d', diagonal)
-                    break
-            }
-        },
-        /**
-         * @param {Object} linkGroup - linkGroup
+         * @param {Object} linkCtr - container element of the link
          * @param {String} type - enter or update
          */
-        drawArrowHead({ linkGroup, type }) {
+        drawArrowHead({ linkCtr, type }) {
             const className = 'link__arrow'
             const strokeWidth = 3
             const transform = d => this.transformArrow(d)
             switch (type) {
                 case 'enter':
-                    linkGroup
+                    linkCtr
                         .append('path')
                         .attr('class', className)
                         .attr('stroke-width', strokeWidth)
@@ -364,60 +336,24 @@ export default {
                         .attr('transform', transform)
                     break
                 case 'update':
-                    linkGroup
+                    linkCtr
                         .select(`path.${className}`)
                         .attr('fill', this.colorize)
                         .attr('transform', transform)
                     break
             }
         },
-        drawArrowLink(param) {
-            this.drawLine(param)
-            this.drawArrowHead(param)
-        },
-        drawLinks(data) {
-            this.svgGroup
-                .selectAll('.link-group')
-                .data(data)
-                .join(
-                    enter => {
-                        const linkGroup = enter
-                            .insert('g')
-                            .attr('class', 'link-group pointer')
-                            .style('opacity', 0.5)
-                            .on('mouseover', function() {
-                                d3Select(this)
-                                    .style('opacity', 1)
-                                    .style('z-index', 10)
-                                    .select('path.link_line')
-                                    .attr('stroke-dasharray', null)
-                            })
-                            .on('mouseout', function() {
-                                d3Select(this)
-                                    .style('opacity', 0.5)
-                                    .style('z-index', 'unset')
-                                    .select('path.link_line')
-                                    .attr('stroke-dasharray', '5')
-                            })
-                        this.drawArrowLink({ linkGroup, type: 'enter' })
-                        /**
-                         * mouseover event on `.link-group` can only be triggered when mouseover "visiblePainted" path.
-                         * i.e. the space between dots won't trigger the event. In addition, the line is thin making
-                         * it hard to trigger the event.
-                         * So draw an invisible line with enough thickness.
-                         */
-                        this.drawLine({ linkGroup, type: 'enter', isInvisible: true })
-                        return linkGroup
-                    },
-                    // update is called when node changes it size or its position
-                    update => {
-                        const linkGroup = update
-                        this.drawArrowLink({ linkGroup, type: 'update' })
-                        this.drawLine({ linkGroup, type: 'update', isInvisible: true })
-                        return linkGroup
-                    },
-                    exit => exit.remove()
-                )
+        handleDrawLinks() {
+            drawLinks({
+                containerEle: this.svgGroup,
+                data: this.dag.links(),
+                linkCtrClassName: LINK_CTR_CLASS,
+                linkClassName: LINK_LINE_CLASS,
+                linkPathGenerator: this.linkPathGenerator,
+                linkStrokeGenerator: this.colorize,
+                onEnter: linkCtr => this.drawArrowHead({ linkCtr, type: 'enter' }),
+                onUpdate: linkCtr => this.drawArrowHead({ linkCtr, type: 'update' }),
+            })
         },
         //-------------------------draggable methods---------------------------
         /**
@@ -427,7 +363,7 @@ export default {
          */
         changeLinkGroupStyle({ link, isDragging }) {
             this.svgGroup
-                .selectAll('.link-group')
+                .selectAll(`.${LINK_CTR_CLASS}`)
                 .filter(d => {
                     return (
                         d.source.data.id === link.source.data.id &&
@@ -436,7 +372,7 @@ export default {
                 })
                 .style('opacity', isDragging ? 1 : 0.5)
                 .style('z-index', isDragging ? 10 : 'unset')
-                .select('path.link_line')
+                .select(`path.${LINK_LINE_CLASS}`)
                 .attr('stroke-dasharray', isDragging ? null : '5')
         },
         /**
@@ -470,7 +406,7 @@ export default {
             })
             // store links so that style applied to them can be reset to default after finish dragging
             this.highlightedLinks = [...dagNode.ichildLinks(), ...parentLinks]
-            this.drawLinks(this.dag.links())
+            this.handleDrawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
             this.redrawLinks({ nodeId: node.id, diffX, diffY })
