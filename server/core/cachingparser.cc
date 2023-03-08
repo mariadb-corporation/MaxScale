@@ -30,9 +30,6 @@ const char CN_CACHE[] = "cache";
 const char CN_CACHE_SIZE[] = "cache_size";
 const char CN_CLASSIFICATION[] = "classification";
 const char CN_HITS[] = "hits";
-const char CN_OPERATION[] = "operation";
-const char CN_PARSE_RESULT[] = "parse_result";
-const char CN_TYPE_MASK[] = "type_mask";
 
 class ThisUnit
 {

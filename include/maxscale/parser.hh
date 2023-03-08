@@ -332,6 +332,7 @@ public:
     virtual QUERY_CLASSIFIER& classifier() const = 0;
 
     virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
+    std::unique_ptr<json_t>   parse_to_resource(const char* zHost, const std::string& statement) const;
 
     virtual GWBUF            create_buffer(const std::string& statement) const = 0;
     virtual std::string_view get_created_table_name(GWBUF* pStmt) const = 0;
