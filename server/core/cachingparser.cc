@@ -16,6 +16,8 @@
 #include <map>
 #include <random>
 #include <maxscale/buffer.hh>
+#include <maxscale/cn_strings.hh>
+#include <maxscale/json_api.hh>
 // TODO: Remove mariadb dependency.
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
@@ -23,6 +25,8 @@
 
 namespace
 {
+
+const char CN_CACHE_SIZE[] = "cache_size";
 
 class ThisUnit
 {
@@ -514,6 +518,82 @@ bool CachingParser::set_properties(const QC_CACHE_PROPERTIES& properties)
 void CachingParser::get_properties(QC_CACHE_PROPERTIES* pProperties)
 {
     pProperties->max_size = this_unit.cache_max_size();
+}
+
+namespace
+{
+
+json_t* get_params(json_t* pJson)
+{
+    json_t* pParams = mxb::json_ptr(pJson, MXS_JSON_PTR_PARAMETERS);
+
+    if (pParams && json_is_object(pParams))
+    {
+        if (auto pSize = mxb::json_ptr(pParams, CN_CACHE_SIZE))
+        {
+            if (!json_is_null(pSize) && !json_is_integer(pSize))
+            {
+                pParams = nullptr;
+            }
+        }
+    }
+
+    return pParams;
+}
+}
+
+//static
+bool CachingParser::set_properties(json_t* pJson)
+{
+    bool rv = false;
+
+    json_t* pParams = get_params(pJson);
+
+    if (pParams)
+    {
+        rv = true;
+
+        QC_CACHE_PROPERTIES cache_properties;
+        get_properties(&cache_properties);
+
+        json_t* pValue;
+
+        if ((pValue = mxb::json_ptr(pParams, CN_CACHE_SIZE)))
+        {
+            cache_properties.max_size = json_integer_value(pValue);
+            // If get_params() did its job, then we will not
+            // get here if the value is negative.
+            mxb_assert(cache_properties.max_size >= 0);
+        }
+
+        if (rv)
+        {
+            MXB_AT_DEBUG(bool set = ) mxs::CachingParser::set_properties(cache_properties);
+            mxb_assert(set);
+        }
+    }
+
+    return rv;
+}
+
+//static
+std::unique_ptr<json_t> CachingParser::get_properties_as_resource(const char* zHost)
+{
+    QC_CACHE_PROPERTIES properties;
+    get_properties(&properties);
+
+    json_t* pParams = json_object();
+    json_object_set_new(pParams, CN_CACHE_SIZE, json_integer(properties.max_size));
+
+    json_t* pAttributes = json_object();
+    json_object_set_new(pAttributes, CN_PARAMETERS, pParams);
+
+    json_t* pSelf = json_object();
+    json_object_set_new(pSelf, CN_ID, json_string(CN_QUERY_CLASSIFIER));
+    json_object_set_new(pSelf, CN_TYPE, json_string(CN_QUERY_CLASSIFIER));
+    json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
+
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC, pSelf));
 }
 
 //static

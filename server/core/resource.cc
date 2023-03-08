@@ -19,6 +19,7 @@
 
 #include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
+#include <maxscale/cachingparser.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/http.hh>
 #include <maxscale/listener.hh>
@@ -593,7 +594,7 @@ HttpResponse cb_alter_qc(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
 
-    if (qc_alter_from_json(request.get_json()))
+    if (mxs::CachingParser::set_properties(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -972,7 +973,8 @@ HttpResponse cb_all_threads(const HttpRequest& request)
 
 HttpResponse cb_qc(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, qc_as_json(request.host()).release());
+    json_t* json = mxs::CachingParser::get_properties_as_resource(request.host()).release();
+    return HttpResponse(MHD_HTTP_OK, json);
 }
 
 HttpResponse cb_qc_classify(const HttpRequest& request)
