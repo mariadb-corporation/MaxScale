@@ -124,13 +124,3 @@ QUERY_CLASSIFIER* qc_load(const char* plugin_name);
  * @see qc_load
  */
 void qc_unload(QUERY_CLASSIFIER* classifier);
-
-/**
- * Classify statement
- *
- * @param zHost      The MaxScale host.
- * @param statement  The statement to be classified.
- *
- * @return A json object containing information about the statement.
- */
-std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement);

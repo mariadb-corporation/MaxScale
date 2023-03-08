@@ -22,10 +22,11 @@
 #include <maxscale/cachingparser.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/http.hh>
+#include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/admin.hh"
@@ -981,7 +982,10 @@ HttpResponse cb_qc_classify(const HttpRequest& request)
 {
     string sql = request.get_option("sql");
 
-    return HttpResponse(MHD_HTTP_OK, qc_classify_as_json(request.host(), sql).release());
+    // TODO: Add possiblity to parse using specific parser.
+    json_t* json = MariaDBParser::get().parse_to_resource(request.host(), sql).release();
+
+    return HttpResponse(MHD_HTTP_OK, json);
 }
 
 HttpResponse cb_qc_cache(const HttpRequest& request)
