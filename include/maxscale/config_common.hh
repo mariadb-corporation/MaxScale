@@ -31,7 +31,6 @@
 #include <maxbase/jansson.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/pcre2.hh>
-#include <maxscale/query_classifier.hh>
 
 class SERVICE;
 class SERVER;

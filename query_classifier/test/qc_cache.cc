@@ -19,7 +19,6 @@
 #include <maxscale/cachingparser.hh>
 #include <maxscale/log.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/testparser.hh>
 

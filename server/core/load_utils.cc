@@ -36,7 +36,6 @@
 #include <maxscale/monitor.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/version.hh>

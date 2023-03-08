@@ -20,7 +20,6 @@
 #include <maxscale/json_api.hh>
 // TODO: Remove mariadb dependency.
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
 
 namespace

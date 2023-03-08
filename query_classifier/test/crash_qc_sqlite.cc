@@ -17,7 +17,6 @@
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/testparser.hh>
 #include "../../server/core/internal/modules.hh"
 

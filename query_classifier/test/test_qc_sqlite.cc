@@ -5,7 +5,6 @@
 #include <maxbase/assert.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/modutil.hh>
 
 using namespace std::literals::string_literals;

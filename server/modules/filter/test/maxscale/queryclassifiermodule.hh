@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/parser.hh>
 #include "module.hh"
 
 namespace maxscale
