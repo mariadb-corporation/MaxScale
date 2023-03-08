@@ -47,7 +47,7 @@ public:
     {
         if (m_qc)
         {
-            qc_unload(m_qc);
+            mxs::Parser::unload(m_qc);
         }
     }
 
@@ -78,7 +78,7 @@ private:
     {
         std::string libdir = "../"s + name;
         mxs::set_libdir(libdir.c_str());
-        QUERY_CLASSIFIER* pClassifier = qc_load(name);
+        QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(name);
 
         if (pClassifier)
         {
@@ -88,7 +88,7 @@ private:
                 || pClassifier->thread_init() != QC_RESULT_OK)
             {
                 std::cerr << "error: Could not setup or init classifier " << name << "." << std::endl;
-                qc_unload(pClassifier);
+                mxs::Parser::unload(pClassifier);
                 pClassifier = nullptr;
             }
             else

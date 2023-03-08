@@ -22,7 +22,7 @@ namespace
 
 QUERY_CLASSIFIER* load_parser(const string& plugin, qc_sql_mode_t sql_mode, const string& plugin_args)
 {
-    QUERY_CLASSIFIER* pClassifier = qc_load(plugin.c_str());
+    QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(plugin.c_str());
 
     if (!pClassifier)
     {
@@ -34,7 +34,7 @@ QUERY_CLASSIFIER* load_parser(const string& plugin, qc_sql_mode_t sql_mode, cons
 
     if (pClassifier->setup(sql_mode, plugin_args.c_str()) != QC_RESULT_OK)
     {
-        qc_unload(pClassifier);
+        mxs::Parser::unload(pClassifier);
         ostringstream ss;
 
         ss << "Could not setup parser plugin '" << plugin << "'.";
@@ -44,7 +44,7 @@ QUERY_CLASSIFIER* load_parser(const string& plugin, qc_sql_mode_t sql_mode, cons
 
     if (pClassifier->thread_init() != QC_RESULT_OK)
     {
-        qc_unload(pClassifier);
+        mxs::Parser::unload(pClassifier);
         ostringstream ss;
 
         ss << "Could not perform thread initialization for parser plugin '" << plugin << "'.";

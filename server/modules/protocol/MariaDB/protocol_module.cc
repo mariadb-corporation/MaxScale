@@ -343,7 +343,7 @@ int module_init()
 
     const auto& config = mxs::Config::get();
 
-    QUERY_CLASSIFIER* pClassifier = qc_load(DEFAULT_QC_NAME);
+    QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(DEFAULT_QC_NAME);
 
     if (pClassifier)
     {
@@ -356,7 +356,7 @@ int module_init()
         }
         else
         {
-            qc_unload(pClassifier);
+            mxs::Parser::unload(pClassifier);
         }
     }
     else

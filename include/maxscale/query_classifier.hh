@@ -99,28 +99,3 @@ public:
 
     virtual mxs::Parser& parser() = 0;
 };
-
-/**
- * Loads a particular query classifier.
- *
- * In general there is no need to use this function, but rely upon qc_init().
- * However, if there is a need to use multiple query classifiers concurrently
- * then this function provides the means for that. Note that after a query
- * classifier has been loaded, it must explicitly be initialized before it
- * can be used.
- *
- * @param plugin_name  The name of the plugin from which the query classifier
- *                     should be loaded.
- *
- * @return A QUERY_CLASSIFIER object if successful, NULL otherwise.
- *
- * @see qc_unload
- */
-QUERY_CLASSIFIER* qc_load(const char* plugin_name);
-
-/**
- * Unloads an explicitly loaded query classifier.
- *
- * @see qc_load
- */
-void qc_unload(QUERY_CLASSIFIER* classifier);
