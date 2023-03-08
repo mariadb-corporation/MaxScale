@@ -328,6 +328,9 @@ public:
 
     static const char* op_to_string(qc_query_op_t op);
 
+    static QUERY_CLASSIFIER* load(const char* zPlugin_name);
+    static void              unload(QUERY_CLASSIFIER* pPlugin);
+
     // Only for testing purposes, not to be used for anything else.
     virtual QUERY_CLASSIFIER& classifier() const = 0;
 

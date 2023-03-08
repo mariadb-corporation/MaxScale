@@ -15,6 +15,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/query_classifier.hh>
+#include "internal/modules.hh"
 
 namespace
 {
@@ -443,6 +444,35 @@ const char* Parser::op_to_string(qc_query_op_t op)
     default:
         return "UNKNOWN_QUERY_OP";
     }
+}
+
+//static
+QUERY_CLASSIFIER* Parser::load(const char* zPlugin_name)
+{
+    void* pModule = nullptr;
+    auto pModule_info = get_module(zPlugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
+    if (pModule_info)
+    {
+        pModule = pModule_info->module_object;
+    }
+
+    if (pModule)
+    {
+        MXB_INFO("%s loaded.", zPlugin_name);
+    }
+    else
+    {
+        MXB_ERROR("Could not load %s.", zPlugin_name);
+    }
+
+    return (QUERY_CLASSIFIER*) pModule;
+}
+
+//static
+void Parser::unload(QUERY_CLASSIFIER*)
+{
+    // TODO: The module loading/unloading needs an overhaul before we
+    // TODO: actually can unload something.
 }
 
 namespace

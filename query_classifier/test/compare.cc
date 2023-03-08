@@ -159,7 +159,7 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
 
     mxs::set_libdir(libdir);
 
-    QUERY_CLASSIFIER* pClassifier = qc_load(name);
+    QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(name);
 
     if (!pClassifier)
     {
@@ -183,7 +183,7 @@ QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, cons
                 || pClassifier->thread_init() != QC_RESULT_OK)
             {
                 cerr << "error: Could not setup or init classifier " << zName << "." << endl;
-                qc_unload(pClassifier);
+                mxs::Parser::unload(pClassifier);
                 pClassifier = 0;
             }
         }
@@ -197,7 +197,7 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
     if (pClassifier)
     {
         pClassifier->thread_end();
-        qc_unload(pClassifier);
+        mxs::Parser::unload(pClassifier);
     }
 }
 
