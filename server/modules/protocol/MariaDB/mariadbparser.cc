@@ -13,8 +13,8 @@
 
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 
-MariaDBParser::MariaDBParser(QUERY_CLASSIFIER* pClassifier)
-    : mxs::CachingParser(pClassifier)
+MariaDBParser::MariaDBParser(mxs::Parser::Plugin* pPlugin)
+    : mxs::CachingParser(pPlugin)
 {
 }
 

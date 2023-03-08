@@ -23,7 +23,7 @@ int errors = 0;
 class Tester
 {
 public:
-    Tester(const char* query_classifier)
+    Tester(const char* zParser_plugin)
     {
         mxs::set_datadir("/tmp");
         mxs::set_langdir(".");
@@ -34,19 +34,19 @@ public:
             throw std::runtime_error("Failed to initialize the log");
         }
 
-        m_qc = load_classifier(query_classifier);
+        m_pPlugin = load_plugin(zParser_plugin);
 
-        if (!m_qc)
+        if (!m_pPlugin)
         {
-            throw std::runtime_error("Failed to load "s + query_classifier);
+            throw std::runtime_error("Failed to load "s + zParser_plugin);
         }
     }
 
     ~Tester()
     {
-        if (m_qc)
+        if (m_pPlugin)
         {
-            mxs::Parser::unload(m_qc);
+            mxs::Parser::unload(m_pPlugin);
         }
     }
 
@@ -54,57 +54,57 @@ public:
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_qc->parser().get_operation(&buffer);
+        return m_pPlugin->parser().get_operation(&buffer);
     }
 
     uint32_t get_type(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_qc->parser().get_type_mask(&buffer);
+        return m_pPlugin->parser().get_type_mask(&buffer);
     }
 
     QC_KILL get_kill(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_qc->parser().get_kill_info(&buffer);
+        return m_pPlugin->parser().get_kill_info(&buffer);
     }
 
 private:
 
-    QUERY_CLASSIFIER* load_classifier(const char* name)
+    mxs::Parser::Plugin* load_plugin(const char* name)
     {
         std::string libdir = "../"s + name;
         mxs::set_libdir(libdir.c_str());
-        QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(name);
+        mxs::Parser::Plugin* pPlugin = mxs::Parser::load(name);
 
-        if (pClassifier)
+        if (pPlugin)
         {
             const char* args = "parse_as=10.3,log_unrecognized_statements=1";
 
-            if (pClassifier->setup(QC_SQL_MODE_DEFAULT, args) != QC_RESULT_OK
-                || pClassifier->thread_init() != QC_RESULT_OK)
+            if (pPlugin->setup(QC_SQL_MODE_DEFAULT, args) != QC_RESULT_OK
+                || pPlugin->thread_init() != QC_RESULT_OK)
             {
-                std::cerr << "error: Could not setup or init classifier " << name << "." << std::endl;
-                mxs::Parser::unload(pClassifier);
-                pClassifier = nullptr;
+                std::cerr << "error: Could not setup or init plugin " << name << "." << std::endl;
+                mxs::Parser::unload(pPlugin);
+                pPlugin = nullptr;
             }
             else
             {
                 uint64_t version = 10 * 1000 * 3 * 100;
-                pClassifier->parser().set_server_version(version);
+                pPlugin->parser().set_server_version(version);
             }
         }
         else
         {
-            std::cerr << "error: Could not load classifier " << name << "." << std::endl;
+            std::cerr << "error: Could not load plugin " << name << "." << std::endl;
         }
 
-        return pClassifier;
+        return pPlugin;
     }
 
-    QUERY_CLASSIFIER* m_qc = nullptr;
+    mxs::Parser::Plugin* m_pPlugin = nullptr;
 };
 
 static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases

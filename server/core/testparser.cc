@@ -19,11 +19,11 @@ using namespace std;
 namespace
 {
 
-QUERY_CLASSIFIER* load_parser(const string& plugin, qc_sql_mode_t sql_mode, const string& plugin_args)
+mxs::Parser::Plugin* load_parser(const string& plugin, qc_sql_mode_t sql_mode, const string& plugin_args)
 {
-    QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(plugin.c_str());
+    mxs::Parser::Plugin* pPlugin = mxs::Parser::load(plugin.c_str());
 
-    if (!pClassifier)
+    if (!pPlugin)
     {
         ostringstream ss;
         ss << "Could not load parser plugin '" << plugin << "'.";
@@ -31,9 +31,9 @@ QUERY_CLASSIFIER* load_parser(const string& plugin, qc_sql_mode_t sql_mode, cons
         throw std::runtime_error(ss.str());
     }
 
-    if (pClassifier->setup(sql_mode, plugin_args.c_str()) != QC_RESULT_OK)
+    if (pPlugin->setup(sql_mode, plugin_args.c_str()) != QC_RESULT_OK)
     {
-        mxs::Parser::unload(pClassifier);
+        mxs::Parser::unload(pPlugin);
         ostringstream ss;
 
         ss << "Could not setup parser plugin '" << plugin << "'.";
@@ -41,9 +41,9 @@ QUERY_CLASSIFIER* load_parser(const string& plugin, qc_sql_mode_t sql_mode, cons
         throw std::runtime_error(ss.str());
     }
 
-    if (pClassifier->thread_init() != QC_RESULT_OK)
+    if (pPlugin->thread_init() != QC_RESULT_OK)
     {
-        mxs::Parser::unload(pClassifier);
+        mxs::Parser::unload(pPlugin);
         ostringstream ss;
 
         ss << "Could not perform thread initialization for parser plugin '" << plugin << "'.";
@@ -53,7 +53,7 @@ QUERY_CLASSIFIER* load_parser(const string& plugin, qc_sql_mode_t sql_mode, cons
 
     mxs::CachingParser::thread_init();
 
-    return pClassifier;
+    return pPlugin;
 }
 
 }
@@ -68,7 +68,7 @@ TestParser::TestParser(const string& plugin, qc_sql_mode_t sql_mode, const strin
 
 TestParser::~TestParser()
 {
-    m_classifier.thread_end();
+    m_plugin.thread_end();
     mxs::CachingParser::thread_finish();
 }
 

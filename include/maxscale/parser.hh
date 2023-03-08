@@ -17,7 +17,6 @@
 
 #define MXS_QUERY_CLASSIFIER_VERSION {3, 0, 0}
 
-class QUERY_CLASSIFIER;
 class GWBUF;
 struct json_t;
 
@@ -304,8 +303,6 @@ enum qc_trx_parse_using_t
 namespace maxscale
 {
 
-class Parser;
-
 namespace parser
 {
 
@@ -314,81 +311,80 @@ const char* to_string(qc_kill_type_t type);
 
 }
 
-}
-
-class QUERY_CLASSIFIER
-{
-public:
-    /**
-     * Called once to setup the query classifier
-     *
-     * @param sql_mode  The default sql mode.
-     * @param args      The value of `query_classifier_args` in the configuration file.
-     *
-     * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
-     *         some specific error code.
-     */
-    virtual int32_t setup(qc_sql_mode_t sql_mode, const char* args) = 0;
-
-    /**
-     * Called once per each thread.
-     *
-     * @return QC_RESULT_OK, if the thread initialization succeeded.
-     */
-    virtual int32_t thread_init(void) = 0;
-
-    /**
-     * Called once when a thread finishes.
-     */
-    virtual void thread_end(void) = 0;
-
-    /**
-     * Return statement currently being classified.
-     *
-     * @param ppStmp  Pointer to pointer that on return will point to the
-     *                statement being classified.
-     * @param pLen    Pointer to value that on return will contain the length
-     *                of the returned string.
-     *
-     * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
-     *         classified), QC_RESULT_ERROR otherwise.
-     */
-    virtual int32_t get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
-
-    /**
-     * Get result from info.
-     *
-     * @param  The info whose result should be returned.
-     *
-     * @return The result of the provided info.
-     */
-    virtual QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) = 0;
-
-    /**
-     * Get canonical statement
-     *
-     * @param info  The info whose canonical statement should be returned.
-     *
-     * @attention - The string_view refers to data that remains valid only as long
-     *              as @c info remains valid.
-     *            - If @c info is of a COM_STMT_PREPARE, then the canonical string will
-     *              be suffixed by ":P".
-     *
-     * @return The canonical statement.
-     */
-    virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
-
-    virtual mxs::Parser& parser() = 0;
-};
-
-namespace maxscale
-{
-
 class Parser
 {
 public:
     using TableNames = std::vector<QcTableName>;
     using DatabaseNames = std::vector<std::string_view>;
+
+    /**
+     * Plugin defines the object a parser plugin must
+     * implement and return.
+     */
+    class Plugin
+    {
+    public:
+        /**
+         * Called once to setup the query classifier
+         *
+         * @param sql_mode  The default sql mode.
+         * @param args      The value of `query_classifier_args` in the configuration file.
+         *
+         * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
+         *         some specific error code.
+         */
+        virtual int32_t setup(qc_sql_mode_t sql_mode, const char* args) = 0;
+
+        /**
+         * Called once per each thread.
+         *
+         * @return QC_RESULT_OK, if the thread initialization succeeded.
+         */
+        virtual int32_t thread_init(void) = 0;
+
+        /**
+         * Called once when a thread finishes.
+         */
+        virtual void thread_end(void) = 0;
+
+        /**
+         * Return statement currently being classified.
+         *
+         * @param ppStmp  Pointer to pointer that on return will point to the
+         *                statement being classified.
+         * @param pLen    Pointer to value that on return will contain the length
+         *                of the returned string.
+         *
+         * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
+         *         classified), QC_RESULT_ERROR otherwise.
+         */
+        virtual int32_t get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
+
+        /**
+         * Get result from info.
+         *
+         * @param  The info whose result should be returned.
+         *
+         * @return The result of the provided info.
+         */
+        virtual QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) = 0;
+
+        /**
+         * Get canonical statement
+         *
+         * @param info  The info whose canonical statement should be returned.
+         *
+         * @attention - The string_view refers to data that remains valid only as long
+         *              as @c info remains valid.
+         *            - If @c info is of a COM_STMT_PREPARE, then the canonical string will
+         *              be suffixed by ":P".
+         *
+         * @return The canonical statement.
+         */
+        virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
+
+        virtual mxs::Parser& parser() = 0;
+    };
 
     virtual ~Parser() = default;
 
@@ -401,11 +397,10 @@ public:
 
     static const char* op_to_string(qc_query_op_t op);
 
-    static QUERY_CLASSIFIER* load(const char* zPlugin_name);
-    static void              unload(QUERY_CLASSIFIER* pPlugin);
+    static Plugin* load(const char* zPlugin_name);
+    static void    unload(Plugin* pPlugin);
 
-    // Only for testing purposes, not to be used for anything else.
-    virtual QUERY_CLASSIFIER& classifier() const = 0;
+    virtual Plugin& plugin() const = 0;
 
     virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
     std::unique_ptr<json_t>   parse_to_resource(const char* zHost, const std::string& statement) const;

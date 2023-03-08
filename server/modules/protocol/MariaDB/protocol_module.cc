@@ -348,20 +348,20 @@ int module_init()
 
     const auto& config = mxs::Config::get();
 
-    QUERY_CLASSIFIER* pClassifier = mxs::Parser::load(DEFAULT_QC_NAME);
+    mxs::Parser::Plugin* pPlugin = mxs::Parser::load(DEFAULT_QC_NAME);
 
-    if (pClassifier)
+    if (pPlugin)
     {
         MXB_NOTICE("Classifier loaded.");
 
-        if (pClassifier->setup(config.qc_sql_mode, config.qc_args.c_str()) == QC_RESULT_OK)
+        if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()) == QC_RESULT_OK)
         {
-            this_unit.pParser = new MariaDBParser(pClassifier);
+            this_unit.pParser = new MariaDBParser(pPlugin);
             rv = 0;
         }
         else
         {
-            mxs::Parser::unload(pClassifier);
+            mxs::Parser::unload(pPlugin);
         }
     }
     else

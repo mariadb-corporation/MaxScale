@@ -4074,7 +4074,7 @@ namespace
 class MysqlParser : public mxs::Parser
 {
 public:
-    QUERY_CLASSIFIER& classifier() const override;
+    mxs::Parser::Plugin& plugin() const override;
 
     qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override
     {
@@ -4229,7 +4229,7 @@ public:
     }
 };
 
-class MysqlQueryClassifier : public QUERY_CLASSIFIER
+class MysqlParserPlugin : public mxs::Parser::Plugin
 {
 public:
     int32_t setup(qc_sql_mode_t sql_mode, const char* args) override
@@ -4273,11 +4273,11 @@ private:
     MysqlParser m_parser;
 };
 
-MysqlQueryClassifier qc;
+MysqlParserPlugin mysql_plugin;
 
-QUERY_CLASSIFIER& MysqlParser::classifier() const
+mxs::Parser::Plugin& MysqlParser::plugin() const
 {
-    return qc;
+    return mysql_plugin;
 }
 
 }
@@ -4301,7 +4301,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Query classifier based upon MySQL Embedded",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &qc,
+        &mysql_plugin,
         qc_mysql_process_init,
         qc_mysql_process_end,
         qc_mysql_thread_init,

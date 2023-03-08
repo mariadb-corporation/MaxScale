@@ -581,7 +581,7 @@ int main(int argc, char** argv)
     config.n_threads = 1;
 
     mxs::CachingParser::thread_init();
-    MariaDBParser::get().classifier().thread_init();
+    MariaDBParser::get().plugin().thread_init();
 
     return CacheRules::Tester::test_all();
 }
