@@ -139,9 +139,13 @@ public:
             std::string user_name;              /* The user name to filter on */
             std::string source;                 /* The source of the client connection to filter on */
 
-            mxs::config::RegexValue match;  /* Optional text to match against */
-            mxs::config::RegexValue exclude;/* Optional text to match against for exclusion */
-            uint32_t                options;/* Regular expression options */
+            mxs::config::RegexValue match;          /* Optional text to match against */
+            mxs::config::RegexValue exclude;        /* Optional text to match against for exclusion */
+            mxs::config::RegexValue user_match;     /* Match for users */
+            mxs::config::RegexValue user_exclude;   /* Exclude for users */
+            mxs::config::RegexValue source_match;   /* Match for source */
+            mxs::config::RegexValue source_exclude; /* Exclude for source */
+            uint32_t                options;        /* Regular expression options */
         };
 
         const Values& values() const
@@ -254,6 +258,7 @@ private:
     void        write_log_entries(const LogEventElems& elems);
     void        write_session_log_entry(const std::string& entry);
     std::string generate_log_entry(uint64_t data_flags, const LogEventElems& elems);
+    bool        should_activate();
 };
 
 /**

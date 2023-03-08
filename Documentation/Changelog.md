@@ -57,6 +57,11 @@
   key has been modified. As a result, the query history, snippets, and user
   preferences settings are restored to their default values.
 
+* The redundant options for `create server` and `create listener` that were
+  deprecated in 22.08 have been removed in MaxScale 23.02. The use of explicit
+  options has been superseded by the use of `key=value` parameters in all
+  `create` commands.
+
 For more details, please refer to:
 
 * [MariaDB MaxScale 23.02.0 Release Notes](Release-Notes/MaxScale-23.02.0-Release-Notes.md)

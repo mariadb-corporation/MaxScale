@@ -433,7 +433,7 @@ static bool should_skip_query(const mxs::Parser& parser,
         // Not a transaction management related command
         for (const auto& t : tables)
         {
-            std::string name = mxb::cat(!t.db.empty() ? t.db : db, '.', t.table);
+            std::string name = mxb::cat(!t.db.empty() ? t.db : db, ".", t.table);
 
             if (should_skip(config, name))
             {

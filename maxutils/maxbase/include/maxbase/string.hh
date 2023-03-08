@@ -19,6 +19,7 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <type_traits>
 
 /**
  * Thread-safe (but not re-entrant) strerror.
@@ -67,6 +68,10 @@ namespace maxbase
 template<class ... Args>
 std::string cat(Args&& ... args)
 {
+    // This static assertion avoids the accidental use of integers with mxb::cat. If an integer is passed to
+    // std::string::operator+=, the value is converted into a character which is nearly always unintentional.
+    static_assert(std::conjunction_v<std::is_constructible<std::string_view, Args> ...>,
+                  "Must be able to construct a std::string_view from all types");
     std::string rval;
     (rval += ... += args);
     return rval;

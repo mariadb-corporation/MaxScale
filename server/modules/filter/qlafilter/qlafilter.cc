@@ -88,6 +88,22 @@ cfg::ParamString s_user(
     &s_spec, "user", "Log queries only from this user", "",
     cfg::Param::AT_RUNTIME);
 
+cfg::ParamRegex s_user_match(
+    &s_spec, "user_match", "Log queries only from users that match this pattern", "",
+    cfg::Param::AT_RUNTIME);
+
+cfg::ParamRegex s_user_exclude(
+    &s_spec, "user_exclude", "Exclude queries from users that match this pattern", "",
+    cfg::Param::AT_RUNTIME);
+
+cfg::ParamRegex s_source_match(
+    &s_spec, "source_match", "Log queries only from hosts that match this pattern", "",
+    cfg::Param::AT_RUNTIME);
+
+cfg::ParamRegex s_source_exclude(
+    &s_spec, "source_exclude", "Exclude queries from hosts that match this pattern", "",
+    cfg::Param::AT_RUNTIME);
+
 cfg::ParamString s_source(
     &s_spec, "source", "Log queries only from this network address", "",
     cfg::Param::AT_RUNTIME);
@@ -188,6 +204,10 @@ QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     add_native(&Settings::m_v, &Values::match, &s_match);
     add_native(&Settings::m_v, &Values::exclude, &s_exclude);
     add_native(&Settings::m_v, &Values::options, &s_options);
+    add_native(&Settings::m_v, &Values::user_match, &s_user_match);
+    add_native(&Settings::m_v, &Values::user_exclude, &s_user_exclude);
+    add_native(&Settings::m_v, &Values::source_match, &s_source_match);
+    add_native(&Settings::m_v, &Values::source_exclude, &s_source_exclude);
     add_native(&Settings::m_v, &Values::log_file_data_flags, &s_log_data);
     add_native(&Settings::m_v, &Values::log_file_types, &s_log_type);
 }
@@ -202,6 +222,10 @@ bool QlaInstance::Settings::post_configure(const std::map<std::string, mxs::Conf
     m_v.session_data_flags = m_v.log_file_data_flags & ~LOG_DATA_SESSION;
     m_v.exclude = mxs::config::RegexValue(m_v.exclude.pattern(), m_v.options);
     m_v.match = mxs::config::RegexValue(m_v.match.pattern(), m_v.options);
+    m_v.user_match = mxs::config::RegexValue(m_v.user_match.pattern(), m_v.options);
+    m_v.user_exclude = mxs::config::RegexValue(m_v.user_exclude.pattern(), m_v.options);
+    m_v.source_match = mxs::config::RegexValue(m_v.source_match.pattern(), m_v.options);
+    m_v.source_exclude = mxs::config::RegexValue(m_v.source_exclude.pattern(), m_v.options);
     return m_instance->post_configure();
 }
 
@@ -307,9 +331,7 @@ mxs::FilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* servi
 bool QlaFilterSession::prepare()
 {
     const auto& settings = m_log->settings();
-    bool hostname_ok = settings.source.empty() || (m_remote == settings.source);
-    bool username_ok = settings.user_name.empty() || (m_user == settings.user_name);
-    m_active = hostname_ok && username_ok;
+    m_active = should_activate();
 
     bool error = false;
 
@@ -848,6 +870,35 @@ void QlaFilterSession::write_session_log_entry(const string& entry)
             m_write_error_logged = true;
         }
     }
+}
+
+bool QlaFilterSession::should_activate()
+{
+    const auto& settings = m_log->settings();
+    bool user_ok = true;
+    bool host_ok = true;
+
+    if (!settings.source.empty())
+    {
+        host_ok = m_remote == settings.source;
+    }
+    else if (settings.source_match || settings.source_exclude)
+    {
+        host_ok = (!settings.source_match || settings.source_match.match(m_remote))
+            && (!settings.source_exclude || !settings.source_exclude.match(m_remote));
+    }
+
+    if (!settings.user_name.empty())
+    {
+        user_ok = m_user == settings.user_name;
+    }
+    else if (settings.user_match || settings.user_exclude)
+    {
+        user_ok = (!settings.user_match || settings.user_match.match(m_user))
+            && (!settings.user_exclude || !settings.user_exclude.match(m_user));
+    }
+
+    return host_ok && user_ok;
 }
 
 /**
