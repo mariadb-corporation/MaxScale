@@ -13,7 +13,6 @@
 
 #include <maxscale/testparser.hh>
 #include <sstream>
-#include <maxscale/query_classifier.hh>
 
 using namespace std;
 

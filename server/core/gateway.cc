@@ -59,7 +59,6 @@
 #include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/sqlite3.hh>

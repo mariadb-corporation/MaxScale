@@ -17,7 +17,6 @@
 #include <fstream>
 #include <unordered_map>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
 #include "storagefactory.hh"
 #include "cache.hh"
 #include "cache_storage_api.hh"

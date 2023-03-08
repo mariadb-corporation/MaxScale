@@ -26,7 +26,6 @@
 #include <maxscale/log.hh>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/test.hh>
 

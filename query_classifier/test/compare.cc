@@ -26,7 +26,6 @@
 #include <maxscale/log.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/query_classifier.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
 #include "../../server/core/internal/modules.hh"
 #include "testreader.hh"

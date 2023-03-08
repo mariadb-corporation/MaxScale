@@ -14,7 +14,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/query_classifier.hh>
 #include "internal/modules.hh"
 
 namespace

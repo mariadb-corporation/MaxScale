@@ -25,7 +25,6 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/pcre2.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 
 using std::string;

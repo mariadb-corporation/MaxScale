@@ -57,7 +57,6 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 

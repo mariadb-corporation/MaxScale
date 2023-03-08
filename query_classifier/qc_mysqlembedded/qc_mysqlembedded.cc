@@ -70,7 +70,6 @@
 #include <maxbase/string.hh>
 #include <maxscale/log.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include <maxscale/paths.hh>

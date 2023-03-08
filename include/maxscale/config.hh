@@ -14,12 +14,12 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/config2.hh>
-#include <maxscale/session.hh>
-#include <maxscale/query_classifier.hh>
-#include <maxscale/key_manager.hh>
-#include <maxbase/ssl.hh>
 #include <maxbase/http.hh>
+#include <maxbase/ssl.hh>
+#include <maxscale/config2.hh>
+#include <maxscale/key_manager.hh>
+#include <maxscale/parser.hh>
+#include <maxscale/session.hh>
 
 namespace maxscale
 {

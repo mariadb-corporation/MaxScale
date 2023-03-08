@@ -53,7 +53,6 @@
 #include <maxbase/regex.hh>
 #include <maxbase/alloc.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/session.hh>
 #include <maxscale/modutil.hh>

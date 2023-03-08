@@ -24,7 +24,6 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/query_classifier.hh>
 
 #include "sql.hh"
 

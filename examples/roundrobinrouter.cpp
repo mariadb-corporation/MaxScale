@@ -48,7 +48,6 @@
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 
 // #define DEBUG_RRROUTER

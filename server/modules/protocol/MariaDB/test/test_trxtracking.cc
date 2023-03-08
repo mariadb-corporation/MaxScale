@@ -18,7 +18,6 @@
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/testparser.hh>
-#include <maxscale/query_classifier.hh>
 
 using namespace std;
 
