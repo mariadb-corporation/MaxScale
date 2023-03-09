@@ -30,7 +30,7 @@
 #include <maxbase/watchedworker.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/indexedstorage.hh>
-#include <maxscale/parser.hh>
+#include <maxscale/cachingparser.hh>
 #include <maxscale/session.hh>
 
 class ServerEndpoint;

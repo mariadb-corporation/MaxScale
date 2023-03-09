@@ -21,18 +21,6 @@ class GWBUF;
 struct json_t;
 
 /**
- * QC_CACHE_STATS provides statistics of the cache.
- */
-struct QC_CACHE_STATS
-{
-    int64_t size;       /** The current size of the cache. */
-    int64_t inserts;    /** The number of inserts. */
-    int64_t hits;       /** The number of hits. */
-    int64_t misses;     /** The number of misses. */
-    int64_t evictions;  /** The number of evictions. */
-};
-
-/**
  * qc_option_t defines options that affect the classification.
  */
 enum qc_option_t
@@ -189,23 +177,6 @@ enum qc_kill_type_t
     QC_KILL_CONNECTION,
     QC_KILL_QUERY,
     QC_KILL_QUERY_ID
-};
-
-/**
- * Public interface to query classifier cache state.
- */
-struct QC_CACHE_ENTRY
-{
-    int64_t        hits;
-    QC_STMT_RESULT result;
-};
-
-/**
- * QC_CACHE_PROPERTIES specifies the limits of the query classification cache.
- */
-struct QC_CACHE_PROPERTIES
-{
-    int64_t max_size;   /** The maximum size of the cache. */
 };
 
 /**

@@ -18,7 +18,7 @@
 #include <maxbase/ssl.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/key_manager.hh>
-#include <maxscale/parser.hh>
+#include <maxscale/cachingparser.hh>
 #include <maxscale/session.hh>
 
 namespace maxscale
