@@ -547,7 +547,7 @@ public:
     json_t* parameters_to_json() const;
 
     // The following should only be called by the monitor worker.
-    bool pre_run();
+    void pre_run();
     void post_run();
 
     /**

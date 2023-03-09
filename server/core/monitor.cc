@@ -398,7 +398,8 @@ private:
 
     bool pre_run() override final
     {
-        return m_monitor.pre_run();
+        m_monitor.pre_run();
+        return true;
     }
 
     void post_run() override final
@@ -1944,17 +1945,10 @@ bool Monitor::start()
     }
     else
     {
-        // Ok, so the thread started. Let's wait until we can be certain the
-        // state has been updated.
-        m_semaphore.wait();
-
-        started = m_thread_running.load(std::memory_order_acquire);
-        if (!started)
-        {
-            // Ok, so the initialization failed and the thread will exit.
-            // We need to wait on it so that the thread resources will not leak.
-            m_worker->join();
-        }
+        // Worker::start() waits until thread has started and completed its 'pre_run()`. This means that
+        // Monitor::pre_run() has now completed and any writes should be visible.
+        mxb_assert(m_thread_running.load(std::memory_order_relaxed));
+        started = true;
     }
     return started;
 }
@@ -2238,34 +2232,17 @@ void SimpleMonitor::tick()
     write_journal_if_needed();
 }
 
-bool Monitor::pre_run()
+void Monitor::pre_run()
 {
-    bool rv = false;
     m_ticks.store(0, std::memory_order_release);
-
-    if (mysql_thread_init() == 0)
-    {
-        rv = true;
-        // Write and post the semaphore to signal the admin thread that the start is succeeding.
-        m_thread_running.store(true, std::memory_order_release);
-        m_semaphore.post();
-
-        pre_loop();
-        m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
-    }
-    else
-    {
-        MXB_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.", name());
-        m_semaphore.post();
-    }
-
-    return rv;
+    m_thread_running.store(true, std::memory_order_release);
+    pre_loop();
+    m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
 }
 
 void Monitor::post_run()
 {
     post_loop();
-    mysql_thread_end();
 }
 
 bool Monitor::call_run_one_tick()
