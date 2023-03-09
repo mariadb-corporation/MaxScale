@@ -80,10 +80,6 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
             m_state = state_init(gwbuf);
             break;
 
-        case State::SSL_HANDSHAKE:
-            m_state = state_ssl_handshake(gwbuf);
-            break;
-
         case State::AUTH:
             m_state = state_auth(gwbuf);
             break;
@@ -142,12 +138,6 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
     }
 
     return next_state;
-}
-
-PgClientConnection::State PgClientConnection::state_ssl_handshake(const GWBUF& gwbuf)
-{
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    return State::ERROR;
 }
 
 PgClientConnection::State PgClientConnection::state_auth(const GWBUF& gwbuf)
