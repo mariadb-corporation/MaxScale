@@ -882,7 +882,7 @@ bool have_so_reuseport()
     return kernel_supports_so_reuseport;
 }
 
-std::vector<uint8_t> from_base64(const std::string& input)
+std::vector<uint8_t> from_base64(std::string_view input)
 {
     std::vector<uint8_t> rval;
     rval.resize((input.size() / 4) * 3 + 3);

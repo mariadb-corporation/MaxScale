@@ -33,7 +33,7 @@ std::string create_nonce()
     std::array<uint8_t, NONCE_SIZE> nonce;
     RAND_bytes(nonce.data(), nonce.size());
     // This is what e.g. pgbouncer does when generating the nonce.
-    return mxs::to_base64(nonce.data(), nonce.size());
+    return mxs::to_base64(nonce);
 }
 
 std::optional<ScramUser> parse_scram_password(std::string_view pw)
@@ -64,14 +64,52 @@ std::optional<ScramUser> parse_scram_password(std::string_view pw)
 
             user.iter = iter;
             user.salt = salt;
-            user.stored_key = stored;
-            user.server_key = server;
+            auto stored_bin = mxs::from_base64(stored);
+            auto server_bin = mxs::from_base64(server);
 
-            return user;
+            if (stored_bin.size() == SHA256_DIGEST_LENGTH
+                && server_bin.size() == SHA256_DIGEST_LENGTH)
+            {
+                memcpy(user.stored_key.data(), stored_bin.data(), stored_bin.size());
+                memcpy(user.server_key.data(), server_bin.data(), server_bin.size());
+                return user;
+            }
         }
     }
 
     return {};
+}
+
+template<class Key, class Data>
+Digest hmac(const Key& k, const Data& d)
+{
+    Digest digest;
+    unsigned int size = digest.size();
+
+    HMAC(EVP_sha256(), (uint8_t*)k.data(), k.size(), (uint8_t*)d.data(), d.size(), digest.data(), &size);
+    mxb_assert(size == digest.size());
+
+    return digest;
+}
+
+Digest digest_xor(const Digest& lhs, const Digest& rhs)
+{
+    Digest result{};
+
+    for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
+        result[i] = lhs[i] ^ rhs[i];
+    }
+
+    return result;
+}
+
+template<class Input>
+Digest hash(const Input& in)
+{
+    Digest digest;
+    SHA256(in.data(), in.size(), digest.data());
+    return digest;
 }
 
 GWBUF create_authentication_sasl()
@@ -110,8 +148,8 @@ GWBUF create_sasl_initial_response(std::string& client_first_message_bare)
 GWBUF create_authentication_sasl_continue(const GWBUF& buffer, std::string& server_first_message)
 {
     const uint8_t* ptr = buffer.data();
-    uint8_t cmd = *ptr++;
-    mxb_assert(cmd == pg::SASL_INITIAL_RESPONSE);
+    mxb_assert(*ptr == pg::SASL_INITIAL_RESPONSE);
+    ++ptr;
     uint32_t len = pg::get_uint32(ptr);
     ptr += 4;
 
@@ -165,8 +203,10 @@ GWBUF create_authentication_sasl_continue(const GWBUF& buffer, std::string& serv
 GWBUF create_sasl_response(const GWBUF& buffer,
                            std::string_view client_first_message_bare,
                            std::string_view server_first_message,
-                           const std::array<uint8_t, SHA256_DIGEST_LENGTH>& client_key)
+                           const Digest& client_key)
 {
+    mxb_assert(buffer[0] == pg::AUTHENTICATION);
+    mxb_assert(pg::get_uint32(buffer.data() + pg::HEADER_LEN) == pg::AUTH_SASL_CONTINUE);
     uint32_t len = pg::get_uint32(buffer.data() + 1) - 8;
     std::string_view msg((const char*)buffer.data() + 9, len);
     std::string nonce;
@@ -187,6 +227,10 @@ GWBUF create_sasl_response(const GWBUF& buffer,
     auto client_final_message_without_proof = mxb::cat("c=biws,", nonce);
 
     // See: https://www.rfc-editor.org/rfc/rfc5802#section-3
+
+    // AuthMessage     := client-first-message-bare + "," +
+    //                    server-first-message + "," +
+    //                    client-final-message-without-proof
     auto auth_message = mxb::cat(client_first_message_bare, ",",
                                  server_first_message, ",",
                                  client_final_message_without_proof);
@@ -194,25 +238,14 @@ GWBUF create_sasl_response(const GWBUF& buffer,
     // TODO: Get this from the UserAccountManager
     auto user = parse_scram_password(THE_PASSWORD);
 
-    auto stored = mxs::from_base64(user->stored_key);
+    // ClientSignature := HMAC(StoredKey, AuthMessage)
+    Digest client_sig = hmac(user->stored_key, auth_message);
 
-    std::array<uint8_t, SHA256_DIGEST_LENGTH> client_sig;
-    unsigned int client_sig_size = client_sig.size();
+    // ClientProof     := ClientKey XOR ClientSignature
+    auto client_proof = mxs::to_base64(digest_xor(client_key, client_sig));
+    std::string client_final_message = mxb::cat(client_final_message_without_proof, ",p=", client_proof);
 
-    HMAC(EVP_sha256(), stored.data(), stored.size(),
-         (uint8_t*)auth_message.data(), auth_message.size(),
-         client_sig.data(), &client_sig_size);
-
-    std::array<uint8_t, SHA256_DIGEST_LENGTH> client_proof;
-
-    for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    {
-        client_proof[i] = client_key[i] ^ client_sig[i];
-    }
-
-    auto client_proof_b64 = mxs::to_base64(client_proof.data(), client_proof.size());
-    std::string client_final_message = mxb::cat(client_final_message_without_proof, ",p=", client_proof_b64);
-
+    // SASLResponse
     GWBUF response(pg::HEADER_LEN + client_final_message.length());
     uint8_t* ptr = response.data();
 
@@ -226,16 +259,15 @@ GWBUF create_sasl_response(const GWBUF& buffer,
 GWBUF create_authentication_sasl_final(const GWBUF& buffer,
                                        std::string_view client_first_message_bare,
                                        std::string_view server_first_message,
-                                       std::array<uint8_t, SHA256_DIGEST_LENGTH>& client_key)
+                                       Digest& client_key)
 {
-    uint8_t cmd = buffer[0];
-    mxb_assert(cmd == pg::SASL_RESPONSE);
+    mxb_assert(buffer[0] == pg::SASL_RESPONSE);
     uint32_t len = pg::get_uint32(buffer.data() + 1);
     std::string_view client_msg((const char*)buffer.data() + pg::HEADER_LEN, len - 4);
 
     std::string nonce;
     std::string channel_bind;
-    std::vector<uint8_t> client_proof;
+    Digest client_proof{};
 
     for (auto tok : mxb::strtok(client_msg, ","))
     {
@@ -249,11 +281,23 @@ GWBUF create_authentication_sasl_final(const GWBUF& buffer,
         }
         else if (tok[0] == 'p')
         {
-            client_proof = mxs::from_base64(tok.substr(2));
+            if (auto proof = mxs::from_base64(tok.substr(2)); proof.size() == SHA256_DIGEST_LENGTH)
+            {
+                memcpy(client_proof.data(), proof.data(), proof.size());
+            }
+            else
+            {
+                mxb_assert_message(!true, "Invalid proof size: %lu", proof.size());
+                return GWBUF();
+            }
         }
     }
 
     // See: https://www.rfc-editor.org/rfc/rfc5802#section-3
+
+    // AuthMessage     := client-first-message-bare + "," +
+    //                    server-first-message + "," +
+    //                    client-final-message-without-proof
     auto client_final_message_without_proof = mxb::cat(channel_bind, ",", nonce);
     auto auth_message = mxb::cat(client_first_message_bare, ",",
                                  server_first_message, ",",
@@ -262,38 +306,22 @@ GWBUF create_authentication_sasl_final(const GWBUF& buffer,
     // TODO: Get this from the UserAccountManager
     auto user = parse_scram_password(THE_PASSWORD);
 
-    auto stored = mxs::from_base64(user->stored_key);
-    auto server = mxs::from_base64(user->server_key);
-    std::array<uint8_t, SHA256_DIGEST_LENGTH> client_sig;
-    unsigned int client_sig_size = client_sig.size();
+    // ClientSignature := HMAC(StoredKey, AuthMessage)
+    Digest client_sig = hmac(user->stored_key, auth_message);
 
-    HMAC(EVP_sha256(), stored.data(), stored.size(),
-         (uint8_t*)auth_message.data(), auth_message.size(),
-         client_sig.data(), &client_sig_size);
+    // ClientProof     := ClientKey XOR ClientSignature
+    // We do the inverse with the ClientProof to get the ClientKey
+    client_key = digest_xor(client_proof, client_sig);
 
-    mxb_assert(client_proof.size() == SHA256_DIGEST_LENGTH);
-
-    // Output the ClientKey
-    for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    // StoredKey       := H(ClientKey)
+    if (hash(client_key) != user->stored_key)
     {
-        client_key[i] = client_proof[i] ^ client_sig[i];
-    }
-
-    std::array<uint8_t, SHA256_DIGEST_LENGTH> verification;
-    SHA256(client_key.data(), client_key.size(), verification.data());
-
-    if (memcmp(verification.data(), stored.data(), stored.size()) != 0)
-    {
+        // Wrong password
         return GWBUF();
     }
 
-    std::array<uint8_t, SHA256_DIGEST_LENGTH> server_proof;
-    unsigned int server_proof_size = server_proof.size();
-    HMAC(EVP_sha256(), server.data(), server.size(),
-         (uint8_t*)auth_message.data(), auth_message.size(),
-         server_proof.data(), &server_proof_size);
-
-    std::string server_final = "v=" + mxs::to_base64(server_proof.data(), server_proof.size());
+    // ServerSignature := HMAC(ServerKey, AuthMessage)
+    std::string server_final = "v=" + mxs::to_base64(hmac(user->server_key, auth_message));
 
     GWBUF response(9 + server_final.size());
     uint8_t* ptr = response.data();
@@ -303,17 +331,49 @@ GWBUF create_authentication_sasl_final(const GWBUF& buffer,
     ptr += pg::set_uint32(ptr, 8 + server_final.size());
     ptr += pg::set_uint32(ptr, pg::AUTH_SASL_FINAL);
     memcpy(ptr, server_final.data(), server_final.size());
-    ptr += server_final.size();
 
     // The AuthenticationOk, BackendKeyData and ReadyForQuery messages also need to be sent to the client
 
     return response;
 }
 
-bool verify_authentication_sasl_final(const GWBUF& buffer)
+bool verify_authentication_sasl_final(const GWBUF& buffer,
+                                      std::string_view client_first_message_bare,
+                                      std::string_view server_first_message,
+                                      std::string_view client_final_message_without_proof)
 {
-    // TODO: Actually verify the server's response
-    return true;
+    uint32_t len = pg::get_uint32(buffer.data() + 1) - 8;
+    std::string_view msg((const char*)buffer.data() + 9, len);
+    Digest server_sig{};
+
+    for (auto token : mxb::strtok(msg, ","))
+    {
+        if (token.substr(0, 2) == "v=")
+        {
+            if (auto sig = mxs::from_base64(token.substr(2)); sig.size() == server_sig.size())
+            {
+                memcpy(server_sig.data(), sig.data(), sig.size());
+                break;
+            }
+            else
+            {
+                mxb_assert_message(!true, "Invalid signature size: %lu", sig.size());
+                return false;
+            }
+        }
+    }
+
+    // AuthMessage     := client-first-message-bare + "," +
+    //                    server-first-message + "," +
+    //                    client-final-message-without-proof
+    auto auth_message = mxb::cat(client_first_message_bare, ",",
+                                 server_first_message, ",",
+                                 client_final_message_without_proof);
+
+    // TODO: Get this from the UserAccountManager
+    auto user = parse_scram_password(THE_PASSWORD);
+
+    return hmac(user->server_key, auth_message) == server_sig;
 }
 }
 

@@ -551,7 +551,8 @@ std::vector<uint8_t> from_hex(const std::string& str);
  * @return Base64 encoded string of the given data
  */
 std::string to_base64(const uint8_t* ptr, size_t len);
-static inline std::string to_base64(const std::vector<uint8_t>& v)
+template<class T>
+static inline std::string to_base64(const T& v)
 {
     return to_base64(v.data(), v.size());
 }
@@ -563,7 +564,7 @@ static inline std::string to_base64(const std::vector<uint8_t>& v)
  *
  * @return Decoded data
  */
-std::vector<uint8_t> from_base64(const std::string& str);
+std::vector<uint8_t> from_base64(std::string_view str);
 
 /**
  * Base class for checksums

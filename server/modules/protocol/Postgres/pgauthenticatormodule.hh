@@ -15,12 +15,14 @@
 #include "postgresprotocol.hh"
 #include <maxscale/authenticator.hh>
 
+using Digest = std::array<uint8_t, SHA256_DIGEST_LENGTH>;
+
 struct ScramUser
 {
     std::string iter;
     std::string salt;
-    std::string stored_key;
-    std::string server_key;
+    Digest      stored_key{};
+    Digest      server_key{};
 };
 
 class PgAuthenticatorModule : public mxs::AuthenticatorModule
@@ -32,4 +34,3 @@ public:
 
     std::string name() const override;
 };
-
