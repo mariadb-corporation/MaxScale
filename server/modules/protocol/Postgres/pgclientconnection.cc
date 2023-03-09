@@ -13,6 +13,8 @@
 
 #include "pgclientconnection.hh"
 #include <maxscale/dcb.hh>
+#include <maxscale/listener.hh>
+#include <maxscale/service.hh>
 
 namespace
 {
@@ -40,9 +42,28 @@ GWBUF create_startup_reply(const GWBUF& startup_message)
 }
 
 PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent)
-    : m_session(pSession)
+    : m_session(*pSession)
+    , m_ssl_required(m_session.listener_data()->m_ssl.config().enabled)
     , m_down(pComponent)
 {
+}
+
+bool PgClientConnection::setup_ssl()
+{
+    auto state = m_dcb->ssl_state();
+    mxb_assert(state != DCB::SSLState::ESTABLISHED);
+
+    if (state == DCB::SSLState::HANDSHAKE_UNKNOWN)
+    {
+        m_dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
+    }
+
+    auto rv = m_dcb->ssl_handshake();
+
+    const char* zRemote = m_dcb->remote().c_str();
+    const char* zService = m_session.service->name();
+
+    return rv >= 0;
 }
 
 void PgClientConnection::ready_for_reading(DCB* dcb)
@@ -79,7 +100,7 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
 
     if (m_state == State::ERROR)
     {
-        m_session->kill();
+        m_session.kill();
     }
 }
 
@@ -91,16 +112,25 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
 
     if (gwbuf.length() == 8 && first_word == pg::SSLREQ_MAGIC)
     {
-        uint8_t authok[] = {pg::SSLREQ_NO};     // TODO no SSL yet
-        write(GWBUF {authok, sizeof(authok)});
-        next_state = State::INIT;               // Waiting for Startup message
+        uint8_t auth_resp[] = {m_ssl_required ? pg::SSLREQ_YES : pg::SSLREQ_NO};
+        write(GWBUF {auth_resp, sizeof(auth_resp)});
+
+        if (m_ssl_required && !setup_ssl())
+        {
+            MXB_ERROR("SSL setup failed, closing PG client connection.");
+            next_state = State::ERROR;
+        }
+        else
+        {
+            next_state = State::INIT;   // Waiting for Startup message
+        }
     }
     else
     {
         m_dcb->writeq_append(create_startup_reply(gwbuf));
         // TODO: are there more packets that should be read from the dcb
         //       before going to ROUTE or "normal" state.
-        if (m_session->state() == MXS_SESSION::State::CREATED && m_session->start())
+        if (m_session.state() == MXS_SESSION::State::CREATED && m_session.start())
         {
             next_state = State::ROUTE;
         }
@@ -146,13 +176,13 @@ void PgClientConnection::write_ready(DCB* dcb)
 void PgClientConnection::error(DCB* dcb)
 {
     // TODO: Add some logging in case we didn't expect this
-    m_session->kill();
+    m_session.kill();
 }
 
 void PgClientConnection::hangup(DCB* dcb)
 {
     // TODO: Add some logging in case we didn't expect this
-    m_session->kill();
+    m_session.kill();
 }
 
 bool PgClientConnection::write(GWBUF&& buffer)

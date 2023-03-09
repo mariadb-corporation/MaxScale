@@ -55,7 +55,11 @@ private:
     State state_auth(const GWBUF& gwbuf);
     State state_route(GWBUF&& gwbuf);
 
+    // Return true if ssl handshake succeeded or is in progress
+    bool setup_ssl();
+
     State           m_state = State::INIT;
-    MXS_SESSION*    m_session;
+    MXS_SESSION&    m_session;
+    bool            m_ssl_required;
     mxs::Component* m_down;
 };
