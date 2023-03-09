@@ -105,30 +105,9 @@ struct State
             ""                  // indent
 };
 
-ostream& operator<<(ostream& out, qc_parse_result_t x)
+ostream& operator<<(ostream& out, Parser::Result x)
 {
-    switch (x)
-    {
-    case QC_QUERY_INVALID:
-        out << "QC_QUERY_INVALID";
-        break;
-
-    case QC_QUERY_TOKENIZED:
-        out << "QC_QUERY_TOKENIZED";
-        break;
-
-    case QC_QUERY_PARTIALLY_PARSED:
-        out << "QC_QUERY_PARTIALLY_PARSED";
-        break;
-
-    case QC_QUERY_PARSED:
-        out << "QC_QUERY_PARSED";
-        break;
-
-    default:
-        out << "static_cast<c_parse_result_t>(" << (int)x << ")";
-    }
-
+    out << mxs::parser::to_string(x);
     return out;
 }
 
@@ -170,7 +149,7 @@ Parser::Plugin* load_plugin(const char* name)
     return pPlugin;
 }
 
-Parser::Plugin* get_plugin(const char* zName, qc_sql_mode_t sql_mode, const char* zArgs)
+Parser::Plugin* get_plugin(const char* zName, Parser::SqlMode sql_mode, const char* zArgs)
 {
     Parser::Plugin* pPlugin = nullptr;
 
@@ -201,7 +180,7 @@ void put_plugin(Parser::Plugin* pPlugin)
     }
 }
 
-bool get_plugins(qc_sql_mode_t sql_mode,
+bool get_plugins(Parser::SqlMode sql_mode,
                  const char* zName1,
                  const char* zArgs1,
                  Parser::Plugin** ppPlugin1,
@@ -329,12 +308,12 @@ bool compare_parse(Parser::Plugin* pPlugin1,
     struct timespec finish;
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    int32_t rv1 = pPlugin1->parser().parse(pCopy1, QC_COLLECT_ESSENTIALS);
+    Parser::Result rv1 = pPlugin1->parser().parse(pCopy1, Parser::COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time1, start, finish);
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    int32_t rv2 = pPlugin2->parser().parse(pCopy2, QC_COLLECT_ESSENTIALS);
+    Parser::Result rv2 = pPlugin2->parser().parse(pCopy2, Parser::COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time2, start, finish);
 
@@ -343,7 +322,7 @@ bool compare_parse(Parser::Plugin* pPlugin1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << static_cast<qc_parse_result_t>(rv1);
+        ss << "Ok : " << rv1;
         success = true;
     }
     else
@@ -361,7 +340,7 @@ bool compare_parse(Parser::Plugin* pPlugin1,
             }
         }
 
-        ss << static_cast<qc_parse_result_t>(rv1) << " != " << static_cast<qc_parse_result_t>(rv2);
+        ss << rv1 << " != " << rv2;
     }
 
     report(success, ss.str());
@@ -685,7 +664,7 @@ bool compare_get_prepare_name(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool operator==(const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
+bool operator==(const Parser::FieldInfo& lhs, const Parser::FieldInfo& rhs)
 {
     return
         lhs.column == rhs.column
@@ -693,7 +672,7 @@ bool operator==(const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
         && lhs.database == rhs.database;
 }
 
-ostream& operator<<(ostream& out, const QC_FIELD_INFO& x)
+ostream& operator<<(ostream& out, const Parser::FieldInfo& x)
 {
     if (!x.database.empty())
     {
@@ -717,7 +696,7 @@ ostream& operator<<(ostream& out, const QC_FIELD_INFO& x)
 class QcFieldInfo
 {
 public:
-    QcFieldInfo(const QC_FIELD_INFO& info)
+    QcFieldInfo(const Parser::FieldInfo& info)
         : m_database(info.database)
         , m_table(info.table)
         , m_column(info.column)
@@ -791,13 +770,13 @@ public:
             out << "(";
             bool first = true;
 
-            if (m_context & QC_FIELD_UNION)
+            if (m_context & Parser::FIELD_UNION)
             {
                 out << (first ? "" : ", ") << "UNION";
                 first = false;
             }
 
-            if (m_context & QC_FIELD_SUBQUERY)
+            if (m_context & Parser::FIELD_SUBQUERY)
             {
                 out << (first ? "" : ", ") << "SUBQUERY";
                 first = false;
@@ -855,8 +834,8 @@ bool compare_get_field_info(Parser::Plugin* pPlugin1,
     bool success = false;
     const char HEADING[] = "qc_get_field_info        : ";
 
-    const QC_FIELD_INFO* infos1;
-    const QC_FIELD_INFO* infos2;
+    const Parser::FieldInfo* infos1;
+    const Parser::FieldInfo* infos2;
     size_t n_infos1;
     size_t n_infos2;
 
@@ -904,7 +883,7 @@ bool compare_get_field_info(Parser::Plugin* pPlugin1,
 class QcFunctionInfo
 {
 public:
-    QcFunctionInfo(const QC_FUNCTION_INFO& info)
+    QcFunctionInfo(const Parser::FunctionInfo& info)
         : m_name(info.name)
         , m_pFields(info.fields)
         , m_nFields(info.n_fields)
@@ -958,7 +937,7 @@ public:
 
         for (uint32_t i = 0; i < m_nFields; ++i)
         {
-            const QC_FIELD_INFO& name = m_pFields[i];
+            const Parser::FieldInfo& name = m_pFields[i];
 
             if (!name.database.empty())
             {
@@ -1010,7 +989,7 @@ private:
         return rv;
     }
 
-    static std::string get_field_name(const QC_FIELD_INFO& field)
+    static std::string get_field_name(const Parser::FieldInfo& field)
     {
         string s;
 
@@ -1034,9 +1013,9 @@ private:
     }
 
 private:
-    std::string          m_name;
-    const QC_FIELD_INFO* m_pFields;
-    uint32_t             m_nFields;
+    std::string              m_name;
+    const Parser::FieldInfo* m_pFields;
+    uint32_t                 m_nFields;
 };
 
 ostream& operator<<(ostream& out, const QcFunctionInfo& x)
@@ -1093,8 +1072,8 @@ bool compare_get_function_info(Parser::Plugin* pPlugin1,
     bool success = false;
     const char HEADING[] = "qc_get_function_info     : ";
 
-    const QC_FUNCTION_INFO* infos1;
-    const QC_FUNCTION_INFO* infos2;
+    const Parser::FunctionInfo* infos1;
+    const Parser::FunctionInfo* infos2;
     size_t n_infos1;
     size_t n_infos2;
 
@@ -1258,13 +1237,13 @@ bool compare(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, const string& s
             switch (sql_mode)
             {
             case SetSqlModeParser::DEFAULT:
-                pPlugin1->parser().set_sql_mode(QC_SQL_MODE_DEFAULT);
-                pPlugin2->parser().set_sql_mode(QC_SQL_MODE_DEFAULT);
+                pPlugin1->parser().set_sql_mode(Parser::SqlMode::DEFAULT);
+                pPlugin2->parser().set_sql_mode(Parser::SqlMode::DEFAULT);
                 break;
 
             case SetSqlModeParser::ORACLE:
-                pPlugin1->parser().set_sql_mode(QC_SQL_MODE_ORACLE);
-                pPlugin2->parser().set_sql_mode(QC_SQL_MODE_ORACLE);
+                pPlugin1->parser().set_sql_mode(Parser::SqlMode::ORACLE);
+                pPlugin2->parser().set_sql_mode(Parser::SqlMode::ORACLE);
                 break;
 
             default:
@@ -1379,7 +1358,7 @@ int main(int argc, char* argv[])
     string classifier2Args("log_unrecognized_statements=1");
     string statement;
     const char* zStatement = NULL;
-    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
+    Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
     bool solo = false;
 
     size_t rounds = 1;
@@ -1462,11 +1441,11 @@ int main(int argc, char* argv[])
         case 'm':
             if (strcasecmp(optarg, "default") == 0)
             {
-                sql_mode = QC_SQL_MODE_DEFAULT;
+                sql_mode = Parser::SqlMode::DEFAULT;
             }
             else if (strcasecmp(optarg, "oracle") == 0)
             {
-                sql_mode = QC_SQL_MODE_ORACLE;
+                sql_mode = Parser::SqlMode::ORACLE;
             }
             else
             {

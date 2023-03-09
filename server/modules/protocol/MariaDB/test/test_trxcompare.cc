@@ -25,6 +25,7 @@
 #include "../../../query_classifier/test/testreader.hh"
 
 using namespace std;
+using mxs::Parser;
 
 namespace
 {
@@ -70,7 +71,7 @@ GWBUF* create_gwbuf(const char* zStmt)
 class Tester
 {
 public:
-    Tester(const mxs::Parser& parser, uint32_t verbosity)
+    Tester(const Parser& parser, uint32_t verbosity)
         : m_parser(parser)
         , m_verbosity(verbosity)
     {
@@ -82,31 +83,31 @@ public:
 
         GWBUF* pStmt = create_gwbuf(zStmt);
 
-        uint32_t type_mask_qc = m_parser.get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_QC);
-        uint32_t type_mask_parser = m_parser.get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_PARSER);
+        uint32_t type_mask_default = m_parser.get_trx_type_mask_using(pStmt, Parser::ParseTrxUsing::DEFAULT);
+        uint32_t type_mask_custom = m_parser.get_trx_type_mask_using(pStmt, Parser::ParseTrxUsing::CUSTOM);
 
         gwbuf_free(pStmt);
 
-        if (type_mask_qc == type_mask_parser)
+        if (type_mask_default == type_mask_custom)
         {
             if ((m_verbosity & VERBOSITY_SUCCESSFUL)
-                || ((m_verbosity & VERBOSITY_SUCCESSFUL_TRANSACTIONAL) && (type_mask_qc != 0)))
+                || ((m_verbosity & VERBOSITY_SUCCESSFUL_TRANSACTIONAL) && (type_mask_default != 0)))
             {
-                string type_mask_qc_str = mxs::Parser::type_mask_to_string(type_mask_qc);
+                string type_mask_default_str = Parser::type_mask_to_string(type_mask_default);
 
-                cout << zStmt << ": " << type_mask_qc_str << endl;
+                cout << zStmt << ": " << type_mask_default_str << endl;
             }
         }
         else
         {
             if (m_verbosity & VERBOSITY_FAILED)
             {
-                string type_mask_qc_str = mxs::Parser::type_mask_to_string(type_mask_qc);
-                string type_mask_parser_str = mxs::Parser::type_mask_to_string(type_mask_parser);
+                string type_mask_default_str = Parser::type_mask_to_string(type_mask_default);
+                string type_mask_custom_str = Parser::type_mask_to_string(type_mask_custom);
 
                 cout << zStmt << "\n"
-                     << "  QC    : " << type_mask_qc_str << "\n"
-                     << "  PARSER: " << type_mask_parser_str << endl;
+                     << "  QC    : " << type_mask_default_str << "\n"
+                     << "  PARSER: " << type_mask_custom_str << endl;
             }
 
             rc = EXIT_FAILURE;
@@ -139,8 +140,8 @@ private:
     Tester& operator=(const Tester&);
 
 private:
-    const mxs::Parser& m_parser;
-    uint32_t           m_verbosity;
+    const Parser& m_parser;
+    uint32_t      m_verbosity;
 };
 }
 

@@ -463,7 +463,7 @@ public:
      *
      * return True, if @c index referred to a worker, false otherwise.
      */
-    static bool get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats);
+    static bool get_qc_stats_by_index(int index, CachingParser::Stats* pStats);
 
     /**
      * Provides QC statistics of all workers
@@ -471,7 +471,7 @@ public:
      * @param nWorkers   ALL, RUNNING, CONFIGURED or a specific number of workers.
      * @param all_stats  Vector that on return will contain the statistics of all workers.
      */
-    static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats);
+    static void get_qc_stats(std::vector<CachingParser::Stats>& all_stats);
 
     /**
      * Provides QC statistics of all workers as a Json object for use in the REST-API.

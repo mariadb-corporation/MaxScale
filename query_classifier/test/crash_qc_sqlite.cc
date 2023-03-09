@@ -55,7 +55,7 @@ int main()
     // being of the opinion that the statement was not the one to be
     // classified and hence an alien parse-tree being passed to sqlite3's
     // code generator.
-    parser.parse(stmt, QC_COLLECT_ALL);
+    parser.parse(stmt, mxs::Parser::COLLECT_ALL);
 
     gwbuf_free(stmt);
 

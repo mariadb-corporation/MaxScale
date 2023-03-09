@@ -21,40 +21,6 @@ class GWBUF;
 struct json_t;
 
 /**
- * qc_option_t defines options that affect the classification.
- */
-enum qc_option_t
-{
-    QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0),   /*< Report a string argument to a function as a field. */
-    QC_OPTION_STRING_AS_FIELD     = (1 << 1),   /*< Report strings as fields. */
-};
-
-const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD | QC_OPTION_STRING_AS_FIELD;
-
-/**
- * qc_sql_mode_t specifies what should be assumed of the statements
- * that will be parsed.
- */
-enum qc_sql_mode_t
-{
-    QC_SQL_MODE_DEFAULT,    /*< Assume the statements are MariaDB SQL. */
-    QC_SQL_MODE_ORACLE      /*< Assume the statements are PL/SQL. */
-};
-
-/**
- * @c qc_collect_info_t specifies what information should be collected during parsing.
- */
-enum qc_collect_info_t
-{
-    QC_COLLECT_ESSENTIALS = 0x00,   /*< Collect only the base minimum. */
-    QC_COLLECT_TABLES     = 0x01,   /*< Collect table names. */
-    QC_COLLECT_DATABASES  = 0x02,   /*< Collect database names. */
-    QC_COLLECT_FIELDS     = 0x04,   /*< Collect field information. */
-    QC_COLLECT_FUNCTIONS  = 0x08,   /*< Collect function information. */
-
-    QC_COLLECT_ALL = (QC_COLLECT_TABLES | QC_COLLECT_DATABASES | QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS)
-};
-/**
  * qc_query_type_t defines bits that provide information about a
  * particular statement.
  *
@@ -120,92 +86,8 @@ enum qc_query_op_t
     QUERY_OP_KILL,
 };
 
-/**
- * qc_parse_result_t defines the possible outcomes when a statement is parsed.
- */
-enum qc_parse_result_t
-{
-    QC_QUERY_INVALID          = 0,  /*< The query was not recognized or could not be parsed. */
-    QC_QUERY_TOKENIZED        = 1,  /*< The query was classified based on tokens; incompletely classified. */
-    QC_QUERY_PARTIALLY_PARSED = 2,  /*< The query was only partially parsed; incompletely classified. */
-    QC_QUERY_PARSED           = 3   /*< The query was fully parsed; completely classified. */
-};
-
-/**
- * qc_field_context_t defines the context where a field appears.
- *
- * NOTE: A particular bit does NOT mean that the field appears ONLY in the context,
- *       but it may appear in other contexts as well.
- */
-typedef enum qc_field_context
-{
-    QC_FIELD_UNION    = 1,  /** The field appears on the right hand side in a UNION. */
-    QC_FIELD_SUBQUERY = 2   /** The field appears in a subquery. */
-} qc_field_context_t;
-
-struct QC_FIELD_INFO
-{
-    std::string_view database;  /** Present if the field is of the form "a.b.c", empty otherwise. */
-    std::string_view table;     /** Present if the field is of the form "a.b", empty otherwise. */
-    std::string_view column;    /** Always present. */
-    uint32_t         context;   /** The context in which the field appears. */
-};
-
-/**
- * QC_FUNCTION_INFO contains information about a function used in a statement.
- */
-struct QC_FUNCTION_INFO
-{
-    std::string_view name;    /** Name of function. */
-    QC_FIELD_INFO*   fields;  /** What fields the function accesses. */
-    uint32_t         n_fields;/** The number of fields in @c fields. */
-};
-
-/**
- * QC_STMT_RESULT contains limited information about a particular
- * statement.
- */
-struct QC_STMT_RESULT
-{
-    qc_parse_result_t status;
-    uint32_t          type_mask;
-    qc_query_op_t     op;
-};
-
-enum qc_kill_type_t
-{
-    QC_KILL_CONNECTION,
-    QC_KILL_QUERY,
-    QC_KILL_QUERY_ID
-};
-
-/**
- * Contains the information about a KILL command.
- */
-struct QC_KILL
-{
-    std::string    target;                      // The string form target of the KILL
-    bool           user = false;                // If true, the the value in `target` is the name of a user.
-    bool           soft = false;                // If true, the SOFT option was used
-    qc_kill_type_t type = QC_KILL_CONNECTION;   // Type of the KILL command
-};
-
-enum qc_trx_parse_using_t
-{
-    QC_TRX_PARSE_USING_QC,      /**< Use the query classifier. */
-    QC_TRX_PARSE_USING_PARSER,  /**< Use custom parser. */
-};
-
 namespace maxscale
 {
-
-namespace parser
-{
-
-const char* to_string(qc_parse_result_t result);
-const char* to_string(qc_kill_type_t type);
-
-}
 
 class Parser
 {
@@ -263,6 +145,120 @@ public:
     using DatabaseNames = std::vector<std::string_view>;
 
     /**
+     * Options to be used with set_options().
+     */
+    enum Option
+    {
+        OPTION_STRING_ARG_AS_FIELD = (1 << 0),   /*< Report a string argument to a function as a field. */
+        OPTION_STRING_AS_FIELD     = (1 << 1),   /*< Report strings as fields. */
+    };
+
+    static constexpr uint32_t OPTION_MASK = OPTION_STRING_ARG_AS_FIELD | OPTION_STRING_AS_FIELD;
+
+    /**
+     * SqlMode specifies what should be assumed of the statements
+     * that will be parsed.
+     */
+    enum class SqlMode
+    {
+        DEFAULT,    /*< Assume the statements are MariaDB SQL. */
+        ORACLE      /*< Assume the statements are PL/SQL. */
+    };
+
+
+    enum class KillType
+    {
+        CONNECTION,
+        QUERY,
+        QUERY_ID
+    };
+
+    /**
+     * Contains the information about a KILL command.
+     */
+    struct KillInfo
+    {
+        std::string target;                      // The string form target of the KILL
+        bool        user = false;                // If true, the the value in `target` is the name of a user.
+        bool        soft = false;                // If true, the SOFT option was used
+        KillType    type = KillType::CONNECTION; // Type of the KILL command
+    };
+
+    enum class ParseTrxUsing
+    {
+        DEFAULT, /**< Parse transaction state using default parser. */
+        CUSTOM,  /**< Parse transaction state using limited custom parser.. */
+    };
+
+    /**
+     * FieldContext defines the context where a field appears.
+     *
+     * NOTE: A particular bit does NOT mean that the field appears ONLY in the context,
+     *       but it may appear in other contexts as well.
+     */
+    enum FieldContext
+    {
+        FIELD_UNION    = 1,  /** The field appears on the right hand side in a UNION. */
+        FIELD_SUBQUERY = 2   /** The field appears in a subquery. */
+    };
+
+    /**
+     * FieldInfo contains information about a field used in a statement.
+     */
+    struct FieldInfo
+    {
+        std::string_view database;      /** Present if the field is of the form "a.b.c", empty otherwise. */
+        std::string_view table;         /** Present if the field is of the form "a.b", empty otherwise. */
+        std::string_view column;        /** Always present. */
+        uint32_t         context { 0 }; /** The context in which the field appears. */
+    };
+
+    /**
+     * FunctionInfo contains information about a function used in a statement.
+     */
+    struct FunctionInfo
+    {
+        std::string_view name;               /** Name of function. */
+        FieldInfo*       fields { nullptr }; /** What fields the function accesses. */
+        uint32_t         n_fields { 0 };     /** The number of fields in @c fields. */
+    };
+
+    /**
+     * Collect specifies what information should be collected during parsing.
+     */
+    enum Collect
+    {
+        COLLECT_ESSENTIALS = 0x00,   /*< Collect only the base minimum. */
+        COLLECT_TABLES     = 0x01,   /*< Collect table names. */
+        COLLECT_DATABASES  = 0x02,   /*< Collect database names. */
+        COLLECT_FIELDS     = 0x04,   /*< Collect field information. */
+        COLLECT_FUNCTIONS  = 0x08,   /*< Collect function information. */
+
+        COLLECT_ALL = (COLLECT_TABLES | COLLECT_DATABASES | COLLECT_FIELDS | COLLECT_FUNCTIONS)
+    };
+
+    /**
+     * Result defines the possible outcomes when a statement is parsed.
+     */
+    enum class Result
+    {
+        INVALID          = 0,  /*< The query was not recognized or could not be parsed. */
+        TOKENIZED        = 1,  /*< The query was classified based on tokens; incompletely classified. */
+        PARTIALLY_PARSED = 2,  /*< The query was only partially parsed; incompletely classified. */
+        PARSED           = 3   /*< The query was fully parsed; completely classified. */
+    };
+
+    /**
+     * StmtResult contains limited information about a particular statement.
+     */
+    struct StmtResult
+    {
+        Result        status { Result::INVALID };
+        uint32_t      type_mask { 0 };
+        qc_query_op_t op { QUERY_OP_UNDEFINED };
+    };
+
+    /**
      * Plugin defines the object a parser plugin must
      * implement and return.
      */
@@ -277,7 +273,7 @@ public:
          *
          * @return True, if the parser plugin be setup, otherwise false.
          */
-        virtual bool setup(qc_sql_mode_t sql_mode, const char* args) = 0;
+        virtual bool setup(SqlMode sql_mode, const char* args) = 0;
 
         /**
          * Must be called once per thread where the parser will be used. Note that
@@ -313,7 +309,7 @@ public:
          *
          * @return The result of the provided info.
          */
-        virtual QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) = 0;
+        virtual StmtResult get_result_from_info(const QC_STMT_INFO* info) = 0;
 
         /**
          * Get canonical statement
@@ -348,35 +344,43 @@ public:
 
     virtual Plugin& plugin() const = 0;
 
-    virtual qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const = 0;
-    std::unique_ptr<json_t>   parse_to_resource(const char* zHost, const std::string& statement) const;
+    virtual Result           parse(GWBUF* pStmt, uint32_t collect) const = 0;
+    std::unique_ptr<json_t>  parse_to_resource(const char* zHost, const std::string& statement) const;
 
     virtual GWBUF            create_buffer(const std::string& statement) const = 0;
     virtual std::string_view get_created_table_name(GWBUF* pStmt) const = 0;
     virtual DatabaseNames    get_database_names(GWBUF* pStmt) const = 0;
     virtual void             get_field_info(GWBUF* pStmt,
-                                            const QC_FIELD_INFO** ppInfos,
+                                            const FieldInfo** ppInfos,
                                             size_t* pnInfos) const = 0;
     virtual void             get_function_info(GWBUF* pStmt,
-                                               const QC_FUNCTION_INFO** ppInfos,
+                                               const FunctionInfo** ppInfos,
                                                size_t* pnInfos) const = 0;
-    virtual QC_KILL          get_kill_info(GWBUF* pStmt) const = 0;
+    virtual KillInfo         get_kill_info(GWBUF* pStmt) const = 0;
     virtual qc_query_op_t    get_operation(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_options() const = 0;
     virtual GWBUF*           get_preparable_stmt(GWBUF* pStmt) const = 0;
     virtual std::string_view get_prepare_name(GWBUF* pStmt) const = 0;
     virtual uint64_t         get_server_version() const = 0;
-    virtual qc_sql_mode_t    get_sql_mode() const = 0;
+    virtual SqlMode          get_sql_mode() const = 0;
     virtual TableNames       get_table_names(GWBUF* pStmt) const = 0;
     virtual uint32_t         get_trx_type_mask(GWBUF* pStmt) const = 0;
-    uint32_t                 get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const;
+    uint32_t                 get_trx_type_mask_using(GWBUF* pStmt, ParseTrxUsing use) const;
     virtual uint32_t         get_type_mask(GWBUF* pStmt) const = 0;
     virtual bool             is_drop_table_query(GWBUF* pStmt) const = 0;
 
     virtual bool set_options(uint32_t options) = 0;
     virtual void set_server_version(uint64_t version) = 0;
-    virtual void set_sql_mode(qc_sql_mode_t sql_mode) = 0;
+    virtual void set_sql_mode(SqlMode sql_mode) = 0;
 };
+
+namespace parser
+{
+
+const char* to_string(Parser::Result result);
+const char* to_string(Parser::KillType type);
+
+}
 
 }
 

@@ -34,6 +34,7 @@
 using mxb::sv_case_eq;
 using std::shared_ptr;
 using std::unique_ptr;
+using mxs::Parser;
 
 namespace
 {
@@ -532,7 +533,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
         default_table = tables[0].table;
     }
 
-    const QC_FIELD_INFO* infos;
+    const Parser::FieldInfo* infos;
     size_t n_infos;
 
     parser.get_field_info((GWBUF*)pQuery, &infos, &n_infos);
@@ -542,7 +543,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
     size_t i = 0;
     while (!matches && (i < n_infos))
     {
-        const QC_FIELD_INFO* info = (infos + i);
+        const Parser::FieldInfo* info = (infos + i);
 
         if (sv_case_eq(info->column, zRule_column) || strcmp(zRule_column, "*") == 0)
         {
@@ -811,7 +812,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
 
     size_t default_table_len = default_table.length();
 
-    const QC_FIELD_INFO* infos;
+    const Parser::FieldInfo* infos;
     size_t n_infos;
 
     parser.get_field_info((GWBUF*)pQuery, &infos, &n_infos);
@@ -821,7 +822,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
     size_t i = 0;
     while (!matches && (i < n_infos))
     {
-        const QC_FIELD_INFO* info = (infos + i);
+        const Parser::FieldInfo* info = (infos + i);
 
         std::string_view database;
         size_t database_len;

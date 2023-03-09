@@ -64,7 +64,7 @@ public:
         return m_pPlugin->parser().get_type_mask(&buffer);
     }
 
-    QC_KILL get_kill(const std::string& sql)
+    mxs::Parser::KillInfo get_kill(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
 
@@ -83,7 +83,7 @@ private:
         {
             const char* args = "parse_as=10.3,log_unrecognized_statements=1";
 
-            if (!pPlugin->setup(QC_SQL_MODE_DEFAULT, args) || !pPlugin->thread_init())
+            if (!pPlugin->setup(mxs::Parser::SqlMode::DEFAULT, args) || !pPlugin->thread_init())
             {
                 std::cerr << "error: Could not setup or init plugin " << name << "." << std::endl;
                 mxs::Parser::unload(pPlugin);
@@ -434,8 +434,8 @@ void test_kill(Tester& tester)
 
         for (const std::string type : {"", "CONNECTION", "QUERY", "QUERY ID"})
         {
-            qc_kill_type_t qtype = type == "QUERY" ? QC_KILL_QUERY :
-                (type == "QUERY ID" ? QC_KILL_QUERY_ID : QC_KILL_CONNECTION);
+            mxs::Parser::KillType qtype = type == "QUERY" ? mxs::Parser::KillType::QUERY :
+                (type == "QUERY ID" ? mxs::Parser::KillType::QUERY_ID : mxs::Parser::KillType::CONNECTION);
             std::string id = std::to_string(i++);
             std::string sql_id = "KILL " + hardness + " " + type + " " + id;
             std::string sql_user = "KILL " + hardness + " " + type + " USER 'bob'";
@@ -454,7 +454,7 @@ void test_kill(Tester& tester)
             expect(res_id.target == id, "Target should be '%s', not '%s' for: %s",
                    id.c_str(), res_id.target.c_str(), sql_user.c_str());
 
-            if (qtype != QC_KILL_QUERY_ID)
+            if (qtype != mxs::Parser::KillType::QUERY_ID)
             {
                 auto res_user = tester.get_kill(sql_user);
 

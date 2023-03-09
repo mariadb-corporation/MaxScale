@@ -291,17 +291,17 @@ public:
     // NON-modifiable automatically configured parameters.
     ParamAutoTune::value_type auto_tune;        /**< Vector of parameter names. */
 
-    int64_t       n_threads;                    /**< Number of polling threads */
-    int64_t       n_threads_max;                /**< Hard maximum for number of polling threads. */
-    std::string   qc_name;                      /**< The name of the query classifier to load */
-    std::string   qc_args;                      /**< Arguments for the query classifieer */
-    qc_sql_mode_t qc_sql_mode;                  /**< The query classifier sql mode */
-    std::string   admin_host;                   /**< Admin interface host */
-    int64_t       admin_port;                   /**< Admin interface port */
-    bool          admin_auth;                   /**< Admin interface authentication */
-    bool          admin_enabled;                /**< Admin interface is enabled */
-    std::string   admin_pam_rw_service;         /**< PAM service for read-write users */
-    std::string   admin_pam_ro_service;         /**< PAM service for read-only users */
+    int64_t              n_threads;                    /**< Number of polling threads */
+    int64_t              n_threads_max;                /**< Hard maximum for number of polling threads. */
+    std::string          qc_name;                      /**< The name of the query classifier to load */
+    std::string          qc_args;                      /**< Arguments for the query classifieer */
+    mxs::Parser::SqlMode qc_sql_mode;                  /**< The query classifier sql mode */
+    std::string          admin_host;                   /**< Admin interface host */
+    int64_t              admin_port;                   /**< Admin interface port */
+    bool                 admin_auth;                   /**< Admin interface authentication */
+    bool                 admin_enabled;                /**< Admin interface is enabled */
+    std::string          admin_pam_rw_service;         /**< PAM service for read-write users */
+    std::string          admin_pam_ro_service;         /**< PAM service for read-only users */
 
     std::string               admin_ssl_key;        /**< Admin SSL key */
     std::string               admin_ssl_cert;       /**< Admin SSL cert */
@@ -343,7 +343,8 @@ public:
 
     mxb_log_target_t    log_target;                 /**< Log type */
     bool                substitute_variables;       /**< Should environment variables be substituted */
-    QC_CACHE_PROPERTIES qc_cache_properties;        /**< The query classifier cache properties. */
+    using CacheProperties = mxs::CachingParser::Properties;
+    CacheProperties     qc_cache_properties;        /**< The query classifier cache properties. */
     int64_t             promoted_at;                /**< Time when this Maxscale instance was
                                                     * promoted from a passive to an active */
 
@@ -434,7 +435,7 @@ private:
     static config::ParamCount                           s_n_threads_max;
     static config::ParamString                          s_qc_name;
     static config::ParamString                          s_qc_args;
-    static config::ParamEnum<qc_sql_mode_t>             s_qc_sql_mode;
+    static config::ParamEnum<mxs::Parser::SqlMode>      s_qc_sql_mode;
     static config::ParamString                          s_admin_host;
     static config::ParamInteger                         s_admin_port;
     static config::ParamBool                            s_admin_auth;

@@ -51,14 +51,14 @@ GWBUF* create_gwbuf(const char* zStmt)
     return pBuf;
 }
 
-uint32_t get_qc_trx_type_mask(GWBUF* pBuf)
+uint32_t get_default_trx_type_mask(GWBUF* pBuf)
 {
-    return pParser->get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_QC);
+    return pParser->get_trx_type_mask_using(pBuf, mxs::Parser::ParseTrxUsing::DEFAULT);
 }
 
-uint32_t get_parser_trx_type_mask(GWBUF* pBuf)
+uint32_t get_custom_trx_type_mask(GWBUF* pBuf)
 {
-    return pParser->get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_PARSER);
+    return pParser->get_trx_type_mask_using(pBuf, mxs::Parser::ParseTrxUsing::CUSTOM);
 }
 }
 
@@ -464,7 +464,7 @@ int main(int argc, char* argv[])
             {
                 cout << "QC" << endl;
                 cout << "==" << endl;
-                if (!test(get_qc_trx_type_mask, dont_bail_out))
+                if (!test(get_default_trx_type_mask, dont_bail_out))
                 {
                     rc = EXIT_FAILURE;
                 }
@@ -475,7 +475,7 @@ int main(int argc, char* argv[])
             {
                 cout << "Parser" << endl;
                 cout << "======" << endl;
-                if (!test(get_parser_trx_type_mask, dont_bail_out))
+                if (!test(get_custom_trx_type_mask, dont_bail_out))
                 {
                     rc = EXIT_FAILURE;
                 }

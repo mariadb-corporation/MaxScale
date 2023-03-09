@@ -57,11 +57,11 @@ using mxs::Parser;
 #define QC_EXCEPTION_GUARD(statement) \
     do {try {statement;} \
         catch (const std::bad_alloc&) { \
-            MXB_OOM(); pInfo->m_status = QC_QUERY_INVALID;} \
+            MXB_OOM(); pInfo->m_status = Parser::Result::INVALID;} \
         catch (const std::exception& x) { \
-            MXB_ERROR("Caught standard exception: %s", x.what()); pInfo->m_status = QC_QUERY_INVALID;} \
+            MXB_ERROR("Caught standard exception: %s", x.what()); pInfo->m_status = Parser::Result::INVALID;} \
         catch (...) { \
-            MXB_ERROR("Caught unknown exception."); pInfo->m_status = QC_QUERY_INVALID;}} while (false)
+            MXB_ERROR("Caught unknown exception."); pInfo->m_status = Parser::Result::INVALID;}} while (false)
 
 namespace
 {
@@ -74,14 +74,14 @@ enum qc_result_t
 
 }
 
-static inline bool qc_info_was_tokenized(qc_parse_result_t status)
+static inline bool qc_info_was_tokenized(mxs::Parser::Result status)
 {
-    return status == QC_QUERY_TOKENIZED;
+    return status == Parser::Result::TOKENIZED;
 }
 
-static inline bool qc_info_was_parsed(qc_parse_result_t status)
+static inline bool qc_info_was_parsed(mxs::Parser::Result status)
 {
-    return status == QC_QUERY_PARSED;
+    return status == Parser::Result::PARSED;
 }
 
 typedef enum qc_log_level
@@ -144,7 +144,7 @@ static struct
     bool             initialized;
     bool             setup;
     qc_log_level_t   log_level;
-    qc_sql_mode_t    sql_mode;
+    Parser::SqlMode  sql_mode;
     QC_NAME_MAPPING* pFunction_name_mappings;
     std::mutex       lock;
 } this_unit;
@@ -158,7 +158,7 @@ static thread_local struct
 {
     bool             initialized;           // Whether the thread specific data has been initialized.
     sqlite3*         pDb;                   // Thread specific database handle.
-    qc_sql_mode_t    sql_mode;              // What sql_mode is used.
+    Parser::SqlMode  sql_mode;              // What sql_mode is used.
     uint32_t         options;               // Options affecting classification.
     QcSqliteInfo*    pInfo;                 // The information for the current statement being classified.
     uint64_t         version;               // Encoded version number
@@ -271,23 +271,23 @@ public:
         size += m_table_names.capacity() * sizeof(Parser::TableName);
 
         m_field_infos.shrink_to_fit();
-        size += m_field_infos.capacity() * sizeof(QC_FIELD_INFO);
+        size += m_field_infos.capacity() * sizeof(Parser::FieldInfo);
 
-        using VQFI = vector<QC_FIELD_INFO>;
+        using VQFI = vector<Parser::FieldInfo>;
         m_function_field_usage.shrink_to_fit();
         size += m_function_field_usage.capacity() * sizeof(VQFI);
         for_each(m_function_field_usage.begin(), m_function_field_usage.end(), [&size](VQFI& v) {
                 v.shrink_to_fit();
-                size += v.capacity() * sizeof(QC_FIELD_INFO);
+                size += v.capacity() * sizeof(Parser::FieldInfo);
             });
 
         m_function_infos.shrink_to_fit();
-        size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
+        size += m_function_infos.capacity() * sizeof(Parser::FunctionInfo);
         // Since the function infos point into function field usages, we must
         // now ensure that, in case m_function_field_usage really was shrank
         // to fit, that we do not point into la-la land.
         int i = 0;
-        for_each(m_function_infos.begin(), m_function_infos.end(), [this, &i](QC_FUNCTION_INFO& info) {
+        for_each(m_function_infos.begin(), m_function_infos.end(), [this, &i](Parser::FunctionInfo& info) {
                 VQFI& v = m_function_field_usage[i];
 
                 info.fields = v.data();
@@ -312,9 +312,9 @@ public:
         return m_size;
     }
 
-    QC_STMT_RESULT get_result() const
+    Parser::StmtResult get_result() const
     {
-        QC_STMT_RESULT result =
+        Parser::StmtResult result =
         {
             m_status,
             m_type_mask,
@@ -344,7 +344,7 @@ public:
 
     bool is_valid() const
     {
-        return m_status != QC_QUERY_INVALID;
+        return m_status != Parser::Result::INVALID;
     }
 
     bool get_type_mask(uint32_t* pType_mask) const
@@ -429,7 +429,7 @@ public:
         return rv;
     }
 
-    bool get_kill_info(QC_KILL* pKill) const
+    bool get_kill_info(Parser::KillInfo* pKill) const
     {
         bool rv = false;
 
@@ -456,7 +456,7 @@ public:
         return rv;
     }
 
-    bool get_field_info(const QC_FIELD_INFO** ppInfos, uint32_t* pnInfos) const
+    bool get_field_info(const Parser::FieldInfo** ppInfos, uint32_t* pnInfos) const
     {
         bool rv = false;
 
@@ -471,7 +471,7 @@ public:
         return rv;
     }
 
-    bool get_function_info(const QC_FUNCTION_INFO** ppInfos, uint32_t* pnInfos) const
+    bool get_function_info(const Parser::FunctionInfo** ppInfos, uint32_t* pnInfos) const
     {
         bool rv = false;
 
@@ -515,7 +515,7 @@ public:
     {
         // We must collect if fields should be collected and they have not
         // been collected yet.
-        return (m_collect & QC_COLLECT_FIELDS) && !(m_collected & QC_COLLECT_FIELDS);
+        return (m_collect & Parser::COLLECT_FIELDS) && !(m_collected & Parser::COLLECT_FIELDS);
     }
 
     /**
@@ -529,7 +529,7 @@ public:
     {
         bool rv = false;
 
-        if (m_sql_mode == QC_SQL_MODE_ORACLE)
+        if (m_sql_mode == Parser::SqlMode::ORACLE)
         {
             // In Oracle mode we ignore the pseudocolumns "currval" and "nextval".
             // We also exclude "lastval", the 10.3 equivalent of "currval".
@@ -590,7 +590,7 @@ public:
         }
     }
 
-    // QC_FIELD_NAME or QC_FIELD_INFO
+    // QC_FIELD_NAME or Parser::FieldInfo
     template<class T>
     class MatchFieldName : public std::unary_function<T, bool>
     {
@@ -666,11 +666,11 @@ public:
 
         honour_aliases(pAliases, &zDatabase, &zTable);
 
-        MatchFieldName<QC_FIELD_INFO> predicate(zDatabase, zTable, zColumn);
+        MatchFieldName<Parser::FieldInfo> predicate(zDatabase, zTable, zColumn);
 
-        vector<QC_FIELD_INFO>::iterator i = find_if(m_field_infos.begin(),
-                                                    m_field_infos.end(),
-                                                    predicate);
+        vector<Parser::FieldInfo>::iterator i = find_if(m_field_infos.begin(),
+                                                        m_field_infos.end(),
+                                                        predicate);
 
         if (i == m_field_infos.end())   // If true, the field was not present already.
         {
@@ -680,7 +680,7 @@ public:
             // a statement like "select a as d from x where d = 2".
             if (!(zColumn && !zTable && !zDatabase && pExclude && should_exclude(zColumn, pExclude)))
             {
-                QC_FIELD_INFO item;
+                Parser::FieldInfo item;
 
                 populate_field_info(item, zDatabase, zTable, zColumn);
                 item.context = context;
@@ -706,10 +706,10 @@ public:
                       QcAliases* pAliases,
                       Exclude exclude = Exclude::DUAL)
     {
-        bool should_collect_alias = pAliases && zAlias && should_collect(QC_COLLECT_FIELDS);
-        bool should_collect_table = should_collect_alias || should_collect(QC_COLLECT_TABLES);
+        bool should_collect_alias = pAliases && zAlias && should_collect(Parser::COLLECT_FIELDS);
+        bool should_collect_table = should_collect_alias || should_collect(Parser::COLLECT_TABLES);
         bool should_collect_database = zDatabase
-            && (should_collect_alias || should_collect(QC_COLLECT_DATABASES));
+            && (should_collect_alias || should_collect(Parser::COLLECT_DATABASES));
 
         if (should_collect_table || should_collect_database)
         {
@@ -860,7 +860,7 @@ public:
             break;
 
         case TK_STRING:     // select "a" ..., for @@sql_mode containing 'ANSI_QUOTES'
-            if (this_thread.options & QC_OPTION_STRING_AS_FIELD)
+            if (this_thread.options & Parser::OPTION_STRING_AS_FIELD)
             {
                 const char* zColumn = pExpr->u.zToken;
                 update_field_infos_from_column(pAliases, context, zColumn, pExclude);
@@ -911,7 +911,7 @@ public:
                     if (zToken[0] != '?')
                     {
                         // If the mode is Oracle then :N is accepted as well.
-                        if (zToken[0] != ':' || this_thread.sql_mode != QC_SQL_MODE_ORACLE)
+                        if (zToken[0] != ':' || this_thread.sql_mode != Parser::SqlMode::ORACLE)
                         {
                             // Everything else is unexpected, but harmless.
                             MXB_WARNING("%s reported as VARIABLE.", zToken);
@@ -964,7 +964,7 @@ public:
 
                         if (i != -1)
                         {
-                            vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
+                            vector<Parser::FieldInfo>& fields = m_function_field_usage[i];
 
                             if (pExpr->pLeft)
                             {
@@ -978,7 +978,7 @@ public:
 
                             if (fields.size() != 0)
                             {
-                                QC_FUNCTION_INFO& info = m_function_infos[i];
+                                Parser::FunctionInfo& info = m_function_infos[i];
 
                                 info.fields = &fields[0];
                                 info.n_fields = fields.size();
@@ -989,7 +989,7 @@ public:
                 break;
 
             case TK_REM:
-                if (m_sql_mode == QC_SQL_MODE_ORACLE)
+                if (m_sql_mode == Parser::SqlMode::ORACLE)
                 {
                     if ((pLeft && (pLeft->op == TK_ID))
                         && (pRight && (pRight->op == TK_ID))
@@ -1034,7 +1034,7 @@ public:
                                                            this_thread.version_major,
                                                            this_thread.version_minor,
                                                            this_thread.version_patch,
-                                                           m_sql_mode == QC_SQL_MODE_ORACLE))
+                                                           m_sql_mode == Parser::SqlMode::ORACLE))
                     {
                         m_type_mask |= QUERY_TYPE_WRITE;
                     }
@@ -1184,7 +1184,7 @@ public:
         }
         else if (pExpr->op == TK_STRING)
         {
-            if (this_thread.options & QC_OPTION_STRING_ARG_AS_FIELD)
+            if (this_thread.options & Parser::OPTION_STRING_ARG_AS_FIELD)
             {
                 zColumn = pExpr->u.zToken;
             }
@@ -1286,7 +1286,7 @@ public:
                 if (pSrc->a[i].pSelect)
                 {
                     update_field_infos_from_select(aliases,
-                                                   context | QC_FIELD_SUBQUERY,
+                                                   context | Parser::FIELD_SUBQUERY,
                                                    pSrc->a[i].pSelect,
                                                    pExclude);
                 }
@@ -1296,7 +1296,7 @@ public:
                     update_field_infos(&aliases, context, 0, pSrc->a[i].pOn, QC_TOKEN_MIDDLE, pExclude);
                 }
 
-#ifdef QC_COLLECT_NAMES_FROM_USING
+#ifdef PARSER_COLLECT_NAMES_FROM_USING
                 // With this enabled, the affected fields of
                 //    select * from (t1 as t2 left join t1 as t3 using (a)), t1;
                 // will be "* a", otherwise "*". However, that "a" is used in the join
@@ -1368,7 +1368,7 @@ public:
                     {
                         // The fields in the first select in a UNION are not considered to
                         // be in a union. Those names will be visible in the resultset.
-                        ctx &= ~QC_FIELD_UNION;
+                        ctx &= ~Parser::FIELD_UNION;
                     }
 
                     QcAliases aliases2(aliases);
@@ -1392,7 +1392,7 @@ public:
     {
         QcAliases aliases(existing_aliases);
 
-        context |= QC_FIELD_SUBQUERY;
+        context |= Parser::FIELD_SUBQUERY;
 
         update_field_infos_from_select(aliases, context, pSelect, pExclude, compound_approach);
     }
@@ -1445,20 +1445,20 @@ public:
                                 const char* zDatabase,
                                 const char* zTable,
                                 const char* zColumn,
-                                vector<QC_FIELD_INFO>& fields)
+                                vector<Parser::FieldInfo>& fields)
     {
         mxb_assert(zColumn);
 
         honour_aliases(pAliases, &zDatabase, &zTable);
 
-        MatchFieldName<QC_FIELD_INFO> predicate(zDatabase, zTable, zColumn);
+        MatchFieldName<Parser::FieldInfo> predicate(zDatabase, zTable, zColumn);
 
-        vector<QC_FIELD_INFO>::iterator i = find_if(fields.begin(), fields.end(), predicate);
+        vector<Parser::FieldInfo>::iterator i = find_if(fields.begin(), fields.end(), predicate);
 
         if (i == fields.end())      // Not present
         {
             // TODO: Add exclusion?
-            QC_FIELD_INFO item;
+            Parser::FieldInfo item;
 
             populate_field_info(item, zDatabase, zTable, zColumn);
             fields.push_back(item);
@@ -1468,7 +1468,7 @@ public:
     void update_function_fields(const QcAliases* pAliases,
                                 const Expr* pExpr,
                                 const ExprList* pExclude,
-                                vector<QC_FIELD_INFO>& fields)
+                                vector<Parser::FieldInfo>& fields)
     {
         const char* zDatabase;
         const char* zTable;
@@ -1500,7 +1500,7 @@ public:
     void update_function_fields(const QcAliases* pAliases,
                                 const ExprList* pEList,
                                 const ExprList* pExclude,
-                                vector<QC_FIELD_INFO>& fields)
+                                vector<Parser::FieldInfo>& fields)
     {
         for (int i = 0; i < pEList->nExpr; ++i)
         {
@@ -1520,7 +1520,7 @@ public:
         mxb_assert(zName);
         mxb_assert((!pExpr && !pEList) || (pExpr && !pEList) || (!pExpr && pEList));
 
-        if (!(m_collect & QC_COLLECT_FUNCTIONS) || (m_collected & QC_COLLECT_FUNCTIONS))
+        if (!(m_collect & Parser::COLLECT_FUNCTIONS) || (m_collected & Parser::COLLECT_FUNCTIONS))
         {
             // If function information should not be collected, or if function information
             // has already been collected, we just return.
@@ -1532,7 +1532,7 @@ public:
         size_t i;
         for (i = 0; i < m_function_infos.size(); ++i)
         {
-            QC_FUNCTION_INFO& function_info = m_function_infos[i];
+            Parser::FunctionInfo& function_info = m_function_infos[i];
 
             if (sv_case_eq(zName, function_info.name))
             {
@@ -1544,7 +1544,7 @@ public:
         {
             string_view name = get_string_view("function", zName);
 
-            QC_FUNCTION_INFO item { name, nullptr, 0 };
+            Parser::FunctionInfo item { name, nullptr, 0 };
 
             m_function_infos.reserve(m_function_infos.size() + 1);
             m_function_field_usage.reserve(m_function_field_usage.size() + 1);
@@ -1555,7 +1555,7 @@ public:
 
         if (pExpr || pEList)
         {
-            vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
+            vector<Parser::FieldInfo>& fields = m_function_field_usage[i];
 
             if (pExpr)
             {
@@ -1566,7 +1566,7 @@ public:
                 update_function_fields(pAliases, pEList, pExclude, fields);
             }
 
-            QC_FUNCTION_INFO& info = m_function_infos[i];
+            Parser::FunctionInfo& info = m_function_infos[i];
 
             if (fields.size() != 0)
             {
@@ -1610,7 +1610,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_ALTER;
     }
@@ -1628,7 +1628,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
 
         update_names_from_srclist(NULL, pSrcList);
@@ -1640,9 +1640,9 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        if ((m_sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
+        if ((m_sql_mode != Parser::SqlMode::ORACLE) || (token == TK_START))
         {
-            m_status = QC_QUERY_PARSED;
+            m_status = Parser::Result::PARSED;
             m_type_mask = QUERY_TYPE_BEGIN_TRX | type;
         }
     }
@@ -1662,7 +1662,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
 
         if (pTableName)
@@ -1695,7 +1695,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_COMMIT;
     }
 
@@ -1712,7 +1712,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_CREATE;
 
@@ -1741,7 +1741,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_CREATE;
 
@@ -1781,7 +1781,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
 
         if (m_operation != QUERY_OP_EXPLAIN)
         {
@@ -1858,7 +1858,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_DROP;
 
@@ -1872,7 +1872,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_DROP;
         if (!isView)
@@ -1915,7 +1915,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
 
         if (m_operation != QUERY_OP_EXPLAIN)
         {
@@ -1937,7 +1937,7 @@ public:
 
                 if (i != -1)
                 {
-                    vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
+                    vector<Parser::FieldInfo>& fields = m_function_field_usage[i];
 
                     for (int j = 0; j < pColumns->nId; ++j)
                     {
@@ -1946,7 +1946,7 @@ public:
 
                     if (fields.size() != 0)
                     {
-                        QC_FUNCTION_INFO& info = m_function_infos[i];
+                        Parser::FunctionInfo& info = m_function_infos[i];
 
                         info.fields = &fields[0];
                         info.n_fields = fields.size();
@@ -1975,7 +1975,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_ROLLBACK;
     }
 
@@ -1983,7 +1983,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
 
         if (m_operation != QUERY_OP_EXPLAIN)
         {
@@ -2004,7 +2004,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_operation = QUERY_OP_CREATE;
         m_type_mask = QUERY_TYPE_WRITE;
 
@@ -2033,7 +2033,7 @@ public:
             update_names(NULL, name, NULL, NULL, Exclude::NONE);
         }
 
-        if (m_collect & QC_COLLECT_TABLES)
+        if (m_collect & Parser::COLLECT_TABLES)
         {
             // If information is collected in several passes, then we may
             // this information already.
@@ -2053,7 +2053,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
 
         if (m_operation != QUERY_OP_EXPLAIN)
         {
@@ -2094,7 +2094,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
     }
 
@@ -2133,7 +2133,7 @@ public:
         }
 
         QcAliases aliases;
-        uint32_t context = is_significant_union(pSelect) ? QC_FIELD_UNION : 0;
+        uint32_t context = is_significant_union(pSelect) ? Parser::FIELD_UNION : 0;
         update_field_infos_from_select(aliases, context, pSelect, NULL);
     }
 
@@ -2144,7 +2144,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_ALTER;
 
@@ -2173,7 +2173,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_CALL;
 
@@ -2192,7 +2192,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
 
         update_names_from_srclist(NULL, pTables);
@@ -2204,7 +2204,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
 
         const char* zDatabase = NULL;
         char database[pDatabase ? pDatabase->n + 1 : 1];
@@ -2235,9 +2235,9 @@ public:
         {
             regular_parsing = true;
 
-            if (m_status == QC_QUERY_INVALID)
+            if (m_status == Parser::Result::INVALID)
             {
-                m_status = QC_QUERY_PARSED;
+                m_status = Parser::Result::PARSED;
                 m_type_mask = QUERY_TYPE_READ;
             }
         }
@@ -2249,9 +2249,9 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        if (m_sql_mode != QC_SQL_MODE_ORACLE)
+        if (m_sql_mode != Parser::SqlMode::ORACLE)
         {
-            m_status = QC_QUERY_INVALID;
+            m_status = Parser::Result::INVALID;
         }
     }
 
@@ -2259,7 +2259,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_DEALLOC_PREPARE;
 
         // If information is collected in several passes, then we may
@@ -2279,7 +2279,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = (QUERY_TYPE_READ | QUERY_TYPE_WRITE);
 
         exposed_sqlite3ExprListDelete(pParse->db, pEList);
@@ -2289,7 +2289,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_DROP;
 
@@ -2334,7 +2334,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = (QUERY_TYPE_WRITE | type_mask);
         m_operation = QUERY_OP_EXECUTE;
 
@@ -2355,7 +2355,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        if (m_sql_mode == QC_SQL_MODE_ORACLE)
+        if (m_sql_mode == Parser::SqlMode::ORACLE)
         {
             // This should be "EXECUTE IMMEDIATE ...", but as "IMMEDIATE" is not
             // checked by the parser we do it here.
@@ -2364,18 +2364,18 @@ public:
 
             if ((pName->n == sizeof(IMMEDIATE) - 1) && (strncasecmp(pName->z, IMMEDIATE, pName->n)) == 0)
             {
-                m_status = QC_QUERY_PARSED;
+                m_status = Parser::Result::PARSED;
                 m_type_mask = (QUERY_TYPE_WRITE | type_mask);
                 m_type_mask |= type_check_dynamic_string(pExprSpan->pExpr);
             }
             else
             {
-                m_status = QC_QUERY_INVALID;
+                m_status = Parser::Result::INVALID;
             }
         }
         else
         {
-            m_status = QC_QUERY_INVALID;
+            m_status = Parser::Result::INVALID;
         }
 
         exposed_sqlite3ExprDelete(pParse->db, pExprSpan->pExpr);
@@ -2385,7 +2385,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_READ;
         m_operation = QUERY_OP_SHOW;
 
@@ -2404,7 +2404,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_READ;
         m_operation = QUERY_OP_EXPLAIN;
     }
@@ -2413,7 +2413,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
     }
 
@@ -2421,7 +2421,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
 
         switch (type)
         {
@@ -2459,7 +2459,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = local ? QUERY_OP_LOAD_LOCAL : QUERY_OP_LOAD;
 
@@ -2475,7 +2475,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
 
         if (pTables)
@@ -2490,7 +2490,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
 
         if (pTables)
@@ -2504,7 +2504,7 @@ public:
     void maxscaleKill(Parse* pParse, MxsKill* pKill)
     {
         mxb_assert(this_thread.initialized);
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_KILL;
         m_kill.soft = pKill->soft;
@@ -2513,15 +2513,15 @@ public:
         switch (pKill->type)
         {
         case MXS_KILL_TYPE_CONNECTION:
-            m_kill.type = QC_KILL_CONNECTION;
+            m_kill.type = Parser::KillType::CONNECTION;
             break;
 
         case MXS_KILL_TYPE_QUERY:
-            m_kill.type = QC_KILL_QUERY;
+            m_kill.type = Parser::KillType::QUERY;
             break;
 
         case MXS_KILL_TYPE_QUERY_ID:
-            m_kill.type = QC_KILL_QUERY_ID;
+            m_kill.type = Parser::KillType::QUERY_ID;
             break;
         }
 
@@ -2537,7 +2537,7 @@ public:
         case TK_CHARSET:
         case TK_DO:
         case TK_HANDLER:
-            if (m_sql_mode == QC_SQL_MODE_ORACLE)
+            if (m_sql_mode == Parser::SqlMode::ORACLE)
             {
                 // The keyword is translated, but only if it not used
                 // as the first keyword. Matters for DO and HANDLER.
@@ -2582,13 +2582,13 @@ public:
             switch (m_keyword_1)
             {
             case TK_ALTER:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_ALTER;
                 break;
 
             case TK_ANALYZE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
                 m_operation = QUERY_OP_EXPLAIN;
                 break;
@@ -2596,11 +2596,11 @@ public:
             case TK_BEGIN:
             case TK_DECLARE:
             case TK_FOR:
-                if (m_sql_mode == QC_SQL_MODE_ORACLE)
+                if (m_sql_mode == Parser::SqlMode::ORACLE)
                 {
                     // The beginning of a BLOCK. We'll assume it is in a single
                     // COM_QUERY packet and hence one GWBUF.
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_WRITE;
                     // Return non-0 to cause the entire input to be consumed.
                     rv = 1;
@@ -2608,136 +2608,136 @@ public:
                 break;
 
             case TK_CALL:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_CREATE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_CREATE;
                 break;
 
             case TK_DELETE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_DELETE;
                 break;
 
             case TK_DESC:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
                 m_operation = QUERY_OP_EXPLAIN;
                 break;
 
             case TK_DROP:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_DROP;
                 break;
 
             case TK_EXECUTE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_EXPLAIN:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
                 m_operation = QUERY_OP_EXPLAIN;
                 break;
 
             case TK_GRANT:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_GRANT;
                 break;
 
             case TK_HANDLER:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_INSERT:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_INSERT;
                 break;
 
             case TK_LOCK:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_OPTIMIZE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_PREPARE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
                 break;
 
             case TK_REPLACE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_INSERT;
                 break;
 
             case TK_REVOKE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_REVOKE;
                 break;
 
             case TK_RESET:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_SELECT:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
                 m_operation = QUERY_OP_SELECT;
                 break;
 
             case TK_SET:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_SESSION_WRITE;
                 m_operation = QUERY_OP_SET;
                 break;
 
             case TK_SHOW:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
                 m_operation = QUERY_OP_SHOW;
                 break;
 
             case TK_START:
                 // Will produce the right info for START SLAVE.
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_UNLOCK:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_UPDATE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_UPDATE;
                 break;
 
             case TK_TRUNCATE:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_XA:
-                m_status = QC_QUERY_TOKENIZED;
+                m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
@@ -2754,7 +2754,7 @@ public:
             case TK_CHECK:
                 if (m_keyword_2 == TK_TABLE)
                 {
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_WRITE;
                 }
                 break;
@@ -2762,7 +2762,7 @@ public:
             case TK_DEALLOCATE:
                 if (m_keyword_2 == TK_PREPARE)
                 {
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_SESSION_WRITE;
                 }
                 break;
@@ -2770,7 +2770,7 @@ public:
             case TK_LOAD:
                 if (m_keyword_2 == TK_DATA)
                 {
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_WRITE;
                     m_operation = QUERY_OP_LOAD;
                 }
@@ -2779,7 +2779,7 @@ public:
             case TK_RENAME:
                 if (m_keyword_2 == TK_TABLE)
                 {
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_WRITE;
                 }
                 break;
@@ -2799,7 +2799,7 @@ public:
                 switch (m_keyword_2)
                 {
                 case TK_TRANSACTION:
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_BEGIN_TRX;
                     break;
 
@@ -2812,12 +2812,12 @@ public:
                 switch (m_keyword_2)
                 {
                 case TK_DATABASES_KW:
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_SHOW_DATABASES;
                     break;
 
                 case TK_TABLES:
-                    m_status = QC_QUERY_TOKENIZED;
+                    m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_SHOW_TABLES;
                     break;
 
@@ -2830,17 +2830,16 @@ public:
         return rv;
     }
 
-    void maxscaleSetStatusCap(int cap)
+    void maxscaleSetStatusCap(Parser::Result cap)
     {
-        mxb_assert(cap >= QC_QUERY_TOKENIZED && cap <= QC_QUERY_PARSED);
-        m_status_cap = static_cast<qc_parse_result_t>(cap);
+        m_status_cap = cap;
     }
 
     void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
 
         for (int i = 0; i < pTables->nSrc; ++i)
@@ -2865,11 +2864,11 @@ public:
         {
         case TK_STRING:
         case TK_VARIABLE:
-            m_status = QC_QUERY_PARSED;
+            m_status = Parser::Result::PARSED;
             break;
 
         default:
-            m_status = QC_QUERY_PARTIALLY_PARSED;
+            m_status = Parser::Result::PARTIALLY_PARSED;
             break;
         }
 
@@ -2921,7 +2920,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
 
         switch (kind)
@@ -2943,7 +2942,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
 
         switch (what)
         {
@@ -2960,7 +2959,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask |= QUERY_TYPE_SESSION_WRITE;
         m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
         m_operation = QUERY_OP_SET;
@@ -2972,7 +2971,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         // The following must be set anew as there will be no SET in case of
         // Oracle's "var := 1", in which case maxscaleKeyword() is never called.
         m_type_mask |= QUERY_TYPE_SESSION_WRITE;
@@ -2998,7 +2997,7 @@ public:
 
     void maxscaleSetPassword(Parse* pParse)
     {
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         // Not a session write because that would break replication - see MXS-2713.
         m_type_mask |= QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_SET;
@@ -3150,7 +3149,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_SESSION_WRITE;
         m_operation = QUERY_OP_SET_TRANSACTION;
 
@@ -3181,7 +3180,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_operation = QUERY_OP_SHOW;
 
         switch (pShow->what)
@@ -3290,7 +3289,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_TRUNCATE;
 
@@ -3319,11 +3318,11 @@ public:
     {
         mxb_assert(this_thread.initialized);
 
-        m_status = QC_QUERY_PARSED;
+        m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_SESSION_WRITE;
         m_operation = QUERY_OP_CHANGE_DB;
 
-        if (should_collect(QC_COLLECT_DATABASES))
+        if (should_collect(Parser::COLLECT_DATABASES))
         {
             char copy[pToken->n + 1];
             strncpy(copy, pToken->z, pToken->n);
@@ -3343,8 +3342,8 @@ public:
 
     QcSqliteInfo(uint32_t cllct)
         : m_size(0)
-        , m_status(QC_QUERY_INVALID)
-        , m_status_cap(QC_QUERY_PARSED)
+        , m_status(Parser::Result::INVALID)
+        , m_status_cap(Parser::Result::PARSED)
         , m_collect(cllct)
         , m_collected(0)
         , m_sql_mode(this_thread.sql_mode)
@@ -3366,12 +3365,12 @@ public:
     }
 
 private:
-    bool should_collect(qc_collect_info_t collect) const
+    bool should_collect(Parser::Collect collect) const
     {
         return (m_collect & collect) && !(m_collected & collect);
     }
 
-    static void free_field_infos(QC_FIELD_INFO* pInfos, size_t nInfos)
+    static void free_field_infos(Parser::FieldInfo* pInfos, size_t nInfos)
     {
         MXB_FREE(pInfos);
     }
@@ -3520,7 +3519,7 @@ private:
         return rv;
     }
 
-    void populate_field_info(QC_FIELD_INFO& info,
+    void populate_field_info(Parser::FieldInfo& info,
                              const char* zDatabase,
                              const char* zTable,
                              const char* zColumn)
@@ -3555,34 +3554,34 @@ private:
 
 public:
     // TODO: Make these private once everything's been updated.
-    mutable int32_t               m_size;                    // The total amount of memory used.
-    int32_t                       m_refs;                    // The reference count.
-    qc_parse_result_t             m_status;                  // The validity of the information.
-    qc_parse_result_t             m_status_cap;              // The cap on 'm_status'.
-    uint32_t                      m_collect;                 // What information should be collected.
-    uint32_t                      m_collected;               // What information has been collected.
-    qc_sql_mode_t                 m_sql_mode;                // The current sql_mode.
-    QC_NAME_MAPPING*              m_pFunction_name_mappings; // How function names should be mapped.
-    int                           m_keyword_1;               // The first encountered keyword.
-    int                           m_keyword_2;               // The second encountered keyword.
-    const char*                   m_pQuery;                  // The query passed to sqlite.
-    size_t                        m_nQuery;                  // The length of the query.
-    uint32_t                      m_type_mask;               // The type mask of the query.
-    qc_query_op_t                 m_operation;               // The operation in question.
-    string_view                   m_created_table_name;      // The name of a created table.
-    bool                          m_is_drop_table;           // Is the query a DROP TABLE.
-    string_view                   m_prepare_name;            // The name of a prepared statement.
-    GWBUF*                        m_pPreparable_stmt;        // The preparable statement.
-    QC_KILL                       m_kill;
-    string                        m_canonical;               // The canonical version of the statement.
-    vector<string_view>           m_database_names;          // Vector of database names used in the query.
-    vector<Parser::TableName>     m_table_names;             // Vector of table names used in the query.
-    vector<QC_FIELD_INFO>         m_field_infos;             // Vector of fields used by the statement.
-    vector<QC_FUNCTION_INFO>      m_function_infos;          // Vector of functions used by the statement.
-    vector<vector<QC_FIELD_INFO>> m_function_field_usage;    // Vector of vector fields used by functions
-                                                             // of the statement. Data referred to from
-                                                             // m_function_infos
-    vector<vector<char>>          m_scratch_buffers;         // Buffers if string not found from canonical.
+    mutable int32_t                   m_size;                    // The total amount of memory used.
+    int32_t                           m_refs;                    // The reference count.
+    Parser::Result                    m_status;                  // The validity of the information.
+    Parser::Result                    m_status_cap;              // The cap on '    m_status'.
+    uint32_t                          m_collect;                 // What information should be collected.
+    uint32_t                          m_collected;               // What information has been collected.
+    Parser::SqlMode                   m_sql_mode;                // The current sql_mode.
+    QC_NAME_MAPPING*                  m_pFunction_name_mappings; // How function names should be mapped.
+    int                               m_keyword_1;               // The first encountered keyword.
+    int                               m_keyword_2;               // The second encountered keyword.
+    const char*                       m_pQuery;                  // The query passed to sqlite.
+    size_t                            m_nQuery;                  // The length of the query.
+    uint32_t                          m_type_mask;               // The type mask of the query.
+    qc_query_op_t                     m_operation;               // The operation in question.
+    string_view                       m_created_table_name;      // The name of a created table.
+    bool                              m_is_drop_table;           // Is the query a DROP TABLE.
+    string_view                       m_prepare_name;            // The name of a prepared statement.
+    GWBUF*                            m_pPreparable_stmt;        // The preparable statement.
+    Parser::KillInfo                  m_kill;
+    string                            m_canonical;               // The canonical version of the statement.
+    vector<string_view>               m_database_names;          // Vector of database names used in the query.
+    vector<Parser::TableName>         m_table_names;             // Vector of table names used in the query.
+    vector<Parser::FieldInfo>         m_field_infos;             // Vector of fields used by the statement.
+    vector<Parser::FunctionInfo>      m_function_infos;          // Vector of functions used by the statement.
+    vector<vector<Parser::FieldInfo>> m_function_field_usage;    // Vector of vector fields used by functions
+                                                                 // of the statement. Data referred to from
+                                                                 // m_function_infos
+    vector<vector<char>>              m_scratch_buffers;         // Buffers if string not found from canonical.
 };
 
 extern "C"
@@ -3665,7 +3664,7 @@ extern void maxscale_set_type_mask(unsigned int type_mask);
 
 extern int  maxscaleComment();
 extern int  maxscaleKeyword(int token);
-extern void maxscaleSetStatusCap(int cap);
+extern void maxscaleSetStatusCap(int cap); // See sqlite3:tokenize.c
 extern int  maxscaleTranslateKeyword(int token);
 }
 
@@ -3713,7 +3712,7 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
 
     if (this_thread.pInfo->m_operation == QUERY_OP_EXPLAIN)
     {
-        this_thread.pInfo->m_status = QC_QUERY_PARSED;
+        this_thread.pInfo->m_status = Parser::Result::PARSED;
     }
 
     if (rc != SQLITE_OK)
@@ -3732,9 +3731,9 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
                     "Statement was only partially parsed "
                     "(Sqlite3 error: %s, %s): \"%.*s%s\"";
 
-                // The status was set to QC_QUERY_PARSED, but sqlite3 returned an
+                // The status was set to Parser::Result::PARSED, but sqlite3 returned an
                 // error. Most likely, query contains some excess unrecognized stuff.
-                this_thread.pInfo->m_status = QC_QUERY_PARTIALLY_PARSED;
+                this_thread.pInfo->m_status = Parser::Result::PARTIALLY_PARSED;
             }
             else
             {
@@ -3753,15 +3752,15 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
                 switch (this_unit.log_level)
                 {
                 case QC_LOG_NON_PARSED:
-                    log_warning = this_thread.pInfo->m_status < QC_QUERY_PARSED;
+                    log_warning = this_thread.pInfo->m_status < Parser::Result::PARSED;
                     break;
 
                 case QC_LOG_NON_PARTIALLY_PARSED:
-                    log_warning = this_thread.pInfo->m_status < QC_QUERY_PARTIALLY_PARSED;
+                    log_warning = this_thread.pInfo->m_status < Parser::Result::PARTIALLY_PARSED;
                     break;
 
                 case QC_LOG_NON_TOKENIZED:
-                    log_warning = this_thread.pInfo->m_status < QC_QUERY_TOKENIZED;
+                    log_warning = this_thread.pInfo->m_status < Parser::Result::TOKENIZED;
                     break;
 
                 default:
@@ -3837,7 +3836,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                 // If we get here, then the statement has been parsed once, but
                 // not all needed was collected. Now we turn on all blinkenlichts to
                 // ensure that a statement is parsed at most twice.
-                pInfo->m_collect = QC_COLLECT_ALL;
+                pInfo->m_collect = Parser::COLLECT_ALL;
 
                 // We also reset the collected keywords, so that code that behaves
                 // differently depending on whether keywords have been seem or not
@@ -4659,12 +4658,12 @@ void maxscaleSetStatusCap(int cap)
 {
     QC_TRACE();
 
-    mxb_assert((cap >= QC_QUERY_INVALID) && (cap <= QC_QUERY_PARSED));
+    mxb_assert((cap >= (int)Parser::Result::INVALID) && (cap <= (int)Parser::Result::PARSED));
 
     QcSqliteInfo* pInfo = this_thread.pInfo;
     mxb_assert(pInfo);
 
-    QC_EXCEPTION_GUARD(pInfo->maxscaleSetStatusCap(cap));
+    QC_EXCEPTION_GUARD(pInfo->maxscaleSetStatusCap(static_cast<Parser::Result>(cap)));
 }
 
 int maxscaleTranslateKeyword(int token)
@@ -4821,28 +4820,28 @@ void maxscaleUse(Parse* pParse, Token* pToken)
 /**
  * API
  */
-static int32_t        qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* args);
-static int32_t        qc_sqlite_process_init(void);
-static void           qc_sqlite_process_end(void);
-static int32_t        qc_sqlite_thread_init(void);
-static void           qc_sqlite_thread_end(void);
-static int32_t        qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result);
-static int32_t        qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
-static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
-static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, string_view* name);
-static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
-static int32_t        qc_sqlite_get_table_names(GWBUF* query, vector<Parser::TableName>* pNames);
-static int32_t        qc_sqlite_get_database_names(GWBUF* query, vector<string_view>* pNames);
-static int32_t        qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
-static void           qc_sqlite_set_server_version(uint64_t version);
-static void           qc_sqlite_get_server_version(uint64_t* version);
-static int32_t        qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode);
-static int32_t        qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode);
-static QC_STMT_INFO*  qc_sqlite_info_dup(QC_STMT_INFO* info);
-static void           qc_sqlite_info_close(QC_STMT_INFO* info);
-static uint32_t       qc_sqlite_get_options();
-static int32_t        qc_sqlite_set_options(uint32_t options);
-static QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo);
+static int32_t            qc_sqlite_setup(Parser::SqlMode sql_mode, const char* args);
+static int32_t            qc_sqlite_process_init(void);
+static void               qc_sqlite_process_end(void);
+static int32_t            qc_sqlite_thread_init(void);
+static void               qc_sqlite_thread_end(void);
+static int32_t            qc_sqlite_parse(GWBUF* query, uint32_t collect, Parser::Result* result);
+static int32_t            qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
+static int32_t            qc_sqlite_get_operation(GWBUF* query, int32_t* op);
+static int32_t            qc_sqlite_get_created_table_name(GWBUF* query, string_view* name);
+static int32_t            qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
+static int32_t            qc_sqlite_get_table_names(GWBUF* query, vector<Parser::TableName>* pNames);
+static int32_t            qc_sqlite_get_database_names(GWBUF* query, vector<string_view>* pNames);
+static int32_t            qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
+static void               qc_sqlite_set_server_version(uint64_t version);
+static void               qc_sqlite_get_server_version(uint64_t* version);
+static int32_t            qc_sqlite_get_sql_mode(Parser::SqlMode* sql_mode);
+static int32_t            qc_sqlite_set_sql_mode(Parser::SqlMode sql_mode);
+static QC_STMT_INFO*      qc_sqlite_info_dup(QC_STMT_INFO* info);
+static void               qc_sqlite_info_close(QC_STMT_INFO* info);
+static uint32_t           qc_sqlite_get_options();
+static int32_t            qc_sqlite_set_options(uint32_t options);
+static Parser::StmtResult qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo);
 
 static string_view    qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo);
 
@@ -4864,7 +4863,7 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 
 static const char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
 
-static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
+static int32_t qc_sqlite_setup(Parser::SqlMode sql_mode, const char* cargs)
 {
     QC_TRACE();
     mxb_assert(!this_unit.setup);
@@ -4919,7 +4918,7 @@ static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
         }
     }
 
-    if (sql_mode == QC_SQL_MODE_ORACLE)
+    if (sql_mode == Parser::SqlMode::ORACLE)
     {
         function_name_mappings = function_name_mappings_oracle;
     }
@@ -5008,7 +5007,7 @@ static int32_t qc_sqlite_thread_init(void)
         MXB_INFO("In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
 
-        std::unique_ptr<QcSqliteInfo> sInfo = QcSqliteInfo::create(QC_COLLECT_ALL);
+        std::unique_ptr<QcSqliteInfo> sInfo = QcSqliteInfo::create(Parser::COLLECT_ALL);
 
         if (sInfo)
         {
@@ -5072,7 +5071,7 @@ static void qc_sqlite_thread_end(void)
     this_thread.initialized = false;
 }
 
-static int32_t qc_sqlite_parse(GWBUF* pStmt, uint32_t collect, int32_t* pResult)
+static int32_t qc_sqlite_parse(GWBUF* pStmt, uint32_t collect, Parser::Result* pResult)
 {
     QC_TRACE();
     mxb_assert(this_unit.initialized);
@@ -5086,7 +5085,7 @@ static int32_t qc_sqlite_parse(GWBUF* pStmt, uint32_t collect, int32_t* pResult)
     }
     else
     {
-        *pResult = QC_QUERY_INVALID;
+        *pResult = Parser::Result::INVALID;
     }
 
     return pInfo ? QC_RESULT_OK : QC_RESULT_ERROR;
@@ -5100,7 +5099,7 @@ static int32_t qc_sqlite_get_type_mask(GWBUF* pStmt, uint32_t* pType_mask)
     mxb_assert(this_thread.initialized);
 
     *pType_mask = QUERY_TYPE_UNKNOWN;
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)
     {
@@ -5129,7 +5128,7 @@ static int32_t qc_sqlite_get_operation(GWBUF* pStmt, int32_t* pOp)
     mxb_assert(this_thread.initialized);
 
     *pOp = QUERY_OP_UNDEFINED;
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)
     {
@@ -5158,7 +5157,7 @@ static int32_t qc_sqlite_get_created_table_name(GWBUF* pStmt, string_view* pCrea
     mxb_assert(this_thread.initialized);
 
     *pCreated_table_name = string_view {};
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_TABLES);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_TABLES);
 
     if (pInfo)
     {
@@ -5187,7 +5186,7 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* pStmt, int32_t* pIs_drop_tab
     mxb_assert(this_thread.initialized);
 
     *pIs_drop_table = 0;
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)
     {
@@ -5215,7 +5214,7 @@ static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, vector<Parser::TableName>
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_TABLES);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_TABLES);
 
     if (pInfo)
     {
@@ -5243,7 +5242,7 @@ static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, vector<string_view>* p
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_DATABASES);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_DATABASES);
 
     if (pInfo)
     {
@@ -5264,14 +5263,14 @@ static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, vector<string_view>* p
     return rv;
 }
 
-static int32_t qc_sqlite_get_kill_info(GWBUF* pStmt, QC_KILL* pKill)
+static int32_t qc_sqlite_get_kill_info(GWBUF* pStmt, Parser::KillInfo* pKill)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)
     {
@@ -5299,7 +5298,7 @@ static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, string_view* pPrepare_na
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)
     {
@@ -5320,7 +5319,7 @@ static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, string_view* pPrepare_na
     return rv;
 }
 
-int32_t qc_sqlite_get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, uint32_t* pnInfos)
+int32_t qc_sqlite_get_field_info(GWBUF* pStmt, const Parser::FieldInfo** ppInfos, uint32_t* pnInfos)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
@@ -5330,7 +5329,7 @@ int32_t qc_sqlite_get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, ui
     *ppInfos = NULL;
     *pnInfos = 0;
 
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_FIELDS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_FIELDS);
 
     if (pInfo)
     {
@@ -5351,7 +5350,7 @@ int32_t qc_sqlite_get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, ui
     return rv;
 }
 
-int32_t qc_sqlite_get_function_info(GWBUF* pStmt, const QC_FUNCTION_INFO** ppInfos, uint32_t* pnInfos)
+int32_t qc_sqlite_get_function_info(GWBUF* pStmt, const Parser::FunctionInfo** ppInfos, uint32_t* pnInfos)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
@@ -5361,7 +5360,7 @@ int32_t qc_sqlite_get_function_info(GWBUF* pStmt, const QC_FUNCTION_INFO** ppInf
     *ppInfos = NULL;
     *pnInfos = 0;
 
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_FUNCTIONS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_FUNCTIONS);
 
     if (pInfo)
     {
@@ -5391,7 +5390,7 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* pStmt, GWBUF** pzPreparable_stmt)
 
     *pzPreparable_stmt = NULL;
 
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)
     {
@@ -5434,24 +5433,24 @@ static void qc_sqlite_get_server_version(uint64_t* pVersion)
 }
 
 
-int32_t qc_sqlite_get_sql_mode(qc_sql_mode_t* pSql_mode)
+int32_t qc_sqlite_get_sql_mode(Parser::SqlMode* pSql_mode)
 {
     *pSql_mode = this_thread.sql_mode;
     return QC_RESULT_OK;
 }
 
-int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
+int32_t qc_sqlite_set_sql_mode(Parser::SqlMode sql_mode)
 {
     int32_t rv = QC_RESULT_OK;
 
     switch (sql_mode)
     {
-    case QC_SQL_MODE_DEFAULT:
+    case Parser::SqlMode::DEFAULT:
         this_thread.sql_mode = sql_mode;
         this_thread.pFunction_name_mappings = function_name_mappings_default;
         break;
 
-    case QC_SQL_MODE_ORACLE:
+    case Parser::SqlMode::ORACLE:
         this_thread.sql_mode = sql_mode;
         this_thread.pFunction_name_mappings = function_name_mappings_oracle;
         break;
@@ -5472,7 +5471,7 @@ int32_t qc_sqlite_set_options(uint32_t options)
 {
     int32_t rv = QC_RESULT_OK;
 
-    if ((options & ~QC_OPTION_MASK) == 0)
+    if ((options & ~Parser::OPTION_MASK) == 0)
     {
         this_thread.options = options;
     }
@@ -5484,7 +5483,7 @@ int32_t qc_sqlite_set_options(uint32_t options)
     return rv;
 }
 
-QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo)
+Parser::StmtResult qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo)
 {
     return static_cast<const QcSqliteInfo*>(pInfo)->get_result();
 }
@@ -5519,18 +5518,18 @@ string_view qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo)
 namespace
 {
 
-class SqliteParser : public mxs::Parser
+class SqliteParser : public Parser
 {
 public:
-    mxs::Parser::Plugin& plugin() const override;
+    Parser::Plugin& plugin() const override;
 
-    qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override
+    Result parse(GWBUF* pStmt, uint32_t collect) const override
     {
-        int32_t result = QC_QUERY_INVALID;
+        Result result = Parser::Result::INVALID;
 
         qc_sqlite_parse(pStmt, collect, &result);
 
-        return static_cast<qc_parse_result_t>(result);
+        return result;
     }
 
     GWBUF create_buffer(const std::string& statement) const override
@@ -5547,32 +5546,32 @@ public:
         return name;
     }
 
-    mxs::Parser::DatabaseNames get_database_names(GWBUF* pStmt) const override
+    Parser::DatabaseNames get_database_names(GWBUF* pStmt) const override
     {
-        mxs::Parser::DatabaseNames names;
+        Parser::DatabaseNames names;
 
         qc_sqlite_get_database_names(pStmt, &names);
 
         return names;
     }
 
-    void get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, size_t* pnInfos) const override
+    void get_field_info(GWBUF* pStmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
         qc_sqlite_get_field_info(pStmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    void get_function_info(GWBUF* pStmt, const QC_FUNCTION_INFO** ppInfos, size_t* pnInfos) const override
+    void get_function_info(GWBUF* pStmt, const Parser::FunctionInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
         qc_sqlite_get_function_info(pStmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    QC_KILL get_kill_info(GWBUF* pStmt) const override
+    Parser::KillInfo get_kill_info(GWBUF* pStmt) const override
     {
-        QC_KILL kill;
+        Parser::KillInfo kill;
 
         qc_sqlite_get_kill_info(pStmt, &kill);
 
@@ -5619,18 +5618,18 @@ public:
         return version;
     }
 
-    qc_sql_mode_t get_sql_mode() const override
+    Parser::SqlMode get_sql_mode() const override
     {
-        qc_sql_mode_t sql_mode;
+        Parser::SqlMode sql_mode;
 
         qc_sqlite_get_sql_mode(&sql_mode);
 
         return sql_mode;
     }
 
-    mxs::Parser::TableNames get_table_names(GWBUF* pStmt) const override
+    Parser::TableNames get_table_names(GWBUF* pStmt) const override
     {
-        mxs::Parser::TableNames names;
+        Parser::TableNames names;
 
         qc_sqlite_get_table_names(pStmt, &names);
 
@@ -5666,7 +5665,7 @@ public:
         qc_sqlite_set_server_version(version);
     }
 
-    void set_sql_mode(qc_sql_mode_t sql_mode) override
+    void set_sql_mode(Parser::SqlMode sql_mode) override
     {
         qc_sqlite_set_sql_mode(sql_mode);
     }
@@ -5677,10 +5676,10 @@ public:
     }
 };
 
-class SqliteParserPlugin : public mxs::Parser::Plugin
+class SqliteParserPlugin : public Parser::Plugin
 {
 public:
-    bool setup(qc_sql_mode_t sql_mode, const char* args) override
+    bool setup(Parser::SqlMode sql_mode, const char* args) override
     {
         return qc_sqlite_setup(sql_mode, args) == QC_RESULT_OK;
     }
@@ -5700,7 +5699,7 @@ public:
         return qc_sqlite_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
     }
 
-    QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
+    Parser::StmtResult get_result_from_info(const QC_STMT_INFO* info) override
     {
         return qc_sqlite_get_result_from_info(info);
     }
@@ -5710,7 +5709,7 @@ public:
         return qc_sqlite_info_get_canonical(info);
     }
 
-    mxs::Parser& parser() override
+    Parser& parser() override
     {
         return m_parser;
     }
@@ -5721,7 +5720,7 @@ private:
 
 SqliteParserPlugin sqlite3_plugin;
 
-mxs::Parser::Plugin& SqliteParser::plugin() const
+Parser::Plugin& SqliteParser::plugin() const
 {
     return sqlite3_plugin;
 }

@@ -309,21 +309,21 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
 namespace maxscale
 {
 
-const char* parser::to_string(qc_parse_result_t result)
+const char* parser::to_string(Parser::Result result)
 {
     switch (result)
     {
-    case QC_QUERY_INVALID:
-        return "QC_QUERY_INVALID";
+    case Parser::Result::INVALID:
+        return "Parser::Result::INVALID";
 
-    case QC_QUERY_TOKENIZED:
-        return "QC_QUERY_TOKENIZED";
+    case Parser::Result::TOKENIZED:
+        return "Parser::Result::TOKENIZED";
 
-    case QC_QUERY_PARTIALLY_PARSED:
-        return "QC_QUERY_PARTIALLY_PARSED";
+    case Parser::Result::PARTIALLY_PARSED:
+        return "Parser::Result::PARTIALLY_PARSED";
 
-    case QC_QUERY_PARSED:
-        return "QC_QUERY_PARSED";
+    case Parser::Result::PARSED:
+        return "Parser::Result::PARSED";
 
     default:
         mxb_assert(!true);
@@ -331,18 +331,18 @@ const char* parser::to_string(qc_parse_result_t result)
     }
 }
 
-const char* parser::to_string(qc_kill_type_t type)
+const char* parser::to_string(Parser::KillType type)
 {
     switch (type)
     {
-    case QC_KILL_CONNECTION:
-        return "QC_KILL_CONNECTION";
+    case Parser::KillType::CONNECTION:
+        return "Parser::KillType::CONNECTION";
 
-    case QC_KILL_QUERY:
-        return "QC_KILL_QUERY";
+    case Parser::KillType::QUERY:
+        return "Parser::KillType::QUERY";
 
-    case QC_KILL_QUERY_ID:
-        return "QC_KILL_QUERY_ID";
+    case Parser::KillType::QUERY_ID:
+        return "Parser::KillType::QUERY_ID";
 
     default:
         mxb_assert(!true);
@@ -479,11 +479,11 @@ namespace
 
 void append_field_info(json_t* pParent,
                        const char* zName,
-                       const QC_FIELD_INFO* begin, const QC_FIELD_INFO* end)
+                       const Parser::FieldInfo* begin, const Parser::FieldInfo* end)
 {
     json_t* pFields = json_array();
 
-    std::for_each(begin, end, [pFields](const QC_FIELD_INFO& info) {
+    std::for_each(begin, end, [pFields](const Parser::FieldInfo& info) {
                       std::string name;
 
                       if (!info.database.empty())
@@ -511,7 +511,7 @@ void append_field_info(json_t* pParent,
 
 void append_field_info(const mxs::Parser& parser, json_t* pParams, GWBUF* pBuffer)
 {
-    const QC_FIELD_INFO* begin;
+    const Parser::FieldInfo* begin;
     size_t n;
     parser.get_field_info(pBuffer, &begin, &n);
 
@@ -522,11 +522,11 @@ void append_function_info(const mxs::Parser& parser, json_t* pParams, GWBUF* pBu
 {
     json_t* pFunctions = json_array();
 
-    const QC_FUNCTION_INFO* begin;
+    const mxs::Parser::FunctionInfo* begin;
     size_t n;
     parser.get_function_info(pBuffer, &begin, &n);
 
-    std::for_each(begin, begin + n, [&parser, pFunctions](const QC_FUNCTION_INFO& info) {
+    std::for_each(begin, begin + n, [&parser, pFunctions](const mxs::Parser::FunctionInfo& info) {
                       json_t* pFunction = json_object();
 
                       json_object_set_new(pFunction, CN_NAME,
@@ -548,11 +548,11 @@ std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, const std::
     GWBUF buffer = create_buffer(statement);
     GWBUF* pBuffer = &buffer;
 
-    qc_parse_result_t result = parse(pBuffer, QC_COLLECT_ALL);
+    Parser::Result result = parse(pBuffer, mxs::Parser::COLLECT_ALL);
 
     json_object_set_new(pAttributes, CN_PARSE_RESULT, json_string(mxs::parser::to_string(result)));
 
-    if (result != QC_QUERY_INVALID)
+    if (result != Parser::Result::INVALID)
     {
         std::string type_mask = mxs::Parser::type_mask_to_string(get_type_mask(pBuffer));
         json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(type_mask.c_str()));
@@ -577,7 +577,7 @@ std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, const std::
 namespace
 {
 
-uint32_t get_trx_type_mask_using_qc(const mxs::Parser& parser, GWBUF* pStmt)
+uint32_t get_trx_type_mask_using_default(const mxs::Parser& parser, GWBUF* pStmt)
 {
     uint32_t type_mask = parser.get_type_mask(pStmt);
 
@@ -616,17 +616,17 @@ uint32_t get_trx_type_mask_using_qc(const mxs::Parser& parser, GWBUF* pStmt)
 
 }
 
-uint32_t Parser::get_trx_type_mask_using(GWBUF* pStmt, qc_trx_parse_using_t use) const
+uint32_t Parser::get_trx_type_mask_using(GWBUF* pStmt, ParseTrxUsing use) const
 {
     uint32_t type_mask = 0;
 
     switch (use)
     {
-    case QC_TRX_PARSE_USING_QC:
-        type_mask = get_trx_type_mask_using_qc(*this, pStmt);
+    case ParseTrxUsing::DEFAULT:
+        type_mask = get_trx_type_mask_using_default(*this, pStmt);
         break;
 
-    case QC_TRX_PARSE_USING_PARSER:
+    case ParseTrxUsing::CUSTOM:
         type_mask = get_trx_type_mask(pStmt);
         break;
 

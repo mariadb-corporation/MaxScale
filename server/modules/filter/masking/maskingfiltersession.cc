@@ -203,17 +203,17 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
 {
     bool rv = false;
 
-    uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+    uint32_t option = m_config.treat_string_arg_as_field ? Parser::OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(parser(), option);
 
-    auto parse_result = parser().parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
+    auto parse_result = parser().parse(pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
     auto op = parser().get_operation(pPacket);
 
     if (op == QUERY_OP_EXPLAIN)
     {
         rv = true;
     }
-    else if (parse_result == QC_QUERY_PARSED || !m_config.require_fully_parsed)
+    else if (parse_result == Parser::Result::PARSED || !m_config.require_fully_parsed)
     {
         if (Parser::type_mask_contains(parser().get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
@@ -251,17 +251,17 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
 {
     bool rv = false;
 
-    uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+    uint32_t option = m_config.treat_string_arg_as_field ? Parser::OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(parser(), option);
 
-    auto parse_result = parser().parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
+    auto parse_result = parser().parse(pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
     auto op = parser().get_operation(pPacket);
 
     if (op == QUERY_OP_EXPLAIN)
     {
         rv = true;
     }
-    else if (parse_result == QC_QUERY_PARSED || !m_config.require_fully_parsed)
+    else if (parse_result == Parser::Result::PARSED || !m_config.require_fully_parsed)
     {
         rv = check_query(pPacket);
     }
@@ -627,28 +627,28 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
 {
     bool is_used = false;
 
-    auto pred1 = [this, zUser, zHost](const QC_FIELD_INFO& field_info) {
+    auto pred1 = [this, zUser, zHost](const Parser::FieldInfo& field_info) {
             const MaskingRules::Rule* pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
 
             return pRule ? true : false;
         };
 
-    auto pred2 = [&pred1](const QC_FUNCTION_INFO& function_info) {
-            const QC_FIELD_INFO* begin = function_info.fields;
-            const QC_FIELD_INFO* end = begin + function_info.n_fields;
+    auto pred2 = [&pred1](const Parser::FunctionInfo& function_info) {
+            const Parser::FieldInfo* begin = function_info.fields;
+            const Parser::FieldInfo* end = begin + function_info.n_fields;
 
             auto i = std::find_if(begin, end, pred1);
 
             return i != end;
         };
 
-    const QC_FUNCTION_INFO* pInfos;
+    const Parser::FunctionInfo* pInfos;
     size_t nInfos;
 
     parser().get_function_info(pPacket, &pInfos, &nInfos);
 
-    const QC_FUNCTION_INFO* begin = pInfos;
-    const QC_FUNCTION_INFO* end = begin + nInfos;
+    const Parser::FunctionInfo* begin = pInfos;
+    const Parser::FunctionInfo* end = begin + nInfos;
 
     auto i = std::find_if(begin, end, pred2);
 
@@ -672,7 +672,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
     bool is_defined = false;
 
-    auto pred = [this, zUser, zHost](const QC_FIELD_INFO& field_info) {
+    auto pred = [this, zUser, zHost](const Parser::FieldInfo& field_info) {
             bool rv = false;
 
             if (field_info.column ==  "*")
@@ -688,13 +688,13 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
             return rv;
         };
 
-    const QC_FIELD_INFO* pInfos;
+    const Parser::FieldInfo* pInfos;
     size_t nInfos;
 
     parser().get_field_info(pPacket, &pInfos, &nInfos);
 
-    const QC_FIELD_INFO* begin = pInfos;
-    const QC_FIELD_INFO* end = begin + nInfos;
+    const Parser::FieldInfo* begin = pInfos;
+    const Parser::FieldInfo* end = begin + nInfos;
 
     auto i = std::find_if(begin, end, pred);
 
@@ -731,15 +731,15 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
 
     if (m_config.check_unions)
     {
-        mask |= QC_FIELD_UNION;
+        mask |= Parser::FIELD_UNION;
     }
 
     if (m_config.check_subqueries)
     {
-        mask |= QC_FIELD_SUBQUERY;
+        mask |= Parser::FIELD_SUBQUERY;
     }
 
-    auto pred = [this, mask, zUser, zHost](const QC_FIELD_INFO& field_info) {
+    auto pred = [this, mask, zUser, zHost](const Parser::FieldInfo& field_info) {
             bool rv = false;
 
             if (field_info.context & mask)
@@ -758,13 +758,13 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
             return rv;
         };
 
-    const QC_FIELD_INFO* pInfos;
+    const Parser::FieldInfo* pInfos;
     size_t nInfos;
 
     parser().get_field_info(pPacket, &pInfos, &nInfos);
 
-    const QC_FIELD_INFO* begin = pInfos;
-    const QC_FIELD_INFO* end = begin + nInfos;
+    const Parser::FieldInfo* begin = pInfos;
+    const Parser::FieldInfo* end = begin + nInfos;
 
     auto i = std::find_if(begin, end, pred);
 
@@ -774,7 +774,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
 
         std::stringstream ss;
 
-        if (m_config.check_unions && (i->context & QC_FIELD_UNION))
+        if (m_config.check_unions && (i->context & Parser::FIELD_UNION))
         {
             if (column == "*")
             {
@@ -787,7 +787,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
                    << "' is used in the second or subsequent SELECT of a UNION, access is denied.";
             }
         }
-        else if (m_config.check_subqueries && (i->context & QC_FIELD_SUBQUERY))
+        else if (m_config.check_subqueries && (i->context & Parser::FIELD_SUBQUERY))
         {
             if (column == "*")
             {

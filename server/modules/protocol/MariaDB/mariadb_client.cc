@@ -823,12 +823,12 @@ string MariaDBClientConnection::handle_variables(GWBUF& buffer)
                 {
                 case SqlModeParser::ORACLE:
                     m_session_data->is_autocommit = false;
-                    m_sql_mode = QC_SQL_MODE_ORACLE;
+                    m_sql_mode = mxs::Parser::SqlMode::ORACLE;
                     break;
 
                 case SqlModeParser::DEFAULT:
                     m_session_data->is_autocommit = true;
-                    m_sql_mode = QC_SQL_MODE_DEFAULT;
+                    m_sql_mode = mxs::Parser::SqlMode::DEFAULT;
                     break;
 
                 case SqlModeParser::SOMETHING:
@@ -907,8 +907,9 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
     if (mxs_mysql_get_command(*packetbuf) == MXS_COM_QUERY)
     {
-        bool use_qc = rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION);
-        const auto parser_type = use_qc ? QC_TRX_PARSE_USING_QC : QC_TRX_PARSE_USING_PARSER;
+        bool use_parser = rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION);
+        const auto parser_type = use_parser
+            ? mxs::Parser::ParseTrxUsing::DEFAULT : mxs::Parser::ParseTrxUsing::CUSTOM;
 
         uint32_t type = parser()->get_trx_type_mask_using(packetbuf, parser_type);
 
@@ -950,7 +951,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         else if (type & (QUERY_TYPE_READWRITE | QUERY_TYPE_READONLY))
         {
             // Currently only qc_sqlite should return these types
-            mxb_assert(use_qc && parser()->get_operation(packetbuf) == QUERY_OP_SET_TRANSACTION);
+            mxb_assert(use_parser && parser()->get_operation(packetbuf) == QUERY_OP_SET_TRANSACTION);
             uint32_t mode = type & QUERY_TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
             m_session_data->next_trx_mode = mode;
 
@@ -1057,7 +1058,7 @@ bool MariaDBClientConnection::should_inspect_query(GWBUF& buffer) const
 {
     bool rval = true;
 
-    if (parser()->parse(&buffer, QC_COLLECT_ALL) == QC_QUERY_PARSED)
+    if (parser()->parse(&buffer, mxs::Parser::COLLECT_ALL) == mxs::Parser::Result::PARSED)
     {
         auto op = parser()->get_operation(&buffer);
 

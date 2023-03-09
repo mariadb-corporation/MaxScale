@@ -1862,14 +1862,14 @@ Worker::Statistics RoutingWorker::get_statistics()
 }
 
 // static
-bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
+bool RoutingWorker::get_qc_stats_by_index(int index, CachingParser::Stats* pStats)
 {
     mxb_assert(MainWorker::is_current());
 
     class Task : public Worker::Task
     {
     public:
-        Task(QC_CACHE_STATS* pStats)
+        Task(CachingParser::Stats* pStats)
             : m_stats(*pStats)
         {
         }
@@ -1880,7 +1880,7 @@ bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
         }
 
     private:
-        QC_CACHE_STATS& m_stats;
+        CachingParser::Stats& m_stats;
     };
 
     RoutingWorker* pWorker = RoutingWorker::get_by_index(index);
@@ -1897,14 +1897,14 @@ bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
 }
 
 // static
-void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
+void RoutingWorker::get_qc_stats(std::vector<CachingParser::Stats>& all_stats)
 {
     mxb_assert(MainWorker::is_current());
 
     class Task : public Worker::Task
     {
     public:
-        Task(std::vector<QC_CACHE_STATS>* pAll_stats)
+        Task(std::vector<CachingParser::Stats>* pAll_stats)
             : m_all_stats(*pAll_stats)
         {
         }
@@ -1914,13 +1914,13 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
             int index = static_cast<RoutingWorker&>(worker).index();
             mxb_assert(index >= 0 && index < (int)m_all_stats.size());
 
-            QC_CACHE_STATS& stats = m_all_stats[index];
+            CachingParser::Stats& stats = m_all_stats[index];
 
             mxs::CachingParser::get_thread_cache_stats(&stats);
         }
 
     private:
-        std::vector<QC_CACHE_STATS>& m_all_stats;
+        std::vector<CachingParser::Stats>& m_all_stats;
     };
 
     auto nWorkers = this_unit.nRunning.load(std::memory_order_relaxed);
@@ -1934,7 +1934,7 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 namespace
 {
 
-json_t* qc_stats_to_json(const char* zHost, int id, const QC_CACHE_STATS& stats)
+json_t* qc_stats_to_json(const char* zHost, int id, const CachingParser::Stats& stats)
 {
     mxb_assert(MainWorker::is_current());
 
@@ -1967,7 +1967,7 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json_by_index(const char*
 
     std::unique_ptr<json_t> sStats;
 
-    QC_CACHE_STATS stats;
+    CachingParser::Stats stats;
 
     if (get_qc_stats_by_index(index, &stats))
     {
@@ -1987,7 +1987,7 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 {
     mxb_assert(MainWorker::is_current());
 
-    vector<QC_CACHE_STATS> all_stats;
+    vector<CachingParser::Stats> all_stats;
 
     get_qc_stats(all_stats);
 
@@ -2359,7 +2359,7 @@ RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
 
     MemoryUsage rv;
 
-    QC_CACHE_STATS qc;
+    CachingParser::Stats qc;
     if (mxs::CachingParser::get_thread_cache_stats(&qc))
     {
         rv.query_classifier = qc.size;

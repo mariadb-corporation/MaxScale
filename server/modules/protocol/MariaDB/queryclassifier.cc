@@ -96,7 +96,7 @@ std::string get_text_ps_id(const mxs::Parser& parser, GWBUF* buffer)
 
 bool relates_to_previous_stmt(const mxs::Parser& parser, GWBUF* pBuffer)
 {
-    const QC_FUNCTION_INFO* infos = nullptr;
+    const mxs::Parser::FunctionInfo* infos = nullptr;
     size_t n_infos = 0;
     parser.get_function_info(pBuffer, &infos, &n_infos);
 

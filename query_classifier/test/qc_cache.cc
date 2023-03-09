@@ -58,12 +58,12 @@ int run(const mxs::Parser& parser, const char* zStatement, int n)
         GWBUF* pStatement = create_gwbuf(zStatement);
 
         maxbase::StopWatch sw;
-        int rc = parser.parse(pStatement, QC_COLLECT_ALL);
+        mxs::Parser::Result rc = parser.parse(pStatement, mxs::Parser::COLLECT_ALL);
         diff += sw.split();
 
         gwbuf_free(pStatement);
 
-        if (rc != QC_QUERY_PARSED)
+        if (rc != mxs::Parser::Result::PARSED)
         {
             return EXIT_FAILURE;
         }
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 {
     int rv = EXIT_SUCCESS;
 
-    QC_CACHE_PROPERTIES* pCache_properties = nullptr;
+    mxs::CachingParser::Properties* pCache_properties = nullptr;
     const char* zStatement = nullptr;
     int n = 0;
 
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
         {
         case 'c':
             {
-                static QC_CACHE_PROPERTIES cache_properties;
+                static mxs::CachingParser::Properties cache_properties;
                 pCache_properties = &cache_properties;
             }
             break;

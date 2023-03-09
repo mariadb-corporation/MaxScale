@@ -349,7 +349,7 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
             // A version specific executable comment,
             // e.g. "/*!99999 ..." or "/*M!99999 ..." => never parsed.
             extern void maxscaleSetStatusCap(int);
-            maxscaleSetStatusCap(2); // QC_QUERY_PARTIALLY_PARSED, see query_classifier.h:qc_parse_result
+            maxscaleSetStatusCap(2); // QC_QUERY_PARTIALLY_PARSED, see parser.hh:Parser::Result
             ++i; // Next after the trailing '/'
           }
           else {
