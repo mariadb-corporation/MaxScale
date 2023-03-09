@@ -15,14 +15,14 @@
             >
                 <template
                     v-slot:graph-node-content="{
-                        data: { node, nodeSize, changeNodeSize, isDragging },
+                        data: { node, nodeSize, onNodeResized, isDragging },
                     }"
                 >
                     <conf-node
                         :class="{ 'no-pointerEvent': isDragging }"
                         :node="node"
                         :nodeSize="nodeSize"
-                        :changeNodeSize="changeNodeSize"
+                        :onNodeResized="onNodeResized"
                     />
                 </template>
             </mxs-dag-graph>

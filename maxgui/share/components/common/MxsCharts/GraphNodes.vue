@@ -31,7 +31,7 @@
                 :data="{
                     node,
                     nodeSize: getNodeSize(node.id),
-                    changeNodeSize,
+                    onNodeResized,
                     isDragging: draggingStates.isDragging,
                 }"
             />
@@ -162,7 +162,12 @@ export default {
                 height: this.dynNodeHeight ? 'unset' : `${height}px`,
             }
         },
-        changeNodeSize(node) {
+        /**
+         * Handles the event when a node is resized.
+         * @param {Object} node - The node object that was resized.
+         */
+        onNodeResized(node) {
+            // Run with doubleRAF to make sure getBoundingClientRect return accurate dim
             this.$helpers.doubleRAF(() => {
                 const nodeEle = this.$typy(this.$refs, 'graphNode').safeArray.find(
                     n => n.getAttribute('node_id') === node.id

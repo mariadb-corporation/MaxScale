@@ -112,7 +112,7 @@ export default {
     props: {
         node: { type: Object, required: true },
         nodeSize: { type: Object, required: true },
-        changeNodeSize: { type: Function, required: true },
+        onNodeResized: { type: Function, required: true },
     },
     data() {
         return {
@@ -229,7 +229,7 @@ export default {
         },
         handleVisFilters() {
             this.isVisualizingFilters = !this.isVisualizingFilters
-            this.changeNodeSize(this.node)
+            this.onNodeResized(this.node)
         },
     },
 }
