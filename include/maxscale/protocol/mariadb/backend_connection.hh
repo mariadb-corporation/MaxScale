@@ -147,8 +147,7 @@ private:
 
     void            send_history();
     StateMachineRes read_history_response();
-    bool            compare_responses();
-    void            check_history();
+    void            handle_history_mismatch();
 
     bool            send_change_user_to_backend();
     StateMachineRes read_change_user();
@@ -161,7 +160,6 @@ private:
                           mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void prepare_for_write(const GWBUF& buffer);
     void process_stmt_execute(GWBUF& buffer, uint32_t id, PSInfo& info);
-    void pin_history_responses();
 
     GWBUF track_response(GWBUF& buffer);
     bool  read_backend_handshake(GWBUF&& buffer);
@@ -238,7 +236,7 @@ private:
     mxs::Reply  m_reply;
 
     uint32_t server_capabilities {0};   /**< Server capabilities */
-    uint32_t extra_capabilities {0};   /**< Extra MariaDB capabilities */
+    uint32_t extra_capabilities {0};    /**< Extra MariaDB capabilities */
 
     // The auth token used with the latest COM_CHANGE_USER, required in case a new COM_CHANGE_USER arrives
     // before the server responds to the previous one and the server sends an AuthSwitchRequest packet.
@@ -249,22 +247,12 @@ private:
     // The mapping of COM_STMT_PREPARE IDs we sent upstream to the actual IDs that the backend sent us
     std::unordered_map<uint32_t, PSInfo> m_ps_map;
 
-    // The internal ID of the current query
-    uint32_t m_current_id {0};
-
     // Whether to collect the rows from the next resultset
     bool m_collect_rows {false};
-
-    // The ID and response to the command that will be added to the history. This is stored in a separate
-    // variable in case the correct response that is delivered to the client isn't available when this backend
-    // receive the response.
-    std::map<uint32_t, bool> m_ids_to_check;
-
-    // The responses to the history that's being replayed. The IDs are not needed as we know any future
-    // commands will be queued until we complete the history replay.
-    std::deque<uint32_t> m_history_responses;
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */
     BackendDCB*     m_dcb {nullptr};            /**< Dcb used by this protocol connection */
+
+    std::unique_ptr<mxs::History::Subscriber> m_subscriber;
 };

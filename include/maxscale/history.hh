@@ -19,6 +19,7 @@
 #include <deque>
 #include <map>
 #include <optional>
+#include <functional>
 
 namespace maxscale
 {
@@ -29,6 +30,81 @@ namespace maxscale
 class History
 {
 public:
+    class Subscriber
+    {
+    public:
+        /**
+         * Create a new Subscriber
+         *
+         * @param history The history that this Subscriber is a part of
+         * @param cb      The callback that's called when a mismatch is found
+         */
+        Subscriber(History& history, std::function<void ()> cb);
+
+        ~Subscriber();
+
+        /**
+         * Set the ID of the current command
+         *
+         * The ID is used to uniquely identify
+         * @param id The ID to set
+         */
+        void set_current_id(uint32_t id);
+
+        /**
+         * Get the ID of the current command
+         *
+         * @return The ID of the current command being executed
+         */
+        uint32_t current_id() const;
+
+        /**
+         * Add a response and compare it to the one stored in the history
+         *
+         * @param ok Whether the command succeeded or not
+         *
+         * @return True if the command matched the one in the history or false if it didn't. If the validity
+         *         could not yet be verified, due to the recorded response not having arrived yet, the
+         *         function returns true. If at a later point it turns out that the result was a mismatch, the
+         *         callback given to the constructor is called.
+         */
+        bool add_response(bool ok);
+
+        /**
+         * Get the current history
+         *
+         * @return The history that has been recorded so far
+         */
+        const std::deque<GWBUF>& history() const;
+
+        /**
+         * Get the result of a command
+         *
+         * @param id The ID of the command
+         *
+         * @return The result of the command if it was found
+         */
+        std::optional<bool> get(uint32_t id) const;
+
+    private:
+        friend class History;
+
+        bool compare_responses();
+
+        History& m_history;
+
+        // The callback that is called when the history needs to be checked
+        std::function<void ()> m_cb;
+
+        // The internal ID of the current query.
+        uint32_t m_current_id {0};
+
+        // The ID and response to the command that will be added to the history. This is stored in a separate
+        // variable in case the correct response that is delivered to the client isn't available when this
+        // subscriber receive the response.
+        std::map<uint32_t, bool> m_ids_to_check;
+    };
+
     /**
      * Construct a History
      *
@@ -57,7 +133,7 @@ public:
      * Clear the whole history
      *
      * This does not clear the responses, they get cleared once the history is filled up again and when it is
-     * known that no backend connection needs it anymore.
+     * known that no subscriber needs it anymore.
      */
     void clear()
     {
@@ -65,55 +141,16 @@ public:
     }
 
     /**
-     * Get the current history
+     * Create a new subscriber for this history
      *
-     * @return The history that has been recorded
+     * @param cb The callback that is called when a history response mismatch is encountered
+     *
+     * @return The new subscriber
      */
-    const std::deque<GWBUF>& history() const
+    std::unique_ptr<Subscriber> subscribe(std::function<void ()> cb)
     {
-        return m_history;
+        return std::make_unique<Subscriber>(*this, std::move(cb));
     }
-
-    /**
-     * Pin the history responses
-     *
-     * This prevents the history from being erased while the history is being replayed.
-     *
-     * @param backend The backend that requested the pinning to be done
-     */
-    void pin_responses(mxs::BackendConnection* backend);
-
-    /**
-     * Set the history position of a backend
-     *
-     * @param backend  The backend in question
-     * @param position The position it's at
-     */
-    void set_position(mxs::BackendConnection* backend, uint32_t position);
-
-    /**
-     * Mark that a backend is waiting for a response
-     *
-     * @param backend The backend that needs the response
-     * @param cb      The callback that is called
-     */
-    void need_response(mxs::BackendConnection* backend, std::function<void ()> cb);
-
-    /**
-     * Remove a backend from the history
-     *
-     * @param backend The backend to remove
-     */
-    void remove(mxs::BackendConnection* backend);
-
-    /**
-     * Get the result of a command
-     *
-     * @param id The ID of the command
-     *
-     * @return The result of the command if it was found
-     */
-    std::optional<bool> get(uint32_t id) const;
 
     /**
      * Compare history responses that arrived before the accepted reply arrived
@@ -152,21 +189,49 @@ public:
 
 private:
 
-    // The struct used to communicate information from the backend protocol to the client protocol.
+    /**
+     * Pin the history responses
+     *
+     * This prevents the history from being erased while the history is being replayed.
+     *
+     * @param subscriber The subscriber that requested the pinning to be done
+     */
+    void pin_responses(Subscriber* subscriber);
+
+    /**
+     * Set the history position of a subscriber
+     *
+     * @param subscriber The subscriber in question
+     * @param position   The position it's at
+     */
+    void set_position(Subscriber* subscriber, uint32_t position);
+
+    /**
+     * Mark that a subscriber is waiting for a response
+     *
+     * @param subscriber The subscriber that needs the response
+     */
+    void need_response(Subscriber* subscriber);
+
+    /**
+     * Remove a subscriber from the history
+     *
+     * @param subscriber The subscriber to remove
+     */
+    void remove(Subscriber* subscriber);
+
+    void prune_history();
+
+    // The struct used to communicate information from the subscriber protocol to the client protocol.
     struct HistoryInfo
     {
-        // Flag that is set to true whenever a backend executes a command before the response which is
+        // Flag that is set to true whenever a subscriber executes a command before the response which is
         // delivered to the client has arrived.
         bool waiting_for_response {false};
-
-        // The callback that is called
-        std::function<void ()> response_cb;
 
         // Current position in history. Used to track the responses that are still needed.
         uint32_t position {0};
     };
-
-    void prune_history();
 
     // History of all commands that modify the session state
     std::deque<GWBUF> m_history;
@@ -178,8 +243,8 @@ private:
     // is acceptable to lose some state history (i.e. prune_sescmd_history is enabled).
     bool m_history_pruned {false};
 
-    // History information for all open backend connections
-    std::map<mxs::BackendConnection*, HistoryInfo> m_history_info;
+    // History information for all open subscriptions
+    std::map<Subscriber*, HistoryInfo> m_history_info;
 
     // Number of stored session commands
     size_t m_max_sescmd_history;

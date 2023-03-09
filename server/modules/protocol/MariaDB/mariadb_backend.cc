@@ -149,7 +149,6 @@ MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component
 {
     std::unique_ptr<MariaDBBackendConnection> backend_conn(new MariaDBBackendConnection(server));
     backend_conn->assign_session(session, component);
-    backend_conn->pin_history_responses();
     return backend_conn;
 }
 
@@ -157,10 +156,7 @@ void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
 
-    if (m_state != State::POOLED)
-    {
-        mysql_session()->history().remove(this);
-    }
+    m_subscriber.reset();
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
     m_dcb->silence_errors();
@@ -230,7 +226,6 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
 
             // Clear out any old prepared statements, those are reset by the COM_CHANGE_USER
             m_ps_map.clear();
-            pin_history_responses();
 
             if (reset_conn && m_session->listener_data()->m_conn_init_sql.buffer_contents.empty())
             {
@@ -600,7 +595,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
 
     // Erase history info callback before we do the handleError call. This prevents it from being called while
     // the DCB is in the zombie queue.
-    mysql_session()->history().remove(this);
+    m_subscriber.reset();
 
     mxb_assert(!dcb->hanged_up());
     MXB_AT_DEBUG(bool res = ) m_upstream->handleError(type, ss.str(), nullptr, m_reply);
@@ -838,11 +833,11 @@ void MariaDBBackendConnection::normal_read()
     if (!m_dcb->is_open())
     {
         // The router closed the session, erase the callbacks to prevent the client protocol from calling it.
-        mysql_session()->history().remove(this);
+        m_subscriber.reset();
     }
-    else if (m_reply.is_complete())
+    else if (m_reply.is_complete() && !m_subscriber->add_response(m_reply.is_ok()))
     {
-        check_history();
+        handle_history_mismatch();
     }
 }
 
@@ -850,7 +845,7 @@ void MariaDBBackendConnection::send_history()
 {
     MYSQL_session* client_data = mysql_session();
 
-    for (const auto& history_query : client_data->history().history())
+    for (const auto& history_query : m_subscriber->history())
     {
         TrackedQuery query(history_query);
 
@@ -867,7 +862,6 @@ void MariaDBBackendConnection::send_history()
                  history_query.id(), m_server.name(), history_query.get_sql().c_str());
 
         m_dcb->writeq_append(history_query.shallow_clone());
-        m_history_responses.push_back(history_query.id());
     }
 }
 
@@ -875,7 +869,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 {
     StateMachineRes rval = StateMachineRes::DONE;
 
-    while (!m_history_responses.empty() && rval == StateMachineRes::DONE)
+    while ((!m_reply.is_complete() || !m_track_queue.empty()) && rval == StateMachineRes::DONE)
     {
         auto [read_ok, buffer] = m_dcb->read(MYSQL_HEADER_LEN, 0);
 
@@ -901,20 +895,15 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
             if (m_reply.is_complete())
             {
-                MYSQL_session* client_data = mysql_session();
-                uint32_t id = m_history_responses.front();
-                auto cmd = client_data->history().get(id);
-
-                if (cmd && cmd.value() == m_reply.is_ok())
+                if (m_subscriber->add_response(m_reply.is_ok()))
                 {
-                    MXB_INFO("Reply to %u complete", id);
-                    m_history_responses.pop_front();
+                    MXB_INFO("Reply to %u complete", m_subscriber->current_id());
                 }
                 else
                 {
                     // This server sent a different response than the one we sent to the client. Trigger a
                     // hangup event so that it is closed.
-                    do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
+                    handle_history_mismatch();
                     m_dcb->trigger_hangup_event();
                     rval = StateMachineRes::ERROR;
                 }
@@ -931,7 +920,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
     return rval;
 }
 
-std::string MariaDBBackendConnection::create_response_mismatch_error()
+void MariaDBBackendConnection::handle_history_mismatch()
 {
     std::ostringstream ss;
 
@@ -944,86 +933,7 @@ std::string MariaDBBackendConnection::create_response_mismatch_error()
         ss << " Error: " << m_reply.error().message();
     }
 
-    return ss.str();
-}
-
-void MariaDBBackendConnection::pin_history_responses()
-{
-    // Mark the start of the history responses that we're interested in. This guarantees that all responses
-    // remain in effect while the connection reset is ongoing. This is needed to correctly detect a
-    // COM_STMT_CLOSE that arrives after the connection creation and which caused the history to shrink.
-    mysql_session()->history().pin_responses(this);
-}
-
-void MariaDBBackendConnection::check_history()
-{
-    if (!compare_responses())
-    {
-        do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
-    }
-}
-
-bool MariaDBBackendConnection::compare_responses()
-{
-    MYSQL_session* data = mysql_session();
-
-    if (m_current_id)
-    {
-        // It's possible that there's already a response for this command. This can happen if the session
-        // command is executed multiple times before the accepted answer has arrived. We only care about
-        // the latest result.
-        m_ids_to_check[m_current_id] = m_reply.is_ok();
-
-        // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
-        // response is read without a pre-assigned ID.
-        m_current_id = 0;
-    }
-
-    // It is possible that the same command is verified twice if the session command ends up being executed
-    // more than once. This happens as each failed attempt to execute it causes the response callback to be
-    // installed and if the accepted answer arrives before the final response for this backend arrives, the
-    // latest completed response from this backend is used. This can cause the connection to be closed even if
-    // it would be considered valid later on.
-    //
-    // TODO: We could probably use m_current_id to prevent this from happening.
-
-    bool ok = true;
-    bool found = false;
-    auto it = m_ids_to_check.begin();
-
-    while (it != m_ids_to_check.end())
-    {
-        if (auto cmd = data->history().get(it->first))
-        {
-            data->history().set_position(this, it->first);
-
-            if (it->second != cmd.value())
-            {
-                ok = false;
-                break;
-            }
-
-            it = m_ids_to_check.erase(it);
-            found = true;
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
-    if (ok && !found && !m_ids_to_check.empty())
-    {
-        data->history().need_response(this, [this]() {
-            if (!compare_responses())
-            {
-                do_handle_error(m_dcb, create_response_mismatch_error(),
-                                mxs::ErrorType::PERMANENT);
-            }
-        });
-    }
-
-    return ok;
+    do_handle_error(m_dcb, ss.str(), mxs::ErrorType::PERMANENT);
 }
 
 MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_user()
@@ -1260,9 +1170,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
                     // sent, don't respond to it.
                     if (cmd == MXS_COM_STMT_CLOSE)
                     {
-                        auto data = mysql_session();
-
-                        if (data->history().get(ps_id))
+                        if (m_subscriber->get(ps_id))
                         {
                             // If we haven't executed the COM_STMT_PREPARE that this COM_STMT_CLOSE refers to
                             // but we have the response for it, we know that the COM_STMT_CLOSE was received
@@ -2349,7 +2257,7 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 
     // Extract the PS ID generated by the server and replace it with our own. This allows the client protocol
     // to always refer to the same prepared statement with the same ID.
-    uint32_t internal_id = m_current_id;
+    uint32_t internal_id = m_subscriber->current_id();
     uint32_t stmt_id = 0;
     mxb_assert(internal_id != 0);
 
@@ -2533,6 +2441,13 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
     MYSQL_session* client_data = mysql_session();
     m_auth_data.client_data = client_data;
     m_authenticator = client_data->auth_data->be_auth_module->create_backend_authenticator(m_auth_data);
+
+    // Subscribing to the history marks the start of the history responses that we're interested in. This
+    // guarantees that all responses remain in effect while the connection reset is ongoing. This is needed to
+    // correctly detect a COM_STMT_CLOSE that arrives after the connection creation and which caused the
+    // history to shrink.
+    auto fn = std::bind(&MariaDBBackendConnection::handle_history_mismatch, this);
+    m_subscriber = client_data->history().subscribe(std::move(fn));
 }
 
 MariaDBBackendConnection::TrackedQuery::TrackedQuery(const GWBUF& buffer)
@@ -2568,7 +2483,7 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 
     // Track the ID that the client protocol assigned to this query. It is used to verify that the result
     // from this backend matches the one that was sent upstream.
-    m_current_id = query.id;
+    m_subscriber->set_current_id(query.id);
 
     m_collect_rows = query.collect_rows;
 
@@ -3003,7 +2918,7 @@ void MariaDBBackendConnection::set_to_pooled()
     m_capabilities = ms->full_capabilities();
     m_account = m_session->user_and_host();
     m_db = ms->current_db;
-    ms->history().remove(this);
+    m_subscriber.reset();
 
     m_session = nullptr;
     m_upstream = nullptr;
