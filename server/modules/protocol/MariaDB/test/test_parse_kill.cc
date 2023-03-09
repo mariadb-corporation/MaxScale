@@ -119,7 +119,7 @@ int main(int argc, char** argv)
         {" kill ConNectioN SOFT 123",             NONE, 0,                                },
         {"/* \ncomment1\ncomment2*/         kill  HARD ConNectioN 123",
          KILL,  123,       KT_CONNECTION | KT_HARD},
-        {"/*** star* *comm///*EnT ****/  \n--linecomment\n  /***/kill 123",
+        {"/*** star* *comm///*EnT ****/  \n-- linecomment\n  /***/kill 123",
          KILL,  123,       },
         {"#line-comment\nkill  SOFT ConNectioN 123",
          KILL,  123,       KT_CONNECTION | KT_SOFT},
