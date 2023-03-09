@@ -25,6 +25,8 @@
 namespace
 {
 
+using mxs::CachingParser;
+
 const char CN_CACHE[] = "cache";
 const char CN_CACHE_SIZE[] = "cache_size";
 const char CN_CLASSIFICATION[] = "classification";
@@ -96,7 +98,6 @@ public:
     QCInfoCache()
         : m_reng(m_rdev())
     {
-        memset(&m_stats, 0, sizeof(m_stats));
     }
 
     ~QCInfoCache()
@@ -125,7 +126,7 @@ public:
     std::shared_ptr<QC_STMT_INFO> get(mxs::Parser::Plugin* pPlugin, std::string_view canonical_stmt)
     {
         std::shared_ptr<QC_STMT_INFO> sInfo;
-        qc_sql_mode_t sql_mode = pPlugin->parser().get_sql_mode();
+        mxs::Parser::SqlMode sql_mode = pPlugin->parser().get_sql_mode();
 
         auto i = m_infos.find(canonical_stmt);
 
@@ -193,7 +194,7 @@ public:
 
             if (m_stats.size + size <= cache_max_size)
             {
-                qc_sql_mode_t sql_mode = pPlugin->parser().get_sql_mode();
+                mxs::Parser::SqlMode sql_mode = pPlugin->parser().get_sql_mode();
 
                 m_infos.emplace(canonical_stmt,
                                 Entry(pPlugin, std::move(sInfo), sql_mode, this_thread.options));
@@ -209,12 +210,12 @@ public:
         m_stats.size += delta;
     }
 
-    void get_stats(QC_CACHE_STATS* pStats)
+    void get_stats(CachingParser::Stats* pStats)
     {
         *pStats = m_stats;
     }
 
-    void get_state(std::map<std::string, QC_CACHE_ENTRY>& state) const
+    void get_state(std::map<std::string, CachingParser::Entry>& state) const
     {
         for (const auto& info : m_infos)
         {
@@ -225,7 +226,7 @@ public:
 
             if (it == state.end())
             {
-                QC_CACHE_ENTRY e {};
+                CachingParser::Entry e {};
 
                 e.hits = entry.hits;
                 e.result = entry.pPlugin->get_result_from_info(entry.sInfo.get());
@@ -234,11 +235,11 @@ public:
             }
             else
             {
-                QC_CACHE_ENTRY& e = it->second;
+                CachingParser::Entry& e = it->second;
 
                 e.hits += entry.hits;
 #if defined (SS_DEBUG)
-                QC_STMT_RESULT result = entry.pPlugin->get_result_from_info(entry.sInfo.get());
+                mxs::Parser::StmtResult result = entry.pPlugin->get_result_from_info(entry.sInfo.get());
 
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
@@ -267,7 +268,7 @@ private:
     {
         Entry(mxs::Parser::Plugin* pPlugin,
               std::shared_ptr<QC_STMT_INFO> sInfo,
-              qc_sql_mode_t sql_mode,
+              mxs::Parser::SqlMode sql_mode,
               uint32_t options)
             : pPlugin(pPlugin)
             , sInfo(std::move(sInfo))
@@ -279,7 +280,7 @@ private:
 
         mxs::Parser::Plugin*          pPlugin;
         std::shared_ptr<QC_STMT_INFO> sInfo;
-        qc_sql_mode_t                 sql_mode;
+        mxs::Parser::SqlMode          sql_mode;
         uint32_t                      options;
         int64_t                       hits;
     };
@@ -360,11 +361,11 @@ private:
         return freed_space;
     }
 
-    InfosByStmt        m_infos;
-    QC_CACHE_STATS     m_stats;
-    std::random_device m_rdev;
-    std::mt19937       m_reng;
-    int32_t            m_refs { 0 };
+    InfosByStmt          m_infos;
+    CachingParser::Stats m_stats;
+    std::random_device   m_rdev;
+    std::mt19937         m_reng;
+    int32_t              m_refs { 0 };
 };
 
 /**
@@ -492,7 +493,7 @@ void CachingParser::thread_finish()
 }
 
 //static
-bool CachingParser::set_properties(const QC_CACHE_PROPERTIES& properties)
+bool CachingParser::set_properties(const Properties& properties)
 {
     bool rv = false;
 
@@ -517,7 +518,7 @@ bool CachingParser::set_properties(const QC_CACHE_PROPERTIES& properties)
 }
 
 //static
-void CachingParser::get_properties(QC_CACHE_PROPERTIES* pProperties)
+void CachingParser::get_properties(Properties* pProperties)
 {
     pProperties->max_size = this_unit.cache_max_size();
 }
@@ -555,7 +556,7 @@ bool CachingParser::set_properties(json_t* pJson)
     {
         rv = true;
 
-        QC_CACHE_PROPERTIES cache_properties;
+        Properties cache_properties;
         get_properties(&cache_properties);
 
         json_t* pValue;
@@ -570,7 +571,7 @@ bool CachingParser::set_properties(json_t* pJson)
 
         if (rv)
         {
-            MXB_AT_DEBUG(bool set = ) mxs::CachingParser::set_properties(cache_properties);
+            MXB_AT_DEBUG(bool set = ) CachingParser::set_properties(cache_properties);
             mxb_assert(set);
         }
     }
@@ -581,7 +582,7 @@ bool CachingParser::set_properties(json_t* pJson)
 //static
 std::unique_ptr<json_t> CachingParser::get_properties_as_resource(const char* zHost)
 {
-    QC_CACHE_PROPERTIES properties;
+    Properties properties;
     get_properties(&properties);
 
     json_t* pParams = json_object();
@@ -601,7 +602,7 @@ std::unique_ptr<json_t> CachingParser::get_properties_as_resource(const char* zH
 namespace
 {
 
-json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry)
+json_t* cache_entry_as_json(const std::string& stmt, const CachingParser::Entry& entry)
 {
     json_t* pHits = json_integer(entry.hits);
 
@@ -629,7 +630,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
 
 std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost)
 {
-    std::map<std::string, QC_CACHE_ENTRY> state;
+    std::map<std::string, Entry> state;
 
     // Assuming the classification cache of all workers will roughly be similar
     // (which will be the case unless something is broken), collecting the
@@ -638,7 +639,7 @@ std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost)
     // parallel and then coalesced here.
 
     mxs::RoutingWorker::execute_serially([&state]() {
-                                             mxs::CachingParser::get_thread_cache_state(state);
+                                             CachingParser::get_thread_cache_state(state);
                                          });
 
     json_t* pData = json_array();
@@ -671,7 +672,7 @@ int64_t CachingParser::clear_thread_cache()
 }
 
 //static
-void CachingParser::get_thread_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state)
+void CachingParser::get_thread_cache_state(std::map<std::string, Entry>& state)
 {
     QCInfoCache* pCache = this_thread.pInfo_cache;
 
@@ -682,7 +683,7 @@ void CachingParser::get_thread_cache_state(std::map<std::string, QC_CACHE_ENTRY>
 }
 
 //static
-bool CachingParser::get_thread_cache_stats(QC_CACHE_STATS* pStats)
+bool CachingParser::get_thread_cache_stats(Stats* pStats)
 {
     bool rv = false;
 
@@ -700,7 +701,7 @@ bool CachingParser::get_thread_cache_stats(QC_CACHE_STATS* pStats)
 //static
 std::unique_ptr<json_t> CachingParser::get_thread_cache_stats_as_json()
 {
-    QC_CACHE_STATS stats = {};
+    Stats stats;
     get_thread_cache_stats(&stats);
 
     std::unique_ptr<json_t> sStats { json_object() };
@@ -724,7 +725,7 @@ mxs::Parser::Plugin& CachingParser::plugin() const
     return m_plugin;
 }
 
-qc_parse_result_t CachingParser::parse(GWBUF* pStmt, uint32_t collect) const
+Parser::Result CachingParser::parse(GWBUF* pStmt, uint32_t collect) const
 {
     QCInfoCacheScope scope(&m_plugin, pStmt);
 
@@ -749,7 +750,7 @@ CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF* pStmt) con
 }
 
 void CachingParser::get_field_info(GWBUF* pStmt,
-                                   const QC_FIELD_INFO** ppInfos,
+                                   const FieldInfo** ppInfos,
                                    size_t* pnInfos) const
 {
     QCInfoCacheScope scope(&m_plugin, pStmt);
@@ -757,14 +758,14 @@ void CachingParser::get_field_info(GWBUF* pStmt,
 }
 
 void CachingParser::get_function_info(GWBUF* pStmt,
-                                      const QC_FUNCTION_INFO** ppInfos,
+                                      const FunctionInfo** ppInfos,
                                       size_t* pnInfos) const
 {
     QCInfoCacheScope scope(&m_plugin, pStmt);
     m_parser.get_function_info(pStmt, ppInfos, pnInfos);
 }
 
-QC_KILL CachingParser::get_kill_info(GWBUF* query) const
+Parser::KillInfo CachingParser::get_kill_info(GWBUF* query) const
 {
     QCInfoCacheScope scope(&m_plugin, query);
     return m_parser.get_kill_info(query);
@@ -798,7 +799,7 @@ uint64_t CachingParser::get_server_version() const
     return m_parser.get_server_version();
 }
 
-qc_sql_mode_t CachingParser::get_sql_mode() const
+Parser::SqlMode CachingParser::get_sql_mode() const
 {
     return m_parser.get_sql_mode();
 }
@@ -838,7 +839,7 @@ bool CachingParser::set_options(uint32_t options)
     return rv;
 }
 
-void CachingParser::set_sql_mode(qc_sql_mode_t sql_mode)
+void CachingParser::set_sql_mode(Parser::SqlMode sql_mode)
 {
     m_parser.set_sql_mode(sql_mode);
 }

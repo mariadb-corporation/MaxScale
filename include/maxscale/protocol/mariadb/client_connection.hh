@@ -330,14 +330,14 @@ private:
 
     std::string m_pending_value;        /**< Role or db client is changing to */
 
-    mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
-    MXS_SESSION*    m_session {nullptr};    /**< Generic session */
-    MYSQL_session*  m_session_data {nullptr};
-    qc_sql_mode_t   m_sql_mode {QC_SQL_MODE_DEFAULT};   /**< SQL-mode setting */
-    uint8_t         m_sequence {0};                     /**< Latest sequence number from client */
-    uint8_t         m_next_sequence {0};                /**< Next sequence to send to client */
-    uint8_t         m_command {0};
-    uint64_t        m_version {0};                  /**< Numeric server version */
+    mxs::Component*       m_downstream {nullptr}; /**< Downstream component, the session */
+    MXS_SESSION*          m_session {nullptr};    /**< Generic session */
+    MYSQL_session*        m_session_data {nullptr};
+    mxs::Parser::SqlMode  m_sql_mode {mxs::Parser::SqlMode::DEFAULT};   /**< SQL-mode setting */
+    uint8_t               m_sequence {0};                     /**< Latest sequence number from client */
+    uint8_t               m_next_sequence {0};                /**< Next sequence to send to client */
+    uint8_t               m_command {0};
+    uint64_t              m_version {0};                  /**< Numeric server version */
 
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */

@@ -124,11 +124,11 @@ cfg::ParamBool s_ssl_verify_peer_certificate(
 cfg::ParamBool s_ssl_verify_peer_host(
     &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false, RUNTIME);
 
-cfg::ParamEnum<qc_sql_mode_t> s_sql_mode(&s_spec, CN_SQL_MODE, "SQL parsing mode",
+cfg::ParamEnum<mxs::Parser::SqlMode> s_sql_mode(&s_spec, CN_SQL_MODE, "SQL parsing mode",
     {
-        {QC_SQL_MODE_DEFAULT, "default"},
-        {QC_SQL_MODE_ORACLE, "oracle"}
-    }, QC_SQL_MODE_DEFAULT, RUNTIME);
+        {mxs::Parser::SqlMode::DEFAULT, "default"},
+        {mxs::Parser::SqlMode::ORACLE, "oracle"}
+    }, mxs::Parser::SqlMode::DEFAULT, RUNTIME);
 
 cfg::ParamPath s_connection_init_sql_file(
     &s_spec, CN_CONNECTION_INIT_SQL_FILE, "Path to connection initialization SQL", cfg::ParamPath::R, "",
@@ -249,7 +249,7 @@ namespace maxscale
 /**
  * ListenerData
  */
-ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
+ListenerData::ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode, SERVICE* service,
                            std::unique_ptr<mxs::ProtocolModule> protocol_module,
                            const std::string& listener_name,
                            std::vector<SAuthenticator>&& authenticators,

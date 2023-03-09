@@ -642,15 +642,15 @@ config::ParamString Config::s_qc_args(
     "Arguments for the query classifier.",
     "");
 
-config::ParamEnum<qc_sql_mode_t> Config::s_qc_sql_mode(
+config::ParamEnum<mxs::Parser::SqlMode> Config::s_qc_sql_mode(
     &Config::s_specification,
     CN_SQL_MODE,
     "The query classifier sql mode.",
     {
-        {QC_SQL_MODE_DEFAULT, "default"},
-        {QC_SQL_MODE_ORACLE, "oracle"}
+        {mxs::Parser::SqlMode::DEFAULT, "default"},
+        {mxs::Parser::SqlMode::ORACLE, "oracle"}
     },
-    QC_SQL_MODE_DEFAULT);
+    mxs::Parser::SqlMode::DEFAULT);
 
 config::ParamString Config::s_admin_host(
     &Config::s_specification,

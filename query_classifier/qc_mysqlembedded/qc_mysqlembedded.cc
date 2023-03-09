@@ -250,7 +250,7 @@ public:
         return rv;
     }
 
-    void populate_field_info(QC_FIELD_INFO& info,
+    void populate_field_info(Parser::FieldInfo& info,
                              const char* zDatabase, const char* zTable, const char* zColumn)
     {
         if (zDatabase)
@@ -286,24 +286,24 @@ public:
         return sizeof(*this); // TODO: calculate better if needed. Not really relevant.
     }
 
-    MYSQL*               pi_handle { nullptr } ;            /*< parsing info object pointer */
-    char*                pi_query_plain_str { nullptr };   /*< query as plain string */
-    QC_FIELD_INFO*       field_infos { nullptr };
-    size_t               field_infos_len { 0 };
-    size_t               field_infos_capacity { 0 };
-    QC_FUNCTION_INFO*    function_infos { 0 };
-    size_t               function_infos_len { 0 };
-    size_t               function_infos_capacity { 0 };
-    GWBUF*               preparable_stmt { 0 };
-    qc_parse_result_t    result { QC_QUERY_INVALID };
-    int32_t              type_mask { 0 };
-    NAME_MAPPING*        function_name_mappings { 0 };
-    string               created_table_name;
-    vector<string>       database_names;
-    vector<TableName>    table_names;
-    string               prepare_name;
-    string               canonical;
-    vector<vector<char>> scratchs;
+    MYSQL*                pi_handle { nullptr } ;            /*< parsing info object pointer */
+    char*                 pi_query_plain_str { nullptr };   /*< query as plain string */
+    Parser::FieldInfo*    field_infos { nullptr };
+    size_t                field_infos_len { 0 };
+    size_t                field_infos_capacity { 0 };
+    Parser::FunctionInfo* function_infos { 0 };
+    size_t                function_infos_len { 0 };
+    size_t                function_infos_capacity { 0 };
+    GWBUF*                preparable_stmt { 0 };
+    Parser::Result     result { Parser::Result::INVALID };
+    int32_t               type_mask { 0 };
+    NAME_MAPPING*         function_name_mappings { 0 };
+    string                created_table_name;
+    vector<string>        database_names;
+    vector<TableName>     table_names;
+    string                prepare_name;
+    string                canonical;
+    vector<vector<char>>  scratchs;
 };
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
@@ -321,7 +321,7 @@ static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
 static bool        ensure_query_is_parsed(GWBUF* query);
 static bool        parse_query(GWBUF* querybuf);
 static bool        query_is_parsed(GWBUF* buf);
-int32_t            qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos);
+int32_t            qc_mysql_get_field_info(GWBUF* buf, const Parser::FieldInfo** infos, uint32_t* n_infos);
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
 inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
@@ -468,28 +468,28 @@ const LEX_STRING& qcme_get_prepared_stmt_name(LEX* lex)
 
 static struct
 {
-    qc_sql_mode_t   sql_mode;
+    Parser::SqlMode sql_mode;
     pthread_mutex_t sql_mode_mutex;
     NAME_MAPPING*   function_name_mappings;
 } this_unit =
 {
-    QC_SQL_MODE_DEFAULT,
+    Parser::SqlMode::DEFAULT,
     PTHREAD_MUTEX_INITIALIZER,
     function_name_mappings_default
 };
 
 static thread_local struct
 {
-    qc_sql_mode_t sql_mode;
-    uint32_t      options;
-    NAME_MAPPING* function_name_mappings;
+    Parser::SqlMode sql_mode;
+    uint32_t        options;
+    NAME_MAPPING*   function_name_mappings;
     // The version information is not used; the embedded library parses according
     // to the version of the embedded library it has been linked with. However, we
     // need to store the information so that qc_[get|set]_server_version will work.
     uint64_t version;
 } this_thread =
 {
-    QC_SQL_MODE_DEFAULT,
+    Parser::SqlMode::DEFAULT,
     0,
     function_name_mappings_default,
     0
@@ -553,11 +553,11 @@ parsing_info_t::~parsing_info_t()
 
     for (size_t i = 0; i < this->function_infos_len; ++i)
     {
-        QC_FUNCTION_INFO& fi = this->function_infos[i];
+        Parser::FunctionInfo& fi = this->function_infos[i];
 
         for (size_t j = 0; j < fi.n_fields; ++j)
         {
-            QC_FIELD_INFO& field = fi.fields[j];
+            Parser::FieldInfo& field = fi.fields[j];
         }
         free(fi.fields);
     }
@@ -597,7 +597,7 @@ bool ensure_query_is_parsed(GWBUF* query)
         MXB_AT_DEBUG(rv = ) pthread_mutex_lock(&this_unit.sql_mode_mutex);
         mxb_assert(rv == 0);
 
-        if (this_thread.sql_mode == QC_SQL_MODE_ORACLE)
+        if (this_thread.sql_mode == Parser::SqlMode::ORACLE)
         {
             global_system_variables.sql_mode |= MODE_ORACLE;
         }
@@ -620,7 +620,7 @@ bool ensure_query_is_parsed(GWBUF* query)
     return parsed;
 }
 
-int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
+int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, Parser::Result* result)
 {
     bool parsed = ensure_query_is_parsed(querybuf);
 
@@ -638,7 +638,7 @@ int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
     }
     else
     {
-        *result = QC_QUERY_INVALID;
+        *result = Parser::Result::INVALID;
     }
 
     return QC_RESULT_OK;
@@ -678,7 +678,7 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
                 // If in 10.3 mode we need to ensure that sequence related functions
                 // are taken into account. That we can ensure by querying for the fields.
-                const QC_FIELD_INFO* field_infos;
+                const Parser::FieldInfo* field_infos;
                 uint32_t n_field_infos;
 
                 rv = qc_mysql_get_field_info(querybuf, &field_infos, &n_field_infos);
@@ -734,16 +734,16 @@ static bool parse_query(GWBUF* querybuf)
      */
     if (create_parse_tree(thd))
     {
-        pi->result = QC_QUERY_PARSED;
+        pi->result = Parser::Result::PARSED;
     }
 
     /** Add complete parsing info struct to the query buffer */
     querybuf->set_classifier_data(std::move(pi));
 
     // By calling qc_mysql_get_field_info() now, the result will be
-    // QC_QUERY_PARTIALLY_PARSED, if some field is not found in the
+    // Parser::Result::PARTIALLY_PARSED, if some field is not found in the
     // canonical string.
-    const QC_FIELD_INFO* infos;
+    const Parser::FieldInfo* infos;
     uint32_t n_infos;
     qc_mysql_get_field_info(querybuf, &infos, &n_infos);
 
@@ -1462,12 +1462,12 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 #endif
     // TODO: This test is meaningless, since at this point
     // TODO: qtype (not type) is QUERY_TYPE_UNKNOWN.
-    if (mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_UNKNOWN)
-        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_LOCAL_READ)
-        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
-        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
-        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
-        || mxs::Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
+    if (Parser::type_mask_contains(qtype, QUERY_TYPE_UNKNOWN)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_LOCAL_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
+        || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
         /**
          * These values won't change qtype more restrictive than write.
@@ -2173,7 +2173,7 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, vector<string_view>* pNames
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_kill_info(GWBUF* querybuf, QC_KILL* pKill)
+int32_t qc_mysql_get_kill_info(GWBUF* querybuf, Parser::KillInfo* pKill)
 {
     // TODO: Implement this
     return QC_RESULT_ERROR;
@@ -2425,7 +2425,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                         // We copy the statment, blindly replacing all '?':s (always)
                         // and ':N' (in Oracle mode) with '0':s as otherwise the parsing of the
                         // preparable statement as a regular statement will not always succeed.
-                        qc_sql_mode_t sql_mode = this_thread.sql_mode;
+                        Parser::SqlMode sql_mode = this_thread.sql_mode;
                         const char* p = preparable_stmt;
                         const char* end = preparable_stmt + preparable_stmt_len;
                         bool replacement = false;
@@ -2435,7 +2435,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                             {
                                 *s = '0';
                             }
-                            else if (sql_mode == QC_SQL_MODE_ORACLE)
+                            else if (sql_mode == Parser::SqlMode::ORACLE)
                             {
                                 if (*p == ':' && p + 1 < end)
                                 {
@@ -2590,7 +2590,7 @@ static void add_field_info(parsing_info_t* pi,
 {
     mxb_assert(column);
 
-    QC_FIELD_INFO item;
+    Parser::FieldInfo item;
 
     if (database)
     {
@@ -2610,7 +2610,7 @@ static void add_field_info(parsing_info_t* pi,
     size_t i;
     for (i = 0; i < pi->field_infos_len; ++i)
     {
-        QC_FIELD_INFO* field_info = pi->field_infos + i;
+        Parser::FieldInfo* field_info = pi->field_infos + i;
 
         if (sv_case_eq(item.column, field_info->column))
         {
@@ -2633,7 +2633,7 @@ static void add_field_info(parsing_info_t* pi,
         }
     }
 
-    QC_FIELD_INFO* field_infos = NULL;
+    Parser::FieldInfo* field_infos = NULL;
 
     if (i == pi->field_infos_len)     // If true, the field was not present already.
     {
@@ -2650,7 +2650,8 @@ static void add_field_info(parsing_info_t* pi,
             else
             {
                 size_t capacity = pi->field_infos_capacity ? 2 * pi->field_infos_capacity : 8;
-                field_infos = (QC_FIELD_INFO*)realloc(pi->field_infos, capacity * sizeof(QC_FIELD_INFO));
+                field_infos = (Parser::FieldInfo*)realloc(pi->field_infos,
+                                                          capacity * sizeof(Parser::FieldInfo));
 
                 if (field_infos)
                 {
@@ -2688,14 +2689,14 @@ static void add_function_field_usage(parsing_info_t* pi,
                                      const char* database,
                                      const char* table,
                                      const char* column,
-                                     QC_FUNCTION_INFO* fi)
+                                     Parser::FunctionInfo* fi)
 {
     bool found = false;
     uint32_t i = 0;
 
     while (!found && (i < fi->n_fields))
     {
-        QC_FIELD_INFO& field = fi->fields[i];
+        Parser::FieldInfo& field = fi->fields[i];
 
         if (sv_case_eq(field.column, column))
         {
@@ -2721,15 +2722,16 @@ static void add_function_field_usage(parsing_info_t* pi,
 
     if (!found)
     {
-        QC_FIELD_INFO* fields = (QC_FIELD_INFO*)realloc(fi->fields,
-                                                        (fi->n_fields + 1) * sizeof(QC_FIELD_INFO));
+        Parser::FieldInfo* fields = (Parser::FieldInfo*)realloc(fi->fields,
+                                                                (fi->n_fields + 1)
+                                                                * sizeof(Parser::FieldInfo));
         mxb_assert(fields);
 
         if (fields)
         {
             fi->fields = fields;
 
-            QC_FIELD_INFO field;
+            Parser::FieldInfo field;
             pi->populate_field_info(field, database, table, column);
 
             fi->fields[fi->n_fields] = field;
@@ -2741,7 +2743,7 @@ static void add_function_field_usage(parsing_info_t* pi,
 static void add_function_field_usage(parsing_info_t* pi,
                                      st_select_lex* select,
                                      Item_field* item,
-                                     QC_FUNCTION_INFO* fi)
+                                     Parser::FunctionInfo* fi)
 {
     const char* database = mxs_strptr(item->db_name);
     const char* table = mxs_strptr(item->table_name);
@@ -2801,7 +2803,7 @@ static void add_function_field_usage(parsing_info_t* pi,
                                      st_select_lex* select,
                                      Item** items,
                                      int n_items,
-                                     QC_FUNCTION_INFO* fi)
+                                     Parser::FunctionInfo* fi)
 {
     for (int i = 0; i < n_items; ++i)
     {
@@ -2816,7 +2818,7 @@ static void add_function_field_usage(parsing_info_t* pi,
         default:
             if (qcme_item_is_string(item))
             {
-                if (this_thread.options & QC_OPTION_STRING_ARG_AS_FIELD)
+                if (this_thread.options & Parser::OPTION_STRING_ARG_AS_FIELD)
                 {
                     String* s = item->val_str();
                     int len = s->length();
@@ -2838,7 +2840,7 @@ static void add_function_field_usage(parsing_info_t* pi,
 static void add_function_field_usage(parsing_info_t* pi,
                                      st_select_lex* select,
                                      st_select_lex* sub_select,
-                                     QC_FUNCTION_INFO* fi)
+                                     Parser::FunctionInfo* fi)
 {
     List_iterator<Item> ilist(sub_select->item_list);
 
@@ -2851,9 +2853,9 @@ static void add_function_field_usage(parsing_info_t* pi,
     }
 }
 
-static QC_FUNCTION_INFO* get_function_info(parsing_info_t* pi, const char* zName)
+static Parser::FunctionInfo* get_function_info(parsing_info_t* pi, const char* zName)
 {
-    QC_FUNCTION_INFO* function_info = NULL;
+    Parser::FunctionInfo* function_info = NULL;
 
     size_t i;
     for (i = 0; i < pi->function_infos_len; ++i)
@@ -2873,9 +2875,9 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* pi, const char* zName
         if (pi->function_infos_len == pi->function_infos_capacity)
         {
             size_t capacity = pi->function_infos_capacity ? 2 * pi->function_infos_capacity : 8;
-            QC_FUNCTION_INFO* function_infos =
-                (QC_FUNCTION_INFO*)realloc(pi->function_infos,
-                                           capacity * sizeof(QC_FUNCTION_INFO));
+            Parser::FunctionInfo* function_infos =
+                (Parser::FunctionInfo*)realloc(pi->function_infos,
+                                               capacity * sizeof(Parser::FunctionInfo));
             assert(function_infos);
 
             pi->function_infos = function_infos;
@@ -2884,22 +2886,22 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* pi, const char* zName
 
         std::string_view name = pi->get_string_view("function", zName);
 
-        pi->function_infos[pi->function_infos_len] = QC_FUNCTION_INFO { name, nullptr, 0 };
+        pi->function_infos[pi->function_infos_len] = Parser::FunctionInfo { name, nullptr, 0 };
         function_info = &pi->function_infos[pi->function_infos_len++];
     }
 
     return function_info;
 }
 
-static QC_FUNCTION_INFO* add_function_info(parsing_info_t* pi,
-                                           st_select_lex* select,
-                                           const char* zName,
-                                           Item** items,
-                                           int n_items)
+static Parser::FunctionInfo* add_function_info(parsing_info_t* pi,
+                                               st_select_lex* select,
+                                               const char* zName,
+                                               Item** items,
+                                               int n_items)
 {
     mxb_assert(zName);
 
-    QC_FUNCTION_INFO* function_info = NULL;
+    Parser::FunctionInfo* function_info = NULL;
 
     zName = map_function_name(pi->function_name_mappings, zName);
 
@@ -2913,7 +2915,7 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* pi,
         }
     }
 
-    QC_FUNCTION_INFO* function_infos = NULL;
+    Parser::FunctionInfo* function_infos = NULL;
 
     if (!function_info)
     {
@@ -2924,8 +2926,8 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* pi,
         else
         {
             size_t capacity = pi->function_infos_capacity ? 2 * pi->function_infos_capacity : 8;
-            function_infos = (QC_FUNCTION_INFO*)realloc(pi->function_infos,
-                                                        capacity * sizeof(QC_FUNCTION_INFO));
+            function_infos = (Parser::FunctionInfo*)realloc(pi->function_infos,
+                                                            capacity * sizeof(Parser::FunctionInfo));
             assert(function_infos);
 
             pi->function_infos = function_infos;
@@ -2934,7 +2936,7 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* pi,
 
         std::string_view name = pi->get_string_view("function", zName);
 
-        pi->function_infos[pi->function_infos_len] = QC_FUNCTION_INFO { name, nullptr, 0 };
+        pi->function_infos[pi->function_infos_len] = Parser::FunctionInfo { name, nullptr, 0 };
         function_info = &pi->function_infos[pi->function_infos_len++];
     }
 
@@ -3322,7 +3324,7 @@ static void update_field_infos(parsing_info_t* pi,
     case Item::SUBSELECT_ITEM:
         {
             Item_subselect* subselect_item = static_cast<Item_subselect*>(item);
-            QC_FUNCTION_INFO* fi = NULL;
+            Parser::FunctionInfo* fi = NULL;
             switch (subselect_item->substype())
             {
             case Item_subselect::IN_SUBS:
@@ -3415,7 +3417,7 @@ static void update_field_infos(parsing_info_t* pi,
     default:
         if (qcme_item_is_string(item))
         {
-            if (this_thread.options & QC_OPTION_STRING_AS_FIELD)
+            if (this_thread.options & Parser::OPTION_STRING_AS_FIELD)
             {
                 String* s = item->val_str();
                 int len = s->length();
@@ -3607,7 +3609,7 @@ void add_value_func_item(parsing_info_t* pi, Item_func* func_item)
 
 }
 
-int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos)
+int32_t qc_mysql_get_field_info(GWBUF* buf, const Parser::FieldInfo** infos, uint32_t* n_infos)
 {
     *infos = NULL;
     *n_infos = 0;
@@ -3674,7 +3676,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             pList = it2++;
         }
 
-        QC_FUNCTION_INFO* fi = NULL;
+        Parser::FunctionInfo* fi = NULL;
 
         if ((lex->sql_command == SQLCOM_UPDATE) || (lex->sql_command == SQLCOM_UPDATE_MULTI))
         {
@@ -3748,7 +3750,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             if (item)
             {
                 // We get here in case of "insert into t set a = 0".
-                QC_FUNCTION_INFO* fi = get_function_info(pi, "=");
+                Parser::FunctionInfo* fi = get_function_info(pi, "=");
 
                 while (item)
                 {
@@ -3844,7 +3846,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 }
 
 int32_t qc_mysql_get_function_info(GWBUF* buf,
-                                   const QC_FUNCTION_INFO** function_infos,
+                                   const Parser::FunctionInfo** function_infos,
                                    uint32_t* n_function_infos)
 {
     *function_infos = NULL;
@@ -3854,7 +3856,7 @@ int32_t qc_mysql_get_function_info(GWBUF* buf,
 
     if (buf)
     {
-        const QC_FIELD_INFO* field_infos;
+        const Parser::FieldInfo* field_infos;
         uint32_t n_field_infos;
 
         // We ensure the information has been collected by querying the fields first.
@@ -3941,11 +3943,11 @@ void configure_options(const char* datadir, const char* langdir)
 }
 }
 
-int32_t qc_mysql_setup(qc_sql_mode_t sql_mode, const char* zArgs)
+int32_t qc_mysql_setup(Parser::SqlMode sql_mode, const char* zArgs)
 {
     this_unit.sql_mode = sql_mode;
 
-    if (sql_mode == QC_SQL_MODE_ORACLE)
+    if (sql_mode == Parser::SqlMode::ORACLE)
     {
         this_unit.function_name_mappings = function_name_mappings_oracle;
     }
@@ -4025,24 +4027,24 @@ void qc_mysql_thread_end(void)
     mysql_thread_end();
 }
 
-int32_t qc_mysql_get_sql_mode(qc_sql_mode_t* sql_mode)
+int32_t qc_mysql_get_sql_mode(Parser::SqlMode* sql_mode)
 {
     *sql_mode = this_thread.sql_mode;
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_set_sql_mode(qc_sql_mode_t sql_mode)
+int32_t qc_mysql_set_sql_mode(Parser::SqlMode sql_mode)
 {
     int32_t rv = QC_RESULT_OK;
 
     switch (sql_mode)
     {
-    case QC_SQL_MODE_DEFAULT:
+    case Parser::SqlMode::DEFAULT:
         this_thread.sql_mode = sql_mode;
         this_thread.function_name_mappings = function_name_mappings_default;
         break;
 
-    case QC_SQL_MODE_ORACLE:
+    case Parser::SqlMode::ORACLE:
         this_thread.sql_mode = sql_mode;
         this_thread.function_name_mappings = function_name_mappings_oracle;
         break;
@@ -4063,7 +4065,7 @@ int32_t qc_mysql_set_options(uint32_t options)
 {
     int32_t rv = QC_RESULT_OK;
 
-    if ((options & ~QC_OPTION_MASK) == 0)
+    if ((options & ~Parser::OPTION_MASK) == 0)
     {
         this_thread.options = options;
     }
@@ -4083,18 +4085,18 @@ int32_t qc_mysql_get_current_stmt(const char** ppStmt, size_t* pLen)
 namespace
 {
 
-class MysqlParser : public mxs::Parser
+class MysqlParser : public Parser
 {
 public:
-    mxs::Parser::Plugin& plugin() const override;
+    Parser::Plugin& plugin() const override;
 
-    qc_parse_result_t parse(GWBUF* pStmt, uint32_t collect) const override
+    Result parse(GWBUF* pStmt, uint32_t collect) const override
     {
-        int32_t result = QC_QUERY_INVALID;
+        Result result = Parser::Result::INVALID;
 
         qc_mysql_parse(pStmt, collect, &result);
 
-        return static_cast<qc_parse_result_t>(result);
+        return result;
     }
 
     GWBUF create_buffer(const std::string& statement) const override
@@ -4111,32 +4113,32 @@ public:
         return name;
     }
 
-    mxs::Parser::DatabaseNames get_database_names(GWBUF* pStmt) const override
+    Parser::DatabaseNames get_database_names(GWBUF* pStmt) const override
     {
-        mxs::Parser::DatabaseNames names;
+        Parser::DatabaseNames names;
 
         qc_mysql_get_database_names(pStmt, &names);
 
         return names;
     }
 
-    void get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, size_t* pnInfos) const override
+    void get_field_info(GWBUF* pStmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
         qc_mysql_get_field_info(pStmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    void get_function_info(GWBUF* pStmt, const QC_FUNCTION_INFO** ppInfos, size_t* pnInfos) const override
+    void get_function_info(GWBUF* pStmt, const Parser::FunctionInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
         qc_mysql_get_function_info(pStmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    QC_KILL get_kill_info(GWBUF* pStmt) const override
+    Parser::KillInfo get_kill_info(GWBUF* pStmt) const override
     {
-        QC_KILL kill;
+        Parser::KillInfo kill;
 
         qc_mysql_get_kill_info(pStmt, &kill);
 
@@ -4183,18 +4185,18 @@ public:
         return version;
     }
 
-    qc_sql_mode_t get_sql_mode() const override
+    Parser::SqlMode get_sql_mode() const override
     {
-        qc_sql_mode_t sql_mode;
+        Parser::SqlMode sql_mode;
 
         qc_mysql_get_sql_mode(&sql_mode);
 
         return sql_mode;
     }
 
-    mxs::Parser::TableNames get_table_names(GWBUF* pStmt) const override
+    Parser::TableNames get_table_names(GWBUF* pStmt) const override
     {
-        mxs::Parser::TableNames names;
+        Parser::TableNames names;
 
         qc_mysql_get_table_names(pStmt, &names);
 
@@ -4225,7 +4227,7 @@ public:
         return is_drop_table;
     }
 
-    void set_sql_mode(qc_sql_mode_t sql_mode) override
+    void set_sql_mode(Parser::SqlMode sql_mode) override
     {
         qc_mysql_set_sql_mode(sql_mode);
     }
@@ -4241,10 +4243,10 @@ public:
     }
 };
 
-class MysqlParserPlugin : public mxs::Parser::Plugin
+class MysqlParserPlugin : public Parser::Plugin
 {
 public:
-    bool setup(qc_sql_mode_t sql_mode, const char* args) override
+    bool setup(Parser::SqlMode sql_mode, const char* args) override
     {
         return qc_mysql_setup(sql_mode, args) == QC_RESULT_OK;
     }
@@ -4264,10 +4266,10 @@ public:
         return qc_mysql_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
     }
 
-    QC_STMT_RESULT get_result_from_info(const QC_STMT_INFO* info) override
+    Parser::StmtResult get_result_from_info(const QC_STMT_INFO* info) override
     {
         // Not supported.
-        return QC_STMT_RESULT {};
+        return Parser::StmtResult {};
     }
 
     std::string_view info_get_canonical(const QC_STMT_INFO* info) override
@@ -4276,7 +4278,7 @@ public:
         return std::string_view {};
     }
 
-    mxs::Parser& parser() override
+    Parser& parser() override
     {
         return m_parser;
     }
@@ -4287,7 +4289,7 @@ private:
 
 MysqlParserPlugin mysql_plugin;
 
-mxs::Parser::Plugin& MysqlParser::plugin() const
+Parser::Plugin& MysqlParser::plugin() const
 {
     return mysql_plugin;
 }

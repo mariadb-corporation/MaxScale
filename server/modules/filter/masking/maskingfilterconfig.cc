@@ -137,7 +137,7 @@ bool MaskingFilterConfig::post_configure(const std::map<std::string, mxs::Config
 
         if (m_v.treat_string_arg_as_field)
         {
-            QC_CACHE_PROPERTIES cache_properties;
+            mxs::CachingParser::Properties cache_properties;
             mxs::CachingParser::get_properties(&cache_properties);
 
             if (cache_properties.max_size != 0)

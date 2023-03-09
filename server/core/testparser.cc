@@ -19,7 +19,9 @@ using namespace std;
 namespace
 {
 
-mxs::Parser::Plugin* load_parser(const string& plugin, qc_sql_mode_t sql_mode, const string& plugin_args)
+mxs::Parser::Plugin* load_parser(const string& plugin,
+                                 mxs::Parser::SqlMode sql_mode,
+                                 const string& plugin_args)
 {
     mxs::Parser::Plugin* pPlugin = mxs::Parser::load(plugin.c_str());
 
@@ -61,7 +63,7 @@ mxs::Parser::Plugin* load_parser(const string& plugin, qc_sql_mode_t sql_mode, c
 namespace maxscale
 {
 
-TestParser::TestParser(const string& plugin, qc_sql_mode_t sql_mode, const string& plugin_args)
+TestParser::TestParser(const string& plugin, SqlMode sql_mode, const string& plugin_args)
     : CachingParser(load_parser(plugin, sql_mode, plugin_args))
 {
 }

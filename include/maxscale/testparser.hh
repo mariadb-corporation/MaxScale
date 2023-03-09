@@ -34,26 +34,26 @@ public:
     TestParser& operator=(const TestParser&) = delete;
 
     TestParser()
-        : TestParser(DEFAULT_PLUGIN, QC_SQL_MODE_DEFAULT, std::string {})
+        : TestParser(DEFAULT_PLUGIN, SqlMode::DEFAULT, std::string {})
     {
     }
 
     TestParser(const std::string& plugin)
-        : TestParser(plugin, QC_SQL_MODE_DEFAULT, std::string {})
+        : TestParser(plugin, SqlMode::DEFAULT, std::string {})
     {
     }
 
-    TestParser(const std::string& plugin, qc_sql_mode_t sql_mode)
+    TestParser(const std::string& plugin, SqlMode sql_mode)
         : TestParser(plugin, sql_mode, std::string {})
     {
     }
 
     TestParser(const std::string& plugin, const std::string& plugin_args)
-        : TestParser(plugin, QC_SQL_MODE_DEFAULT, plugin_args)
+        : TestParser(plugin, SqlMode::DEFAULT, plugin_args)
     {
     }
 
-    TestParser(const std::string& plugin, qc_sql_mode_t sql_mode, const std::string& plugin_args);
+    TestParser(const std::string& plugin, SqlMode sql_mode, const std::string& plugin_args);
     ~TestParser();
 };
 

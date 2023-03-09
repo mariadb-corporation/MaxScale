@@ -113,12 +113,12 @@ bool uses_non_cacheable_function(const Parser& parser, GWBUF* pPacket)
 {
     bool rv = false;
 
-    const QC_FUNCTION_INFO* pInfo;
+    const Parser::FunctionInfo* pInfo;
     size_t nInfos;
 
     parser.get_function_info(pPacket, &pInfo, &nInfos);
 
-    const QC_FUNCTION_INFO* pEnd = pInfo + nInfos;
+    const Parser::FunctionInfo* pEnd = pInfo + nInfos;
 
     while (!rv && (pInfo != pEnd))
     {
@@ -134,12 +134,12 @@ bool uses_non_cacheable_variable(const Parser& parser, GWBUF* pPacket)
 {
     bool rv = false;
 
-    const QC_FIELD_INFO* pInfo;
+    const Parser::FieldInfo* pInfo;
     size_t nInfos;
 
     parser.get_field_info(pPacket, &pInfo, &nInfos);
 
-    const QC_FIELD_INFO* pEnd = pInfo + nInfos;
+    const Parser::FieldInfo* pEnd = pInfo + nInfos;
 
     while (!rv && (pInfo != pEnd))
     {
@@ -958,9 +958,9 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             m_invalidate_now = true;
                         }
 
-                        qc_parse_result_t result = parser().parse(pPacket, QC_COLLECT_TABLES);
+                        Parser::Result result = parser().parse(pPacket, Parser::COLLECT_TABLES);
 
-                        if (result == QC_QUERY_PARSED)
+                        if (result == Parser::Result::PARSED)
                         {
                             update_table_names(pPacket);
                         }
@@ -1642,9 +1642,9 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
 {
     if (m_invalidate && m_state == CACHE_EXPECTING_RESPONSE)
     {
-        qc_parse_result_t parse_result = parser().parse(pPacket, QC_COLLECT_TABLES);
+        Parser::Result parse_result = parser().parse(pPacket, Parser::COLLECT_TABLES);
 
-        if (parse_result == QC_QUERY_PARSED)
+        if (parse_result == Parser::Result::PARSED)
         {
             update_table_names(pPacket);
         }

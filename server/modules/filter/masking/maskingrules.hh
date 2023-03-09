@@ -142,7 +142,7 @@ public:
          *
          * @return True, if the rule matches.
          */
-        bool matches(const QC_FIELD_INFO& field,
+        bool matches(const mxs::Parser::FieldInfo& field,
                      const char* zUser,
                      const char* zHost) const;
 
@@ -396,7 +396,7 @@ public:
                              const char* zHost) const;
 
     /**
-     * Return the rule object that matches a QC_FIELD_INFO and user/host.
+     * Return the rule object that matches a Parser::FieldInfo and user/host.
      *
      * @param field  A field.
      * @param zUser  The current user.
@@ -408,7 +408,7 @@ public:
      * @attention The returned object remains value only as long as the
      *            @c MaskingRules object remains valid.
      */
-    const Rule* get_rule_for(const QC_FIELD_INFO& field_info,
+    const Rule* get_rule_for(const mxs::Parser::FieldInfo& field_info,
                              const char* zUser,
                              const char* zHost) const;
 

@@ -29,7 +29,8 @@
 using std::unique_ptr;
 using std::string;
 using std::vector;
-using maxscale::Closer;
+using mxs::Closer;
+using mxs::Parser;
 
 namespace
 {
@@ -1081,7 +1082,7 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
     return match;
 }
 
-bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
+bool MaskingRules::Rule::matches(const Parser::FieldInfo& field,
                                  const char* zUser,
                                  const char* zHost) const
 {
@@ -1452,13 +1453,13 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const ComQueryResponse::Col
     return pRule;
 }
 
-const MaskingRules::Rule* MaskingRules::get_rule_for(const QC_FIELD_INFO& field_info,
+const MaskingRules::Rule* MaskingRules::get_rule_for(const Parser::FieldInfo& field_info,
                                                      const char* zUser,
                                                      const char* zHost) const
 {
     const Rule* pRule = NULL;
 
-    RuleMatcher<QC_FIELD_INFO> matcher(field_info, zUser, zHost);
+    RuleMatcher<Parser::FieldInfo> matcher(field_info, zUser, zHost);
     vector<SRule>::const_iterator i = std::find_if(m_rules.begin(), m_rules.end(), matcher);
 
     if (i != m_rules.end())
