@@ -425,7 +425,7 @@ static bool should_skip_query(const mxs::Parser& parser,
 {
     GWBUF buf = mariadb::create_query(sql);
     bool rval = false;
-    std::vector<QcTableName> tables = parser.get_table_names(&buf);
+    std::vector<mxs::Parser::TableName> tables = parser.get_table_names(&buf);
 
     if (parser.get_trx_type_mask(&buf) == 0)
     {

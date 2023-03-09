@@ -65,7 +65,7 @@ std::set<mxs::Target*> Shard::get_all_locations(std::string_view table)
     return get_all_locations(db, tbl);
 }
 
-std::set<mxs::Target*> Shard::get_all_locations(QcTableName name)
+std::set<mxs::Target*> Shard::get_all_locations(mxs::Parser::TableName name)
 {
     return get_all_locations(std::string(name.db), std::string(name.table));
 }

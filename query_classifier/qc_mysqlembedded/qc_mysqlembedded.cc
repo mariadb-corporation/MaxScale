@@ -85,6 +85,7 @@
 
 using namespace std;
 using mxb::sv_case_eq;
+using mxs::Parser;
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 2
 #define CTE_SUPPORTED
@@ -185,9 +186,9 @@ struct TableName
     std::string db;
     std::string table;
 
-    operator QcTableName() const
+    operator Parser::TableName() const
     {
-        return QcTableName (this->db, this->table);
+        return Parser::TableName (this->db, this->table);
     }
 };
 
@@ -1942,7 +1943,7 @@ static bool is_show_command(int sql_command)
     return rv;
 }
 
-int32_t qc_mysql_get_table_names(GWBUF* querybuf, vector<QcTableName>* tables)
+int32_t qc_mysql_get_table_names(GWBUF* querybuf, vector<Parser::TableName>* tables)
 {
     LEX* lex;
     TABLE_LIST* tbl;

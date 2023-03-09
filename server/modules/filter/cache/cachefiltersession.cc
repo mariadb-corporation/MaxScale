@@ -1077,7 +1077,7 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
 {
     // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
-    std::vector<QcTableName> names = parser().get_table_names(pPacket);
+    std::vector<mxs::Parser::TableName> names = parser().get_table_names(pPacket);
 
     for (auto& name : names)
     {
