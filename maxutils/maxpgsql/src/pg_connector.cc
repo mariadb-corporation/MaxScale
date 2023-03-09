@@ -13,6 +13,7 @@
 
 #include <maxpgsql/pg_connector.hh>
 #include <libpq-fe.h>
+#include <utility>
 
 namespace maxpgsql
 {
