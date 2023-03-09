@@ -536,12 +536,12 @@ bool compare_get_table_names(Parser::Plugin* pPlugin1,
     int n1 = 0;
     int n2 = 0;
 
-    std::vector<QcTableName> rv1 = pPlugin1->parser().get_table_names(pCopy1);
-    std::vector<QcTableName> rv2 = pPlugin2->parser().get_table_names(pCopy2);
+    std::vector<Parser::TableName> rv1 = pPlugin1->parser().get_table_names(pCopy1);
+    std::vector<Parser::TableName> rv2 = pPlugin2->parser().get_table_names(pCopy2);
 
     // The order need not be the same, so let's compare a set.
-    std::set<QcTableName> names1(rv1.begin(), rv1.end());
-    std::set<QcTableName> names2(rv2.begin(), rv2.end());
+    std::set<Parser::TableName> names1(rv1.begin(), rv1.end());
+    std::set<Parser::TableName> names2(rv2.begin(), rv2.end());
 
     stringstream ss;
     ss << HEADING;

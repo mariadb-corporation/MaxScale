@@ -43,6 +43,7 @@ using std::vector;
 using std::string_view;
 using std::string;
 using mxb::sv_case_eq;
+using mxs::Parser;
 
 // #define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
@@ -267,7 +268,7 @@ public:
         size += m_canonical.size();
 
         m_table_names.shrink_to_fit();
-        size += m_table_names.capacity() * sizeof(QcTableName);
+        size += m_table_names.capacity() * sizeof(Parser::TableName);
 
         m_field_infos.shrink_to_fit();
         size += m_field_infos.capacity() * sizeof(QC_FIELD_INFO);
@@ -401,7 +402,7 @@ public:
         return rv;
     }
 
-    bool get_table_names(vector<QcTableName>* pTables) const
+    bool get_table_names(vector<Parser::TableName>* pTables) const
     {
         bool rv = false;
 
@@ -3409,13 +3410,13 @@ private:
         return pz;
     }
 
-    QcTableName table_name_collected(string_view database, string_view table)
+    Parser::TableName table_name_collected(string_view database, string_view table)
     {
-        QcTableName needle(database, table);
+        Parser::TableName needle(database, table);
 
         auto it = std::find(m_table_names.begin(), m_table_names.end(), needle);
 
-        return it != m_table_names.end() ? *it : QcTableName {};
+        return it != m_table_names.end() ? *it : Parser::TableName {};
     }
 
     string_view database_name_collected(const char* zDatabase, size_t nDatabase)
@@ -3437,7 +3438,7 @@ private:
         string_view database = (nDatabase != 0 ? string_view(zDatabase, nDatabase) : string_view {});
         string_view table(zTable, nTable);
 
-        QcTableName collected_name = table_name_collected(database, table);
+        Parser::TableName collected_name = table_name_collected(database, table);
 
         if (collected_name.empty())
         {
@@ -3575,7 +3576,7 @@ public:
     QC_KILL                       m_kill;
     string                        m_canonical;               // The canonical version of the statement.
     vector<string_view>           m_database_names;          // Vector of database names used in the query.
-    vector<QcTableName>           m_table_names;             // Vector of table names used in the query.
+    vector<Parser::TableName>     m_table_names;             // Vector of table names used in the query.
     vector<QC_FIELD_INFO>         m_field_infos;             // Vector of fields used by the statement.
     vector<QC_FUNCTION_INFO>      m_function_infos;          // Vector of functions used by the statement.
     vector<vector<QC_FIELD_INFO>> m_function_field_usage;    // Vector of vector fields used by functions
@@ -4830,7 +4831,7 @@ static int32_t        qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
 static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
 static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, string_view* name);
 static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
-static int32_t        qc_sqlite_get_table_names(GWBUF* query, vector<QcTableName>* pNames);
+static int32_t        qc_sqlite_get_table_names(GWBUF* query, vector<Parser::TableName>* pNames);
 static int32_t        qc_sqlite_get_database_names(GWBUF* query, vector<string_view>* pNames);
 static int32_t        qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
 static void           qc_sqlite_set_server_version(uint64_t version);
@@ -5207,7 +5208,7 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* pStmt, int32_t* pIs_drop_tab
     return rv;
 }
 
-static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, vector<QcTableName>* pTables)
+static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, vector<Parser::TableName>* pTables)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;

@@ -1400,9 +1400,9 @@ void SchemaRouterSession::send_databases()
 
 mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
 {
-    std::vector<QcTableName> table_names = parser().get_table_names(const_cast<GWBUF*>(&buffer));
+    std::vector<Parser::TableName> table_names = parser().get_table_names(const_cast<GWBUF*>(&buffer));
 
-    // We get QcTableNames, but as we need qualified names we need to
+    // We get Parser::TableNames, but as we need qualified names we need to
     // copy them over to a vector<string>.
     std::vector<std::string> tables;
     tables.reserve(table_names.size());

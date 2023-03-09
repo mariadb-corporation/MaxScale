@@ -52,9 +52,9 @@ public:
      * Same as get_location except returns all servers that have it
      */
     std::set<mxs::Target*> get_all_locations(std::string_view table_view);
-    std::set<mxs::Target*> get_all_locations(QcTableName name);
+    std::set<mxs::Target*> get_all_locations(mxs::Parser::TableName name);
     std::set<mxs::Target*> get_all_locations(std::string db, std::string tbl);
-    template<class T>  // std::string_view or QcTableName
+    template<class T>  // std::string_view or mxs::Parser::TableName
     std::set<mxs::Target*> get_all_locations(const std::vector<T>& db);
 
     void         add_statement(std::string stmt, mxs::Target* target);

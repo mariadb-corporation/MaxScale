@@ -190,71 +190,6 @@ struct QC_KILL
     qc_kill_type_t type = QC_KILL_CONNECTION;   // Type of the KILL command
 };
 
-/**
- * Returns the tables accessed by the statement.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return Array of strings or NULL if a memory allocation fails.
- *
- * @note The returned array and the strings pointed to @b must be freed
- *       by the caller.
- */
-struct QcTableName
-{
-    QcTableName() = default;
-
-    QcTableName(std::string_view table)
-        : table(table)
-    {
-    }
-
-    QcTableName(std::string_view db, std::string_view table)
-        : db(db)
-        , table(table)
-    {
-    }
-
-    std::string_view db;
-    std::string_view table;
-
-    bool operator == (const QcTableName& rhs) const
-    {
-        return this->db == rhs.db && this->table == rhs.table;
-    }
-
-    bool operator < (const QcTableName& rhs) const
-    {
-        return this->db < rhs.db || (this->db == rhs.db && this->table < rhs.table);
-    }
-
-    bool empty() const
-    {
-        return this->db.empty() && this->table.empty();
-    }
-
-    std::string to_string() const
-    {
-        std::string s;
-
-        if (!this->db.empty())
-        {
-            s = this->db;
-            s += ".";
-        }
-
-        s += table;
-
-        return s;
-    }
-};
-
-inline std::ostream& operator << (std::ostream& out, const QcTableName& x)
-{
-    out << x.to_string();
-    return out;
-}
-
 enum qc_trx_parse_using_t
 {
     QC_TRX_PARSE_USING_QC,      /**< Use the query classifier. */
@@ -275,7 +210,56 @@ const char* to_string(qc_kill_type_t type);
 class Parser
 {
 public:
-    using TableNames = std::vector<QcTableName>;
+    struct TableName
+    {
+        TableName() = default;
+
+        TableName(std::string_view table)
+            : table(table)
+        {
+        }
+
+        TableName(std::string_view db, std::string_view table)
+            : db(db)
+            , table(table)
+        {
+        }
+
+        std::string_view db;
+        std::string_view table;
+
+        bool operator == (const TableName& rhs) const
+        {
+            return this->db == rhs.db && this->table == rhs.table;
+        }
+
+        bool operator < (const TableName& rhs) const
+        {
+            return this->db < rhs.db || (this->db == rhs.db && this->table < rhs.table);
+        }
+
+        bool empty() const
+        {
+            return this->db.empty() && this->table.empty();
+        }
+
+        std::string to_string() const
+        {
+            std::string s;
+
+            if (!this->db.empty())
+            {
+                s = this->db;
+                s += ".";
+            }
+
+            s += table;
+
+            return s;
+        }
+    };
+
+    using TableNames = std::vector<TableName>;
     using DatabaseNames = std::vector<std::string_view>;
 
     /**
@@ -394,4 +378,10 @@ public:
     virtual void set_sql_mode(qc_sql_mode_t sql_mode) = 0;
 };
 
+}
+
+inline std::ostream& operator << (std::ostream& out, const mxs::Parser::TableName& x)
+{
+    out << x.to_string();
+    return out;
 }
