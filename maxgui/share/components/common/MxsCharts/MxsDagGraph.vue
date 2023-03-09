@@ -48,10 +48,7 @@ import * as d3d from 'd3-dag'
 import 'd3-transition'
 import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsCharts/GraphNodes.vue'
-import { drawLinks } from '@share/components/common/MxsCharts/utils'
-
-const LINK_CTR_CLASS = 'link_container'
-const LINK_LINE_CLASS = 'link_line'
+import { drawLinks, changeLinkGroupStyle } from '@share/components/common/MxsCharts/utils'
 
 export default {
     name: 'mxs-dag-graph',
@@ -77,6 +74,7 @@ export default {
             graphNodeCoordMap: {},
             dynNodeSizeMap: {},
             arrowHeadHeight: 12,
+            isDraggingNode: false,
             highlightedLinks: [],
         }
     },
@@ -112,6 +110,10 @@ export default {
             handler(v, oV) {
                 if (!this.$helpers.lodash.isEqual(v, oV)) this.graphNodes = v
             },
+        },
+        isDraggingNode(v) {
+            for (const link of this.highlightedLinks)
+                changeLinkGroupStyle({ link, idPath: 'data.id', isDragging: v })
         },
     },
     mounted() {
@@ -347,8 +349,7 @@ export default {
             drawLinks({
                 containerEle: this.svgGroup,
                 data: this.dag.links(),
-                linkCtrClassName: LINK_CTR_CLASS,
-                linkClassName: LINK_LINE_CLASS,
+                idPath: 'data.id',
                 linkPathGenerator: this.linkPathGenerator,
                 linkStrokeGenerator: this.colorize,
                 onEnter: linkCtr => this.drawArrowHead({ linkCtr, type: 'enter' }),
@@ -356,25 +357,6 @@ export default {
             })
         },
         //-------------------------draggable methods---------------------------
-        /**
-         * This helps to turn the dashed link to solid while dragging and vice versa.
-         * @param {Object} param.link - child link or parent link of a node
-         * @param {Boolean} param.isDragging - is node dragging
-         */
-        changeLinkGroupStyle({ link, isDragging }) {
-            this.svgGroup
-                .selectAll(`.${LINK_CTR_CLASS}`)
-                .filter(d => {
-                    return (
-                        d.source.data.id === link.source.data.id &&
-                        d.target.data.id === link.target.data.id
-                    )
-                })
-                .style('opacity', isDragging ? 1 : 0.5)
-                .style('z-index', isDragging ? 10 : 'unset')
-                .select(`path.${LINK_LINE_CLASS}`)
-                .attr('stroke-dasharray', isDragging ? null : '5')
-        },
         /**
          *
          * @param {String} param.nodeId - id of the node has links being redrawn
@@ -389,7 +371,6 @@ export default {
                 let point = link.points[0]
                 point.x = point.x + diffX
                 point.y = point.y + diffY
-                this.changeLinkGroupStyle({ link, isDragging: true })
             }
             let parentLinks = []
             // change coord of links to parent nodes
@@ -402,20 +383,17 @@ export default {
                 let point = linkToParent.points[linkToParent.points.length - 1]
                 point.x = point.x + diffX
                 point.y = point.y + diffY
-                this.changeLinkGroupStyle({ link: linkToParent, isDragging: true })
             })
             // store links so that style applied to them can be reset to default after finish dragging
             this.highlightedLinks = [...dagNode.ichildLinks(), ...parentLinks]
             this.handleDrawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
+            this.isDraggingNode = true
             this.redrawLinks({ nodeId: node.id, diffX, diffY })
         },
         onNodeDragEnd() {
-            //  reset style of highlightedLinks to default
-            for (const link of this.highlightedLinks) {
-                this.changeLinkGroupStyle({ link, isDragging: false })
-            }
+            this.isDraggingNode = false
         },
     },
 }

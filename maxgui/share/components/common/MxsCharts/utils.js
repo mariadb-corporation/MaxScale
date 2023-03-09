@@ -10,23 +10,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { select as d3Select } from 'd3-selection'
+import { select as d3Select, selectAll as d3SelectAll } from 'd3-selection'
 
+const objGet = require('lodash/get')
+const LINK_CTR_CLASS = 'link_container'
+const LINK_LINE_CLASS = 'link_line'
 /**
  * @private
  * @param {Object} param.containerEle - Container element of the link
  * @param {String} param.type - enter or update
  * @param {Boolean} param.isInvisible - Draw an invisible link
  **/
-function drawLink({
-    containerEle,
-    type,
-    isInvisible,
-    linkClassName,
-    linkPathGenerator,
-    linkStrokeGenerator,
-}) {
-    const className = isInvisible ? `${linkClassName}__invisible` : linkClassName
+function drawLink({ containerEle, type, isInvisible, linkPathGenerator, linkStrokeGenerator }) {
+    const className = isInvisible ? `${LINK_LINE_CLASS}__invisible` : LINK_LINE_CLASS
     const strokeWidth = isInvisible ? 12 : 2.5
     const strokeDasharray = isInvisible ? 0 : 5
     const strokeColor = isInvisible ? 'transparent' : linkStrokeGenerator
@@ -52,52 +48,52 @@ function drawLink({
 
 /**
  * @public
- * The mouseover event on `.${linkCtrClassName}` element only works when the mouse is over the
+ * The mouseover event on `.${LINK_CTR_CLASS}` element only works when the mouse is over the
  * "visiblePainted" path, not the space between dots. However, the thinness of the link makes
  * it difficult to trigger the event, so an additional invisible link with a large thickness
  * is drawn to help with this.
  * @param {Object} param.containerEle - container element of links to be drawn
  * @param {String} param.data - Links data
+ * @param {String|Array} [param.idPath='id'] - The path to the identifier field of a node
  * @param {Function} param.linkPathGenerator - Function to fill the value of the d attribute
  * @param {String|Function} param.linkStrokeGenerator - fill the value of the stroke attribute.
- * @param {String} param.linkCtrClassName - Class name of the container element of the link
- * @param {String} param.linkClassName - Class name of the link
  * @param {Function} param.onEnter - When links are entered into the DOM
  * @param {Function} param.onUpdate - When links are updated in the DOM
  */
 export function drawLinks({
     containerEle,
     data,
-    linkCtrClassName,
-    linkClassName,
+    idPath = 'id',
     linkPathGenerator,
     linkStrokeGenerator,
     onEnter,
     onUpdate,
 }) {
-    const drawLinkParams = { linkClassName, linkPathGenerator, linkStrokeGenerator }
+    const drawLinkParams = { linkPathGenerator, linkStrokeGenerator }
 
     containerEle
-        .selectAll(`.${linkCtrClassName}`)
+        .selectAll(`.${LINK_CTR_CLASS}`)
         .data(data)
         .join(
             enter => {
                 const linkCtr = enter
                     .insert('g')
-                    .attr('class', `${linkCtrClassName} pointer`)
+                    .attr('class', `${LINK_CTR_CLASS} pointer`)
+                    .attr('src-id', d => objGet(d.source, idPath))
+                    .attr('target-id', d => objGet(d.target, idPath))
                     .style('opacity', 0.5)
                     .on('mouseover', function() {
                         d3Select(this)
                             .style('opacity', 1)
                             .style('z-index', 10)
-                            .select(`path.${linkClassName}`)
+                            .select(`path.${LINK_LINE_CLASS}`)
                             .attr('stroke-dasharray', null)
                     })
                     .on('mouseout', function() {
                         d3Select(this)
                             .style('opacity', 0.5)
                             .style('z-index', 'unset')
-                            .select(`path.${linkClassName}`)
+                            .select(`path.${LINK_LINE_CLASS}`)
                             .attr('stroke-dasharray', '5')
                     })
                 drawLink({ containerEle: linkCtr, type: 'enter', ...drawLinkParams })
@@ -125,4 +121,19 @@ export function drawLinks({
             },
             exit => exit.remove()
         )
+}
+/**
+ * This helps to turn the dashed link to solid while dragging and vice versa.
+ * @param {Object} param.link - link object
+ * @param {String|Array} [param.idPath='id'] - The path to the identifier field of a node
+ * @param {Boolean} param.isDragging - is dragging node
+ */
+export function changeLinkGroupStyle({ link, idPath = 'id', isDragging }) {
+    const srcId = objGet(link.source, idPath)
+    const targetId = objGet(link.target, idPath)
+    d3SelectAll(`.${LINK_CTR_CLASS}[src-id="${srcId}"][target-id="${targetId}"]`)
+        .style('opacity', isDragging ? 1 : 0.5)
+        .style('z-index', isDragging ? 10 : 'unset')
+        .select(`path.${LINK_LINE_CLASS}`)
+        .attr('stroke-dasharray', isDragging ? null : '5')
 }
