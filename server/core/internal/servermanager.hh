@@ -40,6 +40,11 @@ public:
     static Server* create_server(const char* name, json_t* json);
 
     /**
+     * Same as above, just creates a volatile server.
+     */
+    static Server* create_volatile_server(const std::string& name, const mxs::ConfigParameters& params);
+
+    /**
      * Deallocate the server.
      *
      * @param server The server to deallocate

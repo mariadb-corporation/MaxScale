@@ -79,6 +79,41 @@ public:
         return rval;
     }
 
+    Server* add_volatile_server(std::unique_ptr<Server> server)
+    {
+        // Only check that server name does not clash, volatile servers can have same host-ports.
+        // Callers should check for name clashes before getting here so a clash is only possible if
+        // someone managed to create the same server just now.
+        Server* rval = nullptr;
+        bool conflict = false;
+
+        {
+            Guard guard(m_all_servers_lock);
+            for (auto* srv : m_all_servers)
+            {
+                if (srv->active() && strcmp(srv->name(), server->name()) == 0)
+                {
+                    conflict = true;
+                    break;
+                }
+            }
+
+            if (!conflict)
+            {
+                auto server_ptr = server.release();
+                m_all_servers.push_back(server_ptr);
+                rval = server_ptr;
+            }
+        }
+
+        if (conflict)
+        {
+            MXB_ERROR("Cannot create volatile server '%s' at '[%s]:%d', server '%s' exists already.",
+                      server->name(), server->address(), server->port(), server->name());
+        }
+        return rval;
+    }
+
     void erase(Server* server)
     {
         Guard guard(m_all_servers_lock);
@@ -123,6 +158,12 @@ Server* ServerManager::create_server(const char* name, json_t* json)
 {
     mxb::LogScope scope(name);
     return this_unit.add_server(Server::create(name, json));
+}
+
+Server* ServerManager::create_volatile_server(const string& name, const mxs::ConfigParameters& params)
+{
+    mxb::LogScope scope(name.c_str());
+    return this_unit.add_volatile_server(Server::create(name.c_str(), params));
 }
 
 void ServerManager::server_free(Server* server)

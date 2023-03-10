@@ -1207,10 +1207,6 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
                                              const std::string& ip,
                                              int port)
 {
-    SERVER* pServer = nullptr;
-
-    auto pMain = mxs::MainWorker::get();
-
     string who = name();
 
     mxs::ConfigParameters extra;
@@ -1233,85 +1229,20 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
         extra = m_extra;
     }
 
-    if (mxb::Worker::get_current() == pMain)
+    SERVER* pServer = nullptr;
+    if (runtime_create_volatile_server(server_name, ip, port, extra))
     {
-        // Running in the main worker, we can call directly.
-        if (runtime_create_volatile_server(server_name, ip, port, extra))
+        pServer = SERVER::find_by_unique_name(server_name);
+        if (!pServer)
         {
-            pServer = SERVER::find_by_unique_name(server_name);
-
-            if (!pServer)
-            {
-                MXB_ERROR("%s: Created server %s (at %s:%d) could not be "
-                          "looked up using its name.",
-                          name(), server_name.c_str(), ip.c_str(), mysql_port);
-            }
-        }
-        else
-        {
-            MXB_ERROR("%s: Could not create server %s at %s:%d.",
-                      who.c_str(), server_name.c_str(), ip.c_str(), port);
+            MXB_ERROR("%s: Created server %s (at %s:%d) could not be looked up using its name.",
+                      name(), server_name.c_str(), ip.c_str(), mysql_port);
         }
     }
     else
     {
-        // Not running in the main worker, we need to send the execution there.
-        auto f = [who, server_name, ip, port, extra](){
-            if (!runtime_create_volatile_server(server_name, ip, port, extra))
-            {
-                MXB_ERROR("%s: Could not create server %s at %s:%d.",
-                          who.c_str(), server_name.c_str(), ip.c_str(), port);
-            }
-        };
-
-        // We don't call, as that could lead to a deadlock if someone precisely at
-        // the wrong moment mxsctrls the monitor.
-        if (pMain->execute(f, mxb::Worker::EXECUTE_QUEUED))
-        {
-            int attempts = 0;
-
-            milliseconds sleep(1); // Yielding is not sufficient, but 1ms seems to be most of the time.
-            milliseconds total_slept(0);
-            milliseconds max_sleep(5000);
-
-            while (true)
-            {
-                ++attempts;
-                pServer = SERVER::find_by_unique_name(server_name);
-
-                if (pServer || (total_slept >= max_sleep))
-                {
-                    break;
-                }
-
-                if (sleep < milliseconds(1000)) // Max will be 1024ms.
-                {
-                    sleep *= 2;
-                }
-
-                std::this_thread::sleep_for(sleep);
-                total_slept += sleep;
-            }
-
-            if (pServer)
-            {
-                MXB_INFO("Created volatile server found after %d lookup attempts and "
-                         "a total sleep time of %d milliseconds.",
-                         attempts, (int)total_slept.count());
-            }
-            else
-            {
-                MXB_ERROR("%s: After %d lookup attempts and a total sleep time of %d milliseconds, "
-                          "the volatile server %s was not found. The creation of the server may "
-                          "have failed. ",
-                          name(), attempts, (int)total_slept.count(), server_name.c_str());
-            }
-        }
-        else
-        {
-            MXB_ERROR("%s: Could not send request to create server %s at %s:%d to main worker.",
-                      name(), server_name.c_str(), ip.c_str(), port);
-        }
+        MXB_ERROR("%s: Could not create server %s at %s:%d.",
+                  who.c_str(), server_name.c_str(), ip.c_str(), port);
     }
 
     return pServer;

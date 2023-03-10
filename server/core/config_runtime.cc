@@ -1456,8 +1456,9 @@ json_t* runtime_get_json_error()
 bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port,
                                     const mxs::ConfigParameters& extra)
 {
+    // This function can be called from a monitor thread in addition to the MainWorker.
+    mxb_assert(!mxs::RoutingWorker::get_current());
     UnmaskPasswords unmask;
-    mxb_assert(mxs::MainWorker::is_current());
     bool rval = false;
     if (ServerManager::find_by_unique_name(name) == nullptr)
     {
@@ -1469,21 +1470,21 @@ bool runtime_create_volatile_server(const std::string& name, const std::string& 
         }
         parameters.set(CN_PORT, std::to_string(port));
 
-        if (Server* server = ServerManager::create_server(name.c_str(), parameters))
+        if (Server* server = ServerManager::create_volatile_server(name, parameters))
         {
             rval = true;
-            MXB_NOTICE("Created server '%s' at %s:%u", server->name(), server->address(),
+            MXB_NOTICE("Created volatile server '%s' at %s:%u", server->name(), server->address(),
                        server->port());
         }
         else
         {
-            MXB_ERROR("Failed to create server '%s', see error log for more details",
-                      name.c_str());
+            MXB_ERROR("Failed to create volatile server '%s', see error log for more details", name.c_str());
         }
     }
     else
     {
-        MXB_ERROR("Server '%s' already exists", name.c_str());
+        MXB_ERROR("Failed to create volatile server '%s', server '%s' already exists",
+                  name.c_str(), name.c_str());
     }
 
     return rval;
