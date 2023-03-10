@@ -93,7 +93,7 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , m_id(session_get_next_id())
     , m_worker(mxs::RoutingWorker::get_current())
     , m_host(host)
-    , m_capabilities(service->capabilities())
+    , m_capabilities(service->capabilities() | RCAP_TYPE_REQUEST_TRACKING)
     , client_dcb(nullptr)
     , stats{time(0)}
     , service(service)
