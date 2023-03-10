@@ -4,7 +4,7 @@ describe("Classify Commands", function () {
   before(startMaxScale);
 
   it("classifies query", function () {
-    return doCommand("--tsv classify SELECT\t1").should.eventually.match(/QC_QUERY_PARSED/);
+    return doCommand("--tsv classify SELECT\t1").should.eventually.match(/Parser::Result::PARSED/);
   });
 
   it("classifies query with function", function () {
@@ -15,7 +15,7 @@ describe("Classify Commands", function () {
   });
 
   it("classifies invalid query", function () {
-    return doCommand("--tsv classify This-should-fail").should.eventually.match(/QC_QUERY_INVALID/);
+    return doCommand("--tsv classify This-should-fail").should.eventually.match(/Parser::Result::INVALID/);
   });
 
   it("rejects no query", function () {
