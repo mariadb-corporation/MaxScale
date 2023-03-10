@@ -1,5 +1,9 @@
 <template>
-    <v-card outlined class="node-card fill-height" :style="{ borderColor: headingColor.bg }">
+    <v-card
+        outlined
+        class="node-card fill-height"
+        :style="{ borderColor: headingColor.bg, backgroundColor: 'transparent' }"
+    >
         <div
             class="node-heading d-flex align-center justify-center flex-row px-3 py-1"
             :style="{ backgroundColor: headingColor.bg }"

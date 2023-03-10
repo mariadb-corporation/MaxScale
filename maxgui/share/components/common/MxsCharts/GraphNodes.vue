@@ -76,7 +76,8 @@ export default {
         nodeStyle: { type: Object, default: () => ({}) },
         defNodeSize: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
-        dynNodeHeight: { type: Boolean, default: false },
+        dynHeight: { type: Boolean, default: false },
+        dynWidth: { type: Boolean, default: false },
         revertDrag: { type: Boolean, default: false },
         boardZoom: { type: Object, required: true },
     },
@@ -158,8 +159,8 @@ export default {
         getNodeSizeStyle(id) {
             const { width, height } = this.getNodeSize(id)
             return {
-                width: `${width}px`,
-                height: this.dynNodeHeight ? 'unset' : `${height}px`,
+                width: this.dynWidth ? 'unset' : `${width}px`,
+                height: this.dynHeight ? 'unset' : `${height}px`,
             }
         },
         /**

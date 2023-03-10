@@ -7,11 +7,11 @@
                 :data="config_graph_data"
                 :dim="ctrDim"
                 :defNodeSize="{ width: 220, height: 100 }"
-                dynNodeHeight
                 revert
                 draggable
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
+                :graphNodesProps="{ dynHeight: true }"
             >
                 <template
                     v-slot:graph-node-content="{

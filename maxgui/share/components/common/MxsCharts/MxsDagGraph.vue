@@ -9,12 +9,12 @@
         <template v-slot:append="{ data: { transform, zoom } }">
             <graph-nodes
                 ref="graphNodes"
+                v-bind="graphNodesProps"
                 :nodes="graphNodes"
                 :coordMap.sync="graphNodeCoordMap"
                 :style="{ transform }"
                 :nodeStyle="revertGraphStyle"
                 :defNodeSize="defNodeSize"
-                :dynNodeHeight="dynNodeHeight"
                 draggable
                 :revertDrag="revert"
                 :boardZoom="zoom"
@@ -60,7 +60,7 @@ export default {
         data: { type: Array, required: true },
         dim: { type: Object, required: true },
         defNodeSize: { type: Object, default: () => ({ width: 200, height: 100 }) },
-        dynNodeHeight: { type: Boolean, default: false },
+        graphNodesProps: { type: Object, default: () => ({ dynHeight: false, dynWidth: false }) },
         revert: { type: Boolean, default: false },
         colorizingLinkFn: { type: Function, default: () => '' },
         handleRevertDiagonal: { type: Function, default: () => false },
