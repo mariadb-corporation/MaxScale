@@ -395,6 +395,8 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
     auto cluster = s_cluster.get(params);
     auto filters = s_filters.get(params);
 
+    // The call to set_filters also calculates the capabilities and the set of
+    // supported protocols for this service.
     if (!service->set_filters(filters))
     {
         service->state = State::FAILED;
@@ -467,8 +469,6 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
         service->state = State::FAILED;
         return nullptr;
     }
-
-    service->m_capabilities |= service->m_router->getCapabilities();
 
     auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
@@ -604,9 +604,6 @@ Service::Service(const std::string& name, const std::string& router_name)
     : SERVICE(name, router_name)
     , m_config(this)
 {
-    const MXS_MODULE* module = get_module(router_name, mxs::ModuleType::ROUTER);
-    m_capabilities = module->module_capabilities;
-
     RoutingWorker::Data::initialize_workers();
 }
 
@@ -840,8 +837,14 @@ bool Service::set_filters(const std::vector<std::string>& filters)
 {
     bool rval = true;
     std::vector<SFilterDef> flist;
-    uint64_t my_capabilities = m_router->getCapabilities();
     auto protocols = m_router->protocols();
+    uint64_t my_capabilities = get_module(router_name(), mxs::ModuleType::ROUTER)->module_capabilities;
+    my_capabilities |= m_router->getCapabilities();
+
+    if (config()->connection_keepalive.count())
+    {
+        my_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
+    }
 
     for (auto f : filters)
     {
@@ -2342,11 +2345,6 @@ bool SERVICE::Config::post_configure(const std::map<std::string, mxs::ConfigPara
 bool Service::post_configure()
 {
     const auto& config = *m_config.values();
-
-    if (config.connection_keepalive.count())
-    {
-        m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
-    }
 
     // If the parameter affects the user account manager, update its settings.
     if (m_usermanager)
