@@ -75,11 +75,6 @@ RWSplitSession::~RWSplitSession()
 {
     for (auto& backend : m_raw_backends)
     {
-        if (backend->in_use())
-        {
-            backend->close();
-        }
-
         m_server_stats[backend->target()].update(backend->session_timer().split(),
                                                  backend->select_timer().total(),
                                                  backend->num_selects());

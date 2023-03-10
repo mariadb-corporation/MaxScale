@@ -41,7 +41,6 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
                                          SchemaRouter* router,
                                          SRBackendList backends)
     : mxs::RouterSession(session)
-    , m_closed(false)
     , m_client(static_cast<MariaDBClientConnection*>(session->client_connection()))
     , m_backends(std::move(backends))
     , m_config(*router->m_config.values())
@@ -76,53 +75,35 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
 
 SchemaRouterSession::~SchemaRouterSession()
 {
-    mxb_assert(!m_closed);
-
-    /**
-     * Lock router client session for secure read and update.
-     */
-    if (!m_closed)
+    if (m_dcid)
     {
-        m_closed = true;
-
-        if (m_dcid)
-        {
-            m_pSession->cancel_dcall(m_dcid);
-        }
-
-        for (const auto& a : m_backends)
-        {
-            if (a->in_use())
-            {
-                a->close();
-            }
-        }
-
-        if (m_state & INIT_MAPPING)
-        {
-            m_router->m_shard_manager.cancel_update(m_key);
-        }
-
-        std::lock_guard<std::mutex> guard(m_router->m_lock);
-
-        if (m_router->m_stats.longest_sescmd < m_stats.longest_sescmd)
-        {
-            m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
-        }
-        double ses_time = difftime(time(NULL), m_pSession->stats.connect);
-        if (m_router->m_stats.ses_longest < ses_time)
-        {
-            m_router->m_stats.ses_longest = ses_time;
-        }
-        if (m_router->m_stats.ses_shortest > ses_time && m_router->m_stats.ses_shortest > 0)
-        {
-            m_router->m_stats.ses_shortest = ses_time;
-        }
-
-        m_router->m_stats.ses_average =
-            (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
-            / (m_router->m_stats.sessions);
+        m_pSession->cancel_dcall(m_dcid);
     }
+
+    if (m_state & INIT_MAPPING)
+    {
+        m_router->m_shard_manager.cancel_update(m_key);
+    }
+
+    std::lock_guard<std::mutex> guard(m_router->m_lock);
+
+    if (m_router->m_stats.longest_sescmd < m_stats.longest_sescmd)
+    {
+        m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
+    }
+    double ses_time = difftime(time(NULL), m_pSession->stats.connect);
+    if (m_router->m_stats.ses_longest < ses_time)
+    {
+        m_router->m_stats.ses_longest = ses_time;
+    }
+    if (m_router->m_stats.ses_shortest > ses_time && m_router->m_stats.ses_shortest > 0)
+    {
+        m_router->m_stats.ses_shortest = ses_time;
+    }
+
+    m_router->m_stats.ses_average =
+        (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
+        / (m_router->m_stats.sessions);
 }
 
 static void inspect_query(const Parser& parser,
@@ -261,11 +242,6 @@ mxs::Target* SchemaRouterSession::get_valid_target(const std::set<mxs::Target*>&
 
 bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 {
-    if (m_closed)
-    {
-        return 0;
-    }
-
     if (m_shard.empty() && (m_state & INIT_MAPPING) == 0)
     {
         if (m_dcid)

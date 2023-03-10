@@ -142,7 +142,6 @@ private:
 
 
     /** Member variables */
-    bool                     m_closed;          /**< True if session closed */
     MariaDBClientConnection* m_client {nullptr};/**< Client connection */
 
     MYSQL_session*    m_mysql_session;  /**< Session client data (username, password, SHA1). */

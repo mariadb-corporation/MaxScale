@@ -33,17 +33,6 @@ MirrorSession::MirrorSession(MXS_SESSION* session, Mirror* router, SMyBackends b
     }
 }
 
-MirrorSession::~MirrorSession()
-{
-    for (auto& a : m_backends)
-    {
-        if (a->in_use())
-        {
-            a->close();
-        }
-    }
-}
-
 bool MirrorSession::routeQuery(GWBUF&& packet)
 {
     int rc = 0;

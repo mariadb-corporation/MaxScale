@@ -28,8 +28,6 @@ Backend::Backend(mxs::Endpoint* b)
 
 Backend::~Backend()
 {
-    mxb_assert(m_closed || !in_use());
-
     if (in_use())
     {
         close();

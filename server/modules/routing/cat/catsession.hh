@@ -30,12 +30,6 @@ public:
 
     CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backends);
 
-    /**
-     * The RouterSession instance will be deleted when a client session
-     * has terminated. Will be called only after @c close() has been called.
-     */
-    ~CatSession();
-
     bool routeQuery(GWBUF&& packet) override;
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;

@@ -27,17 +27,6 @@ CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backe
 {
 }
 
-CatSession::~CatSession()
-{
-    for (auto& backend : m_backends)
-    {
-        if (backend->in_use())
-        {
-            backend->close();
-        }
-    }
-}
-
 bool CatSession::next_backend()
 {
     // Skip unused backends

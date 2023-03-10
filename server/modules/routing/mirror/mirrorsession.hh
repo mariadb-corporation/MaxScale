@@ -32,8 +32,6 @@ public:
 
     MirrorSession(MXS_SESSION* session, Mirror* router, SMyBackends backends);
 
-    ~MirrorSession();
-
     bool routeQuery(GWBUF&& packet) override;
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
