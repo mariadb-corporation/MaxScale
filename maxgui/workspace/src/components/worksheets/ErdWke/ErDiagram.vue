@@ -1,6 +1,6 @@
 <template>
     <graph-board
-        class="erd-graph fill-height"
+        class="erd-graph"
         :dim="ctrDim"
         :graphDim="ctrDim"
         @get-graph-ctr="svgGroup = $event"
@@ -73,29 +73,12 @@ export default {
             simulation: null,
             defNodeSize: { width: 200, height: 100 },
             dynNodeSizeMap: {},
-            sizeChangesCount: 0,
             isDraggingNode: false,
             highlightedLinks: [],
             fieldHeight: 22,
         }
     },
     watch: {
-        /**
-         * The dynNodeSizeMap is calculated after the nodes are rendered in graph-nodes,
-         * so the handleCollision method can only get the correct node sizes on the second render.
-         * Also, the handleCollision method should only be automatically executed once because
-         * if there is a new col added to the table, it shouldn't be triggered to keep the
-         * layout steady.
-         */
-        dynNodeSizeMap: {
-            deep: true,
-            handler(v) {
-                if (!this.$typy(v).isEmptyObject && this.sizeChangesCount < 1) {
-                    this.sizeChangesCount++
-                    this.handleCollision()
-                }
-            },
-        },
         isDraggingNode(v) {
             for (const link of this.highlightedLinks) changeLinkGroupStyle({ link, isDragging: v })
         },
@@ -103,33 +86,52 @@ export default {
             deep: true,
             immediate: true,
             handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.assignData()
+                if (!this.$helpers.lodash.isEqual(v, oV)) {
+                    this.assignData(v)
+                    this.drawChart()
+                }
             },
         },
     },
-    mounted() {
-        this.drawChart(this.graphData)
-    },
     methods: {
-        assignData() {
-            this.graphData = this.data
-            this.graphNodes = this.$helpers.lodash.cloneDeep(this.graphData.nodes)
+        /**
+         * D3 mutates data, this method deep clones data to make the original is intact
+         * @param {Object} data
+         */
+        assignData(data) {
+            const cloned = this.$helpers.lodash.cloneDeep(data)
+            this.graphData = cloned
+        },
+        drawGraphNodes() {
+            this.graphNodes = this.graphData.nodes
         },
         drawChart() {
-            if (this.graphData.nodes.length) {
-                const { nodes, links } = this.graphData
-                this.simulation = forceSimulation(nodes)
-                    .force(
-                        'link',
-                        forceLink(links).id(d => d.id)
-                    )
-                    .force('charge', forceManyBody().theta(0.5))
-                    .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
-                    .on('tick', () => {
-                        this.setGraphNodeCoordMap()
-                        this.handleDrawLinks()
-                    })
-            }
+            this.drawGraphNodes()
+            this.$nextTick(() => {
+                if (this.graphData.nodes.length) {
+                    const { nodes, links } = this.graphData
+                    this.simulation = forceSimulation(nodes)
+                        .force(
+                            'link',
+                            forceLink(links)
+                                .id(d => d.id)
+                                .distance(250)
+                        )
+                        .force(
+                            'charge',
+                            forceManyBody()
+                                .strength(-15)
+                                .theta(0.5)
+                        )
+                        .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
+                        .on('tick', this.tick)
+                    this.handleCollision()
+                }
+            })
+        },
+        tick() {
+            this.setGraphNodeCoordMap()
+            this.handleDrawLinks()
         },
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphData.nodes.reduce((map, n) => {
