@@ -132,7 +132,6 @@ FilterDef::FilterDef(std::string name, std::string module, Filter* instance)
 FilterDef::~FilterDef()
 {
     MXB_INFO("Destroying '%s'", name());
-    delete m_filter;
 }
 
 /**

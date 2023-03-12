@@ -46,7 +46,7 @@ public:
 
     mxs::Filter* instance() const
     {
-        return m_filter;
+        return m_filter.get();
     }
 
     uint64_t capabilities() const
@@ -68,9 +68,9 @@ public:
     static mxs::config::Specification* specification();
 
 private:
-    std::string  m_name;            /**< The Filter name */
-    std::string  m_module;          /**< The module to load */
-    mxs::Filter* m_filter;          /**< The runtime filter */
+    std::string                  m_name;    /**< The Filter name */
+    std::string                  m_module;  /**< The module to load */
+    std::unique_ptr<mxs::Filter> m_filter;  /**< The runtime filter */
 
     json_t* json_data(const char* host) const;
     json_t* parameters_to_json() const;
