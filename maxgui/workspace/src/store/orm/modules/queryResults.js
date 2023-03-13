@@ -181,6 +181,17 @@ export default {
             const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const queryEditorConn = QueryConn.getters('getQueryEditorConn')
+
+            // abort the query first then send kill flag
+            const abort_controller = rootGetters['queryResultsMem/getAbortController'](
+                activeQueryTabId
+            )
+            abort_controller.abort() // abort the running query
+
+            QueryTabTmp.update({
+                where: activeQueryTabId,
+                data: { has_kill_flag: true },
+            })
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: queryEditorConn.id,
@@ -188,14 +199,9 @@ export default {
                     config,
                 })
             )
+
             if (e) this.vue.$logger.error(e)
             else {
-                QueryTabTmp.update({
-                    where: activeQueryTabId,
-                    data(obj) {
-                        obj.has_kill_flag = true
-                    },
-                })
                 const results = this.vue.$typy(res, 'data.data.attributes.results').safeArray
                 if (this.vue.$typy(results, '[0].errno').isDefined)
                     commit(
@@ -209,12 +215,6 @@ export default {
                         },
                         { root: true }
                     )
-                else {
-                    const abort_controller = rootGetters['queryResultsMem/getAbortController'](
-                        activeQueryTabId
-                    )
-                    abort_controller.abort() // abort the running query
-                }
             }
         },
         /**
