@@ -1373,9 +1373,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         return StateMachineRes::ERROR;
     }
 
-    if (m_routing_state == RoutingState::CHANGING_DB
-        || m_routing_state == RoutingState::CHANGING_ROLE
-        || m_routing_state == RoutingState::CHANGING_USER
+    if (m_routing_state == RoutingState::CHANGING_STATE
         || m_routing_state == RoutingState::RECORD_HISTORY)
     {
         // We're still waiting for a response from the backend, read more data once we get it.
@@ -1465,9 +1463,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         }
         break;
 
-    case RoutingState::CHANGING_DB:
-    case RoutingState::CHANGING_ROLE:
-    case RoutingState::CHANGING_USER:
+    case RoutingState::CHANGING_STATE:
     case RoutingState::RECORD_HISTORY:
     case RoutingState::COMPARE_RESPONSES:
         mxb_assert_message(!true, "We should never end up here");
@@ -2300,7 +2296,8 @@ bool MariaDBClientConnection::complete_change_user_p1()
     // Failure here means a comms error -> session failure.
     if (route_statement(move(m_change_user.client_query)))
     {
-        m_routing_state = RoutingState::CHANGING_USER;
+        m_routing_state = RoutingState::CHANGING_STATE;
+        m_changing_state = ChangingState::USER;
         rval = true;
     }
     return rval;
@@ -2897,54 +2894,70 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
 {
     if (m_num_responses == 1)
     {
-        switch (m_routing_state)
+        // First check the changing state, because the routing state need not
+        // be CHANGING_STATE but may also be RECORD_HISTORY if the history is
+        // being recorded.
+        if (m_changing_state != ChangingState::NONE)
         {
-        case RoutingState::CHANGING_DB:
-            if (reply.is_ok())
-            {
-                // Database change succeeded.
-                m_session_data->current_db = move(m_pending_value);
-                m_session->notify_userdata_change();
-            }
-            // Regardless of result, database change is complete.
-            m_pending_value.clear();
-            m_routing_state = RoutingState::PACKET_START;
-            m_dcb->trigger_read_event();
-            break;
+            mxb_assert(m_routing_state == RoutingState::CHANGING_STATE
+                       || m_routing_state == RoutingState::RECORD_HISTORY);
 
-        case RoutingState::CHANGING_ROLE:
-            if (reply.is_ok())
+            switch (m_changing_state)
             {
-                // Role change succeeded. Role "NONE" is special, in that it means no role is active.
-                if (m_pending_value == "NONE")
+            case ChangingState::DB:
+                if (reply.is_ok())
                 {
-                    m_session_data->role.clear();
+                    // Database change succeeded.
+                    m_session_data->current_db = move(m_pending_value);
+                    m_session->notify_userdata_change();
+                }
+                break;
+
+            case ChangingState::ROLE:
+                if (reply.is_ok())
+                {
+                    // Role change succeeded. Role "NONE" is special, in that it means no role is active.
+                    if (m_pending_value == "NONE")
+                    {
+                        m_session_data->role.clear();
+                    }
+                    else
+                    {
+                        m_session_data->role = move(m_pending_value);
+                    }
+                    m_session->notify_userdata_change();
+                }
+                break;
+
+            case ChangingState::USER:
+                // Route the reply to client. The sequence in the server packet may be wrong, fix it.
+                GWBUF_DATA(buffer)[3] = m_next_sequence;
+                if (reply.is_ok())
+                {
+                    complete_change_user_p2();
+                    m_session->notify_userdata_change();
                 }
                 else
                 {
-                    m_session_data->role = move(m_pending_value);
+                    // Change user succeeded on MaxScale but failed on backends. Cancel it.
+                    cancel_change_user_p2(buffer);
                 }
-                m_session->notify_userdata_change();
-            }
-            // Regardless of result, role change is complete.
-            m_pending_value.clear();
-            m_routing_state = RoutingState::PACKET_START;
-            m_dcb->trigger_read_event();
-            break;
+                break;
 
-        case RoutingState::CHANGING_USER:
-            // Route the reply to client. The sequence in the server packet may be wrong, fix it.
-            GWBUF_DATA(buffer)[3] = m_next_sequence;
-            if (reply.is_ok())
-            {
-                complete_change_user_p2();
-                m_session->notify_userdata_change();
+            case ChangingState::NONE:
+                mxb_assert(!true);
+                break;
             }
-            else
-            {
-                // Change user succeeded on MaxScale but failed on backends. Cancel it.
-                cancel_change_user_p2(buffer);
-            }
+
+            m_pending_value.clear();
+            m_changing_state = ChangingState::NONE;
+        }
+
+        switch (m_routing_state)
+        {
+        case RoutingState::CHANGING_STATE:
+            // Regardless of result, state change is complete. Note that the
+            // routing state may also be RECORD_HISTORY.
             m_routing_state = RoutingState::PACKET_START;
             m_dcb->trigger_read_event();
             break;
@@ -3176,13 +3189,15 @@ bool MariaDBClientConnection::module_init()
 
 void MariaDBClientConnection::start_change_role(string&& role)
 {
-    m_routing_state = RoutingState::CHANGING_ROLE;
+    m_routing_state = RoutingState::CHANGING_STATE;
+    m_changing_state = ChangingState::ROLE;
     m_pending_value = move(role);
 }
 
 void MariaDBClientConnection::start_change_db(string&& db)
 {
-    m_routing_state = RoutingState::CHANGING_DB;
+    m_routing_state = RoutingState::CHANGING_STATE;
+    m_changing_state = ChangingState::DB;
     m_pending_value = move(db);
 }
 
