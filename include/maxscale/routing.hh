@@ -119,6 +119,8 @@ enum mxs_routing_capability_t
      * Request and response tracking: tells when a response to a query is complete. Implies
      * RCAP_TYPE_STMT_INPUT and RCAP_TYPE_PACKET_OUTPUT.
      *
+     * Deprecated: request tracking is now always done, this is a redundant option.
+     *
      * Binary: 0b0000000000001101
      */
     RCAP_TYPE_REQUEST_TRACKING = (1 << 3) | RCAP_TYPE_STMT_INPUT | RCAP_TYPE_PACKET_OUTPUT,
