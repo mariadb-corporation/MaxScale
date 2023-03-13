@@ -1,36 +1,46 @@
 <template>
-    <graph-board
-        class="erd-graph"
-        :dim="ctrDim"
-        :graphDim="ctrDim"
-        @get-graph-ctr="svgGroup = $event"
-    >
-        <template v-slot:append="{ data: { transform, zoom } }">
-            <graph-nodes
-                ref="graphNodes"
-                :nodes="graphNodes"
-                :coordMap.sync="graphNodeCoordMap"
-                :style="{ transform }"
-                :defNodeSize="defNodeSize"
-                draggable
-                :boardZoom="zoom"
-                dynHeight
-                dynWidth
-                @node-size-map="dynNodeSizeMap = $event"
-                @drag="onNodeDrag"
-                @drag-end="onNodeDragEnd"
-            >
-                <template v-slot:default="{ data: { node } }">
-                    <div class="px-2" :style="{ backgroundColor: node.data.bgColor }">
-                        <div class="text-center font-weight-bold">{{ node.id }}</div>
-                        <div v-for="col in node.data.cols" :key="`key_${node.id}_${col}`">
-                            {{ col }}
+    <div class="fill-height er-diagram">
+        <v-progress-linear v-if="isRendering" indeterminate color="primary" />
+        <graph-board :dim="ctrDim" :graphDim="ctrDim" @get-graph-ctr="svgGroup = $event">
+            <template v-slot:append="{ data: { transform, zoom } }">
+                <graph-nodes
+                    ref="graphNodes"
+                    :nodes="graphNodes"
+                    :coordMap.sync="graphNodeCoordMap"
+                    :style="{ transform }"
+                    :defNodeSize="defNodeSize"
+                    draggable
+                    :boardZoom="zoom"
+                    dynHeight
+                    dynWidth
+                    @node-size-map="dynNodeSizeMap = $event"
+                    @drag="onNodeDrag"
+                    @drag-end="onNodeDragEnd"
+                >
+                    <template v-slot:default="{ data: { node } }">
+                        <div class="entity">
+                            <div
+                                class="px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold"
+                                :style="{
+                                    backgroundColor: node.data.highlightColor,
+                                }"
+                            >
+                                {{ node.id }}
+                            </div>
+                            <table
+                                class="entity-fields px-2 rounded-br-lg rounded-bl-lg"
+                                :style="{ border: `1px solid ${node.data.highlightColor}` }"
+                            >
+                                <tr v-for="col in node.data.cols" :key="`key_${node.id}_${col}`">
+                                    <td>{{ col }}</td>
+                                </tr>
+                            </table>
                         </div>
-                    </div>
-                </template>
-            </graph-nodes>
-        </template>
-    </graph-board>
+                    </template>
+                </graph-nodes>
+            </template>
+        </graph-board>
+    </div>
 </template>
 
 <script>
@@ -64,7 +74,7 @@ export default {
     },
     data() {
         return {
-            graphDim: this.ctrDim,
+            isRendering: false,
             svgGroup: null,
             graphNodeCoordMap: {},
             graphData: { nodes: [], links: [] },
@@ -78,6 +88,7 @@ export default {
             fieldHeight: 22,
         }
     },
+
     watch: {
         isDraggingNode(v) {
             for (const link of this.highlightedLinks) changeLinkGroupStyle({ link, isDragging: v })
@@ -87,6 +98,7 @@ export default {
             immediate: true,
             handler(v, oV) {
                 if (!this.$helpers.lodash.isEqual(v, oV)) {
+                    this.isRendering = true
                     this.assignData(v)
                     this.drawChart()
                 }
@@ -113,9 +125,7 @@ export default {
                     this.simulation = forceSimulation(nodes)
                         .force(
                             'link',
-                            forceLink(links)
-                                .id(d => d.id)
-                                .distance(250)
+                            forceLink(links).id(d => d.id)
                         )
                         .force(
                             'charge',
@@ -124,12 +134,16 @@ export default {
                                 .theta(0.5)
                         )
                         .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
-                        .on('tick', this.tick)
+                        .alphaMin(0.1)
+                        .on('end', () => {
+                            this.render()
+                            this.isRendering = false
+                        })
                     this.handleCollision()
                 }
             })
         },
-        tick() {
+        render() {
             this.setGraphNodeCoordMap()
             this.handleDrawLinks()
         },
@@ -193,3 +207,12 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.entity {
+    background: rgba(255, 255, 255, 0);
+    .entity-fields {
+        width: 100%;
+    }
+}
+</style>
