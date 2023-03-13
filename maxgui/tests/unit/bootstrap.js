@@ -35,3 +35,14 @@ window.HTMLElement.prototype.scrollIntoView = () => {}
 // mock $helpers.copyTextToClipboard as execCommand is undefined in jsdom
 global.document.execCommand = () => {}
 global.AbortController = sinon.stub()
+
+process.on('uncaughtException', error => {
+    // Ignore "Uncaught error outside test suite" message
+    if (error.message.includes('No available storage method found.')) return
+    console.error(error)
+})
+process.on('unhandledRejection', error => {
+    // Ignore "Uncaught error outside test suite" message
+    if (error.message.includes('No available storage method found.')) return
+    console.error(error)
+})
