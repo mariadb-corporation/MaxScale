@@ -292,6 +292,19 @@ std::string format_response(const GWBUF& buffer);
  * @return The values mapped according to the field values
  */
 std::map<uint8_t, std::string_view> extract_response_fields(const uint8_t* ptr, size_t len);
+
+/**
+ * Check whether the command in the buffer is expected to generate a response
+ *
+ * The individual messages in the extended query protocol no not create responses. The exception to this is
+ * the Sync message that "closes" a batch of extended query protocol messages. This means that for each Sync
+ * message, there will be one ReadyForQuery message.
+ *
+ * @param buffer Buffer to inspect
+ *
+ * @return True if the command will generate a response.
+ */
+bool will_respond(const GWBUF& buffer);
 }
 
 // Convenience alias for the namespace

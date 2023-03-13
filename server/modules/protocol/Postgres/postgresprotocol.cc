@@ -96,6 +96,23 @@ std::string format_response(const GWBUF& buffer)
 
     return mxb::rtrimmed_copy(mxb::cat(severity, ": ", sqlstate, " ", msg, " ", detail, " ", hint));
 }
+
+bool will_respond(const GWBUF& buffer)
+{
+    switch (buffer[0])
+    {
+    case pg::BIND:
+    case pg::CLOSE:
+    case pg::DESCRIBE:
+    case pg::EXECUTE:
+    case pg::FLUSH:
+    case pg::PARSE:
+        return false;
+
+    default:
+        return true;
+    }
+}
 }
 
 /**

@@ -122,18 +122,21 @@ bool PgBackendConnection::write(GWBUF&& buffer)
         return true;
     }
 
-    if (m_reply.is_complete())
+    if (pg::will_respond(buffer))
     {
-        // The connection is idle, start tracking the result state
-        m_reply.clear();
-        m_reply.set_reply_state(mxs::ReplyState::START);
-        m_reply.set_command(buffer[0]);
-    }
-    else
-    {
-        // Something else is already going on, push the command byte so that we can start tracking it once the
-        // current command completes.
-        m_track_queue.push_back(buffer[0]);
+        if (m_reply.is_complete())
+        {
+            // The connection is idle, start tracking the result state
+            m_reply.clear();
+            m_reply.set_reply_state(mxs::ReplyState::START);
+            m_reply.set_command(buffer[0]);
+        }
+        else
+        {
+            // Something else is already going on, push the command byte so that we can start tracking it once
+            // the current command completes.
+            m_track_queue.push_back(buffer[0]);
+        }
     }
 
     return m_dcb->writeq_append(std::move(buffer));
