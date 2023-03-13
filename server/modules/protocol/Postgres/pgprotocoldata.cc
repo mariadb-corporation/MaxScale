@@ -22,6 +22,12 @@ bool PgProtocolData::will_respond(const GWBUF& buffer) const
     return pg::will_respond(buffer);
 }
 
+bool PgProtocolData::can_recover_state() const
+{
+    // TODO: Change this to a call into mxs::History::can_recover_state()
+    return false;
+}
+
 bool PgProtocolData::is_trx_starting() const
 {
     return false;

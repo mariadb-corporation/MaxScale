@@ -109,7 +109,7 @@ Session::Session(Client* pClient, SListenerData listener_data)
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
     set_client_connection(new MockClientConnection(&m_client_dcb));
-    set_protocol_data(std::make_unique<MYSQL_session>(0));
+    set_protocol_data(std::make_unique<MYSQL_session>(0, false, false));
 }
 
 Session::~Session()

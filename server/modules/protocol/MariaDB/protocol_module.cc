@@ -70,15 +70,16 @@ mxs::config::Configuration& MySQLProtocolModule::getConfiguration()
 std::unique_ptr<mxs::ClientConnection>
 MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component)
 {
+    const auto& cnf = *session->service->config();
     std::unique_ptr<mxs::ClientConnection> new_client_proto;
-    std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session(session->max_sescmd_history()));
+    std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session(cnf.max_sescmd_history,
+                                                                               cnf.prune_sescmd_history,
+                                                                               cnf.disable_sescmd_history));
     if (mdb_session)
     {
         auto& search_sett = mdb_session->user_search_settings;
         search_sett.listener = m_user_search_settings;
-
-        const auto& service_config = *session->service->config();
-        search_sett.service.allow_root_user = service_config.enable_root;
+        search_sett.service.allow_root_user = cnf.enable_root;
 
         auto def_sqlmode = session->listener_data()->m_default_sql_mode;
         mdb_session->is_autocommit = (def_sqlmode != mxs::Parser::SqlMode::ORACLE);

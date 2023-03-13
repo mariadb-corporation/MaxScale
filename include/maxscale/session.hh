@@ -157,6 +157,17 @@ public:
         virtual bool will_respond(const GWBUF& buffer) const = 0;
 
         /**
+         * Tells whether the session state can be recovered if a connection is lost
+         *
+         * In practice this means that if the history of commands that modify the session state are still
+         * stored in memory or if the configuration allows partial history recovery, the state can be
+         * recovered.
+         *
+         * @return True if the state can be recovered
+         */
+        virtual bool can_recover_state() const = 0;
+
+        /**
          * Tells whether a transaction is starting. Exact meaning depends on the protocol.
          *
          * @return True if a transaction is starting
@@ -394,11 +405,6 @@ public:
      * @return True, if the variable existed, false otherwise.
      */
     virtual bool remove_variable(const char* name, void** context) = 0;
-
-    /**
-     * Get the session command history limit for this session
-     */
-    size_t max_sescmd_history() const;
 
     /**
      * Check if log level has been explicitly enabled for this session

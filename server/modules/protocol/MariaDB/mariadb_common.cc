@@ -435,6 +435,11 @@ bool MYSQL_session::will_respond(const GWBUF& buffer) const
     return mxs_mysql_command_will_respond(mxs_mysql_get_command(buffer));
 }
 
+bool MYSQL_session::can_recover_state() const
+{
+    return m_history.can_recover_state();
+}
+
 bool MYSQL_session::is_trx_read_only() const
 {
     return trx_state & TrxState::TRX_READ_ONLY;

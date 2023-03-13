@@ -271,25 +271,7 @@ private:
 
     inline bool can_recover_servers() const
     {
-        const auto& config = *m_pSession->service->config();
-        bool rval = false;
-
-        if (protocol_data()->history().empty())
-        {
-            // Servers can always be recovered if no session commands have been executed
-            rval = true;
-        }
-        else if (!config.disable_sescmd_history)
-        {
-            // Recovery is also possible if history pruning is enabled or the history limit hasn't exceeded
-            // the limit
-            if (config.prune_sescmd_history || !protocol_data()->history().pruned())
-            {
-                rval = true;
-            }
-        }
-
-        return rval;
+        return protocol_data()->can_recover_state();
     }
 
     inline bool can_recover_master() const

@@ -21,6 +21,7 @@ public:
     ~PgProtocolData();
 
     bool will_respond(const GWBUF& buffer) const override;
+    bool can_recover_state() const override;
     bool is_trx_starting() const override;
     bool is_trx_active() const override;
     bool is_trx_read_only() const override;

@@ -78,8 +78,8 @@ std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb);
 class MYSQL_session : public MXS_SESSION::ProtocolData
 {
 public:
-    MYSQL_session(size_t limit)
-        : m_history(limit)
+    MYSQL_session(size_t limit, bool allow_pruning, bool disable_history)
+        : m_history(limit, allow_pruning, disable_history)
     {
     }
 
@@ -192,6 +192,8 @@ public:
     uint32_t trx_state {TRX_INACTIVE};
 
     bool will_respond(const GWBUF& buffer) const override;
+
+    bool can_recover_state() const override;
 
     /**
      * Tells whether a transaction is starting.

@@ -108,8 +108,9 @@ std::optional<bool> History::Subscriber::get(uint32_t id) const
     return rval;
 }
 
-History::History(size_t limit)
-    : m_max_sescmd_history(limit)
+History::History(size_t limit, bool allow_pruning, bool disable_history)
+    : m_max_sescmd_history(disable_history ? 0 : limit)
+    , m_allow_pruning(allow_pruning)
 {
 }
 
@@ -222,5 +223,27 @@ size_t History::runtime_size() const
     sescmd_history += m_history_info.size() * sizeof(decltype(m_history_info)::value_type);
 
     return sescmd_history;
+}
+
+bool History::can_recover_state() const
+{
+    bool rval = false;
+
+    if (m_history.empty())
+    {
+        // Connections can always be recovered if no session commands have been executed
+        rval = true;
+    }
+    else if (m_max_sescmd_history > 0)
+    {
+        // Recovery is also possible if history pruning is enabled or the history limit hasn't exceeded
+        // the limit
+        if (m_allow_pruning || !m_history_pruned)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 }

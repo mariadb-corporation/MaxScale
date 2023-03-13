@@ -108,9 +108,11 @@ public:
     /**
      * Construct a History
      *
-     * @param limit How many commands to keep in the history
+     * @param limit           How many commands to keep in the history
+     * @param allow_pruning   Whether history pruning is allowed
+     * @param disable_history If true, recovery is disabled but consistency checks are still done
      */
-    History(size_t limit);
+    History(size_t limit, bool allow_pruning, bool disable_history);
 
     /**
      * Adds a command to the history
@@ -170,12 +172,13 @@ public:
     }
 
     /**
-     * Whether the history is empty
+     * Whether the state can still be recovered from the history
+     *
+     * The recovery may only be partial if the configuration allows it.
+     *
+     * @return True if the session state can be recovered from history
      */
-    bool empty() const
-    {
-        return m_history.empty();
-    }
+    bool can_recover_state() const;
 
     /**
      * Size of the history
@@ -248,5 +251,8 @@ private:
 
     // Number of stored session commands
     size_t m_max_sescmd_history;
+
+    // Whether history pruning is allowed
+    bool m_allow_pruning;
 };
 }
