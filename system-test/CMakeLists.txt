@@ -871,6 +871,9 @@ add_test_executable(mxs3458_ps_with_strict_sp.cc mxs3458_ps_with_strict_sp mxs34
 # Qlafilter test
 add_test_executable(test_qlafilter.cc test_qlafilter test_qlafilter LABELS REPL_BACKEND)
 
+# MXS-4410: "USE db" does not update the database logged to the qla-log.
+add_test_executable(mxs4410_db_not_logged.cc mxs4410_db_not_logged mxs4410_db_not_logged LABELS REPL_BACKEND)
+
 # MXS-3769: Support for SET TRANSACTION
 add_test_executable(mxs3769_set_transaction.cc mxs3769_set_transaction mxs3769_set_transaction LABELS REPL_BACKEND readwritesplit)
 
