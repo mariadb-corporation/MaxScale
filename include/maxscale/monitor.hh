@@ -375,8 +375,6 @@ public:
     class Test;
     friend class Test;
 
-    using ServerVector = std::vector<MonitorServer*>;
-
     Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
 

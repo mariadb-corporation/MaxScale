@@ -613,6 +613,7 @@ void Monitor::release_all_servers()
     // This should only be called from the admin thread while the monitor is stopped.
     mxb_assert(!is_running() && is_main_worker());
 
+    configured_servers_updated({});
     for (auto srv : m_conf_servers)
     {
         mxb_assert(this_unit.claimed_by(srv->name()) == m_name);

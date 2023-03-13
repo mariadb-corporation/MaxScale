@@ -229,6 +229,7 @@ void MonitorManager::destroy_all_monitors()
     for (auto monitor : monitors)
     {
         mxb_assert(!monitor->is_running());
+        monitor->deactivate();
         delete monitor;
     }
 }
