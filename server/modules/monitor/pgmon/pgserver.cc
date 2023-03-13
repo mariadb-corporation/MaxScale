@@ -21,16 +21,6 @@ PgServer::PgServer(SERVER* server, const SharedSettings& shared)
 {
 }
 
-void PgServer::test_permissions(const std::string& query)
-{
-    auto result = ping_or_connect();
-    if (!mxs::Monitor::connection_is_ok(result))
-    {
-        MXB_ERROR("Failed to check monitor user credentials and permissions on '%s': %s",
-                  server->name(), get_connect_error(result).c_str());
-    }
-}
-
 maxscale::MonitorServer::ConnectResult PgServer::ping_or_connect()
 {
     if (m_conn.is_open())
@@ -103,4 +93,8 @@ void PgServer::update_disk_space_status()
 bool PgServer::fetch_variables()
 {
     return true;
+}
+
+void PgServer::check_permissions()
+{
 }

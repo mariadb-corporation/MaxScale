@@ -37,6 +37,7 @@ using namespace std::chrono_literals;
 namespace
 {
 const char not_a_db[] = "it is not a valid database.";
+const string grant_test_query = "SHOW SLAVE STATUS;";
 }
 
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
@@ -79,12 +80,6 @@ uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn) const
      * and decides to process events from one relay log before getting new events to the other. In
      * any case, such events are obsolete and the server can be considered to have processed such logs. */
     return slave_conn.gtid_io_pos.events_ahead(m_gtid_current_pos, GtidList::MISSING_DOMAIN_IGNORE);
-}
-
-std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, string* errmsg_out,
-                                                          unsigned int* errno_out)
-{
-    return maxscale::execute_query(con, query, errmsg_out, errno_out);
 }
 
 /**
@@ -958,31 +953,6 @@ void MariaDBServer::update_server_version()
     {
         MXB_ERROR("Server '%s' (%s) is unsupported. The server is ignored by the monitor.",
                   name(), info.version_string());
-    }
-}
-
-void MariaDBServer::check_permissions()
-{
-    // Test with a typical query to make sure the monitor has sufficient permissions.
-    const string query = "SHOW SLAVE STATUS;";
-    string err_msg;
-    auto result = execute_query(query, &err_msg);
-
-    if (result == nullptr)
-    {
-        /* In theory, this could be due to other errors as well, but that is quite unlikely since the
-         * connection was just checked. The end result is in any case that the server is not updated,
-         * and that this test is retried next round. */
-        set_status(SERVER_AUTH_ERROR);
-        // Only print error if last round was ok.
-        if (!had_status(SERVER_AUTH_ERROR))
-        {
-            MXB_WARNING("Error during monitor permissions test for server '%s': %s", name(), err_msg.c_str());
-        }
-    }
-    else
-    {
-        clear_status(SERVER_AUTH_ERROR);
     }
 }
 
@@ -2687,4 +2657,9 @@ void MariaDBServer::update_rlag_state(int64_t limit)
 const MonitorServer::EventList& MariaDBServer::new_custom_events() const
 {
     return m_new_events;
+}
+
+const std::string& MariaDBServer::permission_test_query() const
+{
+    return grant_test_query;
 }

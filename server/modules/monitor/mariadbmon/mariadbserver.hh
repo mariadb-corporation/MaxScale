@@ -199,30 +199,12 @@ public:
     void update_server_version();
 
     /**
-     * Checks monitor permissions on the server. Sets/clears the SERVER_AUTH_ERROR bit.
-     */
-    void check_permissions();
-
-    /**
      * Calculate how many events are left in the relay log of the slave connection.
      *
      * @param slave_conn The slave connection to calculate for
      * @return Number of events in relay log. Always  0 or greater.
      */
     uint64_t relay_log_events(const SlaveStatus& slave_conn) const;
-
-    /**
-     * Execute a query which returns data. The results are returned as a unique pointer to a QueryResult
-     * object. The column names of the results are assumed unique.
-     *
-     * @param query The query
-     * @param errmsg_out Where to store an error message if query fails. Can be null.
-     * @param errno_out Error code output. Can be null.
-     * @return Pointer to query results, or an empty pointer on failure
-     */
-    std::unique_ptr<mxq::QueryResult>
-    execute_query(const std::string& query, std::string* errmsg_out = nullptr,
-                  unsigned int* errno_out = nullptr);
 
     /**
      * execute_cmd_ex with query retry ON.
@@ -652,4 +634,6 @@ private:
 
     int64_t conn_id() const;
     void    clear_locks_info();
+
+    const std::string& permission_test_query() const override;
 };

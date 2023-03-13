@@ -21,10 +21,10 @@ class PgServer final : public mxs::MonitorServer
 public:
     PgServer(SERVER* server, const SharedSettings& shared);
 
-    void          test_permissions(const std::string& query) override;
     ConnectResult ping_or_connect() override;
     void          close_conn() override;
     void          fetch_uptime() override;
+    void          check_permissions() override;
     void          update_disk_space_status() override;
 
 private:

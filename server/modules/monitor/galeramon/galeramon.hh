@@ -117,4 +117,7 @@ public:
     GaleraServer(SERVER* server, const SharedSettings& shared);
 
     void report_query_error();
+
+private:
+    const std::string& permission_test_query() const override;
 };

@@ -693,49 +693,6 @@ json_t* Monitor::parameters_to_json() const
     return rval;
 }
 
-void Monitor::test_permissions(const string& query)
-{
-    if (m_servers.empty() || mxs::Config::get().skip_permission_checks.get() || query.empty())
-    {
-        return;
-    }
-
-    mxb::LogScope scope(name());
-    for (MonitorServer* mondb : m_servers)
-    {
-        mondb->test_permissions(query);
-    }
-}
-
-void MariaServer::test_permissions(const string& query)
-{
-    auto mondb = this;
-    auto result = mondb->ping_or_connect();
-    if (!Monitor::connection_is_ok(result))
-    {
-        MXB_ERROR("Failed to check monitor user credentials and permissions on '%s': %s",
-                  mondb->server->name(), mondb->get_connect_error(result).c_str());
-    }
-    else if (mxs_mysql_query(mondb->con, query.c_str()) != 0)
-    {
-        MXB_ERROR("Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                  query.c_str(), conn_settings().username.c_str(), mysql_error(mondb->con));
-    }
-    else
-    {
-        MYSQL_RES* res = mysql_use_result(mondb->con);
-        if (res == NULL)
-        {
-            MXB_ERROR("Result retrieval failed when checking monitor permissions: %s",
-                      mysql_error(mondb->con));
-        }
-        else
-        {
-            mysql_free_result(res);
-        }
-    }
-}
-
 json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
 {
     json_t* rval = nullptr;
@@ -1058,16 +1015,6 @@ bool MonitorServer::auth_status_changed()
 
     return old_status != static_cast<uint64_t>(-1) && old_status != new_status
            && (old_status & SERVER_AUTH_ERROR) != (new_status & SERVER_AUTH_ERROR);
-}
-
-/**
- * Check if current monitored server has a loggable failure status.
- *
- * @return true if failed status can be logged or false
- */
-bool MonitorServer::should_print_fail_status()
-{
-    return server->is_down() && mon_err_count == 0;
 }
 
 MonitorServer* Monitor::find_parent_node(MonitorServer* target)
@@ -2165,12 +2112,7 @@ void SimpleMonitor::tick()
     check_maintenance_requests();
     pre_tick();
 
-    if (ticks() == 0)
-    {
-        // Check monitor user permissions only on the first tick. This is not essential, as any missing
-        // privs will cause other errors. Any servers which cannot be connected to at all will be skipped.
-        test_permissions(permission_test_query());
-    }
+    bool first_tick = (ticks() == 0);
 
     const bool should_update_disk_space = check_disk_space_this_tick();
 
@@ -2178,50 +2120,51 @@ void SimpleMonitor::tick()
     {
         pMs->stash_current_status();
 
-        ConnectResult rval = pMs->ping_or_connect();
+        ConnectResult conn_status = pMs->ping_or_connect();
 
-        if (connection_is_ok(rval))
+        if (connection_is_ok(conn_status))
         {
             pMs->maybe_fetch_variables();
             pMs->fetch_uptime();
-            pMs->clear_pending_status(SERVER_AUTH_ERROR);
             pMs->set_pending_status(SERVER_RUNNING);
 
-            if (should_update_disk_space && pMs->can_update_disk_space_status())
+            // Check permissions if permissions failed last time or if this is a new connection.
+            if (pMs->had_status(SERVER_AUTH_ERROR) || (conn_status == ConnectResult::NEWCONN_OK))
             {
-                pMs->update_disk_space_status();
+                pMs->check_permissions();
             }
 
-            update_server_status(pMs);
+            // If permissions are ok, continue.
+            if (!pMs->has_status(SERVER_AUTH_ERROR))
+            {
+                if (should_update_disk_space && pMs->can_update_disk_space_status())
+                {
+                    pMs->update_disk_space_status();
+                }
+
+                update_server_status(pMs);
+            }
         }
         else
         {
-            /**
-             * TODO: Move the bits that do not represent a state out of
-             * the server state bits. This would allow clearing the state by
-             * zeroing it out.
-             */
             pMs->clear_pending_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
 
-            if (rval == ConnectResult::ACCESS_DENIED)
+            if (conn_status == ConnectResult::ACCESS_DENIED)
             {
                 pMs->set_pending_status(SERVER_AUTH_ERROR);
             }
 
-            if (pMs->status_changed() && pMs->should_print_fail_status())
+            /* Avoid spamming and only log if this is the first tick or if server was running last tick or
+             * if server has started to reject the monitor. */
+            if (first_tick || pMs->had_status(SERVER_RUNNING)
+                || (pMs->has_status(SERVER_AUTH_ERROR) && !pMs->had_status(SERVER_AUTH_ERROR)))
             {
-                pMs->log_connect_error(rval);
+                pMs->log_connect_error(conn_status);
             }
         }
 
-        if (pMs->server->is_down())
-        {
-            pMs->mon_err_count += 1;
-        }
-        else
-        {
-            pMs->mon_err_count = 0;
-        }
+        auto* srv = pMs->server;
+        pMs->mon_err_count = (srv->is_running() || srv->is_in_maint()) ? 0 : pMs->mon_err_count + 1;
     }
 
     post_tick();
@@ -2444,6 +2387,45 @@ MariaServer::MariaServer(SERVER* server, const MonitorServer::SharedSettings& sh
 MariaServer::~MariaServer()
 {
     close_conn();
+}
+
+void MariaServer::check_permissions()
+{
+    // Test with a typical query to make sure the monitor has sufficient permissions.
+    auto& query = permission_test_query();
+    string err_msg;
+    auto result = execute_query(query, &err_msg);
+
+    if (result == nullptr)
+    {
+        /* In theory, this could be due to other errors as well, but that is quite unlikely since the
+         * connection was just checked. The end result is in any case that the server is not updated,
+         * and that this test is retried next round. */
+        set_pending_status(SERVER_AUTH_ERROR);
+        // Only print error if last round was ok.
+        if (!had_status(SERVER_AUTH_ERROR))
+        {
+            MXB_WARNING("Error during monitor permissions test for server '%s': %s",
+                        server->name(), err_msg.c_str());
+        }
+    }
+    else
+    {
+        clear_pending_status(SERVER_AUTH_ERROR);
+    }
+}
+
+std::unique_ptr<mxq::QueryResult>
+MariaServer::execute_query(const string& query, std::string* errmsg_out, unsigned int* errno_out)
+{
+    return maxscale::execute_query(con, query, errmsg_out, errno_out);
+}
+
+const std::string& MariaServer::permission_test_query() const
+{
+    mxb_assert(!true);      // Can only be empty for monitors that do not check permissions.
+    static string dummy = "";
+    return dummy;
 }
 }
 

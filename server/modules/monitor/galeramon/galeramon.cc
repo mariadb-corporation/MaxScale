@@ -38,6 +38,8 @@
 
 namespace
 {
+const std::string grant_test_query = "SHOW STATUS LIKE 'wsrep_local_state';";
+
 namespace cfg = mxs::config;
 
 cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::MONITOR);
@@ -962,6 +964,22 @@ void GaleraMonitor::pre_loop()
     SimpleMonitor::pre_loop();
 }
 
+GaleraServer::GaleraServer(SERVER* server, const MonitorServer::SharedSettings& shared)
+    : MariaServer(server, shared)
+{
+}
+
+void GaleraServer::report_query_error()
+{
+    MXB_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
+              server->name(), server->address(), server->port(), mysql_error(con));
+}
+
+const std::string& GaleraServer::permission_test_query() const
+{
+    return grant_test_query;
+}
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -991,15 +1009,4 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
-}
-
-GaleraServer::GaleraServer(SERVER* server, const MonitorServer::SharedSettings& shared)
-    : MariaServer(server, shared)
-{
-}
-
-void GaleraServer::report_query_error()
-{
-    MXB_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
-              server->name(), server->address(), server->port(), mysql_error(con));
 }

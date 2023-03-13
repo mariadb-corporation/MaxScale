@@ -33,7 +33,10 @@ namespace maxscale
 {
 class Monitor;
 }
-
+namespace maxsql
+{
+class QueryResult;
+}
 class DCB;
 struct json_t;
 class ExternalCmd;
@@ -207,14 +210,8 @@ public:
     bool        status_changed();
     bool        flush_status();
     bool        auth_status_changed();
-    bool        should_print_fail_status();
     std::string get_connect_error(ConnectResult rval);
     void        log_connect_error(ConnectResult rval);
-
-    /**
-     * Try run query, log errors.
-     */
-    virtual void test_permissions(const std::string& query) = 0;
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
@@ -240,6 +237,8 @@ public:
      * Update the Uptime status variable of the server
      */
     virtual void fetch_uptime() = 0;
+
+    virtual void check_permissions() = 0;
 
     const char* get_event_name();
 
@@ -356,14 +355,28 @@ public:
 
     ConnectResult ping_or_connect() override;
     void          close_conn() override;
-    virtual void  fetch_uptime() override;
-    void          test_permissions(const std::string& query) override;
+    void          fetch_uptime() override;
+    void          check_permissions() override;
     void          update_disk_space_status() override;
 
     MYSQL* con {nullptr};   /**< The MySQL connection */
 
+protected:
+    /**
+     * Execute a query which returns data.
+     *
+     * @param query The query
+     * @param errmsg_out Where to store an error message if query fails. Can be null.
+     * @param errno_out Error code output. Can be null.
+     * @return Pointer to query results, or an empty pointer on failure
+     */
+    std::unique_ptr<maxsql::QueryResult>
+    execute_query(const std::string& query, std::string* errmsg_out = nullptr,
+                  unsigned int* errno_out = nullptr);
+
 private:
-    bool fetch_variables() override;
+    bool                       fetch_variables() override;
+    virtual const std::string& permission_test_query() const;
 };
 
 /**
@@ -562,15 +575,6 @@ public:
 protected:
 
     const std::vector<MonitorServer*>& active_servers() const;
-
-    /**
-     * Check if the monitor user can execute a query. The query should be such that it only succeeds if
-     * the monitor user has all required permissions. Servers which are down are skipped.
-     *
-     * @param query Query to test with
-     * @return True on success, false if monitor credentials lack permissions
-     */
-    void test_permissions(const std::string& query);
 
     /**
      * Copy monitored_server->m_pending_status to server->status. If status changed, request journal update.
