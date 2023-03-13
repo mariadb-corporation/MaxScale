@@ -382,7 +382,7 @@ const char* to_string(Parser::KillType type);
 
 }
 
-inline std::ostream& operator << (std::ostream& out, const mxs::Parser::TableName& x)
+inline std::ostream& operator << (std::ostream& out, const Parser::TableName& x)
 {
     out << x.to_string();
     return out;
