@@ -51,7 +51,7 @@ public:
 
     uint64_t capabilities() const
     {
-        return m_capabilities;
+        return instance()->getCapabilities();
     }
 
     mxs::config::Configuration& configuration() const
@@ -71,7 +71,6 @@ private:
     std::string  m_name;            /**< The Filter name */
     std::string  m_module;          /**< The module to load */
     mxs::Filter* m_filter;          /**< The runtime filter */
-    uint64_t     m_capabilities;
 
     json_t* json_data(const char* host) const;
     json_t* parameters_to_json() const;
