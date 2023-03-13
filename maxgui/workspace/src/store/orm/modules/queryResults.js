@@ -258,6 +258,7 @@ export default {
 
             return is_loading
         },
-        getHasKillFlag: () => query_tab_id => QueryTabTmp.find(query_tab_id).has_kill_flag,
+        getHasKillFlag: () => query_tab_id =>
+            QueryTab.getters('getQueryTabTmp')(query_tab_id).has_kill_flag,
     },
 }

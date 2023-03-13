@@ -15,21 +15,22 @@
 import mount from '@tests/unit/setup'
 import WkeNavTab from '../WkeNavTab.vue'
 
-const mountFactory = opts =>
-    mount({
-        shallow: false,
-        component: WkeNavTab,
-        propsData: {
-            worksheet: dummyWke,
-        },
-        ...opts,
-    })
-
 const dummyWke = {
     id: '71cb4820-76d6-11ed-b6c2-dfe0423852da',
     query_editor_id: '71cb4821-76d6-11ed-b6c2-dfe0423852da',
     name: 'WORKSHEET',
 }
+
+const mountFactory = opts =>
+    mount({
+        shallow: false,
+        component: WkeNavTab,
+        propsData: {
+            wke: dummyWke,
+        },
+        ...opts,
+    })
+
 describe('wke-nav-tab', () => {
     let wrapper
 
@@ -48,7 +49,7 @@ describe('wke-nav-tab', () => {
     })
 
     it('Should show loading icon', () => {
-        wrapper = mountFactory({ computed: { iRunning: () => true } })
-        expect(wrapper.findComponent({ name: 'v-progress-circular' }.exists())).to.be.true
+        wrapper = mountFactory({ computed: { isRunning: () => true } })
+        expect(wrapper.findComponent({ name: 'v-progress-circular' }).exists()).to.be.true
     })
 })

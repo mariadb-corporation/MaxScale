@@ -69,14 +69,14 @@ describe('sidebar-ctr', () => {
             })
             expect(wrapper.vm.hasConn).to.be.true
         })
-        it(`Should return accurate value for reloadDisabled`, async () => {
+        it(`Should return accurate value for disableReload`, async () => {
             // has connection
             wrapper = mountFactory({
                 computed: {
                     hasConn: () => true,
                 },
             })
-            expect(wrapper.vm.reloadDisabled).to.be.false
+            expect(wrapper.vm.disableReload).to.be.false
             // have no connection and still loading for data
             await wrapper.setProps({ hasConn: false, isLoading: true })
             wrapper = mountFactory({
@@ -85,22 +85,15 @@ describe('sidebar-ctr', () => {
                     isLoadingDbTree: () => true,
                 },
             })
-            expect(wrapper.vm.reloadDisabled).to.be.true
+            expect(wrapper.vm.disableReload).to.be.true
         })
     })
 
-    describe(`Button tests`, () => {
-        it(`Should disable reload-schemas button`, () => {
-            wrapper = mountFactory({
-                shallow: false,
-                computed: { reloadDisabled: () => true },
-            })
-            expect(wrapper.find('.reload-schemas').attributes().disabled).to.be.equals('disabled')
-        })
+    describe(`Filter objects tests`, () => {
         it(`Should disable filter-objects input`, () => {
             wrapper = mountFactory({
                 shallow: false,
-                computed: { reloadDisabled: () => true },
+                computed: { disableReload: () => true },
             })
             expect(
                 wrapper
@@ -108,25 +101,6 @@ describe('sidebar-ctr', () => {
                     .find('input')
                     .attributes().disabled
             ).to.be.equals('disabled')
-        })
-
-        const btnHandlerMap = {
-            'reload-schemas': 'fetchSchemas',
-            'toggle-sidebar': 'SET_IS_SIDEBAR_COLLAPSED',
-        }
-        Object.keys(btnHandlerMap).forEach(btn => {
-            it(`Should call ${btnHandlerMap[btn]} when ${btn} button is clicked`, async () => {
-                let callCount = 0
-                wrapper = mountFactory({
-                    shallow: false,
-                    computed: { reloadDisabled: () => false, is_sidebar_collapsed: () => false },
-                    methods: {
-                        [btnHandlerMap[btn]]: () => callCount++,
-                    },
-                })
-                await wrapper.find(`.${btn}`).trigger('click')
-                expect(callCount).to.be.equals(1)
-            })
         })
     })
 })

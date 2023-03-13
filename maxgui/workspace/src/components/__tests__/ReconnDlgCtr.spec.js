@@ -15,9 +15,10 @@
 import mount from '@tests/unit/setup'
 import ReconnDlgCtr from '../ReconnDlgCtr.vue'
 
-const dummy_conn_err_obj = {
-    message: 'Lost connection to server during query',
-    errno: 2013,
+const lost_cnn_stub = {
+    id: '123',
+    meta: { name: 'server_0' },
+    lost_cnn_err: { message: 'Lost connection to server during query', errno: 2013 },
 }
 const mountFactory = opts =>
     mount({
@@ -26,20 +27,17 @@ const mountFactory = opts =>
         ...opts,
     })
 describe('ReconnDlgCtr', () => {
-    let wrapper, deleteConnSpy
+    let wrapper
 
     beforeEach(() => {
-        deleteConnSpy = sinon.spy(ReconnDlgCtr.methods, 'deleteConn')
         wrapper = mountFactory()
     })
-    afterEach(() => {
-        deleteConnSpy.restore()
-    })
+    afterEach(() => {})
     it('Should show reconnection dialog when there is a connection error', () => {
         expect(wrapper.vm.showReconnDialog).to.be.false
         wrapper = mountFactory({
             computed: {
-                lostCnnErrMsgObj: () => dummy_conn_err_obj,
+                activeConns: () => [lost_cnn_stub],
             },
         })
         expect(wrapper.vm.showReconnDialog).to.be.true
@@ -47,7 +45,7 @@ describe('ReconnDlgCtr', () => {
     it('Should pass accurate data to mxs-dlg via props', () => {
         const baseDialog = wrapper.findComponent({ name: 'mxs-dlg' })
         const { value, title, cancelText, saveText, onSave, showCloseIcon } = baseDialog.vm.$props
-        expect(title).to.be.equals(wrapper.vm.queryErrMsg)
+        expect(title).to.be.equals('Server has gone away')
         expect(value).to.be.equals(wrapper.vm.showReconnDialog)
         expect(cancelText).to.be.equals('disconnect')
         expect(saveText).to.be.equals('reconnect')
@@ -55,8 +53,10 @@ describe('ReconnDlgCtr', () => {
         expect(showCloseIcon).to.be.false
     })
     it('Should call deleteConn when clicking disconnect button ', async () => {
+        const spy = sinon.spy(ReconnDlgCtr.methods, 'deleteConns')
         wrapper = mountFactory({ shallow: false })
         await wrapper.find('.cancel').trigger('click') // cancel btn is disconnect btn
-        deleteConnSpy.should.have.been.calledOnce
+        spy.should.have.been.calledOnce
+        spy.restore()
     })
 })

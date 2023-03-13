@@ -13,9 +13,10 @@
  */
 
 import mount from '@tests/unit/setup'
-import WorkspaceCtr from '../WorkspaceCtr.vue'
+import WorkspaceCtr from '@wsSrc/WorkspaceCtr.vue'
 import { lodash } from '@share/utils/helpers'
 
+const activeWke = { id: 'WORKSHEET_123', query_editor_id: 'QUERY EDITOR' }
 const mountFactory = opts =>
     mount(
         lodash.merge(
@@ -24,8 +25,9 @@ const mountFactory = opts =>
                 component: WorkspaceCtr,
                 computed: {
                     is_validating_conn: () => false,
-                    allWorksheets: () => [{ id: 'WORKSHEET_123' }],
-                    activeWkeId: () => 'WORKSHEET_123',
+                    activeWke: () => activeWke,
+                    keptAliveWorksheets: () => [activeWke],
+                    activeWkeId: () => activeWke.id,
                     ctrDim: () => ({ width: 1280, height: 800 }),
                 },
                 stubs: {

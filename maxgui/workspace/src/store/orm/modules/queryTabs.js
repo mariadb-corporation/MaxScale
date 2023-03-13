@@ -139,5 +139,6 @@ export default {
                 .get(),
         getActiveQueryTabTmp: () =>
             QueryTabTmp.find(QueryEditor.getters('getActiveQueryTabId')) || {},
+        getQueryTabTmp: () => query_tab_id => QueryTabTmp.find(query_tab_id) || {},
     },
 }

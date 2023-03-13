@@ -16,6 +16,7 @@ import mount from '@tests/unit/setup'
 import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
 import { lodash } from '@share/utils/helpers'
 import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
+import QueryConn from '@wsModels/QueryConn'
 
 const dummy_rc_target_names_map = {
     listeners: [
@@ -42,7 +43,7 @@ const mountFactory = opts =>
                 component: ConnDlgCtr,
                 propsData: {
                     value: true, // open dialog by default
-                    handleSave: sinon.stub(),
+                    onSave: sinon.stub(),
                 },
             },
             opts
@@ -186,10 +187,9 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
         wrapper.vm.handleChooseDefRsrc('listeners')
         expect(wrapper.vm.$data.selectedResource).to.be.eql(dummy_rc_target_names_map.listeners[0])
     })
-    it(`Should call handleSave with accurate arguments`, () => {
-        let handleSaveArgs
+    it(`Should call onSave with accurate arguments`, () => {
+        const spy = sinon.spy(QueryConn, 'dispatch')
         const mockBodyFormData = {
-            target: 'nosql-Listener',
             user: 'maxskysql',
             password: 'skysql',
             db: '',
@@ -204,13 +204,11 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
                 selectedResource: mockSelectedResource,
                 body: mockBodyFormData,
             }),
-            propsData: {
-                handleSave: args => (handleSaveArgs = args),
-            },
         })
         wrapper.vm.onSave()
-        expect(handleSaveArgs).to.be.deep.equals({
+        spy.should.have.been.calledOnceWith('openQueryEditorConn', {
             body: { target: mockSelectedResource.id, ...mockBodyFormData },
+            meta: { name: mockSelectedResource.id },
         })
     })
 })
@@ -218,7 +216,7 @@ describe(`ConnDlgCtr - form input tests`, () => {
     let wrapper
     it(`Should parse value as number for timeout field`, async () => {
         wrapper = mountFactory({ shallow: false })
-        const inputComponent = wrapper.findComponent({ name: 'mxs-dlg' }).find(`.timeout`)
+        const inputComponent = wrapper.findComponent({ name: 'timeout-input' })
         await inputChangeMock(inputComponent, '300')
         expect(wrapper.vm.body.timeout).to.be.equals(300)
     })

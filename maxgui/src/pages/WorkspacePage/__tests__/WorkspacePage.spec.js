@@ -15,6 +15,7 @@
 import mount from '@tests/unit/setup'
 import WorkspacePage from '../index.vue'
 import { lodash } from '@share/utils/helpers'
+import QueryConn from '@wsModels/QueryConn'
 
 const allConnsMock = [
     {
@@ -47,17 +48,11 @@ describe('WorkspacePage', () => {
     let wrapper
 
     describe('Created hook tests', () => {
-        let validatingConnCallCount = 0
-        before(() => {
-            mountFactory({
-                shallow: true,
-                methods: {
-                    validateConns: () => validatingConnCallCount++,
-                },
-            })
-        })
         it('Should call `validateConns` action once when component is created', () => {
-            expect(validatingConnCallCount).to.be.equals(1)
+            const spy = sinon.spy(QueryConn, 'dispatch')
+            wrapper = mountFactory({ shallow: true })
+            spy.should.have.been.calledOnceWith('validateConns')
+            spy.restore()
         })
     })
     describe('Leaving page tests', () => {
@@ -81,20 +76,17 @@ describe('WorkspacePage', () => {
                     allConns: () => [],
                 },
             })
-            expect(wrapper.vm.sql_conns).to.be.empty
             mockBeforeRouteLeave(wrapper)
             expect(wrapper.vm.$data.isConfDlgOpened).to.be.false
         })
-        it(`Should emit leave-page when there is no active connection`, () => {
+        it(`Should call leavePage when there is no active connection`, () => {
             wrapper = mountFactory({
                 shallow: true,
                 computed: {
                     // stub for having no active connection
                     allConns: () => [],
                 },
-                methods: {
-                    leavePage: () => sinon.stub(),
-                },
+                methods: { leavePage: () => sinon.stub() },
             })
             const spy = sinon.spy(wrapper.vm, 'leavePage')
             mockBeforeRouteLeave(wrapper)
@@ -103,10 +95,8 @@ describe('WorkspacePage', () => {
     })
 
     describe('Handle disconnect connections when leaving page', () => {
-        let disconnectAllSpy
-
+        let spy
         beforeEach(() => {
-            disconnectAllSpy = sinon.spy(WorkspacePage.methods, 'disconnectAll')
             wrapper = mountFactory({
                 shallow: true,
                 computed: {
@@ -114,27 +104,24 @@ describe('WorkspacePage', () => {
                     allConns: () => allConnsMock,
                 },
             })
+            spy = sinon.spy(QueryConn, 'dispatch')
         })
-        afterEach(() => {
-            disconnectAllSpy.restore()
-        })
+        afterEach(() => spy.restore())
 
         it(`Should disconnect all opened connections by default when
          confirming leaving the page`, () => {
-            mockBeforeRouteLeave(wrapper) // mockup leaving page
-            expect(wrapper.vm.$data.shouldDelAll).to.be.true
+            mockBeforeRouteLeave(wrapper)
+            let shouldDelAll = true
             // mock confirm leaving
-            wrapper.vm.onLeave()
-            disconnectAllSpy.should.have.been.calledOnce
+            wrapper.vm.onConfirm(shouldDelAll)
+            spy.should.have.been.calledWith('disconnectAll')
         })
 
         it(`Should keep connections even when leaving the page`, async () => {
-            mockBeforeRouteLeave(wrapper) //mockup leaving page
-            // mockup un-checking "Disconnect all" checkbox
-            await wrapper.setData({ shouldDelAll: false })
+            mockBeforeRouteLeave(wrapper)
             // mock confirm leaving
-            wrapper.vm.onLeave()
-            disconnectAllSpy.should.have.not.been.called
+            wrapper.vm.onConfirm()
+            spy.should.have.not.been.called
         })
     })
 })
