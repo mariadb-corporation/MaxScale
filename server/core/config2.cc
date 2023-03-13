@@ -1617,19 +1617,28 @@ bool regex_from_string(const std::string& value_as_string,
 
         string text = value_as_string.substr(slashes ? 1 : 0, value_as_string.length() - (slashes ? 2 : 0));
 
-        uint32_t jit_available = 0;
-        pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
-
-        uint32_t ovec_size;
-        std::unique_ptr<pcre2_code> sCode(compile_regex_string(text.c_str(),
-                                                               jit_available, options, &ovec_size));
-
-        if (sCode)
+        if (text.empty())
         {
-            RegexValue value(value_as_string, std::move(sCode), ovec_size, options);
-
-            *pValue = value;
+            *pValue = RegexValue{};
             rv = true;
+        }
+        else
+        {
+
+            uint32_t jit_available = 0;
+            pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
+
+            uint32_t ovec_size;
+            std::unique_ptr<pcre2_code> sCode(compile_regex_string(text.c_str(),
+                                                                   jit_available, options, &ovec_size));
+
+            if (sCode)
+            {
+                RegexValue value(value_as_string, std::move(sCode), ovec_size, options);
+
+                *pValue = value;
+                rv = true;
+            }
         }
     }
 
