@@ -28,4 +28,18 @@ public:
     size_t amend_memory_statistics(json_t* memory) const override;
     size_t static_size() const override;
     size_t varying_size() const override;
+
+    void set_connect_params(const GWBUF& buf)
+    {
+        mxb_assert_message(buf.length() > 8, "StartupMessage should be longer than 8 bytes");
+        m_params.assign(buf.data() + 8, buf.end());
+    }
+
+    const std::vector<uint8_t>& connect_params() const
+    {
+        return m_params;
+    }
+
+private:
+    std::vector<uint8_t> m_params;
 };

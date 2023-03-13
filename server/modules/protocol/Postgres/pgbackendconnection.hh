@@ -74,6 +74,11 @@ private:
 
     GWBUF process_packets(GWBUF& buffer);
 
+    PgProtocolData& protocol_data()
+    {
+        return *static_cast<PgProtocolData*>(m_session->protocol_data());
+    }
+
     MXS_SESSION*    m_session;
     mxs::Component* m_upstream;
     BackendDCB*     m_dcb;

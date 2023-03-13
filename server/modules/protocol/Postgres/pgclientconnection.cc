@@ -12,6 +12,7 @@
  */
 
 #include "pgclientconnection.hh"
+#include "pgprotocoldata.hh"
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
@@ -123,6 +124,9 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
     }
     else
     {
+        auto data = static_cast<PgProtocolData*>(m_session.protocol_data());
+        data->set_connect_params(gwbuf);
+
         m_dcb->writeq_append(create_startup_reply(gwbuf));
         // TODO: are there more packets that should be read from the dcb
         //       before going to ROUTE or "normal" state.

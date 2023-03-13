@@ -23,17 +23,17 @@ GWBUF create_ssl_request()
     return GWBUF(buf.data(), buf.size());
 }
 
-GWBUF create_startup_message(const uint8_t* params, size_t size)
+GWBUF create_startup_message(const std::vector<uint8_t>& params)
 {
     // The parameters should be null-terminated
-    mxb_assert(params[size - 1] == 0x0);
+    mxb_assert(params.back() == 0x0);
 
-    GWBUF rval(8 + size);
+    GWBUF rval(8 + params.size());
     uint8_t* ptr = rval.data();
 
-    ptr += pg::set_uint32(ptr, 8 + size);
+    ptr += pg::set_uint32(ptr, 8 + params.size());
     ptr += pg::set_uint32(ptr, pg::PROTOCOL_V3_MAGIC);
-    memcpy(ptr, params, size);
+    memcpy(ptr, params.data(), params.size());
 
     return rval;
 }
@@ -261,11 +261,8 @@ void PgBackendConnection::send_ssl_request()
 
 void PgBackendConnection::send_startup_message()
 {
-    // TODO: Copy these from the client. This'll only work if there's role named "maxuser".
-    const char params[] = "user\0maxuser\0";
-
     // The parameters are a list of null-terminated strings that end with an empty string
-    if (m_dcb->writeq_append(create_startup_message((uint8_t*)params, sizeof(params))))
+    if (m_dcb->writeq_append(create_startup_message(protocol_data().connect_params())))
     {
         m_state = State::AUTH;
     }
