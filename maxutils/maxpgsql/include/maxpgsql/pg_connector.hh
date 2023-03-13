@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <string>
+#include <maxbase/ssl.hh>
 
 struct pg_conn;
 
@@ -40,7 +41,8 @@ public:
         std::string user;
         std::string password;
 
-        int timeout {0};
+        int            timeout {0};
+        mxb::SSLConfig ssl;
     };
     /**
      * Open a new database connection.

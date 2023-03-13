@@ -61,6 +61,7 @@ maxscale::MonitorServer::ConnectResult PgServer::ping_or_connect()
     conn_settings.user = uname;
     conn_settings.password = dpwd;
     conn_settings.timeout = mon_settings.connect_timeout.count();
+    conn_settings.ssl = server->ssl_config();
 
     auto res = ConnectResult::REFUSED;
     if (m_conn.open(server->address(), server->port()))

@@ -65,11 +65,95 @@ bool PgSQL::open(const std::string& host, int port, const std::string& db)
     mxb_assert(port >= 0);
     close();
 
+    const int n_max_params = 128;
+    // Give the settings to libpq as two null-terminated arrays. LibPQ will process the arrays as long as
+    // the keywords-element is not null. Null entries or empty strings in the values-array are ignored.
+    const char* keywords[n_max_params];
+    const char* values[n_max_params];
+    int n_params = 0;
+    auto add_param = [&n_params, &keywords, &values](const char* param, const char* value) {
+        keywords[n_params] = param;
+        values[n_params] = value;
+        n_params++;
+    };
+
+    add_param("host", host.c_str());    // TODO: use hostaddr instead when host is known to be a numeric ip
     string port_str = std::to_string(port);
-    m_conn = PQsetdbLogin(host.c_str(), port_str.c_str(), "", "", "",
-                          m_settings.user.c_str(), m_settings.password.c_str());
+    add_param("port", port_str.c_str());
+    add_param("dbname", db.c_str());
+    add_param("application_name", "MaxScale");
+
+    add_param("user", m_settings.user.c_str());
+    add_param("password", m_settings.password.c_str());
+
+    string timeout_str = std::to_string(m_settings.timeout);
+    add_param("connect_timeout", timeout_str.c_str());
+
+    // If ssl-mode is not defined, the PG connector will try ssl first, then downgrade to unencrypted.
+    // TODO: think if this is ok.
+    const char mode_str[] = "sslmode";
+    const auto& ssl = m_settings.ssl;
+    if (ssl.enabled)
+    {
+
+        if (ssl.verify_host)
+        {
+            add_param(mode_str, "verify-full");
+        }
+        else if (ssl.verify_peer)
+        {
+            add_param(mode_str, "verify-ca");
+        }
+        else
+        {
+            add_param(mode_str, "require");
+        }
+
+        add_param("sslcert", ssl.cert.c_str());
+        add_param("sslkey", ssl.key.c_str());
+        add_param("sslrootcert", ssl.ca.c_str());
+
+        const char* ssl_version_str = nullptr;
+        switch (ssl.version)
+        {
+        case mxb::ssl_version::TLS10:
+            ssl_version_str = "TLSv1";
+            break;
+
+        case mxb::ssl_version::TLS11:
+            ssl_version_str = "TLSv1.1";
+            break;
+
+        case mxb::ssl_version::TLS12:
+            ssl_version_str = "TLSv1.2";
+            break;
+
+        case mxb::ssl_version::TLS13:
+            ssl_version_str = "TLSv1.3";
+            break;
+
+        case mxb::ssl_version::SSL_MAX:
+        case mxb::ssl_version::TLS_MAX:
+        case mxb::ssl_version::SSL_TLS_MAX:
+        case mxb::ssl_version::SSL_UNKNOWN:
+            // Leave empty, causes connection to use at least TLSv1.2. Higher versions may also be used if
+            // allowed by backend.
+            break;
+        }
+        if (ssl_version_str)
+        {
+            add_param("ssl_min_protocol_version", ssl_version_str);
+            add_param("ssl_max_protocol_version", ssl_version_str);
+        }
+
+        add_param("sslcrl", ssl.crl.c_str());
+    }
+
+    add_param(nullptr, nullptr);
+    mxb_assert(n_params <= n_max_params - 1);
+
+    m_conn = PQconnectdbParams(keywords, values, 0);
     // Connection object can only be null on OOM, assume it never happens.
-    // TODO: add other options e.g. ssl
 
     bool rval = false;
     if (PQstatus(m_conn) == CONNECTION_OK)
