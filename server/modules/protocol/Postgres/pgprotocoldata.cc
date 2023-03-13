@@ -17,6 +17,11 @@ PgProtocolData::~PgProtocolData()
 {
 }
 
+bool PgProtocolData::will_respond(const GWBUF& buffer) const
+{
+    return pg::will_respond(buffer);
+}
+
 bool PgProtocolData::is_trx_starting() const
 {
     return false;

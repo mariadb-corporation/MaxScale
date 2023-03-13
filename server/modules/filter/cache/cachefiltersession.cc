@@ -1662,7 +1662,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         }
     }
 
-    if (!mxs_mysql_command_will_respond(MYSQL_GET_COMMAND(GWBUF_DATA(pPacket))))
+    if (!m_pSession->protocol_data()->will_respond(*pPacket))
     {
         m_processing = false;
     }

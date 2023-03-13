@@ -148,6 +148,15 @@ public:
         virtual ~ProtocolData() = default;
 
         /**
+         * Tells whether the command stored in the buffer will generate a response
+         *
+         * @param buffer The buffer that contains one packet packets
+         *
+         * @return True if a response is expected for this packet
+         */
+        virtual bool will_respond(const GWBUF& buffer) const = 0;
+
+        /**
          * Tells whether a transaction is starting. Exact meaning depends on the protocol.
          *
          * @return True if a transaction is starting

@@ -200,6 +200,8 @@ public:
      */
     uint32_t trx_state {TRX_INACTIVE};
 
+    bool will_respond(const GWBUF& buffer) const override;
+
     /**
      * Tells whether a transaction is starting.
      *

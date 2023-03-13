@@ -46,7 +46,7 @@ bool MirrorSession::routeQuery(GWBUF&& packet)
     {
         m_query = packet.get_sql();
         m_command = mxs_mysql_get_command(packet);
-        bool expecting_response = mxs_mysql_command_will_respond(m_command);
+        bool expecting_response = m_pSession->protocol_data()->will_respond(packet);
 
         for (const auto& a : m_backends)
         {

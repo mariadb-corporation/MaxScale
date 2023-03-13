@@ -245,7 +245,7 @@ bool RWSplitSession::query_not_supported(const GWBUF& querybuf)
 
     if (mxs_mysql_is_ps_command(info.command()) && info.stmt_id() == 0)
     {
-        if (mxs_mysql_command_will_respond(info.command()))
+        if (m_pSession->protocol_data()->will_respond(querybuf))
         {
             // Unknown PS ID, can't route this query
             std::stringstream ss;
@@ -482,7 +482,7 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
     bool ok = true;
     mxs::Backend::response_type type = mxs::Backend::NO_RESPONSE;
 
-    if (mxs_mysql_command_will_respond(cmd))
+    if (m_pSession->protocol_data()->will_respond(buffer))
     {
         type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
     }
@@ -614,7 +614,7 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
 
             m_current_query = std::move(buffer);
 
-            if (mxs_mysql_command_will_respond(command))
+            if (m_pSession->protocol_data()->will_respond(m_current_query))
             {
                 m_expected_responses++;
                 mxb_assert(m_expected_responses == 1);

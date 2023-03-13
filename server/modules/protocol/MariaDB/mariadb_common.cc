@@ -430,6 +430,11 @@ std::string MYSQL_session::user_and_host() const
     return mxb::string_printf("'%s'@'%s'", auth_data->user.c_str(), remote.c_str());
 }
 
+bool MYSQL_session::will_respond(const GWBUF& buffer) const
+{
+    return mxs_mysql_command_will_respond(mxs_mysql_get_command(buffer));
+}
+
 bool MYSQL_session::is_trx_read_only() const
 {
     return trx_state & TrxState::TRX_READ_ONLY;

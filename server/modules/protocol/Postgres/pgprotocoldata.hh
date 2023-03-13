@@ -20,6 +20,7 @@ class PgProtocolData final : public MXS_SESSION::ProtocolData
 public:
     ~PgProtocolData();
 
+    bool will_respond(const GWBUF& buffer) const override;
     bool is_trx_starting() const override;
     bool is_trx_active() const override;
     bool is_trx_read_only() const override;
