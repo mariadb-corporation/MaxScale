@@ -288,11 +288,17 @@ private:
         LARGE_PACKET,           /**< Expecting the client to continue streaming a large packet */
         LARGE_HISTORY_PACKET,   /**< The client will continue writing a large command that is recorded */
         LOAD_DATA,              /**< Expecting the client to continue streaming CSV-data */
-        CHANGING_DB,            /**< Client is changing database, waiting server response */
-        CHANGING_ROLE,          /**< Client is changing role, waiting server response */
-        CHANGING_USER,          /**< Session is changing user, waiting server response */
+        CHANGING_STATE,         /**< Client/session is changing db, role or user, waiting server response */
         RECORD_HISTORY,         /**< Recording a command and the result it generated */
         COMPARE_RESPONSES,      /**< Call callbacks that compare the recorded responses */
+    };
+
+    enum class ChangingState
+    {
+        NONE,  /**< No state change in process */
+        DB,    /**< Client is changing database, waiting server response */
+        ROLE,  /**< Client is changing role, waiting server response */
+        USER,  /**< Session is changing user, waiting server response */
     };
 
     /** Data required during COM_CHANGE_USER. */
@@ -320,10 +326,11 @@ private:
     SSLState ssl_authenticate_check_status();
     int      ssl_authenticate_client();
 
-    State        m_state {State::HANDSHAKING};                  /**< Overall state */
-    HSState      m_handshake_state {HSState::INIT};             /**< Handshake state */
-    AuthState    m_auth_state {AuthState::FIND_ENTRY};          /**< Authentication state */
-    RoutingState m_routing_state {RoutingState::PACKET_START};  /**< Routing state */
+    State         m_state {State::HANDSHAKING};                  /**< Overall state */
+    HSState       m_handshake_state {HSState::INIT};             /**< Handshake state */
+    AuthState     m_auth_state {AuthState::FIND_ENTRY};          /**< Authentication state */
+    RoutingState  m_routing_state {RoutingState::PACKET_START};  /**< Routing state */
+    ChangingState m_changing_state {ChangingState::NONE};        /**< Changing state */
 
     mariadb::SClientAuth m_authenticator;   /**< Client authentication data */
     ChangeUserFields     m_change_user;     /**< User account to change to */
