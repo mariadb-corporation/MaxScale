@@ -74,28 +74,28 @@ public:
 
     Plugin& plugin() const override;
 
-    Result           parse(GWBUF* pStmt, uint32_t collect) const override;
+    Result           parse(GWBUF& stmt, uint32_t collect) const override;
 
     GWBUF            create_buffer(const std::string& statement) const override;
-    std::string_view get_created_table_name(GWBUF* pStmt) const override;
-    DatabaseNames    get_database_names(GWBUF* pStmt) const override;
-    void             get_field_info(GWBUF* pStmt,
+    std::string_view get_created_table_name(GWBUF& stmt) const override;
+    DatabaseNames    get_database_names(GWBUF& stmt) const override;
+    void             get_field_info(GWBUF& stmt,
                                     const FieldInfo** ppInfos,
                                     size_t* pnInfos) const override;
-    void             get_function_info(GWBUF* pStmt,
+    void             get_function_info(GWBUF& stmt,
                                        const FunctionInfo** infos,
                                        size_t* n_infos) const override;
-    KillInfo         get_kill_info(GWBUF* pStmt) const override;
-    qc_query_op_t    get_operation(GWBUF* pStmt) const override;
+    KillInfo         get_kill_info(GWBUF& stmt) const override;
+    qc_query_op_t    get_operation(GWBUF& stmt) const override;
     uint32_t         get_options() const override;
-    GWBUF*           get_preparable_stmt(GWBUF* pStmt) const override;
-    std::string_view get_prepare_name(GWBUF* pStmt) const override;
+    GWBUF*           get_preparable_stmt(GWBUF& stmt) const override;
+    std::string_view get_prepare_name(GWBUF& stmt) const override;
     uint64_t         get_server_version() const override;
     SqlMode          get_sql_mode() const override;
-    TableNames       get_table_names(GWBUF* pStmt) const override;
-    uint32_t         get_trx_type_mask(GWBUF* pStmt) const override;
-    uint32_t         get_type_mask(GWBUF* pStmt) const override;
-    bool             is_drop_table_query(GWBUF* pStmt) const override;
+    TableNames       get_table_names(GWBUF& stmt) const override;
+    uint32_t         get_trx_type_mask(GWBUF& stmt) const override;
+    uint32_t         get_type_mask(GWBUF& stmt) const override;
+    bool             is_drop_table_query(GWBUF& stmt) const override;
 
     bool set_options(uint32_t options) override;
     void set_sql_mode(SqlMode sql_mode) override;

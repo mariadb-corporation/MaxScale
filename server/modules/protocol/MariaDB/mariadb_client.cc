@@ -911,7 +911,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         const auto parser_type = use_parser
             ? mxs::Parser::ParseTrxUsing::DEFAULT : mxs::Parser::ParseTrxUsing::CUSTOM;
 
-        uint32_t type = parser()->get_trx_type_mask_using(packetbuf, parser_type);
+        uint32_t type = parser()->get_trx_type_mask_using(*packetbuf, parser_type);
 
         if (type & QUERY_TYPE_BEGIN_TRX)
         {
@@ -951,7 +951,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         else if (type & (QUERY_TYPE_READWRITE | QUERY_TYPE_READONLY))
         {
             // Currently only qc_sqlite should return these types
-            mxb_assert(use_parser && parser()->get_operation(packetbuf) == QUERY_OP_SET_TRANSACTION);
+            mxb_assert(use_parser && parser()->get_operation(*packetbuf) == QUERY_OP_SET_TRANSACTION);
             uint32_t mode = type & QUERY_TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
             m_session_data->next_trx_mode = mode;
 
@@ -1047,7 +1047,7 @@ MariaDBClientConnection::parse_kill_query_elems(const char* sql)
 
 void MariaDBClientConnection::handle_use_database(GWBUF& read_buffer)
 {
-    auto databases = parser()->get_database_names(&read_buffer);
+    auto databases = parser()->get_database_names(read_buffer);
     if (!databases.empty())
     {
         start_change_db(string(databases[0]));
@@ -1058,9 +1058,9 @@ bool MariaDBClientConnection::should_inspect_query(GWBUF& buffer) const
 {
     bool rval = true;
 
-    if (parser()->parse(&buffer, mxs::Parser::COLLECT_ALL) == mxs::Parser::Result::PARSED)
+    if (parser()->parse(buffer, mxs::Parser::COLLECT_ALL) == mxs::Parser::Result::PARSED)
     {
-        auto op = parser()->get_operation(&buffer);
+        auto op = parser()->get_operation(buffer);
 
         if (op != QUERY_OP_KILL && op != QUERY_OP_SET && op != QUERY_OP_CHANGE_DB)
         {

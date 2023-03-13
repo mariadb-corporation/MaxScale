@@ -52,7 +52,7 @@ bool is_packet_a_query(int packet_type)
 
 bool check_for_sp_call(const mxs::Parser& parser, GWBUF* buf, uint8_t packet_type)
 {
-    return packet_type == MXS_COM_QUERY && parser.get_operation(buf) == QUERY_OP_CALL;
+    return packet_type == MXS_COM_QUERY && parser.get_operation(*buf) == QUERY_OP_CALL;
 }
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
@@ -71,18 +71,18 @@ uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
         GWBUF stmt = buffer->deep_clone();
         stmt.data()[4] = MXS_COM_QUERY;
         stmt.set_classifier_data(nullptr);      // To ensure cloned buffer is parsed.
-        mxb_assert(parser.get_type_mask(&stmt) == (parser.get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT));
+        mxb_assert(parser.get_type_mask(stmt) == (parser.get_type_mask(*buffer) & ~QUERY_TYPE_PREPARE_STMT));
 #endif
 
-        type = parser.get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT;
+        type = parser.get_type_mask(*buffer) & ~QUERY_TYPE_PREPARE_STMT;
     }
     else
     {
-        GWBUF* stmt = parser.get_preparable_stmt(buffer);
+        GWBUF* stmt = parser.get_preparable_stmt(*buffer);
 
         if (stmt)
         {
-            type = parser.get_type_mask(stmt);
+            type = parser.get_type_mask(*stmt);
         }
     }
 
@@ -91,14 +91,14 @@ uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
 
 std::string get_text_ps_id(const mxs::Parser& parser, GWBUF* buffer)
 {
-    return std::string(parser.get_prepare_name(buffer));
+    return std::string(parser.get_prepare_name(*buffer));
 }
 
 bool relates_to_previous_stmt(const mxs::Parser& parser, GWBUF* pBuffer)
 {
     const mxs::Parser::FunctionInfo* infos = nullptr;
     size_t n_infos = 0;
-    parser.get_function_info(pBuffer, &infos, &n_infos);
+    parser.get_function_info(*pBuffer, &infos, &n_infos);
 
     for (size_t i = 0; i < n_infos; ++i)
     {
@@ -118,7 +118,7 @@ bool foreach_table(QueryClassifier& qc,
 {
     bool rval = true;
 
-    for (const auto& t : qc.parser().get_table_names(querybuf))
+    for (const auto& t : qc.parser().get_table_names(*querybuf))
     {
         std::string table;
 
@@ -174,7 +174,7 @@ public:
     void store(GWBUF* buffer, uint32_t id)
     {
         mxb_assert(mxs_mysql_get_command(*buffer) == MXS_COM_STMT_PREPARE
-                   || Parser::type_mask_contains(m_parser.get_type_mask(buffer),
+                   || Parser::type_mask_contains(m_parser.get_type_mask(*buffer),
                                                  QUERY_TYPE_PREPARE_NAMED_STMT));
 
         PreparedStmt stmt;
@@ -633,11 +633,11 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
         break;
 
     case MXS_COM_QUERY:
-        type = m_parser.get_type_mask(querybuf);
+        type = m_parser.get_type_mask(*querybuf);
         break;
 
     case MXS_COM_STMT_PREPARE:
-        type = m_parser.get_type_mask(querybuf);
+        type = m_parser.get_type_mask(*querybuf);
         type |= QUERY_TYPE_PREPARE_STMT;
         break;
 
@@ -667,7 +667,7 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
     {
         std::string table;
 
-        for (const auto& t : m_parser.get_table_names(querybuf))
+        for (const auto& t : m_parser.get_table_names(*querybuf))
         {
             if (t.db.empty())
             {
@@ -711,7 +711,7 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
 
 void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 {
-    if (m_parser.is_drop_table_query(querybuf))
+    if (m_parser.is_drop_table_query(*querybuf))
     {
         foreach_table(*this, m_pSession, querybuf, &QueryClassifier::delete_table);
     }
@@ -928,7 +928,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         {
             if (!in_read_only_trx
                 && command == MXS_COM_QUERY
-                && m_parser.get_operation(pBuffer) == QUERY_OP_EXECUTE)
+                && m_parser.get_operation(*pBuffer) == QUERY_OP_EXECUTE)
             {
                 if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, pBuffer)))
                 {

@@ -53,12 +53,12 @@ GWBUF* create_gwbuf(const char* zStmt)
 
 uint32_t get_default_trx_type_mask(GWBUF* pBuf)
 {
-    return pParser->get_trx_type_mask_using(pBuf, mxs::Parser::ParseTrxUsing::DEFAULT);
+    return pParser->get_trx_type_mask_using(*pBuf, mxs::Parser::ParseTrxUsing::DEFAULT);
 }
 
 uint32_t get_custom_trx_type_mask(GWBUF* pBuf)
 {
-    return pParser->get_trx_type_mask_using(pBuf, mxs::Parser::ParseTrxUsing::CUSTOM);
+    return pParser->get_trx_type_mask_using(*pBuf, mxs::Parser::ParseTrxUsing::CUSTOM);
 }
 }
 

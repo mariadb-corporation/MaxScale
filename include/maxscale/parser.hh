@@ -344,30 +344,30 @@ public:
 
     virtual Plugin& plugin() const = 0;
 
-    virtual Result           parse(GWBUF* pStmt, uint32_t collect) const = 0;
+    virtual Result           parse(GWBUF& stmt, uint32_t collect) const = 0;
     std::unique_ptr<json_t>  parse_to_resource(const char* zHost, const std::string& statement) const;
 
     virtual GWBUF            create_buffer(const std::string& statement) const = 0;
-    virtual std::string_view get_created_table_name(GWBUF* pStmt) const = 0;
-    virtual DatabaseNames    get_database_names(GWBUF* pStmt) const = 0;
-    virtual void             get_field_info(GWBUF* pStmt,
+    virtual std::string_view get_created_table_name(GWBUF& stmt) const = 0;
+    virtual DatabaseNames    get_database_names(GWBUF& stmt) const = 0;
+    virtual void             get_field_info(GWBUF& stmt,
                                             const FieldInfo** ppInfos,
                                             size_t* pnInfos) const = 0;
-    virtual void             get_function_info(GWBUF* pStmt,
+    virtual void             get_function_info(GWBUF& stmt,
                                                const FunctionInfo** ppInfos,
                                                size_t* pnInfos) const = 0;
-    virtual KillInfo         get_kill_info(GWBUF* pStmt) const = 0;
-    virtual qc_query_op_t    get_operation(GWBUF* pStmt) const = 0;
+    virtual KillInfo         get_kill_info(GWBUF& stmt) const = 0;
+    virtual qc_query_op_t    get_operation(GWBUF& stmt) const = 0;
     virtual uint32_t         get_options() const = 0;
-    virtual GWBUF*           get_preparable_stmt(GWBUF* pStmt) const = 0;
-    virtual std::string_view get_prepare_name(GWBUF* pStmt) const = 0;
+    virtual GWBUF*           get_preparable_stmt(GWBUF& stmt) const = 0;
+    virtual std::string_view get_prepare_name(GWBUF& stmt) const = 0;
     virtual uint64_t         get_server_version() const = 0;
     virtual SqlMode          get_sql_mode() const = 0;
-    virtual TableNames       get_table_names(GWBUF* pStmt) const = 0;
-    virtual uint32_t         get_trx_type_mask(GWBUF* pStmt) const = 0;
-    uint32_t                 get_trx_type_mask_using(GWBUF* pStmt, ParseTrxUsing use) const;
-    virtual uint32_t         get_type_mask(GWBUF* pStmt) const = 0;
-    virtual bool             is_drop_table_query(GWBUF* pStmt) const = 0;
+    virtual TableNames       get_table_names(GWBUF& stmt) const = 0;
+    virtual uint32_t         get_trx_type_mask(GWBUF& stmt) const = 0;
+    uint32_t                 get_trx_type_mask_using(GWBUF& stmt, ParseTrxUsing use) const;
+    virtual uint32_t         get_type_mask(GWBUF& stmt) const = 0;
+    virtual bool             is_drop_table_query(GWBUF& stmt) const = 0;
 
     virtual bool set_options(uint32_t options) = 0;
     virtual void set_server_version(uint64_t version) = 0;

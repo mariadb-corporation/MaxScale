@@ -58,7 +58,7 @@ int run(const mxs::Parser& parser, const char* zStatement, int n)
         GWBUF* pStatement = create_gwbuf(zStatement);
 
         maxbase::StopWatch sw;
-        mxs::Parser::Result rc = parser.parse(pStatement, mxs::Parser::COLLECT_ALL);
+        mxs::Parser::Result rc = parser.parse(*pStatement, mxs::Parser::COLLECT_ALL);
         diff += sw.split();
 
         gwbuf_free(pStatement);

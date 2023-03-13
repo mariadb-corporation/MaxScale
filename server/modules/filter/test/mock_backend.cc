@@ -304,7 +304,7 @@ bool ResultSetBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
 
 void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF&& statement)
 {
-    qc_query_op_t op = MariaDBParser::get().get_operation(&statement);
+    qc_query_op_t op = MariaDBParser::get().get_operation(statement);
 
     if (op == QUERY_OP_SELECT)
     {

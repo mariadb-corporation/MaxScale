@@ -1226,7 +1226,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
 
     if (mariadb::is_com_query_or_prepare(buffer))
     {
-        type_mask = session()->client_connection()->parser()->get_type_mask(&buffer);
+        type_mask = session()->client_connection()->parser()->get_type_mask(buffer);
     }
 
     auto is_read_only = !(type_mask & ~read_only_types);

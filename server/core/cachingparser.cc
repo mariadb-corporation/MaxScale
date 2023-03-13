@@ -77,10 +77,10 @@ bool use_cached_result()
     return this_unit.cache_max_size() != 0 && this_thread.use_cache;
 }
 
-bool has_not_been_parsed(GWBUF* pStmt)
+bool has_not_been_parsed(GWBUF& stmt)
 {
     // A GWBUF has not been parsed, if it does not have a parsing info object attached.
-    return pStmt->get_classifier_data_ptr() == nullptr;
+    return stmt.get_classifier_data_ptr() == nullptr;
 }
 
 /**
@@ -388,17 +388,17 @@ public:
 
     QCInfoCacheScope(mxs::Parser::Plugin* pPlugin, GWBUF* pStmt)
         : m_pPlugin(pPlugin)
-        , m_pStmt(pStmt)
+        , m_stmt(*pStmt)
     {
-        auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data_ptr());
+        auto pInfo = static_cast<QC_STMT_INFO*>(m_stmt.get_classifier_data_ptr());
         m_info_size_before = pInfo ? pInfo->size() : 0;
 
-        if (use_cached_result() && has_not_been_parsed(m_pStmt))
+        if (use_cached_result() && has_not_been_parsed(m_stmt))
         {
-            m_canonical = m_pStmt->get_canonical(); // Not from the QC, but from GWBUF.
+            m_canonical = m_stmt.get_canonical(); // Not from the QC, but from GWBUF.
 
             // TODO: Remove mariadb dependency.
-            if (mariadb::is_com_prepare(*pStmt))
+            if (mariadb::is_com_prepare(m_stmt))
             {
                 // P as in prepare, and appended so as not to cause a
                 // need for copying the data.
@@ -409,7 +409,7 @@ public:
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
-                m_pStmt->set_classifier_data(std::move(sInfo));
+                m_stmt.set_classifier_data(std::move(sInfo));
                 m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
             }
         }
@@ -421,7 +421,7 @@ public:
 
         if (!m_canonical.empty() && !exclude)
         {   // Cache for the first time
-            auto sInfo = m_pStmt->get_classifier_data();
+            auto sInfo = m_stmt.get_classifier_data();
             mxb_assert(sInfo);
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
@@ -433,7 +433,7 @@ public:
         }
         else if (!exclude)
         {   // The size might have changed
-            auto pInfo = m_pStmt->get_classifier_data_ptr();
+            auto pInfo = m_stmt.get_classifier_data_ptr();
             auto info_size_after = pInfo ? pInfo->size() : 0;
 
             if (m_info_size_before != info_size_after)
@@ -446,14 +446,14 @@ public:
 
 private:
     mxs::Parser::Plugin* m_pPlugin;
-    GWBUF*               m_pStmt;
+    GWBUF&               m_stmt;
     std::string          m_canonical;
     size_t               m_info_size_before;
 
     bool exclude_from_cache() const
     {
         constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
-        uint32_t type_mask = m_pPlugin->parser().get_type_mask(m_pStmt);
+        uint32_t type_mask = m_pPlugin->parser().get_type_mask(m_stmt);
         return (type_mask & is_autocommit) != 0;
     }
 };
@@ -725,11 +725,11 @@ mxs::Parser::Plugin& CachingParser::plugin() const
     return m_plugin;
 }
 
-Parser::Result CachingParser::parse(GWBUF* pStmt, uint32_t collect) const
+Parser::Result CachingParser::parse(GWBUF& stmt, uint32_t collect) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
 
-    return m_parser.parse(pStmt, collect);
+    return m_parser.parse(stmt, collect);
 }
 
 GWBUF CachingParser::create_buffer(const std::string& statement) const
@@ -737,44 +737,44 @@ GWBUF CachingParser::create_buffer(const std::string& statement) const
     return m_parser.create_buffer(statement);
 }
 
-std::string_view CachingParser::get_created_table_name(GWBUF* query) const
+std::string_view CachingParser::get_created_table_name(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, query);
-    return m_parser.get_created_table_name(query);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_created_table_name(stmt);
 }
 
-CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF* pStmt) const
+CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    return m_parser.get_database_names(pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_database_names(stmt);
 }
 
-void CachingParser::get_field_info(GWBUF* pStmt,
+void CachingParser::get_field_info(GWBUF& stmt,
                                    const FieldInfo** ppInfos,
                                    size_t* pnInfos) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    m_parser.get_field_info(pStmt, ppInfos, pnInfos);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    m_parser.get_field_info(stmt, ppInfos, pnInfos);
 }
 
-void CachingParser::get_function_info(GWBUF* pStmt,
+void CachingParser::get_function_info(GWBUF& stmt,
                                       const FunctionInfo** ppInfos,
                                       size_t* pnInfos) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    m_parser.get_function_info(pStmt, ppInfos, pnInfos);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    m_parser.get_function_info(stmt, ppInfos, pnInfos);
 }
 
-Parser::KillInfo CachingParser::get_kill_info(GWBUF* query) const
+Parser::KillInfo CachingParser::get_kill_info(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, query);
-    return m_parser.get_kill_info(query);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_kill_info(stmt);
 }
 
-qc_query_op_t CachingParser::get_operation(GWBUF* pStmt) const
+qc_query_op_t CachingParser::get_operation(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    return m_parser.get_operation(pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_operation(stmt);
 }
 
 uint32_t CachingParser::get_options() const
@@ -782,16 +782,16 @@ uint32_t CachingParser::get_options() const
     return m_parser.get_options();
 }
 
-GWBUF* CachingParser::get_preparable_stmt(GWBUF* pStmt) const
+GWBUF* CachingParser::get_preparable_stmt(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    return m_parser.get_preparable_stmt(pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_preparable_stmt(stmt);
 }
 
-std::string_view CachingParser::get_prepare_name(GWBUF* pStmt) const
+std::string_view CachingParser::get_prepare_name(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    return m_parser.get_prepare_name(pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_prepare_name(stmt);
 }
 
 uint64_t CachingParser::get_server_version() const
@@ -804,27 +804,27 @@ Parser::SqlMode CachingParser::get_sql_mode() const
     return m_parser.get_sql_mode();
 }
 
-CachingParser::TableNames CachingParser::get_table_names(GWBUF* pStmt) const
+CachingParser::TableNames CachingParser::get_table_names(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    return m_parser.get_table_names(pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_table_names(stmt);
 }
 
-uint32_t CachingParser::get_trx_type_mask(GWBUF* pStmt) const
+uint32_t CachingParser::get_trx_type_mask(GWBUF& stmt) const
 {
-    return m_parser.get_trx_type_mask(pStmt);
+    return m_parser.get_trx_type_mask(stmt);
 }
 
-uint32_t CachingParser::get_type_mask(GWBUF* pStmt) const
+uint32_t CachingParser::get_type_mask(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    return m_parser.get_type_mask(pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.get_type_mask(stmt);
 }
 
-bool CachingParser::is_drop_table_query(GWBUF* pStmt) const
+bool CachingParser::is_drop_table_query(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, pStmt);
-    return m_parser.is_drop_table_query(pStmt);
+    QCInfoCacheScope scope(&m_plugin, &stmt);
+    return m_parser.is_drop_table_query(stmt);
 }
 
 bool CachingParser::set_options(uint32_t options)

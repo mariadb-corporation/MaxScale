@@ -133,12 +133,12 @@ static void inspect_query(const Parser& parser,
         break;
 
     case MXS_COM_QUERY:
-        *type = parser.get_type_mask(bufptr);
-        *op = parser.get_operation(bufptr);
+        *type = parser.get_type_mask(*bufptr);
+        *op = parser.get_operation(*bufptr);
         break;
 
     case MXS_COM_STMT_PREPARE:
-        *type = parser.get_type_mask(bufptr);
+        *type = parser.get_type_mask(*bufptr);
         *type |= QUERY_TYPE_PREPARE_STMT;
         break;
 
@@ -616,7 +616,7 @@ std::pair<bool, std::string> extract_database(const Parser& parser, const GWBUF&
     std::string rval;
     uint8_t command = mxs_mysql_get_command(buf);
 
-    if (command == MXS_COM_QUERY && parser.get_operation(const_cast<GWBUF*>(&buf)) == QUERY_OP_CHANGE_DB)
+    if (command == MXS_COM_QUERY && parser.get_operation(const_cast<GWBUF&>(buf)) == QUERY_OP_CHANGE_DB)
     {
         auto tokens = mxb::strtok(buf.get_sql(), "` \n\t;");
 
@@ -1235,7 +1235,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t
 
     if (command == MXS_COM_QUERY)
     {
-        op = parser().get_operation(const_cast<GWBUF*>(&buffer));
+        op = parser().get_operation(const_cast<GWBUF&>(buffer));
         rval = get_query_target(buffer);
     }
 
@@ -1376,7 +1376,7 @@ void SchemaRouterSession::send_databases()
 
 mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
 {
-    std::vector<Parser::TableName> table_names = parser().get_table_names(const_cast<GWBUF*>(&buffer));
+    std::vector<Parser::TableName> table_names = parser().get_table_names(const_cast<GWBUF&>(buffer));
 
     // We get Parser::TableNames, but as we need qualified names we need to
     // copy them over to a vector<string>.
@@ -1405,7 +1405,7 @@ mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
     {
         MXB_INFO("Query targets table on server '%s'", rval->name());
     }
-    else if ((rval = get_location(parser().get_database_names(const_cast<GWBUF*>(&buffer)))))
+    else if ((rval = get_location(parser().get_database_names(const_cast<GWBUF&>(buffer)))))
     {
         MXB_INFO("Query targets database on server '%s'", rval->name());
     }
@@ -1423,12 +1423,12 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     {
         // If pStmt is null, the PREPARE was malformed. In that case it can be routed to any backend to get
         // a proper error response. Also returns null if preparing from a variable. This is a limitation.
-        GWBUF* pStmt = parser().get_preparable_stmt(bufptr);
+        GWBUF* pStmt = parser().get_preparable_stmt(*bufptr);
         if (pStmt)
         {
-            std::string_view stmt = parser().get_prepare_name(bufptr);
+            std::string_view stmt = parser().get_prepare_name(*bufptr);
 
-            if ((rval = get_location(parser().get_table_names(pStmt))))
+            if ((rval = get_location(parser().get_table_names(*pStmt))))
             {
                 MXB_INFO("PREPARING NAMED %.*s ON SERVER %s", (int)stmt.length(), stmt.data(), rval->name());
                 m_shard.add_statement(stmt, rval);
@@ -1437,7 +1437,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     }
     else if (op == QUERY_OP_EXECUTE)
     {
-        std::string_view stmt = parser().get_prepare_name(bufptr);
+        std::string_view stmt = parser().get_prepare_name(*bufptr);
         mxs::Target* ps_target = m_shard.get_statement(stmt);
         if (ps_target)
         {
@@ -1448,7 +1448,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     }
     else if (Parser::type_mask_contains(qtype, QUERY_TYPE_DEALLOC_PREPARE))
     {
-        std::string_view stmt = parser().get_prepare_name(bufptr);
+        std::string_view stmt = parser().get_prepare_name(*bufptr);
         if ((rval = m_shard.get_statement(stmt)))
         {
             MXB_INFO("Closing named statement %.*s on server %s",
@@ -1458,7 +1458,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     }
     else if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT))
     {
-        rval = get_location(parser().get_table_names(bufptr));
+        rval = get_location(parser().get_table_names(*bufptr));
 
         if (rval)
         {

@@ -54,21 +54,21 @@ public:
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_pPlugin->parser().get_operation(&buffer);
+        return m_pPlugin->parser().get_operation(buffer);
     }
 
     uint32_t get_type(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_pPlugin->parser().get_type_mask(&buffer);
+        return m_pPlugin->parser().get_type_mask(buffer);
     }
 
     mxs::Parser::KillInfo get_kill(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_pPlugin->parser().get_kill_info(&buffer);
+        return m_pPlugin->parser().get_kill_info(buffer);
     }
 
 private:

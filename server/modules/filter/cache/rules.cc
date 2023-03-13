@@ -308,7 +308,7 @@ bool CacheRuleValue::matches_database(const mxs::Parser& parser,
     bool fullnames = true;
 
     // TODO: Make qc const-correct.
-    for (const auto& name : parser.get_table_names((GWBUF*)pQuery))
+    for (const auto& name : parser.get_table_names(const_cast<GWBUF&>(*pQuery)))
     {
         if (!name.db.empty())
         {
@@ -502,7 +502,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
 
     std::string_view default_database;
 
-    auto databases = parser.get_database_names((GWBUF*)pQuery);
+    auto databases = parser.get_database_names(const_cast<GWBUF&>(*pQuery));
 
     if (databases.empty())
     {
@@ -522,7 +522,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
         default_database = databases[0];
     }
 
-    auto tables = parser.get_table_names((GWBUF*)pQuery);
+    auto tables = parser.get_table_names(const_cast<GWBUF&>(*pQuery));
 
     std::string_view default_table;
 
@@ -536,7 +536,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
     const Parser::FieldInfo* infos;
     size_t n_infos;
 
-    parser.get_field_info((GWBUF*)pQuery, &infos, &n_infos);
+    parser.get_field_info(const_cast<GWBUF&>(*pQuery), &infos, &n_infos);
 
     bool matches = false;
 
@@ -633,7 +633,7 @@ bool CacheRuleCTD::matches_table(const mxs::Parser& parser,
     bool matches = false;
     bool fullnames = !m_database.empty();
 
-    for (const auto& name : parser.get_table_names((GWBUF*)pQuery))
+    for (const auto& name : parser.get_table_names(const_cast<GWBUF&>(*pQuery)))
     {
         std::string_view database;
         std::string_view table;
@@ -777,7 +777,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
     std::string_view default_database;
 
     int n_databases;
-    auto databases = parser.get_database_names((GWBUF*)pQuery);
+    auto databases = parser.get_database_names(const_cast<GWBUF&>(*pQuery));
 
     if (databases.empty())
     {
@@ -799,7 +799,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
 
     size_t default_database_len = default_database.length();
 
-    auto tables = parser.get_table_names((GWBUF*)pQuery);
+    auto tables = parser.get_table_names(const_cast<GWBUF&>(*pQuery));
 
     std::string_view default_table;
 
@@ -815,7 +815,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
     const Parser::FieldInfo* infos;
     size_t n_infos;
 
-    parser.get_field_info((GWBUF*)pQuery, &infos, &n_infos);
+    parser.get_field_info(const_cast<GWBUF&>(*pQuery), &infos, &n_infos);
 
     bool matches = false;
 
@@ -886,7 +886,7 @@ bool CacheRuleRegex::matches_table(const mxs::Parser& parser,
 
     bool matches = false;
 
-    auto names = parser.get_table_names((GWBUF*)pQuery);
+    auto names = parser.get_table_names(const_cast<GWBUF&>(*pQuery));
 
     if (!names.empty())
     {

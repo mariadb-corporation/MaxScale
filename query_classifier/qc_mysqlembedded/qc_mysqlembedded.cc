@@ -4090,11 +4090,11 @@ class MysqlParser : public Parser
 public:
     Parser::Plugin& plugin() const override;
 
-    Result parse(GWBUF* pStmt, uint32_t collect) const override
+    Result parse(GWBUF& stmt, uint32_t collect) const override
     {
         Result result = Parser::Result::INVALID;
 
-        qc_mysql_parse(pStmt, collect, &result);
+        qc_mysql_parse(&stmt, collect, &result);
 
         return result;
     }
@@ -4104,52 +4104,52 @@ public:
         return mariadb::create_query(statement);
     }
 
-    std::string_view get_created_table_name(GWBUF* pStmt) const override
+    std::string_view get_created_table_name(GWBUF& stmt) const override
     {
         std::string_view name;
 
-        qc_mysql_get_created_table_name(pStmt, &name);
+        qc_mysql_get_created_table_name(&stmt, &name);
 
         return name;
     }
 
-    Parser::DatabaseNames get_database_names(GWBUF* pStmt) const override
+    Parser::DatabaseNames get_database_names(GWBUF& stmt) const override
     {
         Parser::DatabaseNames names;
 
-        qc_mysql_get_database_names(pStmt, &names);
+        qc_mysql_get_database_names(&stmt, &names);
 
         return names;
     }
 
-    void get_field_info(GWBUF* pStmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
+    void get_field_info(GWBUF& stmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
-        qc_mysql_get_field_info(pStmt, ppInfos, &n);
+        qc_mysql_get_field_info(&stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    void get_function_info(GWBUF* pStmt, const Parser::FunctionInfo** ppInfos, size_t* pnInfos) const override
+    void get_function_info(GWBUF& stmt, const Parser::FunctionInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
-        qc_mysql_get_function_info(pStmt, ppInfos, &n);
+        qc_mysql_get_function_info(&stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    Parser::KillInfo get_kill_info(GWBUF* pStmt) const override
+    Parser::KillInfo get_kill_info(GWBUF& stmt) const override
     {
         Parser::KillInfo kill;
 
-        qc_mysql_get_kill_info(pStmt, &kill);
+        qc_mysql_get_kill_info(&stmt, &kill);
 
         return kill;
     }
 
-    qc_query_op_t get_operation(GWBUF* pStmt) const override
+    qc_query_op_t get_operation(GWBUF& stmt) const override
     {
         int32_t op = 0;
 
-        qc_mysql_get_operation(pStmt, &op);
+        qc_mysql_get_operation(&stmt, &op);
 
         return static_cast<qc_query_op_t>(op);
     }
@@ -4159,20 +4159,20 @@ public:
         return qc_mysql_get_options();
     }
 
-    GWBUF* get_preparable_stmt(GWBUF* pStmt) const override
+    GWBUF* get_preparable_stmt(GWBUF& stmt) const override
     {
         GWBUF* pPreparable_stmt = nullptr;
 
-        qc_mysql_get_preparable_stmt(pStmt, &pPreparable_stmt);
+        qc_mysql_get_preparable_stmt(&stmt, &pPreparable_stmt);
 
         return pPreparable_stmt;
     }
 
-    std::string_view get_prepare_name(GWBUF* pStmt) const override
+    std::string_view get_prepare_name(GWBUF& stmt) const override
     {
         std::string_view name;
 
-        qc_mysql_get_prepare_name(pStmt, &name);
+        qc_mysql_get_prepare_name(&stmt, &name);
 
         return name;
     }
@@ -4194,35 +4194,35 @@ public:
         return sql_mode;
     }
 
-    Parser::TableNames get_table_names(GWBUF* pStmt) const override
+    Parser::TableNames get_table_names(GWBUF& stmt) const override
     {
         Parser::TableNames names;
 
-        qc_mysql_get_table_names(pStmt, &names);
+        qc_mysql_get_table_names(&stmt, &names);
 
         return names;
     }
 
-    uint32_t get_trx_type_mask(GWBUF* pStmt) const override
+    uint32_t get_trx_type_mask(GWBUF& stmt) const override
     {
         maxscale::TrxBoundaryParser parser;
-        return parser.type_mask_of(pStmt);
+        return parser.type_mask_of(&stmt);
     }
 
-    uint32_t get_type_mask(GWBUF* pStmt) const override
+    uint32_t get_type_mask(GWBUF& stmt) const override
     {
         uint32_t type_mask = 0;
 
-        qc_mysql_get_type_mask(pStmt, &type_mask);
+        qc_mysql_get_type_mask(&stmt, &type_mask);
 
         return type_mask;
     }
 
-    bool is_drop_table_query(GWBUF* pStmt) const override
+    bool is_drop_table_query(GWBUF& stmt) const override
     {
         int32_t is_drop_table = false;
 
-        qc_mysql_is_drop_table_query(pStmt, &is_drop_table);
+        qc_mysql_is_drop_table_query(&stmt, &is_drop_table);
 
         return is_drop_table;
     }

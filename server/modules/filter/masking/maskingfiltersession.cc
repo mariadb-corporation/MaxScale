@@ -150,7 +150,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     const char* zHost = m_pSession->client_remote().c_str();
     bool acceptable = true;
 
-    if (Parser::type_mask_contains(parser().get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
+    if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), QUERY_TYPE_USERVAR_WRITE))
     {
         if (m_config.check_user_variables)
         {
@@ -162,7 +162,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     }
     else
     {
-        qc_query_op_t op = parser().get_operation(pPacket);
+        qc_query_op_t op = parser().get_operation(*pPacket);
 
         if (op == QUERY_OP_SELECT)
         {
@@ -206,8 +206,8 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     uint32_t option = m_config.treat_string_arg_as_field ? Parser::OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(parser(), option);
 
-    auto parse_result = parser().parse(pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
-    auto op = parser().get_operation(pPacket);
+    auto parse_result = parser().parse(*pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
+    auto op = parser().get_operation(*pPacket);
 
     if (op == QUERY_OP_EXPLAIN)
     {
@@ -215,9 +215,9 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     }
     else if (parse_result == Parser::Result::PARSED || !m_config.require_fully_parsed)
     {
-        if (Parser::type_mask_contains(parser().get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
+        if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
-            GWBUF* pP = parser().get_preparable_stmt(pPacket);
+            GWBUF* pP = parser().get_preparable_stmt(*pPacket);
 
             if (pP)
             {
@@ -254,8 +254,8 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
     uint32_t option = m_config.treat_string_arg_as_field ? Parser::OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(parser(), option);
 
-    auto parse_result = parser().parse(pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
-    auto op = parser().get_operation(pPacket);
+    auto parse_result = parser().parse(*pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
+    auto op = parser().get_operation(*pPacket);
 
     if (op == QUERY_OP_EXPLAIN)
     {
@@ -645,7 +645,7 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
     const Parser::FunctionInfo* pInfos;
     size_t nInfos;
 
-    parser().get_function_info(pPacket, &pInfos, &nInfos);
+    parser().get_function_info(*pPacket, &pInfos, &nInfos);
 
     const Parser::FunctionInfo* begin = pInfos;
     const Parser::FunctionInfo* end = begin + nInfos;
@@ -668,7 +668,7 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
 
 bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    mxb_assert(Parser::type_mask_contains(parser().get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE));
+    mxb_assert(Parser::type_mask_contains(parser().get_type_mask(*pPacket), QUERY_TYPE_USERVAR_WRITE));
 
     bool is_defined = false;
 
@@ -691,7 +691,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     const Parser::FieldInfo* pInfos;
     size_t nInfos;
 
-    parser().get_field_info(pPacket, &pInfos, &nInfos);
+    parser().get_field_info(*pPacket, &pInfos, &nInfos);
 
     const Parser::FieldInfo* begin = pInfos;
     const Parser::FieldInfo* end = begin + nInfos;
@@ -722,7 +722,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
 bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    mxb_assert(parser().get_operation(pPacket) == QUERY_OP_SELECT);
+    mxb_assert(parser().get_operation(*pPacket) == QUERY_OP_SELECT);
     mxb_assert(m_config.check_unions || m_config.check_subqueries);
 
     bool is_used = false;
@@ -761,7 +761,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
     const Parser::FieldInfo* pInfos;
     size_t nInfos;
 
-    parser().get_field_info(pPacket, &pInfos, &nInfos);
+    parser().get_field_info(*pPacket, &pInfos, &nInfos);
 
     const Parser::FieldInfo* begin = pInfos;
     const Parser::FieldInfo* end = begin + nInfos;

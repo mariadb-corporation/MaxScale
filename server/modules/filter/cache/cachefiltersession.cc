@@ -116,7 +116,7 @@ bool uses_non_cacheable_function(const Parser& parser, GWBUF* pPacket)
     const Parser::FunctionInfo* pInfo;
     size_t nInfos;
 
-    parser.get_function_info(pPacket, &pInfo, &nInfos);
+    parser.get_function_info(*pPacket, &pInfo, &nInfos);
 
     const Parser::FunctionInfo* pEnd = pInfo + nInfos;
 
@@ -137,7 +137,7 @@ bool uses_non_cacheable_variable(const Parser& parser, GWBUF* pPacket)
     const Parser::FieldInfo* pInfo;
     size_t nInfos;
 
-    parser.get_field_info(pPacket, &pInfo, &nInfos);
+    parser.get_field_info(*pPacket, &pInfo, &nInfos);
 
     const Parser::FieldInfo* pEnd = pInfo + nInfos;
 
@@ -828,7 +828,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
     if (m_use || m_populate)
     {
-        uint32_t type_mask = parser().get_trx_type_mask(pPacket); // Note, only trx-related type mask
+        uint32_t type_mask = parser().get_trx_type_mask(*pPacket); // Note, only trx-related type mask
 
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
@@ -924,7 +924,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     {
                         // Note that the type mask must be obtained a new. A few lines
                         // above we only got the transaction state related type mask.
-                        type_mask = parser().get_type_mask(pPacket);
+                        type_mask = parser().get_type_mask(*pPacket);
 
                         if (Parser::type_mask_contains(type_mask, QUERY_TYPE_USERVAR_READ))
                         {
@@ -958,7 +958,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             m_invalidate_now = true;
                         }
 
-                        Parser::Result result = parser().parse(pPacket, Parser::COLLECT_TABLES);
+                        Parser::Result result = parser().parse(*pPacket, Parser::COLLECT_TABLES);
 
                         if (result == Parser::Result::PARSED)
                         {
@@ -1077,7 +1077,7 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
 {
     // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
-    std::vector<mxs::Parser::TableName> names = parser().get_table_names(pPacket);
+    std::vector<mxs::Parser::TableName> names = parser().get_table_names(*pPacket);
 
     for (auto& name : names)
     {
@@ -1642,7 +1642,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
 {
     if (m_invalidate && m_state == CACHE_EXPECTING_RESPONSE)
     {
-        Parser::Result parse_result = parser().parse(pPacket, Parser::COLLECT_TABLES);
+        Parser::Result parse_result = parser().parse(*pPacket, Parser::COLLECT_TABLES);
 
         if (parse_result == Parser::Result::PARSED)
         {

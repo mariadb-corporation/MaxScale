@@ -83,8 +83,8 @@ public:
 
         GWBUF* pStmt = create_gwbuf(zStmt);
 
-        uint32_t type_mask_default = m_parser.get_trx_type_mask_using(pStmt, Parser::ParseTrxUsing::DEFAULT);
-        uint32_t type_mask_custom = m_parser.get_trx_type_mask_using(pStmt, Parser::ParseTrxUsing::CUSTOM);
+        uint32_t type_mask_default = m_parser.get_trx_type_mask_using(*pStmt, Parser::ParseTrxUsing::DEFAULT);
+        uint32_t type_mask_custom = m_parser.get_trx_type_mask_using(*pStmt, Parser::ParseTrxUsing::CUSTOM);
 
         gwbuf_free(pStmt);
 

@@ -94,7 +94,7 @@ static int lua_get_type_mask(lua_State* state)
 
     if (data.buffer)
     {
-        uint32_t type = data.session->client_connection()->parser()->get_type_mask(data.buffer);
+        uint32_t type = data.session->client_connection()->parser()->get_type_mask(*data.buffer);
         std::string mask = mxs::Parser::type_mask_to_string(type);
         lua_pushstring(state, mask.c_str());
     }
@@ -113,7 +113,7 @@ static int lua_get_operation(lua_State* state)
 
     if (data.buffer)
     {
-        qc_query_op_t op = data.session->client_connection()->parser()->get_operation(data.buffer);
+        qc_query_op_t op = data.session->client_connection()->parser()->get_operation(*data.buffer);
         opstring = mxs::Parser::op_to_string(op);
     }
 

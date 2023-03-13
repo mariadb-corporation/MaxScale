@@ -485,7 +485,7 @@ void RRRouterSession::decide_target(const GWBUF& querybuf, mxs::Endpoint*& targe
             /* Use the inbuilt query_classifier to get information about
              * the query. The default qc works with mySQL-queries.
              */
-            query_types = parser().get_type_mask(const_cast<GWBUF*>(&querybuf));
+            query_types = parser().get_type_mask(const_cast<GWBUF&>(querybuf));
 
 #ifdef DEBUG_RRROUTER
             RR_DEBUG("QUERY: %s", querybuf.get_sql().c_str());

@@ -49,15 +49,15 @@ int main()
 
     const char s[] = "SELECT @@global.max_allowed_packet";
 
-    GWBUF* stmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
+    GWBUF* pStmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
 
     // In 2.0.1 this crashed due to is_submitted_query() in qc_sqlite.c
     // being of the opinion that the statement was not the one to be
     // classified and hence an alien parse-tree being passed to sqlite3's
     // code generator.
-    parser.parse(stmt, mxs::Parser::COLLECT_ALL);
+    parser.parse(*pStmt, mxs::Parser::COLLECT_ALL);
 
-    gwbuf_free(stmt);
+    gwbuf_free(pStmt);
 
     return EXIT_SUCCESS;
 }

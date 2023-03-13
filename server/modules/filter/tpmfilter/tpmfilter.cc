@@ -298,7 +298,7 @@ bool TpmSession::routeQuery(GWBUF&& buffer)
 
         if (!sql.empty())
         {
-            auto mask = parser().get_type_mask(queue);
+            auto mask = parser().get_type_mask(*queue);
 
             if (mask & QUERY_TYPE_COMMIT)
             {

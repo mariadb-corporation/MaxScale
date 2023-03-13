@@ -297,9 +297,9 @@ static void update_time(timespec* pResult, timespec& start, timespec& finish)
 }
 
 bool compare_parse(Parser::Plugin* pPlugin1,
-                   GWBUF* pCopy1,
+                   GWBUF& copy1,
                    Parser::Plugin* pPlugin2,
-                   GWBUF* pCopy2)
+                   GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_parse                 : ";
@@ -308,12 +308,12 @@ bool compare_parse(Parser::Plugin* pPlugin1,
     struct timespec finish;
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    Parser::Result rv1 = pPlugin1->parser().parse(pCopy1, Parser::COLLECT_ESSENTIALS);
+    Parser::Result rv1 = pPlugin1->parser().parse(copy1, Parser::COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time1, start, finish);
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    Parser::Result rv2 = pPlugin2->parser().parse(pCopy2, Parser::COLLECT_ESSENTIALS);
+    Parser::Result rv2 = pPlugin2->parser().parse(copy2, Parser::COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time2, start, finish);
 
@@ -349,15 +349,15 @@ bool compare_parse(Parser::Plugin* pPlugin1,
 }
 
 bool compare_get_type(Parser::Plugin* pPlugin1,
-                      GWBUF* pCopy1,
+                      GWBUF& copy1,
                       Parser::Plugin* pPlugin2,
-                      GWBUF* pCopy2)
+                      GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_type_mask         : ";
 
-    uint32_t rv1 = pPlugin1->parser().get_type_mask(pCopy1);
-    uint32_t rv2 = pPlugin2->parser().get_type_mask(pCopy2);
+    uint32_t rv1 = pPlugin1->parser().get_type_mask(copy1);
+    uint32_t rv2 = pPlugin2->parser().get_type_mask(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -413,15 +413,15 @@ bool compare_get_type(Parser::Plugin* pPlugin1,
 }
 
 bool compare_get_operation(Parser::Plugin* pPlugin1,
-                           GWBUF* pCopy1,
+                           GWBUF& copy1,
                            Parser::Plugin* pPlugin2,
-                           GWBUF* pCopy2)
+                           GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_operation         : ";
 
-    int32_t rv1 = pPlugin1->parser().get_operation(pCopy1);
-    int32_t rv2 = pPlugin2->parser().get_operation(pCopy2);
+    int32_t rv1 = pPlugin1->parser().get_operation(copy1);
+    int32_t rv2 = pPlugin2->parser().get_operation(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -445,15 +445,15 @@ bool compare_get_operation(Parser::Plugin* pPlugin1,
 }
 
 bool compare_get_created_table_name(Parser::Plugin* pPlugin1,
-                                    GWBUF* pCopy1,
+                                    GWBUF& copy1,
                                     Parser::Plugin* pPlugin2,
-                                    GWBUF* pCopy2)
+                                    GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_created_table_name: ";
 
-    std::string_view rv1 = pPlugin1->parser().get_created_table_name(pCopy1);
-    std::string_view rv2 = pPlugin2->parser().get_created_table_name(pCopy2);
+    std::string_view rv1 = pPlugin1->parser().get_created_table_name(copy1);
+    std::string_view rv2 = pPlugin2->parser().get_created_table_name(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -474,15 +474,15 @@ bool compare_get_created_table_name(Parser::Plugin* pPlugin1,
 }
 
 bool compare_is_drop_table_query(Parser::Plugin* pPlugin1,
-                                 GWBUF* pCopy1,
+                                 GWBUF& copy1,
                                  Parser::Plugin* pPlugin2,
-                                 GWBUF* pCopy2)
+                                 GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_is_drop_table_query   : ";
 
-    bool rv1 = pPlugin1->parser().is_drop_table_query(pCopy1);
-    bool rv2 = pPlugin2->parser().is_drop_table_query(pCopy2);
+    bool rv1 = pPlugin1->parser().is_drop_table_query(copy1);
+    bool rv2 = pPlugin2->parser().is_drop_table_query(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -503,9 +503,9 @@ bool compare_is_drop_table_query(Parser::Plugin* pPlugin1,
 }
 
 bool compare_get_table_names(Parser::Plugin* pPlugin1,
-                             GWBUF* pCopy1,
+                             GWBUF& copy1,
                              Parser::Plugin* pPlugin2,
-                             GWBUF* pCopy2)
+                             GWBUF& copy2)
 {
     bool success = false;
     const char* HEADING;
@@ -515,8 +515,8 @@ bool compare_get_table_names(Parser::Plugin* pPlugin1,
     int n1 = 0;
     int n2 = 0;
 
-    std::vector<Parser::TableName> rv1 = pPlugin1->parser().get_table_names(pCopy1);
-    std::vector<Parser::TableName> rv2 = pPlugin2->parser().get_table_names(pCopy2);
+    std::vector<Parser::TableName> rv1 = pPlugin1->parser().get_table_names(copy1);
+    std::vector<Parser::TableName> rv2 = pPlugin2->parser().get_table_names(copy2);
 
     // The order need not be the same, so let's compare a set.
     std::set<Parser::TableName> names1(rv1.begin(), rv1.end());
@@ -607,15 +607,15 @@ ostream& operator<<(ostream& o, const std::set<string>& s)
 }
 
 bool compare_get_database_names(Parser::Plugin* pPlugin1,
-                                GWBUF* pCopy1,
+                                GWBUF& copy1,
                                 Parser::Plugin* pPlugin2,
-                                GWBUF* pCopy2)
+                                GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_database_names    : ";
 
-    std::vector<std::string_view> rv1 = pPlugin1->parser().get_database_names(pCopy1);
-    std::vector<std::string_view> rv2 = pPlugin2->parser().get_database_names(pCopy2);
+    std::vector<std::string_view> rv1 = pPlugin1->parser().get_database_names(copy1);
+    std::vector<std::string_view> rv2 = pPlugin2->parser().get_database_names(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -636,15 +636,15 @@ bool compare_get_database_names(Parser::Plugin* pPlugin1,
 }
 
 bool compare_get_prepare_name(Parser::Plugin* pPlugin1,
-                              GWBUF* pCopy1,
+                              GWBUF& copy1,
                               Parser::Plugin* pPlugin2,
-                              GWBUF* pCopy2)
+                              GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_prepare_name      : ";
 
-    std::string_view rv1 = pPlugin1->parser().get_prepare_name(pCopy1);
-    std::string_view rv2 = pPlugin2->parser().get_prepare_name(pCopy2);
+    std::string_view rv1 = pPlugin1->parser().get_prepare_name(copy1);
+    std::string_view rv2 = pPlugin2->parser().get_prepare_name(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -827,9 +827,9 @@ bool operator==(const QcFieldInfo& lhs, const QcFieldInfo& rhs)
 }
 
 bool compare_get_field_info(Parser::Plugin* pPlugin1,
-                            GWBUF* pCopy1,
+                            GWBUF& copy1,
                             Parser::Plugin* pPlugin2,
-                            GWBUF* pCopy2)
+                            GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_field_info        : ";
@@ -839,8 +839,8 @@ bool compare_get_field_info(Parser::Plugin* pPlugin1,
     size_t n_infos1;
     size_t n_infos2;
 
-    pPlugin1->parser().get_field_info(pCopy1, &infos1, &n_infos1);
-    pPlugin2->parser().get_field_info(pCopy2, &infos2, &n_infos2);
+    pPlugin1->parser().get_field_info(copy1, &infos1, &n_infos1);
+    pPlugin2->parser().get_field_info(copy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1065,9 +1065,9 @@ void collect_missing_function_names(const std::set<QcFunctionInfo>& one,
 }
 
 bool compare_get_function_info(Parser::Plugin* pPlugin1,
-                               GWBUF* pCopy1,
+                               GWBUF& copy1,
                                Parser::Plugin* pPlugin2,
-                               GWBUF* pCopy2)
+                               GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_function_info     : ";
@@ -1077,8 +1077,8 @@ bool compare_get_function_info(Parser::Plugin* pPlugin1,
     size_t n_infos1;
     size_t n_infos2;
 
-    pPlugin1->parser().get_function_info(pCopy1, &infos1, &n_infos1);
-    pPlugin2->parser().get_function_info(pCopy2, &infos2, &n_infos2);
+    pPlugin1->parser().get_function_info(copy1, &infos1, &n_infos1);
+    pPlugin2->parser().get_function_info(copy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1170,22 +1170,22 @@ bool compare_get_function_info(Parser::Plugin* pPlugin1,
 
 
 bool compare(Parser::Plugin* pPlugin1,
-             GWBUF* pBuf1,
+             GWBUF& copy1,
              Parser::Plugin* pPlugin2,
-             GWBUF* pBuf2)
+             GWBUF& copy2)
 {
     int errors = 0;
 
-    errors += !compare_parse(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_type(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_operation(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_created_table_name(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_is_drop_table_query(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_table_names(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_database_names(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_prepare_name(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_field_info(pPlugin1, pBuf1, pPlugin2, pBuf2);
-    errors += !compare_get_function_info(pPlugin1, pBuf1, pPlugin2, pBuf2);
+    errors += !compare_parse(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_type(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_operation(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_created_table_name(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_is_drop_table_query(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_table_names(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_database_names(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_prepare_name(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_field_info(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_get_function_info(pPlugin1, copy1, pPlugin2, copy2);
 
     if (global.result_printed)
     {
@@ -1194,14 +1194,14 @@ bool compare(Parser::Plugin* pPlugin1,
 
     bool success = (errors == 0);
 
-    uint32_t type_mask1 = pPlugin1->parser().get_type_mask(pBuf1);
-    uint32_t type_mask2 = pPlugin2->parser().get_type_mask(pBuf2);
+    uint32_t type_mask1 = pPlugin1->parser().get_type_mask(copy1);
+    uint32_t type_mask2 = pPlugin2->parser().get_type_mask(copy2);
 
     if ((type_mask1 == type_mask2)
         && ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
     {
-        GWBUF* pPreparable1 = pPlugin1->parser().get_preparable_stmt(pBuf1);
-        GWBUF* pPreparable2 = pPlugin2->parser().get_preparable_stmt(pBuf2);
+        GWBUF* pPreparable1 = pPlugin1->parser().get_preparable_stmt(copy1);
+        GWBUF* pPreparable2 = pPlugin2->parser().get_preparable_stmt(copy2);
 
         if (pPreparable1 && pPreparable2)
         {
@@ -1209,9 +1209,9 @@ bool compare(Parser::Plugin* pPlugin1,
             global.indent += string(4, ' ');
 
             success = compare(pPlugin1,
-                              pPreparable1,
+                              *pPreparable1,
                               pPlugin2,
-                              pPreparable2);
+                              *pPreparable2);
 
             global.indent = indent;
         }
@@ -1225,7 +1225,7 @@ bool compare(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, const string& s
     GWBUF* pCopy1 = create_gwbuf(s);
     GWBUF* pCopy2 = create_gwbuf(s);
 
-    bool success = compare(pPlugin1, pCopy1, pPlugin2, pCopy2);
+    bool success = compare(pPlugin1, *pCopy1, pPlugin2, *pCopy2);
 
     if (success)
     {

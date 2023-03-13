@@ -501,7 +501,7 @@ bool QlaFilterSession::routeQuery(GWBUF&& queue)
 
         if (data_flags & (QlaInstance::LOG_DATA_TRANSACTION | QlaInstance::LOG_DATA_TRANSACTION_DUR))
         {
-            m_qc_type_mask = parser().get_type_mask(&queue);
+            m_qc_type_mask = parser().get_type_mask(queue);
 
             if (m_qc_type_mask & QUERY_TYPE_BEGIN_TRX)
             {
