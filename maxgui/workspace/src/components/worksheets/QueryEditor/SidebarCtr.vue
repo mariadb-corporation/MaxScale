@@ -1,53 +1,14 @@
 <template>
-    <div
-        class="sidebar-wrapper d-flex flex-column fill-height mxs-color-helper border-right-table-border"
+    <wke-sidebar
+        v-model="isCollapsed"
+        :title="$mxs_t('schemas')"
         :class="{ 'not-allowed': isSidebarDisabled }"
+        disableReload
+        @reload="fetchSchemas"
     >
-        <div class="sidebar-toolbar" :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']">
-            <div class="d-flex align-center justify-center">
-                <span
-                    v-if="!is_sidebar_collapsed"
-                    class="mxs-color-helper text-small-text sidebar-toolbar__title d-inline-block text-truncate text-capitalize"
-                >
-                    {{ $mxs_t('schemas') }}
-                </span>
-                <mxs-tooltip-btn
-                    v-if="!is_sidebar_collapsed"
-                    btnClass="reload-schemas"
-                    icon
-                    small
-                    :disabled="reloadDisabled"
-                    :color="reloadDisabled ? '' : 'primary'"
-                    @click="fetchSchemas"
-                >
-                    <template v-slot:btn-content>
-                        <v-icon size="12">
-                            $vuetify.icons.mxs_reload
-                        </v-icon>
-                    </template>
-                    {{ $mxs_t('reload') }}
-                </mxs-tooltip-btn>
-                <mxs-tooltip-btn
-                    btnClass="toggle-sidebar"
-                    icon
-                    small
-                    color="primary"
-                    @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
-                >
-                    <template v-slot:btn-content>
-                        <v-icon
-                            size="22"
-                            class="collapse-icon"
-                            :class="[is_sidebar_collapsed ? 'rotate-right' : 'rotate-left']"
-                        >
-                            mdi-chevron-double-down
-                        </v-icon>
-                    </template>
-                    {{ is_sidebar_collapsed ? $mxs_t('expand') : $mxs_t('collapse') }}
-                </mxs-tooltip-btn>
-            </div>
+        <template v-slot:toolbar-append>
             <v-text-field
-                v-if="!is_sidebar_collapsed"
+                v-if="!isCollapsed"
                 v-model="filterTxt"
                 name="searchSchema"
                 dense
@@ -57,10 +18,10 @@
                 :placeholder="$mxs_t('filterSchemaObjects')"
                 :disabled="!hasConn"
             />
-        </div>
+        </template>
         <keep-alive>
             <schema-tree-ctr
-                v-show="!is_sidebar_collapsed"
+                v-show="!isCollapsed"
                 class="schema-list-ctr"
                 @get-node-data="fetchNodePrvwData"
                 @load-children="handleLoadChildren"
@@ -71,7 +32,7 @@
                 v-on="$listeners"
             />
         </keep-alive>
-    </div>
+    </wke-sidebar>
 </template>
 
 <script>
@@ -103,10 +64,11 @@ import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
+import WkeSidebar from '@wkeComps/WkeSidebar.vue'
 
 export default {
     name: 'sidebar-ctr',
-    components: { SchemaTreeCtr },
+    components: { SchemaTreeCtr, WkeSidebar },
     props: {
         execSqlDlg: { type: Object, required: true },
     },
@@ -123,6 +85,14 @@ export default {
             EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
         }),
+        isCollapsed: {
+            get() {
+                return this.is_sidebar_collapsed
+            },
+            set(v) {
+                this.SET_IS_SIDEBAR_COLLAPSED(v)
+            },
+        },
         queryEditorId() {
             return QueryEditor.getters('getQueryEditorId')
         },
@@ -140,7 +110,7 @@ export default {
         isLoadingDbTree() {
             return SchemaSidebar.getters('getLoadingDbTree')
         },
-        reloadDisabled() {
+        disableReload() {
             return !this.hasConn || this.isLoadingDbTree
         },
         isSidebarDisabled() {
@@ -218,21 +188,10 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.sidebar-wrapper {
-    width: 100%;
-    .sidebar-toolbar {
-        height: 60px;
-        padding-top: 2px !important;
-        &__title {
-            font-size: 12px;
-            margin-right: auto;
-        }
-    }
-    .schema-list-ctr {
-        font-size: 12px;
-        overflow-y: auto;
-        z-index: 1;
-    }
+.schema-list-ctr {
+    font-size: 12px;
+    overflow-y: auto;
+    z-index: 1;
 }
 </style>
 
