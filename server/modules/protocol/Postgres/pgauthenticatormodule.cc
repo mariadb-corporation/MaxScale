@@ -30,7 +30,7 @@ const char* THE_PASSWORD =
 
 std::string create_nonce()
 {
-    std::array<uint8_t, NONCE_SIZE> nonce;
+    std::array<uint8_t, NONCE_SIZE> nonce{};
     RAND_bytes(nonce.data(), nonce.size());
     // This is what e.g. pgbouncer does when generating the nonce.
     return mxs::to_base64(nonce);
