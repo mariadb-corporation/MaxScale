@@ -14,6 +14,7 @@
 #include "pgclientconnection.hh"
 #include "pgprotocoldata.hh"
 #include <maxscale/dcb.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
 
@@ -206,6 +207,11 @@ bool PgClientConnection::safe_to_restart() const
 {
     // TODO: Add support for restarting
     return false;
+}
+
+mxs::Parser* PgClientConnection::parser()
+{
+    return &MariaDBParser::get();
 }
 
 size_t PgClientConnection::sizeof_buffers() const

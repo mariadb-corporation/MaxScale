@@ -36,6 +36,7 @@ public:
     void finish_connection() override;
     bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool safe_to_restart() const override;
+    mxs::Parser* parser() override;
 
     // mxs::ClientConnectionBase
     size_t sizeof_buffers() const override;
