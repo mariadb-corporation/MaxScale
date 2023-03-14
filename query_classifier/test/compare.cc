@@ -42,6 +42,7 @@ using std::string;
 using std::stringstream;
 
 using mxs::Parser;
+namespace sql = mxs::sql;
 
 namespace
 {
@@ -420,23 +421,23 @@ bool compare_get_operation(Parser::Plugin* pPlugin1,
     bool success = false;
     const char HEADING[] = "qc_get_operation         : ";
 
-    int32_t rv1 = pPlugin1->parser().get_operation(copy1);
-    int32_t rv2 = pPlugin2->parser().get_operation(copy2);
+    sql::OpCode rv1 = pPlugin1->parser().get_operation(copy1);
+    sql::OpCode rv2 = pPlugin2->parser().get_operation(copy2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << mxs::Parser::op_to_string(static_cast<qc_query_op_t>(rv1));
+        ss << "Ok : " << mxs::sql::to_string(rv1);
         success = true;
     }
     else
     {
         ss << "ERR: "
-           << mxs::Parser::op_to_string(static_cast<qc_query_op_t>(rv1))
+           << mxs::sql::to_string(rv1)
            << " != "
-           << mxs::Parser::op_to_string(static_cast<qc_query_op_t>(rv2));
+           << mxs::sql::to_string(rv2);
     }
 
     report(success, ss.str());

@@ -109,7 +109,7 @@ SchemaRouterSession::~SchemaRouterSession()
 static void inspect_query(const Parser& parser,
                           const GWBUF& packet,
                           uint32_t* type,
-                          qc_query_op_t* op,
+                          mxs::sql::OpCode* op,
                           uint8_t command)
 {
     GWBUF* bufptr = const_cast<GWBUF*>(&packet);
@@ -307,7 +307,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
     uint8_t command = mxs_mysql_get_command(packet);
     mxs::Target* target = NULL;
     uint32_t type = QUERY_TYPE_UNKNOWN;
-    qc_query_op_t op = QUERY_OP_UNDEFINED;
+    mxs::sql::OpCode op = mxs::sql::OP_UNDEFINED;
     enum route_target route_target = TARGET_UNDEFINED;
 
     if (m_load_target)
@@ -355,7 +355,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         /**
          * Find a suitable server that matches the requirements of @c route_target
          */
-        if (command == MXS_COM_INIT_DB || op == QUERY_OP_CHANGE_DB)
+        if (command == MXS_COM_INIT_DB || op == mxs::sql::OP_CHANGE_DB)
         {
             /** The default database changes must be routed to a specific server */
             if (change_current_db(packet, command))
@@ -400,7 +400,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 
         if (SRBackend* bref = get_shard_backend(target->name()))
         {
-            if (op == QUERY_OP_LOAD_LOCAL)
+            if (op == mxs::sql::OP_LOAD_LOCAL)
             {
                 m_load_target = bref->target();
             }
@@ -616,7 +616,7 @@ std::pair<bool, std::string> extract_database(const Parser& parser, const GWBUF&
     std::string rval;
     uint8_t command = mxs_mysql_get_command(buf);
 
-    if (command == MXS_COM_QUERY && parser.get_operation(const_cast<GWBUF&>(buf)) == QUERY_OP_CHANGE_DB)
+    if (command == MXS_COM_QUERY && parser.get_operation(const_cast<GWBUF&>(buf)) == mxs::sql::OP_CHANGE_DB)
     {
         auto tokens = mxb::strtok(buf.get_sql(), "` \n\t;");
 
@@ -1230,7 +1230,7 @@ void SchemaRouterSession::query_databases()
 mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t qtype)
 {
     mxs::Target* rval = NULL;
-    qc_query_op_t op = QUERY_OP_UNDEFINED;
+    mxs::sql::OpCode op = mxs::sql::OP_UNDEFINED;
     uint8_t command = mxs_mysql_get_command(buffer);
 
     if (command == MXS_COM_QUERY)
@@ -1243,7 +1243,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t
         || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
         || Parser::type_mask_contains(qtype, QUERY_TYPE_DEALLOC_PREPARE)
         || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT)
-        || op == QUERY_OP_EXECUTE)
+        || op == mxs::sql::OP_EXECUTE)
     {
         rval = get_ps_target(buffer, qtype, op);
     }
@@ -1413,7 +1413,7 @@ mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
     return rval;
 }
 
-mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qtype, qc_query_op_t op)
+mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qtype, mxs::sql::OpCode op)
 {
     mxs::Target* rval = NULL;
     uint8_t command = mxs_mysql_get_command(buffer);
@@ -1435,7 +1435,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
             }
         }
     }
-    else if (op == QUERY_OP_EXECUTE)
+    else if (op == mxs::sql::OP_EXECUTE)
     {
         std::string_view stmt = parser().get_prepare_name(*bufptr);
         mxs::Target* ps_target = m_shard.get_statement(stmt);

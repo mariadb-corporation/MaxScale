@@ -113,8 +113,8 @@ static int lua_get_operation(lua_State* state)
 
     if (data.buffer)
     {
-        qc_query_op_t op = data.session->client_connection()->parser()->get_operation(*data.buffer);
-        opstring = mxs::Parser::op_to_string(op);
+        mxs::sql::OpCode op = data.session->client_connection()->parser()->get_operation(*data.buffer);
+        opstring = mxs::sql::to_string(op);
     }
 
     lua_pushstring(state, opstring);

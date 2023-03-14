@@ -52,7 +52,7 @@ bool is_packet_a_query(int packet_type)
 
 bool check_for_sp_call(const mxs::Parser& parser, GWBUF* buf, uint8_t packet_type)
 {
-    return packet_type == MXS_COM_QUERY && parser.get_operation(*buf) == QUERY_OP_CALL;
+    return packet_type == MXS_COM_QUERY && parser.get_operation(*buf) == mxs::sql::OP_CALL;
 }
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
@@ -928,7 +928,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         {
             if (!in_read_only_trx
                 && command == MXS_COM_QUERY
-                && m_parser.get_operation(*pBuffer) == QUERY_OP_EXECUTE)
+                && m_parser.get_operation(*pBuffer) == mxs::sql::OP_EXECUTE)
             {
                 if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, pBuffer)))
                 {

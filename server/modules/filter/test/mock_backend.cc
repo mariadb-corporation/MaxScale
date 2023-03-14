@@ -304,9 +304,9 @@ bool ResultSetBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
 
 void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF&& statement)
 {
-    qc_query_op_t op = MariaDBParser::get().get_operation(statement);
+    mxs::sql::OpCode op = MariaDBParser::get().get_operation(statement);
 
-    if (op == QUERY_OP_SELECT)
+    if (op == mxs::sql::OP_SELECT)
     {
         std::unique_ptr<ResultSet> set = ResultSet::create({"a"});
         set->add_row({std::to_string(++m_counter)});

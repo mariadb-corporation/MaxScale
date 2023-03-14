@@ -376,72 +376,73 @@ std::string Parser::type_mask_to_string(uint32_t type_mask)
 }
 
 //static
-const char* Parser::op_to_string(qc_query_op_t op)
+const char* sql::to_string(sql::OpCode op)
 {
     switch (op)
     {
-    case QUERY_OP_UNDEFINED:
-        return "QUERY_OP_UNDEFINED";
+    case OP_UNDEFINED:
+        return "sql::OP_UNDEFINED";
 
-    case QUERY_OP_ALTER:
-        return "QUERY_OP_ALTER";
+    case OP_ALTER:
+        return "sql::OP_ALTER";
 
-    case QUERY_OP_CALL:
-        return "QUERY_OP_CALL";
+    case OP_CALL:
+        return "sql::OP_CALL";
 
-    case QUERY_OP_CHANGE_DB:
-        return "QUERY_OP_CHANGE_DB";
+    case OP_CHANGE_DB:
+        return "sql::OP_CHANGE_DB";
 
-    case QUERY_OP_CREATE:
-        return "QUERY_OP_CREATE";
+    case OP_CREATE:
+        return "sql::OP_CREATE";
 
-    case QUERY_OP_DELETE:
-        return "QUERY_OP_DELETE";
+    case OP_DELETE:
+        return "sql::OP_DELETE";
 
-    case QUERY_OP_DROP:
-        return "QUERY_OP_DROP";
+    case OP_DROP:
+        return "sql::OP_DROP";
 
-    case QUERY_OP_EXPLAIN:
-        return "QUERY_OP_EXPLAIN";
+    case OP_EXPLAIN:
+        return "sql::OP_EXPLAIN";
 
-    case QUERY_OP_GRANT:
-        return "QUERY_OP_GRANT";
+    case OP_GRANT:
+        return "sql::OP_GRANT";
 
-    case QUERY_OP_INSERT:
-        return "QUERY_OP_INSERT";
+    case OP_INSERT:
+        return "sql::OP_INSERT";
 
-    case QUERY_OP_LOAD:
-        return "QUERY_OP_LOAD";
+    case OP_LOAD:
+        return "sql::OP_LOAD";
 
-    case QUERY_OP_LOAD_LOCAL:
-        return "QUERY_OP_LOAD_LOCAL";
+    case OP_LOAD_LOCAL:
+        return "sql::OP_LOAD_LOCAL";
 
-    case QUERY_OP_REVOKE:
-        return "QUERY_OP_REVOKE";
+    case OP_REVOKE:
+        return "sql::OP_REVOKE";
 
-    case QUERY_OP_SELECT:
-        return "QUERY_OP_SELECT";
+    case OP_SELECT:
+        return "sql::OP_SELECT";
 
-    case QUERY_OP_SET:
-        return "QUERY_OP_SET";
+    case OP_SET:
+        return "sql::OP_SET";
 
-    case QUERY_OP_SET_TRANSACTION:
-        return "QUERY_OP_SET_TRANSACTION";
+    case OP_SET_TRANSACTION:
+        return "sql::OP_SET_TRANSACTION";
 
-    case QUERY_OP_SHOW:
-        return "QUERY_OP_SHOW";
+    case OP_SHOW:
+        return "sql::OP_SHOW";
 
-    case QUERY_OP_TRUNCATE:
-        return "QUERY_OP_TRUNCATE";
+    case OP_TRUNCATE:
+        return "sql::OP_TRUNCATE";
 
-    case QUERY_OP_UPDATE:
-        return "QUERY_OP_UPDATE";
+    case OP_UPDATE:
+        return "sql::OP_UPDATE";
 
-    case QUERY_OP_KILL:
-        return "QUERY_OP_KILL";
+    case OP_KILL:
+        return "sql::OP_KILL";
 
     default:
-        return "UNKNOWN_QUERY_OP";
+        mxb_assert(!true);
+        return "UNKNOWN_SQL_OP";
     }
 }
 
@@ -557,7 +558,7 @@ std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, const std::
         json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(type_mask.c_str()));
 
         json_object_set_new(pAttributes, CN_OPERATION,
-                            json_string(mxs::Parser::op_to_string(get_operation(stmt))));
+                            json_string(mxs::sql::to_string(get_operation(stmt))));
 
         append_field_info(*this, pAttributes, stmt);
         append_function_info(*this, pAttributes, stmt);

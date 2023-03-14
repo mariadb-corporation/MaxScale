@@ -613,7 +613,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const CachingParser::Entry&
     json_object_set_new(pClassification, CN_TYPE_MASK, json_string(type_mask.c_str()));
     json_object_set_new(pClassification,
                         CN_OPERATION,
-                        json_string(mxs::Parser::op_to_string(entry.result.op)));
+                        json_string(mxs::sql::to_string(entry.result.op)));
 
     json_t* pAttributes = json_object();
     json_object_set_new(pAttributes, CN_HITS, pHits);
@@ -771,7 +771,7 @@ Parser::KillInfo CachingParser::get_kill_info(GWBUF& stmt) const
     return m_parser.get_kill_info(stmt);
 }
 
-qc_query_op_t CachingParser::get_operation(GWBUF& stmt) const
+sql::OpCode CachingParser::get_operation(GWBUF& stmt) const
 {
     QCInfoCacheScope scope(&m_plugin, &stmt);
     return m_parser.get_operation(stmt);

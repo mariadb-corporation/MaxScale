@@ -86,7 +86,7 @@ public:
                                        const FunctionInfo** infos,
                                        size_t* n_infos) const override;
     KillInfo         get_kill_info(GWBUF& stmt) const override;
-    qc_query_op_t    get_operation(GWBUF& stmt) const override;
+    sql::OpCode      get_operation(GWBUF& stmt) const override;
     uint32_t         get_options() const override;
     GWBUF*           get_preparable_stmt(GWBUF& stmt) const override;
     std::string_view get_prepare_name(GWBUF& stmt) const override;

@@ -951,7 +951,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         else if (type & (QUERY_TYPE_READWRITE | QUERY_TYPE_READONLY))
         {
             // Currently only qc_sqlite should return these types
-            mxb_assert(use_parser && parser()->get_operation(*packetbuf) == QUERY_OP_SET_TRANSACTION);
+            mxb_assert(use_parser && parser()->get_operation(*packetbuf) == mxs::sql::OP_SET_TRANSACTION);
             uint32_t mode = type & QUERY_TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
             m_session_data->next_trx_mode = mode;
 
@@ -1062,7 +1062,7 @@ bool MariaDBClientConnection::should_inspect_query(GWBUF& buffer) const
     {
         auto op = parser()->get_operation(buffer);
 
-        if (op != QUERY_OP_KILL && op != QUERY_OP_SET && op != QUERY_OP_CHANGE_DB)
+        if (op != mxs::sql::OP_KILL && op != mxs::sql::OP_SET && op != mxs::sql::OP_CHANGE_DB)
         {
             rval = false;
         }

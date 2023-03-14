@@ -101,7 +101,7 @@ private:
     void         handle_default_db_response();
     bool         ignore_duplicate_table(std::string_view data) const;
     mxs::Target* get_query_target(const GWBUF& buffer);
-    mxs::Target* get_ps_target(const GWBUF& buffer, uint32_t qtype, qc_query_op_t op);
+    mxs::Target* get_ps_target(const GWBUF& buffer, uint32_t qtype, mxs::sql::OpCode op);
 
     /** Routing functions */
     bool         route_session_write(GWBUF&& querybuf, uint8_t command);

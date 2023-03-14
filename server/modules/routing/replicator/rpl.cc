@@ -2154,10 +2154,10 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
         mariadb::set_byte3(GWBUF_DATA(buffer), sql.length() + 1);
         GWBUF_DATA(buffer)[4] = 0x03;
         memcpy(GWBUF_DATA(buffer) + 5, sql.c_str(), sql.length());
-        qc_query_op_t op = MariaDBParser::get().get_operation(*buffer);
+        mxs::sql::OpCode op = MariaDBParser::get().get_operation(*buffer);
         gwbuf_free(buffer);
 
-        if (op == QUERY_OP_UPDATE || op == QUERY_OP_INSERT || op == QUERY_OP_DELETE)
+        if (op == mxs::sql::OP_UPDATE || op == mxs::sql::OP_INSERT || op == mxs::sql::OP_DELETE)
         {
             MXB_WARNING("Possible STATEMENT or MIXED format binary log. Check that "
                         "'binlog_format' is set to ROW on the master.");

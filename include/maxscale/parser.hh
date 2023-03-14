@@ -57,37 +57,41 @@ enum qc_query_type_t
     QUERY_TYPE_NEXT_TRX           = 1 << 25,/*< SET TRANSACTION that's only for the next transaction */
 };
 
-/**
- * qc_query_op_t defines the operations a particular statement can perform.
- */
-enum qc_query_op_t
-{
-    QUERY_OP_UNDEFINED = 0,
-
-    QUERY_OP_ALTER,
-    QUERY_OP_CALL,
-    QUERY_OP_CHANGE_DB,
-    QUERY_OP_CREATE,
-    QUERY_OP_DELETE,
-    QUERY_OP_DROP,
-    QUERY_OP_EXECUTE,
-    QUERY_OP_EXPLAIN,
-    QUERY_OP_GRANT,
-    QUERY_OP_INSERT,
-    QUERY_OP_LOAD_LOCAL,
-    QUERY_OP_LOAD,
-    QUERY_OP_REVOKE,
-    QUERY_OP_SELECT,
-    QUERY_OP_SET,
-    QUERY_OP_SET_TRANSACTION,
-    QUERY_OP_SHOW,
-    QUERY_OP_TRUNCATE,
-    QUERY_OP_UPDATE,
-    QUERY_OP_KILL,
-};
-
 namespace maxscale
 {
+
+namespace sql
+{
+
+enum OpCode
+{
+    OP_UNDEFINED = 0,
+
+    OP_ALTER,
+    OP_CALL,
+    OP_CHANGE_DB,
+    OP_CREATE,
+    OP_DELETE,
+    OP_DROP,
+    OP_EXECUTE,
+    OP_EXPLAIN,
+    OP_GRANT,
+    OP_INSERT,
+    OP_LOAD_LOCAL,
+    OP_LOAD,
+    OP_REVOKE,
+    OP_SELECT,
+    OP_SET,
+    OP_SET_TRANSACTION,
+    OP_SHOW,
+    OP_TRUNCATE,
+    OP_UPDATE,
+    OP_KILL,
+};
+
+const char* to_string(OpCode code);
+
+};
 
 class Parser
 {
@@ -253,9 +257,9 @@ public:
      */
     struct StmtResult
     {
-        Result        status { Result::INVALID };
-        uint32_t      type_mask { 0 };
-        qc_query_op_t op { QUERY_OP_UNDEFINED };
+        Result      status { Result::INVALID };
+        uint32_t    type_mask { 0 };
+        sql::OpCode op { sql::OP_UNDEFINED };
     };
 
     /**
@@ -337,8 +341,6 @@ public:
 
     static std::string type_mask_to_string(uint32_t type_mask);
 
-    static const char* op_to_string(qc_query_op_t op);
-
     static Plugin* load(const char* zPlugin_name);
     static void    unload(Plugin* pPlugin);
 
@@ -357,7 +359,7 @@ public:
                                                const FunctionInfo** ppInfos,
                                                size_t* pnInfos) const = 0;
     virtual KillInfo         get_kill_info(GWBUF& stmt) const = 0;
-    virtual qc_query_op_t    get_operation(GWBUF& stmt) const = 0;
+    virtual sql::OpCode      get_operation(GWBUF& stmt) const = 0;
     virtual uint32_t         get_options() const = 0;
     virtual GWBUF*           get_preparable_stmt(GWBUF& stmt) const = 0;
     virtual std::string_view get_prepare_name(GWBUF& stmt) const = 0;

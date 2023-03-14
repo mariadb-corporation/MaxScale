@@ -2181,7 +2181,7 @@ int32_t qc_mysql_get_kill_info(GWBUF* querybuf, Parser::KillInfo* pKill)
 
 int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
 {
-    *operation = QUERY_OP_UNDEFINED;
+    *operation = mxs::sql::OP_UNDEFINED;
 
     if (querybuf)
     {
@@ -2194,18 +2194,18 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
             {
                 if (lex->describe || lex->analyze_stmt)
                 {
-                    *operation = QUERY_OP_EXPLAIN;
+                    *operation = mxs::sql::OP_EXPLAIN;
                 }
                 else
                 {
                     switch (lex->sql_command)
                     {
                     case SQLCOM_ANALYZE:
-                        *operation = QUERY_OP_EXPLAIN;
+                        *operation = mxs::sql::OP_EXPLAIN;
                         break;
 
                     case SQLCOM_SELECT:
-                        *operation = QUERY_OP_SELECT;
+                        *operation = mxs::sql::OP_SELECT;
                         break;
 
                     case SQLCOM_CREATE_DB:
@@ -2222,7 +2222,7 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_CREATE_TRIGGER:
                     case SQLCOM_CREATE_USER:
                     case SQLCOM_CREATE_VIEW:
-                        *operation = QUERY_OP_CREATE;
+                        *operation = mxs::sql::OP_CREATE;
                         break;
 
                     case SQLCOM_ALTER_DB:
@@ -2233,28 +2233,28 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_ALTER_SERVER:
                     case SQLCOM_ALTER_TABLE:
                     case SQLCOM_ALTER_TABLESPACE:
-                        *operation = QUERY_OP_ALTER;
+                        *operation = mxs::sql::OP_ALTER;
                         break;
 
                     case SQLCOM_UPDATE:
                     case SQLCOM_UPDATE_MULTI:
-                        *operation = QUERY_OP_UPDATE;
+                        *operation = mxs::sql::OP_UPDATE;
                         break;
 
                     case SQLCOM_INSERT:
                     case SQLCOM_INSERT_SELECT:
                     case SQLCOM_REPLACE:
                     case SQLCOM_REPLACE_SELECT:
-                        *operation = QUERY_OP_INSERT;
+                        *operation = mxs::sql::OP_INSERT;
                         break;
 
                     case SQLCOM_DELETE:
                     case SQLCOM_DELETE_MULTI:
-                        *operation = QUERY_OP_DELETE;
+                        *operation = mxs::sql::OP_DELETE;
                         break;
 
                     case SQLCOM_TRUNCATE:
-                        *operation = QUERY_OP_TRUNCATE;
+                        *operation = mxs::sql::OP_TRUNCATE;
                         break;
 
                     case SQLCOM_DROP_DB:
@@ -2270,35 +2270,35 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_DROP_TRIGGER:
                     case SQLCOM_DROP_USER:
                     case SQLCOM_DROP_VIEW:
-                        *operation = QUERY_OP_DROP;
+                        *operation = mxs::sql::OP_DROP;
                         break;
 
                     case SQLCOM_CHANGE_DB:
-                        *operation = QUERY_OP_CHANGE_DB;
+                        *operation = mxs::sql::OP_CHANGE_DB;
                         break;
 
                     case SQLCOM_LOAD:
-                        *operation = QUERY_OP_LOAD_LOCAL;
+                        *operation = mxs::sql::OP_LOAD_LOCAL;
                         break;
 
                     case SQLCOM_GRANT:
-                        *operation = QUERY_OP_GRANT;
+                        *operation = mxs::sql::OP_GRANT;
                         break;
 
                     case SQLCOM_REVOKE:
                     case SQLCOM_REVOKE_ALL:
-                        *operation = QUERY_OP_REVOKE;
+                        *operation = mxs::sql::OP_REVOKE;
                         break;
 
                     case SQLCOM_SET_OPTION:
                         switch (get_set_type(pi->pi_query_plain_str))
                         {
                         case SET_TYPE_TRANSACTION:
-                            *operation = QUERY_OP_SET_TRANSACTION;
+                            *operation = mxs::sql::OP_SET_TRANSACTION;
                             break;
 
                         default:
-                            *operation = QUERY_OP_SET;
+                            *operation = mxs::sql::OP_SET;
                         }
                         break;
 
@@ -2324,19 +2324,19 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_SHOW_TABLE_STATUS:
                     case SQLCOM_SHOW_VARIABLES:
                     case SQLCOM_SHOW_WARNS:
-                        *operation = QUERY_OP_SHOW;
+                        *operation = mxs::sql::OP_SHOW;
                         break;
 
                     case SQLCOM_EXECUTE:
-                        *operation = QUERY_OP_EXECUTE;
+                        *operation = mxs::sql::OP_EXECUTE;
                         break;
 
                     case SQLCOM_CALL:
-                        *operation = QUERY_OP_CALL;
+                        *operation = mxs::sql::OP_CALL;
                         break;
 
                     default:
-                        *operation = QUERY_OP_UNDEFINED;
+                        *operation = mxs::sql::OP_UNDEFINED;
                     }
                 }
             }
@@ -4145,13 +4145,13 @@ public:
         return kill;
     }
 
-    qc_query_op_t get_operation(GWBUF& stmt) const override
+    mxs::sql::OpCode get_operation(GWBUF& stmt) const override
     {
         int32_t op = 0;
 
         qc_mysql_get_operation(&stmt, &op);
 
-        return static_cast<qc_query_op_t>(op);
+        return static_cast<mxs::sql::OpCode>(op);
     }
 
     uint32_t get_options() const override

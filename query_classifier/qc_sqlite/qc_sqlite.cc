@@ -873,10 +873,10 @@ public:
                 {
                     if (zToken[1] == '@')
                     {
-                        // TODO: This should actually be "... && (m_operation == QUERY_OP_SET)"
-                        // TODO: but there is no QUERY_OP_SET at the moment.
+                        // TODO: This should actually be "... && (m_operation == mxs::sql::OP_SET)"
+                        // TODO: but there is no mxs::sql::OP_SET at the moment.
                         if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT)
-                            && (m_operation != QUERY_OP_SELECT))
+                            && (m_operation != mxs::sql::OP_SELECT))
                         {
                             m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
                         }
@@ -1612,7 +1612,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_ALTER;
+        m_operation = mxs::sql::OP_ALTER;
     }
 
     void mxs_sqlite3AlterBeginAddColumn(Parse* pParse, SrcList* pSrcList)
@@ -1714,7 +1714,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_CREATE;
+        m_operation = mxs::sql::OP_CREATE;
 
         if (pTblName)
         {
@@ -1743,7 +1743,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_CREATE;
+        m_operation = mxs::sql::OP_CREATE;
 
         const Token* pName = pName2->z ? pName2 : pName1;
         const Token* pDatabase = pName2->z ? pName1 : NULL;
@@ -1783,10 +1783,10 @@ public:
 
         m_status = Parser::Result::PARSED;
 
-        if (m_operation != QUERY_OP_EXPLAIN)
+        if (m_operation != mxs::sql::OP_EXPLAIN)
         {
             m_type_mask = QUERY_TYPE_WRITE;
-            m_operation = QUERY_OP_DELETE;
+            m_operation = mxs::sql::OP_DELETE;
 
             QcAliases aliases;
 
@@ -1860,7 +1860,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_DROP;
+        m_operation = mxs::sql::OP_DROP;
 
         update_names_from_srclist(NULL, pTable);
 
@@ -1874,7 +1874,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_DROP;
+        m_operation = mxs::sql::OP_DROP;
         if (!isView)
         {
             m_is_drop_table = true;
@@ -1917,10 +1917,10 @@ public:
 
         m_status = Parser::Result::PARSED;
 
-        if (m_operation != QUERY_OP_EXPLAIN)
+        if (m_operation != mxs::sql::OP_EXPLAIN)
         {
             m_type_mask = QUERY_TYPE_WRITE;
-            m_operation = QUERY_OP_INSERT;
+            m_operation = mxs::sql::OP_INSERT;
             mxb_assert(pTabList);
             mxb_assert(pTabList->nSrc >= 1);
 
@@ -1985,9 +1985,9 @@ public:
 
         m_status = Parser::Result::PARSED;
 
-        if (m_operation != QUERY_OP_EXPLAIN)
+        if (m_operation != mxs::sql::OP_EXPLAIN)
         {
-            m_operation = QUERY_OP_SELECT;
+            m_operation = mxs::sql::OP_SELECT;
 
             maxscaleCollectInfoFromSelect(pParse, p, 0);
         }
@@ -2005,7 +2005,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_operation = QUERY_OP_CREATE;
+        m_operation = mxs::sql::OP_CREATE;
         m_type_mask = QUERY_TYPE_WRITE;
 
         if (isTemp)
@@ -2055,13 +2055,13 @@ public:
 
         m_status = Parser::Result::PARSED;
 
-        if (m_operation != QUERY_OP_EXPLAIN)
+        if (m_operation != mxs::sql::OP_EXPLAIN)
         {
             QcAliases aliases;
             uint32_t context = 0;
 
             m_type_mask = QUERY_TYPE_WRITE;
-            m_operation = QUERY_OP_UPDATE;
+            m_operation = mxs::sql::OP_UPDATE;
             update_names_from_srclist(&aliases, pTabList);
 
             if (pChanges)
@@ -2146,7 +2146,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_ALTER;
+        m_operation = mxs::sql::OP_ALTER;
 
         switch (command)
         {
@@ -2175,7 +2175,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_CALL;
+        m_operation = mxs::sql::OP_CALL;
 
         if (pExprList)
         {
@@ -2291,14 +2291,14 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_DROP;
+        m_operation = mxs::sql::OP_DROP;
 
         switch (what)
         {
         case MXS_DROP_DATABASE:
             {
 #ifdef TODO_SPECIFIC_OP_FOR_DROP_DATABASE_ADDED
-                // TODO: As there is only QUERY_OP_DROP, you can't be fully
+                // TODO: As there is only mxs::sql::OP_DROP, you can't be fully
                 // TODO: certain what a returned database actually refers to
                 // TODO: so better not to provide a name until there is a
                 // TODO: specific op.
@@ -2336,7 +2336,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = (QUERY_TYPE_WRITE | type_mask);
-        m_operation = QUERY_OP_EXECUTE;
+        m_operation = mxs::sql::OP_EXECUTE;
 
         // If information is collected in several passes, then we may
         // this information already.
@@ -2387,7 +2387,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_READ;
-        m_operation = QUERY_OP_SHOW;
+        m_operation = mxs::sql::OP_SHOW;
 
         for (int i = 0; i < pList->nSrc; ++i)
         {
@@ -2406,7 +2406,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_READ;
-        m_operation = QUERY_OP_EXPLAIN;
+        m_operation = mxs::sql::OP_EXPLAIN;
     }
 
     void maxscaleFlush(Parse* pParse, Token* pWhat)
@@ -2461,7 +2461,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = local ? QUERY_OP_LOAD_LOCAL : QUERY_OP_LOAD;
+        m_operation = local ? mxs::sql::OP_LOAD_LOCAL : mxs::sql::OP_LOAD;
 
         if (pFullName)
         {
@@ -2506,7 +2506,7 @@ public:
         mxb_assert(this_thread.initialized);
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_KILL;
+        m_operation = mxs::sql::OP_KILL;
         m_kill.soft = pKill->soft;
         m_kill.user = pKill->user;
 
@@ -2584,13 +2584,13 @@ public:
             case TK_ALTER:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_ALTER;
+                m_operation = mxs::sql::OP_ALTER;
                 break;
 
             case TK_ANALYZE:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
-                m_operation = QUERY_OP_EXPLAIN;
+                m_operation = mxs::sql::OP_EXPLAIN;
                 break;
 
             case TK_BEGIN:
@@ -2615,25 +2615,25 @@ public:
             case TK_CREATE:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_CREATE;
+                m_operation = mxs::sql::OP_CREATE;
                 break;
 
             case TK_DELETE:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_DELETE;
+                m_operation = mxs::sql::OP_DELETE;
                 break;
 
             case TK_DESC:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
-                m_operation = QUERY_OP_EXPLAIN;
+                m_operation = mxs::sql::OP_EXPLAIN;
                 break;
 
             case TK_DROP:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_DROP;
+                m_operation = mxs::sql::OP_DROP;
                 break;
 
             case TK_EXECUTE:
@@ -2644,13 +2644,13 @@ public:
             case TK_EXPLAIN:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
-                m_operation = QUERY_OP_EXPLAIN;
+                m_operation = mxs::sql::OP_EXPLAIN;
                 break;
 
             case TK_GRANT:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_GRANT;
+                m_operation = mxs::sql::OP_GRANT;
                 break;
 
             case TK_HANDLER:
@@ -2661,7 +2661,7 @@ public:
             case TK_INSERT:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_INSERT;
+                m_operation = mxs::sql::OP_INSERT;
                 break;
 
             case TK_LOCK:
@@ -2682,13 +2682,13 @@ public:
             case TK_REPLACE:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_INSERT;
+                m_operation = mxs::sql::OP_INSERT;
                 break;
 
             case TK_REVOKE:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_REVOKE;
+                m_operation = mxs::sql::OP_REVOKE;
                 break;
 
             case TK_RESET:
@@ -2699,19 +2699,19 @@ public:
             case TK_SELECT:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
-                m_operation = QUERY_OP_SELECT;
+                m_operation = mxs::sql::OP_SELECT;
                 break;
 
             case TK_SET:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_SESSION_WRITE;
-                m_operation = QUERY_OP_SET;
+                m_operation = mxs::sql::OP_SET;
                 break;
 
             case TK_SHOW:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
-                m_operation = QUERY_OP_SHOW;
+                m_operation = mxs::sql::OP_SHOW;
                 break;
 
             case TK_START:
@@ -2728,7 +2728,7 @@ public:
             case TK_UPDATE:
                 m_status = Parser::Result::TOKENIZED;
                 m_type_mask = QUERY_TYPE_WRITE;
-                m_operation = QUERY_OP_UPDATE;
+                m_operation = mxs::sql::OP_UPDATE;
                 break;
 
             case TK_TRUNCATE:
@@ -2772,7 +2772,7 @@ public:
                 {
                     m_status = Parser::Result::TOKENIZED;
                     m_type_mask = QUERY_TYPE_WRITE;
-                    m_operation = QUERY_OP_LOAD;
+                    m_operation = mxs::sql::OP_LOAD;
                 }
                 break;
 
@@ -2926,11 +2926,11 @@ public:
         switch (kind)
         {
         case TK_GRANT:
-            m_operation = QUERY_OP_GRANT;
+            m_operation = mxs::sql::OP_GRANT;
             break;
 
         case TK_REVOKE:
-            m_operation = QUERY_OP_REVOKE;
+            m_operation = mxs::sql::OP_REVOKE;
             break;
 
         default:
@@ -2962,7 +2962,7 @@ public:
         m_status = Parser::Result::PARSED;
         m_type_mask |= QUERY_TYPE_SESSION_WRITE;
         m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
-        m_operation = QUERY_OP_SET;
+        m_operation = mxs::sql::OP_SET;
 
         exposed_sqlite3ExprDelete(pParse->db, pValue);
     }
@@ -2975,7 +2975,7 @@ public:
         // The following must be set anew as there will be no SET in case of
         // Oracle's "var := 1", in which case maxscaleKeyword() is never called.
         m_type_mask |= QUERY_TYPE_SESSION_WRITE;
-        m_operation = QUERY_OP_SET;
+        m_operation = mxs::sql::OP_SET;
 
         switch (kind)
         {
@@ -3000,7 +3000,7 @@ public:
         m_status = Parser::Result::PARSED;
         // Not a session write because that would break replication - see MXS-2713.
         m_type_mask |= QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_SET;
+        m_operation = mxs::sql::OP_SET;
     }
 
     void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr)
@@ -3151,7 +3151,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_SESSION_WRITE;
-        m_operation = QUERY_OP_SET_TRANSACTION;
+        m_operation = mxs::sql::OP_SET_TRANSACTION;
 
         if (scope == TK_GLOBAL)
         {
@@ -3181,7 +3181,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_operation = QUERY_OP_SHOW;
+        m_operation = mxs::sql::OP_SHOW;
 
         switch (pShow->what)
         {
@@ -3291,7 +3291,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_TRUNCATE;
+        m_operation = mxs::sql::OP_TRUNCATE;
 
         char* zDatabase;
 
@@ -3320,7 +3320,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = QUERY_TYPE_SESSION_WRITE;
-        m_operation = QUERY_OP_CHANGE_DB;
+        m_operation = mxs::sql::OP_CHANGE_DB;
 
         if (should_collect(Parser::COLLECT_DATABASES))
         {
@@ -3353,7 +3353,7 @@ public:
         , m_pQuery(NULL)
         , m_nQuery(0)
         , m_type_mask(QUERY_TYPE_UNKNOWN)
-        , m_operation(QUERY_OP_UNDEFINED)
+        , m_operation(mxs::sql::OP_UNDEFINED)
         , m_is_drop_table(false)
         , m_pPreparable_stmt(NULL)
     {
@@ -3567,7 +3567,7 @@ public:
     const char*                       m_pQuery;                  // The query passed to sqlite.
     size_t                            m_nQuery;                  // The length of the query.
     uint32_t                          m_type_mask;               // The type mask of the query.
-    qc_query_op_t                     m_operation;               // The operation in question.
+    mxs::sql::OpCode                  m_operation;               // The operation in question.
     string_view                       m_created_table_name;      // The name of a created table.
     bool                              m_is_drop_table;           // Is the query a DROP TABLE.
     string_view                       m_prepare_name;            // The name of a prepared statement.
@@ -3710,7 +3710,7 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
         this_thread.pInfo->m_status = this_thread.pInfo->m_status_cap;
     }
 
-    if (this_thread.pInfo->m_operation == QUERY_OP_EXPLAIN)
+    if (this_thread.pInfo->m_operation == mxs::sql::OP_EXPLAIN)
     {
         this_thread.pInfo->m_status = Parser::Result::PARSED;
     }
@@ -5127,7 +5127,7 @@ static int32_t qc_sqlite_get_operation(GWBUF* pStmt, int32_t* pOp)
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    *pOp = QUERY_OP_UNDEFINED;
+    *pOp = mxs::sql::OP_UNDEFINED;
     QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)
@@ -5578,13 +5578,13 @@ public:
         return kill;
     }
 
-    qc_query_op_t get_operation(GWBUF& stmt) const override
+    mxs::sql::OpCode get_operation(GWBUF& stmt) const override
     {
         int32_t op = 0;
 
         qc_sqlite_get_operation(&stmt, &op);
 
-        return static_cast<qc_query_op_t>(op);
+        return static_cast<mxs::sql::OpCode>(op);
     }
 
     uint32_t get_options() const override

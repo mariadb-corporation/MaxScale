@@ -162,9 +162,9 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     }
     else
     {
-        qc_query_op_t op = parser().get_operation(*pPacket);
+        mxs::sql::OpCode op = parser().get_operation(*pPacket);
 
-        if (op == QUERY_OP_SELECT)
+        if (op == mxs::sql::OP_SELECT)
         {
             if (m_config.check_unions || m_config.check_subqueries)
             {
@@ -186,7 +186,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
             // rejected, which would be nonsensical anyway.
             // The check cannot be limited to just SELECTs, because that would
             // allow you to probe a value e.g. using UPDATEs.
-            if (op != QUERY_OP_INSERT)
+            if (op != mxs::sql::OP_INSERT)
             {
                 if (is_function_used(pPacket, zUser, zHost))
                 {
@@ -209,7 +209,7 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     auto parse_result = parser().parse(*pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
     auto op = parser().get_operation(*pPacket);
 
-    if (op == QUERY_OP_EXPLAIN)
+    if (op == mxs::sql::OP_EXPLAIN)
     {
         rv = true;
     }
@@ -257,7 +257,7 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
     auto parse_result = parser().parse(*pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
     auto op = parser().get_operation(*pPacket);
 
-    if (op == QUERY_OP_EXPLAIN)
+    if (op == mxs::sql::OP_EXPLAIN)
     {
         rv = true;
     }
@@ -722,7 +722,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
 bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    mxb_assert(parser().get_operation(*pPacket) == QUERY_OP_SELECT);
+    mxb_assert(parser().get_operation(*pPacket) == mxs::sql::OP_SELECT);
     mxb_assert(m_config.check_unions || m_config.check_subqueries);
 
     bool is_used = false;
