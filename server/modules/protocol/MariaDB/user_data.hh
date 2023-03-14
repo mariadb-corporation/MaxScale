@@ -21,7 +21,7 @@
 #include <set>
 #include <thread>
 #include <maxsql/mariadb_connector.hh>
-#include <maxsql/queryresult.hh>
+#include <maxbase/queryresult.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
@@ -241,7 +241,7 @@ public:
     SERVICE* service() const;
 
 private:
-    using QResult = std::unique_ptr<mxq::QueryResult>;
+    using QResult = std::unique_ptr<mxb::QueryResult>;
     enum class LoadResult
     {
         SUCCESS,

@@ -21,6 +21,7 @@ add_library(maxbase STATIC
   pam_utils.cc
   pretty_print.cc
   proxy_protocol.cc
+  queryresult.cc
   random.cc
   regex.cc
   secrets.cc

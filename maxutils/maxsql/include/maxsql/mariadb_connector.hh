@@ -18,7 +18,7 @@
 #include <memory>
 #include <string>
 #include <maxbase/ssl.hh>
-#include <maxsql/queryresult.hh>
+#include <maxbase/queryresult.hh>
 
 #include <mysql.h>
 
@@ -132,7 +132,7 @@ public:
      * @param query SQL to run
      * @return Query results on success, null otherwise
      */
-    std::unique_ptr<mxq::QueryResult> query(const std::string& query);
+    std::unique_ptr<mxb::QueryResult> query(const std::string& query);
 
     /**
      * Run multiple queries as one. Each should return data. Multiqueries should be enabled in connection
@@ -142,7 +142,7 @@ public:
      * should end in a semicolon.
      * @return Results from every query. If any kind of error occurs, returns an empty vector.
      */
-    std::vector<std::unique_ptr<mxq::QueryResult>> multiquery(const std::vector<std::string>& queries);
+    std::vector<std::unique_ptr<mxb::QueryResult>> multiquery(const std::vector<std::string>& queries);
 
     enum class ResultType
     {
@@ -259,7 +259,7 @@ private:
 /**
  * QueryResult implementation for the MariaDB-class.
  */
-class MariaDBQueryResult : public QueryResult
+class MariaDBQueryResult : public mxb::QueryResult
 {
 public:
     MariaDBQueryResult(const MariaDBQueryResult&) = delete;

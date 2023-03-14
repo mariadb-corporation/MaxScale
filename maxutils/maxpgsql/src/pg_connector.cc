@@ -211,4 +211,9 @@ PgSQL::VersionInfo PgSQL::version_info() const
     }
     return rval;
 }
+
+std::unique_ptr<mxb::QueryResult> PgSQL::query(const string& query)
+{
+    return nullptr;
+}
 }

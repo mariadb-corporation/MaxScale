@@ -155,7 +155,7 @@ namespace maxscale
  * @param errno_out Error code output. Can be null.
  * @return Pointer to query results, or an empty pointer on failure
  */
-std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
+std::unique_ptr<mxb::QueryResult> execute_query(MYSQL* conn, const std::string& query,
                                                 std::string* errmsg_out = nullptr,
                                                 unsigned int* errno_out = nullptr);
 }

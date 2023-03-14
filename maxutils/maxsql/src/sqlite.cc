@@ -220,9 +220,9 @@ int SQLiteStmt::error() const
     return m_errornum;
 }
 
-std::unique_ptr<mxq::QueryResult> SQLite::query(const std::string& query)
+std::unique_ptr<mxb::QueryResult> SQLite::query(const std::string& query)
 {
-    using mxq::QueryResult;
+    using mxb::QueryResult;
     std::unique_ptr<QueryResult> rval;
     if (m_dbhandle)
     {

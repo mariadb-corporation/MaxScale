@@ -33,7 +33,7 @@ namespace maxscale
 {
 class Monitor;
 }
-namespace maxsql
+namespace maxbase
 {
 class QueryResult;
 }
@@ -370,7 +370,7 @@ protected:
      * @param errno_out Error code output. Can be null.
      * @return Pointer to query results, or an empty pointer on failure
      */
-    std::unique_ptr<maxsql::QueryResult>
+    std::unique_ptr<mxb::QueryResult>
     execute_query(const std::string& query, std::string* errmsg_out = nullptr,
                   unsigned int* errno_out = nullptr);
 

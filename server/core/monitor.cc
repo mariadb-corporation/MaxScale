@@ -2415,7 +2415,7 @@ void MariaServer::check_permissions()
     }
 }
 
-std::unique_ptr<mxq::QueryResult>
+std::unique_ptr<mxb::QueryResult>
 MariaServer::execute_query(const string& query, std::string* errmsg_out, unsigned int* errno_out)
 {
     return maxscale::execute_query(con, query, errmsg_out, errno_out);

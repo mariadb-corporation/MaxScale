@@ -28,7 +28,7 @@ using std::string;
 using std::vector;
 using std::unique_ptr;
 using mxb::string_printf;
-using mxq::QueryResult;
+using mxb::QueryResult;
 
 namespace
 {
@@ -297,7 +297,7 @@ bool MariaDB::cmd(const std::string& query)
     return run_query(query, result_handler);
 }
 
-std::unique_ptr<mxq::QueryResult> MariaDB::query(const std::string& query)
+std::unique_ptr<mxb::QueryResult> MariaDB::query(const std::string& query)
 {
     std::unique_ptr<QueryResult> rval;
     auto result_handler = [this, &query, &rval]() {

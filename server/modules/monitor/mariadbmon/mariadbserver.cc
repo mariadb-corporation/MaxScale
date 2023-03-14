@@ -27,7 +27,7 @@ using std::string;
 using maxbase::string_printf;
 using maxbase::Duration;
 using maxbase::StopWatch;
-using maxsql::QueryResult;
+using maxbase::QueryResult;
 using Guard = std::lock_guard<std::mutex>;
 using maxscale::MonitorServer;
 using ConnectResult = maxscale::MonitorServer::ConnectResult;

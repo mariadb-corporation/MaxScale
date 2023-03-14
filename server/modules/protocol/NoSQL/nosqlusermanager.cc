@@ -1966,7 +1966,7 @@ bool UserManagerMariaDB::do_remove_user(const string& db, const string& user)
     return rv;
 }
 
-bool UserManagerMariaDB::user_info_from_result(mxq::QueryResult* pResult, UserManager::UserInfo* pInfo) const
+bool UserManagerMariaDB::user_info_from_result(mxb::QueryResult* pResult, UserManager::UserInfo* pInfo) const
 {
     // TODO: A bit of unnecessary work is made here if 'pInfo' is null.
 
@@ -2036,7 +2036,7 @@ bool UserManagerMariaDB::user_info_from_result(mxq::QueryResult* pResult, UserMa
     return rv;
 }
 
-vector<UserManager::UserInfo> UserManagerMariaDB::user_infos_from_result(mxq::QueryResult* pResult) const
+vector<UserManager::UserInfo> UserManagerMariaDB::user_infos_from_result(mxb::QueryResult* pResult) const
 {
     mxb_assert(pResult->get_col_count() == 5);
 

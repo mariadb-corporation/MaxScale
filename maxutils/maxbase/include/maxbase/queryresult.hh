@@ -20,11 +20,11 @@
 #include <unordered_map>
 #include <vector>
 
-namespace maxsql
+namespace maxbase
 {
 
 /**
- * Base class for a query result object returned from either a MariaDB-connection or an SQLite-handle.
+ * Base class for a query result object returned from either a MariaDB- or a PostgreSQL-connection.
  * Functions which produce QueryResults should generally return pointers to this class instead of the
  * derived classes, unless the derived class has specific features.
  */

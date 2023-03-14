@@ -16,7 +16,7 @@
 #include <maxsql/ccdefs.hh>
 #include <memory>
 #include <string>
-#include <maxsql/queryresult.hh>
+#include <maxbase/queryresult.hh>
 
 struct sqlite3;
 struct sqlite3_stmt;
@@ -110,7 +110,7 @@ public:
      * @param query SQL to run
      * @return Query results on success, null otherwise
      */
-    std::unique_ptr<mxq::QueryResult> query(const std::string& query);
+    std::unique_ptr<mxb::QueryResult> query(const std::string& query);
 
     /**
      * Prepare a query.
@@ -202,7 +202,7 @@ private:
 /**
  * QueryResult implementation for SQLite.
  */
-class SQLiteQueryResult : public QueryResult
+class SQLiteQueryResult : public mxb::QueryResult
 {
 public:
     /**

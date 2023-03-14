@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <maxbase/ssl.hh>
+#include <maxbase/queryresult.hh>
 
 struct pg_conn;
 
@@ -76,6 +77,14 @@ public:
     VersionInfo version_info() const;
 
     ConnectionSettings& connection_settings();
+
+    /**
+     * Run a query which may return data.
+     *
+     * @param query SQL to run
+     * @return Query results on success, null otherwise
+     */
+    std::unique_ptr<mxb::QueryResult> query(const std::string& query);
 
 private:
     pg_conn*           m_conn {nullptr};

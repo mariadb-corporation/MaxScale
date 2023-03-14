@@ -12,9 +12,8 @@
  * Public License.
  */
 
-#include <maxsql/queryresult.hh>
+#include <maxbase/queryresult.hh>
 
-#include <mysql.h>
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <memory>
@@ -28,7 +27,8 @@ const string type_integer = "integer";
 const string type_uinteger = "unsigned integer";
 const string type_boolean = "boolean";
 }
-namespace maxsql
+
+namespace maxbase
 {
 
 bool QueryResult::next_row()
