@@ -163,6 +163,16 @@ public:
     }
 
     /**
+     * @brief Check whether the next response from this backend should be routed to the client
+     *
+     * @return True if this response should be routed to the client
+     */
+    bool is_expected_response() const
+    {
+        return !m_responses.empty() && m_responses.front() == EXPECT_RESPONSE;
+    }
+
+    /**
      * @brief Check if a response is unexpected
      *
      * @return True if the result was not expected
