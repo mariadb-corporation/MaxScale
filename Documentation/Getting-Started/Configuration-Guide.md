@@ -634,25 +634,6 @@ The following functionality is disabled when passive mode is enabled:
 Enable or disable the high precision timestamps in logfiles. Enabling this adds
 millisecond precision to all logfile timestamps.
 
-### `skip_permission_checks`
-
-- **Type**: [boolean](#booleans)
-- **Default**: false
-- **Dynamic**: Yes
-
-Skip service and monitor user permission checks. This is useful when you know
-the permissions are OK and you want to speed up the startup process.
-
-It is recommended to not disable the permission checks so that any missing
-privileges are detected when maxscale is starting up. If you are experiencing a
-slow startup of MaxScale due to large amounts of connection timeouts when
-permissions are checked, disabling the permission checks could speed up the
-startup process.
-
-```
-skip_permission_checks=true
-```
-
 ### `syslog`
 
 - **Type**: [boolean](#booleans)

@@ -501,7 +501,7 @@ config::ParamSeconds Config::s_auth_write_timeout(
     std::chrono::seconds(DEFAULT_AUTH_WRITE_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_skip_permission_checks(
+config::ParamDeprecated<config::ParamBool> Config::s_skip_permission_checks(
     &Config::s_specification,
     CN_SKIP_PERMISSION_CHECKS,
     "Skip service and monitor permission checks.",
@@ -1027,7 +1027,6 @@ Config::Config(int argc, char** argv)
     auth_conn_timeout(this, &s_auth_conn_timeout),
     auth_read_timeout(this, &s_auth_read_timeout),
     auth_write_timeout(this, &s_auth_write_timeout),
-    skip_permission_checks(this, &s_skip_permission_checks),
     passive(this, &s_passive, [](bool value) {
     if (Config::get().passive.get() && !value)
     {

@@ -263,7 +263,6 @@ public:
     config::Seconds       auth_conn_timeout;        /**< Connection timeout for the user authentication */
     config::Seconds       auth_read_timeout;        /**< Read timeout for the user authentication */
     config::Seconds       auth_write_timeout;       /**< Write timeout for the user authentication */
-    config::Bool          skip_permission_checks;   /**< Skip service and monitor permission checks */
     config::Bool          passive;                  /**< True if MaxScale is in passive mode */
     config::Size          qc_cache_max_size;        /**< Maximum amount of memory used by qc */
     config::Bool          admin_log_auth_failures;  /**< Log admin interface authentication failures */
@@ -415,7 +414,7 @@ private:
     static config::ParamSeconds                         s_auth_conn_timeout;
     static config::ParamSeconds                         s_auth_read_timeout;
     static config::ParamSeconds                         s_auth_write_timeout;
-    static config::ParamBool                            s_skip_permission_checks;
+    static config::ParamDeprecated<config::ParamBool>   s_skip_permission_checks;
     static config::ParamBool                            s_passive;
     static config::ParamSize                            s_qc_cache_max_size;
     static config::ParamBool                            s_admin_log_auth_failures;

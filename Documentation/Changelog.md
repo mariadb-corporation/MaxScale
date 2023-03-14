@@ -1,5 +1,10 @@
 # Changelog
 
+## MariaDB MaxScale 23.08
+
+* The global setting `skip_permission_checks` has been deprecated and is
+  ignored. Monitors start regardless of monitor user permissions.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
