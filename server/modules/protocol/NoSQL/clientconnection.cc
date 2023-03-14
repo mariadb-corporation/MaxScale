@@ -335,7 +335,7 @@ void ClientConnection::prepare_session(const string& user, const vector<uint8_t>
     GWBUF stmt = mariadb::create_query("set names utf8mb4 collate utf8mb4_bin");
     stmt.set_id(id);
 
-    m_session_data.history.add(move(stmt), true);
+    m_session_data.history().add(move(stmt), true);
 
     setup_session(user, password);
 }
