@@ -475,35 +475,6 @@ bool compare_get_created_table_name(ParserPlugin* pPlugin1,
     return success;
 }
 
-bool compare_is_drop_table_query(ParserPlugin* pPlugin1,
-                                 GWBUF& copy1,
-                                 ParserPlugin* pPlugin2,
-                                 GWBUF& copy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_is_drop_table_query   : ";
-
-    bool rv1 = pPlugin1->parser().is_drop_table_query(copy1);
-    bool rv2 = pPlugin2->parser().is_drop_table_query(copy2);
-
-    stringstream ss;
-    ss << HEADING;
-
-    if (rv1 == rv2)
-    {
-        ss << "Ok : " << static_cast<bool>(rv1);
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: " << static_cast<bool>(rv1) << " != " << static_cast<bool>(rv2);
-    }
-
-    report(success, ss.str());
-
-    return success;
-}
-
 bool compare_get_table_names(ParserPlugin* pPlugin1,
                              GWBUF& copy1,
                              ParserPlugin* pPlugin2,
@@ -1182,7 +1153,6 @@ bool compare(ParserPlugin* pPlugin1,
     errors += !compare_get_type(pPlugin1, copy1, pPlugin2, copy2);
     errors += !compare_get_operation(pPlugin1, copy1, pPlugin2, copy2);
     errors += !compare_get_created_table_name(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_is_drop_table_query(pPlugin1, copy1, pPlugin2, copy2);
     errors += !compare_get_table_names(pPlugin1, copy1, pPlugin2, copy2);
     errors += !compare_get_database_names(pPlugin1, copy1, pPlugin2, copy2);
     errors += !compare_get_prepare_name(pPlugin1, copy1, pPlugin2, copy2);

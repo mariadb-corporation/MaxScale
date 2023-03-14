@@ -406,6 +406,12 @@ const char* sql::to_string(sql::OpCode op)
     case OP_DROP:
         return "sql::OP_DROP";
 
+    case OP_DROP_TABLE:
+        return "sql::OP_DROP_TABLE";
+
+    case OP_EXECUTE:
+        return "sql::OP_EXECUTE";
+
     case OP_EXPLAIN:
         return "sql::OP_EXPLAIN";
 
@@ -414,6 +420,9 @@ const char* sql::to_string(sql::OpCode op)
 
     case OP_INSERT:
         return "sql::OP_INSERT";
+
+    case OP_KILL:
+        return "sql::OP_KILL";
 
     case OP_LOAD:
         return "sql::OP_LOAD";
@@ -441,9 +450,6 @@ const char* sql::to_string(sql::OpCode op)
 
     case OP_UPDATE:
         return "sql::OP_UPDATE";
-
-    case OP_KILL:
-        return "sql::OP_KILL";
 
     default:
         mxb_assert(!true);

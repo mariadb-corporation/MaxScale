@@ -2267,11 +2267,14 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_DROP_SEQUENCE:
 #endif
                     case SQLCOM_DROP_SERVER:
-                    case SQLCOM_DROP_TABLE:
                     case SQLCOM_DROP_TRIGGER:
                     case SQLCOM_DROP_USER:
                     case SQLCOM_DROP_VIEW:
                         *operation = mxs::sql::OP_DROP;
+                        break;
+
+                    case SQLCOM_DROP_TABLE:
+                        *operation = mxs::sql::OP_DROP_TABLE;
                         break;
 
                     case SQLCOM_CHANGE_DB:
@@ -4217,15 +4220,6 @@ public:
         qc_mysql_get_type_mask(&stmt, &type_mask);
 
         return type_mask;
-    }
-
-    bool is_drop_table_query(GWBUF& stmt) const override
-    {
-        int32_t is_drop_table = false;
-
-        qc_mysql_is_drop_table_query(&stmt, &is_drop_table);
-
-        return is_drop_table;
     }
 
     void set_sql_mode(Parser::SqlMode sql_mode) override

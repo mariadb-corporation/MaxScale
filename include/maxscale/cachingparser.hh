@@ -95,7 +95,6 @@ public:
     TableNames       get_table_names(GWBUF& stmt) const override;
     uint32_t         get_trx_type_mask(GWBUF& stmt) const override;
     uint32_t         get_type_mask(GWBUF& stmt) const override;
-    bool             is_drop_table_query(GWBUF& stmt) const override;
 
     bool set_options(uint32_t options) override;
     void set_sql_mode(SqlMode sql_mode) override;

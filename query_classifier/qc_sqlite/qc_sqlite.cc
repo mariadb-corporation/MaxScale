@@ -1879,6 +1879,7 @@ public:
         if (!isView)
         {
             m_is_drop_table = true;
+            m_operation = mxs::sql::OP_DROP_TABLE;
         }
         update_names_from_srclist(NULL, pName);
 
@@ -5650,15 +5651,6 @@ public:
         qc_sqlite_get_type_mask(&stmt, &type_mask);
 
         return type_mask;
-    }
-
-    bool is_drop_table_query(GWBUF& stmt) const override
-    {
-        int32_t is_drop_table = false;
-
-        qc_sqlite_is_drop_table_query(&stmt, &is_drop_table);
-
-        return is_drop_table;
     }
 
     void set_server_version(uint64_t version) override

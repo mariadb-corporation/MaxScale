@@ -822,12 +822,6 @@ uint32_t CachingParser::get_type_mask(GWBUF& stmt) const
     return m_parser.get_type_mask(stmt);
 }
 
-bool CachingParser::is_drop_table_query(GWBUF& stmt) const
-{
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.is_drop_table_query(stmt);
-}
-
 bool CachingParser::set_options(uint32_t options)
 {
     bool rv = m_parser.set_options(options);

@@ -62,7 +62,7 @@ enum Type
     TYPE_NEXT_TRX           = 1 << 25,/*< SET TRANSACTION that's only for the next transaction */
 };
 
-enum OpCode
+enum OpCode : uint32_t
 {
     OP_UNDEFINED = 0,
 
@@ -72,12 +72,14 @@ enum OpCode
     OP_CREATE,
     OP_DELETE,
     OP_DROP,
+    OP_DROP_TABLE,
     OP_EXECUTE,
     OP_EXPLAIN,
     OP_GRANT,
     OP_INSERT,
-    OP_LOAD_LOCAL,
+    OP_KILL,
     OP_LOAD,
+    OP_LOAD_LOCAL,
     OP_REVOKE,
     OP_SELECT,
     OP_SET,
@@ -85,7 +87,6 @@ enum OpCode
     OP_SHOW,
     OP_TRUNCATE,
     OP_UPDATE,
-    OP_KILL,
 };
 
 const char* to_string(OpCode code);
@@ -297,7 +298,6 @@ public:
     virtual uint32_t         get_trx_type_mask(GWBUF& stmt) const = 0;
     uint32_t                 get_trx_type_mask_using(GWBUF& stmt, ParseTrxUsing use) const;
     virtual uint32_t         get_type_mask(GWBUF& stmt) const = 0;
-    virtual bool             is_drop_table_query(GWBUF& stmt) const = 0;
 
     virtual bool set_options(uint32_t options) = 0;
     virtual void set_server_version(uint64_t version) = 0;

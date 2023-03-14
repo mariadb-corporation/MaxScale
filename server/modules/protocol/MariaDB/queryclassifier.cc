@@ -712,7 +712,7 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
 
 void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 {
-    if (m_parser.is_drop_table_query(*querybuf))
+    if (m_parser.get_operation(*querybuf) == mxs::sql::OP_DROP_TABLE)
     {
         foreach_table(*this, m_pSession, querybuf, &QueryClassifier::delete_table);
     }
