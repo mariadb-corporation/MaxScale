@@ -63,7 +63,7 @@ bool are_multi_statements_allowed(MXS_SESSION* pSession)
 
 uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
 {
-    uint32_t type = QUERY_TYPE_UNKNOWN;
+    uint32_t type = mxs::sql::TYPE_UNKNOWN;
 
     if (mxs_mysql_get_command(*buffer) == MXS_COM_STMT_PREPARE)
     {
@@ -71,10 +71,11 @@ uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
         GWBUF stmt = buffer->deep_clone();
         stmt.data()[4] = MXS_COM_QUERY;
         stmt.set_classifier_data(nullptr);      // To ensure cloned buffer is parsed.
-        mxb_assert(parser.get_type_mask(stmt) == (parser.get_type_mask(*buffer) & ~QUERY_TYPE_PREPARE_STMT));
+        mxb_assert(parser.get_type_mask(stmt)
+                   == (parser.get_type_mask(*buffer) & ~mxs::sql::TYPE_PREPARE_STMT));
 #endif
 
-        type = parser.get_type_mask(*buffer) & ~QUERY_TYPE_PREPARE_STMT;
+        type = parser.get_type_mask(*buffer) & ~mxs::sql::TYPE_PREPARE_STMT;
     }
     else
     {
@@ -175,7 +176,7 @@ public:
     {
         mxb_assert(mxs_mysql_get_command(*buffer) == MXS_COM_STMT_PREPARE
                    || Parser::type_mask_contains(m_parser.get_type_mask(*buffer),
-                                                 QUERY_TYPE_PREPARE_NAMED_STMT));
+                                                 mxs::sql::TYPE_PREPARE_NAMED_STMT));
 
         PreparedStmt stmt;
         stmt.type = get_prepare_type(m_parser, buffer);
@@ -346,16 +347,16 @@ bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
 {
     bool rval = false;
 
-    if (!Parser::type_mask_contains(qtype, QUERY_TYPE_MASTER_READ)
-        && !Parser::type_mask_contains(qtype, QUERY_TYPE_WRITE)
-        && (Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
-            || Parser::type_mask_contains(qtype, QUERY_TYPE_SHOW_TABLES)
-            || Parser::type_mask_contains(qtype, QUERY_TYPE_SHOW_DATABASES)
-            || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
-            || Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
-            || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ)))
+    if (!Parser::type_mask_contains(qtype, mxs::sql::TYPE_MASTER_READ)
+        && !Parser::type_mask_contains(qtype, mxs::sql::TYPE_WRITE)
+        && (Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ)
+            || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SHOW_TABLES)
+            || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SHOW_DATABASES)
+            || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ)
+            || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)
+            || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_READ)))
     {
-        if (Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ))
+        if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ))
         {
             if (m_use_sql_variables_in == TYPE_ALL)
             {
@@ -448,8 +449,8 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     /**
      * Prepared statements preparations should go to all servers
      */
-    if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
+    if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_STMT)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT)
         || command == MXS_COM_STMT_CLOSE
         || command == MXS_COM_STMT_RESET)
     {
@@ -458,15 +459,15 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     /**
      * These queries should be routed to all servers
      */
-    else if (!load_active && !Parser::type_mask_contains(qtype, QUERY_TYPE_WRITE)
-             && (Parser::type_mask_contains(qtype, QUERY_TYPE_SESSION_WRITE)
+    else if (!load_active && !Parser::type_mask_contains(qtype, mxs::sql::TYPE_WRITE)
+             && (Parser::type_mask_contains(qtype, mxs::sql::TYPE_SESSION_WRITE)
                  ||     /** Configured to allow writing user variables to all nodes */
                  (m_use_sql_variables_in == TYPE_ALL
-                  && Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_WRITE))
-                 || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_WRITE)
+                  && Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_WRITE))
+                 || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_WRITE)
                  ||     /** enable or disable autocommit are always routed to all */
-                 Parser::type_mask_contains(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
-                 || Parser::type_mask_contains(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
+                 Parser::type_mask_contains(qtype, mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
+                 || Parser::type_mask_contains(qtype, mxs::sql::TYPE_DISABLE_AUTOCOMMIT)))
     {
         target |= TARGET_ALL;
     }
@@ -485,29 +486,29 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     else
     {
         mxb_assert(trx_active || load_active
-                   || (Parser::type_mask_contains(qtype, QUERY_TYPE_WRITE)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_MASTER_READ)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_SESSION_WRITE)
-                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
+                   || (Parser::type_mask_contains(qtype, mxs::sql::TYPE_WRITE)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_MASTER_READ)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SESSION_WRITE)
+                       || (Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
+                       || (Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ)
+                       || (Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_READ)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_WRITE)
+                       || (Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_WRITE)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || (Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_WRITE)
+                       || (Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_WRITE)
                            && m_use_sql_variables_in == TYPE_MASTER)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_BEGIN_TRX)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_ROLLBACK)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_COMMIT)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_EXEC_STMT)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_CREATE_TMP_TABLE)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_READ_TMP_TABLE)
-                       || Parser::type_mask_contains(qtype, QUERY_TYPE_UNKNOWN))
-                   || Parser::type_mask_contains(qtype, QUERY_TYPE_EXEC_STMT));
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_BEGIN_TRX)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_DISABLE_AUTOCOMMIT)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_ROLLBACK)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_COMMIT)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_EXEC_STMT)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_CREATE_TMP_TABLE)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ_TMP_TABLE)
+                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_UNKNOWN))
+                   || Parser::type_mask_contains(qtype, mxs::sql::TYPE_EXEC_STMT));
 
         target = TARGET_MASTER;
     }
@@ -605,7 +606,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
 
 uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
 {
-    uint32_t type = QUERY_TYPE_UNKNOWN;
+    uint32_t type = mxs::sql::TYPE_UNKNOWN;
 
     switch (command)
     {
@@ -617,7 +618,7 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
     case MXS_COM_CHANGE_USER:       /*< 11 all servers change it accordingly */
     case MXS_COM_SET_OPTION:        /*< 1b send options to all servers */
     case MXS_COM_RESET_CONNECTION:  /*< 1f resets the state of all connections */
-        type = QUERY_TYPE_SESSION_WRITE;
+        type = mxs::sql::TYPE_SESSION_WRITE;
         break;
 
     case MXS_COM_CREATE_DB:             /**< 5 DDL must go to the master */
@@ -625,11 +626,11 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
     case MXS_COM_STMT_CLOSE:            /*< free prepared statement */
     case MXS_COM_STMT_SEND_LONG_DATA:   /*< send data to column */
     case MXS_COM_STMT_RESET:            /*< resets the data of a prepared statement */
-        type = QUERY_TYPE_WRITE;
+        type = mxs::sql::TYPE_WRITE;
         break;
 
     case MXS_COM_FIELD_LIST:    /**< This is essentially SHOW COLUMNS */
-        type = QUERY_TYPE_READ;
+        type = mxs::sql::TYPE_READ;
         break;
 
     case MXS_COM_QUERY:
@@ -638,12 +639,12 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
 
     case MXS_COM_STMT_PREPARE:
         type = m_parser.get_type_mask(*querybuf);
-        type |= QUERY_TYPE_PREPARE_STMT;
+        type |= mxs::sql::TYPE_PREPARE_STMT;
         break;
 
     case MXS_COM_STMT_EXECUTE:
         /** Parsing is not needed for this type of packet */
-        type = QUERY_TYPE_EXEC_STMT;
+        type = mxs::sql::TYPE_EXEC_STMT;
         break;
 
     case MXS_COM_SHUTDOWN:      /**< 8 where should shutdown be routed ? */
@@ -663,7 +664,7 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
 
 void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
 {
-    if (Parser::type_mask_contains(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    if (Parser::type_mask_contains(type, mxs::sql::TYPE_CREATE_TMP_TABLE))
     {
         std::string table;
 
@@ -694,11 +695,11 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
 {
     bool rval = false;
 
-    if (Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_LOCAL_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
+    if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_LOCAL_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_READ))
     {
         if (!foreach_table(*this, m_pSession, querybuf, &QueryClassifier::find_table))
         {
@@ -768,7 +769,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
         check_drop_tmp_table(querybuf);
         if (is_read_tmp_table(querybuf, *qtype))
         {
-            *qtype |= QUERY_TYPE_MASTER_READ;
+            *qtype |= mxs::sql::TYPE_MASTER_READ;
         }
     }
 
@@ -820,7 +821,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 {
     uint32_t route_target = TARGET_MASTER;
     uint8_t command = 0xFF;
-    uint32_t type_mask = QUERY_TYPE_UNKNOWN;
+    uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
     uint32_t len = gwbuf_length(pBuffer);
 
@@ -875,7 +876,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
          */
         if (in_read_only_trx)
         {
-            type_mask = QUERY_TYPE_READ;
+            type_mask = mxs::sql::TYPE_READ;
         }
         else
         {
@@ -890,11 +891,11 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             {
                 /* If we do not have a master node, assigning the forced node is not
                  * effective since we don't have a node to force queries to. In this
-                 * situation, assigning QUERY_TYPE_WRITE for the query will trigger
+                 * situation, assigning mxs::sql::TYPE_WRITE for the query will trigger
                  * the error processing. */
                 if (!m_pHandler->lock_to_master())
                 {
-                    type_mask |= QUERY_TYPE_WRITE;
+                    type_mask |= mxs::sql::TYPE_WRITE;
                 }
             }
         }
@@ -960,7 +961,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
         process_routing_hints(pBuffer->hints, &route_target);
 
-        if (protocol_data->is_trx_ending() || Parser::type_mask_contains(type_mask, QUERY_TYPE_BEGIN_TRX))
+        if (protocol_data->is_trx_ending() || Parser::type_mask_contains(type_mask, mxs::sql::TYPE_BEGIN_TRX))
         {
             // Transaction is ending or starting
             m_route_info.set_trx_still_read_only(true);

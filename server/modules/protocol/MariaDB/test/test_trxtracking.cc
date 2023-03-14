@@ -73,63 +73,63 @@ struct test_case
 {
     // Keep these all uppercase, lowercase are tested programmatically.
     {"BEGIN",
-     QUERY_TYPE_BEGIN_TRX},
+     mxs::sql::TYPE_BEGIN_TRX},
     {"BEGIN WORK",
-     QUERY_TYPE_BEGIN_TRX},
+     mxs::sql::TYPE_BEGIN_TRX},
 
     {"COMMIT",
-     QUERY_TYPE_COMMIT},
+     mxs::sql::TYPE_COMMIT},
     {"COMMIT WORK",
-     QUERY_TYPE_COMMIT},
+     mxs::sql::TYPE_COMMIT},
 
     {"ROLLBACK",
-     QUERY_TYPE_ROLLBACK},
+     mxs::sql::TYPE_ROLLBACK},
     {"ROLLBACK WORK",
-     QUERY_TYPE_ROLLBACK},
+     mxs::sql::TYPE_ROLLBACK},
 
     {"START TRANSACTION",
-     QUERY_TYPE_BEGIN_TRX},
+     mxs::sql::TYPE_BEGIN_TRX},
 
     {"START TRANSACTION READ ONLY",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_READ},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_READ},
     {"START TRANSACTION READ WRITE",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_WRITE},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_WRITE},
 
     {"START TRANSACTION WITH CONSISTENT SNAPSHOT",
-     QUERY_TYPE_BEGIN_TRX},
+     mxs::sql::TYPE_BEGIN_TRX},
 
     {"START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_READ},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_READ},
 
     {"SET AUTOCOMMIT=true",
-     QUERY_TYPE_COMMIT
-     | QUERY_TYPE_ENABLE_AUTOCOMMIT},
+     mxs::sql::TYPE_COMMIT
+     | mxs::sql::TYPE_ENABLE_AUTOCOMMIT},
 
     {"SET AUTOCOMMIT=1",
-     QUERY_TYPE_COMMIT
-     | QUERY_TYPE_ENABLE_AUTOCOMMIT},
+     mxs::sql::TYPE_COMMIT
+     | mxs::sql::TYPE_ENABLE_AUTOCOMMIT},
 
     {"SET AUTOCOMMIT=false",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_DISABLE_AUTOCOMMIT},
 
     {"SET AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_DISABLE_AUTOCOMMIT},
     {"SET @@AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_DISABLE_AUTOCOMMIT},
     {"SET GLOBAL AUTOCOMMIT=0",
      0},
     {"SET SESSION AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_DISABLE_AUTOCOMMIT},
     {"SET @@SESSION . AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+     mxs::sql::TYPE_BEGIN_TRX
+     | mxs::sql::TYPE_DISABLE_AUTOCOMMIT},
     {"SET @@GLOBAL . AUTOCOMMIT=0",
      0},
 };

@@ -333,7 +333,7 @@ private:
             // buffer which would be required for the function information.
             return !reply.is_ok()
                 && !mxs::Parser::type_mask_contains(m_qc.current_route_info().type_mask(),
-                                                    QUERY_TYPE_MASTER_READ);
+                                                    mxs::sql::TYPE_MASTER_READ);
         }
 
         mxb_assert(!true);
@@ -402,8 +402,8 @@ private:
             mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
         }
 
-        const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
-            | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
+        const uint32_t read_only_types = mxs::sql::TYPE_READ | mxs::sql::TYPE_LOCAL_READ
+            | mxs::sql::TYPE_USERVAR_READ | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ;
 
         if ((route_info().type_mask() & ~read_only_types) && !trx_is_read_only()
             && res.target->is_master())

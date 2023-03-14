@@ -503,7 +503,7 @@ bool QlaFilterSession::routeQuery(GWBUF&& queue)
         {
             m_qc_type_mask = parser().get_type_mask(queue);
 
-            if (m_qc_type_mask & QUERY_TYPE_BEGIN_TRX)
+            if (m_qc_type_mask & mxs::sql::TYPE_BEGIN_TRX)
             {
                 m_trx_begin_time = m_begin_time;
             }
@@ -783,15 +783,15 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     if (data_flags & QlaInstance::LOG_DATA_TRANSACTION)
     {
         output << curr_sep;
-        if (m_qc_type_mask & QUERY_TYPE_BEGIN_TRX)
+        if (m_qc_type_mask & mxs::sql::TYPE_BEGIN_TRX)
         {
             output << "BEGIN";
         }
-        else if (m_qc_type_mask & QUERY_TYPE_COMMIT)
+        else if (m_qc_type_mask & mxs::sql::TYPE_COMMIT)
         {
             output << "COMMIT";
         }
-        else if (m_qc_type_mask & QUERY_TYPE_ROLLBACK)
+        else if (m_qc_type_mask & mxs::sql::TYPE_ROLLBACK)
         {
             output << "ROLLBACK";
         }
@@ -800,7 +800,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     if (data_flags & QlaInstance::LOG_DATA_TRANSACTION_DUR)
     {
         output << curr_sep;
-        if (m_qc_type_mask & QUERY_TYPE_COMMIT)
+        if (m_qc_type_mask & mxs::sql::TYPE_COMMIT)
         {
             auto secs = mxb::to_secs(elems.last_response_time - m_trx_begin_time);
             output << int(m_log->settings().duration_multiplier * secs + 0.5);

@@ -150,7 +150,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     const char* zHost = m_pSession->client_remote().c_str();
     bool acceptable = true;
 
-    if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), QUERY_TYPE_USERVAR_WRITE))
+    if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), mxs::sql::TYPE_USERVAR_WRITE))
     {
         if (m_config.check_user_variables)
         {
@@ -215,7 +215,7 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     }
     else if (parse_result == Parser::Result::PARSED || !m_config.require_fully_parsed)
     {
-        if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
+        if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), mxs::sql::TYPE_PREPARE_NAMED_STMT))
         {
             GWBUF* pP = parser().get_preparable_stmt(*pPacket);
 
@@ -668,7 +668,7 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
 
 bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    mxb_assert(Parser::type_mask_contains(parser().get_type_mask(*pPacket), QUERY_TYPE_USERVAR_WRITE));
+    mxb_assert(Parser::type_mask_contains(parser().get_type_mask(*pPacket), mxs::sql::TYPE_USERVAR_WRITE));
 
     bool is_defined = false;
 

@@ -64,22 +64,22 @@ namespace
 
 /* This router handles different query types in a different manner. Some queries
  * require that a "write_backend" is set. */
-const uint32_t q_route_to_rr = (QUERY_TYPE_LOCAL_READ | QUERY_TYPE_READ
-                                | QUERY_TYPE_MASTER_READ | QUERY_TYPE_USERVAR_READ
-                                | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ
-                                | QUERY_TYPE_SHOW_DATABASES | QUERY_TYPE_SHOW_TABLES);
+const uint32_t q_route_to_rr = (mxs::sql::TYPE_LOCAL_READ | mxs::sql::TYPE_READ
+                                | mxs::sql::TYPE_MASTER_READ | mxs::sql::TYPE_USERVAR_READ
+                                | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ
+                                | mxs::sql::TYPE_SHOW_DATABASES | mxs::sql::TYPE_SHOW_TABLES);
 
-const uint32_t q_route_to_all = (QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_USERVAR_WRITE
-                                 | QUERY_TYPE_GSYSVAR_WRITE | QUERY_TYPE_ENABLE_AUTOCOMMIT
-                                 | QUERY_TYPE_DISABLE_AUTOCOMMIT);
+const uint32_t q_route_to_all = (mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_USERVAR_WRITE
+                                 | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
+                                 | mxs::sql::TYPE_DISABLE_AUTOCOMMIT);
 
-const uint32_t q_trx_begin = QUERY_TYPE_BEGIN_TRX;
+const uint32_t q_trx_begin = mxs::sql::TYPE_BEGIN_TRX;
 
-const uint32_t q_trx_end = (QUERY_TYPE_ROLLBACK | QUERY_TYPE_COMMIT);
+const uint32_t q_trx_end = (mxs::sql::TYPE_ROLLBACK | mxs::sql::TYPE_COMMIT);
 
-const uint32_t q_route_to_write = (QUERY_TYPE_WRITE | QUERY_TYPE_PREPARE_NAMED_STMT
-                                   | QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_EXEC_STMT
-                                   | QUERY_TYPE_CREATE_TMP_TABLE | QUERY_TYPE_READ_TMP_TABLE);
+const uint32_t q_route_to_write = (mxs::sql::TYPE_WRITE | mxs::sql::TYPE_PREPARE_NAMED_STMT
+                                   | mxs::sql::TYPE_PREPARE_STMT | mxs::sql::TYPE_EXEC_STMT
+                                   | mxs::sql::TYPE_CREATE_TMP_TABLE | mxs::sql::TYPE_READ_TMP_TABLE);
 
 
 namespace cfg = mxs::config;

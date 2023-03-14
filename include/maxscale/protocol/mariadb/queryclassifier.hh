@@ -275,7 +275,7 @@ public:
 
         uint32_t          m_target = QueryClassifier::TARGET_UNDEFINED;
         uint8_t           m_command = 0xff;
-        uint32_t          m_type_mask = QUERY_TYPE_UNKNOWN;
+        uint32_t          m_type_mask = mxs::sql::TYPE_UNKNOWN;
         uint32_t          m_stmt_id = 0;
         load_data_state_t m_load_data_state = LOAD_DATA_INACTIVE;
         uint64_t          m_load_data_sent = 0;
@@ -389,7 +389,7 @@ public:
      */
     bool is_trx_starting() const
     {
-        return mxs::Parser::type_mask_contains(m_route_info.type_mask(), QUERY_TYPE_BEGIN_TRX);
+        return mxs::Parser::type_mask_contains(m_route_info.type_mask(), mxs::sql::TYPE_BEGIN_TRX);
     }
 
     /**

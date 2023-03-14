@@ -307,7 +307,7 @@ public:
     vector<vector<char>>  scratchs;
 };
 
-#define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
+#define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < mxs::sql::TYPE_WRITE ? true : false)
 
 static THD*          get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
 static unsigned long set_client_flags(MYSQL* mysql);
@@ -649,7 +649,7 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
 {
     int32_t rv = QC_RESULT_OK;
 
-    *type_mask = QUERY_TYPE_UNKNOWN;
+    *type_mask = mxs::sql::TYPE_UNKNOWN;
     MYSQL* mysql;
     bool succp;
 
@@ -1099,8 +1099,8 @@ set_type_t get_set_type(const char* s)
  */
 static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 {
-    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-    uint32_t type = QUERY_TYPE_UNKNOWN;
+    mxs::sql::Type qtype = mxs::sql::TYPE_UNKNOWN;
+    uint32_t type = mxs::sql::TYPE_UNKNOWN;
     int set_autocommit_stmt = -1;   /*< -1 no, 0 disable, 1 enable */
     LEX* lex;
     Item* item;
@@ -1125,19 +1125,19 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         if (dynamic_cast<select_to_file*>(lex->result))
         {
             // SELECT ... INTO DUMPFILE|OUTFILE ...
-            type = QUERY_TYPE_WRITE;
+            type = mxs::sql::TYPE_WRITE;
         }
         else
         {
             // SELECT ... INTO @var
-            type = QUERY_TYPE_GSYSVAR_WRITE;
+            type = mxs::sql::TYPE_GSYSVAR_WRITE;
         }
         goto return_qtype;
     }
 
     if (lex->describe)
     {
-        type = QUERY_TYPE_READ;
+        type = mxs::sql::TYPE_READ;
         goto return_qtype;
     }
 
@@ -1157,8 +1157,8 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
         if (set_autocommit_stmt == 1)
         {
-            type |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
-            type |= QUERY_TYPE_COMMIT;
+            type |= mxs::sql::TYPE_ENABLE_AUTOCOMMIT;
+            type |= mxs::sql::TYPE_COMMIT;
         }
     }
 
@@ -1170,8 +1170,8 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                      " before executing the next command.");
         }
 
-        type |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
-        type |= QUERY_TYPE_BEGIN_TRX;
+        type |= mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
+        type |= mxs::sql::TYPE_BEGIN_TRX;
     }
 
     if (lex->sql_command == SQLCOM_SHOW_STATUS)
@@ -1179,11 +1179,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         if (lex->option_type == OPT_GLOBAL)
         {
             // Force to master.
-            type = QUERY_TYPE_WRITE;
+            type = mxs::sql::TYPE_WRITE;
         }
         else
         {
-            type = QUERY_TYPE_READ;
+            type = mxs::sql::TYPE_READ;
         }
 
         goto return_qtype;
@@ -1193,11 +1193,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     {
         if (lex->option_type == OPT_GLOBAL)
         {
-            type |= QUERY_TYPE_GSYSVAR_READ;
+            type |= mxs::sql::TYPE_GSYSVAR_READ;
         }
         else
         {
-            type |= QUERY_TYPE_SYSVAR_READ;
+            type |= mxs::sql::TYPE_SYSVAR_READ;
         }
 
         goto return_qtype;
@@ -1209,7 +1209,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
          * REVOKE ALL, ASSIGN_TO_KEYCACHE,
          * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
          */
-        type |= QUERY_TYPE_GSYSVAR_WRITE;
+        type |= mxs::sql::TYPE_GSYSVAR_WRITE;
 
         goto return_qtype;
     }
@@ -1219,16 +1219,16 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         switch (get_set_type(pi->pi_query_plain_str))
         {
         case SET_TYPE_PASSWORD:
-            type |= QUERY_TYPE_WRITE;
+            type |= mxs::sql::TYPE_WRITE;
             break;
 
         case SET_TYPE_DEFAULT_ROLE:
-            type |= QUERY_TYPE_WRITE;
+            type |= mxs::sql::TYPE_WRITE;
             break;
 
         case SET_TYPE_NAMES:
             {
-                type |= QUERY_TYPE_SESSION_WRITE;
+                type |= mxs::sql::TYPE_SESSION_WRITE;
 
                 List_iterator<set_var_base> ilist(lex->var_list);
 
@@ -1236,7 +1236,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                 {
                     if (var->is_system())
                     {
-                        type |= QUERY_TYPE_GSYSVAR_WRITE;
+                        type |= mxs::sql::TYPE_GSYSVAR_WRITE;
                     }
                 }
             }
@@ -1244,17 +1244,17 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
         case SET_TYPE_TRANSACTION:
             {
-                type |= QUERY_TYPE_SESSION_WRITE;
+                type |= mxs::sql::TYPE_SESSION_WRITE;
 
                 if (lex->option_type == SHOW_OPT_GLOBAL)
                 {
-                    type |= QUERY_TYPE_GSYSVAR_WRITE;
+                    type |= mxs::sql::TYPE_GSYSVAR_WRITE;
                 }
                 else
                 {
                     if (lex->option_type != SHOW_OPT_SESSION)
                     {
-                        type |= QUERY_TYPE_NEXT_TRX;
+                        type |= mxs::sql::TYPE_NEXT_TRX;
                     }
 
                     List_iterator<set_var_base> ilist(lex->var_list);
@@ -1268,11 +1268,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                         {
                             if (strcasestr(pi->pi_query_plain_str, "write"))
                             {
-                                type |= QUERY_TYPE_READWRITE;
+                                type |= mxs::sql::TYPE_READWRITE;
                             }
                             else
                             {
-                                type |= QUERY_TYPE_READONLY;
+                                type |= mxs::sql::TYPE_READONLY;
                             }
                         }
                     }
@@ -1282,7 +1282,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
         case SET_TYPE_UNKNOWN:
             {
-                type |= QUERY_TYPE_SESSION_WRITE;
+                type |= mxs::sql::TYPE_SESSION_WRITE;
                 /** Either user- or system variable write */
                 List_iterator<set_var_base> ilist(lex->var_list);
                 size_t n = 0;
@@ -1291,24 +1291,24 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                 {
                     if (var->is_system())
                     {
-                        type |= QUERY_TYPE_GSYSVAR_WRITE;
+                        type |= mxs::sql::TYPE_GSYSVAR_WRITE;
                     }
                     else
                     {
-                        type |= QUERY_TYPE_USERVAR_WRITE;
+                        type |= mxs::sql::TYPE_USERVAR_WRITE;
                     }
                     ++n;
                 }
 
                 if (n == 0)
                 {
-                    type |= QUERY_TYPE_GSYSVAR_WRITE;
+                    type |= mxs::sql::TYPE_GSYSVAR_WRITE;
                 }
             }
             break;
 
         default:
-            type |= QUERY_TYPE_SESSION_WRITE;
+            type |= mxs::sql::TYPE_SESSION_WRITE;
         }
 
         goto return_qtype;
@@ -1332,18 +1332,18 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
             && force_data_modify_op_replication)
         {
             /** Not replicated */
-            type |= QUERY_TYPE_SESSION_WRITE;
+            type |= mxs::sql::TYPE_SESSION_WRITE;
         }
         else
 #endif /* NOT_IN_USE */
         {
             /** Written to binlog, that is, replicated except tmp tables */
-            type |= QUERY_TYPE_WRITE;   /*< to master */
+            type |= mxs::sql::TYPE_WRITE;   /*< to master */
 
             if (lex->sql_command == SQLCOM_CREATE_TABLE
                 && (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE))
             {
-                type |= QUERY_TYPE_CREATE_TMP_TABLE;    /*< remember in router */
+                type |= mxs::sql::TYPE_CREATE_TMP_TABLE;    /*< remember in router */
             }
         }
     }
@@ -1352,65 +1352,65 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     switch (lex->sql_command)
     {
     case SQLCOM_EMPTY_QUERY:
-        type |= QUERY_TYPE_READ;
+        type |= mxs::sql::TYPE_READ;
         break;
 
     case SQLCOM_CHANGE_DB:
-        type |= QUERY_TYPE_SESSION_WRITE;
+        type |= mxs::sql::TYPE_SESSION_WRITE;
         break;
 
     case SQLCOM_DEALLOCATE_PREPARE:
-        type |= QUERY_TYPE_DEALLOC_PREPARE;
+        type |= mxs::sql::TYPE_DEALLOC_PREPARE;
         break;
 
     case SQLCOM_SELECT:
-        type |= QUERY_TYPE_READ;
+        type |= mxs::sql::TYPE_READ;
         break;
 
     case SQLCOM_CALL:
-        type |= QUERY_TYPE_WRITE;
+        type |= mxs::sql::TYPE_WRITE;
         break;
 
     case SQLCOM_BEGIN:
-        type |= QUERY_TYPE_BEGIN_TRX;
+        type |= mxs::sql::TYPE_BEGIN_TRX;
         if (lex->start_transaction_opt & MYSQL_START_TRANS_OPT_READ_WRITE)
         {
-            type |= QUERY_TYPE_WRITE;
+            type |= mxs::sql::TYPE_WRITE;
         }
         else if (lex->start_transaction_opt & MYSQL_START_TRANS_OPT_READ_ONLY)
         {
-            type |= QUERY_TYPE_READ;
+            type |= mxs::sql::TYPE_READ;
         }
         goto return_qtype;
         break;
 
     case SQLCOM_COMMIT:
-        type |= QUERY_TYPE_COMMIT;
+        type |= mxs::sql::TYPE_COMMIT;
         goto return_qtype;
         break;
 
     case SQLCOM_ROLLBACK:
-        type |= QUERY_TYPE_ROLLBACK;
+        type |= mxs::sql::TYPE_ROLLBACK;
         goto return_qtype;
         break;
 
     case SQLCOM_PREPARE:
-        type |= QUERY_TYPE_PREPARE_NAMED_STMT;
+        type |= mxs::sql::TYPE_PREPARE_NAMED_STMT;
         goto return_qtype;
         break;
 
     case SQLCOM_SET_OPTION:
-        type |= QUERY_TYPE_SESSION_WRITE;
+        type |= mxs::sql::TYPE_SESSION_WRITE;
         goto return_qtype;
         break;
 
     case SQLCOM_SHOW_DATABASES:
-        type |= QUERY_TYPE_SHOW_DATABASES;
+        type |= mxs::sql::TYPE_SHOW_DATABASES;
         goto return_qtype;
         break;
 
     case SQLCOM_SHOW_TABLES:
-        type |= QUERY_TYPE_SHOW_TABLES;
+        type |= mxs::sql::TYPE_SHOW_TABLES;
         goto return_qtype;
         break;
 
@@ -1425,7 +1425,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     case SQLCOM_SHOW_SLAVE_HOSTS:
     case SQLCOM_SHOW_SLAVE_STAT:
     case SQLCOM_SHOW_STATUS:
-        type |= QUERY_TYPE_READ;
+        type |= mxs::sql::TYPE_READ;
         goto return_qtype;
         break;
 
@@ -1436,24 +1436,24 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     case SQLCOM_RESET:
         if (lex->type & REFRESH_QUERY_CACHE)
         {
-            type |= QUERY_TYPE_SESSION_WRITE;
+            type |= mxs::sql::TYPE_SESSION_WRITE;
         }
         else
         {
-            type |= QUERY_TYPE_WRITE;
+            type |= mxs::sql::TYPE_WRITE;
         }
         break;
 
     case SQLCOM_XA_START:
-        type |= QUERY_TYPE_BEGIN_TRX;
+        type |= mxs::sql::TYPE_BEGIN_TRX;
         break;
 
     case SQLCOM_XA_END:
-        type |= QUERY_TYPE_COMMIT;
+        type |= mxs::sql::TYPE_COMMIT;
         break;
 
     default:
-        type |= QUERY_TYPE_WRITE;
+        type |= mxs::sql::TYPE_WRITE;
         break;
     }
 
@@ -1462,13 +1462,13 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     if (QTYPE_LESS_RESTRICTIVE_THAN_WRITE(type))
 #endif
     // TODO: This test is meaningless, since at this point
-    // TODO: qtype (not type) is QUERY_TYPE_UNKNOWN.
-    if (Parser::type_mask_contains(qtype, QUERY_TYPE_UNKNOWN)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_LOCAL_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
+    // TODO: qtype (not type) is mxs::sql::TYPE_UNKNOWN.
+    if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_UNKNOWN)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_LOCAL_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_READ))
     {
         /**
          * These values won't change qtype more restrictive than write.
@@ -1496,7 +1496,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
             }
             else if (itype == Item::FUNC_ITEM)
             {
-                int func_qtype = QUERY_TYPE_UNKNOWN;
+                int func_qtype = mxs::sql::TYPE_UNKNOWN;
                 /**
                  * Item types:
                  * FIELD_ITEM = 0, FUNC_ITEM,
@@ -1551,7 +1551,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                      * An unknown (for maxscale) function / sp
                      * belongs to this category.
                      */
-                    func_qtype |= QUERY_TYPE_WRITE;
+                    func_qtype |= mxs::sql::TYPE_WRITE;
                     MXB_DEBUG("%lu [resolve_query_type] "
                               "functype FUNC_SP, stored proc "
                               "or unknown function.",
@@ -1559,7 +1559,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                     break;
 
                 case Item_func::UDF_FUNC:
-                    func_qtype |= QUERY_TYPE_WRITE;
+                    func_qtype |= mxs::sql::TYPE_WRITE;
                     MXB_DEBUG("%lu [resolve_query_type] "
                               "functype UDF_FUNC, user-defined "
                               "function.",
@@ -1594,11 +1594,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                                 || ((length == sizeof(identity) - 1)
                                     && (strcasecmp(name, identity) == 0))))
                         {
-                            func_qtype |= QUERY_TYPE_MASTER_READ;
+                            func_qtype |= mxs::sql::TYPE_MASTER_READ;
                         }
                         else
                         {
-                            func_qtype |= QUERY_TYPE_SYSVAR_READ;
+                            func_qtype |= mxs::sql::TYPE_SYSVAR_READ;
                         }
                         MXB_DEBUG("%lu [resolve_query_type] "
                                   "functype GSYSVAR_FUNC, system "
@@ -1609,7 +1609,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
                 /** User-defined variable read */
                 case Item_func::GUSERVAR_FUNC:
-                    func_qtype |= QUERY_TYPE_USERVAR_READ;
+                    func_qtype |= mxs::sql::TYPE_USERVAR_READ;
                     MXB_DEBUG("%lu [resolve_query_type] "
                               "functype GUSERVAR_FUNC, user "
                               "variable read.",
@@ -1618,7 +1618,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
                 /** User-defined variable modification */
                 case Item_func::SUSERVAR_FUNC:
-                    func_qtype |= QUERY_TYPE_USERVAR_WRITE;
+                    func_qtype |= mxs::sql::TYPE_USERVAR_WRITE;
                     MXB_DEBUG("%lu [resolve_query_type] "
                               "functype SUSERVAR_FUNC, user "
                               "variable write.",
@@ -1630,11 +1630,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                     if (((Item_func*) item)->func_name() != NULL
                         && strcmp((char*) ((Item_func*) item)->func_name(), "last_insert_id") == 0)
                     {
-                        func_qtype |= QUERY_TYPE_MASTER_READ;
+                        func_qtype |= mxs::sql::TYPE_MASTER_READ;
                     }
                     else
                     {
-                        func_qtype |= QUERY_TYPE_READ;
+                        func_qtype |= mxs::sql::TYPE_READ;
                     }
 
                     /**
@@ -1666,7 +1666,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
              * Write is as restrictive as it gets due functions,
              * so break.
              */
-            if ((type & QUERY_TYPE_WRITE) == QUERY_TYPE_WRITE)
+            if ((type & mxs::sql::TYPE_WRITE) == mxs::sql::TYPE_WRITE)
             {
                 break;
             }
@@ -1676,7 +1676,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     }       /**< if */
 
 return_qtype:
-    qtype = (qc_query_type_t) type;
+    qtype = (mxs::sql::Type) type;
     return qtype;
 }
 
@@ -3127,7 +3127,7 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
         if ((strcasecmp(func_name, "lastval") == 0)
             || (strcasecmp(func_name, "nextval") == 0))
         {
-            pi->type_mask |= QUERY_TYPE_WRITE;
+            pi->type_mask |= mxs::sql::TYPE_WRITE;
             rv = true;
         }
     }

@@ -913,9 +913,9 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
         uint32_t type = parser()->get_trx_type_mask_using(*packetbuf, parser_type);
 
-        if (type & QUERY_TYPE_BEGIN_TRX)
+        if (type & mxs::sql::TYPE_BEGIN_TRX)
         {
-            if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
+            if (type & mxs::sql::TYPE_DISABLE_AUTOCOMMIT)
             {
                 // This disables autocommit and the next statement starts a new transaction
                 m_session_data->is_autocommit = false;
@@ -925,37 +925,37 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             {
                 auto new_trx_state = trx_starting_active | m_session_data->next_trx_mode;
                 m_session_data->next_trx_mode = m_session_data->default_trx_mode;
-                if (type & QUERY_TYPE_READ)
+                if (type & mxs::sql::TYPE_READ)
                 {
                     new_trx_state |= TrxState::TRX_READ_ONLY;
                 }
-                else if (type & QUERY_TYPE_WRITE)
+                else if (type & mxs::sql::TYPE_WRITE)
                 {
                     new_trx_state &= ~TrxState::TRX_READ_ONLY;
                 }
                 ses_trx_state = new_trx_state;
             }
         }
-        else if (type & (QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK))
+        else if (type & (mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK))
         {
             auto new_trx_state = ses_trx_state | TrxState::TRX_ENDING;
             // A commit never starts a new transaction. This would happen with: SET AUTOCOMMIT=0; COMMIT;
             new_trx_state &= ~TrxState::TRX_STARTING;
             ses_trx_state = new_trx_state;
 
-            if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
+            if (type & mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
             {
                 m_session_data->is_autocommit = true;
             }
         }
-        else if (type & (QUERY_TYPE_READWRITE | QUERY_TYPE_READONLY))
+        else if (type & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
         {
             // Currently only qc_sqlite should return these types
             mxb_assert(use_parser && parser()->get_operation(*packetbuf) == mxs::sql::OP_SET_TRANSACTION);
-            uint32_t mode = type & QUERY_TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
+            uint32_t mode = type & mxs::sql::TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
             m_session_data->next_trx_mode = mode;
 
-            if ((type & QUERY_TYPE_NEXT_TRX) == 0)
+            if ((type & mxs::sql::TYPE_NEXT_TRX) == 0)
             {
                 // All future transactions will use this access mode
                 m_session_data->default_trx_mode = mode;
@@ -1212,7 +1212,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
         should_record = true;
 
         if (cmd == MXS_COM_STMT_PREPARE
-            || mxs::Parser::type_mask_contains(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
+            || mxs::Parser::type_mask_contains(info.type_mask(), mxs::sql::TYPE_PREPARE_NAMED_STMT))
         {
             // This will silence the warnings about unknown PS IDs
             m_qc.ps_store(&buffer, m_next_id);

@@ -654,7 +654,7 @@ public:
         // NOTE: in case zColumn is "currval" etc.
         if (is_sequence_related_field(zDatabase, zTable, zColumn))
         {
-            m_type_mask |= QUERY_TYPE_WRITE;
+            m_type_mask |= mxs::sql::TYPE_WRITE;
             return;
         }
 
@@ -780,11 +780,11 @@ public:
                     {
                         if (zToken[1] == '@')
                         {
-                            type_mask |= QUERY_TYPE_SYSVAR_READ;
+                            type_mask |= mxs::sql::TYPE_SYSVAR_READ;
                         }
                         else
                         {
-                            type_mask |= QUERY_TYPE_USERVAR_READ;
+                            type_mask |= mxs::sql::TYPE_USERVAR_READ;
                         }
                     }
                 }
@@ -879,18 +879,18 @@ public:
                         if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT)
                             && (m_operation != mxs::sql::OP_SELECT))
                         {
-                            m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+                            m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
                         }
                         else
                         {
                             if ((strcasecmp(&zToken[2], "identity") == 0)
                                 || (strcasecmp(&zToken[2], "last_insert_id") == 0))
                             {
-                                m_type_mask |= QUERY_TYPE_MASTER_READ;
+                                m_type_mask |= mxs::sql::TYPE_MASTER_READ;
                             }
                             else
                             {
-                                m_type_mask |= QUERY_TYPE_SYSVAR_READ;
+                                m_type_mask |= mxs::sql::TYPE_SYSVAR_READ;
                             }
                         }
                     }
@@ -898,11 +898,11 @@ public:
                     {
                         if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
                         {
-                            m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
+                            m_type_mask |= mxs::sql::TYPE_USERVAR_WRITE;
                         }
                         else
                         {
-                            m_type_mask |= QUERY_TYPE_USERVAR_READ;
+                            m_type_mask |= mxs::sql::TYPE_USERVAR_READ;
                         }
                     }
                 }
@@ -1024,11 +1024,11 @@ public:
                 {
                     if (strcasecmp(zToken, "last_insert_id") == 0)
                     {
-                        m_type_mask |= QUERY_TYPE_MASTER_READ;
+                        m_type_mask |= mxs::sql::TYPE_MASTER_READ;
                     }
                     else if (is_sequence_related_function(zToken))
                     {
-                        m_type_mask |= QUERY_TYPE_WRITE;
+                        m_type_mask |= mxs::sql::TYPE_WRITE;
                         ignore_exprlist = true;
                     }
                     else if (!is_builtin_readonly_function(zToken,
@@ -1037,7 +1037,7 @@ public:
                                                            this_thread.version_patch,
                                                            m_sql_mode == Parser::SqlMode::ORACLE))
                     {
-                        m_type_mask |= QUERY_TYPE_WRITE;
+                        m_type_mask |= mxs::sql::TYPE_WRITE;
                     }
 
                     // We exclude "row", because we cannot detect all rows the same
@@ -1612,7 +1612,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_ALTER;
     }
 
@@ -1630,7 +1630,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         update_names_from_srclist(NULL, pSrcList);
 
@@ -1644,7 +1644,7 @@ public:
         if ((m_sql_mode != Parser::SqlMode::ORACLE) || (token == TK_START))
         {
             m_status = Parser::Result::PARSED;
-            m_type_mask = QUERY_TYPE_BEGIN_TRX | type;
+            m_type_mask = mxs::sql::TYPE_BEGIN_TRX | type;
         }
     }
 
@@ -1664,7 +1664,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         if (pTableName)
         {
@@ -1697,7 +1697,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_COMMIT;
+        m_type_mask = mxs::sql::TYPE_COMMIT;
     }
 
     void mxs_sqlite3CreateIndex(Parse* pParse,      /* All information about this parse */
@@ -1714,7 +1714,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_CREATE;
 
         if (pTblName)
@@ -1743,7 +1743,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_CREATE;
 
         const Token* pName = pName2->z ? pName2 : pName1;
@@ -1786,7 +1786,7 @@ public:
 
         if (m_operation != mxs::sql::OP_EXPLAIN)
         {
-            m_type_mask = QUERY_TYPE_WRITE;
+            m_type_mask = mxs::sql::TYPE_WRITE;
             m_operation = mxs::sql::OP_DELETE;
 
             QcAliases aliases;
@@ -1860,7 +1860,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_DROP;
 
         update_names_from_srclist(NULL, pTable);
@@ -1874,7 +1874,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_DROP;
         if (!isView)
         {
@@ -1920,7 +1920,7 @@ public:
 
         if (m_operation != mxs::sql::OP_EXPLAIN)
         {
-            m_type_mask = QUERY_TYPE_WRITE;
+            m_type_mask = mxs::sql::TYPE_WRITE;
             m_operation = mxs::sql::OP_INSERT;
             mxb_assert(pTabList);
             mxb_assert(pTabList->nSrc >= 1);
@@ -1977,7 +1977,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_ROLLBACK;
+        m_type_mask = mxs::sql::TYPE_ROLLBACK;
     }
 
     void mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
@@ -2007,11 +2007,11 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_operation = mxs::sql::OP_CREATE;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         if (isTemp)
         {
-            m_type_mask |= QUERY_TYPE_CREATE_TMP_TABLE;
+            m_type_mask |= mxs::sql::TYPE_CREATE_TMP_TABLE;
         }
 
         const Token* pName = pName2->z ? pName2 : pName1;
@@ -2061,7 +2061,7 @@ public:
             QcAliases aliases;
             uint32_t context = 0;
 
-            m_type_mask = QUERY_TYPE_WRITE;
+            m_type_mask = mxs::sql::TYPE_WRITE;
             m_operation = mxs::sql::OP_UPDATE;
             update_names_from_srclist(&aliases, pTabList);
 
@@ -2096,7 +2096,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
     }
 
     void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_select)
@@ -2117,20 +2117,20 @@ public:
                 // ":DUMPFILE:" or ":OUTFILE:" then it's a SELECT ... INTO OUTFILE|DUMPFILE
                 // and the statement needs to go to master.
                 // See in parse.y, the rule for select_into.
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
             }
             else
             {
                 // If there's a single variable, then it's a write.
                 // mysql embedded considers it a system var write.
-                m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+                m_type_mask = mxs::sql::TYPE_GSYSVAR_WRITE;
             }
 
-            // Also INTO {OUTFILE|DUMPFILE} will be typed as QUERY_TYPE_GSYSVAR_WRITE.
+            // Also INTO {OUTFILE|DUMPFILE} will be typed as mxs::sql::TYPE_GSYSVAR_WRITE.
         }
         else
         {
-            m_type_mask |= QUERY_TYPE_READ;
+            m_type_mask |= mxs::sql::TYPE_READ;
         }
 
         QcAliases aliases;
@@ -2146,7 +2146,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_ALTER;
 
         switch (command)
@@ -2175,7 +2175,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_CALL;
 
         if (pExprList)
@@ -2194,7 +2194,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         update_names_from_srclist(NULL, pTables);
 
@@ -2239,7 +2239,7 @@ public:
             if (m_status == Parser::Result::INVALID)
             {
                 m_status = Parser::Result::PARSED;
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
             }
         }
 
@@ -2261,7 +2261,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_DEALLOC_PREPARE;
+        m_type_mask = mxs::sql::TYPE_DEALLOC_PREPARE;
 
         // If information is collected in several passes, then we may
         // this information already.
@@ -2281,7 +2281,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = (QUERY_TYPE_READ | QUERY_TYPE_WRITE);
+        m_type_mask = (mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE);
 
         exposed_sqlite3ExprListDelete(pParse->db, pEList);
     }
@@ -2291,7 +2291,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_DROP;
 
         switch (what)
@@ -2336,7 +2336,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | type_mask);
+        m_type_mask = (mxs::sql::TYPE_WRITE | type_mask);
         m_operation = mxs::sql::OP_EXECUTE;
 
         // If information is collected in several passes, then we may
@@ -2366,7 +2366,7 @@ public:
             if ((pName->n == sizeof(IMMEDIATE) - 1) && (strncasecmp(pName->z, IMMEDIATE, pName->n)) == 0)
             {
                 m_status = Parser::Result::PARSED;
-                m_type_mask = (QUERY_TYPE_WRITE | type_mask);
+                m_type_mask = (mxs::sql::TYPE_WRITE | type_mask);
                 m_type_mask |= type_check_dynamic_string(pExprSpan->pExpr);
             }
             else
@@ -2387,7 +2387,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_READ;
+        m_type_mask = mxs::sql::TYPE_READ;
         m_operation = mxs::sql::OP_SHOW;
 
         for (int i = 0; i < pList->nSrc; ++i)
@@ -2406,7 +2406,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_READ;
+        m_type_mask = mxs::sql::TYPE_READ;
         m_operation = mxs::sql::OP_EXPLAIN;
     }
 
@@ -2415,7 +2415,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
     }
 
     void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Token* pName)
@@ -2428,7 +2428,7 @@ public:
         {
         case MXS_HANDLER_OPEN:
             {
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
 
                 mxb_assert(pFullName->nSrc == 1);
                 const SrcList::SrcList_item* pItem = &pFullName->a[0];
@@ -2439,7 +2439,7 @@ public:
 
         case MXS_HANDLER_CLOSE:
             {
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
 
                 char zName[pName->n + 1];
                 memcpy(zName, pName->z, pName->n);
@@ -2461,7 +2461,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = local ? mxs::sql::OP_LOAD_LOCAL : mxs::sql::OP_LOAD;
 
         if (pFullName)
@@ -2477,7 +2477,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         if (pTables)
         {
@@ -2492,7 +2492,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         if (pTables)
         {
@@ -2506,7 +2506,7 @@ public:
     {
         mxb_assert(this_thread.initialized);
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_KILL;
         m_kill.soft = pKill->soft;
         m_kill.user = pKill->user;
@@ -2584,13 +2584,13 @@ public:
             {
             case TK_ALTER:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_ALTER;
                 break;
 
             case TK_ANALYZE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 m_operation = mxs::sql::OP_EXPLAIN;
                 break;
 
@@ -2602,7 +2602,7 @@ public:
                     // The beginning of a BLOCK. We'll assume it is in a single
                     // COM_QUERY packet and hence one GWBUF.
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_WRITE;
+                    m_type_mask = mxs::sql::TYPE_WRITE;
                     // Return non-0 to cause the entire input to be consumed.
                     rv = 1;
                 }
@@ -2610,136 +2610,136 @@ public:
 
             case TK_CALL:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_CREATE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_CREATE;
                 break;
 
             case TK_DELETE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_DELETE;
                 break;
 
             case TK_DESC:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 m_operation = mxs::sql::OP_EXPLAIN;
                 break;
 
             case TK_DROP:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_DROP;
                 break;
 
             case TK_EXECUTE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_EXPLAIN:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 m_operation = mxs::sql::OP_EXPLAIN;
                 break;
 
             case TK_GRANT:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_GRANT;
                 break;
 
             case TK_HANDLER:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_INSERT:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_INSERT;
                 break;
 
             case TK_LOCK:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_OPTIMIZE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_PREPARE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
+                m_type_mask = mxs::sql::TYPE_PREPARE_NAMED_STMT;
                 break;
 
             case TK_REPLACE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_INSERT;
                 break;
 
             case TK_REVOKE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_REVOKE;
                 break;
 
             case TK_RESET:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_SELECT:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 m_operation = mxs::sql::OP_SELECT;
                 break;
 
             case TK_SET:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_SESSION_WRITE;
+                m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
                 m_operation = mxs::sql::OP_SET;
                 break;
 
             case TK_SHOW:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 m_operation = mxs::sql::OP_SHOW;
                 break;
 
             case TK_START:
                 // Will produce the right info for START SLAVE.
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_UNLOCK:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_UPDATE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 m_operation = mxs::sql::OP_UPDATE;
                 break;
 
             case TK_TRUNCATE:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case TK_XA:
                 m_status = Parser::Result::TOKENIZED;
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             default:
@@ -2756,7 +2756,7 @@ public:
                 if (m_keyword_2 == TK_TABLE)
                 {
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_WRITE;
+                    m_type_mask = mxs::sql::TYPE_WRITE;
                 }
                 break;
 
@@ -2764,7 +2764,7 @@ public:
                 if (m_keyword_2 == TK_PREPARE)
                 {
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_SESSION_WRITE;
+                    m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
                 }
                 break;
 
@@ -2772,7 +2772,7 @@ public:
                 if (m_keyword_2 == TK_DATA)
                 {
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_WRITE;
+                    m_type_mask = mxs::sql::TYPE_WRITE;
                     m_operation = mxs::sql::OP_LOAD;
                 }
                 break;
@@ -2781,18 +2781,18 @@ public:
                 if (m_keyword_2 == TK_TABLE)
                 {
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_WRITE;
+                    m_type_mask = mxs::sql::TYPE_WRITE;
                 }
                 break;
 
             case TK_SET:
                 if (m_keyword_2 == TK_PASSWORD)
                 {
-                    m_type_mask = QUERY_TYPE_WRITE;
+                    m_type_mask = mxs::sql::TYPE_WRITE;
                 }
                 else if (m_keyword_2 == TK_STATEMENT)
                 {
-                    m_type_mask = QUERY_TYPE_UNKNOWN; // aka 0
+                    m_type_mask = mxs::sql::TYPE_UNKNOWN; // aka 0
                 }
                 break;
 
@@ -2801,7 +2801,7 @@ public:
                 {
                 case TK_TRANSACTION:
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_BEGIN_TRX;
+                    m_type_mask = mxs::sql::TYPE_BEGIN_TRX;
                     break;
 
                 default:
@@ -2814,12 +2814,12 @@ public:
                 {
                 case TK_DATABASES_KW:
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_SHOW_DATABASES;
+                    m_type_mask = mxs::sql::TYPE_SHOW_DATABASES;
                     break;
 
                 case TK_TABLES:
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = QUERY_TYPE_SHOW_TABLES;
+                    m_type_mask = mxs::sql::TYPE_SHOW_TABLES;
                     break;
 
                 default:
@@ -2841,7 +2841,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         for (int i = 0; i < pTables->nSrc; ++i)
         {
@@ -2873,7 +2873,7 @@ public:
             break;
         }
 
-        m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
+        m_type_mask = mxs::sql::TYPE_PREPARE_NAMED_STMT;
 
         // If information is collected in several passes, then we may
         // this information already.
@@ -2922,7 +2922,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
 
         switch (kind)
         {
@@ -2948,7 +2948,7 @@ public:
         switch (what)
         {
         case MXS_RESET_QUERY_CACHE:
-            m_type_mask = QUERY_TYPE_SESSION_WRITE;
+            m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
             break;
 
         default:
@@ -2961,8 +2961,8 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask |= QUERY_TYPE_SESSION_WRITE;
-        m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+        m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
+        m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
         m_operation = mxs::sql::OP_SET;
 
         exposed_sqlite3ExprDelete(pParse->db, pValue);
@@ -2975,7 +2975,7 @@ public:
         m_status = Parser::Result::PARSED;
         // The following must be set anew as there will be no SET in case of
         // Oracle's "var := 1", in which case maxscaleKeyword() is never called.
-        m_type_mask |= QUERY_TYPE_SESSION_WRITE;
+        m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
         m_operation = mxs::sql::OP_SET;
 
         switch (kind)
@@ -2984,7 +2984,7 @@ public:
             break;
 
         case MXS_SET_DEFAULT_ROLE:
-            m_type_mask = QUERY_TYPE_WRITE;
+            m_type_mask = mxs::sql::TYPE_WRITE;
             break;
 
         default:
@@ -3000,7 +3000,7 @@ public:
     {
         m_status = Parser::Result::PARSED;
         // Not a session write because that would break replication - see MXS-2713.
-        m_type_mask |= QUERY_TYPE_WRITE;
+        m_type_mask |= mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_SET;
     }
 
@@ -3029,7 +3029,7 @@ public:
                 {
                     // Even though SET PASSWORD looks like a session command it
                     // is not, the password change will be replicated to slaves.
-                    m_type_mask = QUERY_TYPE_WRITE;
+                    m_type_mask = mxs::sql::TYPE_WRITE;
                     break;
                 }
 
@@ -3052,11 +3052,11 @@ public:
 
                 if (n_at == 1)
                 {
-                    m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
+                    m_type_mask |= mxs::sql::TYPE_USERVAR_WRITE;
                 }
                 else
                 {
-                    m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+                    m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
 
                     if (n_at == 2 && strcasecmp(zName, "GLOBAL") == 0)
                     {
@@ -3116,13 +3116,13 @@ public:
                             switch (enable)
                             {
                             case 0:
-                                m_type_mask |= QUERY_TYPE_BEGIN_TRX;
-                                m_type_mask |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
+                                m_type_mask |= mxs::sql::TYPE_BEGIN_TRX;
+                                m_type_mask |= mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
                                 break;
 
                             case 1:
-                                m_type_mask |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
-                                m_type_mask |= QUERY_TYPE_COMMIT;
+                                m_type_mask |= mxs::sql::TYPE_ENABLE_AUTOCOMMIT;
+                                m_type_mask |= mxs::sql::TYPE_COMMIT;
                                 break;
 
                             default:
@@ -3151,28 +3151,28 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_SESSION_WRITE;
+        m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
         m_operation = mxs::sql::OP_SET_TRANSACTION;
 
         if (scope == TK_GLOBAL)
         {
-            m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+            m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
         }
         else
         {
             if (access_mode == TK_WRITE)
             {
-                m_type_mask |= QUERY_TYPE_READWRITE;
+                m_type_mask |= mxs::sql::TYPE_READWRITE;
             }
             else if (access_mode == TK_READ)
             {
-                m_type_mask |= QUERY_TYPE_READONLY;
+                m_type_mask |= mxs::sql::TYPE_READONLY;
             }
 
             if (scope != TK_SESSION)
             {
                 // The SET TRANSACTION affects only the next transaction
-                m_type_mask |= QUERY_TYPE_NEXT_TRX;
+                m_type_mask |= mxs::sql::TYPE_NEXT_TRX;
             }
         }
     }
@@ -3188,7 +3188,7 @@ public:
         {
         case MXS_SHOW_COLUMNS:
             {
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 const char* zDatabase = nullptr;
                 size_t nDatabase = 0;
 
@@ -3205,29 +3205,29 @@ public:
             break;
 
         case MXS_SHOW_CREATE_SEQUENCE:
-            m_type_mask = QUERY_TYPE_READ;
+            m_type_mask = mxs::sql::TYPE_READ;
             break;
 
         case MXS_SHOW_CREATE_VIEW:
-            m_type_mask = QUERY_TYPE_READ;
+            m_type_mask = mxs::sql::TYPE_READ;
             break;
 
         case MXS_SHOW_CREATE_TABLE:
-            m_type_mask = QUERY_TYPE_READ;
+            m_type_mask = mxs::sql::TYPE_READ;
             break;
 
         case MXS_SHOW_DATABASES:
-            m_type_mask = QUERY_TYPE_SHOW_DATABASES;
+            m_type_mask = mxs::sql::TYPE_SHOW_DATABASES;
             break;
 
         case MXS_SHOW_INDEX:
         case MXS_SHOW_INDEXES:
         case MXS_SHOW_KEYS:
-            m_type_mask = QUERY_TYPE_WRITE;
+            m_type_mask = mxs::sql::TYPE_WRITE;
             break;
 
         case MXS_SHOW_TABLE_STATUS:
-            m_type_mask = QUERY_TYPE_WRITE;
+            m_type_mask = mxs::sql::TYPE_WRITE;
             break;
 
         case MXS_SHOW_STATUS:
@@ -3236,29 +3236,29 @@ public:
             case MXS_SHOW_VARIABLES_GLOBAL:
             case MXS_SHOW_VARIABLES_SESSION:
             case MXS_SHOW_VARIABLES_UNSPECIFIED:
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 break;
 
             case MXS_SHOW_STATUS_MASTER:
-                m_type_mask = QUERY_TYPE_WRITE;
+                m_type_mask = mxs::sql::TYPE_WRITE;
                 break;
 
             case MXS_SHOW_STATUS_SLAVE:
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 break;
 
             case MXS_SHOW_STATUS_ALL_SLAVES:
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 break;
 
             default:
-                m_type_mask = QUERY_TYPE_READ;
+                m_type_mask = mxs::sql::TYPE_READ;
                 break;
             }
             break;
 
         case MXS_SHOW_TABLES:
-            m_type_mask = QUERY_TYPE_SHOW_TABLES;
+            m_type_mask = mxs::sql::TYPE_SHOW_TABLES;
             if (pShow->pDatabase->z)
             {
                 update_database_names(pShow->pDatabase->z, pShow->pDatabase->n);
@@ -3268,17 +3268,17 @@ public:
         case MXS_SHOW_VARIABLES:
             if (pShow->data == MXS_SHOW_VARIABLES_GLOBAL)
             {
-                m_type_mask = QUERY_TYPE_GSYSVAR_READ;
+                m_type_mask = mxs::sql::TYPE_GSYSVAR_READ;
             }
             else
             {
-                m_type_mask = QUERY_TYPE_SYSVAR_READ;
+                m_type_mask = mxs::sql::TYPE_SYSVAR_READ;
             }
             break;
 
         case MXS_SHOW_WARNINGS:
             // qc_mysqliembedded claims this.
-            m_type_mask = QUERY_TYPE_WRITE;
+            m_type_mask = mxs::sql::TYPE_WRITE;
             break;
 
         default:
@@ -3291,7 +3291,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = mxs::sql::TYPE_WRITE;
         m_operation = mxs::sql::OP_TRUNCATE;
 
         char* zDatabase;
@@ -3320,7 +3320,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = QUERY_TYPE_SESSION_WRITE;
+        m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
         m_operation = mxs::sql::OP_CHANGE_DB;
 
         if (should_collect(Parser::COLLECT_DATABASES))
@@ -3353,7 +3353,7 @@ public:
         , m_keyword_2(0) // that we have not seen a keyword.
         , m_pQuery(NULL)
         , m_nQuery(0)
-        , m_type_mask(QUERY_TYPE_UNKNOWN)
+        , m_type_mask(mxs::sql::TYPE_UNKNOWN)
         , m_operation(mxs::sql::OP_UNDEFINED)
         , m_is_drop_table(false)
         , m_pPreparable_stmt(NULL)
@@ -3887,7 +3887,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
                 if (command == MXS_COM_STMT_PREPARE)
                 {
-                    pInfo->m_type_mask |= QUERY_TYPE_PREPARE_STMT;
+                    pInfo->m_type_mask |= mxs::sql::TYPE_PREPARE_STMT;
                 }
 
                 pInfo->m_collected = pInfo->m_collect;
@@ -5099,7 +5099,7 @@ static int32_t qc_sqlite_get_type_mask(GWBUF* pStmt, uint32_t* pType_mask)
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    *pType_mask = QUERY_TYPE_UNKNOWN;
+    *pType_mask = mxs::sql::TYPE_UNKNOWN;
     QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, Parser::COLLECT_ESSENTIALS);
 
     if (pInfo)

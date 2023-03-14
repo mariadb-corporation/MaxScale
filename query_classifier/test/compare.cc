@@ -373,26 +373,26 @@ bool compare_get_type(ParserPlugin* pPlugin1,
     {
         uint32_t rv1b = rv1;
 
-        if (rv1b & QUERY_TYPE_WRITE)
+        if (rv1b & sql::TYPE_WRITE)
         {
-            rv1b &= ~(uint32_t)QUERY_TYPE_READ;
+            rv1b &= ~(uint32_t)sql::TYPE_READ;
         }
 
         uint32_t rv2b = rv2;
 
-        if (rv2b & QUERY_TYPE_WRITE)
+        if (rv2b & sql::TYPE_WRITE)
         {
-            rv2b &= ~(uint32_t)QUERY_TYPE_READ;
+            rv2b &= ~(uint32_t)sql::TYPE_READ;
         }
 
-        if (rv1b & QUERY_TYPE_READ)
+        if (rv1b & sql::TYPE_READ)
         {
-            rv1b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
+            rv1b &= ~(uint32_t)sql::TYPE_LOCAL_READ;
         }
 
-        if (rv2b & QUERY_TYPE_READ)
+        if (rv2b & sql::TYPE_READ)
         {
-            rv2b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
+            rv2b &= ~(uint32_t)sql::TYPE_LOCAL_READ;
         }
 
         auto types1 = Parser::type_mask_to_string(rv1);
@@ -1200,7 +1200,7 @@ bool compare(ParserPlugin* pPlugin1,
     uint32_t type_mask2 = pPlugin2->parser().get_type_mask(copy2);
 
     if ((type_mask1 == type_mask2)
-        && ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
+        && ((type_mask1 & sql::TYPE_PREPARE_NAMED_STMT) || (type_mask1 & sql::TYPE_PREPARE_STMT)))
     {
         GWBUF* pPreparable1 = pPlugin1->parser().get_preparable_stmt(copy1);
         GWBUF* pPreparable2 = pPlugin2->parser().get_preparable_stmt(copy2);

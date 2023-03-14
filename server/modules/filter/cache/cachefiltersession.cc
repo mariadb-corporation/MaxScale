@@ -835,7 +835,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         const CacheConfig& config = m_sCache->config();
         auto protocol_data = m_pSession->protocol_data();
 
-        if (Parser::type_mask_contains(type_mask, QUERY_TYPE_BEGIN_TRX))
+        if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_BEGIN_TRX))
         {
             if (log_decisions())
             {
@@ -911,7 +911,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
         if (m_invalidate || (action != CACHE_IGNORE))
         {
-            if (Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
+            if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_COMMIT))
             {
                 m_invalidate_now = m_invalidate;
             }
@@ -926,12 +926,12 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                         // above we only got the transaction state related type mask.
                         type_mask = parser().get_type_mask(*pPacket);
 
-                        if (Parser::type_mask_contains(type_mask, QUERY_TYPE_USERVAR_READ))
+                        if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_USERVAR_READ))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "user variables are read";
                         }
-                        else if (Parser::type_mask_contains(type_mask, QUERY_TYPE_SYSVAR_READ))
+                        else if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_SYSVAR_READ))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "system variables are read";

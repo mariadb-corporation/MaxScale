@@ -19,48 +19,49 @@
 namespace
 {
 
+namespace sql = mxs::sql;
+
 const char CN_ARGUMENTS[] = "arguments";
 const char CN_CANONICAL[] = "canonical";
 const char CN_CLASSIFY[] = "classify";
 const char CN_FIELDS[] = "fields";
 const char CN_FUNCTIONS[] = "functions";
 
-static const qc_query_type_t QUERY_TYPES[] =
+static const sql::Type SQL_TYPES[] =
 {
     /* Excluded by design */
-    // QUERY_TYPE_UNKNOWN,
-    QUERY_TYPE_LOCAL_READ,
-    QUERY_TYPE_READ,
-    QUERY_TYPE_WRITE,
-    QUERY_TYPE_MASTER_READ,
-    QUERY_TYPE_SESSION_WRITE,
-    QUERY_TYPE_USERVAR_WRITE,
-    QUERY_TYPE_USERVAR_READ,
-    QUERY_TYPE_SYSVAR_READ,
+    // sql::TYPE_UNKNOWN,
+    sql::TYPE_LOCAL_READ,
+    sql::TYPE_READ,
+    sql::TYPE_WRITE,
+    sql::TYPE_MASTER_READ,
+    sql::TYPE_SESSION_WRITE,
+    sql::TYPE_USERVAR_WRITE,
+    sql::TYPE_USERVAR_READ,
+    sql::TYPE_SYSVAR_READ,
     /** Not implemented yet */
-    // QUERY_TYPE_SYSVAR_WRITE,
-    QUERY_TYPE_GSYSVAR_READ,
-    QUERY_TYPE_GSYSVAR_WRITE,
-    QUERY_TYPE_BEGIN_TRX,
-    QUERY_TYPE_ENABLE_AUTOCOMMIT,
-    QUERY_TYPE_DISABLE_AUTOCOMMIT,
-    QUERY_TYPE_ROLLBACK,
-    QUERY_TYPE_COMMIT,
-    QUERY_TYPE_PREPARE_NAMED_STMT,
-    QUERY_TYPE_PREPARE_STMT,
-    QUERY_TYPE_EXEC_STMT,
-    QUERY_TYPE_CREATE_TMP_TABLE,
-    QUERY_TYPE_READ_TMP_TABLE,
-    QUERY_TYPE_SHOW_DATABASES,
-    QUERY_TYPE_SHOW_TABLES,
-    QUERY_TYPE_DEALLOC_PREPARE,
-    QUERY_TYPE_READONLY,
-    QUERY_TYPE_READWRITE,
-    QUERY_TYPE_NEXT_TRX,
+    // sql::TYPE_SYSVAR_WRITE,
+    sql::TYPE_GSYSVAR_READ,
+    sql::TYPE_GSYSVAR_WRITE,
+    sql::TYPE_BEGIN_TRX,
+    sql::TYPE_ENABLE_AUTOCOMMIT,
+    sql::TYPE_DISABLE_AUTOCOMMIT,
+    sql::TYPE_ROLLBACK,
+    sql::TYPE_COMMIT,
+    sql::TYPE_PREPARE_NAMED_STMT,
+    sql::TYPE_PREPARE_STMT,
+    sql::TYPE_EXEC_STMT,
+    sql::TYPE_CREATE_TMP_TABLE,
+    sql::TYPE_READ_TMP_TABLE,
+    sql::TYPE_SHOW_DATABASES,
+    sql::TYPE_SHOW_TABLES,
+    sql::TYPE_DEALLOC_PREPARE,
+    sql::TYPE_READONLY,
+    sql::TYPE_READWRITE,
+    sql::TYPE_NEXT_TRX,
 };
 
-static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
-static const int QUERY_TYPE_MAX_LEN = 29;   // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
+static const int N_SQL_TYPES = sizeof(SQL_TYPES) / sizeof(SQL_TYPES[0]);
 
 struct type_name_info
 {
@@ -68,225 +69,225 @@ struct type_name_info
     size_t      name_len;
 };
 
-struct type_name_info type_to_type_name_info(qc_query_type_t type)
+struct type_name_info type_to_type_name_info(sql::Type type)
 {
     struct type_name_info info;
 
     switch (type)
     {
-    case QUERY_TYPE_UNKNOWN:
+    case mxs::sql::TYPE_UNKNOWN:
         {
-            static const char name[] = "QUERY_TYPE_UNKNOWN";
+            static const char name[] = "sql::TYPE_UNKNOWN";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_LOCAL_READ:
+    case mxs::sql::TYPE_LOCAL_READ:
         {
-            static const char name[] = "QUERY_TYPE_LOCAL_READ";
+            static const char name[] = "sql::TYPE_LOCAL_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_READ:
+    case mxs::sql::TYPE_READ:
         {
-            static const char name[] = "QUERY_TYPE_READ";
+            static const char name[] = "sql::TYPE_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_WRITE:
+    case mxs::sql::TYPE_WRITE:
         {
-            static const char name[] = "QUERY_TYPE_WRITE";
+            static const char name[] = "sql::TYPE_WRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_MASTER_READ:
+    case mxs::sql::TYPE_MASTER_READ:
         {
-            static const char name[] = "QUERY_TYPE_MASTER_READ";
+            static const char name[] = "sql::TYPE_MASTER_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_SESSION_WRITE:
+    case mxs::sql::TYPE_SESSION_WRITE:
         {
-            static const char name[] = "QUERY_TYPE_SESSION_WRITE";
+            static const char name[] = "sql::TYPE_SESSION_WRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_USERVAR_WRITE:
+    case mxs::sql::TYPE_USERVAR_WRITE:
         {
-            static const char name[] = "QUERY_TYPE_USERVAR_WRITE";
+            static const char name[] = "sql::TYPE_USERVAR_WRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_USERVAR_READ:
+    case mxs::sql::TYPE_USERVAR_READ:
         {
-            static const char name[] = "QUERY_TYPE_USERVAR_READ";
+            static const char name[] = "sql::TYPE_USERVAR_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_SYSVAR_READ:
+    case mxs::sql::TYPE_SYSVAR_READ:
         {
-            static const char name[] = "QUERY_TYPE_SYSVAR_READ";
+            static const char name[] = "sql::TYPE_SYSVAR_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
     /** Not implemented yet */
-    // case QUERY_TYPE_SYSVAR_WRITE:
-    case QUERY_TYPE_GSYSVAR_READ:
+    // case mxs::sql::TYPE_SYSVAR_WRITE:
+    case mxs::sql::TYPE_GSYSVAR_READ:
         {
-            static const char name[] = "QUERY_TYPE_GSYSVAR_READ";
+            static const char name[] = "sql::TYPE_GSYSVAR_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_GSYSVAR_WRITE:
+    case mxs::sql::TYPE_GSYSVAR_WRITE:
         {
-            static const char name[] = "QUERY_TYPE_GSYSVAR_WRITE";
+            static const char name[] = "sql::TYPE_GSYSVAR_WRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_BEGIN_TRX:
+    case mxs::sql::TYPE_BEGIN_TRX:
         {
-            static const char name[] = "QUERY_TYPE_BEGIN_TRX";
+            static const char name[] = "sql::TYPE_BEGIN_TRX";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_ENABLE_AUTOCOMMIT:
+    case mxs::sql::TYPE_ENABLE_AUTOCOMMIT:
         {
-            static const char name[] = "QUERY_TYPE_ENABLE_AUTOCOMMIT";
+            static const char name[] = "sql::TYPE_ENABLE_AUTOCOMMIT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_DISABLE_AUTOCOMMIT:
+    case mxs::sql::TYPE_DISABLE_AUTOCOMMIT:
         {
-            static const char name[] = "QUERY_TYPE_DISABLE_AUTOCOMMIT";
+            static const char name[] = "sql::TYPE_DISABLE_AUTOCOMMIT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_ROLLBACK:
+    case mxs::sql::TYPE_ROLLBACK:
         {
-            static const char name[] = "QUERY_TYPE_ROLLBACK";
+            static const char name[] = "sql::TYPE_ROLLBACK";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_COMMIT:
+    case mxs::sql::TYPE_COMMIT:
         {
-            static const char name[] = "QUERY_TYPE_COMMIT";
+            static const char name[] = "sql::TYPE_COMMIT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_PREPARE_NAMED_STMT:
+    case mxs::sql::TYPE_PREPARE_NAMED_STMT:
         {
-            static const char name[] = "QUERY_TYPE_PREPARE_NAMED_STMT";
+            static const char name[] = "sql::TYPE_PREPARE_NAMED_STMT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_PREPARE_STMT:
+    case mxs::sql::TYPE_PREPARE_STMT:
         {
-            static const char name[] = "QUERY_TYPE_PREPARE_STMT";
+            static const char name[] = "sql::TYPE_PREPARE_STMT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_EXEC_STMT:
+    case mxs::sql::TYPE_EXEC_STMT:
         {
-            static const char name[] = "QUERY_TYPE_EXEC_STMT";
+            static const char name[] = "sql::TYPE_EXEC_STMT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_CREATE_TMP_TABLE:
+    case mxs::sql::TYPE_CREATE_TMP_TABLE:
         {
-            static const char name[] = "QUERY_TYPE_CREATE_TMP_TABLE";
+            static const char name[] = "sql::TYPE_CREATE_TMP_TABLE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_READ_TMP_TABLE:
+    case mxs::sql::TYPE_READ_TMP_TABLE:
         {
-            static const char name[] = "QUERY_TYPE_READ_TMP_TABLE";
+            static const char name[] = "sql::TYPE_READ_TMP_TABLE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_SHOW_DATABASES:
+    case mxs::sql::TYPE_SHOW_DATABASES:
         {
-            static const char name[] = "QUERY_TYPE_SHOW_DATABASES";
+            static const char name[] = "sql::TYPE_SHOW_DATABASES";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_SHOW_TABLES:
+    case mxs::sql::TYPE_SHOW_TABLES:
         {
-            static const char name[] = "QUERY_TYPE_SHOW_TABLES";
+            static const char name[] = "sql::TYPE_SHOW_TABLES";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_DEALLOC_PREPARE:
+    case mxs::sql::TYPE_DEALLOC_PREPARE:
         {
-            static const char name[] = "QUERY_TYPE_DEALLOC_PREPARE";
+            static const char name[] = "sql::TYPE_DEALLOC_PREPARE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_READONLY:
+    case mxs::sql::TYPE_READONLY:
         {
-            static const char name[] = "QUERY_TYPE_READONLY";
+            static const char name[] = "sql::TYPE_READONLY";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_READWRITE:
+    case mxs::sql::TYPE_READWRITE:
         {
-            static const char name[] = "QUERY_TYPE_READWRITE";
+            static const char name[] = "sql::TYPE_READWRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
         break;
 
-    case QUERY_TYPE_NEXT_TRX:
+    case mxs::sql::TYPE_NEXT_TRX:
         {
-            static const char name[] = "QUERY_TYPE_NEXT_TRX";
+            static const char name[] = "sql::TYPE_NEXT_TRX";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
@@ -294,7 +295,7 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
 
     default:
         {
-            static const char name[] = "UNKNOWN_QUERY_TYPE";
+            static const char name[] = "UNKNOWN_mxs::sql::TYPE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }
@@ -359,9 +360,9 @@ std::string Parser::type_mask_to_string(uint32_t type_mask)
 {
     std::string rv;
 
-    for (int i = 0; i < N_QUERY_TYPES; ++i)
+    for (int i = 0; i < N_SQL_TYPES; ++i)
     {
-        qc_query_type_t type = QUERY_TYPES[i];
+        sql::Type type = SQL_TYPES[i];
 
         if (type_mask & type)
         {
@@ -556,8 +557,8 @@ uint32_t get_trx_type_mask_using_default(const mxs::Parser& parser, GWBUF& stmt)
 {
     uint32_t type_mask = parser.get_type_mask(stmt);
 
-    if (Parser::type_mask_contains(type_mask, QUERY_TYPE_WRITE)
-        && Parser::type_mask_contains(type_mask, QUERY_TYPE_COMMIT))
+    if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_WRITE)
+        && Parser::type_mask_contains(type_mask, mxs::sql::TYPE_COMMIT))
     {
         // This is a commit reported for "CREATE TABLE...",
         // "DROP TABLE...", etc. that cause an implicit commit.
@@ -566,24 +567,24 @@ uint32_t get_trx_type_mask_using_default(const mxs::Parser& parser, GWBUF& stmt)
     else
     {
         // Only START TRANSACTION can be explicitly READ or WRITE.
-        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+        if (!(type_mask & mxs::sql::TYPE_BEGIN_TRX))
         {
             // So, strip them away for everything else.
-            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+            type_mask &= ~(mxs::sql::TYPE_WRITE | mxs::sql::TYPE_READ);
         }
 
         // Then leave only the bits related to transaction and
         // autocommit state.
-        type_mask &= (QUERY_TYPE_BEGIN_TRX
-                      | QUERY_TYPE_WRITE
-                      | QUERY_TYPE_READ
-                      | QUERY_TYPE_COMMIT
-                      | QUERY_TYPE_ROLLBACK
-                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
-                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
-                      | QUERY_TYPE_READONLY
-                      | QUERY_TYPE_READWRITE
-                      | QUERY_TYPE_NEXT_TRX);
+        type_mask &= (mxs::sql::TYPE_BEGIN_TRX
+                      | mxs::sql::TYPE_WRITE
+                      | mxs::sql::TYPE_READ
+                      | mxs::sql::TYPE_COMMIT
+                      | mxs::sql::TYPE_ROLLBACK
+                      | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
+                      | mxs::sql::TYPE_DISABLE_AUTOCOMMIT
+                      | mxs::sql::TYPE_READONLY
+                      | mxs::sql::TYPE_READWRITE
+                      | mxs::sql::TYPE_NEXT_TRX);
     }
 
     return type_mask;

@@ -300,11 +300,11 @@ bool TpmSession::routeQuery(GWBUF&& buffer)
         {
             auto mask = parser().get_type_mask(*queue);
 
-            if (mask & QUERY_TYPE_COMMIT)
+            if (mask & mxs::sql::TYPE_COMMIT)
             {
                 m_query_end = true;
             }
-            else if (mask & QUERY_TYPE_ROLLBACK)
+            else if (mask & mxs::sql::TYPE_ROLLBACK)
             {
                 m_query_end = true;
                 m_sql.clear();

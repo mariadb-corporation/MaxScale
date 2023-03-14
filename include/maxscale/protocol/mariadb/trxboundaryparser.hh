@@ -219,7 +219,7 @@ private:
 
     uint32_t parse_begin(uint32_t type_mask)
     {
-        type_mask |= QUERY_TYPE_BEGIN_TRX;
+        type_mask |= mxs::sql::TYPE_BEGIN_TRX;
 
         token_t token = next_token();
 
@@ -242,7 +242,7 @@ private:
 
     uint32_t parse_commit(uint32_t type_mask)
     {
-        type_mask |= QUERY_TYPE_COMMIT;
+        type_mask |= mxs::sql::TYPE_COMMIT;
 
         token_t token = next_token();
 
@@ -265,7 +265,7 @@ private:
 
     uint32_t parse_only(uint32_t type_mask)
     {
-        type_mask |= QUERY_TYPE_READ;
+        type_mask |= mxs::sql::TYPE_READ;
 
         token_t token = next_token();
 
@@ -314,7 +314,7 @@ private:
 
     uint32_t parse_rollback(uint32_t type_mask)
     {
-        type_mask |= QUERY_TYPE_ROLLBACK;
+        type_mask |= mxs::sql::TYPE_ROLLBACK;
 
         token_t token = next_token();
 
@@ -345,11 +345,11 @@ private:
             token = next_token(TOKEN_REQUIRED);
             if (token == TOK_ONE || token == TOK_TRUE)
             {
-                type_mask |= (QUERY_TYPE_COMMIT | QUERY_TYPE_ENABLE_AUTOCOMMIT);
+                type_mask |= (mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ENABLE_AUTOCOMMIT);
             }
             else if (token == TOK_ZERO || token == TOK_FALSE)
             {
-                type_mask = (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT);
+                type_mask = (mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_DISABLE_AUTOCOMMIT);
             }
             else
             {
@@ -430,7 +430,7 @@ private:
         {
         case TOK_WRITE:
         case TOK_ONLY:
-            type_mask |= (token == TOK_WRITE ? QUERY_TYPE_READWRITE : QUERY_TYPE_READONLY);
+            type_mask |= (token == TOK_WRITE ? mxs::sql::TYPE_READWRITE : mxs::sql::TYPE_READONLY);
             break;
 
         case PARSER_EXHAUSTED:
@@ -571,7 +571,7 @@ private:
             break;
 
         case TOK_TRANSACTION:
-            type_mask |= QUERY_TYPE_NEXT_TRX;
+            type_mask |= mxs::sql::TYPE_NEXT_TRX;
             type_mask = parse_set_transaction(type_mask);
             break;
 
@@ -611,7 +611,7 @@ private:
 
     uint32_t parse_transaction(uint32_t type_mask)
     {
-        type_mask |= QUERY_TYPE_BEGIN_TRX;
+        type_mask |= mxs::sql::TYPE_BEGIN_TRX;
 
         token_t token = next_token();
 
@@ -686,7 +686,7 @@ private:
 
     uint32_t parse_write(uint32_t type_mask)
     {
-        type_mask |= QUERY_TYPE_WRITE;
+        type_mask |= mxs::sql::TYPE_WRITE;
 
         token_t token = next_token();
 
@@ -713,11 +713,11 @@ private:
         {
         case TOK_START:
         case TOK_BEGIN:
-            type_mask |= QUERY_TYPE_BEGIN_TRX;
+            type_mask |= mxs::sql::TYPE_BEGIN_TRX;
             break;
 
         case TOK_END:
-            type_mask |= QUERY_TYPE_COMMIT;
+            type_mask |= mxs::sql::TYPE_COMMIT;
             break;
 
         case PARSER_EXHAUSTED:

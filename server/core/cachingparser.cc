@@ -452,7 +452,8 @@ private:
 
     bool exclude_from_cache() const
     {
-        constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
+        constexpr const int is_autocommit =
+            mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
         uint32_t type_mask = m_pPlugin->parser().get_type_mask(m_stmt);
         return (type_mask & is_autocommit) != 0;
     }

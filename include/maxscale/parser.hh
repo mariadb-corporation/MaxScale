@@ -20,48 +20,47 @@
 class GWBUF;
 struct json_t;
 
-/**
- * qc_query_type_t defines bits that provide information about a
- * particular statement.
- *
- * Note that more than one bit may be set for a single statement.
- */
-enum qc_query_type_t
-{
-    QUERY_TYPE_UNKNOWN            = 0,      /*< Initial value, can't be tested bitwisely */
-    QUERY_TYPE_LOCAL_READ         = 1 << 0, /*< Read non-database data, execute in MaxScale:any */
-    QUERY_TYPE_READ               = 1 << 1, /*< Read database data:any */
-    QUERY_TYPE_WRITE              = 1 << 2, /*< Master data will be  modified:master */
-    QUERY_TYPE_MASTER_READ        = 1 << 3, /*< Read from the master:master */
-    QUERY_TYPE_SESSION_WRITE      = 1 << 4, /*< Session data will be modified:master or all */
-    QUERY_TYPE_USERVAR_WRITE      = 1 << 5, /*< Write a user variable:master or all */
-    QUERY_TYPE_USERVAR_READ       = 1 << 6, /*< Read a user variable:master or any */
-    QUERY_TYPE_SYSVAR_READ        = 1 << 7, /*< Read a system variable:master or any */
-    QUERY_TYPE_GSYSVAR_READ       = 1 << 8, /*< Read global system variable:master or any */
-    QUERY_TYPE_GSYSVAR_WRITE      = 1 << 9, /*< Write global system variable:master or all */
-    QUERY_TYPE_BEGIN_TRX          = 1 << 10,/*< BEGIN or START TRANSACTION */
-    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 1 << 11,/*< SET autocommit=1 */
-    QUERY_TYPE_DISABLE_AUTOCOMMIT = 1 << 12,/*< SET autocommit=0 */
-    QUERY_TYPE_ROLLBACK           = 1 << 13,/*< ROLLBACK */
-    QUERY_TYPE_COMMIT             = 1 << 14,/*< COMMIT */
-    QUERY_TYPE_PREPARE_NAMED_STMT = 1 << 15,/*< Prepared stmt with name from user:all */
-    QUERY_TYPE_PREPARE_STMT       = 1 << 16,/*< Prepared stmt with id provided by server:all */
-    QUERY_TYPE_EXEC_STMT          = 1 << 17,/*< Execute prepared statement:master or any */
-    QUERY_TYPE_CREATE_TMP_TABLE   = 1 << 18,/*< Create temporary table:master (could be all) */
-    QUERY_TYPE_READ_TMP_TABLE     = 1 << 19,/*< Read temporary table:master (could be any) */
-    QUERY_TYPE_SHOW_DATABASES     = 1 << 20,/*< Show list of databases */
-    QUERY_TYPE_SHOW_TABLES        = 1 << 21,/*< Show list of tables */
-    QUERY_TYPE_DEALLOC_PREPARE    = 1 << 22,/*< Dealloc named prepare stmt:all */
-    QUERY_TYPE_READONLY           = 1 << 23,/*< The READ ONLY part of SET TRANSACTION */
-    QUERY_TYPE_READWRITE          = 1 << 24,/*< The READ WRITE part of SET TRANSACTION  */
-    QUERY_TYPE_NEXT_TRX           = 1 << 25,/*< SET TRANSACTION that's only for the next transaction */
-};
-
 namespace maxscale
 {
 
 namespace sql
 {
+
+/**
+ * Type defines bits that provide information about a particular statement.
+ *
+ * Note that more than one bit may be set for a single statement.
+ */
+enum Type
+{
+    TYPE_UNKNOWN            = 0,      /*< Initial value, can't be tested bitwisely */
+    TYPE_LOCAL_READ         = 1 << 0, /*< Read non-database data, execute in MaxScale:any */
+    TYPE_READ               = 1 << 1, /*< Read database data:any */
+    TYPE_WRITE              = 1 << 2, /*< Master data will be  modified:master */
+    TYPE_MASTER_READ        = 1 << 3, /*< Read from the master:master */
+    TYPE_SESSION_WRITE      = 1 << 4, /*< Session data will be modified:master or all */
+    TYPE_USERVAR_WRITE      = 1 << 5, /*< Write a user variable:master or all */
+    TYPE_USERVAR_READ       = 1 << 6, /*< Read a user variable:master or any */
+    TYPE_SYSVAR_READ        = 1 << 7, /*< Read a system variable:master or any */
+    TYPE_GSYSVAR_READ       = 1 << 8, /*< Read global system variable:master or any */
+    TYPE_GSYSVAR_WRITE      = 1 << 9, /*< Write global system variable:master or all */
+    TYPE_BEGIN_TRX          = 1 << 10,/*< BEGIN or START TRANSACTION */
+    TYPE_ENABLE_AUTOCOMMIT  = 1 << 11,/*< SET autocommit=1 */
+    TYPE_DISABLE_AUTOCOMMIT = 1 << 12,/*< SET autocommit=0 */
+    TYPE_ROLLBACK           = 1 << 13,/*< ROLLBACK */
+    TYPE_COMMIT             = 1 << 14,/*< COMMIT */
+    TYPE_PREPARE_NAMED_STMT = 1 << 15,/*< Prepared stmt with name from user:all */
+    TYPE_PREPARE_STMT       = 1 << 16,/*< Prepared stmt with id provided by server:all */
+    TYPE_EXEC_STMT          = 1 << 17,/*< Execute prepared statement:master or any */
+    TYPE_CREATE_TMP_TABLE   = 1 << 18,/*< Create temporary table:master (could be all) */
+    TYPE_READ_TMP_TABLE     = 1 << 19,/*< Read temporary table:master (could be any) */
+    TYPE_SHOW_DATABASES     = 1 << 20,/*< Show list of databases */
+    TYPE_SHOW_TABLES        = 1 << 21,/*< Show list of tables */
+    TYPE_DEALLOC_PREPARE    = 1 << 22,/*< Dealloc named prepare stmt:all */
+    TYPE_READONLY           = 1 << 23,/*< The READ ONLY part of SET TRANSACTION */
+    TYPE_READWRITE          = 1 << 24,/*< The READ WRITE part of SET TRANSACTION  */
+    TYPE_NEXT_TRX           = 1 << 25,/*< SET TRANSACTION that's only for the next transaction */
+};
 
 enum OpCode
 {
@@ -266,7 +265,7 @@ public:
 
     virtual ~Parser() = default;
 
-    static bool type_mask_contains(uint32_t type_mask, qc_query_type_t type)
+    static bool type_mask_contains(uint32_t type_mask, sql::Type type)
     {
         return (type_mask & (uint32_t)type) == (uint32_t)type;
     }

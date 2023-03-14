@@ -1219,8 +1219,8 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
     mxb_assert(buffer);
     int32_t rval = 0;
 
-    const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
-        | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
+    const uint32_t read_only_types = mxs::sql::TYPE_READ | mxs::sql::TYPE_LOCAL_READ
+        | mxs::sql::TYPE_USERVAR_READ | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ;
 
     uint32_t type_mask = 0;
 

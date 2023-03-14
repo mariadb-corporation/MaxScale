@@ -597,14 +597,14 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
                 m_qc.ps_erase(&buffer);
                 m_exec_map.erase(route_info().stmt_id());
             }
-            else if (Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_NAMED_STMT)
-                     || Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_STMT))
+            else if (Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT)
+                     || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_STMT))
             {
                 mxb_assert(buffer.id() != 0
-                           || Parser::type_mask_contains(type, QUERY_TYPE_PREPARE_NAMED_STMT));
+                           || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT));
                 m_qc.ps_store(&buffer, buffer.id());
             }
-            else if (Parser::type_mask_contains(type, QUERY_TYPE_DEALLOC_PREPARE))
+            else if (Parser::type_mask_contains(type, mxs::sql::TYPE_DEALLOC_PREPARE))
             {
                 mxb_assert(!mxs_mysql_is_ps_command(route_info().command()));
                 m_qc.ps_erase(&buffer);

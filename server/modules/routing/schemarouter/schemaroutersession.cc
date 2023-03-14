@@ -124,12 +124,12 @@ static void inspect_query(const Parser& parser,
         // case MXS_COM_STMT_CLOSE: /*< free prepared statement */
         // case MXS_COM_STMT_SEND_LONG_DATA: /*< send data to column */
         // case MXS_COM_STMT_RESET: /*< resets the data of a prepared statement */
-        *type = QUERY_TYPE_SESSION_WRITE;
+        *type = mxs::sql::TYPE_SESSION_WRITE;
         break;
 
     case MXS_COM_CREATE_DB: /**< 5 DDL must go to the master */
     case MXS_COM_DROP_DB:   /**< 6 DDL must go to the master */
-        *type = QUERY_TYPE_WRITE;
+        *type = mxs::sql::TYPE_WRITE;
         break;
 
     case MXS_COM_QUERY:
@@ -139,12 +139,12 @@ static void inspect_query(const Parser& parser,
 
     case MXS_COM_STMT_PREPARE:
         *type = parser.get_type_mask(*bufptr);
-        *type |= QUERY_TYPE_PREPARE_STMT;
+        *type |= mxs::sql::TYPE_PREPARE_STMT;
         break;
 
     case MXS_COM_STMT_EXECUTE:
         /** Parsing is not needed for this type of packet */
-        *type = QUERY_TYPE_EXEC_STMT;
+        *type = mxs::sql::TYPE_EXEC_STMT;
         break;
 
     case MXS_COM_SHUTDOWN:      /**< 8 where should shutdown be routed ? */
@@ -306,7 +306,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 
     uint8_t command = mxs_mysql_get_command(packet);
     mxs::Target* target = NULL;
-    uint32_t type = QUERY_TYPE_UNKNOWN;
+    uint32_t type = mxs::sql::TYPE_UNKNOWN;
     mxs::sql::OpCode op = mxs::sql::OP_UNDEFINED;
     enum route_target route_target = TARGET_UNDEFINED;
 
@@ -326,7 +326,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         inspect_query(parser(), packet, &type, &op, command);
 
         /** Create the response to the SHOW DATABASES from the mapped databases */
-        if (Parser::type_mask_contains(type, QUERY_TYPE_SHOW_DATABASES))
+        if (Parser::type_mask_contains(type, mxs::sql::TYPE_SHOW_DATABASES))
         {
             send_databases();
             return 1;
@@ -346,7 +346,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         // consistent even if no default database is used or if the default database being used is located
         // on more than one node.
         if (packet.hints.empty()
-            && (type & (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)))
+            && (type & (mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK)))
         {
             MXB_INFO("Routing trx control statement to all nodes.");
             route_target = TARGET_ALL;
@@ -1240,9 +1240,9 @@ mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t
     }
 
     if (mxs_mysql_is_ps_command(command)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_DEALLOC_PREPARE)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_DEALLOC_PREPARE)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_STMT)
         || op == mxs::sql::OP_EXECUTE)
     {
         rval = get_ps_target(buffer, qtype, op);
@@ -1329,17 +1329,17 @@ enum route_target get_shard_route_target(uint32_t qtype)
     /**
      * These queries are not affected by hints
      */
-    if (Parser::type_mask_contains(qtype, QUERY_TYPE_SESSION_WRITE)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_WRITE)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_USERVAR_WRITE)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
-        || Parser::type_mask_contains(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+    if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_SESSION_WRITE)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_WRITE)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_WRITE)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_DISABLE_AUTOCOMMIT))
     {
         /** hints don't affect on routing */
         target = TARGET_ALL;
     }
-    else if (Parser::type_mask_contains(qtype, QUERY_TYPE_SYSVAR_READ)
-             || Parser::type_mask_contains(qtype, QUERY_TYPE_GSYSVAR_READ))
+    else if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)
+             || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_READ))
     {
         target = TARGET_ANY;
     }
@@ -1419,7 +1419,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     uint8_t command = mxs_mysql_get_command(buffer);
     GWBUF* bufptr = const_cast<GWBUF*>(&buffer);
 
-    if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+    if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT))
     {
         // If pStmt is null, the PREPARE was malformed. In that case it can be routed to any backend to get
         // a proper error response. Also returns null if preparing from a variable. This is a limitation.
@@ -1446,7 +1446,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
                      (int)stmt.length(), stmt.data(), rval->name());
         }
     }
-    else if (Parser::type_mask_contains(qtype, QUERY_TYPE_DEALLOC_PREPARE))
+    else if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_DEALLOC_PREPARE))
     {
         std::string_view stmt = parser().get_prepare_name(*bufptr);
         if ((rval = m_shard.get_statement(stmt)))
@@ -1456,7 +1456,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
             m_shard.remove_statement(stmt);
         }
     }
-    else if (Parser::type_mask_contains(qtype, QUERY_TYPE_PREPARE_STMT))
+    else if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_STMT))
     {
         rval = get_location(parser().get_table_names(*bufptr));
 

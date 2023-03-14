@@ -758,7 +758,7 @@ bool RWSplitSession::start_trx_replay()
                  * or ends a transaction or autocommit should be disabled.
                  */
                 MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query));
-                mxb_assert_message((type_mask & (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_COMMIT))
+                mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
                                    || !protocol_data()->is_autocommit,
                                    "The current query (%s) should start or stop a transaction "
                                    "or autocommit should be disabled",
@@ -1136,5 +1136,5 @@ bool RWSplitSession::need_gtid_probe(const RoutingPlan& plan) const
            && plan.route_target == TARGET_SLAVE
            && m_wait_gtid == NONE
            && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE)
-           && (route_info().type_mask() & (QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)) == 0;
+           && (route_info().type_mask() & (sql::TYPE_COMMIT | sql::TYPE_ROLLBACK)) == 0;
 }

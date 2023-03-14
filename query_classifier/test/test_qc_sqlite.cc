@@ -110,316 +110,316 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode>> test_cas
 {
     {
         "select sleep(2);",
-        QUERY_TYPE_READ,
+        mxs::sql::TYPE_READ,
         mxs::sql::OP_SELECT
     },
     {
         "select * from tst where lname like '%e%' order by fname;",
-        QUERY_TYPE_READ,
+        mxs::sql::TYPE_READ,
         mxs::sql::OP_SELECT
     },
     {
         "insert into tst values ('Jane','Doe'),('Daisy','Duck'),('Marie','Curie');",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_INSERT
     },
     {
         "update tst set fname='Farmer', lname='McDonald' where lname='%Doe' and fname='John';",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_UPDATE
     },
     {
         "create table tmp as select * from t1;",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_CREATE
     },
     {
         "create temporary table tmp as select * from t1;",
-        QUERY_TYPE_WRITE | QUERY_TYPE_CREATE_TMP_TABLE,
+        mxs::sql::TYPE_WRITE | mxs::sql::TYPE_CREATE_TMP_TABLE,
         mxs::sql::OP_CREATE
     },
     {
         "select @@server_id;",
-        QUERY_TYPE_READ | QUERY_TYPE_SYSVAR_READ,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_SYSVAR_READ,
         mxs::sql::OP_SELECT
     },
     {
         "select @OLD_SQL_NOTES;",
-        QUERY_TYPE_READ | QUERY_TYPE_USERVAR_READ,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_USERVAR_READ,
         mxs::sql::OP_SELECT
     },
     {
         "SET autocommit=1;",
-        QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_GSYSVAR_WRITE | QUERY_TYPE_ENABLE_AUTOCOMMIT
-        | QUERY_TYPE_COMMIT,
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
+        | mxs::sql::TYPE_COMMIT,
         mxs::sql::OP_SET
     },
     {
         "SET autocommit=0;",
-        QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_GSYSVAR_WRITE | QUERY_TYPE_BEGIN_TRX
-        | QUERY_TYPE_DISABLE_AUTOCOMMIT,
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_BEGIN_TRX
+        | mxs::sql::TYPE_DISABLE_AUTOCOMMIT,
         mxs::sql::OP_SET
     },
     {
         "BEGIN;",
-        QUERY_TYPE_BEGIN_TRX,
+        mxs::sql::TYPE_BEGIN_TRX,
         mxs::sql::OP_UNDEFINED
     },
     {
         "ROLLBACK;",
-        QUERY_TYPE_ROLLBACK,
+        mxs::sql::TYPE_ROLLBACK,
         mxs::sql::OP_UNDEFINED
     },
     {
         "COMMIT;",
-        QUERY_TYPE_COMMIT,
+        mxs::sql::TYPE_COMMIT,
         mxs::sql::OP_UNDEFINED
     },
     {
         "use X;",
-        QUERY_TYPE_SESSION_WRITE,
+        mxs::sql::TYPE_SESSION_WRITE,
         mxs::sql::OP_CHANGE_DB
     },
     {
         "select last_insert_id();",
-        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
         mxs::sql::OP_SELECT
     },
     {
         "select @@last_insert_id;",
-        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
         mxs::sql::OP_SELECT
     },
     {
         "select @@identity;",
-        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
         mxs::sql::OP_SELECT
     },
     {
         "select if(@@hostname='box02','prod_mariadb02','n');",
-        QUERY_TYPE_READ | QUERY_TYPE_SYSVAR_READ,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_SYSVAR_READ,
         mxs::sql::OP_SELECT
     },
     {
         "select next value for seq1;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "select nextval(seq1);",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "select seq1.nextval;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT GET_LOCK('lock1',10);",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT IS_FREE_LOCK('lock1');",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT IS_USED_LOCK('lock1');",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT RELEASE_LOCK('lock1');",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "deallocate prepare select_stmt;",
-        QUERY_TYPE_DEALLOC_PREPARE,
+        mxs::sql::TYPE_DEALLOC_PREPARE,
         mxs::sql::OP_UNDEFINED
     },
     {
         "SELECT a FROM tbl FOR UPDATE;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT a INTO OUTFILE 'out.txt';",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT a INTO DUMPFILE 'dump.txt';",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT a INTO @var;",
-        QUERY_TYPE_GSYSVAR_WRITE,
+        mxs::sql::TYPE_GSYSVAR_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "select timediff(cast('2004-12-30 12:00:00' as time), '12:00:00');",
-        QUERY_TYPE_READ,
+        mxs::sql::TYPE_READ,
         mxs::sql::OP_SELECT
     },
     {
         "(select 1 as a from t1) union all (select 1 from dual) limit 1;",
-        QUERY_TYPE_READ,
+        mxs::sql::TYPE_READ,
         mxs::sql::OP_SELECT
     },
     {
         "SET @saved_cs_client= @@character_set_client;",
-        QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_USERVAR_WRITE,
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_USERVAR_WRITE,
         mxs::sql::OP_SET
     },
     {
         "SELECT 1 AS c1 FROM t1 ORDER BY ( SELECT 1 AS c2 FROM t1 GROUP BY GREATEST(LAST_INSERT_ID(), t1.a) ORDER BY GREATEST(LAST_INSERT_ID(), t1.a) LIMIT 1);",
-        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
         mxs::sql::OP_SELECT
     },
     {
         "SET PASSWORD FOR 'user'@'10.0.0.1'='*C50EB75D7CB4C76B5264218B92BC69E6815B057A';",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SET
     },
     {
         "SELECT UTC_TIMESTAMP();",
-        QUERY_TYPE_READ,
+        mxs::sql::TYPE_READ,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT COUNT(IF(!c.ispackage, 1, NULL)) as cnt FROM test FOR UPDATE;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT handler FROM abc FOR UPDATE;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT * FROM test LOCK IN SHARE MODE;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "SELECT * FROM test FOR SHARE;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_SELECT
     },
     {
         "DELETE x FROM x JOIN (SELECT id FROM y) y ON x.id = y.id;",
-        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
         mxs::sql::OP_DELETE
     },
 
     // MXS-3377: Parsing of KILL queries
     {
         "KILL 1",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL CONNECTION 2",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL CONNECTION USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL QUERY 3",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL QUERY USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL QUERY ID 4",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL HARD 5",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL HARD USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL HARD CONNECTION 6",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL HARD CONNECTION USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL HARD QUERY 7",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL HARD QUERY USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL HARD QUERY ID 8",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL SOFT 9",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL SOFT USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL SOFT CONNECTION 10",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL SOFT CONNECTION USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL SOFT QUERY 11",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL SOFT QUERY USER 'bob'",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
     {
         "KILL SOFT QUERY ID 12",
-        QUERY_TYPE_WRITE,
+        mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
 };
@@ -501,36 +501,36 @@ void test_set_transaction(Tester& tester)
                     auto type = tester.get_type(sql);
                     auto type_str = mxs::Parser::type_mask_to_string(type);
 
-                    expect(type & QUERY_TYPE_SESSION_WRITE, "Query should be QUERY_TYPE_SESSION_WRITE");
+                    expect(type & mxs::sql::TYPE_SESSION_WRITE, "Query should be mxs::sql::TYPE_SESSION_WRITE");
 
                     if (scope == "")
                     {
-                        expect(type & QUERY_TYPE_NEXT_TRX,
-                               "%s should be QUERY_TYPE_NEXT_TRX: %s", sql.c_str(), type_str.c_str());
+                        expect(type & mxs::sql::TYPE_NEXT_TRX,
+                               "%s should be mxs::sql::TYPE_NEXT_TRX: %s", sql.c_str(), type_str.c_str());
                     }
                     else if (scope == "GLOBAL")
                     {
-                        expect(type & QUERY_TYPE_GSYSVAR_WRITE,
-                               "%s should be QUERY_TYPE_GSYSVAR_WRITE: %s", sql.c_str(), type_str.c_str());
+                        expect(type & mxs::sql::TYPE_GSYSVAR_WRITE,
+                               "%s should be mxs::sql::TYPE_GSYSVAR_WRITE: %s", sql.c_str(), type_str.c_str());
                     }
 
                     if (scope != "GLOBAL" && v.find(trx) != std::string::npos)
                     {
                         if (trx == "READ ONLY")
                         {
-                            expect(type & QUERY_TYPE_READONLY,
-                                   "%s should be QUERY_TYPE_READONLY: %s", sql.c_str(), type_str.c_str());
+                            expect(type & mxs::sql::TYPE_READONLY,
+                                   "%s should be mxs::sql::TYPE_READONLY: %s", sql.c_str(), type_str.c_str());
                         }
                         else
                         {
-                            expect(type & QUERY_TYPE_READWRITE,
-                                   "%s should be QUERY_TYPE_READWRITE: %s", sql.c_str(), type_str.c_str());
+                            expect(type & mxs::sql::TYPE_READWRITE,
+                                   "%s should be mxs::sql::TYPE_READWRITE: %s", sql.c_str(), type_str.c_str());
                         }
                     }
                     else
                     {
-                        expect((type & (QUERY_TYPE_READONLY | QUERY_TYPE_READWRITE)) == 0,
-                               "%s should not be QUERY_TYPE_READONLY or QUERY_TYPE_READWRITE: %s",
+                        expect((type & (mxs::sql::TYPE_READONLY | mxs::sql::TYPE_READWRITE)) == 0,
+                               "%s should not be mxs::sql::TYPE_READONLY or mxs::sql::TYPE_READWRITE: %s",
                                sql.c_str(), type_str.c_str());
                     }
                 }
