@@ -41,7 +41,7 @@ const mockupComputed = {
 }
 
 describe('Dashboard TabNav', () => {
-    let wrapper, axiosStub
+    let wrapper
 
     beforeEach(() => {
         wrapper = mount({
@@ -50,15 +50,10 @@ describe('Dashboard TabNav', () => {
             computed: mockupComputed,
             stubs: {
                 'refresh-rate': "<div class='refresh-rate'></div>",
+                'line-chart': '<div/>',
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(Promise.resolve({ data: {} }))
     })
-    afterEach(() => {
-        axiosStub.restore()
-        wrapper.destroy()
-    })
-
     it(`Should show total number of table rows on each tab`, () => {
         const resourceTypes = ['servers', 'sessions', 'services', 'listeners', 'filters']
 
@@ -77,7 +72,7 @@ describe('Dashboard TabNav', () => {
             const { text: tabText, name: routeName } = dashboardTabRoutes[i]
             const content = aTag.text().replace(/\s{2,}/g, ' ')
             expect(content).to.be.equals(
-                `${wrapper.vm.$tc(tabText, 2)} (${wrapper.vm.getTotal(routeName)})`
+                `${wrapper.vm.$mxs_tc(tabText, 2)} (${wrapper.vm.getTotal(routeName)})`
             )
         })
     })

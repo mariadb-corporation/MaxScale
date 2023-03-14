@@ -23,7 +23,6 @@
                                 <v-row>
                                     <v-col cols="12">
                                         <details-readonly-table
-                                            ref="statistics-table"
                                             :title="`${$mxs_tc('statistics', 2)}`"
                                             :tableData="serverStats"
                                             isTree
@@ -72,7 +71,6 @@
                             </v-col>
                             <v-col cols="6">
                                 <details-readonly-table
-                                    ref="diagnostics-table"
                                     :title="`${$mxs_t('monitorDiagnostics')}`"
                                     :tableData="monitorDiagnostics"
                                     expandAll

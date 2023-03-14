@@ -22,14 +22,6 @@ import {
     dummy_service_connection_info,
 } from '@tests/unit/utils'
 
-const EXPECT_SESSIONS_HEADER = [
-    { text: 'ID', value: 'id' },
-    { text: 'Client', value: 'user' },
-    { text: 'Connected', value: 'connected' },
-    { text: 'IDLE (s)', value: 'idle' },
-    { text: 'Memory', value: 'memory' },
-]
-
 const routerDiagnosticsResStub = {
     queries: 0,
     replayed_transactions: 0,
@@ -196,20 +188,11 @@ describe('ServiceDetail index', () => {
         it(`Should pass necessary props to 'CURRENT SESSIONS' table`, () => {
             const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
             expect(sessionsTable.exists()).to.be.true
-            const { search, sortDesc, sortBy } = sessionsTable.vm.$attrs
-            const { collapsible, delayLoading, rows } = sessionsTable.vm.$props
-            const { search_keyword, sessionsTableRows } = wrapper.vm
-            expect(search).to.be.equals(search_keyword)
-            expect(rows).to.be.eql(sessionsTableRows)
+            const { items } = sessionsTable.vm.$attrs
+            const { collapsible, delayLoading } = sessionsTable.vm.$props
+            expect(items).to.be.eql(wrapper.vm.sessionsTableRows)
             expect(collapsible).to.be.true
             expect(delayLoading).to.be.true
-            expect(sortDesc).to.be.true
-            expect(sortBy).to.be.equals('connected')
-        })
-
-        it(`Should use accurate table headers for 'CURRENT SESSIONS' table`, () => {
-            const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
-            expect(sessionsTable.vm.$props.headers).to.be.deep.equals(EXPECT_SESSIONS_HEADER)
         })
 
         it(`Should compute sessions for this service with accurate data format`, () => {

@@ -14,60 +14,50 @@
 
 import mount from '@tests/unit/setup'
 import Graphs from '@rootSrc/pages/Dashboard/Graphs'
+import { lodash } from '@share/utils/helpers'
 
-import { dummy_all_servers } from '@tests/unit/utils'
-describe('Graphs index', () => {
+const mountFactory = opts =>
+    mount(
+        lodash.merge(
+            {
+                shallow: false,
+                component: Graphs,
+                stubs: { 'line-chart': '<div/>' },
+            },
+            opts
+        )
+    )
+
+describe('Graphs', () => {
     let wrapper
 
     beforeEach(() => {
-        wrapper = mount({
-            shallow: false,
-            component: Graphs,
+        wrapper = mountFactory()
+    })
+    it('Renders three chart cards', () => {
+        const chartCards = wrapper.findAllComponents({ name: 'outlined-overview-card' })
+        expect(chartCards.length).to.be.equals(3)
+    })
+    it('Displays sessions chart if sessions_datasets exist', () => {
+        wrapper = mountFactory({ computed: { sessions_datasets: () => [1, 2, 3] } })
+        expect(wrapper.findComponent({ ref: 'sessionsChart' }).exists()).to.be.true
+    })
+    it(`Displays server connections chart if all_servers and
+    server_connections_datasets exist`, () => {
+        wrapper = mountFactory({
             computed: {
-                sessions_datasets: () => [
-                    {
-                        label: 'Total sessions',
-                        type: 'line',
-                        fill: true,
-                        backgroundColor: 'rgba(171,199,74,0.1)',
-                        borderColor: 'rgba(171,199,74,1)',
-                        borderWidth: 1,
-                        data: [{ x: 1596440973122, y: 30 }],
-                    },
-                ],
-                server_connections_datasets: () => [
-                    {
-                        label: 'CONNECTIONS',
-                        type: 'line',
-                        fill: true,
-                        backgroundColor: 'rgba(171,199,74,0.1)',
-                        borderColor: 'rgba(171,199,74,1)',
-                        borderWidth: 1,
-                        data: [{ x: 1596440973122, y: 10 }],
-                    },
-                ],
-                threads_datasets: () => [
-                    {
-                        label: 'LOAD',
-                        type: 'line',
-                        fill: true,
-                        backgroundColor: 'rgba(171,199,74,0.1)',
-                        borderColor: 'rgba(171,199,74,1)',
-                        borderWidth: 1,
-                        data: [{ x: 1596440973122, y: 20 }],
-                    },
-                ],
-
-                all_servers: () => dummy_all_servers,
+                all_servers: () => [{ id: 1 }, { id: 2 }],
+                server_connections_datasets: () => [1, 2, 3],
             },
         })
+        expect(wrapper.findComponent({ ref: 'connsChart' }).exists()).to.be.true
     })
-    it(`Should call corresponding methods when updateChart is called`, () => {
-        let spies = ['updateConnsGraph', 'updateSessionsGraph', 'updateThreadsGraph'].map(fn =>
-            sinon.spy(wrapper.vm, fn)
-        )
-        //mockup update chart
-        wrapper.vm.updateChart()
-        spies.forEach(spy => spy.should.have.been.calledOnce)
+    it('Displays threads chart if threads_datasets exist', () => {
+        wrapper = mountFactory({
+            computed: {
+                threads_datasets: () => [1, 2, 3],
+            },
+        })
+        expect(wrapper.findComponent({ ref: 'threadsChart' }).exists()).to.be.true
     })
 })

@@ -248,9 +248,9 @@ describe('Dashboard Servers tab', () => {
         })
     })
 
-    it('Show not render rep-tooltip for server not monitored by mariadbmon', () => {
+    it('Show disable rep-tooltip for server not monitored by mariadbmon', () => {
         const serverId = expectedTableRows[2].id
         const repTooltip = getRepTooltipCell({ wrapper, rowId: serverId, cellId: 'id' })
-        expect(repTooltip.exists()).to.be.false
+        expect(repTooltip.vm.$attrs.disabled).to.be.true
     })
 })

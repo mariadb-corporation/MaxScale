@@ -54,6 +54,7 @@ describe('Dashboard', () => {
                 stubs: {
                     'refresh-rate': "<div class='refresh-rate'></div>",
                     'page-header': "<div class='page-header'></div>",
+                    'line-chart': '<div/>',
                 },
             })
             const fetchAllSpy = sinon.spy(wrapper.vm, 'fetchAll')

@@ -436,7 +436,8 @@ describe('maxgui helpers unit tests', () => {
                 'backgroundColor',
                 'borderColor',
                 'borderWidth',
-                'data'
+                'data',
+                'fill'
             )
         })
         it(`Should get timestamp form Date.now() if timestamp

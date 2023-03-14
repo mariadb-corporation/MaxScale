@@ -20,99 +20,68 @@ import {
     dummy_service_connection_info,
 } from '@tests/unit/utils'
 
-const defaultProps = {
-    currentService: dummy_all_services[0],
-    serviceConnectionsDatasets: dummy_service_connection_datasets,
-    serviceConnectionInfo: dummy_service_connection_info,
-}
-
-const propsMountFactory = props =>
-    mount({
-        shallow: false,
-        component: OverviewHeader,
-        propsData: props,
-    })
-
 describe('ServiceDetail - OverviewHeader', () => {
-    let wrapper, clock, updateChartSpy
+    let wrapper, outlineOverviewCards
+
+    const {
+        attributes: { router, started },
+    } = dummy_all_services[0]
+
     beforeEach(() => {
-        clock = sinon.useFakeTimers()
-        updateChartSpy = sinon.spy(OverviewHeader.methods, 'updateChart')
         wrapper = mount({
             shallow: false,
             component: OverviewHeader,
-            propsData: defaultProps,
+            propsData: {
+                currentService: dummy_all_services[0],
+                serviceConnectionsDatasets: dummy_service_connection_datasets,
+                serviceConnectionInfo: dummy_service_connection_info,
+            },
+            stubs: { 'line-chart': '<div/>' },
         })
+        outlineOverviewCards = wrapper.findAllComponents({
+            name: 'outlined-overview-card',
+        }).wrappers
     })
-    afterEach(async () => {
-        await clock.restore()
-        await updateChartSpy.restore()
-        // this prevent fetch loop in mxs-line-chart-stream
-        await wrapper.setData({
-            options: null,
-        })
-        await wrapper.destroy()
+
+    it(`Should render 3 outlined-overview-card components`, () => {
+        expect(outlineOverviewCards.length).to.be.equals(3)
     })
 
-    describe('outlined-overview-card render assertions', () => {
-        const {
-            attributes: { router, started },
-        } = dummy_all_services[0]
-        let outlineOverviewCards
-        beforeEach(() => {
-            wrapper = propsMountFactory(defaultProps)
-            outlineOverviewCards = wrapper.findAllComponents({
-                name: 'outlined-overview-card',
-            }).wrappers
+    it(`Should show 'Overview' title in the first outlined-overview-card`, () => {
+        const title = outlineOverviewCards[0].find('.detail-overview__title')
+        expect(title.text()).to.be.equals('Overview')
+    })
+    it(`Should show 'Overview' title in the first outlined-overview-card`, () => {
+        const title = outlineOverviewCards[0].find('.detail-overview__title')
+        expect(title.text()).to.be.equals('Overview')
+    })
+    it(`Should show router in the first outlined-overview-card`, () => {
+        const cardTitle = outlineOverviewCards[0].find('.text-caption')
+        const cardBody = outlineOverviewCards[0].find('.router')
+        expect(cardTitle.text()).to.be.equals('ROUTER')
+        expect(cardBody.text()).to.be.equals(router)
+    })
+    it(`Should show started time in the second outlined-overview-card`, () => {
+        const { dateFormat } = wrapper.vm.$helpers
+        const cardTitle = outlineOverviewCards[1].find('.text-caption')
+        const cardBody = outlineOverviewCards[1].find('.started')
+        expect(cardTitle.text()).to.be.equals('STARTED AT')
+        expect(cardBody.text()).to.be.equals(dateFormat({ value: started }))
+    })
+    it(`Should not show tile in the last outlined-overview-card`, () => {
+        expect(outlineOverviewCards[2].vm.$props.tile).to.be.false
+    })
+    it(`Should current connections as title in the last outlined-overview-card`, () => {
+        const title = outlineOverviewCards[2].find('.detail-overview__title')
+        const { connections, total_connections } = dummy_service_connection_info
+        expect(title.text()).to.be.equals(
+            `Current Connections  (${connections}/${total_connections})`
+        )
+    })
+    it(`Should show connections chart in the last outlined-overview-card`, () => {
+        const lineChart = outlineOverviewCards[2].findComponent({
+            name: 'mxs-line-chart-stream',
         })
-        afterEach(() => {
-            // this prevent fetch loop in lline-chart-stream
-            wrapper.setData({
-                options: null,
-            })
-            wrapper.destroy()
-        })
-
-        it(`Should render 3 outlined-overview-card components`, () => {
-            expect(outlineOverviewCards.length).to.be.equals(3)
-        })
-
-        it(`Should show 'Overview' title in the first outlined-overview-card`, () => {
-            const title = outlineOverviewCards[0].find('.detail-overview__title')
-            expect(title.text()).to.be.equals('Overview')
-        })
-        it(`Should show 'Overview' title in the first outlined-overview-card`, () => {
-            const title = outlineOverviewCards[0].find('.detail-overview__title')
-            expect(title.text()).to.be.equals('Overview')
-        })
-        it(`Should show router in the first outlined-overview-card`, () => {
-            const cardTitle = outlineOverviewCards[0].find('.text-caption')
-            const cardBody = outlineOverviewCards[0].find('.router')
-            expect(cardTitle.text()).to.be.equals('ROUTER')
-            expect(cardBody.text()).to.be.equals(router)
-        })
-        it(`Should show started time in the second outlined-overview-card`, () => {
-            const { dateFormat } = wrapper.vm.$helpers
-            const cardTitle = outlineOverviewCards[1].find('.text-caption')
-            const cardBody = outlineOverviewCards[1].find('.started')
-            expect(cardTitle.text()).to.be.equals('STARTED AT')
-            expect(cardBody.text()).to.be.equals(dateFormat({ value: started }))
-        })
-        it(`Should not show tile in the last outlined-overview-card`, () => {
-            expect(outlineOverviewCards[2].vm.$props.tile).to.be.false
-        })
-        it(`Should current connections as title in the last outlined-overview-card`, () => {
-            const title = outlineOverviewCards[2].find('.detail-overview__title')
-            const { connections, total_connections } = dummy_service_connection_info
-            expect(title.text()).to.be.equals(
-                `Current Connections  (${connections}/${total_connections})`
-            )
-        })
-        it(`Should show connections chart in the last outlined-overview-card`, () => {
-            const lineChart = outlineOverviewCards[2].findComponent({
-                name: 'mxs-line-chart-stream',
-            })
-            expect(lineChart.exists()).to.be.true
-        })
+        expect(lineChart.exists()).to.be.true
     })
 })
