@@ -22,15 +22,6 @@
 namespace maxscale
 {
 
-/**
- * Deletes local data from all workers
- *
- * The key must not be used again after deletion.
- *
- * @param key      Key to remove
- */
-void worker_local_delete_data(uint64_t key);
-
 template<class T>
 struct WLConstructor
 {
@@ -88,13 +79,9 @@ public:
 
     ~WorkerLocal()
     {
-        worker_local_delete_data(m_handle);
-    }
-
-    // Converts to a T reference
-    operator T&() const
-    {
-        return *get_local_value();
+        mxs::RoutingWorker::broadcast([key = m_handle]() {
+            mxs::RoutingWorker::get_current()->storage().delete_data(key);
+        }, mxs::RoutingWorker::EXECUTE_AUTO);
     }
 
     // Arrow operator
@@ -113,6 +100,29 @@ public:
     const T& operator*() const
     {
         return *get_local_value();
+    }
+
+    /**
+     * Collect local values from all active RoutingWorkers
+     *
+     * @note: This method must only be called from the MainWorker.
+     *
+     * @return A vector containing the individual values for each routing worker
+     */
+    std::vector<T> collect_values() const
+    {
+        mxb_assert_message(MainWorker::is_current() || mxs::test::is_test(),
+                           "this method must be called from the main worker thread");
+        std::vector<T> rval;
+        std::mutex lock;
+
+        mxs::RoutingWorker::execute_concurrently(
+            [&]() {
+            std::lock_guard<std::mutex> guard(lock);
+            rval.push_back(*this->get_local_value());
+        });
+
+        return rval;
     }
 
 protected:
@@ -161,14 +171,48 @@ protected:
     }
 };
 
-// Extends WorkerLocal with global read and write methods for updating all stored values.
+/**
+ * A class that provides (mostly) lock-free reads of a globally shared variable.
+ *
+ * The intended use-case of this class is to provide a convenient way of accessing global data without having
+ * to use a mutex to protect the access. The idea use-case for this is any large object that is infrequently
+ * updated (e.g. configuration data) but used relatively often from a RoutingWorker.
+ *
+ * The variable is wrapped in a std::shared_ptr which means there's at most one copy of the value at any given
+ * time. The class provides const access to the worker-local value. All updates to the value must be done
+ * using the assign() function.
+ *
+ * The access to the worker-local value only blocks for the first time that the value is accessed. This
+ * happens as the local reference is copied from the global one. This may happen long after the WorkerGlobal
+ * has been created if the number of threads in MaxScale increases. The update of the value is done under a
+ * lock which means no further synchronization is needed when the values are read.
+ *
+ * Currently the assign() function uses mxs::RoutingWorker::execute_concurrently() which means that all
+ * updates must be done in the MainWorker. This prevents multiple pending updates to the value and guarantees
+ * that once an update is done, all new sessions in MaxScale will see the value.
+ */
 template<class T>
-class WorkerGlobal : public WorkerLocal<T>
+class WorkerGlobal : private WorkerLocal<std::shared_ptr<T>>
 {
 public:
-    using WorkerLocal<T>::WorkerLocal;
-    // CentOS 7 fails to build if an alias is used to access base class methods instead of the this pointer
-    // using Base = WorkerLocal<T>;
+    // Forwarding constructor
+    template<typename ... Args>
+    WorkerGlobal(Args&& ... args)
+        : WorkerLocal<std::shared_ptr<T>>(std::make_shared<T>(std::forward<Args>(args)...))
+    {
+    }
+
+    // Arrow operator
+    const T* operator->() const
+    {
+        return this->get_local_value()->get();
+    }
+
+    // Const version of dereference operator
+    const T& operator*() const
+    {
+        return *this->get_local_value()->get();
+    }
 
     /**
      * Assign a value
@@ -186,9 +230,10 @@ public:
         mxb_assert_message(MainWorker::is_current() || mxs::test::is_test(),
                            "this method must be called from the main worker thread");
 
+        auto new_val = std::make_shared<T>(t);
         // Update the value of the master copy
         std::unique_lock<std::mutex> guard(this->m_lock);
-        this->m_value = t;
+        this->m_value = std::move(new_val);
         guard.unlock();
 
         update_local_value();
@@ -200,36 +245,13 @@ public:
         });
     }
 
-    /**
-     * Collect local values from all active RoutingWorkers
-     *
-     * @note: This method must only be called from the MainWorker.
-     *
-     * @return A vector containing the individual values for each routing worker
-     */
-    std::vector<T> collect_values() const
-    {
-        mxb_assert_message(MainWorker::is_current() || mxs::test::is_test(),
-                           "this method must be called from the main worker thread");
-        std::vector<T> rval;
-        std::mutex lock;
-
-        mxs::RoutingWorker::execute_concurrently(
-            [&]() {
-            std::lock_guard<std::mutex> guard(lock);
-            rval.push_back(*this->get_local_value());
-        });
-
-        return rval;
-    }
-
 private:
 
     void update_local_value()
     {
         // As get_local_value can cause a lock to be taken, we need the pointer to our value before
         // we lock the master value for the updating of our value.
-        T* my_value = this->get_local_value();
+        auto* my_value = this->get_local_value();
 
         std::lock_guard<std::mutex> guard(this->m_lock);
         *my_value = this->m_value;

@@ -438,9 +438,9 @@ private:
         std::atomic<uint64_t> sequence {0};
     };
 
-    mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
+    mxs::WorkerLocal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
 
-    using GlobalDistributions = mxs::WorkerGlobal<maxscale::ResponseDistribution>;
+    using GlobalDistributions = mxs::WorkerLocal<maxscale::ResponseDistribution>;
     GlobalDistributions m_read_distributions;
     GlobalDistributions m_write_distributions;
     json_t* response_distribution_to_json(mxb::MeasureTime::Operation opr) const;
@@ -507,7 +507,8 @@ private:
 
     maxbase::MeasureTime m_query_time;
 
-    maxscale::ResponseDistribution& m_read_distribution;    // reference to entry in WorkerGlobal
-    maxscale::ResponseDistribution& m_write_distribution;   // reference to entry in WorkerGlobal
+    // TODO: This causes a cross-thread read if the session is moved
+    maxscale::ResponseDistribution& m_read_distribution;    // reference to entry in WorkerLocal
+    maxscale::ResponseDistribution& m_write_distribution;   // reference to entry in WorkerLocal
     mxb::TimePoint                  m_conn_wait_start;
 };

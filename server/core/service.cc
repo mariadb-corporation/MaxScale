@@ -872,8 +872,9 @@ bool Service::set_filters(const std::vector<std::string>& filters)
 
     if (rval)
     {
-        m_data->filters = flist;
-        m_data.assign(*m_data);
+        auto data = *m_data;
+        data.filters = flist;
+        m_data.assign(data);
         m_capabilities = my_capabilities;
         m_protocols = std::move(protocols);
     }
@@ -1760,7 +1761,7 @@ std::pair<uint64_t, uint64_t> Service::get_versions(const std::vector<SERVER*>& 
 
 void Service::targets_updated()
 {
-    auto& data = *m_data;
+    auto data = *m_data;
 
     // Now that we have the new set of targets, recalculate the servers that this service reaches as well as
     // the new routing capabilities.
@@ -1851,15 +1852,19 @@ void Service::propagate_target_update()
 
 void Service::remove_target(SERVER* target)
 {
-    auto& targets = m_data->targets;
-    targets.erase(std::remove(targets.begin(), targets.end(), target), targets.end());
+    auto data = *m_data;
+    data.targets.erase(std::remove(data.targets.begin(), data.targets.end(), target), data.targets.end());
+    m_data.assign(data);
+
     propagate_target_update();
 }
 
 void Service::remove_target(Service* target)
 {
-    auto& targets = m_data->targets;
-    targets.erase(std::remove(targets.begin(), targets.end(), target), targets.end());
+    auto data = *m_data;
+    data.targets.erase(std::remove(data.targets.begin(), data.targets.end(), target), data.targets.end());
+    m_data.assign(data);
+
     propagate_target_update();
     target->remove_parent(this);
 }
@@ -1868,14 +1873,20 @@ void Service::add_target(SERVER* target)
 {
     if (std::find(begin(m_data->targets), end(m_data->targets), target) == end(m_data->targets))
     {
-        m_data->targets.push_back(target);
+        auto data = *m_data;
+        data.targets.push_back(target);
+        m_data.assign(data);
+
         propagate_target_update();
     }
 }
 
 void Service::add_target(Service* target)
 {
-    m_data->targets.push_back(target);
+    auto data = *m_data;
+    data.targets.push_back(target);
+    m_data.assign(data);
+
     target->add_parent(this);
     propagate_target_update();
 }
@@ -1884,7 +1895,10 @@ void Service::update_targets(const Monitor& mon)
 {
     mxb_assert(mxs::MainWorker::is_current());
     const auto& servers = mon.active_routing_servers();
-    m_data->targets.assign(servers.begin(), servers.end());
+    auto data = *m_data;
+    data.targets.assign(servers.begin(), servers.end());
+    m_data.assign(data);
+
     propagate_target_update();
 }
 
@@ -2282,7 +2296,10 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
 void Service::set_cluster(mxs::Monitor* monitor)
 {
     const auto& servers = monitor->active_routing_servers();
-    m_data->targets.assign(servers.begin(), servers.end());
+    auto data = *m_data;
+    data.targets.assign(servers.begin(), servers.end());
+    m_data.assign(data);
+
     m_monitor = monitor;
 }
 
@@ -2293,7 +2310,7 @@ bool Service::change_cluster(mxs::Monitor* monitor)
     if (m_monitor == nullptr && m_data->targets.empty())
     {
         set_cluster(monitor);
-        targets_updated();
+        propagate_target_update();
         rval = true;
     }
 
@@ -2306,8 +2323,11 @@ bool Service::remove_cluster(mxs::Monitor* monitor)
 
     if (m_monitor == monitor)
     {
-        m_data->targets.clear();
-        targets_updated();
+        auto data = *m_data;
+        data.targets.clear();
+        m_data.assign(data);
+
+        propagate_target_update();
         m_monitor = nullptr;
         rval = true;
     }

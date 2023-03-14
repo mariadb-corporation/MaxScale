@@ -61,7 +61,6 @@ add_library(maxscale-common SHARED
   users.cc
   utils.cc
   websocket.cc
-  workerlocal.cc
   response_distribution.cc
   )
 

@@ -426,11 +426,11 @@ private:
     bool check_causal_reads(SERVER* server) const;
     void set_warnings(json_t* json) const;
 
-    SERVICE*                                      m_service;/**< Service where the router belongs*/
-    RWSConfig                                     m_config;
-    Stats                                         m_stats;
-    mxs::WorkerGlobal<TargetSessionStats>         m_server_stats;
-    mxs::WorkerGlobal<maxbase::CumulativeAverage> m_avg_sescmd_sz;
-    std::map<uint32_t, gtid>                      m_last_gtid;
-    mutable mxb::shared_mutex                     m_last_gtid_lock;
+    SERVICE*                                     m_service; /**< Service where the router belongs*/
+    RWSConfig                                    m_config;
+    Stats                                        m_stats;
+    mxs::WorkerLocal<TargetSessionStats>         m_server_stats;
+    mxs::WorkerLocal<maxbase::CumulativeAverage> m_avg_sescmd_sz;
+    std::map<uint32_t, gtid>                     m_last_gtid;
+    mutable mxb::shared_mutex                    m_last_gtid_lock;
 };
