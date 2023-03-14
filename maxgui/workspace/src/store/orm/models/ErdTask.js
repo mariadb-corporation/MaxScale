@@ -22,7 +22,7 @@ export default class ErdTask extends Extender {
      */
     static getNonKeyFields() {
         return {
-            data: this.attr([]),
+            data: this.attr({ nodes: [], links: [] }),
         }
     }
 

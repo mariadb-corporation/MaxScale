@@ -43,5 +43,9 @@ export default {
             Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name: 'ERD' } })
         },
     },
-    getters: {},
+    getters: {
+        getActiveErdTaskId: () => Worksheet.getters('getActiveWkeId'),
+        getActiveErdTask: (_, getters) => ErdTask.find(getters.getActiveErdTaskId) || {},
+        getActiveGraphData: (_, getters) => getters.getActiveErdTask.data,
+    },
 }

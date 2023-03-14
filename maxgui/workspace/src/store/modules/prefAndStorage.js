@@ -15,13 +15,15 @@ import { addDaysToNow } from '@wsSrc/utils/helpers'
 
 const getUserPrefStates = () => ({
     sidebar_pct_width: 0,
+    is_sidebar_collapsed: false,
+    erd_sidebar_pct_width: 0,
+    is_erd_sidebar_collapsed: false,
     query_pane_pct_height: 60,
     is_fullscreen: false,
     query_row_limit: 10000,
     query_confirm_flag: 1, //  either 0 or 1
     query_history_expired_time: addDaysToNow(30), // Unix time
     query_show_sys_schemas_flag: 1,
-    is_sidebar_collapsed: false,
     tab_moves_focus: false,
 })
 
