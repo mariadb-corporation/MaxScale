@@ -63,13 +63,13 @@ export default {
         },
         /**
          * Initialize a blank QueryTab and its mandatory relational entities
-         * @param {String} query_editor_id  - id of the QueryEditor has QueryTab being inserted
-         * @param {Object} [ fields = { query_tab_id: uuidv1(), name: '' } ] - fields
+         * @param {String} param.query_editor_id  - id of the QueryEditor has QueryTab being inserted
+         * @param {String} [param.query_tab_id]
+         * @param {String} [param.name]
          */
         insertQueryTab(
             _,
-            query_editor_id,
-            fields = { query_tab_id: this.vue.$helpers.uuidv1(), name: '' }
+            { query_editor_id, query_tab_id = this.vue.$helpers.uuidv1(), name = '' }
         ) {
             let tabName = 'Query Tab 1',
                 count = 1
@@ -81,21 +81,20 @@ export default {
                 count = lastQueryTabOfWke.count + 1
                 tabName = `Query Tab ${count}`
             }
-            if (fields.name) tabName = fields.name
             QueryTab.insert({
                 data: {
-                    id: fields.query_tab_id,
+                    id: query_tab_id,
                     count,
-                    name: tabName,
+                    name: name ? name : tabName,
                     query_editor_id,
                 },
             })
-            Editor.insert({ data: { id: fields.query_tab_id } })
-            QueryResult.insert({ data: { id: fields.query_tab_id } })
-            QueryTabTmp.insert({ data: { id: fields.query_tab_id } })
+            Editor.insert({ data: { id: query_tab_id } })
+            QueryResult.insert({ data: { id: query_tab_id } })
+            QueryTabTmp.insert({ data: { id: query_tab_id } })
             QueryEditor.update({
                 where: query_editor_id,
-                data: { active_query_tab_id: fields.query_tab_id },
+                data: { active_query_tab_id: query_tab_id },
             })
         },
         /**
@@ -105,11 +104,9 @@ export default {
          * @param {String} param.query_editor_id - QueryEditor id
          * @param {String} param.name - queryTab name. If not provided, it'll be auto generated
          */
-        async handleAddQueryTab({ dispatch }, { query_editor_id, name }) {
+        async handleAddQueryTab({ dispatch }, { query_editor_id, name = '' }) {
             const query_tab_id = this.vue.$helpers.uuidv1()
-            let fields = { query_tab_id }
-            if (name) fields.name = name
-            dispatch('insertQueryTab', query_editor_id, fields)
+            dispatch('insertQueryTab', { query_editor_id, query_tab_id, name })
             const queryEditorConn = QueryConn.getters('getQueryEditorConn')
             // Clone the QueryEditor conn and bind it to the new queryTab
             if (queryEditorConn.id)

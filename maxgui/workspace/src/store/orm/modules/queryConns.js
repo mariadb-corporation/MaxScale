@@ -222,13 +222,11 @@ export default {
             const [e, res] = await this.vue.$helpers.to(
                 connection.clone({ id: queryEditorConn.id, config })
             )
-
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201)
                 QueryConn.insert({
                     data: {
                         id: res.data.data.id,
-                        name: queryEditorConn.name,
                         attributes: res.data.data.attributes,
                         binding_type: QUERY_TAB,
                         query_tab_id,

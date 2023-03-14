@@ -74,7 +74,7 @@ export default {
             QueryEditor.insert({ data: { id: query_editor_id } })
             QueryEditorTmp.insert({ data: { id: query_editor_id } })
             SchemaSidebar.insert({ data: { id: query_editor_id } })
-            QueryTab.dispatch('insertQueryTab', query_editor_id)
+            QueryTab.dispatch('insertQueryTab', { query_editor_id })
         },
         /**
          * Init QueryEditor entities if they don't exist in the active worksheet.
