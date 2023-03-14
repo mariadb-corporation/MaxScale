@@ -4310,10 +4310,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         mxs::MODULE_INFO_VERSION,
         "qc_mysqlembedded",
-        mxs::ModuleType::QUERY_CLASSIFIER,
+        mxs::ModuleType::PARSER,
         mxs::ModuleStatus::GA,
-        MXS_QUERY_CLASSIFIER_VERSION,
-        "Query classifier based upon MySQL Embedded",
+        MXS_PARSER_VERSION,
+        "MariaDB SQL parser using MySQL Embedded",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mysql_plugin,

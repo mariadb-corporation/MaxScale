@@ -621,7 +621,7 @@ uint32_t Parser::get_trx_type_mask_using(GWBUF& stmt, ParseTrxUsing use) const
 ParserPlugin* ParserPlugin::load(const char* zPlugin_name)
 {
     void* pModule_object = nullptr;
-    auto pModule_info = get_module(zPlugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
+    auto pModule_info = get_module(zPlugin_name, mxs::ModuleType::PARSER);
     if (pModule_info)
     {
         pModule_object = pModule_info->module_object;

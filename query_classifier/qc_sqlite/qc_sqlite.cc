@@ -5742,10 +5742,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         mxs::MODULE_INFO_VERSION,
         MXB_MODULE_NAME,
-        mxs::ModuleType::QUERY_CLASSIFIER,
+        mxs::ModuleType::PARSER,
         mxs::ModuleStatus::GA,
-        MXS_QUERY_CLASSIFIER_VERSION,
-        "Query classifier using sqlite.",
+        MXS_PARSER_VERSION,
+        "MariaDB SQL parser using sqlite3.",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &sqlite3_plugin,

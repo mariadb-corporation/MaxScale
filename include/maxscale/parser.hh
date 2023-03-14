@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/buffer.hh>
 
-#define MXS_QUERY_CLASSIFIER_VERSION {3, 0, 0}
+#define MXS_PARSER_VERSION {4, 0, 0}
 
 class GWBUF;
 struct json_t;

@@ -57,7 +57,7 @@ enum class ModuleType
     MONITOR,
     FILTER,
     AUTHENTICATOR,
-    QUERY_CLASSIFIER,
+    PARSER,
 };
 }
 

@@ -165,8 +165,8 @@ static bool api_version_match(const MXS_MODULE* mod_info, const string& filepath
         required = MXS_FILTER_VERSION;
         break;
 
-    case ModuleType::QUERY_CLASSIFIER:
-        required = MXS_QUERY_CLASSIFIER_VERSION;
+    case ModuleType::PARSER:
+        required = MXS_PARSER_VERSION;
         break;
 
     default:
@@ -508,8 +508,8 @@ const char* module_type_to_legacy_string(ModuleType type)
     case ModuleType::AUTHENTICATOR:
         return "Authenticator";
 
-    case ModuleType::QUERY_CLASSIFIER:
-        return "QueryClassifier";
+    case ModuleType::PARSER:
+        return "Parser";
 
     default:
         mxb_assert(!true);
@@ -833,8 +833,8 @@ const char* module_type_to_string(ModuleType type)
     case ModuleType::AUTHENTICATOR:
         return "authenticator";
 
-    case ModuleType::QUERY_CLASSIFIER:
-        return "query_classifier";
+    case ModuleType::PARSER:
+        return "parser";
 
     default:
         mxb_assert(!true);
