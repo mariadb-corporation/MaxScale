@@ -2007,7 +2007,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_operation = mxs::sql::OP_CREATE;
+        m_operation = mxs::sql::OP_CREATE_TABLE;
         m_type_mask = mxs::sql::TYPE_WRITE;
 
         if (isTemp)
@@ -2148,7 +2148,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = mxs::sql::TYPE_WRITE;
-        m_operation = mxs::sql::OP_ALTER;
+        m_operation = mxs::sql::OP_ALTER_TABLE;
 
         switch (command)
         {
@@ -2753,6 +2753,13 @@ public:
 
             switch (m_keyword_1)
             {
+            case TK_ALTER:
+                if (m_keyword_2 == TK_TABLE)
+                {
+                    m_operation = mxs::sql::OP_ALTER_TABLE;
+                }
+                break;
+
             case TK_CHECK:
                 if (m_keyword_2 == TK_TABLE)
                 {
@@ -2761,11 +2768,25 @@ public:
                 }
                 break;
 
+            case TK_CREATE:
+                if (m_keyword_2 == TK_TABLE)
+                {
+                    m_operation = mxs::sql::OP_CREATE_TABLE;
+                }
+                break;
+
             case TK_DEALLOCATE:
                 if (m_keyword_2 == TK_PREPARE)
                 {
                     m_status = Parser::Result::TOKENIZED;
                     m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
+                }
+                break;
+
+            case TK_DROP:
+                if (m_keyword_2 == TK_TABLE)
+                {
+                    m_operation = mxs::sql::OP_DROP_TABLE;
                 }
                 break;
 

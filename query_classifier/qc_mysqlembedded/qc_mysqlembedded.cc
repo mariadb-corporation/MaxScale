@@ -2219,11 +2219,14 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
 #endif
                     case SQLCOM_CREATE_SERVER:
                     case SQLCOM_CREATE_SPFUNCTION:
-                    case SQLCOM_CREATE_TABLE:
                     case SQLCOM_CREATE_TRIGGER:
                     case SQLCOM_CREATE_USER:
                     case SQLCOM_CREATE_VIEW:
                         *operation = mxs::sql::OP_CREATE;
+                        break;
+
+                    case SQLCOM_CREATE_TABLE:
+                        *operation = mxs::sql::OP_CREATE_TABLE;
                         break;
 
                     case SQLCOM_ALTER_DB:
@@ -2232,9 +2235,12 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_ALTER_FUNCTION:
                     case SQLCOM_ALTER_PROCEDURE:
                     case SQLCOM_ALTER_SERVER:
-                    case SQLCOM_ALTER_TABLE:
                     case SQLCOM_ALTER_TABLESPACE:
                         *operation = mxs::sql::OP_ALTER;
+                        break;
+
+                    case SQLCOM_ALTER_TABLE:
+                        *operation = mxs::sql::OP_ALTER_TABLE;
                         break;
 
                     case SQLCOM_UPDATE:

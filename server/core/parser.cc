@@ -391,6 +391,9 @@ const char* sql::to_string(sql::OpCode op)
     case OP_ALTER:
         return "sql::OP_ALTER";
 
+    case OP_ALTER_TABLE:
+        return "sql::OP_ALTER_TABLE";
+
     case OP_CALL:
         return "sql::OP_CALL";
 
@@ -399,6 +402,9 @@ const char* sql::to_string(sql::OpCode op)
 
     case OP_CREATE:
         return "sql::OP_CREATE";
+
+    case OP_CREATE_TABLE:
+        return "sql::OP_CREATE_TABLE";
 
     case OP_DELETE:
         return "sql::OP_DELETE";

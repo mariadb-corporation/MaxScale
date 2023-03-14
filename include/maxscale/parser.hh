@@ -67,9 +67,11 @@ enum OpCode : uint32_t
     OP_UNDEFINED = 0,
 
     OP_ALTER,
+    OP_ALTER_TABLE,
     OP_CALL,
     OP_CHANGE_DB,
     OP_CREATE,
+    OP_CREATE_TABLE,
     OP_DELETE,
     OP_DROP,
     OP_DROP_TABLE,
