@@ -348,7 +348,7 @@ int module_init()
 
     const auto& config = mxs::Config::get();
 
-    mxs::Parser::Plugin* pPlugin = mxs::Parser::load(DEFAULT_QC_NAME);
+    mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(DEFAULT_QC_NAME);
 
     if (pPlugin)
     {
@@ -361,7 +361,7 @@ int module_init()
         }
         else
         {
-            mxs::Parser::unload(pPlugin);
+            mxs::ParserPlugin::unload(pPlugin);
         }
     }
     else

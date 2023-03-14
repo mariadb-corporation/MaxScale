@@ -42,6 +42,7 @@ using std::string;
 using std::stringstream;
 
 using mxs::Parser;
+using mxs::ParserPlugin;
 namespace sql = mxs::sql;
 
 namespace
@@ -130,7 +131,7 @@ GWBUF* create_gwbuf(const string& s)
     return gwbuf;
 }
 
-Parser::Plugin* load_plugin(const char* name)
+ParserPlugin* load_plugin(const char* name)
 {
     bool loaded = false;
     size_t len = strlen(name);
@@ -140,7 +141,7 @@ Parser::Plugin* load_plugin(const char* name)
 
     mxs::set_libdir(libdir);
 
-    Parser::Plugin* pPlugin = mxs::Parser::load(name);
+    ParserPlugin* pPlugin = ParserPlugin::load(name);
 
     if (!pPlugin)
     {
@@ -150,9 +151,9 @@ Parser::Plugin* load_plugin(const char* name)
     return pPlugin;
 }
 
-Parser::Plugin* get_plugin(const char* zName, Parser::SqlMode sql_mode, const char* zArgs)
+ParserPlugin* get_plugin(const char* zName, Parser::SqlMode sql_mode, const char* zArgs)
 {
-    Parser::Plugin* pPlugin = nullptr;
+    ParserPlugin* pPlugin = nullptr;
 
     if (zName)
     {
@@ -163,7 +164,7 @@ Parser::Plugin* get_plugin(const char* zName, Parser::SqlMode sql_mode, const ch
             if (!pPlugin->setup(sql_mode, zArgs) || !pPlugin->thread_init())
             {
                 cerr << "error: Could not setup or init classifier " << zName << "." << endl;
-                mxs::Parser::unload(pPlugin);
+                ParserPlugin::unload(pPlugin);
                 pPlugin = 0;
             }
         }
@@ -172,27 +173,27 @@ Parser::Plugin* get_plugin(const char* zName, Parser::SqlMode sql_mode, const ch
     return pPlugin;
 }
 
-void put_plugin(Parser::Plugin* pPlugin)
+void put_plugin(ParserPlugin* pPlugin)
 {
     if (pPlugin)
     {
         pPlugin->thread_end();
-        mxs::Parser::unload(pPlugin);
+        ParserPlugin::unload(pPlugin);
     }
 }
 
 bool get_plugins(Parser::SqlMode sql_mode,
                  const char* zName1,
                  const char* zArgs1,
-                 Parser::Plugin** ppPlugin1,
+                 ParserPlugin** ppPlugin1,
                  const char* zName2,
                  const char* zArgs2,
-                 Parser::Plugin** ppPlugin2)
+                 ParserPlugin** ppPlugin2)
 {
     bool rc = false;
 
-    Parser::Plugin* pPlugin1 = get_plugin(zName1, sql_mode, zArgs1);
-    Parser::Plugin* pPlugin2 = get_plugin(zName2, sql_mode, zArgs2);
+    ParserPlugin* pPlugin1 = get_plugin(zName1, sql_mode, zArgs1);
+    ParserPlugin* pPlugin2 = get_plugin(zName2, sql_mode, zArgs2);
 
     if ((!zName1 || pPlugin1) && (!zName2 || pPlugin2))
     {
@@ -209,7 +210,7 @@ bool get_plugins(Parser::SqlMode sql_mode,
     return rc;
 }
 
-void put_plugins(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2)
+void put_plugins(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2)
 {
     put_plugin(pPlugin1);
     put_plugin(pPlugin2);
@@ -297,9 +298,9 @@ static void update_time(timespec* pResult, timespec& start, timespec& finish)
     pResult->tv_sec += difference.tv_sec;
 }
 
-bool compare_parse(Parser::Plugin* pPlugin1,
+bool compare_parse(ParserPlugin* pPlugin1,
                    GWBUF& copy1,
-                   Parser::Plugin* pPlugin2,
+                   ParserPlugin* pPlugin2,
                    GWBUF& copy2)
 {
     bool success = false;
@@ -349,9 +350,9 @@ bool compare_parse(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool compare_get_type(Parser::Plugin* pPlugin1,
+bool compare_get_type(ParserPlugin* pPlugin1,
                       GWBUF& copy1,
-                      Parser::Plugin* pPlugin2,
+                      ParserPlugin* pPlugin2,
                       GWBUF& copy2)
 {
     bool success = false;
@@ -365,7 +366,7 @@ bool compare_get_type(Parser::Plugin* pPlugin1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << mxs::Parser::type_mask_to_string(rv1);
+        ss << "Ok : " << Parser::type_mask_to_string(rv1);
         success = true;
     }
     else
@@ -394,8 +395,8 @@ bool compare_get_type(Parser::Plugin* pPlugin1,
             rv2b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
         }
 
-        auto types1 = mxs::Parser::type_mask_to_string(rv1);
-        auto types2 = mxs::Parser::type_mask_to_string(rv2);
+        auto types1 = Parser::type_mask_to_string(rv1);
+        auto types2 = Parser::type_mask_to_string(rv2);
 
         if (rv1b == rv2b)
         {
@@ -413,9 +414,9 @@ bool compare_get_type(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool compare_get_operation(Parser::Plugin* pPlugin1,
+bool compare_get_operation(ParserPlugin* pPlugin1,
                            GWBUF& copy1,
-                           Parser::Plugin* pPlugin2,
+                           ParserPlugin* pPlugin2,
                            GWBUF& copy2)
 {
     bool success = false;
@@ -445,9 +446,9 @@ bool compare_get_operation(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool compare_get_created_table_name(Parser::Plugin* pPlugin1,
+bool compare_get_created_table_name(ParserPlugin* pPlugin1,
                                     GWBUF& copy1,
-                                    Parser::Plugin* pPlugin2,
+                                    ParserPlugin* pPlugin2,
                                     GWBUF& copy2)
 {
     bool success = false;
@@ -474,9 +475,9 @@ bool compare_get_created_table_name(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool compare_is_drop_table_query(Parser::Plugin* pPlugin1,
+bool compare_is_drop_table_query(ParserPlugin* pPlugin1,
                                  GWBUF& copy1,
-                                 Parser::Plugin* pPlugin2,
+                                 ParserPlugin* pPlugin2,
                                  GWBUF& copy2)
 {
     bool success = false;
@@ -503,9 +504,9 @@ bool compare_is_drop_table_query(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool compare_get_table_names(Parser::Plugin* pPlugin1,
+bool compare_get_table_names(ParserPlugin* pPlugin1,
                              GWBUF& copy1,
-                             Parser::Plugin* pPlugin2,
+                             ParserPlugin* pPlugin2,
                              GWBUF& copy2)
 {
     bool success = false;
@@ -607,9 +608,9 @@ ostream& operator<<(ostream& o, const std::set<string>& s)
     return o;
 }
 
-bool compare_get_database_names(Parser::Plugin* pPlugin1,
+bool compare_get_database_names(ParserPlugin* pPlugin1,
                                 GWBUF& copy1,
-                                Parser::Plugin* pPlugin2,
+                                ParserPlugin* pPlugin2,
                                 GWBUF& copy2)
 {
     bool success = false;
@@ -636,9 +637,9 @@ bool compare_get_database_names(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool compare_get_prepare_name(Parser::Plugin* pPlugin1,
+bool compare_get_prepare_name(ParserPlugin* pPlugin1,
                               GWBUF& copy1,
-                              Parser::Plugin* pPlugin2,
+                              ParserPlugin* pPlugin2,
                               GWBUF& copy2)
 {
     bool success = false;
@@ -827,9 +828,9 @@ bool operator==(const QcFieldInfo& lhs, const QcFieldInfo& rhs)
     return lhs.eq(rhs);
 }
 
-bool compare_get_field_info(Parser::Plugin* pPlugin1,
+bool compare_get_field_info(ParserPlugin* pPlugin1,
                             GWBUF& copy1,
-                            Parser::Plugin* pPlugin2,
+                            ParserPlugin* pPlugin2,
                             GWBUF& copy2)
 {
     bool success = false;
@@ -1065,9 +1066,9 @@ void collect_missing_function_names(const std::set<QcFunctionInfo>& one,
     }
 }
 
-bool compare_get_function_info(Parser::Plugin* pPlugin1,
+bool compare_get_function_info(ParserPlugin* pPlugin1,
                                GWBUF& copy1,
-                               Parser::Plugin* pPlugin2,
+                               ParserPlugin* pPlugin2,
                                GWBUF& copy2)
 {
     bool success = false;
@@ -1170,9 +1171,9 @@ bool compare_get_function_info(Parser::Plugin* pPlugin1,
 }
 
 
-bool compare(Parser::Plugin* pPlugin1,
+bool compare(ParserPlugin* pPlugin1,
              GWBUF& copy1,
-             Parser::Plugin* pPlugin2,
+             ParserPlugin* pPlugin2,
              GWBUF& copy2)
 {
     int errors = 0;
@@ -1221,7 +1222,7 @@ bool compare(Parser::Plugin* pPlugin1,
     return success;
 }
 
-bool compare(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, const string& s)
+bool compare(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, const string& s)
 {
     GWBUF* pCopy1 = create_gwbuf(s);
     GWBUF* pCopy2 = create_gwbuf(s);
@@ -1281,7 +1282,7 @@ static void trim(std::string& s)
     rtrim(s);
 }
 
-int run(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, istream& in)
+int run(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, istream& in)
 {
     bool stop = false;      // Whether we should exit.
 
@@ -1319,7 +1320,7 @@ int run(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, istream& in)
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-int run(Parser::Plugin* pPlugin1, Parser::Plugin* pPlugin2, const string& statement)
+int run(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, const string& statement)
 {
     global.query = statement;
 
@@ -1487,8 +1488,8 @@ int main(int argc, char* argv[])
                 const char* zClassifier1Args = classifier1Args.c_str();
                 const char* zClassifier2Args = classifier2Args.c_str();
 
-                Parser::Plugin* pPlugin1;
-                Parser::Plugin* pPlugin2;
+                ParserPlugin* pPlugin1;
+                ParserPlugin* pPlugin2;
 
                 if (get_plugins(sql_mode,
                                 zClassifier1,

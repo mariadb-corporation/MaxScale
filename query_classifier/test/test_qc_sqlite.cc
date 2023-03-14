@@ -46,7 +46,7 @@ public:
     {
         if (m_pPlugin)
         {
-            mxs::Parser::unload(m_pPlugin);
+            mxs::ParserPlugin::unload(m_pPlugin);
         }
     }
 
@@ -73,11 +73,11 @@ public:
 
 private:
 
-    mxs::Parser::Plugin* load_plugin(const char* name)
+    mxs::ParserPlugin* load_plugin(const char* name)
     {
         std::string libdir = "../"s + name;
         mxs::set_libdir(libdir.c_str());
-        mxs::Parser::Plugin* pPlugin = mxs::Parser::load(name);
+        mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(name);
 
         if (pPlugin)
         {
@@ -86,7 +86,7 @@ private:
             if (!pPlugin->setup(mxs::Parser::SqlMode::DEFAULT, args) || !pPlugin->thread_init())
             {
                 std::cerr << "error: Could not setup or init plugin " << name << "." << std::endl;
-                mxs::Parser::unload(pPlugin);
+                mxs::ParserPlugin::unload(pPlugin);
                 pPlugin = nullptr;
             }
             else
@@ -103,7 +103,7 @@ private:
         return pPlugin;
     }
 
-    mxs::Parser::Plugin* m_pPlugin = nullptr;
+    mxs::ParserPlugin* m_pPlugin = nullptr;
 };
 
 static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode>> test_cases

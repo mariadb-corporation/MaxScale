@@ -86,6 +86,7 @@
 using namespace std;
 using mxb::sv_case_eq;
 using mxs::Parser;
+using mxs::ParserPlugin;
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 2
 #define CTE_SUPPORTED
@@ -4088,7 +4089,7 @@ namespace
 class MysqlParser : public Parser
 {
 public:
-    Parser::Plugin& plugin() const override;
+    ParserPlugin& plugin() const override;
 
     Result parse(GWBUF& stmt, uint32_t collect) const override
     {
@@ -4243,7 +4244,7 @@ public:
     }
 };
 
-class MysqlParserPlugin : public Parser::Plugin
+class MysqlParserPlugin : public ParserPlugin
 {
 public:
     bool setup(Parser::SqlMode sql_mode, const char* args) override
@@ -4289,7 +4290,7 @@ private:
 
 MysqlParserPlugin mysql_plugin;
 
-Parser::Plugin& MysqlParser::plugin() const
+ParserPlugin& MysqlParser::plugin() const
 {
     return mysql_plugin;
 }

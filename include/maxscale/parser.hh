@@ -93,6 +93,8 @@ const char* to_string(OpCode code);
 
 };
 
+class ParserPlugin;
+
 class Parser
 {
 public:
@@ -262,76 +264,6 @@ public:
         sql::OpCode op { sql::OP_UNDEFINED };
     };
 
-    /**
-     * Plugin defines the object a parser plugin must
-     * implement and return.
-     */
-    class Plugin
-    {
-    public:
-        /**
-         * Must be called once to setup the parser plugin.
-         *
-         * @param sql_mode  The default sql mode.
-         * @param args      The value of `query_classifier_args` in the configuration file.
-         *
-         * @return True, if the parser plugin be setup, otherwise false.
-         */
-        virtual bool setup(SqlMode sql_mode, const char* args) = 0;
-
-        /**
-         * Must be called once per thread where the parser will be used. Note that
-         * this will automatically be done in all MaxScale routing threads.
-         *
-         * @return True, if the thread initialization succeeded, otherwise false.
-         */
-        virtual bool thread_init(void) = 0;
-
-        /**
-         * Must be called once when a thread finishes. Note that this will
-         * automatically be done in all MaxScale routing threads.
-         */
-        virtual void thread_end(void) = 0;
-
-        /**
-         * Return statement currently being classified.
-         *
-         * @param ppStmp  Pointer to pointer that on return will point to the
-         *                statement being classified.
-         * @param pLen    Pointer to value that on return will contain the length
-         *                of the returned string.
-         *
-         * @return True, if a statement was returned (i.e. a statement is being
-         *         classified), otherwise false.
-         */
-        virtual bool get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
-
-        /**
-         * Get result from info.
-         *
-         * @param  The info whose result should be returned.
-         *
-         * @return The result of the provided info.
-         */
-        virtual StmtResult get_result_from_info(const QC_STMT_INFO* info) = 0;
-
-        /**
-         * Get canonical statement
-         *
-         * @param info  The info whose canonical statement should be returned.
-         *
-         * @attention - The string_view refers to data that remains valid only as long
-         *              as @c info remains valid.
-         *            - If @c info is of a COM_STMT_PREPARE, then the canonical string will
-         *              be suffixed by ":P".
-         *
-         * @return The canonical statement.
-         */
-        virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
-
-        virtual mxs::Parser& parser() = 0;
-    };
-
     virtual ~Parser() = default;
 
     static bool type_mask_contains(uint32_t type_mask, qc_query_type_t type)
@@ -341,10 +273,7 @@ public:
 
     static std::string type_mask_to_string(uint32_t type_mask);
 
-    static Plugin* load(const char* zPlugin_name);
-    static void    unload(Plugin* pPlugin);
-
-    virtual Plugin& plugin() const = 0;
+    virtual ParserPlugin& plugin() const = 0;
 
     virtual Result           parse(GWBUF& stmt, uint32_t collect) const = 0;
     std::unique_ptr<json_t>  parse_to_resource(const char* zHost, const std::string& statement) const;
@@ -375,6 +304,84 @@ public:
     virtual void set_server_version(uint64_t version) = 0;
     virtual void set_sql_mode(SqlMode sql_mode) = 0;
 };
+
+/**
+ * ParserPlugin defines the object a parser plugin must
+ * implement and return.
+ */
+class ParserPlugin
+{
+public:
+    static ParserPlugin* load(const char* zPlugin_name);
+    static void          unload(ParserPlugin* pPlugin);
+
+    /**
+     * Must be called once to setup the parser plugin.
+     *
+     * @param sql_mode  The default sql mode.
+     * @param args      The value of `query_classifier_args` in the configuration file.
+     *
+     * @return True, if the parser plugin be setup, otherwise false.
+     */
+    virtual bool setup(Parser::SqlMode sql_mode, const char* args) = 0;
+
+    /**
+     * Must be called once per thread where the parser will be used. Note that
+     * this will automatically be done in all MaxScale routing threads.
+     *
+     * @return True, if the thread initialization succeeded, otherwise false.
+     */
+    virtual bool thread_init(void) = 0;
+
+    /**
+     * Must be called once when a thread finishes. Note that this will
+     * automatically be done in all MaxScale routing threads.
+     */
+    virtual void thread_end(void) = 0;
+
+    /**
+     * Return statement currently being classified.
+     *
+     * @param ppStmp  Pointer to pointer that on return will point to the
+     *                statement being classified.
+     * @param pLen    Pointer to value that on return will contain the length
+     *                of the returned string.
+     *
+     * @return True, if a statement was returned (i.e. a statement is being
+     *         classified), otherwise false.
+     */
+    virtual bool get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
+
+    /**
+     * Get result from info.
+     *
+     * @param  The info whose result should be returned.
+     *
+     * @return The result of the provided info.
+     */
+    virtual Parser::StmtResult get_result_from_info(const QC_STMT_INFO* info) = 0;
+
+    /**
+     * Get canonical statement
+     *
+     * @param info  The info whose canonical statement should be returned.
+     *
+     * @attention - The string_view refers to data that remains valid only as long
+     *              as @c info remains valid.
+     *            - If @c info is of a COM_STMT_PREPARE, then the canonical string will
+     *              be suffixed by ":P".
+     *
+     * @return The canonical statement.
+     */
+    virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
+
+    /**
+     * @return The parser provided by the plugin.
+     */
+    virtual Parser& parser() = 0;
+};
+
+
 
 namespace parser
 {

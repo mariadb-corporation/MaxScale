@@ -123,7 +123,7 @@ public:
         return i != m_infos.end() ? i->second.sInfo.get() : nullptr;
     }
 
-    std::shared_ptr<QC_STMT_INFO> get(mxs::Parser::Plugin* pPlugin, std::string_view canonical_stmt)
+    std::shared_ptr<QC_STMT_INFO> get(mxs::ParserPlugin* pPlugin, std::string_view canonical_stmt)
     {
         std::shared_ptr<QC_STMT_INFO> sInfo;
         mxs::Parser::SqlMode sql_mode = pPlugin->parser().get_sql_mode();
@@ -158,7 +158,7 @@ public:
         return sInfo;
     }
 
-    void insert(mxs::Parser::Plugin* pPlugin,
+    void insert(mxs::ParserPlugin* pPlugin,
                 std::string_view canonical_stmt,
                 std::shared_ptr<QC_STMT_INFO> sInfo)
     {
@@ -266,7 +266,7 @@ public:
 private:
     struct Entry
     {
-        Entry(mxs::Parser::Plugin* pPlugin,
+        Entry(mxs::ParserPlugin* pPlugin,
               std::shared_ptr<QC_STMT_INFO> sInfo,
               mxs::Parser::SqlMode sql_mode,
               uint32_t options)
@@ -278,7 +278,7 @@ private:
         {
         }
 
-        mxs::Parser::Plugin*          pPlugin;
+        mxs::ParserPlugin*            pPlugin;
         std::shared_ptr<QC_STMT_INFO> sInfo;
         mxs::Parser::SqlMode          sql_mode;
         uint32_t                      options;
@@ -386,7 +386,7 @@ public:
     QCInfoCacheScope(const QCInfoCacheScope&) = delete;
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
-    QCInfoCacheScope(mxs::Parser::Plugin* pPlugin, GWBUF* pStmt)
+    QCInfoCacheScope(mxs::ParserPlugin* pPlugin, GWBUF* pStmt)
         : m_pPlugin(pPlugin)
         , m_stmt(*pStmt)
     {
@@ -445,10 +445,10 @@ public:
     }
 
 private:
-    mxs::Parser::Plugin* m_pPlugin;
-    GWBUF&               m_stmt;
-    std::string          m_canonical;
-    size_t               m_info_size_before;
+    mxs::ParserPlugin* m_pPlugin;
+    GWBUF&             m_stmt;
+    std::string        m_canonical;
+    size_t             m_info_size_before;
 
     bool exclude_from_cache() const
     {
@@ -463,7 +463,7 @@ private:
 namespace maxscale
 {
 
-CachingParser::CachingParser(Plugin* pPlugin)
+CachingParser::CachingParser(ParserPlugin* pPlugin)
     : m_plugin(*pPlugin)
     , m_parser(pPlugin->parser())
 {
@@ -720,7 +720,7 @@ void CachingParser::set_thread_cache_enabled(bool enabled)
     this_thread.use_cache = enabled;
 }
 
-mxs::Parser::Plugin& CachingParser::plugin() const
+mxs::ParserPlugin& CachingParser::plugin() const
 {
     return m_plugin;
 }

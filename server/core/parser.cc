@@ -350,6 +350,10 @@ const char* parser::to_string(Parser::KillType type)
     }
 }
 
+/**
+ * Parser
+ */
+
 //static
 std::string Parser::type_mask_to_string(uint32_t type_mask)
 {
@@ -444,35 +448,6 @@ const char* sql::to_string(sql::OpCode op)
         mxb_assert(!true);
         return "UNKNOWN_SQL_OP";
     }
-}
-
-//static
-Parser::Plugin* Parser::load(const char* zPlugin_name)
-{
-    void* pModule_object = nullptr;
-    auto pModule_info = get_module(zPlugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
-    if (pModule_info)
-    {
-        pModule_object = pModule_info->module_object;
-    }
-
-    if (pModule_object)
-    {
-        MXB_INFO("%s loaded.", zPlugin_name);
-    }
-    else
-    {
-        MXB_ERROR("Could not load %s.", zPlugin_name);
-    }
-
-    return static_cast<Plugin*>(pModule_object);
-}
-
-//static
-void Parser::unload(Parser::Plugin*)
-{
-    // TODO: The module loading/unloading needs an overhaul before we
-    // TODO: actually can unload something.
 }
 
 namespace
@@ -635,6 +610,40 @@ uint32_t Parser::get_trx_type_mask_using(GWBUF& stmt, ParseTrxUsing use) const
     }
 
     return type_mask;
+}
+
+
+/**
+ * ParserPlugin
+ */
+
+//static
+ParserPlugin* ParserPlugin::load(const char* zPlugin_name)
+{
+    void* pModule_object = nullptr;
+    auto pModule_info = get_module(zPlugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
+    if (pModule_info)
+    {
+        pModule_object = pModule_info->module_object;
+    }
+
+    if (pModule_object)
+    {
+        MXB_INFO("%s loaded.", zPlugin_name);
+    }
+    else
+    {
+        MXB_ERROR("Could not load %s.", zPlugin_name);
+    }
+
+    return static_cast<ParserPlugin*>(pModule_object);
+}
+
+//static
+void ParserPlugin::unload(ParserPlugin*)
+{
+    // TODO: The module loading/unloading needs an overhaul before we
+    // TODO: actually can unload something.
 }
 
 }

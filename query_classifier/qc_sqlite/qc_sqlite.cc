@@ -44,6 +44,7 @@ using std::string_view;
 using std::string;
 using mxb::sv_case_eq;
 using mxs::Parser;
+using mxs::ParserPlugin;
 
 // #define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
@@ -5521,7 +5522,7 @@ namespace
 class SqliteParser : public Parser
 {
 public:
-    Parser::Plugin& plugin() const override;
+    ParserPlugin& plugin() const override;
 
     Result parse(GWBUF& stmt, uint32_t collect) const override
     {
@@ -5676,7 +5677,7 @@ public:
     }
 };
 
-class SqliteParserPlugin : public Parser::Plugin
+class SqliteParserPlugin : public ParserPlugin
 {
 public:
     bool setup(Parser::SqlMode sql_mode, const char* args) override
@@ -5720,7 +5721,7 @@ private:
 
 SqliteParserPlugin sqlite3_plugin;
 
-Parser::Plugin& SqliteParser::plugin() const
+ParserPlugin& SqliteParser::plugin() const
 {
     return sqlite3_plugin;
 }

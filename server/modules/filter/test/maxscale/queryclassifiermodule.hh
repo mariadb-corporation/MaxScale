@@ -25,7 +25,7 @@ namespace maxscale
  * A QueryClassfierModule instance is an abstraction for a query
  * classifier module.
  */
-class QueryClassifierModule : public SpecificModule<QueryClassifierModule, mxs::Parser::Plugin>
+class QueryClassifierModule : public SpecificModule<QueryClassifierModule, mxs::ParserPlugin>
 {
     QueryClassifierModule(const QueryClassifierModule&);
     QueryClassifierModule& operator=(const QueryClassifierModule&);

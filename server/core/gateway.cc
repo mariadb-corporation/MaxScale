@@ -507,7 +507,7 @@ static void sigfatal_handler(int i)
 
             if (parser)
             {
-                mxs::Parser::Plugin& pp = parser->plugin();
+                mxs::ParserPlugin& pp = parser->plugin();
 
                 pp.get_current_stmt(&pStmt, &nStmt);
             }

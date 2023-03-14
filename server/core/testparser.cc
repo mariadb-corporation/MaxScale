@@ -19,11 +19,11 @@ using namespace std;
 namespace
 {
 
-mxs::Parser::Plugin* load_parser(const string& plugin,
-                                 mxs::Parser::SqlMode sql_mode,
-                                 const string& plugin_args)
+mxs::ParserPlugin* load_parser(const string& plugin,
+                               mxs::Parser::SqlMode sql_mode,
+                               const string& plugin_args)
 {
-    mxs::Parser::Plugin* pPlugin = mxs::Parser::load(plugin.c_str());
+    mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(plugin.c_str());
 
     if (!pPlugin)
     {
@@ -35,7 +35,7 @@ mxs::Parser::Plugin* load_parser(const string& plugin,
 
     if (!pPlugin->setup(sql_mode, plugin_args.c_str()))
     {
-        mxs::Parser::unload(pPlugin);
+        mxs::ParserPlugin::unload(pPlugin);
         ostringstream ss;
 
         ss << "Could not setup parser plugin '" << plugin << "'.";
@@ -45,7 +45,7 @@ mxs::Parser::Plugin* load_parser(const string& plugin,
 
     if (!pPlugin->thread_init())
     {
-        mxs::Parser::unload(pPlugin);
+        mxs::ParserPlugin::unload(pPlugin);
         ostringstream ss;
 
         ss << "Could not perform thread initialization for parser plugin '" << plugin << "'.";

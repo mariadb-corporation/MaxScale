@@ -72,7 +72,7 @@ public:
     static std::unique_ptr<json_t> content_as_resource(const char* zHost);
 
 
-    Plugin& plugin() const override;
+    ParserPlugin& plugin() const override;
 
     Result           parse(GWBUF& stmt, uint32_t collect) const override;
 
@@ -102,10 +102,10 @@ public:
     void set_server_version(uint64_t version) override;
 
 protected:
-    CachingParser(Plugin* pPlugin);
+    CachingParser(ParserPlugin* pPlugin);
 
-    Plugin&      m_plugin;
-    mxs::Parser& m_parser;
+    ParserPlugin& m_plugin;
+    mxs::Parser&  m_parser;
 };
 
 }

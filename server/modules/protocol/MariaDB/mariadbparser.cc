@@ -13,7 +13,7 @@
 
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 
-MariaDBParser::MariaDBParser(mxs::Parser::Plugin* pPlugin)
+MariaDBParser::MariaDBParser(mxs::ParserPlugin* pPlugin)
     : mxs::CachingParser(pPlugin)
 {
 }
