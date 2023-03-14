@@ -54,7 +54,7 @@ std::string get_rotate_name(const char* ptr, size_t len)
 namespace maxsql
 {
 
-int RplEvent::get_event_length(const std::vector<char>& header)
+uint32_t RplEvent::get_event_length(const std::vector<char>& header)
 {
     return *((uint32_t*) (header.data() + 4 + 1 + 4));
 }

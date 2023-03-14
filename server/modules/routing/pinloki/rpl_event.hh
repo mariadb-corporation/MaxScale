@@ -133,8 +133,8 @@ public:
     bool          is_commit() const;
 
     /** For the writer */
-    void       set_next_pos(uint32_t next_pos);
-    static int get_event_length(const std::vector<char>& header);
+    void            set_next_pos(uint32_t next_pos);
+    static uint32_t get_event_length(const std::vector<char>& header);
 
 private:
     // Initialize the raw buffer to size sz. Used with read_header_only()
