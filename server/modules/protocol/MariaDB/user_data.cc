@@ -426,7 +426,8 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
             if (srv_info.type() == ServerType::UNKNOWN)
             {
                 auto new_info = con.version_info();
-                srv->set_version(new_info.version, new_info.info, new_info.capabilities);
+                srv->set_version(SERVER::BaseType::MARIADB, new_info.version, new_info.info,
+                                 new_info.capabilities);
             }
 
             switch (srv_info.type())
@@ -443,6 +444,10 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
             case ServerType::UNKNOWN:
             case ServerType::BLR:
                 // Cannot query these types.
+                break;
+
+            case ServerType::POSTGRESQL:
+                mxb_assert(!true);      // Something is very wrong.
                 break;
             }
 

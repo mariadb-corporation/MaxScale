@@ -111,7 +111,8 @@ public:
         return m_settings.m_persistpoolmax_eff > 0;
     }
 
-    void set_version(uint64_t version_num, const std::string& version_str, uint64_t caps) override;
+    void set_version(BaseType base_type, uint64_t version_num, const std::string& version_str,
+                     uint64_t caps) override;
 
     const VersionInfo& info() const override;
 

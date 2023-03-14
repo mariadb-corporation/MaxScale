@@ -199,4 +199,16 @@ PgSQL::ConnectionSettings& PgSQL::connection_settings()
 {
     return m_settings;
 }
+
+PgSQL::VersionInfo PgSQL::version_info() const
+{
+    VersionInfo rval;
+    if (is_open())
+    {
+        rval.version = PQserverVersion(m_conn);
+        // TODO: use "select version" for full info string.
+        rval.info = PQparameterStatus(m_conn, "server_version");
+    }
+    return rval;
+}
 }

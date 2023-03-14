@@ -278,7 +278,7 @@ void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source)
     uint64_t caps = mxq::mysql_get_server_capabilities(source);
 
     mxb_assert(version_string && version_num != 0);
-    dest->set_version(version_num, version_string, caps);
+    dest->set_version(SERVER::BaseType::MARIADB, version_num, version_string, caps);
 }
 
 namespace maxscale

@@ -34,6 +34,8 @@ class SERVER : public mxs::Target
 {
 public:
 
+    enum class BaseType {MARIADB, POSTGRESQL};
+
     /**
      * Stores server version info. Encodes/decodes to/from the version number received from the server.
      * Also stores the version string and parses information from it. Assumed to rarely change, so reads
@@ -47,7 +49,8 @@ public:
             MYSQL,      /**< MySQL 5.5 or later. */
             MARIADB,    /**< MariaDB 5.5 or later */
             XPAND,      /**< Xpand node */
-            BLR         /**< Binlog router */
+            BLR,        /**< Binlog router */
+            POSTGRESQL, /**< PostgreSQL */
         };
 
         struct Version
@@ -61,12 +64,13 @@ public:
         /**
          * Reads in version data. Deduces server type from version string.
          *
+         * @param base_type      MariaDB or Pg
          * @param version_num    Version number from server
          * @param version_string Version string from server
          * @param caps           Server capabilities
          * @return True if version data changed
          */
-        bool set(uint64_t version_num, const std::string& version_string, uint64_t caps);
+        bool set(BaseType base_type, uint64_t version_num, const std::string& version_string, uint64_t caps);
 
         /**
          * Return true if the server is a real database and can process queries. Returns false if server
@@ -183,7 +187,8 @@ public:
      * @param version_str New version string
      * @param caps        Server capabilities
      */
-    virtual void set_version(uint64_t version_num, const std::string& version_str, uint64_t caps) = 0;
+    virtual void set_version(BaseType base_type, uint64_t version_num, const std::string& version_str,
+                             uint64_t caps) = 0;
 
     /**
      * Get version information. The contents of the referenced object may change at any time,

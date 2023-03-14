@@ -68,6 +68,13 @@ public:
     bool        is_open() const;
     const char* error() const;
 
+    struct VersionInfo
+    {
+        int         version {0};
+        std::string info;
+    };
+    VersionInfo version_info() const;
+
     ConnectionSettings& connection_settings();
 
 private:

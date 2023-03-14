@@ -718,15 +718,24 @@ uint64_t Server::gtid_pos(uint32_t domain) const
     return it != gtids.end() ? it->second : 0;
 }
 
-void Server::set_version(uint64_t version_num, const std::string& version_str, uint64_t caps)
+void Server::set_version(BaseType base_type, uint64_t version_num, const std::string& version_str,
+                         uint64_t caps)
 {
-    bool changed = m_info.set(version_num, version_str, caps);
+    bool changed = m_info.set(base_type, version_num, version_str, caps);
     if (changed)
     {
         auto type_string = m_info.type_string();
         auto vrs = m_info.version_num();
-        MXB_NOTICE("'%s' sent version string '%s'. Detected type: '%s', version: %i.%i.%i.",
-                   name(), version_str.c_str(), type_string.c_str(), vrs.major, vrs.minor, vrs.patch);
+        if (m_info.type() == VersionInfo::Type::POSTGRESQL && vrs.major >= 10)
+        {
+            MXB_NOTICE("%s sent version string '%s'. Detected type: %s, version: %i.%i.",
+                       name(), version_str.c_str(), type_string.c_str(), vrs.major, vrs.minor);
+        }
+        else
+        {
+            MXB_NOTICE("%s sent version string '%s'. Detected type: %s, version: %i.%i.%i.",
+                       name(), version_str.c_str(), type_string.c_str(), vrs.major, vrs.minor, vrs.patch);
+        }
     }
 }
 
@@ -878,30 +887,47 @@ mxb::SSLConfig Server::create_ssl_config()
     return cfg;
 }
 
-bool Server::VersionInfo::set(uint64_t version, const std::string& version_str, uint64_t caps)
+bool
+Server::VersionInfo::set(BaseType base_type, uint64_t version, const std::string& version_str, uint64_t caps)
 {
     uint32_t major = version / 10000;
     uint32_t minor = (version - major * 10000) / 100;
     uint32_t patch = version - major * 10000 - minor * 100;
 
     Type new_type = Type::UNKNOWN;
-    auto version_strz = version_str.c_str();
-    if (strcasestr(version_strz, "xpand") || strcasestr(version_strz, "clustrix"))
+
+    if (base_type == BaseType::MARIADB)
     {
-        new_type = Type::XPAND;
+        auto version_strz = version_str.c_str();
+        if (strcasestr(version_strz, "xpand") || strcasestr(version_strz, "clustrix"))
+        {
+            new_type = Type::XPAND;
+        }
+        else if (strcasestr(version_strz, "binlogrouter"))
+        {
+            new_type = Type::BLR;
+        }
+        else if (strcasestr(version_strz, "mariadb"))
+        {
+            // Needs to be after Xpand and BLR as their version strings may include "mariadb".
+            new_type = Type::MARIADB;
+        }
+        else if (!version_str.empty())
+        {
+            new_type = Type::MYSQL;     // Used for any unrecognized server types.
+        }
     }
-    else if (strcasestr(version_strz, "binlogrouter"))
+    else
     {
-        new_type = Type::BLR;
-    }
-    else if (strcasestr(version_strz, "mariadb"))
-    {
-        // Needs to be after Xpand and BLR as their version strings may include "mariadb".
-        new_type = Type::MARIADB;
-    }
-    else if (!version_str.empty())
-    {
-        new_type = Type::MYSQL;     // Used for any unrecognized server types.
+        // Pg versions prior to major 10 used three-part versioning similar to MariaDB. After 10, only two
+        // parts, major and minor are used.
+        if (major >= 10)
+        {
+            // The minor version is the last digit in this case.
+            minor = patch;
+            patch = 0;
+        }
+        new_type = Type::POSTGRESQL;
     }
 
     bool changed = false;
@@ -942,7 +968,7 @@ const char* Server::VersionInfo::version_string() const
 bool SERVER::VersionInfo::is_database() const
 {
     auto t = m_type;
-    return t == Type::MARIADB || t == Type::XPAND || t == Type::MYSQL;
+    return t == Type::MARIADB || t == Type::XPAND || t == Type::MYSQL || t == Type::POSTGRESQL;
 }
 
 std::string SERVER::VersionInfo::type_string() const
@@ -968,6 +994,10 @@ std::string SERVER::VersionInfo::type_string() const
 
     case Type::BLR:
         type_str = "MaxScale Binlog Router";
+        break;
+
+    case Type::POSTGRESQL:
+        type_str = "PostgreSQL";
         break;
     }
     return type_str;
