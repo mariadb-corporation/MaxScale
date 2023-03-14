@@ -3,7 +3,7 @@
         v-model="isCollapsed"
         :title="$mxs_t('schemas')"
         :class="{ 'not-allowed': isSidebarDisabled }"
-        disableReload
+        :disableReload="disableReload"
         @reload="fetchSchemas"
     >
         <template v-slot:toolbar-append>
@@ -29,6 +29,7 @@
                 @alter-tbl="onAlterTable"
                 @drop-action="handleOpenExecSqlDlg"
                 @truncate-tbl="handleOpenExecSqlDlg"
+                @gen-erd="handleShowGenErdDlg"
                 v-on="$listeners"
             />
         </keep-alive>
@@ -184,6 +185,8 @@ export default {
         clearExeStatementsResult() {
             QueryEditorTmp.update({ where: this.queryEditorId, data: { exe_stmt_result: {} } })
         },
+        //TODO: Show entity-select-dlg component
+        handleShowGenErdDlg() {},
     },
 }
 </script>

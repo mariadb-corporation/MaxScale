@@ -244,6 +244,7 @@
         "filterSchemaObjects": "Filter schema objects",
         "forceClosing": "Force closing",
         "forgotPassword": "Forgot Password",
+        "genErd": "Generate ERD",
         "graph": "Graph",
         "group": "group",
         "gtid_binlog_pos": "GTID Binlog Pos",

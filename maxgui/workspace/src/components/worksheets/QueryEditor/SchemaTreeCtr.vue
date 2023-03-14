@@ -107,6 +107,7 @@ This component emits the following events
 @drop-action: sql:string.
 @truncate-tbl: sql:string.
 @use-db: qualified_name:string.
+@gen-erd: Node.
 @load-children: Node. Async event.
 @on-dragging: Event.
 @on-dragend: Event.
@@ -179,7 +180,7 @@ export default {
         // basic node options for different node types
         baseOptsMap() {
             const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = this.NODE_TYPES
-            const { USE, PRVW_DATA, PRVW_DATA_DETAILS } = this.NODE_CTX_TYPES
+            const { USE, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = this.NODE_CTX_TYPES
 
             const tblViewOpts = [
                 { text: this.$mxs_t('previewData'), type: PRVW_DATA },
@@ -188,7 +189,11 @@ export default {
                 ...this.txtOpts,
             ]
             return {
-                [SCHEMA]: [{ text: this.$mxs_t('useDb'), type: USE }, ...this.txtOpts],
+                [SCHEMA]: [
+                    { text: this.$mxs_t('useDb'), type: USE },
+                    { text: this.$mxs_t('genErd'), type: GEN_ERD },
+                    ...this.txtOpts,
+                ],
                 [TBL]: tblViewOpts,
                 [VIEW]: tblViewOpts,
                 [SP]: this.txtOpts,
@@ -445,6 +450,7 @@ export default {
                 DROP,
                 ALTER,
                 TRUNCATE,
+                GEN_ERD,
             } = this.NODE_CTX_TYPES
 
             const { escapeIdentifiers: escape } = this.$helpers
@@ -490,6 +496,8 @@ export default {
                     if (node.type === TBL)
                         this.$emit('truncate-tbl', `TRUNCATE TABLE ${escape(node.qualified_name)};`)
                     break
+                case GEN_ERD:
+                    this.$emit('gen-erd', this.minimizeNode(node))
             }
         },
     },

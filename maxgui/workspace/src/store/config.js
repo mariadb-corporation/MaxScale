@@ -123,6 +123,7 @@ export const NODE_CTX_TYPES = Object.freeze({
     CLIPBOARD: 'Clipboard',
     PRVW_DATA: QUERY_MODES.PRVW_DATA,
     PRVW_DATA_DETAILS: QUERY_MODES.PRVW_DATA_DETAILS,
+    GEN_ERD: 'Generate ERD',
 })
 
 export const DDL_ALTER_SPECS = Object.freeze({
