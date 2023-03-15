@@ -550,49 +550,15 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
     }
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
     {
-        uint8_t* packet = GWBUF_DATA(querybuf);
-        unsigned char command = packet[4];
-        int len = 0;
-        std::string sqldata;
-        const char* sql = "<non-SQL>";
-        std::string qtypestr = Parser::type_mask_to_string(qtype);
-
-        if (is_ps_command(command))
-        {
-            sqldata = "ID: " + std::to_string(mxs_mysql_extract_ps_id(querybuf));
-            sql = sqldata.c_str();
-            len = sqldata.length();
-        }
-        else
-        {
-            modutil_extract_SQL(*querybuf, &sql, &len);
-        }
-
-        if (len > QC_TRACE_MSG_LEN)
-        {
-            len = QC_TRACE_MSG_LEN;
-        }
-
         MXS_SESSION* ses = session();
         auto mariases = static_cast<MYSQL_session*>(ses->protocol_data());
         const char* autocommit = mariases->is_autocommit ? "[enabled]" : "[disabled]";
         const char* transaction = mariases->is_trx_active() ? "[open]" : "[not open]";
-        uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
-        const char* querytype = qtypestr.empty() ? "N/A" : qtypestr.c_str();
-        const char* hint = querybuf->hints.empty() ? "" : ", Hint:";
-        const char* hint_type = querybuf->hints.empty() ? "" : Hint::type_to_str(querybuf->hints[0].type);
 
-        MXB_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
+        MXB_INFO("> Autocommit: %s, trx is %s, %s",
                  autocommit,
                  transaction,
-                 command,
-                 STRPACKETTYPE(command),
-                 plen,
-                 querytype,
-                 len,
-                 sql,
-                 hint,
-                 hint_type);
+                 ses->protocol()->describe(*querybuf).c_str());
     }
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
     {
