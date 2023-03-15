@@ -74,7 +74,9 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
 
         for (const auto& query : after)
         {
-            test.expect(conn.query(query), "%s: %s should work: %u, %s",
+            bool query_ok = conn.query(query);
+            bool replay_error = query == "COMMIT" && strstr(conn.error(), "Transaction checksum mismatch");
+            test.expect(query_ok || replay_error, "%s: %s should work: %u, %s",
                         func, query.c_str(), conn.thread_id(), conn.error());
         }
 
@@ -131,12 +133,16 @@ int main(int argc, char** argv)
     // always returns an error. We don't care as the main purpose is to stress-test the transaction replay
     // while causal_reads=universal is active.
     std::vector<std::thread> threads;
-    threads.emplace_back(test_no_trx, std::ref(test));
-    threads.emplace_back(test_autocommit_on, std::ref(test));
-    threads.emplace_back(test_autocommit_off, std::ref(test));
-    threads.emplace_back(test_rw_trx, std::ref(test));
-    threads.emplace_back(test_ro_trx, std::ref(test));
-    threads.emplace_back(test_ro_trx_set_trx, std::ref(test));
+
+    for (int i = 0; i < 5; i++)
+    {
+        threads.emplace_back(test_no_trx, std::ref(test));
+        threads.emplace_back(test_autocommit_on, std::ref(test));
+        threads.emplace_back(test_autocommit_off, std::ref(test));
+        threads.emplace_back(test_rw_trx, std::ref(test));
+        threads.emplace_back(test_ro_trx, std::ref(test));
+        threads.emplace_back(test_ro_trx_set_trx, std::ref(test));
+    }
 
     for (int i = 0; i < 5; i++)
     {
