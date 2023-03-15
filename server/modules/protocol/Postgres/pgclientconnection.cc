@@ -101,6 +101,13 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
         }
     }
 
+    // TODO: This is not efficient, especially if the client normally sends
+    //       multiple packets in State::ROUTE.
+    if (!m_dcb->readq_empty())
+    {
+        m_dcb->trigger_read_event();
+    }
+
     if (m_state == State::ERROR)
     {
         m_session.kill();
