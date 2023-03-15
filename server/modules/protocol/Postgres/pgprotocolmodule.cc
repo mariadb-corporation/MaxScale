@@ -17,6 +17,7 @@
 #include "pgclientconnection.hh"
 #include "pgbackendconnection.hh"
 #include "pgprotocoldata.hh"
+#include "postgresprotocol.hh"
 
 
 PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
@@ -25,7 +26,7 @@ PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
 {
 }
 
-//static
+// static
 PgProtocolModule* PgProtocolModule::create(const std::string& name, mxs::Listener* pListener)
 {
     return new PgProtocolModule(name, pListener->service());
@@ -57,12 +58,30 @@ std::string PgProtocolModule::auth_default() const
     return "";
 }
 
-GWBUF PgProtocolModule::make_error(int errnum, const std::string& sqlstate, const std::string& message) const
+GWBUF PgProtocolModule::make_error(int errnum, const std::string& sqlstate, const std::string& msg) const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
+    // The field type explanations are here
+    // https://www.postgresql.org/docs/current/protocol-error-fields.html
+    auto old_severity = mxb::cat("S", "ERROR");
+    auto new_severity = mxb::cat("V", "ERROR");
+    auto code = mxb::cat("C", sqlstate);
+    auto message = mxb::cat("M", msg);
 
-    return GWBUF{};
+    GWBUF buf{pg::HEADER_LEN
+              + old_severity.size() + 1
+              + new_severity.size() + 1
+              + code.size() + 1
+              + message.size() + 1};
+    auto ptr = buf.data();
+
+    *ptr++ = 'E';
+    ptr += pg::set_uint32(ptr, buf.length() - 1);
+    ptr += pg::set_string(ptr, old_severity);
+    ptr += pg::set_string(ptr, new_severity);
+    ptr += pg::set_string(ptr, code);
+    ptr += pg::set_string(ptr, message);
+
+    return buf;
 }
 
 std::string PgProtocolModule::describe(const GWBUF& packet, int body_max_len) const
