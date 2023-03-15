@@ -20,26 +20,31 @@
 
 namespace
 {
-GWBUF create_startup_reply(const GWBUF& startup_message)
+
+void add_packet_auth_request(GWBUF& gwbuf, pg::Auth athentication_method)
 {
-    // Minimal reply
-    const auto auth_len = 1 + 4 + 4;    // Byte1('R'), Int32(8) len, Int32(0) ok
-    const auto rdy_len = 1 + 4 + 1;     // Byte1('Z'), Int32(5) len, Byte1('I') for idle
-    GWBUF resp{auth_len + rdy_len};
+    const size_t auth_len = 1 + 4 + 4;      // Byte1('R'), Int32(8) len, Int32 auth_method
+    std::array<uint8_t, auth_len> data;
 
-    uint8_t* ptr = resp.data();
-
-    // Authentication OK
+    uint8_t* ptr = begin(data);
     *ptr++ = pg::AUTHENTICATION;
     ptr += pg::set_uint32(ptr, 8);
-    ptr += pg::set_uint32(ptr, 0);
+    ptr += pg::set_uint32(ptr, athentication_method);
 
-    // Ready for query
+    gwbuf.append(begin(data), data.size());
+}
+
+void add_packet_ready_for_query(GWBUF& gwbuf)
+{
+    const size_t rdy_len = 1 + 4 + 1;       // Byte1('R'), Int32(8) len, Int8 trx status
+    std::array<uint8_t, rdy_len> data;
+
+    uint8_t* ptr = begin(data);
     *ptr++ = pg::READY_FOR_QUERY;
     ptr += pg::set_uint32(ptr, 5);
-    *ptr++ = 'I';   // Idle
+    *ptr++ = 'I';   // trx idle
 
-    return resp;
+    gwbuf.append(begin(data), data.size());
 }
 }
 
@@ -128,9 +133,11 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
         auto data = static_cast<PgProtocolData*>(m_session.protocol_data());
         data->set_connect_params(gwbuf);
 
-        m_dcb->writeq_append(create_startup_reply(gwbuf));
-        // TODO: are there more packets that should be read from the dcb
-        //       before going to ROUTE or "normal" state.
+        GWBUF reply;
+        add_packet_auth_request(reply, pg::AUTH_OK);
+        add_packet_ready_for_query(reply);
+        m_dcb->writeq_append(std::move(reply));
+
         if (m_session.state() == MXS_SESSION::State::CREATED && m_session.start())
         {
             next_state = State::ROUTE;
