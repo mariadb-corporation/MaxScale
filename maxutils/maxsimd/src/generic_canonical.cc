@@ -14,6 +14,7 @@
 
 #include <maxsimd/canonical.hh>
 #include <maxbase/assert.h>
+#include <maxbase/string.hh>
 
 #include <array>
 #include <string>
@@ -187,7 +188,7 @@ namespace generic
 #define likely(x)   __builtin_expect (!!(x), 1)
 #define unlikely(x) __builtin_expect (!!(x), 0)
 
-std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
+std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
 {
     auto& sql = *pSql;
 
@@ -248,62 +249,23 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
                 break;
             }
         }
-        else if (*it == '/' && is_next(it, end, "/*"))
+        else if (((*it == '/' && is_next(it, end, "/*"))
+                  || (*it == '#' || (*it == '-' && is_next(it, end, "-- ")))))
         {
-            auto comment_start = std::next(it, 2);
-            if (comment_start == end)
+            auto before = it;
+            it = (uint8_t*) maxbase::consume_comment((const char*) it, (const char*) end, true);
+            if (it - before == 4)           // replace comment "/**/" with a space
             {
-                break;
+                *it_out++ = ' ';
             }
-            else if (*comment_start != '!' && *comment_start != 'M')
-            {
-                // Non-executable comment
-                while (it != end)
-                {
-                    if (is_next(it, end, "*/"))
-                    {
-                        // Comment end marker, return to normal parsing
-                        ++it;
-                        break;
-                    }
-                    ++it;
-                }
 
-                if (it == end)
-                {
-                    break;
-                }
-            }
-            else
+            if (it != before) // "it" is increased at the end of each loop
             {
-                // Executable comment, treat it as normal SQL
+                --it;
+            }
+            else // we have an executable comment
+            {
                 *it_out++ = *it;
-            }
-        }
-        else if (*it == '#' || (*it == '-' && is_next(it, end, "-- ")))
-        {
-            // End-of-line comment, jump to the next line if one exists
-            while (it != end)
-            {
-                if (*it == '\n')
-                {
-                    break;
-                }
-                else if (*it == '\r')
-                {
-                    if ((is_next(it, end, "\r\n")))
-                    {
-                        ++it;
-                    }
-                    break;
-                }
-
-                ++it;
-            }
-
-            if (it == end)
-            {
-                break;
             }
         }
         else if (*it == '`')
