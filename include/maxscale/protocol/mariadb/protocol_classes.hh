@@ -135,20 +135,6 @@ public:
         return m_history;
     }
 
-    /**
-     * Tells whether autocommit is ON or not. The value effectively only tells the last value
-     * of the statement "set autocommit=...".
-     *
-     * That is, if the statement "set autocommit=1" has been executed, then even if a transaction has
-     * been started, which implicitly will cause autocommit to be set to 0 for the duration of the
-     * transaction, this value will be true.
-     *
-     * By default autocommit is ON. Only the client protocol connection should modify this.
-     *
-     * @see get_trx_state
-     */
-    bool is_autocommit {false};
-
     enum TrxState : uint32_t
     {
         TRX_INACTIVE  = 0,
@@ -242,6 +228,13 @@ public:
      */
     bool is_trx_ending() const override;
 
+    bool is_autocommit() const override;
+
+    void set_autocommit(bool value)
+    {
+        m_autocommit = value;
+    }
+
     size_t amend_memory_statistics(json_t* memory) const override final;
 
     size_t static_size() const override final;
@@ -276,4 +269,18 @@ private:
 
     // The session command history
     mxs::History m_history;
+
+    /**
+     * Tells whether autocommit is ON or not. The value effectively only tells the last value
+     * of the statement "set autocommit=...".
+     *
+     * That is, if the statement "set autocommit=1" has been executed, then even if a transaction has
+     * been started, which implicitly will cause autocommit to be set to 0 for the duration of the
+     * transaction, this value will be true.
+     *
+     * By default autocommit is ON. Only the client protocol connection should modify this.
+     *
+     * @see get_trx_state
+     */
+    bool m_autocommit {false};
 };

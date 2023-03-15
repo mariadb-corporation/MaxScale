@@ -151,6 +151,13 @@ public:
     virtual bool is_trx_ending() const = 0;
 
     /**
+     * Tells whether autocommit is enabled
+     *
+     * @return True if autocommit is enabled
+     */
+    virtual bool is_autocommit() const = 0;
+
+    /**
      * Amend provided json object with significant memory usage statistics.
      *
      * @param memory  Json object to be populated.

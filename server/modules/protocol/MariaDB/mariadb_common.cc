@@ -460,6 +460,11 @@ bool MYSQL_session::is_trx_active() const
     return trx_state & TrxState::TRX_ACTIVE;
 }
 
+bool MYSQL_session::is_autocommit() const
+{
+    return m_autocommit;
+}
+
 size_t MYSQL_session::amend_memory_statistics(json_t* memory) const
 {
     size_t sescmd_history;

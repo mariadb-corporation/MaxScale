@@ -82,7 +82,7 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
         search_sett.service.allow_root_user = cnf.enable_root;
 
         auto def_sqlmode = session->listener_data()->m_default_sql_mode;
-        mdb_session->is_autocommit = (def_sqlmode != mxs::Parser::SqlMode::ORACLE);
+        mdb_session->set_autocommit(def_sqlmode != mxs::Parser::SqlMode::ORACLE);
 
         mdb_session->remote = session->client_remote();
 

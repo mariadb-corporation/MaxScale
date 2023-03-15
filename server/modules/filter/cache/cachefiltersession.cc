@@ -953,7 +953,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     if (m_invalidate)
                     {
                         auto mariases = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-                        if (!protocol_data->is_trx_active() && mariases->is_autocommit)
+                        if (!protocol_data->is_trx_active() && mariases->is_autocommit())
                         {
                             m_invalidate_now = true;
                         }

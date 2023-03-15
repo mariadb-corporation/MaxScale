@@ -822,12 +822,12 @@ string MariaDBClientConnection::handle_variables(GWBUF& buffer)
                 switch (sql_mode_parser.get_sql_mode(value.first, value.second))
                 {
                 case SqlModeParser::ORACLE:
-                    m_session_data->is_autocommit = false;
+                    m_session_data->set_autocommit(false);
                     m_sql_mode = mxs::Parser::SqlMode::ORACLE;
                     break;
 
                 case SqlModeParser::DEFAULT:
-                    m_session_data->is_autocommit = true;
+                    m_session_data->set_autocommit(true);
                     m_sql_mode = mxs::Parser::SqlMode::DEFAULT;
                     break;
 
@@ -882,7 +882,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
     if (ses_trx_state & TrxState::TRX_ENDING)
     {
-        if (m_session_data->is_autocommit)
+        if (m_session_data->is_autocommit())
         {
             // Transaction ended, go into inactive state
             ses_trx_state = TrxState::TRX_INACTIVE;
@@ -898,7 +898,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     {
         ses_trx_state &= ~TrxState::TRX_STARTING;
     }
-    else if (!m_session_data->is_autocommit && ses_trx_state == TrxState::TRX_INACTIVE)
+    else if (!m_session_data->is_autocommit() && ses_trx_state == TrxState::TRX_INACTIVE)
     {
         // This state is entered when autocommit was disabled
         ses_trx_state = trx_starting_active | m_session_data->next_trx_mode;
@@ -918,7 +918,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             if (type & mxs::sql::TYPE_DISABLE_AUTOCOMMIT)
             {
                 // This disables autocommit and the next statement starts a new transaction
-                m_session_data->is_autocommit = false;
+                m_session_data->set_autocommit(false);
                 ses_trx_state = TrxState::TRX_INACTIVE;
             }
             else
@@ -945,7 +945,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
             if (type & mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
             {
-                m_session_data->is_autocommit = true;
+                m_session_data->set_autocommit(true);
             }
         }
         else if (type & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
@@ -2987,10 +2987,10 @@ void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
 
     uint16_t status = reply.server_status();
     bool in_trx = status & (STATUS_IN_TRX | STATUS_IN_RO_TRX);
-    m_session_data->is_autocommit = status & STATUS_AUTOCOMMIT;
+    m_session_data->set_autocommit(status & STATUS_AUTOCOMMIT);
     ses_trx_state = TrxState::TRX_INACTIVE;
 
-    if (!m_session_data->is_autocommit || in_trx)
+    if (!m_session_data->is_autocommit() || in_trx)
     {
         ses_trx_state = TrxState::TRX_ACTIVE;
 
@@ -3003,7 +3003,7 @@ void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
     auto autocommit = reply.get_variable("autocommit");
     if (!autocommit.empty())
     {
-        m_session_data->is_autocommit = strncasecmp(autocommit.c_str(), "ON", 2) == 0;
+        m_session_data->set_autocommit(strncasecmp(autocommit.c_str(), "ON", 2) == 0);
     }
 
     auto trx_state = reply.get_variable("trx_state");

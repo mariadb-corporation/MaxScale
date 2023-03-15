@@ -552,7 +552,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
     {
         MXS_SESSION* ses = session();
         auto mariases = static_cast<MYSQL_session*>(ses->protocol_data());
-        const char* autocommit = mariases->is_autocommit ? "[enabled]" : "[disabled]";
+        const char* autocommit = mariases->is_autocommit() ? "[enabled]" : "[disabled]";
         const char* transaction = mariases->is_trx_active() ? "[open]" : "[not open]";
 
         MXB_INFO("> Autocommit: %s, trx is %s, %s",

@@ -48,6 +48,11 @@ bool PgProtocolData::is_trx_ending() const
     return false;
 }
 
+bool PgProtocolData::is_autocommit() const
+{
+    return false;
+}
+
 size_t PgProtocolData::amend_memory_statistics(json_t* memory) const
 {
     return runtime_size();
