@@ -49,8 +49,6 @@ public:
 
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
-    bool post_configure();
-
 private:
     PgProtocolModule(std::string name, SERVICE* pService);
 

@@ -128,11 +128,3 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
 
     return authenticators;
 }
-
-bool PgProtocolModule::post_configure()
-{
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
-    return false;
-}
