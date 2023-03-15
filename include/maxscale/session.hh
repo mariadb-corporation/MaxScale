@@ -91,6 +91,101 @@ typedef char* (* session_variable_handler_t)(void* context,
                                              const char* value_begin,
                                              const char* value_end);
 
+namespace maxscale
+{
+
+/**
+ * If a protocol wants to define custom session-level data, the data should inherit from this class.
+ */
+class ProtocolData
+{
+public:
+    virtual ~ProtocolData() = default;
+
+    /**
+     * Tells whether the command stored in the buffer will generate a response
+     *
+     * @param buffer The buffer that contains one packet packets
+     *
+     * @return True if a response is expected for this packet
+     */
+    virtual bool will_respond(const GWBUF& buffer) const = 0;
+
+    /**
+     * Tells whether the session state can be recovered if a connection is lost
+     *
+     * In practice this means that if the history of commands that modify the session state are still
+     * stored in memory or if the configuration allows partial history recovery, the state can be
+     * recovered.
+     *
+     * @return True if the state can be recovered
+     */
+    virtual bool can_recover_state() const = 0;
+
+    /**
+     * Tells whether a transaction is starting. Exact meaning depends on the protocol.
+     *
+     * @return True if a transaction is starting
+     */
+    virtual bool is_trx_starting() const = 0;
+
+    /**
+     * Tells whether a transaction is active. Exact meaning depends on the protocol.
+     *
+     * @return True if a transaction is active
+     */
+    virtual bool is_trx_active() const = 0;
+
+    /**
+     * Tells whether a read-only transaction is active. Exact meaning depends on the protocol.
+     *
+     * @return True if a read-only transaction is active
+     */
+    virtual bool is_trx_read_only() const = 0;
+
+    /**
+     * Tells whether a transaction is ending. Exact meaning depends on the protocol.
+     *
+     * @return True if a transaction is ending
+     */
+    virtual bool is_trx_ending() const = 0;
+
+    /**
+     * Amend provided json object with significant memory usage statistics.
+     *
+     * @param memory  Json object to be populated.
+     *
+     * @return Total amount of memory added.
+     */
+    virtual size_t amend_memory_statistics(json_t* memory) const = 0;
+
+    /**
+     * Returns the static size of the instance, i.e. sizeof(*this) of
+     * the most derived class.
+     *
+     * @return The static size.
+     */
+    virtual size_t static_size() const = 0;
+
+    /**
+     * Returns the current size of the varying part of the instance.
+     *
+     * @return The varying size.
+     */
+    virtual size_t varying_size() const = 0;
+
+    /**
+     * Returns the runtime size of the instance; i.e. the static size + the varying size.
+     *
+     * @return The runtime size.
+     */
+    size_t runtime_size() const
+    {
+        return static_size() + varying_size();
+    }
+};
+}
+
 /**
  * The session status block
  *
@@ -139,96 +234,6 @@ public:
         MXS_SESSION* m_prev;
     };
 
-    /**
-     * If a protocol wants to define custom session-level data, the data should inherit from this class.
-     */
-    class ProtocolData
-    {
-    public:
-        virtual ~ProtocolData() = default;
-
-        /**
-         * Tells whether the command stored in the buffer will generate a response
-         *
-         * @param buffer The buffer that contains one packet packets
-         *
-         * @return True if a response is expected for this packet
-         */
-        virtual bool will_respond(const GWBUF& buffer) const = 0;
-
-        /**
-         * Tells whether the session state can be recovered if a connection is lost
-         *
-         * In practice this means that if the history of commands that modify the session state are still
-         * stored in memory or if the configuration allows partial history recovery, the state can be
-         * recovered.
-         *
-         * @return True if the state can be recovered
-         */
-        virtual bool can_recover_state() const = 0;
-
-        /**
-         * Tells whether a transaction is starting. Exact meaning depends on the protocol.
-         *
-         * @return True if a transaction is starting
-         */
-        virtual bool is_trx_starting() const = 0;
-
-        /**
-         * Tells whether a transaction is active. Exact meaning depends on the protocol.
-         *
-         * @return True if a transaction is active
-         */
-        virtual bool is_trx_active() const = 0;
-
-        /**
-         * Tells whether a read-only transaction is active. Exact meaning depends on the protocol.
-         *
-         * @return True if a read-only transaction is active
-         */
-        virtual bool is_trx_read_only() const = 0;
-
-        /**
-         * Tells whether a transaction is ending. Exact meaning depends on the protocol.
-         *
-         * @return True if a transaction is ending
-         */
-        virtual bool is_trx_ending() const = 0;
-
-        /**
-         * Amend provided json object with significant memory usage statistics.
-         *
-         * @param memory  Json object to be populated.
-         *
-         * @return Total amount of memory added.
-         */
-        virtual size_t amend_memory_statistics(json_t* memory) const = 0;
-
-        /**
-         * Returns the static size of the instance, i.e. sizeof(*this) of
-         * the most derived class.
-         *
-         * @return The static size.
-         */
-        virtual size_t static_size() const = 0;
-
-        /**
-         * Returns the current size of the varying part of the instance.
-         *
-         * @return The varying size.
-         */
-        virtual size_t varying_size() const = 0;
-
-        /**
-         * Returns the runtime size of the instance; i.e. the static size + the varying size.
-         *
-         * @return The runtime size.
-         */
-        size_t runtime_size() const
-        {
-            return static_size() + varying_size();
-        }
-    };
 
     class EventSubscriber
     {
@@ -535,11 +540,11 @@ public:
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
 
-    ProtocolData* protocol_data() const;
-    void          set_protocol_data(std::unique_ptr<ProtocolData> new_data);
+    mxs::ProtocolData* protocol_data() const;
+    void               set_protocol_data(std::unique_ptr<mxs::ProtocolData> new_data);
 
 private:
-    std::unique_ptr<ProtocolData> m_protocol_data;
+    std::unique_ptr<mxs::ProtocolData> m_protocol_data;
 
     bool m_killed {false};
 

@@ -758,7 +758,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_DEFAULT_DB)
     {
-        auto maria_ses = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+        auto maria_ses = static_cast<const MYSQL_session*>(protocol_data());
         const char* db = maria_ses->current_db.empty() ? "(none)" : maria_ses->current_db.c_str();
 
         output << curr_sep << db;

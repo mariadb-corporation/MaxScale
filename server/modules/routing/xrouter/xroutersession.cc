@@ -78,7 +78,7 @@ bool XRouterSession::route_to_all(GWBUF&& packet)
 
 mxs::Backend::response_type XRouterSession::response_type(mxs::Backend* backend, const GWBUF& packet)
 {
-    if (!m_pSession->protocol_data()->will_respond(packet))
+    if (!protocol_data()->will_respond(packet))
     {
         return mxs::Backend::NO_RESPONSE;
     }

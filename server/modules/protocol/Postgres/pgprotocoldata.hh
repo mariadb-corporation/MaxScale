@@ -15,7 +15,7 @@
 #include "postgresprotocol.hh"
 #include <maxscale/session.hh>
 
-class PgProtocolData final : public MXS_SESSION::ProtocolData
+class PgProtocolData final : public mxs::ProtocolData
 {
 public:
     ~PgProtocolData();

@@ -42,4 +42,9 @@ void RouterSession::set_response(GWBUF&& response) const
 {
     session_set_response(m_pSession, m_pUp, std::move(response));
 }
+
+const mxs::ProtocolData* RouterSession::protocol_data() const
+{
+    return m_pSession->protocol_data();
+}
 }

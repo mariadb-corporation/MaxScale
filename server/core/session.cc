@@ -144,12 +144,12 @@ void MXS_SESSION::kill(const std::string& errmsg)
     }
 }
 
-MXS_SESSION::ProtocolData* MXS_SESSION::protocol_data() const
+mxs::ProtocolData* MXS_SESSION::protocol_data() const
 {
     return m_protocol_data.get();
 }
 
-void MXS_SESSION::set_protocol_data(std::unique_ptr<ProtocolData> new_data)
+void MXS_SESSION::set_protocol_data(std::unique_ptr<mxs::ProtocolData> new_data)
 {
     m_protocol_data = std::move(new_data);
 }

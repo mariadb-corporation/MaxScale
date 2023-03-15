@@ -26,6 +26,7 @@ struct json_t;
 
 namespace maxscale
 {
+class ProtocolData;
 class ConfigParameters;
 namespace config
 {
@@ -133,6 +134,13 @@ protected:
      * @param pResponse  The response to be sent to the client.
      */
     void set_response(GWBUF&& response) const;
+
+    /**
+     * Get the protocol data for this session
+     *
+     * @return The protocol data if the protocol provided it. A null pointer if it didn't.
+     */
+    const mxs::ProtocolData* protocol_data() const;
 
     MXS_SESSION* m_pSession;    /*< The MXS_SESSION this router session is associated with. */
     Parser*      m_pParser;     /*< The parser suitable the protocol of this router. */

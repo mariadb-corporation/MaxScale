@@ -316,7 +316,7 @@ bool TpmSession::routeQuery(GWBUF&& buffer)
             }
 
             /* for normal sql statements */
-            if (!m_query_end && m_pSession->protocol_data()->is_trx_active())
+            if (!m_query_end && protocol_data()->is_trx_active())
             {
                 if (sql.empty())
                 {

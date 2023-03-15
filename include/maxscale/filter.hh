@@ -27,6 +27,7 @@ class MXS_SESSION;
 class SERVICE;
 namespace maxscale
 {
+class ProtocolData;
 class ConfigParameters;
 class FilterSession;
 namespace config
@@ -189,6 +190,13 @@ protected:
         mxb_assert_message(m_pParser, "Protocol of client connection does not have a parser.");
         return *m_pParser;
     }
+
+    /**
+     * Get the protocol data for this session
+     *
+     * @return The protocol data if the protocol provided it. A null pointer if it didn't.
+     */
+    const mxs::ProtocolData* protocol_data() const;
 
 protected:
     MXS_SESSION* m_pSession;/*< The MXS_SESSION this filter session is associated with. */

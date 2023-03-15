@@ -75,7 +75,7 @@ std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb);
 /*
  * Protocol-specific session data
  */
-class MYSQL_session : public MXS_SESSION::ProtocolData
+class MYSQL_session : public mxs::ProtocolData
 {
 public:
     MYSQL_session(size_t limit, bool allow_pruning, bool disable_history)

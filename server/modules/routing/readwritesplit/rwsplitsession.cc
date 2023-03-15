@@ -80,7 +80,8 @@ RWSplitSession::~RWSplitSession()
                                                  backend->num_selects());
     }
 
-    m_router->local_avg_sescmd_sz().add(protocol_data()->history().size());
+    // TODO: Fix this
+    // m_router->local_avg_sescmd_sz().add(protocol_data()->history().size());
 }
 
 bool RWSplitSession::routeQuery(GWBUF&& buffer)
@@ -757,9 +758,10 @@ bool RWSplitSession::start_trx_replay()
                  * executed. The buffer should contain a query that starts
                  * or ends a transaction or autocommit should be disabled.
                  */
+                // TODO: Make is_autocommit a function of the ProtocolData class
                 MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query));
                 mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
-                                   || !protocol_data()->is_autocommit,
+                                   || !static_cast<const MYSQL_session*>(protocol_data())->is_autocommit,
                                    "The current query (%s) should start or stop a transaction "
                                    "or autocommit should be disabled",
                                    m_interrupted_query.get_sql().c_str());
@@ -771,9 +773,11 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(!protocol_data()->is_autocommit || trx_is_ending(),
-                               "Session should have autocommit disabled or transaction just ended if the "
-                               "transaction had no statements and no query was interrupted");
+            // TODO: Make is_autocommit a function of the ProtocolData class
+            mxb_assert_message(
+                !static_cast<const MYSQL_session*>(protocol_data())->is_autocommit || trx_is_ending(),
+                "Session should have autocommit disabled or transaction just ended if the "
+                "transaction had no statements and no query was interrupted");
         }
 
         rval = true;
