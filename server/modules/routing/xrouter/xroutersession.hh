@@ -21,7 +21,7 @@ using SBackends = std::vector<std::unique_ptr<mxs::Backend>>;
 class XRouterSession final : public mxs::RouterSession
 {
 public:
-    XRouterSession(MXS_SESSION* session, XRouter* router, SBackends backends);
+    XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends);
     bool routeQuery(GWBUF&& packet) override;
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
@@ -41,6 +41,7 @@ private:
 
     mxs::Backend::response_type response_type(mxs::Backend* backend, const GWBUF& buffer);
 
+    XRouter&         m_router;
     State            m_state{State::IDLE};
     SBackends        m_backends;
     mxs::Backend*    m_main;

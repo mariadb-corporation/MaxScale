@@ -15,11 +15,22 @@
 
 #include <maxscale/modutil.hh>
 
-XRouterSession::XRouterSession(MXS_SESSION* session, XRouter* router, SBackends backends)
+XRouterSession::XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends)
     : RouterSession(session)
+    , m_router(router)
     , m_backends(std::move(backends))
     , m_main(m_backends[rand() % m_backends.size()].get())
 {
+    for (auto& b : m_backends)
+    {
+        if (b->in_use())
+        {
+            const auto& sql = b.get() == m_main ?
+                m_router.config().main_sql : m_router.config().secondary_sql;
+
+            b->write(m_pSession->protocol()->make_query(sql), mxs::Backend::IGNORE_RESPONSE);
+        }
+    }
 }
 
 bool XRouterSession::routeQuery(GWBUF&& packet)

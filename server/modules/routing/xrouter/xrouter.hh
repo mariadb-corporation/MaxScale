@@ -16,6 +16,7 @@
 
 #include <maxscale/router.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/workerlocal.hh>
 #include <maxscale/protocol/postgresql/module_names.hh>
 
 class XRouterSession;
@@ -25,6 +26,30 @@ class XRouter final : public mxs::Router
 public:
     static constexpr uint64_t CAPS = RCAP_TYPE_QUERY_CLASSIFICATION | RCAP_TYPE_SESCMD_HISTORY
         | RCAP_TYPE_TRANSACTION_TRACKING;
+
+    class Config final : public mxs::config::Configuration
+    {
+    public:
+        Config(const std::string& name);
+
+        struct Values
+        {
+            std::string main_sql;
+            std::string secondary_sql;
+        };
+
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override
+        {
+            m_shared.assign(m_v);
+            return true;
+        }
+
+    private:
+        friend class XRouter;
+
+        Values                    m_v;
+        mxs::WorkerGlobal<Values> m_shared;
+    };
 
     static XRouter*     create(SERVICE* pService);
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
@@ -45,8 +70,13 @@ public:
         return {MXS_POSTGRESQL_PROTOCOL_NAME};
     }
 
+    const Config::Values& config()
+    {
+        return *m_config.m_shared;
+    }
+
 private:
     XRouter(const std::string& name);
 
-    mxs::config::Configuration m_config;
+    Config m_config;
 };

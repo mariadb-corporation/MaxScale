@@ -17,10 +17,25 @@
 namespace
 {
 mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::ROUTER);
+
+mxs::config::ParamString s_main_sql(
+    &s_spec, "main_sql", "SQL executed on the main node",
+    "SET foo.bar = 'main'", mxs::config::Param::AT_RUNTIME);
+
+mxs::config::ParamString s_secondary_sql(
+    &s_spec, "secondary_sql", "SQL executed on the secondary nodes",
+    "SET foo.bar = 'secondary'", mxs::config::Param::AT_RUNTIME);
+}
+
+XRouter::Config::Config(const std::string& name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&Config::m_v, &Values::main_sql, &s_main_sql);
+    add_native(&Config::m_v, &Values::secondary_sql, &s_secondary_sql);
 }
 
 XRouter::XRouter(const std::string& name)
-    : m_config(name, &s_spec)
+    : m_config(name)
 {
 }
 
@@ -44,7 +59,7 @@ mxs::RouterSession* XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoi
         }
     }
 
-    return backends.empty() ? nullptr : new XRouterSession(pSession, this, std::move(backends));
+    return backends.empty() ? nullptr : new XRouterSession(pSession, *this, std::move(backends));
 }
 
 json_t* XRouter::diagnostics() const
