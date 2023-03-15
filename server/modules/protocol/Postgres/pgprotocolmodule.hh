@@ -39,6 +39,7 @@ public:
     std::string auth_default() const override;
     GWBUF       make_error(int errnum, const std::string& sqlstate,
                            const std::string& message) const override final;
+    std::string describe(const GWBUF& packet, int body_max_len) const override final;
 
     uint64_t    capabilities() const override;
     std::string name() const override;

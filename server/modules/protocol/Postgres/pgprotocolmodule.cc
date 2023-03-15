@@ -65,6 +65,14 @@ GWBUF PgProtocolModule::make_error(int errnum, const std::string& sqlstate, cons
     return GWBUF{};
 }
 
+std::string PgProtocolModule::describe(const GWBUF& packet, int body_max_len) const
+{
+    MXB_ALERT("Not implemented yet: %s", __func__);
+    mxb_assert(!true);
+
+    return std::string {};
+}
+
 uint64_t PgProtocolModule::capabilities() const
 {
     return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTH_MODULES;

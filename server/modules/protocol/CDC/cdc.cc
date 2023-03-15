@@ -96,6 +96,12 @@ public:
         return GWBUF{};
     }
 
+    std::string describe(const GWBUF& packet, int body_max_len) const override
+    {
+        mxb_assert(!true);
+        return std::string{};
+    }
+
 private:
     CDCProtocolModule(const std::string& name)
         : m_config(name, &s_spec)

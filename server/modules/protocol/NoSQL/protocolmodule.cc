@@ -20,6 +20,7 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/service.hh>
 #include "../MariaDB/user_data.hh"
+#include "../MariaDB/protocol_module.hh"
 #include "clientconnection.hh"
 #include "nosqlcursor.hh"
 
@@ -95,6 +96,13 @@ GWBUF ProtocolModule::make_error(int errnum, const std::string& sqlstate, const 
 {
     mxb_assert(!true);
     return GWBUF{};
+}
+
+std::string ProtocolModule::describe(const GWBUF& packet, int body_max_len) const
+{
+    // By the time this function may be called, 'packet' is a
+    // MariaDB protocol packet, and not a NoSQL protocol packet.
+    return MySQLProtocolModule::get_description(packet, body_max_len);
 }
 
 uint64_t ProtocolModule::capabilities() const

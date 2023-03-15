@@ -106,6 +106,20 @@ public:
     virtual GWBUF make_error(int errnum, const std::string& sqlstate, const std::string& message) const = 0;
 
     /**
+     * Returns a human-readable description of the @c packet, which is assumed
+     * to be a protocol packet obtained from a client connection created using
+     * this protocol module.
+     *
+     * @param packet        A protocol packet received via a client connection
+     *                      of this protocol module.
+     * @param body_max_len  If the packet contains human readable data, the amount
+     *                      of it that should be included.
+     *
+     * @return Human-readable string. May be empty.
+     */
+    virtual std::string describe(const GWBUF& packet, int body_max_len = 1000) const = 0;
+
+    /**
      * Get protocol module name.
      *
      * @return Module name
