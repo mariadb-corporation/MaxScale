@@ -92,6 +92,18 @@ std::string PgProtocolModule::describe(const GWBUF& packet, int body_max_len) co
     return std::string {};
 }
 
+GWBUF PgProtocolModule::make_query(std::string_view sql) const
+{
+    GWBUF buf{pg::HEADER_LEN + sql.size()};
+    auto ptr = buf.data();
+
+    *ptr++ = pg::QUERY;
+    ptr += pg::set_uint32(ptr, buf.length() - 1);
+    memcpy(ptr, sql.data(), sql.size());
+
+    return buf;
+}
+
 uint64_t PgProtocolModule::capabilities() const
 {
     return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTH_MODULES;

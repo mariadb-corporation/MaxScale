@@ -156,6 +156,11 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
                               zHint_type);
 }
 
+GWBUF MySQLProtocolModule::make_query(std::string_view sql) const
+{
+    return mariadb::create_query(sql);
+}
+
 std::string MySQLProtocolModule::name() const
 {
     return MXB_MODULE_NAME;

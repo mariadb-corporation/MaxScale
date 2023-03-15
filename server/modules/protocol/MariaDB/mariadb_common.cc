@@ -735,14 +735,14 @@ GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows)
  * @param query Query to create.
  * @return Result GWBUF
  */
-GWBUF create_query(const string& query)
+GWBUF create_query(std::string_view query)
 {
     size_t plen = query.length() + 1;       // Query plus the command byte
     size_t total_len = MYSQL_HEADER_LEN + plen;
     GWBUF rval(total_len);
     auto ptr = mariadb::write_header(rval.data(), plen, 0);
     *ptr++ = MXS_COM_QUERY;
-    ptr = mariadb::copy_chars(ptr, query.c_str(), query.length());
+    ptr = mariadb::copy_chars(ptr, query.data(), query.length());
     mxb_assert(ptr - rval.data() == (ptrdiff_t)total_len);
     return rval;
 }

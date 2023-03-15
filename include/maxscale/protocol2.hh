@@ -120,6 +120,21 @@ public:
     virtual std::string describe(const GWBUF& packet, int body_max_len = 1000) const = 0;
 
     /**
+     * Create query
+     *
+     * The protocol should return a packet that can be routed to a backend server which executes a SQL query.
+     *
+     * @param errnum   The SQL to execute
+     *
+     * @return A buffer containing an SQL query
+     */
+    virtual GWBUF make_query(std::string_view query) const
+    {
+        mxb_assert(!true);
+        return GWBUF{};
+    }
+
+    /**
      * Get protocol module name.
      *
      * @return Module name
