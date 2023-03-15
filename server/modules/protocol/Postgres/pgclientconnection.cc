@@ -48,6 +48,11 @@ void add_packet_ready_for_query(GWBUF& gwbuf)
 }
 }
 
+bool PgClientConnection::validate_cleartext_auth(const GWBUF& reply)
+{
+    return true;
+}
+
 PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent)
     : m_session(*pSession)
     , m_ssl_required(m_session.listener_data()->m_ssl.config().enabled)
@@ -65,12 +70,7 @@ bool PgClientConnection::setup_ssl()
         m_dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
     }
 
-    auto rv = m_dcb->ssl_handshake();
-
-    const char* zRemote = m_dcb->remote().c_str();
-    const char* zService = m_session.service->name();
-
-    return rv >= 0;
+    return m_dcb->ssl_handshake() >= 0;
 }
 
 void PgClientConnection::ready_for_reading(DCB* dcb)
@@ -134,18 +134,27 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
         data->set_connect_params(gwbuf);
 
         GWBUF reply;
-        add_packet_auth_request(reply, pg::AUTH_OK);
-        add_packet_ready_for_query(reply);
-        m_dcb->writeq_append(std::move(reply));
+        add_packet_auth_request(reply, pg_prot_data_auth_method);
 
-        if (m_session.state() == MXS_SESSION::State::CREATED && m_session.start())
+        if (pg_prot_data_auth_method != pg::AUTH_OK)
         {
+            next_state = State::AUTH;
+        }
+        else if (m_session.state() == MXS_SESSION::State::CREATED && m_session.start())
+        {
+            add_packet_ready_for_query(reply);
             next_state = State::ROUTE;
         }
         else
         {
             MXB_ERROR("Could not start session, closing PG client connection.");
+            reply.clear();
             next_state = State::ERROR;
+        }
+
+        if (reply.length())
+        {
+            m_dcb->writeq_append(std::move(reply));
         }
     }
 
@@ -154,8 +163,56 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
 
 PgClientConnection::State PgClientConnection::state_auth(const GWBUF& gwbuf)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    return State::ERROR;
+    enum class Result {READY, CONTINUE, ERROR};
+    auto result = Result::ERROR;
+
+    switch (pg_prot_data_auth_method)
+    {
+    case pg::AUTH_CLEARTEXT:
+        if (validate_cleartext_auth(gwbuf))
+        {
+            result = Result::READY;
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+        result = Result::ERROR;
+        MXB_SERROR("Unsupported authentication method: " << pg_prot_data_auth_method);
+        break;
+    }
+
+    auto next_state = State::ERROR;
+
+    switch (result)
+    {
+    case Result::READY:
+        if (m_session.state() == MXS_SESSION::State::CREATED && m_session.start())
+        {
+            GWBUF rdy;
+            add_packet_auth_request(rdy, pg::AUTH_OK);
+            add_packet_ready_for_query(rdy);
+            write(std::move(rdy));
+            next_state = State::ROUTE;
+        }
+        else
+        {
+            MXB_ERROR("Could not start session, closing PG client connection.");
+            next_state = State::ERROR;
+        }
+        break;
+
+    case Result::ERROR:
+        MXB_ERROR("Authentication failed, closing PG client connection.");
+        next_state = State::ERROR;
+        break;
+
+    case Result::CONTINUE:
+        next_state = State::AUTH;
+        break;
+    }
+
+    return next_state;
 }
 
 PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)

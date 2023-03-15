@@ -56,9 +56,13 @@ private:
 
     // Return true if ssl handshake succeeded or is in progress
     bool setup_ssl();
+    bool validate_cleartext_auth(const GWBUF& reply);
 
     State           m_state = State::INIT;
     MXS_SESSION&    m_session;
     bool            m_ssl_required;
     mxs::Component* m_down;
+
+    // Will be provided by the monitor
+    pg::Auth pg_prot_data_auth_method = pg::AUTH_CLEARTEXT;
 };
