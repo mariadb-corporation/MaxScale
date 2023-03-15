@@ -12,13 +12,14 @@
  */
 
 #include "pgprotocolmodule.hh"
-#include <maxscale/listener.hh>
 #include "pgauthenticatormodule.hh"
 #include "pgclientconnection.hh"
 #include "pgbackendconnection.hh"
 #include "pgprotocoldata.hh"
 #include "postgresprotocol.hh"
 
+#include <maxscale/listener.hh>
+#include <maxbase/pretty_print.hh>
 
 PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
     : m_config(name, this)
@@ -84,12 +85,55 @@ GWBUF PgProtocolModule::make_error(int errnum, const std::string& sqlstate, cons
     return buf;
 }
 
-std::string PgProtocolModule::describe(const GWBUF& packet, int body_max_len) const
+std::string PgProtocolModule::describe(const GWBUF& packet, int max_len) const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
+    std::ostringstream ss;
+    const uint8_t* ptr = packet.data();
 
-    return std::string {};
+    char cmd = *ptr++;
+    uint32_t len = pg::get_uint32(ptr);
+    ptr += 4;
+    ss << pg::client_command_to_str(cmd) << " (" << mxb::pretty_size(len) << ")";
+
+    switch (cmd)
+    {
+    case pg::QUERY:
+        ss << " stmt: " << pg::get_string(ptr).substr(0, max_len);
+        break;
+
+    case pg::PARSE:
+        {
+            auto id = pg::get_string(ptr);
+            ptr += id.size() + 1;
+            ss << " id: '" << id << "' stmt: " << pg::get_string(ptr).substr(0, max_len);
+        }
+        break;
+
+    case pg::CLOSE:
+    case pg::DESCRIBE:
+        {
+            char type = *ptr++;
+            ss << " type: '" << type << "' id: '" << pg::get_string(ptr) << "'";
+        }
+        break;
+
+    case pg::EXECUTE:
+        ss << " id: '" << pg::get_string(ptr) << "'";
+        break;
+
+    case pg::BIND:
+        {
+            auto portal = pg::get_string(ptr);
+            ptr += portal.size() + 1;
+            ss << " portal: '" << portal << "' id: '" << pg::get_string(ptr) << "'";
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return ss.str();
 }
 
 GWBUF PgProtocolModule::make_query(std::string_view sql) const

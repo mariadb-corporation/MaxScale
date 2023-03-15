@@ -16,6 +16,130 @@
 
 namespace postgres
 {
+
+const char* backend_command_to_str(uint8_t cmd)
+{
+    switch (cmd)
+    {
+    case AUTHENTICATION:
+        return "Authentication";
+
+    case BACKEND_KEY_DATA:
+        return "BackendKeyData";
+
+    case BIND_COMPLETE:
+        return "BindComplete";
+
+    case CLOSE_COMPLETE:
+        return "CloseComplete";
+
+    case COMMAND_COMPLETE:
+        return "CommandComplete";
+
+    case COPY_BOTH_RESPONSE:
+        return "CopyBothResponse";
+
+    case COPY_IN_RESPONSE:
+        return "CopyInResponse";
+
+    case COPY_OUT_RESPONSE:
+        return "CopyOutResponse";
+
+    case DATA_ROW:
+        return "DataRow";
+
+    case EMPTY_QUERY_RESPONSE:
+        return "EmptyQueryResponse";
+
+    case ERROR_RESPONSE:
+        return "ErrorResponse";
+
+    case NEGOTIATE_PROTOCOL_VERSION:
+        return "NegotiateProtocolVersion";
+
+    case FUNCTION_CALL_RESPONSE:
+        return "FunctionCallResponse";
+
+    case NO_DATA:
+        return "NoData";
+
+    case NOTICE_RESPONSE:
+        return "NoticeResponse";
+
+    case NOTIFICATION_RESPONSE:
+        return "NotificationResponse";
+
+    case PARAMETER_DESCRIPTION:
+        return "ParameterDescription";
+
+    case PARAMETER_STATUS:
+        return "ParameterStatus";
+
+    case PARSE_COMPLETE:
+        return "ParseComplete";
+
+    case PORTAL_SUSPENDED:
+        return "PortalSuspended";
+
+    case READY_FOR_QUERY:
+        return "ReadyForQuery";
+
+    case ROW_DESCRIPTION:
+        return "RowDescription";
+    }
+
+    mxb_assert(!true);
+    thread_local char buffer[20];
+    snprintf(buffer, sizeof(buffer), "Unknown: 0x%hhx", cmd);
+    return buffer;
+}
+
+const char* client_command_to_str(uint8_t cmd)
+{
+    switch (cmd)
+    {
+    case BIND:
+        return "Bind";
+
+    case CLOSE:
+        return "Close";
+
+    case COPY_FAIL:
+        return "CopyFail";
+
+    case DESCRIBE:
+        return "Describe";
+
+    case EXECUTE:
+        return "Execute";
+
+    case FLUSH:
+        return "Flush";
+
+    case PARSE:
+        return "Parse";
+
+    case QUERY:
+        return "Query";
+
+        // SASL_INITIAL_RESPONSE, SASL_RESPONSE, GSS_RESPONSE share the same value. There aren't seen after
+        // the authentication has completed.
+    case PASSWORD_MESSAGE:
+        return "Auth";
+
+    case SYNC:
+        return "Sync";
+
+    case TERMINATE:
+        return "Terminate";
+    }
+
+    mxb_assert(!true);
+    thread_local char buffer[20];
+    snprintf(buffer, sizeof(buffer), "Unknown: 0x%hhx", cmd);
+    return buffer;
+}
+
 std::tuple<bool, GWBUF> read_packet(DCB* dcb, ExpectCmdByte expect_cmd_byte)
 {
     size_t len_offset = expect_cmd_byte == ExpectCmdByte::YES ? 1 : 0;

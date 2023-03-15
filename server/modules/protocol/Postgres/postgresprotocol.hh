@@ -96,6 +96,8 @@ enum BackendCommand : uint8_t
     ROW_DESCRIPTION            = 'T',   // RowDescription
 };
 
+const char* backend_command_to_str(uint8_t cmd);
+
 // Client messages
 enum ClientCommand : uint8_t
 {
@@ -114,6 +116,8 @@ enum ClientCommand : uint8_t
     SYNC                  = 'S',// Sync
     TERMINATE             = 'X',// Terminate
 };
+
+const char* client_command_to_str(uint8_t cmd);
 
 // Messages that are sent by both clients and backends
 enum BidirectionalCommand : uint8_t
