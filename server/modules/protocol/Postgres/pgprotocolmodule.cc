@@ -94,12 +94,14 @@ std::string PgProtocolModule::describe(const GWBUF& packet, int body_max_len) co
 
 GWBUF PgProtocolModule::make_query(std::string_view sql) const
 {
-    GWBUF buf{pg::HEADER_LEN + sql.size()};
+    GWBUF buf{pg::HEADER_LEN + sql.size() + 1};
     auto ptr = buf.data();
 
     *ptr++ = pg::QUERY;
     ptr += pg::set_uint32(ptr, buf.length() - 1);
     memcpy(ptr, sql.data(), sql.size());
+    ptr += sql.size();
+    *ptr = 0x0;
 
     return buf;
 }
