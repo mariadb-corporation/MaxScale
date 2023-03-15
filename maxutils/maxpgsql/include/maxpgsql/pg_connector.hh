@@ -74,12 +74,20 @@ public:
         int         version {0};
         std::string info;
     };
-    VersionInfo version_info() const;
+    VersionInfo get_version_info();
 
     ConnectionSettings& connection_settings();
 
     /**
-     * Run a query which may return data.
+     * Run a query which returns no data.
+     *
+     * @param query SQL to run
+     * @return True on success
+     */
+    bool cmd(const std::string& query);
+
+    /**
+     * Run a query which returns data.
      *
      * @param query SQL to run
      * @return Query results on success, null otherwise
@@ -89,6 +97,7 @@ public:
 private:
     pg_conn*           m_conn {nullptr};
     ConnectionSettings m_settings;
+    std::string        m_errormsg;
 
     void move_helper(PgSQL&& other);
 };

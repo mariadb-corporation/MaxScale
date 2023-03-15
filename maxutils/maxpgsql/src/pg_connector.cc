@@ -18,10 +18,36 @@
 #include <maxbase/format.hh>
 
 using std::string;
+using mxb::QueryResult;
 
 namespace
 {
-const char no_connection[] = "PostgreSQL-connection does not exist.";
+const char no_connection[] = "PostgreSQL-connection is not open, cannot perform query.";
+const char query_failed[] = "Query '%s' failed. %s.";
+const char wrong_result_type[] = "Unexpected result type for '%s'. Expected '%s', got '%s'.";
+
+/**
+ * QueryResult implementation for the PgSQL-class.
+ */
+class PgQueryResult : public mxb::QueryResult
+{
+public:
+    explicit PgQueryResult(pg_result* resultset);
+    ~PgQueryResult() override;
+
+    int64_t get_col_count() const override;
+    int64_t get_row_count() const override;
+
+private:
+    const char* row_elem(int64_t column_ind) const override;
+    bool        advance_row() override;
+
+    static std::vector<std::string> column_names(pg_result* results);
+
+    pg_result* m_resultset {nullptr};   /**< Underlying result set object */
+    int        m_row_ind {-1};          /**< Current row index */
+    const int  m_row_count {-1};        /**< Total row count */
+};
 }
 
 namespace maxpgsql
@@ -200,20 +226,165 @@ PgSQL::ConnectionSettings& PgSQL::connection_settings()
     return m_settings;
 }
 
-PgSQL::VersionInfo PgSQL::version_info() const
+PgSQL::VersionInfo PgSQL::get_version_info()
 {
     VersionInfo rval;
     if (is_open())
     {
         rval.version = PQserverVersion(m_conn);
-        // TODO: use "select version" for full info string.
-        rval.info = PQparameterStatus(m_conn, "server_version");
+        auto info_res = query("select version();");
+        if (info_res && info_res->next_row() && info_res->get_col_count() == 1)
+        {
+            rval.info = info_res->get_string(0);
+        }
     }
     return rval;
 }
 
-std::unique_ptr<mxb::QueryResult> PgSQL::query(const string& query)
+bool PgSQL::cmd(const string& query)
 {
-    return nullptr;
+    bool rval = false;
+    if (m_conn)
+    {
+        auto result = PQexec(m_conn, query.c_str());
+        auto res_status = PQresultStatus(result);   // ok even if result is null
+        if (res_status == PGRES_COMMAND_OK)
+        {
+            rval = true;
+            m_errormsg.clear();
+        }
+        else if (res_status == PGRES_TUPLES_OK)
+        {
+            int cols = PQnfields(result);
+            int rows = PQntuples(result);
+            m_errormsg = mxb::string_printf(
+                "Command '%s' returned %d columns and %d rows of data when none was expected.",
+                query.c_str(), cols, rows);
+        }
+        else if (res_status == PGRES_FATAL_ERROR)
+        {
+            // The result may not exist, ask connection itself for error.
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), PQerrorMessage(m_conn));
+        }
+        else
+        {
+            // Ask the result object for error.
+            const char* errmsg = PQresultErrorMessage(result);
+            if (*errmsg)
+            {
+                m_errormsg = mxb::string_printf(query_failed, query.c_str(), errmsg);
+            }
+            else
+            {
+                // Not an error, must be some other unexpected result type.
+                const char* expected = PQresStatus(PGRES_COMMAND_OK);
+                const char* found = PQresStatus(res_status);
+                m_errormsg = mxb::string_printf(wrong_result_type, query.c_str(), expected, found);
+            }
+        }
+        PQclear(result);
+        // TODO: log statements
+    }
+    else
+    {
+        m_errormsg = no_connection;
+    }
+
+    return rval;
+}
+
+std::unique_ptr<QueryResult> PgSQL::query(const std::string& query)
+{
+    std::unique_ptr<QueryResult> rval;
+    if (m_conn)
+    {
+        auto result = PQexec(m_conn, query.c_str());
+        auto res_status = PQresultStatus(result);
+        if (res_status == PGRES_TUPLES_OK)
+        {
+            rval = std::make_unique<PgQueryResult>(result);
+            m_errormsg.clear();
+        }
+        else if (res_status == PGRES_FATAL_ERROR)
+        {
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), PQerrorMessage(m_conn));
+            PQclear(result);
+        }
+        else
+        {
+            const char* errmsg = PQresultErrorMessage(result);
+            if (*errmsg)
+            {
+                m_errormsg = mxb::string_printf(query_failed, query.c_str(), errmsg);
+            }
+            else
+            {
+                const char* expected = PQresStatus(PGRES_TUPLES_OK);
+                const char* found = PQresStatus(res_status);
+                m_errormsg = mxb::string_printf(wrong_result_type, query.c_str(), expected, found);
+            }
+            PQclear(result);
+        }
+        // TODO: log statements
+    }
+    else
+    {
+        m_errormsg = no_connection;
+    }
+    return rval;
+}
+}
+
+namespace
+{
+PgQueryResult::PgQueryResult(pg_result* resultset)
+    : QueryResult(column_names(resultset))
+    , m_resultset(resultset)
+    , m_row_count(PQntuples(resultset))
+{
+}
+
+std::vector<std::string> PgQueryResult::column_names(pg_result* results)
+{
+    std::vector<std::string> rval;
+    int n_columns = PQnfields(results);
+    rval.resize(n_columns);
+    for (int i = 0; i < n_columns; i++)
+    {
+        rval[i] = PQfname(results, i);
+    }
+    return rval;
+}
+
+PgQueryResult::~PgQueryResult()
+{
+    PQclear(m_resultset);
+}
+
+int64_t PgQueryResult::get_col_count() const
+{
+    return PQnfields(m_resultset);
+}
+
+int64_t PgQueryResult::get_row_count() const
+{
+    return m_row_count;
+}
+
+bool PgQueryResult::advance_row()
+{
+    bool rval = false;
+    if (m_row_ind < m_row_count - 1)
+    {
+        m_row_ind++;
+        rval = true;
+    }
+    return rval;
+}
+
+const char* PgQueryResult::row_elem(int64_t column_ind) const
+{
+    // TODO: This only works for text-format data.
+    return PQgetvalue(m_resultset, m_row_ind, column_ind);
 }
 }
