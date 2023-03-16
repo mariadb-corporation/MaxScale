@@ -278,9 +278,8 @@ public:
     virtual ParserPlugin& plugin() const = 0;
 
     virtual Result           parse(GWBUF& stmt, uint32_t collect) const = 0;
-    std::unique_ptr<json_t>  parse_to_resource(const char* zHost, const std::string& statement) const;
+    std::unique_ptr<json_t>  parse_to_resource(const char* zHost, GWBUF& stmt) const;
 
-    virtual GWBUF            create_buffer(const std::string& statement) const = 0;
     virtual std::string_view get_created_table_name(GWBUF& stmt) const = 0;
     virtual DatabaseNames    get_database_names(GWBUF& stmt) const = 0;
     virtual void             get_field_info(GWBUF& stmt,

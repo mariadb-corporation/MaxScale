@@ -76,7 +76,6 @@ public:
 
     Result           parse(GWBUF& stmt, uint32_t collect) const override;
 
-    GWBUF            create_buffer(const std::string& statement) const override;
     std::string_view get_created_table_name(GWBUF& stmt) const override;
     DatabaseNames    get_database_names(GWBUF& stmt) const override;
     void             get_field_info(GWBUF& stmt,

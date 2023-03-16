@@ -530,11 +530,9 @@ void append_function_info(const mxs::Parser& parser, json_t* pParams, GWBUF& stm
 }
 }
 
-std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, const std::string& statement) const
+std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, GWBUF& stmt) const
 {
     json_t* pAttributes = json_object();
-
-    GWBUF stmt = create_buffer(statement);
 
     Parser::Result result = parse(stmt, mxs::Parser::COLLECT_ALL);
 

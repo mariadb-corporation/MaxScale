@@ -733,11 +733,6 @@ Parser::Result CachingParser::parse(GWBUF& stmt, uint32_t collect) const
     return m_parser.parse(stmt, collect);
 }
 
-GWBUF CachingParser::create_buffer(const std::string& statement) const
-{
-    return m_parser.create_buffer(statement);
-}
-
 std::string_view CachingParser::get_created_table_name(GWBUF& stmt) const
 {
     QCInfoCacheScope scope(&m_plugin, &stmt);

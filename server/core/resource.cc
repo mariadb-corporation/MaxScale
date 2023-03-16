@@ -27,6 +27,7 @@
 #include <maxscale/mainworker.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/admin.hh"
@@ -983,7 +984,8 @@ HttpResponse cb_qc_classify(const HttpRequest& request)
     string sql = request.get_option("sql");
 
     // TODO: Add possiblity to parse using specific parser.
-    json_t* json = MariaDBParser::get().parse_to_resource(request.host(), sql).release();
+    GWBUF stmt = mariadb::create_query(sql);
+    json_t* json = MariaDBParser::get().parse_to_resource(request.host(), stmt).release();
 
     return HttpResponse(MHD_HTTP_OK, json);
 }
