@@ -145,7 +145,9 @@ GWBUF create_sasl_initial_response(std::string& client_first_message_bare)
     return response;
 }
 
-GWBUF create_authentication_sasl_continue(const GWBUF& buffer, std::string& server_first_message)
+GWBUF create_authentication_sasl_continue(const GWBUF& buffer,
+                                          std::string& client_first_message,
+                                          std::string& server_first_message)
 {
     const uint8_t* ptr = buffer.data();
     mxb_assert(*ptr == pg::SASL_INITIAL_RESPONSE);
@@ -183,7 +185,10 @@ GWBUF create_authentication_sasl_continue(const GWBUF& buffer, std::string& serv
     // TODO: Get this from the UserAccountManager
     auto user = parse_scram_password(THE_PASSWORD);
 
-    // This is needed for the final step
+    // This is the client-first-message-bare that is one part of the final auth-message
+    client_first_message = mxb::cat("n=", client_user, ",r=", client_nonce);
+
+    // This is also needed for the final step
     server_first_message = mxb::cat("r=", client_nonce, server_nonce,
                                     ",s=", user->salt,
                                     ",i=", user->iter);
@@ -202,16 +207,17 @@ GWBUF create_authentication_sasl_continue(const GWBUF& buffer, std::string& serv
 
 GWBUF create_sasl_response(const GWBUF& buffer,
                            std::string_view client_first_message_bare,
-                           std::string_view server_first_message,
+                           std::string& server_first_message,
+                           std::string& client_final_message_without_proof,
                            const Digest& client_key)
 {
     mxb_assert(buffer[0] == pg::AUTHENTICATION);
     mxb_assert(pg::get_uint32(buffer.data() + pg::HEADER_LEN) == pg::AUTH_SASL_CONTINUE);
     uint32_t len = pg::get_uint32(buffer.data() + 1) - 8;
-    std::string_view msg((const char*)buffer.data() + 9, len);
+    server_first_message.assign((const char*)buffer.data() + 9, len);
     std::string nonce;
 
-    for (auto token : mxb::strtok(msg, ","))
+    for (auto token : mxb::strtok(server_first_message, ","))
     {
         if (token.substr(0, 2) == "r=")
         {
@@ -224,7 +230,7 @@ GWBUF create_sasl_response(const GWBUF& buffer,
 
     // Without a channel bind, this is always "c=biws". Support for channel binding requires the base64 value
     // to be calculated.
-    auto client_final_message_without_proof = mxb::cat("c=biws,", nonce);
+    client_final_message_without_proof = mxb::cat("c=biws,", nonce);
 
     // See: https://www.rfc-editor.org/rfc/rfc5802#section-3
 
