@@ -76,8 +76,7 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
     switch (m_state)
     {
     case State::IDLE:
-        // TODO: use the query classifier to detect statements that need to be routed to all nodes
-        if ("should route to all"s == "yes, we should"s)
+        if (is_multi_node(packet))
         {
             m_state = State::MAIN;
             ok = route_main(std::move(packet));
@@ -335,4 +334,33 @@ GWBUF XRouterSession::finish_multinode()
     m_packets.clear();
     m_state = State::IDLE;
     return packet;
+}
+
+bool XRouterSession::is_multi_node(GWBUF& buffer) const
+{
+    using namespace mxs::sql;
+    bool is_multi = false;
+
+    if (!mxs::Parser::type_mask_contains(parser().get_type_mask(buffer), TYPE_CREATE_TMP_TABLE))
+    {
+        switch (parser().get_operation(buffer))
+        {
+        // TODO: Update with the parser changes when merging
+        case OP_CREATE:
+        case OP_CREATE_TABLE:
+        case OP_DROP:
+        case OP_DROP_TABLE:
+        case OP_ALTER:
+        case OP_ALTER_TABLE:
+        case OP_GRANT:
+        case OP_REVOKE:
+            is_multi = true;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return is_multi;
 }

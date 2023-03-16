@@ -50,6 +50,9 @@ private:
 
     GWBUF finish_multinode();
 
+    // TODO: const-correct after parser is fixed
+    bool is_multi_node(GWBUF& buffer) const;
+
     XRouter&         m_router;
     State            m_state{State::INIT};
     SBackends        m_backends;
