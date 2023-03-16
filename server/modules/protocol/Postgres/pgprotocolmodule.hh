@@ -18,14 +18,14 @@
 
 class SERVICE;
 
-class PgProtocolModule : public mxs::ProtocolModule
+class PgProtocolModule final : public mxs::ProtocolModule
 {
 public:
     using AuthenticatorList = std::vector<mxs::SAuthenticatorModule>;
 
     static PgProtocolModule* create(const std::string& name, mxs::Listener* pListener);
 
-    mxs::config::Configuration& getConfiguration() override final
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }
@@ -38,9 +38,9 @@ public:
 
     std::string auth_default() const override;
     GWBUF       make_error(int errnum, const std::string& sqlstate,
-                           const std::string& message) const override final;
+                           const std::string& message) const override;
     std::string_view get_sql(const GWBUF& packet) const override;
-    std::string describe(const GWBUF& packet, int body_max_len) const override final;
+    std::string describe(const GWBUF& packet, int body_max_len) const override;
     GWBUF       make_query(std::string_view sql) const override;
 
     uint64_t    capabilities() const override;

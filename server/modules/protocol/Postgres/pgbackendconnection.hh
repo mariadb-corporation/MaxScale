@@ -18,34 +18,34 @@
 #include <maxscale/protocol2.hh>
 #include <deque>
 
-class PgBackendConnection : public mxs::BackendConnection
+class PgBackendConnection final : public mxs::BackendConnection
 {
 public:
     PgBackendConnection(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 
-    void ready_for_reading(DCB* dcb) override final;
-    void write_ready(DCB* dcb) override final;
-    void error(DCB* dcb) override final;
-    void hangup(DCB* dcb) override final;
+    void ready_for_reading(DCB* dcb) override;
+    void write_ready(DCB* dcb) override;
+    void error(DCB* dcb) override;
+    void hangup(DCB* dcb) override;
 
-    bool write(GWBUF&& buffer) override final;
+    bool write(GWBUF&& buffer) override;
 
-    void finish_connection() override final;
+    void finish_connection() override;
 
-    uint64_t can_reuse(MXS_SESSION* session) const override final;
-    bool     reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type) override final;
-    bool     established() override final;
-    void     set_to_pooled() override final;
-    void     ping() override final;
-    bool     can_close() const override final;
+    uint64_t can_reuse(MXS_SESSION* session) const override;
+    bool     reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type) override;
+    bool     established() override;
+    void     set_to_pooled() override;
+    void     ping() override;
+    bool     can_close() const override;
 
-    void              set_dcb(DCB* dcb) override final;
-    const BackendDCB* dcb() const override final;
-    BackendDCB*       dcb() override final;
-    mxs::Component*   upstream() const override final;
+    void              set_dcb(DCB* dcb) override;
+    const BackendDCB* dcb() const override;
+    BackendDCB*       dcb() override;
+    mxs::Component*   upstream() const override;
 
-    json_t* diagnostics() const override final;
-    size_t  sizeof_buffers() const override final;
+    json_t* diagnostics() const override;
+    size_t  sizeof_buffers() const override;
 
 private:
     enum class State

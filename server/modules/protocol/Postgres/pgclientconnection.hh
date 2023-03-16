@@ -17,7 +17,7 @@
 #include <maxscale/protocol2.hh>
 #include <maxscale/session.hh>
 
-class PgClientConnection : public mxs::ClientConnectionBase
+class PgClientConnection final : public mxs::ClientConnectionBase
 {
 public:
     PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent);
