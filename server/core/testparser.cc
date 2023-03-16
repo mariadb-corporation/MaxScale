@@ -20,7 +20,7 @@ using namespace std;
 namespace
 {
 
-std::unique_ptr<mxs::Parser> create_parser(const mxs::Parser::Extractor* pExtractor,
+std::unique_ptr<mxs::Parser> create_parser(const mxs::Parser::Helper* pHelper,
                                            const string& plugin,
                                            mxs::Parser::SqlMode sql_mode,
                                            const string& plugin_args)
@@ -57,7 +57,7 @@ std::unique_ptr<mxs::Parser> create_parser(const mxs::Parser::Extractor* pExtrac
 
     mxs::CachingParser::thread_init();
 
-    return pPlugin->create_parser(pExtractor);
+    return pPlugin->create_parser(pHelper);
 }
 
 }
@@ -66,15 +66,15 @@ namespace maxscale
 {
 
 TestParser::TestParser()
-    : TestParser(&MariaDBParser::Extractor::get(), DEFAULT_PLUGIN, SqlMode::DEFAULT, std::string {})
+    : TestParser(&MariaDBParser::Helper::get(), DEFAULT_PLUGIN, SqlMode::DEFAULT, std::string {})
 {
 }
 
-TestParser::TestParser(const Parser::Extractor* pExtractor,
+TestParser::TestParser(const Parser::Helper* pHelper,
                        const string& plugin,
                        SqlMode sql_mode,
                        const string& plugin_args)
-    : CachingParser(create_parser(pExtractor, plugin, sql_mode, plugin_args))
+    : CachingParser(create_parser(pHelper, plugin, sql_mode, plugin_args))
 {
 }
 

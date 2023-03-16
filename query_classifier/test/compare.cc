@@ -1478,10 +1478,10 @@ int main(int argc, char* argv[])
                         pPlugin2 = pPlugin1;
                     }
 
-                    auto& extractor = MariaDBParser::Extractor::get();
+                    auto& helper = MariaDBParser::Helper::get();
 
-                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser(&extractor);
-                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser(&extractor);
+                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser(&helper);
+                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser(&helper);
 
                     do
                     {

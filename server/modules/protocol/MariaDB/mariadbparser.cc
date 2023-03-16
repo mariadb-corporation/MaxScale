@@ -19,28 +19,28 @@ namespace
 
 struct ThisUnit
 {
-    MariaDBParser::Extractor extractor;
+    MariaDBParser::Helper helper;
 } this_unit;
 
 }
 
 // static
-const MariaDBParser::Extractor& MariaDBParser::Extractor::get()
+const MariaDBParser::Helper& MariaDBParser::Helper::get()
 {
-    return this_unit.extractor;
+    return this_unit.helper;
 }
 
-GWBUF MariaDBParser::Extractor::create_packet(std::string_view sql) const
+GWBUF MariaDBParser::Helper::create_packet(std::string_view sql) const
 {
     return mariadb::create_query(sql);
 }
 
-std::string_view MariaDBParser::Extractor::get_sql(const GWBUF& packet) const
+std::string_view MariaDBParser::Helper::get_sql(const GWBUF& packet) const
 {
     return mariadb::get_sql(packet);
 }
 
-bool MariaDBParser::Extractor::is_prepare(const GWBUF& packet) const
+bool MariaDBParser::Helper::is_prepare(const GWBUF& packet) const
 {
     return mariadb::is_com_prepare(packet);
 }

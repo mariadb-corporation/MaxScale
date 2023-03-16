@@ -420,9 +420,9 @@ int module_init()
 
         if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()))
         {
-            auto& extractor = MariaDBParser::Extractor::get();
+            auto& helper = MariaDBParser::Helper::get();
 
-            this_unit.pParser = new MariaDBParser(pPlugin->create_parser(&extractor));
+            this_unit.pParser = new MariaDBParser(pPlugin->create_parser(&helper));
             rv = 0;
         }
         else

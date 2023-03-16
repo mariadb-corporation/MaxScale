@@ -100,7 +100,7 @@ class ParserPlugin;
 class Parser
 {
 public:
-    class Extractor
+    class Helper
     {
     public:
         virtual GWBUF            create_packet(std::string_view sql) const = 0;
@@ -391,12 +391,12 @@ public:
     /**
      * Create a parser.
      *
-     * @param pExtractor  The extractor to be used when extracting SQL from a GWBUF.
-     *                    Must exist for as long as the parser does.
+     * @param pHelper  The helper to be used when needed.
+     *                 Must exist for as long as the parser does.
      *
      * @return A new parser.
      */
-    virtual std::unique_ptr<Parser> create_parser(const Parser::Extractor* pExtractor) const = 0;
+    virtual std::unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const = 0;
 };
 
 

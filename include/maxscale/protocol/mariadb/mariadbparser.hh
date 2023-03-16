@@ -19,10 +19,10 @@
 class MariaDBParser : public maxscale::CachingParser
 {
 public:
-    class Extractor : public mxs::Parser::Extractor
+    class Helper : public mxs::Parser::Helper
     {
     public:
-        static const Extractor& get();
+        static const Helper& get();
 
         GWBUF            create_packet(std::string_view sql) const override;
         std::string_view get_sql(const GWBUF& packet) const override;

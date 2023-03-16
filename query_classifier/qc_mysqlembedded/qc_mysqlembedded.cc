@@ -4098,8 +4098,8 @@ namespace
 class MysqlParser : public Parser
 {
 public:
-    MysqlParser(const Extractor* pExtractor)
-        : m_extractor(*pExtractor)
+    MysqlParser(const Helper* pHelper)
+        : m_helper(*pHelper)
     {
     }
 
@@ -4244,7 +4244,7 @@ public:
     }
 
 private:
-    const Extractor& m_extractor;
+    const Helper& m_helper;
 };
 
 class MysqlParserPlugin : public ParserPlugin
@@ -4287,9 +4287,9 @@ public:
         return mariadb::is_com_prepare(stmt);
     }
 
-    std::unique_ptr<Parser> create_parser(const Parser::Extractor* pExtractor) const override
+    std::unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const override
     {
-        return std::make_unique<MysqlParser>(pExtractor);
+        return std::make_unique<MysqlParser>(pHelper);
     }
 };
 
