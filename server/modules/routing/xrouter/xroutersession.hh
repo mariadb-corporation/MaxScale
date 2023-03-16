@@ -32,24 +32,33 @@ private:
         IDLE,
         SOLO,
         WAIT_SOLO,
-        BUSY,
+        MAIN,
+        WAIT_MAIN,
+        WAIT_SECONDARY,
     };
 
     static std::string_view state_to_str(State state);
     std::string_view        state_str() const;
+    std::string             describe(const GWBUF& buffer);
 
-    bool route_to_one(GWBUF&& packet, State next_state);
+    bool route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Backend::response_type type);
     bool route_solo(GWBUF&& packet);
-    bool route_to_all(GWBUF&& packet);
+    bool route_main(GWBUF&& packet);
+    bool route_secondary();
     bool route_queued();
     bool all_backends_idle() const;
 
-    std::string                 describe(const GWBUF& buffer);
-    mxs::Backend::response_type response_type(mxs::Backend* backend, const GWBUF& buffer);
+    GWBUF finish_multinode();
 
     XRouter&         m_router;
     State            m_state{State::INIT};
     SBackends        m_backends;
     mxs::Backend*    m_main;
     std::list<GWBUF> m_queue;
+
+    // The packets that make up the multi-node command
+    std::list<GWBUF> m_packets;
+
+    // The response to the multi-node command that will be returned to the client
+    GWBUF m_response;
 };

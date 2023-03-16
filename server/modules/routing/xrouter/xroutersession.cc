@@ -32,8 +32,14 @@ std::string_view XRouterSession::state_to_str(State state)
     case State::WAIT_SOLO:
         return "WAIT_SOLO";
 
-    case State::BUSY:
-        return "BUSY";
+    case State::MAIN:
+        return "MAIN";
+
+    case State::WAIT_MAIN:
+        return "WAIT_MAIN";
+
+    case State::WAIT_SECONDARY:
+        return "WAIT_SECONDARY";
     }
 
     mxb_assert(!true);
@@ -73,8 +79,8 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
         // TODO: use the query classifier to detect statements that need to be routed to all nodes
         if ("should route to all"s == "yes, we should"s)
         {
-            m_state = State::BUSY;
-            ok = route_to_all(std::move(packet));
+            m_state = State::MAIN;
+            ok = route_main(std::move(packet));
         }
         else
         {
@@ -87,9 +93,14 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
         ok = route_solo(std::move(packet));
         break;
 
+    case State::MAIN:
+        ok = route_main(std::move(packet));
+        break;
+
     case State::INIT:
     case State::WAIT_SOLO:
-    case State::BUSY:
+    case State::WAIT_MAIN:
+    case State::WAIT_SECONDARY:
         MXB_SINFO("Queuing: " << describe(packet));
         m_queue.push_back(std::move(packet));
         break;
@@ -100,40 +111,49 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
 
 bool XRouterSession::route_solo(GWBUF&& packet)
 {
-    return route_to_one(std::move(packet), State::WAIT_SOLO);
-}
-
-bool XRouterSession::route_to_one(GWBUF&& packet, State next_state)
-{
-    MXB_SINFO("Route to '" << m_main->name() << "': " << describe(packet));
     auto type = mxs::Backend::NO_RESPONSE;
 
     if (protocol_data()->will_respond(packet))
     {
         type = mxs::Backend::EXPECT_RESPONSE;
-        m_state = next_state;
+        m_state = State::WAIT_SOLO;
     }
 
-    return m_main->write(std::move(packet), type);
+    return route_to_one(m_main, std::move(packet), type);
 }
 
-bool XRouterSession::route_to_all(GWBUF&& packet)
+bool XRouterSession::route_main(GWBUF&& packet)
+{
+    auto type = mxs::Backend::NO_RESPONSE;
+
+    if (protocol_data()->will_respond(packet))
+    {
+        type = mxs::Backend::IGNORE_RESPONSE;
+        m_state = State::WAIT_MAIN;
+    }
+
+    m_packets.push_back(packet.shallow_clone());
+    return route_to_one(m_main, std::move(packet), type);
+}
+
+bool XRouterSession::route_secondary()
 {
     bool ok = true;
-    m_state = State::BUSY;
-    MXB_SINFO("Routing to all backends: " << describe(packet));
+    MXB_SINFO("Routing to secondary backends");
 
     for (auto& b : m_backends)
     {
-        if (b->in_use())
+        if (b->in_use() && b.get() != m_main)
         {
-            if (b->write(packet.shallow_clone(), response_type(b.get(), packet)))
+            for (const auto& packet : m_packets)
             {
-                MXB_SINFO("Route to '" << b->name() << "'");
-            }
-            else
-            {
-                ok = false;
+                auto type = protocol_data()->will_respond(packet) ?
+                    mxs::Backend::IGNORE_RESPONSE : mxs::Backend::NO_RESPONSE;
+
+                if (!route_to_one(b.get(), packet.shallow_clone(), type))
+                {
+                    ok = false;
+                }
             }
         }
     }
@@ -141,14 +161,10 @@ bool XRouterSession::route_to_all(GWBUF&& packet)
     return ok;
 }
 
-mxs::Backend::response_type XRouterSession::response_type(mxs::Backend* backend, const GWBUF& packet)
+bool XRouterSession::route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Backend::response_type type)
 {
-    if (!protocol_data()->will_respond(packet))
-    {
-        return mxs::Backend::NO_RESPONSE;
-    }
-
-    return backend == m_main ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
+    MXB_SINFO("Route to '" << backend->name() << "': " << describe(packet));
+    return backend->write(std::move(packet), type);
 }
 
 bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
@@ -194,6 +210,58 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
         }
         break;
 
+    case State::MAIN:
+        // This might also be an error condition in MaxScale but we should still handle it.
+        mxb_assert_message(!complete, "Result should not be complete");
+        [[fallthrough]];
+
+    case State::WAIT_MAIN:
+        mxb_assert(!route);
+        m_response.append(packet);
+        packet.clear();
+
+        if (complete)
+        {
+            mxb_assert(all_backends_idle());
+
+            if (reply.error())
+            {
+                // The command failed, don't propagate the change
+                MXB_SINFO("Multi-node command failed:" << reply.describe());
+                route = true;
+                packet = finish_multinode();
+            }
+            else
+            {
+                m_state = State::WAIT_SECONDARY;
+                rv = route_secondary();
+            }
+        }
+        break;
+
+    case State::WAIT_SECONDARY:
+        mxb_assert_message(!route, "No response expected from '%s'", backend->name());
+        mxb_assert_message(backend != m_main, "Main backend should not respond");
+        mxb_assert_message(m_main->is_idle(), "Main backend should be idle");
+
+        if (complete)
+        {
+            if (reply.error())
+            {
+                // TODO: Fence out the node somehow
+                MXB_SINFO("Command failed on '" << backend->name() << "': " << reply.describe());
+            }
+
+            if (all_backends_idle())
+            {
+                // All backends have responded with something, clear out the packets and route the response.
+                MXB_SINFO("Multi-node command complete");
+                route = true;
+                packet = finish_multinode();
+            }
+        }
+        break;
+
     default:
         MXB_SWARNING("Unexpected response" << reply.to_string() << " " << reply.describe());
         m_pSession->kill();
@@ -204,7 +272,7 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
 
     if (route)
     {
-        mxb_assert(backend == m_main);
+        mxb_assert(packet);
         rv = mxs::RouterSession::clientReply(std::move(packet), down, reply);
     }
 
@@ -229,6 +297,8 @@ bool XRouterSession::route_queued()
         switch (m_state)
         {
         case State::WAIT_SOLO:
+        case State::WAIT_MAIN:
+        case State::WAIT_SECONDARY:
             again = false;
             break;
 
@@ -256,4 +326,13 @@ bool XRouterSession::all_backends_idle() const
 std::string XRouterSession::describe(const GWBUF& buffer)
 {
     return m_pSession->protocol()->describe(buffer);
+}
+
+GWBUF XRouterSession::finish_multinode()
+{
+    GWBUF packet = std::move(m_response);
+    m_response.clear();
+    m_packets.clear();
+    m_state = State::IDLE;
+    return packet;
 }
