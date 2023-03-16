@@ -28,21 +28,24 @@ public:
 private:
     enum class State
     {
+        INIT,
         IDLE,
+        SOLO,
+        WAIT_SOLO,
         BUSY,
-        ROUTE_QUEUED,
     };
 
-    bool route_query(GWBUF&& packet);
-    bool route_to_one(GWBUF&& packet);
+    bool route_to_one(GWBUF&& packet, State next_state);
+    bool route_solo(GWBUF&& packet);
     bool route_to_all(GWBUF&& packet);
     bool route_queued();
-    bool all_backends_idle();
+    bool all_backends_idle() const;
 
+    std::string                 describe(const GWBUF& buffer);
     mxs::Backend::response_type response_type(mxs::Backend* backend, const GWBUF& buffer);
 
     XRouter&         m_router;
-    State            m_state{State::IDLE};
+    State            m_state{State::INIT};
     SBackends        m_backends;
     mxs::Backend*    m_main;
     std::list<GWBUF> m_queue;
