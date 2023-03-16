@@ -4279,13 +4279,10 @@ public:
         return mariadb::is_com_prepare(stmt);
     }
 
-    Parser& parser() override
+    std::unique_ptr<Parser> create_parser() const override
     {
-        return m_parser;
+        return std::make_unique<MysqlParser>();
     }
-
-private:
-    MysqlParser m_parser;
 };
 
 MysqlParserPlugin mysql_plugin;

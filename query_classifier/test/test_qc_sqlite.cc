@@ -40,6 +40,11 @@ public:
         {
             throw std::runtime_error("Failed to load "s + zParser_plugin);
         }
+
+        m_sParser = m_pPlugin->create_parser();
+
+        uint64_t version = 10 * 1000 * 3 * 100;
+        m_sParser->set_server_version(version);
     }
 
     ~Tester()
@@ -54,21 +59,21 @@ public:
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_pPlugin->parser().get_operation(buffer);
+        return m_sParser->get_operation(buffer);
     }
 
     uint32_t get_type(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_pPlugin->parser().get_type_mask(buffer);
+        return m_sParser->get_type_mask(buffer);
     }
 
     mxs::Parser::KillInfo get_kill(const std::string& sql)
     {
         GWBUF buffer = mariadb::create_query(sql);
 
-        return m_pPlugin->parser().get_kill_info(buffer);
+        return m_sParser->get_kill_info(buffer);
     }
 
 private:
@@ -89,11 +94,6 @@ private:
                 mxs::ParserPlugin::unload(pPlugin);
                 pPlugin = nullptr;
             }
-            else
-            {
-                uint64_t version = 10 * 1000 * 3 * 100;
-                pPlugin->parser().set_server_version(version);
-            }
         }
         else
         {
@@ -103,7 +103,8 @@ private:
         return pPlugin;
     }
 
-    mxs::ParserPlugin* m_pPlugin = nullptr;
+    mxs::ParserPlugin*           m_pPlugin = nullptr;
+    std::unique_ptr<mxs::Parser> m_sParser;
 };
 
 static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode>> test_cases

@@ -100,10 +100,9 @@ public:
     void set_server_version(uint64_t version) override;
 
 protected:
-    CachingParser(ParserPlugin* pPlugin);
+    CachingParser(std::unique_ptr<Parser> sParser);
 
-    ParserPlugin& m_plugin;
-    mxs::Parser&  m_parser;
+    std::unique_ptr<Parser> m_sParser;
 };
 
 }

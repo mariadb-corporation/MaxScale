@@ -298,9 +298,9 @@ static void update_time(timespec* pResult, timespec& start, timespec& finish)
     pResult->tv_sec += difference.tv_sec;
 }
 
-bool compare_parse(ParserPlugin* pPlugin1,
+bool compare_parse(Parser* pParser1,
                    GWBUF& copy1,
-                   ParserPlugin* pPlugin2,
+                   Parser* pParser2,
                    GWBUF& copy2)
 {
     bool success = false;
@@ -310,12 +310,12 @@ bool compare_parse(ParserPlugin* pPlugin1,
     struct timespec finish;
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    Parser::Result rv1 = pPlugin1->parser().parse(copy1, Parser::COLLECT_ESSENTIALS);
+    Parser::Result rv1 = pParser1->parse(copy1, Parser::COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time1, start, finish);
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    Parser::Result rv2 = pPlugin2->parser().parse(copy2, Parser::COLLECT_ESSENTIALS);
+    Parser::Result rv2 = pParser2->parse(copy2, Parser::COLLECT_ESSENTIALS);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time2, start, finish);
 
@@ -350,16 +350,16 @@ bool compare_parse(ParserPlugin* pPlugin1,
     return success;
 }
 
-bool compare_get_type(ParserPlugin* pPlugin1,
+bool compare_get_type(Parser* pParser1,
                       GWBUF& copy1,
-                      ParserPlugin* pPlugin2,
+                      Parser* pParser2,
                       GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_type_mask         : ";
 
-    uint32_t rv1 = pPlugin1->parser().get_type_mask(copy1);
-    uint32_t rv2 = pPlugin2->parser().get_type_mask(copy2);
+    uint32_t rv1 = pParser1->get_type_mask(copy1);
+    uint32_t rv2 = pParser2->get_type_mask(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -414,16 +414,16 @@ bool compare_get_type(ParserPlugin* pPlugin1,
     return success;
 }
 
-bool compare_get_operation(ParserPlugin* pPlugin1,
+bool compare_get_operation(Parser* pParser1,
                            GWBUF& copy1,
-                           ParserPlugin* pPlugin2,
+                           Parser* pParser2,
                            GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_operation         : ";
 
-    sql::OpCode rv1 = pPlugin1->parser().get_operation(copy1);
-    sql::OpCode rv2 = pPlugin2->parser().get_operation(copy2);
+    sql::OpCode rv1 = pParser1->get_operation(copy1);
+    sql::OpCode rv2 = pParser2->get_operation(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -446,16 +446,16 @@ bool compare_get_operation(ParserPlugin* pPlugin1,
     return success;
 }
 
-bool compare_get_created_table_name(ParserPlugin* pPlugin1,
+bool compare_get_created_table_name(Parser* pParser1,
                                     GWBUF& copy1,
-                                    ParserPlugin* pPlugin2,
+                                    Parser* pParser2,
                                     GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_created_table_name: ";
 
-    std::string_view rv1 = pPlugin1->parser().get_created_table_name(copy1);
-    std::string_view rv2 = pPlugin2->parser().get_created_table_name(copy2);
+    std::string_view rv1 = pParser1->get_created_table_name(copy1);
+    std::string_view rv2 = pParser2->get_created_table_name(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -475,9 +475,9 @@ bool compare_get_created_table_name(ParserPlugin* pPlugin1,
     return success;
 }
 
-bool compare_get_table_names(ParserPlugin* pPlugin1,
+bool compare_get_table_names(Parser* pParser1,
                              GWBUF& copy1,
-                             ParserPlugin* pPlugin2,
+                             Parser* pParser2,
                              GWBUF& copy2)
 {
     bool success = false;
@@ -488,8 +488,8 @@ bool compare_get_table_names(ParserPlugin* pPlugin1,
     int n1 = 0;
     int n2 = 0;
 
-    std::vector<Parser::TableName> rv1 = pPlugin1->parser().get_table_names(copy1);
-    std::vector<Parser::TableName> rv2 = pPlugin2->parser().get_table_names(copy2);
+    std::vector<Parser::TableName> rv1 = pParser1->get_table_names(copy1);
+    std::vector<Parser::TableName> rv2 = pParser2->get_table_names(copy2);
 
     // The order need not be the same, so let's compare a set.
     std::set<Parser::TableName> names1(rv1.begin(), rv1.end());
@@ -579,16 +579,16 @@ ostream& operator<<(ostream& o, const std::set<string>& s)
     return o;
 }
 
-bool compare_get_database_names(ParserPlugin* pPlugin1,
+bool compare_get_database_names(Parser* pParser1,
                                 GWBUF& copy1,
-                                ParserPlugin* pPlugin2,
+                                Parser* pParser2,
                                 GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_database_names    : ";
 
-    std::vector<std::string_view> rv1 = pPlugin1->parser().get_database_names(copy1);
-    std::vector<std::string_view> rv2 = pPlugin2->parser().get_database_names(copy2);
+    std::vector<std::string_view> rv1 = pParser1->get_database_names(copy1);
+    std::vector<std::string_view> rv2 = pParser2->get_database_names(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -608,16 +608,16 @@ bool compare_get_database_names(ParserPlugin* pPlugin1,
     return success;
 }
 
-bool compare_get_prepare_name(ParserPlugin* pPlugin1,
+bool compare_get_prepare_name(Parser* pParser1,
                               GWBUF& copy1,
-                              ParserPlugin* pPlugin2,
+                              Parser* pParser2,
                               GWBUF& copy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_prepare_name      : ";
 
-    std::string_view rv1 = pPlugin1->parser().get_prepare_name(copy1);
-    std::string_view rv2 = pPlugin2->parser().get_prepare_name(copy2);
+    std::string_view rv1 = pParser1->get_prepare_name(copy1);
+    std::string_view rv2 = pParser2->get_prepare_name(copy2);
 
     stringstream ss;
     ss << HEADING;
@@ -799,9 +799,9 @@ bool operator==(const QcFieldInfo& lhs, const QcFieldInfo& rhs)
     return lhs.eq(rhs);
 }
 
-bool compare_get_field_info(ParserPlugin* pPlugin1,
+bool compare_get_field_info(Parser* pParser1,
                             GWBUF& copy1,
-                            ParserPlugin* pPlugin2,
+                            Parser* pParser2,
                             GWBUF& copy2)
 {
     bool success = false;
@@ -812,8 +812,8 @@ bool compare_get_field_info(ParserPlugin* pPlugin1,
     size_t n_infos1;
     size_t n_infos2;
 
-    pPlugin1->parser().get_field_info(copy1, &infos1, &n_infos1);
-    pPlugin2->parser().get_field_info(copy2, &infos2, &n_infos2);
+    pParser1->get_field_info(copy1, &infos1, &n_infos1);
+    pParser2->get_field_info(copy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1037,9 +1037,9 @@ void collect_missing_function_names(const std::set<QcFunctionInfo>& one,
     }
 }
 
-bool compare_get_function_info(ParserPlugin* pPlugin1,
+bool compare_get_function_info(Parser* pParser1,
                                GWBUF& copy1,
-                               ParserPlugin* pPlugin2,
+                               Parser* pParser2,
                                GWBUF& copy2)
 {
     bool success = false;
@@ -1050,8 +1050,8 @@ bool compare_get_function_info(ParserPlugin* pPlugin1,
     size_t n_infos1;
     size_t n_infos2;
 
-    pPlugin1->parser().get_function_info(copy1, &infos1, &n_infos1);
-    pPlugin2->parser().get_function_info(copy2, &infos2, &n_infos2);
+    pParser1->get_function_info(copy1, &infos1, &n_infos1);
+    pParser2->get_function_info(copy2, &infos2, &n_infos2);
 
     stringstream ss;
     ss << HEADING;
@@ -1142,22 +1142,22 @@ bool compare_get_function_info(ParserPlugin* pPlugin1,
 }
 
 
-bool compare(ParserPlugin* pPlugin1,
+bool compare(Parser* pParser1,
              GWBUF& copy1,
-             ParserPlugin* pPlugin2,
+             Parser* pParser2,
              GWBUF& copy2)
 {
     int errors = 0;
 
-    errors += !compare_parse(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_type(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_operation(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_created_table_name(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_table_names(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_database_names(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_prepare_name(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_field_info(pPlugin1, copy1, pPlugin2, copy2);
-    errors += !compare_get_function_info(pPlugin1, copy1, pPlugin2, copy2);
+    errors += !compare_parse(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_type(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_operation(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_created_table_name(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_table_names(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_database_names(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_prepare_name(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_field_info(pParser1, copy1, pParser2, copy2);
+    errors += !compare_get_function_info(pParser1, copy1, pParser2, copy2);
 
     if (global.result_printed)
     {
@@ -1166,23 +1166,23 @@ bool compare(ParserPlugin* pPlugin1,
 
     bool success = (errors == 0);
 
-    uint32_t type_mask1 = pPlugin1->parser().get_type_mask(copy1);
-    uint32_t type_mask2 = pPlugin2->parser().get_type_mask(copy2);
+    uint32_t type_mask1 = pParser1->get_type_mask(copy1);
+    uint32_t type_mask2 = pParser2->get_type_mask(copy2);
 
     if ((type_mask1 == type_mask2)
         && ((type_mask1 & sql::TYPE_PREPARE_NAMED_STMT) || (type_mask1 & sql::TYPE_PREPARE_STMT)))
     {
-        GWBUF* pPreparable1 = pPlugin1->parser().get_preparable_stmt(copy1);
-        GWBUF* pPreparable2 = pPlugin2->parser().get_preparable_stmt(copy2);
+        GWBUF* pPreparable1 = pParser1->get_preparable_stmt(copy1);
+        GWBUF* pPreparable2 = pParser2->get_preparable_stmt(copy2);
 
         if (pPreparable1 && pPreparable2)
         {
             string indent = global.indent;
             global.indent += string(4, ' ');
 
-            success = compare(pPlugin1,
+            success = compare(pParser1,
                               *pPreparable1,
-                              pPlugin2,
+                              pParser2,
                               *pPreparable2);
 
             global.indent = indent;
@@ -1192,12 +1192,12 @@ bool compare(ParserPlugin* pPlugin1,
     return success;
 }
 
-bool compare(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, const string& s)
+bool compare(Parser* pParser1, Parser* pParser2, const string& s)
 {
     GWBUF* pCopy1 = create_gwbuf(s);
     GWBUF* pCopy2 = create_gwbuf(s);
 
-    bool success = compare(pPlugin1, *pCopy1, pPlugin2, *pCopy2);
+    bool success = compare(pParser1, *pCopy1, pParser2, *pCopy2);
 
     if (success)
     {
@@ -1209,13 +1209,13 @@ bool compare(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, const string& s)
             switch (sql_mode)
             {
             case SetSqlModeParser::DEFAULT:
-                pPlugin1->parser().set_sql_mode(Parser::SqlMode::DEFAULT);
-                pPlugin2->parser().set_sql_mode(Parser::SqlMode::DEFAULT);
+                pParser1->set_sql_mode(Parser::SqlMode::DEFAULT);
+                pParser2->set_sql_mode(Parser::SqlMode::DEFAULT);
                 break;
 
             case SetSqlModeParser::ORACLE:
-                pPlugin1->parser().set_sql_mode(Parser::SqlMode::ORACLE);
-                pPlugin2->parser().set_sql_mode(Parser::SqlMode::ORACLE);
+                pParser1->set_sql_mode(Parser::SqlMode::ORACLE);
+                pParser2->set_sql_mode(Parser::SqlMode::ORACLE);
                 break;
 
             default:
@@ -1252,7 +1252,7 @@ static void trim(std::string& s)
     rtrim(s);
 }
 
-int run(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, istream& in)
+int run(Parser* pParser1, Parser* pParser2, istream& in)
 {
     bool stop = false;      // Whether we should exit.
 
@@ -1272,7 +1272,7 @@ int run(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, istream& in)
             report_query();
         }
 
-        bool success = compare(pPlugin1, pPlugin2, global.query);
+        bool success = compare(pParser1, pParser2, global.query);
 
         if (!success)
         {
@@ -1290,7 +1290,7 @@ int run(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, istream& in)
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-int run(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, const string& statement)
+int run(Parser* pParser1, Parser* pParser2, const string& statement)
 {
     global.query = statement;
 
@@ -1302,7 +1302,7 @@ int run(ParserPlugin* pPlugin1, ParserPlugin* pPlugin2, const string& statement)
         report_query();
     }
 
-    if (!compare(pPlugin1, pPlugin2, global.query))
+    if (!compare(pParser1, pParser2, global.query))
     {
         ++global.n_errors;
     }
@@ -1477,6 +1477,9 @@ int main(int argc, char* argv[])
                         pPlugin2 = pPlugin1;
                     }
 
+                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser();
+                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser();
+
                     do
                     {
                         ++round;
@@ -1488,11 +1491,11 @@ int main(int argc, char* argv[])
 
                         if (zStatement)
                         {
-                            rc = run(pPlugin1, pPlugin2, zStatement);
+                            rc = run(sParser1.get(), sParser2.get(), zStatement);
                         }
                         else if (n == 1)
                         {
-                            rc = run(pPlugin1, pPlugin2, cin);
+                            rc = run(sParser1.get(), sParser2.get(), cin);
                         }
                         else
                         {
@@ -1502,7 +1505,7 @@ int main(int argc, char* argv[])
 
                             if (in)
                             {
-                                rc = run(pPlugin1, pPlugin2, in);
+                                rc = run(sParser1.get(), sParser2.get(), in);
                             }
                             else
                             {
@@ -1538,6 +1541,9 @@ int main(int argc, char* argv[])
                          << global.time2.tv_sec << "."
                          << global.time2.tv_nsec
                          << endl;
+
+                    sParser1.reset();
+                    sParser2.reset();
 
                     unload_all_modules();
                 }

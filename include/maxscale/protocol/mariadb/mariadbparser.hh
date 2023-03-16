@@ -22,7 +22,7 @@ public:
     MariaDBParser(const MariaDBParser&) = delete;
     MariaDBParser& operator=(const MariaDBParser&) = delete;
 
-    MariaDBParser(mxs::ParserPlugin* pPlugin);
+    MariaDBParser(std::unique_ptr<mxs::Parser> sParser);
     ~MariaDBParser();
 
     static MariaDBParser& get();

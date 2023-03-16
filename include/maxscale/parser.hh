@@ -381,9 +381,9 @@ public:
     virtual bool is_prepare(GWBUF& stmt) const = 0;
 
     /**
-     * @return The parser provided by the plugin.
+     * @return A new parser.
      */
-    virtual Parser& parser() = 0;
+    virtual std::unique_ptr<Parser> create_parser() const = 0;
 };
 
 

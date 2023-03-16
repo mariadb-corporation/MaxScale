@@ -121,10 +121,10 @@ public:
         return i != m_infos.end() ? i->second.sInfo.get() : nullptr;
     }
 
-    std::shared_ptr<QC_STMT_INFO> get(mxs::ParserPlugin* pPlugin, std::string_view canonical_stmt)
+    std::shared_ptr<QC_STMT_INFO> get(mxs::Parser* pParser, std::string_view canonical_stmt)
     {
         std::shared_ptr<QC_STMT_INFO> sInfo;
-        mxs::Parser::SqlMode sql_mode = pPlugin->parser().get_sql_mode();
+        mxs::Parser::SqlMode sql_mode = pParser->get_sql_mode();
 
         auto i = m_infos.find(canonical_stmt);
 
@@ -156,7 +156,7 @@ public:
         return sInfo;
     }
 
-    void insert(mxs::ParserPlugin* pPlugin,
+    void insert(mxs::Parser* pParser,
                 std::string_view canonical_stmt,
                 std::shared_ptr<QC_STMT_INFO> sInfo)
     {
@@ -192,10 +192,10 @@ public:
 
             if (m_stats.size + size <= cache_max_size)
             {
-                mxs::Parser::SqlMode sql_mode = pPlugin->parser().get_sql_mode();
+                mxs::Parser::SqlMode sql_mode = pParser->get_sql_mode();
 
                 m_infos.emplace(canonical_stmt,
-                                Entry(pPlugin, std::move(sInfo), sql_mode, this_thread.options));
+                                Entry(pParser, std::move(sInfo), sql_mode, this_thread.options));
 
                 ++m_stats.inserts;
                 m_stats.size += size;
@@ -227,7 +227,7 @@ public:
                 CachingParser::Entry e {};
 
                 e.hits = entry.hits;
-                e.result = entry.pPlugin->get_result_from_info(entry.sInfo.get());
+                e.result = entry.pParser->plugin().get_result_from_info(entry.sInfo.get());
 
                 state.insert(std::make_pair(stmt, e));
             }
@@ -237,7 +237,8 @@ public:
 
                 e.hits += entry.hits;
 #if defined (SS_DEBUG)
-                mxs::Parser::StmtResult result = entry.pPlugin->get_result_from_info(entry.sInfo.get());
+                auto& plugin = entry.pParser->plugin();
+                mxs::Parser::StmtResult result = plugin.get_result_from_info(entry.sInfo.get());
 
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
@@ -264,11 +265,11 @@ public:
 private:
     struct Entry
     {
-        Entry(mxs::ParserPlugin* pPlugin,
+        Entry(mxs::Parser* pParser,
               std::shared_ptr<QC_STMT_INFO> sInfo,
               mxs::Parser::SqlMode sql_mode,
               uint32_t options)
-            : pPlugin(pPlugin)
+            : pParser(pParser)
             , sInfo(std::move(sInfo))
             , sql_mode(sql_mode)
             , options(options)
@@ -276,7 +277,7 @@ private:
         {
         }
 
-        mxs::ParserPlugin*            pPlugin;
+        mxs::Parser*                  pParser;
         std::shared_ptr<QC_STMT_INFO> sInfo;
         mxs::Parser::SqlMode          sql_mode;
         uint32_t                      options;
@@ -384,8 +385,8 @@ public:
     QCInfoCacheScope(const QCInfoCacheScope&) = delete;
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
-    QCInfoCacheScope(mxs::ParserPlugin* pPlugin, GWBUF* pStmt)
-        : m_plugin(*pPlugin)
+    QCInfoCacheScope(mxs::Parser* pParser, GWBUF* pStmt)
+        : m_parser(*pParser)
         , m_stmt(*pStmt)
     {
         auto pInfo = static_cast<QC_STMT_INFO*>(m_stmt.get_classifier_data_ptr());
@@ -395,14 +396,14 @@ public:
         {
             m_canonical = m_stmt.get_canonical(); // Not from the QC, but from GWBUF.
 
-            if (m_plugin.is_prepare(m_stmt))
+            if (m_parser.plugin().is_prepare(m_stmt))
             {
                 // P as in prepare, and appended so as not to cause a
                 // need for copying the data.
                 m_canonical += ":P";
             }
 
-            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(&m_plugin, m_canonical);
+            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(&m_parser, m_canonical);
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
@@ -423,10 +424,10 @@ public:
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
             // contained a COM_STMT_PREPARE.
-            std::string_view canonical = m_plugin.info_get_canonical(sInfo.get());
+            std::string_view canonical = m_parser.plugin().info_get_canonical(sInfo.get());
             mxb_assert(m_canonical == canonical);
 
-            this_thread.pInfo_cache->insert(&m_plugin, canonical, std::move(sInfo));
+            this_thread.pInfo_cache->insert(&m_parser, canonical, std::move(sInfo));
         }
         else if (!exclude)
         {   // The size might have changed
@@ -442,16 +443,16 @@ public:
     }
 
 private:
-    mxs::ParserPlugin& m_plugin;
-    GWBUF&             m_stmt;
-    std::string        m_canonical;
-    size_t             m_info_size_before;
+    mxs::Parser& m_parser;
+    GWBUF&       m_stmt;
+    std::string  m_canonical;
+    size_t       m_info_size_before;
 
     bool exclude_from_cache() const
     {
         constexpr const int is_autocommit =
             mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
-        uint32_t type_mask = m_plugin.parser().get_type_mask(m_stmt);
+        uint32_t type_mask = m_parser.get_type_mask(m_stmt);
         return (type_mask & is_autocommit) != 0;
     }
 };
@@ -461,9 +462,8 @@ private:
 namespace maxscale
 {
 
-CachingParser::CachingParser(ParserPlugin* pPlugin)
-    : m_plugin(*pPlugin)
-    , m_parser(pPlugin->parser())
+CachingParser::CachingParser(std::unique_ptr<Parser> sParser)
+    : m_sParser(std::move(sParser))
 {
 }
 
@@ -720,103 +720,103 @@ void CachingParser::set_thread_cache_enabled(bool enabled)
 
 mxs::ParserPlugin& CachingParser::plugin() const
 {
-    return m_plugin;
+    return m_sParser->plugin();
 }
 
 Parser::Result CachingParser::parse(GWBUF& stmt, uint32_t collect) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
 
-    return m_parser.parse(stmt, collect);
+    return m_sParser->parse(stmt, collect);
 }
 
 std::string_view CachingParser::get_created_table_name(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_created_table_name(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_created_table_name(stmt);
 }
 
 CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_database_names(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_database_names(stmt);
 }
 
 void CachingParser::get_field_info(GWBUF& stmt,
                                    const FieldInfo** ppInfos,
                                    size_t* pnInfos) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    m_parser.get_field_info(stmt, ppInfos, pnInfos);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    m_sParser->get_field_info(stmt, ppInfos, pnInfos);
 }
 
 void CachingParser::get_function_info(GWBUF& stmt,
                                       const FunctionInfo** ppInfos,
                                       size_t* pnInfos) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    m_parser.get_function_info(stmt, ppInfos, pnInfos);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    m_sParser->get_function_info(stmt, ppInfos, pnInfos);
 }
 
 Parser::KillInfo CachingParser::get_kill_info(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_kill_info(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_kill_info(stmt);
 }
 
 sql::OpCode CachingParser::get_operation(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_operation(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_operation(stmt);
 }
 
 uint32_t CachingParser::get_options() const
 {
-    return m_parser.get_options();
+    return m_sParser->get_options();
 }
 
 GWBUF* CachingParser::get_preparable_stmt(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_preparable_stmt(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_preparable_stmt(stmt);
 }
 
 std::string_view CachingParser::get_prepare_name(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_prepare_name(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_prepare_name(stmt);
 }
 
 uint64_t CachingParser::get_server_version() const
 {
-    return m_parser.get_server_version();
+    return m_sParser->get_server_version();
 }
 
 Parser::SqlMode CachingParser::get_sql_mode() const
 {
-    return m_parser.get_sql_mode();
+    return m_sParser->get_sql_mode();
 }
 
 CachingParser::TableNames CachingParser::get_table_names(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_table_names(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_table_names(stmt);
 }
 
 uint32_t CachingParser::get_trx_type_mask(GWBUF& stmt) const
 {
-    return m_parser.get_trx_type_mask(stmt);
+    return m_sParser->get_trx_type_mask(stmt);
 }
 
 uint32_t CachingParser::get_type_mask(GWBUF& stmt) const
 {
-    QCInfoCacheScope scope(&m_plugin, &stmt);
-    return m_parser.get_type_mask(stmt);
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->get_type_mask(stmt);
 }
 
 bool CachingParser::set_options(uint32_t options)
 {
-    bool rv = m_parser.set_options(options);
+    bool rv = m_sParser->set_options(options);
 
     if (rv)
     {
@@ -828,12 +828,12 @@ bool CachingParser::set_options(uint32_t options)
 
 void CachingParser::set_sql_mode(Parser::SqlMode sql_mode)
 {
-    m_parser.set_sql_mode(sql_mode);
+    m_sParser->set_sql_mode(sql_mode);
 }
 
 void CachingParser::set_server_version(uint64_t version)
 {
-    m_parser.set_server_version(version);
+    m_sParser->set_server_version(version);
 }
 
 }
