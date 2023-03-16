@@ -520,13 +520,23 @@ GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
                 auto values = pg::extract_response_fields(it, len + 1);
                 std::string_view sqlstate = values['C'];
                 std::string_view errmsg = values['M'];
-                m_reply.set_error(0, sqlstate.begin(), sqlstate.end(), errmsg.begin(), errmsg.end());
+                m_reply.set_error(1, sqlstate.begin(), sqlstate.end(), errmsg.begin(), errmsg.end());
             }
+            break;
+
+        case pg::NOTICE_RESPONSE:
+            m_reply.set_num_warnings(1);
             break;
 
         case pg::READY_FOR_QUERY:
             // Result complete, the next result will be delivered in a separate clientReply call.
             m_reply.set_reply_state(mxs::ReplyState::DONE);
+
+            // No rows and no errors means it's an "OK response"
+            if (m_reply.rows_read() == 0 && !m_reply.error())
+            {
+                m_reply.set_is_ok(true);
+            }
             break;
 
         case pg::DATA_ROW:
@@ -536,12 +546,15 @@ GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
 
         case pg::ROW_DESCRIPTION:
             m_reply.set_reply_state(mxs::ReplyState::RSET_COLDEF);
+            m_reply.add_field_count(pg::get_uint16(it + pg::HEADER_LEN));
             break;
         }
 
         size += len + 1;
         it += len + 1;
     }
+
+    m_reply.add_bytes(size);
 
     mxb_assert(size <= buffer.length());
     return buffer.split(size);
