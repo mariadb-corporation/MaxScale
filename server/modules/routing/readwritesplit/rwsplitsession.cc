@@ -519,7 +519,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
 
     if (reply.is_complete())
     {
-        if (backend->unexpected_response())
+        if (backend->is_idle())
         {
             MXB_ERROR("Unexpected response from '%s', closing session: %s",
                       backend->name(), reply.describe().c_str());

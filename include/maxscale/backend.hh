@@ -173,11 +173,14 @@ public:
     }
 
     /**
-     * @brief Check if a response is unexpected
+     * @brief Check if any results are expected
      *
-     * @return True if the result was not expected
+     * Ignored results count as expected results. Use is_waiting_result() to see if a result is expected that
+     * should be routed to a client.
+     *
+     * @return True if no results are expected
      */
-    bool unexpected_response() const
+    bool is_idle() const
     {
         return m_responses.empty();
     }
