@@ -376,6 +376,11 @@ public:
     virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
 
     /**
+     * @return True, if @c is a prepare statement, false otherwise.
+     */
+    virtual bool is_prepare(GWBUF& stmt) const = 0;
+
+    /**
      * @return The parser provided by the plugin.
      */
     virtual Parser& parser() = 0;

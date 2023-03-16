@@ -4274,6 +4274,11 @@ public:
         return std::string_view {};
     }
 
+    bool is_prepare(GWBUF& stmt) const override
+    {
+        return mariadb::is_com_prepare(stmt);
+    }
+
     Parser& parser() override
     {
         return m_parser;

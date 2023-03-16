@@ -18,8 +18,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
-// TODO: Remove mariadb dependency.
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/routingworker.hh>
 
 namespace
@@ -387,7 +385,7 @@ public:
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
     QCInfoCacheScope(mxs::ParserPlugin* pPlugin, GWBUF* pStmt)
-        : m_pPlugin(pPlugin)
+        : m_plugin(*pPlugin)
         , m_stmt(*pStmt)
     {
         auto pInfo = static_cast<QC_STMT_INFO*>(m_stmt.get_classifier_data_ptr());
@@ -397,15 +395,14 @@ public:
         {
             m_canonical = m_stmt.get_canonical(); // Not from the QC, but from GWBUF.
 
-            // TODO: Remove mariadb dependency.
-            if (mariadb::is_com_prepare(m_stmt))
+            if (m_plugin.is_prepare(m_stmt))
             {
                 // P as in prepare, and appended so as not to cause a
                 // need for copying the data.
                 m_canonical += ":P";
             }
 
-            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(m_pPlugin, m_canonical);
+            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(&m_plugin, m_canonical);
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
@@ -426,10 +423,10 @@ public:
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
             // contained a COM_STMT_PREPARE.
-            std::string_view canonical = m_pPlugin->info_get_canonical(sInfo.get());
+            std::string_view canonical = m_plugin.info_get_canonical(sInfo.get());
             mxb_assert(m_canonical == canonical);
 
-            this_thread.pInfo_cache->insert(m_pPlugin, canonical, std::move(sInfo));
+            this_thread.pInfo_cache->insert(&m_plugin, canonical, std::move(sInfo));
         }
         else if (!exclude)
         {   // The size might have changed
@@ -445,7 +442,7 @@ public:
     }
 
 private:
-    mxs::ParserPlugin* m_pPlugin;
+    mxs::ParserPlugin& m_plugin;
     GWBUF&             m_stmt;
     std::string        m_canonical;
     size_t             m_info_size_before;
@@ -454,7 +451,7 @@ private:
     {
         constexpr const int is_autocommit =
             mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
-        uint32_t type_mask = m_pPlugin->parser().get_type_mask(m_stmt);
+        uint32_t type_mask = m_plugin.parser().get_type_mask(m_stmt);
         return (type_mask & is_autocommit) != 0;
     }
 };

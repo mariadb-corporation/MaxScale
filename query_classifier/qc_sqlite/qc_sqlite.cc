@@ -5718,6 +5718,11 @@ public:
         return qc_sqlite_info_get_canonical(info);
     }
 
+    bool is_prepare(GWBUF& stmt) const override
+    {
+        return mariadb::is_com_prepare(stmt);
+    }
+
     Parser& parser() override
     {
         return m_parser;
