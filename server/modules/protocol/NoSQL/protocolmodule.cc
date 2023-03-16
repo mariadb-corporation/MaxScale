@@ -97,8 +97,14 @@ string ProtocolModule::auth_default() const
 
 GWBUF ProtocolModule::make_error(int errnum, const std::string& sqlstate, const std::string& message) const
 {
-    mxb_assert(!true);
-    return GWBUF{};
+    return mariadb::create_error_packet(0, errnum, sqlstate.c_str(), message.c_str());
+}
+
+std::string_view ProtocolModule::get_sql(const GWBUF& packet) const
+{
+    // By the time this function may be called, 'packet' is a
+    // MariaDB protocol packet, and not a NoSQL protocol packet.
+    return mariadb::get_sql(packet);
 }
 
 std::string ProtocolModule::describe(const GWBUF& packet, int body_max_len) const

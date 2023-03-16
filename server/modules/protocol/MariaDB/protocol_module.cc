@@ -104,6 +104,11 @@ GWBUF MySQLProtocolModule::make_error(int errnum, const std::string& sqlstate,
     return mariadb::create_error_packet(0, errnum, sqlstate.c_str(), message.c_str());
 }
 
+std::string_view MySQLProtocolModule::get_sql(const GWBUF& packet) const
+{
+    return mariadb::get_sql(packet);
+}
+
 std::string MySQLProtocolModule::describe(const GWBUF& packet, int sql_max_len) const
 {
     return get_description(packet, sql_max_len);

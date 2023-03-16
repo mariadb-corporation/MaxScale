@@ -19,14 +19,14 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
-class MySQLProtocolModule : public mxs::ProtocolModule
+class MySQLProtocolModule final : public mxs::ProtocolModule
 {
 public:
     ~MySQLProtocolModule() override = default;
 
     static MySQLProtocolModule* create(const std::string& name, mxs::Listener* listener);
 
-    mxs::config::Configuration& getConfiguration() override final;
+    mxs::config::Configuration& getConfiguration() override;
 
     std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
@@ -36,8 +36,9 @@ public:
 
     std::string auth_default() const override;
     GWBUF       make_error(int errnum, const std::string& sqlstate,
-                           const std::string& message) const override final;
-    std::string describe(const GWBUF& packet, int body_max_len) const override final;
+                           const std::string& message) const override;
+    std::string_view get_sql(const GWBUF& packet) const override;
+    std::string describe(const GWBUF& packet, int body_max_len) const override;
 
     static std::string get_description(const GWBUF& packet, int body_max_len);
     GWBUF              make_query(std::string_view sql) const override;

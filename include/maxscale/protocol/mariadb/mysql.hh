@@ -209,6 +209,8 @@ GWBUF get_next_MySQL_packet(GWBUF& buffer);
 
 GWBUF create_ok_packet();
 
+std::string_view get_sql(const GWBUF& packet);
+
 /**
  * Create a MySQL ERR packet.
  *

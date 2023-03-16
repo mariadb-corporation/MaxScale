@@ -867,4 +867,22 @@ std::string extract_error(const GWBUF* buffer)
 
     return rval;
 }
+
+std::string_view get_sql(const GWBUF& packet)
+{
+    std::string_view rv;
+
+    if (is_com_query_or_prepare(packet))
+    {
+        size_t nHeader = MYSQL_HEADER_LEN + 1;
+
+        const char* pSql = reinterpret_cast<const char*>(packet.data() + nHeader);
+        size_t nSql = packet.length() - nHeader;
+
+        rv = std::string_view { pSql, nSql };
+    }
+
+    return rv;
+}
+
 }

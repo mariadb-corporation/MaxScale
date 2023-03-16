@@ -106,6 +106,15 @@ public:
     virtual GWBUF make_error(int errnum, const std::string& sqlstate, const std::string& message) const = 0;
 
     /**
+     * If the packet contains SQL, return it as a string_view.
+     *
+     * @return Non-empty string_view if the packet contains SQL, an empty string_view otherwise.
+     *
+     * @note The returned string_view is valid only as long as @c packet is.
+     */
+    virtual std::string_view get_sql(const GWBUF& packet) const = 0;
+
+    /**
      * Returns a human-readable description of the @c packet, which is assumed
      * to be a protocol packet obtained from a client connection created using
      * this protocol module.

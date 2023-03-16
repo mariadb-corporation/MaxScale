@@ -96,6 +96,12 @@ public:
         return GWBUF{};
     }
 
+    std::string_view get_sql(const GWBUF& packet) const override
+    {
+        mxb_assert(!true);
+        return std::string_view{};
+    }
+
     std::string describe(const GWBUF& packet, int body_max_len) const override
     {
         mxb_assert(!true);
