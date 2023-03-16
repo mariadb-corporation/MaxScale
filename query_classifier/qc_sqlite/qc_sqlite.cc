@@ -1613,7 +1613,7 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask = mxs::sql::TYPE_WRITE;
-        m_operation = mxs::sql::OP_ALTER;
+        m_operation = mxs::sql::OP_ALTER_TABLE;
     }
 
     void mxs_sqlite3AlterBeginAddColumn(Parse* pParse, SrcList* pSrcList)

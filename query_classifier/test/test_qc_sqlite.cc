@@ -131,12 +131,12 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode>> test_cas
     {
         "create table tmp as select * from t1;",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_CREATE
+        mxs::sql::OP_CREATE_TABLE
     },
     {
         "create temporary table tmp as select * from t1;",
         mxs::sql::TYPE_WRITE | mxs::sql::TYPE_CREATE_TMP_TABLE,
-        mxs::sql::OP_CREATE
+        mxs::sql::OP_CREATE_TABLE
     },
     {
         "select @@server_id;",
