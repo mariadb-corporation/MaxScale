@@ -34,7 +34,6 @@ using std::string;
 using std::vector;
 using std::move;
 using mxq::MariaDB;
-using MutexLock = std::unique_lock<std::mutex>;
 using Guard = std::lock_guard<std::mutex>;
 using UserEntry = mariadb::UserEntry;
 using UserEntryType = mariadb::UserEntryType;
@@ -44,21 +43,13 @@ using ServerType = SERVER::VersionInfo::Type;
 
 namespace
 {
-
 constexpr auto acquire = std::memory_order_acquire;
-constexpr auto release = std::memory_order_release;
 constexpr auto relaxed = std::memory_order_relaxed;
 constexpr auto npos = string::npos;
 
 const int ipv4min_len = 7;      // 1.1.1.1
 const string mysql_default_auth = "mysql_native_password";
 const string info_schema = "information_schema";    // Any user can access this even without a grant.
-
-/** How many times users can be successfully loaded before throttling kicks in. */
-const int throttling_start_loads = 5;
-
-/** Max user load attempts when starting. If this limit is exceeded, throttling kicks in. */
-const int user_load_fail_limit = 10;
 
 namespace mariadb_queries
 {
@@ -102,68 +93,8 @@ const string db_grants_query = "SELECT u.username, u.host, a.dbname, a.privilege
 }
 
 MariaDBUserManager::MariaDBUserManager()
-    : m_last_update{time(nullptr)}
 {
     m_userdb = std::make_shared<UserDatabase>();    // Must never be null
-}
-
-void MariaDBUserManager::start()
-{
-    mxb_assert(!m_updater_thread.joinable());
-    m_keep_running.store(true, release);
-    m_updater_thread = std::thread([this] {
-                                       updater_thread_function();
-                                   });
-    mxb::set_thread_name(m_updater_thread, "UserManager");
-    m_thread_started.wait();
-}
-
-void MariaDBUserManager::stop()
-{
-    mxb_assert(m_updater_thread.joinable());
-    m_keep_running.store(false, release);
-    m_notifier.notify_one();
-    m_updater_thread.join();
-}
-
-void MariaDBUserManager::update_user_accounts()
-{
-    {
-        Guard guard(m_notifier_lock);
-        m_update_users_requested.store(true, release);
-    }
-    m_warn_no_servers.store(true, relaxed);
-    m_notifier.notify_one();
-}
-
-void MariaDBUserManager::set_credentials(const std::string& user, const std::string& pw)
-{
-    Guard guard(m_settings_lock);
-    m_username = user;
-    m_password = pw;
-}
-
-void MariaDBUserManager::set_backends(const std::vector<SERVER*>& backends)
-{
-    Guard guard(m_settings_lock);
-    m_backends = backends;
-}
-
-void MariaDBUserManager::set_user_accounts_file(const string& filepath, UsersFileUsage file_usage)
-{
-    Guard guard(m_settings_lock);
-    m_users_file_path = filepath;
-    m_users_file_usage = file_usage;
-}
-
-void MariaDBUserManager::set_union_over_backends(bool union_over_backends)
-{
-    m_union_over_backends.store(union_over_backends, relaxed);
-}
-
-void MariaDBUserManager::set_strip_db_esc(bool strip_db_esc)
-{
-    m_strip_db_esc.store(strip_db_esc, relaxed);
 }
 
 std::string MariaDBUserManager::protocol_name() const
@@ -171,173 +102,42 @@ std::string MariaDBUserManager::protocol_name() const
     return MXS_MARIADB_PROTOCOL_NAME;
 }
 
-void MariaDBUserManager::updater_thread_function()
-{
-    using mxb::TimePoint;
-    using mxb::Duration;
-    using mxb::Clock;
-
-    // Minimum wait between update loops. User accounts should not be changing continuously.
-    const std::chrono::seconds default_min_interval(1);
-
-    // Default value for scheduled updates. Cannot set too far in the future, as the cv wait_until bugs and
-    // doesn't wait.
-    const std::chrono::hours default_max_interval(24);
-
-    bool first_iteration = true;
-    bool throttling = false;
-    TimePoint last_update = Clock::now();
-
-    auto should_stop_waiting = [this]() {
-            return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire);
-        };
-
-    while (m_keep_running.load(acquire))
-    {
-        /**
-         *  The user updating is controlled by several factors:
-         *  1) In the beginning, a hardcoded interval is used to try to repeatedly update users as
-         *  the monitor is performing its first loop.
-         *  2) User refresh requests from the owning service. These can come at any time and rate.
-         *  3) users_refresh_time, the minimum time which should pass between refreshes. This means that
-         *  rapid update requests may be ignored.
-         *  4) users_refresh_interval, the maximum time between refreshes. Users should be refreshed
-         *  automatically if this time elapses.
-         */
-        mxs::Config& glob_config = mxs::Config::get();
-        auto max_refresh_interval = glob_config.users_refresh_interval.get();
-        auto min_refresh_interval = glob_config.users_refresh_time.get();
-
-        // Calculate the earliest allowed time for next update. If throttling is not on, next update can
-        // happen immediately.
-        TimePoint next_possible_update = last_update;
-        if (throttling)
-        {
-            next_possible_update += (min_refresh_interval.count() > 0) ?
-                min_refresh_interval : default_min_interval;
-        }
-
-        // Calculate the time for the next scheduled update.
-        TimePoint next_scheduled_update = last_update;
-        if (first_iteration)
-        {
-            // Try to update immediately.
-        }
-        else if (!throttling && m_successful_loads == 0)
-        {
-            // If updating has not succeeded even once yet, keep trying again and again,
-            // with just a minimal wait.
-            next_scheduled_update += default_min_interval;
-        }
-        else
-        {
-            next_scheduled_update += (max_refresh_interval.count() > 0) ?
-                max_refresh_interval : default_max_interval;
-        }
-
-        MutexLock lock(m_notifier_lock);
-        // Wait until "next_possible_update", or until the thread should stop.
-        m_notifier.wait_until(lock, next_possible_update, should_stop_waiting);
-
-        m_can_update.store(true, release);
-        if (first_iteration)
-        {
-            // Thread has properly started and the "can_update"-state is visible to other threads.
-            m_thread_started.post();
-            first_iteration = false;
-        }
-
-        // Wait until "next_scheduled_update", or until update requested or thread stop.
-        m_notifier.wait_until(lock, next_scheduled_update, should_stop_waiting);
-        lock.unlock();
-
-        if (m_keep_running.load(acquire))
-        {
-            if (update_users())
-            {
-                m_consecutive_failed_loads = 0;
-                m_successful_loads++;
-                m_warn_no_servers.store(true, relaxed);
-            }
-            else
-            {
-                m_consecutive_failed_loads++;
-            }
-        }
-
-        /**
-         * Throttling kicks in if users have been loaded a few times, or if loading has failed repeatedly
-         * often enough. This allows a few quick user account updates at the beginning. The quick updates
-         * are useful for test situations, where users are often created just after MaxScale has started. */
-        throttling = (m_successful_loads > throttling_start_loads
-                      || m_consecutive_failed_loads > user_load_fail_limit);
-
-        if (throttling)
-        {
-            m_can_update.store(false, release);
-        }
-
-        m_service->sync_user_account_caches();
-        m_update_users_requested.store(false, release);
-        last_update = Clock::now();
-        m_last_update.store(time(nullptr), std::memory_order_relaxed);
-    }
-
-    // Possible race here: If throttling=false and m_keep_running=false, m_can_update may be momentarily
-    // "true" even when thread is exiting the loop. If a client is logging at that exact moment, the session
-    // may be put on standby without ever waking up. This is not an issue if the thread stops only when
-    // MaxScale is shutting down.
-    m_can_update.store(false, release);
-}
-
 bool MariaDBUserManager::update_users()
 {
-    string conn_user;
-    string conn_pw;
-    std::vector<SERVER*> backends;
-    string users_file_path;
-    UsersFileUsage users_file_usage;
-
-    // Copy all arraylike settings under a lock.
-    MutexLock lock(m_settings_lock);
-    conn_user = m_username;
-    conn_pw = m_password;
-    backends = m_backends;
-    users_file_path = m_users_file_path;
-    users_file_usage = m_users_file_usage;
-    lock.unlock();
+    LoadSettings sett = get_load_settings();
 
     auto temp_userdata = std::make_unique<UserDatabase>();
     UserLoadRes res1;
     UserLoadRes res2;
-    bool file_enabled = !users_file_path.empty();
+    bool file_enabled = !sett.users_file_path.empty();
 
-    if (file_enabled && users_file_usage == UsersFileUsage::FILE_ONLY_ALWAYS)
+    if (file_enabled && sett.users_file_usage == UsersFileUsage::FILE_ONLY_ALWAYS)
     {
-        res1 = load_users_from_file(users_file_path, temp_userdata.get());
+        res1 = load_users_from_file(sett.users_file_path, *temp_userdata);
     }
     else
     {
-        res1 = load_users_from_backends(move(conn_user), move(conn_pw), move(backends), *temp_userdata);
-        if (file_enabled && users_file_usage == UsersFileUsage::ADD_WHEN_LOAD_OK && res1.success)
+        res1 = load_users_from_backends(std::move(sett.conn_user), std::move(sett.conn_pw),
+                                        std::move(sett.backends), *temp_userdata);
+        if (file_enabled && sett.users_file_usage == UsersFileUsage::ADD_WHEN_LOAD_OK && res1.success)
         {
-            res2 = load_users_from_file(users_file_path, temp_userdata.get());
+            res2 = load_users_from_file(sett.users_file_path, *temp_userdata);
         }
     }
 
     if (res1.success)
     {
-        auto build_msg = [this, &res1, &res2]() {
+        auto build_msg = [this, &res1, &res2](){
                 string rval;
                 if (res2.success)
                 {
                     rval = mxb::string_printf("Read %s for service '%s'. In addition, read %s.",
-                                              res1.msg.c_str(), m_service->name(), res2.msg.c_str());
+                                              res1.msg.c_str(), svc_name(), res2.msg.c_str());
                 }
                 else
                 {
                     rval = mxb::string_printf("Read %s for service '%s'.",
-                                              res1.msg.c_str(), m_service->name());
+                                              res1.msg.c_str(), svc_name());
                 }
                 return rval;
             };
@@ -384,7 +184,7 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
     {
         sett.local_address = local_address;
     }
-    const bool union_over_backends = m_union_over_backends.load(relaxed);
+    const bool union_over_bes = union_over_backends();
 
     // Filter out unusable backends.
     auto is_unusable = [](const SERVER* srv) {
@@ -472,7 +272,7 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
                 break;
             }
 
-            if (got_data && !union_over_backends)
+            if (got_data && !union_over_bes)
             {
                 break;
             }
@@ -525,7 +325,7 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
             const char msg_fmt[] = "Using old user account query due to insufficient privileges. "
                                    "To avoid this warning, give the service user of '%s' access to "
                                    "the 'mysql.procs_priv'-table.";
-            MXB_WARNING(msg_fmt, m_service->name());
+            MXB_WARNING(msg_fmt, svc_name());
 
             multiquery[2] = mariadb_queries::db_grants_query_old;
             multiq_result = con.multiquery(multiquery);
@@ -690,7 +490,7 @@ void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_wc_grants, QResul
         };
 
     StringSetMap db_wc_grants_map = map_builder("db", std::move(db_wc_grants), false);
-    StringSetMap db_grants_map = map_builder("db", std::move(db_grants), m_strip_db_esc.load(relaxed));
+    StringSetMap db_grants_map = map_builder("db", std::move(db_grants), strip_db_esc());
     output->add_db_grants(move(db_wc_grants_map), move(db_grants_map));
 
     if (roles)
@@ -795,7 +595,7 @@ void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
     auto ind_dbname = acl->get_col_index("dbname");
     auto ind_privs = acl->get_col_index("privileges");
     bool have_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_dbname >= 0) && (ind_privs >= 0);
-    bool strip_db_esc = m_strip_db_esc.load(relaxed);
+    bool strip_db_escape = strip_db_esc();
 
     if (have_required_fields)
     {
@@ -826,7 +626,7 @@ void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
             }
             else
             {
-                if (strip_db_esc)
+                if (strip_db_escape)
                 {
                     mxb::strip_escape_chars(dbname);
                 }
@@ -856,17 +656,6 @@ MariaDBUserManager::UserDBInfo MariaDBUserManager::get_user_database() const
     return rval;
 }
 
-void MariaDBUserManager::set_service(SERVICE* service)
-{
-    mxb_assert(!m_service);
-    m_service = service;
-}
-
-bool MariaDBUserManager::can_update_immediately() const
-{
-    return m_can_update.load(acquire);
-}
-
 int MariaDBUserManager::userdb_version() const
 {
     return m_userdb_version.load(acquire);
@@ -880,16 +669,6 @@ json_t* MariaDBUserManager::users_to_json() const
         ptr_copy = m_userdb;
     }
     return ptr_copy->users_to_json();
-}
-
-time_t MariaDBUserManager::last_update() const
-{
-    return m_last_update.load(std::memory_order_relaxed);
-}
-
-SERVICE* MariaDBUserManager::service() const
-{
-    return m_service;
 }
 
 /**
@@ -985,13 +764,13 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
             const char msg[] = "Service user '%s' of service '%s' does not have 'SHOW DATABASES' or "
                                "a similar global privilege on '%s'. This may cause authentication errors on "
                                "clients logging in to a specific database.";
-            MXB_WARNING(msg, con.connection_settings().user.c_str(), m_service->name(), servername);
+            MXB_WARNING(msg, con.connection_settings().user.c_str(), svc_name(), servername);
         }
     }
 }
 
 MariaDBUserManager::UserLoadRes
-MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* output)
+MariaDBUserManager::load_users_from_file(const string& source, UserDatabase& output)
 {
     using mxb::Json;
     auto filepathc = source.c_str();
@@ -1091,7 +870,7 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* out
                         {
                             // Erase * from password if found. This is similar to mysql.user.
                             remove_star(new_entry.password);
-                            output->add_entry(move(new_entry));
+                            output.add_entry(move(new_entry));
                             n_users++;
                         }
                     }
@@ -1125,7 +904,7 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* out
                     // Add it so that client won't get an "Unknown database"-error. If using
                     // "add_when_load_ok"-mode, this should not have any effect as the entry should
                     // exist. If it doesn't, then it's the user's problem.
-                    output->add_database_name(db);
+                    output.add_database_name(db);
                 }
                 else
                 {
@@ -1136,7 +915,7 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* out
             process_array(all, grp_db, grant_handler);
             // Add all the db grants as wildcard grants, as we cannot know which type it is.
             UserDatabase::StringSetMap dummy;
-            output->add_db_grants(move(db_grants_temp), move(dummy));
+            output.add_db_grants(move(db_grants_temp), move(dummy));
         }
 
         const char grp_roles_mapping[] = "roles_mapping";
@@ -1163,7 +942,7 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* out
                 }
             };
             process_array(all, grp_roles_mapping, role_handler);
-            output->add_role_mapping(move(role_map_tmp));
+            output.add_role_mapping(move(role_map_tmp));
         }
 
         // Print a log message explaining how many of each item type was read.

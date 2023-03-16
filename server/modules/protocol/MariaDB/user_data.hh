@@ -22,6 +22,7 @@
 #include <thread>
 #include <maxsql/mariadb_connector.hh>
 #include <maxbase/queryresult.hh>
+#include <maxscale/base_user_manager.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
@@ -191,38 +192,17 @@ private:
     StringSet m_database_names;     /**< Set with existing database names */
 };
 
-class MariaDBUserManager : public mxs::UserAccountManager
+class MariaDBUserManager : public mxs::BaseUserManager
 {
 public:
     using SUserDB = std::shared_ptr<const UserDatabase>;
     MariaDBUserManager();
     ~MariaDBUserManager() override = default;
 
-    /**
-     * Start the updater thread. Should only be called when the updater is stopped or has just been created.
-     */
-    void start() override;
-
-    /**
-     * Stop the updater thread. Should only be called when the updater is running.
-     */
-    void stop() override;
-
-    void update_user_accounts() override;
-    void set_credentials(const std::string& user, const std::string& pw) override;
-    void set_backends(const std::vector<SERVER*>& backends) override;
-    void set_union_over_backends(bool union_over_backends) override;
-    void set_strip_db_esc(bool strip_db_esc) override;
-    void set_user_accounts_file(const std::string& filepath, UsersFileUsage file_usage) override;
-    void set_service(SERVICE* service) override;
-
-    bool can_update_immediately() const;
-
     std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
 
     std::string protocol_name() const override;
     json_t*     users_to_json() const override;
-    time_t      last_update() const override;
 
     struct UserDBInfo
     {
@@ -237,8 +217,7 @@ public:
      */
     UserDBInfo get_user_database() const;
 
-    int      userdb_version() const;
-    SERVICE* service() const;
+    int userdb_version() const;
 
 private:
     using QResult = std::unique_ptr<mxb::QueryResult>;
@@ -249,7 +228,7 @@ private:
         INVALID_DATA,
     };
 
-    bool update_users();
+    bool update_users() override;
 
     struct UserLoadRes
     {
@@ -257,13 +236,11 @@ private:
         std::string msg;
     };
     UserLoadRes load_users_from_backends(std::string&& conn_user, std::string&& conn_pw,
-                                         std::vector<SERVER*>&& backends, UserDatabase& temp_userdata);
-    UserLoadRes load_users_from_file(const std::string& source, UserDatabase* output);
+                                         std::vector<SERVER*>&& backends, UserDatabase& output);
+    UserLoadRes load_users_from_file(const std::string& source, UserDatabase& output);
 
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
     LoadResult load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
-
-    void updater_thread_function();
 
     bool read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
                             UserDatabase* output);
@@ -284,46 +261,8 @@ private:
     SUserDB            m_userdb;            /**< Contains user account info */
     std::atomic_int    m_userdb_version {0};/**< How many times the user database has changed */
 
-    // Fields for controlling the updater thread.
-    std::thread             m_updater_thread;
-    std::atomic_bool        m_keep_running {false};
-    std::condition_variable m_notifier;
-    std::mutex              m_notifier_lock;
-    std::atomic_bool        m_update_users_requested {false};
-
-    mxb::Semaphore m_thread_started;    /* Communicates that the updater thread has properly started. */
-
-    // Settings and options. Access to arraylike fields is protected by the mutex.
-    std::mutex           m_settings_lock;
-    std::string          m_username;
-    std::string          m_password;
-    std::vector<SERVER*> m_backends;
-    SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
-
-    /** User accounts file related settings. */
-    std::string    m_users_file_path;
-    UsersFileUsage m_users_file_usage {UsersFileUsage::ADD_WHEN_LOAD_OK};
-
-    /** Fetch users from all backends and store the union. */
-    std::atomic_bool m_union_over_backends {false};
-    /** Remove escape characters '\' from database names when fetching user info from backend. */
-    std::atomic_bool m_strip_db_esc {true};
-
-    std::atomic_bool m_can_update {false};      /**< User accounts can or are about to be updated */
-    int              m_successful_loads {0};    /**< Successful refreshes */
-
-    /** How many times user loading has continuously failed. User for suppressing error messages. */
-    int m_consecutive_failed_loads {0};
-
-    /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
-     *  ran yet. */
-    std::atomic_bool m_warn_no_servers {false};
-
     /** Check if service user has "show databases" privilege. If found, not done again. */
     bool m_check_showdb_priv {true};
-
-    /** The last time the users were loaded */
-    std::atomic<time_t> m_last_update;
 };
 
 class MariaDBUserCache : public mxs::UserAccountCache
