@@ -309,6 +309,30 @@ std::map<uint8_t, std::string_view> extract_response_fields(const uint8_t* ptr, 
  * @return True if the command will generate a response.
  */
 bool will_respond(const GWBUF& buffer);
+
+/**
+ * Create a Postgres packat from SQL.
+ *
+ * @return A postgres packet contining SQL.
+ */
+GWBUF create_query_packet(std::string_view sql);
+
+/**
+ * Get SQL from a packet.
+ *
+ * @note The returned string_view remains valid only as long as @c is valid.
+ *
+ * @return A non-empty string_view if the packet contains SQL, otherwise an empty string_view.
+ */
+std::string_view get_sql(const GWBUF& packet);
+
+/**
+ * Does the packet contain a prepare statement.
+ *
+ * @return True if it does, false otherwise.
+ */
+bool is_prepare(const GWBUF& packet);
+
 }
 
 // Convenience alias for the namespace

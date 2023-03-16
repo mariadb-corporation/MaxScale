@@ -12,7 +12,43 @@
  */
 
 #include "postgresprotocol.hh"
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include "pgprotocolmodule.hh"
+#include "pgparser.hh"
+
+namespace
+{
+
+struct ThisUnit
+{
+    PgParser* pParser = nullptr;
+} this_unit;
+
+int module_init()
+{
+    mxb_assert(!this_unit.pParser);
+
+    auto& pp = MariaDBParser::get().plugin();
+
+    this_unit.pParser = new PgParser(pp.create_parser(&PgParser::Helper::get()));
+
+    return 0;
+}
+
+void module_finish()
+{
+    mxb_assert(this_unit.pParser);
+    delete this_unit.pParser;
+}
+
+}
+
+PgParser& PgParser::get()
+{
+    mxb_assert(this_unit.pParser);
+
+    return *this_unit.pParser;
+}
 
 namespace postgres
 {
@@ -237,6 +273,67 @@ bool will_respond(const GWBUF& buffer)
         return true;
     }
 }
+
+GWBUF create_query_packet(std::string_view sql)
+{
+    GWBUF buf{pg::HEADER_LEN + sql.size() + 1};
+    auto ptr = buf.data();
+
+    *ptr++ = pg::QUERY;
+    ptr += pg::set_uint32(ptr, buf.length() - 1);
+    memcpy(ptr, sql.data(), sql.size());
+    ptr += sql.size();
+    *ptr = 0x0;
+
+    return buf;
+}
+
+std::string_view get_sql(const GWBUF& packet)
+{
+    std::string_view rv;
+
+    if (packet.length() > pg::HEADER_LEN)
+    {
+        auto ptr = packet.data();
+
+        if (*ptr++ == pg::QUERY)
+        {
+            uint32_t len = pg::get_uint32(ptr) - 4; // Exclude the 4 bytes of length information.
+
+            if (pg::HEADER_LEN + len == packet.length())
+            {
+                ptr += 4; // Skip the 4 bytes of length information.
+
+                if (ptr[len - 1] == 0)
+                {
+                    rv = std::string_view { reinterpret_cast<const char*>(ptr), len - 1 };
+                }
+                else
+                {
+                    MXB_ERROR("Invalid Query packet; missing terminating NULL.");
+                }
+            }
+            else
+            {
+                MXB_ERROR("Invalid Query packet; packet claims to be %lu bytes, but "
+                          "packet is %lu bytes.",
+                          (unsigned long) pg::HEADER_LEN + len,
+                          (unsigned long) packet.length());
+            }
+        }
+    }
+
+    return rv;
+}
+
+bool is_prepare(const GWBUF& packet)
+{
+    MXB_ALERT("Not implemented yet: %s", __func__);
+    mxb_assert(!true);
+
+    return false;
+}
+
 }
 
 /**
@@ -257,8 +354,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::ProtocolApiGenerator<PgProtocolModule>::s_api,
-        nullptr,
-        nullptr,
+        module_init,
+        module_finish,
         nullptr,
         nullptr,
         &PgConfiguration::specification()

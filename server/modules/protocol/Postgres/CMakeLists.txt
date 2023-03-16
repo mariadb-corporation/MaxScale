@@ -3,6 +3,7 @@ add_library(postgresprotocol SHARED
   pgbackendconnection.cc
   pgclientconnection.cc
   pgconfiguration.cc
+  pgparser.cc
   pgprotocoldata.cc
   pgprotocolmodule.cc
   postgresprotocol.cc

@@ -87,12 +87,9 @@ GWBUF PgProtocolModule::make_error(int errnum, const std::string& sqlstate, cons
 
 std::string_view PgProtocolModule::get_sql(const GWBUF& packet) const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
-    return std::string_view{};
-    // return postgres::get_sql(packet);
+    return pg::get_sql(packet);
 }
+
 std::string PgProtocolModule::describe(const GWBUF& packet, int max_len) const
 {
     std::ostringstream ss;
@@ -146,16 +143,7 @@ std::string PgProtocolModule::describe(const GWBUF& packet, int max_len) const
 
 GWBUF PgProtocolModule::make_query(std::string_view sql) const
 {
-    GWBUF buf{pg::HEADER_LEN + sql.size() + 1};
-    auto ptr = buf.data();
-
-    *ptr++ = pg::QUERY;
-    ptr += pg::set_uint32(ptr, buf.length() - 1);
-    memcpy(ptr, sql.data(), sql.size());
-    ptr += sql.size();
-    *ptr = 0x0;
-
-    return buf;
+    return pg::create_query_packet(sql);
 }
 
 uint64_t PgProtocolModule::capabilities() const
