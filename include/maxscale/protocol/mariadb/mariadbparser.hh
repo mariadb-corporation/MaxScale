@@ -24,7 +24,9 @@ public:
     public:
         static const Extractor& get();
 
+        GWBUF            create_packet(std::string_view sql) const override;
         std::string_view get_sql(const GWBUF& packet) const override;
+        bool             is_prepare(const GWBUF& packet) const override;
     };
 
     MariaDBParser(const MariaDBParser&) = delete;

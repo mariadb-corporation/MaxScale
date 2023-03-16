@@ -103,7 +103,9 @@ public:
     class Extractor
     {
     public:
+        virtual GWBUF            create_packet(std::string_view sql) const = 0;
         virtual std::string_view get_sql(const GWBUF& packet) const = 0;
+        virtual bool             is_prepare(const GWBUF& packet) const = 0;
     };
 
     struct TableName
