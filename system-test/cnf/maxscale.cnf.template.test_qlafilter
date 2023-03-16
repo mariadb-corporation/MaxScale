@@ -30,3 +30,4 @@ type=listener
 service=RW-Split-Router
 protocol=mariadbclient
 port=4006
+authenticator_options=log_password_mismatch=true
