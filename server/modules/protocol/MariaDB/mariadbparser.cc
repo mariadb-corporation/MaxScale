@@ -12,6 +12,29 @@
  */
 
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
+
+namespace
+{
+
+struct ThisUnit
+{
+    MariaDBParser::Extractor extractor;
+} this_unit;
+
+}
+
+// static
+const MariaDBParser::Extractor& MariaDBParser::Extractor::get()
+{
+    return this_unit.extractor;
+}
+
+std::string_view MariaDBParser::Extractor::get_sql(const GWBUF& packet) const
+{
+    return mariadb::get_sql(packet);
+}
+
 
 MariaDBParser::MariaDBParser(std::unique_ptr<Parser> sParser)
     : mxs::CachingParser(std::move(sParser))

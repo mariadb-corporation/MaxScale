@@ -100,6 +100,12 @@ class ParserPlugin;
 class Parser
 {
 public:
+    class Extractor
+    {
+    public:
+        virtual std::string_view get_sql(const GWBUF& packet) const = 0;
+    };
+
     struct TableName
     {
         TableName() = default;
@@ -381,9 +387,14 @@ public:
     virtual bool is_prepare(GWBUF& stmt) const = 0;
 
     /**
+     * Create a parser.
+     *
+     * @param pExtractor  The extractor to be used when extracting SQL from a GWBUF.
+     *                    Must exist for as long as the parser does.
+     *
      * @return A new parser.
      */
-    virtual std::unique_ptr<Parser> create_parser() const = 0;
+    virtual std::unique_ptr<Parser> create_parser(const Parser::Extractor* pExtractor) const = 0;
 };
 
 

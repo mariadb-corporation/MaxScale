@@ -6,6 +6,7 @@
 #include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 
 using namespace std::literals::string_literals;
 
@@ -23,7 +24,7 @@ int errors = 0;
 class Tester
 {
 public:
-    Tester(const char* zParser_plugin)
+    Tester(const char* zParser_plugin, const mxs::Parser::Extractor* pExtractor)
     {
         mxs::set_datadir("/tmp");
         mxs::set_langdir(".");
@@ -41,7 +42,7 @@ public:
             throw std::runtime_error("Failed to load "s + zParser_plugin);
         }
 
-        m_sParser = m_pPlugin->create_parser();
+        m_sParser = m_pPlugin->create_parser(pExtractor);
 
         uint64_t version = 10 * 1000 * 3 * 100;
         m_sParser->set_server_version(version);
@@ -546,7 +547,7 @@ int main(int argc, char** argv)
 
     try
     {
-        Tester tester("qc_sqlite");
+        Tester tester("qc_sqlite", &MariaDBParser::Extractor::get());
 
         for (const auto& t : test_cases)
         {

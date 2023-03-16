@@ -19,6 +19,14 @@
 class MariaDBParser : public maxscale::CachingParser
 {
 public:
+    class Extractor : public mxs::Parser::Extractor
+    {
+    public:
+        static const Extractor& get();
+
+        std::string_view get_sql(const GWBUF& packet) const override;
+    };
+
     MariaDBParser(const MariaDBParser&) = delete;
     MariaDBParser& operator=(const MariaDBParser&) = delete;
 

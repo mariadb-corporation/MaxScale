@@ -5544,6 +5544,11 @@ namespace
 class SqliteParser : public Parser
 {
 public:
+    SqliteParser(const Extractor* pExtractor)
+        : m_extractor(*pExtractor)
+    {
+    }
+
     ParserPlugin& plugin() const override;
 
     Result parse(GWBUF& stmt, uint32_t collect) const override
@@ -5683,6 +5688,9 @@ public:
     {
         return qc_sqlite_set_options(options) == QC_RESULT_OK;
     }
+
+private:
+    const Extractor& m_extractor;
 };
 
 class SqliteParserPlugin : public ParserPlugin
@@ -5723,9 +5731,9 @@ public:
         return mariadb::is_com_prepare(stmt);
     }
 
-    std::unique_ptr<Parser> create_parser() const override
+    std::unique_ptr<Parser> create_parser(const Parser::Extractor* pExtractor) const override
     {
-        return std::make_unique<SqliteParser>();
+        return std::make_unique<SqliteParser>(pExtractor);
     }
 };
 

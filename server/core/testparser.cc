@@ -12,6 +12,7 @@
  */
 
 #include <maxscale/testparser.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <sstream>
 
 using namespace std;
@@ -19,7 +20,8 @@ using namespace std;
 namespace
 {
 
-std::unique_ptr<mxs::Parser> create_parser(const string& plugin,
+std::unique_ptr<mxs::Parser> create_parser(const mxs::Parser::Extractor* pExtractor,
+                                           const string& plugin,
                                            mxs::Parser::SqlMode sql_mode,
                                            const string& plugin_args)
 {
@@ -55,7 +57,7 @@ std::unique_ptr<mxs::Parser> create_parser(const string& plugin,
 
     mxs::CachingParser::thread_init();
 
-    return pPlugin->create_parser();
+    return pPlugin->create_parser(pExtractor);
 }
 
 }
@@ -63,8 +65,16 @@ std::unique_ptr<mxs::Parser> create_parser(const string& plugin,
 namespace maxscale
 {
 
-TestParser::TestParser(const string& plugin, SqlMode sql_mode, const string& plugin_args)
-    : CachingParser(create_parser(plugin, sql_mode, plugin_args))
+TestParser::TestParser()
+    : TestParser(&MariaDBParser::Extractor::get(), DEFAULT_PLUGIN, SqlMode::DEFAULT, std::string {})
+{
+}
+
+TestParser::TestParser(const Parser::Extractor* pExtractor,
+                       const string& plugin,
+                       SqlMode sql_mode,
+                       const string& plugin_args)
+    : CachingParser(create_parser(pExtractor, plugin, sql_mode, plugin_args))
 {
 }
 

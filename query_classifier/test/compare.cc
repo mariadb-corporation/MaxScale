@@ -25,6 +25,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/log.hh>
 #include <maxscale/parser.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
 #include "../../server/core/internal/modules.hh"
@@ -1477,8 +1478,10 @@ int main(int argc, char* argv[])
                         pPlugin2 = pPlugin1;
                     }
 
-                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser();
-                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser();
+                    auto& extractor = MariaDBParser::Extractor::get();
+
+                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser(&extractor);
+                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser(&extractor);
 
                     do
                     {

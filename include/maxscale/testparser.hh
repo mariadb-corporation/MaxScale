@@ -33,27 +33,27 @@ public:
     TestParser(const TestParser&) = delete;
     TestParser& operator=(const TestParser&) = delete;
 
-    TestParser()
-        : TestParser(DEFAULT_PLUGIN, SqlMode::DEFAULT, std::string {})
+    TestParser();
+
+    TestParser(const Parser::Extractor* pExtractor, const std::string& plugin)
+        : TestParser(pExtractor, plugin, SqlMode::DEFAULT, std::string {})
     {
     }
 
-    TestParser(const std::string& plugin)
-        : TestParser(plugin, SqlMode::DEFAULT, std::string {})
+    TestParser(const Parser::Extractor* pExtractor, const std::string& plugin, SqlMode sql_mode)
+        : TestParser(pExtractor, plugin, sql_mode, std::string {})
     {
     }
 
-    TestParser(const std::string& plugin, SqlMode sql_mode)
-        : TestParser(plugin, sql_mode, std::string {})
+    TestParser(const Parser::Extractor* pExtractor, const std::string& plugin, const std::string& plugin_args)
+        : TestParser(pExtractor, plugin, SqlMode::DEFAULT, plugin_args)
     {
     }
 
-    TestParser(const std::string& plugin, const std::string& plugin_args)
-        : TestParser(plugin, SqlMode::DEFAULT, plugin_args)
-    {
-    }
-
-    TestParser(const std::string& plugin, SqlMode sql_mode, const std::string& plugin_args);
+    TestParser(const Parser::Extractor* pExtractor,
+               const std::string& plugin,
+               SqlMode sql_mode,
+               const std::string& plugin_args);
     ~TestParser();
 };
 
