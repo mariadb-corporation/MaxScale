@@ -15,6 +15,36 @@
 
 #include <maxscale/modutil.hh>
 
+// static
+std::string_view XRouterSession::state_to_str(State state)
+{
+    switch (state)
+    {
+    case State::INIT:
+        return "INIT";
+
+    case State::IDLE:
+        return "IDLE";
+
+    case State::SOLO:
+        return "SOLO";
+
+    case State::WAIT_SOLO:
+        return "WAIT_SOLO";
+
+    case State::BUSY:
+        return "BUSY";
+    }
+
+    mxb_assert(!true);
+    return "UNKNOWN";
+}
+
+std::string_view XRouterSession::state_str() const
+{
+    return state_to_str(m_state);
+}
+
 XRouterSession::XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends)
     : RouterSession(session)
     , m_router(router)

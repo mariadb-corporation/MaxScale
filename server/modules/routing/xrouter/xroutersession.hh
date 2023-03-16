@@ -35,6 +35,9 @@ private:
         BUSY,
     };
 
+    static std::string_view state_to_str(State state);
+    std::string_view        state_str() const;
+
     bool route_to_one(GWBUF&& packet, State next_state);
     bool route_solo(GWBUF&& packet);
     bool route_to_all(GWBUF&& packet);
