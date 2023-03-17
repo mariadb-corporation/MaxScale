@@ -118,17 +118,6 @@ const std::string& GWBUF::get_sql() const
     return m_sql;
 }
 
-const std::string& GWBUF::get_canonical() const
-{
-    if (m_canonical.empty())
-    {
-        m_canonical = get_sql();
-        maxsimd::get_canonical(&m_canonical, &m_markers);
-    }
-
-    return m_canonical;
-}
-
 GWBUF::GWBUF()
 {
 #ifdef SS_DEBUG
@@ -190,8 +179,6 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     m_stmt_info = std::move(rhs.m_stmt_info);
     m_sbuf = move(rhs.m_sbuf);
     m_sql = move(rhs.m_sql);
-    m_canonical = move(rhs.m_canonical);
-    m_markers = move(rhs.m_markers);
 }
 
 GWBUF GWBUF::deep_clone() const
@@ -241,8 +228,6 @@ void GWBUF::clone_helper(const GWBUF& other)
     m_stmt_info = other.m_stmt_info;
 
     m_sql = other.m_sql;
-    m_canonical = other.m_canonical;
-    // No need to copy 'markers'.
 }
 
 GWBUF* gwbuf_clone_shallow(GWBUF* buf)
@@ -278,7 +263,6 @@ GWBUF GWBUF::split(uint64_t n_bytes)
         m_id = 0;
         m_stmt_info = nullptr;
         m_sql.clear();
-        m_canonical.clear();
 
         consume(n_bytes);
         rval.rtrim(len - n_bytes);
@@ -475,8 +459,6 @@ void GWBUF::reset()
 
     // TODO: do these really need to be cleared or would they be overwritten?
     m_sql.clear();
-    m_canonical.clear();
-    m_markers.clear();
 }
 
 void GWBUF::ensure_unique()
@@ -570,8 +552,6 @@ size_t GWBUF::varying_size() const
     }
 
     rv += m_sql.capacity();
-    rv += m_canonical.capacity();
-    rv += m_markers.capacity() * sizeof(decltype(m_markers)::value_type);
 
     return rv;
 }

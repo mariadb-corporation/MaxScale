@@ -93,7 +93,6 @@ public:
 
     // TODO: Move out from here?
     const std::string& get_sql() const;
-    const std::string& get_canonical() const;
 
     /**
      * Constructs an empty GWBUF. Does not allocate any storage. Calling most storage-accessing functions
@@ -375,9 +374,7 @@ private:
     mxb::Worker* m_owner {nullptr};     /**< Owning thread. Used for debugging */
 #endif
 
-    mutable std::string      m_sql;
-    mutable std::string      m_canonical;
-    mutable maxsimd::Markers m_markers;
+    mutable std::string m_sql;
 
     void move_helper(GWBUF&& other) noexcept;
     void clone_helper(const GWBUF& other);
