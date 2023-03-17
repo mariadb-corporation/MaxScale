@@ -549,7 +549,8 @@ std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, GWBUF& stmt
         append_field_info(*this, pAttributes, stmt);
         append_function_info(*this, pAttributes, stmt);
 
-        json_object_set_new(pAttributes, CN_CANONICAL, json_string(stmt.get_canonical().c_str()));
+        std::string canonical(get_canonical(stmt));
+        json_object_set_new(pAttributes, CN_CANONICAL, json_string(canonical.c_str()));
     }
 
     json_t* pSelf = json_object();

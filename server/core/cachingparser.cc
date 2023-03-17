@@ -64,9 +64,10 @@ class QCInfoCache;
 
 thread_local struct
 {
-    QCInfoCache* pInfo_cache { nullptr };
-    uint32_t     options { 0 };
-    bool         use_cache { true };
+    QCInfoCache*             pInfo_cache { nullptr };
+    uint32_t                 options { 0 };
+    bool                     use_cache { true };
+    std::vector<const char*> markers;
 } this_thread;
 
 
@@ -394,7 +395,11 @@ public:
 
         if (use_cached_result() && has_not_been_parsed(m_stmt))
         {
-            m_canonical = m_stmt.get_canonical(); // Not from the QC, but from GWBUF.
+            // We generate m_canonical explicitly, because now we want the key that
+            // allows us to look up whether the parsing info already exists. Besides,
+            // calling m_parser.get_canonical(m_stmt) would cause an infinite recursion.
+            m_canonical = m_parser.helper().get_sql(m_stmt);
+            maxsimd::get_canonical(&m_canonical, &this_thread.markers);
 
             if (m_parser.plugin().is_prepare(m_stmt))
             {

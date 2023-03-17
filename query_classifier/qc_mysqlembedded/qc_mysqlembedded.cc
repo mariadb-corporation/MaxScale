@@ -481,25 +481,19 @@ static struct
 
 static thread_local struct
 {
-    Parser::SqlMode sql_mode;
-    uint32_t        options;
-    NAME_MAPPING*   function_name_mappings;
-    // The version information is not used; the embedded library parses according
-    // to the version of the embedded library it has been linked with. However, we
-    // need to store the information so that qc_[get|set]_server_version will work.
-    uint64_t version;
-} this_thread =
-{
-    Parser::SqlMode::DEFAULT,
-    0,
-    function_name_mappings_default,
-    0
-};
+    Parser::SqlMode          sql_mode { Parser::SqlMode::DEFAULT };
+    uint32_t                 options { 0 };
+    NAME_MAPPING*            function_name_mappings { function_name_mappings_default };
+    uint64_t                 version { 0 };
+    std::vector<const char*> markers;
+} this_thread;
 
 
 parsing_info_t::parsing_info_t(GWBUF* querybuf)
-    : canonical(querybuf->get_canonical())
+    : canonical(mariadb::get_sql(*querybuf))
 {
+    maxsimd::get_canonical(&this->canonical, &this_thread.markers);
+
     MYSQL* mysql = mysql_init(NULL);
     mxb_assert(mysql);
 
