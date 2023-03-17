@@ -2051,23 +2051,6 @@ int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, string_view* table_name
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_is_drop_table_query(GWBUF* querybuf, int32_t* answer)
-{
-    *answer = 0;
-
-    if (querybuf)
-    {
-        if (ensure_query_is_parsed(querybuf))
-        {
-            LEX* lex = get_lex(querybuf);
-
-            *answer = lex && lex->sql_command == SQLCOM_DROP_TABLE;
-        }
-    }
-
-    return QC_RESULT_OK;
-}
-
 /**
  * Create parsing information; initialize mysql handle, allocate parsing info
  * struct and set handle and free function pointer to it.

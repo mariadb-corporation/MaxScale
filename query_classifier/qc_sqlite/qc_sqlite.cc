@@ -391,19 +391,6 @@ public:
         return rv;
     }
 
-    bool is_drop_table_query(int32_t* pIs_drop_table)
-    {
-        bool rv = false;
-
-        if (is_valid())
-        {
-            *pIs_drop_table = m_is_drop_table;
-            rv = true;
-        }
-
-        return rv;
-    }
-
     bool get_table_names(vector<Parser::TableName>* pTables) const
     {
         bool rv = false;
@@ -1879,7 +1866,6 @@ public:
         m_operation = mxs::sql::OP_DROP;
         if (!isView)
         {
-            m_is_drop_table = true;
             m_operation = mxs::sql::OP_DROP_TABLE;
         }
         update_names_from_srclist(NULL, pName);
@@ -3360,7 +3346,6 @@ public:
         , m_nQuery(0)
         , m_type_mask(mxs::sql::TYPE_UNKNOWN)
         , m_operation(mxs::sql::OP_UNDEFINED)
-        , m_is_drop_table(false)
         , m_pPreparable_stmt(NULL)
     {
     }
@@ -3575,7 +3560,6 @@ public:
     uint32_t                          m_type_mask;               // The type mask of the query.
     mxs::sql::OpCode                  m_operation;               // The operation in question.
     string_view                       m_created_table_name;      // The name of a created table.
-    bool                              m_is_drop_table;           // Is the query a DROP TABLE.
     string_view                       m_prepare_name;            // The name of a prepared statement.
     GWBUF*                            m_pPreparable_stmt;        // The preparable statement.
     Parser::KillInfo                  m_kill;
