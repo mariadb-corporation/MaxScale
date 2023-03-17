@@ -6,6 +6,7 @@ add_library(postgresprotocol SHARED
   pgparser.cc
   pgprotocoldata.cc
   pgprotocolmodule.cc
+  pgusermanager.cc
   postgresprotocol.cc
   )
 

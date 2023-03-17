@@ -17,6 +17,7 @@
 #include "pgbackendconnection.hh"
 #include "pgprotocoldata.hh"
 #include "postgresprotocol.hh"
+#include "pgusermanager.hh"
 
 #include <maxscale/listener.hh>
 #include <maxbase/pretty_print.hh>
@@ -148,7 +149,7 @@ GWBUF PgProtocolModule::make_query(std::string_view sql) const
 
 uint64_t PgProtocolModule::capabilities() const
 {
-    return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTH_MODULES;
+    return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA;
 }
 
 std::string PgProtocolModule::name() const
@@ -163,10 +164,7 @@ std::string PgProtocolModule::protocol_name() const
 
 std::unique_ptr<mxs::UserAccountManager> PgProtocolModule::create_user_data_manager()
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
-    return nullptr;
+    return std::make_unique<PgUserManager>();
 }
 
 PgProtocolModule::AuthenticatorList
