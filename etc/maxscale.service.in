@@ -6,6 +6,8 @@ After=network.target
 Type=forking
 Restart=on-abort
 @SERVICE_FILE_DEBUG_OPTIONS@
+@SERVICE_FILE_ASAN_OPTIONS@
+@SERVICE_FILE_UBSAN_OPTIONS@
 
 # Make sure /var/run/maxscale exists
 PermissionsStartOnly=true
@@ -24,9 +26,6 @@ LimitNOFILE=65535
 StartLimitBurst=0
 WatchdogSec=60s
 NotifyAccess=all
-
-# Only relevant when MaxScale is linked with -fsanitize=address
-Environment=ASAN_OPTIONS=abort_on_error=1:unmap_shadow_on_exit=1
 
 [Install]
 WantedBy=multi-user.target
