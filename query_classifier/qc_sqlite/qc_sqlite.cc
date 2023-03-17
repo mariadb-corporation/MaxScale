@@ -5511,6 +5511,11 @@ public:
 
     ParserPlugin& plugin() const override;
 
+    const Helper& helper() const override
+    {
+        return m_helper;
+    }
+
     Result parse(GWBUF& stmt, uint32_t collect) const override
     {
         Result result = Parser::Result::INVALID;

@@ -284,6 +284,7 @@ public:
     static std::string type_mask_to_string(uint32_t type_mask);
 
     virtual ParserPlugin& plugin() const = 0;
+    virtual const Helper& helper() const = 0;
 
     virtual Result           parse(GWBUF& stmt, uint32_t collect) const = 0;
     std::unique_ptr<json_t>  parse_to_resource(const char* zHost, GWBUF& stmt) const;

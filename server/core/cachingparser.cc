@@ -722,6 +722,11 @@ mxs::ParserPlugin& CachingParser::plugin() const
     return m_sParser->plugin();
 }
 
+const Parser::Helper& CachingParser::helper() const
+{
+    return m_sParser->helper();
+}
+
 Parser::Result CachingParser::parse(GWBUF& stmt, uint32_t collect) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
