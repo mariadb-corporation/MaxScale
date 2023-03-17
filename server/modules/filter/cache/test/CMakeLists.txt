@@ -48,14 +48,22 @@ add_executable(keycheck
   ../../../../../query_classifier/test/testreader.cc
   ../cache.cc
   ../cache_storage_api.cc
+  ../cacheconfig.cc
+  ../cachefilter.cc
+  ../cachefiltersession.cc
+  ../cachemt.cc
+  ../cachept.cc
+  ../cachesimple.cc
+  ../cachest.cc
   ../lrustorage.cc
   ../lrustoragemt.cc
   ../lrustoragest.cc
   ../rules.cc
+  ../sessioncache.cc
   ../storage.cc
   ../storagefactory.cc
   )
-target_link_libraries(keycheck maxscale-common lzma)
+target_link_libraries(keycheck maxscale-common mariadbclient lzma)
 
 #add_executable(cache_stress cache_stress.cc)
 #target_link_libraries(cache_stress ${MARIADB_CONNECTOR_LIBRARIES} ssl crypt crypto dl pthread)
