@@ -96,7 +96,7 @@ bool maxtest::MariaDB::try_cmd_f(const char* format, ...)
     return cmd(sql, Expect::ANY);
 }
 
-std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query(const std::string& query, Expect expect)
+std::unique_ptr<mxb::QueryResult> maxtest::MariaDB::query(const std::string& query, Expect expect)
 {
     auto ret = mxq::MariaDB::query(query);
     if (!ret && mxq::mysql_is_net_error(errornum()))
@@ -122,12 +122,12 @@ std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query(const std::string& que
     return ret;
 }
 
-std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::try_query(const std::string& query)
+std::unique_ptr<mxb::QueryResult> maxtest::MariaDB::try_query(const std::string& query)
 {
     return this->query(query, Expect::ANY);
 }
 
-std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query_f(const char* format, ...)
+std::unique_ptr<mxb::QueryResult> maxtest::MariaDB::query_f(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -136,7 +136,7 @@ std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query_f(const char* format, 
     return query(sql);
 }
 
-std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::try_query_f(const char* format, ...)
+std::unique_ptr<mxb::QueryResult> maxtest::MariaDB::try_query_f(const char* format, ...)
 {
     va_list args;
     va_start(args, format);

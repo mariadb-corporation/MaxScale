@@ -239,7 +239,7 @@ bool ReplicationCluster::remove_all_slave_conns(MariaDBServer* server)
  */
 bool ReplicationCluster::good_slave_thread_status(MariaDBServer* slave, MariaDBServer* master)
 {
-    auto is_replicating_from_master = [this, slave, master](mxq::QueryResult* res) {
+    auto is_replicating_from_master = [this, slave, master](mxb::QueryResult* res) {
             auto namec = slave->vm_node().m_name.c_str();
             string conn_name = res->get_string("Connection_name");
             string host = res->get_string("Master_Host");

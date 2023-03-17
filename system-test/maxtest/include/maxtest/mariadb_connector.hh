@@ -42,11 +42,11 @@ public:
     bool cmd_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
     bool try_cmd_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
 
-    std::unique_ptr<mxq::QueryResult> query(const std::string& query, Expect expect = Expect::OK);
-    std::unique_ptr<mxq::QueryResult> try_query(const std::string& query);
+    std::unique_ptr<mxb::QueryResult> query(const std::string& query, Expect expect = Expect::OK);
+    std::unique_ptr<mxb::QueryResult> try_query(const std::string& query);
 
-    std::unique_ptr<mxq::QueryResult> query_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
-    std::unique_ptr<mxq::QueryResult>
+    std::unique_ptr<mxb::QueryResult> query_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+    std::unique_ptr<mxb::QueryResult>
     try_query_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
 
     /**
