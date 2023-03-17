@@ -350,6 +350,11 @@ public:
         return m_status != Parser::Result::INVALID;
     }
 
+    std::string_view get_canonical() const
+    {
+        return m_canonical;
+    }
+
     bool get_type_mask(uint32_t* pType_mask) const
     {
         bool rv = false;
@@ -5515,6 +5520,20 @@ public:
         return result;
     }
 
+    std::string_view get_canonical(GWBUF& stmt) const override
+    {
+        std::string_view rv;
+
+        QcSqliteInfo* pInfo = get_info(stmt);
+
+        if (pInfo)
+        {
+            rv = pInfo->get_canonical();
+        }
+
+        return rv;
+    }
+
     std::string_view get_created_table_name(GWBUF& stmt) const override
     {
         std::string_view name;
@@ -5645,6 +5664,22 @@ public:
     }
 
 private:
+    QcSqliteInfo* get_info(GWBUF& stmt) const
+    {
+        mxb_assert(this_unit.initialized);
+        mxb_assert(this_thread.initialized);
+
+        QcSqliteInfo* pInfo = QcSqliteInfo::get(m_helper, &stmt, Parser::COLLECT_ESSENTIALS);
+
+        if (!pInfo)
+        {
+            MXB_ERROR("The query could not be parsed. Either memory could not be "
+                      "allocated or there was no SQL to parse.");
+        }
+
+        return pInfo;
+    }
+
     const Helper& m_helper;
 };
 

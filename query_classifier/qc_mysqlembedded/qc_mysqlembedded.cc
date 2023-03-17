@@ -4097,6 +4097,20 @@ public:
         return result;
     }
 
+    std::string_view get_canonical(GWBUF& stmt) const override
+    {
+        std::string_view rv;
+
+        if (ensure_query_is_parsed(&stmt))
+        {
+            auto* pi = get_pinfo(&stmt);
+
+            rv = pi->canonical;
+        }
+
+        return rv;
+    }
+
     std::string_view get_created_table_name(GWBUF& stmt) const override
     {
         std::string_view name;
