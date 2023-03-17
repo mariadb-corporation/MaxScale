@@ -157,17 +157,18 @@ class QcSqliteInfo;
 
 static thread_local struct
 {
-    bool                  initialized;   // Whether the thread specific data has been initialized.
-    sqlite3*              pDb;           // Thread specific database handle.
-    Parser::SqlMode       sql_mode;      // What sql_mode is used.
-    uint32_t              options;       // Options affecting classification.
-    QcSqliteInfo*         pInfo;         // The information for the current statement being classified.
-    uint64_t              version;       // Encoded version number
-    uint32_t              version_major;
-    uint32_t              version_minor;
-    uint32_t              version_patch;
-    QC_NAME_MAPPING*      pFunction_name_mappings;   // How function names should be mapped.
-    const Parser::Helper* pHelper;
+    bool                     initialized;   // Whether the thread specific data has been initialized.
+    sqlite3*                 pDb;           // Thread specific database handle.
+    Parser::SqlMode          sql_mode;      // What sql_mode is used.
+    uint32_t                 options;       // Options affecting classification.
+    QcSqliteInfo*            pInfo;         // The information for the current statement being classified.
+    uint64_t                 version;       // Encoded version number
+    uint32_t                 version_major;
+    uint32_t                 version_minor;
+    uint32_t                 version_patch;
+    QC_NAME_MAPPING*         pFunction_name_mappings;   // How function names should be mapped.
+    const Parser::Helper*    pHelper;
+    std::vector<const char*> markers;       // For use with maxsimd::get_canonical()
 } this_thread;
 
 const uint32_t VERSION_MAJOR_DEFAULT = 10;
@@ -3841,9 +3842,8 @@ static bool parse_query(const mxs::Parser::Helper& helper, GWBUF& query, uint32_
             {
                 query.set_classifier_data(std::move(sInfo));
 
-                // TODO: Asking GWBUF for its canonical version is a bit ass-backwards,
-                // TODO: but sorting that out is for later.
-                pInfo->m_canonical = query.get_canonical();
+                pInfo->m_canonical = helper.get_sql(query);
+                maxsimd::get_canonical(&pInfo->m_canonical, &this_thread.markers);
 
                 if (is_prepare)
                 {
