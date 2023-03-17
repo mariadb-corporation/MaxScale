@@ -162,11 +162,13 @@ then
     then
         sudo yum -d1 -y install devtoolset-7-gcc-c++
         sudo yum -d1 -y install devtoolset-7-libasan-devel
+        sudo yum -d1 -y install devtoolset-7-libubsan-devel
         # Enable it by default
         echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
     else
         # For everything else, install the default ASAN
         sudo yum -d1 -y install libasan
+        sudo yum -d1 -y install libubsan
     fi
 
     grep "release [78]" /etc/redhat-release
