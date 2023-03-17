@@ -147,6 +147,7 @@ private:
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;
     uint32_t                    m_rebalancing_dc {0};
+    uint32_t                    m_tick_dc {0};
     mxb::TimePoint              m_last_rebalancing;
 };
 }

@@ -56,6 +56,11 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
 MainWorker::~MainWorker()
 {
+    if (m_tick_dc)
+    {
+        cancel_dcall(m_tick_dc);
+    }
+
     mxb_assert(this_unit.pMain);
 
     this_thread.pMain = nullptr;
@@ -205,7 +210,7 @@ bool MainWorker::pre_run()
 
     bool rval = false;
 
-    dcall(100, &MainWorker::inc_ticks);
+    m_tick_dc = dcall(100, &MainWorker::inc_ticks);
 
     update_rebalancing();
 
@@ -334,15 +339,18 @@ void MainWorker::start_shutdown()
 
 bool MainWorker::wait_for_shutdown(Call::action_t action)
 {
+    bool again = true;
+
     if (action == Call::EXECUTE)
     {
         if (RoutingWorker::shutdown_complete())
         {
             shutdown();
+            again = false;
         }
     }
 
-    return true;
+    return again;
 }
 }
 

@@ -1527,6 +1527,8 @@ void RoutingWorker::start_shutdown()
 
 bool RoutingWorker::try_shutdown(Call::action_t action)
 {
+    bool again = true;
+
     if (action == Call::EXECUTE)
     {
         evict_dcbs(Evict::ALL);
@@ -1534,6 +1536,7 @@ bool RoutingWorker::try_shutdown(Call::action_t action)
         if (m_sessions.empty())
         {
             shutdown();
+            again = false;
         }
         else
         {
@@ -1544,7 +1547,7 @@ bool RoutingWorker::try_shutdown(Call::action_t action)
         }
     }
 
-    return true;
+    return again;
 }
 }
 
