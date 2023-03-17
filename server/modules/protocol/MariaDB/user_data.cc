@@ -128,19 +128,19 @@ bool MariaDBUserManager::update_users()
     if (res1.success)
     {
         auto build_msg = [this, &res1, &res2](){
-                string rval;
-                if (res2.success)
-                {
-                    rval = mxb::string_printf("Read %s for service '%s'. In addition, read %s.",
-                                              res1.msg.c_str(), svc_name(), res2.msg.c_str());
-                }
-                else
-                {
-                    rval = mxb::string_printf("Read %s for service '%s'.",
-                                              res1.msg.c_str(), svc_name());
-                }
-                return rval;
-            };
+            string rval;
+            if (res2.success)
+            {
+                rval = mxb::string_printf("Read %s for service '%s'. In addition, read %s.",
+                                          res1.msg.c_str(), svc_name(), res2.msg.c_str());
+            }
+            else
+            {
+                rval = mxb::string_printf("Read %s for service '%s'.",
+                                          res1.msg.c_str(), svc_name());
+            }
+            return rval;
+        };
 
         // Got some data. Update the master database if the contents differ. Usually they don't.
 
@@ -188,8 +188,8 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
 
     // Filter out unusable backends.
     auto is_unusable = [](const SERVER* srv) {
-            return !srv->active() || !srv->is_usable();
-        };
+        return !srv->active() || !srv->is_usable();
+    };
     auto erase_iter = std::remove_if(backends.begin(), backends.end(), is_unusable);
     backends.erase(erase_iter, backends.end());
     if (backends.empty() && m_warn_no_servers.load(relaxed))
@@ -199,9 +199,9 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
 
     // Order backends so that the master is checked first.
     auto compare = [](const SERVER* lhs, const SERVER* rhs) {
-            return (lhs->is_master() && !rhs->is_master())
-                   || (lhs->is_slave() && (!rhs->is_master() && !rhs->is_slave()));
-        };
+        return (lhs->is_master() && !rhs->is_master())
+               || (lhs->is_slave() && (!rhs->is_master() && !rhs->is_slave()));
+    };
     std::sort(backends.begin(), backends.end(), compare);
 
     bool got_data = false;
@@ -390,9 +390,9 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
                                             UserDatabase* output)
 {
     auto get_bool_enum = [&users](int64_t col_ind) {
-            string val = users->get_string(col_ind);
-            return val == "Y" || val == "y";
-        };
+        string val = users->get_string(col_ind);
+        return val == "Y" || val == "y";
+    };
 
     // MySQL-server 5.7 and later do not have a "Password"-column. The pw is in the
     // "authentication_string"-column.
@@ -467,27 +467,27 @@ void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_wc_grants, QResul
     using StringSetMap = UserDatabase::StringSetMap;
 
     auto map_builder = [](const string& grant_col_name, QResult source, bool strip_escape) {
-            StringSetMap result;
-            auto ind_user = source->get_col_index("user");
-            auto ind_host = source->get_col_index("host");
-            auto ind_grant = source->get_col_index(grant_col_name);
-            bool valid_data = (ind_user >= 0 && ind_host >= 0 && ind_grant >= 0);
-            if (valid_data)
+        StringSetMap result;
+        auto ind_user = source->get_col_index("user");
+        auto ind_host = source->get_col_index("host");
+        auto ind_grant = source->get_col_index(grant_col_name);
+        bool valid_data = (ind_user >= 0 && ind_host >= 0 && ind_grant >= 0);
+        if (valid_data)
+        {
+            while (source->next_row())
             {
-                while (source->next_row())
+                string grant = source->get_string(ind_grant);
+                if (strip_escape)
                 {
-                    string grant = source->get_string(ind_grant);
-                    if (strip_escape)
-                    {
-                        mxb::strip_escape_chars(grant);
-                    }
-                    string key = UserDatabase::form_db_mapping_key(source->get_string(ind_user),
-                                                                   source->get_string(ind_host));
-                    result[key].insert(grant);
+                    mxb::strip_escape_chars(grant);
                 }
+                string key = UserDatabase::form_db_mapping_key(source->get_string(ind_user),
+                                                               source->get_string(ind_host));
+                result[key].insert(grant);
             }
-            return result;
-        };
+        }
+        return result;
+    };
 
     StringSetMap db_wc_grants_map = map_builder("db", std::move(db_wc_grants), false);
     StringSetMap db_grants_map = map_builder("db", std::move(db_grants), strip_db_esc());
@@ -730,12 +730,12 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
                     {
                         // The username and host pattern may be quoted on Xpand.
                         auto remove_quotes = [](string& str){
-                                if (str.length() >= 2 && str[0] == '\'' && str.back() == '\'')
-                                {
-                                    str.pop_back();
-                                    str.erase(0, 1);
-                                }
-                            };
+                            if (str.length() >= 2 && str[0] == '\'' && str.back() == '\'')
+                            {
+                                str.pop_back();
+                                str.erase(0, 1);
+                            }
+                        };
                         remove_quotes(username);
                         remove_quotes(hostpattern);
                     }
@@ -777,51 +777,51 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase& out
 
     auto read_str_if_exists = [filepathc](const Json& source, const char* key,
                                           const string& user, const string& host, string* out) {
-            bool rval = true;
-            if (source.contains(key))
+        bool rval = true;
+        if (source.contains(key))
+        {
+            if (!source.try_get_string(key, out))
             {
-                if (!source.try_get_string(key, out))
-                {
-                    MXB_ERROR("File '%s' contains field '%s' for user '%s'@'%s', but it is not a string.",
-                              filepathc, key, user.c_str(), host.c_str());
-                    rval = false;
-                }
+                MXB_ERROR("File '%s' contains field '%s' for user '%s'@'%s', but it is not a string.",
+                          filepathc, key, user.c_str(), host.c_str());
+                rval = false;
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     auto read_bool_if_exists = [filepathc](const Json& source, const char* key,
                                            const string& user, const string& host, bool* out) {
-            bool rval = true;
-            if (source.contains(key))
+        bool rval = true;
+        if (source.contains(key))
+        {
+            if (!source.try_get_bool(key, out))
             {
-                if (!source.try_get_bool(key, out))
-                {
-                    MXB_ERROR("File '%s' contains field '%s' for user '%s'@'%s', but it is not a boolean.",
-                              filepathc, key, user.c_str(), host.c_str());
-                    rval = false;
-                }
+                MXB_ERROR("File '%s' contains field '%s' for user '%s'@'%s', but it is not a boolean.",
+                          filepathc, key, user.c_str(), host.c_str());
+                rval = false;
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     using EntryHandler = std::function<void (Json& elem, int ind)>;
     auto process_array = [filepathc](Json& all, const char* arr_obj_name, const EntryHandler& handler) {
-            auto arr = all.get_array_elems(arr_obj_name);
-            if (all.ok())
+        auto arr = all.get_array_elems(arr_obj_name);
+        if (all.ok())
+        {
+            int ind = 0;
+            for (auto& elem : arr)
             {
-                int ind = 0;
-                for (auto& elem : arr)
-                {
-                    handler(elem, ind);
-                    ind++;
-                }
+                handler(elem, ind);
+                ind++;
             }
-            else
-            {
-                MXB_ERROR("Wrong object type in '%s': %s", filepathc, all.error_msg().c_str());
-            }
-        };
+        }
+        else
+        {
+            MXB_ERROR("Wrong object type in '%s': %s", filepathc, all.error_msg().c_str());
+        }
+    };
 
     UserLoadRes rval;
     Json all;
@@ -837,49 +837,49 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase& out
         {
             n_users = 0;
             EntryHandler user_handler = [&](Json& user_data, int ind) {
-                    // The user definition must contain at least 'user' and 'host' fields.
-                    string uname = user_data.get_string("user");
-                    string host = user_data.get_string("host");
+                // The user definition must contain at least 'user' and 'host' fields.
+                string uname = user_data.get_string("user");
+                string host = user_data.get_string("host");
 
-                    if (user_data.ok())
+                if (user_data.ok())
+                {
+                    auto read_str = [&user_data, &uname, &host, &read_str_if_exists]
+                        (const char* key, string* out) {
+                        return read_str_if_exists(user_data, key, uname, host, out);
+                    };
+                    auto read_bool = [&user_data, &uname, &host, &read_bool_if_exists]
+                        (const char* key, bool* out) {
+                        return read_bool_if_exists(user_data, key, uname, host, out);
+                    };
+
+                    mariadb::UserEntry new_entry;
+                    new_entry.username = uname;
+                    new_entry.host_pattern = host;
+
+                    bool strings_ok = (read_str("password", &new_entry.password)
+                        && read_str("plugin", &new_entry.plugin)
+                        && read_str("authentication_string", &new_entry.auth_string)
+                        && read_str("default_role", &new_entry.default_role));
+                    // TODO: add "ssl"-field read once it is actually used for something.
+                    bool booleans_ok = (read_bool("super_priv", &new_entry.super_priv)
+                        && read_bool("global_db_priv", &new_entry.global_db_priv)
+                        && read_bool("proxy_priv", &new_entry.proxy_priv)
+                        && read_bool("is_role", &new_entry.is_role));
+
+                    if (strings_ok && booleans_ok)
                     {
-                        auto read_str = [&user_data, &uname, &host, &read_str_if_exists]
-                            (const char* key, string* out) {
-                                return read_str_if_exists(user_data, key, uname, host, out);
-                            };
-                        auto read_bool = [&user_data, &uname, &host, &read_bool_if_exists]
-                            (const char* key, bool* out) {
-                                return read_bool_if_exists(user_data, key, uname, host, out);
-                            };
-
-                        mariadb::UserEntry new_entry;
-                        new_entry.username = uname;
-                        new_entry.host_pattern = host;
-
-                        bool strings_ok = (read_str("password", &new_entry.password)
-                                           && read_str("plugin", &new_entry.plugin)
-                                           && read_str("authentication_string", &new_entry.auth_string)
-                                           && read_str("default_role", &new_entry.default_role));
-                        // TODO: add "ssl"-field read once it is actually used for something.
-                        bool booleans_ok = (read_bool("super_priv", &new_entry.super_priv)
-                                            && read_bool("global_db_priv", &new_entry.global_db_priv)
-                                            && read_bool("proxy_priv", &new_entry.proxy_priv)
-                                            && read_bool("is_role", &new_entry.is_role));
-
-                        if (strings_ok && booleans_ok)
-                        {
-                            // Erase * from password if found. This is similar to mysql.user.
-                            remove_star(new_entry.password);
-                            output.add_entry(move(new_entry));
-                            n_users++;
-                        }
+                        // Erase * from password if found. This is similar to mysql.user.
+                        remove_star(new_entry.password);
+                        output.add_entry(move(new_entry));
+                        n_users++;
                     }
-                    else
-                    {
-                        MXB_ERROR("User entry %i in '%s'-array in file '%s' is missing a required field: %s",
-                                  ind + 1, grp_user, filepathc, user_data.error_msg().c_str());
-                    }
-                };
+                }
+                else
+                {
+                    MXB_ERROR("User entry %i in '%s'-array in file '%s' is missing a required field: %s",
+                              ind + 1, grp_user, filepathc, user_data.error_msg().c_str());
+                }
+            };
             process_array(all, grp_user, user_handler);
         }
 
@@ -948,15 +948,15 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase& out
         // Print a log message explaining how many of each item type was read.
         std::vector<string> list_items;
         auto message_helper = [&list_items](int n_items, const char* desc) {
-                if (n_items == 1)
-                {
-                    list_items.push_back(mxb::string_printf("1 %s entry", desc));
-                }
-                else if (n_items >= 0)
-                {
-                    list_items.push_back(mxb::string_printf("%i %s entries", n_items, desc));
-                }
-            };
+            if (n_items == 1)
+            {
+                list_items.push_back(mxb::string_printf("1 %s entry", desc));
+            }
+            else if (n_items >= 0)
+            {
+                list_items.push_back(mxb::string_printf("%i %s entries", n_items, desc));
+            }
+        };
         message_helper(n_users, "user");
         message_helper(n_grants, "database grant");
         message_helper(n_roles, "role mapping");
@@ -1187,12 +1187,12 @@ bool UserDatabase::user_can_access_db(const string& user, const string& host_pat
     bool grant_found = false;
 
     auto like = [case_sensitive_db](const string& pattern, const string& subject) {
-            char esc = '\\';
-            auto pat = pattern.c_str();
-            auto subj = subject.c_str();
-            int ret = case_sensitive_db ? sql_strlike_case(pat, subj, esc) : sql_strlike(pat, subj, esc);
-            return ret == 0;
-        };
+        char esc = '\\';
+        auto pat = pattern.c_str();
+        auto subj = subject.c_str();
+        int ret = case_sensitive_db ? sql_strlike_case(pat, subj, esc) : sql_strlike(pat, subj, esc);
+        return ret == 0;
+    };
 
     // Need to check two database grant maps, one may have wildcard grants.
     auto wc_mapping_iter = m_database_wc_grants.find(key);
@@ -1262,38 +1262,38 @@ bool UserDatabase::user_can_access_role(const std::string& user, const std::stri
 bool UserDatabase::role_can_access_db(const string& role, const string& db, bool case_sensitive_db) const
 {
     auto role_has_global_priv = [this](const string& role) {
-            bool rval = false;
-            auto iter = m_users.find(role);
-            if (iter != m_users.end())
+        bool rval = false;
+        auto iter = m_users.find(role);
+        if (iter != m_users.end())
+        {
+            auto& entrylist = iter->second;
+            // Because roles have an empty host-pattern, they must be first in the list.
+            if (!entrylist.empty())
             {
-                auto& entrylist = iter->second;
-                // Because roles have an empty host-pattern, they must be first in the list.
-                if (!entrylist.empty())
+                auto& entry = entrylist.front();
+                if (entry.is_role && entry.global_db_priv)
                 {
-                    auto& entry = entrylist.front();
-                    if (entry.is_role && entry.global_db_priv)
-                    {
-                        rval = true;
-                    }
+                    rval = true;
                 }
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     auto find_linked_roles = [this](const string& role) {
-            std::vector<string> rval;
-            string key = role + "@";
-            auto iter = m_roles_mapping.find(key);
-            if (iter != m_roles_mapping.end())
+        std::vector<string> rval;
+        string key = role + "@";
+        auto iter = m_roles_mapping.find(key);
+        if (iter != m_roles_mapping.end())
+        {
+            auto& roles_set = iter->second;
+            for (auto& linked_role : roles_set)
             {
-                auto& roles_set = iter->second;
-                for (auto& linked_role : roles_set)
-                {
-                    rval.push_back(linked_role);
-                }
+                rval.push_back(linked_role);
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     // Roles are tricky since one role may have access to other roles and so on.
     StringSet open_set;     // roles which still need to be expanded.
@@ -1365,8 +1365,8 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
     }
 
     auto like = [](const string& pattern, const string& str) {
-            return sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
-        };
+        return sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
+    };
 
     bool matched = false;
     if (patterntype == PatternType::ADDRESS)
@@ -1403,10 +1403,10 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
             // client_ip & mask == base_ip. To test this, all three parts need to be converted
             // to numbers.
             auto ip_to_integer = [](const string& ip) {
-                    sockaddr_in sa {};
-                    inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
-                    return (uint32_t)sa.sin_addr.s_addr;
-                };
+                sockaddr_in sa {};
+                inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+                return (uint32_t)sa.sin_addr.s_addr;
+            };
 
             auto div_loc = host_pattern.find('/');
             string base_ip_str = host_pattern.substr(0, div_loc);
@@ -1508,8 +1508,8 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
     // is not a hostname, we can skip the expensive reverse name lookup.
 
     auto is_wc = [](char c) {
-            return c == '%' || c == '_';
-        };
+        return c == '%' || c == '_';
+    };
 
     auto patterntype = PatternType::UNKNOWN;
     // First, check some common special cases.
@@ -1550,30 +1550,30 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
         bool escaped = false;
 
         auto classify_char = [is_wc, &maybe_address, &maybe_hostname](char c) {
-                auto is_ipchar = [](char c) {
-                        return std::isxdigit(c) || c == ':' || c == '.';
-                    };
-
-                auto is_hostnamechar = [](char c) {
-                        return std::isalnum(c) || c == '_' || c == '.' || c == '-';
-                    };
-
-                if (is_wc(c))
-                {
-                    // Can be address or hostname.
-                }
-                else
-                {
-                    if (!is_ipchar(c))
-                    {
-                        maybe_address = false;
-                    }
-                    if (!is_hostnamechar(c))
-                    {
-                        maybe_hostname = false;
-                    }
-                }
+            auto is_ipchar = [](char c) {
+                return std::isxdigit(c) || c == ':' || c == '.';
             };
+
+            auto is_hostnamechar = [](char c) {
+                return std::isalnum(c) || c == '_' || c == '.' || c == '-';
+            };
+
+            if (is_wc(c))
+            {
+                // Can be address or hostname.
+            }
+            else
+            {
+                if (!is_ipchar(c))
+                {
+                    maybe_address = false;
+                }
+                if (!is_hostnamechar(c))
+                {
+                    maybe_hostname = false;
+                }
+            }
+        };
 
         for (auto c : host_pattern)
         {
