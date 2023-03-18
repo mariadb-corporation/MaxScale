@@ -99,7 +99,7 @@ std::vector<char> create_header(uint32_t payload_len,
 namespace maxsql
 {
 
-int RplEvent::get_event_length(const std::vector<char>& header)
+uint32_t RplEvent::get_event_length(const std::vector<char>& header)
 {
     return *((uint32_t*) (header.data() + 4 + 1 + 4));
 }
