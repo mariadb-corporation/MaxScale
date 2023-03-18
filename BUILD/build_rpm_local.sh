@@ -68,7 +68,7 @@ cp _build/*.gz .
 
 if [ "$build_experimental" == "yes" ]
 then
-    for component in experimental devel cdc-connector
+    for component in experimental
     do
         cd _build
         rm CMakeCache.txt
