@@ -1484,19 +1484,21 @@ static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& respo
     }
 }
 
+static bool log_redirect(int level, const std::string& msg)
+{
+    if (level < LOG_WARNING)    // Lower is more severe
+    {
+        config_runtime_add_error(msg);
+        return true;
+    }
+
+    return false;
+}
+
 static HttpResponse handle_request(const HttpRequest& request)
 {
     // Redirect log output into the runtime error message buffer
-    mxb::LogRedirect redirect(
-        [](auto level, const auto& msg) {
-            if (level < LOG_WARNING)    // Lower is more severe
-            {
-                config_runtime_add_error(msg);
-                return true;
-            }
-
-            return false;
-        });
+    mxb::LogRedirect redirect(log_redirect);
 
     MXS_DEBUG("%s %s %s",
               request.get_verb().c_str(),
