@@ -271,6 +271,17 @@ bool PgClientConnection::clientReply(GWBUF&& buffer,
                                      mxs::ReplyRoute& down,
                                      const mxs::Reply& reply)
 {
+    if (reply.is_complete())
+    {
+        if (auto trx_state = reply.get_variable(pg::TRX_STATE_VARIABLE); !trx_state.empty())
+        {
+            auto data = static_cast<PgProtocolData*>(m_session.protocol_data());
+
+            // If the value is anything other than 'I', a transaction is open.
+            data->set_in_trx(trx_state[0] != 'I');
+        }
+    }
+
     return write(std::move(buffer));
 }
 

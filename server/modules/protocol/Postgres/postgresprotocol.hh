@@ -166,6 +166,9 @@ enum Auth : uint32_t
 //
 // GSSENCRequest - StartupMessage with 80877104 as the version. GSSAPI encryption request.
 
+// The name of the variable in mxs::Reply that's used to track the transaction state
+static inline constexpr std::string_view TRX_STATE_VARIABLE {"trx_state"};
+
 /**
  * Extract a 16-bit unsigned integer
  *

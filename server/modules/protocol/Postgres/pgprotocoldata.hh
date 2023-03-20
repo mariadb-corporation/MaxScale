@@ -43,6 +43,9 @@ public:
         return m_params;
     }
 
+    void set_in_trx(bool in_trx);
+
 private:
     std::vector<uint8_t> m_params;
+    bool                 m_in_trx {false};
 };

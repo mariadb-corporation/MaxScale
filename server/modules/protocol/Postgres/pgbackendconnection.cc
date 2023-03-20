@@ -529,6 +529,10 @@ GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
             break;
 
         case pg::READY_FOR_QUERY:
+            mxb_assert(len == 5);
+            m_reply.set_variable(pg::TRX_STATE_VARIABLE,
+                                 std::string_view {reinterpret_cast<const char*>(it + pg::HEADER_LEN), 1});
+
             // Result complete, the next result will be delivered in a separate clientReply call.
             m_reply.set_reply_state(mxs::ReplyState::DONE);
 

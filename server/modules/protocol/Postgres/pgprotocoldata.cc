@@ -35,7 +35,7 @@ bool PgProtocolData::is_trx_starting() const
 
 bool PgProtocolData::is_trx_active() const
 {
-    return false;
+    return m_in_trx;
 }
 
 bool PgProtocolData::is_trx_read_only() const
@@ -45,12 +45,12 @@ bool PgProtocolData::is_trx_read_only() const
 
 bool PgProtocolData::is_trx_ending() const
 {
-    return false;
+    return !m_in_trx;
 }
 
 bool PgProtocolData::is_autocommit() const
 {
-    return false;
+    return true;
 }
 
 size_t PgProtocolData::amend_memory_statistics(json_t* memory) const
@@ -66,4 +66,9 @@ size_t PgProtocolData::static_size() const
 size_t PgProtocolData::varying_size() const
 {
     return 0;
+}
+
+void PgProtocolData::set_in_trx(bool in_trx)
+{
+    m_in_trx = in_trx;
 }
