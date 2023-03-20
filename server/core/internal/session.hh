@@ -130,7 +130,7 @@ public:
     bool remove_variable(const char* name, void** context);
     void retain_statement(GWBUF* pBuffer);
     void dump_statements() const;
-    void book_server_response(SERVER* pServer, bool final_response);
+    void book_server_response(mxs::Target* pServer, bool final_response);
     void book_last_as_complete();
     void reset_server_bookkeeping();
     void append_session_log(std::string);

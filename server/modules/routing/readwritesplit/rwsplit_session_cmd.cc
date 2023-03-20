@@ -85,7 +85,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 mxb_assert(m_current_query.empty());
 
                 // TODO: This would make more sense if it was done at the client protocol level
-                session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
+                session_book_server_response(m_pSession, backend->target(), true);
 
                 /** Store the master's response so that the slave responses can be compared to it */
                 m_sescmd_responses[id] = std::make_pair(backend, reply.error());
