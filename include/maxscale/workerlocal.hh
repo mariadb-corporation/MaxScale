@@ -18,6 +18,7 @@
 #include <maxscale/mainworker.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/test.hh>
+#include <type_traits>
 
 namespace maxscale
 {
@@ -191,27 +192,40 @@ protected:
  * updates must be done in the MainWorker. This prevents multiple pending updates to the value and guarantees
  * that once an update is done, all new sessions in MaxScale will see the value.
  */
-template<class T>
-class WorkerGlobal : private WorkerLocal<std::shared_ptr<T>>
+template<class T, typename Stored = std::add_const_t<T>>
+class WorkerGlobal : private WorkerLocal<std::shared_ptr<Stored>>
 {
 public:
     // Forwarding constructor
     template<typename ... Args>
     WorkerGlobal(Args&& ... args)
-        : WorkerLocal<std::shared_ptr<T>>(std::make_shared<T>(std::forward<Args>(args)...))
+        : WorkerLocal<std::shared_ptr<Stored>>(std::make_shared<Stored>(std::forward<Args>(args)...))
     {
     }
 
     // Arrow operator
-    const T* operator->() const
+    Stored* operator->() const
     {
         return this->get_local_value()->get();
     }
 
     // Const version of dereference operator
-    const T& operator*() const
+    Stored& operator*() const
     {
         return *this->get_local_value()->get();
+    }
+
+    /**
+     * Get a reference to the underlying value
+     *
+     * This can be useful for "freezing" configuration objects at a given state so that future modifications
+     * will not affect it.
+     *
+     * @return A reference to the current value
+     */
+    std::shared_ptr<Stored> get_ref() const
+    {
+        return *this->get_local_value();
     }
 
     /**
@@ -225,12 +239,12 @@ public:
      *
      * @param t The new value to assign
      */
-    void assign(const T& t)
+    void assign(Stored& t)
     {
         mxb_assert_message(MainWorker::is_current() || mxs::test::is_test(),
                            "this method must be called from the main worker thread");
 
-        auto new_val = std::make_shared<T>(t);
+        auto new_val = std::make_shared<Stored>(t);
         // Update the value of the master copy
         std::unique_lock<std::mutex> guard(this->m_lock);
         this->m_value = std::move(new_val);
