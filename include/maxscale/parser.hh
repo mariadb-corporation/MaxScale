@@ -290,6 +290,11 @@ public:
     std::unique_ptr<json_t>  parse_to_resource(const char* zHost, GWBUF& stmt) const;
 
     virtual std::string_view get_canonical(GWBUF& stmt) const = 0;
+    std::string_view         get_sql(const GWBUF& stmt) const
+    {
+        return helper().get_sql(stmt);
+    }
+
     virtual std::string_view get_created_table_name(GWBUF& stmt) const = 0;
     virtual DatabaseNames    get_database_names(GWBUF& stmt) const = 0;
     virtual void             get_field_info(GWBUF& stmt,

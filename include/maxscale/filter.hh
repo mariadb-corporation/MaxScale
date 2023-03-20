@@ -19,6 +19,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <stdint.h>
+#include <maxscale/parser.hh>
 #include <maxscale/routing.hh>
 
 struct json_t;
@@ -189,6 +190,20 @@ protected:
     {
         mxb_assert_message(m_pParser, "Protocol of client connection does not have a parser.");
         return *m_pParser;
+    }
+
+    /**
+     * @return The SQL of @c packet, or an empty string if it does not contain SQL.
+     */
+    std::string_view get_sql(const GWBUF& stmt) const
+    {
+        return parser().get_sql(stmt);
+    }
+
+    // TODO: To be removed when everyone can handle string_views.
+    std::string get_sql_string(const GWBUF& stmt) const
+    {
+        return std::string { get_sql(stmt) };
     }
 
     /**
