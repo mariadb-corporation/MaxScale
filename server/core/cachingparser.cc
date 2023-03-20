@@ -508,8 +508,7 @@ bool CachingParser::set_properties(const Properties& properties)
     else
     {
         MXB_ERROR("Ignoring attempt to set size of query classifier "
-                  "cache to a negative value: %" PRIi64 ".",
-                  properties.max_size);
+                  "cache to a negative value: %lu.", properties.max_size);
     }
 
     return rv;
