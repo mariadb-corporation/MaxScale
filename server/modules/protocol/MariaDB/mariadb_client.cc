@@ -2999,27 +2999,24 @@ void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
         }
     }
 
-    auto autocommit = reply.get_variable("autocommit");
-    if (!autocommit.empty())
+    if (auto autocommit = reply.get_variable("autocommit"); !autocommit.empty())
     {
-        m_session_data->set_autocommit(strncasecmp(autocommit.c_str(), "ON", 2) == 0);
+        m_session_data->set_autocommit(mxb::sv_case_eq(autocommit, "ON"));
     }
 
-    auto trx_state = reply.get_variable("trx_state");
-    if (!trx_state.empty())
+    if (auto trx_state = reply.get_variable("trx_state"); !trx_state.empty())
     {
-        if (trx_state.find_first_of("TI") != std::string::npos)
+        if (trx_state.find_first_of("TI") != std::string_view::npos)
         {
             ses_trx_state = TrxState::TRX_ACTIVE;
         }
-        else if (trx_state.find_first_of("rRwWsSL") == std::string::npos)
+        else if (trx_state.find_first_of("rRwWsSL") == std::string_view::npos)
         {
             ses_trx_state = TrxState::TRX_INACTIVE;
         }
     }
 
-    auto trx_characteristics = reply.get_variable("trx_characteristics");
-    if (!trx_characteristics.empty())
+    if (auto trx_characteristics = reply.get_variable("trx_characteristics"); !trx_characteristics.empty())
     {
         if (trx_characteristics == "START TRANSACTION READ ONLY;")
         {

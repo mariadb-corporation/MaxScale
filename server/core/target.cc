@@ -474,10 +474,16 @@ uint16_t Reply::param_count() const
     return m_param_count;
 }
 
-std::string Reply::get_variable(const std::string& name) const
+std::string_view Reply::get_variable(std::string_view name) const
 {
-    auto it = m_variables.find(name);
-    return it != m_variables.end() ? it->second : "";
+    std::string_view rv;
+
+    if (auto it = m_variables.find(name);  it != m_variables.end())
+    {
+        rv = it->second;
+    }
+
+    return rv;
 }
 
 const std::vector<std::vector<std::string_view>>& Reply::row_data() const
@@ -525,9 +531,9 @@ void Reply::set_is_ok(bool is_ok)
     m_is_ok = is_ok;
 }
 
-void Reply::set_variable(const std::string& key, const std::string& value)
+void Reply::set_variable(std::string_view key, std::string_view value)
 {
-    m_variables.insert(std::make_pair(key, value));
+    m_variables.emplace(key, value);
 }
 
 void Reply::set_num_warnings(uint16_t warnings)

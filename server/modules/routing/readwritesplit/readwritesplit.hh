@@ -338,7 +338,7 @@ public:
         uint32_t server_id {0};
         uint64_t sequence {0};
 
-        static gtid from_string(const std::string& str);
+        static gtid from_string(std::string_view str);
         void        parse(std::string_view str);
         std::string to_string() const;
         bool        empty() const;
@@ -357,7 +357,7 @@ public:
     int64_t                     avg_sescmd_sz() const;
     std::string                 last_gtid() const;
     std::map<uint32_t, gtid>    last_gtid_map() const;
-    void                        set_last_gtid(const std::string& gtid);
+    void                        set_last_gtid(std::string_view str);
 
     bool have_enough_servers() const
     {

@@ -19,7 +19,7 @@
 #include <string>
 #include <string_view>
 #include <mutex>
-#include <unordered_map>
+#include <map>
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/buffer.hh>
@@ -662,9 +662,9 @@ public:
      *
      * @param name The variable name
      *
-     * @return The variable value or an empty string if the variable was not set
+     * @return The variable value or an empty string_view if the variable was not set
      */
-    std::string get_variable(const std::string& name) const;
+    std::string_view get_variable(std::string_view name) const;
 
     /**
      * Get rows returned in the result
@@ -698,7 +698,7 @@ public:
 
     void set_is_ok(bool is_ok);
 
-    void set_variable(const std::string& key, const std::string& value);
+    void set_variable(std::string_view key, std::string_view value);
 
     void set_num_warnings(uint16_t warnings);
 
@@ -729,7 +729,7 @@ private:
     bool                  m_is_ok {false};
     std::vector<uint64_t> m_field_counts;
 
-    std::unordered_map<std::string, std::string> m_variables;
-    std::vector<std::vector<std::string_view>>   m_row_data;
+    std::map<std::string, std::string, std::less<>> m_variables;
+    std::vector<std::vector<std::string_view>>      m_row_data;
 };
 }

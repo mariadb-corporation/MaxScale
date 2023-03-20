@@ -23,6 +23,7 @@
 #include <cmath>
 #include <new>
 #include <sstream>
+#include <charconv>
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
@@ -179,7 +180,7 @@ std::map<uint32_t, RWSplit::gtid> RWSplit::last_gtid_map() const
     return m_last_gtid;
 }
 
-void RWSplit::set_last_gtid(const std::string& str)
+void RWSplit::set_last_gtid(std::string_view str)
 {
     auto gtid = gtid::from_string(str);
     std::lock_guard<mxb::shared_mutex> guard(m_last_gtid_lock);
@@ -193,7 +194,7 @@ void RWSplit::set_last_gtid(const std::string& str)
 }
 
 // static
-RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
+RWSplit::gtid RWSplit::gtid::from_string(std::string_view str)
 {
     gtid g;
     g.parse(str);
@@ -202,17 +203,14 @@ RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
 
 void RWSplit::gtid::parse(std::string_view sv)
 {
-    std::string str(sv);
-    const char* ptr = str.c_str();
-    char* end;
-    domain = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '-');
-    ptr = end + 1;
-    server_id = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '-');
-    ptr = end + 1;
-    sequence = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '\0');
+    auto [dom, remaining] = mxb::split(sv, "-");
+    auto [sid, seq] = mxb::split(remaining, "-");
+    MXB_AT_DEBUG(auto dom_res = ) std::from_chars(dom.begin(), dom.end(), this->domain);
+    MXB_AT_DEBUG(auto sid_res = ) std::from_chars(sid.begin(), sid.end(), this->server_id);
+    MXB_AT_DEBUG(auto seq_res = ) std::from_chars(seq.begin(), seq.end(), this->sequence);
+    mxb_assert(dom_res.ptr == dom.end());
+    mxb_assert(sid_res.ptr == sid.end());
+    mxb_assert(seq_res.ptr == seq.end());
 }
 
 std::string RWSplit::gtid::to_string() const
