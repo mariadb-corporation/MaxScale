@@ -23,7 +23,6 @@
 #include <maxbase/assert.hh>
 #include <maxsimd/canonical.hh>
 #include <maxscale/hint.hh>
-#include <maxscale/qc_stmt_info.hh>
 
 class SERVER;
 
@@ -69,6 +68,12 @@ public:
 class GWBUF
 {
 public:
+    class ProtocolInfo
+    {
+    public:
+        virtual ~ProtocolInfo() = default;
+        virtual size_t size() const = 0;
+    };
 
     enum Type : uint32_t
     {
@@ -147,26 +152,19 @@ public:
     GWBUF deep_clone() const;
 
     /**
-     * Set classifier data. Can only be set once.
+     * Set out-of-band protocol information associated with the buffer.
+     * Should only be set by the client or backend protocol.
      *
-     * @param new_data Data of the object
-     * @param deleter Deleter function
+     * @param new_info  Out of band protocol information of the buffer.
      */
-    void set_classifier_data(std::shared_ptr<QC_STMT_INFO> new_data);
+    void set_protocol_info(std::shared_ptr<ProtocolInfo> new_info) const;
 
     /**
-     * Get classifier data pointer. The pointer should not be saved, as it's a borrowed reference.
+     * Get out-of-band protocol information associated with the buffer.
      *
-     * @return Data or null
+     * @return Information or null.
      */
-    QC_STMT_INFO* get_classifier_data_ptr() const;
-
-    /**
-     * Return a shared pointer to classifier data. Required when saving the pointer.
-     *
-     * @return Data or null
-     */
-    std::shared_ptr<QC_STMT_INFO> get_classifier_data() const;
+    const std::shared_ptr<ProtocolInfo>& get_protocol_info() const;
 
     iterator       begin();
     iterator       end();
@@ -359,8 +357,8 @@ public:
     size_t runtime_size() const;
 
 private:
-    std::shared_ptr<SHARED_BUF>   m_sbuf;       /**< The shared buffer with the real data */
-    std::shared_ptr<QC_STMT_INFO> m_stmt_info;  /**< Classifier data */
+    std::shared_ptr<SHARED_BUF>           m_sbuf;          /**< The shared buffer with the real data */
+    mutable std::shared_ptr<ProtocolInfo> m_protocol_info; /**< Protocol info */
 
     uint8_t* m_start {nullptr};         /**< Start of the valid data */
     uint8_t* m_end {nullptr};           /**< First byte after the valid data */
@@ -394,11 +392,6 @@ inline bool GWBUF::type_is_collect_rows() const
 inline bool GWBUF::type_is_replayed() const
 {
     return m_type & TYPE_REPLAYED;
-}
-
-inline bool gwbuf_is_parsed(const GWBUF* b)
-{
-    return b->get_classifier_data_ptr() != nullptr;
 }
 
 inline uint8_t* GWBUF::data()

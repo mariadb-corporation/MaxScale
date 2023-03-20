@@ -374,7 +374,7 @@ public:
      *
      * @return The result of the provided info.
      */
-    virtual Parser::StmtResult get_result_from_info(const QC_STMT_INFO* info) = 0;
+    virtual Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) = 0;
 
     /**
      * Get canonical statement
@@ -388,7 +388,7 @@ public:
      *
      * @return The canonical statement.
      */
-    virtual std::string_view info_get_canonical(const QC_STMT_INFO* info) = 0;
+    virtual std::string_view get_canonical(const GWBUF::ProtocolInfo* info) = 0;
 
     /**
      * @return True, if @c is a prepare statement, false otherwise.

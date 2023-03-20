@@ -193,7 +193,7 @@ struct TableName
     }
 };
 
-class parsing_info_t : public QC_STMT_INFO
+class parsing_info_t : public GWBUF::ProtocolInfo
 {
 public:
     parsing_info_t(const parsing_info_t&) = delete;
@@ -627,7 +627,7 @@ int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, Parser::Result* result
 
     if (parsed)
     {
-        auto pi = static_cast<parsing_info_t*>(querybuf->get_classifier_data_ptr());
+        auto pi = static_cast<parsing_info_t*>(querybuf->get_protocol_info().get());
         mxb_assert(pi);
         *result = pi->result;
     }
@@ -660,7 +660,7 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
     /** Read thd pointer and resolve the query type with it. */
     if (succp)
     {
-        auto pi = static_cast<parsing_info_t*>(querybuf->get_classifier_data_ptr());
+        auto pi = static_cast<parsing_info_t*>(querybuf->get_protocol_info().get());
 
         if (pi != NULL)
         {
@@ -733,7 +733,7 @@ static bool parse_query(GWBUF* querybuf)
     }
 
     /** Add complete parsing info struct to the query buffer */
-    querybuf->set_classifier_data(std::move(pi));
+    querybuf->set_protocol_info(std::move(pi));
 
     // By calling qc_mysql_get_field_info() now, the result will be
     // Parser::Result::PARTIALLY_PARSED, if some field is not found in the
@@ -755,7 +755,7 @@ static bool parse_query(GWBUF* querybuf)
  */
 static bool query_is_parsed(GWBUF* buf)
 {
-    return buf != NULL && gwbuf_is_parsed(buf);
+    return buf != NULL && buf->get_protocol_info().get() != nullptr;
 }
 
 /**
@@ -1831,9 +1831,9 @@ parsing_info_t* get_pinfo(GWBUF* querybuf)
 {
     parsing_info_t* pi = NULL;
 
-    if ((querybuf != NULL) && gwbuf_is_parsed(querybuf))
+    if ((querybuf != NULL) && querybuf->get_protocol_info().get() != nullptr)
     {
-        pi = static_cast<parsing_info_t*>(querybuf->get_classifier_data_ptr());
+        pi = static_cast<parsing_info_t*>(querybuf->get_protocol_info().get());
     }
 
     return pi;
@@ -4266,13 +4266,13 @@ public:
         return qc_mysql_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
     }
 
-    Parser::StmtResult get_result_from_info(const QC_STMT_INFO* info) override
+    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) override
     {
         // Not supported.
         return Parser::StmtResult {};
     }
 
-    std::string_view info_get_canonical(const QC_STMT_INFO* info) override
+    std::string_view get_canonical(const GWBUF::ProtocolInfo* info) override
     {
         // Not supported.
         return std::string_view {};

@@ -78,15 +78,15 @@ bool use_cached_result()
 
 bool has_not_been_parsed(GWBUF& stmt)
 {
-    // A GWBUF has not been parsed, if it does not have a parsing info object attached.
-    return stmt.get_classifier_data_ptr() == nullptr;
+    // A GWBUF has not been parsed, if it does not have a protocol info object attached.
+    return stmt.get_protocol_info().get() == nullptr;
 }
 
 /**
  * @class QCInfoCache
  *
  * An instance of this class maintains a mapping from a canonical statement to
- * the QC_STMT_INFO object created by the actual query classifier.
+ * the GWBUF::ProtocolInfo object created by the actual query classifier.
  */
 class QCInfoCache
 {
@@ -115,16 +115,16 @@ public:
         return --m_refs;
     }
 
-    QC_STMT_INFO* peek(std::string_view canonical_stmt) const
+    GWBUF::ProtocolInfo* peek(std::string_view canonical_stmt) const
     {
         auto i = m_infos.find(canonical_stmt);
 
         return i != m_infos.end() ? i->second.sInfo.get() : nullptr;
     }
 
-    std::shared_ptr<QC_STMT_INFO> get(mxs::Parser* pParser, std::string_view canonical_stmt)
+    std::shared_ptr<GWBUF::ProtocolInfo> get(mxs::Parser* pParser, std::string_view canonical_stmt)
     {
-        std::shared_ptr<QC_STMT_INFO> sInfo;
+        std::shared_ptr<GWBUF::ProtocolInfo> sInfo;
         mxs::Parser::SqlMode sql_mode = pParser->get_sql_mode();
 
         auto i = m_infos.find(canonical_stmt);
@@ -159,7 +159,7 @@ public:
 
     void insert(mxs::Parser* pParser,
                 std::string_view canonical_stmt,
-                std::shared_ptr<QC_STMT_INFO> sInfo)
+                std::shared_ptr<GWBUF::ProtocolInfo> sInfo)
     {
         mxb_assert(peek(canonical_stmt) == nullptr);
 
@@ -228,7 +228,7 @@ public:
                 CachingParser::Entry e {};
 
                 e.hits = entry.hits;
-                e.result = entry.pParser->plugin().get_result_from_info(entry.sInfo.get());
+                e.result = entry.pParser->plugin().get_stmt_result(entry.sInfo.get());
 
                 state.insert(std::make_pair(stmt, e));
             }
@@ -239,7 +239,7 @@ public:
                 e.hits += entry.hits;
 #if defined (SS_DEBUG)
                 auto& plugin = entry.pParser->plugin();
-                mxs::Parser::StmtResult result = plugin.get_result_from_info(entry.sInfo.get());
+                mxs::Parser::StmtResult result = plugin.get_stmt_result(entry.sInfo.get());
 
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
@@ -267,7 +267,7 @@ private:
     struct Entry
     {
         Entry(mxs::Parser* pParser,
-              std::shared_ptr<QC_STMT_INFO> sInfo,
+              std::shared_ptr<GWBUF::ProtocolInfo> sInfo,
               mxs::Parser::SqlMode sql_mode,
               uint32_t options)
             : pParser(pParser)
@@ -278,16 +278,16 @@ private:
         {
         }
 
-        mxs::Parser*                  pParser;
-        std::shared_ptr<QC_STMT_INFO> sInfo;
-        mxs::Parser::SqlMode          sql_mode;
-        uint32_t                      options;
-        int64_t                       hits;
+        mxs::Parser*                         pParser;
+        std::shared_ptr<GWBUF::ProtocolInfo> sInfo;
+        mxs::Parser::SqlMode                 sql_mode;
+        uint32_t                             options;
+        int64_t                              hits;
     };
 
     typedef std::unordered_map<std::string_view, Entry> InfosByStmt;
 
-    int64_t entry_size(const QC_STMT_INFO* pInfo)
+    int64_t entry_size(const GWBUF::ProtocolInfo* pInfo)
     {
         const int64_t map_entry_overhead = 4 * sizeof(void *);
         const int64_t constant_overhead = sizeof(std::string_view) + sizeof(Entry) + map_entry_overhead;
@@ -390,7 +390,7 @@ public:
         : m_parser(*pParser)
         , m_stmt(*pStmt)
     {
-        auto pInfo = static_cast<QC_STMT_INFO*>(m_stmt.get_classifier_data_ptr());
+        auto pInfo = m_stmt.get_protocol_info().get();
         m_info_size_before = pInfo ? pInfo->size() : 0;
 
         if (use_cached_result() && has_not_been_parsed(m_stmt))
@@ -408,11 +408,11 @@ public:
                 m_canonical += ":P";
             }
 
-            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(&m_parser, m_canonical);
+            std::shared_ptr<GWBUF::ProtocolInfo> sInfo = this_thread.pInfo_cache->get(&m_parser, m_canonical);
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
-                m_stmt.set_classifier_data(std::move(sInfo));
+                m_stmt.set_protocol_info(std::move(sInfo));
                 m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
             }
         }
@@ -424,19 +424,19 @@ public:
 
         if (!m_canonical.empty() && !exclude)
         {   // Cache for the first time
-            auto sInfo = m_stmt.get_classifier_data();
+            auto sInfo = m_stmt.get_protocol_info();
             mxb_assert(sInfo);
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
             // contained a COM_STMT_PREPARE.
-            std::string_view canonical = m_parser.plugin().info_get_canonical(sInfo.get());
+            std::string_view canonical = m_parser.plugin().get_canonical(sInfo.get());
             mxb_assert(m_canonical == canonical);
 
             this_thread.pInfo_cache->insert(&m_parser, canonical, std::move(sInfo));
         }
         else if (!exclude)
         {   // The size might have changed
-            auto pInfo = m_stmt.get_classifier_data_ptr();
+            auto pInfo = m_stmt.get_protocol_info().get();
             auto info_size_after = pInfo ? pInfo->size() : 0;
 
             if (m_info_size_before != info_size_after)

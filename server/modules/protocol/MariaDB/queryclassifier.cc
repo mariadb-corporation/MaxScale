@@ -70,7 +70,7 @@ uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
 #ifdef SS_DEBUG
         GWBUF stmt = buffer->deep_clone();
         stmt.data()[4] = MXS_COM_QUERY;
-        stmt.set_classifier_data(nullptr);      // To ensure cloned buffer is parsed.
+        stmt.set_protocol_info(nullptr);      // To ensure cloned buffer is parsed.
         mxb_assert(parser.get_type_mask(stmt)
                    == (parser.get_type_mask(*buffer) & ~mxs::sql::TYPE_PREPARE_STMT));
 #endif

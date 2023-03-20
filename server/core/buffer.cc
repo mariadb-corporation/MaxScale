@@ -166,7 +166,7 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     m_id = exchange(rhs.m_id, 0);
 
     hints = move(rhs.hints);
-    m_stmt_info = std::move(rhs.m_stmt_info);
+    m_protocol_info = std::move(rhs.m_protocol_info);
     m_sbuf = move(rhs.m_sbuf);
 }
 
@@ -214,7 +214,7 @@ void GWBUF::clone_helper(const GWBUF& other)
     hints = other.hints;
     m_type = other.m_type;
     m_id = other.m_id;
-    m_stmt_info = other.m_stmt_info;
+    m_protocol_info = other.m_protocol_info;
 }
 
 GWBUF* gwbuf_clone_shallow(GWBUF* buf)
@@ -248,7 +248,7 @@ GWBUF GWBUF::split(uint64_t n_bytes)
         hints.clear();
         m_type = TYPE_UNDEFINED;
         m_id = 0;
-        m_stmt_info = nullptr;
+        m_protocol_info.reset();
 
         consume(n_bytes);
         rval.rtrim(len - n_bytes);
@@ -330,19 +330,14 @@ void GWBUF::set_type(Type type)
     m_type |= type;
 }
 
-void GWBUF::set_classifier_data(std::shared_ptr<QC_STMT_INFO> new_data)
+void GWBUF::set_protocol_info(std::shared_ptr<ProtocolInfo> new_info) const
 {
-    m_stmt_info = std::move(new_data);
+    m_protocol_info = std::move(new_info);
 }
 
-QC_STMT_INFO* GWBUF::get_classifier_data_ptr() const
+const std::shared_ptr<GWBUF::ProtocolInfo>& GWBUF::get_protocol_info() const
 {
-    return m_stmt_info.get();
-}
-
-std::shared_ptr<QC_STMT_INFO> GWBUF::get_classifier_data() const
-{
-    return m_stmt_info;
+    return m_protocol_info;
 }
 
 void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
@@ -439,7 +434,7 @@ void GWBUF::reset()
     }
 
     hints.clear();
-    m_stmt_info.reset();
+    m_protocol_info.reset();
     m_type = TYPE_UNDEFINED;
     m_id = 0;
 }
@@ -528,10 +523,9 @@ size_t GWBUF::varying_size() const
         rv += m_sbuf->size() / m_sbuf.use_count();
     }
 
-    if (m_stmt_info)
+    if (m_protocol_info)
     {
-        rv += sizeof(*m_stmt_info);
-        rv += m_stmt_info->size() / m_stmt_info.use_count();
+        rv += m_protocol_info->size() / m_protocol_info.use_count();
     }
 
     return rv;

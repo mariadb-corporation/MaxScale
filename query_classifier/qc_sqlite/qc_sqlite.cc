@@ -247,7 +247,7 @@ extern void exposed_sqlite3Update(Parse* pParse,
 /**
  * Contains information about a particular query.
  */
-class QcSqliteInfo : public QC_STMT_INFO
+class QcSqliteInfo : public GWBUF::ProtocolInfo
 {
     QcSqliteInfo(const QcSqliteInfo&);
     QcSqliteInfo& operator=(const QcSqliteInfo&);
@@ -338,7 +338,7 @@ public:
 
         if (ensure_query_is_parsed(helper, pStmt, collect))
         {
-            pInfo = static_cast<QcSqliteInfo*>(pStmt->get_classifier_data_ptr());
+            pInfo = static_cast<QcSqliteInfo*>(pStmt->get_protocol_info().get());
             mxb_assert(pInfo);
         }
 
@@ -3819,7 +3819,7 @@ static bool parse_query(const mxs::Parser::Helper& helper, GWBUF& query, uint32_
         bool suppress_logging = false;
         bool is_prepare = helper.is_prepare(query);
 
-        auto* pInfo = static_cast<QcSqliteInfo*>(query.get_classifier_data_ptr());
+        auto* pInfo = static_cast<QcSqliteInfo*>(query.get_protocol_info().get());
         if (pInfo)
         {
             mxb_assert((~pInfo->m_collect & collect) != 0);
@@ -3845,7 +3845,7 @@ static bool parse_query(const mxs::Parser::Helper& helper, GWBUF& query, uint32_
             pInfo = sInfo.get();
             if (pInfo)
             {
-                query.set_classifier_data(std::move(sInfo));
+                query.set_protocol_info(std::move(sInfo));
 
                 pInfo->m_canonical = helper.get_sql(query);
                 maxsimd::get_canonical(&pInfo->m_canonical, &this_thread.markers);
@@ -3905,20 +3905,25 @@ static bool parse_query(const mxs::Parser::Helper& helper, GWBUF& query, uint32_
     return parsed;
 }
 
-static bool query_is_parsed(GWBUF* query, uint32_t collect)
+static bool query_is_parsed(GWBUF* pQuery, uint32_t collect)
 {
-    bool rc = query && gwbuf_is_parsed(query);
+    bool rc = false;
 
-    if (rc)
+    if (pQuery)
     {
-        auto* pInfo = static_cast<QcSqliteInfo*>(query->get_classifier_data_ptr());
-        mxb_assert(pInfo);
+        auto* pInfo = static_cast<QcSqliteInfo*>(pQuery->get_protocol_info().get());
 
-        if ((~pInfo->m_collected & collect) != 0)
+        if (pInfo)
         {
-            // The statement has been parsed once, but the needed information
-            // was not collected at that time.
-            rc = false;
+            if ((~pInfo->m_collected & collect) != 0)
+            {
+                // The statement has been parsed once, but the needed information
+                // was not collected at that time.
+            }
+            else
+            {
+                rc = true;
+            }
         }
     }
 
@@ -4819,9 +4824,9 @@ static int32_t            qc_sqlite_get_sql_mode(Parser::SqlMode* sql_mode);
 static int32_t            qc_sqlite_set_sql_mode(Parser::SqlMode sql_mode);
 static uint32_t           qc_sqlite_get_options();
 static int32_t            qc_sqlite_set_options(uint32_t options);
-static Parser::StmtResult qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo);
+static Parser::StmtResult qc_sqlite_get_result_from_info(const GWBUF::ProtocolInfo* pInfo);
 
-static string_view    qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo);
+static string_view    qc_sqlite_info_get_canonical(const GWBUF::ProtocolInfo* pInfo);
 
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
@@ -5456,7 +5461,7 @@ int32_t qc_sqlite_set_options(uint32_t options)
     return rv;
 }
 
-Parser::StmtResult qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo)
+Parser::StmtResult qc_sqlite_get_result_from_info(const GWBUF::ProtocolInfo* pInfo)
 {
     return static_cast<const QcSqliteInfo*>(pInfo)->get_result();
 }
@@ -5475,7 +5480,7 @@ int32_t qc_sqlite_get_current_stmt(const char** ppStmt, size_t* pLen)
     return rv;
 }
 
-string_view qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo)
+string_view qc_sqlite_info_get_canonical(const GWBUF::ProtocolInfo* pInfo)
 {
     QC_TRACE();
     mxb_assert(this_unit.initialized);
@@ -5701,12 +5706,12 @@ public:
         return qc_sqlite_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
     }
 
-    Parser::StmtResult get_result_from_info(const QC_STMT_INFO* info) override
+    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) override
     {
         return qc_sqlite_get_result_from_info(info);
     }
 
-    std::string_view info_get_canonical(const QC_STMT_INFO* info) override
+    std::string_view get_canonical(const GWBUF::ProtocolInfo* info) override
     {
         return qc_sqlite_info_get_canonical(info);
     }
