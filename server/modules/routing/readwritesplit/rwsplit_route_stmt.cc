@@ -96,7 +96,7 @@ bool RWSplitSession::have_connected_slaves() const
 
 bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
 {
-    return m_config.optimistic_trx                  // Optimistic transactions are enabled
+    return m_config->optimistic_trx                  // Optimistic transactions are enabled
            && !is_locked_to_master()                // Not locked to master
            && m_state == ROUTING                    // In normal routing mode
            && TARGET_IS_MASTER(route_target)        // The target type is master
@@ -195,7 +195,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
         MXB_INFO("Delaying routing: %s", get_sql_string(buffer).c_str());
         retry_query(std::move(buffer));
     }
-    else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
+    else if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)
     {
         MXB_INFO("Sending read-only error, no valid target found for %s",
                  route_target_to_string(res.route_target));
@@ -205,7 +205,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
         discard_connection(m_current_master, "The original primary is not available");
     }
     else if (res.route_target == TARGET_MASTER
-             && (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout.count()))
+             && (!m_config->delayed_retry || m_retry_duration >= m_config->delayed_retry_timeout.count()))
     {
         // Cannot retry the query, log a message that routing has failed
         log_master_routing_failure(res.target != nullptr, m_current_master, res.target);
@@ -317,7 +317,7 @@ bool RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& res)
     route_target_t route_target = info.target();
     mxb_assert_message(m_state != OTRX_ROLLBACK, "OTRX_ROLLBACK should never happen when routing queries");
 
-    if (m_config.reuse_ps && reuse_prepared_stmt(buffer))
+    if (m_config->reuse_ps && reuse_prepared_stmt(buffer))
     {
         mxb::atomic::add(&m_router->stats().n_ps_reused, 1, mxb::atomic::RELAXED);
         return true;
@@ -376,8 +376,8 @@ bool RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
         {
             // If delayed query retry is enabled, we need to store the current statement
             bool store_stmt = m_state != OTRX_ROLLBACK
-                && (m_config.delayed_retry
-                    || (TARGET_IS_SLAVE(res.route_target) && m_config.retry_failed_reads));
+                && (m_config->delayed_retry
+                    || (TARGET_IS_SLAVE(res.route_target) && m_config->retry_failed_reads));
 
             if (handle_got_target(std::move(buffer), target, store_stmt))
             {
@@ -412,7 +412,7 @@ RWBackend* RWSplitSession::get_target(const GWBUF& buffer, route_target_t route_
         // If transaction replay is enabled and a transaction is open, hints must be ignored. This prevents
         // them from overriding the transaction target which is what would otherwise happen and which causes
         // problems.
-        if (m_config.transaction_replay && trx_is_open() && m_trx.target())
+        if (m_config->transaction_replay && trx_is_open() && m_trx.target())
         {
             MXB_INFO("Transaction replay is enabled, ignoring routing hint while inside a transaction.");
         }
@@ -500,7 +500,7 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
         MXB_ERROR("Failed to execute session command in %s", backend->name());
         backend->close();
 
-        if (m_config.master_failure_mode == RW_FAIL_INSTANTLY && backend == m_current_master)
+        if (m_config->master_failure_mode == RW_FAIL_INSTANTLY && backend == m_current_master)
         {
             ok = false;
         }
@@ -660,7 +660,7 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
         }
         else
         {
-            if (m_retry_duration >= m_config.delayed_retry_timeout.count())
+            if (m_retry_duration >= m_config->delayed_retry_timeout.count())
             {
                 error << " Retry took too long (" << m_retry_duration << " seconds).";
             }
@@ -761,9 +761,9 @@ int RWSplitSession::get_max_replication_lag()
     int conf_max_rlag = mxs::Target::RLAG_UNDEFINED;
 
     /** if there is no configured value, then longest possible int is used */
-    if (m_config.max_slave_replication_lag.count() > 0)
+    if (m_config->max_slave_replication_lag.count() > 0)
     {
-        conf_max_rlag = m_config.max_slave_replication_lag.count();
+        conf_max_rlag = m_config->max_slave_replication_lag.count();
     }
 
     return conf_max_rlag;
@@ -916,7 +916,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 {
     char errmsg[1024 * 2 + 100];        // Extra space for error message
 
-    if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout.count())
+    if (m_config->delayed_retry && m_retry_duration >= m_config->delayed_retry_timeout.count())
     {
         sprintf(errmsg, "'delayed_retry_timeout' exceeded before a primary could be found");
     }
@@ -945,7 +945,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
     else
     {
         /** We never had a master connection, the session must be in read-only mode */
-        if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
+        if (m_config->master_failure_mode != RW_FAIL_INSTANTLY)
         {
             sprintf(errmsg,
                     "Session is in read-only mode because it was created "
@@ -990,7 +990,7 @@ bool RWSplitSession::trx_is_ending() const
 
 bool RWSplitSession::should_replace_master(RWBackend* target)
 {
-    return m_config.master_reconnection
+    return m_config->master_reconnection
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
@@ -1037,7 +1037,7 @@ bool RWSplitSession::should_migrate_trx() const
 {
     bool migrate = false;
 
-    if (m_config.transaction_replay
+    if (m_config->transaction_replay
         && m_state != TRX_REPLAY// Transaction replay is not active
         && trx_is_open()        // We have an open transaction
         && m_can_replay_trx)    // The transaction can be replayed

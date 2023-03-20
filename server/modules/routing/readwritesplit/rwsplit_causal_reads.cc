@@ -85,7 +85,7 @@ bool RWSplitSession::handle_causal_read_reply(GWBUF& writebuf,
                                               const mxs::Reply& reply,
                                               mxs::RWBackend* backend)
 {
-    if (m_config.causal_reads != CausalReads::NONE)
+    if (m_config->causal_reads != CausalReads::NONE)
     {
         if (reply.is_ok() && backend == m_current_master)
         {
@@ -93,8 +93,8 @@ bool RWSplitSession::handle_causal_read_reply(GWBUF& writebuf,
 
             if (!gtid.empty())
             {
-                if (m_config.causal_reads == CausalReads::GLOBAL
-                    || m_config.causal_reads == CausalReads::FAST_GLOBAL)
+                if (m_config->causal_reads == CausalReads::GLOBAL
+                    || m_config->causal_reads == CausalReads::FAST_GLOBAL)
                 {
                     m_router->set_last_gtid(gtid);
                 }
@@ -128,7 +128,7 @@ bool RWSplitSession::handle_causal_read_reply(GWBUF& writebuf,
 
 bool RWSplitSession::should_do_causal_read() const
 {
-    switch (m_config.causal_reads)
+    switch (m_config->causal_reads)
     {
     case CausalReads::LOCAL:
         // Only do a causal read if we have a GTID to wait for
@@ -166,7 +166,7 @@ bool RWSplitSession::continue_causal_read()
         m_query_queue.pop_front();
         rval = true;
     }
-    else if (m_config.causal_reads != CausalReads::NONE && m_wait_gtid != GTID_READ_DONE)
+    else if (m_config->causal_reads != CausalReads::NONE && m_wait_gtid != GTID_READ_DONE)
     {
         if (m_wait_gtid == RETRYING_ON_MASTER)
         {
@@ -208,12 +208,12 @@ void RWSplitSession::add_prefix_wait_gtid(GWBUF& origin)
     std::ostringstream ss;
     const char* wait_func = version > 50700 && version < 100000 ?
         "WAIT_FOR_EXECUTED_GTID_SET" : "MASTER_GTID_WAIT";
-    std::string gtid_position = m_config.causal_reads == CausalReads::GLOBAL ?
+    std::string gtid_position = m_config->causal_reads == CausalReads::GLOBAL ?
         m_router->last_gtid() : m_gtid_pos.to_string();
 
     ss << "SET @maxscale_secret_variable=(SELECT CASE WHEN "
        << wait_func
-       << "('" << gtid_position << "', " << m_config.causal_reads_timeout.count() << ") = 0 "
+       << "('" << gtid_position << "', " << m_config->causal_reads_timeout.count() << ") = 0 "
        << "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
 
     auto sql = ss.str();
@@ -233,8 +233,8 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
     // has to be retried.
     m_current_query.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
 
-    int64_t timeout = m_config.causal_reads_timeout.count();
-    std::string gtid = m_config.causal_reads == CausalReads::GLOBAL ?
+    int64_t timeout = m_config->causal_reads_timeout.count();
+    std::string gtid = m_config->causal_reads == CausalReads::GLOBAL ?
         m_router->last_gtid() : m_gtid_pos.to_string();
 
     // The following SQL will wait for the current GTID to be reached. If the GTID is not reached within

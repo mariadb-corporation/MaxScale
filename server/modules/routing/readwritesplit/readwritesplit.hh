@@ -286,9 +286,9 @@ struct RWSConfig : public mxs::config::Configuration
         bool reuse_ps;      /**< Reuse prepared statements */
     };
 
-    const Values& values() const
+    const mxs::WorkerGlobal<Values>& values() const
     {
-        return *m_values;
+        return m_values;
     }
 
 private:
@@ -348,7 +348,6 @@ public:
     ~RWSplit();
 
     SERVICE*                    service() const;
-    const RWSConfig::Values&    config() const;
     Stats&                      stats();
     const Stats&                stats() const;
     TargetSessionStats&         local_server_stats();
@@ -358,6 +357,8 @@ public:
     std::string                 last_gtid() const;
     std::map<uint32_t, gtid>    last_gtid_map() const;
     void                        set_last_gtid(std::string_view str);
+
+    const mxs::WorkerGlobal<RWSConfig::Values>& config() const;
 
     bool have_enough_servers() const
     {

@@ -249,15 +249,15 @@ private:
          *
          * @see handle_trx_replay
          */
-        return m_config.delayed_retry
-               && m_retry_duration < m_config.delayed_retry_timeout.count()
+        return m_config->delayed_retry
+               && m_retry_duration < m_config->delayed_retry_timeout.count()
                && !trx_is_open();
     }
 
     // Whether a transaction replay can remain active
     inline bool can_continue_trx_replay() const
     {
-        return m_state == TRX_REPLAY && m_retry_duration < m_config.delayed_retry_timeout.count();
+        return m_state == TRX_REPLAY && m_retry_duration < m_config->delayed_retry_timeout.count();
     }
 
     // Whether a new transaction replay can be started, limited by transaction_replay_max_attempts and
@@ -271,7 +271,7 @@ private:
 
     inline bool can_recover_master() const
     {
-        return m_config.master_reconnection && can_recover_servers();
+        return m_config->master_reconnection && can_recover_servers();
     }
 
     inline bool have_open_connections() const
@@ -296,7 +296,7 @@ private:
 
     inline bool include_in_checksum(const mxs::Reply& reply) const
     {
-        switch (m_config.trx_checksum)
+        switch (m_config->trx_checksum)
         {
         case TrxChecksum::FULL:
             return true;
@@ -309,8 +309,8 @@ private:
             // be better. However, this only requires the storage of the type bitmask instead of the whole
             // buffer which would be required for the function information.
             return !reply.is_ok()
-                && !mxs::Parser::type_mask_contains(m_qc.current_route_info().type_mask(),
-                                                    mxs::sql::TYPE_MASTER_READ);
+                   && !mxs::Parser::type_mask_contains(m_qc.current_route_info().type_mask(),
+                                                       mxs::sql::TYPE_MASTER_READ);
         }
 
         mxb_assert(!true);
@@ -349,7 +349,7 @@ private:
                  && res.target == m_current_master
                 // If transaction replay is configured, we cannot stream the queries as we need to know
                 // what they returned in case the transaction is replayed.
-                 && (!m_config.transaction_replay || !trx_is_open())
+                 && (!m_config->transaction_replay || !trx_is_open())
                 // Causal reads can't support multiple ongoing queries
                  && m_wait_gtid == NONE)
         {
@@ -430,11 +430,12 @@ private:
 
     State m_state = ROUTING;
 
-    mxs::SRWBackends  m_backends;               /**< Mem. management, not for use outside RWSplitSession */
-    mxs::PRWBackends  m_raw_backends;           /**< Backend pointers for use in interfaces . */
-    mxs::RWBackend*   m_current_master;         /**< Current master server */
-    RoutingPlan       m_prev_plan;              /**< The previous routing plan */
-    RWSConfig::Values m_config;                 /**< Configuration for this session */
+    mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
+    mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
+    mxs::RWBackend*  m_current_master;          /**< Current master server */
+    RoutingPlan      m_prev_plan;               /**< The previous routing plan */
+
+    std::shared_ptr<const RWSConfig::Values> m_config;      /**< Configuration for this session */
 
     int  m_expected_responses;          /**< Number of expected responses to the current query */
     bool m_locked_to_master {false};    /**< Whether session is permanently locked to the master */

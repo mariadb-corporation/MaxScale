@@ -252,11 +252,11 @@ bool RWSplitSession::is_gtid_synced(mxs::RWBackend* backend)
 {
     bool rv = true;
 
-    if (m_config.causal_reads == CausalReads::FAST)
+    if (m_config->causal_reads == CausalReads::FAST)
     {
         rv = gtid_pos_is_ok(backend, m_gtid_pos);
     }
-    else if (m_config.causal_reads == CausalReads::FAST_GLOBAL)
+    else if (m_config->causal_reads == CausalReads::FAST_GLOBAL)
     {
         rv = true;
 
@@ -315,7 +315,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     int best_priority {INT_MAX};
     auto current_rank = get_current_rank();
     // Slaves can be taken into use if we need more slave connections
-    bool need_slaves = counts.second < m_config.max_slave_connections;
+    bool need_slaves = counts.second < m_config->max_slave_connections;
 
     // Create a list of backends valid for read operations
     for (auto& backend : m_raw_backends)
@@ -329,7 +329,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
         // slaves or a master.
         bool is_usable = backend->in_use() || (can_take_into_use && (need_slaves || my_master));
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
-        int priority = get_backend_priority(backend, m_config.master_accept_reads);
+        int priority = get_backend_priority(backend, m_config->master_accept_reads);
         auto rank = backend->target()->rank();
         bool gtid_is_ok = my_master || is_gtid_synced(backend);
 
@@ -355,7 +355,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     }
 
     // Let the slave selection function pick the best server
-    return m_config.backend_select_fct(candidates);
+    return m_config->backend_select_fct(candidates);
 }
 
 /**
@@ -449,14 +449,14 @@ RWBackend* RWSplitSession::get_root_master()
  */
 bool RWSplitSession::open_connections()
 {
-    if (m_config.lazy_connect)
+    if (m_config->lazy_connect)
     {
         return true;    // No need to create connections
     }
 
     RWBackend* master = get_root_master();
 
-    if ((!master || !master->can_connect()) && m_config.master_failure_mode == RW_FAIL_INSTANTLY)
+    if ((!master || !master->can_connect()) && m_config->master_failure_mode == RW_FAIL_INSTANTLY)
     {
         if (!master)
         {
@@ -471,7 +471,7 @@ bool RWSplitSession::open_connections()
 
     if (mxb_log_should_log(LOG_INFO))
     {
-        log_server_connections(m_config.slave_selection_criteria, m_raw_backends);
+        log_server_connections(m_config->slave_selection_criteria, m_raw_backends);
     }
 
     if (can_recover_servers())
@@ -485,7 +485,7 @@ bool RWSplitSession::open_connections()
     }
 
     int n_slaves = get_slave_counts(m_raw_backends, master).second;
-    int max_nslaves = std::min(m_config.max_slave_connections, m_config.slave_connections);
+    int max_nslaves = std::min(m_config->max_slave_connections, m_config->slave_connections);
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
     auto current_rank = get_current_rank();
     PRWBackends candidates;

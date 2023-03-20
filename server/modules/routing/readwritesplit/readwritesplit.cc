@@ -104,7 +104,7 @@ SERVICE* RWSplit::service() const
     return m_service;
 }
 
-const RWSConfig::Values& RWSplit::config() const
+const mxs::WorkerGlobal<RWSConfig::Values>& RWSplit::config() const
 {
     return m_config.values();
 }
@@ -339,7 +339,7 @@ json_t* RWSplit::diagnostics() const
     json_object_set_new(rval, "max_sescmd_history_length", json_integer(stats().n_max_sescmd_sz));
     json_object_set_new(rval, "avg_sescmd_history_length", json_integer(avg_sescmd_sz()));
 
-    if (m_config.values().reuse_ps)
+    if (config()->reuse_ps)
     {
         json_object_set_new(rval, "prepared_statements_reused", json_integer(stats().n_ps_reused));
     }
@@ -366,7 +366,7 @@ json_t* RWSplit::diagnostics() const
 
     json_object_set_new(rval, "server_query_statistics", arr);
 
-    if (config().causal_reads != CausalReads::NONE)
+    if (config()->causal_reads != CausalReads::NONE)
     {
         set_warnings(rval);
     }

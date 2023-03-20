@@ -41,7 +41,7 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     mxb_assert(can_recover_servers());
 
     // Try to first find a master if we are allowed to connect to one
-    if (m_config.lazy_connect || m_config.master_reconnection)
+    if (m_config->lazy_connect || m_config->master_reconnection)
     {
         for (auto backend : m_raw_backends)
         {
