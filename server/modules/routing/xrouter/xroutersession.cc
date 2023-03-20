@@ -51,19 +51,19 @@ std::string_view XRouterSession::state_str() const
     return state_to_str(m_state);
 }
 
-XRouterSession::XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends)
+XRouterSession::XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends,
+                               XRouter::Config::ValueRef config)
     : RouterSession(session)
     , m_router(router)
     , m_backends(std::move(backends))
     , m_main(m_backends[rand() % m_backends.size()].get())
+    , m_config(std::move(config))
 {
     for (auto& b : m_backends)
     {
         if (b->in_use())
         {
-            const auto& sql = b.get() == m_main ?
-                m_router.config().main_sql : m_router.config().secondary_sql;
-
+            const auto& sql = b.get() == m_main ? m_config->main_sql : m_config->secondary_sql;
             b->write(m_pSession->protocol()->make_query(sql), mxs::Backend::IGNORE_RESPONSE);
         }
     }

@@ -59,7 +59,14 @@ mxs::RouterSession* XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoi
         }
     }
 
-    return backends.empty() ? nullptr : new XRouterSession(pSession, *this, std::move(backends));
+    mxs::RouterSession* rv = nullptr;
+
+    if (!backends.empty())
+    {
+        rv = new XRouterSession(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+    }
+
+    return rv;
 }
 
 json_t* XRouter::diagnostics() const

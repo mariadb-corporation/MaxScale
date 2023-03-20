@@ -38,6 +38,8 @@ public:
             std::string secondary_sql;
         };
 
+        using ValueRef = std::shared_ptr<const Values>;
+
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override
         {
             m_shared.assign(m_v);

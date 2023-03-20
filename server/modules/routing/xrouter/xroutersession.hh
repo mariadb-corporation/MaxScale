@@ -21,7 +21,8 @@ using SBackends = std::vector<std::unique_ptr<mxs::Backend>>;
 class XRouterSession final : public mxs::RouterSession
 {
 public:
-    XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends);
+    XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends,
+                   XRouter::Config::ValueRef config);
     bool routeQuery(GWBUF&& packet) override;
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
@@ -64,4 +65,7 @@ private:
 
     // The response to the multi-node command that will be returned to the client
     GWBUF m_response;
+
+    // The router configuration that was active when this session was started.
+    XRouter::Config::ValueRef m_config;
 };
