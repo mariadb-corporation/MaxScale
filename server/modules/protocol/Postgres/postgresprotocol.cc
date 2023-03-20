@@ -328,10 +328,7 @@ std::string_view get_sql(const GWBUF& packet)
 
 bool is_prepare(const GWBUF& packet)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    mxb_assert(!true);
-
-    return false;
+    return packet.length() > 0 && packet[0] == pg::PARSE;
 }
 
 }
