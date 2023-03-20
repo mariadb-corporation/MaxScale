@@ -495,7 +495,7 @@ bool QlaFilterSession::routeQuery(GWBUF&& queue)
         m_qc_type_mask = 0;     // only set if needed
 
         m_sql = m_log->settings().use_canonical_form ?
-            parser().get_canonical(queue) : queue.get_sql();
+            parser().get_canonical(queue) : parser().get_sql(queue);
 
         m_begin_time = m_pSession->worker()->epoll_tick_now();
 

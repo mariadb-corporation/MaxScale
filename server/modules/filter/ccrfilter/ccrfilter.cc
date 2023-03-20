@@ -294,7 +294,7 @@ bool CCRSession::routeQuery(GWBUF&& queue)
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement. */
         if (mxs::Parser::type_mask_contains(parser().get_type_mask(queue), mxs::sql::TYPE_WRITE))
         {
-            auto sql = queue.get_sql();
+            auto sql = get_sql(queue);
 
             if (!sql.empty())
             {

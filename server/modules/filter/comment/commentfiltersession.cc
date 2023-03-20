@@ -49,7 +49,7 @@ bool CommentFilterSession::routeQuery(GWBUF&& packet)
     if (mariadb::is_com_query(packet))
     {
         string comment = parseComment(m_inject);
-        packet = mariadb::create_query(mxb::cat("/* ", comment, " */", packet.get_sql()));
+        packet = mariadb::create_query(mxb::cat("/* ", comment, " */", get_sql_string(packet)));
     }
 
     return mxs::FilterSession::routeQuery(std::move(packet));

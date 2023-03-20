@@ -98,7 +98,7 @@ bool RWSplitSession::routeQuery(GWBUF&& buffer)
         MXB_INFO("New %s received while %s is active: %s",
                  STRPACKETTYPE(buffer.data()[4]),
                  m_state == TRX_REPLAY ?  "transaction replay" : "query execution",
-                 buffer.get_sql().c_str());
+                 get_sql_string(buffer).c_str());
 
         m_query_queue.emplace_back(std::move(buffer));
         return true;
@@ -137,7 +137,7 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
         MXB_INFO("Storing query (len: %lu cmd: %0x), expecting %d replies to current command: %s. "
                  "Would route %s to '%s'.",
                  buffer.length(), buffer.data()[4], m_expected_responses,
-                 maxbase::show_some(buffer.get_sql(), 1024).c_str(),
+                 maxbase::show_some(get_sql_string(buffer), 1024).c_str(),
                  route_target_to_string(res.route_target),
                  res.target ? res.target->name() : "<no target>");
 
@@ -225,7 +225,7 @@ void RWSplitSession::trx_replay_next_stmt()
         // More statements to replay, pop the oldest one and execute it
         GWBUF buf = m_replayed_trx.pop_stmt();
         const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
-        MXB_INFO("Replaying %s: %s", cmd, buf.get_sql().c_str());
+        MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
         retry_query(std::move(buf), 0);
     }
     else
@@ -248,7 +248,7 @@ void RWSplitSession::trx_replay_next_stmt()
 
                 if (m_interrupted_query)
                 {
-                    MXB_INFO("Resuming execution: %s", m_interrupted_query.get_sql().c_str());
+                    MXB_INFO("Resuming execution: %s", get_sql_string(m_interrupted_query).c_str());
                     retry_query(std::move(m_interrupted_query), 0);
                     m_interrupted_query.clear();
                 }
@@ -332,7 +332,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
                 if (m_current_query)
                 {
                     const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(m_current_query));
-                    MXB_INFO("Adding %s to trx: %s", cmd, m_current_query.get_sql().c_str());
+                    MXB_INFO("Adding %s to trx: %s", cmd, get_sql_string(m_current_query).c_str());
 
                     // Add the statement to the transaction once the first part of the result is received.
                     m_trx.add_stmt(backend, std::move(m_current_query));
@@ -509,7 +509,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
     {
         if (m_current_query && !backend->should_ignore_response())
         {
-            const auto& current_sql = m_current_query.get_sql();
+            const auto& current_sql = get_sql_string(m_current_query);
             m_ps_cache[current_sql].append(writebuf.shallow_clone());
         }
     }
@@ -748,7 +748,7 @@ bool RWSplitSession::start_trx_replay()
                 // Pop the first statement and start replaying the transaction
                 GWBUF buf = m_replayed_trx.pop_stmt();
                 const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
-                MXB_INFO("Replaying %s: %s", cmd, buf.get_sql().c_str());
+                MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
                 retry_query(std::move(buf), 1);
             }
             else
@@ -763,9 +763,9 @@ bool RWSplitSession::start_trx_replay()
                                    || !protocol_data()->is_autocommit(),
                                    "The current query (%s) should start or stop a transaction "
                                    "or autocommit should be disabled",
-                                   m_interrupted_query.get_sql().c_str());
+                                   get_sql_string(m_interrupted_query).c_str());
 
-                MXB_INFO("Retrying interrupted query: %s", m_interrupted_query.get_sql().c_str());
+                MXB_INFO("Retrying interrupted query: %s", get_sql_string(m_interrupted_query).c_str());
                 retry_query(std::move(m_interrupted_query), 1);
                 m_interrupted_query.clear();
             }

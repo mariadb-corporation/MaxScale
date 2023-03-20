@@ -383,7 +383,7 @@ bool RCRSession::routeQuery(GWBUF&& buffer)
     MXB_INFO("Routed [%s] to '%s' %s",
              STRPACKETTYPE(mysql_command),
              m_backend->target()->name(),
-             buffer.get_sql().c_str());
+             get_sql_string(buffer).c_str());
 
     m_query_timer.start_interval();
 

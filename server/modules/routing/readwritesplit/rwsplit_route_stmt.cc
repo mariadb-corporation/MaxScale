@@ -178,7 +178,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
 
     if (m_wait_gtid == READING_GTID)
     {
-        mxb_assert(buffer.get_sql() == "SELECT @@gtid_current_pos");
+        mxb_assert(get_sql(buffer) == "SELECT @@gtid_current_pos");
         buffer = reset_gtid_probe();
     }
 
@@ -192,7 +192,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
-        MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
+        MXB_INFO("Delaying routing: %s", get_sql_string(buffer).c_str());
         retry_query(std::move(buffer));
     }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
@@ -216,7 +216,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
     {
         MXB_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
                   route_target_to_string(res.route_target), STRPACKETTYPE(buffer.data()[4]),
-                  buffer.get_sql().c_str(), get_verbose_status().c_str());
+                  get_sql_string(buffer).c_str(), get_verbose_status().c_str());
         ok = false;
     }
 
@@ -265,7 +265,8 @@ bool RWSplitSession::query_not_supported(const GWBUF& querybuf)
         // Conflicting routing targets. Return an error to the client.
         MXB_ERROR("Can't route %s '%s'. SELECT with session data modification is not "
                   "supported with `use_sql_variables_in=all`.",
-                  STRPACKETTYPE(info.command()), querybuf.get_sql().c_str());
+                  STRPACKETTYPE(info.command()),
+                  get_sql_string(querybuf).c_str());
 
         err = mariadb::create_error_packet(1, 1064, "42000", "Routing query to backend failed. "
                                                              "See the error log for further details.");
@@ -286,7 +287,7 @@ bool RWSplitSession::reuse_prepared_stmt(const GWBUF& buffer)
 
     if (info.command() == MXS_COM_STMT_PREPARE)
     {
-        auto it = m_ps_cache.find(buffer.get_sql());
+        auto it = m_ps_cache.find(get_sql_string(buffer));
 
         if (it != m_ps_cache.end())
         {
@@ -637,13 +638,15 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
         else
         {
             error << "Could not route session command "
-                  << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << ").";
+                  << "(" << STRPACKETTYPE(command) << ": "
+                  << get_sql(buffer) << ").";
         }
     }
     else
     {
         error << "No valid candidates for session command "
-              << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << ").";
+              << "(" << STRPACKETTYPE(command) << ": "
+              << get_sql(buffer) << ").";
         ok = false;
     }
 
@@ -651,7 +654,7 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
     {
         if (can_retry_query() || can_continue_trx_replay())
         {
-            MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
+            MXB_INFO("Delaying routing: %s", get_sql_string(buffer).c_str());
             retry_query(std::move(buffer));
             ok = true;
         }

@@ -107,7 +107,8 @@ bool SmartRouterSession::routeQuery(GWBUF&& buffer)
         }
         else
         {
-            MXB_INFO("Queuing query while KILL command is in progress: %s", buffer.get_sql().c_str());
+            MXB_INFO("Queuing query while KILL command is in progress: %s",
+                     get_sql_string(buffer).c_str());
             m_queued = std::move(buffer);
             return 1;
         }
@@ -412,7 +413,7 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
 
         if (m_queued)
         {
-            MXB_INFO("Routing queued query: %s", m_queued.get_sql().c_str());
+            MXB_INFO("Routing queued query: %s", get_sql_string(m_queued).c_str());
             m_pSession->delay_routing(this, std::move(m_queued), 0);
             m_queued.clear();
         }

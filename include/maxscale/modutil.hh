@@ -56,11 +56,13 @@ const char* STRPACKETTYPE(int p);
  * @return      True if the packet is a COM_QUERY or COM_STMT_PREPARE packet, and
  *              sql was extracted.
  */
+// TODO: Get rid of this function entirelly.
 inline bool modutil_extract_SQL(const GWBUF& buf, const char** pSql, int* length)
 {
-    const auto& sql = buf.get_sql();
-    *pSql = sql.c_str();
-    auto sql_len = sql.length();
-    *length = sql_len;
-    return sql_len > 0;
+    std::string_view sv = mariadb::get_sql(buf);
+
+    *pSql = sv.data();
+    *length = sv.length();
+
+    return sv.length() > 0;
 }

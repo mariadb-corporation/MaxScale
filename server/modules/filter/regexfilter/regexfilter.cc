@@ -258,7 +258,7 @@ bool RegexSession::routeQuery(GWBUF&& queue)
 {
     if (m_active)
     {
-        const auto& sql = queue.get_sql();
+        const auto& sql = get_sql_string(queue);
 
         if (!sql.empty())
         {

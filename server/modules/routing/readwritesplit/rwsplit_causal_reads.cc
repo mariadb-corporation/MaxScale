@@ -222,7 +222,7 @@ void RWSplitSession::add_prefix_wait_gtid(GWBUF& origin)
     if (origin.length() + sql.size() < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
         m_current_query = origin.shallow_clone();
-        origin = mariadb::create_query(mxb::cat(sql, origin.get_sql()));
+        origin = mariadb::create_query(mxb::cat(sql, get_sql(origin)));
         m_wait_gtid = WAITING_FOR_HEADER;
     }
 }
@@ -278,7 +278,7 @@ std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
 GWBUF RWSplitSession::reset_gtid_probe()
 {
     mxb_assert_message(m_current_query.empty(), "Current query should be empty but it contains: %s",
-                       m_current_query.get_sql().c_str());
+                       get_sql_string(m_current_query).c_str());
     mxb_assert_message(!m_query_queue.empty(), "Query queue should contain at least one query");
 
     // Retry the the original query that triggered the GTID probe.

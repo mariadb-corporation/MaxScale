@@ -126,9 +126,9 @@ static int lua_get_canonical(lua_State* state)
     const auto& data = get_data(state);
     std::string sql;
 
-    if (data.buffer)
+    if (data.session && data.buffer)
     {
-        sql = data.buffer->get_sql();
+        sql = std::string(data.session->client_connection()->parser()->get_sql(*data.buffer));
         maxsimd::Markers markers;
         maxsimd::get_canonical(&sql, &markers);
     }
@@ -260,7 +260,8 @@ bool LuaContext::route_query(MXS_SESSION* session, GWBUF** buffer)
     Scope scope(this, {session, *buffer});
     bool route = true;
 
-    if (call_function(m_state, "routeQuery", 1, m_data.buffer->get_sql()))
+    std::string sql(session->client_connection()->parser()->helper().get_sql(*m_data.buffer));
+    if (call_function(m_state, "routeQuery", 1, sql))
     {
         if (lua_gettop(m_state))
         {

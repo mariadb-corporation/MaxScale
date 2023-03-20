@@ -172,7 +172,7 @@ bool PinlokiSession::routeQuery(GWBUF&& buf)
     case MXS_COM_QUERY:
         try
         {
-            const auto& sql = buf.get_sql();
+            const auto& sql = get_sql_string(buf);
             MXB_DEBUG("COM_QUERY: %s", sql.c_str());
             parser::parse(sql, this);
             rval = 1;

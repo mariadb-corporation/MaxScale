@@ -44,7 +44,7 @@ bool MirrorSession::routeQuery(GWBUF&& packet)
     }
     else
     {
-        m_query = packet.get_sql();
+        m_query = get_sql_string(packet);
         m_command = mxs_mysql_get_command(packet);
         bool expecting_response = protocol_data()->will_respond(packet);
 
@@ -84,7 +84,7 @@ void MirrorSession::route_queued_queries()
         auto query = std::move(m_queue.front());
         m_queue.pop_front();
 
-        MXB_AT_DEBUG(std::string query_sql = query.get_sql());
+        MXB_AT_DEBUG(std::string query_sql = get_sql_string(query));
 
         if (!routeQuery(std::move(query)))
         {
@@ -95,7 +95,7 @@ void MirrorSession::route_queued_queries()
 
         // Routing of queued queries should never cause the same query to be put back into the queue. The
         // check for m_responses should prevent it.
-        mxb_assert(m_queue.empty() || m_queue.back().get_sql() != query_sql);
+        mxb_assert(m_queue.empty() || get_sql(m_queue.back()) != query_sql);
     }
 }
 

@@ -784,13 +784,14 @@ void get_cmd_and_stmt(const GWBUF& buffer, const char** ppCmd, const char** ppSt
     *ppStmt = nullptr;
     *pLen = 0;
 
-    const auto& sql = buffer.get_sql();
+    // TODO: Remove assumption of MariaDB.
+    std::string_view sql = mariadb::get_sql(buffer);
 
     if (!sql.empty())
     {
         auto cmd = mxs_mysql_get_command(buffer);
         *ppCmd = STRPACKETTYPE(cmd);
-        *ppStmt = sql.c_str();
+        *ppStmt = sql.data();
         *pLen = sql.length();
     }
 }

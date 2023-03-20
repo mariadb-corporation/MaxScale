@@ -59,7 +59,7 @@ bool RewriteFilterSession::routeQuery(GWBUF&& buffer)
 {
     GWBUF* pBuffer = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     auto& session_data = *m_sSession_data.get();
-    const auto& sql = pBuffer->get_sql();
+    const auto& sql = get_sql_string(*pBuffer);
     const auto* pSql_to_match = &sql;
 
     std::string new_sql;

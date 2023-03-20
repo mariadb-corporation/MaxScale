@@ -191,7 +191,7 @@ typedef enum qc_token_position
 
 static void        enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
 static bool        ensure_query_is_parsed(const Parser::Helper& helper, GWBUF* query, uint32_t collect);
-static void        log_invalid_data(GWBUF* query, const char* message);
+static void        log_invalid_data(const Parser::Helper& helper, GWBUF* query, const char* message);
 static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
 static bool        parse_query(const Parser::Helper& helper, GWBUF& query, uint32_t collect);
 static void        parse_query_string(const char* query, int len, bool suppress_logging);
@@ -3929,25 +3929,13 @@ static bool query_is_parsed(GWBUF* query, uint32_t collect)
  * @param query   The query that could not be parsed.
  * @param message What is being asked for.
  */
-static void log_invalid_data(GWBUF* query, const char* message)
+static void log_invalid_data(const Parser::Helper& helper, GWBUF* query, const char* message)
 {
-    // At this point the query should be contiguous, but better safe than sorry.
+    auto sql = helper.get_sql(*query);
 
-    if (gwbuf_link_length(query) >= MYSQL_HEADER_LEN + 1)
+    if (!sql.empty())
     {
-        const auto& sql = query->get_sql();
-
-        if (!sql.empty())
-        {
-            int length = sql.length();
-
-            if (length > (int)gwbuf_link_length(query) - MYSQL_HEADER_LEN - 1)
-            {
-                length = (int)gwbuf_link_length(query) - MYSQL_HEADER_LEN - 1;
-            }
-
-            MXB_INFO("Parsing the query failed, %s: %.*s", message, length, sql.c_str());
-        }
+        MXB_INFO("Parsing the query failed, %s: %.*s", message, (int)sql.length(), sql.data());
     }
 }
 
@@ -5102,7 +5090,7 @@ static int32_t qc_sqlite_get_type_mask(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report query type");
+            log_invalid_data(helper, pStmt, "cannot report query type");
         }
     }
     else
@@ -5133,7 +5121,7 @@ static int32_t qc_sqlite_get_operation(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report query operation");
+            log_invalid_data(helper, pStmt, "cannot report query operation");
         }
     }
     else
@@ -5164,7 +5152,7 @@ static int32_t qc_sqlite_get_created_table_name(const mxs::Parser::Helper& helpe
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report created tables");
+            log_invalid_data(helper, pStmt, "cannot report created tables");
         }
     }
     else
@@ -5194,7 +5182,7 @@ static int32_t qc_sqlite_get_table_names(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report what tables are accessed");
+            log_invalid_data(helper, pStmt, "cannot report what tables are accessed");
         }
     }
     else
@@ -5224,7 +5212,7 @@ static int32_t qc_sqlite_get_database_names(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report what databases are accessed");
+            log_invalid_data(helper, pStmt, "cannot report what databases are accessed");
         }
     }
     else
@@ -5254,7 +5242,7 @@ static int32_t qc_sqlite_get_kill_info(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report KILL information");
+            log_invalid_data(helper, pStmt, "cannot report KILL information");
         }
     }
     else
@@ -5284,7 +5272,7 @@ static int32_t qc_sqlite_get_prepare_name(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report the name of a prepared statement");
+            log_invalid_data(helper, pStmt, "cannot report the name of a prepared statement");
         }
     }
     else
@@ -5318,7 +5306,7 @@ int32_t qc_sqlite_get_field_info(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report field info");
+            log_invalid_data(helper, pStmt, "cannot report field info");
         }
     }
     else
@@ -5351,7 +5339,7 @@ int32_t qc_sqlite_get_function_info(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report function info");
+            log_invalid_data(helper, pStmt, "cannot report function info");
         }
     }
     else
@@ -5383,7 +5371,7 @@ int32_t qc_sqlite_get_preparable_stmt(const mxs::Parser::Helper& helper,
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
-            log_invalid_data(pStmt, "cannot report preperable statement");
+            log_invalid_data(helper, pStmt, "cannot report preperable statement");
         }
     }
     else

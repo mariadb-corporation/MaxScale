@@ -35,7 +35,7 @@ namespace schemarouter
 bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session);
 
 enum route_target get_shard_route_target(uint32_t qtype);
-bool              detect_show_shards(const GWBUF& query);
+bool              detect_show_shards(const Parser& parser, const GWBUF& query);
 
 SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
                                          SchemaRouter* router,
@@ -162,7 +162,8 @@ static void inspect_query(const Parser& parser,
     if (mxb_log_should_log(LOG_INFO))
     {
         MXB_INFO("> Command: %s, stmt: %s %s%s",
-                 STRPACKETTYPE(command), packet.get_sql().c_str(),
+                 STRPACKETTYPE(command),
+                 std::string(parser.get_sql(packet)).c_str(),
                  (packet.hints.empty() ? "" : ", Hint:"),
                  (packet.hints.empty() ? "" : Hint::type_to_str(packet.hints[0].type)));
     }
@@ -331,7 +332,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
             send_databases();
             return 1;
         }
-        else if (detect_show_shards(packet))
+        else if (detect_show_shards(parser(), packet))
         {
             if (send_shards())
             {
@@ -618,7 +619,7 @@ std::pair<bool, std::string> extract_database(const Parser& parser, const GWBUF&
 
     if (command == MXS_COM_QUERY && parser.get_operation(const_cast<GWBUF&>(buf)) == mxs::sql::OP_CHANGE_DB)
     {
-        auto tokens = mxb::strtok(buf.get_sql(), "` \n\t;");
+        auto tokens = mxb::strtok(parser.get_sql(buf), "` \n\t;");
 
         if (tokens.size() < 2 || strcasecmp(tokens[0].c_str(), "use") != 0)
         {
@@ -753,7 +754,7 @@ bool SchemaRouterSession::have_servers()
  * @param query Query to inspect
  * @return true if the query is a SHOW SHARDS query otherwise false
  */
-bool detect_show_shards(const GWBUF& query)
+bool detect_show_shards(const Parser& parser, const GWBUF& query)
 {
     bool rval = false;
 
@@ -762,7 +763,7 @@ bool detect_show_shards(const GWBUF& query)
         return false;
     }
 
-    auto tokens = mxb::strtok(query.get_sql(), " ");
+    auto tokens = mxb::strtok(parser.get_sql(query), " ");
 
     if (tokens.size() >= 2
         && strcasecmp(tokens[0].c_str(), "show") == 0
@@ -855,7 +856,7 @@ void SchemaRouterSession::route_queued_query()
     GWBUF tmp = std::move(m_queue.front());
     m_queue.pop_front();
 
-    MXB_INFO("Routing queued query: %s", tmp.get_sql().c_str());
+    MXB_INFO("Routing queued query: %s", get_sql_string(tmp).c_str());
 
     m_pSession->delay_routing(this, std::move(tmp), 0);
 }
