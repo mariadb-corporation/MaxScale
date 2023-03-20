@@ -3896,8 +3896,10 @@ static bool parse_query(const mxs::Parser::Helper& helper, GWBUF& query, uint32_
     }
     else
     {
-        MXB_ERROR("The provided buffer does not contain SQL.");
-        mxb_assert(!true);
+        // TODO: It would be better if the parser was asked to parse a buffer
+        // TODO: only when it is known to contain something parsable.
+        MXB_WARNING("The provided buffer does not contain SQL.");
+        // mxb_assert(!true);
     }
 
     return parsed;
