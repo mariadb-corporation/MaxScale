@@ -401,9 +401,6 @@ std::string Reply::to_string() const
 
     case ReplyState::LOAD_DATA:
         return "LOAD_DATA";
-
-    case ReplyState::LOAD_DATA_END:
-        return "LOAD_DATA_END";
     }
 
     return "UNKNOWN";
@@ -459,6 +456,11 @@ uint64_t Reply::size() const
     return m_size;
 }
 
+uint64_t Reply::upload_size() const
+{
+    return m_upload_size;
+}
+
 const std::vector<uint64_t>& Reply::field_counts() const
 {
     return m_field_counts;
@@ -509,6 +511,11 @@ void Reply::add_rows(uint64_t row_count)
 void Reply::add_bytes(uint64_t size)
 {
     m_size += size;
+}
+
+void Reply::add_upload_bytes(uint64_t size)
+{
+    m_upload_size += size;
 }
 
 void Reply::add_field_count(uint64_t field_count)
@@ -564,6 +571,7 @@ void Reply::clear()
     m_row_count = 0;
     m_num_warnings = 0;
     m_size = 0;
+    m_upload_size = 0;
     m_generated_id = 0;
     m_param_count = 0;
     m_is_ok = false;

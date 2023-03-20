@@ -557,7 +557,6 @@ enum class ReplyState
     RSET_ROWS,      /**< Resultset response, waiting for rows */
     PREPARE,        /**< COM_STMT_PREPARE response */
     LOAD_DATA,      /**< Sending data for LOAD DATA LOCAL INFILE */
-    LOAD_DATA_END,  /**< Waiting for LOAD DATA LOCAL INFILE response */
 };
 
 class Reply
@@ -643,6 +642,11 @@ public:
     uint64_t size() const;
 
     /**
+     * Number of bytes sent by the client for this request
+     */
+    uint64_t upload_size() const;
+
+    /**
      * The field counts for all received result sets
      */
     const std::vector<uint64_t>& field_counts() const;
@@ -690,6 +694,8 @@ public:
 
     void add_bytes(uint64_t size);
 
+    void add_upload_bytes(uint64_t size);
+
     void add_field_count(uint64_t field_count);
 
     void set_generated_id(uint32_t id);
@@ -722,6 +728,7 @@ private:
     Error                 m_error;
     uint64_t              m_row_count {0};
     uint64_t              m_size {0};
+    uint64_t              m_upload_size {0};
     uint32_t              m_generated_id {0};
     uint16_t              m_param_count {0};
     uint16_t              m_num_warnings {0};

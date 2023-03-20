@@ -130,6 +130,7 @@ bool PgBackendConnection::write(GWBUF&& buffer)
             m_reply.clear();
             m_reply.set_reply_state(mxs::ReplyState::START);
             m_reply.set_command(buffer[0]);
+            m_reply.add_upload_bytes(buffer.length());
         }
         else
         {
@@ -551,6 +552,10 @@ GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
         case pg::ROW_DESCRIPTION:
             m_reply.set_reply_state(mxs::ReplyState::RSET_COLDEF);
             m_reply.add_field_count(pg::get_uint16(it + pg::HEADER_LEN));
+            break;
+
+        case pg::COPY_IN_RESPONSE:
+            m_reply.set_reply_state(mxs::ReplyState::LOAD_DATA);
             break;
         }
 

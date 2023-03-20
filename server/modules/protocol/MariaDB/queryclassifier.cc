@@ -560,13 +560,9 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
                  transaction,
                  ses->protocol()->describe(*querybuf).c_str());
     }
-    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
-    {
-        MXB_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.", m_route_info.load_data_sent());
-    }
     else
     {
-        MXB_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.", m_route_info.load_data_sent());
+        MXB_INFO("> Processing LOAD DATA LOCAL INFILE.");
     }
 }
 
@@ -805,11 +801,6 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     // Reset for every classification
     m_route_info.set_ps_continuation(false);
 
-    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
-    {
-        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
-    }
-
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
     auto protocol_data = session()->protocol_data();
@@ -818,13 +809,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
     if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
-        m_route_info.append_load_data_sent(pBuffer);
-
-        if (len == MYSQL_HEADER_LEN)
-        {
-            /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-            m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_END);
-        }
+        // A LOAD DATA LOCAL INFILE is ongoing
     }
     else if (len > MYSQL_HEADER_LEN)
     {
@@ -954,11 +939,8 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
 void QueryClassifier::update_from_reply(const mxs::Reply& reply)
 {
-    if (reply.state() == mxs::ReplyState::LOAD_DATA
-        && m_route_info.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE)
-    {
-        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
-    }
+    m_route_info.set_load_data_state(reply.state() == mxs::ReplyState::LOAD_DATA ?
+                                     LOAD_DATA_ACTIVE : LOAD_DATA_INACTIVE);
 }
 
 // static

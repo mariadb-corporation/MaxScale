@@ -39,7 +39,6 @@ public:
     {
         LOAD_DATA_INACTIVE,         /**< Not active */
         LOAD_DATA_ACTIVE,           /**< Load is active */
-        LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
     };
 
     class RouteInfo
@@ -128,14 +127,6 @@ public:
         }
 
         /**
-         * Get number of bytes send in the LOAD DATA LOCAL INFILE
-         */
-        uint64_t load_data_sent() const
-        {
-            return m_load_data_sent;
-        }
-
-        /**
          * Check if current transaction is still a read-only transaction
          *
          * @return True if no statements have been executed that modify data
@@ -221,27 +212,7 @@ public:
 
         void set_load_data_state(load_data_state_t state)
         {
-            if (state == LOAD_DATA_ACTIVE)
-            {
-                // The load data state is almost always inactive when this function is called with
-                // LOAD_DATA_ACTIVE as the state. The only exception is when the same SQL statement executes
-                // two or more LOAD DATA LOCAL INFILE commands in a row. In this case the state will be
-                // LOAD_DATA_END.
-                mxb_assert(m_load_data_state != LOAD_DATA_ACTIVE);
-                reset_load_data_sent();
-            }
-
             m_load_data_state = state;
-        }
-
-        void append_load_data_sent(GWBUF* pBuffer)
-        {
-            m_load_data_sent += gwbuf_length(pBuffer);
-        }
-
-        void reset_load_data_sent()
-        {
-            m_load_data_sent = 0;
         }
 
         void set_trx_still_read_only(bool value)
@@ -278,7 +249,6 @@ public:
         uint32_t          m_type_mask = mxs::sql::TYPE_UNKNOWN;
         uint32_t          m_stmt_id = 0;
         load_data_state_t m_load_data_state = LOAD_DATA_INACTIVE;
-        uint64_t          m_load_data_sent = 0;
         bool              m_large_query = false;
         bool              m_next_large_query = false;
         bool              m_trx_is_read_only = true;

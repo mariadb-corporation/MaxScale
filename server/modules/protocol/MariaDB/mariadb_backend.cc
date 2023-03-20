@@ -20,6 +20,7 @@
 #include <mysqld_error.h>
 #include <maxbase/format.hh>
 #include <maxbase/proxy_protocol.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
@@ -1103,17 +1104,10 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
             bool was_large = m_large_query;
             uint32_t packet_len = mariadb::get_header(queue.data()).pl_length;
             m_large_query = packet_len == MYSQL_PACKET_LENGTH_MAX;
+            m_reply.add_upload_bytes(queue.length());
 
             if (was_large || m_reply.state() == ReplyState::LOAD_DATA)
             {
-                if (packet_len == 0 && m_reply.state() == ReplyState::LOAD_DATA)
-                {
-                    // An empty packet is sent at the end of the LOAD DATA LOCAL INFILE. Any packets received
-                    // after this but before the server responds with the result should go through the normal
-                    // code paths.
-                    set_reply_state(ReplyState::LOAD_DATA_END);
-                }
-
                 // Not the start of a packet, don't analyze it.
                 return m_dcb->writeq_append(std::move(queue));
             }
@@ -1981,16 +1975,8 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         break;
 
     case ReplyState::LOAD_DATA:
-        // This should not happen as the server is supposed to wait for the whole LOAD DATA LOCAL INFILE to
-        // complete before sending a response. It is however possible that something else, for example another
-        // MaxScale, causes an error to be sent even if the client hasn't finished sending the data.
-        MXB_ERROR("Response to LOAD DATA LOCAL INFILE read before the upload was complete: "
-                  "cmd: 0x%02hhx, len: %u, server: %s", cmd, len, m_server.name());
-        mxb_assert(!true);
-        /** Fallthrough */
-
-    case ReplyState::LOAD_DATA_END:
-        MXB_INFO("Load data ended on '%s'", m_server.name());
+        MXB_INFO("Load data ended on '%s', %s in total", m_server.name(),
+                 mxb::pretty_size(m_reply.upload_size()).c_str());
 
         if (cmd == MYSQL_REPLY_ERR)
         {
