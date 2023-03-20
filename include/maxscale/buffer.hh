@@ -91,9 +91,6 @@ public:
     // TODO: make private?
     HintVector hints;   /*< Hint data for this buffer */
 
-    // TODO: Move out from here?
-    const std::string& get_sql() const;
-
     /**
      * Constructs an empty GWBUF. Does not allocate any storage. Calling most storage-accessing functions
      * on an empty buffer is an error.
@@ -373,8 +370,6 @@ private:
 #ifdef SS_DEBUG
     mxb::Worker* m_owner {nullptr};     /**< Owning thread. Used for debugging */
 #endif
-
-    mutable std::string m_sql;
 
     void move_helper(GWBUF&& other) noexcept;
     void clone_helper(const GWBUF& other);
@@ -1330,14 +1325,6 @@ public:
     uint32_t id() const
     {
         return m_pBuffer->id();
-    }
-
-    /**
-     * Get the sql of the buffer (if any)
-     */
-    const std::string& get_sql() const
-    {
-        return m_pBuffer->get_sql();
     }
 
     /**

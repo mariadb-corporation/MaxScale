@@ -108,16 +108,6 @@ GWBUF* gwbuf_alloc(unsigned int size)
     return rval;
 }
 
-const std::string& GWBUF::get_sql() const
-{
-    if (m_sql.empty())
-    {
-        m_sql = extract_sql_real(this);
-    }
-
-    return m_sql;
-}
-
 GWBUF::GWBUF()
 {
 #ifdef SS_DEBUG
@@ -178,7 +168,6 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     hints = move(rhs.hints);
     m_stmt_info = std::move(rhs.m_stmt_info);
     m_sbuf = move(rhs.m_sbuf);
-    m_sql = move(rhs.m_sql);
 }
 
 GWBUF GWBUF::deep_clone() const
@@ -226,8 +215,6 @@ void GWBUF::clone_helper(const GWBUF& other)
     m_type = other.m_type;
     m_id = other.m_id;
     m_stmt_info = other.m_stmt_info;
-
-    m_sql = other.m_sql;
 }
 
 GWBUF* gwbuf_clone_shallow(GWBUF* buf)
@@ -262,7 +249,6 @@ GWBUF GWBUF::split(uint64_t n_bytes)
         m_type = TYPE_UNDEFINED;
         m_id = 0;
         m_stmt_info = nullptr;
-        m_sql.clear();
 
         consume(n_bytes);
         rval.rtrim(len - n_bytes);
@@ -456,9 +442,6 @@ void GWBUF::reset()
     m_stmt_info.reset();
     m_type = TYPE_UNDEFINED;
     m_id = 0;
-
-    // TODO: do these really need to be cleared or would they be overwritten?
-    m_sql.clear();
 }
 
 void GWBUF::ensure_unique()
@@ -550,8 +533,6 @@ size_t GWBUF::varying_size() const
         rv += sizeof(*m_stmt_info);
         rv += m_stmt_info->size() / m_stmt_info.use_count();
     }
-
-    rv += m_sql.capacity();
 
     return rv;
 }
