@@ -744,7 +744,7 @@ static bool check_dir_access(const char* dirname, bool rd, bool wr)
 
     if (!err.empty())
     {
-        print_alert(errno, "%s", err.c_str());
+        log_startup_error(errno, "%s", err.c_str());
     }
 
     return err.empty();
@@ -3007,7 +3007,7 @@ SniffResult sniff_configuration(const string& filepath)
                         string errmsg = mxb::string_printf("Variable substitution to file '%s' failed. ",
                                                            filepath.c_str());
                         errmsg += mxb::create_list_string(subst_errors, " ");
-                        print_alert("%s", errmsg.c_str());
+                        log_startup_error("%s", errmsg.c_str());
                         substitution_ok = false;
                     }
                 }
@@ -3030,7 +3030,7 @@ SniffResult sniff_configuration(const string& filepath)
     else
     {
         string all_errors = mxb::create_list_string(load_res.errors, " ");
-        print_alert("Failed to read configuration file '%s': %s", filepath.c_str(), all_errors.c_str());
+        log_startup_error("Failed to read configuration file '%s': %s", filepath.c_str(), all_errors.c_str());
     }
     return rval;
 }
