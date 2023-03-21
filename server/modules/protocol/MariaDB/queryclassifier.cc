@@ -723,18 +723,6 @@ bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* b
     return rval;
 }
 
-inline bool is_large_query(GWBUF* buf)
-{
-    uint32_t buflen = gwbuf_length(buf);
-
-    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
-    mxb_assert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
-    // ... and the payload should be buflen - 4 bytes
-    mxb_assert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
-
-    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
-}
-
 QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     QueryClassifier::current_target_t current_target,
     GWBUF* pBuffer)
@@ -748,7 +736,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
 
-    m_route_info.set_large_query(is_large_query(pBuffer));
+    m_route_info.set_large_query(m_parser.is_large_query(*pBuffer));
 
     if (m_route_info.large_query())
     {
