@@ -101,6 +101,18 @@ std::string_view MariaDBParser::Helper::get_sql(const GWBUF& packet) const
     return mariadb::get_sql(packet);
 }
 
+bool MariaDBParser::Helper::is_large_query(const GWBUF& packet) const
+{
+    uint32_t buflen = packet.length();
+
+    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
+    mxb_assert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
+    // ... and the payload should be buflen - 4 bytes
+    mxb_assert(MYSQL_GET_PAYLOAD_LEN(packet.data()) == buflen - MYSQL_HEADER_LEN);
+
+    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
+}
+
 bool MariaDBParser::Helper::is_prepare(const GWBUF& packet) const
 {
     return mariadb::is_com_prepare(packet);

@@ -63,6 +63,11 @@ std::string_view PgParser::Helper::get_sql(const GWBUF& packet) const
     return pg::get_sql(packet);
 }
 
+bool PgParser::Helper::is_large_query(const GWBUF& packet) const
+{
+    return false;
+}
+
 bool PgParser::Helper::is_prepare(const GWBUF& packet) const
 {
     return pg::is_prepare(packet);
