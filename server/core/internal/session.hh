@@ -154,7 +154,7 @@ public:
     bool remove_variable(const char* name, void** context) override;
     void retain_statement(const GWBUF& buffer) override;
     void dump_statements() const override;
-    void book_server_response(SERVER* pServer, bool final_response) override;
+    void book_server_response(mxs::Target* pTarget, bool final_response) override;
     void book_last_as_complete();
     void reset_server_bookkeeping() override;
     void append_session_log(const std::string& msg) override;

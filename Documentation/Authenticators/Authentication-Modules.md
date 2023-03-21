@@ -179,7 +179,7 @@ and should be set to the value used by the backends.
 The setting accepts the values 0, 1 or 2:
 
 0. Case-sensitive matching (default)
-1. Convert the requested database name to lower case before using case-sensitive
+1. Convert the requested database name to lower case before using case-insensitive
 matching. Assumes that database names on the server are stored in lower case.
 2. Use case-insensitive matching.
 

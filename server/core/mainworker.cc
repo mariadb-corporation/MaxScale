@@ -286,12 +286,15 @@ void MainWorker::start_shutdown()
 
 bool MainWorker::wait_for_shutdown()
 {
+    bool again = true;
+
     if (RoutingWorker::shutdown_complete())
     {
         shutdown();
+        again = false;
     }
 
-    return true;
+    return again;
 }
 }
 

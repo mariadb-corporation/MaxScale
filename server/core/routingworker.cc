@@ -1691,10 +1691,12 @@ void RoutingWorker::start_shutdown()
 bool RoutingWorker::try_shutdown()
 {
     pool_close_all_conns();
+    bool again = true;
 
     if (m_sessions.empty())
     {
         shutdown();
+        again = false;
     }
     else
     {
@@ -1704,7 +1706,7 @@ bool RoutingWorker::try_shutdown()
         }
     }
 
-    return true;
+    return again;
 }
 
 void RoutingWorker::register_session(MXS_SESSION* ses)
