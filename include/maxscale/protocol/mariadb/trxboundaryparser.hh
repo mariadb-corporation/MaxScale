@@ -136,7 +136,7 @@ public:
      * @return The corresponding type mask or 0, if the statement does not
      *         affect transaction state or autocommit mode.
      */
-    uint32_t type_mask_of(GWBUF* pBuf)
+    uint32_t type_mask_of(const GWBUF* pBuf)
     {
         uint32_t type_mask = 0;
 

@@ -76,7 +76,7 @@ bool use_cached_result()
     return this_unit.cache_max_size() != 0 && this_thread.use_cache;
 }
 
-bool has_not_been_parsed(GWBUF& stmt)
+bool has_not_been_parsed(const GWBUF& stmt)
 {
     // A GWBUF has not been parsed, if it does not have a protocol info object attached.
     return stmt.get_protocol_info().get() == nullptr;
@@ -386,7 +386,7 @@ public:
     QCInfoCacheScope(const QCInfoCacheScope&) = delete;
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
-    QCInfoCacheScope(mxs::Parser* pParser, GWBUF* pStmt)
+    QCInfoCacheScope(mxs::Parser* pParser, const GWBUF* pStmt)
         : m_parser(*pParser)
         , m_stmt(*pStmt)
     {
@@ -449,7 +449,7 @@ public:
 
 private:
     mxs::Parser& m_parser;
-    GWBUF&       m_stmt;
+    const GWBUF& m_stmt;
     std::string  m_canonical;
     size_t       m_info_size_before;
 
@@ -732,32 +732,32 @@ const Parser::Helper& CachingParser::helper() const
     return m_sParser->helper();
 }
 
-Parser::Result CachingParser::parse(GWBUF& stmt, uint32_t collect) const
+Parser::Result CachingParser::parse(const GWBUF& stmt, uint32_t collect) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
 
     return m_sParser->parse(stmt, collect);
 }
 
-std::string_view CachingParser::get_canonical(GWBUF& stmt) const
+std::string_view CachingParser::get_canonical(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_canonical(stmt);
 }
 
-std::string_view CachingParser::get_created_table_name(GWBUF& stmt) const
+std::string_view CachingParser::get_created_table_name(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_created_table_name(stmt);
 }
 
-CachingParser::DatabaseNames CachingParser::get_database_names(GWBUF& stmt) const
+CachingParser::DatabaseNames CachingParser::get_database_names(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_database_names(stmt);
 }
 
-void CachingParser::get_field_info(GWBUF& stmt,
+void CachingParser::get_field_info(const GWBUF& stmt,
                                    const FieldInfo** ppInfos,
                                    size_t* pnInfos) const
 {
@@ -765,7 +765,7 @@ void CachingParser::get_field_info(GWBUF& stmt,
     m_sParser->get_field_info(stmt, ppInfos, pnInfos);
 }
 
-void CachingParser::get_function_info(GWBUF& stmt,
+void CachingParser::get_function_info(const GWBUF& stmt,
                                       const FunctionInfo** ppInfos,
                                       size_t* pnInfos) const
 {
@@ -773,13 +773,13 @@ void CachingParser::get_function_info(GWBUF& stmt,
     m_sParser->get_function_info(stmt, ppInfos, pnInfos);
 }
 
-Parser::KillInfo CachingParser::get_kill_info(GWBUF& stmt) const
+Parser::KillInfo CachingParser::get_kill_info(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_kill_info(stmt);
 }
 
-sql::OpCode CachingParser::get_operation(GWBUF& stmt) const
+sql::OpCode CachingParser::get_operation(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_operation(stmt);
@@ -790,13 +790,13 @@ uint32_t CachingParser::get_options() const
     return m_sParser->get_options();
 }
 
-GWBUF* CachingParser::get_preparable_stmt(GWBUF& stmt) const
+GWBUF* CachingParser::get_preparable_stmt(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_preparable_stmt(stmt);
 }
 
-std::string_view CachingParser::get_prepare_name(GWBUF& stmt) const
+std::string_view CachingParser::get_prepare_name(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_prepare_name(stmt);
@@ -812,18 +812,18 @@ Parser::SqlMode CachingParser::get_sql_mode() const
     return m_sParser->get_sql_mode();
 }
 
-CachingParser::TableNames CachingParser::get_table_names(GWBUF& stmt) const
+CachingParser::TableNames CachingParser::get_table_names(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_table_names(stmt);
 }
 
-uint32_t CachingParser::get_trx_type_mask(GWBUF& stmt) const
+uint32_t CachingParser::get_trx_type_mask(const GWBUF& stmt) const
 {
     return m_sParser->get_trx_type_mask(stmt);
 }
 
-uint32_t CachingParser::get_type_mask(GWBUF& stmt) const
+uint32_t CachingParser::get_type_mask(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_type_mask(stmt);

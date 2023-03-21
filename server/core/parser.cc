@@ -498,7 +498,7 @@ void append_field_info(json_t* pParent,
     json_object_set_new(pParent, zName, pFields);
 }
 
-void append_field_info(const mxs::Parser& parser, json_t* pParams, GWBUF& stmt)
+void append_field_info(const mxs::Parser& parser, json_t* pParams, const GWBUF& stmt)
 {
     const Parser::FieldInfo* begin;
     size_t n;
@@ -507,7 +507,7 @@ void append_field_info(const mxs::Parser& parser, json_t* pParams, GWBUF& stmt)
     append_field_info(pParams, CN_FIELDS, begin, begin + n);
 }
 
-void append_function_info(const mxs::Parser& parser, json_t* pParams, GWBUF& stmt)
+void append_function_info(const mxs::Parser& parser, json_t* pParams, const GWBUF& stmt)
 {
     json_t* pFunctions = json_array();
 
@@ -530,7 +530,7 @@ void append_function_info(const mxs::Parser& parser, json_t* pParams, GWBUF& stm
 }
 }
 
-std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, GWBUF& stmt) const
+std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, const GWBUF& stmt) const
 {
     json_t* pAttributes = json_object();
 
@@ -564,7 +564,7 @@ std::unique_ptr<json_t> Parser::parse_to_resource(const char* zHost, GWBUF& stmt
 namespace
 {
 
-uint32_t get_trx_type_mask_using_default(const mxs::Parser& parser, GWBUF& stmt)
+uint32_t get_trx_type_mask_using_default(const mxs::Parser& parser, const GWBUF& stmt)
 {
     uint32_t type_mask = parser.get_type_mask(stmt);
 
@@ -603,7 +603,7 @@ uint32_t get_trx_type_mask_using_default(const mxs::Parser& parser, GWBUF& stmt)
 
 }
 
-uint32_t Parser::get_trx_type_mask_using(GWBUF& stmt, ParseTrxUsing use) const
+uint32_t Parser::get_trx_type_mask_using(const GWBUF& stmt, ParseTrxUsing use) const
 {
     uint32_t type_mask = 0;
 

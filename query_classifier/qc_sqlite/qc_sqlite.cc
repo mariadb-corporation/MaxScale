@@ -190,12 +190,12 @@ typedef enum qc_token_position
 } qc_token_position_t;
 
 static void        enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
-static bool        ensure_query_is_parsed(const Parser::Helper& helper, GWBUF* query, uint32_t collect);
-static void        log_invalid_data(const Parser::Helper& helper, GWBUF* query, const char* message);
+static bool        ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query, uint32_t collect);
+static void        log_invalid_data(const Parser::Helper& helper, const GWBUF* query, const char* message);
 static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
-static bool        parse_query(const Parser::Helper& helper, GWBUF& query, uint32_t collect);
+static bool        parse_query(const Parser::Helper& helper, const GWBUF& query, uint32_t collect);
 static void        parse_query_string(const char* query, int len, bool suppress_logging);
-static bool        query_is_parsed(GWBUF* query, uint32_t collect);
+static bool        query_is_parsed(const GWBUF* query, uint32_t collect);
 static bool        should_exclude(const char* zName, const ExprList* pExclude);
 static const char* get_token_symbol(int token);
 
@@ -332,7 +332,7 @@ public:
         return std::make_unique<QcSqliteInfo>(collect);
     }
 
-    static QcSqliteInfo* get(const mxs::Parser::Helper& helper, GWBUF* pStmt, uint32_t collect)
+    static QcSqliteInfo* get(const mxs::Parser::Helper& helper, const GWBUF* pStmt, uint32_t collect)
     {
         QcSqliteInfo* pInfo = nullptr;
 
@@ -3676,7 +3676,7 @@ static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_
     }
 }
 
-static bool ensure_query_is_parsed(const mxs::Parser::Helper& helper, GWBUF* query, uint32_t collect)
+static bool ensure_query_is_parsed(const mxs::Parser::Helper& helper, const GWBUF* query, uint32_t collect)
 {
     bool parsed = query_is_parsed(query, collect);
 
@@ -3807,7 +3807,7 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
     }
 }
 
-static bool parse_query(const mxs::Parser::Helper& helper, GWBUF& query, uint32_t collect)
+static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, uint32_t collect)
 {
     bool parsed = false;
     mxb_assert(!query_is_parsed(&query, collect));
@@ -3905,7 +3905,7 @@ static bool parse_query(const mxs::Parser::Helper& helper, GWBUF& query, uint32_
     return parsed;
 }
 
-static bool query_is_parsed(GWBUF* pQuery, uint32_t collect)
+static bool query_is_parsed(const GWBUF* pQuery, uint32_t collect)
 {
     bool rc = false;
 
@@ -3936,7 +3936,7 @@ static bool query_is_parsed(GWBUF* pQuery, uint32_t collect)
  * @param query   The query that could not be parsed.
  * @param message What is being asked for.
  */
-static void log_invalid_data(const Parser::Helper& helper, GWBUF* query, const char* message)
+static void log_invalid_data(const Parser::Helper& helper, const GWBUF* query, const char* message)
 {
     auto sql = helper.get_sql(*query);
 
@@ -4805,19 +4805,19 @@ static void               qc_sqlite_process_end(void);
 static int32_t            qc_sqlite_thread_init(void);
 static void               qc_sqlite_thread_end(void);
 static int32_t            qc_sqlite_parse(const mxs::Parser::Helper&,
-                                          GWBUF* query, uint32_t collect, Parser::Result* result);
+                                          const GWBUF* query, uint32_t collect, Parser::Result* result);
 static int32_t            qc_sqlite_get_type_mask(const mxs::Parser::Helper&,
-                                                  GWBUF* query, uint32_t* typemask);
+                                                  const GWBUF* query, uint32_t* typemask);
 static int32_t            qc_sqlite_get_operation(const mxs::Parser::Helper&,
-                                                  GWBUF* query, int32_t* op);
+                                                  const GWBUF* query, int32_t* op);
 static int32_t            qc_sqlite_get_created_table_name(const mxs::Parser::Helper&,
-                                                           GWBUF* query, string_view* name);
+                                                           const GWBUF* query, string_view* name);
 static int32_t            qc_sqlite_get_table_names(const mxs::Parser::Helper&,
-                                                    GWBUF* query, vector<Parser::TableName>* pNames);
+                                                    const GWBUF* query, vector<Parser::TableName>* pNames);
 static int32_t            qc_sqlite_get_database_names(const mxs::Parser::Helper&,
-                                                       GWBUF* query, vector<string_view>* pNames);
+                                                       const GWBUF* query, vector<string_view>* pNames);
 static int32_t            qc_sqlite_get_preparable_stmt(const mxs::Parser::Helper&,
-                                                        GWBUF* stmt, GWBUF** preparable_stmt);
+                                                        const GWBUF* stmt, GWBUF** preparable_stmt);
 static void               qc_sqlite_set_server_version(uint64_t version);
 static void               qc_sqlite_get_server_version(uint64_t* version);
 static int32_t            qc_sqlite_get_sql_mode(Parser::SqlMode* sql_mode);
@@ -5055,7 +5055,7 @@ static void qc_sqlite_thread_end(void)
 }
 
 static int32_t qc_sqlite_parse(const mxs::Parser::Helper& helper,
-                               GWBUF* pStmt,
+                               const GWBUF* pStmt,
                                uint32_t collect,
                                Parser::Result* pResult)
 {
@@ -5078,7 +5078,7 @@ static int32_t qc_sqlite_parse(const mxs::Parser::Helper& helper,
 }
 
 static int32_t qc_sqlite_get_type_mask(const mxs::Parser::Helper& helper,
-                                       GWBUF* pStmt,
+                                       const GWBUF* pStmt,
                                        uint32_t* pType_mask)
 {
     QC_TRACE();
@@ -5109,7 +5109,7 @@ static int32_t qc_sqlite_get_type_mask(const mxs::Parser::Helper& helper,
 }
 
 static int32_t qc_sqlite_get_operation(const mxs::Parser::Helper& helper,
-                                       GWBUF* pStmt,
+                                       const GWBUF* pStmt,
                                        int32_t* pOp)
 {
     QC_TRACE();
@@ -5140,7 +5140,7 @@ static int32_t qc_sqlite_get_operation(const mxs::Parser::Helper& helper,
 }
 
 static int32_t qc_sqlite_get_created_table_name(const mxs::Parser::Helper& helper,
-                                                GWBUF* pStmt,
+                                                const GWBUF* pStmt,
                                                 string_view* pCreated_table_name)
 {
     QC_TRACE();
@@ -5171,7 +5171,7 @@ static int32_t qc_sqlite_get_created_table_name(const mxs::Parser::Helper& helpe
 }
 
 static int32_t qc_sqlite_get_table_names(const mxs::Parser::Helper& helper,
-                                         GWBUF* pStmt,
+                                         const GWBUF* pStmt,
                                          vector<Parser::TableName>* pTables)
 {
     QC_TRACE();
@@ -5201,7 +5201,7 @@ static int32_t qc_sqlite_get_table_names(const mxs::Parser::Helper& helper,
 }
 
 static int32_t qc_sqlite_get_database_names(const mxs::Parser::Helper& helper,
-                                            GWBUF* pStmt,
+                                            const GWBUF* pStmt,
                                             vector<string_view>* pNames)
 {
     QC_TRACE();
@@ -5231,7 +5231,7 @@ static int32_t qc_sqlite_get_database_names(const mxs::Parser::Helper& helper,
 }
 
 static int32_t qc_sqlite_get_kill_info(const mxs::Parser::Helper& helper,
-                                       GWBUF* pStmt,
+                                       const GWBUF* pStmt,
                                        Parser::KillInfo* pKill)
 {
     QC_TRACE();
@@ -5261,7 +5261,7 @@ static int32_t qc_sqlite_get_kill_info(const mxs::Parser::Helper& helper,
 }
 
 static int32_t qc_sqlite_get_prepare_name(const mxs::Parser::Helper& helper,
-                                          GWBUF* pStmt,
+                                          const GWBUF* pStmt,
                                           string_view* pPrepare_name)
 {
     QC_TRACE();
@@ -5291,7 +5291,7 @@ static int32_t qc_sqlite_get_prepare_name(const mxs::Parser::Helper& helper,
 }
 
 int32_t qc_sqlite_get_field_info(const mxs::Parser::Helper& helper,
-                                 GWBUF* pStmt,
+                                 const GWBUF* pStmt,
                                  const Parser::FieldInfo** ppInfos,
                                  uint32_t* pnInfos)
 {
@@ -5325,7 +5325,7 @@ int32_t qc_sqlite_get_field_info(const mxs::Parser::Helper& helper,
 }
 
 int32_t qc_sqlite_get_function_info(const mxs::Parser::Helper& helper,
-                                    GWBUF* pStmt,
+                                    const GWBUF* pStmt,
                                     const Parser::FunctionInfo** ppInfos, uint32_t* pnInfos)
 {
     QC_TRACE();
@@ -5358,7 +5358,7 @@ int32_t qc_sqlite_get_function_info(const mxs::Parser::Helper& helper,
 }
 
 int32_t qc_sqlite_get_preparable_stmt(const mxs::Parser::Helper& helper,
-                                      GWBUF* pStmt,
+                                      const GWBUF* pStmt,
                                       GWBUF** pzPreparable_stmt)
 {
     QC_TRACE();
@@ -5511,7 +5511,7 @@ public:
         return m_helper;
     }
 
-    Result parse(GWBUF& stmt, uint32_t collect) const override
+    Result parse(const GWBUF& stmt, uint32_t collect) const override
     {
         Result result = Parser::Result::INVALID;
 
@@ -5520,7 +5520,7 @@ public:
         return result;
     }
 
-    std::string_view get_canonical(GWBUF& stmt) const override
+    std::string_view get_canonical(const GWBUF& stmt) const override
     {
         std::string_view rv;
 
@@ -5534,7 +5534,7 @@ public:
         return rv;
     }
 
-    std::string_view get_created_table_name(GWBUF& stmt) const override
+    std::string_view get_created_table_name(const GWBUF& stmt) const override
     {
         std::string_view name;
 
@@ -5543,7 +5543,7 @@ public:
         return name;
     }
 
-    Parser::DatabaseNames get_database_names(GWBUF& stmt) const override
+    Parser::DatabaseNames get_database_names(const GWBUF& stmt) const override
     {
         Parser::DatabaseNames names;
 
@@ -5552,21 +5552,23 @@ public:
         return names;
     }
 
-    void get_field_info(GWBUF& stmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
+    void get_field_info(const GWBUF& stmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
         qc_sqlite_get_field_info(m_helper, &stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    void get_function_info(GWBUF& stmt, const Parser::FunctionInfo** ppInfos, size_t* pnInfos) const override
+    void get_function_info(const GWBUF& stmt,
+                           const Parser::FunctionInfo** ppInfos,
+                           size_t* pnInfos) const override
     {
         uint32_t n = 0;
         qc_sqlite_get_function_info(m_helper, &stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
-    Parser::KillInfo get_kill_info(GWBUF& stmt) const override
+    Parser::KillInfo get_kill_info(const GWBUF& stmt) const override
     {
         Parser::KillInfo kill;
 
@@ -5575,7 +5577,7 @@ public:
         return kill;
     }
 
-    mxs::sql::OpCode get_operation(GWBUF& stmt) const override
+    mxs::sql::OpCode get_operation(const GWBUF& stmt) const override
     {
         int32_t op = 0;
 
@@ -5589,7 +5591,7 @@ public:
         return qc_sqlite_get_options();
     }
 
-    GWBUF* get_preparable_stmt(GWBUF& stmt) const override
+    GWBUF* get_preparable_stmt(const GWBUF& stmt) const override
     {
         GWBUF* pPreparable_stmt = nullptr;
 
@@ -5598,7 +5600,7 @@ public:
         return pPreparable_stmt;
     }
 
-    std::string_view get_prepare_name(GWBUF& stmt) const override
+    std::string_view get_prepare_name(const GWBUF& stmt) const override
     {
         std::string_view name;
 
@@ -5624,7 +5626,7 @@ public:
         return sql_mode;
     }
 
-    Parser::TableNames get_table_names(GWBUF& stmt) const override
+    Parser::TableNames get_table_names(const GWBUF& stmt) const override
     {
         Parser::TableNames names;
 
@@ -5633,13 +5635,13 @@ public:
         return names;
     }
 
-    uint32_t get_trx_type_mask(GWBUF& stmt) const override
+    uint32_t get_trx_type_mask(const GWBUF& stmt) const override
     {
         maxscale::TrxBoundaryParser parser;
         return parser.type_mask_of(&stmt);
     }
 
-    uint32_t get_type_mask(GWBUF& stmt) const override
+    uint32_t get_type_mask(const GWBUF& stmt) const override
     {
         uint32_t type_mask = 0;
 
@@ -5664,7 +5666,7 @@ public:
     }
 
 private:
-    QcSqliteInfo* get_info(GWBUF& stmt) const
+    QcSqliteInfo* get_info(const GWBUF& stmt) const
     {
         mxb_assert(this_unit.initialized);
         mxb_assert(this_thread.initialized);
@@ -5716,7 +5718,7 @@ public:
         return qc_sqlite_info_get_canonical(info);
     }
 
-    bool is_prepare(GWBUF& stmt) const override
+    bool is_prepare(const GWBUF& stmt) const override
     {
         return mariadb::is_com_prepare(stmt);
     }
