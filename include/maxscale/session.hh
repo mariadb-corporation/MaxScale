@@ -448,7 +448,7 @@ public:
      * @param server          The server having returned a response.
      * @param final_response  True if this was the final server to respond, false otherwise.
      */
-    virtual void book_server_response(SERVER* pServer, bool final_response) = 0;
+    virtual void book_server_response(mxs::Target* pTarget, bool final_response) = 0;
 
     /**
      * @brief Reset the server bookkeeping for the current statement.

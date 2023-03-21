@@ -2940,8 +2940,7 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, maxscale::ReplyRoute& down,
             --m_num_responses;
             mxb_assert(m_num_responses >= 0);
 
-            // TODO: The SERVER parameter should be changed into a mxs::Target
-            m_session->book_server_response(static_cast<SERVER*>(down.front()->target()), true);
+            m_session->book_server_response(down.front()->target(), true);
         }
 
         if (reply.is_ok() && m_session->service->config()->session_track_trx_state)
