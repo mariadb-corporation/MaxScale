@@ -438,7 +438,7 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
     }
 }
 
-uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
+uint32_t QueryClassifier::get_route_target(uint32_t qtype)
 {
     auto session_data = m_pSession->protocol_data();
     bool trx_active = session_data->is_trx_active();
@@ -450,9 +450,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
      * Prepared statements preparations should go to all servers
      */
     if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_STMT)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT)
-        || command == MXS_COM_STMT_CLOSE
-        || command == MXS_COM_STMT_RESET)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT))
     {
         target = TARGET_ALL;
     }
@@ -862,7 +860,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                 route_to_last_used = true;
             }
 
-            route_target = get_route_target(command, type_mask);
+            route_target = get_route_target(type_mask);
 
             if (route_target == TARGET_SLAVE && route_to_last_used)
             {

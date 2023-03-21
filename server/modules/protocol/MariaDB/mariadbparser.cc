@@ -52,14 +52,14 @@ mxs::Parser::PacketTypeMask MariaDBParser::Helper::get_packet_type_mask(const GW
         case MXS_COM_CHANGE_USER:       /*< 11 all servers change it accordingly */
         case MXS_COM_SET_OPTION:        /*< 1b send options to all servers */
         case MXS_COM_RESET_CONNECTION:  /*< 1f resets the state of all connections */
+        case MXS_COM_STMT_CLOSE:        /*< free prepared statement */
+        case MXS_COM_STMT_RESET:        /*< resets the data of a prepared statement */
             type_mask = mxs::sql::TYPE_SESSION_WRITE;
             break;
 
         case MXS_COM_CREATE_DB:             /**< 5 DDL must go to the master */
         case MXS_COM_DROP_DB:               /**< 6 DDL must go to the master */
-        case MXS_COM_STMT_CLOSE:            /*< free prepared statement */
         case MXS_COM_STMT_SEND_LONG_DATA:   /*< send data to column */
-        case MXS_COM_STMT_RESET:            /*< resets the data of a prepared statement */
             type_mask = mxs::sql::TYPE_WRITE;
             break;
 
