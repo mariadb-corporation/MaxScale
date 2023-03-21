@@ -48,10 +48,18 @@ add_executable(keycheck
   ../../../../../query_classifier/test/testreader.cc
   ../cache.cc
   ../cache_storage_api.cc
+  ../cacheconfig.cc
+  ../cachefilter.cc
+  ../cachefiltersession.cc
+  ../cachemt.cc
+  ../cachept.cc
+  ../cachesimple.cc
+  ../cachest.cc
   ../lrustorage.cc
   ../lrustoragemt.cc
   ../lrustoragest.cc
   ../rules.cc
+  ../sessioncache.cc
   ../storage.cc
   ../storagefactory.cc
   )
