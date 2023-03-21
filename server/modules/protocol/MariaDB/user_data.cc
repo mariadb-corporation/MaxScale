@@ -1635,6 +1635,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
 
     case UserDatabase::DBNameCmpMode::LOWER_CASE:
         eff_requested_db = mxb::tolower(requested_db);
+        case_sensitive_db = false;
         break;
 
     case UserDatabase::DBNameCmpMode::CASE_INSENSITIVE:
