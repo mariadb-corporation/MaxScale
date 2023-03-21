@@ -35,6 +35,29 @@ GWBUF PgParser::Helper::create_packet(std::string_view sql) const
     return pg::create_query_packet(sql);
 }
 
+mxs::Parser::PacketTypeMask PgParser::Helper::get_packet_type_mask(const GWBUF& packet) const
+{
+    uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
+    TypeMaskStatus status = TypeMaskStatus::FINAL;
+
+    if (packet.length() > 1)
+    {
+        switch (*packet.data())
+        {
+        case pg::QUERY:
+        case pg::PARSE:
+            status = TypeMaskStatus::NEEDS_PARSING;
+            break;
+
+            // TODO: Handle other packets appropriately.
+        default:
+            break;
+        }
+    }
+
+    return PacketTypeMask { type_mask, status };
+}
+
 std::string_view PgParser::Helper::get_sql(const GWBUF& packet) const
 {
     return pg::get_sql(packet);

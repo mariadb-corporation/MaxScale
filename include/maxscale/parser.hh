@@ -100,10 +100,20 @@ class ParserPlugin;
 class Parser
 {
 public:
+    enum class TypeMaskStatus
+    {
+        FINAL,
+        NEEDS_PARSING
+    };
+
+    using PacketTypeMask = std::pair<uint32_t, TypeMaskStatus>;
+
     class Helper
     {
     public:
+
         virtual GWBUF            create_packet(std::string_view sql) const = 0;
+        virtual PacketTypeMask   get_packet_type_mask(const GWBUF& packet) const = 0;
         virtual std::string_view get_sql(const GWBUF& packet) const = 0;
         virtual bool             is_prepare(const GWBUF& packet) const = 0;
     };
@@ -306,6 +316,10 @@ public:
     virtual KillInfo         get_kill_info(const GWBUF& stmt) const = 0;
     virtual sql::OpCode      get_operation(const GWBUF& stmt) const = 0;
     virtual uint32_t         get_options() const = 0;
+    PacketTypeMask           get_packet_type_mask(const GWBUF& packet) const
+    {
+        return helper().get_packet_type_mask(packet);
+    }
     virtual GWBUF*           get_preparable_stmt(const GWBUF& stmt) const = 0;
     virtual std::string_view get_prepare_name(const GWBUF& stmt) const = 0;
     virtual uint64_t         get_server_version() const = 0;
