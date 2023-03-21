@@ -249,6 +249,7 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
             {
                 // TODO: Fence out the node somehow
                 MXB_SINFO("Command failed on '" << backend->name() << "': " << reply.describe());
+                backend->close(mxs::Backend::CLOSE_FATAL);
             }
 
             if (all_backends_idle())

@@ -471,7 +471,12 @@ bool PgBackendConnection::handle_routing()
                 mxs::ReplyRoute down;
                 m_upstream->clientReply(std::move(complete_packets), down, m_reply);
 
-                if (m_reply.is_complete() && !m_track_queue.empty())
+                if (!m_dcb->is_open())
+                {
+                    // The DCB was closed as a result of the clientReply call
+                    keep_going = false;
+                }
+                else if (m_reply.is_complete() && !m_track_queue.empty())
                 {
                     // Another command was executed, try to route a response again
                     m_reply.set_reply_state(mxs::ReplyState::START);
