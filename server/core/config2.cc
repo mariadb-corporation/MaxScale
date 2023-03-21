@@ -15,6 +15,7 @@
 #include <maxscale/config2.hh>
 
 #include <maxscale/monitor.hh>
+#include <maxscale/secrets.hh>
 #include "internal/config.hh"
 #include "internal/monitor.hh"
 #include "internal/service.hh"
@@ -1461,6 +1462,46 @@ bool ParamString::from_json(const json_t* pJson,
     }
 
     return rv;
+}
+
+std::string ParamPassword::type() const
+{
+    return "password";
+}
+
+std::string ParamPassword::to_string(value_type value) const
+{
+    return config_mask_passwords() ? "*****" : ParamString::to_string(value);
+}
+
+bool ParamPassword::from_string(const std::string& value, value_type* pValue, std::string* pMessage) const
+{
+    bool ok = ParamString::from_string(value, pValue, pMessage);
+
+    if (ok)
+    {
+        *pValue = mxs::decrypt_password(*pValue);
+    }
+
+    return ok;
+}
+
+
+json_t* ParamPassword::to_json(value_type value) const
+{
+    return config_mask_passwords() ? json_string("*****") : ParamString::to_json(value);
+}
+
+bool ParamPassword::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
+{
+    bool ok = ParamString::from_json(pJson, pValue, pMessage);
+
+    if (ok)
+    {
+        *pValue = mxs::decrypt_password(*pValue);
+    }
+
+    return ok;
 }
 }
 }

@@ -533,12 +533,12 @@ class ParamNumber : public ConcreteParam<ParamNumber, int64_t>
 {
 public:
     virtual std::string to_string(value_type value) const;
-    virtual bool        from_string(const std::string& value, value_type* pValue,
-                                    std::string* pMessage = nullptr) const;
+    virtual bool from_string(const std::string& value, value_type* pValue,
+                             std::string* pMessage = nullptr) const;
 
     virtual json_t* to_json(value_type value) const;
-    virtual bool    from_json(const json_t* pJson, value_type* pValue,
-                              std::string* pMessage = nullptr) const;
+    virtual bool from_json(const json_t* pJson, value_type* pValue,
+                           std::string* pMessage = nullptr) const;
 
     bool is_valid(value_type value) const
     {
@@ -1327,13 +1327,13 @@ public:
 
     std::string type() const override;
 
-    std::string to_string(value_type value) const;
-    bool        from_string(const std::string& value, value_type* pValue,
-                            std::string* pMessage = nullptr) const;
+    virtual std::string to_string(value_type value) const;
+    virtual bool         from_string(const std::string& value, value_type* pValue,
+                                    std::string* pMessage = nullptr) const;
 
-    json_t* to_json(value_type value) const;
-    bool    from_json(const json_t* pJson, value_type* pValue,
-                      std::string* pMessage = nullptr) const;
+    virtual json_t* to_json(value_type value) const;
+    virtual bool     from_json(const json_t* pJson, value_type* pValue,
+                              std::string* pMessage = nullptr) const;
 
 private:
     ParamString(Specification* pSpecification,
@@ -1354,6 +1354,25 @@ private:
     }
 
     Quotes m_quotes;
+};
+
+/**
+ * ParamPassword
+ */
+class ParamPassword : public ParamString
+{
+public:
+    using ParamString::ParamString;
+
+    std::string type() const override;
+
+    std::string to_string(value_type value) const override;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const override;
+
+    json_t* to_json(value_type value) const override;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const override;
 };
 
 /**
