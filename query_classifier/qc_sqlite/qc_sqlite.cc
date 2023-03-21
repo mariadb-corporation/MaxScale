@@ -12,11 +12,6 @@
  * Public License.
  */
 
-// NOTE: qc_sqlite used to be C. So as to be able to use STL collections,
-// NOTE: it has been ported to C++. However, the porting is only partial,
-// NOTE: which is the reason why there is a mix of C-style and C++-style
-// NOTE: approaches.
-
 #define MXB_MODULE_NAME "qc_sqlite"
 #include <sqliteInt.h>
 
@@ -63,17 +58,6 @@ using mxs::ParserPlugin;
             MXB_ERROR("Caught standard exception: %s", x.what()); pInfo->m_status = Parser::Result::INVALID;} \
         catch (...) { \
             MXB_ERROR("Caught unknown exception."); pInfo->m_status = Parser::Result::INVALID;}} while (false)
-
-namespace
-{
-
-enum qc_result_t
-{
-    QC_RESULT_OK,
-    QC_RESULT_ERROR
-};
-
-}
 
 static inline bool qc_info_was_tokenized(mxs::Parser::Result status)
 {
@@ -189,9 +173,7 @@ typedef enum qc_token_position
     QC_TOKEN_RIGHT,     // To the right, e.g: "b" in "a = b".
 } qc_token_position_t;
 
-static void        enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
 static bool        ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query, uint32_t collect);
-static void        log_invalid_data(const Parser::Helper& helper, const GWBUF* query, const char* message);
 static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
 static bool        parse_query(const Parser::Helper& helper, const GWBUF& query, uint32_t collect);
 static void        parse_query_string(const char* query, int len, bool suppress_logging);
@@ -368,7 +350,7 @@ public:
         return rv;
     }
 
-    bool get_operation(int32_t* pOp) const
+    bool get_operation(mxs::sql::OpCode* pOp) const
     {
         bool rv = false;
 
@@ -451,7 +433,7 @@ public:
         return rv;
     }
 
-    bool get_field_info(const Parser::FieldInfo** ppInfos, uint32_t* pnInfos) const
+    bool get_field_info(const Parser::FieldInfo** ppInfos, size_t* pnInfos) const
     {
         bool rv = false;
 
@@ -466,7 +448,7 @@ public:
         return rv;
     }
 
-    bool get_function_info(const Parser::FunctionInfo** ppInfos, uint32_t* pnInfos) const
+    bool get_function_info(const Parser::FunctionInfo** ppInfos, size_t* pnInfos) const
     {
         bool rv = false;
 
@@ -3664,18 +3646,6 @@ extern void maxscaleSetStatusCap(int cap); // See sqlite3:tokenize.c
 extern int  maxscaleTranslateKeyword(int token);
 }
 
-static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity)
-{
-    if (len + n >= *pCapacity)
-    {
-        int capacity = *pCapacity ? *pCapacity * 2 : 4;
-
-        *ppzStrings = (char**) MXB_REALLOC(*ppzStrings, capacity * sizeof(char**));
-        MXB_ABORT_IF_NULL(*ppzStrings);
-        *pCapacity = capacity;
-    }
-}
-
 static bool ensure_query_is_parsed(const mxs::Parser::Helper& helper, const GWBUF* query, uint32_t collect)
 {
     bool parsed = query_is_parsed(query, collect);
@@ -3928,22 +3898,6 @@ static bool query_is_parsed(const GWBUF* pQuery, uint32_t collect)
     }
 
     return rc;
-}
-
-/**
- * Logs information about invalid data.
- *
- * @param query   The query that could not be parsed.
- * @param message What is being asked for.
- */
-static void log_invalid_data(const Parser::Helper& helper, const GWBUF* query, const char* message)
-{
-    auto sql = helper.get_sql(*query);
-
-    if (!sql.empty())
-    {
-        MXB_INFO("Parsing the query failed, %s: %.*s", message, (int)sql.length(), sql.data());
-    }
 }
 
 /**
@@ -4799,34 +4753,10 @@ void maxscaleUse(Parse* pParse, Token* pToken)
 /**
  * API
  */
-static int32_t            qc_sqlite_setup(Parser::SqlMode sql_mode, const char* args);
-static int32_t            qc_sqlite_process_init(void);
-static void               qc_sqlite_process_end(void);
-static int32_t            qc_sqlite_thread_init(void);
-static void               qc_sqlite_thread_end(void);
-static int32_t            qc_sqlite_parse(const mxs::Parser::Helper&,
-                                          const GWBUF* query, uint32_t collect, Parser::Result* result);
-static int32_t            qc_sqlite_get_type_mask(const mxs::Parser::Helper&,
-                                                  const GWBUF* query, uint32_t* typemask);
-static int32_t            qc_sqlite_get_operation(const mxs::Parser::Helper&,
-                                                  const GWBUF* query, int32_t* op);
-static int32_t            qc_sqlite_get_created_table_name(const mxs::Parser::Helper&,
-                                                           const GWBUF* query, string_view* name);
-static int32_t            qc_sqlite_get_table_names(const mxs::Parser::Helper&,
-                                                    const GWBUF* query, vector<Parser::TableName>* pNames);
-static int32_t            qc_sqlite_get_database_names(const mxs::Parser::Helper&,
-                                                       const GWBUF* query, vector<string_view>* pNames);
-static int32_t            qc_sqlite_get_preparable_stmt(const mxs::Parser::Helper&,
-                                                        const GWBUF* stmt, GWBUF** preparable_stmt);
-static void               qc_sqlite_set_server_version(uint64_t version);
-static void               qc_sqlite_get_server_version(uint64_t* version);
-static int32_t            qc_sqlite_get_sql_mode(Parser::SqlMode* sql_mode);
-static int32_t            qc_sqlite_set_sql_mode(Parser::SqlMode sql_mode);
-static uint32_t           qc_sqlite_get_options();
-static int32_t            qc_sqlite_set_options(uint32_t options);
-static Parser::StmtResult qc_sqlite_get_result_from_info(const GWBUF::ProtocolInfo* pInfo);
-
-static string_view    qc_sqlite_info_get_canonical(const GWBUF::ProtocolInfo* pInfo);
+static int32_t qc_sqlite_process_init(void);
+static void    qc_sqlite_process_end(void);
+static int32_t qc_sqlite_thread_init(void);
+static void    qc_sqlite_thread_end(void);
 
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
@@ -4845,74 +4775,6 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 }
 
 static const char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
-
-static int32_t qc_sqlite_setup(Parser::SqlMode sql_mode, const char* cargs)
-{
-    QC_TRACE();
-    mxb_assert(!this_unit.setup);
-
-    qc_log_level_t log_level = QC_LOG_NOTHING;
-    QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
-
-    if (cargs)
-    {
-        char args[strlen(cargs) + 1];
-        strcpy(args, cargs);
-
-        char* p1;
-        char* token = strtok_r(args, ",", &p1);
-
-        while (token)
-        {
-            const char* key;
-            const char* value;
-
-            if (get_key_and_value(token, &key, &value))
-            {
-                if (strcmp(key, ARG_LOG_UNRECOGNIZED_STATEMENTS) == 0)
-                {
-                    char* end;
-
-                    long l = strtol(value, &end, 0);
-
-                    if ((*end == 0) && (l >= QC_LOG_NOTHING) && (l <= QC_LOG_NON_TOKENIZED))
-                    {
-                        log_level = static_cast<qc_log_level_t>(l);
-                    }
-                    else
-                    {
-                        MXB_WARNING("'%s' is not a number between %d and %d.",
-                                    value,
-                                    QC_LOG_NOTHING,
-                                    QC_LOG_NON_TOKENIZED);
-                    }
-                }
-                else
-                {
-                    MXB_WARNING("'%s' is not a recognized argument.", key);
-                }
-            }
-            else
-            {
-                MXB_WARNING("'%s' is not a recognized argument string.", args);
-            }
-
-            token = strtok_r(NULL, ",", &p1);
-        }
-    }
-
-    if (sql_mode == Parser::SqlMode::ORACLE)
-    {
-        function_name_mappings = function_name_mappings_oracle;
-    }
-
-    this_unit.setup = true;
-    this_unit.log_level = log_level;
-    this_unit.sql_mode = sql_mode;
-    this_unit.pFunction_name_mappings = function_name_mappings;
-
-    return this_unit.setup ? QC_RESULT_OK : QC_RESULT_ERROR;
-}
 
 static int32_t qc_sqlite_process_init(void)
 {
@@ -4955,7 +4817,7 @@ static int32_t qc_sqlite_process_init(void)
         MXB_ERROR("Failed to initialize sqlite3.");
     }
 
-    return this_unit.initialized ? QC_RESULT_OK : QC_RESULT_ERROR;
+    return this_unit.initialized ? 0 : -1;
 }
 
 static void qc_sqlite_process_end(void)
@@ -5030,7 +4892,7 @@ static int32_t qc_sqlite_thread_init(void)
                   sqlite3_errstr(rc));
     }
 
-    return this_thread.initialized ? QC_RESULT_OK : QC_RESULT_ERROR;
+    return this_thread.initialized ? 0 : -1;
 }
 
 static void qc_sqlite_thread_end(void)
@@ -5052,445 +4914,6 @@ static void qc_sqlite_thread_end(void)
 
     this_thread.pDb = NULL;
     this_thread.initialized = false;
-}
-
-static int32_t qc_sqlite_parse(const mxs::Parser::Helper& helper,
-                               const GWBUF* pStmt,
-                               uint32_t collect,
-                               Parser::Result* pResult)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, collect);
-
-    if (pInfo)
-    {
-        *pResult = pInfo->m_status;
-    }
-    else
-    {
-        *pResult = Parser::Result::INVALID;
-    }
-
-    return pInfo ? QC_RESULT_OK : QC_RESULT_ERROR;
-}
-
-static int32_t qc_sqlite_get_type_mask(const mxs::Parser::Helper& helper,
-                                       const GWBUF* pStmt,
-                                       uint32_t* pType_mask)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *pType_mask = mxs::sql::TYPE_UNKNOWN;
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_ESSENTIALS);
-
-    if (pInfo)
-    {
-        if (pInfo->get_type_mask(pType_mask))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report query type");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-static int32_t qc_sqlite_get_operation(const mxs::Parser::Helper& helper,
-                                       const GWBUF* pStmt,
-                                       int32_t* pOp)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *pOp = mxs::sql::OP_UNDEFINED;
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_ESSENTIALS);
-
-    if (pInfo)
-    {
-        if (pInfo->get_operation(pOp))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report query operation");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-static int32_t qc_sqlite_get_created_table_name(const mxs::Parser::Helper& helper,
-                                                const GWBUF* pStmt,
-                                                string_view* pCreated_table_name)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *pCreated_table_name = string_view {};
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_TABLES);
-
-    if (pInfo)
-    {
-        if (pInfo->get_created_table_name(pCreated_table_name))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report created tables");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-static int32_t qc_sqlite_get_table_names(const mxs::Parser::Helper& helper,
-                                         const GWBUF* pStmt,
-                                         vector<Parser::TableName>* pTables)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_TABLES);
-
-    if (pInfo)
-    {
-        if (pInfo->get_table_names(pTables))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report what tables are accessed");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The pStmt could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-static int32_t qc_sqlite_get_database_names(const mxs::Parser::Helper& helper,
-                                            const GWBUF* pStmt,
-                                            vector<string_view>* pNames)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_DATABASES);
-
-    if (pInfo)
-    {
-        if (pInfo->get_database_names(pNames))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report what databases are accessed");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-static int32_t qc_sqlite_get_kill_info(const mxs::Parser::Helper& helper,
-                                       const GWBUF* pStmt,
-                                       Parser::KillInfo* pKill)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_ESSENTIALS);
-
-    if (pInfo)
-    {
-        if (pInfo->get_kill_info(pKill))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report KILL information");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-static int32_t qc_sqlite_get_prepare_name(const mxs::Parser::Helper& helper,
-                                          const GWBUF* pStmt,
-                                          string_view* pPrepare_name)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_ESSENTIALS);
-
-    if (pInfo)
-    {
-        if (pInfo->get_prepare_name(pPrepare_name))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report the name of a prepared statement");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-int32_t qc_sqlite_get_field_info(const mxs::Parser::Helper& helper,
-                                 const GWBUF* pStmt,
-                                 const Parser::FieldInfo** ppInfos,
-                                 uint32_t* pnInfos)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *ppInfos = NULL;
-    *pnInfos = 0;
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_FIELDS);
-
-    if (pInfo)
-    {
-        if (pInfo->get_field_info(ppInfos, pnInfos))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report field info");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-int32_t qc_sqlite_get_function_info(const mxs::Parser::Helper& helper,
-                                    const GWBUF* pStmt,
-                                    const Parser::FunctionInfo** ppInfos, uint32_t* pnInfos)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *ppInfos = NULL;
-    *pnInfos = 0;
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_FUNCTIONS);
-
-    if (pInfo)
-    {
-        if (pInfo->get_function_info(ppInfos, pnInfos))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report function info");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-int32_t qc_sqlite_get_preparable_stmt(const mxs::Parser::Helper& helper,
-                                      const GWBUF* pStmt,
-                                      GWBUF** pzPreparable_stmt)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *pzPreparable_stmt = NULL;
-
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(helper, pStmt, Parser::COLLECT_ESSENTIALS);
-
-    if (pInfo)
-    {
-        if (pInfo->get_preparable_stmt(pzPreparable_stmt))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(helper, pStmt, "cannot report preperable statement");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
-static void qc_sqlite_set_server_version(uint64_t version)
-{
-    QC_TRACE();
-
-    uint32_t major = version / 10000;
-    uint32_t minor = (version - major * 10000) / 100;
-    uint32_t patch = version - major * 10000 - minor * 100;
-
-    this_thread.version = version;
-    this_thread.version_major = major;
-    this_thread.version_minor = minor;
-    this_thread.version_patch = patch;
-}
-
-static void qc_sqlite_get_server_version(uint64_t* pVersion)
-{
-    QC_TRACE();
-
-    *pVersion = this_thread.version;
-}
-
-
-int32_t qc_sqlite_get_sql_mode(Parser::SqlMode* pSql_mode)
-{
-    *pSql_mode = this_thread.sql_mode;
-    return QC_RESULT_OK;
-}
-
-int32_t qc_sqlite_set_sql_mode(Parser::SqlMode sql_mode)
-{
-    int32_t rv = QC_RESULT_OK;
-
-    switch (sql_mode)
-    {
-    case Parser::SqlMode::DEFAULT:
-        this_thread.sql_mode = sql_mode;
-        this_thread.pFunction_name_mappings = function_name_mappings_default;
-        break;
-
-    case Parser::SqlMode::ORACLE:
-        this_thread.sql_mode = sql_mode;
-        this_thread.pFunction_name_mappings = function_name_mappings_oracle;
-        break;
-
-    default:
-        rv = QC_RESULT_ERROR;
-    }
-
-    return rv;
-}
-
-uint32_t qc_sqlite_get_options()
-{
-    return this_thread.options;
-}
-
-int32_t qc_sqlite_set_options(uint32_t options)
-{
-    int32_t rv = QC_RESULT_OK;
-
-    if ((options & ~Parser::OPTION_MASK) == 0)
-    {
-        this_thread.options = options;
-    }
-    else
-    {
-        rv = QC_RESULT_ERROR;
-    }
-
-    return rv;
-}
-
-Parser::StmtResult qc_sqlite_get_result_from_info(const GWBUF::ProtocolInfo* pInfo)
-{
-    return static_cast<const QcSqliteInfo*>(pInfo)->get_result();
-}
-
-int32_t qc_sqlite_get_current_stmt(const char** ppStmt, size_t* pLen)
-{
-    int32_t rv = QC_RESULT_ERROR;
-
-    if (this_thread.pInfo && this_thread.pInfo->m_pQuery && (this_thread.pInfo->m_nQuery != 0))
-    {
-        *ppStmt = this_thread.pInfo->m_pQuery;
-        *pLen = this_thread.pInfo->m_nQuery;
-        rv = QC_RESULT_OK;
-    }
-
-    return rv;
-}
-
-string_view qc_sqlite_info_get_canonical(const GWBUF::ProtocolInfo* pInfo)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    string_view canonical;
-
-    static_cast<const QcSqliteInfo*>(pInfo)->get_canonical(&canonical);
-
-    return canonical;
 }
 
 namespace
@@ -5515,7 +4938,10 @@ public:
     {
         Result result = Parser::Result::INVALID;
 
-        qc_sqlite_parse(m_helper, &stmt, collect, &result);
+        if (QcSqliteInfo* pInfo = get_info(stmt, collect))
+        {
+            result = pInfo->m_status;
+        }
 
         return result;
     }
@@ -5524,9 +4950,7 @@ public:
     {
         std::string_view rv;
 
-        QcSqliteInfo* pInfo = get_info(stmt);
-
-        if (pInfo)
+        if (QcSqliteInfo* pInfo = get_info(stmt))
         {
             rv = pInfo->get_canonical();
         }
@@ -5538,7 +4962,13 @@ public:
     {
         std::string_view name;
 
-        qc_sqlite_get_created_table_name(m_helper, &stmt, &name);
+        if (QcSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_TABLES))
+        {
+            if (!pInfo->get_created_table_name(&name))
+            {
+                log_invalid_data(stmt, "cannot report created table");
+            }
+        }
 
         return name;
     }
@@ -5547,55 +4977,93 @@ public:
     {
         Parser::DatabaseNames names;
 
-        qc_sqlite_get_database_names(m_helper, &stmt, &names);
+        if (QcSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_DATABASES))
+        {
+            if (!pInfo->get_database_names(&names))
+            {
+                log_invalid_data(stmt, "cannot report what databases are accessed");
+            }
+        }
 
         return names;
     }
 
     void get_field_info(const GWBUF& stmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
     {
-        uint32_t n = 0;
-        qc_sqlite_get_field_info(m_helper, &stmt, ppInfos, &n);
-        *pnInfos = n;
+        *ppInfos = nullptr;
+        *pnInfos = 0;
+
+        if (QcSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_FIELDS))
+        {
+            if (!pInfo->get_field_info(ppInfos, pnInfos))
+            {
+                log_invalid_data(stmt, "cannot report field info");
+            }
+        }
     }
 
     void get_function_info(const GWBUF& stmt,
                            const Parser::FunctionInfo** ppInfos,
                            size_t* pnInfos) const override
     {
-        uint32_t n = 0;
-        qc_sqlite_get_function_info(m_helper, &stmt, ppInfos, &n);
-        *pnInfos = n;
+        *ppInfos = nullptr;
+        *pnInfos = 0;
+
+        if (QcSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_FUNCTIONS))
+        {
+            if (!pInfo->get_function_info(ppInfos, pnInfos))
+            {
+                log_invalid_data(stmt, "cannot report function info");
+            }
+        }
     }
 
     Parser::KillInfo get_kill_info(const GWBUF& stmt) const override
     {
         Parser::KillInfo kill;
 
-        qc_sqlite_get_kill_info(m_helper, &stmt, &kill);
+        if (QcSqliteInfo* pInfo = get_info(stmt))
+        {
+            if (!pInfo->get_kill_info(&kill))
+            {
+                log_invalid_data(stmt, "cannot report KILL information");
+            }
+        }
 
         return kill;
     }
 
     mxs::sql::OpCode get_operation(const GWBUF& stmt) const override
     {
-        int32_t op = 0;
+        mxs::sql::OpCode op = mxs::sql::OP_UNDEFINED;
 
-        qc_sqlite_get_operation(m_helper, &stmt, &op);
+        if (QcSqliteInfo* pInfo = get_info(stmt))
+        {
+            if (!pInfo->get_operation(&op))
+            {
+                log_invalid_data(stmt, "cannot report query operation");
+            }
+        }
 
-        return static_cast<mxs::sql::OpCode>(op);
+        return op;
     }
 
     uint32_t get_options() const override
     {
-        return qc_sqlite_get_options();
+        return this_thread.options;
     }
 
     GWBUF* get_preparable_stmt(const GWBUF& stmt) const override
     {
         GWBUF* pPreparable_stmt = nullptr;
 
-        qc_sqlite_get_preparable_stmt(m_helper, &stmt, &pPreparable_stmt);
+        if (QcSqliteInfo* pInfo = get_info(stmt))
+        {
+            if (!pInfo->get_preparable_stmt(&pPreparable_stmt))
+            {
+                log_invalid_data(stmt, "cannot report preperable statement");
+            }
+        }
 
         return pPreparable_stmt;
     }
@@ -5604,33 +5072,38 @@ public:
     {
         std::string_view name;
 
-        qc_sqlite_get_prepare_name(m_helper, &stmt, &name);
+        if (QcSqliteInfo* pInfo = get_info(stmt))
+        {
+            if (!pInfo->get_prepare_name(&name))
+            {
+                log_invalid_data(stmt, "cannot report the name of a prepared statement");
+            }
+        }
 
         return name;
     }
 
     uint64_t get_server_version() const override
     {
-        uint64_t version = 0;
-        qc_sqlite_get_server_version(&version);
-
-        return version;
+        return this_thread.version;
     }
 
     Parser::SqlMode get_sql_mode() const override
     {
-        Parser::SqlMode sql_mode;
-
-        qc_sqlite_get_sql_mode(&sql_mode);
-
-        return sql_mode;
+        return this_thread.sql_mode;
     }
 
     Parser::TableNames get_table_names(const GWBUF& stmt) const override
     {
         Parser::TableNames names;
 
-        qc_sqlite_get_table_names(m_helper, &stmt, &names);
+        if (QcSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_TABLES))
+        {
+            if (!pInfo->get_table_names(&names))
+            {
+                log_invalid_data(stmt, "cannot report what tables are accessed");
+            }
+        }
 
         return names;
     }
@@ -5645,33 +5118,74 @@ public:
     {
         uint32_t type_mask = 0;
 
-        qc_sqlite_get_type_mask(m_helper, &stmt, &type_mask);
+        if (QcSqliteInfo* pInfo = get_info(stmt))
+        {
+            if (!pInfo->get_type_mask(&type_mask))
+            {
+                log_invalid_data(stmt, "cannot report query type");
+            }
+        }
 
         return type_mask;
     }
 
     void set_server_version(uint64_t version) override
     {
-        qc_sqlite_set_server_version(version);
+        uint32_t major = version / 10000;
+        uint32_t minor = (version - major * 10000) / 100;
+        uint32_t patch = version - major * 10000 - minor * 100;
+
+        this_thread.version = version;
+        this_thread.version_major = major;
+        this_thread.version_minor = minor;
+        this_thread.version_patch = patch;
     }
 
     void set_sql_mode(Parser::SqlMode sql_mode) override
     {
-        qc_sqlite_set_sql_mode(sql_mode);
+        switch (sql_mode)
+        {
+        case Parser::SqlMode::DEFAULT:
+            this_thread.sql_mode = sql_mode;
+            this_thread.pFunction_name_mappings = function_name_mappings_default;
+            break;
+
+        case Parser::SqlMode::ORACLE:
+            this_thread.sql_mode = sql_mode;
+            this_thread.pFunction_name_mappings = function_name_mappings_oracle;
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
     }
 
     bool set_options(uint32_t options) override
     {
-        return qc_sqlite_set_options(options) == QC_RESULT_OK;
+        bool rv = false;
+
+        if ((options & ~Parser::OPTION_MASK) == 0)
+        {
+            this_thread.options = options;
+            rv = true;
+        }
+        else
+        {
+            mxb_assert(!true);
+        }
+
+        return rv;
     }
 
 private:
-    QcSqliteInfo* get_info(const GWBUF& stmt) const
+    QcSqliteInfo* get_info(const GWBUF& stmt, uint32_t collect_extra = 0) const
     {
         mxb_assert(this_unit.initialized);
         mxb_assert(this_thread.initialized);
 
-        QcSqliteInfo* pInfo = QcSqliteInfo::get(m_helper, &stmt, Parser::COLLECT_ESSENTIALS);
+        uint32_t collect = Parser::COLLECT_ESSENTIALS | collect_extra;
+
+        QcSqliteInfo* pInfo = QcSqliteInfo::get(m_helper, &stmt, collect);
 
         if (!pInfo)
         {
@@ -5682,20 +5196,96 @@ private:
         return pInfo;
     }
 
+    void log_invalid_data(const GWBUF& stmt, const char* zMessage) const
+    {
+        if (mxb_log_should_log(LOG_INFO))
+        {
+            auto sql = m_helper.get_sql(stmt);
+
+            if (!sql.empty())
+            {
+                MXB_INFO("Parsing the query failed, %s: %.*s", zMessage, (int)sql.length(), sql.data());
+            }
+        }
+    }
+
     const Helper& m_helper;
 };
 
 class SqliteParserPlugin : public ParserPlugin
 {
 public:
-    bool setup(Parser::SqlMode sql_mode, const char* args) override
+    bool setup(Parser::SqlMode sql_mode, const char* cargs) override
     {
-        return qc_sqlite_setup(sql_mode, args) == QC_RESULT_OK;
+        QC_TRACE();
+        mxb_assert(!this_unit.setup);
+
+        qc_log_level_t log_level = QC_LOG_NOTHING;
+        QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
+
+        if (cargs)
+        {
+            char args[strlen(cargs) + 1];
+            strcpy(args, cargs);
+
+            char* p1;
+            char* token = strtok_r(args, ",", &p1);
+
+            while (token)
+            {
+                const char* key;
+                const char* value;
+
+                if (get_key_and_value(token, &key, &value))
+                {
+                    if (strcmp(key, ARG_LOG_UNRECOGNIZED_STATEMENTS) == 0)
+                    {
+                        char* end;
+
+                        long l = strtol(value, &end, 0);
+
+                        if ((*end == 0) && (l >= QC_LOG_NOTHING) && (l <= QC_LOG_NON_TOKENIZED))
+                        {
+                            log_level = static_cast<qc_log_level_t>(l);
+                        }
+                        else
+                        {
+                            MXB_WARNING("'%s' is not a number between %d and %d.",
+                                        value,
+                                        QC_LOG_NOTHING,
+                                        QC_LOG_NON_TOKENIZED);
+                        }
+                    }
+                    else
+                    {
+                        MXB_WARNING("'%s' is not a recognized argument.", key);
+                    }
+                }
+                else
+                {
+                    MXB_WARNING("'%s' is not a recognized argument string.", args);
+                }
+
+                token = strtok_r(NULL, ",", &p1);
+            }
+        }
+
+        if (sql_mode == Parser::SqlMode::ORACLE)
+        {
+            function_name_mappings = function_name_mappings_oracle;
+        }
+
+        this_unit.setup = true;
+        this_unit.log_level = log_level;
+        this_unit.sql_mode = sql_mode;
+        this_unit.pFunction_name_mappings = function_name_mappings;
+
+        return this_unit.setup;
     }
 
     bool thread_init(void) override
     {
-        return qc_sqlite_thread_init() == QC_RESULT_OK;
+        return qc_sqlite_thread_init() == 0;
     }
 
     void thread_end(void) override
@@ -5705,17 +5295,30 @@ public:
 
     bool get_current_stmt(const char** ppStmt, size_t* pLen) override
     {
-        return qc_sqlite_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
+        bool rv = false;
+
+        if (this_thread.pInfo && this_thread.pInfo->m_pQuery && (this_thread.pInfo->m_nQuery != 0))
+        {
+            *ppStmt = this_thread.pInfo->m_pQuery;
+            *pLen = this_thread.pInfo->m_nQuery;
+            rv = true;
+        }
+
+        return rv;
     }
 
-    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) override
+    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* pInfo) override
     {
-        return qc_sqlite_get_result_from_info(info);
+        return static_cast<const QcSqliteInfo*>(pInfo)->get_result();
     }
 
-    std::string_view get_canonical(const GWBUF::ProtocolInfo* info) override
+    std::string_view get_canonical(const GWBUF::ProtocolInfo* pInfo) override
     {
-        return qc_sqlite_info_get_canonical(info);
+        string_view canonical;
+
+        static_cast<const QcSqliteInfo*>(pInfo)->get_canonical(&canonical);
+
+        return canonical;
     }
 
     bool is_prepare(const GWBUF& stmt) const override
