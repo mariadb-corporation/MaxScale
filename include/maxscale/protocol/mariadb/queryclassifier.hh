@@ -469,7 +469,7 @@ private:
 
     void log_transaction_status(GWBUF* querybuf, uint32_t qtype);
 
-    uint32_t determine_query_type(GWBUF* querybuf, int command);
+    uint32_t determine_query_type(const GWBUF& packet) const;
 
     void check_create_tmp_table(GWBUF* querybuf, uint32_t type);
 
