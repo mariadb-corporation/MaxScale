@@ -1000,10 +1000,28 @@ void Session::retain_statement(GWBUF* pBuffer)
     }
 }
 
-void Session::book_server_response(SERVER* pServer, bool final_response)
+void Session::book_server_response(mxs::Target* pTarget, bool final_response)
 {
     if (m_retain_last_statements && !m_last_queries.empty())
     {
+        bool found = false;
+        for (SERVER* s : static_cast<Service*>(this->service)->reachable_servers())
+        {
+            if (static_cast<mxs::Target*>(s) == pTarget)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            // Not a server
+            return;
+        }
+
+        SERVER* pServer = static_cast<SERVER*>(pTarget);
+
         mxb_assert(m_current_query >= 0);
 
         if (m_current_query < 0)
