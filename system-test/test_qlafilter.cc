@@ -70,6 +70,10 @@ void test_user_matching(TestConnections& test)
                  "CREATE USER 'bob' IDENTIFIED BY 'bob'", "GRANT ALL ON *.* TO 'bob'",
                  "CREATE USER 'bobby' IDENTIFIED BY 'bobby'", "GRANT ALL ON *.* TO 'bobby'"});
 
+    // Make sure that the users have replicated over and that MaxScale has loaded them
+    test.repl->sync_slaves();
+    test.check_maxctrl("reload service RW-Split-Router");
+
     auto c = test.maxscale->rwsplit();
 
     // Do the query first with the excluded user, this way if it ends up matching it'll be detected
@@ -86,7 +90,7 @@ void test_user_matching(TestConnections& test)
         {1, 0, "SELECT 'bob'"}
     });
 
-    query(test, {"DROP USER 'bob'", "DROP USER 'bobby'"});
+    query(test, {"DROP USER 'alice'", "DROP USER 'bob'", "DROP USER 'bobby'"});
 }
 
 void test_source_matching(TestConnections& test)
