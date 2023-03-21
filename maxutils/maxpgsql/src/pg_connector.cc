@@ -16,6 +16,7 @@
 #include <utility>
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
+#include <maxbase/string.hh>
 
 using std::string;
 using mxb::QueryResult;
@@ -23,7 +24,7 @@ using mxb::QueryResult;
 namespace
 {
 const char no_connection[] = "PostgreSQL-connection is not open, cannot perform query.";
-const char query_failed[] = "Query '%s' failed. %s.";
+const char query_failed[] = "Query '%s' failed. %s";
 const char wrong_result_type[] = "Unexpected result type for '%s'. Expected '%s', got '%s'.";
 
 /**
@@ -185,33 +186,28 @@ bool PgSQL::open(const std::string& host, int port, const std::string& db)
     if (PQstatus(m_conn) == CONNECTION_OK)
     {
         rval = true;
+        m_errormsg.clear();
+    }
+    else
+    {
+        m_errormsg = read_pg_error();
     }
     return rval;
 }
 
 const char* PgSQL::error() const
 {
-    const char* rval = no_connection;
-    if (m_conn)
-    {
-        rval = PQerrorMessage(m_conn);
-    }
-    return rval;
+    return m_errormsg.c_str();
 }
 
 bool PgSQL::ping()
 {
     bool rval = false;
     // PostgreSQL does not seem to have a similar ping-function as MariaDB. Try a simple query instead.
-    if (m_conn)
+    auto result = query("select 1;");
+    if (result)
     {
-        auto result = PQexec(m_conn, "select 1;");
-        auto res_status = PQresultStatus(result);
-        if (res_status == PGRES_TUPLES_OK)
-        {
-            rval = true;
-        }
-        PQclear(result);
+        rval = true;
     }
     return rval;
 }
@@ -233,10 +229,22 @@ PgSQL::VersionInfo PgSQL::get_version_info()
     {
         rval.version = PQserverVersion(m_conn);
         auto info_res = query("select version();");
-        if (info_res && info_res->next_row() && info_res->get_col_count() == 1)
+        if (info_res)
         {
-            rval.info = info_res->get_string(0);
+            if (info_res->next_row() && info_res->get_col_count() == 1)
+            {
+                rval.info = info_res->get_string(0);
+                m_errormsg.clear();
+            }
+            else
+            {
+                m_errormsg = "Invalid version result.";
+            }
         }
+    }
+    else
+    {
+        m_errormsg = no_connection;
     }
     return rval;
 }
@@ -264,7 +272,7 @@ bool PgSQL::cmd(const string& query)
         else if (res_status == PGRES_FATAL_ERROR)
         {
             // The result may not exist, ask connection itself for error.
-            m_errormsg = mxb::string_printf(query_failed, query.c_str(), PQerrorMessage(m_conn));
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), read_pg_error().c_str());
         }
         else
         {
@@ -307,7 +315,7 @@ std::unique_ptr<QueryResult> PgSQL::query(const std::string& query)
         }
         else if (res_status == PGRES_FATAL_ERROR)
         {
-            m_errormsg = mxb::string_printf(query_failed, query.c_str(), PQerrorMessage(m_conn));
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), read_pg_error().c_str());
             PQclear(result);
         }
         else
@@ -332,6 +340,17 @@ std::unique_ptr<QueryResult> PgSQL::query(const std::string& query)
         m_errormsg = no_connection;
     }
     return rval;
+}
+
+std::string PgSQL::read_pg_error() const
+{
+    // PG error messages can contain linebreaks. Replace the linebreaks with space. If the linebreak is at
+    // the end of the error message, erase it.
+    mxb_assert(m_conn);
+    string errormsg = PQerrorMessage(m_conn);
+    std::replace(errormsg.begin(), errormsg.end(), '\n', ' ');
+    mxb::rtrim(errormsg);
+    return errormsg;
 }
 }
 

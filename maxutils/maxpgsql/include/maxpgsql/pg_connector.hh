@@ -99,6 +99,7 @@ private:
     ConnectionSettings m_settings;
     std::string        m_errormsg;
 
-    void move_helper(PgSQL&& other);
+    void        move_helper(PgSQL&& other);
+    std::string read_pg_error() const;
 };
 }
