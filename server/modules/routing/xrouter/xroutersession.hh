@@ -33,6 +33,8 @@ private:
         IDLE,
         SOLO,
         WAIT_SOLO,
+        LOCK_MAIN,
+        UNLOCK_MAIN,
         MAIN,
         WAIT_MAIN,
         WAIT_SECONDARY,
@@ -41,6 +43,7 @@ private:
     static std::string_view state_to_str(State state);
     std::string_view        state_str() const;
     std::string             describe(const GWBUF& buffer);
+    bool                    send_query(mxs::Backend* backend, std::string_view sql);
 
     bool route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Backend::response_type type);
     bool route_solo(GWBUF&& packet);
@@ -54,10 +57,36 @@ private:
     // TODO: const-correct after parser is fixed
     bool is_multi_node(GWBUF& buffer) const;
 
-    XRouter&         m_router;
-    State            m_state{State::INIT};
-    SBackends        m_backends;
-    mxs::Backend*    m_main;
+    XRouter&  m_router;
+    State     m_state{State::INIT};
+    SBackends m_backends;
+
+    // The "main" node. This is the first node in the backend list and it's used by all MaxScale instances
+    // for DDLs and other commands that need to be sent to multiple nodes (referred to as multi-node commands
+    // in the source code). It's also the node which is locked before the DDLs get executed. As it's always
+    // the same node that gets locked, the DDLs end up being executed serially across all MaxScale instances
+    // that use the same configuration.
+    //
+    // The remaining nodes in the backend list are treated as "secondary" nodes. They execute the multi-node
+    // commands without locks after the main node has successfully executed it but before the main node is
+    // unlocked.
+    //
+    // This approach protects DDL execution most of the time but it is not free of race conditions: it is
+    // possible that the main node executes a DDL successfully but the connection to it is lost immediately
+    // afterwards. As the advisory locks are lost when the connection closes, it is possible that secondary
+    // nodes end up executing the DDLs out-of-order compared to the main node. However, if the client receives
+    // the response from MaxScale, it is guaranteed that all nodes that participated in the DDL have either
+    // returned a response or died mid-operation.
+    mxs::Backend* m_main;
+
+    // The "solo" node. This one is used for all non-DDL queries that do not need any special handling like
+    // SELECTs and INSERTs. This node is randomly chosen from the backend list which means it can be either
+    // the main node or a secondary node. A node separate from the main one is used to load balance requests
+    // across all available nodes.
+    mxs::Backend* m_solo;
+
+    // The list of queued queries that were received when the session was busy doing something else. These get
+    // routed after whatever the session was doing is complete.
     std::list<GWBUF> m_queue;
 
     // The packets that make up the multi-node command

@@ -32,6 +32,12 @@ std::string_view XRouterSession::state_to_str(State state)
     case State::WAIT_SOLO:
         return "WAIT_SOLO";
 
+    case State::LOCK_MAIN:
+        return "LOCK_MAIN";
+
+    case State::UNLOCK_MAIN:
+        return "UNLOCK_MAIN";
+
     case State::MAIN:
         return "MAIN";
 
@@ -56,21 +62,25 @@ XRouterSession::XRouterSession(MXS_SESSION* session, XRouter& router, SBackends 
     : RouterSession(session)
     , m_router(router)
     , m_backends(std::move(backends))
-    , m_main(m_backends[rand() % m_backends.size()].get())
+    , m_main(m_backends[0].get())
+    , m_solo(m_backends[rand() % m_backends.size()].get())
     , m_config(std::move(config))
 {
     for (auto& b : m_backends)
     {
-        if (b->in_use())
-        {
-            const auto& sql = b.get() == m_main ? m_config->main_sql : m_config->secondary_sql;
-            b->write(m_pSession->protocol()->make_query(sql), mxs::Backend::IGNORE_RESPONSE);
-        }
+        mxb_assert(b->in_use());
+        send_query(b.get(), b.get() == m_main ? m_config->main_sql : m_config->secondary_sql);
     }
 }
 
 bool XRouterSession::routeQuery(GWBUF&& packet)
 {
+    if (!m_main->in_use() || !m_solo->in_use())
+    {
+        MXB_SINFO("Main node or the single-target node is no longer in use, closing session.");
+        return false;
+    }
+
     bool ok = true;
 
     switch (m_state)
@@ -78,24 +88,35 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
     case State::IDLE:
         if (is_multi_node(packet))
         {
-            m_state = State::MAIN;
-            ok = route_main(std::move(packet));
+            // Send the lock query to the main node before doing the DDL. This way the operations are
+            // serialized with respect to the main node.
+            MXB_SINFO("Multi-node command, locking main node");
+            m_state = State::LOCK_MAIN;
+            ok = send_query(m_main, m_config->lock_sql);
+            m_queue.push_back(std::move(packet));
         }
         else
         {
+            // Normal single-node query (DML) that does not need to be sent to the secondary nodes.
             m_state = State::SOLO;
             ok = route_solo(std::move(packet));
         }
         break;
 
     case State::SOLO:
+        // More packets that belong to the single-node command. Keep routing them until we get one that will
+        // generate a response.
         ok = route_solo(std::move(packet));
         break;
 
     case State::MAIN:
+        // More packets that belong to the multi-node command. Keep routing them until we get one that will
+        // generate a response.
         ok = route_main(std::move(packet));
         break;
 
+    case State::LOCK_MAIN:
+    case State::UNLOCK_MAIN:
     case State::INIT:
     case State::WAIT_SOLO:
     case State::WAIT_MAIN:
@@ -118,7 +139,7 @@ bool XRouterSession::route_solo(GWBUF&& packet)
         m_state = State::WAIT_SOLO;
     }
 
-    return route_to_one(m_main, std::move(packet), type);
+    return route_to_one(m_solo, std::move(packet), type);
 }
 
 bool XRouterSession::route_main(GWBUF&& packet)
@@ -163,6 +184,7 @@ bool XRouterSession::route_secondary()
 bool XRouterSession::route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Backend::response_type type)
 {
     MXB_SINFO("Route to '" << backend->name() << "': " << describe(packet));
+    mxb_assert(backend->in_use());
     return backend->write(std::move(packet), type);
 }
 
@@ -209,6 +231,25 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
         }
         break;
 
+    case State::LOCK_MAIN:
+        if (complete)
+        {
+            MXB_SINFO("Main node locked, routing query to main node.");
+            mxb_assert(!route);
+            m_state = State::MAIN;
+            rv = route_queued();
+        }
+        break;
+
+    case State::UNLOCK_MAIN:
+        if (complete)
+        {
+            MXB_SINFO("Main node unlocked, returning to normal routing.");
+            mxb_assert(!route);
+            m_state = State::IDLE;
+        }
+        break;
+
     case State::MAIN:
         // This might also be an error condition in MaxScale but we should still handle it.
         mxb_assert_message(!complete, "Result should not be complete");
@@ -226,7 +267,7 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
             if (reply.error())
             {
                 // The command failed, don't propagate the change
-                MXB_SINFO("Multi-node command failed:" << reply.describe());
+                MXB_SINFO("Multi-node command failed: " << reply.describe());
                 route = true;
                 packet = finish_multinode();
             }
@@ -263,14 +304,14 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
         break;
 
     default:
-        MXB_SWARNING("Unexpected response" << reply.to_string() << " " << reply.describe());
+        MXB_SWARNING("Unexpected response: " << reply.describe());
         m_pSession->kill();
         mxb_assert(!true);
         rv = false;
         break;
     }
 
-    if (route)
+    if (rv && route)
     {
         mxb_assert(packet);
         rv = mxs::RouterSession::clientReply(std::move(packet), down, reply);
@@ -296,6 +337,8 @@ bool XRouterSession::route_queued()
 
         switch (m_state)
         {
+        case State::UNLOCK_MAIN:
+        case State::LOCK_MAIN:
         case State::WAIT_SOLO:
         case State::WAIT_MAIN:
         case State::WAIT_SECONDARY:
@@ -328,12 +371,25 @@ std::string XRouterSession::describe(const GWBUF& buffer)
     return m_pSession->protocol()->describe(buffer);
 }
 
+bool XRouterSession::send_query(mxs::Backend* backend, std::string_view sql)
+{
+    return route_to_one(backend, m_pSession->protocol()->make_query(sql), mxs::Backend::IGNORE_RESPONSE);
+}
+
 GWBUF XRouterSession::finish_multinode()
 {
     GWBUF packet = std::move(m_response);
     m_response.clear();
     m_packets.clear();
-    m_state = State::IDLE;
+    m_state = State::UNLOCK_MAIN;
+    MXB_SINFO("Unlocking main backend.");
+
+    if (!send_query(m_main, m_config->unlock_sql))
+    {
+        MXB_SINFO("Failed to unlock main backend, next query will close the session.");
+        m_main->close(mxs::Backend::CLOSE_FATAL);
+    }
+
     return packet;
 }
 

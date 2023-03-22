@@ -25,6 +25,14 @@ mxs::config::ParamString s_main_sql(
 mxs::config::ParamString s_secondary_sql(
     &s_spec, "secondary_sql", "SQL executed on the secondary nodes",
     "SET foo.bar = 'secondary'", mxs::config::Param::AT_RUNTIME);
+
+mxs::config::ParamString s_lock_sql(
+    &s_spec, "lock_sql", "SQL executed to lock a node",
+    "SELECT pg_advisory_lock(1679475768)", mxs::config::Param::AT_RUNTIME);
+
+mxs::config::ParamString s_unlock_sql(
+    &s_spec, "unlock_sql", "SQL executed to unlock a node",
+    "SELECT pg_advisory_unlock(1679475768) ", mxs::config::Param::AT_RUNTIME);
 }
 
 XRouter::Config::Config(const std::string& name)
@@ -32,6 +40,8 @@ XRouter::Config::Config(const std::string& name)
 {
     add_native(&Config::m_v, &Values::main_sql, &s_main_sql);
     add_native(&Config::m_v, &Values::secondary_sql, &s_secondary_sql);
+    add_native(&Config::m_v, &Values::lock_sql, &s_lock_sql);
+    add_native(&Config::m_v, &Values::unlock_sql, &s_unlock_sql);
 }
 
 XRouter::XRouter(const std::string& name)

@@ -36,6 +36,8 @@ public:
         {
             std::string main_sql;
             std::string secondary_sql;
+            std::string lock_sql;
+            std::string unlock_sql;
         };
 
         using ValueRef = std::shared_ptr<const Values>;
