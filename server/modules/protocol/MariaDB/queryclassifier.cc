@@ -46,14 +46,6 @@ uint32_t get_prepare_type(const mxs::Parser& parser, const GWBUF& buffer)
 
     if (parser.is_prepare(buffer))
     {
-#ifdef SS_DEBUG
-        GWBUF stmt = buffer.deep_clone();
-        stmt.data()[4] = MXS_COM_QUERY;
-        stmt.set_protocol_info(nullptr);      // To ensure cloned buffer is parsed.
-        mxb_assert(parser.get_type_mask(stmt)
-                   == (parser.get_type_mask(buffer) & ~mxs::sql::TYPE_PREPARE_STMT));
-#endif
-
         type = parser.get_type_mask(buffer) & ~mxs::sql::TYPE_PREPARE_STMT;
     }
     else
@@ -721,7 +713,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     }
     else if (len > MYSQL_HEADER_LEN)
     {
-        cmd = mxs_mysql_get_command(*pBuffer);
+        cmd = m_parser.get_command(*pBuffer);
 
         if (m_parser.is_ps_packet(*pBuffer))
         {
@@ -785,8 +777,10 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         }
         else
         {
+            bool is_query = m_parser.is_query(*pBuffer);
+
             if (!in_read_only_trx
-                && cmd == MXS_COM_QUERY
+                && is_query
                 && m_parser.get_operation(*pBuffer) == mxs::sql::OP_EXECUTE)
             {
                 if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, pBuffer)))
@@ -804,7 +798,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                     m_route_info.set_ps_continuation(query_continues_ps(*pBuffer));
                 }
             }
-            else if (cmd == MXS_COM_QUERY && relates_to_previous_stmt(m_parser, pBuffer))
+            else if (is_query && relates_to_previous_stmt(m_parser, pBuffer))
             {
                 route_to_last_used = true;
             }
