@@ -276,14 +276,15 @@ public:
 
     mxb::SSLConfig ssl_config() const override;
 
-    void        set_uptime(int64_t uptime) override;
-    int64_t     get_uptime() const override;
-    bool        track_variable(std::string variable) override;
-    bool        untrack_variable(std::string variable) override;
+    void                  set_uptime(int64_t uptime) override;
+    int64_t               get_uptime() const override;
+    bool                  track_variable(std::string variable) override;
+    bool                  untrack_variable(std::string variable) override;
     std::set<std::string> tracked_variables() const override;
-    Variables   get_variables() const override;
-    std::string get_variable_value(const std::string& variable) const override;
-    void        set_variables(Variables&& variables) override;
+    Variables             get_variables() const override;
+    std::string           get_variable_value(const std::string& variable) const override;
+    void                  set_variables(Variables&& variables) override;
+    void                  set_maintenance() override;
 
     uint64_t gtid_pos(uint32_t domain) const override;
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;

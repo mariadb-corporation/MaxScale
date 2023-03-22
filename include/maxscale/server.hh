@@ -376,4 +376,9 @@ public:
      * @return The configuration of the server.
      */
     virtual mxs::config::Configuration& configuration() = 0;
+
+    /**
+     * Set the server into maintenance mode.
+     */
+    virtual void set_maintenance() = 0;
 };

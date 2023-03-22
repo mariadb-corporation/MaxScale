@@ -1421,3 +1421,10 @@ const std::set<std::string>& Server::protocols() const
     static std::set<std::string> any_protocol{MXS_ANY_PROTOCOL};
     return any_protocol;
 }
+
+void Server::set_maintenance()
+{
+    mxs::MainWorker::get()->execute([this]() {
+        MonitorManager::set_server_status(this, SERVER_MAINT);
+    }, mxb::Worker::EXECUTE_AUTO);
+}

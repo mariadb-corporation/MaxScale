@@ -33,9 +33,6 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "user_data.hh"
 
-// For setting server status through monitor
-#include "../../../core/internal/monitormanager.hh"
-
 using mxs::ReplyState;
 using std::string;
 using std::move;
@@ -268,17 +265,12 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
      * This will prevent repeated authentication failures. */
     if (errcode == ER_HOST_IS_BLOCKED)
     {
-        auto main_worker = mxs::MainWorker::get();
-        auto server = dcb->server();
-        main_worker->execute([server]() {
-            MonitorManager::set_server_status(server, SERVER_MAINT);
-        }, mxb::Worker::EXECUTE_AUTO);
-
+        m_server.set_maintenance();
         MXB_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
                   "this server out of maintenance mode. To avoid this problem in the future, set "
                   "'max_connect_errors' to a larger value in the backend server.",
-                  server->name(), server->address(), server->port());
+                  m_server.name(), m_server.address(), m_server.port());
     }
     else if (errcode == ER_ACCESS_DENIED_ERROR)
     {
