@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/protocol/mariadb/queryclassifier.hh>
+#include <maxscale/queryclassifier.hh>
 #include <unordered_map>
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>

@@ -8,7 +8,6 @@ add_library(mariadbprotocol OBJECT
   mariadbparser.cc
   packet_parser.cc
   protocol_module.cc
-  queryclassifier.cc
   resultset.cc
   rwbackend.cc
   sqlite_strlike.cc

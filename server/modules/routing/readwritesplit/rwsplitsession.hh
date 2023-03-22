@@ -24,9 +24,9 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/protocol/mariadb/queryclassifier.hh>
-#include <maxscale/protocol/mariadb/rwbackend.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/rwbackend.hh>
+#include <maxscale/queryclassifier.hh>
 
 #define TARGET_IS_MASTER(t)       mariadb::QueryClassifier::target_is_master(t)
 #define TARGET_IS_SLAVE(t)        mariadb::QueryClassifier::target_is_slave(t)

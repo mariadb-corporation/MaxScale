@@ -21,7 +21,7 @@
 
 #include <maxbase/jansson.hh>
 #include <maxscale/pcre2.hh>
-#include <maxscale/protocol/mariadb/queryclassifier.hh>
+#include <maxscale/queryclassifier.hh>
 #include "mysql.hh"
 
 /**

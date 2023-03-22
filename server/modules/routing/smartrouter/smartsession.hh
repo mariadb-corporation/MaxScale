@@ -17,9 +17,9 @@
 
 #include <iostream>
 #include <maxbase/host.hh>
-#include <maxscale/packet_tracker.hh>
-#include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <maxsimd/canonical.hh>
+#include <maxscale/packet_tracker.hh>
+#include <maxscale/queryclassifier.hh>
 
 class SmartRouter;
 
