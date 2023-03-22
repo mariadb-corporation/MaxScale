@@ -123,6 +123,11 @@ bool MariaDBParser::Helper::is_prepare(const GWBUF& packet) const
     return mariadb::is_com_prepare(packet);
 }
 
+bool MariaDBParser::Helper::is_query(const GWBUF& packet) const
+{
+    return mariadb::is_com_query(packet);
+}
+
 
 MariaDBParser::MariaDBParser(std::unique_ptr<Parser> sParser)
     : mxs::CachingParser(std::move(sParser))

@@ -336,6 +336,13 @@ std::string_view get_sql(const GWBUF& packet);
  */
 bool is_prepare(const GWBUF& packet);
 
+/**
+ * Does the packet contain a query statement.
+ *
+ * @return True if it does, false otherwise.
+ */
+bool is_query(const GWBUF& packet);
+
 }
 
 // Convenience alias for the namespace

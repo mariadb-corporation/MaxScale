@@ -331,6 +331,11 @@ bool is_prepare(const GWBUF& packet)
     return packet.length() > 0 && packet[0] == pg::PARSE;
 }
 
+bool is_query(const GWBUF& packet)
+{
+    return packet.length() > 0 && packet[0] == pg::QUERY;
+}
+
 }
 
 /**
