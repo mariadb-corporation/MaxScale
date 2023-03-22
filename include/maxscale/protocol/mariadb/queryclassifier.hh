@@ -481,7 +481,7 @@ private:
                                                 GWBUF* querybuf,
                                                 uint32_t* qtype);
 
-    bool query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* buffer);
+    bool query_continues_ps(const GWBUF& buffer);
 
 private:
     class PSManager;

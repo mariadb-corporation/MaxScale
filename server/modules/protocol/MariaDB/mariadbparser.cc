@@ -35,6 +35,27 @@ GWBUF MariaDBParser::Helper::create_packet(std::string_view sql) const
     return mariadb::create_query(sql);
 }
 
+bool MariaDBParser::Helper::continues_ps(const GWBUF& packet, uint32_t prev_cmd) const
+{
+    bool rv = false;
+
+    uint32_t cmd = get_command(packet);
+
+    if (prev_cmd == MXS_COM_STMT_SEND_LONG_DATA
+        && (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA))
+    {
+        // PS execution must be sent to the same server where the data was sent
+        rv = true;
+    }
+    else if (cmd == MXS_COM_STMT_FETCH)
+    {
+        // COM_STMT_FETCH should always go to the same target as the COM_STMT_EXECUTE
+        rv = true;
+    }
+
+    return rv;
+}
+
 uint32_t MariaDBParser::Helper::get_command(const GWBUF& packet) const
 {
     return mxs_mysql_get_command(packet);

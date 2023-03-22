@@ -680,24 +680,9 @@ uint16_t QueryClassifier::get_param_count(uint32_t id)
     return m_sPs_manager->param_count(id);
 }
 
-bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* buffer)
+bool QueryClassifier::query_continues_ps(const GWBUF& buffer)
 {
-    bool rval = false;
-    uint8_t prev_cmd = m_route_info.command();
-
-    if (prev_cmd == MXS_COM_STMT_SEND_LONG_DATA
-        && (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA))
-    {
-        // PS execution must be sent to the same server where the data was sent
-        rval = true;
-    }
-    else if (cmd == MXS_COM_STMT_FETCH)
-    {
-        // COM_STMT_FETCH should always go to the same target as the COM_STMT_EXECUTE
-        rval = true;
-    }
-
-    return rval;
+    return m_parser.continues_ps(buffer, m_route_info.command());
 }
 
 QueryClassifier::RouteInfo QueryClassifier::update_route_info(
@@ -816,7 +801,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                 {
                     type_mask = ps->type;
                     route_to_last_used = ps->route_to_last_used;
-                    m_route_info.set_ps_continuation(query_continues_ps(cmd, stmt_id, pBuffer));
+                    m_route_info.set_ps_continuation(query_continues_ps(*pBuffer));
                 }
             }
             else if (cmd == MXS_COM_QUERY && relates_to_previous_stmt(m_parser, pBuffer))
