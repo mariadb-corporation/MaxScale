@@ -55,9 +55,9 @@ uint32_t get_prepare_type(const mxs::Parser& parser, const GWBUF& buffer)
     return type;
 }
 
-std::string get_text_ps_id(const mxs::Parser& parser, GWBUF* buffer)
+std::string get_text_ps_id(const mxs::Parser& parser, const GWBUF& buffer)
 {
-    return std::string(parser.get_prepare_name(*buffer));
+    return std::string(parser.get_prepare_name(buffer));
 }
 
 bool relates_to_previous_stmt(const mxs::Parser& parser, GWBUF* pBuffer)
@@ -155,7 +155,7 @@ public:
         }
         else if (m_parser.is_query(*buffer))
         {
-            m_text_ps.emplace(get_text_ps_id(m_parser, buffer), std::move(stmt));
+            m_text_ps.emplace(get_text_ps_id(m_parser, *buffer), std::move(stmt));
         }
         else
         {
@@ -226,11 +226,11 @@ public:
     {
         if (m_parser.is_query(*buffer))
         {
-            erase(get_text_ps_id(m_parser, buffer));
+            erase(get_text_ps_id(m_parser, *buffer));
         }
         else if (m_parser.is_ps_packet(*buffer))
         {
-            erase(mxs_mysql_extract_ps_id(buffer));
+            erase(m_parser.get_ps_id(*buffer));
         }
         else
         {
@@ -479,11 +479,10 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype)
 
 uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
 {
-    // All COM_STMT type statements store the ID in the same place
-    uint32_t id = mxs_mysql_extract_ps_id(pBuffer);
+    uint32_t id = m_parser.get_ps_id(*pBuffer);
 
-    // MARIADB_PS_DIRECT_EXEC_ID is a special ID that refers to the previous prepared statement
-    if (id == MARIADB_PS_DIRECT_EXEC_ID && m_prev_ps_id)
+    // Do we implicitly refer to the previous prepared statement.
+    if (m_parser.is_ps_direct_exec_id(id) && m_prev_ps_id)
     {
         return m_prev_ps_id;
     }
@@ -777,7 +776,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                 && is_query
                 && m_parser.get_operation(*pBuffer) == mxs::sql::OP_EXECUTE)
             {
-                if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, pBuffer)))
+                if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, *pBuffer)))
                 {
                     type_mask = ps->type;
                     route_to_last_used = ps->route_to_last_used;

@@ -117,9 +117,11 @@ public:
         virtual bool             continues_ps(const GWBUF& packet, uint32_t prev_cmd) const = 0;
         virtual uint32_t         get_command(const GWBUF& packet) const = 0;
         virtual PacketTypeMask   get_packet_type_mask(const GWBUF& packet) const = 0;
+        virtual uint32_t         get_ps_id(const GWBUF& packet) const = 0;
         virtual std::string_view get_sql(const GWBUF& packet) const = 0;
         virtual bool             is_multi_part_packet(const GWBUF& packet) const = 0;
         virtual bool             is_prepare(const GWBUF& packet) const = 0;
+        virtual bool             is_ps_direct_exec_id(uint32_t id) const = 0;
         virtual bool             is_ps_packet(const GWBUF& packet) const = 0;
         virtual bool             is_query(const GWBUF& packet) const = 0;
     };
@@ -323,6 +325,11 @@ public:
         return helper().get_packet_type_mask(packet);
     }
 
+    uint32_t get_ps_id(const GWBUF& packet) const
+    {
+        return helper().get_ps_id(packet);
+    }
+
     std::string_view get_sql(const GWBUF& stmt) const
     {
         return helper().get_sql(stmt);
@@ -338,14 +345,19 @@ public:
         return helper().is_prepare(packet);
     }
 
-    bool is_query(const GWBUF& packet) const
+    bool is_ps_direct_exec_id(uint32_t id) const
     {
-        return helper().is_query(packet);
+        return helper().is_ps_direct_exec_id(id);
     }
 
     bool is_ps_packet(const GWBUF& packet) const
     {
         return helper().is_ps_packet(packet);
+    }
+
+    bool is_query(const GWBUF& packet) const
+    {
+        return helper().is_query(packet);
     }
 
 

@@ -75,6 +75,11 @@ mxs::Parser::PacketTypeMask PgParser::Helper::get_packet_type_mask(const GWBUF& 
     return PacketTypeMask { type_mask, status };
 }
 
+uint32_t PgParser::Helper::get_ps_id(const GWBUF& packet) const
+{
+    return 0;
+}
+
 std::string_view PgParser::Helper::get_sql(const GWBUF& packet) const
 {
     return pg::get_sql(packet);
@@ -88,6 +93,11 @@ bool PgParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 bool PgParser::Helper::is_prepare(const GWBUF& packet) const
 {
     return pg::is_prepare(packet);
+}
+
+bool PgParser::Helper::is_ps_direct_exec_id(uint32_t id) const
+{
+    return false;
 }
 
 bool PgParser::Helper::is_ps_packet(const GWBUF& packet) const

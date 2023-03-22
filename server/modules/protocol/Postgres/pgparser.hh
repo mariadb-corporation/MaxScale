@@ -29,9 +29,11 @@ public:
         bool             continues_ps(const GWBUF& packet, uint32_t prev_cmd) const override;
         uint32_t         get_command(const GWBUF& packet) const override;
         PacketTypeMask   get_packet_type_mask(const GWBUF& packet) const override;
+        uint32_t         get_ps_id(const GWBUF& packet) const override;
         std::string_view get_sql(const GWBUF& packet) const override;
         bool             is_multi_part_packet(const GWBUF& packet) const override;
         bool             is_prepare(const GWBUF& packet) const override;
+        bool             is_ps_direct_exec_id(uint32_t id) const override;
         bool             is_ps_packet(const GWBUF& packet) const override;
         bool             is_query(const GWBUF& packet) const override;
     };

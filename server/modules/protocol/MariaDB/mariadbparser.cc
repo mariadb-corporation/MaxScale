@@ -122,6 +122,11 @@ mxs::Parser::PacketTypeMask MariaDBParser::Helper::get_packet_type_mask(const GW
     return PacketTypeMask { type_mask, status };
 }
 
+uint32_t MariaDBParser::Helper::get_ps_id(const GWBUF& packet) const
+{
+    return mxs_mysql_extract_ps_id(&packet);
+}
+
 std::string_view MariaDBParser::Helper::get_sql(const GWBUF& packet) const
 {
     return mariadb::get_sql(packet);
@@ -142,6 +147,11 @@ bool MariaDBParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 bool MariaDBParser::Helper::is_prepare(const GWBUF& packet) const
 {
     return mariadb::is_com_prepare(packet);
+}
+
+bool MariaDBParser::Helper::is_ps_direct_exec_id(uint32_t id) const
+{
+    return id == MARIADB_PS_DIRECT_EXEC_ID;
 }
 
 bool MariaDBParser::Helper::is_ps_packet(const GWBUF& packet) const
