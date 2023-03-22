@@ -34,17 +34,6 @@ std::string get_current_db(MXS_SESSION* session)
     return session->client_connection()->current_db();
 }
 
-// Copied from mysql_common.c
-bool is_ps_command(uint8_t cmd)
-{
-    return cmd == MXS_COM_STMT_EXECUTE
-           || cmd == MXS_COM_STMT_BULK_EXECUTE
-           || cmd == MXS_COM_STMT_SEND_LONG_DATA
-           || cmd == MXS_COM_STMT_CLOSE
-           || cmd == MXS_COM_STMT_FETCH
-           || cmd == MXS_COM_STMT_RESET;
-}
-
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
     auto ses = static_cast<MYSQL_session*>(pSession->protocol_data());
@@ -249,13 +238,11 @@ public:
 
     void erase(GWBUF* buffer)
     {
-        uint8_t cmd = mxs_mysql_get_command(*buffer);
-
-        if (cmd == MXS_COM_QUERY)
+        if (m_parser.is_query(*buffer))
         {
             erase(get_text_ps_id(m_parser, buffer));
         }
-        else if (is_ps_command(cmd))
+        else if (m_parser.is_ps_packet(*buffer))
         {
             erase(mxs_mysql_extract_ps_id(buffer));
         }
@@ -321,7 +308,7 @@ void QueryClassifier::ps_store(GWBUF* pBuffer, uint32_t id)
 
 void QueryClassifier::ps_erase(GWBUF* buffer)
 {
-    if (is_ps_command(mxs_mysql_get_command(*buffer)))
+    if (m_parser.is_ps_packet(*buffer))
     {
         // Erase the type of the statement stored with the internal ID
         m_sPs_manager->erase(ps_id_internal_get(buffer));
@@ -751,7 +738,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     {
         cmd = mxs_mysql_get_command(*pBuffer);
 
-        if (is_ps_command(cmd))
+        if (m_parser.is_ps_packet(*pBuffer))
         {
             stmt_id = ps_id_internal_get(pBuffer);
         }
@@ -823,7 +810,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                     route_to_last_used = ps->route_to_last_used;
                 }
             }
-            else if (is_ps_command(cmd))
+            else if (m_parser.is_ps_packet(*pBuffer))
             {
                 if (const auto* ps = m_sPs_manager->get(stmt_id))
                 {

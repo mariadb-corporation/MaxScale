@@ -30,6 +30,7 @@ public:
         std::string_view get_sql(const GWBUF& packet) const override;
         bool             is_multi_part_packet(const GWBUF& packet) const override;
         bool             is_prepare(const GWBUF& packet) const override;
+        bool             is_ps_packet(const GWBUF& packet) const override;
         bool             is_query(const GWBUF& packet) const override;
     };
 

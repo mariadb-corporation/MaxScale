@@ -118,6 +118,7 @@ public:
         virtual std::string_view get_sql(const GWBUF& packet) const = 0;
         virtual bool             is_multi_part_packet(const GWBUF& packet) const = 0;
         virtual bool             is_prepare(const GWBUF& packet) const = 0;
+        virtual bool             is_ps_packet(const GWBUF& packet) const = 0;
         virtual bool             is_query(const GWBUF& packet) const = 0;
     };
 
@@ -334,6 +335,12 @@ public:
     {
         return helper().is_query(packet);
     }
+
+    bool is_ps_packet(const GWBUF& packet) const
+    {
+        return helper().is_ps_packet(packet);
+    }
+
 
     virtual std::string_view get_created_table_name(const GWBUF& stmt) const = 0;
     virtual DatabaseNames    get_database_names(const GWBUF& stmt) const = 0;

@@ -85,6 +85,11 @@ bool PgParser::Helper::is_prepare(const GWBUF& packet) const
     return pg::is_prepare(packet);
 }
 
+bool PgParser::Helper::is_ps_packet(const GWBUF& packet) const
+{
+    return false;
+}
+
 bool PgParser::Helper::is_query(const GWBUF& packet) const
 {
     return pg::is_query(packet);

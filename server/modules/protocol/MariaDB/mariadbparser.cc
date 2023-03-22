@@ -123,6 +123,11 @@ bool MariaDBParser::Helper::is_prepare(const GWBUF& packet) const
     return mariadb::is_com_prepare(packet);
 }
 
+bool MariaDBParser::Helper::is_ps_packet(const GWBUF& packet) const
+{
+    return packet.length() > MYSQL_HEADER_LEN ? mxs_mysql_is_ps_command(packet[MYSQL_HEADER_LEN]) : false;
+}
+
 bool MariaDBParser::Helper::is_query(const GWBUF& packet) const
 {
     return mariadb::is_com_query(packet);
