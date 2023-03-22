@@ -34,12 +34,6 @@ std::string get_current_db(MXS_SESSION* session)
     return session->client_connection()->current_db();
 }
 
-bool are_multi_statements_allowed(MXS_SESSION* pSession)
-{
-    auto ses = static_cast<MYSQL_session*>(pSession->protocol_data());
-    return (ses->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS) != 0;
-}
-
 uint32_t get_prepare_type(const mxs::Parser& parser, const GWBUF& buffer)
 {
     uint32_t type = mxs::sql::TYPE_UNKNOWN;
@@ -287,7 +281,7 @@ QueryClassifier::QueryClassifier(mxs::Parser& parser,
     , m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
-    , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
+    , m_multi_statements_allowed(pSession->protocol_data()->are_multi_statements_allowed())
     , m_sPs_manager(new PSManager(parser, log))
 {
 }
@@ -518,9 +512,9 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
     {
         MXS_SESSION* ses = session();
-        auto mariases = static_cast<MYSQL_session*>(ses->protocol_data());
-        const char* autocommit = mariases->is_autocommit() ? "[enabled]" : "[disabled]";
-        const char* transaction = mariases->is_trx_active() ? "[open]" : "[not open]";
+        auto pdata = ses->protocol_data();
+        const char* autocommit = pdata->is_autocommit() ? "[enabled]" : "[disabled]";
+        const char* transaction = pdata->is_trx_active() ? "[open]" : "[not open]";
 
         MXB_INFO("> Autocommit: %s, trx is %s, %s",
                  autocommit,
