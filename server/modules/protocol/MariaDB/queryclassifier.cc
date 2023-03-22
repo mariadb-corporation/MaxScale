@@ -45,14 +45,14 @@ bool is_ps_command(uint8_t cmd)
            || cmd == MXS_COM_STMT_RESET;
 }
 
-bool is_packet_a_query(int packet_type)
+bool is_packet_a_query(int cmd)
 {
-    return packet_type == MXS_COM_QUERY;
+    return cmd == MXS_COM_QUERY;
 }
 
-bool check_for_sp_call(const mxs::Parser& parser, GWBUF* buf, uint8_t packet_type)
+bool check_for_sp_call(const mxs::Parser& parser, GWBUF* buf, uint8_t cmd)
 {
-    return packet_type == MXS_COM_QUERY && parser.get_operation(*buf) == mxs::sql::OP_CALL;
+    return cmd == MXS_COM_QUERY && parser.get_operation(*buf) == mxs::sql::OP_CALL;
 }
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
@@ -646,7 +646,7 @@ void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
  * @param qc                   The query classifier
  * @param current_target       The current target
  * @param querybuf             Buffer containing query to be routed
- * @param packet_type          Type of packet (database specific)
+ * @param cmd                  Type of packet (database specific)
  * @param qtype                Query type
  *
  * @return QueryClassifier::CURRENT_TARGET_MASTER if the session should be fixed
@@ -655,7 +655,7 @@ void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     QueryClassifier::current_target_t current_target,
     GWBUF* querybuf,
-    uint8_t packet_type,
+    uint8_t cmd,
     uint32_t* qtype)
 {
     QueryClassifier::current_target_t rv = QueryClassifier::CURRENT_TARGET_UNDEFINED;
@@ -665,8 +665,8 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
      * when the query is routed. */
     if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
-        bool is_multi = check_for_sp_call(m_parser, querybuf, packet_type);
-        if (!is_multi && multi_statements_allowed() && packet_type == MXS_COM_QUERY)
+        bool is_multi = check_for_sp_call(m_parser, querybuf, cmd);
+        if (!is_multi && multi_statements_allowed() && cmd == MXS_COM_QUERY)
         {
             // This is wasteful, the sql is extracted multiple times
             // it should be in the Context, after first call.
@@ -683,7 +683,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     /**
      * Check if the query has anything to do with temporary tables.
      */
-    if (m_route_info.have_tmp_tables() && is_packet_a_query(packet_type))
+    if (m_route_info.have_tmp_tables() && is_packet_a_query(cmd))
     {
 
         check_drop_tmp_table(querybuf);
@@ -728,7 +728,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     GWBUF* pBuffer)
 {
     uint32_t route_target = TARGET_MASTER;
-    uint8_t command = 0xFF;
+    uint8_t cmd = 0xFF;
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
     uint32_t len = gwbuf_length(pBuffer);
@@ -759,9 +759,9 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     }
     else if (len > MYSQL_HEADER_LEN)
     {
-        command = mxs_mysql_get_command(*pBuffer);
+        cmd = mxs_mysql_get_command(*pBuffer);
 
-        if (is_ps_command(command))
+        if (is_ps_command(cmd))
         {
             stmt_id = ps_id_internal_get(pBuffer);
         }
@@ -781,7 +781,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
             current_target = handle_multi_temp_and_load(current_target,
                                                         pBuffer,
-                                                        command,
+                                                        cmd,
                                                         &type_mask);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
@@ -825,7 +825,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         else
         {
             if (!in_read_only_trx
-                && command == MXS_COM_QUERY
+                && cmd == MXS_COM_QUERY
                 && m_parser.get_operation(*pBuffer) == mxs::sql::OP_EXECUTE)
             {
                 if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, pBuffer)))
@@ -834,16 +834,16 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                     route_to_last_used = ps->route_to_last_used;
                 }
             }
-            else if (is_ps_command(command))
+            else if (is_ps_command(cmd))
             {
                 if (const auto* ps = m_sPs_manager->get(stmt_id))
                 {
                     type_mask = ps->type;
                     route_to_last_used = ps->route_to_last_used;
-                    m_route_info.set_ps_continuation(query_continues_ps(command, stmt_id, pBuffer));
+                    m_route_info.set_ps_continuation(query_continues_ps(cmd, stmt_id, pBuffer));
                 }
             }
-            else if (command == MXS_COM_QUERY && relates_to_previous_stmt(m_parser, pBuffer))
+            else if (cmd == MXS_COM_QUERY && relates_to_previous_stmt(m_parser, pBuffer))
             {
                 route_to_last_used = true;
             }
@@ -876,7 +876,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     }
 
     m_route_info.set_target(route_target);
-    m_route_info.set_command(command);
+    m_route_info.set_command(cmd);
     m_route_info.set_type_mask(type_mask);
     m_route_info.set_stmt_id(stmt_id);
 
