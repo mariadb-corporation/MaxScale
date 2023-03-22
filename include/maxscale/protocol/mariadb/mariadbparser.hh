@@ -27,7 +27,7 @@ public:
         GWBUF            create_packet(std::string_view sql) const override;
         PacketTypeMask   get_packet_type_mask(const GWBUF& packet) const override;
         std::string_view get_sql(const GWBUF& packet) const override;
-        bool             is_large_query(const GWBUF& packet) const override;
+        bool             is_multi_part_packet(const GWBUF& packet) const override;
         bool             is_prepare(const GWBUF& packet) const override;
     };
 

@@ -87,17 +87,17 @@ public:
         /**
          * Check if this is a continuation of a previous multi-packet query
          */
-        bool large_query() const
+        bool multi_part_packet() const
         {
-            return m_large_query;
+            return m_multi_part_packet;
         }
 
         /**
          * Check if the packet after this will be a continuation of multi-packet query
          */
-        bool expecting_large_query() const
+        bool expecting_multi_part_packet() const
         {
-            return m_next_large_query;
+            return m_next_multi_part_packet;
         }
 
         /**
@@ -106,7 +106,7 @@ public:
         bool expecting_response() const
         {
             return load_data_state() == LOAD_DATA_INACTIVE
-                   && !large_query()
+                   && !multi_part_packet()
                    && mxs_mysql_command_will_respond(command());
         }
 
@@ -202,12 +202,12 @@ public:
             m_stmt_id = stmt_id;
         }
 
-        void set_large_query(bool large_query)
+        void set_multi_part_packet(bool multi_part_packet)
         {
-            // The value returned from large_query() must lag by one classification result. This means that
-            // the first packet returns false and the subsequent ones return true.
-            m_large_query = m_next_large_query;
-            m_next_large_query = large_query;
+            // The value returned from multi_part_packet() must lag by one classification result.
+            // This means that the first packet returns false and the subsequent ones return true.
+            m_multi_part_packet = m_next_multi_part_packet;
+            m_next_multi_part_packet = multi_part_packet;
         }
 
         void set_load_data_state(load_data_state_t state)
@@ -249,8 +249,8 @@ public:
         uint32_t          m_type_mask = mxs::sql::TYPE_UNKNOWN;
         uint32_t          m_stmt_id = 0;
         load_data_state_t m_load_data_state = LOAD_DATA_INACTIVE;
-        bool              m_large_query = false;
-        bool              m_next_large_query = false;
+        bool              m_multi_part_packet = false;
+        bool              m_next_multi_part_packet = false;
         bool              m_trx_is_read_only = true;
         bool              m_ps_continuation = false;
         TableSet          m_tmp_tables;

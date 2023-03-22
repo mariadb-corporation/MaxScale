@@ -336,7 +336,7 @@ private:
 
         if (m_expected_responses == 0
             || route_info().load_data_state() != mariadb::QueryClassifier::LOAD_DATA_INACTIVE
-            || route_info().large_query())
+            || route_info().multi_part_packet())
         {
             // Not currently doing anything or we're processing a multi-packet query
             can_route = true;

@@ -101,7 +101,7 @@ std::string_view MariaDBParser::Helper::get_sql(const GWBUF& packet) const
     return mariadb::get_sql(packet);
 }
 
-bool MariaDBParser::Helper::is_large_query(const GWBUF& packet) const
+bool MariaDBParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 {
     uint32_t buflen = packet.length();
 

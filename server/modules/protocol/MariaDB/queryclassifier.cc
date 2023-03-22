@@ -542,7 +542,7 @@ void QueryClassifier::ps_store_response(uint32_t id, uint16_t param_count)
 
 void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
 {
-    if (m_route_info.large_query())
+    if (m_route_info.multi_part_packet())
     {
         MXB_INFO("> Processing large request with more than 2^24 bytes of data");
     }
@@ -736,9 +736,9 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
 
-    m_route_info.set_large_query(m_parser.is_large_query(*pBuffer));
+    m_route_info.set_multi_part_packet(m_parser.is_multi_part_packet(*pBuffer));
 
-    if (m_route_info.large_query())
+    if (m_route_info.multi_part_packet())
     {
         // Trailing part of a multi-packet query, ignore it
         return m_route_info;

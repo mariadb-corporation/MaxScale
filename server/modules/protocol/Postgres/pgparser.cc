@@ -63,7 +63,7 @@ std::string_view PgParser::Helper::get_sql(const GWBUF& packet) const
     return pg::get_sql(packet);
 }
 
-bool PgParser::Helper::is_large_query(const GWBUF& packet) const
+bool PgParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 {
     return false;
 }

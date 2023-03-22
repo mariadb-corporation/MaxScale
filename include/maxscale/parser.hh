@@ -115,7 +115,7 @@ public:
         virtual GWBUF            create_packet(std::string_view sql) const = 0;
         virtual PacketTypeMask   get_packet_type_mask(const GWBUF& packet) const = 0;
         virtual std::string_view get_sql(const GWBUF& packet) const = 0;
-        virtual bool             is_large_query(const GWBUF& packet) const = 0;
+        virtual bool             is_multi_part_packet(const GWBUF& packet) const = 0;
         virtual bool             is_prepare(const GWBUF& packet) const = 0;
     };
 
@@ -313,9 +313,9 @@ public:
         return helper().get_sql(stmt);
     }
 
-    bool is_large_query(const GWBUF& packet) const
+    bool is_multi_part_packet(const GWBUF& packet) const
     {
-        return helper().is_large_query(packet);
+        return helper().is_multi_part_packet(packet);
     }
 
     bool is_prepare(const GWBUF& packet) const

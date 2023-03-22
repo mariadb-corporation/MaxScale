@@ -152,7 +152,7 @@ bool RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res
     const RouteInfo& info = route_info();
     bool result = false;
 
-    if (route_info().large_query())
+    if (route_info().multi_part_packet())
     {
         continue_large_session_write(std::move(buffer), info.type_mask());
         result = true;
@@ -448,7 +448,7 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const GWBUF& buffer, c
     RoutingPlan rval;
     rval.route_target = info.target();
 
-    if (info.large_query())
+    if (info.multi_part_packet())
     {
         /** We're processing a large query that's split across multiple packets.
          * Route it to the same backend where we routed the previous packet. */
@@ -1104,7 +1104,7 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
 
     bool attempting_causal_read = false;
 
-    if (route_info().large_query() || route_info().loading_data())
+    if (route_info().multi_part_packet() || route_info().loading_data())
     {
         // Never store multi-packet queries or data sent during LOAD DATA LOCAL INFILE
         store = false;
@@ -1167,7 +1167,7 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
 
     if (route_info().expecting_response())
     {
-        mxb_assert(!route_info().large_query());
+        mxb_assert(!route_info().multi_part_packet());
 
         ++m_expected_responses;     // The server will reply to this command
         response = mxs::Backend::EXPECT_RESPONSE;
