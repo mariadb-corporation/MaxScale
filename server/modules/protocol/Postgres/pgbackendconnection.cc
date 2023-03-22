@@ -12,6 +12,7 @@
  */
 
 #include "pgbackendconnection.hh"
+#include <maxscale/server.hh>
 
 namespace
 {
@@ -469,9 +470,15 @@ bool PgBackendConnection::handle_routing()
             if (GWBUF complete_packets = process_packets(buf))
             {
                 mxs::ReplyRoute down;
-                m_upstream->clientReply(std::move(complete_packets), down, m_reply);
+                bool reply_ok = m_upstream->clientReply(std::move(complete_packets), down, m_reply);
 
-                if (!m_dcb->is_open())
+                if (!reply_ok)
+                {
+                    MXB_INFO("Routing the reply from '%s' failed, closing session.", m_dcb->server()->name());
+                    m_session->kill();
+                    keep_going = false;
+                }
+                else if (!m_dcb->is_open())
                 {
                     // The DCB was closed as a result of the clientReply call
                     keep_going = false;

@@ -821,8 +821,15 @@ void MariaDBBackendConnection::normal_read()
 
             thread_local mxs::ReplyRoute route;
             route.clear();
-            m_upstream->clientReply(std::move(stmt), route, m_reply);
+            bool reply_ok = m_upstream->clientReply(std::move(stmt), route, m_reply);
             m_reply.clear_row_data();
+
+            if (!reply_ok)
+            {
+                MXB_INFO("Routing the reply from '%s' failed, closing session.", m_server.name());
+                m_session->kill();
+                break;
+            }
         }
         else
         {
