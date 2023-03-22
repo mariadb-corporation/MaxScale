@@ -132,6 +132,11 @@ std::string_view MariaDBParser::Helper::get_sql(const GWBUF& packet) const
     return mariadb::get_sql(packet);
 }
 
+bool MariaDBParser::Helper::is_empty(const GWBUF& packet) const
+{
+    return packet.length() == MYSQL_HEADER_LEN;
+}
+
 bool MariaDBParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 {
     uint32_t buflen = packet.length();

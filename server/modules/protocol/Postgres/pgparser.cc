@@ -77,6 +77,7 @@ mxs::Parser::PacketTypeMask PgParser::Helper::get_packet_type_mask(const GWBUF& 
 
 uint32_t PgParser::Helper::get_ps_id(const GWBUF& packet) const
 {
+    MXB_ALERT("Not implemented yet: %s", __func__);
     return 0;
 }
 
@@ -85,9 +86,14 @@ std::string_view PgParser::Helper::get_sql(const GWBUF& packet) const
     return pg::get_sql(packet);
 }
 
+bool PgParser::Helper::is_empty(const GWBUF& packet) const
+{
+    return packet.length() == pg::HEADER_LEN;
+}
+
 bool PgParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 {
-    return false;
+    return true;
 }
 
 bool PgParser::Helper::is_prepare(const GWBUF& packet) const
@@ -97,11 +103,13 @@ bool PgParser::Helper::is_prepare(const GWBUF& packet) const
 
 bool PgParser::Helper::is_ps_direct_exec_id(uint32_t id) const
 {
+    MXB_ALERT("Not implemented yet: %s", __func__);
     return false;
 }
 
 bool PgParser::Helper::is_ps_packet(const GWBUF& packet) const
 {
+    MXB_ALERT("Not implemented yet: %s", __func__);
     return false;
 }
 

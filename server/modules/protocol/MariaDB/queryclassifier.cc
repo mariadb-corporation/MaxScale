@@ -18,8 +18,6 @@
 #include <maxbase/string.hh>
 #include <maxsimd/multistmt.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using mariadb::QueryClassifier;
 using mxs::Parser;
@@ -678,7 +676,6 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     uint8_t cmd = 0xFF;
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
-    uint32_t len = gwbuf_length(pBuffer);
 
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
@@ -704,7 +701,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     {
         // A LOAD DATA LOCAL INFILE is ongoing
     }
-    else if (len > MYSQL_HEADER_LEN)
+    else if (!m_parser.is_empty(*pBuffer))
     {
         cmd = m_parser.get_command(*pBuffer);
 
