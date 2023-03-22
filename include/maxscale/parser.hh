@@ -113,6 +113,7 @@ public:
     public:
 
         virtual GWBUF            create_packet(std::string_view sql) const = 0;
+        virtual uint32_t         get_command(const GWBUF& packet) const = 0;
         virtual PacketTypeMask   get_packet_type_mask(const GWBUF& packet) const = 0;
         virtual std::string_view get_sql(const GWBUF& packet) const = 0;
         virtual bool             is_multi_part_packet(const GWBUF& packet) const = 0;
@@ -303,6 +304,11 @@ public:
     virtual std::string_view get_canonical(const GWBUF& stmt) const = 0;
 
     // Shorthands for Handler functions.
+    uint32_t get_command(const GWBUF& packet) const
+    {
+        return helper().get_command(packet);
+    }
+
     PacketTypeMask get_packet_type_mask(const GWBUF& packet) const
     {
         return helper().get_packet_type_mask(packet);

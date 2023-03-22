@@ -25,6 +25,7 @@ public:
         static const Helper& get();
 
         GWBUF            create_packet(std::string_view sql) const override;
+        uint32_t         get_command(const GWBUF& packet) const override;
         PacketTypeMask   get_packet_type_mask(const GWBUF& packet) const override;
         std::string_view get_sql(const GWBUF& packet) const override;
         bool             is_multi_part_packet(const GWBUF& packet) const override;

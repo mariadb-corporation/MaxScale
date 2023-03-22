@@ -35,6 +35,18 @@ GWBUF PgParser::Helper::create_packet(std::string_view sql) const
     return pg::create_query_packet(sql);
 }
 
+uint32_t PgParser::Helper::get_command(const GWBUF& packet) const
+{
+    uint32_t cmd = 0;
+
+    if (packet.length() > 0)
+    {
+        cmd = packet[0];
+    }
+
+    return cmd;
+}
+
 mxs::Parser::PacketTypeMask PgParser::Helper::get_packet_type_mask(const GWBUF& packet) const
 {
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;

@@ -35,6 +35,11 @@ GWBUF MariaDBParser::Helper::create_packet(std::string_view sql) const
     return mariadb::create_query(sql);
 }
 
+uint32_t MariaDBParser::Helper::get_command(const GWBUF& packet) const
+{
+    return mxs_mysql_get_command(packet);
+}
+
 mxs::Parser::PacketTypeMask MariaDBParser::Helper::get_packet_type_mask(const GWBUF& packet) const
 {
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
