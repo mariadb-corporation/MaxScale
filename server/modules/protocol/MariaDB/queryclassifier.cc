@@ -45,41 +45,31 @@ bool is_ps_command(uint8_t cmd)
            || cmd == MXS_COM_STMT_RESET;
 }
 
-bool is_packet_a_query(int cmd)
-{
-    return cmd == MXS_COM_QUERY;
-}
-
-bool check_for_sp_call(const mxs::Parser& parser, GWBUF* buf, uint8_t cmd)
-{
-    return cmd == MXS_COM_QUERY && parser.get_operation(*buf) == mxs::sql::OP_CALL;
-}
-
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
     auto ses = static_cast<MYSQL_session*>(pSession->protocol_data());
     return (ses->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS) != 0;
 }
 
-uint32_t get_prepare_type(const mxs::Parser& parser, GWBUF* buffer)
+uint32_t get_prepare_type(const mxs::Parser& parser, const GWBUF& buffer)
 {
     uint32_t type = mxs::sql::TYPE_UNKNOWN;
 
-    if (mxs_mysql_get_command(*buffer) == MXS_COM_STMT_PREPARE)
+    if (parser.is_prepare(buffer))
     {
 #ifdef SS_DEBUG
-        GWBUF stmt = buffer->deep_clone();
+        GWBUF stmt = buffer.deep_clone();
         stmt.data()[4] = MXS_COM_QUERY;
         stmt.set_protocol_info(nullptr);      // To ensure cloned buffer is parsed.
         mxb_assert(parser.get_type_mask(stmt)
-                   == (parser.get_type_mask(*buffer) & ~mxs::sql::TYPE_PREPARE_STMT));
+                   == (parser.get_type_mask(buffer) & ~mxs::sql::TYPE_PREPARE_STMT));
 #endif
 
-        type = parser.get_type_mask(*buffer) & ~mxs::sql::TYPE_PREPARE_STMT;
+        type = parser.get_type_mask(buffer) & ~mxs::sql::TYPE_PREPARE_STMT;
     }
     else
     {
-        GWBUF* stmt = parser.get_preparable_stmt(*buffer);
+        GWBUF* stmt = parser.get_preparable_stmt(buffer);
 
         if (stmt)
         {
@@ -174,27 +164,27 @@ public:
 
     void store(GWBUF* buffer, uint32_t id)
     {
-        mxb_assert(mxs_mysql_get_command(*buffer) == MXS_COM_STMT_PREPARE
+        bool is_prepare = m_parser.is_prepare(*buffer);
+
+        mxb_assert(is_prepare
                    || Parser::type_mask_contains(m_parser.get_type_mask(*buffer),
                                                  mxs::sql::TYPE_PREPARE_NAMED_STMT));
 
         PreparedStmt stmt;
-        stmt.type = get_prepare_type(m_parser, buffer);
+        stmt.type = get_prepare_type(m_parser, *buffer);
         stmt.route_to_last_used = relates_to_previous_stmt(m_parser, buffer);
 
-        switch (mxs_mysql_get_command(*buffer))
+        if (is_prepare)
         {
-        case MXS_COM_QUERY:
-            m_text_ps.emplace(get_text_ps_id(m_parser, buffer), std::move(stmt));
-            break;
-
-        case MXS_COM_STMT_PREPARE:
             m_binary_ps.emplace(id, std::move(stmt));
-            break;
-
-        default:
+        }
+        else if (m_parser.is_query(*buffer))
+        {
+            m_text_ps.emplace(get_text_ps_id(m_parser, buffer), std::move(stmt));
+        }
+        else
+        {
             mxb_assert(!true);
-            break;
         }
     }
 
@@ -646,7 +636,6 @@ void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
  * @param qc                   The query classifier
  * @param current_target       The current target
  * @param querybuf             Buffer containing query to be routed
- * @param cmd                  Type of packet (database specific)
  * @param qtype                Query type
  *
  * @return QueryClassifier::CURRENT_TARGET_MASTER if the session should be fixed
@@ -655,18 +644,19 @@ void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     QueryClassifier::current_target_t current_target,
     GWBUF* querybuf,
-    uint8_t cmd,
     uint32_t* qtype)
 {
     QueryClassifier::current_target_t rv = QueryClassifier::CURRENT_TARGET_UNDEFINED;
+
+    bool is_query = m_parser.is_query(*querybuf);
 
     /** Check for multi-statement queries. If no master server is available
      * and a multi-statement is issued, an error is returned to the client
      * when the query is routed. */
     if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
-        bool is_multi = check_for_sp_call(m_parser, querybuf, cmd);
-        if (!is_multi && multi_statements_allowed() && cmd == MXS_COM_QUERY)
+        bool is_multi = is_query && m_parser.get_operation(*querybuf) == mxs::sql::OP_CALL;
+        if (!is_multi && multi_statements_allowed() && is_query)
         {
             // This is wasteful, the sql is extracted multiple times
             // it should be in the Context, after first call.
@@ -683,7 +673,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     /**
      * Check if the query has anything to do with temporary tables.
      */
-    if (m_route_info.have_tmp_tables() && is_packet_a_query(cmd))
+    if (m_route_info.have_tmp_tables() && is_query)
     {
 
         check_drop_tmp_table(querybuf);
@@ -781,7 +771,6 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
             current_target = handle_multi_temp_and_load(current_target,
                                                         pBuffer,
-                                                        cmd,
                                                         &type_mask);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)

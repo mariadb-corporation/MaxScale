@@ -479,7 +479,6 @@ private:
 
     current_target_t handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
                                                 GWBUF* querybuf,
-                                                uint8_t packet_type,
                                                 uint32_t* qtype);
 
     bool query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* buffer);
