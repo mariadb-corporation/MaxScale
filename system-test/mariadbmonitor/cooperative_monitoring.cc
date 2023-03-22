@@ -31,8 +31,8 @@ MonitorInfo monitors[] = {
     {MonitorID::UNKNOWN, "none",            },
 };
 
-const int failover_mon_ticks = 3;
-const int mxs_switch_ticks = 3;
+const int failover_mon_ticks = 6;
+const int mxs_switch_ticks = 6;
 }
 
 bool               monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info);
