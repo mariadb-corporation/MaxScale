@@ -44,14 +44,15 @@ XRouter::Config::Config(const std::string& name)
     add_native(&Config::m_v, &Values::unlock_sql, &s_unlock_sql);
 }
 
-XRouter::XRouter(const std::string& name)
-    : m_config(name)
+XRouter::XRouter(SERVICE& service)
+    : m_config(service.name())
+    , m_service(service)
 {
 }
 
 XRouter* XRouter::create(SERVICE* pService)
 {
-    return new XRouter(pService->name());
+    return new XRouter(*pService);
 }
 
 mxs::RouterSession* XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)

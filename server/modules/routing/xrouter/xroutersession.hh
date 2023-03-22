@@ -25,6 +25,8 @@ public:
                    XRouter::Config::ValueRef config);
     bool routeQuery(GWBUF&& packet) override;
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool handleError(mxs::ErrorType type, const std::string& message,
+                     mxs::Endpoint* pProblem, const mxs::Reply& reply) override;
 
 private:
     enum class State
@@ -53,6 +55,8 @@ private:
     bool all_backends_idle() const;
 
     GWBUF finish_multinode();
+    void  fence_bad_node(mxs::Backend* backend);
+    bool  check_node_status();
 
     // TODO: const-correct after parser is fixed
     bool is_multi_node(GWBUF& buffer) const;

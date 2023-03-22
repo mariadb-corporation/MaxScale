@@ -86,7 +86,11 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
     switch (m_state)
     {
     case State::IDLE:
-        if (is_multi_node(packet))
+        if (!check_node_status())
+        {
+            ok = false;
+        }
+        else if (is_multi_node(packet))
         {
             // Send the lock query to the main node before doing the DDL. This way the operations are
             // serialized with respect to the main node.
@@ -288,9 +292,8 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
         {
             if (reply.error())
             {
-                // TODO: Fence out the node somehow
                 MXB_SINFO("Command failed on '" << backend->name() << "': " << reply.describe());
-                backend->close(mxs::Backend::CLOSE_FATAL);
+                fence_bad_node(backend);
             }
 
             if (all_backends_idle())
@@ -323,6 +326,19 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
     }
 
     return rv;
+}
+
+bool XRouterSession::handleError(mxs::ErrorType type, const std::string& message,
+                                 mxs::Endpoint* pProblem, const mxs::Reply& reply)
+{
+    mxs::Backend* backend = static_cast<mxs::Backend*>(pProblem->get_userdata());
+
+    if (backend != m_main)
+    {
+        fence_bad_node(backend);
+    }
+
+    return false;
 }
 
 bool XRouterSession::route_queued()
@@ -374,6 +390,38 @@ std::string XRouterSession::describe(const GWBUF& buffer)
 bool XRouterSession::send_query(mxs::Backend* backend, std::string_view sql)
 {
     return route_to_one(backend, m_pSession->protocol()->make_query(sql), mxs::Backend::IGNORE_RESPONSE);
+}
+
+void XRouterSession::fence_bad_node(mxs::Backend* backend)
+{
+    if (!backend->target()->is_in_maint())
+    {
+        auto servers = m_router.service().reachable_servers();
+
+        if (auto it = std::find(servers.begin(), servers.end(), backend->target()); it != servers.end())
+        {
+            SERVER* srv = *it;
+            MXB_SWARNING("Server '" << srv->name() << "' has failed. "
+                                    << "The node has been excluded from routing and "
+                                    << "is now in maintenance mode.");
+            srv->set_maintenance();
+        }
+    }
+
+    backend->close(mxs::Backend::CLOSE_FATAL);
+}
+
+bool XRouterSession::check_node_status()
+{
+    for (auto& b : m_backends)
+    {
+        if (b->in_use() && !b->can_connect())
+        {
+            b->close();
+        }
+    }
+
+    return m_main->in_use() && m_solo->in_use();
 }
 
 GWBUF XRouterSession::finish_multinode()

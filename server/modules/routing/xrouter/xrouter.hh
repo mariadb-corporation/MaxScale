@@ -79,8 +79,14 @@ public:
         return *m_config.m_shared;
     }
 
-private:
-    XRouter(const std::string& name);
+    SERVICE& service() const
+    {
+        return m_service;
+    }
 
-    Config m_config;
+private:
+    XRouter(SERVICE& name);
+
+    Config   m_config;
+    SERVICE& m_service;
 };
