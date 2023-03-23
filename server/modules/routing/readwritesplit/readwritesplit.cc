@@ -23,7 +23,6 @@
 #include <cmath>
 #include <new>
 #include <sstream>
-#include <charconv>
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
@@ -203,14 +202,11 @@ RWSplit::gtid RWSplit::gtid::from_string(std::string_view str)
 
 void RWSplit::gtid::parse(std::string_view sv)
 {
-    auto [dom, remaining] = mxb::split(sv, "-");
-    auto [sid, seq] = mxb::split(remaining, "-");
-    MXB_AT_DEBUG(auto dom_res = ) std::from_chars(dom.begin(), dom.end(), this->domain);
-    MXB_AT_DEBUG(auto sid_res = ) std::from_chars(sid.begin(), sid.end(), this->server_id);
-    MXB_AT_DEBUG(auto seq_res = ) std::from_chars(seq.begin(), seq.end(), this->sequence);
-    mxb_assert(dom_res.ptr == dom.end());
-    mxb_assert(sid_res.ptr == sid.end());
-    mxb_assert(seq_res.ptr == seq.end());
+    auto tok = mxb::strtok(sv, "-");
+    mxb_assert(tok.size() == 3);
+    this->domain = strtoul(tok[0].c_str(), nullptr, 10);
+    this->server_id = strtoul(tok[1].c_str(), nullptr, 10);
+    this->sequence = strtoul(tok[2].c_str(), nullptr, 10);
 }
 
 std::string RWSplit::gtid::to_string() const
