@@ -199,7 +199,7 @@ public:
     parsing_info_t(const parsing_info_t&) = delete;
     parsing_info_t& operator=(const parsing_info_t&) = delete;
 
-    parsing_info_t(const GWBUF* querybuf);
+    parsing_info_t(const Parser::Helper& helper, const GWBUF* querybuf);
     ~parsing_info_t();
 
     std::string_view get_string_view(const char* zContext, const char* zNeedle)
@@ -279,7 +279,7 @@ public:
         MXB_LOG_MESSAGE(priority,
                         "The %s '%s' is not found in the canonical statement '%s' created from "
                         "the statement '%s'.",
-                        zWhat, zKey, this->canonical.c_str(), this->pi_query_plain_str);
+                        zWhat, zKey, this->canonical.c_str(), this->pi_query_plain_str.c_str());
     }
 
     size_t size() const override
@@ -287,8 +287,8 @@ public:
         return sizeof(*this); // TODO: calculate better if needed. Not really relevant.
     }
 
-    MYSQL*                pi_handle { nullptr } ;            /*< parsing info object pointer */
-    char*                 pi_query_plain_str { nullptr };   /*< query as plain string */
+    MYSQL*                pi_handle { nullptr }; /*< parsing info object pointer */
+    std::string           pi_query_plain_str;    /*< query as plain string */
     Parser::FieldInfo*    field_infos { nullptr };
     size_t                field_infos_len { 0 };
     size_t                field_infos_capacity { 0 };
@@ -296,7 +296,7 @@ public:
     size_t                function_infos_len { 0 };
     size_t                function_infos_capacity { 0 };
     GWBUF*                preparable_stmt { 0 };
-    Parser::Result     result { Parser::Result::INVALID };
+    Parser::Result        result { Parser::Result::INVALID };
     int32_t               type_mask { 0 };
     NAME_MAPPING*         function_name_mappings { 0 };
     string                created_table_name;
@@ -309,20 +309,21 @@ public:
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < mxs::sql::TYPE_WRITE ? true : false)
 
-static THD*          get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
+static THD*          get_or_create_thd_for_parsing(MYSQL* mysql, const char* query_str);
 static unsigned long set_client_flags(MYSQL* mysql);
 static bool          create_parse_tree(THD* thd);
 static uint32_t      resolve_query_type(parsing_info_t*, THD* thd);
 static bool          skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
 static int           is_autocommit_stmt(LEX* lex);
 
-static std::unique_ptr<parsing_info_t> parsing_info_init(const GWBUF* querybuf);
+static std::unique_ptr<parsing_info_t> parsing_info_init(const Parser::Helper& helper, const GWBUF* querybuf);
 
 static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
-static bool        ensure_query_is_parsed(const GWBUF* query);
-static bool        parse_query(const GWBUF* querybuf);
+static bool        ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query);
+static bool        parse_query(const Parser::Helper& helper, const GWBUF* querybuf);
 static bool        query_is_parsed(const GWBUF* buf);
-int32_t            qc_mysql_get_field_info(const GWBUF* buf,
+int32_t            qc_mysql_get_field_info(const Parser::Helper& helper,
+                                           const GWBUF* buf,
                                            const Parser::FieldInfo** infos,
                                            uint32_t* n_infos);
 
@@ -491,8 +492,9 @@ static thread_local struct
 } this_thread;
 
 
-parsing_info_t::parsing_info_t(const GWBUF* querybuf)
-    : canonical(mariadb::get_sql(*querybuf))
+parsing_info_t::parsing_info_t(const Parser::Helper& helper, const GWBUF* querybuf)
+    : pi_query_plain_str(helper.get_sql(*querybuf))
+    , canonical(pi_query_plain_str)
 {
     maxsimd::get_canonical(&this->canonical, &this_thread.markers);
 
@@ -515,14 +517,6 @@ parsing_info_t::parsing_info_t(const GWBUF* querybuf)
     this->pi_handle = mysql;
     mxb_assert(this_thread.function_name_mappings);
     this->function_name_mappings = this_thread.function_name_mappings;
-
-    auto* data = GWBUF_DATA(querybuf);
-    auto len = MYSQL_GET_PAYLOAD_LEN(data) - 1;      /*< distract 1 for packet type byte */
-
-    this->pi_query_plain_str = static_cast<char*>(malloc(len + 1));
-
-    memcpy(this->pi_query_plain_str, &data[5], len);
-    memset(&this->pi_query_plain_str[len], 0, 1);
 }
 
 parsing_info_t::~parsing_info_t()
@@ -539,12 +533,6 @@ parsing_info_t::~parsing_info_t()
     }
 
     mysql_close(mysql);
-
-    /** Free plain text query string */
-    if (this->pi_query_plain_str != NULL)
-    {
-        free(this->pi_query_plain_str);
-    }
 
     free(this->field_infos);
 
@@ -570,7 +558,7 @@ parsing_info_t::~parsing_info_t()
  *
  * @return true if the query is parsed, false otherwise.
  */
-bool ensure_query_is_parsed(const GWBUF* query)
+bool ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query)
 {
     bool parsed = query_is_parsed(query);
 
@@ -603,7 +591,7 @@ bool ensure_query_is_parsed(const GWBUF* query)
             global_system_variables.sql_mode &= ~MODE_ORACLE;
         }
 
-        parsed = parse_query(query);
+        parsed = parse_query(helper, query);
 
         MXB_AT_DEBUG(rv = ) pthread_mutex_unlock(&this_unit.sql_mode_mutex);
         mxb_assert(rv == 0);
@@ -617,9 +605,10 @@ bool ensure_query_is_parsed(const GWBUF* query)
     return parsed;
 }
 
-int32_t qc_mysql_parse(const GWBUF* querybuf, uint32_t collect, Parser::Result* result)
+int32_t qc_mysql_parse(const Parser::Helper& helper,
+                       const GWBUF* querybuf, uint32_t collect, Parser::Result* result)
 {
-    bool parsed = ensure_query_is_parsed(querybuf);
+    bool parsed = ensure_query_is_parsed(helper, querybuf);
 
     // Since the query is parsed using the same parser - subject to version
     // differences between the embedded library and the server - either the
@@ -641,7 +630,8 @@ int32_t qc_mysql_parse(const GWBUF* querybuf, uint32_t collect, Parser::Result* 
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_type_mask(const GWBUF* querybuf, uint32_t* type_mask)
+int32_t qc_mysql_get_type_mask(const Parser::Helper& helper,
+                               const GWBUF* querybuf, uint32_t* type_mask)
 {
     int32_t rv = QC_RESULT_OK;
 
@@ -657,7 +647,7 @@ int32_t qc_mysql_get_type_mask(const GWBUF* querybuf, uint32_t* type_mask)
         goto retblock;
     }
 
-    succp = ensure_query_is_parsed(querybuf);
+    succp = ensure_query_is_parsed(helper, querybuf);
 
     /** Read thd pointer and resolve the query type with it. */
     if (succp)
@@ -678,7 +668,7 @@ int32_t qc_mysql_get_type_mask(const GWBUF* querybuf, uint32_t* type_mask)
                 const Parser::FieldInfo* field_infos;
                 uint32_t n_field_infos;
 
-                rv = qc_mysql_get_field_info(querybuf, &field_infos, &n_field_infos);
+                rv = qc_mysql_get_field_info(helper, querybuf, &field_infos, &n_field_infos);
 
                 if (rv == QC_RESULT_OK)
                 {
@@ -701,7 +691,7 @@ retblock:
  *
  * @return true if succeed, false otherwise
  */
-static bool parse_query(const GWBUF* querybuf)
+static bool parse_query(const Parser::Helper& helper, const GWBUF* querybuf)
 {
     bool succp;
     THD* thd;
@@ -719,10 +709,10 @@ static bool parse_query(const GWBUF* querybuf)
     }
 
     /** Create parsing info */
-    std::unique_ptr<parsing_info_t> pi = parsing_info_init(querybuf);
+    std::unique_ptr<parsing_info_t> pi = parsing_info_init(helper, querybuf);
 
     /** Get one or create new THD object to be use in parsing */
-    thd = get_or_create_thd_for_parsing(pi->pi_handle, pi->pi_query_plain_str);
+    thd = get_or_create_thd_for_parsing(pi->pi_handle, pi->pi_query_plain_str.c_str());
     mxb_assert(thd);
 
     /**
@@ -742,7 +732,7 @@ static bool parse_query(const GWBUF* querybuf)
     // canonical string.
     const Parser::FieldInfo* infos;
     uint32_t n_infos;
-    qc_mysql_get_field_info(querybuf, &infos, &n_infos);
+    qc_mysql_get_field_info(helper, querybuf, &infos, &n_infos);
 
     return true;
 }
@@ -772,7 +762,7 @@ static bool query_is_parsed(const GWBUF* buf)
  * @return Thread context pointer
  *
  */
-static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str)
+static THD* get_or_create_thd_for_parsing(MYSQL* mysql, const char* query_str)
 {
     THD* thd = NULL;
     unsigned long client_flags;
@@ -830,7 +820,7 @@ static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str)
      */
     free_old_query(mysql);
     thd->extra_length = query_len;
-    thd->extra_data = query_str;
+    thd->extra_data = (char*)query_str;
     alloc_query(thd, query_str, query_len);
     goto return_thd;
 
@@ -1212,7 +1202,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
     if (lex->sql_command == SQLCOM_SET_OPTION)
     {
-        switch (get_set_type(pi->pi_query_plain_str))
+        switch (get_set_type(pi->pi_query_plain_str.c_str()))
         {
         case SET_TYPE_PASSWORD:
             type |= mxs::sql::TYPE_WRITE;
@@ -1262,7 +1252,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
                         if (thd->tx_read_only)
                         {
-                            if (strcasestr(pi->pi_query_plain_str, "write"))
+                            if (strcasestr(pi->pi_query_plain_str.c_str(), "write"))
                             {
                                 type |= mxs::sql::TYPE_READWRITE;
                             }
@@ -1940,12 +1930,13 @@ static bool is_show_command(int sql_command)
     return rv;
 }
 
-int32_t qc_mysql_get_table_names(const GWBUF* querybuf, vector<Parser::TableName>* tables)
+int32_t qc_mysql_get_table_names(const Parser::Helper& helper,
+                                 const GWBUF* querybuf, vector<Parser::TableName>* tables)
 {
     LEX* lex;
     TABLE_LIST* tbl;
 
-    if (!ensure_query_is_parsed(querybuf))
+    if (!ensure_query_is_parsed(helper, querybuf))
     {
         return QC_RESULT_OK;
     }
@@ -2011,7 +2002,8 @@ int32_t qc_mysql_get_table_names(const GWBUF* querybuf, vector<Parser::TableName
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_created_table_name(const GWBUF* querybuf, string_view* table_name)
+int32_t qc_mysql_get_created_table_name(const Parser::Helper& helper,
+                                        const GWBUF* querybuf, string_view* table_name)
 {
     *table_name = string_view {};
 
@@ -2020,7 +2012,7 @@ int32_t qc_mysql_get_created_table_name(const GWBUF* querybuf, string_view* tabl
         return QC_RESULT_OK;
     }
 
-    if (!ensure_query_is_parsed(querybuf))
+    if (!ensure_query_is_parsed(helper, querybuf))
     {
         return QC_RESULT_ERROR;
     }
@@ -2053,9 +2045,9 @@ int32_t qc_mysql_get_created_table_name(const GWBUF* querybuf, string_view* tabl
  *
  * @return pointer to parsing information
  */
-static std::unique_ptr<parsing_info_t> parsing_info_init(const GWBUF* querybuf)
+static std::unique_ptr<parsing_info_t> parsing_info_init(const Parser::Helper& helper, const GWBUF* querybuf)
 {
-    return std::make_unique<parsing_info_t>(querybuf);
+    return std::make_unique<parsing_info_t>(helper, querybuf);
 }
 
 /**
@@ -2066,16 +2058,10 @@ static std::unique_ptr<parsing_info_t> parsing_info_init(const GWBUF* querybuf)
  *
  * @return void
  */
-static void parsing_info_set_plain_str(void* ptr, char* str)
+int32_t qc_mysql_get_database_names(const Parser::Helper& helper,
+                                    const GWBUF* querybuf, vector<string_view>* pNames)
 {
-    parsing_info_t* pi = (parsing_info_t*) ptr;
-
-    pi->pi_query_plain_str = str;
-}
-
-int32_t qc_mysql_get_database_names(const GWBUF* querybuf, vector<string_view>* pNames)
-{
-    if (!querybuf || !ensure_query_is_parsed(querybuf))
+    if (!querybuf || !ensure_query_is_parsed(helper, querybuf))
     {
         return QC_RESULT_OK;
     }
@@ -2159,13 +2145,14 @@ int32_t qc_mysql_get_kill_info(const GWBUF* querybuf, Parser::KillInfo* pKill)
     return QC_RESULT_ERROR;
 }
 
-int32_t qc_mysql_get_operation(const GWBUF* querybuf, int32_t* operation)
+int32_t qc_mysql_get_operation(const Parser::Helper& helper,
+                               const GWBUF* querybuf, int32_t* operation)
 {
     *operation = mxs::sql::OP_UNDEFINED;
 
     if (querybuf)
     {
-        if (ensure_query_is_parsed(querybuf))
+        if (ensure_query_is_parsed(helper, querybuf))
         {
             parsing_info_t* pi = get_pinfo(querybuf);
             LEX* lex = get_lex(pi);
@@ -2280,7 +2267,7 @@ int32_t qc_mysql_get_operation(const GWBUF* querybuf, int32_t* operation)
                         break;
 
                     case SQLCOM_SET_OPTION:
-                        switch (get_set_type(pi->pi_query_plain_str))
+                        switch (get_set_type(pi->pi_query_plain_str.c_str()))
                         {
                         case SET_TYPE_TRANSACTION:
                             *operation = mxs::sql::OP_SET_TRANSACTION;
@@ -2335,13 +2322,14 @@ int32_t qc_mysql_get_operation(const GWBUF* querybuf, int32_t* operation)
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_prepare_name(const GWBUF* stmt, std::string_view* namep)
+int32_t qc_mysql_get_prepare_name(const Parser::Helper& helper,
+                                  const GWBUF* stmt, std::string_view* namep)
 {
     *namep = std::string_view {};
 
     if (stmt)
     {
-        if (ensure_query_is_parsed(stmt))
+        if (ensure_query_is_parsed(helper, stmt))
         {
             auto* pi = get_pinfo(stmt);
 
@@ -2369,11 +2357,12 @@ int32_t qc_mysql_get_prepare_name(const GWBUF* stmt, std::string_view* namep)
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_preparable_stmt(const Parser::Helper& helper, const GWBUF* stmt, GWBUF** preparable_stmt)
+int32_t qc_mysql_get_preparable_stmt(const Parser::Helper& helper,
+                                     const GWBUF* stmt, GWBUF** preparable_stmt)
 {
     if (stmt)
     {
-        if (ensure_query_is_parsed(stmt))
+        if (ensure_query_is_parsed(helper, stmt))
         {
             LEX* lex = get_lex(stmt);
 
@@ -2396,7 +2385,8 @@ int32_t qc_mysql_get_preparable_stmt(const Parser::Helper& helper, const GWBUF* 
                     size_t payload_len = preparable_stmt_len + 1;
                     size_t packet_len = MYSQL_HEADER_LEN + payload_len;
 
-                    char* s = new char [payload_len];
+                    char* tmp = new char [payload_len];
+                    char* s = tmp;
 
                     // We copy the statment, blindly replacing all '?':s (always)
                     // and ':N' (in Oracle mode) with '0':s as otherwise the parsing of the
@@ -2467,8 +2457,9 @@ int32_t qc_mysql_get_preparable_stmt(const Parser::Helper& helper, const GWBUF* 
                         *s = 0;
                     }
 
-                    GWBUF* preparable_packet = new GWBUF(helper.create_packet(s));
-                    delete [] s;
+                    std::string_view sv(tmp, s - tmp);
+                    GWBUF* preparable_packet = new GWBUF(helper.create_packet(sv));
+                    delete [] tmp;
 
                     pi->preparable_stmt = preparable_packet;
                 }
@@ -3587,7 +3578,8 @@ void add_value_func_item(parsing_info_t* pi, Item_func* func_item)
 
 }
 
-int32_t qc_mysql_get_field_info(const GWBUF* buf, const Parser::FieldInfo** infos, uint32_t* n_infos)
+int32_t qc_mysql_get_field_info(const Parser::Helper& helper,
+                                const GWBUF* buf, const Parser::FieldInfo** infos, uint32_t* n_infos)
 {
     *infos = NULL;
     *n_infos = 0;
@@ -3597,7 +3589,7 @@ int32_t qc_mysql_get_field_info(const GWBUF* buf, const Parser::FieldInfo** info
         return QC_RESULT_OK;
     }
 
-    if (!ensure_query_is_parsed(buf))
+    if (!ensure_query_is_parsed(helper, buf))
     {
         return QC_RESULT_ERROR;
     }
@@ -3823,7 +3815,8 @@ int32_t qc_mysql_get_field_info(const GWBUF* buf, const Parser::FieldInfo** info
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_function_info(const GWBUF* buf,
+int32_t qc_mysql_get_function_info(const Parser::Helper& helper,
+                                   const GWBUF* buf,
                                    const Parser::FunctionInfo** function_infos,
                                    uint32_t* n_function_infos)
 {
@@ -3838,7 +3831,7 @@ int32_t qc_mysql_get_function_info(const GWBUF* buf,
         uint32_t n_field_infos;
 
         // We ensure the information has been collected by querying the fields first.
-        rv = qc_mysql_get_field_info(buf, &field_infos, &n_field_infos);
+        rv = qc_mysql_get_field_info(helper, buf, &field_infos, &n_field_infos);
 
         if (rv == QC_RESULT_OK)
         {
@@ -4082,7 +4075,7 @@ public:
     {
         Result result = Parser::Result::INVALID;
 
-        qc_mysql_parse(&stmt, collect, &result);
+        qc_mysql_parse(m_helper, &stmt, collect, &result);
 
         return result;
     }
@@ -4091,7 +4084,7 @@ public:
     {
         std::string_view rv;
 
-        if (ensure_query_is_parsed(&stmt))
+        if (ensure_query_is_parsed(m_helper, &stmt))
         {
             auto* pi = get_pinfo(&stmt);
 
@@ -4105,7 +4098,7 @@ public:
     {
         std::string_view name;
 
-        qc_mysql_get_created_table_name(&stmt, &name);
+        qc_mysql_get_created_table_name(m_helper, &stmt, &name);
 
         return name;
     }
@@ -4114,7 +4107,7 @@ public:
     {
         Parser::DatabaseNames names;
 
-        qc_mysql_get_database_names(&stmt, &names);
+        qc_mysql_get_database_names(m_helper, &stmt, &names);
 
         return names;
     }
@@ -4122,7 +4115,7 @@ public:
     void get_field_info(const GWBUF& stmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
-        qc_mysql_get_field_info(&stmt, ppInfos, &n);
+        qc_mysql_get_field_info(m_helper, &stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
@@ -4131,7 +4124,7 @@ public:
                            size_t* pnInfos) const override
     {
         uint32_t n = 0;
-        qc_mysql_get_function_info(&stmt, ppInfos, &n);
+        qc_mysql_get_function_info(m_helper, &stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
@@ -4148,7 +4141,7 @@ public:
     {
         int32_t op = 0;
 
-        qc_mysql_get_operation(&stmt, &op);
+        qc_mysql_get_operation(m_helper, &stmt, &op);
 
         return static_cast<mxs::sql::OpCode>(op);
     }
@@ -4171,7 +4164,7 @@ public:
     {
         std::string_view name;
 
-        qc_mysql_get_prepare_name(&stmt, &name);
+        qc_mysql_get_prepare_name(m_helper, &stmt, &name);
 
         return name;
     }
@@ -4197,7 +4190,7 @@ public:
     {
         Parser::TableNames names;
 
-        qc_mysql_get_table_names(&stmt, &names);
+        qc_mysql_get_table_names(m_helper, &stmt, &names);
 
         return names;
     }
@@ -4212,7 +4205,7 @@ public:
     {
         uint32_t type_mask = 0;
 
-        qc_mysql_get_type_mask(&stmt, &type_mask);
+        qc_mysql_get_type_mask(m_helper, &stmt, &type_mask);
 
         return type_mask;
     }
