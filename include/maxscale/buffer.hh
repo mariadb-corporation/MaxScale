@@ -157,7 +157,7 @@ public:
      *
      * @param new_info  Out of band protocol information of the buffer.
      */
-    void set_protocol_info(std::shared_ptr<ProtocolInfo> new_info) const;
+    void set_protocol_info(std::shared_ptr<ProtocolInfo> new_info);
 
     /**
      * Get out-of-band protocol information associated with the buffer.
@@ -357,8 +357,8 @@ public:
     size_t runtime_size() const;
 
 private:
-    std::shared_ptr<SHARED_BUF>           m_sbuf;          /**< The shared buffer with the real data */
-    mutable std::shared_ptr<ProtocolInfo> m_protocol_info; /**< Protocol info */
+    std::shared_ptr<SHARED_BUF>   m_sbuf;          /**< The shared buffer with the real data */
+    std::shared_ptr<ProtocolInfo> m_protocol_info; /**< Protocol info */
 
     uint8_t* m_start {nullptr};         /**< Start of the valid data */
     uint8_t* m_end {nullptr};           /**< First byte after the valid data */

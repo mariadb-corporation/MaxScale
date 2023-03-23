@@ -3815,7 +3815,7 @@ static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, u
             pInfo = sInfo.get();
             if (pInfo)
             {
-                query.set_protocol_info(std::move(sInfo));
+                const_cast<GWBUF&>(query).set_protocol_info(std::move(sInfo));
 
                 pInfo->m_canonical = helper.get_sql(query);
                 maxsimd::get_canonical(&pInfo->m_canonical, &this_thread.markers);

@@ -412,7 +412,7 @@ public:
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
-                m_stmt.set_protocol_info(std::move(sInfo));
+                const_cast<GWBUF&>(m_stmt).set_protocol_info(std::move(sInfo));
                 m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
             }
         }

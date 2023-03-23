@@ -330,7 +330,7 @@ void GWBUF::set_type(Type type)
     m_type |= type;
 }
 
-void GWBUF::set_protocol_info(std::shared_ptr<ProtocolInfo> new_info) const
+void GWBUF::set_protocol_info(std::shared_ptr<ProtocolInfo> new_info)
 {
     m_protocol_info = std::move(new_info);
 }

@@ -735,7 +735,7 @@ static bool parse_query(const GWBUF* querybuf)
     }
 
     /** Add complete parsing info struct to the query buffer */
-    querybuf->set_protocol_info(std::move(pi));
+    const_cast<GWBUF*>(querybuf)->set_protocol_info(std::move(pi));
 
     // By calling qc_mysql_get_field_info() now, the result will be
     // Parser::Result::PARTIALLY_PARSED, if some field is not found in the
