@@ -18,6 +18,8 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <optional>
+#include <regex>
 #include <set>
 #include <string>
 #include <sstream>
@@ -64,6 +66,7 @@ char USAGE[] =
     "-s    compare single statement\n"
     "-S    strict, also require that the parse result is identical\n"
     "-R    strict reporting, report if parse result is different\n"
+    "-x    test only statements matching the regex\n"
     "-v 0, only return code\n"
     "   1, query and result for failed cases\n"
     "   2, all queries, and result for failed cases\n"
@@ -1253,7 +1256,7 @@ static void trim(std::string& s)
     rtrim(s);
 }
 
-int run(Parser* pParser1, Parser* pParser2, istream& in)
+int run(const std::optional<std::regex>& regex, Parser* pParser1, Parser* pParser2, istream& in)
 {
     bool stop = false;      // Whether we should exit.
 
@@ -1261,9 +1264,44 @@ int run(Parser* pParser1, Parser* pParser2, istream& in)
 
     while (!stop && (reader.get_statement(global.query) == maxscale::TestReader::RESULT_STMT))
     {
-        global.line = reader.line();
-        global.query_printed = false;
-        global.result_printed = false;
+        if (!regex || std::regex_search(global.query, *regex))
+        {
+            global.line = reader.line();
+            global.query_printed = false;
+            global.result_printed = false;
+
+            ++global.n_statements;
+
+            if (global.verbosity >= VERBOSITY_EXTENDED)
+            {
+                // In case the execution crashes, we want the query printed.
+                report_query();
+            }
+
+            bool success = compare(pParser1, pParser2, global.query);
+
+            if (!success)
+            {
+                ++global.n_errors;
+
+                if (global.stop_at_error)
+                {
+                    stop = true;
+                }
+            }
+
+            global.query.clear();
+        }
+    }
+
+    return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+int run(const std::optional<std::regex>& regex, Parser* pParser1, Parser* pParser2, const string& statement)
+{
+    if (!regex || std::regex_search(statement, *regex))
+    {
+        global.query = statement;
 
         ++global.n_statements;
 
@@ -1273,39 +1311,10 @@ int run(Parser* pParser1, Parser* pParser2, istream& in)
             report_query();
         }
 
-        bool success = compare(pParser1, pParser2, global.query);
-
-        if (!success)
+        if (!compare(pParser1, pParser2, global.query))
         {
             ++global.n_errors;
-
-            if (global.stop_at_error)
-            {
-                stop = true;
-            }
         }
-
-        global.query.clear();
-    }
-
-    return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
-}
-
-int run(Parser* pParser1, Parser* pParser2, const string& statement)
-{
-    global.query = statement;
-
-    ++global.n_statements;
-
-    if (global.verbosity >= VERBOSITY_EXTENDED)
-    {
-        // In case the execution crashes, we want the query printed.
-        report_query();
-    }
-
-    if (!compare(pParser1, pParser2, global.query))
-    {
-        ++global.n_errors;
     }
 
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -1332,12 +1341,13 @@ int main(int argc, char* argv[])
     string statement;
     const char* zStatement = NULL;
     Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
+    std::optional<std::regex> regex;
     bool solo = false;
 
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:s:SR")) != -1)
+    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:s:SR")) != -1)
     {
         switch (c)
         {
@@ -1427,6 +1437,13 @@ int main(int argc, char* argv[])
             }
             break;
 
+        case 'x':
+            {
+                auto flags = std::regex_constants::ECMAScript | std::regex_constants::icase;
+                regex = std::regex(optarg, flags);
+            }
+            break;
+
         case 'S':
             global.strict = true;
             break;
@@ -1494,11 +1511,11 @@ int main(int argc, char* argv[])
 
                         if (zStatement)
                         {
-                            rc = run(sParser1.get(), sParser2.get(), zStatement);
+                            rc = run(regex, sParser1.get(), sParser2.get(), zStatement);
                         }
                         else if (n == 1)
                         {
-                            rc = run(sParser1.get(), sParser2.get(), cin);
+                            rc = run(regex, sParser1.get(), sParser2.get(), cin);
                         }
                         else
                         {
@@ -1508,7 +1525,7 @@ int main(int argc, char* argv[])
 
                             if (in)
                             {
-                                rc = run(sParser1.get(), sParser2.get(), in);
+                                rc = run(regex, sParser1.get(), sParser2.get(), in);
                             }
                             else
                             {
