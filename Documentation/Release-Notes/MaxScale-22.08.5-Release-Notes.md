@@ -14,6 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4561](https://jira.mariadb.org/browse/MXS-4561) Some configuration cause no errors to be logged
 * [MXS-4557](https://jira.mariadb.org/browse/MXS-4557) Binlogrouter breaks if event size exceeds INT_MAX
 * [MXS-4556](https://jira.mariadb.org/browse/MXS-4556) Maxscale ignores lower_case_table_names=1 on config file
 * [MXS-4555](https://jira.mariadb.org/browse/MXS-4555) Dynamic filter capabilities do not work
