@@ -290,7 +290,7 @@ std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
     }
 
     // Remove trailing whitespace
-    while (lut(IS_SPACE, *(it_out - 1)))
+    while (it_out != it_out_begin  && lut(IS_SPACE, *(it_out - 1)))
     {
         --it_out;
     }
