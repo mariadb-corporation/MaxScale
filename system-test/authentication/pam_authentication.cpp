@@ -400,9 +400,9 @@ void test_main(TestConnections& test)
             }
             cout << "\n";
 
-            // Should not work, as target db is not lower case.
+            // Should work even if target db is not lower case.
             login_success = test_normal_login_short(nomatch_port, login_db2);
-            test.expect(!login_success, unexpected_login, login_db2.c_str());
+            test.expect(login_success, failed_login, login_db2.c_str());
 
             cout << "Testing listener with lower_case_table_names=2\n";
             // Should work, as listener compares db names case-insensitive.
