@@ -2369,7 +2369,7 @@ int32_t qc_mysql_get_prepare_name(const GWBUF* stmt, std::string_view* namep)
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_preparable_stmt(const GWBUF* stmt, GWBUF** preparable_stmt)
+int32_t qc_mysql_get_preparable_stmt(const Parser::Helper& helper, const GWBUF* stmt, GWBUF** preparable_stmt)
 {
     if (stmt)
     {
@@ -2396,92 +2396,81 @@ int32_t qc_mysql_get_preparable_stmt(const GWBUF* stmt, GWBUF** preparable_stmt)
                     size_t payload_len = preparable_stmt_len + 1;
                     size_t packet_len = MYSQL_HEADER_LEN + payload_len;
 
-                    GWBUF* preperable_packet = gwbuf_alloc(packet_len);
+                    char* s = new char [payload_len];
 
-                    if (preperable_packet)
+                    // We copy the statment, blindly replacing all '?':s (always)
+                    // and ':N' (in Oracle mode) with '0':s as otherwise the parsing of the
+                    // preparable statement as a regular statement will not always succeed.
+                    Parser::SqlMode sql_mode = this_thread.sql_mode;
+                    const char* p = preparable_stmt;
+                    const char* end = preparable_stmt + preparable_stmt_len;
+                    bool replacement = false;
+                    while (p < end)
                     {
-                        // Encode the length of the payload in the 3 first bytes.
-                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 0) = payload_len;
-                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 1) = (payload_len >> 8);
-                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 2) = (payload_len >> 16);
-                        // Sequence id
-                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 3) = 0x00;
-                        // Payload, starts with command.
-                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 4) = COM_QUERY;
-                        // Is followed by the statement.
-                        char* s = (char*)GWBUF_DATA(preperable_packet) + 5;
-
-                        // We copy the statment, blindly replacing all '?':s (always)
-                        // and ':N' (in Oracle mode) with '0':s as otherwise the parsing of the
-                        // preparable statement as a regular statement will not always succeed.
-                        Parser::SqlMode sql_mode = this_thread.sql_mode;
-                        const char* p = preparable_stmt;
-                        const char* end = preparable_stmt + preparable_stmt_len;
-                        bool replacement = false;
-                        while (p < end)
+                        if (*p == '?')
                         {
-                            if (*p == '?')
+                            *s = '0';
+                        }
+                        else if (sql_mode == Parser::SqlMode::ORACLE)
+                        {
+                            if (*p == ':' && p + 1 < end)
                             {
-                                *s = '0';
-                            }
-                            else if (sql_mode == Parser::SqlMode::ORACLE)
-                            {
-                                if (*p == ':' && p + 1 < end)
+                                // This may be an Oracle specific positional parameter.
+                                char c = *(p + 1);
+                                if (isalnum(c))
                                 {
-                                    // This may be an Oracle specific positional parameter.
-                                    char c = *(p + 1);
-                                    if (isalnum(c))
+                                    ++p;
+                                    // e.g. :4711 or :aaa
+                                    while (p + 1 < end && isalnum(*(p + 1)))
                                     {
                                         ++p;
-                                        // e.g. :4711 or :aaa
-                                        while (p + 1 < end && isalnum(*(p + 1)))
-                                        {
-                                            ++p;
-                                        }
-
-                                        replacement = true;
-                                        *s = '0';
                                     }
-                                    else if (c == '\'' || c == '\"')
-                                    {
-                                        // e.g. :"abc"
-                                        char quote = *p;
-                                        while (p + 1 < end && *(p + 1) != quote)
-                                        {
-                                            ++p;
-                                        }
 
-                                        replacement = true;
-                                        *s = '0';
-                                    }
+                                    replacement = true;
+                                    *s = '0';
                                 }
-                                else
+                                else if (c == '\'' || c == '\"')
                                 {
-                                    *s = *p;
+                                    // e.g. :"abc"
+                                    char quote = *p;
+                                    while (p + 1 < end && *(p + 1) != quote)
+                                    {
+                                        ++p;
+                                    }
+
+                                    replacement = true;
+                                    *s = '0';
                                 }
                             }
                             else
                             {
                                 *s = *p;
                             }
-
-                            if (p != end)
-                            {
-                                ++p;
-                            }
-
-                            ++s;
                         }
-
-                        if (replacement)
+                        else
                         {
-                            // If something has been replaced, then we stash a NULL at the
-                            // end so that parsing will stop at the right spot.
-                            *s = 0;
+                            *s = *p;
                         }
+
+                        if (p != end)
+                        {
+                            ++p;
+                        }
+
+                        ++s;
                     }
 
-                    pi->preparable_stmt = preperable_packet;
+                    if (replacement)
+                    {
+                        // If something has been replaced, then we stash a NULL at the
+                        // end so that parsing will stop at the right spot.
+                        *s = 0;
+                    }
+
+                    GWBUF* preparable_packet = new GWBUF(helper.create_packet(s));
+                    delete [] s;
+
+                    pi->preparable_stmt = preparable_packet;
                 }
 
                 *preparable_stmt = pi->preparable_stmt;
@@ -4173,7 +4162,7 @@ public:
     {
         GWBUF* pPreparable_stmt = nullptr;
 
-        qc_mysql_get_preparable_stmt(&stmt, &pPreparable_stmt);
+        qc_mysql_get_preparable_stmt(m_helper, &stmt, &pPreparable_stmt);
 
         return pPreparable_stmt;
     }
