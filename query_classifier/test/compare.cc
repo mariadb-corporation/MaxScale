@@ -29,10 +29,10 @@
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
 #undef MXB_MODULE_NAME
 #include "../../server/modules/protocol/Postgres/pgparser.hh"
 #include "../../server/core/internal/modules.hh"
+#include "setsqlmodeparser.hh"
 #include "testreader.hh"
 
 using std::cerr;
