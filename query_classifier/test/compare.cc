@@ -30,6 +30,8 @@
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
+#undef MXB_MODULE_NAME
+#include "../../server/modules/protocol/Postgres/pgparser.hh"
 #include "../../server/core/internal/modules.hh"
 #include "testreader.hh"
 
@@ -53,7 +55,8 @@ namespace
 
 char USAGE[] =
     "usage: compare [-r count] [-d] [-0 classifier] [-1 classfier1] [-2 classifier2] "
-    "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
+    "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-H (postgres|mariadb)] "
+    "[-s statement]|[file]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
     "-0    sanity check mode, compares the statement twice with the same classifier\n"
@@ -67,6 +70,7 @@ char USAGE[] =
     "-S    strict, also require that the parse result is identical\n"
     "-R    strict reporting, report if parse result is different\n"
     "-x    test only statements matching the regex\n"
+    "-H    use MariaDB or Postgres Parser helper, default 'mariadb'\n"
     "-v 0, only return code\n"
     "   1, query and result for failed cases\n"
     "   2, all queries, and result for failed cases\n"
@@ -1342,12 +1346,13 @@ int main(int argc, char* argv[])
     const char* zStatement = NULL;
     Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
     std::optional<std::regex> regex;
+    const Parser::Helper* pHelper = &MariaDBParser::Helper::get();
     bool solo = false;
 
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:s:SR")) != -1)
+    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:s:SRH:")) != -1)
     {
         switch (c)
         {
@@ -1452,6 +1457,22 @@ int main(int argc, char* argv[])
             global.strict_reporting = true;
             break;
 
+        case 'H':
+            if (strcmp(optarg, "mariadb") == 0)
+            {
+                pHelper = &MariaDBParser::Helper::get();
+            }
+            else if(strcmp(optarg, "postgres") == 0)
+            {
+                pHelper = &PgParser::Helper::get();
+            }
+            else
+            {
+                rc = EXIT_FAILURE;
+                break;
+            }
+            break;
+
         default:
             rc = EXIT_FAILURE;
             break;
@@ -1495,10 +1516,8 @@ int main(int argc, char* argv[])
                         pPlugin2 = pPlugin1;
                     }
 
-                    auto& helper = MariaDBParser::Helper::get();
-
-                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser(&helper);
-                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser(&helper);
+                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser(pHelper);
+                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser(pHelper);
 
                     do
                     {

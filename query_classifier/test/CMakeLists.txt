@@ -22,7 +22,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
   endif()
 endif()
 
-target_link_libraries(compare maxscale-common)
+target_link_libraries(compare postgresprotocol maxscale-common)
 
 add_executable(qc_cache qc_cache.cc)
 target_link_libraries(qc_cache maxscale-common)
