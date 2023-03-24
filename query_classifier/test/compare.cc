@@ -1212,7 +1212,8 @@ bool compare(Parser* pParser1, Parser* pParser2, const string& s)
         SetSqlModeParser::sql_mode_t sql_mode;
         SetSqlModeParser parser;
 
-        if (parser.get_sql_mode(&pCopy1, &sql_mode) == SetSqlModeParser::IS_SET_SQL_MODE)
+        std::string_view sql = pParser1->get_sql(*pCopy1);
+        if (parser.get_sql_mode(sql, &sql_mode) == SetSqlModeParser::IS_SET_SQL_MODE)
         {
             switch (sql_mode)
             {

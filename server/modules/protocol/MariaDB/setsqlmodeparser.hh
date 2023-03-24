@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/customparser.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 
 
 class SetSqlModeParser : public maxscale::CustomParser
@@ -31,8 +30,8 @@ public:
     enum result_t
     {
         ERROR,          // Some fatal error occurred; mem alloc failed, parsing failed, etc.
-        IS_SET_SQL_MODE,// The COM_QUERY is "set sql_mode=..."
-        NOT_SET_SQL_MODE// The COM_QUERY is NOT "set sql_mode=..."
+        IS_SET_SQL_MODE,// The SQL is "set sql_mode=..."
+        NOT_SET_SQL_MODE// The SQL is NOT "set sql_mode=..."
     };
 
     enum
@@ -56,9 +55,7 @@ public:
      * Return whether the statement is a "SET SQL_MODE=" statement and if so,
      * whether the state is ORACLE, DEFAULT or something else.
      *
-     * @param ppBuffer   Address of pointer to buffer containing statement.
-     *                   The GWBUF must contain a complete statement, but the
-     *                   buffer need not be contiguous.
+     * @param sql        The SQL.
      * @param pSql_mode  Pointer to variable receiving the sql_mode state, if
      *                   the statement is a "SET SQL_MODE=" statement.
      *
@@ -66,94 +63,38 @@ public:
      *         IS_SET_SQL_MODE  if the statement is a "SET SQL_MODE=" statement
      *         NOT_SET_SQL_MODE if the statement is not a "SET SQL_MODE="
      *                          statement
-     *
-     * @attention If the result cannot be deduced without parsing the statement,
-     *            then the buffer will be made contiguous and the value of
-     *            @c *ppBuffer will be updated accordingly.
      */
-    result_t get_sql_mode(GWBUF** ppBuffer, sql_mode_t* pSql_mode)
+    result_t get_sql_mode(std::string_view sql, sql_mode_t* pSql_mode)
     {
         result_t rv = NOT_SET_SQL_MODE;
 
-        GWBUF* pBuffer = *ppBuffer;
-
-        mxb_assert(gwbuf_length(pBuffer) >= MYSQL_HEADER_LEN);
-
-        size_t buf_len = gwbuf_link_length(pBuffer);
-        size_t payload_len;
-        if (buf_len >= MYSQL_HEADER_LEN)
+        if (sql.length() >= 20) // sizeof(command byte) + strlen("SET sql_mode=ORACLE"), the minimum needed.
         {
-            // The first buffer in the chain contains the header so we
-            // can read the length directly.
-            payload_len = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(pBuffer));
-        }
-        else
-        {
-            // The first buffer in the chain does not contain the full
-            // header so we need to copy it first.
-            uint8_t header[MYSQL_HEADER_LEN];
-            pBuffer->copy_data(0, sizeof(header), header);
-            payload_len = MYSQL_GET_PAYLOAD_LEN(header);
-        }
+            const char* pStmt = sql.data();
 
-        if (payload_len >= 20)      // sizeof(command byte) + strlen("SET sql_mode=ORACLE"), the minimum
-                                    // needed.
-        {
-            // We need 4 bytes from the payload to deduce whether more investigations are needed.
-            uint8_t payload[4];
-            uint8_t* pPayload;
-
-            if (buf_len >= MYSQL_HEADER_LEN + sizeof(payload))
+            if (is_alpha(*pStmt))
             {
-                // Enough data in the first buffer of the chain, we can access directly.
-                pPayload = GWBUF_DATA(pBuffer) + MYSQL_HEADER_LEN;
+                // First character is alphabetic, we can check whether it is "SET".
+                if (is_set(pStmt))
+                {
+                    initialize(sql);
+                    rv = parse(pSql_mode);
+                }
             }
             else
             {
-                // Not enough, we copy what we need.
-                pBuffer->copy_data(MYSQL_HEADER_LEN, sizeof(payload), payload);
-                pPayload = payload;
-            }
+                // If the first character is not an alphabetic character we assume there
+                // is a comment.
+                initialize(sql);
 
-            uint8_t command = pPayload[0];
+                bypass_whitespace();
 
-            if (command == MXS_COM_QUERY)
-            {
-                const uint8_t* pStmt = &pPayload[1];
+                // Check that there's enough characters to contain a SET keyword
+                bool long_enough = m_pEnd - m_pI > 3;
 
-                if (is_alpha(*pStmt))
+                if (long_enough && is_set(m_pI))
                 {
-                    // First character is alphabetic, we can check whether it is "SET".
-                    if (is_set(pStmt))
-                    {
-                        initialize(pBuffer);
-                        rv = parse(pSql_mode);
-                    }
-                }
-                else
-                {
-                    // If the first character is not an alphabetic character we assume there
-                    // is a comment.
-                    pBuffer = *ppBuffer;
-                    if (pBuffer)
-                    {
-                        *ppBuffer = pBuffer;
-                        initialize(pBuffer);
-
-                        bypass_whitespace();
-
-                        // Check that there's enough characters to contain a SET keyword
-                        bool long_enough = m_pEnd - m_pI > 3;
-
-                        if (long_enough && is_set(m_pI))
-                        {
-                            rv = parse(pSql_mode);
-                        }
-                    }
-                    else
-                    {
-                        rv = ERROR;
-                    }
+                    rv = parse(pSql_mode);
                 }
             }
         }
@@ -231,19 +172,12 @@ private:
         return rv == ERROR;
     }
 
-    result_t initialize(GWBUF* pBuffer)
+    void initialize(std::string_view sql)
     {
-        result_t rv = ERROR;
-
-        const char* pSql;
-        if (modutil_extract_SQL(*pBuffer, &pSql, &m_len))
-        {
-            m_pSql = pSql;
-            m_pI = m_pSql;
-            m_pEnd = m_pI + m_len;
-        }
-
-        return ERROR;
+        m_pSql = sql.data();
+        m_len = sql.length();
+        m_pI = m_pSql;
+        m_pEnd = m_pI + m_len;
     }
 
     bool consume_id()
