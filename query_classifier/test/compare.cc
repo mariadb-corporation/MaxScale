@@ -121,24 +121,6 @@ ostream& operator<<(ostream& out, Parser::Result x)
     return out;
 }
 
-GWBUF* create_gwbuf(const string& s)
-{
-    size_t len = s.length();
-    size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
-
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s.c_str(), len);
-
-    return gwbuf;
-}
-
 ParserPlugin* load_plugin(const char* name)
 {
     bool loaded = false;
@@ -1202,17 +1184,17 @@ bool compare(Parser* pParser1,
 
 bool compare(Parser* pParser1, Parser* pParser2, const string& s)
 {
-    GWBUF* pCopy1 = create_gwbuf(s);
-    GWBUF* pCopy2 = create_gwbuf(s);
+    GWBUF copy1 = pParser1->helper().create_packet(s);
+    GWBUF copy2 = pParser2->helper().create_packet(s);
 
-    bool success = compare(pParser1, *pCopy1, pParser2, *pCopy2);
+    bool success = compare(pParser1, copy1, pParser2, copy2);
 
     if (success)
     {
         SetSqlModeParser::sql_mode_t sql_mode;
         SetSqlModeParser parser;
 
-        std::string_view sql = pParser1->get_sql(*pCopy1);
+        std::string_view sql = pParser1->get_sql(copy1);
         if (parser.get_sql_mode(sql, &sql_mode) == SetSqlModeParser::IS_SET_SQL_MODE)
         {
             switch (sql_mode)
@@ -1235,9 +1217,6 @@ bool compare(Parser* pParser1, Parser* pParser2, const string& s)
             }
         }
     }
-
-    gwbuf_free(pCopy1);
-    gwbuf_free(pCopy2);
 
     return success;
 }
