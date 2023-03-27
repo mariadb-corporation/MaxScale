@@ -148,7 +148,6 @@ export default {
                     id,
                     attributes: { idle, connected, user, remote, memory, io_activity },
                 } = session
-
                 tableRows.push({
                     id: id,
                     user: `${user}@${remote}`,
