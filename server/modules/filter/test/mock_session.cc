@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-12-27
+ * Change Date: 2027-03-14
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -104,12 +104,13 @@ Session::Session(Client* pClient, SListenerData listener_data)
     : ::Session(std::move(listener_data), pClient->host())
     , m_client(*pClient)
     , m_client_dcb(this, pClient->host(), pClient)
+    , m_sClient_connection(std::make_unique<MockClientConnection>(&m_client_dcb))
 {
     set_user(pClient->user());
 
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
-    set_client_connection(new MockClientConnection(&m_client_dcb));
+    set_client_connection(m_sClient_connection.get());
     set_protocol_data(std::make_unique<MYSQL_session>());
 }
 
