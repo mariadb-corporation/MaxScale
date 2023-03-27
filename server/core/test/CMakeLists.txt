@@ -54,7 +54,6 @@ target_link_libraries(test_trxtracking maxscale-common)
 target_link_libraries(test_users maxscale-common)
 target_link_libraries(test_utils maxscale-common)
 
-add_test(test_adminusers test_adminusers)
 add_test(test_atomic /bin/bash -c "timeout --signal SIGSEGV 60s ${CMAKE_CURRENT_BINARY_DIR}/test_atomic")
 add_test(test_buffer test_buffer)
 add_test(test_config test_config)
@@ -84,8 +83,20 @@ add_test(test_trxcompare_set test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../.
 add_test(test_trxcompare_update test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test/update.test)
 add_test(test_trxcompare_maxscale test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test/maxscale.test)
 add_test(test_trxtracking test_trxtracking)
-add_test(test_users test_users)
 add_test(test_utils test_utils)
 
 add_subdirectory(rest-api)
 add_subdirectory(canonical_tests)
+
+# GCC 10 has a broken ASAN implementation that got fixed in GCC 11. The
+# --as-needed flag breaks the crypt and crypt_r interceptors in ASAN and the
+# tests that use it must disble the feature that breaks it. For Debian, adding
+# --no-as-needed would fix it but for SLES 15 it still ends up failing. To make life simpler, just skip these tests if ASAN is enabled on those systems
+if (WITH_ASAN
+    AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER 10.0.0
+    AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 11.0.0)
+  message(STATUS "Skipping test_adminusers and test_users due to broken ASAN implementation")
+else()
+  add_test(test_adminusers test_adminusers)
+  add_test(test_users test_users)
+endif()
