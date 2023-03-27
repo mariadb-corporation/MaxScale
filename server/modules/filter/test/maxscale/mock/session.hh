@@ -94,8 +94,8 @@ private:
         bool                   m_open = true;
     };
 
-    Client&       m_client;
-    Dcb           m_client_dcb;
+    Client&                                m_client;
+    Dcb                                    m_client_dcb;
     std::unique_ptr<mxs::ClientConnection> m_sClient_connection;
 };
 }
