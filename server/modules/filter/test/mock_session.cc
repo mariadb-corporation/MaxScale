@@ -103,19 +103,19 @@ Session::Session(Client* pClient, SListenerData listener_data)
     : ::Session(std::move(listener_data), pClient->host())
     , m_client(*pClient)
     , m_client_dcb(this, pClient->host(), pClient)
+    , m_sClient_connection(std::make_unique<MockClientConnection>(&m_client_dcb))
 {
     set_user(pClient->user());
 
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
-    set_client_connection(new MockClientConnection(&m_client_dcb));
+    set_client_connection(m_sClient_connection.get());
     set_protocol_data(std::make_unique<MYSQL_session>(0, false, false));
 }
 
 Session::~Session()
 {
     m_down->close();
-    delete client_connection();
     // This prevents the protocol module from freeing the data
     refcount = 0;
     client_dcb = nullptr;
