@@ -43,6 +43,7 @@ using std::ifstream;
 using std::istream;
 using std::map;
 using std::ostream;
+using std::set;
 using std::string;
 using std::stringstream;
 
@@ -56,7 +57,7 @@ namespace
 char USAGE[] =
     "usage: compare [-r count] [-d] [-0 classifier] [-1 classfier1] [-2 classifier2] "
     "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-H (postgres|mariadb)] "
-    "[-s statement]|[file]]\n\n"
+    "[-p properties] [-s statement]|[file]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
     "-0    sanity check mode, compares the statement twice with the same classifier\n"
@@ -71,6 +72,7 @@ char USAGE[] =
     "-R    strict reporting, report if parse result is different\n"
     "-x    test only statements matching the regex\n"
     "-H    use MariaDB or Postgres Parser helper, default 'mariadb'\n"
+    "-p    only test and print properties\n"
     "-v 0, only return code\n"
     "   1, query and result for failed cases\n"
     "   2, all queries, and result for failed cases\n"
@@ -1131,8 +1133,18 @@ bool compare_get_function_info(const Parser& parser1,
     return success;
 }
 
+namespace
+{
 
-bool compare(const Parser& parser1,
+bool specified(const set<string>& properties, const string& key)
+{
+    return properties.empty() || properties.count(key) != 0;
+}
+
+}
+
+bool compare(const set<string>& properties,
+             const Parser& parser1,
              const GWBUF& copy1,
              const Parser& parser2,
              const GWBUF& copy2)
@@ -1140,14 +1152,46 @@ bool compare(const Parser& parser1,
     int errors = 0;
 
     errors += !compare_parse(parser1, copy1, parser2, copy2);
-    errors += !compare_get_type(parser1, copy1, parser2, copy2);
-    errors += !compare_get_operation(parser1, copy1, parser2, copy2);
-    errors += !compare_get_created_table_name(parser1, copy1, parser2, copy2);
-    errors += !compare_get_table_names(parser1, copy1, parser2, copy2);
-    errors += !compare_get_database_names(parser1, copy1, parser2, copy2);
-    errors += !compare_get_prepare_name(parser1, copy1, parser2, copy2);
-    errors += !compare_get_field_info(parser1, copy1, parser2, copy2);
-    errors += !compare_get_function_info(parser1, copy1, parser2, copy2);
+
+    if (specified(properties, "type"))
+    {
+        errors += !compare_get_type(parser1, copy1, parser2, copy2);
+    }
+
+    if (specified(properties, "operation"))
+    {
+        errors += !compare_get_operation(parser1, copy1, parser2, copy2);
+    }
+
+    if (specified(properties, "created_table_name"))
+    {
+        errors += !compare_get_created_table_name(parser1, copy1, parser2, copy2);
+    }
+
+    if (specified(properties, "table_names"))
+    {
+        errors += !compare_get_table_names(parser1, copy1, parser2, copy2);
+    }
+
+    if (specified(properties, "database_names"))
+    {
+        errors += !compare_get_database_names(parser1, copy1, parser2, copy2);
+    }
+
+    if (specified(properties, "prepare_name"))
+    {
+        errors += !compare_get_prepare_name(parser1, copy1, parser2, copy2);
+    }
+
+    if (specified(properties, "field_info"))
+    {
+        errors += !compare_get_field_info(parser1, copy1, parser2, copy2);
+    }
+
+    if (specified(properties, "function_info"))
+    {
+        errors += !compare_get_function_info(parser1, copy1, parser2, copy2);
+    }
 
     if (global.result_printed)
     {
@@ -1170,7 +1214,7 @@ bool compare(const Parser& parser1,
             string indent = global.indent;
             global.indent += string(4, ' ');
 
-            success = compare(parser1, *pPreparable1, parser2, *pPreparable2);
+            success = compare(properties, parser1, *pPreparable1, parser2, *pPreparable2);
 
             global.indent = indent;
         }
@@ -1179,12 +1223,12 @@ bool compare(const Parser& parser1,
     return success;
 }
 
-bool compare(Parser& parser1, Parser& parser2, const string& s)
+bool compare(const set<string>& properties, Parser& parser1, Parser& parser2, const string& s)
 {
     GWBUF copy1 = parser1.helper().create_packet(s);
     GWBUF copy2 = parser2.helper().create_packet(s);
 
-    bool success = compare(parser1, copy1, parser2, copy2);
+    bool success = compare(properties, parser1, copy1, parser2, copy2);
 
     if (success)
     {
@@ -1238,6 +1282,7 @@ static void trim(std::string& s)
 }
 
 int run(uint32_t testreader_config,
+        const set<string>& properties,
         const std::optional<std::regex>& regex,
         Parser& parser1,
         Parser& parser2,
@@ -1263,7 +1308,7 @@ int run(uint32_t testreader_config,
                 report_query();
             }
 
-            bool success = compare(parser1, parser2, global.query);
+            bool success = compare(properties, parser1, parser2, global.query);
 
             if (!success)
             {
@@ -1282,7 +1327,8 @@ int run(uint32_t testreader_config,
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-int run(const std::optional<std::regex>& regex, Parser& parser1, Parser& parser2, const string& statement)
+int run(const set<string>& properties,
+        const std::optional<std::regex>& regex, Parser& parser1, Parser& parser2, const string& statement)
 {
     if (!regex || std::regex_search(statement, *regex))
     {
@@ -1296,7 +1342,7 @@ int run(const std::optional<std::regex>& regex, Parser& parser1, Parser& parser2
             report_query();
         }
 
-        if (!compare(parser1, parser2, global.query))
+        if (!compare(properties, parser1, parser2, global.query))
         {
             ++global.n_errors;
         }
@@ -1330,11 +1376,12 @@ int main(int argc, char* argv[])
     const Parser::Helper* pHelper = &MariaDBParser::Helper::get();
     bool solo = false;
     bool testreader_config = 0;
+    set<string> properties;
 
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:s:SRH:")) != -1)
+    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:s:SRH:p:")) != -1)
     {
         switch (c)
         {
@@ -1456,6 +1503,13 @@ int main(int argc, char* argv[])
             }
             break;
 
+        case 'p':
+            {
+                auto tokens = mxb::strtok(optarg, "|");
+                properties.insert(tokens.begin(), tokens.end());
+            }
+            break;
+
         default:
             rc = EXIT_FAILURE;
             break;
@@ -1513,11 +1567,11 @@ int main(int argc, char* argv[])
 
                         if (zStatement)
                         {
-                            rc = run(regex, *sParser1, *sParser2, zStatement);
+                            rc = run(properties, regex, *sParser1, *sParser2, zStatement);
                         }
                         else if (n == 1)
                         {
-                            rc = run(testreader_config, regex, *sParser1, *sParser2, cin);
+                            rc = run(testreader_config, properties, regex, *sParser1, *sParser2, cin);
                         }
                         else
                         {
@@ -1527,7 +1581,7 @@ int main(int argc, char* argv[])
 
                             if (in)
                             {
-                                rc = run(testreader_config, regex, *sParser1, *sParser2, in);
+                                rc = run(testreader_config, properties, regex, *sParser1, *sParser2, in);
                             }
                             else
                             {
