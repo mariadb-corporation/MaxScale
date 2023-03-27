@@ -1237,11 +1237,15 @@ static void trim(std::string& s)
     rtrim(s);
 }
 
-int run(const std::optional<std::regex>& regex, Parser& parser1, Parser& parser2, istream& in)
+int run(uint32_t testreader_config,
+        const std::optional<std::regex>& regex,
+        Parser& parser1,
+        Parser& parser2,
+        istream& in)
 {
     bool stop = false;      // Whether we should exit.
 
-    maxscale::TestReader reader(in);
+    maxscale::TestReader reader(testreader_config, in);
 
     while (!stop && (reader.get_statement(global.query) == maxscale::TestReader::RESULT_STMT))
     {
@@ -1325,6 +1329,7 @@ int main(int argc, char* argv[])
     std::optional<std::regex> regex;
     const Parser::Helper* pHelper = &MariaDBParser::Helper::get();
     bool solo = false;
+    bool testreader_config = 0;
 
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
@@ -1442,6 +1447,7 @@ int main(int argc, char* argv[])
             else if(strcmp(optarg, "postgres") == 0)
             {
                 pHelper = &PgParser::Helper::get();
+                testreader_config = mxs::TestReader::SKIP_POSTGRES_DOLLAR_QUOTES;
             }
             else
             {
@@ -1511,7 +1517,7 @@ int main(int argc, char* argv[])
                         }
                         else if (n == 1)
                         {
-                            rc = run(regex, *sParser1, *sParser2, cin);
+                            rc = run(testreader_config, regex, *sParser1, *sParser2, cin);
                         }
                         else
                         {
@@ -1521,7 +1527,7 @@ int main(int argc, char* argv[])
 
                             if (in)
                             {
-                                rc = run(regex, *sParser1, *sParser2, in);
+                                rc = run(testreader_config, regex, *sParser1, *sParser2, in);
                             }
                             else
                             {

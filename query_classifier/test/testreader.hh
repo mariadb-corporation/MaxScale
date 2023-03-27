@@ -29,6 +29,12 @@ namespace maxscale
 class TestReader
 {
 public:
+    enum Config
+    {
+        // When an '$$' is encountered, ignore all ';' until next '$$'.
+        SKIP_POSTGRES_DOLLAR_QUOTES = (1 << 0)
+    };
+
     enum result_t
     {
         RESULT_ERROR,   /*< The input is probably not a test file. */
@@ -43,14 +49,24 @@ public:
      */
     static void init();
 
+    /**
+     * Creates a TestReader instance.
+     *
+     * @param in     An input stream.
+     * @param line   Optionally specify the initial line number.
+     */
+    TestReader(std::istream& in,
+               size_t line = 0);
 
     /**
      * Creates a TestReader instance.
      *
-     * @param in    An input stream.
-     * @param line  Optionally specify the initial line number.
+     * @param config Bitmask of values from Config.
+     * @param in     An input stream.
+     * @param line   Optionally specify the initial line number.
      */
-    TestReader(std::istream& in,
+    TestReader(uint32_t config,
+               std::istream& in,
                size_t line = 0);
 
     /**
@@ -72,12 +88,14 @@ public:
 
 private:
     void skip_block();
+    void skip_postgres_dollar_quotes(std::string& line, std::string& stmt);
 
 private:
     TestReader(const TestReader&);
     TestReader& operator=(const TestReader&);
 
 private:
+    uint32_t      m_config;     /*< The config. */
     std::istream& m_in;         /*< The stream we are using. */
     size_t        m_line;       /*< The current line. */
     std::string   m_delimiter;  /*< The current delimiter. */

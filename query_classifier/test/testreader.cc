@@ -227,7 +227,19 @@ namespace maxscale
 
 TestReader::TestReader(istream& in,
                        size_t line)
-    : m_in(in)
+    : m_config(0)
+    , m_in(in)
+    , m_line(line)
+    , m_delimiter(";")
+{
+    init();
+}
+
+TestReader::TestReader(uint32_t config,
+                       istream& in,
+                       size_t line)
+    : m_config(config)
+    , m_in(in)
     , m_line(line)
     , m_delimiter(";")
 {
@@ -325,12 +337,17 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
             stmt += line;
 
+            if (m_config & SKIP_POSTGRES_DOLLAR_QUOTES)
+            {
+                skip_postgres_dollar_quotes(line, stmt);
+            }
+
             // Look for a ';'. If we are dealing with a one line test statment
             // the delimiter will in practice be ';' and if it is a multi-line
             // test statement then the test-script delimiter will be something
             // else than ';' and ';' will be the delimiter used in the multi-line
             // statement.
-            string::size_type i = line.find(";");
+            auto i = line.find(";");
 
             if (i != string::npos)
             {
@@ -451,6 +468,44 @@ void TestReader::skip_block()
 
         default:
             ;
+        }
+    }
+}
+
+void TestReader::skip_postgres_dollar_quotes(std::string& line, std::string& stmt)
+{
+    auto i = line.find("$$");
+
+    if (i != string::npos)
+    {
+        if (i == line.length() - 2)
+        {
+            stmt += "\n";
+        }
+
+        string l;
+        while (m_in && std::getline(m_in, l))
+        {
+            ++m_line;
+
+            stmt += l;
+            stmt += "\n";
+
+            i = l.find("$$");
+
+            if (i != string::npos)
+            {
+                break;
+            }
+        }
+
+        if (i != string::npos)
+        {
+            line = l.substr(i + 2);
+        }
+        else
+        {
+            line.clear();
         }
     }
 }
