@@ -13,6 +13,11 @@
 
 #include "pgprotocoldata.hh"
 
+PgProtocolData::PgProtocolData(size_t limit, bool allow_pruning, bool disable_history)
+    : m_history(limit, allow_pruning, disable_history)
+{
+}
+
 PgProtocolData::~PgProtocolData()
 {
 }
@@ -24,8 +29,7 @@ bool PgProtocolData::will_respond(const GWBUF& buffer) const
 
 bool PgProtocolData::can_recover_state() const
 {
-    // TODO: Change this to a call into mxs::History::can_recover_state()
-    return false;
+    return m_history.can_recover_state();
 }
 
 bool PgProtocolData::is_trx_starting() const

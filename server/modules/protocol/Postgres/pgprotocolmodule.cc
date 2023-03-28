@@ -20,6 +20,7 @@
 #include "pgusermanager.hh"
 
 #include <maxscale/listener.hh>
+#include <maxscale/service.hh>
 #include <maxbase/pretty_print.hh>
 
 PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
@@ -37,7 +38,10 @@ PgProtocolModule* PgProtocolModule::create(const std::string& name, mxs::Listene
 std::unique_ptr<mxs::ClientConnection>
 PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent)
 {
-    auto sProtocol_data = std::make_unique<PgProtocolData>();
+    const auto& cnf = *pSession->service->config();
+    auto sProtocol_data = std::make_unique<PgProtocolData>(cnf.max_sescmd_history,
+                                                           cnf.prune_sescmd_history,
+                                                           cnf.disable_sescmd_history);
 
     pSession->set_protocol_data(std::move(sProtocol_data));
 

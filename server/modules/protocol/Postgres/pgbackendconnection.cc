@@ -51,6 +51,7 @@ GWBUF create_terminate()
 PgBackendConnection::TrackedQuery::TrackedQuery(const GWBUF& buffer)
     : command(buffer[0])
     , size(buffer.length())
+    , id(buffer.id())
 {
 }
 
@@ -58,6 +59,8 @@ PgBackendConnection::PgBackendConnection(MXS_SESSION* session, SERVER* server, m
     : m_session(session)
     , m_upstream(component)
 {
+    auto fn = std::bind(&PgBackendConnection::history_mismatch, this);
+    m_subscriber = protocol_data().history().subscribe(std::move(fn));
 }
 
 void PgBackendConnection::ready_for_reading(DCB* dcb)
@@ -82,6 +85,10 @@ void PgBackendConnection::ready_for_reading(DCB* dcb)
 
         case State::STARTUP:
             keep_going = handle_startup();
+            break;
+
+        case State::HISTORY:
+            keep_going = handle_history();
             break;
 
         case State::ROUTING:
@@ -219,6 +226,10 @@ size_t PgBackendConnection::sizeof_buffers() const
 
 void PgBackendConnection::handle_error(const std::string& error, mxs::ErrorType type)
 {
+    // Release the subscription before calling handleError. This prevents the callback from being called while
+    // the DCB is in the zombie queue.
+    m_subscriber.reset();
+
     m_upstream->handleError(type, error, nullptr, m_reply);
     m_state = State::FAILED;
 }
@@ -366,8 +377,16 @@ bool PgBackendConnection::handle_startup()
         case pg::READY_FOR_QUERY:
             // Authentication is successful.
             // TODO: Track the transaction status from this packet
-            m_state = State::ROUTING;
-            send_backlog();
+            if (m_subscriber->history().empty())
+            {
+                m_state = State::ROUTING;
+                send_backlog();
+            }
+            else
+            {
+                m_state = State::HISTORY;
+                send_history();
+            }
             break;
 
         case pg::ERROR_RESPONSE:
@@ -455,6 +474,8 @@ void PgBackendConnection::start_tracking(const TrackedQuery& query)
     m_reply.set_reply_state(mxs::ReplyState::START);
     m_reply.set_command(query.command);
     m_reply.add_upload_bytes(query.size);
+
+    m_subscriber->set_current_id(query.id);
 }
 
 bool PgBackendConnection::track_next_result()
@@ -468,6 +489,67 @@ bool PgBackendConnection::track_next_result()
     }
 
     return more;
+}
+
+void PgBackendConnection::send_history()
+{
+    for (const auto& buffer : m_subscriber->history())
+    {
+        MXB_INFO("Execute %u on '%s': %s", buffer.id(), m_dcb->server()->name(),
+                 m_session->protocol()->describe(buffer).c_str());
+
+        track_query(buffer);
+        m_dcb->writeq_append(buffer.shallow_clone());
+    }
+}
+
+bool PgBackendConnection::handle_history()
+{
+    mxb_assert_message(!m_reply.is_complete(), "A reply should always be expected at this point");
+    bool keep_going = false;
+
+    if (GWBUF packets = read_complete_packets())
+    {
+        if (m_reply.is_complete())
+        {
+            if (m_subscriber->add_response(!m_reply.error()))
+            {
+                MXB_INFO("Reply to %u complete", m_subscriber->current_id());
+
+                // Keep reading more data until all the results have been read or we run out of data.
+                keep_going = true;
+
+                if (!track_next_result())
+                {
+                    // The history execution is now complete.
+                    m_state = State::ROUTING;
+                    send_backlog();
+                }
+            }
+            else
+            {
+                history_mismatch();
+            }
+        }
+    }
+
+    return keep_going;
+}
+
+void PgBackendConnection::history_mismatch()
+{
+    std::ostringstream ss;
+
+    ss << "Response from server '" << m_dcb->server()->name() << "' "
+       << "differs from the expected response to " << static_cast<char>(m_reply.command()) << ". "
+       << "Closing connection due to inconsistent session state.";
+
+    if (m_reply.error())
+    {
+        ss << " Error: " << m_reply.error().message();
+    }
+
+    handle_error(ss.str(), mxs::ErrorType::PERMANENT);
 }
 
 void PgBackendConnection::send_backlog()
@@ -546,8 +628,15 @@ bool PgBackendConnection::handle_routing()
         }
         else if (m_reply.is_complete())
         {
-            // If another command was executed, try to route a response again
-            keep_going = track_next_result();
+            if (!m_subscriber->add_response(!m_reply.error()))
+            {
+                history_mismatch();
+            }
+            else
+            {
+                // If another command was executed, try to route a response again
+                keep_going = track_next_result();
+            }
         }
     }
 

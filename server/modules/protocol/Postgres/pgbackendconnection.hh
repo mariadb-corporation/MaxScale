@@ -55,6 +55,7 @@ private:
         SSL_HANDSHAKE,
         AUTH,
         STARTUP,
+        HISTORY,
         ROUTING,
         FAILED,
     };
@@ -64,20 +65,24 @@ private:
     {
         TrackedQuery(const GWBUF& buffer);
 
-        uint8_t command;// The command byte
-        size_t  size;   // The size of the whole network payload, includes the command byte
+        uint8_t  command;   // The command byte
+        size_t   size;      // The size of the whole network payload, includes the command byte
+        uint32_t id;        // The unique ID this command, set by the client protocol
     };
 
     bool check_size(const GWBUF& buffer, size_t bytes);
     void handle_error(const std::string& error, mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
+    void history_mismatch();
     void send_ssl_request();
     void send_startup_message();
+    void send_history();
     void send_backlog();
 
     bool handle_ssl_request();
     bool handle_ssl_handshake();
     bool handle_startup();
     bool handle_auth();
+    bool handle_history();
     bool handle_routing();
 
     GWBUF read_complete_packets();
@@ -106,4 +111,8 @@ private:
 
     // A queue of commands that are being executed. The queue will be empty if only one result is expected.
     std::deque<TrackedQuery> m_track_queue;
+
+    // The session command history subscriber. This is what tracks the responses to session commands and makes
+    // sure the response from this backend matches the one that was expected.
+    std::unique_ptr<mxs::History::Subscriber> m_subscriber;
 };

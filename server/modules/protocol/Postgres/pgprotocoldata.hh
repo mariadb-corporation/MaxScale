@@ -14,10 +14,12 @@
 
 #include "postgresprotocol.hh"
 #include <maxscale/session.hh>
+#include <maxscale/history.hh>
 
 class PgProtocolData final : public mxs::ProtocolData
 {
 public:
+    PgProtocolData(size_t limit, bool allow_pruning, bool disable_history);
     ~PgProtocolData();
 
     bool will_respond(const GWBUF& buffer) const override;
@@ -43,8 +45,18 @@ public:
 
     void set_in_trx(bool in_trx);
 
+    mxs::History& history()
+    {
+        return m_history;
+    }
+
 private:
     std::string          m_database;
     std::vector<uint8_t> m_params;
     bool                 m_in_trx {false};
+
+    // Session command history. Contains the commands that modify the session state that are not done as a
+    // part of the connection creation. Usually this consists mainly of SET statements that prepare the
+    // behavior of the database connection.
+    mxs::History m_history;
 };
