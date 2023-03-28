@@ -227,7 +227,7 @@ namespace maxscale
 
 TestReader::TestReader(istream& in,
                        size_t line)
-    : m_config(0)
+    : m_expect(Expect::MARIADB)
     , m_in(in)
     , m_line(line)
     , m_delimiter(";")
@@ -235,10 +235,10 @@ TestReader::TestReader(istream& in,
     init();
 }
 
-TestReader::TestReader(uint32_t config,
+TestReader::TestReader(Expect expect,
                        istream& in,
                        size_t line)
-    : m_config(config)
+    : m_expect(expect)
     , m_in(in)
     , m_line(line)
     , m_delimiter(";")
@@ -261,6 +261,11 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
         trim(line);
 
         m_line++;
+
+        if (is_postgres() && line.length() >= 2 && line.substr(0, 2) == "\\d")
+        {
+            continue;
+        }
 
         if (!line.empty() && (line.at(0) != '#'))
         {
@@ -337,7 +342,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
             stmt += line;
 
-            if (m_config & SKIP_POSTGRES_DOLLAR_QUOTES)
+            if (is_postgres())
             {
                 skip_postgres_dollar_quotes(line, stmt);
             }
@@ -355,9 +360,17 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                 if ((line.find("-- ", i) != string::npos)
                     || (line.find("#", i) != string::npos))
                 {
-                    // If so, add a newline. Otherwise the rest of the
-                    // statement would be included in the comment.
-                    stmt += "\n";
+                    if (is_postgres())
+                    {
+                        found = true;
+                        continue;
+                    }
+                    else
+                    {
+                        // If so, add a newline. Otherwise the rest of the
+                        // statement would be included in the comment.
+                        stmt += "\n";
+                    }
                 }
 
                 // This is somewhat fragile as a ";", "#" or "-- " inside a
@@ -474,6 +487,7 @@ void TestReader::skip_block()
 
 void TestReader::skip_postgres_dollar_quotes(std::string& line, std::string& stmt)
 {
+    // When an '$$' is encountered, ignore all ';' until next '$$'.
     auto i = line.find("$$");
 
     if (i != string::npos)
@@ -483,29 +497,39 @@ void TestReader::skip_postgres_dollar_quotes(std::string& line, std::string& stm
             stmt += "\n";
         }
 
-        string l;
-        while (m_in && std::getline(m_in, l))
-        {
-            ++m_line;
-
-            stmt += l;
-            stmt += "\n";
-
-            i = l.find("$$");
-
-            if (i != string::npos)
-            {
-                break;
-            }
-        }
+        string l = line.substr(i + 2);
+        i = l.find("$$");
 
         if (i != string::npos)
         {
+            // We found the end
             line = l.substr(i + 2);
         }
         else
         {
-            line.clear();
+            while (std::getline(m_in, l))
+            {
+                ++m_line;
+
+                stmt += l;
+                stmt += "\n";
+
+                i = l.find("$$");
+
+                if (i != string::npos)
+                {
+                    break;
+                }
+            }
+
+            if (i != string::npos)
+            {
+                line = l.substr(i + 2);
+            }
+            else
+            {
+                line.clear();
+            }
         }
     }
 }

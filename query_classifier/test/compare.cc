@@ -1281,7 +1281,7 @@ static void trim(std::string& s)
     rtrim(s);
 }
 
-int run(uint32_t testreader_config,
+int run(mxs::TestReader::Expect expect,
         const set<string>& properties,
         const std::optional<std::regex>& regex,
         Parser& parser1,
@@ -1290,7 +1290,7 @@ int run(uint32_t testreader_config,
 {
     bool stop = false;      // Whether we should exit.
 
-    maxscale::TestReader reader(testreader_config, in);
+    maxscale::TestReader reader(expect, in);
 
     while (!stop && (reader.get_statement(global.query) == maxscale::TestReader::RESULT_STMT))
     {
@@ -1375,7 +1375,7 @@ int main(int argc, char* argv[])
     std::optional<std::regex> regex;
     const Parser::Helper* pHelper = &MariaDBParser::Helper::get();
     bool solo = false;
-    bool testreader_config = 0;
+    mxs::TestReader::Expect expect = mxs::TestReader::Expect::MARIADB;
     set<string> properties;
 
     size_t rounds = 1;
@@ -1494,7 +1494,7 @@ int main(int argc, char* argv[])
             else if(strcmp(optarg, "postgres") == 0)
             {
                 pHelper = &PgParser::Helper::get();
-                testreader_config = mxs::TestReader::SKIP_POSTGRES_DOLLAR_QUOTES;
+                expect = mxs::TestReader::Expect::POSTGRES;
             }
             else
             {
@@ -1571,7 +1571,7 @@ int main(int argc, char* argv[])
                         }
                         else if (n == 1)
                         {
-                            rc = run(testreader_config, properties, regex, *sParser1, *sParser2, cin);
+                            rc = run(expect, properties, regex, *sParser1, *sParser2, cin);
                         }
                         else
                         {
@@ -1581,7 +1581,7 @@ int main(int argc, char* argv[])
 
                             if (in)
                             {
-                                rc = run(testreader_config, properties, regex, *sParser1, *sParser2, in);
+                                rc = run(expect, properties, regex, *sParser1, *sParser2, in);
                             }
                             else
                             {

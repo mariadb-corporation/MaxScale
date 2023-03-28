@@ -29,10 +29,10 @@ namespace maxscale
 class TestReader
 {
 public:
-    enum Config
+    enum class Expect
     {
-        // When an '$$' is encountered, ignore all ';' until next '$$'.
-        SKIP_POSTGRES_DOLLAR_QUOTES = (1 << 0)
+        MARIADB,
+        POSTGRES
     };
 
     enum result_t
@@ -61,11 +61,11 @@ public:
     /**
      * Creates a TestReader instance.
      *
-     * @param config Bitmask of values from Config.
+     * @param expect What kind of test source to expect.
      * @param in     An input stream.
      * @param line   Optionally specify the initial line number.
      */
-    TestReader(uint32_t config,
+    TestReader(Expect expect,
                std::istream& in,
                size_t line = 0);
 
@@ -90,12 +90,22 @@ private:
     void skip_block();
     void skip_postgres_dollar_quotes(std::string& line, std::string& stmt);
 
+    bool is_mariadb() const
+    {
+        return m_expect == Expect::MARIADB;
+    }
+
+    bool is_postgres() const
+    {
+        return m_expect == Expect::POSTGRES;
+    }
+
 private:
     TestReader(const TestReader&);
     TestReader& operator=(const TestReader&);
 
 private:
-    uint32_t      m_config;     /*< The config. */
+    Expect        m_expect;     /*< What to expect. */
     std::istream& m_in;         /*< The stream we are using. */
     size_t        m_line;       /*< The current line. */
     std::string   m_delimiter;  /*< The current delimiter. */
