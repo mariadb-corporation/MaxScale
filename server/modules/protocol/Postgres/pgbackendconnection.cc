@@ -48,6 +48,12 @@ GWBUF create_terminate()
 }
 }
 
+PgBackendConnection::TrackedQuery::TrackedQuery(const GWBUF& buffer)
+    : command(buffer[0])
+    , size(buffer.length())
+{
+}
+
 PgBackendConnection::PgBackendConnection(MXS_SESSION* session, SERVER* server, mxs::Component* component)
     : m_session(session)
     , m_upstream(component)
@@ -121,20 +127,7 @@ bool PgBackendConnection::write(GWBUF&& buffer)
 
     if (pg::will_respond(buffer))
     {
-        if (m_reply.is_complete())
-        {
-            // The connection is idle, start tracking the result state
-            m_reply.clear();
-            m_reply.set_reply_state(mxs::ReplyState::START);
-            m_reply.set_command(buffer[0]);
-            m_reply.add_upload_bytes(buffer.length());
-        }
-        else
-        {
-            // Something else is already going on, push the command byte so that we can start tracking it once
-            // the current command completes.
-            m_track_queue.push_back(buffer[0]);
-        }
+        track_query(buffer);
     }
 
     return m_dcb->writeq_append(std::move(buffer));
@@ -438,6 +431,45 @@ bool PgBackendConnection::handle_auth()
     return true;
 }
 
+void PgBackendConnection::track_query(const GWBUF& buffer)
+{
+    mxb_assert(pg::will_respond(buffer));
+    TrackedQuery query{buffer};
+
+    if (m_reply.is_complete())
+    {
+        // The connection is idle, start tracking the result state
+        start_tracking(query);
+    }
+    else
+    {
+        // Something else is already going on, store the information so that we can start tracking it once
+        // the current command completes.
+        m_track_queue.push_back(query);
+    }
+}
+
+void PgBackendConnection::start_tracking(const TrackedQuery& query)
+{
+    m_reply.clear();
+    m_reply.set_reply_state(mxs::ReplyState::START);
+    m_reply.set_command(query.command);
+    m_reply.add_upload_bytes(query.size);
+}
+
+bool PgBackendConnection::track_next_result()
+{
+    bool more = !m_track_queue.empty();
+
+    if (more)
+    {
+        start_tracking(m_track_queue.front());
+        m_track_queue.pop_front();
+    }
+
+    return more;
+}
+
 void PgBackendConnection::send_backlog()
 {
     mxb_assert(m_state == State::ROUTING);
@@ -512,13 +544,10 @@ bool PgBackendConnection::handle_routing()
         {
             // The DCB was closed as a result of the clientReply call
         }
-        else if (m_reply.is_complete() && !m_track_queue.empty())
+        else if (m_reply.is_complete())
         {
-            // Another command was executed, try to route a response again
-            m_reply.set_reply_state(mxs::ReplyState::START);
-            m_reply.set_command(m_track_queue.front());
-            m_track_queue.pop_front();
-            keep_going = true;
+            // If another command was executed, try to route a response again
+            keep_going = track_next_result();
         }
     }
 

@@ -59,6 +59,15 @@ private:
         FAILED,
     };
 
+    // Struct that contains the information needed to correctly track the execution of queries
+    struct TrackedQuery
+    {
+        TrackedQuery(const GWBUF& buffer);
+
+        uint8_t command;// The command byte
+        size_t  size;   // The size of the whole network payload, includes the command byte
+    };
+
     bool check_size(const GWBUF& buffer, size_t bytes);
     void handle_error(const std::string& error, mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void send_ssl_request();
@@ -73,6 +82,9 @@ private:
 
     GWBUF read_complete_packets();
     GWBUF process_packets(GWBUF& buffer);
+    void  track_query(const GWBUF& buffer);
+    void  start_tracking(const TrackedQuery& query);
+    bool  track_next_result();
 
     PgProtocolData& protocol_data()
     {
@@ -93,5 +105,5 @@ private:
     std::vector<GWBUF> m_backlog;
 
     // A queue of commands that are being executed. The queue will be empty if only one result is expected.
-    std::deque<uint8_t> m_track_queue;
+    std::deque<TrackedQuery> m_track_queue;
 };
