@@ -55,7 +55,6 @@ private:
         SSL_HANDSHAKE,
         AUTH,
         STARTUP,
-        BACKLOG,
         ROUTING,
         FAILED,
     };
@@ -64,12 +63,12 @@ private:
     void handle_error(const std::string& error, mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void send_ssl_request();
     void send_startup_message();
+    void send_backlog();
 
     bool handle_ssl_request();
     bool handle_ssl_handshake();
     bool handle_startup();
     bool handle_auth();
-    bool handle_backlog();
     bool handle_routing();
 
     GWBUF process_packets(GWBUF& buffer);

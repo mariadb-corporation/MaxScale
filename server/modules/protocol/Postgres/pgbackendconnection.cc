@@ -78,10 +78,6 @@ void PgBackendConnection::ready_for_reading(DCB* dcb)
             keep_going = handle_startup();
             break;
 
-        case State::BACKLOG:
-            keep_going = handle_backlog();
-            break;
-
         case State::ROUTING:
             keep_going = handle_routing();
             break;
@@ -377,7 +373,8 @@ bool PgBackendConnection::handle_startup()
         case pg::READY_FOR_QUERY:
             // Authentication is successful.
             // TODO: Track the transaction status from this packet
-            m_state = State::BACKLOG;
+            m_state = State::ROUTING;
+            send_backlog();
             break;
 
         case pg::ERROR_RESPONSE:
@@ -441,22 +438,29 @@ bool PgBackendConnection::handle_auth()
     return true;
 }
 
-bool PgBackendConnection::handle_backlog()
+void PgBackendConnection::send_backlog()
 {
-    m_state = State::ROUTING;
+    mxb_assert(m_state == State::ROUTING);
     auto packets = std::move(m_backlog);
     m_backlog.clear();
 
-    for (auto& p : packets)
+    for (auto it = packets.begin(); it != packets.end(); ++it)
     {
-        if (!write(std::move(p)))
+        if (!write(std::move(*it)))
         {
             handle_error("Failed to process delayed packets");
             break;
         }
+        else if (m_state != State::ROUTING)
+        {
+            // Something caused a state to be entered that prevents further routing of packets. Wait for that
+            // to finish before proceeding with the rest of the backlog.
+            mxb_assert(m_backlog.empty());
+            packets.erase(packets.begin(), it + 1);
+            m_backlog = std::move(packets);
+            break;
+        }
     }
-
-    return true;
 }
 
 bool PgBackendConnection::handle_routing()
