@@ -20,9 +20,10 @@
                     <template v-slot:default="{ data: { node } }">
                         <div class="entity">
                             <div
-                                class="px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold"
+                                class="entity-header px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold"
                                 :style="{
                                     backgroundColor: node.data.highlightColor,
+                                    height: `${entityHeaderHeight}px`,
                                 }"
                             >
                                 {{ node.id }}
@@ -31,8 +32,12 @@
                                 class="entity-fields px-2 rounded-br-lg rounded-bl-lg"
                                 :style="{ border: `1px solid ${node.data.highlightColor}` }"
                             >
-                                <tr v-for="col in node.data.cols" :key="`key_${node.id}_${col}`">
-                                    <td>{{ col }}</td>
+                                <tr
+                                    v-for="col in node.data.cols"
+                                    :key="`key_${node.id}_${col.name}`"
+                                    :style="{ height: `${trHeight}px` }"
+                                >
+                                    <td>{{ col.name }}</td>
                                 </tr>
                             </table>
                         </div>
@@ -57,7 +62,15 @@
  * Public License.
  */
 import { line, curveLinear } from 'd3-shape'
-import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force'
+import {
+    forceSimulation,
+    forceLink,
+    forceManyBody,
+    forceCenter,
+    forceCollide,
+    forceX,
+    forceY,
+} from 'd3-force'
 import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsCharts/GraphNodes.vue'
 import { drawLinks, changeLinkGroupStyle } from '@share/components/common/MxsCharts/utils'
@@ -79,13 +92,13 @@ export default {
             graphNodeCoordMap: {},
             graphData: { nodes: [], links: [] },
             graphNodes: [], // staging data
-            svg: null,
             simulation: null,
             defNodeSize: { width: 200, height: 100 },
             dynNodeSizeMap: {},
             isDraggingNode: false,
             highlightedLinks: [],
-            fieldHeight: 22,
+            trHeight: 32,
+            entityHeaderHeight: 32,
         }
     },
 
@@ -134,6 +147,8 @@ export default {
                                 .theta(0.5)
                         )
                         .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
+                        .force('x', forceX().strength(0.1))
+                        .force('y', forceY().strength(0.1))
                         .alphaMin(0.1)
                         .on('end', () => {
                             this.render()
@@ -154,14 +169,54 @@ export default {
                 return map
             }, {})
         },
-        //TODO: Draw the link from the row of the source table to the row of the target table
+        /**
+         * Reposition the y value to the center of the relational column
+         * @param {Object} param.node - entity node
+         * @param {String} param.col - name of the relational column
+         */
+        repositionY({ node, col }) {
+            const size = this.dynNodeSizeMap[node.id]
+            const colIdx = node.data.cols.findIndex(c => c.name === col)
+            return (
+                node.y +
+                size.height / 2 -
+                (size.height - this.entityHeaderHeight) +
+                colIdx * this.trHeight +
+                this.trHeight / 2
+            )
+        },
+        /**
+         * Reposition the x value to either right or left edge of the relational column
+         * @param {Object} param.source - source node
+         * @param {Object} param.target - target node
+         */
+        handleRepositionX({ source, target }) {
+            const sourceSize = this.dynNodeSizeMap[source.id]
+            const targetSize = this.dynNodeSizeMap[target.id]
+            const isSrcRightWard = source.x - target.x > 0
+            const srcOffset = sourceSize.width / 2,
+                targetOffset = targetSize.width / 2
+            return {
+                sourceX: source.x + (isSrcRightWard ? -srcOffset : srcOffset),
+                targetX: target.x + (isSrcRightWard ? targetOffset : -targetOffset),
+            }
+        },
+        //TODO: Replace curveLinear with a custom function
         linkPathGenerator(d) {
+            const {
+                source,
+                target,
+                relationshipData: { source_col, target_col },
+            } = d
+            const { sourceX, targetX } = this.handleRepositionX({ source, target })
+            let sourceY = this.repositionY({ node: source, col: source_col }),
+                targetY = this.repositionY({ node: target, col: target_col })
             return line()
                 .x(d => d.x)
                 .y(d => d.y)
                 .curve(curveLinear)([
-                { x: d.source.x, y: d.source.y },
-                { x: d.target.x, y: d.target.y },
+                { x: sourceX, y: sourceY },
+                { x: targetX, y: targetY },
             ])
         },
         /**
@@ -213,6 +268,7 @@ export default {
     background: rgba(255, 255, 255, 0);
     .entity-fields {
         width: 100%;
+        border-spacing: 0px;
     }
 }
 </style>
