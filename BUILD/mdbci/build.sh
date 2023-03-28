@@ -27,6 +27,10 @@ export script_dir="$(dirname $(readlink -f $0))"
 
 export platform=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platform' --silent`
 export platform_version=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platform_version' --silent`
+if [ "$platform" == "rocky" ] || [ "$platform" == "centos" ]
+then
+    platform=rhel
+fi
 export dist_sfx="$platform"."$platform_version"
 export cmake_flags="${cmake_flags} -DPACKAGE=Y -DDISTRIB_SUFFIX=${dist_sfx}"
 
