@@ -463,39 +463,15 @@ void PgBackendConnection::send_backlog()
     }
 }
 
-bool PgBackendConnection::handle_routing()
+GWBUF PgBackendConnection::read_complete_packets()
 {
-    bool keep_going = false;
+    GWBUF complete_packets;
 
     if (auto [ok, buf] = m_dcb->read(pg::HEADER_LEN, 0); ok)
     {
         if (buf)
         {
-            if (GWBUF complete_packets = process_packets(buf))
-            {
-                mxs::ReplyRoute down;
-                bool reply_ok = m_upstream->clientReply(std::move(complete_packets), down, m_reply);
-
-                if (!reply_ok)
-                {
-                    MXB_INFO("Routing the reply from '%s' failed, closing session.", m_dcb->server()->name());
-                    m_session->kill();
-                    keep_going = false;
-                }
-                else if (!m_dcb->is_open())
-                {
-                    // The DCB was closed as a result of the clientReply call
-                    keep_going = false;
-                }
-                else if (m_reply.is_complete() && !m_track_queue.empty())
-                {
-                    // Another command was executed, try to route a response again
-                    m_reply.set_reply_state(mxs::ReplyState::START);
-                    m_reply.set_command(m_track_queue.front());
-                    m_track_queue.pop_front();
-                    keep_going = true;
-                }
-            }
+            complete_packets = process_packets(buf);
 
             if (buf)
             {
@@ -513,6 +489,37 @@ bool PgBackendConnection::handle_routing()
     else
     {
         handle_error("Network read failed");
+    }
+
+    return complete_packets;
+}
+
+bool PgBackendConnection::handle_routing()
+{
+    bool keep_going = false;
+
+    if (GWBUF complete_packets = read_complete_packets())
+    {
+        mxs::ReplyRoute down;
+        bool reply_ok = m_upstream->clientReply(std::move(complete_packets), down, m_reply);
+
+        if (!reply_ok)
+        {
+            MXB_INFO("Routing the reply from '%s' failed, closing session.", m_dcb->server()->name());
+            m_session->kill();
+        }
+        else if (!m_dcb->is_open())
+        {
+            // The DCB was closed as a result of the clientReply call
+        }
+        else if (m_reply.is_complete() && !m_track_queue.empty())
+        {
+            // Another command was executed, try to route a response again
+            m_reply.set_reply_state(mxs::ReplyState::START);
+            m_reply.set_command(m_track_queue.front());
+            m_track_queue.pop_front();
+            keep_going = true;
+        }
     }
 
     return keep_going;

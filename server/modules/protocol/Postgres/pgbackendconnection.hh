@@ -71,6 +71,7 @@ private:
     bool handle_auth();
     bool handle_routing();
 
+    GWBUF read_complete_packets();
     GWBUF process_packets(GWBUF& buffer);
 
     PgProtocolData& protocol_data()
