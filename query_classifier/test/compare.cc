@@ -57,7 +57,7 @@ namespace
 char USAGE[] =
     "usage: compare [-r count] [-d] [-0 classifier] [-1 classfier1] [-2 classifier2] "
     "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-H (postgres|mariadb)] "
-    "[-p properties] [-x regex] [-c regex] [-s statement]|[file]]\n\n"
+    "[-p properties] [-x regex] [-c regex] [-s statement]|[file+]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
     "-0    sanity check mode, compares the statement twice with the same classifier\n"
@@ -1559,7 +1559,7 @@ int main(int argc, char* argv[])
 
         int n = argc - (optind - 1);
 
-        if ((n == 1) || (n == 2))
+        if (n >= 1)
         {
             mxs::set_datadir("/tmp");
             mxs::set_langdir(".");
@@ -1611,19 +1611,22 @@ int main(int argc, char* argv[])
                         }
                         else
                         {
-                            mxb_assert(n == 2);
-
-                            ifstream in(argv[argc - 1]);
-
-                            if (in)
+                            for (int i = optind; i < argc; ++i)
                             {
-                                rc = run(expect, properties, test_regex, check_regex,
-                                         *sParser1, *sParser2, in);
-                            }
-                            else
-                            {
-                                terminate = true;
-                                cerr << "error: Could not open " << argv[argc - 1] << "." << endl;
+                                cout << argv[i] << endl;
+
+                                ifstream in(argv[i]);
+
+                                if (in)
+                                {
+                                    rc = run(expect, properties, test_regex, check_regex,
+                                             *sParser1, *sParser2, in);
+                                }
+                                else
+                                {
+                                    terminate = true;
+                                    cerr << "error: Could not open " << argv[argc - 1] << "." << endl;
+                                }
                             }
                         }
 
