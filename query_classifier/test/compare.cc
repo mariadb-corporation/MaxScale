@@ -57,7 +57,7 @@ namespace
 char USAGE[] =
     "usage: compare [-r count] [-d] [-0 classifier] [-1 classfier1] [-2 classifier2] "
     "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-H (postgres|mariadb)] "
-    "[-p properties] [-s statement]|[file]]\n\n"
+    "[-p properties] [-x regex] [-c regex] [-s statement]|[file]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
     "-0    sanity check mode, compares the statement twice with the same classifier\n"
@@ -73,6 +73,7 @@ char USAGE[] =
     "-x    test only statements matching the regex\n"
     "-H    use MariaDB or Postgres Parser helper, default 'mariadb'\n"
     "-p    only test and print properties\n"
+    "-c    check that response matches regex (type and operation)\n"
     "-v 0, only return code\n"
     "   1, query and result for failed cases\n"
     "   2, all queries, and result for failed cases\n"
@@ -342,7 +343,8 @@ bool compare_parse(const Parser& parser1,
     return success;
 }
 
-bool compare_get_type(const Parser& parser1,
+bool compare_get_type(const std::optional<std::regex>& check_regex,
+                      const Parser& parser1,
                       const GWBUF& copy1,
                       const Parser& parser2,
                       const GWBUF& copy2)
@@ -358,8 +360,18 @@ bool compare_get_type(const Parser& parser1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << Parser::type_mask_to_string(rv1);
-        success = true;
+
+        if (!check_regex || std::regex_search(Parser::type_mask_to_string(rv1), *check_regex))
+        {
+            ss << "Ok : " << Parser::type_mask_to_string(rv1);
+            success = true;
+        }
+        else
+        {
+            ss << "NOT: "
+               << Parser::type_mask_to_string(rv1)
+               << " does NOT match regex.";
+        }
     }
     else
     {
@@ -406,7 +418,8 @@ bool compare_get_type(const Parser& parser1,
     return success;
 }
 
-bool compare_get_operation(const Parser& parser1,
+bool compare_get_operation(const std::optional<std::regex>& check_regex,
+                           const Parser& parser1,
                            const GWBUF& copy1,
                            const Parser& parser2,
                            const GWBUF& copy2)
@@ -422,8 +435,17 @@ bool compare_get_operation(const Parser& parser1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << mxs::sql::to_string(rv1);
-        success = true;
+        if (!check_regex || std::regex_search(mxs::sql::to_string(rv1), *check_regex))
+        {
+            ss << "Ok : " << mxs::sql::to_string(rv1);
+            success = true;
+        }
+        else
+        {
+            ss << "NOT: "
+               << mxs::sql::to_string(rv1)
+               << " does NOT match regex.";
+        }
     }
     else
     {
@@ -1144,6 +1166,7 @@ bool specified(const set<string>& properties, const string& key)
 }
 
 bool compare(const set<string>& properties,
+             const std::optional<std::regex>& check_regex,
              const Parser& parser1,
              const GWBUF& copy1,
              const Parser& parser2,
@@ -1155,12 +1178,12 @@ bool compare(const set<string>& properties,
 
     if (specified(properties, "type"))
     {
-        errors += !compare_get_type(parser1, copy1, parser2, copy2);
+        errors += !compare_get_type(check_regex, parser1, copy1, parser2, copy2);
     }
 
     if (specified(properties, "operation"))
     {
-        errors += !compare_get_operation(parser1, copy1, parser2, copy2);
+        errors += !compare_get_operation(check_regex, parser1, copy1, parser2, copy2);
     }
 
     if (specified(properties, "created_table_name"))
@@ -1214,7 +1237,7 @@ bool compare(const set<string>& properties,
             string indent = global.indent;
             global.indent += string(4, ' ');
 
-            success = compare(properties, parser1, *pPreparable1, parser2, *pPreparable2);
+            success = compare(properties, check_regex, parser1, *pPreparable1, parser2, *pPreparable2);
 
             global.indent = indent;
         }
@@ -1223,12 +1246,14 @@ bool compare(const set<string>& properties,
     return success;
 }
 
-bool compare(const set<string>& properties, Parser& parser1, Parser& parser2, const string& s)
+bool compare(const set<string>& properties,
+             const std::optional<std::regex>& check_regex,
+             Parser& parser1, Parser& parser2, const string& s)
 {
     GWBUF copy1 = parser1.helper().create_packet(s);
     GWBUF copy2 = parser2.helper().create_packet(s);
 
-    bool success = compare(properties, parser1, copy1, parser2, copy2);
+    bool success = compare(properties, check_regex, parser1, copy1, parser2, copy2);
 
     if (success)
     {
@@ -1283,18 +1308,19 @@ static void trim(std::string& s)
 
 int run(mxs::TestReader::Expect expect,
         const set<string>& properties,
-        const std::optional<std::regex>& regex,
+        const std::optional<std::regex>& test_regex,
+        const std::optional<std::regex>& check_regex,
         Parser& parser1,
         Parser& parser2,
         istream& in)
 {
     bool stop = false;      // Whether we should exit.
 
-    maxscale::TestReader reader(expect, in);
+    mxs::TestReader reader(expect, in);
 
-    while (!stop && (reader.get_statement(global.query) == maxscale::TestReader::RESULT_STMT))
+    while (!stop && (reader.get_statement(global.query) == mxs::TestReader::RESULT_STMT))
     {
-        if (!regex || std::regex_search(global.query, *regex))
+        if (!test_regex || std::regex_search(global.query, *test_regex))
         {
             global.line = reader.line();
             global.query_printed = false;
@@ -1308,7 +1334,7 @@ int run(mxs::TestReader::Expect expect,
                 report_query();
             }
 
-            bool success = compare(properties, parser1, parser2, global.query);
+            bool success = compare(properties, check_regex, parser1, parser2, global.query);
 
             if (!success)
             {
@@ -1328,9 +1354,11 @@ int run(mxs::TestReader::Expect expect,
 }
 
 int run(const set<string>& properties,
-        const std::optional<std::regex>& regex, Parser& parser1, Parser& parser2, const string& statement)
+        const std::optional<std::regex>& test_regex,
+        const std::optional<std::regex>& check_regex,
+        Parser& parser1, Parser& parser2, const string& statement)
 {
-    if (!regex || std::regex_search(statement, *regex))
+    if (!test_regex || std::regex_search(statement, *test_regex))
     {
         global.query = statement;
 
@@ -1342,7 +1370,7 @@ int run(const set<string>& properties,
             report_query();
         }
 
-        if (!compare(properties, parser1, parser2, global.query))
+        if (!compare(properties, check_regex, parser1, parser2, global.query))
         {
             ++global.n_errors;
         }
@@ -1372,7 +1400,8 @@ int main(int argc, char* argv[])
     string statement;
     const char* zStatement = NULL;
     Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
-    std::optional<std::regex> regex;
+    std::optional<std::regex> test_regex;
+    std::optional<std::regex> check_regex;
     const Parser::Helper* pHelper = &MariaDBParser::Helper::get();
     bool solo = false;
     mxs::TestReader::Expect expect = mxs::TestReader::Expect::MARIADB;
@@ -1381,7 +1410,7 @@ int main(int argc, char* argv[])
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:s:SRH:p:")) != -1)
+    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:c:s:SRH:p:")) != -1)
     {
         switch (c)
         {
@@ -1474,7 +1503,14 @@ int main(int argc, char* argv[])
         case 'x':
             {
                 auto flags = std::regex_constants::ECMAScript | std::regex_constants::icase;
-                regex = std::regex(optarg, flags);
+                test_regex = std::regex(optarg, flags);
+            }
+            break;
+
+        case 'c':
+            {
+                auto flags = std::regex_constants::ECMAScript | std::regex_constants::icase;
+                check_regex = std::regex(optarg, flags);
             }
             break;
 
@@ -1567,11 +1603,11 @@ int main(int argc, char* argv[])
 
                         if (zStatement)
                         {
-                            rc = run(properties, regex, *sParser1, *sParser2, zStatement);
+                            rc = run(properties, test_regex, check_regex, *sParser1, *sParser2, zStatement);
                         }
                         else if (n == 1)
                         {
-                            rc = run(expect, properties, regex, *sParser1, *sParser2, cin);
+                            rc = run(expect, properties, test_regex, check_regex, *sParser1, *sParser2, cin);
                         }
                         else
                         {
@@ -1581,7 +1617,8 @@ int main(int argc, char* argv[])
 
                             if (in)
                             {
-                                rc = run(expect, properties, regex, *sParser1, *sParser2, in);
+                                rc = run(expect, properties, test_regex, check_regex,
+                                         *sParser1, *sParser2, in);
                             }
                             else
                             {
