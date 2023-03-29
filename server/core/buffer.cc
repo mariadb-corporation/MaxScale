@@ -397,7 +397,13 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
             auto new_sbuf = std::make_shared<SHARED_BUF>(alloc_size);
 
             auto* new_buf_start = new_sbuf->buf_start.get();
-            memcpy(new_buf_start, m_start, old_len);
+
+            if (old_len > 0)
+            {
+                mxb_assert(m_start);
+                memcpy(new_buf_start, m_start, old_len);
+            }
+
             if (swap_cl_data)
             {
                 std::swap(new_sbuf->classifier_data, m_sbuf->classifier_data);
