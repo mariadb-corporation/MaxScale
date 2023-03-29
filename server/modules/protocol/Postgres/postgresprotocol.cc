@@ -121,6 +121,12 @@ const char* backend_command_to_str(uint8_t cmd)
 
     case ROW_DESCRIPTION:
         return "RowDescription";
+
+    case COPY_DATA:
+        return "CopyData";
+
+    case COPY_DONE:
+        return "CopyDone";
     }
 
     mxb_assert(!true);
@@ -167,6 +173,12 @@ const char* client_command_to_str(uint8_t cmd)
 
     case TERMINATE:
         return "Terminate";
+
+    case COPY_DATA:
+        return "CopyData";
+
+    case COPY_DONE:
+        return "CopyDone";
     }
 
     mxb_assert(!true);
