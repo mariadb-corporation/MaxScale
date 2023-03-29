@@ -258,16 +258,73 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
     while (!error && !found && std::getline(m_in, line))
     {
-        trim(line);
-
         m_line++;
 
-        if (is_postgres() && line.length() >= 2 && line.substr(0, 2) == "\\d")
+        trim(line);
+
+        if (line.empty())
         {
             continue;
         }
 
-        if (!line.empty() && (line.at(0) != '#'))
+        if (is_postgres())
+        {
+            // Ignore all meta-commands such as '\d'.
+            if (line.substr(0, 1) == "\\")
+            {
+                continue;
+            }
+
+            // In Postgres can only be a comment and not a mysqltest command.
+            if (line.substr(0, 2) == "--")
+            {
+                continue;
+            }
+
+            if (strncasecmp(line.c_str(), "copy", 4) == 0)
+            {
+                // Apparently a COPY statement. Does it read from stdin?
+                if (strcasestr(line.c_str(), "stdin") != nullptr)
+                {
+                    skip_postgres_stdin_input();
+                    continue;
+                }
+            }
+
+            auto i = line.find("/*");
+
+            if (i != string::npos)
+            {
+                auto j = line.find("*/", i + 2);
+
+                if (j != string::npos)
+                {
+                    // Single line /* ... */ comment. Assume there is just one and remove it.
+                    line = line.substr(0, i) + line.substr(j + 2);
+                }
+                else
+                {
+                    line = line.substr(0, i);
+
+                    string l;
+                    skip_postgres_block_quote(l);
+
+                    if (!l.empty())
+                    {
+                        line += " ";
+                        line += l;
+                    }
+                }
+
+                trim(line);
+                if (line.empty())
+                {
+                    continue;
+                }
+            }
+        }
+
+        if (line.at(0) != '#')
         {
             // Ignore comment lines.
             if ((line.substr(0, 3) == "-- ") || (line.substr(0, 1) == "#"))
@@ -485,6 +542,24 @@ void TestReader::skip_block()
     }
 }
 
+void TestReader::skip_postgres_block_quote(std::string& line)
+{
+    line.clear();
+
+    string l;
+    while (std::getline(m_in, l))
+    {
+        ++m_line;
+
+        auto i = l.find("*/");
+        if (i != string::npos)
+        {
+            line = l.substr(i + 2);
+            break;
+        }
+    }
+}
+
 void TestReader::skip_postgres_dollar_quotes(std::string& line, std::string& stmt)
 {
     // When an '$$' is encountered, ignore all ';' until next '$$'.
@@ -530,6 +605,22 @@ void TestReader::skip_postgres_dollar_quotes(std::string& line, std::string& stm
             {
                 line.clear();
             }
+        }
+    }
+}
+
+void TestReader::skip_postgres_stdin_input()
+{
+    string line;
+    while (std::getline(m_in, line))
+    {
+        ++m_line;
+
+        ltrim(line);
+
+        if (line.substr(0, 2) == "\\.")
+        {
+            break;
         }
     }
 }
