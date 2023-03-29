@@ -37,7 +37,6 @@
 
 #include "readconnroute.hh"
 
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/service.hh>
 
@@ -308,7 +307,7 @@ mxs::Endpoint* RCR::get_connection(const mxs::Endpoints& endpoints)
 }
 
 /** Log routing failure due to closed session */
-static void log_closed_session(uint8_t mysql_command, mxs::Target* t)
+void RCRSession::log_closed_session(const GWBUF& buffer, mxs::Target* t)
 {
     char msg[1024 + 200] = "";      // Extra space for message
 
@@ -325,7 +324,7 @@ static void log_closed_session(uint8_t mysql_command, mxs::Target* t)
         sprintf(msg, "Server '%s' no longer qualifies as a target server.", t->name());
     }
 
-    MXB_ERROR("Failed to route MySQL command %d to backend server. %s", mysql_command, msg);
+    MXB_ERROR("Failed to route, %s: %s", msg, m_pSession->protocol()->describe(buffer).c_str());
 }
 
 /**
@@ -372,18 +371,14 @@ bool RCRSession::connection_is_valid() const
 
 bool RCRSession::routeQuery(GWBUF&& buffer)
 {
-    uint8_t mysql_command = mxs_mysql_get_command(buffer);
-
     if (!connection_is_valid())
     {
-        log_closed_session(mysql_command, m_backend->target());
+        log_closed_session(buffer, m_backend->target());
         return 0;
     }
 
-    MXB_INFO("Routed [%s] to '%s' %s",
-             STRPACKETTYPE(mysql_command),
-             m_backend->target()->name(),
-             get_sql_string(buffer).c_str());
+    MXB_INFO("Routed to '%s': %s", m_backend->target()->name(),
+             m_pSession->protocol()->describe(buffer).c_str());
 
     m_query_timer.start_interval();
 
@@ -408,6 +403,11 @@ bool RCRSession::clientReply(GWBUF&& packet,
                              const maxscale::ReplyRoute& down,
                              const maxscale::Reply& reply)
 {
+    if (reply.is_complete())
+    {
+        MXB_INFO("Reply complete from '%s': %s", down.back()->target()->name(), reply.describe().c_str());
+    }
+
     auto rc = RouterSession::clientReply(std::move(packet), down, reply);
     m_query_timer.end_interval();
     return rc;

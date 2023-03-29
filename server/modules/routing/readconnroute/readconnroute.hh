@@ -53,6 +53,7 @@ private:
     int64_t                 m_session_queries = 0;
 
     bool connection_is_valid() const;
+    void log_closed_session(const GWBUF& buffer, mxs::Target* t);
 };
 
 /**
