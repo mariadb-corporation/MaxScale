@@ -17,6 +17,8 @@
 #include <maxscale/protocol2.hh>
 #include <maxscale/session.hh>
 
+class PgProtocolData;
+
 class PgClientConnection final : public mxs::ClientConnectionBase
 {
 public:
@@ -57,11 +59,13 @@ private:
     // Return true if ssl handshake succeeded or is in progress
     bool setup_ssl();
     bool validate_cleartext_auth(const GWBUF& reply);
+    bool parse_startup_message(const GWBUF& buf);
 
     State           m_state = State::INIT;
     MXS_SESSION&    m_session;
     bool            m_ssl_required;
     mxs::Component* m_down;
+    PgProtocolData* m_protocol_data {nullptr};
 
     // Will be provided by the monitor
     pg::Auth pg_prot_data_auth_method = pg::AUTH_CLEARTEXT;

@@ -77,3 +77,13 @@ void PgProtocolData::set_in_trx(bool in_trx)
 {
     m_in_trx = in_trx;
 }
+
+void PgProtocolData::set_connect_params(const uint8_t* begin, const uint8_t* end)
+{
+    m_params.assign(begin, end);
+}
+
+void PgProtocolData::set_default_database(std::string_view database)
+{
+    m_database = database;
+}

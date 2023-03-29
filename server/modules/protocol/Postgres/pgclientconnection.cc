@@ -18,6 +18,9 @@
 #include "pgparser.hh"
 #include "pgprotocoldata.hh"
 
+using std::string;
+using std::string_view;
+
 namespace
 {
 
@@ -57,6 +60,7 @@ PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pC
     : m_session(*pSession)
     , m_ssl_required(m_session.listener_data()->m_ssl.config().enabled)
     , m_down(pComponent)
+    , m_protocol_data(static_cast<PgProtocolData*>(pSession->protocol_data()))
 {
 }
 
@@ -135,11 +139,8 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
             next_state = State::INIT;   // Waiting for Startup message
         }
     }
-    else
+    else if (parse_startup_message(gwbuf))
     {
-        auto data = static_cast<PgProtocolData*>(m_session.protocol_data());
-        data->set_connect_params(gwbuf);
-
         GWBUF reply;
         add_packet_auth_request(reply, pg_prot_data_auth_method);
 
@@ -299,4 +300,67 @@ mxs::Parser* PgClientConnection::parser()
 size_t PgClientConnection::sizeof_buffers() const
 {
     return 0;
+}
+
+bool PgClientConnection::parse_startup_message(const GWBUF& buf)
+{
+    auto consume_zstring = [](const uint8_t*& ptr, const uint8_t* end){
+        std::string_view result;
+        if (ptr < end)
+        {
+            result = pg::get_string(ptr);
+            ptr += result.length() + 1;
+        }
+        return result;
+    };
+
+    bool rval = false;
+    mxb_assert(buf.length() >= 8);
+    string_view username;
+    string_view database;
+    // StartupMessage: 4 bytes length, 4 bytes magic number, then pairs of strings and finally 0 at end.
+    auto ptr = buf.data();
+    ptr += 4;   // Length should have already been checked.
+    uint32_t protocol_version = pg::get_uint32(ptr);
+    ptr += 4;
+    const auto end = buf.end();
+
+    if (protocol_version == pg::PROTOCOL_V3_MAGIC && *(end - 1) == '\0')
+    {
+        bool parse_error = false;
+        const auto params_begin = ptr;
+        while (ptr < end - 1)
+        {
+            string_view param_name = consume_zstring(ptr, end);
+            string_view param_value = consume_zstring(ptr, end);
+
+            if (!param_name.empty())
+            {
+                // Only recognize a few parameters. Most of the parameters should be sent as is
+                // to backends.
+                if (param_name == "user")
+                {
+                    username = param_value;
+                }
+                else if (param_name == "database")
+                {
+                    database = param_value;
+                }
+            }
+            else
+            {
+                parse_error = true;
+                break;
+            }
+        }
+
+        if (!parse_error && username.length() > 0 && ptr == end - 1)
+        {
+            m_session.set_user(string(username));
+            m_protocol_data->set_default_database(database);
+            m_protocol_data->set_connect_params(params_begin, end);
+            rval = true;
+        }
+    }
+    return rval;
 }
