@@ -141,28 +141,17 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
     }
     else if (parse_startup_message(gwbuf))
     {
-        GWBUF reply;
-        add_packet_auth_request(reply, pg_prot_data_auth_method);
-
-        if (pg_prot_data_auth_method != pg::AUTH_OK)
+        // Add user account check here.
+        if (pg_prot_data_auth_method == pg::AUTH_OK)
         {
-            next_state = State::AUTH;
-        }
-        else if (m_session.state() == MXS_SESSION::State::CREATED && m_session.start())
-        {
-            add_packet_ready_for_query(reply);
-            next_state = State::ROUTE;
+            next_state = start_session() ? State::ROUTE : State::ERROR;
         }
         else
         {
-            MXB_ERROR("Could not start session, closing PG client connection.");
-            reply.clear();
-            next_state = State::ERROR;
-        }
-
-        if (reply.length())
-        {
+            GWBUF reply;
+            add_packet_auth_request(reply, pg_prot_data_auth_method);
             m_dcb->writeq_append(std::move(reply));
+            next_state = State::AUTH;
         }
     }
 
@@ -195,19 +184,7 @@ PgClientConnection::State PgClientConnection::state_auth(const GWBUF& gwbuf)
     switch (result)
     {
     case Result::READY:
-        if (m_session.state() == MXS_SESSION::State::CREATED && m_session.start())
-        {
-            GWBUF rdy;
-            add_packet_auth_request(rdy, pg::AUTH_OK);
-            add_packet_ready_for_query(rdy);
-            write(std::move(rdy));
-            next_state = State::ROUTE;
-        }
-        else
-        {
-            MXB_ERROR("Could not start session, closing PG client connection.");
-            next_state = State::ERROR;
-        }
+        next_state = start_session() ? State::ROUTE : State::ERROR;
         break;
 
     case Result::ERROR:
@@ -221,6 +198,25 @@ PgClientConnection::State PgClientConnection::state_auth(const GWBUF& gwbuf)
     }
 
     return next_state;
+}
+
+bool PgClientConnection::start_session()
+{
+    bool rval = false;
+    mxb_assert(m_session.state() == MXS_SESSION::State::CREATED);
+    if (m_session.start())
+    {
+        GWBUF rdy;
+        add_packet_auth_request(rdy, pg::AUTH_OK);
+        add_packet_ready_for_query(rdy);
+        write(std::move(rdy));
+        rval = true;
+    }
+    else
+    {
+        MXB_ERROR("Could not start session, closing PG client connection.");
+    }
+    return rval;
 }
 
 PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)

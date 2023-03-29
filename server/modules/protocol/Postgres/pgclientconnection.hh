@@ -60,6 +60,7 @@ private:
     bool setup_ssl();
     bool validate_cleartext_auth(const GWBUF& reply);
     bool parse_startup_message(const GWBUF& buf);
+    bool start_session();
 
     State           m_state = State::INIT;
     MXS_SESSION&    m_session;
