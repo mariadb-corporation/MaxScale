@@ -463,11 +463,6 @@ public:
     virtual std::string_view get_canonical(const GWBUF::ProtocolInfo* info) = 0;
 
     /**
-     * @return True, if @c is a prepare statement, false otherwise.
-     */
-    virtual bool is_prepare(const GWBUF& stmt) const = 0;
-
-    /**
      * Create a parser.
      *
      * @param pHelper  The helper to be used when needed.

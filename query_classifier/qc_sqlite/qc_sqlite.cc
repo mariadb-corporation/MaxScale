@@ -5321,11 +5321,6 @@ public:
         return canonical;
     }
 
-    bool is_prepare(const GWBUF& stmt) const override
-    {
-        return mariadb::is_com_prepare(stmt);
-    }
-
     std::unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const override
     {
         return std::make_unique<SqliteParser>(pHelper);

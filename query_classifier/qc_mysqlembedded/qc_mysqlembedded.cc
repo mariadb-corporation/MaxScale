@@ -4264,11 +4264,6 @@ public:
         return std::string_view {};
     }
 
-    bool is_prepare(const GWBUF& stmt) const override
-    {
-        return mariadb::is_com_prepare(stmt);
-    }
-
     std::unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const override
     {
         return std::make_unique<MysqlParser>(pHelper);

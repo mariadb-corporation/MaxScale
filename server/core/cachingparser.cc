@@ -398,10 +398,10 @@ public:
             // We generate m_canonical explicitly, because now we want the key that
             // allows us to look up whether the parsing info already exists. Besides,
             // calling m_parser.get_canonical(m_stmt) would cause an infinite recursion.
-            m_canonical = m_parser.helper().get_sql(m_stmt);
+            m_canonical = m_parser.get_sql(m_stmt);
             maxsimd::get_canonical(&m_canonical, &this_thread.markers);
 
-            if (m_parser.plugin().is_prepare(m_stmt))
+            if (m_parser.is_prepare(m_stmt))
             {
                 // P as in prepare, and appended so as not to cause a
                 // need for copying the data.
