@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-11-16
+ * Change Date: 2027-03-14
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -290,7 +290,7 @@ std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
     }
 
     // Remove trailing whitespace
-    while (lut(IS_SPACE, *(it_out - 1)))
+    while (it_out != it_out_begin  && lut(IS_SPACE, *(it_out - 1)))
     {
         --it_out;
     }
