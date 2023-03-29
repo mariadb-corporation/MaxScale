@@ -32,6 +32,9 @@ std::string_view XRouterSession::state_to_str(State state)
     case State::WAIT_SOLO:
         return "WAIT_SOLO";
 
+    case State::LOAD_DATA:
+        return "LOAD_DATA";
+
     case State::LOCK_MAIN:
         return "LOCK_MAIN";
 
@@ -111,6 +114,11 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
         // More packets that belong to the single-node command. Keep routing them until we get one that will
         // generate a response.
         ok = route_solo(std::move(packet));
+        break;
+
+    case State::LOAD_DATA:
+        // Client is uploading data, keep routing it to the solo node until the server responds.
+        ok = route_to_one(m_solo, std::move(packet), mxs::Backend::NO_RESPONSE);
         break;
 
     case State::MAIN:
@@ -225,6 +233,7 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
         mxb_assert_message(!complete, "Result should not be complete");
         [[fallthrough]];
 
+    case State::LOAD_DATA:
     case State::WAIT_SOLO:
         if (complete)
         {
@@ -232,6 +241,16 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
             mxb_assert(route);
             mxb_assert(all_backends_idle());
             m_state = State::IDLE;
+        }
+        else if (reply.state() == mxs::ReplyState::LOAD_DATA)
+        {
+            MXB_SINFO("Data load starting, waiting for more data from the client.");
+
+            // It's possible that the current state is already LOAD_DATA. In this case the client executed a
+            // query starts multiple data loads. For example, in MariaDB multiple LOAD DATA LOCAL INFILE
+            // commands separated by a semicolons would result in this.
+            m_state = State::LOAD_DATA;
+            rv = route_queued();
         }
         break;
 

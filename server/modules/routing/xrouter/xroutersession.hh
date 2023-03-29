@@ -35,6 +35,7 @@ private:
         IDLE,
         SOLO,
         WAIT_SOLO,
+        LOAD_DATA,
         LOCK_MAIN,
         UNLOCK_MAIN,
         MAIN,

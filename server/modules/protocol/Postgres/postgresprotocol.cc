@@ -278,6 +278,8 @@ bool will_respond(const GWBUF& buffer)
     case pg::EXECUTE:
     case pg::FLUSH:
     case pg::PARSE:
+    case pg::COPY_DATA:
+    case pg::COPY_DONE:
         return false;
 
     default:
