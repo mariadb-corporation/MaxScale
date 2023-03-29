@@ -40,8 +40,8 @@ public:
     GWBUF       make_error(int errnum, const std::string& sqlstate,
                            const std::string& message) const override;
     std::string_view get_sql(const GWBUF& packet) const override;
-    std::string describe(const GWBUF& packet, int body_max_len) const override;
-    GWBUF       make_query(std::string_view sql) const override;
+    std::string      describe(const GWBUF& packet, int body_max_len) const override;
+    GWBUF            make_query(std::string_view sql) const override;
 
     uint64_t    capabilities() const override;
     std::string name() const override;

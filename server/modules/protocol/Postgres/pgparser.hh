@@ -24,7 +24,7 @@ public:
     public:
         static const Helper& get();
 
-        GWBUF            create_packet(std::string_view sql) const override;
+        GWBUF create_packet(std::string_view sql) const override;
 
         bool             continues_ps(const GWBUF& packet, uint32_t prev_cmd) const override;
         uint32_t         get_command(const GWBUF& packet) const override;

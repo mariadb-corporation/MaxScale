@@ -40,7 +40,6 @@ void module_finish()
     mxb_assert(this_unit.pParser);
     delete this_unit.pParser;
 }
-
 }
 
 PgParser& PgParser::get()
@@ -298,15 +297,15 @@ std::string_view get_sql(const GWBUF& packet)
 
         if (*ptr++ == pg::QUERY)
         {
-            uint32_t len = pg::get_uint32(ptr) - 4; // Exclude the 4 bytes of length information.
+            uint32_t len = pg::get_uint32(ptr) - 4;     // Exclude the 4 bytes of length information.
 
             if (pg::HEADER_LEN + len == packet.length())
             {
-                ptr += 4; // Skip the 4 bytes of length information.
+                ptr += 4;   // Skip the 4 bytes of length information.
 
                 if (ptr[len - 1] == 0)
                 {
-                    rv = std::string_view { reinterpret_cast<const char*>(ptr), len - 1 };
+                    rv = std::string_view {reinterpret_cast<const char*>(ptr), len - 1};
                 }
                 else
                 {
@@ -335,7 +334,6 @@ bool is_query(const GWBUF& packet)
 {
     return packet.length() > 0 && packet[0] == pg::QUERY;
 }
-
 }
 
 /**

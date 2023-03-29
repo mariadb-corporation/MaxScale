@@ -342,7 +342,6 @@ bool is_prepare(const GWBUF& packet);
  * @return True if it does, false otherwise.
  */
 bool is_query(const GWBUF& packet);
-
 }
 
 // Convenience alias for the namespace

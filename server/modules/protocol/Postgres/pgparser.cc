@@ -21,7 +21,6 @@ struct ThisUnit
 {
     PgParser::Helper helper;
 } this_unit;
-
 }
 
 // static
@@ -72,7 +71,7 @@ mxs::Parser::PacketTypeMask PgParser::Helper::get_packet_type_mask(const GWBUF& 
         }
     }
 
-    return PacketTypeMask { type_mask, status };
+    return PacketTypeMask {type_mask, status};
 }
 
 uint32_t PgParser::Helper::get_ps_id(const GWBUF& packet) const
