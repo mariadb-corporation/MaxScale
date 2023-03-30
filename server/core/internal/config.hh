@@ -178,6 +178,28 @@ std::string generate_config_string(const std::string& instance_name, const mxs::
 std::string serialize_params(const mxs::ConfigParameters& parameters, const MXS_MODULE_PARAM* defs);
 
 /**
+ * Unmasks passwords when constructed, restores the old value when the object is destroyed. Use this in
+ * code that uses the JSON generated from a mxs::config::Configuration to configure something else.
+ */
+class UnmaskPasswords
+{
+public:
+    UnmaskPasswords();
+
+    ~UnmaskPasswords();
+
+private:
+    bool m_old_val;
+};
+
+/**
+ * Check if passwords should be masked
+ *
+ * @return True if passwords should be masked.
+ */
+bool config_mask_passwords();
+
+/**
  * Check whether a parameter can be modified at runtime
  *
  * @param name Name of the parameter

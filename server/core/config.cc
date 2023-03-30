@@ -5187,9 +5187,14 @@ bool config_set_rebalance_threshold(const char* value)
     return rv;
 }
 
-void config_set_mask_passwords(bool enable)
+UnmaskPasswords::UnmaskPasswords()
+    : m_old_val(std::exchange(this_unit.mask_passwords, false))
 {
-    this_unit.mask_passwords = enable;
+}
+
+UnmaskPasswords::~UnmaskPasswords()
+{
+    this_unit.mask_passwords = m_old_val;
 }
 
 bool config_mask_passwords()
