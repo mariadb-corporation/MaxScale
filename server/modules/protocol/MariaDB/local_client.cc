@@ -63,7 +63,7 @@ bool LocalClient::connect()
 bool LocalClient::routeQuery(GWBUF&& buffer)
 {
     mxb_assert(!true);
-    return 0;
+    return false;
 }
 
 bool LocalClient::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
@@ -73,7 +73,7 @@ bool LocalClient::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::
         m_cb(&buffer, down, reply);
     }
 
-    return 0;
+    return true;
 }
 
 bool LocalClient::handleError(mxs::ErrorType type, const std::string& error, mxs::Endpoint* down, const mxs::Reply& reply)
