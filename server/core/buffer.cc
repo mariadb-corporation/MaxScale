@@ -358,7 +358,10 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
     auto clone_sbuf = [this, old_len](size_t alloc_size) {
         auto new_sbuf = std::make_shared<SHARED_BUF>(alloc_size);
         auto* new_buf_start = new_sbuf->buf_start.get();
-        memcpy(new_buf_start, m_start, old_len);
+        if (old_len > 0)
+        {
+            memcpy(new_buf_start, m_start, old_len);
+        }
         m_sbuf = move(new_sbuf);
         m_start = new_buf_start;
         m_end = m_start + old_len;
