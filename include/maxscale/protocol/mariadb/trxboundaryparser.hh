@@ -136,14 +136,14 @@ public:
      * @return The corresponding type mask or 0, if the statement does not
      *         affect transaction state or autocommit mode.
      */
-    uint32_t type_mask_of(const GWBUF* pBuf)
+    uint32_t type_mask_of(std::string_view sql)
     {
         uint32_t type_mask = 0;
 
-        const char* pSql;
-        if (modutil_extract_SQL(*pBuf, &pSql, &m_len))
+        if (!sql.empty())
         {
-            m_pSql = pSql;
+            m_pSql = sql.data();
+            m_len = sql.length();
             m_pI = m_pSql;
             m_pEnd = m_pI + m_len;
 

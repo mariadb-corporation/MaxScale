@@ -162,15 +162,12 @@ enum class StatementType
     UNKNOWN
 };
 
-StatementType get_statement_type(GWBUF* pStmt)
+StatementType get_statement_type(std::string_view sql)
 {
     StatementType type = StatementType::UNKNOWN;
 
-    const char* pSql;
-    int len;
-
-    MXB_AT_DEBUG(int rc = ) modutil_extract_SQL(*pStmt, &pSql, &len);
-    mxb_assert(rc == 1);
+    const char* pSql = sql.data();
+    int len = sql.length();
 
     const char* pSql_end = pSql + len;
 
@@ -917,7 +914,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             else
             {
-                switch (get_statement_type(pPacket))
+                switch (get_statement_type(parser().get_sql(*pPacket)))
                 {
                 case StatementType::SELECT:
                     if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
@@ -1037,12 +1034,11 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
         if (log_decisions())
         {
-            const char* pSql;
-            int length;
+            // At this point we know it's a query.
+            std::string_view sql = parser().get_sql(*pPacket);
+            const char* pSql = sql.data();
+            int length = sql.length();
             const int max_length = 40;
-
-            // At this point we know it's a COM_QUERY and that the buffer is contiguous
-            modutil_extract_SQL(*pPacket, &pSql, &length);
 
             const char* zFormat;
 
@@ -1650,9 +1646,9 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         }
         else
         {
-            const char* pSql;
-            int len;
-            modutil_extract_SQL(*pPacket, &pSql, &len);
+            std::string_view sql = parser().get_sql(*pPacket);
+            const char* pSql = sql.data();
+            int len = sql.length();
 
             MXB_INFO("Invalidation is enabled, but the current statement could not "
                      "be parsed. Consequently the accessed tables are not known and "

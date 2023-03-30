@@ -43,26 +43,3 @@ const char* modutil_MySQL_bypass_whitespace(const char* sql, size_t len);
 
 // TODO: Move modutil out of the core
 const char* STRPACKETTYPE(int p);
-
-/**
- * Extract the SQL portion of a COM_QUERY packet
- *
- * This function is a wrapper around GWBUF::get_sql().
- * No data is copied.
- *
- * @param       buf     The packet buffer
- * @param       sql     Pointer that is set to point at the SQL data
- * @param       length  Length of the SQL query data
- * @return      True if the packet is a COM_QUERY or COM_STMT_PREPARE packet, and
- *              sql was extracted.
- */
-// TODO: Get rid of this function entirelly.
-inline bool modutil_extract_SQL(const GWBUF& buf, const char** pSql, int* length)
-{
-    std::string_view sv = mariadb::get_sql(buf);
-
-    *pSql = sv.data();
-    *length = sv.length();
-
-    return sv.length() > 0;
-}

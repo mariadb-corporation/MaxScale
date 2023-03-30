@@ -127,18 +127,20 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
     MariaDBParser& p = MariaDBParser::get();
     std::string type_mask = mxs::Parser::type_mask_to_string(p.get_type_mask(const_cast<GWBUF&>(packet)));
 
-    const char* zSql;
+    const char* pSql;
     int len;
     std::string sql;
     if (mxs_mysql_is_ps_command(command))
     {
         sql = "ID: " + std::to_string(mxs_mysql_extract_ps_id(&packet));
-        zSql = sql.c_str();
+        pSql = sql.c_str();
         len = sql.length();
     }
     else
     {
-        modutil_extract_SQL(packet, &zSql, &len);
+        std::string_view sv = mariadb::get_sql(packet);
+        pSql = sv.data();
+        len = sv.length();
     }
 
     if (len > body_max_len)
@@ -156,7 +158,7 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
                               MYSQL_GET_PACKET_LEN(&packet),
                               zType_mask,
                               len,
-                              zSql,
+                              pSql,
                               zHint,
                               zHint_type);
 }

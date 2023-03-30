@@ -4198,7 +4198,7 @@ public:
     uint32_t get_trx_type_mask(const GWBUF& stmt) const override
     {
         maxscale::TrxBoundaryParser parser;
-        return parser.type_mask_of(&stmt);
+        return parser.type_mask_of(m_helper.get_sql(stmt));
     }
 
     uint32_t get_type_mask(const GWBUF& stmt) const override

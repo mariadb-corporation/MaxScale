@@ -95,51 +95,35 @@ public:
      *         NOT_SET_SQL_MODE if the statement is not a "SET SQL_MODE="
      *                          statement
      */
-    status_t check(const GWBUF& buffer, Result* pResult)
+    status_t check(std::string_view sql, Result* pResult)
     {
         status_t rv = NOT_RELEVANT;
-        size_t buf_len = buffer.length();
-        mxb_assert(buf_len >= MYSQL_HEADER_LEN);
-
-        auto* pData = buffer.data();
-        auto header = mariadb::get_header(pData);
-        auto payload_len = header.pl_length;
 
         // sizeof(command_byte) + MIN(strlen("SET maxscale"), strlen("SET sql_mode=ORACLE"))
-        if (payload_len >= 13)
+        if (sql.length() >= 13)
         {
-            // We need 4 bytes from the payload to deduce whether more investigations are needed.
-            mxb_assert(buf_len >= MYSQL_HEADER_LEN + 4);
-            // Enough data in the first buffer of the chain, we can access directly.
-            auto pPayload = pData + MYSQL_HEADER_LEN;
+            const char* pStmt = sql.data();
 
-            uint8_t command = pPayload[0];
-
-            if (command == MXS_COM_QUERY)
+            if (is_alpha(*pStmt))
             {
-                const uint8_t* pStmt = &pPayload[1];
-
-                if (is_alpha(*pStmt))
+                // First character is alphabetic, we can check whether it is "SET".
+                if (is_set(pStmt))
                 {
-                    // First character is alphabetic, we can check whether it is "SET".
-                    if (is_set(pStmt))
-                    {
-                        // It is, so we must parse further.
-                        initialize(buffer);
-                        rv = parse(pResult);
-                    }
+                    // It is, so we must parse further.
+                    initialize(sql);
+                    rv = parse(pResult);
                 }
-                else
-                {
-                    // If the first character is not an alphabetic character we assume there
-                    // is a comment.
-                    initialize(buffer);
-                    bypass_whitespace();
+            }
+            else
+            {
+                // If the first character is not an alphabetic character we assume there
+                // is a comment.
+                initialize(sql);
+                bypass_whitespace();
 
-                    if (m_pEnd - m_pI > 3 && is_set(m_pI))
-                    {
-                        rv = parse(pResult);
-                    }
+                if (m_pEnd - m_pI > 3 && is_set(m_pI))
+                {
+                    rv = parse(pResult);
                 }
             }
         }
@@ -194,19 +178,13 @@ private:
         return rv == ERROR;
     }
 
-    status_t initialize(const GWBUF& buffer)
+    void initialize(std::string_view sql)
     {
         status_t rv = ERROR;
 
-        const char* pSql;
-        if (modutil_extract_SQL(buffer, &pSql, &m_len))
-        {
-            m_pSql = pSql;
-            m_pI = m_pSql;
-            m_pEnd = m_pI + m_len;
-        }
-
-        return ERROR;
+        m_pSql = sql.data();
+        m_pI = m_pSql;
+        m_pEnd = m_pI + sql.length();
     }
 
     bool consume_id()

@@ -251,27 +251,26 @@ bool CacheRuleValue::matches(const mxs::Parser& parser,
     if ((matches && (debug & CACHE_DEBUG_MATCHING))
         || (!matches && (debug & CACHE_DEBUG_NON_MATCHING)))
     {
-        const char* sql;
-        int sql_len;
-        modutil_extract_SQL(*pQuery, &sql, &sql_len);
-        const char* text;
+        std::string_view sql = mariadb::get_sql(*pQuery);
+
+        const char* zText;
 
         if (matches)
         {
-            text = "MATCHES";
+            zText = "MATCHES";
         }
         else
         {
-            text = "does NOT match";
+            zText = "does NOT match";
         }
 
         MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
                    to_string(m_attribute),
                    to_string(m_op),
                    m_value.c_str(),
-                   text,
-                   sql_len,
-                   sql);
+                   zText,
+                   (int)sql.length(),
+                   sql.data());
     }
 
     return matches;
@@ -337,11 +336,10 @@ bool CacheRuleValue::matches_query(const char* zDefault_db, const GWBUF* pQuery)
     // and in the latter a CacheRuleRegex, which means that compare() below will do the
     // right thing.
 
-    const char* sql;
-    int len;
-
-    // Will succeed, query contains a contiguous COM_QUERY.
-    modutil_extract_SQL(*pQuery, &sql, &len);
+    // Will succeed, query contains a COM_QUERY.
+    std::string_view sv = mariadb::get_sql(*pQuery);
+    const char* sql = sv.data();
+    int len = sv.length();
 
     return compare_n(sql, len);
 }

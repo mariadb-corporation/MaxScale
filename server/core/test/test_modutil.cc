@@ -46,9 +46,7 @@ void test1()
     memset(buffer.data(), 0, writelen);
     expect(buffer.length() == writelen, "Length should be correct");
     expect(mariadb::is_com_query(buffer) == false, "Default buffer should not be diagnosed as SQL");
-    const char* sql;
-    int length;
-    expect(!modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
+    expect(mariadb::get_sql(buffer).empty(), "Default buffer should fail");
 }
 
 void test2()
@@ -66,9 +64,9 @@ void test2()
     *ptr++ = 0x03;
     mariadb::copy_chars(ptr, query, strlen(query));
 
-    const char* sql;
-    int length;
-    modutil_extract_SQL(buffer, &sql, &length);
+    std::string_view sv = mariadb::get_sql(buffer);
+    const char* sql = sv.data();
+    int length = sv.length();
     expect(strncmp(sql, query, len) == 0, "SQL should match");
 }
 

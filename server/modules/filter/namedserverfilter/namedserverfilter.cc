@@ -358,10 +358,12 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
     GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_active)
     {
-        const char* sql = nullptr;
-        int sql_len = 0;
-        if (modutil_extract_SQL(*queue, &sql, &sql_len))
+        std::string_view sv = parser().get_sql(buffer);
+        if (!sv.empty())
         {
+            const char* sql = sv.data();
+            int sql_len = sv.length();
+
             // Is either a COM_QUERY or COM_STMT_PREPARE. In either case, generate hints.
             const RegexToServers* reg_serv = find_servers(sql, sql_len);
             auto cmd = MYSQL_GET_COMMAND(queue->data());

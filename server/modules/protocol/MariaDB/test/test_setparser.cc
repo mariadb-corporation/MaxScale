@@ -24,28 +24,6 @@ using namespace std;
 namespace
 {
 
-GWBUF* gwbuf_create_com_query(const char* zStmt)
-{
-    size_t len = strlen(zStmt);
-    size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
-
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(pBuf) + 5, zStmt, len);
-
-    return pBuf;
-}
-}
-
-namespace
-{
-
 typedef SetParser P;
 
 struct TEST_CASE
@@ -375,7 +353,7 @@ int test(const GWBUF& stmt, SetParser::status_t expected_status,
     SetParser parser;
 
     SetParser::Result result;
-    SetParser::status_t status = parser.check(stmt, &result);
+    SetParser::status_t status = parser.check(mariadb::get_sql(stmt), &result);
 
     if (status == expected_status)
     {
@@ -476,9 +454,8 @@ int test(const TEST_CASE& test_case)
 
     cout << test_case.zStmt << ": ";
 
-    GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
-    rv = test(*pStmt, test_case.status, test_case.expectations);
-    gwbuf_free(pStmt);
+    GWBUF stmt = mariadb::create_query(test_case.zStmt);
+    rv = test(stmt, test_case.status, test_case.expectations);
 
     return rv;
 }
@@ -503,65 +480,11 @@ int test_contiguous()
     return rv;
 }
 
-int test_non_contiguous()
-{
-    int rv = EXIT_SUCCESS;
-
-    cout << "Test non-contiguous statements\n"
-         << "------------------------------" << endl;
-
-    for (int i = 0; i < N_TEST_CASES; ++i)
-    {
-        TEST_CASE& test_case = test_cases[i];
-
-        cout << test_case.zStmt << "(" << strlen(test_case.zStmt) << ": ";
-
-        GWBUF* pTail = gwbuf_create_com_query(test_case.zStmt);
-        mxb_assert(pTail);
-        GWBUF* pStmt = NULL;
-
-        while (pTail)
-        {
-            size_t n = MYSQL_HEADER_LEN + rand() % 10;  // Between 4 and 13 bytes long chunks.
-            n = std::min(n, pTail->length());           // Ensure not to split more than available.
-
-            GWBUF* pHead = gwbuf_split(&pTail, n);
-
-            cout << gwbuf_link_length(pHead);
-
-            pStmt = gwbuf_append(pStmt, pHead);
-
-            if (pTail)
-            {
-                cout << ", ";
-            }
-        }
-
-        cout << "): " << flush;
-
-        if (test(*pStmt, test_case.status, test_case.expectations) == EXIT_FAILURE)
-        {
-            rv = EXIT_FAILURE;
-        }
-
-        gwbuf_free(pStmt);
-    }
-
-    cout << endl;
-
-    return rv;
-}
-
 int test()
 {
     int rv = EXIT_SUCCESS;
 
     if (test_contiguous() != EXIT_SUCCESS)
-    {
-        rv = EXIT_FAILURE;
-    }
-
-    if (test_non_contiguous() != EXIT_SUCCESS)
     {
         rv = EXIT_FAILURE;
     }

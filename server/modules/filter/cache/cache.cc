@@ -80,10 +80,9 @@ cache_result_t Cache::get_default_key(const std::string& user,
 {
     mxb_assert((user.empty() && host.empty()) || (!user.empty() && !host.empty()));
 
-    const char* pSql;
-    int length;
-
-    modutil_extract_SQL(*pQuery, &pSql, &length);
+    std::string_view sql = mariadb::get_sql(*pQuery);
+    const char* pSql = sql.data();
+    int length = sql.length();
 
     uint64_t crc = 0;
 

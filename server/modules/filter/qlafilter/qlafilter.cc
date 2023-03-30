@@ -483,11 +483,9 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 
 bool QlaFilterSession::routeQuery(GWBUF&& queue)
 {
-    const char* query = NULL;
-    int query_len = 0;
+    std::string_view query = parser().get_sql(queue);
 
-    if (m_active && modutil_extract_SQL(queue, &query, &query_len)
-        && m_log->match_exclude(query, query_len))
+    if (m_active && !query.empty() && m_log->match_exclude(query.data(), query.length()))
     {
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
 

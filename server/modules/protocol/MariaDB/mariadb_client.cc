@@ -805,7 +805,7 @@ string MariaDBClientConnection::handle_variables(GWBUF& buffer)
     SetParser set_parser;
     SetParser::Result result;
 
-    switch (set_parser.check(buffer, &result))
+    switch (set_parser.check(mariadb::get_sql(buffer), &result))
     {
     case SetParser::ERROR:
         // In practice only OOM.
@@ -1098,8 +1098,12 @@ MariaDBClientConnection::process_special_queries(GWBUF& buffer)
         int len = 0;
         bool is_special = false;
 
-        if (modutil_extract_SQL(buffer, &sql, &len))
+        std::string_view sv = mariadb::get_sql(buffer);
+
+        if (!sv.empty())
         {
+            sql = sv.data();
+            len = sv.length();
             auto pEnd = sql + len;
             is_special = detect_special_query(&sql, pEnd);
             len = pEnd - sql;
