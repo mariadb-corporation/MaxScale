@@ -48,6 +48,20 @@ private:
     std::string             describe(const GWBUF& buffer);
     bool                    send_query(mxs::Backend* backend, std::string_view sql);
 
+    // Functions called from clientReply in different states
+    bool reply_state_init(mxs::Backend* backend, GWBUF&& packet,
+                          const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool reply_state_wait_solo(mxs::Backend* backend, GWBUF&& packet,
+                               const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool reply_state_lock_main(mxs::Backend* backend, GWBUF&& packet,
+                               const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool reply_state_unlock_main(mxs::Backend* backend, GWBUF&& packet,
+                                 const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool reply_state_wait_main(mxs::Backend* backend, GWBUF&& packet,
+                               const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool reply_state_wait_secondary(mxs::Backend* backend, GWBUF&& packet,
+                                    const mxs::ReplyRoute& down, const mxs::Reply& reply);
+
     bool route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Backend::response_type type);
     bool route_solo(GWBUF&& packet);
     bool route_main(GWBUF&& packet);

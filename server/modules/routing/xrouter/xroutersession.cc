@@ -220,11 +220,7 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
     switch (m_state)
     {
     case State::INIT:
-        if (all_backends_idle())
-        {
-            // All initialization queries complete, proceed with normal routing
-            m_state = State::IDLE;
-        }
+        rv = reply_state_init(backend, std::move(packet), down, reply);
         break;
 
     case State::SOLO:
@@ -235,42 +231,18 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
 
     case State::LOAD_DATA:
     case State::WAIT_SOLO:
-        if (complete)
-        {
-            // We just routed the final response to the query, route queued queries
-            mxb_assert(route);
-            mxb_assert(all_backends_idle());
-            m_state = State::IDLE;
-        }
-        else if (reply.state() == mxs::ReplyState::LOAD_DATA)
-        {
-            MXB_SINFO("Data load starting, waiting for more data from the client.");
-
-            // It's possible that the current state is already LOAD_DATA. In this case the client executed a
-            // query starts multiple data loads. For example, in MariaDB multiple LOAD DATA LOCAL INFILE
-            // commands separated by a semicolons would result in this.
-            m_state = State::LOAD_DATA;
-            rv = route_queued();
-        }
+        mxb_assert(route);
+        rv = reply_state_wait_solo(backend, std::move(packet), down, reply);
         break;
 
     case State::LOCK_MAIN:
-        if (complete)
-        {
-            MXB_SINFO("Main node locked, routing query to main node.");
-            mxb_assert(!route);
-            m_state = State::MAIN;
-            rv = route_queued();
-        }
+        mxb_assert(!route);
+        rv = reply_state_lock_main(backend, std::move(packet), down, reply);
         break;
 
     case State::UNLOCK_MAIN:
-        if (complete)
-        {
-            MXB_SINFO("Main node unlocked, returning to normal routing.");
-            mxb_assert(!route);
-            m_state = State::IDLE;
-        }
+        mxb_assert(!route);
+        rv = reply_state_unlock_main(backend, std::move(packet), down, reply);
         break;
 
     case State::MAIN:
@@ -280,49 +252,12 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
 
     case State::WAIT_MAIN:
         mxb_assert(!route);
-        m_response.append(packet);
-        packet.clear();
-
-        if (complete)
-        {
-            mxb_assert(all_backends_idle());
-
-            if (reply.error())
-            {
-                // The command failed, don't propagate the change
-                MXB_SINFO("Multi-node command failed: " << reply.describe());
-                route = true;
-                packet = finish_multinode();
-            }
-            else
-            {
-                m_state = State::WAIT_SECONDARY;
-                rv = route_secondary();
-            }
-        }
+        rv = reply_state_wait_main(backend, std::move(packet), down, reply);
         break;
 
     case State::WAIT_SECONDARY:
-        mxb_assert_message(!route, "No response expected from '%s'", backend->name());
-        mxb_assert_message(backend != m_main, "Main backend should not respond");
-        mxb_assert_message(m_main->is_idle(), "Main backend should be idle");
-
-        if (complete)
-        {
-            if (reply.error())
-            {
-                MXB_SINFO("Command failed on '" << backend->name() << "': " << reply.describe());
-                fence_bad_node(backend);
-            }
-
-            if (all_backends_idle())
-            {
-                // All backends have responded with something, clear out the packets and route the response.
-                MXB_SINFO("Multi-node command complete");
-                route = true;
-                packet = finish_multinode();
-            }
-        }
+        mxb_assert(!route);
+        rv = reply_state_wait_secondary(backend, std::move(packet), down, reply);
         break;
 
     default:
@@ -333,15 +268,132 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
         break;
     }
 
-    if (rv && route)
+    return rv;
+}
+
+bool XRouterSession::reply_state_init(mxs::Backend* backend, GWBUF&& packet,
+                                      const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    bool rv = true;
+
+    if (all_backends_idle())
     {
-        mxb_assert(packet);
-        rv = mxs::RouterSession::clientReply(std::move(packet), down, reply);
+        // All initialization queries complete, proceed with normal routing
+        m_state = State::IDLE;
+        rv = route_queued();
     }
 
-    if (rv && complete && m_state == State::IDLE)
+    return rv;
+}
+
+bool XRouterSession::reply_state_wait_solo(mxs::Backend* backend, GWBUF&& packet,
+                                           const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    if (reply.is_complete())
+    {
+        // We just routed the final response to the query, route queued queries
+        mxb_assert(all_backends_idle());
+        m_state = State::IDLE;
+    }
+    else if (reply.state() == mxs::ReplyState::LOAD_DATA)
+    {
+        MXB_SINFO("Data load starting, waiting for more data from the client.");
+
+        // It's possible that the current state is already LOAD_DATA. In this case the client executed a
+        // query starts multiple data loads. For example, in MariaDB multiple LOAD DATA LOCAL INFILE
+        // commands separated by a semicolons would result in this.
+        m_state = State::LOAD_DATA;
+    }
+
+    bool rv = mxs::RouterSession::clientReply(std::move(packet), down, reply);
+
+    if (rv && (m_state == State::IDLE || m_state == State::LOAD_DATA))
     {
         rv = route_queued();
+    }
+
+    return rv;
+}
+
+bool XRouterSession::reply_state_lock_main(mxs::Backend* backend, GWBUF&& packet,
+                                           const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    bool complete = reply.is_complete();
+    bool rv = true;
+
+    if (complete)
+    {
+        MXB_SINFO("Main node locked, routing query to main node.");
+        m_state = State::MAIN;
+        rv = route_queued();
+    }
+
+    return rv;
+}
+
+bool XRouterSession::reply_state_unlock_main(mxs::Backend* backend, GWBUF&& packet,
+                                             const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    bool rv = true;
+
+    if (reply.is_complete())
+    {
+        MXB_SINFO("Main node unlocked, returning to normal routing.");
+        m_state = State::IDLE;
+        rv = route_queued();
+    }
+
+    return rv;
+}
+
+bool XRouterSession::reply_state_wait_main(mxs::Backend* backend, GWBUF&& packet,
+                                           const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    bool rv = true;
+    m_response.append(packet);
+    packet.clear();
+
+    if (reply.is_complete())
+    {
+        mxb_assert(all_backends_idle());
+
+        if (reply.error())
+        {
+            // The command failed, don't propagate the change
+            MXB_SINFO("Multi-node command failed: " << reply.describe());
+            rv = mxs::RouterSession::clientReply(finish_multinode(), down, reply);
+        }
+        else
+        {
+            m_state = State::WAIT_SECONDARY;
+            rv = route_secondary();
+        }
+    }
+
+    return rv;
+}
+
+bool XRouterSession::reply_state_wait_secondary(mxs::Backend* backend, GWBUF&& packet,
+                                                const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    bool rv = true;
+    mxb_assert_message(backend != m_main, "Main backend should not respond");
+    mxb_assert_message(m_main->is_idle(), "Main backend should be idle");
+
+    if (reply.is_complete())
+    {
+        if (reply.error())
+        {
+            MXB_SINFO("Command failed on '" << backend->name() << "': " << reply.describe());
+            fence_bad_node(backend);
+        }
+
+        if (all_backends_idle())
+        {
+            // All backends have responded with something, clear out the packets and route the response.
+            MXB_SINFO("Multi-node command complete");
+            rv = mxs::RouterSession::clientReply(finish_multinode(), down, reply);
+        }
     }
 
     return rv;
