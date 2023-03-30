@@ -1301,7 +1301,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
     if (reply.is_complete())
     {
         MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
-                 STRPACKETTYPE(m_pending_cmd[4]), m_pending_cmd.id(),
+                 mariadb::cmd_to_string(m_pending_cmd[4]), m_pending_cmd.id(),
                  maxbase::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
                  reply.is_ok() ? "OK" : reply.error().message().c_str());
 

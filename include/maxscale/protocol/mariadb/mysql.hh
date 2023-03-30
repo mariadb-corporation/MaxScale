@@ -381,6 +381,13 @@ enum mxs_mysql_cmd_t
     MXS_COM_UNDEFINED = -1
 };
 
+namespace mariadb
+{
+
+const char* cmd_to_string(int cmd);
+
+}
+
 /**
  * A GWBUF property with this name will contain the latest GTID in string form.
  * This information is only available in OK packets.

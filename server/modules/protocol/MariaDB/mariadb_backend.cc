@@ -860,7 +860,7 @@ void MariaDBBackendConnection::send_history()
             m_track_queue.push(query);
         }
 
-        MXB_INFO("Execute %s %u on '%s': %s", STRPACKETTYPE(query.command),
+        MXB_INFO("Execute %s %u on '%s': %s", mariadb::cmd_to_string(query.command),
                  history_query.id(), m_server.name(),
                  string(mariadb::get_sql(history_query)).c_str());
 
@@ -928,7 +928,7 @@ void MariaDBBackendConnection::handle_history_mismatch()
     std::ostringstream ss;
 
     ss << "Response from server '" << m_server.name() << "' "
-       << "differs from the expected response to " << STRPACKETTYPE(m_reply.command()) << ". "
+       << "differs from the expected response to " << mariadb::cmd_to_string(m_reply.command()) << ". "
        << "Closing connection due to inconsistent session state.";
 
     if (m_reply.error())
@@ -1160,7 +1160,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
                 {
                     std::stringstream ss;
                     ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale for "
-                       << STRPACKETTYPE(cmd) << " by " << m_session->user_and_host();
+                       << mariadb::cmd_to_string(cmd) << " by " << m_session->user_and_host();
 
                     // Only send the error if the client expects a response. If an unknown COM_STMT_CLOSE is
                     // sent, don't respond to it.
@@ -1236,7 +1236,8 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
             }
             else
             {
-                MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
+                MXB_INFO("Storing %s while in state '%s': %s",
+                         mariadb::cmd_to_string(mxs_mysql_get_command(queue)),
                          to_string(m_state).c_str(),
                          string(mariadb::get_sql(queue)).c_str());
                 m_delayed_packets.emplace_back(std::move(queue));
@@ -1247,7 +1248,8 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
 
     default:
         {
-            MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
+            MXB_INFO("Storing %s while in state '%s': %s",
+                     mariadb::cmd_to_string(mxs_mysql_get_command(queue)),
                      to_string(m_state).c_str(),
                      string(mariadb::get_sql(queue)).c_str());
             m_delayed_packets.emplace_back(std::move(queue));

@@ -154,7 +154,7 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
 
     return mxb::string_printf("cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
                               command,
-                              STRPACKETTYPE(command),
+                              mariadb::cmd_to_string(command),
                               MYSQL_GET_PACKET_LEN(&packet),
                               zType_mask,
                               len,

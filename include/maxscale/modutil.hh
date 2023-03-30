@@ -21,6 +21,3 @@
 #include <string>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-
-// TODO: Move modutil out of the core
-const char* STRPACKETTYPE(int p);

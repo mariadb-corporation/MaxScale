@@ -42,7 +42,7 @@ PacketTracker::PacketTracker(GWBUF* pPacket)
     m_command = request.command();
     m_expect_more_split_query_packets = request.is_split_leader();
 
-    MXB_SDEBUG("PacketTracker Command: " << STRPACKETTYPE(m_command));
+    MXB_SDEBUG("PacketTracker Command: " << mariadb::cmd_to_string(m_command));
 
     if (request.server_will_respond())
     {
@@ -73,7 +73,7 @@ PacketTracker::PacketTracker(GWBUF* pPacket)
 
 bool PacketTracker::update_request(GWBUF* pPacket)
 {
-    MXB_SDEBUG("PacketTracker update_request: " << STRPACKETTYPE(m_command));
+    MXB_SDEBUG("PacketTracker update_request: " << mariadb::cmd_to_string(m_command));
     ComPacket com_packet(pPacket, &m_client_com_packet_internal);
 
     if (!m_expect_more_split_query_packets)

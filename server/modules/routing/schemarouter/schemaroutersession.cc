@@ -162,7 +162,7 @@ static void inspect_query(const Parser& parser,
     if (mxb_log_should_log(LOG_INFO))
     {
         MXB_INFO("> Command: %s, stmt: %s %s%s",
-                 STRPACKETTYPE(command),
+                 mariadb::cmd_to_string(command),
                  std::string(parser.get_sql(packet)).c_str(),
                  (packet.hints.empty() ? "" : ", Hint:"),
                  (packet.hints.empty() ? "" : Hint::type_to_str(packet.hints[0].type)));
@@ -426,7 +426,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         }
         else
         {
-            MXB_ERROR("Could not find valid server for %s, closing connection.", STRPACKETTYPE(cmd));
+            MXB_ERROR("Could not find valid server for %s, closing connection.", mariadb::cmd_to_string(cmd));
         }
     }
 

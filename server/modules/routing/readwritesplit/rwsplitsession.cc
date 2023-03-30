@@ -96,7 +96,7 @@ bool RWSplitSession::routeQuery(GWBUF&& buffer)
     if (m_state == TRX_REPLAY || m_pending_retries > 0 || !m_query_queue.empty())
     {
         MXB_INFO("New %s received while %s is active: %s",
-                 STRPACKETTYPE(buffer.data()[4]),
+                 mariadb::cmd_to_string(buffer.data()[4]),
                  m_state == TRX_REPLAY ?  "transaction replay" : "query execution",
                  get_sql_string(buffer).c_str());
 
@@ -224,7 +224,7 @@ void RWSplitSession::trx_replay_next_stmt()
     {
         // More statements to replay, pop the oldest one and execute it
         GWBUF buf = m_replayed_trx.pop_stmt();
-        const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
+        const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(buf));
         MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
         retry_query(std::move(buf), 0);
     }
@@ -331,7 +331,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
 
                 if (m_current_query)
                 {
-                    const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(m_current_query));
+                    const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(m_current_query));
                     MXB_INFO("Adding %s to trx: %s", cmd, get_sql_string(m_current_query).c_str());
 
                     // Add the statement to the transaction once the first part of the result is received.
@@ -747,7 +747,7 @@ bool RWSplitSession::start_trx_replay()
             {
                 // Pop the first statement and start replaying the transaction
                 GWBUF buf = m_replayed_trx.pop_stmt();
-                const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
+                const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(buf));
                 MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
                 retry_query(std::move(buf), 1);
             }

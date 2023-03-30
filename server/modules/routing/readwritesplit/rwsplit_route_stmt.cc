@@ -215,7 +215,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
     else
     {
         MXB_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
-                  route_target_to_string(res.route_target), STRPACKETTYPE(buffer.data()[4]),
+                  route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
                   get_sql_string(buffer).c_str(), get_verbose_status().c_str());
         ok = false;
     }
@@ -250,7 +250,7 @@ bool RWSplitSession::query_not_supported(const GWBUF& querybuf)
             // Unknown PS ID, can't route this query
             std::stringstream ss;
             ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
-               << ") for " << STRPACKETTYPE(info.command()) << " given to MaxScale";
+               << ") for " << mariadb::cmd_to_string(info.command()) << " given to MaxScale";
             err = mariadb::create_error_packet(1, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
         }
         else
@@ -265,7 +265,7 @@ bool RWSplitSession::query_not_supported(const GWBUF& querybuf)
         // Conflicting routing targets. Return an error to the client.
         MXB_ERROR("Can't route %s '%s'. SELECT with session data modification is not "
                   "supported with `use_sql_variables_in=all`.",
-                  STRPACKETTYPE(info.command()),
+                  mariadb::cmd_to_string(info.command()),
                   get_sql_string(querybuf).c_str());
 
         err = mariadb::create_error_packet(1, 1064, "42000", "Routing query to backend failed. "
@@ -638,14 +638,14 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
         else
         {
             error << "Could not route session command "
-                  << "(" << STRPACKETTYPE(command) << ": "
+                  << "(" << mariadb::cmd_to_string(command) << ": "
                   << get_sql(buffer) << ").";
         }
     }
     else
     {
         error << "No valid candidates for session command "
-              << "(" << STRPACKETTYPE(command) << ": "
+              << "(" << mariadb::cmd_to_string(command) << ": "
               << get_sql(buffer) << ").";
         ok = false;
     }
@@ -881,17 +881,17 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
             if (prev_target->in_use())
             {
                 target = prev_target;
-                MXB_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
+                MXB_INFO("%s on %s", mariadb::cmd_to_string(cmd), target->name());
             }
             else
             {
                 MXB_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
-                          "proceed with %s", prev_target->name(), STRPACKETTYPE(cmd));
+                          "proceed with %s", prev_target->name(), mariadb::cmd_to_string(cmd));
             }
         }
         else
         {
-            MXB_WARNING("Unknown statement ID %u used in %s", stmt_id, STRPACKETTYPE(cmd));
+            MXB_WARNING("Unknown statement ID %u used in %s", stmt_id, mariadb::cmd_to_string(cmd));
         }
     }
     else
@@ -1146,7 +1146,7 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
             // COM_STMT_FETCH commands to the same server where the COM_STMT_EXECUTE was done.
             auto& info = m_exec_map[route_info().stmt_id()];
             info.target = target;
-            MXB_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
+            MXB_INFO("%s on %s", mariadb::cmd_to_string(cmd), target->name());
         }
     }
     else if (cmd == MXS_COM_STMT_PREPARE)

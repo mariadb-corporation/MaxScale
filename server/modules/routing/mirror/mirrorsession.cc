@@ -210,7 +210,7 @@ void MirrorSession::generate_report()
     {
         json_t* obj = json_object();
         json_object_set_new(obj, "query", json_string(m_query.c_str()));
-        json_object_set_new(obj, "command", json_string(STRPACKETTYPE(m_command)));
+        json_object_set_new(obj, "command", json_string(mariadb::cmd_to_string(m_command)));
         json_object_set_new(obj, "session", json_integer(m_pSession->id()));
         json_object_set_new(obj, "query_id", json_integer(++m_num_queries));
 

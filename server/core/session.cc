@@ -790,7 +790,7 @@ void get_cmd_and_stmt(const GWBUF& buffer, const char** ppCmd, const char** ppSt
     if (!sql.empty())
     {
         auto cmd = mxs_mysql_get_command(buffer);
-        *ppCmd = STRPACKETTYPE(cmd);
+        *ppCmd = mariadb::cmd_to_string(cmd);
         *ppStmt = sql.data();
         *pLen = sql.length();
     }
