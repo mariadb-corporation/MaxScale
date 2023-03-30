@@ -166,6 +166,25 @@ bool XRouterSession::route_main(GWBUF&& packet)
     return route_to_one(m_main, std::move(packet), type);
 }
 
+bool XRouterSession::route_stored_command(mxs::Backend* backend)
+{
+    bool ok = true;
+
+    for (const auto& packet : m_packets)
+    {
+        auto type = protocol_data()->will_respond(packet) ?
+            mxs::Backend::IGNORE_RESPONSE : mxs::Backend::NO_RESPONSE;
+
+        if (!route_to_one(backend, packet.shallow_clone(), type))
+        {
+            ok = false;
+            break;
+        }
+    }
+
+    return ok;
+}
+
 bool XRouterSession::route_secondary()
 {
     bool ok = true;
@@ -173,18 +192,9 @@ bool XRouterSession::route_secondary()
 
     for (auto& b : m_backends)
     {
-        if (b->in_use() && b.get() != m_main)
+        if (b->in_use() && b.get() != m_main && !route_stored_command(b.get()))
         {
-            for (const auto& packet : m_packets)
-            {
-                auto type = protocol_data()->will_respond(packet) ?
-                    mxs::Backend::IGNORE_RESPONSE : mxs::Backend::NO_RESPONSE;
-
-                if (!route_to_one(b.get(), packet.shallow_clone(), type))
-                {
-                    ok = false;
-                }
-            }
+            ok = false;
         }
     }
 
@@ -363,6 +373,9 @@ bool XRouterSession::reply_state_wait_main(mxs::Backend* backend, GWBUF&& packet
         }
         else
         {
+            // The command was successful. Route the stored command to the secondary backends and wait for
+            // their responses. The lock is held on the main node for the duration of this to serialize the
+            // execution of multi-node commands across all MaxScale instances.
             m_state = State::WAIT_SECONDARY;
             rv = route_secondary();
         }
@@ -380,13 +393,20 @@ bool XRouterSession::reply_state_wait_secondary(mxs::Backend* backend, GWBUF&& p
 
     if (reply.is_complete())
     {
+        bool route = true;
+
         if (reply.error())
         {
             MXB_SINFO("Command failed on '" << backend->name() << "': " << reply.describe());
-            fence_bad_node(backend);
+
+            if (retry_secondary_query(backend))
+            {
+                // The query is being retried, return the result to the client after it completes.
+                route = false;
+            }
         }
 
-        if (all_backends_idle())
+        if (route && all_backends_idle())
         {
             // All backends have responded with something, clear out the packets and route the response.
             MXB_SINFO("Multi-node command complete");
@@ -401,13 +421,15 @@ bool XRouterSession::handleError(mxs::ErrorType type, const std::string& message
                                  mxs::Endpoint* pProblem, const mxs::Reply& reply)
 {
     mxs::Backend* backend = static_cast<mxs::Backend*>(pProblem->get_userdata());
+    bool ok = true;
 
-    if (backend != m_main)
+    if (backend != m_main && m_state == State::WAIT_SECONDARY)
     {
-        fence_bad_node(backend);
+        backend->close();
+        ok = retry_secondary_query(backend);
     }
 
-    return false;
+    return ok;
 }
 
 bool XRouterSession::route_queued()
@@ -498,6 +520,7 @@ GWBUF XRouterSession::finish_multinode()
     GWBUF packet = std::move(m_response);
     m_response.clear();
     m_packets.clear();
+    m_retry_start = mxb::TimePoint::min();
     m_state = State::UNLOCK_MAIN;
     MXB_SINFO("Unlocking main backend.");
 
@@ -537,4 +560,47 @@ bool XRouterSession::is_multi_node(GWBUF& buffer) const
     }
 
     return is_multi;
+}
+
+bool XRouterSession::retry_secondary_query(mxs::Backend* backend)
+{
+    bool ok = true;
+    auto func = [this, backend](auto ignored){
+        if (!backend->in_use())
+        {
+            backend->connect();
+        }
+
+        return route_stored_command(backend);
+    };
+
+    // TODO: Some commands should not trigger a retry and should instead skip directly to fencing out
+    // the node. For example, an error about a table already existing means that something created it
+    // on the secondary node before it was created on the main node.
+
+    if (m_retry_start == mxb::TimePoint::min())
+    {
+        MXB_SINFO("Retrying query for the first time.");
+        m_retry_start = mxb::Clock::now();
+
+        // Route the query again to the secondary node in the hopes that it will work when executed again. Add
+        // a small delay to avoid flooding the server with requests if the command completes very fast.
+        //
+        // TODO: The GWBUF argument to delay_routing is unnecessary in this case. A similar function for
+        //       safely delaying execution of router code would be useful.
+        m_pSession->delay_routing(this, GWBUF {}, 1, std::move(func));
+    }
+    else if (mxb::Clock::now() - m_retry_start < m_config->retry_timeout)
+    {
+        MXB_SINFO("Retrying query again.");
+        m_pSession->delay_routing(this, GWBUF {}, 1, std::move(func));
+    }
+    else
+    {
+        MXB_SINFO("Query retry time limit reached, fencing out the bad node.");
+        fence_bad_node(backend);
+        ok = false;
+    }
+
+    return ok;
 }

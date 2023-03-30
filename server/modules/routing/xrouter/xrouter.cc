@@ -33,6 +33,11 @@ mxs::config::ParamString s_lock_sql(
 mxs::config::ParamString s_unlock_sql(
     &s_spec, "unlock_sql", "SQL executed to unlock a node",
     "SELECT pg_advisory_unlock(1679475768) ", mxs::config::Param::AT_RUNTIME);
+
+mxs::config::ParamSeconds s_retry_timeout(
+    &s_spec, "retry_timeout",
+    "Time limit for retrying of failing multi-node commands on secondary nodes",
+    60s, mxs::config::Param::AT_RUNTIME);
 }
 
 XRouter::Config::Config(const std::string& name)
@@ -42,6 +47,7 @@ XRouter::Config::Config(const std::string& name)
     add_native(&Config::m_v, &Values::secondary_sql, &s_secondary_sql);
     add_native(&Config::m_v, &Values::lock_sql, &s_lock_sql);
     add_native(&Config::m_v, &Values::unlock_sql, &s_unlock_sql);
+    add_native(&Config::m_v, &Values::retry_timeout, &s_retry_timeout);
 }
 
 XRouter::XRouter(SERVICE& service)

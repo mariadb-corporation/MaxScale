@@ -63,6 +63,8 @@ private:
                                     const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     bool route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Backend::response_type type);
+    bool route_stored_command(mxs::Backend* backend);
+    bool retry_secondary_query(mxs::Backend* backend);
     bool route_solo(GWBUF&& packet);
     bool route_main(GWBUF&& packet);
     bool route_secondary();
@@ -110,6 +112,10 @@ private:
 
     // The packets that make up the multi-node command
     std::list<GWBUF> m_packets;
+
+    // The point in time when a retry of a multi-node command started on a secondary node. If the multi-node
+    // command does not succeed before the configured limit is reached, the node is marked as failed.
+    mxb::TimePoint m_retry_start {mxb::TimePoint::min()};
 
     // The response to the multi-node command that will be returned to the client
     GWBUF m_response;
