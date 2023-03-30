@@ -154,6 +154,8 @@ void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
 
+    // Reset the subscriber now. This must be done here and not in the destructor.
+    // See mxs::History::subscribe() for more information.
     m_subscriber.reset();
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.

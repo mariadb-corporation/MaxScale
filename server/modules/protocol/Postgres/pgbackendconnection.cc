@@ -142,6 +142,10 @@ bool PgBackendConnection::write(GWBUF&& buffer)
 
 void PgBackendConnection::finish_connection()
 {
+    // Reset the subscriber now. This must be done here and not in the destructor.
+    // See mxs::History::subscribe() for more information.
+    m_subscriber.reset();
+
     m_dcb->writeq_append(create_terminate());
 }
 

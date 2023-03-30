@@ -145,6 +145,12 @@ public:
     /**
      * Create a new subscriber for this history
      *
+     * @note The subscriber must be reset before the History that it is a part of is destroyed. For backend
+     *       connections, this means it must be released in finish_connect() and not in the destructor. The
+     *       reason for this is that the lifetime of the protocol data that usually contains the History is
+     *       linked to the session and once the final DCB is closed, the session is freed moments before the
+     *       last DCB is freed.
+     *
      * @param cb The callback that is called when a history response mismatch is encountered
      *
      * @return The new subscriber
