@@ -531,7 +531,7 @@ void test_large_packets()
 
 const char* bypass_whitespace(const char* sql)
 {
-    return modutil_MySQL_bypass_whitespace(sql, strlen(sql));
+    return mariadb::bypass_whitespace(sql, strlen(sql));
 }
 
 void test_bypass_whitespace()

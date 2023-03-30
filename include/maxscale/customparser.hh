@@ -14,7 +14,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <ctype.h>
 
 namespace maxscale
@@ -186,7 +186,7 @@ protected:
      */
     void bypass_whitespace()
     {
-        m_pI = modutil_MySQL_bypass_whitespace(m_pI, m_pEnd - m_pI);
+        m_pI = mariadb::bypass_whitespace(m_pI, m_pEnd - m_pI);
     }
 
     /**

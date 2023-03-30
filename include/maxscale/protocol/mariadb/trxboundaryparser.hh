@@ -771,7 +771,7 @@ private:
 
     void bypass_whitespace()
     {
-        m_pI = modutil_MySQL_bypass_whitespace(m_pI, m_pEnd - m_pI);
+        m_pI = mariadb::bypass_whitespace(m_pI, m_pEnd - m_pI);
     }
 
     token_t next_token(token_required_t required = TOKEN_NOT_REQUIRED)

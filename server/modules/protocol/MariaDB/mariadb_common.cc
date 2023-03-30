@@ -890,4 +890,111 @@ std::string_view get_sql(const GWBUF& packet)
     return rv;
 }
 
+const char* bypass_whitespace(std::string_view sql)
+{
+    const char* i = sql.data();
+    const char* end = i + sql.length();
+
+    while (i != end)
+    {
+        if (isspace(*i))
+        {
+            ++i;
+        }
+        else if (*i == '/')     // Might be a comment
+        {
+            if ((i + 1 != end) && (*(i + 1) == '*'))    // Indeed it was
+            {
+                i += 2;
+
+                while (i != end)
+                {
+                    if (*i == '*')      // Might be the end of the comment
+                    {
+                        ++i;
+
+                        if (i != end)
+                        {
+                            if (*i == '/')      // Indeed it was
+                            {
+                                ++i;
+                                break;      // Out of this inner while.
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // It was not the end of the comment.
+                        ++i;
+                    }
+                }
+            }
+            else
+            {
+                // Was not a comment, so we'll bail out.
+                break;
+            }
+        }
+        else if (*i == '-')     // Might be the start of a comment to the end of line
+        {
+            bool is_comment = false;
+
+            if (i + 1 != end)
+            {
+                if (*(i + 1) == '-')    // Might be, yes.
+                {
+                    if (i + 2 != end)
+                    {
+                        if (isspace(*(i + 2)))      // Yes, it is.
+                        {
+                            is_comment = true;
+
+                            i += 3;
+
+                            while ((i != end) && (*i != '\n'))
+                            {
+                                ++i;
+                            }
+
+                            if (i != end)
+                            {
+                                mxb_assert(*i == '\n');
+                                ++i;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!is_comment)
+            {
+                break;
+            }
+        }
+        else if (*i == '#')
+        {
+            ++i;
+
+            while ((i != end) && (*i != '\n'))
+            {
+                ++i;
+            }
+
+            if (i != end)
+            {
+                mxb_assert(*i == '\n');
+                ++i;
+            }
+            break;
+        }
+        else
+        {
+            // Neither whitespace not start of a comment, so we bail out.
+            break;
+        }
+    }
+
+    return i;
+}
+
 }

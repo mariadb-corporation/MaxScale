@@ -212,6 +212,30 @@ GWBUF create_ok_packet();
 std::string_view get_sql(const GWBUF& packet);
 
 /**
+ * Given a buffer containing a MySQL statement, this function will return
+ * a pointer to the first character that is not whitespace. In this context,
+ * comments are also counted as whitespace. For instance:
+ *
+ *    "SELECT"                    => "SELECT"
+ *    "  SELECT                   => "SELECT"
+ *    " / * A comment * / SELECT" => "SELECT"
+ *    "-- comment\nSELECT"        => "SELECT"
+ *
+ *  @param sql  Pointer to buffer containing a MySQL statement
+ *  @param len  Length of sql.
+ *
+ *  @return The first non whitespace (including comments) character. If the
+ *          entire buffer is only whitespace, the returned pointer will point
+ *          to the character following the buffer (i.e. sql + len).
+ */
+const char* bypass_whitespace(std::string_view sql);
+
+inline const char* bypass_whitespace(const char* sql, size_t len)
+{
+    return bypass_whitespace(std::string_view {sql, len});
+}
+
+/**
  * Create a MySQL ERR packet.
  *
  * @param sequence Packet sequence number

@@ -171,7 +171,7 @@ StatementType get_statement_type(std::string_view sql)
 
     const char* pSql_end = pSql + len;
 
-    pSql = modutil_MySQL_bypass_whitespace(pSql, len);
+    pSql = mariadb::bypass_whitespace(pSql, len);
 
     static const char DELETE[] = "DELETE";
     static const char INSERT[] = "INSERT";
