@@ -19,7 +19,6 @@
 #include <queue>
 #include <maxbase/format.hh>
 #include <maxbase/host.hh>
-#include <maxscale/mysql_utils.hh>
 
 using std::string;
 using maxbase::string_printf;

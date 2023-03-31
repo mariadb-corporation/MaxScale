@@ -20,7 +20,7 @@
 #include <glob.h>
 
 #include <maxbase/assert.hh>
-#include <maxscale/mysql_utils.hh>
+#include <maxsql/mariadb.hh>
 #include <maxscale/protocol/mariadb/binlog.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

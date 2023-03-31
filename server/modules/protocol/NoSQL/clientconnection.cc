@@ -18,7 +18,6 @@
 #include <mysqld_error.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/service.hh>

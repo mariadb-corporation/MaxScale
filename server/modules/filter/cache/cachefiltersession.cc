@@ -17,7 +17,6 @@
 #include <new>
 #include <maxbase/alloc.hh>
 #include <maxbase/pretty_print.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxsimd/multistmt.hh>

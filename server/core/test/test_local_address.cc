@@ -17,7 +17,7 @@
 #include <iostream>
 #include <mysql.h>
 #include <maxscale/config.hh>
-#include <maxscale/mysql_utils.hh>
+#include <maxscale/protocol/mariadb/maxscale.hh>
 #include "../internal/server.hh"
 
 using namespace std;

@@ -19,9 +19,8 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
-#include "maxscale/protocol/mariadb/mysql.hh"
 #include <maxbase/format.hh>
-#include <maxscale/mysql_utils.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
 #include "packet_parser.hh"

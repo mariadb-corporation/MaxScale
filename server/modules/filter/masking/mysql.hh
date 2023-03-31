@@ -19,8 +19,9 @@
 #include <string>
 #include <vector>
 #include <mysql.h>
+#include <maxsql/mariadb.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/mysql_utils.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 /**
  * @class LEncInt

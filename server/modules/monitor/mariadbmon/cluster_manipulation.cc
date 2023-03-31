@@ -20,7 +20,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxbase/format.hh>
 #include <maxscale/clock.hh>
-#include <maxscale/mysql_utils.hh>
+#include <maxscale/protocol/mariadb/maxscale.hh>
 
 using std::string;
 using std::move;

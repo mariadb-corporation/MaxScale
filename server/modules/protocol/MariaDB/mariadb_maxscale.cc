@@ -21,7 +21,7 @@
  * row based replication.
  */
 
-#include <maxscale/mysql_utils.hh>
+#include <maxscale/protocol/mariadb/maxscale.hh>
 
 #include <string.h>
 #include <strings.h>

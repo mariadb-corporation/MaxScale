@@ -19,7 +19,6 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 

@@ -23,8 +23,8 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
 #include <maxscale/config.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/parser.hh>
+#include <maxscale/protocol/mariadb/maxscale.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/session.hh>
 

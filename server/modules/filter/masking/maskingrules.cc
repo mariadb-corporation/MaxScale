@@ -21,10 +21,10 @@
 #include <maxbase/assert.hh>
 #include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/protocol/mariadb/maxscale.hh>
 
 using std::unique_ptr;
 using std::string;
