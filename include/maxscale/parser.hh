@@ -121,6 +121,7 @@ public:
         virtual uint32_t         get_ps_id(const GWBUF& packet) const = 0;
         virtual std::string_view get_sql(const GWBUF& packet) const = 0;
         virtual bool             is_empty(const GWBUF& packet) const = 0;
+        virtual bool             is_execute_immediately_ps(uint32_t id) const = 0;
         virtual bool             is_multi_part_packet(const GWBUF& packet) const = 0;
         virtual bool             is_prepare(const GWBUF& packet) const = 0;
         virtual bool             is_ps_direct_exec_id(uint32_t id) const = 0;
@@ -345,6 +346,11 @@ public:
     bool is_empty(const GWBUF& packet) const
     {
         return helper().is_empty(packet);
+    }
+
+    bool is_execute_immediately_ps(uint32_t id) const
+    {
+        return helper().is_execute_immediately_ps(id);
     }
 
     bool is_multi_part_packet(const GWBUF& packet) const

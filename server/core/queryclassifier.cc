@@ -17,7 +17,6 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
 #include <maxsimd/multistmt.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 
 using mariadb::QueryClassifier;
 using mxs::Parser;
@@ -170,7 +169,7 @@ public:
         {
             rval = &it->second;
         }
-        else if (id != MARIADB_PS_DIRECT_EXEC_ID)
+        else if (m_parser.is_execute_immediately_ps(id))
         {
             if (m_log == Log::ALL)
             {

@@ -142,6 +142,11 @@ bool MariaDBParser::Helper::is_empty(const GWBUF& packet) const
     return packet.length() == MYSQL_HEADER_LEN;
 }
 
+bool MariaDBParser::Helper::is_execute_immediately_ps(uint32_t id) const
+{
+    return id == MARIADB_PS_DIRECT_EXEC_ID;
+}
+
 bool MariaDBParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 {
     uint32_t buflen = packet.length();

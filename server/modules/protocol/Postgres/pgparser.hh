@@ -33,6 +33,7 @@ public:
         uint32_t         get_ps_id(const GWBUF& packet) const override;
         std::string_view get_sql(const GWBUF& packet) const override;
         bool             is_empty(const GWBUF& packet) const override;
+        bool             is_execute_immediately_ps(uint32_t id) const override;
         bool             is_multi_part_packet(const GWBUF& packet) const override;
         bool             is_prepare(const GWBUF& packet) const override;
         bool             is_ps_direct_exec_id(uint32_t id) const override;
