@@ -22,12 +22,12 @@
 #include <vector>
 #include <mysql.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/service.hh>
-#include <maxscale/mysql_binlog.hh>
-#include <maxscale/users.hh>
-#include <maxscale/router.hh>
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxscale/protocol/cdc/module_names.hh>
+#include <maxscale/protocol/mariadb/binlog.hh>
+#include <maxscale/router.hh>
+#include <maxscale/service.hh>
+#include <maxscale/users.hh>
 #include <maxavro.hh>
 #include <blr_constants.hh>
 

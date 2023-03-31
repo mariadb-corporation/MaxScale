@@ -21,7 +21,7 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/mysql_binlog.hh>
+#include <maxscale/protocol/mariadb/binlog.hh>
 
 /**
  * A result set consisting of VARCHAR(255) columns
