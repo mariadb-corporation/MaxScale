@@ -19,30 +19,28 @@
             disable-sort
             :footer-props="footerOpts"
             :headers="headers"
+            class="sessions-table"
             v-bind="{ ...$attrs }"
         >
             <!-- Pass on all scopedSlots of data-table -->
             <template v-for="slot in Object.keys($scopedSlots)" v-slot:[slot]="slotData">
                 <slot :name="slot" v-bind="slotData" />
             </template>
-            <template
-                v-if="headers.find(h => h.value === 'memory')"
-                v-slot:[`item.memory`]="{ value: memory }"
-            >
+            <template v-slot:[`item.memory`]="{ value: memory }">
                 <memory-cell :data="memory" />
             </template>
-            <!-- Add action button in the last cell -->
-            <template v-if="isAdmin" v-slot:[`item.${lastHeader.value}`]="slotData">
-                <div class="d-flex justify-space-between align-center">
-                    <slot
-                        v-if="lastHeader.value !== 'memory'"
-                        :name="`item.${lastHeader.value}`"
-                        v-bind="slotData"
-                    />
-                    <memory-cell v-else :data="slotData.value" />
+            <template v-slot:[`item.action`]="slotData">
+                <div
+                    class="kill-session-btn"
+                    :class="{
+                        'kill-session-btn--visible': $helpers.lodash.isEqual(
+                            confDlg.item,
+                            slotData.item
+                        ),
+                    }"
+                >
                     <mxs-tooltip-btn color="error" icon @click="onKillSession(slotData.item)">
                         <template v-slot:btn-content>
-                            <!-- TODO: only show when table row is hovered -->
                             <v-icon size="18"> $vuetify.icons.mxs_unlink</v-icon>
                         </template>
                         {{ $mxs_t('killSession') }}
@@ -112,6 +110,7 @@ export default {
             isMounting: true,
             confDlg: {
                 isOpened: false,
+                item: null,
             },
         }
     },
@@ -130,6 +129,7 @@ export default {
                 { text: 'Memory', value: 'memory' },
                 { text: 'I/O activity', value: 'io_activity' },
                 ...this.extraHeaders,
+                { text: '', value: 'action', sortable: false, width: '1px', cellClass: 'px-0' },
             ]
         },
         isLoading() {
@@ -143,9 +143,6 @@ export default {
             return {
                 'items-per-page-options': [5, 10, 50, 100, 500],
             }
-        },
-        lastHeader() {
-            return this.headers.at(-1)
         },
         // API page starts at 0, vuetify page starts at 1
         pagination: {
@@ -168,6 +165,10 @@ export default {
             },
             deep: true,
         },
+
+        'confDlg.isOpened'(v) {
+            if (!v) this.confDlg.item = null
+        },
     },
     created() {
         this.SET_DEF_PAGINATION_CONFIG()
@@ -189,3 +190,20 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.sessions-table {
+    tbody tr {
+        .kill-session-btn {
+            visibility: hidden;
+            &--visible {
+                visibility: visible;
+            }
+        }
+    }
+    tbody tr:hover {
+        .kill-session-btn {
+            visibility: visible;
+        }
+    }
+}
+</style>
