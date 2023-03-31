@@ -236,6 +236,24 @@ inline const char* bypass_whitespace(const char* sql, size_t len)
 }
 
 /**
+ * Trim whitespace and remove quote characters surrounding a string.
+ *
+ * @note The string is modified in place.
+ *
+ *   'abcd' => abcd
+ *   "abcd" => abcd
+ *   `abcd` => abcd
+ *
+ * @param s  The string to be trimmed.
+ *
+ * @return True, if the string could be trimmed, false otherwise. False
+ *         indicates that the string was not properly quoted; e.g. had
+ *         a starting but not ending quote.
+ */
+bool trim_quotes(char* s);
+
+
+/**
  * Create a MySQL ERR packet.
  *
  * @param sequence Packet sequence number

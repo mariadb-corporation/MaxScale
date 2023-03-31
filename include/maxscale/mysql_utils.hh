@@ -62,31 +62,6 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
  */
 int mxs_mysql_query(MYSQL* conn, const char* query);
 
-/**
- * Trim MySQL quote characters surrounding a string.
- *
- *   'abcd' => abcd
- *   "abcd" => abcd
- *   `abcd` => abcd
- *
- * @param s  The string to be trimmed.
- *
- * @note The string is modified in place.
- */
-bool mxs_mysql_trim_quotes(char* s);
-
-/**
- * Helper function for getting values by field name
- *
- * @param result Resultset
- * @param row    Row where the value is read
- * @param key    Name of the field
- *
- * @return The value of the field or NULL if value is not found. NULL values
- *         are also returned as NULL pointers.
- */
-const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* key);
-
 typedef enum mxs_pcre_quote_approach
 {
     MXS_PCRE_QUOTE_VERBATIM,    /*<! Quote all PCRE characters. */

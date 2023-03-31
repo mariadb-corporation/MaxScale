@@ -965,7 +965,7 @@ CacheRuleUser* CacheRuleUser::create(const CacheConfig* pConfig,
         host = any;
     }
 
-    if (mxs_mysql_trim_quotes(user))
+    if (mariadb::trim_quotes(user))
     {
         char pcre_user[2 * len + 1];    // Surely enough
 
@@ -978,7 +978,7 @@ CacheRuleUser* CacheRuleUser::create(const CacheConfig* pConfig,
             mxs_mysql_name_to_pcre(pcre_user, user, MXS_PCRE_QUOTE_VERBATIM);
         }
 
-        if (mxs_mysql_trim_quotes(host))
+        if (mariadb::trim_quotes(host))
         {
             char pcre_host[2 * len + 1];    // Surely enough
 

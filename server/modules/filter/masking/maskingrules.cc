@@ -400,7 +400,7 @@ unique_ptr<MaskingRules::Rule::Account> MaskingRules::Rule::Account::create(cons
         zHost = zAt + 1;
     }
 
-    if (mxs_mysql_trim_quotes(zUser))
+    if (mariadb::trim_quotes(zUser))
     {
         char pcre_host[2 * len + 1];    // Surely enough
 
@@ -408,7 +408,7 @@ unique_ptr<MaskingRules::Rule::Account> MaskingRules::Rule::Account::create(cons
 
         if (zHost)
         {
-            if (mxs_mysql_trim_quotes(zHost))
+            if (mariadb::trim_quotes(zHost))
             {
                 rv = mxs_mysql_name_to_pcre(pcre_host, zHost, MXS_PCRE_QUOTE_WILDCARD);
 
