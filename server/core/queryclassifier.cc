@@ -17,6 +17,7 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
 #include <maxsimd/multistmt.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using mariadb::QueryClassifier;
 using mxs::Parser;
@@ -280,6 +281,8 @@ QueryClassifier::QueryClassifier(mxs::Parser& parser,
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_multi_statements_allowed(pSession->protocol_data()->are_multi_statements_allowed())
     , m_sPs_manager(new PSManager(parser, log))
+    , m_route_info(&parser)
+    , m_prev_route_info(&parser)
 {
 }
 

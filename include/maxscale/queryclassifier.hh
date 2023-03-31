@@ -20,7 +20,6 @@
 #include <unordered_set>
 #include <maxscale/hint.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/session.hh>
 
@@ -50,7 +49,10 @@ public:
         RouteInfo(RouteInfo&&) = default;
         RouteInfo& operator=(RouteInfo&&) = default;
 
-        RouteInfo() = default;
+        RouteInfo(const mxs::Parser* pParser)
+            : m_pParser(pParser)
+        {
+        }
 
         /**
          * Get the current routing target
@@ -107,7 +109,7 @@ public:
         {
             return load_data_state() == LOAD_DATA_INACTIVE
                    && !multi_part_packet()
-                   && mxs_mysql_command_will_respond(command());
+                   && m_pParser->command_will_respond(command());
         }
 
         /**
@@ -244,16 +246,17 @@ public:
 
         using TableSet = std::unordered_set<std::string>;
 
-        uint32_t          m_target = QueryClassifier::TARGET_UNDEFINED;
-        uint8_t           m_command = 0xff;
-        uint32_t          m_type_mask = mxs::sql::TYPE_UNKNOWN;
-        uint32_t          m_stmt_id = 0;
-        load_data_state_t m_load_data_state = LOAD_DATA_INACTIVE;
-        bool              m_multi_part_packet = false;
-        bool              m_next_multi_part_packet = false;
-        bool              m_trx_is_read_only = true;
-        bool              m_ps_continuation = false;
-        TableSet          m_tmp_tables;
+        const mxs::Parser* m_pParser;
+        uint32_t           m_target = QueryClassifier::TARGET_UNDEFINED;
+        uint8_t            m_command = 0xff;
+        uint32_t           m_type_mask = mxs::sql::TYPE_UNKNOWN;
+        uint32_t           m_stmt_id = 0;
+        load_data_state_t  m_load_data_state = LOAD_DATA_INACTIVE;
+        bool               m_multi_part_packet = false;
+        bool               m_next_multi_part_packet = false;
+        bool               m_trx_is_read_only = true;
+        bool               m_ps_continuation = false;
+        TableSet           m_tmp_tables;
     };
 
     class Handler

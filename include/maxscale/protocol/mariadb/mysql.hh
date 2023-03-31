@@ -184,6 +184,8 @@ uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n);
 
 uint32_t get_packet_length(const uint8_t* buffer);
 
+bool command_will_respond(uint32_t cmd);
+
 /**
  * Check if GWBUF is a COM_QUERY packet.
  */

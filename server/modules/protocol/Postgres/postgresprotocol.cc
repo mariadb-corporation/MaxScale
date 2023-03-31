@@ -270,7 +270,12 @@ std::string format_response(const GWBUF& buffer)
 
 bool will_respond(const GWBUF& buffer)
 {
-    switch (buffer[0])
+    return will_respond(buffer[0]);
+}
+
+bool will_respond(uint8_t cmd)
+{
+    switch (cmd)
     {
     case pg::BIND:
     case pg::CLOSE:

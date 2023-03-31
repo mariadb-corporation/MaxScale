@@ -314,6 +314,11 @@ std::map<uint8_t, std::string_view> extract_response_fields(const uint8_t* ptr, 
 bool will_respond(const GWBUF& buffer);
 
 /**
+ * @see will_respond(const GWBUF&)
+ */
+bool will_respond(uint8_t cmd);
+
+/**
  * Create a Postgres packat from SQL.
  *
  * @return A postgres packet contining SQL.

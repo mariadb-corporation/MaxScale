@@ -669,6 +669,11 @@ uint32_t get_packet_length(const uint8_t* buffer)
     return MYSQL_HEADER_LEN + header.pl_length;
 }
 
+bool command_will_respond(uint32_t cmd)
+{
+    return mxs_mysql_command_will_respond(cmd);
+}
+
 bool is_com_query(const GWBUF& buf)
 {
     return buf.length() > MYSQL_HEADER_LEN && buf[MYSQL_HEADER_LEN] == MXS_COM_QUERY;

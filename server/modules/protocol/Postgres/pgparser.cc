@@ -34,6 +34,11 @@ GWBUF PgParser::Helper::create_packet(std::string_view sql) const
     return pg::create_query_packet(sql);
 }
 
+bool PgParser::Helper::command_will_respond(uint32_t cmd) const
+{
+    return pg::will_respond(cmd);
+}
+
 bool PgParser::Helper::continues_ps(const GWBUF& packet, uint32_t prev_cmd) const
 {
     return false;

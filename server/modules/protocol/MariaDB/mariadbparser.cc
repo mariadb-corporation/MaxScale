@@ -35,6 +35,11 @@ GWBUF MariaDBParser::Helper::create_packet(std::string_view sql) const
     return mariadb::create_query(sql);
 }
 
+bool MariaDBParser::Helper::command_will_respond(uint32_t cmd) const
+{
+    return mariadb::command_will_respond(cmd);
+}
+
 bool MariaDBParser::Helper::continues_ps(const GWBUF& packet, uint32_t prev_cmd) const
 {
     bool rv = false;
