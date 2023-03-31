@@ -74,6 +74,7 @@ private:
 
     // TODO: const-correct after parser is fixed
     bool is_multi_node(GWBUF& buffer) const;
+    bool is_tmp_table_ddl(GWBUF& buffer) const;
 
     XRouter&  m_router;
     State     m_state{State::IDLE};

@@ -87,16 +87,26 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
         {
             // Send the lock query to the main node before doing the DDL. This way the operations are
             // serialized with respect to the main node.
-            MXB_SINFO("Multi-node command, locking main node");
+            MXB_SINFO("Multi-node command, sending `main_sql` and `lock_sql` to '" << m_main->name() << "'");
             m_state = State::LOCK_MAIN;
             ok = send_query(m_main, m_config->main_sql) && send_query(m_main, m_config->lock_sql);
             m_queue.push_back(std::move(packet));
         }
         else
         {
-            // Normal single-node query (DML) that does not need to be sent to the secondary nodes.
-            m_state = State::SOLO;
-            ok = route_solo(std::move(packet));
+            if (is_tmp_table_ddl(packet) && m_solo != m_main)
+            {
+                MXB_SINFO("Temporary table DDL on non-main node, "
+                          << "send `main_sql` to '" << m_solo->name() << "'");
+                ok = send_query(m_solo, m_config->main_sql);
+            }
+
+            if (ok)
+            {
+                // Normal single-node query (DML) that does not need to be sent to the secondary nodes.
+                m_state = State::SOLO;
+                ok = route_solo(std::move(packet));
+            }
         }
         break;
 
@@ -159,6 +169,7 @@ bool XRouterSession::route_main(GWBUF&& packet)
 
 bool XRouterSession::route_stored_command(mxs::Backend* backend)
 {
+    MXB_SINFO("Sending `secondary_sql` to '" << backend->name() << "'");
     bool ok = send_query(backend, m_config->secondary_sql);
 
     if (ok)
@@ -535,6 +546,13 @@ bool XRouterSession::is_multi_node(GWBUF& buffer) const
     }
 
     return is_multi;
+}
+
+bool XRouterSession::is_tmp_table_ddl(GWBUF& buffer) const
+{
+    using namespace mxs::sql;
+    // TODO: Detect DROP and ALTER of a temporary table
+    return mxs::Parser::type_mask_contains(parser().get_type_mask(buffer), TYPE_CREATE_TMP_TABLE);
 }
 
 bool XRouterSession::retry_secondary_query(mxs::Backend* backend)
