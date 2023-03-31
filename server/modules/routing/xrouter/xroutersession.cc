@@ -18,9 +18,6 @@ std::string_view XRouterSession::state_to_str(State state)
 {
     switch (state)
     {
-    case State::INIT:
-        return "INIT";
-
     case State::IDLE:
         return "IDLE";
 
@@ -67,11 +64,6 @@ XRouterSession::XRouterSession(MXS_SESSION* session, XRouter& router, SBackends 
     , m_solo(m_backends[rand() % m_backends.size()].get())
     , m_config(std::move(config))
 {
-    for (auto& b : m_backends)
-    {
-        mxb_assert(b->in_use());
-        send_query(b.get(), b.get() == m_main ? m_config->main_sql : m_config->secondary_sql);
-    }
 }
 
 bool XRouterSession::routeQuery(GWBUF&& packet)
@@ -97,7 +89,7 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
             // serialized with respect to the main node.
             MXB_SINFO("Multi-node command, locking main node");
             m_state = State::LOCK_MAIN;
-            ok = send_query(m_main, m_config->lock_sql);
+            ok = send_query(m_main, m_config->main_sql) && send_query(m_main, m_config->lock_sql);
             m_queue.push_back(std::move(packet));
         }
         else
@@ -127,7 +119,6 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
 
     case State::LOCK_MAIN:
     case State::UNLOCK_MAIN:
-    case State::INIT:
     case State::WAIT_SOLO:
     case State::WAIT_MAIN:
     case State::WAIT_SECONDARY:
@@ -168,17 +159,20 @@ bool XRouterSession::route_main(GWBUF&& packet)
 
 bool XRouterSession::route_stored_command(mxs::Backend* backend)
 {
-    bool ok = true;
+    bool ok = send_query(backend, m_config->secondary_sql);
 
-    for (const auto& packet : m_packets)
+    if (ok)
     {
-        auto type = protocol_data()->will_respond(packet) ?
-            mxs::Backend::IGNORE_RESPONSE : mxs::Backend::NO_RESPONSE;
-
-        if (!route_to_one(backend, packet.shallow_clone(), type))
+        for (const auto& packet : m_packets)
         {
-            ok = false;
-            break;
+            auto type = protocol_data()->will_respond(packet) ?
+                mxs::Backend::IGNORE_RESPONSE : mxs::Backend::NO_RESPONSE;
+
+            if (!route_to_one(backend, packet.shallow_clone(), type))
+            {
+                ok = false;
+                break;
+            }
         }
     }
 
@@ -227,10 +221,6 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
 
     switch (m_state)
     {
-    case State::INIT:
-        rv = reply_state_init(backend, std::move(packet), down, reply);
-        break;
-
     case State::SOLO:
         // This might be an error condition in MaxScale but technically it is possible for the server to
         // send a partial response before we expect it.
@@ -279,21 +269,6 @@ bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
     return rv;
 }
 
-bool XRouterSession::reply_state_init(mxs::Backend* backend, GWBUF&& packet,
-                                      const mxs::ReplyRoute& down, const mxs::Reply& reply)
-{
-    bool rv = true;
-
-    if (all_backends_idle())
-    {
-        // All initialization queries complete, proceed with normal routing
-        m_state = State::IDLE;
-        rv = route_queued();
-    }
-
-    return rv;
-}
-
 bool XRouterSession::reply_state_wait_solo(mxs::Backend* backend, GWBUF&& packet,
                                            const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
@@ -329,7 +304,7 @@ bool XRouterSession::reply_state_lock_main(mxs::Backend* backend, GWBUF&& packet
     bool complete = reply.is_complete();
     bool rv = true;
 
-    if (complete)
+    if (complete && backend->is_idle())
     {
         MXB_SINFO("Main node locked, routing query to main node.");
         m_state = State::MAIN;

@@ -31,7 +31,6 @@ public:
 private:
     enum class State
     {
-        INIT,
         IDLE,
         SOLO,
         WAIT_SOLO,
@@ -49,8 +48,6 @@ private:
     bool                    send_query(mxs::Backend* backend, std::string_view sql);
 
     // Functions called from clientReply in different states
-    bool reply_state_init(mxs::Backend* backend, GWBUF&& packet,
-                          const mxs::ReplyRoute& down, const mxs::Reply& reply);
     bool reply_state_wait_solo(mxs::Backend* backend, GWBUF&& packet,
                                const mxs::ReplyRoute& down, const mxs::Reply& reply);
     bool reply_state_lock_main(mxs::Backend* backend, GWBUF&& packet,
@@ -79,7 +76,7 @@ private:
     bool is_multi_node(GWBUF& buffer) const;
 
     XRouter&  m_router;
-    State     m_state{State::INIT};
+    State     m_state{State::IDLE};
     SBackends m_backends;
 
     // The "main" node. This is the first node in the backend list and it's used by all MaxScale instances
