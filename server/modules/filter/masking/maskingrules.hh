@@ -151,7 +151,7 @@ public:
          *
          * @param s    The current value to be rewritten.
          */
-        virtual void rewrite(LEncString& s) const = 0;
+        virtual void rewrite(mxq::LEncString& s) const = 0;
 
         /**
          * Does this rule apply to a specific account.
@@ -226,7 +226,7 @@ public:
          *
          * @param s     The column value to rewrite.
          */
-        void rewrite(LEncString& s) const override;
+        void rewrite(mxq::LEncString& s) const override;
 
     private:
         std::string m_value;
@@ -273,7 +273,7 @@ public:
          *
          * @param s     The column value to obfuscate.
          */
-        void rewrite(LEncString& s) const override;
+        void rewrite(mxq::LEncString& s) const override;
 
     private:
         ObfuscateRule(const ObfuscateRule&);
@@ -336,7 +336,7 @@ public:
          *
          * @param s     The column value to rewrite.
          */
-        void rewrite(LEncString& s) const override;
+        void rewrite(mxq::LEncString& s) const override;
 
     private:
         pcre2_code* m_regexp;

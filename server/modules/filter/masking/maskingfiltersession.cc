@@ -574,7 +574,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
 
                     if (should_be_masked(value.type()))
                     {
-                        LEncString s = value.as_string();
+                        mxq::LEncString s = value.as_string();
                         pRule->rewrite(s);
                     }
                     else if (m_config.warn_type_mismatch == Config::WARN_ALWAYS)
@@ -602,7 +602,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
 
                     if (should_be_masked(value.type()))
                     {
-                        LEncString s = value.as_string();
+                        mxq::LEncString s = value.as_string();
                         pRule->rewrite(s);
                     }
                     else if (m_config.warn_type_mismatch == Config::WARN_ALWAYS)

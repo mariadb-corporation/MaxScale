@@ -364,7 +364,7 @@ inline bool is_same_name(std::string lhs, std::string_view rhs)
     return mxb::sv_case_eq(lhs, rhs);
 }
 
-inline bool is_same_name(std::string lhs, const LEncString& rhs)
+inline bool is_same_name(std::string lhs, const mxq::LEncString& rhs)
 {
     return rhs.case_eq(lhs);
 }
@@ -1058,8 +1058,8 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
                                  const char* zUser,
                                  const char* zHost) const
 {
-    const LEncString& table = column_def.org_table();
-    const LEncString& database = column_def.schema();
+    const mxq::LEncString& table = column_def.org_table();
+    const mxq::LEncString& database = column_def.schema();
 
     // If the resultset does not contain table and database names, as will
     // be the case in e.g. "SELECT * FROM table UNION SELECT * FROM table",
@@ -1192,7 +1192,7 @@ inline void fill_buffer(FillIter f_first,
     }
 }
 
-void MaskingRules::MatchRule::rewrite(LEncString& s) const
+void MaskingRules::MatchRule::rewrite(mxq::LEncString& s) const
 {
     int rv = 0;
     uint32_t n_matches = 0;
@@ -1226,7 +1226,7 @@ void MaskingRules::MatchRule::rewrite(LEncString& s) const
             // Get Full Match substring size: $0 is [0] and [1]
             size_t substring_len = ovector[1] - ovector[0];
             // Go to Full Match substring offset: 0
-            LEncString::iterator i = s.begin() + ovector[0];
+            mxq::LEncString::iterator i = s.begin() + ovector[0];
 
             // Avoid infinite loop in pcre2_match for a zero-length match
             if (ovector[1] == ovector[0])
@@ -1261,13 +1261,13 @@ void MaskingRules::MatchRule::rewrite(LEncString& s) const
     }
 }
 
-void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const
+void MaskingRules::ObfuscateRule::rewrite(mxq::LEncString& s) const
 {
     size_t i_len = s.length();
-    LEncString::iterator i = s.begin();
+    mxq::LEncString::iterator i = s.begin();
     size_t c = *i + i_len;
 
-    for (LEncString::iterator i = s.begin(); i != s.end(); i++)
+    for (mxq::LEncString::iterator i = s.begin(); i != s.end(); i++)
     {
         // ASCII 32 is first printable char
         unsigned char d = abs((char)(*i ^ c)) + 32;
@@ -1277,7 +1277,7 @@ void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const
     }
 }
 
-void MaskingRules::ReplaceRule::rewrite(LEncString& s) const
+void MaskingRules::ReplaceRule::rewrite(mxq::LEncString& s) const
 {
     bool rewritten = false;
 
