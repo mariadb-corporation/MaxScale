@@ -3,6 +3,7 @@ smartrouter.cc
 smartsession.cc
 perf_info.cc
 perf_updater.cc
+packet_tracker.cc
 )
 
 target_link_libraries(smartrouter maxscale-common)

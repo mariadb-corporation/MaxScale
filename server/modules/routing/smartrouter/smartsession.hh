@@ -18,8 +18,8 @@
 #include <iostream>
 #include <maxbase/host.hh>
 #include <maxsimd/canonical.hh>
-#include <maxscale/packet_tracker.hh>
 #include <maxscale/queryclassifier.hh>
+#include "packet_tracker.hh"
 
 class SmartRouter;
 

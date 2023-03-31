@@ -14,9 +14,9 @@
 
 // LIMITATION: local infile not handled yet.
 
-#include <maxscale/packet_tracker.hh>
-#include <maxscale/mysql_plus.hh>
+#include "packet_tracker.hh"
 #include <maxbase/log.hh>
+#include "mysql_plus.hh"
 
 #include <array>
 

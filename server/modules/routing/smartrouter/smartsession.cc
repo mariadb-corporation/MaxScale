@@ -14,7 +14,6 @@
 #include "smartsession.hh"
 #include "perf_info.hh"
 #include <mysqld_error.h>
-#include <maxscale/mysql_plus.hh>
 #include <maxbase/pretty_print.hh>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
