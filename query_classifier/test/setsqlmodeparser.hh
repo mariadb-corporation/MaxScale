@@ -14,7 +14,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/customparser.hh>
+#include <maxscale/protocol/mariadb/customparser.hh>
 
 
 class SetSqlModeParser : public maxscale::CustomParser

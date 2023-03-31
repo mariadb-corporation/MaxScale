@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <vector>
-#include <maxscale/customparser.hh>
+#include <maxscale/protocol/mariadb/customparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 

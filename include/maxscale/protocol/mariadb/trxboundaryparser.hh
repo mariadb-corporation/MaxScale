@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <ctype.h>
-#include <maxscale/customparser.hh>
+#include <maxscale/protocol/mariadb/customparser.hh>
 #include <maxscale/parser.hh>
 
 namespace maxscale
@@ -767,11 +767,6 @@ private:
         }
 
         return token;
-    }
-
-    void bypass_whitespace()
-    {
-        m_pI = mariadb::bypass_whitespace(m_pI, m_pEnd - m_pI);
     }
 
     token_t next_token(token_required_t required = TOKEN_NOT_REQUIRED)

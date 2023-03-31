@@ -5109,6 +5109,7 @@ public:
 
     uint32_t get_trx_type_mask(const GWBUF& stmt) const override
     {
+        // TODO: This will not work correctly for Postgres.
         maxscale::TrxBoundaryParser parser;
         return parser.type_mask_of(m_helper.get_sql(stmt));
     }
