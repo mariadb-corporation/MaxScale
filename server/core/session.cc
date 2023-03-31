@@ -36,7 +36,6 @@
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>

@@ -19,7 +19,6 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 
 // A transaction

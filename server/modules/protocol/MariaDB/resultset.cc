@@ -21,7 +21,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/modutil.hh>
 
 namespace
 {

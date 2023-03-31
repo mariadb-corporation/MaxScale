@@ -16,7 +16,6 @@
 
 #include <maxscale/packet_tracker.hh>
 #include <maxscale/mysql_plus.hh>
-#include <maxscale/modutil.hh>
 #include <maxbase/log.hh>
 
 #include <array>

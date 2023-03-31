@@ -25,7 +25,6 @@
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>

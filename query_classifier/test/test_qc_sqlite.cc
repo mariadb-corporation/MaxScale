@@ -5,8 +5,8 @@
 #include <maxbase/assert.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using namespace std::literals::string_literals;
 

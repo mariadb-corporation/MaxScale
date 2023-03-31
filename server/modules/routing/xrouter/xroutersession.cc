@@ -13,8 +13,6 @@
 #include "xrouter.hh"
 #include "xroutersession.hh"
 
-#include <maxscale/modutil.hh>
-
 // static
 std::string_view XRouterSession::state_to_str(State state)
 {

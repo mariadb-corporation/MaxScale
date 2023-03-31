@@ -34,7 +34,6 @@ add_library(maxscale-common SHARED
   maxscale_pcre2.cc
   misc.cc
   modulecmd.cc
-  modutil.cc
   monitor.cc
   monitormanager.cc
   mysql_utils.cc

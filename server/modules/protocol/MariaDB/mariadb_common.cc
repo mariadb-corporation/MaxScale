@@ -21,7 +21,6 @@
 
 #include "maxscale/protocol/mariadb/mysql.hh"
 #include <maxbase/format.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>

@@ -16,7 +16,6 @@
 
 #include <cmath>
 #include <mysqld_error.h>
-#include <maxscale/modutil.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxbase/format.hh>

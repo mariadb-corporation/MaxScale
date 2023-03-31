@@ -17,7 +17,6 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
 #include <maxsimd/multistmt.hh>
-#include <maxscale/modutil.hh>
 
 using mariadb::QueryClassifier;
 using mxs::Parser;

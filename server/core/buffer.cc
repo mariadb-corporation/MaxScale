@@ -23,34 +23,9 @@
 #include <maxscale/config.hh>
 #include <maxscale/hint.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/modutil.hh>
 
 using mxs::RoutingWorker;
 using std::move;
-
-namespace
-{
-std::string extract_sql_real(const GWBUF* pBuf)
-{
-    mxb_assert(pBuf != nullptr);
-
-    std::string rval;
-    uint8_t cmd = mxs_mysql_get_command(*pBuf);
-
-    if (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE)
-    {
-        // Skip the packet header and the command byte
-        size_t header_len = MYSQL_HEADER_LEN + 1;
-        size_t length = gwbuf_length(pBuf) - header_len;
-        rval.resize(length);
-        char* pCopy_from = (char*) GWBUF_DATA(pBuf) + header_len;
-        char* pCopy_to = &rval.front();
-        memcpy(pCopy_to, pCopy_from, length);
-    }
-
-    return rval;
-}
-}
 
 #if defined (SS_DEBUG)
 

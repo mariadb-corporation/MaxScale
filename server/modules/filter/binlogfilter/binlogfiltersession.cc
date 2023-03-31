@@ -55,7 +55,6 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/session.hh>
-#include <maxscale/modutil.hh>
 
 #include "binlogfilter.hh"
 #include "binlogfiltersession.hh"

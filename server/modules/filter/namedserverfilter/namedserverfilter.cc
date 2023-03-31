@@ -40,7 +40,7 @@
 
 #include <maxscale/hint.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
 #include <maxscale/config2.hh>

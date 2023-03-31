@@ -22,7 +22,6 @@
 
 #include <maxbase/stopwatch.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>

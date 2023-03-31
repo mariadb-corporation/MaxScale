@@ -44,7 +44,6 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>

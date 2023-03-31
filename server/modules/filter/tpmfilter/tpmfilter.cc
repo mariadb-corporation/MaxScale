@@ -55,10 +55,10 @@
 #include <maxbase/stopwatch.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/session.hh>
 
 class TpmFilter;
 class TpmSession;

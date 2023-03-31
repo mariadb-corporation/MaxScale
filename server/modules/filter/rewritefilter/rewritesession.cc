@@ -14,9 +14,8 @@
 
 #define MXB_MODULE_NAME "rewitefilter"
 #include "rewritesession.hh"
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include "rewritefilter.hh"
-
-#include <maxscale/modutil.hh>
 
 RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
                                            SERVICE* pService,

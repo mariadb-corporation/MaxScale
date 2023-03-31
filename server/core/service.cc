@@ -43,7 +43,6 @@
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/router.hh>

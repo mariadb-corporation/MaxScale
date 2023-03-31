@@ -17,7 +17,7 @@
 #include <string>
 #include <string.h>
 #include <maxscale/buffer.hh>
-#include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 
 namespace maxscale

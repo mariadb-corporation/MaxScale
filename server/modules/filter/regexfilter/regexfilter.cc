@@ -31,10 +31,10 @@
 #include <maxbase/format.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/session.hh>
 #include <maxscale/workerlocal.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include <fstream>
 

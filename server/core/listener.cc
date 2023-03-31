@@ -30,7 +30,7 @@
 
 #include <maxbase/log.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>

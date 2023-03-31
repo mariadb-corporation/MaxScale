@@ -43,7 +43,6 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>

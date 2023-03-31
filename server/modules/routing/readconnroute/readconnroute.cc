@@ -37,7 +37,7 @@
 
 #include "readconnroute.hh"
 
-#include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/service.hh>
 
 config::Specification RCR::Config::s_specification(MXB_MODULE_NAME, config::Specification::ROUTER);

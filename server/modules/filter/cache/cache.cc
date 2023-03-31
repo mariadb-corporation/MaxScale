@@ -19,7 +19,6 @@
 #include <set>
 #include <string>
 #include <maxscale/buffer.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/paths.hh>
 #include "storagefactory.hh"
 #include "storage.hh"

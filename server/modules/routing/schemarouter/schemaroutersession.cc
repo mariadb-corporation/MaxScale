@@ -21,7 +21,6 @@
 
 #include <maxbase/atomic.hh>
 #include <maxbase/alloc.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 

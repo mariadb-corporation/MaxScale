@@ -15,7 +15,6 @@
 #define MXB_MODULE_NAME "throttlefilter"
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/session.hh>
 
 #include "throttlesession.hh"

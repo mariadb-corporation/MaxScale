@@ -17,7 +17,6 @@
 
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/json.hh>
-#include <maxscale/modutil.hh>
 
 #include <fstream>
 #include <sys/types.h>

@@ -22,10 +22,10 @@
 #include <maxscale/filter.hh>
 #include <maxscale/hint.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using std::string;
 

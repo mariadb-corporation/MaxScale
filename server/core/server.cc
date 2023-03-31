@@ -28,8 +28,8 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>

@@ -16,7 +16,7 @@
 #include <string.h>
 #include <maxbase/format.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 namespace
 {

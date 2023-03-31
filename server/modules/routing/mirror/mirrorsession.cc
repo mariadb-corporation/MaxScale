@@ -15,7 +15,6 @@
 #include "mirrorsession.hh"
 
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/modutil.hh>
 
 using namespace maxscale;
 

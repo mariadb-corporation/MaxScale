@@ -14,7 +14,6 @@
 
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 
-#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 

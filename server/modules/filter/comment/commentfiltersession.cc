@@ -17,8 +17,8 @@
 
 #include "commentfiltersession.hh"
 #include "commentfilter.hh"
-#include <maxscale/modutil.hh>
 #include <maxscale/session.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <string>
 #include <regex>
 

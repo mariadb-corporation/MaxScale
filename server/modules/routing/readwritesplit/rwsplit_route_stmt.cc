@@ -24,8 +24,6 @@
 #include <mysqld_error.h>
 
 #include <maxscale/clock.hh>
-#include <maxscale/modutil.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>

@@ -19,7 +19,6 @@
 #include <memory>
 
 #include <maxscale/backend.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/response_stat.hh>
 
 using Endpoints = std::vector<mxs::Endpoint*>;

@@ -23,7 +23,6 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.hh>
 
