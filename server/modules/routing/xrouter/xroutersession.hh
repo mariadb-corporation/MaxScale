@@ -31,15 +31,15 @@ public:
 private:
     enum class State
     {
-        IDLE,
-        SOLO,
-        WAIT_SOLO,
-        LOAD_DATA,
-        LOCK_MAIN,
-        UNLOCK_MAIN,
-        MAIN,
-        WAIT_MAIN,
-        WAIT_SECONDARY,
+        IDLE,           // The session is idle
+        SOLO,           // Routing single-node command
+        WAIT_SOLO,      // Waiting for single-node command to complete
+        LOAD_DATA,      // Data streaming from client in progress
+        LOCK_MAIN,      // Locking main node
+        UNLOCK_MAIN,    // Unlocking main node
+        MAIN,           // Routing multi-node command to main node
+        WAIT_MAIN,      // Waiting for main node to complete the command
+        WAIT_SECONDARY, // Waiting for secondary nodes to complete the command
     };
 
     static std::string_view state_to_str(State state);
