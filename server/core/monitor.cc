@@ -35,12 +35,13 @@
 
 #include <maxbase/format.hh>
 #include <maxbase/json.hh>
+#include <maxscale/diskspace.hh>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/mariadb.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
+#include <maxscale/protocol/mariadb/diskspace.hh>
 #include <maxscale/secrets.hh>
 
 #include "internal/config.hh"

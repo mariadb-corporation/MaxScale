@@ -12,9 +12,8 @@
  * Public License.
  */
 
-#include <maxscale/mariadb.hh>
+#include <maxscale/protocol/mariadb/diskspace.hh>
 #include <maxbase/assert.hh>
-#include <mysql.h>
 
 namespace
 {

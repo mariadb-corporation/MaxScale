@@ -1,6 +1,7 @@
 
 add_library(mariadbprotocol OBJECT
   detect_special_query.cc
+  diskspace.cc
   local_client.cc
   mariadb_backend.cc
   mariadb_client.cc
