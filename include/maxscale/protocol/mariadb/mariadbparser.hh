@@ -26,6 +26,7 @@ public:
 
         GWBUF            create_packet(std::string_view sql) const override;
 
+        const char*      client_command_to_string(uint32_t cmd) const override;
         bool             command_will_respond(uint32_t cmd) const override;
         bool             continues_ps(const GWBUF& packet, uint32_t prev_cmd) const override;
         uint32_t         get_command(const GWBUF& packet) const override;

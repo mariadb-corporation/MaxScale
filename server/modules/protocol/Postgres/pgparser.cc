@@ -34,6 +34,11 @@ GWBUF PgParser::Helper::create_packet(std::string_view sql) const
     return pg::create_query_packet(sql);
 }
 
+const char* PgParser::Helper::client_command_to_string(uint32_t cmd) const
+{
+    return pg::client_command_to_str(cmd);
+}
+
 bool PgParser::Helper::command_will_respond(uint32_t cmd) const
 {
     return pg::will_respond(cmd);

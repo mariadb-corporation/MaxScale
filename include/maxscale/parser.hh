@@ -114,6 +114,7 @@ public:
 
         virtual GWBUF            create_packet(std::string_view sql) const = 0;
 
+        virtual const char*      client_command_to_string(uint32_t cmd) const = 0;
         virtual bool             command_will_respond(uint32_t cmd) const = 0;
         virtual bool             continues_ps(const GWBUF& packet, uint32_t prev_cmd) const = 0;
         virtual uint32_t         get_command(const GWBUF& packet) const = 0;
@@ -313,6 +314,11 @@ public:
     virtual std::string_view get_canonical(const GWBUF& stmt) const = 0;
 
     // Shorthands for Handler functions.
+    const char* client_command_to_string(uint32_t cmd) const
+    {
+        return helper().client_command_to_string(cmd);
+    }
+
     bool command_will_respond(uint32_t cmd) const
     {
         return helper().command_will_respond(cmd);
