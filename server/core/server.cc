@@ -29,7 +29,6 @@
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/parser.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
@@ -1251,7 +1250,9 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
 
     uint32_t type_mask = 0;
 
-    if (mariadb::is_com_query_or_prepare(buffer))
+    auto* parser = m_session->client_connection()->parser();
+    // TODO: These could be combined.
+    if (parser->is_query(buffer) || parser->is_prepare(buffer))
     {
         type_mask = session()->client_connection()->parser()->get_type_mask(buffer);
     }
