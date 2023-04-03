@@ -72,7 +72,7 @@ public:
     public:
         explicit QueryInfo(GWBUF query);
 
-        json_t* as_json() const;
+        json_t* as_json(const mxs::Parser::Helper& helper) const;
 
         bool complete() const
         {
@@ -120,7 +120,7 @@ public:
         }
 
     private:
-        GWBUF                   m_query;            /*< The packet, COM_QUERY *or* something else. */
+        GWBUF                   m_query;            /*< The packet, a query *or* something else. */
         timespec                m_received;         /*< When was it received. */
         timespec                m_completed;        /*< When was it completed. */
         std::vector<ServerInfo> m_server_infos;     /*< When different servers responded. */

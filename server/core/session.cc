@@ -36,7 +36,6 @@
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
@@ -777,19 +776,19 @@ void Session::set_client_dcb(ClientDCB* dcb)
 namespace
 {
 
-void get_cmd_and_stmt(const GWBUF& buffer, const char** ppCmd, const char** ppStmt, int* pLen)
+void get_cmd_and_stmt(const mxs::Parser::Helper& helper,
+                      const GWBUF& buffer, const char** ppCmd, const char** ppStmt, int* pLen)
 {
     *ppCmd = nullptr;
     *ppStmt = nullptr;
     *pLen = 0;
 
-    // TODO: Remove assumption of MariaDB.
-    std::string_view sql = mariadb::get_sql(buffer);
+    std::string_view sql = helper.get_sql(buffer);
 
     if (!sql.empty())
     {
-        auto cmd = mxs_mysql_get_command(buffer);
-        *ppCmd = mariadb::cmd_to_string(cmd);
+        auto cmd = helper.get_command(buffer);
+        *ppCmd = helper.client_command_to_string(cmd);
         *ppStmt = sql.data();
         *pLen = sql.length();
     }
@@ -811,6 +810,7 @@ void Session::dump_statements() const
                         current_id, id());
         }
 
+        auto& helper = client_connection()->parser()->helper();
         for (auto i = m_last_queries.rbegin(); i != m_last_queries.rend(); ++i)
         {
             const QueryInfo& info = *i;
@@ -823,7 +823,7 @@ void Session::dump_statements() const
             const char* pCmd;
             const char* pStmt;
             int len;
-            get_cmd_and_stmt(buffer, &pCmd, &pStmt, &len);
+            get_cmd_and_stmt(helper, buffer, &pCmd, &pStmt, &len);
 
             if (pStmt)
             {
@@ -849,11 +849,12 @@ json_t* Session::queries_as_json() const
 {
     json_t* pQueries = json_array();
 
+    const auto& helper = client_connection()->parser()->helper();
     for (auto i = m_last_queries.rbegin(); i != m_last_queries.rend(); ++i)
     {
         const QueryInfo& info = *i;
 
-        json_array_append_new(pQueries, info.as_json());
+        json_array_append_new(pQueries, info.as_json(helper));
     }
 
     return pQueries;
@@ -1101,14 +1102,14 @@ void timespec_to_iso(char* zIso, const timespec& ts)
 }
 }
 
-json_t* Session::QueryInfo::as_json() const
+json_t* Session::QueryInfo::as_json(const mxs::Parser::Helper& helper) const
 {
     json_t* pQuery = json_object();
 
     const char* pCmd;
     const char* pStmt;
     int len;
-    get_cmd_and_stmt(m_query, &pCmd, &pStmt, &len);
+    get_cmd_and_stmt(helper, m_query, &pCmd, &pStmt, &len);
 
     if (pCmd)
     {
