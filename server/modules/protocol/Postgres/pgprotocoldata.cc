@@ -92,6 +92,16 @@ void PgProtocolData::set_default_database(std::string_view database)
     m_database = database;
 }
 
+void PgProtocolData::set_user_entry(const UserEntryResult& user_entry)
+{
+    m_auth_data.user_entry = user_entry;
+}
+
+const std::string& PgProtocolData::default_db() const
+{
+    return m_database;
+}
+
 AuthenticationData& PgProtocolData::auth_data()
 {
     return m_auth_data;

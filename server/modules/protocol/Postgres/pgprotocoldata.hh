@@ -38,6 +38,7 @@ public:
 
     void set_connect_params(const uint8_t* begin, const uint8_t* end);
     void set_default_database(std::string_view database);
+    void set_user_entry(const UserEntryResult& user_entry);
 
     const std::vector<uint8_t>& connect_params() const
     {
@@ -51,6 +52,7 @@ public:
         return m_history;
     }
 
+    const std::string&  default_db() const;
     AuthenticationData& auth_data();
 
 private:

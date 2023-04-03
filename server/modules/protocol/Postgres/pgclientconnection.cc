@@ -17,6 +17,7 @@
 #include <maxscale/service.hh>
 #include "pgparser.hh"
 #include "pgprotocoldata.hh"
+#include "pgusermanager.hh"
 
 using std::string;
 using std::string_view;
@@ -56,11 +57,13 @@ bool PgClientConnection::validate_cleartext_auth(const GWBUF& reply)
     return true;
 }
 
-PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent)
+PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent,
+                                       const UserAuthSettings& auth_settings)
     : m_session(*pSession)
     , m_ssl_required(m_session.listener_data()->m_ssl.config().enabled)
     , m_down(pComponent)
     , m_protocol_data(static_cast<PgProtocolData*>(pSession->protocol_data()))
+    , m_user_auth_settings(auth_settings)
 {
 }
 
@@ -359,4 +362,58 @@ bool PgClientConnection::parse_startup_message(const GWBUF& buf)
         }
     }
     return rval;
+}
+
+void PgClientConnection::update_user_account_entry()
+{
+    auto match_host = m_user_auth_settings.match_host_pattern ? PgUserCache::MatchHost::YES :
+        PgUserCache::MatchHost::NO;
+    auto& ses = m_session;
+    auto entry = user_account_cache()->find_user(ses.user(), ses.client_remote(),
+                                                 m_protocol_data->default_db(), match_host);
+
+    // Postgres stops authentication if a user entry is not found, so a dummy entry is not required like
+    // with MariaDB.
+    if (entry.type == UserEntryType::USER_ACCOUNT_OK || entry.type == UserEntryType::NO_AUTH_ID_ENTRY)
+    {
+        PgAuthenticatorModule* selected_module = find_auth_module(entry.auth_method);
+        if (selected_module)
+        {
+            // Correct plugin is loaded, generate session-specific data.
+            MXB_INFO("Client %s matched pg_hba.conf entry at line %i.", m_session.user_and_host().c_str(),
+                     entry.line_no);
+            m_authenticator = selected_module->create_client_authenticator();
+        }
+        else
+        {
+            // Authentication cannot continue in this case.
+            entry.type = UserEntryType::METHOD_NOT_SUPPORTED;
+            MXB_INFO("Client %s matched pg_hba.conf entry at line %i. Entry uses unsupported authentication "
+                     "method '%s'. Cannot authenticate user.",
+                     m_session.user_and_host().c_str(), entry.line_no, entry.auth_method.c_str());
+        }
+    }
+    m_protocol_data->set_user_entry(entry);
+}
+
+PgAuthenticatorModule* PgClientConnection::find_auth_module(const string& auth_method)
+{
+    PgAuthenticatorModule* rval = nullptr;
+    auto& auth_modules = m_session.listener_data()->m_authenticators;
+    for (const auto& auth_module : auth_modules)
+    {
+        auto protocol_auth = static_cast<PgAuthenticatorModule*>(auth_module.get());
+        if (protocol_auth->name() == auth_method)
+        {
+            // Found correct authenticator for the user entry.
+            rval = protocol_auth;
+            break;
+        }
+    }
+    return rval;
+}
+
+const PgUserCache* PgClientConnection::user_account_cache()
+{
+    return static_cast<const PgUserCache*>(m_session.service->user_account_cache());
 }

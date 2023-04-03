@@ -57,4 +57,7 @@ private:
 private:
     PgConfiguration m_config;
     SERVICE&        m_service;
+
+    bool m_check_password {true};       /**< Check client password */
+    bool m_match_host_pattern {true};   /**< Client address must match hba entry */
 };

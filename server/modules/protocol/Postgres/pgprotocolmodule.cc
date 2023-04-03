@@ -12,16 +12,19 @@
  */
 
 #include "pgprotocolmodule.hh"
+
+#include <maxbase/pretty_print.hh>
+#include <maxscale/cn_strings.hh>
+#include <maxscale/listener.hh>
+#include <maxscale/service.hh>
 #include "pgauthenticatormodule.hh"
 #include "pgclientconnection.hh"
 #include "pgbackendconnection.hh"
 #include "pgprotocoldata.hh"
 #include "postgresprotocol.hh"
 #include "pgusermanager.hh"
-
-#include <maxscale/listener.hh>
-#include <maxscale/service.hh>
-#include <maxbase/pretty_print.hh>
+#include "authenticators/password.hh"
+#include "authenticators/trust.hh"
 
 PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
     : m_config(name, this)
@@ -45,9 +48,12 @@ PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* 
 
     pSession->set_protocol_data(std::move(sProtocol_data));
 
-    auto sClient_connection = std::make_unique<PgClientConnection>(pSession, pComponent);
+    PgClientConnection::UserAuthSettings auth_settings;
+    auth_settings.check_password = m_check_password;
+    auth_settings.match_host_pattern = m_match_host_pattern;
+    auth_settings.allow_root_user = pSession->service->config()->enable_root;
 
-    return sClient_connection;
+    return std::make_unique<PgClientConnection>(pSession, pComponent, auth_settings);
 }
 
 std::unique_ptr<mxs::BackendConnection>
@@ -153,7 +159,7 @@ GWBUF PgProtocolModule::make_query(std::string_view sql) const
 
 uint64_t PgProtocolModule::capabilities() const
 {
-    return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA;
+    return CAP_BACKEND | CAP_AUTHDATA | CAP_AUTH_MODULES;
 }
 
 std::string PgProtocolModule::name() const
@@ -174,8 +180,54 @@ std::unique_ptr<mxs::UserAccountManager> PgProtocolModule::create_user_data_mana
 PgProtocolModule::AuthenticatorList
 PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
+    // If no authenticator is set, the default authenticator will be loaded.
+    auto auth_names = params.get_string(CN_AUTHENTICATOR);
+    auto auth_opts = params.get_string(CN_AUTHENTICATOR_OPTIONS);
+
+    if (auth_names.empty())
+    {
+        auth_names = "password";    // TODO: likely not final
+    }
 
     AuthenticatorList authenticators;
+    auto auth_names_list = mxb::strtok(auth_names, ",");
+    bool error = false;
+
+    for (auto iter = auth_names_list.begin(); iter != auth_names_list.end() && !error; ++iter)
+    {
+        std::string auth_name = *iter;
+        mxb::trim(auth_name);
+        if (!auth_name.empty())
+        {
+            std::unique_ptr<mxs::AuthenticatorModule> new_auth_module;
+            if (auth_name == "password")
+            {
+                new_auth_module = std::make_unique<PasswordAuthModule>();
+            }
+            else if (auth_name == "trust")
+            {
+                new_auth_module = std::make_unique<TrustAuthModule>();
+            }
+
+            if (new_auth_module)
+            {
+                mxb_assert(new_auth_module->supported_protocol() == MXS_POSTGRESQL_PROTOCOL_NAME);
+                authenticators.push_back(std::move(new_auth_module));
+            }
+            else
+            {
+                MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_name.c_str());
+                error = true;
+            }
+        }
+        else
+        {
+            MXB_ERROR("'%s' is an invalid value for '%s'. The value should be a comma-separated "
+                      "list of authenticators or a single authenticator.",
+                      auth_names.c_str(), CN_AUTHENTICATOR);
+            error = true;
+        }
+    }
+
     return authenticators;
 }

@@ -18,11 +18,22 @@
 #include <maxscale/session.hh>
 
 class PgProtocolData;
+class PgUserCache;
+class PgAuthenticatorModule;
+class PgClientAuthenticator;
 
 class PgClientConnection final : public mxs::ClientConnectionBase
 {
 public:
-    PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent);
+    struct UserAuthSettings
+    {
+        bool check_password {true};     /**< From listener */
+        bool match_host_pattern {true}; /**< From listener */
+        bool allow_root_user {false};   /**< From service */
+    };
+
+    PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent,
+                       const UserAuthSettings& auth_settings);
 
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;
@@ -61,6 +72,10 @@ private:
     bool validate_cleartext_auth(const GWBUF& reply);
     bool parse_startup_message(const GWBUF& buf);
     bool start_session();
+    void update_user_account_entry();
+
+    const PgUserCache*     user_account_cache();
+    PgAuthenticatorModule* find_auth_module(const std::string& auth_method);
 
     State           m_state = State::INIT;
     MXS_SESSION&    m_session;
@@ -70,4 +85,7 @@ private:
 
     // Will be provided by the monitor
     pg::Auth pg_prot_data_auth_method = pg::AUTH_CLEARTEXT;
+
+    std::unique_ptr<PgClientAuthenticator> m_authenticator;
+    const UserAuthSettings                 m_user_auth_settings;
 };
