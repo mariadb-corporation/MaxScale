@@ -13,6 +13,8 @@
 #include "xrouter.hh"
 #include "xroutersession.hh"
 
+#include <algorithm>
+
 // static
 std::string_view XRouterSession::state_to_str(State state)
 {
@@ -385,7 +387,7 @@ bool XRouterSession::reply_state_wait_secondary(mxs::Backend* backend, GWBUF&& p
         {
             MXB_SINFO("Command failed on '" << backend->name() << "': " << reply.describe());
 
-            if (retry_secondary_query(backend))
+            if (can_retry_secondary_query(reply.error().sql_state()) && retry_secondary_query(backend))
             {
                 // The query is being retried, return the result to the client after it completes.
                 route = false;
@@ -555,6 +557,14 @@ bool XRouterSession::is_tmp_table_ddl(GWBUF& buffer) const
     return mxs::Parser::type_mask_contains(parser().get_type_mask(buffer), TYPE_CREATE_TMP_TABLE);
 }
 
+bool XRouterSession::can_retry_secondary_query(std::string_view sqlstate)
+{
+    return std::any_of(
+        m_config->retry_sqlstates.begin(), m_config->retry_sqlstates.end(), [&](const auto& value){
+        return sqlstate.substr(0, value.size()) == value;
+    });
+}
+
 bool XRouterSession::retry_secondary_query(mxs::Backend* backend)
 {
     bool ok = true;
@@ -566,10 +576,6 @@ bool XRouterSession::retry_secondary_query(mxs::Backend* backend)
 
         return route_stored_command(backend);
     };
-
-    // TODO: Some commands should not trigger a retry and should instead skip directly to fencing out
-    // the node. For example, an error about a table already existing means that something created it
-    // on the secondary node before it was created on the main node.
 
     if (m_retry_start == mxb::TimePoint::min())
     {

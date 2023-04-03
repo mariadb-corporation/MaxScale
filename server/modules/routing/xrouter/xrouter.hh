@@ -34,11 +34,12 @@ public:
 
         struct Values
         {
-            std::string          main_sql;
-            std::string          secondary_sql;
-            std::string          lock_sql;
-            std::string          unlock_sql;
-            std::chrono::seconds retry_timeout;
+            std::string              main_sql;
+            std::string              secondary_sql;
+            std::string              lock_sql;
+            std::string              unlock_sql;
+            std::chrono::seconds     retry_timeout;
+            std::vector<std::string> retry_sqlstates;
         };
 
         using ValueRef = std::shared_ptr<const Values>;

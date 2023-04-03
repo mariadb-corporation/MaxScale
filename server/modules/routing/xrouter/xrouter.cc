@@ -38,6 +38,12 @@ mxs::config::ParamSeconds s_retry_timeout(
     &s_spec, "retry_timeout",
     "Time limit for retrying of failing multi-node commands on secondary nodes",
     60s, mxs::config::Param::AT_RUNTIME);
+
+mxs::config::ParamStringList s_retry_sqlstates(
+    &s_spec, "retry_sqlstates",
+    "The SQLSTATE prefixes that trigger a replay on a secondary node",
+    ",",
+    {"HV", "HW"}, mxs::config::Param::AT_RUNTIME);
 }
 
 XRouter::Config::Config(const std::string& name)

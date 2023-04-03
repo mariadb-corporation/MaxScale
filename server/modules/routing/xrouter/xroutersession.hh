@@ -61,7 +61,6 @@ private:
 
     bool route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Backend::response_type type);
     bool route_stored_command(mxs::Backend* backend);
-    bool retry_secondary_query(mxs::Backend* backend);
     bool route_solo(GWBUF&& packet);
     bool route_main(GWBUF&& packet);
     bool route_secondary();
@@ -69,12 +68,16 @@ private:
     bool all_backends_idle() const;
 
     GWBUF finish_multinode();
-    void  fence_bad_node(mxs::Backend* backend);
     bool  check_node_status();
 
     // TODO: const-correct after parser is fixed
     bool is_multi_node(GWBUF& buffer) const;
     bool is_tmp_table_ddl(GWBUF& buffer) const;
+
+    // Functions related to error handling and query retrying
+    bool can_retry_secondary_query(std::string_view sqlstate);
+    bool retry_secondary_query(mxs::Backend* backend);
+    void fence_bad_node(mxs::Backend* backend);
 
     XRouter&  m_router;
     State     m_state{State::IDLE};
