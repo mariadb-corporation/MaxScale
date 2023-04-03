@@ -52,11 +52,6 @@ void add_packet_ready_for_query(GWBUF& gwbuf)
 }
 }
 
-bool PgClientConnection::validate_cleartext_auth(const GWBUF& reply)
-{
-    return true;
-}
-
 PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent,
                                        const UserAuthSettings& auth_settings)
     : m_session(*pSession)
@@ -95,7 +90,7 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
             break;
 
         case State::AUTH:
-            m_state = state_auth(gwbuf);
+            m_state = state_auth(std::move(gwbuf));
             break;
 
         case State::ROUTE:
@@ -144,41 +139,91 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
     }
     else if (parse_startup_message(gwbuf))
     {
-        // Add user account check here.
-        if (pg_prot_data_auth_method == pg::AUTH_OK)
+        update_user_account_entry();
+        if (m_authenticator)
         {
-            next_state = start_session() ? State::ROUTE : State::ERROR;
+            auto pw_request_packet = m_authenticator->authentication_request();
+            if (pw_request_packet.empty())
+            {
+                // The user is trusted, let them in. TODO: check that user can log in
+                next_state = start_session() ? State::ROUTE : State::ERROR;
+            }
+            else
+            {
+                m_dcb->writeq_append(std::move(pw_request_packet));
+                next_state = State::AUTH;
+            }
         }
         else
         {
-            GWBUF reply;
-            add_packet_auth_request(reply, pg_prot_data_auth_method);
-            m_dcb->writeq_append(std::move(reply));
-            next_state = State::AUTH;
+            // TODO: Refresh user accounts.
         }
     }
 
     return next_state;
 }
 
-PgClientConnection::State PgClientConnection::state_auth(const GWBUF& gwbuf)
+PgClientConnection::State PgClientConnection::state_auth(GWBUF&& packet)
 {
+    using ExchRes = PgClientAuthenticator::ExchRes;
+    using AuthRes = PgClientAuthenticator::AuthRes;
+
     enum class Result {READY, CONTINUE, ERROR};
     auto result = Result::ERROR;
 
-    switch (pg_prot_data_auth_method)
+    // TODO: send errors to client.
+    auto res = m_authenticator->exchange(std::move(packet), *m_protocol_data);
+    switch (res.status)
     {
-    case pg::AUTH_CLEARTEXT:
-        if (validate_cleartext_auth(gwbuf))
+    case ExchRes::Status::READY:
         {
-            result = Result::READY;
+            // If user didn't have a proper auth_id entry, fail right away.
+            const auto& user_entry = m_protocol_data->auth_data().user_entry;
+            if (user_entry.type == UserEntryType::USER_ACCOUNT_OK)
+            {
+                AuthRes auth_res;
+                if (m_user_auth_settings.check_password)
+                {
+                    auth_res = m_authenticator->authenticate(*m_protocol_data);
+                }
+                else
+                {
+                    auth_res.status = AuthRes::Status::SUCCESS;
+                    // Copy auth tokens manually. Should work with at least cleartext passwords.
+                    auto& auth_data = m_protocol_data->auth_data();
+                    auth_data.backend_token = auth_data.client_token;
+                    result = Result::READY;
+                }
+
+                if (auth_res.status == AuthRes::Status::SUCCESS)
+                {
+                    result = Result::READY;
+                    if (user_entry.authid_entry.super && mxs::Config::get().log_warn_super_user)
+                    {
+                        MXB_WARNING("Super user %s logged in to service '%s'.",
+                                    m_session.user_and_host().c_str(), m_session.service->name());
+                    }
+                }
+                else
+                {
+                    if (auth_res.status == AuthRes::Status::FAIL_WRONG_PW
+                        && user_account_cache()->can_update_immediately())
+                    {
+                        // Again, this may be because user data is obsolete. Update userdata, but fail
+                        // session anyway since I/O with client cannot be redone.
+                        m_session.service->request_user_account_update();
+                    }
+                    // TODO: send authentication error
+                }
+            }
+            else
+            {
+                // TODO: send authentication error
+            }
         }
         break;
 
-    default:
-        mxb_assert(!true);
-        result = Result::ERROR;
-        MXB_SERROR("Unsupported authentication method: " << pg_prot_data_auth_method);
+    case ExchRes::Status::FAIL:
         break;
     }
 

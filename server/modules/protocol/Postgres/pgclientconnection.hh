@@ -64,12 +64,11 @@ private:
     };
 
     State state_init(const GWBUF& gwbuf);
-    State state_auth(const GWBUF& gwbuf);
+    State state_auth(GWBUF&& packet);
     State state_route(GWBUF&& gwbuf);
 
     // Return true if ssl handshake succeeded or is in progress
     bool setup_ssl();
-    bool validate_cleartext_auth(const GWBUF& reply);
     bool parse_startup_message(const GWBUF& buf);
     bool start_session();
     void update_user_account_entry();
@@ -82,9 +81,6 @@ private:
     bool            m_ssl_required;
     mxs::Component* m_down;
     PgProtocolData* m_protocol_data {nullptr};
-
-    // Will be provided by the monitor
-    pg::Auth pg_prot_data_auth_method = pg::AUTH_CLEARTEXT;
 
     std::unique_ptr<PgClientAuthenticator> m_authenticator;
     const UserAuthSettings                 m_user_auth_settings;
