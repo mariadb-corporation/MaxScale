@@ -16,8 +16,6 @@
 
 #include <sstream>
 
-#include <maxscale/protocol/mariadb/mysql.hh>
-
 using namespace maxscale;
 
 Backend::Backend(mxs::Endpoint* b)

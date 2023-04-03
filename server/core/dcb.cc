@@ -51,7 +51,6 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
