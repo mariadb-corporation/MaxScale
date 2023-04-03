@@ -58,9 +58,11 @@ PgBackendConnection::TrackedQuery::TrackedQuery(const GWBUF& buffer)
 PgBackendConnection::PgBackendConnection(MXS_SESSION* session, SERVER* server, mxs::Component* component)
     : m_session(session)
     , m_upstream(component)
+    , m_protocol_data(static_cast<PgProtocolData*>(session->protocol_data()))
+    , m_authenticator(m_protocol_data->auth_data().auth_module->create_backend_authenticator())
 {
     auto fn = std::bind(&PgBackendConnection::history_mismatch, this);
-    m_subscriber = protocol_data().history().subscribe(std::move(fn));
+    m_subscriber = m_protocol_data->history().subscribe(std::move(fn));
 }
 
 void PgBackendConnection::ready_for_reading(DCB* dcb)
@@ -157,6 +159,7 @@ uint64_t PgBackendConnection::can_reuse(MXS_SESSION* session) const
 bool PgBackendConnection::reuse(MXS_SESSION* session, mxs::Component* component, uint64_t reuse_type)
 {
     m_session = session;
+    m_protocol_data = static_cast<PgProtocolData*>(session->protocol_data());
     m_upstream = component;
     return true;
 }
@@ -268,7 +271,7 @@ void PgBackendConnection::send_ssl_request()
 void PgBackendConnection::send_startup_message()
 {
     // The parameters are a list of null-terminated strings that end with an empty string
-    if (m_dcb->writeq_append(create_startup_message(protocol_data().connect_params())))
+    if (m_dcb->writeq_append(create_startup_message(m_protocol_data->connect_params())))
     {
         m_state = State::AUTH;
     }
@@ -431,8 +434,18 @@ bool PgBackendConnection::handle_auth()
                 }
                 else
                 {
-                    handle_error(mxb::cat("Unsupported authentication mechanism: ",
-                                          std::to_string(auth_method)));
+                    // Not an AuthenticationOk-packet. Give it to the authenticator and send the result
+                    // back to server.
+                    auto reply = m_authenticator->exchange(std::move(buf), *m_protocol_data);
+                    if (reply)
+                    {
+                        m_dcb->writeq_append(std::move(reply));
+                    }
+                    else
+                    {
+                        handle_error(mxb::cat("Unsupported authentication mechanism: ",
+                                              std::to_string(auth_method)));
+                    }
                 }
             }
             break;

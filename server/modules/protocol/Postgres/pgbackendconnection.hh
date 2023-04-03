@@ -18,6 +18,9 @@
 #include <maxscale/protocol2.hh>
 #include <deque>
 
+class PgProtocolData;
+class PgBackendAuthenticator;
+
 class PgBackendConnection final : public mxs::BackendConnection
 {
 public:
@@ -91,16 +94,14 @@ private:
     void  start_tracking(const TrackedQuery& query);
     bool  track_next_result();
 
-    PgProtocolData& protocol_data()
-    {
-        return *static_cast<PgProtocolData*>(m_session->protocol_data());
-    }
-
     MXS_SESSION*    m_session;
     mxs::Component* m_upstream;
     BackendDCB*     m_dcb;
     mxs::Reply      m_reply;
     State           m_state {State::INIT};
+
+    PgProtocolData*                         m_protocol_data {nullptr};
+    std::unique_ptr<PgBackendAuthenticator> m_authenticator;
 
     uint32_t m_process_id {0};      // The process ID on the backend server
     uint32_t m_secret_key {0};      // Secret key for canceling requests

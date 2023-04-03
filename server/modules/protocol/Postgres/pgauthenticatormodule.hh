@@ -15,6 +15,8 @@
 #include "postgresprotocol.hh"
 #include <maxscale/authenticator.hh>
 
+class PgAuthenticatorModule;
+
 using Digest = std::array<uint8_t, SHA256_DIGEST_LENGTH>;
 
 struct ScramUser
@@ -61,6 +63,8 @@ struct AuthenticationData
 
     std::vector<uint8_t> client_token;      /**< Token sent by client */
     std::vector<uint8_t> backend_token;     /**< Token to be sent to backends */
+
+    PgAuthenticatorModule* auth_module {nullptr};
 };
 
 class PgProtocolData;

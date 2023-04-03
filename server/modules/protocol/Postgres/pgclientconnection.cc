@@ -428,6 +428,7 @@ void PgClientConnection::update_user_account_entry()
             MXB_INFO("Client %s matched pg_hba.conf entry at line %i.", m_session.user_and_host().c_str(),
                      entry.line_no);
             m_authenticator = selected_module->create_client_authenticator();
+            m_protocol_data->auth_data().auth_module = selected_module;
         }
         else
         {
