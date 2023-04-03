@@ -30,7 +30,6 @@
 
 #include <maxbase/log.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>
@@ -1500,7 +1499,7 @@ bool Listener::read_connection_init_sql(ListenerData::ConnectionInitSql& output)
             GWBUF total_buf;
             for (const auto& query : queries)
             {
-                total_buf.append(mariadb::create_query(query));
+                total_buf.append(m_shared_data->m_proto_module->make_query(query));
             }
             output.buffer_contents = std::move(total_buf);
         }
