@@ -15,6 +15,7 @@
 #include "postgresprotocol.hh"
 #include <maxscale/session.hh>
 #include <maxscale/history.hh>
+#include "pgauthenticatormodule.hh"
 
 class PgProtocolData final : public mxs::ProtocolData
 {
@@ -50,10 +51,13 @@ public:
         return m_history;
     }
 
+    AuthenticationData& auth_data();
+
 private:
     std::string          m_database;
     std::vector<uint8_t> m_params;
     bool                 m_in_trx {false};
+    AuthenticationData   m_auth_data;
 
     // Session command history. Contains the commands that modify the session state that are not done as a
     // part of the connection creation. Usually this consists mainly of SET statements that prepare the

@@ -55,12 +55,101 @@ struct UserEntryResult
     AuthIdEntry authid_entry;
 };
 
+struct AuthenticationData
+{
+    UserEntryResult user_entry;     /**< User account information */
+
+    std::vector<uint8_t> client_token;      /**< Token sent by client */
+    std::vector<uint8_t> backend_token;     /**< Token to be sent to backends */
+};
+
+class PgProtocolData;
+
+/**
+ * The base class of authenticator client sessions. Contains session-specific data for an authenticator.
+ */
+class PgClientAuthenticator
+{
+public:
+    PgClientAuthenticator(const PgClientAuthenticator&) = delete;
+    PgClientAuthenticator& operator=(const PgClientAuthenticator&) = delete;
+
+    PgClientAuthenticator() = default;
+    virtual ~PgClientAuthenticator() = default;
+
+
+    virtual GWBUF authentication_request() = 0;
+
+    struct ExchRes
+    {
+        enum class Status
+        {
+            READY,      /**< Exchange with client complete, should continue to password check */
+            FAIL,       /**< Packet processing failed */
+        };
+
+        Status status {Status::FAIL};   /**< Authentication exchange status */
+    };
+
+    /**
+     * Communicate with client. Just return a buffer for now. If/once more complicated methods are added,
+     * the function parameters will more closely resemble MariaDB-authenticators.
+     *
+     * @param input Client buffer
+     * @return Result structure
+     */
+    virtual ExchRes exchange(GWBUF&& input, PgProtocolData& session) = 0;
+
+    struct AuthRes
+    {
+        enum class Status
+        {
+            FAIL,           /**< Authentication failed */
+            FAIL_WRONG_PW,  /**< Client provided wrong password */
+            SUCCESS,        /**< Authentication was successful */
+        };
+
+        Status      status {Status::FAIL};
+        std::string msg;
+    };
+
+    /**
+     * Check client token against the password.
+     *
+     * @param data Protocol session data
+     */
+    virtual AuthRes authenticate(PgProtocolData& data) = 0;
+};
+
+/**
+ * The base class for all backend authenticator modules for MariaDB-protocol.
+ */
+class PgBackendAuthenticator
+{
+public:
+    PgBackendAuthenticator(const PgBackendAuthenticator&) = delete;
+    PgBackendAuthenticator& operator=(const PgBackendAuthenticator&) = delete;
+    PgBackendAuthenticator() = default;
+    virtual ~PgBackendAuthenticator() = default;
+
+    /**
+     * Exchange authentication packets. It should read the input, optionally write to output,
+     * and return status.
+     *
+     * @param input Packet from backend
+     * @param session Protocol session
+     * @return Reply to backend. Empty on error.
+     */
+    virtual GWBUF exchange(GWBUF&& input, PgProtocolData& session) = 0;
+};
+
 class PgAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
-    ~PgAuthenticatorModule();
+    virtual ~PgAuthenticatorModule() = default;
+
+    virtual std::unique_ptr<PgClientAuthenticator>  create_client_authenticator() const = 0;
+    virtual std::unique_ptr<PgBackendAuthenticator> create_backend_authenticator() const = 0;
 
     std::string supported_protocol() const override;
-
-    std::string name() const override;
 };

@@ -383,16 +383,7 @@ bool verify_authentication_sasl_final(const GWBUF& buffer,
 }
 }
 
-PgAuthenticatorModule::~PgAuthenticatorModule()
-{
-}
-
 std::string PgAuthenticatorModule::supported_protocol() const
-{
-    return MXB_MODULE_NAME;
-}
-
-std::string PgAuthenticatorModule::name() const
 {
     return MXB_MODULE_NAME;
 }

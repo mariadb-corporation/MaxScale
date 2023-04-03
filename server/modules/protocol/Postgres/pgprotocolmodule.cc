@@ -177,10 +177,5 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
     MXB_ALERT("Not implemented yet: %s", __func__);
 
     AuthenticatorList authenticators;
-
-    std::unique_ptr<PgAuthenticatorModule> sAuthenticator(new PgAuthenticatorModule);
-
-    authenticators.push_back(std::move(sAuthenticator));
-
     return authenticators;
 }

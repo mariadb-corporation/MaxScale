@@ -91,3 +91,8 @@ void PgProtocolData::set_default_database(std::string_view database)
 {
     m_database = database;
 }
+
+AuthenticationData& PgProtocolData::auth_data()
+{
+    return m_auth_data;
+}

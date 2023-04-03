@@ -8,6 +8,8 @@ add_library(postgresprotocol SHARED
   pgprotocolmodule.cc
   pgusermanager.cc
   postgresprotocol.cc
+  authenticators/password.cc
+  authenticators/trust.cc
   )
 
 add_dependencies(postgresprotocol maxscale-common)
