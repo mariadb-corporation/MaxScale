@@ -39,6 +39,7 @@ export const lodash = {
     values: require('lodash/values'),
     camelCase: require('lodash/camelCase'),
     escapeRegExp: require('lodash/escapeRegExp'),
+    objGet: require('lodash/get'),
 }
 
 export function delay(t, v) {

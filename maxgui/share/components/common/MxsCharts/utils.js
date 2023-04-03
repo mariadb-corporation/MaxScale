@@ -11,20 +11,31 @@
  * Public License.
  */
 import { select as d3Select, selectAll as d3SelectAll } from 'd3-selection'
+import { lodash } from '@share/utils/helpers'
 
-const objGet = require('lodash/get')
 const LINK_CTR_CLASS = 'link_container'
 const LINK_LINE_CLASS = 'link_line'
+
+export function getLinkCtr({ srcId, targetId }) {
+    return d3Select(`.${LINK_CTR_CLASS}[src-id="${srcId}"][target-id="${targetId}"]`)
+}
+
 /**
  * @private
  * @param {Object} param.containerEle - Container element of the link
  * @param {String} param.type - enter or update
  * @param {Boolean} param.isInvisible - Draw an invisible link
  **/
-function drawLink({ containerEle, type, isInvisible, linkPathGenerator, linkStrokeGenerator }) {
+export function drawLink({
+    containerEle,
+    type,
+    isInvisible,
+    linkPathGenerator,
+    linkStrokeGenerator,
+}) {
     const className = isInvisible ? `${LINK_LINE_CLASS}__invisible` : LINK_LINE_CLASS
     const strokeWidth = isInvisible ? 12 : 2.5
-    const strokeDasharray = isInvisible ? 0 : 5
+
     const strokeColor = isInvisible ? 'transparent' : linkStrokeGenerator
     switch (type) {
         case 'enter':
@@ -33,7 +44,7 @@ function drawLink({ containerEle, type, isInvisible, linkPathGenerator, linkStro
                 .attr('class', className)
                 .attr('fill', 'none')
                 .attr('stroke-width', strokeWidth)
-                .attr('stroke-dasharray', strokeDasharray)
+                .attr('stroke-dasharray', d => (isInvisible || d.isSolid ? 0 : 5))
                 .attr('stroke', strokeColor)
                 .attr('d', linkPathGenerator)
             break
@@ -79,22 +90,22 @@ export function drawLinks({
                 const linkCtr = enter
                     .insert('g')
                     .attr('class', `${LINK_CTR_CLASS} pointer`)
-                    .attr('src-id', d => objGet(d.source, idPath))
-                    .attr('target-id', d => objGet(d.target, idPath))
+                    .attr('src-id', d => lodash.objGet(d.source, idPath))
+                    .attr('target-id', d => lodash.objGet(d.target, idPath))
                     .style('opacity', 0.5)
                     .on('mouseover', function() {
                         d3Select(this)
                             .style('opacity', 1)
                             .style('z-index', 10)
                             .select(`path.${LINK_LINE_CLASS}`)
-                            .attr('stroke-dasharray', null)
+                            .attr('stroke-dasharray', 0)
                     })
                     .on('mouseout', function() {
                         d3Select(this)
                             .style('opacity', 0.5)
                             .style('z-index', 'unset')
                             .select(`path.${LINK_LINE_CLASS}`)
-                            .attr('stroke-dasharray', '5')
+                            .attr('stroke-dasharray', d => (d.isSolid ? 0 : 5))
                     })
                 drawLink({ containerEle: linkCtr, type: 'enter', ...drawLinkParams })
                 drawLink({
@@ -129,11 +140,11 @@ export function drawLinks({
  * @param {Boolean} param.isDragging - is dragging node
  */
 export function changeLinkGroupStyle({ link, idPath = 'id', isDragging }) {
-    const srcId = objGet(link.source, idPath)
-    const targetId = objGet(link.target, idPath)
+    const srcId = lodash.objGet(link.source, idPath)
+    const targetId = lodash.objGet(link.target, idPath)
     d3SelectAll(`.${LINK_CTR_CLASS}[src-id="${srcId}"][target-id="${targetId}"]`)
         .style('opacity', isDragging ? 1 : 0.5)
         .style('z-index', isDragging ? 10 : 'unset')
         .select(`path.${LINK_LINE_CLASS}`)
-        .attr('stroke-dasharray', isDragging ? null : '5')
+        .attr('stroke-dasharray', d => (isDragging || d.isSolid ? 0 : 5))
 }
