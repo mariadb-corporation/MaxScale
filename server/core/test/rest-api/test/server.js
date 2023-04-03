@@ -65,6 +65,22 @@ describe("Server", function () {
       return request.patch(base_url + "/servers/" + server.data.id, { json: server }).should.be.fulfilled;
     });
 
+    it("masks monitorpw when set", async function() {
+        server.data.attributes.parameters.monitorpw = 'maxpwd';
+        server.data.attributes.parameters.monitoruser = 'maxuser';
+        await request.patch(base_url + "/servers/" + server.data.id, { json: server});
+
+        var res = await request.get(base_url + "/servers/" + server.data.id);
+        expect(res.data.attributes.parameters.monitorpw).to.equal('*****');
+
+        server.data.attributes.parameters.monitorpw = '';
+        server.data.attributes.parameters.monitoruser = '';
+        await request.patch(base_url + "/servers/" + server.data.id, { json: server})
+
+        res = await request.get(base_url + "/servers/" + server.data.id);
+        expect(res.data.attributes.parameters.monitorpw).to.be.null;
+    });
+
     it("rejects update with conflicting port", function () {
       server.data.attributes.parameters.port = 3000;
       return request.patch(base_url + "/servers/" + server.data.id, { json: server }).should.be.rejected;
