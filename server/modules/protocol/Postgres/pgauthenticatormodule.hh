@@ -25,6 +25,36 @@ struct ScramUser
     Digest      server_key{};
 };
 
+enum class UserEntryType
+{
+    NO_HBA_ENTRY,
+    NO_AUTH_ID_ENTRY,
+    METHOD_NOT_SUPPORTED,
+    USER_ACCOUNT_OK,
+};
+
+struct AuthIdEntry
+{
+    std::string name;
+    std::string password;
+    bool        super {false};
+    bool        inherit {false};
+    bool        can_login {false};
+
+    bool operator==(const AuthIdEntry& rhs) const;
+};
+
+struct UserEntryResult
+{
+    UserEntryType type {UserEntryType::NO_HBA_ENTRY};
+
+    uint32_t    line_no {0};
+    std::string username;
+    std::string auth_method;
+
+    AuthIdEntry authid_entry;
+};
+
 class PgAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:

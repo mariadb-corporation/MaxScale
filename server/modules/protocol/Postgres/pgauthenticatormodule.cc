@@ -396,3 +396,9 @@ std::string PgAuthenticatorModule::name() const
 {
     return MXB_MODULE_NAME;
 }
+
+bool AuthIdEntry::operator==(const AuthIdEntry& rhs) const
+{
+    return name == rhs.name && password == rhs.password && super == rhs.super && inherit == rhs.inherit
+           && can_login == rhs.can_login;
+}

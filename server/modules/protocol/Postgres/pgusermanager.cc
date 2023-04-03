@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#include "postgresprotocol.hh"
 #include "pgusermanager.hh"
 #include <maxbase/format.hh>
 #include <maxbase/threadpool.hh>
@@ -224,24 +225,32 @@ PgUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw, ve
 PgUserManager::LoadResult PgUserManager::load_users_pg(mxp::PgSQL& con, PgUserDatabase& output)
 {
     auto read_list = [](std::string_view list_str) {
-        return mxb::strtok(list_str, ", ");
+        std::vector<string> rval;
+        // The list should be enclosed in {}.
+        if (list_str.length() >= 2 && list_str.front() == '{' && list_str.back() == '}')
+        {
+            std::string_view eff_list_str = {list_str.data() + 1, list_str.length() - 2};
+            rval = mxb::strtok(eff_list_str, ", ");
+        }
+        return rval;
     };
 
     // TODO: use multiquery
     // TODO: handle 'union_over_backends' somehow.
     auto load_res = LoadResult::QUERY_FAILED;
-    auto hba_result = con.query("select type, database, user_name, address, netmask, auth_method from "
-                                "pg_hba_file_rules;");
+    auto hba_result = con.query("select line_number, type, database, user_name, address, netmask, "
+                                "auth_method from pg_hba_file_rules;");
     if (hba_result)
     {
-        if (hba_result->get_col_count() == 6)
+        if (hba_result->get_col_count() == 7)
         {
-            int64_t ind_type = 0;
-            int64_t ind_dbs = 1;
-            int64_t ind_unames = 2;
-            int64_t ind_addr = 3;
-            int64_t ind_netmask = 4;
-            int64_t ind_auth_method = 5;
+            int64_t ind_lineno = 0;
+            int64_t ind_type = 1;
+            int64_t ind_dbs = 2;
+            int64_t ind_unames = 3;
+            int64_t ind_addr = 4;
+            int64_t ind_netmask = 5;
+            int64_t ind_auth_method = 6;
 
             while (hba_result->next_row())
             {
@@ -252,7 +261,7 @@ PgUserManager::LoadResult PgUserManager::load_users_pg(mxp::PgSQL& con, PgUserDa
                     || conn_type == "hostnogssenc")
                 {
                     PgUserDatabase::HbaEntry new_entry;
-                    // TODO: handle special user and db names "all" etc here?
+                    new_entry.lineno = hba_result->get_int(ind_lineno);
                     new_entry.usernames = read_list(hba_result->get_string(ind_unames));
                     new_entry.address = hba_result->get_string(ind_addr);
                     new_entry.mask = hba_result->get_string(ind_netmask);
@@ -290,7 +299,7 @@ PgUserManager::LoadResult PgUserManager::load_users_pg(mxp::PgSQL& con, PgUserDa
 
                 while (authid_result->next_row())
                 {
-                    PgUserDatabase::AuthIdEntry new_entry;
+                    AuthIdEntry new_entry;
                     new_entry.name = authid_result->get_string(ind_name);
                     new_entry.password = authid_result->get_string(ind_pw);
                     new_entry.super = read_bool(ind_super);
@@ -335,7 +344,7 @@ void PgUserDatabase::add_hba_entry(PgUserDatabase::HbaEntry&& entry)
     m_hba_entries.emplace_back(std::move(entry));
 }
 
-void PgUserDatabase::add_authid_entry(PgUserDatabase::AuthIdEntry&& entry)
+void PgUserDatabase::add_authid_entry(AuthIdEntry&& entry)
 {
     // Names should be unique. Copies are possible when summing over all backends.
     string key = entry.name;
@@ -345,6 +354,90 @@ void PgUserDatabase::add_authid_entry(PgUserDatabase::AuthIdEntry&& entry)
 int PgUserDatabase::n_auth_entries() const
 {
     return m_auth_entries.size();
+}
+
+const PgUserDatabase::HbaEntry*
+PgUserDatabase::find_hba_entry(std::string_view username, std::string_view host, std::string_view db) const
+{
+    return find_hba_entry(username, host, db, HostPatternMode::MATCH);
+}
+
+const PgUserDatabase::HbaEntry*
+PgUserDatabase::find_hba_entry(std::string_view username, std::string_view db) const
+{
+    return find_hba_entry(username, "", db, HostPatternMode::SKIP);
+}
+
+const PgUserDatabase::HbaEntry*
+PgUserDatabase::find_hba_entry(std::string_view username, std::string_view host, std::string_view db,
+                               PgUserDatabase::HostPatternMode mode) const
+{
+    const PgUserDatabase::HbaEntry* rval = nullptr;
+    for (const auto& entry : m_hba_entries)
+    {
+        // Postgres goes through the entries in order, locking on to the line which matches client address,
+        // requested database, and user name.
+
+        // TODO: add proper address matching and mask support.
+        bool addr_match = (mode == HostPatternMode::SKIP || entry.address == "all"
+            || entry.address == host);
+
+        if (addr_match)
+        {
+            bool username_match = false;
+            for (const auto& allowed_user : entry.usernames)
+            {
+                if (allowed_user == "all" || allowed_user == username)
+                {
+                    username_match = true;
+                    break;
+                }
+                else if (allowed_user[0] == '+')
+                {
+                    // TODO: search group membership.
+                }
+            }
+
+            if (username_match)
+            {
+                bool db_match = false;
+                for (const auto& allowed_db : entry.db_names)
+                {
+                    if (allowed_db == "all" || allowed_db == db
+                        || (allowed_db == "sameuser" && db == username))
+                    {
+                        db_match = true;
+                        break;
+                    }
+                    else if (allowed_db == "samerole" || allowed_db == "samegroup")
+                    {
+                        // TODO:: check if group db exists and user is member.
+                    }
+                }
+
+                if (db_match)
+                {
+                    // If client is marked for rejection, return null.
+                    if (entry.auth_method != "reject")
+                    {
+                        rval = &entry;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    return rval;
+}
+
+const AuthIdEntry* PgUserDatabase::find_authid_entry(const std::string& username) const
+{
+    const AuthIdEntry* rval = nullptr;
+    if (auto it = m_auth_entries.find(username); it != m_auth_entries.end())
+    {
+        rval = &it->second;
+    }
+    return rval;
 }
 
 PgUserCache::PgUserCache(const PgUserManager& master)
@@ -374,14 +467,42 @@ int PgUserCache::version() const
     return m_userdb_version;
 }
 
-bool PgUserDatabase::HbaEntry::operator==(const PgUserDatabase::HbaEntry& rhs) const
+UserEntryResult
+PgUserCache::find_user(const std::string& user, const std::string& host, const std::string& db,
+                       MatchHost match_host) const
 {
-    return usernames == rhs.usernames && db_names == rhs.db_names
-           && address == rhs.address && mask == rhs.mask && auth_method == rhs.auth_method;
+    using HbaEntry = PgUserDatabase::HbaEntry;
+    using AuthIdEntry = AuthIdEntry;
+
+    // PG tells the client if a matching hba entry was not found, regardless of password.
+    UserEntryResult res;
+
+    // Try to find an entry. If host pattern matching is disabled, match only username.
+    const HbaEntry* hba_entry = (match_host == MatchHost::YES) ? m_userdb->find_hba_entry(user, host, db) :
+        m_userdb->find_hba_entry(user, db);
+    if (hba_entry)
+    {
+        res.line_no = hba_entry->lineno;
+        res.auth_method = hba_entry->auth_method;
+
+        const AuthIdEntry* auth_id = m_userdb->find_authid_entry(user);
+        if (auth_id)
+        {
+            res.type = UserEntryType::USER_ACCOUNT_OK;
+            res.authid_entry = *auth_id;
+        }
+        else
+        {
+            // TODO: the error message seems to depend on the auth_method. Tune later.
+            res.type = UserEntryType::NO_AUTH_ID_ENTRY;
+        }
+    }
+
+    return res;
 }
 
-bool PgUserDatabase::AuthIdEntry::operator==(const PgUserDatabase::AuthIdEntry& rhs) const
+bool PgUserDatabase::HbaEntry::operator==(const PgUserDatabase::HbaEntry& rhs) const
 {
-    return name == rhs.name && password == rhs.password && super == rhs.super && inherit == rhs.inherit
-           && can_login == rhs.can_login;
+    return lineno == rhs.lineno && usernames == rhs.usernames && db_names == rhs.db_names
+           && address == rhs.address && mask == rhs.mask && auth_method == rhs.auth_method;
 }

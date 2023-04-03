@@ -24,6 +24,8 @@
 #include <maxscale/protocol2.hh>
 #include <maxscale/server.hh>
 #include <maxscale/base_user_manager.hh>
+#include "pgprotocoldata.hh"
+#include "pgauthenticatormodule.hh"
 
 /**
  * This class contains user data retrieved from the PostgreSQL-database.
@@ -38,6 +40,7 @@ public:
 
     struct HbaEntry
     {
+        int                      lineno {0};
         std::vector<std::string> usernames;
         std::vector<std::string> db_names;
         std::string              address;
@@ -47,21 +50,25 @@ public:
         bool operator==(const HbaEntry& rhs) const;
     };
 
-    struct AuthIdEntry
-    {
-        std::string name;
-        std::string password;
-        bool        super {false};
-        bool        inherit {false};
-        bool        can_login {false};
-
-        bool operator==(const AuthIdEntry& rhs) const;
-    };
-
     void add_hba_entry(HbaEntry&& entry);
     void add_authid_entry(AuthIdEntry&& entry);
 
+    const HbaEntry*
+    find_hba_entry(std::string_view username, std::string_view host, std::string_view db) const;
+
+    const HbaEntry* find_hba_entry(std::string_view username, std::string_view db) const;
+
+    const AuthIdEntry* find_authid_entry(const std::string& username) const;
+
 private:
+    enum class HostPatternMode
+    {
+        SKIP,
+        MATCH,
+    };
+    const HbaEntry* find_hba_entry(std::string_view username, std::string_view host, std::string_view db,
+                                   HostPatternMode mode) const;
+
     std::vector<HbaEntry>              m_hba_entries;   // Must be kept in server order
     std::map<std::string, AuthIdEntry> m_auth_entries;
 };
@@ -123,6 +130,11 @@ public:
     void update_from_master() override;
     bool can_update_immediately() const;
     int  version() const;
+
+    enum class MatchHost {YES, NO};
+    UserEntryResult
+    find_user(const std::string& user, const std::string& host, const std::string& db,
+              MatchHost match_host) const;
 
 private:
     const PgUserManager&   m_master;    /**< User database master copy */
