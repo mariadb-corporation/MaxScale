@@ -227,6 +227,7 @@ RWSConfig::RWSConfig(SERVICE* service)
     add_native(&RWSConfig::m_v, &Values::master_accept_reads, &s_master_accept_reads);
     add_native(&RWSConfig::m_v, &Values::strict_multi_stmt, &s_strict_multi_stmt);
     add_native(&RWSConfig::m_v, &Values::strict_sp_calls, &s_strict_sp_calls);
+    add_native(&RWSConfig::m_v, &Values::strict_tmp_tables, &s_strict_tmp_tables);
     add_native(&RWSConfig::m_v, &Values::retry_failed_reads, &s_retry_failed_reads);
     add_native(&RWSConfig::m_v, &Values::max_slave_replication_lag, &s_max_slave_replication_lag);
     add_native(&RWSConfig::m_v, &Values::max_slave_connections, &s_max_slave_connections);

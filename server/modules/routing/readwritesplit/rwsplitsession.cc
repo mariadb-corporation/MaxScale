@@ -907,6 +907,20 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             errmsg += " A transaction is active and cannot be replayed.";
         }
 
+        if (route_info().have_tmp_tables())
+        {
+            if (m_config->strict_tmp_tables)
+            {
+                can_continue = false;
+                errmsg += " Temporary tables were lost when the connection was lost.";
+            }
+            else
+            {
+                MXB_INFO("Temporary tables have been created and they "
+                         "are now lost if a reconnection takes place.");
+            }
+        }
+
         if (!can_continue)
         {
             auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write();

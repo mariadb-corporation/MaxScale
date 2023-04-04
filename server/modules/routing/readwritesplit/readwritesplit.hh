@@ -176,6 +176,10 @@ static cfg::ParamBool s_strict_sp_calls(
     &s_spec, "strict_sp_calls", "Lock connection to master after a stored procedure is executed",
     false, cfg::Param::AT_RUNTIME);
 
+static cfg::ParamBool s_strict_tmp_tables(
+    &s_spec, "strict_tmp_tables", "Prevent reconnections if temporary tables exist",
+    false, cfg::Param::AT_RUNTIME);
+
 static cfg::ParamBool s_master_accept_reads(
     &s_spec, "master_accept_reads", "Use master for reads",
     false, cfg::Param::AT_RUNTIME);
@@ -264,6 +268,7 @@ struct RWSConfig : public mxs::config::Configuration
         bool         strict_multi_stmt;         /**< Force non-multistatement queries to be routed to the
                                                  * master after a multistatement query. */
         bool        strict_sp_calls;            /**< Lock session to master after an SP call */
+        bool        strict_tmp_tables;          /**< Prevent reconnections if temporary tables exist */
         bool        retry_failed_reads;         /**< Retry failed reads on other servers */
         int64_t     max_slave_connections = 0;  /**< Maximum number of slaves for each connection*/
         int64_t     slave_connections;          /**< Minimum number of slaves for each connection*/

@@ -418,6 +418,23 @@ disabled by default and was added in MaxScale 2.1.9.
 All warnings and restrictions that apply to `strict_multi_stmt` also apply to
 `strict_sp_calls`.
 
+### `strict_tmp_tables`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
+By default, all temporary tables are lost when a reconnection of the primary
+node occurs. This means that when `master_reconnection` is enabled, the use of
+temporary tables might appear to disappear when a reconnection happens.
+
+If `strict_tmp_tables` is enabled, reconnections are prevented as long as a
+temporary tables exist. In this case if the primary node is lost and temporary
+table exist, the session is closed.  If a session creates temporary tables but
+does not drop them, this behavior will effectively disable reconnections until
+the session is closed.
+
 ### `master_failure_mode`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
