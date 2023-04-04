@@ -40,6 +40,8 @@ export const lodash = {
     camelCase: require('lodash/camelCase'),
     escapeRegExp: require('lodash/escapeRegExp'),
     objGet: require('lodash/get'),
+    groupBy: require('lodash/groupBy'),
+    flatMap: require('lodash/flatMap'),
 }
 
 export function delay(t, v) {

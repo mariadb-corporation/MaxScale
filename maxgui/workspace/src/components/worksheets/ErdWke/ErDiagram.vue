@@ -18,30 +18,46 @@
                     @drag-end="onNodeDragEnd"
                 >
                     <template v-slot:default="{ data: { node } }">
-                        <div class="entity">
-                            <div
-                                class="entity-header px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold"
-                                :style="{
-                                    backgroundColor: node.data.highlightColor,
-                                    height: `${entityHeaderHeight}px`,
-                                    color: node.data.headerTxtColor,
-                                }"
-                            >
-                                {{ node.id }}
-                            </div>
-                            <table
-                                class="entity-fields px-2 rounded-br-lg rounded-bl-lg"
-                                :style="{ border: `1px solid ${node.data.highlightColor}` }"
-                            >
+                        <table class="entity-table">
+                            <thead>
+                                <tr :style="{ height: `${entityHeaderHeight}px` }">
+                                    <td
+                                        class="px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold"
+                                        :style="{
+                                            backgroundColor: node.data.highlightColor,
+                                            color: node.data.headerTxtColor,
+                                        }"
+                                    >
+                                        {{ node.id }}
+                                    </td>
+                                </tr>
+                            </thead>
+                            <tbody>
                                 <tr
-                                    v-for="col in node.data.cols"
+                                    v-for="(col, i) in node.data.cols"
                                     :key="`key_${node.id}_${col.name}`"
                                     :style="{ height: `${trHeight}px` }"
                                 >
-                                    <td>{{ col.name }}</td>
+                                    <td
+                                        class="px-2"
+                                        :class="{
+                                            'rounded-bl-lg rounded-br-lg':
+                                                i === node.data.cols.length - 1,
+                                        }"
+                                        :style="{
+                                            borderLeft: getBorderStyle(node),
+                                            borderRight: getBorderStyle(node),
+                                            borderBottom:
+                                                i === node.data.cols.length - 1
+                                                    ? getBorderStyle(node)
+                                                    : 'none',
+                                        }"
+                                    >
+                                        {{ col.name }}
+                                    </td>
                                 </tr>
-                            </table>
-                        </div>
+                            </tbody>
+                        </table>
                     </template>
                 </graph-nodes>
             </template>
@@ -73,7 +89,12 @@ import {
 } from 'd3-force'
 import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsCharts/GraphNodes.vue'
-import { drawLinks, changeLinkGroupStyle } from '@share/components/common/MxsCharts/utils'
+import {
+    drawLinks,
+    changeLinkGroupStyle,
+    drawLink,
+    getLinkCtr,
+} from '@share/components/common/MxsCharts/utils'
 
 export default {
     name: 'er-diagram',
@@ -99,12 +120,75 @@ export default {
             highlightedLinks: [],
             trHeight: 32,
             entityHeaderHeight: 32,
+            linkCoordMap: {}, // keyed by d3 link index
         }
     },
     computed: {
         // Ensure that the marker remains visible while dragging a node by allocating a specific width.
         relMarkFixedWidth() {
             return 30
+        },
+        allLinks() {
+            return this.simulation.force('link').links()
+        },
+        // Minus 4 px to make sure point won't be at the top or bottom edge of the row
+        rowHeightZone() {
+            return this.trHeight - 4
+        },
+        // flat links into points and caching its link data and positions of the relational column
+        connPoints() {
+            return Object.keys(this.allLinks).reduce((points, key) => {
+                const link = this.allLinks[key]
+                const {
+                    source,
+                    target,
+                    relationshipData: { source_col, target_col },
+                } = link
+                const linkCoord = this.linkCoordMap[key]
+                const { x0, x1 } = linkCoord
+                const srcYPos = this.getColYPos({ node: source, col: source_col })
+                const targetYPos = this.getColYPos({ node: target, col: target_col })
+                // range attribute helps to detect overlapped points
+                points = [
+                    ...points,
+                    {
+                        id: source.id,
+                        range: `${x0},${srcYPos.center}`,
+                        yPositions: srcYPos,
+                        linkedPointYPositions: targetYPos,
+                        isSrc: true,
+                        linkData: link,
+                    },
+                    {
+                        id: target.id,
+                        range: `${x1},${targetYPos.center}`,
+                        yPositions: targetYPos,
+                        linkedPointYPositions: srcYPos,
+                        isSrc: false,
+                        linkData: link,
+                    },
+                ]
+                return points
+            }, [])
+        },
+        /**
+         * Generates a map of points that overlap in the `connPoints` array.
+         * @returns {Object} - An object where the keys are link IDs and the values are arrays
+         * of points that overlap. The array of points always has length >= 2
+         */
+        overlappedPoints() {
+            const { groupBy, flatMap } = this.$helpers.lodash
+            const groupedPoints = groupBy(this.connPoints, point => point.range)
+            const overlappedPoints = flatMap(groupedPoints, points => {
+                if (points.length > 1) {
+                    points.sort(
+                        (a, b) => a.linkedPointYPositions.center - b.linkedPointYPositions.center
+                    )
+                    return points
+                }
+                return []
+            })
+            return groupBy(overlappedPoints, 'id')
         },
     },
     watch: {
@@ -179,18 +263,23 @@ export default {
          * the provided column name
          * @param {Object} param.node - The node to reposition.
          * @param {string} param.col - The name of the relational column
-         * @returns {number} The new y position of the node.
+         * @returns {Object} An object containing the y positions (top, center, bottom) of the node at
+         * the provided relational column
          */
         getColYPos({ node, col }) {
             const nodeHeight = this.dynNodeSizeMap[node.id].height
             const colIdx = node.data.cols.findIndex(c => c.name === col)
-            return (
+            const center =
                 node.y +
                 nodeHeight / 2 -
                 (nodeHeight - this.entityHeaderHeight) +
                 colIdx * this.trHeight +
                 this.trHeight / 2
-            )
+            return {
+                top: center - this.rowHeightZone / 2,
+                center,
+                bottom: center + this.rowHeightZone / 2,
+            }
         },
         /**
          * Get the y position of source and target nodes
@@ -202,9 +291,11 @@ export default {
          */
         getYPositions({ source, target, relationshipData }) {
             const { source_col, target_col } = relationshipData
+            const srcY = this.getColYPos({ node: source, col: source_col })
+            const targetY = this.getColYPos({ node: target, col: target_col })
             return {
-                y0: this.getColYPos({ node: source, col: source_col }),
-                y1: this.getColYPos({ node: target, col: target_col }),
+                y0: srcY.center,
+                y1: targetY.center,
             }
         },
         /**
@@ -293,14 +384,8 @@ export default {
 
             return { x0, x1, dx1, dx2, dx3, dx4 }
         },
-        //TODO: handle overlapped y pos as a field can be associated with multiple tables
-        linkPathGenerator(d) {
-            const { source, target, relationshipData } = d
-            const { y0, y1 } = this.getYPositions({ source, target, relationshipData })
-            const { x0, x1, dx1, dx2, dx3, dx4 } = this.getXPositions({
-                source,
-                target,
-            })
+        // Generate a custom path from the given points
+        genPath({ x0, x1, dx1, dx2, dx3, dx4, y0, y1 }) {
             const point0 = [x0, y0]
             const point1 = [dx1, y0]
             const point4 = [dx4, y1]
@@ -312,6 +397,13 @@ export default {
             }
             return `M${point0} L${point1} L${point4} L${point5}`
         },
+        linkPathGenerator(link) {
+            const { source, target, relationshipData } = link
+            const yPositions = this.getYPositions({ source, target, relationshipData })
+            const xPositions = this.getXPositions({ source, target })
+            this.$set(this.linkCoordMap, link.index, { ...xPositions, ...yPositions })
+            return this.genPath({ ...xPositions, ...yPositions })
+        },
         /**
          * @param {Object} node -  node
          * @returns {Object} - { width: Number, height: Number}
@@ -319,13 +411,44 @@ export default {
         getNodeSize(node) {
             return this.$refs.graphNodes.getNodeSize(this.$typy(node, 'id').safeString)
         },
-        linkStrokeGenerator: d => d.source.data.linkColor,
+        linkStrokeGenerator(d) {
+            return this.$typy(d, 'linkStyles.linkColor').safeString || 'black'
+        },
         handleDrawLinks() {
             drawLinks({
                 containerEle: this.svgGroup,
-                data: this.simulation.force('link').links(),
+                data: this.allLinks,
                 linkPathGenerator: this.linkPathGenerator,
                 linkStrokeGenerator: this.linkStrokeGenerator,
+            })
+            this.repositionOverlappedPoints()
+        },
+        /**
+         * Repositions overlapped points for each entity,
+         * so that each point is visible and aligned in the row.
+         */
+        repositionOverlappedPoints() {
+            Object.values(this.overlappedPoints).forEach(points => {
+                // divide the row into points.length equal parts
+                const k = this.rowHeightZone / (points.length + 1)
+                // reposition points
+                points.forEach((point, i) => {
+                    const {
+                        yPositions,
+                        linkData: { source, target, index: linkIdx },
+                    } = point
+                    const newY = yPositions.top + k * i + k
+                    let coord = this.linkCoordMap[linkIdx]
+                    // update coord
+                    this.$set(coord, point.isSrc ? 'y0' : 'y1', newY)
+                    drawLink({
+                        containerEle: getLinkCtr({ srcId: source.id, targetId: target.id }),
+                        type: 'update',
+                        isInvisible: false,
+                        linkPathGenerator: this.genPath(coord),
+                        linkStrokeGenerator: this.linkStrokeGenerator,
+                    })
+                })
             })
         },
         handleCollision() {
@@ -343,7 +466,7 @@ export default {
             const nodeData = this.graphData.nodes.find(n => n.id === node.id)
             nodeData.x = nodeData.x + diffX
             nodeData.y = nodeData.y + diffY
-            const links = this.simulation.force('link').links()
+            const links = this.allLinks
             this.highlightedLinks = links.filter(
                 d => d.source.id === node.id || d.target.id === node.id
             )
@@ -352,16 +475,19 @@ export default {
         onNodeDragEnd() {
             this.isDraggingNode = false
         },
+        getBorderStyle(node) {
+            const { highlightColor } = node.data
+            const style = `1px solid ${highlightColor}`
+            return style
+        },
     },
 }
 </script>
 
 <style lang="scss" scoped>
-.entity {
+.entity-table {
     background: white;
-    .entity-fields {
-        width: 100%;
-        border-spacing: 0px;
-    }
+    width: 100%;
+    border-spacing: 0px;
 }
 </style>

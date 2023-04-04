@@ -12,6 +12,7 @@
  */
 import { select as d3Select, selectAll as d3SelectAll } from 'd3-selection'
 import { lodash } from '@share/utils/helpers'
+import { t } from 'typy'
 
 const LINK_CTR_CLASS = 'link_container'
 const LINK_LINE_CLASS = 'link_line'
@@ -44,7 +45,9 @@ export function drawLink({
                 .attr('class', className)
                 .attr('fill', 'none')
                 .attr('stroke-width', strokeWidth)
-                .attr('stroke-dasharray', d => (isInvisible || d.isSolid ? 0 : 5))
+                .attr('stroke-dasharray', d =>
+                    isInvisible || t(d, 'linkStyles.isSolid').safeBoolean ? 0 : 5
+                )
                 .attr('stroke', strokeColor)
                 .attr('d', linkPathGenerator)
             break
@@ -105,7 +108,9 @@ export function drawLinks({
                             .style('opacity', 0.5)
                             .style('z-index', 'unset')
                             .select(`path.${LINK_LINE_CLASS}`)
-                            .attr('stroke-dasharray', d => (d.isSolid ? 0 : 5))
+                            .attr('stroke-dasharray', d =>
+                                t(d, 'linkStyles.isSolid').safeBoolean ? 0 : 5
+                            )
                     })
                 drawLink({ containerEle: linkCtr, type: 'enter', ...drawLinkParams })
                 drawLink({
@@ -146,5 +151,7 @@ export function changeLinkGroupStyle({ link, idPath = 'id', isDragging }) {
         .style('opacity', isDragging ? 1 : 0.5)
         .style('z-index', isDragging ? 10 : 'unset')
         .select(`path.${LINK_LINE_CLASS}`)
-        .attr('stroke-dasharray', d => (isDragging || d.isSolid ? 0 : 5))
+        .attr('stroke-dasharray', d =>
+            isDragging || t(d, 'linkStyles.isSolid').safeBoolean ? 0 : 5
+        )
 }
