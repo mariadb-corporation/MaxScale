@@ -113,7 +113,7 @@ export default {
         },
         isDraggingNode(v) {
             for (const link of this.highlightedLinks)
-                changeLinkGroupStyle({ link, idPath: 'data.id', isDragging: v })
+                changeLinkGroupStyle({ link, nodeIdPath: 'data.id', isDragging: v })
         },
     },
     mounted() {
@@ -349,7 +349,7 @@ export default {
             drawLinks({
                 containerEle: this.svgGroup,
                 data: this.dag.links(),
-                idPath: 'data.id',
+                nodeIdPath: 'data.id',
                 linkPathGenerator: this.linkPathGenerator,
                 linkStrokeGenerator: this.colorize,
                 onEnter: linkCtr => this.drawArrowHead({ linkCtr, type: 'enter' }),

@@ -120,7 +120,7 @@ export default {
             highlightedLinks: [],
             trHeight: 32,
             entityHeaderHeight: 32,
-            linkCoordMap: {}, // keyed by d3 link index
+            linkCoordMap: {}, // keyed by link id
         }
     },
     computed: {
@@ -137,14 +137,13 @@ export default {
         },
         // flat links into points and caching its link data and positions of the relational column
         connPoints() {
-            return Object.keys(this.allLinks).reduce((points, key) => {
-                const link = this.allLinks[key]
+            return Object.values(this.allLinks).reduce((points, link) => {
                 const {
                     source,
                     target,
                     relationshipData: { source_col, target_col },
                 } = link
-                const linkCoord = this.linkCoordMap[key]
+                const linkCoord = this.linkCoordMap[link.id]
                 const { x0, x1 } = linkCoord
                 const srcYPos = this.getColYPos({ node: source, col: source_col })
                 const targetYPos = this.getColYPos({ node: target, col: target_col })
@@ -401,7 +400,7 @@ export default {
             const { source, target, relationshipData } = link
             const yPositions = this.getYPositions({ source, target, relationshipData })
             const xPositions = this.getXPositions({ source, target })
-            this.$set(this.linkCoordMap, link.index, { ...xPositions, ...yPositions })
+            this.$set(this.linkCoordMap, link.id, { ...xPositions, ...yPositions })
             return this.genPath({ ...xPositions, ...yPositions })
         },
         /**
@@ -435,14 +434,14 @@ export default {
                 points.forEach((point, i) => {
                     const {
                         yPositions,
-                        linkData: { source, target, index: linkIdx },
+                        linkData: { id },
                     } = point
                     const newY = yPositions.top + k * i + k
-                    let coord = this.linkCoordMap[linkIdx]
+                    let coord = this.linkCoordMap[id]
                     // update coord
                     this.$set(coord, point.isSrc ? 'y0' : 'y1', newY)
                     drawLink({
-                        containerEle: getLinkCtr({ srcId: source.id, targetId: target.id }),
+                        containerEle: getLinkCtr(id),
                         type: 'update',
                         isInvisible: false,
                         linkPathGenerator: this.genPath(coord),

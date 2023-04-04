@@ -17,8 +17,8 @@ import { t } from 'typy'
 const LINK_CTR_CLASS = 'link_container'
 const LINK_LINE_CLASS = 'link_line'
 
-export function getLinkCtr({ srcId, targetId }) {
-    return d3Select(`.${LINK_CTR_CLASS}[src-id="${srcId}"][target-id="${targetId}"]`)
+export function getLinkCtr(id) {
+    return d3Select(`#${id}`)
 }
 
 /**
@@ -68,7 +68,7 @@ export function drawLink({
  * is drawn to help with this.
  * @param {Object} param.containerEle - container element of links to be drawn
  * @param {String} param.data - Links data
- * @param {String|Array} [param.idPath='id'] - The path to the identifier field of a node
+ * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
  * @param {Function} param.linkPathGenerator - Function to fill the value of the d attribute
  * @param {String|Function} param.linkStrokeGenerator - fill the value of the stroke attribute.
  * @param {Function} param.onEnter - When links are entered into the DOM
@@ -77,7 +77,7 @@ export function drawLink({
 export function drawLinks({
     containerEle,
     data,
-    idPath = 'id',
+    nodeIdPath = 'id',
     linkPathGenerator,
     linkStrokeGenerator,
     onEnter,
@@ -92,9 +92,10 @@ export function drawLinks({
             enter => {
                 const linkCtr = enter
                     .insert('g')
+                    .attr('id', d => d.id)
                     .attr('class', `${LINK_CTR_CLASS} pointer`)
-                    .attr('src-id', d => lodash.objGet(d.source, idPath))
-                    .attr('target-id', d => lodash.objGet(d.target, idPath))
+                    .attr('src-id', d => lodash.objGet(d.source, nodeIdPath))
+                    .attr('target-id', d => lodash.objGet(d.target, nodeIdPath))
                     .style('opacity', 0.5)
                     .on('mouseover', function() {
                         d3Select(this)
@@ -141,12 +142,12 @@ export function drawLinks({
 /**
  * This helps to turn the dashed link to solid while dragging and vice versa.
  * @param {Object} param.link - link object
- * @param {String|Array} [param.idPath='id'] - The path to the identifier field of a node
+ * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
  * @param {Boolean} param.isDragging - is dragging node
  */
-export function changeLinkGroupStyle({ link, idPath = 'id', isDragging }) {
-    const srcId = lodash.objGet(link.source, idPath)
-    const targetId = lodash.objGet(link.target, idPath)
+export function changeLinkGroupStyle({ link, nodeIdPath = 'id', isDragging }) {
+    const srcId = lodash.objGet(link.source, nodeIdPath)
+    const targetId = lodash.objGet(link.target, nodeIdPath)
     d3SelectAll(`.${LINK_CTR_CLASS}[src-id="${srcId}"][target-id="${targetId}"]`)
         .style('opacity', isDragging ? 1 : 0.5)
         .style('z-index', isDragging ? 10 : 'unset')
