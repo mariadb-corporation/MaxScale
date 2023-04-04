@@ -60,6 +60,7 @@ public:
         bool multiquery {true};
         bool auto_reconnect {false};
         bool clear_sql_mode {false};
+        bool local_infile {true};
 
         std::string charset;
 
