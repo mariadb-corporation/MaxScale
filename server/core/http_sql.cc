@@ -874,6 +874,8 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
         sett.password = config.password;
         sett.timeout = config.timeout;
         sett.ssl = config.ssl;
+        sett.local_infile = false;
+
         if (config.proxy_protocol)
         {
             conn.set_local_text_proxy_header();
