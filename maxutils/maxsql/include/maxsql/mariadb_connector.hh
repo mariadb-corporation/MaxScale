@@ -61,6 +61,7 @@ public:
 
         bool        clear_sql_mode {false};
         std::string charset;
+        bool        local_infile {true};
         // TODO: add more
     };
 

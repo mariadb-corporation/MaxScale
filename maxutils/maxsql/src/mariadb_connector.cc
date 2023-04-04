@@ -87,6 +87,14 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         mysql_optionsv(newconn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     }
 
+    // LOAD DATA LOCAL INFILE is supported by default. This can be turned off to prevent non-local clients
+    // from accessing files on the MaxScale server.
+    if (!m_settings.local_infile)
+    {
+        unsigned int off = 0;
+        mysql_optionsv(newconn, MYSQL_OPT_LOCAL_INFILE, &off);
+    }
+
     const string& eff_plugin_dir = m_settings.plugin_dir.empty() ? default_plugin_dir :
         m_settings.plugin_dir;
     if (!eff_plugin_dir.empty())

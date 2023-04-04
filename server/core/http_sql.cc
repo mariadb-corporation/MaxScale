@@ -695,6 +695,7 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
     sett.timeout = config.timeout;
     sett.ssl = config.ssl;
     sett.proxy_protocol = config.proxy_protocol;
+    sett.local_infile = false;
 
     if (conn.open(config.host, config.port, config.db))
     {
