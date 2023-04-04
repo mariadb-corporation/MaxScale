@@ -40,8 +40,6 @@ namespace
 const std::string CONN_ID_BODY = "conn_id_body_";
 const std::string CONN_ID_SIG = "conn_id_sig_";
 
-const std::string TOKEN_ISSUER = "mxs-query";
-
 const std::string COLLECTION_NAME = "sql";
 
 HttpResponse create_error(const std::string& err, int errcode = MHD_HTTP_BAD_REQUEST)
@@ -72,7 +70,7 @@ std::pair<std::string, std::string> validate_connection_id(const HttpRequest& re
 
     if (!token.empty())
     {
-        if (auto claims = mxs::jwt::decode(TOKEN_ISSUER, token))
+        if (auto claims = mxs::jwt::decode(mxs::Config::get().admin_jwt_issuer, token))
         {
             if (auto sub = claims->get("sub"))
             {
@@ -210,8 +208,9 @@ json_t* all_connections_to_json(const std::string& host, const std::vector<std::
 HttpResponse create_connect_response(const std::string& host, const std::string& id, bool persist, int age)
 {
     int64_t max_age = age > 0 ? age : 28800;
-    max_age = std::min(max_age, mxs::Config::get().admin_jwt_max_age.count());
-    auto token = mxs::jwt::create(TOKEN_ISSUER, id, max_age);
+    const auto& cnf = mxs::Config::get();
+    max_age = std::min(max_age, cnf.admin_jwt_max_age.count());
+    auto token = mxs::jwt::create(cnf.admin_jwt_issuer, id, max_age);
 
     json_t* data = one_connection_to_json(host, id);
     HttpResponse response(MHD_HTTP_CREATED, data);

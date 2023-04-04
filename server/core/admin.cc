@@ -78,7 +78,6 @@ const char* gui_not_secure_page =
 </html>
 )EOF";
 
-const std::string TOKEN_ISSUER = "maxscale";
 const std::string TOKEN_SIG = "token_sig";
 
 const char* CN_ADMIN = "admin";
@@ -1122,7 +1121,8 @@ HttpResponse Client::generate_token(const HttpRequest& request)
 
     mxb_assert(m_account != mxs::USER_ACCOUNT_UNKNOWN);
     const char* type = m_account == mxs::USER_ACCOUNT_ADMIN ? CN_ADMIN : CN_BASIC;
-    auto token = mxs::jwt::create(TOKEN_ISSUER, m_user, token_age, {{"account", type}});
+    const auto& cnf = mxs::Config::get();
+    auto token = mxs::jwt::create(cnf.admin_jwt_issuer, m_user, token_age, {{"account", type}});
 
     if (request.is_truthy_option("persist"))
     {
@@ -1177,7 +1177,7 @@ bool Client::auth_with_token(const std::string& token, const char* method, const
     else
     {
         // Normal token authentication, tokens are generated and verified by MaxScale
-        if (auto claims = mxs::jwt::decode(TOKEN_ISSUER, token))
+        if (auto claims = mxs::jwt::decode(mxs::Config::get().admin_jwt_issuer, token))
         {
             auto user = claims->get("sub");
             mxs::user_account_type type = mxs::USER_ACCOUNT_UNKNOWN;

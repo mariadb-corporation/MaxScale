@@ -309,6 +309,7 @@ public:
     mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature key */
     std::string               admin_jwt_key;        /**< Key used with symmetric JWT algorithms */
     seconds                   admin_jwt_max_age;    /**< Maximum JWT lifetime */
+    std::string               admin_jwt_issuer;     /**< Token issuer */
     std::string               admin_oidc_url;       /**< OIDC server for for external JWTs */
     std::string               admin_verify_url;     /**< URL that points to a verification server */
 
@@ -449,6 +450,7 @@ private:
     static config::ParamEnum<mxs::JwtAlgo>              s_admin_jwt_algorithm;
     static config::ParamString                          s_admin_jwt_key;
     static config::ParamSeconds                         s_admin_jwt_max_age;
+    static config::ParamString                          s_admin_jwt_issuer;
     static config::ParamString                          s_admin_oidc_url;
     static config::ParamBool                            s_admin_audit_enabled;
     static config::ParamString                          s_admin_audit_file;
