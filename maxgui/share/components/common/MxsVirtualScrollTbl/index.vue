@@ -456,11 +456,7 @@ export default {
                 }
             }
             &:active,
-            &--active {
-                .td {
-                    background: #f2fcff !important;
-                }
-            }
+            &--active,
             &--selected {
                 .td {
                     background: $selected-tr-color !important;

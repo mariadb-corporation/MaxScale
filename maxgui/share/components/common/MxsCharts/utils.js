@@ -100,14 +100,12 @@ export function drawLinks({
                     .on('mouseover', function() {
                         d3Select(this)
                             .style('opacity', 1)
-                            .style('z-index', 10)
                             .select(`path.${LINK_LINE_CLASS}`)
                             .attr('stroke-dasharray', 0)
                     })
                     .on('mouseout', function() {
                         d3Select(this)
                             .style('opacity', 0.5)
-                            .style('z-index', 'unset')
                             .select(`path.${LINK_LINE_CLASS}`)
                             .attr('stroke-dasharray', d =>
                                 t(d, 'linkStyles.isSolid').safeBoolean ? 0 : 5
@@ -150,7 +148,6 @@ export function changeLinkGroupStyle({ link, nodeIdPath = 'id', isDragging }) {
     const targetId = lodash.objGet(link.target, nodeIdPath)
     d3SelectAll(`.${LINK_CTR_CLASS}[src-id="${srcId}"][target-id="${targetId}"]`)
         .style('opacity', isDragging ? 1 : 0.5)
-        .style('z-index', isDragging ? 10 : 'unset')
         .select(`path.${LINK_LINE_CLASS}`)
         .attr('stroke-dasharray', d =>
             isDragging || t(d, 'linkStyles.isSolid').safeBoolean ? 0 : 5

@@ -75,6 +75,6 @@ export default {
 }
 
 .detail-overview__card--hover {
-    background-color: #f2fcff;
+    background-color: $tr-hovered-color;
 }
 </style>

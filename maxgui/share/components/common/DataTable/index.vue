@@ -434,7 +434,7 @@ export default {
             const target = cellIndex < this.colsHasRowSpan ? 'rowspanCell' : 'cell'
             const { groupId } = item
             // Make associated td elements to have the same hover effect
-            let bg = e.type === 'mouseenter' ? '#fafcfc' : ''
+            let bg = e.type === 'mouseenter' ? '#F2FCFF' : ''
             switch (target) {
                 case 'cell':
                     {
@@ -529,13 +529,13 @@ export default {
 }
 
 .sortable-chosen:hover {
-    background: #f2fcff !important;
+    background: $tr-hovered-color !important;
     .drag-handle {
         display: inline;
     }
 }
 .sortable-ghost {
-    background: #f2fcff !important;
+    background: $tr-hovered-color !important;
     opacity: 0.6;
 }
 .v-data-table.data-table-full {
@@ -567,7 +567,7 @@ export default {
 
         tbody {
             tr:active:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper):not(.v-data-table__editable-cell-mode) {
-                background: #f2fcff !important;
+                background: $selected-tr-color !important;
             }
             tr {
                 pointer-events: none !important;

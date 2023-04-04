@@ -56,13 +56,11 @@ export default {
     tbody {
         tr {
             &:hover {
-                background: #fafcfc !important;
+                background: $tr-hovered-color !important;
             }
-            &:active {
-                background: #f2fcff !important;
-            }
+            &:active,
             &.v-data-table__selected {
-                background: #9fd7e6 !important;
+                background: $selected-tr-color !important;
             }
 
             td {

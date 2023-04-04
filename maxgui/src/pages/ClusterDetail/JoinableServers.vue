@@ -111,7 +111,7 @@ export default {
     }
 }
 .node-ghost {
-    background: #f2fcff !important;
+    background: $tr-hovered-color !important;
     opacity: 0.6;
 }
 .drag-node-clone {
