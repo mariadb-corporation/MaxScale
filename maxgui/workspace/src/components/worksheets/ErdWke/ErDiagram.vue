@@ -21,7 +21,7 @@
                         <table class="entity-table">
                             <thead>
                                 <tr :style="{ height: `${entityHeaderHeight}px` }">
-                                    <td
+                                    <th
                                         class="px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold"
                                         :style="{
                                             backgroundColor: node.data.highlightColor,
@@ -29,7 +29,7 @@
                                         }"
                                     >
                                         {{ node.id }}
-                                    </td>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -95,6 +95,7 @@ import {
     drawLink,
     getLinkCtr,
 } from '@share/components/common/MxsCharts/utils'
+import { LINK_SHAPES, createPath, genPath } from '@share/components/common/MxsCharts/linkShapes'
 
 export default {
     name: 'er-diagram',
@@ -120,7 +121,9 @@ export default {
             highlightedLinks: [],
             trHeight: 32,
             entityHeaderHeight: 32,
-            linkCoordMap: {}, // keyed by link id
+            pathPointsMap: {}, // keyed by link id
+            //TODO: Add input to change this value
+            linkShapeType: LINK_SHAPES.ORTHO,
         }
     },
     computed: {
@@ -131,9 +134,9 @@ export default {
         allLinks() {
             return this.simulation.force('link').links()
         },
-        // Minus 4 px to make sure point won't be at the top or bottom edge of the row
-        rowHeightZone() {
-            return this.trHeight - 4
+        // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
+        rowHeightOffset() {
+            return 4
         },
         // flat links into points and caching its link data and positions of the relational column
         connPoints() {
@@ -141,12 +144,9 @@ export default {
                 const {
                     source,
                     target,
-                    relationshipData: { source_col, target_col },
+                    pathData: { srcYPos, targetYPos },
                 } = link
-                const linkCoord = this.linkCoordMap[link.id]
-                const { x0, x1 } = linkCoord
-                const srcYPos = this.getColYPos({ node: source, col: source_col })
-                const targetYPos = this.getColYPos({ node: target, col: target_col })
+                const { x0, x1 } = this.pathPointsMap[link.id]
                 // range attribute helps to detect overlapped points
                 points = [
                     ...points,
@@ -176,18 +176,19 @@ export default {
          * of points that overlap. The array of points always has length >= 2
          */
         overlappedPoints() {
-            const { groupBy, flatMap } = this.$helpers.lodash
-            const groupedPoints = groupBy(this.connPoints, point => point.range)
-            const overlappedPoints = flatMap(groupedPoints, points => {
+            // Group points have the same range
+            let groupedPoints = this.$helpers.lodash.groupBy(this.connPoints, point => point.range)
+            // get overlapped points and sort them
+            return Object.keys(groupedPoints).reduce((acc, group) => {
+                const points = groupedPoints[group]
                 if (points.length > 1) {
                     points.sort(
                         (a, b) => a.linkedPointYPositions.center - b.linkedPointYPositions.center
                     )
-                    return points
+                    acc[group] = points
                 }
-                return []
-            })
-            return groupBy(overlappedPoints, 'id')
+                return acc
+            }, {})
         },
     },
     watch: {
@@ -257,151 +258,20 @@ export default {
                 return map
             }, {})
         },
-        /**
-         * Return the y position of a node based on its dynamic height and
-         * the provided column name
-         * @param {Object} param.node - The node to reposition.
-         * @param {string} param.col - The name of the relational column
-         * @returns {Object} An object containing the y positions (top, center, bottom) of the node at
-         * the provided relational column
-         */
-        getColYPos({ node, col }) {
-            const nodeHeight = this.dynNodeSizeMap[node.id].height
-            const colIdx = node.data.cols.findIndex(c => c.name === col)
-            const center =
-                node.y +
-                nodeHeight / 2 -
-                (nodeHeight - this.entityHeaderHeight) +
-                colIdx * this.trHeight +
-                this.trHeight / 2
-            return {
-                top: center - this.rowHeightZone / 2,
-                center,
-                bottom: center + this.rowHeightZone / 2,
-            }
-        },
-        /**
-         * Get the y position of source and target nodes
-         * @param {Object} param.source - The source node of the relationship.
-         * @param {Object} param.target - The target node of the relationship.
-         * @param {string} param.relationshipData.source_col - The name of the relational column of the source
-         * @param {string} param.relationshipData.target_col - The name of the relational column of the target
-         * @returns {Object} An object containing the new y positions of the source and target nodes.
-         */
-        getYPositions({ source, target, relationshipData }) {
-            const { source_col, target_col } = relationshipData
-            const srcY = this.getColYPos({ node: source, col: source_col })
-            const targetY = this.getColYPos({ node: target, col: target_col })
-            return {
-                y0: srcY.center,
-                y1: targetY.center,
-            }
-        },
-        /**
-         * Checks the horizontal position of the target node.
-         * @param {number} params.srcX - The horizontal position of the source node relative to the center.
-         * @param {number} params.targetX - The horizontal position of the target node relative to the center.
-         * @param {number} params.halfSrcWidth - Half the width of the source node.
-         * @param {number} params.halfTargetWidth - Half the width of the target node.
-         * @returns {string} Returns the relative position of the target node to the source node.
-         * "target-right" if the target node is to the right of the source node.
-         * "target-left" if the target node is to the left of the source node.
-         * "intersect" if the target node intersects with the source node.
-         */
-        checkTargetPosX({ srcX, targetX, halfSrcWidth, halfTargetWidth }) {
-            const srcZone = [srcX - halfSrcWidth, srcX + halfSrcWidth],
-                targetZone = [targetX - halfTargetWidth, targetX + halfTargetWidth]
-            if (targetZone[0] - srcZone[1] >= 0) return 'target-right'
-            else if (srcZone[0] - targetZone[1] >= 0) return 'target-left'
-            return 'intersect'
-        },
-        /**
-         * Repositions the x position of a node and its target based on the
-         * dynamic node sizes and the distance between them.
-         * @param {Object} param.source - The source node.
-         * @param {Object} param.target - The target node.
-         * @returns {Object} An object containing the x positions of the source and target
-         * nodes, as well as the midpoint positions of the link.
-         */
-        getXPositions({ source, target }) {
-            const srcWidth = this.dynNodeSizeMap[source.id].width,
-                targetWidth = this.dynNodeSizeMap[target.id].width,
-                halfSrcWidth = srcWidth / 2,
-                halfTargetWidth = targetWidth / 2
-
-            // D3 returns the mid point of the entities for source.x, target.x
-            const srcX = source.x,
-                targetX = target.x
-
-            let x0 = srcX,
-                x1 = targetX,
-                dx1 = x0,
-                dx4 = x1,
-                dx2,
-                dx3
-
-            switch (this.checkTargetPosX({ srcX, targetX, halfSrcWidth, halfTargetWidth })) {
-                case 'target-right': {
-                    x0 = srcX + halfSrcWidth
-                    x1 = targetX - halfTargetWidth
-                    dx1 = x0 + this.relMarkFixedWidth
-                    dx4 = x1 - this.relMarkFixedWidth
-                    if (dx4 - dx1 <= 0) {
-                        dx2 = dx1
-                        dx3 = dx4
-                    }
-                    break
-                }
-                case 'target-left': {
-                    x0 = srcX - halfSrcWidth
-                    x1 = targetX + halfTargetWidth
-                    dx1 = x0 - this.relMarkFixedWidth
-                    dx4 = x1 + this.relMarkFixedWidth
-                    if (dx1 - dx4 <= 0) {
-                        dx2 = dx1
-                        dx3 = dx4
-                    }
-                    break
-                }
-                case 'intersect': {
-                    // move x0 & x1 to the right edge of the nodes
-                    x0 = srcX + halfSrcWidth
-                    x1 = targetX + halfTargetWidth
-                    dx1 = x1 + this.relMarkFixedWidth
-                    dx4 = dx1
-                    if (dx1 - this.relMarkFixedWidth <= x0) {
-                        dx1 = x0 + this.relMarkFixedWidth
-                        if (dx4 - dx1 <= 0) {
-                            dx2 = dx1
-                            dx3 = dx1
-                        }
-                    }
-                    if (dx4 <= dx1) dx4 = dx1
-                    break
-                }
-            }
-
-            return { x0, x1, dx1, dx2, dx3, dx4 }
-        },
-        // Generate a custom path from the given points
-        genPath({ x0, x1, dx1, dx2, dx3, dx4, y0, y1 }) {
-            const point0 = [x0, y0]
-            const point1 = [dx1, y0]
-            const point4 = [dx4, y1]
-            const point5 = [x1, y1]
-            if (dx2 && dx3) {
-                const point2 = [dx2, (y0 + y1) / 2],
-                    point3 = [dx3, (y0 + y1) / 2]
-                return `M${point0} L${point1} L${point2} L${point3} L${point4} L${point5}`
-            }
-            return `M${point0} L${point1} L${point4} L${point5}`
-        },
-        linkPathGenerator(link) {
-            const { source, target, relationshipData } = link
-            const yPositions = this.getYPositions({ source, target, relationshipData })
-            const xPositions = this.getXPositions({ source, target })
-            this.$set(this.linkCoordMap, link.id, { ...xPositions, ...yPositions })
-            return this.genPath({ ...xPositions, ...yPositions })
+        linkPathGenerator(linkData) {
+            const { path, data } = genPath({
+                shapeType: this.linkShapeType,
+                linkData,
+                entitySizeData: {
+                    headerHeight: this.entityHeaderHeight,
+                    rowHeight: this.trHeight,
+                    rowOffset: this.rowHeightOffset,
+                    markerWidth: this.relMarkFixedWidth,
+                },
+                nodeSizeMap: this.dynNodeSizeMap,
+            })
+            this.$set(this.pathPointsMap, linkData.id, data)
+            return path
         },
         /**
          * @param {Object} node -  node
@@ -429,7 +299,7 @@ export default {
         repositionOverlappedPoints() {
             Object.values(this.overlappedPoints).forEach(points => {
                 // divide the row into points.length equal parts
-                const k = this.rowHeightZone / (points.length + 1)
+                const k = (this.trHeight - this.rowHeightOffset) / (points.length + 1)
                 // reposition points
                 points.forEach((point, i) => {
                     const {
@@ -437,14 +307,17 @@ export default {
                         linkData: { id },
                     } = point
                     const newY = yPositions.top + k * i + k
-                    let coord = this.linkCoordMap[id]
+                    let pathPoints = this.pathPointsMap[id]
                     // update coord
-                    this.$set(coord, point.isSrc ? 'y0' : 'y1', newY)
+                    this.$set(pathPoints, point.isSrc ? 'y0' : 'y1', newY)
                     drawLink({
                         containerEle: getLinkCtr(id),
                         type: 'update',
                         isInvisible: false,
-                        linkPathGenerator: this.genPath(coord),
+                        linkPathGenerator: createPath({
+                            shapeType: this.linkShapeType,
+                            ...pathPoints,
+                        }),
                         linkStrokeGenerator: this.linkStrokeGenerator,
                     })
                 })
@@ -488,5 +361,12 @@ export default {
     background: white;
     width: 100%;
     border-spacing: 0px;
+    tbody {
+        tr {
+            &:hover {
+                background: $tr-hovered-color;
+            }
+        }
+    }
 }
 </style>
