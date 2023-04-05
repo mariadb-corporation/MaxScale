@@ -347,6 +347,21 @@ bool is_prepare(const GWBUF& packet);
  * @return True if it does, false otherwise.
  */
 bool is_query(const GWBUF& packet);
+
+enum class Severity {ERROR, FATAL};
+
+/**
+ * Create a Postgres error packet. The packet contains the S, V, C and M fields as described here:
+ * https://www.postgresql.org/docs/current/protocol-error-fields.html
+ *
+ * @param sev      The severity, either FATAL or ERROR. This is the value for both the S and V fields.
+ * @param sqlstate The SQLSTATE of the error. This should be either a standard SQLSTATE or one of
+ * the Postgres specific ones.
+ * @param msg      The primary human-readable error message. This should be relatively short.
+ *
+ * @return The error packet
+ */
+GWBUF make_error(Severity sev, std::string_view sqlstate, std::string_view msg);
 }
 
 // Convenience alias for the namespace

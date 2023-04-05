@@ -353,6 +353,34 @@ bool is_query(const GWBUF& packet)
 {
     return packet.length() > 0 && packet[0] == pg::QUERY;
 }
+
+GWBUF make_error(Severity sev, std::string_view sqlstate, std::string_view msg)
+{
+    std::string severity = (sev == Severity::ERROR) ? "ERROR" : "FATAL";
+    // The field type explanations are here
+    // https://www.postgresql.org/docs/current/protocol-error-fields.html
+    auto old_severity = mxb::cat("S", severity);
+    auto new_severity = mxb::cat("V", severity);
+    auto code = mxb::cat("C", sqlstate);
+    auto message = mxb::cat("M", msg);
+
+    GWBUF buf{pg::HEADER_LEN
+              + old_severity.size() + 1
+              + new_severity.size() + 1
+              + code.size() + 1
+              + message.size() + 1
+              + 1};
+    auto ptr = buf.data();
+
+    *ptr++ = 'E';
+    ptr += pg::set_uint32(ptr, buf.length() - 1);
+    ptr += pg::set_string(ptr, old_severity);
+    ptr += pg::set_string(ptr, new_severity);
+    ptr += pg::set_string(ptr, code);
+    ptr += pg::set_string(ptr, message);
+    *ptr = 0;
+    return buf;
+}
 }
 
 /**

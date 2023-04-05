@@ -12,6 +12,7 @@
  */
 
 #include "pgclientconnection.hh"
+#include <maxbase/format.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
@@ -24,6 +25,7 @@ using std::string_view;
 
 namespace
 {
+const string invalid_auth = "28000";    // invalid_authorization_specification
 
 void add_packet_auth_request(GWBUF& gwbuf, pg::Auth athentication_method)
 {
@@ -145,8 +147,19 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
             auto pw_request_packet = m_authenticator->authentication_request();
             if (pw_request_packet.empty())
             {
-                // The user is trusted, let them in. TODO: check that user can log in
-                next_state = start_session() ? State::ROUTE : State::ERROR;
+                // The user is trusted, no authentication necessary.
+                if (m_protocol_data->auth_data().user_entry.type == UserEntryType::USER_ACCOUNT_OK)
+                {
+                    if (check_allow_login())
+                    {
+                        next_state = start_session() ? State::ROUTE : State::ERROR;
+                    }
+                }
+                else
+                {
+                    send_error(invalid_auth, mxb::string_printf("role \"%s\" does not exist",
+                                                                m_session.user().c_str()));
+                }
             }
             else
             {
@@ -156,7 +169,19 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
         }
         else
         {
-            // TODO: Refresh user accounts.
+            // Either user account did not match or auth method is not enabled.
+            const char* enc = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED) ? "SSL encryption" :
+                "no encryption";
+            string msg = mxb::string_printf(
+                "no pg_hba.conf entry for host \"%s\", user \"%s\", database \"%s\", %s",
+                m_session.client_remote().c_str(), m_session.user().c_str(),
+                m_protocol_data->default_db().c_str(), enc);
+            send_error(invalid_auth, msg);
+            // TODO: Wait for update like MariaDBProtocol.
+            if (user_account_cache()->can_update_immediately())
+            {
+                m_session.service->request_user_account_update();
+            }
         }
     }
 
@@ -171,7 +196,6 @@ PgClientConnection::State PgClientConnection::state_auth(GWBUF&& packet)
     enum class Result {READY, CONTINUE, ERROR};
     auto result = Result::ERROR;
 
-    // TODO: send errors to client.
     auto res = m_authenticator->exchange(std::move(packet), *m_protocol_data);
     switch (res.status)
     {
@@ -197,11 +221,9 @@ PgClientConnection::State PgClientConnection::state_auth(GWBUF&& packet)
 
                 if (auth_res.status == AuthRes::Status::SUCCESS)
                 {
-                    result = Result::READY;
-                    if (user_entry.authid_entry.super && mxs::Config::get().log_warn_super_user)
+                    if (check_allow_login())
                     {
-                        MXB_WARNING("Super user %s logged in to service '%s'.",
-                                    m_session.user_and_host().c_str(), m_session.service->name());
+                        result = Result::READY;
                     }
                 }
                 else
@@ -213,12 +235,15 @@ PgClientConnection::State PgClientConnection::state_auth(GWBUF&& packet)
                         // session anyway since I/O with client cannot be redone.
                         m_session.service->request_user_account_update();
                     }
-                    // TODO: send authentication error
+                    send_error("28P01", mxb::string_printf("password authentication failed for user \"%s\"",
+                                                           m_session.user().c_str()));
                 }
             }
             else
             {
-                // TODO: send authentication error
+                mxb_assert(user_entry.type == UserEntryType::NO_AUTH_ID_ENTRY);
+                send_error(invalid_auth, mxb::string_printf("role \"%s\" does not exist",
+                                                            m_session.user().c_str()));
             }
         }
         break;
@@ -262,7 +287,8 @@ bool PgClientConnection::start_session()
     }
     else
     {
-        MXB_ERROR("Could not start session, closing PG client connection.");
+        send_error("XX000", "Internal error: Session creation failed");
+        MXB_ERROR("Failed to create session for %s.", m_session.user_and_host().c_str());
     }
     return rval;
 }
@@ -462,4 +488,30 @@ PgAuthenticatorModule* PgClientConnection::find_auth_module(const string& auth_m
 const PgUserCache* PgClientConnection::user_account_cache()
 {
     return static_cast<const PgUserCache*>(m_session.service->user_account_cache());
+}
+
+void PgClientConnection::send_error(string_view sqlstate, string_view msg)
+{
+    m_dcb->writeq_append(pg::make_error(pg::Severity::FATAL, sqlstate, msg));
+}
+
+bool PgClientConnection::check_allow_login()
+{
+    bool rval = false;
+    auto& user_entry = m_protocol_data->auth_data().user_entry;
+    if (user_entry.authid_entry.can_login)
+    {
+        if (user_entry.authid_entry.super && mxs::Config::get().log_warn_super_user)
+        {
+            MXB_WARNING("Super user %s logged in to service '%s'.",
+                        m_session.user_and_host().c_str(), m_session.service->name());
+        }
+        rval = true;
+    }
+    else
+    {
+        send_error(invalid_auth, mxb::string_printf("role \"%s\" is not permitted to log in",
+                                                    m_session.user().c_str()));
+    }
+    return rval;
 }

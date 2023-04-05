@@ -72,6 +72,8 @@ private:
     bool parse_startup_message(const GWBUF& buf);
     bool start_session();
     void update_user_account_entry();
+    bool check_allow_login();
+    void send_error(std::string_view sqlstate, std::string_view msg);
 
     const PgUserCache*     user_account_cache();
     PgAuthenticatorModule* find_auth_module(const std::string& auth_method);
