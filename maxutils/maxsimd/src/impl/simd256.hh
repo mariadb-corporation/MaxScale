@@ -162,7 +162,7 @@ inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Marke
             chunk = _mm256_loadu_si256 ((const __m256i*)(pSource));
         }
 
-        auto bitmask = _mm256_movemask_epi8(classify_ascii(ascii_bitmap, chunk));
+        uint32_t bitmask = _mm256_movemask_epi8(classify_ascii(ascii_bitmap, chunk));
 
         while (bitmask)
         {

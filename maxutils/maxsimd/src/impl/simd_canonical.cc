@@ -98,8 +98,8 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
             chunk = _mm256_loadu_si256 ((const __m256i*)(pSource));
         }
 
-        auto ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map(), chunk));
-        auto ident_bitmask = _mm256_movemask_epi8(classify_ascii(ident_begin_bit_map(), chunk));
+        uint32_t ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map(), chunk));
+        uint32_t ident_bitmask = _mm256_movemask_epi8(classify_ascii(ident_begin_bit_map(), chunk));
 
         // Make a bitmap where a sequence of digits is replaced with only
         // the first, leading digit.
@@ -114,22 +114,22 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
         const __m256i xored = _mm256_xor_si256(all_digits, rshifted);
         const __m256i leading_digits = _mm256_and_si256(all_digits, xored);
 
-        auto digit_bitmask = _mm256_movemask_epi8(leading_digits);
+        uint32_t digit_bitmask = _mm256_movemask_epi8(leading_digits);
 
         // If a leading digit is preceded by a char that can
         // start or continue an identifier, drop the digit.
-        auto ident_shftr = ident_bitmask << 1;
-        auto not_a_number = digit_bitmask & ident_shftr;
+        uint32_t ident_shftr = ident_bitmask << 1;
+        uint32_t not_a_number = digit_bitmask & ident_shftr;
         digit_bitmask ^= not_a_number;
 
         // Register boundary check.
         // If the previous rightmost char was an identifier char,
         // then if the current leftmost char is a digit, zero it out.
-        digit_bitmask &= ~int32_t(previous_rightmost_is_ident_char);
+        digit_bitmask &= ~uint32_t(previous_rightmost_is_ident_char);
 
         previous_rightmost_is_ident_char = rightmost_is_ident_char;
 
-        auto bitmask = ascii_bitmask | digit_bitmask;
+        uint32_t bitmask = ascii_bitmask | digit_bitmask;
 
         while (bitmask)
         {
