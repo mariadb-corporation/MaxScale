@@ -14,6 +14,7 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <maxbase/assert.hh>
 #include <algorithm>
 #include <string>
 #include <sstream>
@@ -66,14 +67,17 @@ namespace maxbase
  * @return The concatenated value
  */
 template<class ... Args>
-std::string cat(Args&& ... args)
+std::string cat(Args&& ... args) noexcept
 {
     // This static assertion avoids the accidental use of integers with mxb::cat. If an integer is passed to
     // std::string::operator+=, the value is converted into a character which is nearly always unintentional.
     static_assert(std::conjunction_v<std::is_constructible<std::string_view, Args> ...>,
                   "Must be able to construct a std::string_view from all types");
     std::string rval;
+    size_t total = (0 + ... + std::string_view(args).size());
+    rval.reserve(total);
     (rval += ... += args);
+    mxb_assert(rval.size() == total);
     return rval;
 }
 
