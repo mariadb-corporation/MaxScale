@@ -1261,7 +1261,7 @@ std::vector<ColumnInfo> ODBCImp::get_headers(int columns)
 
 std::pair<bool, bool> ODBCImp::get_normal_result(int columns, Output* handler)
 {
-    SQLRETURN ret;
+    SQLRETURN ret = SQL_SUCCESS;
     ResultBuffer res(m_columns, 1);
 
     bool ok = true;
@@ -1328,7 +1328,7 @@ std::pair<bool, bool> ODBCImp::get_batch_result(int columns, Output* handler)
     SQLSetStmtAttr(m_stmt, SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
     SQLSetStmtAttr(m_stmt, SQL_ATTR_ROW_STATUS_PTR, res.row_status.data(), 0);
 
-    SQLRETURN ret;
+    SQLRETURN ret = SQL_SUCCESS;
     bool ok = true;
 
     for (int i = 0; i < columns; i++)

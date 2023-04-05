@@ -175,7 +175,7 @@ bool is_proxy_protocol_allowed(const sockaddr_storage& addr, const SubnetArray& 
         return false;
     }
 
-    sockaddr_storage normalized_addr;
+    sockaddr_storage normalized_addr{};
 
     // Non-TCP addresses (unix domain socket) are treated as the localhost address.
     switch (addr.ss_family)
