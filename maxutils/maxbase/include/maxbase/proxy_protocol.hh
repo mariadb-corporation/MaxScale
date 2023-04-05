@@ -13,8 +13,10 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
+#include <maxbase/assert.hh>
 #include <string>
+#include <vector>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 

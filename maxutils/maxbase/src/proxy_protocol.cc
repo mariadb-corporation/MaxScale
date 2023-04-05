@@ -12,10 +12,11 @@
  * Public License.
  */
 #include <maxbase/proxy_protocol.hh>
+#include <maxbase/format.hh>
+#include <maxbase/string.hh>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/un.h>
-#include <maxbase/format.hh>
 
 namespace
 {

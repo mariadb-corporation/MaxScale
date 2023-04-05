@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <maxsql/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 #include <functional>
 #include <string>
 #include <unordered_map>
