@@ -1159,6 +1159,13 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
     if (store)
     {
         m_current_query = buffer.shallow_clone();
+
+        if (m_config->transaction_replay && m_config->trx_retry_safe_commit
+            && parser().type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_COMMIT))
+        {
+            MXB_INFO("Transaction is about to commit, skipping replay if it fails.");
+            m_can_replay_trx = false;
+        }
     }
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;

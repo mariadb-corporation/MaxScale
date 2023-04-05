@@ -656,6 +656,30 @@ the transaction is automatically retried. If the retrying of the transaction
 results in another deadlock error, it is retried until it either succeeds or a
 transaction checksum error is encountered.
 
+### `transaction_replay_safe_commit`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: true
+
+If a transaction is ending and the `COMMIT` statement at the end of it is
+interrupted, there is a risk of duplicating the transaction if it is
+replayed. This parameter prevents the retrying of transactions that are about to
+commit.
+
+This parameter was added in MaxScale 23.08.0 and is enabled by default. The
+older version of MaxScale always attempted to replay the transaction even if
+there was a risk of duplicating the transaction.
+
+If the data that is about to be modified is read before it is modified and it is
+locked in an appropriate manner (e.g. with `SELECT ... FOR UPDATE` or with the
+`SERIALIZABLE` isolation level), it is safe to replay a transaction that was
+about to commit. This is because the checksum of the transaction will mismatch
+if the original transaction ended up committing on the server. Disabling this
+feature can enable more robust delivery of transactions but it requires that the
+SQL is correctly formed and compatible with this behavior.
+
 ### `transaction_replay_retry_on_mismatch`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)

@@ -5,6 +5,10 @@
 * The global setting `skip_permission_checks` has been deprecated and is
   ignored. Monitors start regardless of monitor user permissions.
 
+* By default, readwritesplit will not replay transactions that are about to
+  commit when `transaction_replay` is enabled. To retain the old behavior where
+  transactions were always replayed, disable `transaction_replay_safe_commit`.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
