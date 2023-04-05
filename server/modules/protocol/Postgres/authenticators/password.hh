@@ -19,6 +19,9 @@ public:
     GWBUF   authentication_request() override;
     ExchRes exchange(GWBUF&& input, PgProtocolData& session) override;
     AuthRes authenticate(PgProtocolData& session) override;
+
+private:
+    bool check_password_md5_hash(std::string_view pw, std::string_view username, std::string_view hash) const;
 };
 
 class PasswordBackendAuth : public PgBackendAuthenticator

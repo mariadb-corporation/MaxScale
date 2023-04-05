@@ -49,16 +49,14 @@ struct AuthIdEntry
 struct UserEntryResult
 {
     UserEntryType type {UserEntryType::NO_HBA_ENTRY};
-
-    uint32_t    line_no {0};
-    std::string username;
-    std::string auth_method;
-
-    AuthIdEntry authid_entry;
+    uint32_t      line_no {0};
+    std::string   auth_method;
+    AuthIdEntry   authid_entry;
 };
 
 struct AuthenticationData
 {
+    std::string     user;           /**< Username */
     UserEntryResult user_entry;     /**< User account information */
 
     std::vector<uint8_t> client_token;      /**< Token sent by client */

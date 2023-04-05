@@ -466,6 +466,7 @@ void PgClientConnection::update_user_account_entry()
                      entry.line_no);
             m_authenticator = selected_module->create_client_authenticator();
             m_protocol_data->auth_data().auth_module = selected_module;
+            m_protocol_data->auth_data().user = m_session.user();
         }
         else
         {
