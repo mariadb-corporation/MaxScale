@@ -295,6 +295,17 @@ bool PgClientConnection::start_session()
 
 PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)
 {
+    switch (gwbuf[0])
+    {
+    case pg::TERMINATE:
+        m_session.set_normal_quit();
+        m_session.set_can_pool_backends(true);
+        break;
+
+    default:
+        break;
+    }
+
     m_down->routeQuery(std::move(gwbuf));
 
     return State::ROUTE;

@@ -17,6 +17,8 @@
 #include "pgprotocoldata.hh"
 #include <maxscale/protocol2.hh>
 #include <deque>
+#include <tuple>
+#include <memory>
 
 class PgProtocolData;
 class PgBackendAuthenticator;
@@ -60,6 +62,7 @@ private:
         STARTUP,
         HISTORY,
         ROUTING,
+        REUSE,
         FAILED,
     };
 
@@ -87,6 +90,7 @@ private:
     bool handle_auth();
     bool handle_history();
     bool handle_routing();
+    bool handle_reuse();
 
     GWBUF read_complete_packets();
     GWBUF process_packets(GWBUF& buffer);
@@ -116,4 +120,11 @@ private:
     // The session command history subscriber. This is what tracks the responses to session commands and makes
     // sure the response from this backend matches the one that was expected.
     std::unique_ptr<mxs::History::Subscriber> m_subscriber;
+
+    // The identity of a client connection. The first value is the username and the second one is the default
+    // database. The client identity is used to detect whether a user can safely reuse this connection. Since
+    // this is only needed while the connection is in the pool, it can be allocated when the connection is
+    // placed into the pool and freed when it's taken out of it.
+    using ClientIdentity = std::tuple<std::string, std::string>;
+    std::unique_ptr<ClientIdentity> m_identity;
 };

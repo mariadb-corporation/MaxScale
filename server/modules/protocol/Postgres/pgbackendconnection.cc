@@ -97,6 +97,10 @@ void PgBackendConnection::ready_for_reading(DCB* dcb)
             keep_going = handle_routing();
             break;
 
+        case State::REUSE:
+            keep_going = handle_reuse();
+            break;
+
         case State::FAILED:
             keep_going = false;
             break;
@@ -139,6 +143,12 @@ bool PgBackendConnection::write(GWBUF&& buffer)
         track_query(buffer);
     }
 
+    if (m_dcb->server()->persistent_conns_enabled() && buffer[0] == pg::TERMINATE)
+    {
+        // Don't route the Terminate message, this keeps the connection alive
+        return true;
+    }
+
     return m_dcb->writeq_append(std::move(buffer));
 }
 
@@ -153,24 +163,44 @@ void PgBackendConnection::finish_connection()
 
 uint64_t PgBackendConnection::can_reuse(MXS_SESSION* session) const
 {
-    return false;
+    uint64_t reuse_type = REUSE_NOT_POSSIBLE;
+    const auto& data = *static_cast<const PgProtocolData*>(session->protocol_data());
+
+    if (m_identity && *m_identity == std::tie(session->user(), data.default_db()))
+    {
+        reuse_type = OPTIMAL_REUSE;
+    }
+
+    return reuse_type;
 }
 
 bool PgBackendConnection::reuse(MXS_SESSION* session, mxs::Component* component, uint64_t reuse_type)
 {
+    m_identity.reset();
     m_session = session;
     m_protocol_data = static_cast<PgProtocolData*>(session->protocol_data());
     m_upstream = component;
-    return true;
+
+    auto fn = std::bind(&PgBackendConnection::history_mismatch, this);
+    m_subscriber = m_protocol_data->history().subscribe(std::move(fn));
+
+    MXB_INFO("Reusing connection");
+    m_state = State::REUSE;
+
+    // The DISCARD ALL resets the session state
+    // https://www.postgresql.org/docs/current/sql-discard.html
+    return m_dcb->writeq_append(pg::create_query_packet("DISCARD ALL"));
 }
 
 bool PgBackendConnection::established()
 {
-    return true;
+    return m_state == State::ROUTING;
 }
 
 void PgBackendConnection::set_to_pooled()
 {
+    m_subscriber.reset();
+    m_identity = std::make_unique<ClientIdentity>(m_session->user(), m_protocol_data->default_db());
     m_session = nullptr;
     m_upstream = nullptr;
 }
@@ -658,6 +688,29 @@ bool PgBackendConnection::handle_routing()
     }
 
     return keep_going;
+}
+
+bool PgBackendConnection::handle_reuse()
+{
+    if (GWBUF complete_packets = read_complete_packets())
+    {
+        if (m_reply.is_complete())
+        {
+            MXB_SINFO("Connection reset complete: " << m_reply.describe());
+
+            if (m_reply.error())
+            {
+                handle_error("Failed to reuse connection: " + m_reply.error().message());
+            }
+            else
+            {
+                m_state = State::ROUTING;
+                send_backlog();
+            }
+        }
+    }
+
+    return false;
 }
 
 GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
