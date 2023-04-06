@@ -12,6 +12,7 @@
  * Public License.
  */
 import '@share/components/common/MxsCharts/config.js'
+import MxsErd from '@share/components/common/MxsSvgGraphs/MxsErd.vue'
 import MxsDataTable from '@share/components/common/MxsDataTable'
 import MxsDlgs from '@share/components/common/MxsDlgs'
 import MxsLineChart from '@share/components/common/MxsCharts/MxsLineChart.vue'
@@ -30,6 +31,7 @@ import MxsVirtualScrollTbl from '@share/components/common/MxsVirtualScrollTbl'
 import PageWrapper from '@share/components/common/PageWrapper'
 
 export default {
+    'mxs-erd': MxsErd,
     'mxs-data-table': MxsDataTable,
     ...MxsDlgs,
     'mxs-line-chart': MxsLineChart,

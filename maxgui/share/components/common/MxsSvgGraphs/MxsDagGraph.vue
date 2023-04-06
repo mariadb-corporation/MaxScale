@@ -46,9 +46,9 @@
  */
 import * as d3d from 'd3-dag'
 import 'd3-transition'
-import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
-import GraphNodes from '@share/components/common/MxsCharts/GraphNodes.vue'
-import { drawLinks, changeLinkGroupStyle } from '@share/components/common/MxsCharts/utils'
+import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
+import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
+import { drawLinks, changeLinkGroupStyle } from '@share/components/common/MxsSvgGraphs/utils'
 
 export default {
     name: 'mxs-dag-graph',

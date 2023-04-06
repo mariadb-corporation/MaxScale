@@ -16,7 +16,7 @@
         </template>
         <template slot="pane-right">
             <div class="fill-height">
-                <er-diagram :ctrDim="dim" :data="graphData" />
+                <mxs-erd :ctrDim="dim" :data="graphData" />
             </div>
         </template>
     </mxs-split-pane>
@@ -37,12 +37,11 @@
  */
 import { mapState, mapMutations } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
-import ErDiagram from '@wkeComps/ErdWke/ErDiagram.vue'
 import ErSidebarCtr from '@wkeComps/ErdWke/ErSidebarCtr.vue'
 
 export default {
     name: 'erd-wke',
-    components: { ErDiagram, ErSidebarCtr },
+    components: { ErSidebarCtr },
     props: {
         ctrDim: { type: Object, required: true },
     },

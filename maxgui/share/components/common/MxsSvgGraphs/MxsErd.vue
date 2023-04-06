@@ -95,18 +95,18 @@ import {
     forceX,
     forceY,
 } from 'd3-force'
-import GraphBoard from '@share/components/common/MxsCharts/GraphBoard.vue'
-import GraphNodes from '@share/components/common/MxsCharts/GraphNodes.vue'
+import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
+import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import {
     drawLinks,
     changeLinkGroupStyle,
     drawLink,
     getLinkCtr,
-} from '@share/components/common/MxsCharts/utils'
-import { LINK_SHAPES, createPath, genPath } from '@share/components/common/MxsCharts/linkShapes'
+} from '@share/components/common/MxsSvgGraphs/utils'
+import { LINK_SHAPES, createPath, genPath } from '@share/components/common/MxsSvgGraphs/linkShapes'
 
 export default {
-    name: 'er-diagram',
+    name: 'mxs-erd',
     components: {
         'graph-board': GraphBoard,
         'graph-nodes': GraphNodes,
