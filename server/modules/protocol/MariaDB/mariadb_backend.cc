@@ -197,7 +197,7 @@ uint64_t MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
 bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type)
 {
     bool rv = false;
-    mxb_assert(!m_dcb->session() && m_dcb->readq_empty() && m_dcb->writeq_empty());
+    mxb_assert(m_dcb->session() == session && m_dcb->readq_empty() && m_dcb->writeq_empty());
 
     if (m_dcb->state() != DCB::State::POLLING || m_state != State::POOLED || !m_delayed_packets.empty())
     {
@@ -208,7 +208,6 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
     else
     {
         assign_session(session, upstream);
-        m_dcb->reset(session);
 
         bool reset_conn = reuse_type == ReuseType::RESET_CONNECTION;
         GWBUF buffer = reset_conn ? create_reset_connection_packet() : create_change_user_packet();

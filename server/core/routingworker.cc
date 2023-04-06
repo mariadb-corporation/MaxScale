@@ -1155,6 +1155,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             mxb_assert(pCandidate == pDcb->protocol());
             // Put back the original handler.
             pDcb->set_handler(pCandidate);
+            pDcb->reset(pSes);
             pSession->link_backend_connection(pCandidate);
 
             if (pCandidate->reuse(pSes, pUpstream, reuse))
@@ -1164,6 +1165,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             else
             {
                 // Reusing the current candidate failed. Close connection, then try with another candidate.
+                pDcb->reset(nullptr);
                 pSession->unlink_backend_connection(pCandidate);
                 MXB_WARNING("Failed to reuse a persistent connection.");
                 if (pDcb->state() == DCB::State::POLLING)
