@@ -97,12 +97,7 @@ import {
 } from 'd3-force'
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
-import {
-    drawLinks,
-    changeLinkGroupStyle,
-    drawLink,
-    getLinkCtr,
-} from '@share/components/common/MxsSvgGraphs/utils'
+import Link from '@share/components/common/MxsSvgGraphs/Link'
 import { LINK_SHAPES, createPath, genPath } from '@share/components/common/MxsSvgGraphs/linkShapes'
 
 export default {
@@ -132,6 +127,7 @@ export default {
             pathPointsMap: {}, // keyed by link id
             //TODO: Add input to change this value
             linkShapeType: LINK_SHAPES.ORTHO,
+            linkInstance: null,
         }
     },
     computed: {
@@ -198,7 +194,8 @@ export default {
     },
     watch: {
         isDraggingNode(v) {
-            for (const link of this.highlightedLinks) changeLinkGroupStyle({ link, isDragging: v })
+            for (const link of this.highlightedLinks)
+                this.linkInstance.changeLinkStyle({ link, isDragging: v })
         },
     },
     created() {
@@ -241,8 +238,14 @@ export default {
                 this.handleCollision()
             }
         },
+        initLinkInstance() {
+            this.linkInstance = new Link({
+                strokeWidth: 1,
+            })
+        },
         drawChart() {
             this.setGraphNodeCoordMap()
+            this.initLinkInstance()
             this.handleDrawLinks()
         },
         setGraphNodeCoordMap() {
@@ -252,7 +255,7 @@ export default {
                 return map
             }, {})
         },
-        linkPathGenerator(linkData) {
+        pathGenerator(linkData) {
             const { path, data } = genPath({
                 shapeType: this.linkShapeType,
                 linkData,
@@ -274,18 +277,14 @@ export default {
         getNodeSize(node) {
             return this.$refs.graphNodes.getNodeSize(this.$typy(node, 'id').safeString)
         },
-        linkStrokeGenerator(d) {
-            return this.$typy(d, 'linkStyles.linkColor').safeString || 'black'
-        },
         getLinks() {
             return this.simulation.force('link').links()
         },
         handleDrawLinks() {
-            drawLinks({
+            this.linkInstance.drawLinks({
                 containerEle: this.svgGroup,
                 data: this.getLinks(),
-                linkPathGenerator: this.linkPathGenerator,
-                linkStrokeGenerator: this.linkStrokeGenerator,
+                pathGenerator: this.pathGenerator,
             })
             this.repositionOverlappedPoints()
         },
@@ -307,15 +306,13 @@ export default {
                     let pathPoints = this.pathPointsMap[id]
                     // update coord
                     this.$set(pathPoints, point.isSrc ? 'y0' : 'y1', newY)
-                    drawLink({
-                        containerEle: getLinkCtr(id),
+                    this.linkInstance.drawPath({
+                        containerEle: this.linkInstance.getLinkCtr(id),
                         type: 'update',
-                        isInvisible: false,
-                        linkPathGenerator: createPath({
+                        pathGenerator: createPath({
                             shapeType: this.linkShapeType,
                             ...pathPoints,
                         }),
-                        linkStrokeGenerator: this.linkStrokeGenerator,
                     })
                 })
             })

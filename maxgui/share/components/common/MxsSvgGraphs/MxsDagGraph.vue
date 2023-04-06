@@ -48,7 +48,7 @@ import * as d3d from 'd3-dag'
 import 'd3-transition'
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
-import { drawLinks, changeLinkGroupStyle } from '@share/components/common/MxsSvgGraphs/utils'
+import Link from '@share/components/common/MxsSvgGraphs/Link'
 
 export default {
     name: 'mxs-dag-graph',
@@ -76,6 +76,7 @@ export default {
             arrowHeadHeight: 12,
             isDraggingNode: false,
             highlightedLinks: [],
+            linkInstance: null,
         }
     },
     computed: {
@@ -113,7 +114,11 @@ export default {
         },
         isDraggingNode(v) {
             for (const link of this.highlightedLinks)
-                changeLinkGroupStyle({ link, nodeIdPath: 'data.id', isDragging: v })
+                this.linkInstance.changeLinkStyle({
+                    link,
+                    nodeIdPath: 'data.id',
+                    isDragging: v,
+                })
         },
     },
     mounted() {
@@ -121,6 +126,7 @@ export default {
     },
     methods: {
         draw() {
+            this.initLinkInstance()
             this.computeLayout(this.data)
             this.handleDrawLinks()
             this.setGraphNodeCoordMap()
@@ -156,6 +162,9 @@ export default {
                 if (id) map[id] = { x, y }
                 return map
             }, {})
+        },
+        initLinkInstance() {
+            this.linkInstance = new Link({ color: this.colorize })
         },
         /**
          * @param {Object} node - dag node
@@ -303,7 +312,7 @@ export default {
             if (shouldRevert) points = points.reverse()
             return points
         },
-        linkPathGenerator(data) {
+        pathGenerator(data) {
             return this.obtuseShape(data)
         },
         transformArrow(data) {
@@ -323,14 +332,13 @@ export default {
          */
         drawArrowHead({ linkCtr, type }) {
             const className = 'link__arrow'
-            const strokeWidth = 3
             const transform = d => this.transformArrow(d)
             switch (type) {
                 case 'enter':
                     linkCtr
                         .append('path')
                         .attr('class', className)
-                        .attr('stroke-width', strokeWidth)
+                        .attr('stroke-width', 3)
                         .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
                         .attr('stroke-linecap', 'round')
                         .attr('stroke-linejoin', 'round')
@@ -346,12 +354,11 @@ export default {
             }
         },
         handleDrawLinks() {
-            drawLinks({
+            this.linkInstance.drawLinks({
                 containerEle: this.svgGroup,
                 data: this.dag.links(),
                 nodeIdPath: 'data.id',
-                linkPathGenerator: this.linkPathGenerator,
-                linkStrokeGenerator: this.colorize,
+                pathGenerator: this.pathGenerator,
                 onEnter: linkCtr => this.drawArrowHead({ linkCtr, type: 'enter' }),
                 onUpdate: linkCtr => this.drawArrowHead({ linkCtr, type: 'update' }),
             })
