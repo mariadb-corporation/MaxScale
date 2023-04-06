@@ -62,8 +62,8 @@ std::string to_hex_string(__m256i reg)
 
 __m256i make_ascii_bitmap(const std::string& chars)
 {
-    std::array<char, SIMD_BYTES> bitmap {};
-    for (auto ch : chars)
+    std::array<unsigned char, SIMD_BYTES> bitmap {};
+    for (unsigned char ch : chars)
     {
         if (ch & 0b10000000 || ch == '\0')
         {
