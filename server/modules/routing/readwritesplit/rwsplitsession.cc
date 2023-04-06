@@ -126,9 +126,6 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
     }
     else
     {
-        // The buffer should not be a replayed one
-        mxb_assert(!buffer.type_is_replayed());
-
         // Roll back the query classifier state to keep it consistent.
         m_qc.revert_update();
 
@@ -713,14 +710,6 @@ bool RWSplitSession::start_trx_replay()
             m_trx.close();
             m_trx = m_orig_trx;
             m_current_query = m_orig_stmt.shallow_clone();
-
-            mxb_assert(std::none_of(m_query_queue.begin(), m_query_queue.end(),
-                                    std::mem_fn(&GWBUF::type_is_replayed)));
-
-            // Erase all replayed queries from the query queue to prevent checksum mismatches
-            m_query_queue.erase(std::remove_if(m_query_queue.begin(), m_query_queue.end(),
-                                               std::mem_fn(&GWBUF::type_is_replayed)),
-                                m_query_queue.end());
         }
 
         if (m_trx.have_stmts() || m_current_query)

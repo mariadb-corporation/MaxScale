@@ -79,7 +79,6 @@ public:
     {
         TYPE_UNDEFINED      = 0,
         TYPE_COLLECT_RESULT = (1 << 0),
-        TYPE_REPLAYED       = (1 << 1),
 
         // This causes the current resultset rows to be collected into mxs::Reply. They can be accessed
         // using mxs::Reply::row_data() inside the clientReply function and they are only available for
@@ -185,7 +184,6 @@ public:
 
     // Checks if the buffer is of the given type
     bool type_is_undefined() const;
-    bool type_is_replayed() const;
     bool type_is_collect_result() const;
     bool type_is_collect_rows() const;
 
@@ -386,12 +384,6 @@ inline bool GWBUF::type_is_collect_result() const
 inline bool GWBUF::type_is_collect_rows() const
 {
     return m_type & TYPE_COLLECT_ROWS;
-}
-
-// True if the query is not initiated by the client but an internal replaying mechanism
-inline bool GWBUF::type_is_replayed() const
-{
-    return m_type & TYPE_REPLAYED;
 }
 
 inline uint8_t* GWBUF::data()

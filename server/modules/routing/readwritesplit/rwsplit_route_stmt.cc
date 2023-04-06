@@ -65,10 +65,6 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
 void RWSplitSession::retry_query(GWBUF&& querybuf, int delay)
 {
     mxb_assert(querybuf);
-    // TODO: Make sure this is no longer needed. The only place where it might matter is when a retried query
-    // is put into the query queue. This should not be possible as no retried query should be put into the
-    // pool. If it does happen, there are debug assertions that catch it.
-    querybuf.set_type(GWBUF::TYPE_REPLAYED);
 
     // Route the query again later
     m_pSession->delay_routing(
