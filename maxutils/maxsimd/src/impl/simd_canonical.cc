@@ -98,8 +98,8 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
             chunk = _mm256_loadu_si256((const __m256i*)(pSource));
         }
 
-        auto ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map(), chunk));
-        auto ident_bitmask = _mm256_movemask_epi8(classify_ascii(ident_begin_bit_map(), chunk));
+        uint32_t ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map(), chunk));
+        uint32_t ident_bitmask = _mm256_movemask_epi8(classify_ascii(ident_begin_bit_map(), chunk));
 
         // Make a bitmap where a sequence of digits is replaced with only
         // the first, leading digit.
@@ -126,7 +126,7 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
 
         previous_rightmost_is_ident_char = rightmost_is_ident_char;
 
-        auto bitmask = ascii_bitmask | leading_digit_bitmask;
+        uint32_t bitmask = ascii_bitmask | leading_digit_bitmask;
 
         while (bitmask)
         {
