@@ -926,6 +926,9 @@ add_test_executable(mxs4474_worker_messages.cc mxs4474_worker_messages replicati
 # MXS-4488: MaxScale hangs when client sends garbage
 add_test_executable(mxs4488_garbage.cc mxs4488_garbage mxs4488_garbage LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4505: transaction_replay_safe_commit=true should prevent about-to-commit transaction from being replayed
+add_test_executable(mxs4505_trx_safe_replay.cc mxs4505_trx_safe_replay mxs4505_trx_safe_replay LABELS REPL_BACKEND readwritesplit)
+
 # MXS-4522: Loss of temporary tables on reconnection is ignored
 add_test_executable(mxs4522_tmp_table_reconnect.cc mxs4522_tmp_table_reconnect mxs4522_tmp_table_reconnect LABELS REPL_BACKEND readwritesplit)
 
