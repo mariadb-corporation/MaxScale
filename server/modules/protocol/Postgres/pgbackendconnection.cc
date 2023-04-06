@@ -101,6 +101,10 @@ void PgBackendConnection::ready_for_reading(DCB* dcb)
             keep_going = handle_reuse();
             break;
 
+        case State::PING:
+            keep_going = handle_ping();
+            break;
+
         case State::FAILED:
             keep_going = false;
             break;
@@ -197,6 +201,11 @@ bool PgBackendConnection::established()
     return m_state == State::ROUTING;
 }
 
+bool PgBackendConnection::is_idle() const
+{
+    return m_state == State::ROUTING && m_reply.is_complete() && m_track_queue.empty();
+}
+
 void PgBackendConnection::set_to_pooled()
 {
     m_subscriber.reset();
@@ -207,7 +216,13 @@ void PgBackendConnection::set_to_pooled()
 
 void PgBackendConnection::ping()
 {
-    // TODO: Figure out what's a good ping mechanism
+    m_state = State::PING;
+
+    // A query with only a comment creates a very short response, shorter than a SELECT 1 would create. This
+    // is similar to what the DBD::Pg Perl library uses for pinging the connection.
+    auto query = pg::create_query_packet("/* ping */");
+    track_query(query);
+    m_dcb->writeq_append(std::move(query));
 }
 
 bool PgBackendConnection::can_close() const
@@ -708,6 +723,17 @@ bool PgBackendConnection::handle_reuse()
                 send_backlog();
             }
         }
+    }
+
+    return false;
+}
+
+bool PgBackendConnection::handle_ping()
+{
+    if (GWBUF complete_packets = read_complete_packets(); m_reply.is_complete())
+    {
+        m_state = State::ROUTING;
+        send_backlog();
     }
 
     return false;

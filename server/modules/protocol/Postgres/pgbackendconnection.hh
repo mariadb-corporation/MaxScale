@@ -40,6 +40,7 @@ public:
     uint64_t can_reuse(MXS_SESSION* session) const override;
     bool     reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type) override;
     bool     established() override;
+    bool     is_idle() const override;
     void     set_to_pooled() override;
     void     ping() override;
     bool     can_close() const override;
@@ -63,6 +64,7 @@ private:
         HISTORY,
         ROUTING,
         REUSE,
+        PING,
         FAILED,
     };
 
@@ -91,6 +93,7 @@ private:
     bool handle_history();
     bool handle_routing();
     bool handle_reuse();
+    bool handle_ping();
 
     GWBUF read_complete_packets();
     GWBUF process_packets(GWBUF& buffer);
