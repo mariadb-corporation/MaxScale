@@ -46,16 +46,15 @@ export default {
     props: {
         ctrDim: { type: Object, required: true },
     },
-    data() {
-        return {
-            graphData: ErdTask.getters('getActiveGraphData'),
-        }
-    },
     computed: {
         ...mapState({
             erd_sidebar_pct_width: state => state.prefAndStorage.erd_sidebar_pct_width,
             is_erd_sidebar_collapsed: state => state.prefAndStorage.is_erd_sidebar_collapsed,
         }),
+        //TODO: Convert to get/set
+        graphData() {
+            return ErdTask.getters('getActiveGraphData') || {}
+        },
         dim() {
             const { width, height } = this.ctrDim
             return { width: width - this.sidebarWidth, height }
@@ -70,7 +69,7 @@ export default {
             return this.minSidebarPct * 3
         },
         maxSidebarPct() {
-            return 100 - this.$helpers.pxToPct({ px: 370, containerPx: this.ctrDim.width })
+            return 100 - this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
         },
         defSidebarPct() {
             return this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
@@ -83,6 +82,11 @@ export default {
             set(v) {
                 this.SET_ERD_SIDEBAR_PCT_WIDTH(v)
             },
+        },
+    },
+    watch: {
+        is_erd_sidebar_collapsed(v) {
+            if (!v && this.sidebarPct <= this.minSidebarPct) this.sidebarPct = this.defSidebarPct
         },
     },
     created() {

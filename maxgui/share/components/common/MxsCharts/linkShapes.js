@@ -40,11 +40,6 @@ function getColYPos({
     }
 }
 /**
- * TODO: Add getNodeYPos
- * getNodeYPos: for drawing a relationship link between two
- * entities.
- * getColYPos: for drawing FK links. This is the edit mode
- * where the user can add or delete FK.
  * Get the y positions of source and target nodes
  * @param {Object} param.linkData - link object
  * @returns {Object} An object containing the new y positions of the source and target nodes.

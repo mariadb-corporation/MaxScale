@@ -1,7 +1,15 @@
 <template>
     <div class="fill-height er-diagram">
         <v-progress-linear v-if="isRendering" indeterminate color="primary" />
-        <graph-board :dim="ctrDim" :graphDim="ctrDim" @get-graph-ctr="svgGroup = $event">
+        <!-- Graph-board and its child components will be rendered but they won't be visible until
+             the simulation is done. This ensures node size can be calculated dynamically.
+        -->
+        <graph-board
+            :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
+            :dim="ctrDim"
+            :graphDim="ctrDim"
+            @get-graph-ctr="svgGroup = $event"
+        >
             <template v-slot:append="{ data: { transform, zoom } }">
                 <graph-nodes
                     ref="graphNodes"
@@ -112,8 +120,8 @@ export default {
             isRendering: false,
             svgGroup: null,
             graphNodeCoordMap: {},
-            graphData: { nodes: [], links: [] },
-            graphNodes: [], // staging data
+            graphNodes: [],
+            graphLinks: [],
             simulation: null,
             defNodeSize: { width: 200, height: 100 },
             dynNodeSizeMap: {},
@@ -131,16 +139,13 @@ export default {
         relMarkFixedWidth() {
             return 30
         },
-        allLinks() {
-            return this.simulation.force('link').links()
-        },
         // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
         rowHeightOffset() {
             return 4
         },
         // flat links into points and caching its link data and positions of the relational column
         connPoints() {
-            return Object.values(this.allLinks).reduce((points, link) => {
+            return Object.values(this.getLinks()).reduce((points, link) => {
                 const {
                     source,
                     target,
@@ -195,17 +200,12 @@ export default {
         isDraggingNode(v) {
             for (const link of this.highlightedLinks) changeLinkGroupStyle({ link, isDragging: v })
         },
-        data: {
-            deep: true,
-            immediate: true,
-            handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) {
-                    this.isRendering = true
-                    this.assignData(v)
-                    this.drawChart()
-                }
-            },
-        },
+    },
+    created() {
+        this.isRendering = true
+        this.assignData(this.data)
+        // wait until graph-nodes is fully rendered so that handleCollision method can calculate the radius accurately
+        this.$nextTick(() => this.runSimulation())
     },
     methods: {
         /**
@@ -214,45 +214,39 @@ export default {
          */
         assignData(data) {
             const cloned = this.$helpers.lodash.cloneDeep(data)
-            this.graphData = cloned
+            this.graphNodes = cloned.nodes
+            this.graphLinks = cloned.links
         },
-        drawGraphNodes() {
-            this.graphNodes = this.graphData.nodes
+        runSimulation() {
+            if (this.graphNodes.length) {
+                this.simulation = forceSimulation(this.graphNodes)
+                    .force(
+                        'link',
+                        forceLink(this.graphLinks).id(d => d.id)
+                    )
+                    .force(
+                        'charge',
+                        forceManyBody()
+                            .strength(-15)
+                            .theta(0.5)
+                    )
+                    .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
+                    .force('x', forceX().strength(0.1))
+                    .force('y', forceY().strength(0.1))
+                    .alphaMin(0.1)
+                    .on('end', () => {
+                        this.drawChart()
+                        this.isRendering = false
+                    })
+                this.handleCollision()
+            }
         },
         drawChart() {
-            this.drawGraphNodes()
-            this.$nextTick(() => {
-                if (this.graphData.nodes.length) {
-                    const { nodes, links } = this.graphData
-                    this.simulation = forceSimulation(nodes)
-                        .force(
-                            'link',
-                            forceLink(links).id(d => d.id)
-                        )
-                        .force(
-                            'charge',
-                            forceManyBody()
-                                .strength(-15)
-                                .theta(0.5)
-                        )
-                        .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
-                        .force('x', forceX().strength(0.1))
-                        .force('y', forceY().strength(0.1))
-                        .alphaMin(0.1)
-                        .on('end', () => {
-                            this.render()
-                            this.isRendering = false
-                        })
-                    this.handleCollision()
-                }
-            })
-        },
-        render() {
             this.setGraphNodeCoordMap()
             this.handleDrawLinks()
         },
         setGraphNodeCoordMap() {
-            this.graphNodeCoordMap = this.graphData.nodes.reduce((map, n) => {
+            this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {
                 const { x, y, id } = n
                 if (id) map[id] = { x, y }
                 return map
@@ -283,10 +277,13 @@ export default {
         linkStrokeGenerator(d) {
             return this.$typy(d, 'linkStyles.linkColor').safeString || 'black'
         },
+        getLinks() {
+            return this.simulation.force('link').links()
+        },
         handleDrawLinks() {
             drawLinks({
                 containerEle: this.svgGroup,
-                data: this.allLinks,
+                data: this.getLinks(),
                 linkPathGenerator: this.linkPathGenerator,
                 linkStrokeGenerator: this.linkStrokeGenerator,
             })
@@ -335,11 +332,10 @@ export default {
         },
         onNodeDrag({ node, diffX, diffY }) {
             this.isDraggingNode = true
-            const nodeData = this.graphData.nodes.find(n => n.id === node.id)
+            const nodeData = this.graphNodes.find(n => n.id === node.id)
             nodeData.x = nodeData.x + diffX
             nodeData.y = nodeData.y + diffY
-            const links = this.allLinks
-            this.highlightedLinks = links.filter(
+            this.highlightedLinks = this.getLinks().filter(
                 d => d.source.id === node.id || d.target.id === node.id
             )
             this.handleDrawLinks()

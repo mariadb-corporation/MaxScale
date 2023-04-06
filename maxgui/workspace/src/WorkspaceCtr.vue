@@ -26,7 +26,6 @@
                     >
                         <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                     </blank-wke>
-                    <erd-wke v-else-if="isErdWke(activeWke)" :ctrDim="ctrDim" />
                     <!-- Keep alive worksheets -->
                     <keep-alive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
                         <template v-if="activeWkeId === wke.id">
@@ -34,6 +33,7 @@
                             <query-editor v-if="isQueryEditorWke(wke)" :ctrDim="ctrDim">
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                             </query-editor>
+                            <erd-wke v-else-if="isErdWke(wke)" :ctrDim="ctrDim" />
                             <data-migration v-else :ctrDim="ctrDim" :taskId="wke.etl_task_id" />
                         </template>
                     </keep-alive>
@@ -104,7 +104,9 @@ export default {
         }),
         keptAliveWorksheets() {
             return Worksheet.query()
-                .where(wke => this.isQueryEditorWke(wke) || this.isEtlWke(wke))
+                .where(
+                    wke => this.isQueryEditorWke(wke) || this.isEtlWke(wke) || this.isErdWke(wke)
+                )
                 .get()
         },
         activeWkeId() {

@@ -12,11 +12,6 @@
                 ...nodeStyle,
                 ...getNodeSizeStyle(node.id),
                 zIndex: draggingStates.draggingNodeId === node.id ? 4 : 3,
-                /**
-                 * Graph nodes will be rendered but they won't be visible.
-                 * It's done this way so node size can be calculated dynamically
-                 */
-                visibility: $typy(nodeCoordMap).isEmptyObject ? 'hidden' : 'visible',
             }"
             v-on="
                 draggable
