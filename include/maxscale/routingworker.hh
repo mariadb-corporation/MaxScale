@@ -805,7 +805,7 @@ private:
     using TickFuncs = std::vector<std::function<void()>>;
     using Datas = std::vector<Data*>;
 
-    static Datas       s_datas;     /*< Datas that need to be inited/finishe for each worker. */
+    static Datas       s_datas;     /*< Datas that need to be inited/finished for each worker. */
     static std::mutex  s_datas_lock;
 
     int                m_index;     /*< Index of routing worker */
