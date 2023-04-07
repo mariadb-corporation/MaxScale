@@ -431,7 +431,7 @@ are translated into:
 * the privileges themselves, e.g. `SELECT`, `DELETE`, etc.
 
 In NoSQL, every user resides in a specific database. Note that
-this does **not** mean that that database would have to exist
+this does **not** mean that the database would have to exist
 in MariaDB.
 
 When it comes to users, the database effectively means a scope,
@@ -2403,7 +2403,7 @@ made. If it is found, the response is returned to the client. That is, in
 this case neither BSON -> SQL, nor a Result Set -> BSON translation will
 be made.
 
-If the the request is not potentially cacheable or the response is not
+If the request is not potentially cacheable or the response is not
 available, the request is processed normally, which may mean that the
 request is translated into SQL. If the SQL is a SELECT, a second lookup
 will be made for the corresponding result set. If that is found, the
@@ -2570,7 +2570,7 @@ quite convenient in case the MongoDB® command does not behave as expected.
 
 ## MongoDB® Node.JS Driver
 
-As all client libraries implement and depend on the the MongoDB® wire protocol,
+As all client libraries implement and depend on the MongoDB® wire protocol,
 all client libraries should work with _nosqlprotocol_. However, the
 only client library that has been used and that has been verified to work
 is version 3.6 of the _MongoDB Node.JS Driver_.
