@@ -25,7 +25,7 @@ int count_audit_file_lines(TestConnections& test)
 
     auto out = test.maxscale->ssh_output("wc -l " + admin_file);
 
-    test.expect(out.rc == 0, "Could't not access %s", admin_file.c_str());
+    test.expect(out.rc == 0, "Couldn't not access %s", admin_file.c_str());
 
     return out.rc ? -1 : atoi(out.output.c_str());
 }
