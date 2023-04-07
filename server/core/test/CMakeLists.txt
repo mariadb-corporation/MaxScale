@@ -70,7 +70,7 @@ add_test(test_utils test_utils)
 add_subdirectory(rest-api)
 # GCC 10 has a broken ASAN implementation that got fixed in GCC 11. The
 # --as-needed flag breaks the crypt and crypt_r interceptors in ASAN and the
-# tests that use it must disble the feature that breaks it. For Debian, adding
+# tests that use it must disable the feature that breaks it. For Debian, adding
 # --no-as-needed would fix it but for SLES 15 with GCC 11 it still ends up
 # failing. To make life simpler, just skip these tests if ASAN is enabled on
 # those systems
