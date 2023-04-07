@@ -219,8 +219,8 @@ void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
 
     auto dest = test.repl->get_connection(3);
     dest.connect();
-    source.query("DROP TABLE test.masive_result");
-    dest.query("DROP TABLE test.masive_result");
+    source.query("DROP TABLE test.massive_result");
+    dest.query("DROP TABLE test.massive_result");
 }
 
 void cancel_etl(TestConnections& test, EtlTest& etl, const std::string& dsn)
