@@ -332,7 +332,7 @@ bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParamete
 
     if (configured)
     {
-        make_config_adjustements();
+        make_config_adjustments();
 
         // The check for m_pFilter here is for the unit tests that don't allocate a
         // CacheFilter instance. This should be changed in some way so that the
@@ -390,7 +390,7 @@ bool CacheConfig::is_config_valid(const std::map<std::string, mxs::ConfigParamet
     return valid;
 }
 
-void CacheConfig::make_config_adjustements()
+void CacheConfig::make_config_adjustments()
 {
     if (this->soft_ttl > this->hard_ttl)
     {
