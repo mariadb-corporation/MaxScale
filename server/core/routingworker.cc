@@ -537,7 +537,7 @@ void RoutingWorker::deactivate()
             auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
             if (index() == nRunning - 1)
             {
-                // We are in the last last worker.
+                // We are in the last worker.
                 terminate_last_if_dormant(true);
             }
         }
