@@ -926,7 +926,7 @@ the synchronization query before routing the execution of the prepared
 statement. This keeps the performance of causal_reads for prepared statements
 the same as it is for normal SQL queries.
 
-As a result of this, each time the the synchronization query times out, the
+As a result of this, each time the synchronization query times out, the
 connection will be killed by the `KILL` statement and readwritesplit will retry
 the query on the primary. This is done to prevent the execution of the prepared
 statement that follows the synchronization query from being processed by the

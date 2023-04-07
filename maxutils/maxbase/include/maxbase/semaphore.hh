@@ -40,7 +40,7 @@ public:
      * @param initial_count  The initial count of the semaphore.
      *
      * @attention If the value `initial_count` is larger than `SEM_VALUE_MAX`,
-     *            the the value will be adjusted down to `SEM_VALUE_MAX`.
+     *            the value will be adjusted down to `SEM_VALUE_MAX`.
      */
     Semaphore(uint32_t initial_count = 0)
     {

@@ -365,7 +365,7 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
             auto tmp_ptr = find_matching_delimiter(markers, *read_ptr);
             if (tmp_ptr == nullptr)
             {
-                // Invalid SQL, copy the the rest to make canonical invalid.
+                // Invalid SQL, copy the rest to make canonical invalid.
                 goto break_out;
             }
 

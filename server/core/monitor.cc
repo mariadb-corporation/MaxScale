@@ -360,7 +360,7 @@ bool check_disk_space_exhausted(MonitorServer* pMs,
 
     if (used_percentage >= max_percentage)
     {
-        MXB_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
+        MXB_ERROR("Disk space on %s at %s is exhausted; %d%% of the disk "
                   "mounted on the path %s has been used, and the limit it %d%%.",
                   pMs->server->name(),
                   pMs->server->address(),

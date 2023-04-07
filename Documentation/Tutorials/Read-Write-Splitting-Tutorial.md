@@ -55,7 +55,7 @@ The *service* parameter tells which service the listener connects to. For the
 *Splitter-Listener* we set it to *Splitter-Service*.
 
 A listener must define the protocol module it uses. This must be *MariaDBClient* for all
-database listeners. *port* defines the the network port to listen on.
+database listeners. *port* defines the network port to listen on.
 
 The optional *address*-parameter defines the local address the listener should bind to.
 This may be required when the host machine has multiple network interfaces. The

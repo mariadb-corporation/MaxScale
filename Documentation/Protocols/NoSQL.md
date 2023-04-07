@@ -2487,7 +2487,7 @@ quite convenient in case the MongoDB® command does not behave as expected.
 
 ## MongoDB® Node.JS Driver
 
-As all client libraries implement and depend on the the MongoDB® wire protocol,
+As all client libraries implement and depend on the MongoDB® wire protocol,
 all client libraries should work with _nosqlprotocol_. However, the
 only client library that has been used and that has been verified to work
 is version 3.6 of the _MongoDB Node.JS Driver_.

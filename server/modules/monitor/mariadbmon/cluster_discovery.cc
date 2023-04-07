@@ -512,7 +512,7 @@ void MariaDBMonitor::assign_server_roles()
         server->m_replication_lag = mxs::Target::RLAG_UNDEFINED;
     }
 
-    // Check the the master node, label it as the [Master] if it meets the requirements. It must at least
+    // Check the master node, label it as the [Master] if it meets the requirements. It must at least
     // be running and writable.
     if (m_master)
     {

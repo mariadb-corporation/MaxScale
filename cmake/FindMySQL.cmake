@@ -1,4 +1,4 @@
-# This CMake file tries to find the the mysql_version.h header
+# This CMake file tries to find the mysql_version.h header
 # and to parse it for version and provider strings
 # The following variables are set:
 # MYSQL_EMBEDDED_VERSION - The MySQL version number

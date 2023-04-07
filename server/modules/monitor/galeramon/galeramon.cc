@@ -250,7 +250,7 @@ void GaleraMonitor::update_server_status(MonitorServer* mon_server)
 
     std::string server_string = monitored_server->server->info().version_string();
 
-    /* Check if the the Galera FSM shows this node is joined to the cluster */
+    /* Check if the Galera FSM shows this node is joined to the cluster */
     const char* where =
         " WHERE Variable_name IN"
         " ('wsrep_cluster_state_uuid',"

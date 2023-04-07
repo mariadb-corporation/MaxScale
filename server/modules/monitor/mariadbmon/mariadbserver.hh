@@ -291,7 +291,7 @@ public:
     /**
      * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious
      * errors. The non-detected errors will mostly be detected once the slave tries to start replicating.
-     * Before calling this, update the gtid:s of the master so that the the gtid:s of the master are more
+     * Before calling this, update the gtid:s of the master so that the gtid:s of the master are more
      * recent than those of this server.
      *
      * @param master_info Master server

@@ -456,7 +456,7 @@ public:
 
     /**
      * Will cause an EPOLL[R]HUP event to be delivered when the current
-     * event handling finishes, just before the the control returns
+     * event handling finishes, just before the control returns
      * back to epoll_wait().
      *
      * @note During one callback, only one event can be triggered.
@@ -467,7 +467,7 @@ public:
 
     /**
      * Will cause an EPOLLIN event to be delivered when the current
-     * event handling finishes, just before the the control returns
+     * event handling finishes, just before the control returns
      * back to epoll_wait().
      *
      * @note During one callback, only one event can be triggered.
@@ -478,7 +478,7 @@ public:
 
     /**
      * Will cause an EPOLLOUT event to be delivered when the current
-     * event handling finishes, just before the the control returns
+     * event handling finishes, just before the control returns
      * back to epoll_wait().
      *
      * @note During one callback, only one event can be triggered.

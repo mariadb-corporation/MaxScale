@@ -6,7 +6,7 @@ with the binlogrouter.
 
 The first part configures the services and sets them up for the binary log to Avro
 file conversion. The second part of this tutorial uses the client listener
-interface for the avrorouter and shows how to communicate with the the service
+interface for the avrorouter and shows how to communicate with the service
 over the network.
 
 ![Binlog-Avro Translator](../Routers/images/Binlog-Avro.png)

@@ -281,7 +281,7 @@ GWBUF RWSplitSession::reset_gtid_probe()
                        get_sql_string(m_current_query).c_str());
     mxb_assert_message(!m_query_queue.empty(), "Query queue should contain at least one query");
 
-    // Retry the the original query that triggered the GTID probe.
+    // Retry the original query that triggered the GTID probe.
     auto buffer = std::move(m_query_queue.front());
     m_query_queue.pop_front();
 

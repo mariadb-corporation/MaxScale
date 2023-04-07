@@ -1,4 +1,4 @@
-# This CMake file tries to find the the MariaDB Connector-C
+# This CMake file tries to find the MariaDB Connector-C
 # The following variables are set:
 # MARIADB_CONNECTOR_FOUND - System has the connector
 # MARIADB_CONNECTOR_STATIC_FOUND - System has static version of the connector library

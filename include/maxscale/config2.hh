@@ -74,7 +74,7 @@ public:
      * A specification with a prefix expects the parameters to be defined in the form  of "prefix.name" when
      * configured in the configuration file or inside of a nested object when configured from JSON.
      *
-     * @param zModule The the name of the module, e.g. "cachefilter".
+     * @param zModule The name of the module, e.g. "cachefilter".
      * @param kind    The type of the module.
      * @param zPrefix The prefix to use. This is added to all parameters used by this specification.
      */
@@ -2349,7 +2349,7 @@ public:
     Configuration(const std::string& name, const Specification* pSpecification);
 
     /**
-     * @return The The object (i.e. section name) of this configuration.
+     * @return The object (i.e. section name) of this configuration.
      */
     const std::string& name() const;
 

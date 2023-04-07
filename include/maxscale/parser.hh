@@ -217,7 +217,7 @@ public:
     struct KillInfo
     {
         std::string target;                      // The string form target of the KILL
-        bool        user = false;                // If true, the the value in `target` is the name of a user.
+        bool        user = false;                // If true, the value in `target` is the name of a user.
         bool        soft = false;                // If true, the SOFT option was used
         KillType    type = KillType::CONNECTION; // Type of the KILL command
     };

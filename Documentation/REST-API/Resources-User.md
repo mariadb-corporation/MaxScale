@@ -13,7 +13,7 @@ MaxScale's configuration.
 GET /v1/users/inet/:name
 ```
 
-Get a single network user. The The _:name_ in the URI must be a valid network
+Get a single network user. The _:name_ in the URI must be a valid network
 user name.
 
 #### Response
