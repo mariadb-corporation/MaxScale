@@ -51,7 +51,7 @@ actually attempts to _use_ the allocated memory, there is not available
 free memory on the system.
 
 If the value is `2`, then a memory allocation made by an application may
-fail and unless the application is prepared for that possiblity, it will
+fail and unless the application is prepared for that possibility, it will
 likely crash with a SIGSEGV. As MaxScale is not prepared to handle memory
 allocation failures, it will crash in this situation.
 
