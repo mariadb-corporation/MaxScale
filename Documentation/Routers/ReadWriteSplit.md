@@ -1050,7 +1050,7 @@ secondary servers. Readwritesplit is an exception to this rule. The following
 rules govern how readwritesplit behaves with servers that have different ranks.
 
 * Sessions will use the current primary server as long as possible. This means
-  that sessions with a secondary primary will not use the primary primary as long
+  that sessions with a secondary primary will not use the primary as long
   as the secondary primary is available.
 
 * All replica connections will use the same rank as the primary connection. Any
