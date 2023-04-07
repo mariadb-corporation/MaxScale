@@ -3786,7 +3786,7 @@ terminated. However, as thread 3 is still _Draining_, thread 2 will not be
 terminated but stay _Dormant_.
 
 If the sessions handled by thread 3 end, then it will become _Dormant_ at
-which point first thread 3 will be terminatad and immediately after that
+which point first thread 3 will be terminated and immediately after that
 thread 2.
 ```
 $ bin/maxctrl show threads
