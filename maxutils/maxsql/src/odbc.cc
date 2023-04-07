@@ -71,7 +71,7 @@ std::string process_connection_string(std::string str, int64_t timeout)
     // out of memory if an old version is used.
     uint64_t extra_flags = mxq::ODBC::FORWARDONLY | mxq::ODBC::NO_CACHE;
 
-    // The MariaDB ODBC connector also requires this value to make multi-statment SQL work. Otherwise the
+    // The MariaDB ODBC connector also requires this value to make multi-statement SQL work. Otherwise the
     // server will just return syntax errors for otherwise valid SQL.
     extra_flags |= mxq::ODBC::MULTI_STMT;
 

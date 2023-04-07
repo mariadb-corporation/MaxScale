@@ -151,7 +151,7 @@ struct Extractor
 
 
     /**
-     * Should return the SQL for a prepared statment that is used to insert the data into MariaDB.
+     * Should return the SQL for a prepared statement that is used to insert the data into MariaDB.
      *
      * Unlike the create_table() and select() functions, the SQL returned by this function is used to prepare
      * an insert statement and should only contain placeholders. The SQL should be of the form `INSERT INTO

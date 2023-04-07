@@ -1,11 +1,11 @@
 /**
- * Readwritesplit multi-statment test
+ * Readwritesplit multi-statement test
  *
  * - Configure strict multi-statement mode
- * - Execute multi-statment query
+ * - Execute multi-statement query
  * - All queries should go to the master
  * - Configure for relaxed multi-statement mode
- * - Execute multi-statment query
+ * - Execute multi-statement query
  * - Only the multi-statement query should go to the master
  */
 

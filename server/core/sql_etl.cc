@@ -606,7 +606,7 @@ std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
         ss << extra;
     }
 
-    uint64_t option = mxq::ODBC::MULTI_STMT // Enables multi-statment SQL.
+    uint64_t option = mxq::ODBC::MULTI_STMT // Enables multi-statement SQL.
         | mxq::ODBC::FORWARDONLY            // Forces a forward-only cursor (fixes some legacy problems)
         | mxq::ODBC::NO_CACHE;              // Streams the resultset instead of reading it into memory
 

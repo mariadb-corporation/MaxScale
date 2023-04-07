@@ -2093,7 +2093,7 @@ max_connections=100
 
 Enable or disable session transaction state tracking by offloading it to the backend servers.
 Getting current session transaction state from server side will be more accurate for that state
-inside stored procedures or prepare statments will be handle properly, and that is also faster
+inside stored procedures or prepare statements will be handle properly, and that is also faster
 as no parsing is needed on MaxScale.
 
 This is only supported by MariaDB versions 10.3 or newer. Default is false.

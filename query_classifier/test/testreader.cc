@@ -31,7 +31,7 @@ enum skip_action_t
     SKIP_DELIMITER,     // Skip the new delimiter.
     SKIP_LINE,          // Skip current line.
     SKIP_NEXT_STATEMENT,// Skip statement starting on line following this line.
-    SKIP_STATEMENT,     // Skip statment starting on this line.
+    SKIP_STATEMENT,     // Skip statement starting on this line.
     SKIP_TERMINATE,     // Cannot handle this, terminate.
 };
 
@@ -404,7 +404,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                 skip_postgres_dollar_quotes(line, stmt);
             }
 
-            // Look for a ';'. If we are dealing with a one line test statment
+            // Look for a ';'. If we are dealing with a one line test statement
             // the delimiter will in practice be ';' and if it is a multi-line
             // test statement then the test-script delimiter will be something
             // else than ';' and ';' will be the delimiter used in the multi-line

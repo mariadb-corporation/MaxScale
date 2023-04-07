@@ -1,5 +1,5 @@
 /**
- * MXS-2838: Hints in prepared statments
+ * MXS-2838: Hints in prepared statements
  *
  * A simple test that checks that a query that would normally be routed to a
  * slave is routed to the master when the prepared statement contains a routing

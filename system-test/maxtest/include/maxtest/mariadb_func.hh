@@ -196,7 +196,7 @@ int execute_query_num_of_rows(MYSQL* conn,
  * @brief Executes prepared statement and get number of rows in the result
  * This function does not check boundaries of 'num_of_rows' array. This
  * array have to be big enough to store all results
- * @param stmt MYSQL_STMT statetement struct (from mysql_stmt_init())
+ * @param stmt MYSQL_STMT statement struct (from mysql_stmt_init())
  * @param num_of_rows pointer to array to store number of result rows
  * @param i pointer to variable to store number of result sets
  * @return 0 in case of success

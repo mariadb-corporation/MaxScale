@@ -75,7 +75,7 @@ var MariaDB = {
             var grants = {};
 
             results.forEach(function (result) {
-                // There is just one field in result, so this will give the actual GRANT statment.
+                // There is just one field in result, so this will give the actual GRANT statement.
                 var grant = Object.values(result)[0];
                 grant = grant.substring(6); // Strip the initial "GRANT "
 

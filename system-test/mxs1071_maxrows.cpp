@@ -9,7 +9,7 @@
  *  max_resultset_size=9000000
  *  debug=3
  *  @endverbatim
- * All the tests executes statemet, prepared statement or stored procedure and checks
+ * All the tests executes statement, prepared statement or stored procedure and checks
  * number of rows in the result sets (multiple result sets possible)
  *
  * Test  1 - max_allowed_packet limit is not hit, simple SELECTs, small table

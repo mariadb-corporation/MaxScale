@@ -108,7 +108,7 @@ public:
      * Return the type mask of a statement, provided the statement affects
      * transaction state or autocommit mode.
      *
-     * @param pSql  SQL statament.
+     * @param pSql  SQL statement.
      * @param len   Length of pSql.
      *
      * @return The corresponding type mask or 0, if the statement does not

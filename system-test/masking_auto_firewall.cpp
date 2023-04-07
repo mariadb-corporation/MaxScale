@@ -123,25 +123,25 @@ void run(TestConnections& test)
     // defining a variable.
     test_one(test, "set @a = (SELECT a, b FROM masking_auto_firewall)", Expect::FAILURE);
 
-    // This SHOULD succeed as a masked column is not used in the statment.
+    // This SHOULD succeed as a masked column is not used in the statement.
     test_one(test, "select 1 UNION select b FROM masking_auto_firewall", Expect::SUCCESS);
 
-    // This should NOT succeed as a masked column is used in the statment.
+    // This should NOT succeed as a masked column is used in the statement.
     test_one(test, "select 1 UNION select a FROM masking_auto_firewall", Expect::FAILURE);
 
-    // This should NOT succeed as a masked column is used in the statment.
+    // This should NOT succeed as a masked column is used in the statement.
     test_one(test, "select 1 UNION ALL select a FROM masking_auto_firewall", Expect::FAILURE);
 
-    // This should NOT succeed as '*' is used in the statment.
+    // This should NOT succeed as '*' is used in the statement.
     test_one(test, "select 1 UNION select * FROM masking_auto_firewall", Expect::FAILURE);
 
-    // This SHOULD succeed as a masked column is not used in the statment.
+    // This SHOULD succeed as a masked column is not used in the statement.
     test_one(test, "select * FROM (select b from masking_auto_firewall) tbl", Expect::SUCCESS);
 
-    // This SHOULD succeed as a masked column is not used in the statment.
+    // This SHOULD succeed as a masked column is not used in the statement.
     test_one(test, "select * FROM (select a as b from masking_auto_firewall) tbl", Expect::FAILURE);
 
-    // This SHOULD succeed as '*' is used in the statment.
+    // This SHOULD succeed as '*' is used in the statement.
     test_one(test, "select * FROM (select * from masking_auto_firewall) tbl", Expect::FAILURE);
 
     // These SHOULD succeed as they do not access actual data, but wont unless
