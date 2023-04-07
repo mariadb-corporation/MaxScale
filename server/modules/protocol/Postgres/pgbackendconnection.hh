@@ -105,7 +105,7 @@ private:
     uint32_t m_process_id {0};      // The process ID on the backend server
     uint32_t m_secret_key {0};      // Secret key for canceling requests
 
-    // Backlog of packets that need to be written again. These are only buffered for the duratio of the
+    // Backlog of packets that need to be written again. These are only buffered for the duration of the
     // connection creation and authentication after which they are re-sent to the write() function.
     std::vector<GWBUF> m_backlog;
 
