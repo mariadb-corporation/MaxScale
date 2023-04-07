@@ -2881,7 +2881,7 @@ when connecting. The proxy header contains the original client IP-address and
 port, and MaxScale will use that information in its internal bookkeeping.
 This means the client is authenticated as if it was connecting from the host
 in the proxy header. If proxy protocol is also enabled in MaxScale server
-settings, MaxScale will relay the original original client address and port to
+settings, MaxScale will relay the original client address and port to
 the server. See [server settings](#proxy_protocol) for more information.
 
 This setting may be useful if a compatible load balancer is relaying client
