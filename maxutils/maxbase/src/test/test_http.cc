@@ -106,7 +106,7 @@ int test_multi_http_get()
 {
     cout << __func__ << endl;
 
-    vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz"};
+    vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://nonexistent.xyz"};
     vector<bool> expected_successes = {true, true, false};
     vector<mxb::http::Result> results = mxb::http::get(urls);
 
@@ -121,7 +121,7 @@ int test_async_http_get()
 
     int rv = EXIT_FAILURE;
 
-    vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz"};
+    vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://nonexistent.xyz"};
     vector<bool> expected_successes = {true, true, false};
     mxb::http::Async http = mxb::http::get_async(urls);
 

@@ -1,7 +1,7 @@
 /**
  * Regression case for the bug "Different error messages from MariaDB and Maxscale"
  *
- * - try to connect to non existing DB directly to MariaDB server and via Maxscale
+ * - try to connect to nonexistent DB directly to MariaDB server and via Maxscale
  * - compare error messages
  * - repeat for RWSplit, ReadConn
  */
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     auto mxs_ip = test.maxscale->ip4();
     auto node_ip = test.repl->ip4(0);
 
-    cout << "Non-existent database" << endl;
+    cout << "Nonexistent database" << endl;
     test.repl->connect(0, "non_existing_db");
     test.maxscale->connect("non_existing_db");
     test.expect(is_equal_error(test.repl->nodes[0], test.maxscale->conn_rwsplit), "readwritesplit returned wrong error");
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     test.repl->disconnect();
     test.maxscale->disconnect();
 
-    cout << "Non-existent user" << endl;
+    cout << "Nonexistent user" << endl;
     auto conn_direct = open_conn(test.repl->port[0], node_ip, "not-a-user", "not-a-password", false);
     auto conn_rwsplit = open_conn(test.maxscale->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
     auto conn_rconn = open_conn(test.maxscale->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);

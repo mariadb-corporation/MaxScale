@@ -837,7 +837,7 @@ bool SchemaRouterSession::handle_default_db()
     if (!rval)
     {
         /** Unknown database, hang up on the client*/
-        MXB_INFO("Connecting to a non-existent database '%s'", m_connect_db.c_str());
+        MXB_INFO("Connecting to a nonexistent database '%s'", m_connect_db.c_str());
         char errmsg[128 + MYSQL_DATABASE_MAXLEN + 1];
         sprintf(errmsg, "Unknown database '%s'", m_connect_db.c_str());
         if (m_config.debug)
@@ -1007,7 +1007,7 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
  * @param buf Buffer containing the database change query
  * @param cmd The command being executed
  *
- * @return True if new database was set and a query was executed, false if non-existent database was tried
+ * @return True if new database was set and a query was executed, false if nonexistent database was tried
  *         to be used and it wasn't found on any of the backends.
  */
 bool SchemaRouterSession::change_current_db(const GWBUF& buf, uint8_t cmd)

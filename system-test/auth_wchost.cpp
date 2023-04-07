@@ -100,7 +100,7 @@ void test_main(TestConnections& test)
             user1.grant_f("select on %s.*", dbname);
 
             auto reload_users = [&mxs]() {
-                // Try to log in with a non-existent user.
+                // Try to log in with a nonexistent user.
                 sleep(1);
                 mxs.try_open_rwsplit_connection("nevergonna", "giveyouup");
             };

@@ -1,5 +1,5 @@
 /**
- * @file connect_to_nonexisting_db.cpp Tries to connect to non existing DB, expects no crash
+ * @file connect_to_nonexisting_db.cpp Tries to connect to nonexistent DB, expects no crash
  */
 
 #include <maxtest/testconnections.hh>

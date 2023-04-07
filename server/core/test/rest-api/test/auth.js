@@ -270,7 +270,7 @@ describe("Authentication", function () {
       expect(res2.data.attributes.last_update).to.not.equal(res.data.attributes.last_update);
     });
 
-    it("get non-existent user", function () {
+    it("get nonexistent user", function () {
       return request.get(base_url + "/users/inet/user2").should.be.rejected;
     });
 

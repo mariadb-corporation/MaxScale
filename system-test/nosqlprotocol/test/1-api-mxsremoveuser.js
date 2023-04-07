@@ -80,7 +80,7 @@ describe(name, function () {
 
         try {
             await nosql.runCommand({mxsRemoveUser: user.user});
-            assert.fail("Non-existent user could be removed.");
+            assert.fail("Nonexistent user could be removed.");
         }
         catch (x) {
         }

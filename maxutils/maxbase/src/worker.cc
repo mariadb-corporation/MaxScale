@@ -1377,7 +1377,7 @@ Worker::DCall* Worker::remove_dcall(DCId id)
     else
     {
         mxb_assert_message(!true,
-                           "Attempt to remove delayed call using non-existent id %ld. "
+                           "Attempt to remove delayed call using nonexistent id %ld. "
                            "Calling hktask_remove() from the task function? Simply "
                            "return false instead.", id);
         MXB_WARNING("Attempt to remove a delayed call, associated with non-existing id.");

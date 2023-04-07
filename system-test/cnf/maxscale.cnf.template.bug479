@@ -15,7 +15,7 @@ router= readwritesplit
 servers=server1,     server2,              server3,server4
 user=maxskysql
 password=skysql
-filters=non existing filter | не существуюший фильтер
+filters=nonexistent filter | не существуюший фильтер
 
 [Read-Connection-Router-Slave]
 type=service

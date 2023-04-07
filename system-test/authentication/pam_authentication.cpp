@@ -194,7 +194,7 @@ void test_main(TestConnections& test)
         // Basic PAM authentication seems to be working. Now try with an anonymous user proxying to
         // the real user. The following does not actually do proper user mapping, as that requires further
         // setup on the backends. It does however demonstrate that MaxScale detects the anonymous user and
-        // accepts the login of a non-existent user with PAM.
+        // accepts the login of a nonexistent user with PAM.
         MYSQL* conn = test.repl->nodes[0];
         // Add a user which will be proxied.
         test.try_query(conn, "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED BY '%s';", dummy_user, dummy_pw);

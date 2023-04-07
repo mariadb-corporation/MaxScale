@@ -168,7 +168,7 @@ describe("Alter Commands", function () {
       });
   });
 
-  it("will not alter non-existent service parameter", function () {
+  it("will not alter nonexistent service parameter", function () {
     return doCommand("alter service Read-Connection-Router turbocharge yes-please").should.be.rejected;
   });
 
@@ -180,7 +180,7 @@ describe("Alter Commands", function () {
     return doCommand("alter service Read-Connection-Router user=maxuser password maxpwd").should.be.rejected;
   });
 
-  it("will not alter non-existent service", function () {
+  it("will not alter nonexistent service", function () {
     return doCommand("alter service not-a-service user maxuser").should.be.rejected;
   });
 
@@ -199,7 +199,7 @@ describe("Alter Commands", function () {
     });
   });
 
-  it("will not alter non-existent filter parameter", function () {
+  it("will not alter nonexistent filter parameter", function () {
     return doCommand("alter filter QLA turbocharge yes-please").should.be.rejected;
   });
 
@@ -207,7 +207,7 @@ describe("Alter Commands", function () {
     return doCommand("alter filter QLA match match3 exclude").should.be.rejected;
   });
 
-  it("will not alter non-existent filter", function () {
+  it("will not alter nonexistent filter", function () {
     return doCommand("alter filter not-a-filter match match4").should.be.rejected;
   });
 

@@ -84,7 +84,7 @@ void test_main(TestConnections& test)
             auto conn = repl.backend(0)->open_connection();
 
             auto test_query = [&](bool expected) {
-                    // To ensure MaxScale has updated user accounts, try to log in with a non-existent user.
+                    // To ensure MaxScale has updated user accounts, try to log in with a nonexistent user.
                     mxs->try_open_rwsplit_connection("batman", "iambatman");
 
                     // Use local command line client to log in and perform a query, as connector-c may not

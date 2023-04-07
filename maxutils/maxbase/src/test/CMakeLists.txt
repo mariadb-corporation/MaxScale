@@ -1,4 +1,4 @@
-# On too many platforms curling to a non-existent site
+# On too many platforms curling to a nonexistent site
 # does not result in a proper error. Disabled for the
 # time being.
 #

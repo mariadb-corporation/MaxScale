@@ -558,7 +558,7 @@ public:
 private:
     bool is_acceptable_error(const ComERR& err) const override
     {
-        // Deleting documents from a non-existent table should appear to succeed.
+        // Deleting documents from a nonexistent table should appear to succeed.
         return err.code() == ER_NO_SUCH_TABLE;
     }
 
@@ -2337,7 +2337,7 @@ private:
 
     bool is_acceptable_error(const ComERR& err) const override
     {
-        // Updating documents in non-existent table should appear to succeed.
+        // Updating documents in nonexistent table should appear to succeed.
         return err.code() == ER_NO_SUCH_TABLE;
     }
 

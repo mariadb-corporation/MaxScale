@@ -2008,7 +2008,7 @@ set sql_quote_show_create=1;
 set sql_mode="";
 SET NAMES koi8r;
 SET NAMES latin1;
-set @user123="non-existent";
+set @user123="nonexistent";
 set names koi8r;
 set names latin1;
 set password for mysqltest_7@ = password('systpass');

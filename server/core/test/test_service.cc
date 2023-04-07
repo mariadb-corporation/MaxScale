@@ -41,7 +41,7 @@ static void test1()
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
     parameters.set(CN_USER, "user");
     parameters.set(CN_PASSWORD, "password");
-    parameters.set(CN_ROUTER, "non-existent");
+    parameters.set(CN_ROUTER, "nonexistent");
 
     preload_module("readwritesplit", "server/modules/routing/readwritesplit/", mxs::ModuleType::ROUTER);
 
