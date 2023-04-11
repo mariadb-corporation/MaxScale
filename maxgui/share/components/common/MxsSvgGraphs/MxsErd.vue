@@ -44,7 +44,7 @@
                                 <tr
                                     v-for="(col, i) in node.data.cols"
                                     :key="`key_${node.id}_${col.name}`"
-                                    :style="{ height: `${trHeight}px` }"
+                                    :style="{ height: `${entitySizeConfig.rowHeight}px` }"
                                 >
                                     <td
                                         class="px-2"
@@ -98,7 +98,8 @@ import {
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import Link from '@share/components/common/MxsSvgGraphs/Link'
-import { LINK_SHAPES, createPath, genPath } from '@share/components/common/MxsSvgGraphs/linkShapes'
+import EntityLinkShape from '@share/components/common/MxsSvgGraphs/EntityLinkShape'
+import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
 
 export default {
     name: 'mxs-erd',
@@ -122,22 +123,17 @@ export default {
             dynNodeSizeMap: {},
             isDraggingNode: false,
             highlightedLinks: [],
-            trHeight: 32,
             entityHeaderHeight: 32,
             pathPointsMap: {}, // keyed by link id
+            linkInstance: null,
+            linkShapeInstance: null,
             //TODO: Add input to change this value
             linkShapeType: LINK_SHAPES.ORTHO,
-            linkInstance: null,
         }
     },
     computed: {
-        // Ensure that the marker remains visible while dragging a node by allocating a specific width.
-        relMarkFixedWidth() {
-            return 30
-        },
-        // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
-        rowHeightOffset() {
-            return 4
+        entitySizeConfig() {
+            return { rowHeight: 32, rowOffset: 4 }
         },
         // flat links into points and caching its link data and positions of the relational column
         connPoints() {
@@ -242,6 +238,11 @@ export default {
             this.linkInstance = new Link({
                 strokeWidth: 1,
             })
+            this.linkShapeInstance = new EntityLinkShape({
+                type: this.linkShapeType,
+                entitySizeConfig: this.entitySizeConfig,
+                nodeSizeMap: this.dynNodeSizeMap,
+            })
         },
         drawChart() {
             this.setGraphNodeCoordMap()
@@ -251,22 +252,16 @@ export default {
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {
                 const { x, y, id } = n
-                if (id) map[id] = { x, y }
+                /**
+                 * minus entityHeaderHeight so that EntityLinkShape can calculate the
+                 * y position accurately
+                 */
+                if (id) map[id] = { x, y: y - this.entityHeaderHeight }
                 return map
             }, {})
         },
         pathGenerator(linkData) {
-            const { path, data } = genPath({
-                shapeType: this.linkShapeType,
-                linkData,
-                entitySizeData: {
-                    headerHeight: this.entityHeaderHeight,
-                    rowHeight: this.trHeight,
-                    rowOffset: this.rowHeightOffset,
-                    markerWidth: this.relMarkFixedWidth,
-                },
-                nodeSizeMap: this.dynNodeSizeMap,
-            })
+            const { path, data } = this.linkShapeInstance.genPath(linkData)
             this.$set(this.pathPointsMap, linkData.id, data)
             return path
         },
@@ -293,9 +288,10 @@ export default {
          * so that each point is visible and aligned in the row.
          */
         repositionOverlappedPoints() {
+            const { rowHeight, rowOffset } = this.entitySizeConfig
             Object.values(this.overlappedPoints).forEach(points => {
                 // divide the row into points.length equal parts
-                const k = (this.trHeight - this.rowHeightOffset) / (points.length + 1)
+                const k = (rowHeight - rowOffset) / (points.length + 1)
                 // reposition points
                 points.forEach((point, i) => {
                     const {
@@ -309,10 +305,7 @@ export default {
                     this.linkInstance.drawPath({
                         containerEle: this.linkInstance.getLinkCtr(id),
                         type: 'update',
-                        pathGenerator: createPath({
-                            shapeType: this.linkShapeType,
-                            ...pathPoints,
-                        }),
+                        pathGenerator: this.linkShapeInstance.createPath(pathPoints),
                     })
                 })
             })

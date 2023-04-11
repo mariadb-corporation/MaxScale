@@ -10,6 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+export const LINK_SHAPES = {
+    ORTHO: 'Orthogonal',
+    ENTITY_RELATION: 'Entity Relation',
+    STRAIGHT: 'Straight',
+}
+
 export default () => ({
     link: {
         containerClass: 'link_container',
@@ -34,5 +41,16 @@ export default () => ({
             dashArr: '0',
             opacity: 1,
         },
+    },
+    linkShape: {
+        type: LINK_SHAPES.ORTHO,
+        entitySizeConfig: {
+            rowHeight: 32,
+            // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
+            rowOffset: 4,
+            // Ensure that the marker remains visible while dragging a node by allocating a specific width.
+            markerWidth: 15,
+        },
+        nodeSizeMap: null,
     },
 })
