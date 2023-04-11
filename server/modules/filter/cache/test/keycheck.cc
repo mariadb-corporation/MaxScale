@@ -15,7 +15,7 @@
 #include <fstream>
 #include <map>
 #include <maxbase/log.hh>
-#include "../../../../../query_classifier/test/testreader.hh"
+#include "../../../query_classifier/test/testreader.hh"
 #include "../cache_storage_api.hh"
 #include "../cache.hh"
 

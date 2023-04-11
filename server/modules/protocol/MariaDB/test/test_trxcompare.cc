@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 
         if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
-            mxs::set_libdir("../../../../../query_classifier/qc_sqlite");
+            mxs::set_libdir("../../../query_classifier/qc_sqlite");
 
             mxs::TestParser parser;
 

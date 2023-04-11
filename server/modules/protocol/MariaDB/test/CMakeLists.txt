@@ -24,7 +24,7 @@ add_executable(test_trxtracking test_trxtracking.cc)
 target_link_libraries(test_trxtracking maxscale-common)
 add_test(test_trxtracking test_trxtracking)
 
-set(QC_TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../query_classifier/test)
+set(QC_TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test)
 add_executable(test_trxcompare test_trxcompare.cc ${QC_TEST_PATH}/testreader.cc)
 target_link_libraries(test_trxcompare maxscale-common)
 add_test(test_trxcompare_create test_trxcompare ${QC_TEST_PATH}/create.test)

@@ -217,7 +217,6 @@ include_directories(maxutils/maxsimd/include)
 
 add_subdirectory(inih)
 add_subdirectory(maxutils)
-add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(include/maxscale)
 add_subdirectory(maxctrl)
