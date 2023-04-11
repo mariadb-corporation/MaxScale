@@ -32,7 +32,7 @@ export default class EntityLinkShape {
     }
 
     getNodeSize(node) {
-        return this.config.nodeSizeMap[node.id]
+        return node.size
     }
     /**
      * Return the y position of a node based on its dynamic height and

@@ -21,7 +21,7 @@
                     :boardZoom="zoom"
                     dynHeight
                     dynWidth
-                    @node-size-map="dynNodeSizeMap = $event"
+                    @node-size-map="setNodeSize"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
                 >
@@ -114,13 +114,13 @@ export default {
     data() {
         return {
             isRendering: false,
+            areSizesCalculated: false,
             svgGroup: null,
             graphNodeCoordMap: {},
             graphNodes: [],
             graphLinks: [],
             simulation: null,
             defNodeSize: { width: 200, height: 100 },
-            dynNodeSizeMap: {},
             isDraggingNode: false,
             highlightedLinks: [],
             entityHeaderHeight: 32,
@@ -193,12 +193,16 @@ export default {
             for (const link of this.highlightedLinks)
                 this.linkInstance.changeLinkStyle({ link, isDragging: v })
         },
+        // wait until graph-nodes sizes are calculated
+        areSizesCalculated(v) {
+            if (v) {
+                this.runSimulation()
+            }
+        },
     },
     created() {
         this.isRendering = true
         this.assignData(this.data)
-        // wait until graph-nodes is fully rendered so that handleCollision method can calculate the radius accurately
-        this.$nextTick(() => this.runSimulation())
     },
     methods: {
         /**
@@ -209,6 +213,10 @@ export default {
             const cloned = this.$helpers.lodash.cloneDeep(data)
             this.graphNodes = cloned.nodes
             this.graphLinks = cloned.links
+        },
+        setNodeSize(map) {
+            this.graphNodes = this.graphNodes.map(node => ({ ...node, size: map[node.id] }))
+            this.areSizesCalculated = Boolean(Object.keys(map).length)
         },
         runSimulation() {
             if (this.graphNodes.length) {
@@ -235,13 +243,10 @@ export default {
             }
         },
         initLinkInstance() {
-            this.linkInstance = new Link({
-                strokeWidth: 1,
-            })
+            this.linkInstance = new Link({ strokeWidth: 1 })
             this.linkShapeInstance = new EntityLinkShape({
                 type: this.linkShapeType,
                 entitySizeConfig: this.entitySizeConfig,
-                nodeSizeMap: this.dynNodeSizeMap,
             })
         },
         drawChart() {
@@ -264,13 +269,6 @@ export default {
             const { path, data } = this.linkShapeInstance.genPath(linkData)
             this.$set(this.pathPointsMap, linkData.id, data)
             return path
-        },
-        /**
-         * @param {Object} node -  node
-         * @returns {Object} - { width: Number, height: Number}
-         */
-        getNodeSize(node) {
-            return this.$refs.graphNodes.getNodeSize(this.$typy(node, 'id').safeString)
         },
         getLinks() {
             return this.simulation.force('link').links()
@@ -314,7 +312,7 @@ export default {
             this.simulation.force(
                 'collide',
                 forceCollide().radius(d => {
-                    const { width, height } = this.getNodeSize(d)
+                    const { width, height } = d.size
                     // Because nodes are densely packed,  this adds an extra radius of 100 pixels to the nodes
                     return Math.sqrt(width * width + height * height) / 2 + 100
                 })

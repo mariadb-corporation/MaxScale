@@ -51,6 +51,5 @@ export default () => ({
             // Ensure that the marker remains visible while dragging a node by allocating a specific width.
             markerWidth: 15,
         },
-        nodeSizeMap: null,
     },
 })
