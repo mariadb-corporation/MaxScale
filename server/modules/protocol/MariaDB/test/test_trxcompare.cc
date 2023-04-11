@@ -22,7 +22,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/testparser.hh>
-#include "../../../query_classifier/test/testreader.hh"
+#include "../../../parser_plugin/test/testreader.hh"
 
 using namespace std;
 using mxs::Parser;
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 
         if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
-            mxs::set_libdir("../../../query_classifier/qc_sqlite");
+            mxs::set_libdir("../../../parser_plugin/qc_sqlite");
 
             mxs::TestParser parser;
 

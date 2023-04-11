@@ -19,7 +19,7 @@
 #include "cache.hh"
 #include "storagefactory.hh"
 // TODO: Move this to a common place.
-#include "../../../query_classifier/test/testreader.hh"
+#include "../../../parser_plugin/test/testreader.hh"
 
 using maxscale::TestReader;
 using namespace std;

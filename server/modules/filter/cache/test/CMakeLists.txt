@@ -7,7 +7,7 @@ add_library(cachetester
   testerlrustorage.cc
   testerrawstorage.cc
   teststorage.cc
-  ../../../query_classifier/test/testreader.cc
+  ../../../parser_plugin/test/testreader.cc
   )
 
 # Depends on C/C
@@ -18,7 +18,7 @@ target_link_libraries(testrules cache maxscale-common ${JANSSON_LIBRARIES})
 
 add_executable(testkeygeneration
   testkeygeneration.cc
-  ../../../query_classifier/test/testreader.cc
+  ../../../parser_plugin/test/testreader.cc
   )
 target_link_libraries(testkeygeneration cachetester cache maxscale-common)
 
@@ -45,7 +45,7 @@ target_link_libraries(test_cacheoptions maxscale-common)
 
 add_executable(keycheck
   keycheck.cc
-  ../../../query_classifier/test/testreader.cc
+  ../../../parser_plugin/test/testreader.cc
   ../cache.cc
   ../cache_storage_api.cc
   ../cacheconfig.cc
