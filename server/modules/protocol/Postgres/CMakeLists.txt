@@ -8,7 +8,9 @@ add_library(postgresprotocol SHARED
   pgprotocolmodule.cc
   pgusermanager.cc
   postgresprotocol.cc
+  authenticators/common.cc
   authenticators/password.cc
+  authenticators/scram-sha-256.cc
   authenticators/trust.cc
   )
 

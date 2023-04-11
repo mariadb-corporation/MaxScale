@@ -10,16 +10,20 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#pragma once
 
-#include "pgauthenticatormodule.hh"
+#include <maxscale/ccdefs.hh>
+#include <openssl/sha.h>
+#include <optional>
 
-std::string PgAuthenticatorModule::supported_protocol() const
+using Digest = std::array<uint8_t, SHA256_DIGEST_LENGTH>;
+
+struct ScramUser
 {
-    return MXB_MODULE_NAME;
-}
+    std::string iter;
+    std::string salt;
+    Digest      stored_key{};
+    Digest      server_key{};
+};
 
-bool AuthIdEntry::operator==(const AuthIdEntry& rhs) const
-{
-    return name == rhs.name && password == rhs.password && super == rhs.super && inherit == rhs.inherit
-           && can_login == rhs.can_login;
-}
+std::optional<ScramUser> parse_scram_password(std::string_view pw);

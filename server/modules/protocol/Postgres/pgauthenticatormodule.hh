@@ -17,16 +17,6 @@
 
 class PgAuthenticatorModule;
 
-using Digest = std::array<uint8_t, SHA256_DIGEST_LENGTH>;
-
-struct ScramUser
-{
-    std::string iter;
-    std::string salt;
-    Digest      stored_key{};
-    Digest      server_key{};
-};
-
 enum class UserEntryType
 {
     NO_HBA_ENTRY,
