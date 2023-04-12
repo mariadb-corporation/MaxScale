@@ -1,0 +1,91 @@
+diff --git a/src/backend/utils/mmgr/mcxt.c b/src/backend/utils/mmgr/mcxt.c
+index e12be1b9b..f0ed40433 100644
+--- a/src/backend/utils/mmgr/mcxt.c
++++ b/src/backend/utils/mmgr/mcxt.c
+@@ -39,22 +39,22 @@
+  * CurrentMemoryContext
+  *		Default memory context for allocations.
+  */
+-MemoryContext CurrentMemoryContext = NULL;
++__thread MemoryContext CurrentMemoryContext = NULL;
+ 
+ /*
+  * Standard top-level contexts. For a description of the purpose of each
+  * of these contexts, refer to src/backend/utils/mmgr/README
+  */
+-MemoryContext TopMemoryContext = NULL;
+-MemoryContext ErrorContext = NULL;
+-MemoryContext PostmasterContext = NULL;
+-MemoryContext CacheMemoryContext = NULL;
+-MemoryContext MessageContext = NULL;
+-MemoryContext TopTransactionContext = NULL;
+-MemoryContext CurTransactionContext = NULL;
++__thread MemoryContext TopMemoryContext = NULL;
++__thread MemoryContext ErrorContext = NULL;
++__thread MemoryContext PostmasterContext = NULL;
++__thread MemoryContext CacheMemoryContext = NULL;
++__thread MemoryContext MessageContext = NULL;
++__thread MemoryContext TopTransactionContext = NULL;
++__thread MemoryContext CurTransactionContext = NULL;
+ 
+ /* This is a transient link to the active portal's memory context: */
+-MemoryContext PortalContext = NULL;
++__thread MemoryContext PortalContext = NULL;
+ 
+ static void MemoryContextCallResetCallbacks(MemoryContext context);
+ static void MemoryContextStatsInternal(MemoryContext context, int level,
+diff --git a/src/include/utils/catcache.h b/src/include/utils/catcache.h
+index d81e6fabb..1b8bcfaf4 100644
+--- a/src/include/utils/catcache.h
++++ b/src/include/utils/catcache.h
+@@ -187,7 +187,7 @@ typedef struct catcacheheader
+ 
+ 
+ /* this extern duplicates utils/memutils.h... */
+-extern PGDLLIMPORT MemoryContext CacheMemoryContext;
++extern __thread PGDLLIMPORT MemoryContext CacheMemoryContext;
+ 
+ extern void CreateCacheMemoryContext(void);
+ 
+diff --git a/src/include/utils/memutils.h b/src/include/utils/memutils.h
+index 495d1af20..385080fd6 100644
+--- a/src/include/utils/memutils.h
++++ b/src/include/utils/memutils.h
+@@ -52,16 +52,16 @@
+  * Only TopMemoryContext and ErrorContext are initialized by
+  * MemoryContextInit() itself.
+  */
+-extern PGDLLIMPORT MemoryContext TopMemoryContext;
+-extern PGDLLIMPORT MemoryContext ErrorContext;
+-extern PGDLLIMPORT MemoryContext PostmasterContext;
+-extern PGDLLIMPORT MemoryContext CacheMemoryContext;
+-extern PGDLLIMPORT MemoryContext MessageContext;
+-extern PGDLLIMPORT MemoryContext TopTransactionContext;
+-extern PGDLLIMPORT MemoryContext CurTransactionContext;
++extern __thread PGDLLIMPORT MemoryContext TopMemoryContext;
++extern __thread PGDLLIMPORT MemoryContext ErrorContext;
++extern __thread PGDLLIMPORT MemoryContext PostmasterContext;
++extern __thread PGDLLIMPORT MemoryContext CacheMemoryContext;
++extern __thread PGDLLIMPORT MemoryContext MessageContext;
++extern __thread PGDLLIMPORT MemoryContext TopTransactionContext;
++extern __thread PGDLLIMPORT MemoryContext CurTransactionContext;
+ 
+ /* This is a transient link to the active portal's memory context: */
+-extern PGDLLIMPORT MemoryContext PortalContext;
++extern __thread PGDLLIMPORT MemoryContext PortalContext;
+ 
+ /* Backwards compatibility macro */
+ #define MemoryContextResetAndDeleteChildren(ctx) MemoryContextReset(ctx)
+diff --git a/src/include/utils/palloc.h b/src/include/utils/palloc.h
+index a0b62aa7b..3858e978b 100644
+--- a/src/include/utils/palloc.h
++++ b/src/include/utils/palloc.h
+@@ -56,7 +56,7 @@ typedef struct MemoryContextCallback
+  * Avoid accessing it directly!  Instead, use MemoryContextSwitchTo()
+  * to change the setting.
+  */
+-extern PGDLLIMPORT MemoryContext CurrentMemoryContext;
++extern __thread PGDLLIMPORT MemoryContext CurrentMemoryContext;
+ 
+ /*
+  * Flags for MemoryContextAllocExtended.
