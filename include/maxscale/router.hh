@@ -20,6 +20,7 @@
 #include <maxscale/parser.hh>
 #include <maxscale/routing.hh>
 #include <maxscale/target.hh>
+#include <maxscale/protocol2.hh>
 
 class SERVICE;
 class MXS_SESSION;
@@ -156,6 +157,13 @@ protected:
      * @return The protocol data of the protocol
      */
     const mxs::ProtocolData& protocol_data() const;
+
+    /**
+     * The protocol used by this filter session
+     *
+     * @return The protocol module being used
+     */
+    const mxs::ProtocolModule& protocol() const;
 
     MXS_SESSION* m_pSession;    /*< The MXS_SESSION this router session is associated with. */
     Parser*      m_pParser;     /*< The parser suitable the protocol of this router. */

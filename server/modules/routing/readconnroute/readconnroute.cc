@@ -324,7 +324,7 @@ void RCRSession::log_closed_session(const GWBUF& buffer, mxs::Target* t)
         sprintf(msg, "Server '%s' no longer qualifies as a target server.", t->name());
     }
 
-    MXB_ERROR("Failed to route, %s: %s", msg, m_pSession->protocol()->describe(buffer).c_str());
+    MXB_ERROR("Failed to route, %s: %s", msg, protocol().describe(buffer).c_str());
 }
 
 /**
@@ -377,8 +377,7 @@ bool RCRSession::routeQuery(GWBUF&& buffer)
         return 0;
     }
 
-    MXB_INFO("Routed to '%s': %s", m_backend->target()->name(),
-             m_pSession->protocol()->describe(buffer).c_str());
+    MXB_INFO("Routed to '%s': %s", m_backend->target()->name(), protocol().describe(buffer).c_str());
 
     m_query_timer.start_interval();
 

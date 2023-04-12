@@ -463,12 +463,12 @@ bool XRouterSession::all_backends_idle() const
 
 std::string XRouterSession::describe(const GWBUF& buffer)
 {
-    return m_pSession->protocol()->describe(buffer);
+    return protocol().describe(buffer);
 }
 
 bool XRouterSession::send_query(mxs::Backend* backend, std::string_view sql)
 {
-    return route_to_one(backend, m_pSession->protocol()->make_query(sql), mxs::Backend::IGNORE_RESPONSE);
+    return route_to_one(backend, protocol().make_query(sql), mxs::Backend::IGNORE_RESPONSE);
 }
 
 void XRouterSession::fence_bad_node(mxs::Backend* backend)

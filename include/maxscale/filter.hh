@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <maxscale/parser.hh>
 #include <maxscale/routing.hh>
+#include <maxscale/protocol2.hh>
 
 struct json_t;
 class GWBUF;
@@ -212,6 +213,13 @@ protected:
      * @return The protocol data of the protocol
      */
     const mxs::ProtocolData& protocol_data() const;
+
+    /**
+     * The protocol used by this filter session
+     *
+     * @return The protocol module being used
+     */
+    const mxs::ProtocolModule& protocol() const;
 
 protected:
     MXS_SESSION* m_pSession;/*< The MXS_SESSION this filter session is associated with. */

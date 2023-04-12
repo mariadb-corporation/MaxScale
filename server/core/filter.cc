@@ -334,6 +334,12 @@ const mxs::ProtocolData& FilterSession::protocol_data() const
     mxb_assert(m_pSession->protocol_data());
     return *m_pSession->protocol_data();
 }
+
+const mxs::ProtocolModule& FilterSession::protocol() const
+{
+    mxb_assert(m_pSession->protocol());
+    return *m_pSession->protocol();
+}
 }
 
 std::ostream& FilterDef::persist(std::ostream& os) const

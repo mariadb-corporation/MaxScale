@@ -48,4 +48,10 @@ const mxs::ProtocolData& RouterSession::protocol_data() const
     mxb_assert(m_pSession->protocol_data());
     return *m_pSession->protocol_data();
 }
+
+const mxs::ProtocolModule& RouterSession::protocol() const
+{
+    mxb_assert(m_pSession->protocol());
+    return *m_pSession->protocol();
+}
 }
