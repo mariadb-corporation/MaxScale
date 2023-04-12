@@ -128,7 +128,7 @@ public:
     // TODO: To be removed when everyone can handle string_views.
     std::string get_sql_string(const GWBUF& stmt) const
     {
-        return std::string { get_sql(stmt) };
+        return std::string {get_sql(stmt)};
     }
 
     // Sets the upstream component (session, service)
@@ -153,9 +153,9 @@ protected:
     /**
      * Get the protocol data for this session
      *
-     * @return The protocol data if the protocol provided it. A null pointer if it didn't.
+     * @return The protocol data of the protocol
      */
-    const mxs::ProtocolData* protocol_data() const;
+    const mxs::ProtocolData& protocol_data() const;
 
     MXS_SESSION* m_pSession;    /*< The MXS_SESSION this router session is associated with. */
     Parser*      m_pParser;     /*< The parser suitable the protocol of this router. */

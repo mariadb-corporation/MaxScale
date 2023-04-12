@@ -412,7 +412,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 
             MXB_INFO("Route query to \t%s <", bref->name());
 
-            auto responds = protocol_data()->will_respond(packet) ?
+            auto responds = protocol_data().will_respond(packet) ?
                 mxs::Backend::EXPECT_RESPONSE :
                 mxs::Backend::NO_RESPONSE;
 
@@ -643,7 +643,7 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, GWBUF&& buff
     bool ok = true;
     mxs::Backend::response_type type = mxs::Backend::NO_RESPONSE;
 
-    if (protocol_data()->will_respond(buffer))
+    if (protocol_data().will_respond(buffer))
     {
         if (backend == m_sescmd_replier)
         {

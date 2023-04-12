@@ -146,7 +146,7 @@ bool XRouterSession::route_solo(GWBUF&& packet)
 {
     auto type = mxs::Backend::NO_RESPONSE;
 
-    if (protocol_data()->will_respond(packet))
+    if (protocol_data().will_respond(packet))
     {
         type = mxs::Backend::EXPECT_RESPONSE;
         m_state = State::WAIT_SOLO;
@@ -159,7 +159,7 @@ bool XRouterSession::route_main(GWBUF&& packet)
 {
     auto type = mxs::Backend::NO_RESPONSE;
 
-    if (protocol_data()->will_respond(packet))
+    if (protocol_data().will_respond(packet))
     {
         type = mxs::Backend::IGNORE_RESPONSE;
         m_state = State::WAIT_MAIN;
@@ -178,7 +178,7 @@ bool XRouterSession::route_stored_command(mxs::Backend* backend)
     {
         for (const auto& packet : m_packets)
         {
-            auto type = protocol_data()->will_respond(packet) ?
+            auto type = protocol_data().will_respond(packet) ?
                 mxs::Backend::IGNORE_RESPONSE : mxs::Backend::NO_RESPONSE;
 
             if (!route_to_one(backend, packet.shallow_clone(), type))

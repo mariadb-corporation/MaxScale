@@ -265,7 +265,7 @@ private:
 
     inline bool can_recover_servers() const
     {
-        return protocol_data()->can_recover_state();
+        return protocol_data().can_recover_state();
     }
 
     inline bool can_recover_master() const

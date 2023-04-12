@@ -239,7 +239,7 @@ bool RWSplitSession::query_not_supported(const GWBUF& querybuf)
 
     if (mxs_mysql_is_ps_command(info.command()) && info.stmt_id() == 0)
     {
-        if (protocol_data()->will_respond(querybuf))
+        if (protocol_data().will_respond(querybuf))
         {
             // Unknown PS ID, can't route this query
             std::stringstream ss;
@@ -477,7 +477,7 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
     bool ok = true;
     mxs::Backend::response_type type = mxs::Backend::NO_RESPONSE;
 
-    if (protocol_data()->will_respond(buffer))
+    if (protocol_data().will_respond(buffer))
     {
         type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
     }
@@ -606,11 +606,11 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
             }
 
             // TODO: Fix this
-            // m_router->update_max_sescmd_sz(protocol_data()->history().size());
+            // m_router->update_max_sescmd_sz(protocol_data().history().size());
 
             m_current_query = std::move(buffer);
 
-            if (protocol_data()->will_respond(m_current_query))
+            if (protocol_data().will_respond(m_current_query))
             {
                 m_expected_responses++;
                 mxb_assert(m_expected_responses == 1);
@@ -964,22 +964,22 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
 bool RWSplitSession::trx_is_starting() const
 {
-    return protocol_data()->is_trx_starting();
+    return protocol_data().is_trx_starting();
 }
 
 bool RWSplitSession::trx_is_read_only() const
 {
-    return protocol_data()->is_trx_read_only();
+    return protocol_data().is_trx_read_only();
 }
 
 bool RWSplitSession::trx_is_open() const
 {
-    return protocol_data()->is_trx_active();
+    return protocol_data().is_trx_active();
 }
 
 bool RWSplitSession::trx_is_ending() const
 {
-    return protocol_data()->is_trx_ending();
+    return protocol_data().is_trx_ending();
 }
 
 bool RWSplitSession::should_replace_master(RWBackend* target)

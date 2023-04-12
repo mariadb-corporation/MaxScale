@@ -80,7 +80,7 @@ RWSplitSession::~RWSplitSession()
     }
 
     // TODO: Fix this
-    // m_router->local_avg_sescmd_sz().add(protocol_data()->history().size());
+    // m_router->local_avg_sescmd_sz().add(protocol_data().history().size());
 }
 
 bool RWSplitSession::routeQuery(GWBUF&& buffer)
@@ -748,7 +748,7 @@ bool RWSplitSession::start_trx_replay()
                  */
                 MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query));
                 mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
-                                   || !protocol_data()->is_autocommit(),
+                                   || !protocol_data().is_autocommit(),
                                    "The current query (%s) should start or stop a transaction "
                                    "or autocommit should be disabled",
                                    get_sql_string(m_interrupted_query).c_str());
@@ -760,7 +760,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(protocol_data()->is_autocommit() || trx_is_ending(),
+            mxb_assert_message(protocol_data().is_autocommit() || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }

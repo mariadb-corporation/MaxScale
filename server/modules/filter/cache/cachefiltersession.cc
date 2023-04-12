@@ -1656,7 +1656,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         }
     }
 
-    if (!protocol_data()->will_respond(*pPacket))
+    if (!protocol_data().will_respond(*pPacket))
     {
         m_processing = false;
     }

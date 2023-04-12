@@ -83,7 +83,7 @@ bool TeeSession::routeQuery(GWBUF&& queue)
 
     if (m_client && query_matches(queue) && m_client->queue_query(queue.shallow_clone()))
     {
-        if (m_sync && protocol_data()->will_respond(queue))
+        if (m_sync && protocol_data().will_respond(queue))
         {
             // These two could be combined into one uint8_t as they never go above one but having them as
             // separate variables makes debugging easier.

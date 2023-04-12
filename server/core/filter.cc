@@ -329,9 +329,10 @@ void FilterSession::set_response(GWBUF&& response) const
     session_set_response(m_pSession, m_up, std::move(response));
 }
 
-const mxs::ProtocolData* FilterSession::protocol_data() const
+const mxs::ProtocolData& FilterSession::protocol_data() const
 {
-    return m_pSession->protocol_data();
+    mxb_assert(m_pSession->protocol_data());
+    return *m_pSession->protocol_data();
 }
 }
 

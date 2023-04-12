@@ -47,6 +47,64 @@
 namespace
 {
 mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+
+struct CDCProtocolData final : public mxs::ProtocolData
+{
+    bool will_respond(const GWBUF& buffer) const override
+    {
+        return false;
+    }
+
+    bool can_recover_state() const override
+    {
+        return false;
+    }
+
+    virtual bool is_trx_starting() const override
+    {
+        return false;
+    }
+
+    virtual bool is_trx_active() const override
+    {
+        return false;
+    }
+
+    virtual bool is_trx_read_only() const override
+    {
+        return false;
+    }
+
+    virtual bool is_trx_ending() const override
+    {
+        return false;
+    }
+
+    virtual bool is_autocommit() const override
+    {
+        return false;
+    }
+
+    virtual bool are_multi_statements_allowed() const override
+    {
+        return false;
+    }
+
+    virtual size_t amend_memory_statistics(json_t* memory) const override
+    {
+        return 0;
+    }
+
+    virtual size_t static_size() const override
+    {
+        return 0;
+    }
+
+    virtual size_t varying_size() const override
+    {
+        return 0;
+    }
+};
 }
 
 class CDCProtocolModule : public mxs::ProtocolModule
@@ -67,6 +125,7 @@ public:
     std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
+        session->set_protocol_data(std::make_unique<CDCProtocolData>());
         return std::make_unique<CDCClientConnection>(m_auth_module, component);
     }
 
