@@ -71,6 +71,10 @@ export default class Link {
                 break
         }
     }
+    drawPaths(params) {
+        this.drawPath(params)
+        this.drawPath({ ...params, isInvisible: true })
+    }
     /**
      * The mouseover event on link <g/> element only works when the mouse is over the
      * "visiblePainted" of the <path/>, not the space between dots. However, the thinness
@@ -80,8 +84,8 @@ export default class Link {
      * @param {String} param.data - Links data
      * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
      * @param {Function} param.pathGenerator - Function to fill the value of the d attribute
-     * @param {Function} param.onEnter - When links are entered into the DOM
-     * @param {Function} param.onUpdate - When links are updated in the DOM
+     * @param {Function} param.onEnter - When links data are being prepared for entering into the DOM
+     * @param {Function} param.onUpdate - When links are being updated in the DOM
      */
     drawLinks({ containerEle, data, nodeIdPath = 'id', pathGenerator, onEnter, onUpdate }) {
         const scope = this
@@ -116,27 +120,15 @@ export default class Link {
                                 .attr('stroke-width', d => scope.getLinkStyles(d, 'strokeWidth'))
                                 .attr('stroke-dasharray', d => scope.getLinkStyles(d, 'dashArr'))
                         })
-                    this.drawPath({ containerEle: linkCtr, type: 'enter', pathGenerator })
-                    this.drawPath({
-                        containerEle: linkCtr,
-                        type: 'enter',
-                        isInvisible: true,
-                        pathGenerator,
-                    })
-                    if (onEnter) onEnter(linkCtr)
+                    t(onEnter).safeFunction(linkCtr)
+                    this.drawPaths({ containerEle: linkCtr, type: 'enter', pathGenerator })
                     return linkCtr
                 },
                 // update is called when node changes it size or its position
                 update => {
                     const linkCtr = update
-                    this.drawPath({ containerEle: linkCtr, type: 'update', pathGenerator })
-                    this.drawPath({
-                        containerEle: linkCtr,
-                        type: 'update',
-                        isInvisible: true,
-                        pathGenerator,
-                    })
-                    if (onUpdate) onUpdate(linkCtr)
+                    t(onUpdate).safeFunction(linkCtr)
+                    this.drawPaths({ containerEle: linkCtr, type: 'update', pathGenerator })
                     return linkCtr
                 },
                 exit => exit.remove()

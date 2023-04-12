@@ -97,8 +97,7 @@ import {
 } from 'd3-force'
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
-import Link from '@share/components/common/MxsSvgGraphs/Link'
-import EntityLinkShape from '@share/components/common/MxsSvgGraphs/EntityLinkShape'
+import EntityLink from '@share/components/common/MxsSvgGraphs/EntityLink'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
 
 export default {
@@ -124,9 +123,7 @@ export default {
             isDraggingNode: false,
             highlightedLinks: [],
             entityHeaderHeight: 32,
-            pathPointsMap: {}, // keyed by link id
             linkInstance: null,
-            linkShapeInstance: null,
             //TODO: Add input to change this value
             linkShapeType: LINK_SHAPES.ORTHO,
         }
@@ -135,57 +132,14 @@ export default {
         entitySizeConfig() {
             return { rowHeight: 32, rowOffset: 4 }
         },
-        // flat links into points and caching its link data and positions of the relational column
-        connPoints() {
-            return Object.values(this.getLinks()).reduce((points, link) => {
-                const {
-                    source,
-                    target,
-                    pathData: { srcYPos, targetYPos },
-                } = link
-                const { x0, x1 } = this.pathPointsMap[link.id]
-                // range attribute helps to detect overlapped points
-                points = [
-                    ...points,
-                    {
-                        id: source.id,
-                        range: `${x0},${srcYPos.center}`,
-                        yPositions: srcYPos,
-                        linkedPointYPositions: targetYPos,
-                        isSrc: true,
-                        linkData: link,
-                    },
-                    {
-                        id: target.id,
-                        range: `${x1},${targetYPos.center}`,
-                        yPositions: targetYPos,
-                        linkedPointYPositions: srcYPos,
-                        isSrc: false,
-                        linkData: link,
-                    },
-                ]
-                return points
-            }, [])
-        },
-        /**
-         * Generates a map of points that overlap in the `connPoints` array.
-         * @returns {Object} - An object where the keys are link IDs and the values are arrays
-         * of points that overlap. The array of points always has length >= 2
-         */
-        overlappedPoints() {
-            // Group points have the same range
-            let groupedPoints = this.$helpers.lodash.groupBy(this.connPoints, point => point.range)
-            // get overlapped points and sort them
-            return Object.keys(groupedPoints).reduce((acc, group) => {
-                const points = groupedPoints[group]
-                if (points.length > 1) {
-                    points.sort(
-                        (a, b) => a.linkedPointYPositions.center - b.linkedPointYPositions.center
-                    )
-                    acc[group] = points
-                }
-                return acc
-            }, {})
+        entityLinkConfig() {
+            return {
+                linkConfig: { strokeWidth: 1 },
+                shapeConfig: {
+                    type: this.linkShapeType,
+                    entitySizeConfig: this.entitySizeConfig,
+                },
+            }
         },
     },
     watch: {
@@ -243,16 +197,12 @@ export default {
             }
         },
         initLinkInstance() {
-            this.linkInstance = new Link({ strokeWidth: 1 })
-            this.linkShapeInstance = new EntityLinkShape({
-                type: this.linkShapeType,
-                entitySizeConfig: this.entitySizeConfig,
-            })
+            this.linkInstance = new EntityLink(this.entityLinkConfig)
         },
         drawChart() {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
-            this.handleDrawLinks()
+            this.drawLinks()
         },
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {
@@ -265,48 +215,11 @@ export default {
                 return map
             }, {})
         },
-        pathGenerator(linkData) {
-            const { path, data } = this.linkShapeInstance.genPath(linkData)
-            this.$set(this.pathPointsMap, linkData.id, data)
-            return path
-        },
         getLinks() {
             return this.simulation.force('link').links()
         },
-        handleDrawLinks() {
-            this.linkInstance.drawLinks({
-                containerEle: this.svgGroup,
-                data: this.getLinks(),
-                pathGenerator: this.pathGenerator,
-            })
-            this.repositionOverlappedPoints()
-        },
-        /**
-         * Repositions overlapped points for each entity,
-         * so that each point is visible and aligned in the row.
-         */
-        repositionOverlappedPoints() {
-            const { rowHeight, rowOffset } = this.entitySizeConfig
-            Object.values(this.overlappedPoints).forEach(points => {
-                // divide the row into points.length equal parts
-                const k = (rowHeight - rowOffset) / (points.length + 1)
-                // reposition points
-                points.forEach((point, i) => {
-                    const {
-                        yPositions,
-                        linkData: { id },
-                    } = point
-                    const newY = yPositions.top + k * i + k
-                    let pathPoints = this.pathPointsMap[id]
-                    // update coord
-                    this.$set(pathPoints, point.isSrc ? 'y0' : 'y1', newY)
-                    this.linkInstance.drawPath({
-                        containerEle: this.linkInstance.getLinkCtr(id),
-                        type: 'update',
-                        pathGenerator: this.linkShapeInstance.createPath(pathPoints),
-                    })
-                })
-            })
+        drawLinks() {
+            this.linkInstance.draw({ containerEle: this.svgGroup, data: this.getLinks() })
         },
         handleCollision() {
             this.simulation.force(
@@ -326,7 +239,7 @@ export default {
             this.highlightedLinks = this.getLinks().filter(
                 d => d.source.id === node.id || d.target.id === node.id
             )
-            this.handleDrawLinks()
+            this.drawLinks()
         },
         onNodeDragEnd() {
             this.isDraggingNode = false

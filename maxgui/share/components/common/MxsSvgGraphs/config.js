@@ -17,6 +17,12 @@ export const LINK_SHAPES = {
     STRAIGHT: 'Straight',
 }
 
+export const TARGET_POS = {
+    RIGHT: 'right',
+    LEFT: 'left',
+    INTERSECT: 'intersect',
+}
+
 export default () => ({
     link: {
         containerClass: 'link_container',
