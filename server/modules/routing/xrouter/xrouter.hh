@@ -17,6 +17,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/postgresql/module_names.hh>
 
 class XRouterSession;
@@ -73,7 +74,7 @@ public:
 
     std::set<std::string> protocols() const override
     {
-        return {MXS_POSTGRESQL_PROTOCOL_NAME};
+        return {MXS_POSTGRESQL_PROTOCOL_NAME, MXS_MARIADB_PROTOCOL_NAME};
     }
 
     const Config::Values& config()

@@ -86,7 +86,18 @@ mxs::RouterSession* XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoi
 
     if (!backends.empty())
     {
-        rv = new XRouterSession(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+        if (pSession->protocol()->name() == MXS_POSTGRESQL_PROTOCOL_NAME)
+        {
+            rv = new XgresSession(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+        }
+        else if (pSession->protocol()->name() == MXS_MARIADB_PROTOCOL_NAME)
+        {
+            rv = new XmSession(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+        }
+        else
+        {
+            mxb_assert_message(!true, "This should not be called with an invalid protocol");
+        }
     }
 
     return rv;

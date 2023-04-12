@@ -18,7 +18,7 @@
 
 using SBackends = std::vector<std::unique_ptr<mxs::Backend>>;
 
-class XRouterSession final : public mxs::RouterSession
+class XRouterSession : public mxs::RouterSession
 {
 public:
     XRouterSession(MXS_SESSION* session, XRouter& router, SBackends backends,
@@ -27,6 +27,13 @@ public:
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool handleError(mxs::ErrorType type, const std::string& message,
                      mxs::Endpoint* pProblem, const mxs::Reply& reply) override;
+
+protected:
+    virtual void        preprocess(GWBUF&) = 0;
+    virtual std::string main_sql() const = 0;
+    virtual std::string secondary_sql() const = 0;
+    virtual std::string lock_sql(std::string_view lock_id) const = 0;
+    virtual std::string unlock_sql(std::string_view lock_id) const = 0;
 
 private:
     enum class State
@@ -123,4 +130,26 @@ private:
 
     // The router configuration that was active when this session was started.
     XRouter::Config::ValueRef m_config;
+};
+
+class XgresSession final : public XRouterSession
+{
+    using XRouterSession::XRouterSession;
+
+    void        preprocess(GWBUF&) override;
+    std::string main_sql() const override;
+    std::string secondary_sql() const override;
+    std::string lock_sql(std::string_view lock_id) const override;
+    std::string unlock_sql(std::string_view lock_id) const override;
+};
+
+class XmSession final : public XRouterSession
+{
+    using XRouterSession::XRouterSession;
+
+    void        preprocess(GWBUF&) override;
+    std::string main_sql() const override;
+    std::string secondary_sql() const override;
+    std::string lock_sql(std::string_view lock_id) const override;
+    std::string unlock_sql(std::string_view lock_id) const override;
 };
