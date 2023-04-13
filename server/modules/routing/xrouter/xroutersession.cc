@@ -81,6 +81,8 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
     switch (m_state)
     {
     case State::IDLE:
+        preprocess(packet);
+
         if (!check_node_status())
         {
             ok = false;
