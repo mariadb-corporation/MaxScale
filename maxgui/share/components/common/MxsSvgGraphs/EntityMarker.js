@@ -14,8 +14,8 @@
 import { TARGET_POS, CARDINALITY_SYMBOLS } from '@share/components/common/MxsSvgGraphs/config'
 
 export default class EntityMarker {
-    constructor() {
-        this.linkInstance = {}
+    constructor({ linkInstance }) {
+        this.linkInstance = linkInstance
     }
     transform({ d, isSrc = false }) {
         const {
@@ -37,8 +37,9 @@ export default class EntityMarker {
     /**
      * @param {Object} param.containerEle - Container element of the marker
      * @param {String} param.type - enter or update
+     * @param {String} param.isSrc - whether the marker is placed on the source or target
      **/
-    drawMarker({ containerEle, type, isSrc = false }) {
+    draw({ containerEle, type, isSrc = false }) {
         const scope = this
         const { markerClass } = this.linkInstance.config
         const stroke = d => scope.linkInstance.getLinkStyles(d, 'color')
@@ -66,21 +67,36 @@ export default class EntityMarker {
                 break
         }
     }
-    /**
-     * @param {Object} param.containerEle - Container element of the marker
-     * @param {String} param.type - enter or update
-     **/
-    draw(params) {
-        this.linkInstance = params.linkInstance
-        this.drawMarker({ ...params, isSrc: true })
-        this.drawMarker(params)
-    }
-
     getMarker({ d, isSrc }) {
         const {
             relationshipData: { type },
         } = d
         const [src, target] = type.split(':')
         return CARDINALITY_SYMBOLS[isSrc ? src : target]
+    }
+    /**
+     * Change the style of a link markers or multiple link markers
+     */
+    changeMarkersOfLinkStyle({ elements, eventType }) {
+        const linkInstance = this.linkInstance
+        const { markerClass } = linkInstance.config
+        elements
+            .selectAll(`path.${markerClass}`)
+            .attr('stroke-width', d =>
+                eventType
+                    ? linkInstance.getLinkStyles(d, `${eventType}.strokeWidth`)
+                    : linkInstance.getLinkStyles(d, 'strokeWidth')
+            )
+    }
+    /**
+     * Change style of markers having the same source and target
+     * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
+     * @param {Boolean} param.isDragging - is dragging node
+     */
+    changeMarkersStyle({ link, nodeIdPath = 'id', eventType }) {
+        this.changeMarkersOfLinkStyle({
+            elements: this.linkInstance.getRelatedLinks({ link, nodeIdPath }),
+            eventType,
+        })
     }
 }

@@ -23,6 +23,12 @@ export const TARGET_POS = {
     INTERSECT: 'intersect',
 }
 
+export const EVENT_TYPES = {
+    HOVER: 'hover',
+    DRAGGING: 'dragging',
+    NONE: '', // for reversing the styles
+}
+
 export default () => ({
     link: {
         containerClass: 'link_container',
@@ -38,12 +44,12 @@ export default () => ({
         invisibleStrokeWidth: 12,
         dashArr: '5',
         opacity: 0.5,
-        hover: {
+        [EVENT_TYPES.HOVER]: {
             strokeWidth: 2.5,
             dashArr: '0',
             opacity: 1,
         },
-        dragging: {
+        [EVENT_TYPES.DRAGGING]: {
             strokeWidth: 2.5,
             dashArr: '0',
             opacity: 1,
@@ -55,6 +61,7 @@ export default () => ({
             rowHeight: 32,
             // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
             rowOffset: 4,
+            nodeOffsetHeight: 32,
             // Ensure that the marker remains visible while dragging a node by allocating a specific width.
             markerWidth: 18,
         },

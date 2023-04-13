@@ -65,11 +65,17 @@ export default class EntityLinkShape {
      */
     getColYPos({ node, col, nodeHeight }) {
         const {
-            entitySizeConfig: { rowHeight, rowOffset },
+            entitySizeConfig: { rowHeight, rowOffset, nodeOffsetHeight },
         } = this.config
 
         const colIdx = node.data.cols.findIndex(c => c.name === col)
-        const center = node.y + nodeHeight / 2 - nodeHeight + colIdx * rowHeight + rowHeight / 2
+        const center =
+            node.y +
+            nodeHeight / 2 -
+            (nodeHeight - nodeOffsetHeight) +
+            colIdx * rowHeight +
+            rowHeight / 2
+
         return {
             top: center - (rowHeight - rowOffset) / 2,
             center,

@@ -98,7 +98,7 @@ import {
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import EntityLink from '@share/components/common/MxsSvgGraphs/EntityLink'
-import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
+import { LINK_SHAPES, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 
 export default {
     name: 'mxs-erd',
@@ -130,7 +130,7 @@ export default {
     },
     computed: {
         entitySizeConfig() {
-            return { rowHeight: 32, rowOffset: 4 }
+            return { rowHeight: 32, rowOffset: 4, nodeOffsetHeight: this.entityHeaderHeight }
         },
         entityLinkConfig() {
             return {
@@ -145,7 +145,10 @@ export default {
     watch: {
         isDraggingNode(v) {
             for (const link of this.highlightedLinks)
-                this.linkInstance.changeLinkStyle({ link, isDragging: v })
+                this.linkInstance.changeEntityLinkStyle({
+                    link,
+                    eventType: v ? EVENT_TYPES.DRAGGING : EVENT_TYPES.NONE,
+                })
         },
         // wait until graph-nodes sizes are calculated
         areSizesCalculated(v) {
@@ -207,11 +210,7 @@ export default {
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {
                 const { x, y, id } = n
-                /**
-                 * minus entityHeaderHeight so that EntityLinkShape can calculate the
-                 * y position accurately
-                 */
-                if (id) map[id] = { x, y: y - this.entityHeaderHeight }
+                if (id) map[id] = { x, y: y }
                 return map
             }, {})
         },

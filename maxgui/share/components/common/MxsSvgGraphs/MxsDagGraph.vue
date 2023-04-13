@@ -49,6 +49,7 @@ import 'd3-transition'
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import Link from '@share/components/common/MxsSvgGraphs/Link'
+import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 
 export default {
     name: 'mxs-dag-graph',
@@ -114,10 +115,10 @@ export default {
         },
         isDraggingNode(v) {
             for (const link of this.highlightedLinks)
-                this.linkInstance.changeLinkStyle({
+                this.linkInstance.changeLinksStyle({
                     link,
                     nodeIdPath: 'data.id',
-                    isDragging: v,
+                    eventType: v ? EVENT_TYPES.DRAGGING : EVENT_TYPES.NONE,
                 })
         },
     },

@@ -12,7 +12,8 @@
  */
 import Link from '@share/components/common/MxsSvgGraphs/Link'
 import EntityLinkShape from '@share/components/common/MxsSvgGraphs/EntityLinkShape'
-import { TARGET_POS } from '@share/components/common/MxsSvgGraphs/config'
+import EntityMarker from '@share/components/common/MxsSvgGraphs/EntityMarker'
+import { TARGET_POS, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 import { lodash } from '@share/utils/helpers'
 
 export default class EntityLink extends Link {
@@ -21,6 +22,11 @@ export default class EntityLink extends Link {
         this.shapeConfig = shapeConfig
         this.shape = new EntityLinkShape(shapeConfig)
         this.data = []
+        /**
+         * TODO: pass only the config of the link and move reusable methods in Link
+         * class to another class
+         */
+        this.marker = new EntityMarker({ linkInstance: this })
     }
     /**
      * @param {Object} params.link - The link object to mutate.
@@ -140,15 +146,31 @@ export default class EntityLink extends Link {
                 const newY = (isSrc ? srcYPos.top : targetYPos.top) + (k * i + k)
                 // update coord
                 pathPoints[isSrc ? 'y0' : 'y1'] = newY
+                //Redraw the link
+                const containerEle = this.getLinkCtr(id)
                 this.drawPath({
-                    containerEle: this.getLinkCtr(id),
+                    containerEle,
                     type: 'update',
                     pathGenerator: this.shape.createPath(pathPoints),
                 })
+                this.drawMarkers({ containerEle, type: 'update' })
             })
         })
     }
+    /**
+     * Draw source && target markers
+     * @param {Object} param.containerEle - Container element of the marker
+     * @param {String} param.type - enter or update
+     */
+    drawMarkers({ containerEle, type }) {
+        this.marker.draw({ containerEle, type, isSrc: true })
+        this.marker.draw({ containerEle, type })
+    }
 
+    /**
+     * @param {Object} param.containerEle - container element of links to be drawn
+     * @param {String} param.data - Links data
+     */
     draw({ containerEle, data }) {
         this.data = data
         this.drawLinks({
@@ -157,7 +179,30 @@ export default class EntityLink extends Link {
             pathGenerator: this.pathGenerator.bind(this),
             onEnter: linkCtr => linkCtr.each(this.setTargetXPos.bind(this)),
             onUpdate: linkCtr => linkCtr.each(this.setTargetXPos.bind(this)),
+            afterEnter: linkCtr =>
+                linkCtr.each(link =>
+                    this.drawMarkers({ containerEle: this.getLinkCtr(link.id), type: 'enter' })
+                ),
+            afterUpdate: linkCtr =>
+                linkCtr.each(link =>
+                    this.drawMarkers({ containerEle: this.getLinkCtr(link.id), type: 'update' })
+                ),
+            mouseOver: linkCtr =>
+                this.marker.changeMarkersOfLinkStyle({
+                    elements: linkCtr,
+                    eventType: EVENT_TYPES.HOVER,
+                }),
+            mouseOut: linkCtr =>
+                this.marker.changeMarkersOfLinkStyle({
+                    elements: linkCtr,
+                    eventType: EVENT_TYPES.NONE,
+                }),
         })
         this.repositionOverlappedPoints()
+    }
+
+    changeEntityLinkStyle(params) {
+        this.changeLinksStyle(params)
+        this.marker.changeMarkersStyle(params)
     }
 }
