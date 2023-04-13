@@ -10,12 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import { getLinkStyles, getRelatedLinks } from '@share/components/common/MxsSvgGraphs/utils'
 import { TARGET_POS, CARDINALITY_SYMBOLS } from '@share/components/common/MxsSvgGraphs/config'
 
 export default class EntityMarker {
-    constructor({ linkInstance }) {
-        this.linkInstance = linkInstance
+    constructor(linkConfig) {
+        this.linkConfig = linkConfig
     }
     transform({ d, isSrc = false }) {
         const {
@@ -34,6 +34,9 @@ export default class EntityMarker {
         }
         return `translate(${x}, ${y}) rotate(${k})`
     }
+    getStyle(link, styleNamePath) {
+        return getLinkStyles({ link, styleNamePath, linkConfig: this.linkConfig })
+    }
     /**
      * @param {Object} param.containerEle - Container element of the marker
      * @param {String} param.type - enter or update
@@ -41,8 +44,8 @@ export default class EntityMarker {
      **/
     draw({ containerEle, type, isSrc = false }) {
         const scope = this
-        const { markerClass } = this.linkInstance.config
-        const stroke = d => scope.linkInstance.getLinkStyles(d, 'color')
+        const { markerClass } = this.linkConfig
+        const stroke = d => scope.getStyle(d, 'color')
         const markerCtrClass = `entity-marker-${isSrc ? 'src' : 'target'}`
         const markerPathClass = `${markerClass} ${markerClass}-${isSrc ? 'src' : 'target'}`
         switch (type) {
@@ -61,7 +64,7 @@ export default class EntityMarker {
                 containerEle
                     .select(`g.${markerCtrClass}`)
                     .attr('transform', d => scope.transform({ d, isSrc }))
-                    .select(`path.${markerPathClass.replace('.')}`)
+                    .select(`path.${markerPathClass}`)
                     .attr('stroke', stroke)
                     .attr('d', d => scope.getMarker({ d, isSrc }))
                 break
@@ -78,24 +81,26 @@ export default class EntityMarker {
      * Change the style of a link markers or multiple link markers
      */
     changeMarkersOfLinkStyle({ elements, eventType }) {
-        const linkInstance = this.linkInstance
-        const { markerClass } = linkInstance.config
+        const scope = this
+        const { markerClass } = this.linkConfig
         elements
             .selectAll(`path.${markerClass}`)
             .attr('stroke-width', d =>
                 eventType
-                    ? linkInstance.getLinkStyles(d, `${eventType}.strokeWidth`)
-                    : linkInstance.getLinkStyles(d, 'strokeWidth')
+                    ? scope.getStyle(d, `${eventType}.strokeWidth`)
+                    : scope.getStyle(d, 'strokeWidth')
             )
     }
     /**
      * Change style of markers having the same source and target
-     * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
-     * @param {Boolean} param.isDragging - is dragging node
      */
-    changeMarkersStyle({ link, nodeIdPath = 'id', eventType }) {
+    changeMarkersStyle({ link, nodeIdPath, eventType }) {
         this.changeMarkersOfLinkStyle({
-            elements: this.linkInstance.getRelatedLinks({ link, nodeIdPath }),
+            elements: getRelatedLinks({
+                link,
+                linkCtrClass: this.linkConfig.containerClass,
+                nodeIdPath,
+            }),
             eventType,
         })
     }

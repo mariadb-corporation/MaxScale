@@ -10,7 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { select as d3Select, selectAll as d3SelectAll } from 'd3-selection'
+import { getLinkStyles, getRelatedLinks } from '@share/components/common/MxsSvgGraphs/utils'
+import { select as d3Select } from 'd3-selection'
 import { lodash } from '@share/utils/helpers'
 import { t } from 'typy'
 import defaultConfig, { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
@@ -19,47 +20,26 @@ export default class Link {
     constructor(config) {
         this.config = lodash.merge(defaultConfig().link, t(config).safeObjectOrEmpty)
     }
-    getLinkCtr(id) {
-        return d3Select(`#${id}`)
-    }
-    getRelatedLinks({ link, nodeIdPath = 'id' }) {
-        const srcId = lodash.objGet(link.source, nodeIdPath)
-        const targetId = lodash.objGet(link.target, nodeIdPath)
-        const { containerClass } = this.config
-        return d3SelectAll(`.${containerClass}[src-id="${srcId}"][target-id="${targetId}"]`)
-    }
-    /**
-     *
-     * @param {Object} d - link data
-     * @param {String} styleNamePath - style name path
-     * @returns {String|Number} style value
-     */
-    getLinkStyles(d, styleNamePath) {
-        const linkStyle = lodash.cloneDeep(t(d, 'linkStyles').safeObjectOrEmpty)
-        const globalValue = lodash.objGet(this.config, styleNamePath)
-        // use global config style as a fallback value
-        return lodash.objGet(
-            linkStyle,
-            styleNamePath,
-            t(globalValue).isFunction ? globalValue(d) : globalValue
-        )
+    getStyle(link, styleNamePath) {
+        return getLinkStyles({ link, styleNamePath, linkConfig: this.config })
     }
     /**
      * @param {Object} param.containerEle - Container element of the path
      * @param {String} param.type - enter or update
      * @param {Boolean} param.isInvisible - Draw an invisible path
+     * @param {Function} param.pathGenerator - Path generator function
      **/
     drawPath({ containerEle, type, isInvisible, pathGenerator }) {
         const scope = this
         const { pathClass, invisiblePathClass } = this.config
         const className = isInvisible ? invisiblePathClass : pathClass
 
-        const stroke = d => (isInvisible ? 'transparent' : scope.getLinkStyles(d, 'color'))
+        const stroke = d => (isInvisible ? 'transparent' : scope.getStyle(d, 'color'))
         const strokeWidth = d =>
             isInvisible
-                ? scope.getLinkStyles(d, 'invisibleStrokeWidth')
-                : scope.getLinkStyles(d, 'strokeWidth')
-        const strokeDashArray = d => (isInvisible ? 0 : scope.getLinkStyles(d, 'dashArr'))
+                ? scope.getStyle(d, 'invisibleStrokeWidth')
+                : scope.getStyle(d, 'strokeWidth')
+        const strokeDashArray = d => (isInvisible ? 0 : scope.getStyle(d, 'dashArr'))
 
         switch (type) {
             case 'enter':
@@ -125,7 +105,7 @@ export default class Link {
                         .attr('class', `${containerClass} pointer`)
                         .attr('src-id', d => lodash.objGet(d.source, nodeIdPath))
                         .attr('target-id', d => lodash.objGet(d.target, nodeIdPath))
-                        .style('opacity', d => scope.getLinkStyles(d, 'opacity'))
+                        .style('opacity', d => scope.getStyle(d, 'opacity'))
                         .on('mouseover', function() {
                             const linkCtr = d3Select(this)
                             scope.changeLinkStyle({
@@ -166,29 +146,29 @@ export default class Link {
         const { pathClass } = this.config
         elements
             .style('opacity', d =>
-                eventType
-                    ? scope.getLinkStyles(d, `${eventType}.opacity`)
-                    : scope.getLinkStyles(d, 'opacity')
+                eventType ? scope.getStyle(d, `${eventType}.opacity`) : scope.getStyle(d, 'opacity')
             )
             .select(`path.${pathClass}`)
             .attr('stroke-width', d =>
                 eventType
-                    ? scope.getLinkStyles(d, `${eventType}.strokeWidth`)
-                    : scope.getLinkStyles(d, 'strokeWidth')
+                    ? scope.getStyle(d, `${eventType}.strokeWidth`)
+                    : scope.getStyle(d, 'strokeWidth')
             )
             .attr('stroke-dasharray', d =>
-                eventType
-                    ? scope.getLinkStyles(d, `${eventType}.dashArr`)
-                    : scope.getLinkStyles(d, 'dashArr')
+                eventType ? scope.getStyle(d, `${eventType}.dashArr`) : scope.getStyle(d, 'dashArr')
             )
     }
     /**
      * Change style of links having the same source and target
-     * @param {Object} param.link - link object
-     * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
-     * @param {String} param.eventType - Link EVENT_TYPES
      */
-    changeLinksStyle({ link, nodeIdPath = 'id', eventType }) {
-        this.changeLinkStyle({ elements: this.getRelatedLinks({ link, nodeIdPath }), eventType })
+    changeLinksStyle({ link, nodeIdPath, eventType }) {
+        this.changeLinkStyle({
+            elements: getRelatedLinks({
+                link,
+                linkCtrClass: this.config.containerClass,
+                nodeIdPath,
+            }),
+            eventType,
+        })
     }
 }

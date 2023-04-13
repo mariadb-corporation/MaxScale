@@ -14,6 +14,7 @@ import Link from '@share/components/common/MxsSvgGraphs/Link'
 import EntityLinkShape from '@share/components/common/MxsSvgGraphs/EntityLinkShape'
 import EntityMarker from '@share/components/common/MxsSvgGraphs/EntityMarker'
 import { TARGET_POS, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import { getLinkCtr } from '@share/components/common/MxsSvgGraphs/utils'
 import { lodash } from '@share/utils/helpers'
 
 export default class EntityLink extends Link {
@@ -22,11 +23,7 @@ export default class EntityLink extends Link {
         this.shapeConfig = shapeConfig
         this.shape = new EntityLinkShape(shapeConfig)
         this.data = []
-        /**
-         * TODO: pass only the config of the link and move reusable methods in Link
-         * class to another class
-         */
-        this.marker = new EntityMarker({ linkInstance: this })
+        this.marker = new EntityMarker(this.config)
     }
     /**
      * @param {Object} params.link - The link object to mutate.
@@ -147,7 +144,7 @@ export default class EntityLink extends Link {
                 // update coord
                 pathPoints[isSrc ? 'y0' : 'y1'] = newY
                 //Redraw the link
-                const containerEle = this.getLinkCtr(id)
+                const containerEle = getLinkCtr(id)
                 this.drawPath({
                     containerEle,
                     type: 'update',
@@ -181,11 +178,11 @@ export default class EntityLink extends Link {
             onUpdate: linkCtr => linkCtr.each(this.setTargetXPos.bind(this)),
             afterEnter: linkCtr =>
                 linkCtr.each(link =>
-                    this.drawMarkers({ containerEle: this.getLinkCtr(link.id), type: 'enter' })
+                    this.drawMarkers({ containerEle: getLinkCtr(link.id), type: 'enter' })
                 ),
             afterUpdate: linkCtr =>
                 linkCtr.each(link =>
-                    this.drawMarkers({ containerEle: this.getLinkCtr(link.id), type: 'update' })
+                    this.drawMarkers({ containerEle: getLinkCtr(link.id), type: 'update' })
                 ),
             mouseOver: linkCtr =>
                 this.marker.changeMarkersOfLinkStyle({
