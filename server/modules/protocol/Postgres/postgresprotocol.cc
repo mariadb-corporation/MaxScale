@@ -12,6 +12,7 @@
  */
 
 #include "postgresprotocol.hh"
+#include <maxscale/config.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxbase/pretty_print.hh>
 #include "pgprotocolmodule.hh"
@@ -29,11 +30,52 @@ int module_init()
 {
     mxb_assert(!this_unit.pParser);
 
-    auto& pp = MariaDBParser::get().plugin();
+    int rv = 1;
 
-    this_unit.pParser = new PgParser(pp.create_parser(&PgParser::Helper::get()));
+    // TODO: Until switch is permanently made.
+    if (getenv("PP_POSTGRES_NATIVE"))
+    {
+        MXB_NOTICE("Using Postgres parser for parsing Postgres SQL.");
 
-    return 0;
+        const auto& config = mxs::Config::get();
+
+        const char* zPlugin = "pp_postgres";
+
+        mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(zPlugin);
+
+        if (pPlugin)
+        {
+            MXB_NOTICE("Parser plugin loaded.");
+
+            if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()))
+            {
+                auto& helper = PgParser::Helper::get();
+
+                this_unit.pParser = new PgParser(pPlugin->create_parser(&helper));
+                rv = 0;
+            }
+            else
+            {
+                MXB_ERROR("Could not setup parser plugin '%s'.", zPlugin);
+                mxs::ParserPlugin::unload(pPlugin);
+            }
+        }
+        else
+        {
+            MXB_NOTICE("Could not load parser plugin '%s'.", zPlugin);
+        }
+    }
+    else
+    {
+        MXB_NOTICE("Using MariaDB parser for parsing Postgres SQL.");
+
+        auto& pp = MariaDBParser::get().plugin();
+
+        this_unit.pParser = new PgParser(pp.create_parser(&PgParser::Helper::get()));
+        rv = 0;
+    }
+
+    return rv;
 }
 
 void module_finish()
