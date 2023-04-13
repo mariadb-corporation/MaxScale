@@ -53,10 +53,7 @@ export default class Link {
                     .attr('d', pathGenerator)
                 break
             case 'update':
-                containerEle
-                    .select(`path.${className}`)
-                    .attr('stroke', stroke)
-                    .attr('d', pathGenerator)
+                containerEle.select(`path.${className}`).attr('d', pathGenerator)
                 break
         }
     }
@@ -149,6 +146,7 @@ export default class Link {
                 eventType ? scope.getStyle(d, `${eventType}.opacity`) : scope.getStyle(d, 'opacity')
             )
             .select(`path.${pathClass}`)
+            .attr('stroke', d => scope.getStyle(d, 'color'))
             .attr('stroke-width', d =>
                 eventType
                     ? scope.getStyle(d, `${eventType}.strokeWidth`)

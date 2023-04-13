@@ -13,14 +13,7 @@
                 ...getNodeSizeStyle(node.id),
                 zIndex: draggingStates.draggingNodeId === node.id ? 4 : 3,
             }"
-            v-on="
-                draggable
-                    ? {
-                          mousedown: e => dragStart({ e, node }),
-                          mousemove: e => drag({ e, node }),
-                      }
-                    : null
-            "
+            v-on="handleAddEvents(node)"
         >
             <slot
                 :data="{
@@ -75,6 +68,7 @@ export default {
         dynWidth: { type: Boolean, default: false },
         revertDrag: { type: Boolean, default: false },
         boardZoom: { type: Object, required: true },
+        hoverable: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -126,6 +120,22 @@ export default {
         if (this.draggable) this.rmMouseUpEvt()
     },
     methods: {
+        handleAddEvents(node) {
+            let events = {}
+            if (this.draggable)
+                events = {
+                    ...events,
+                    mousedown: e => this.dragStart({ e, node }),
+                    mousemove: e => this.drag({ e, node }),
+                }
+            if (this.hoverable)
+                events = {
+                    ...events,
+                    mouseover: e => this.$emit('mouseover', { e, node }),
+                    mouseout: e => this.$emit('mouseout', { e, node }),
+                }
+            return events
+        },
         setDefDraggingStates() {
             this.draggingStates = this.$helpers.lodash.cloneDeep(this.defDraggingStates)
         },

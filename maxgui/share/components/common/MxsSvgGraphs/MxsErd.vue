@@ -18,12 +18,15 @@
                     :style="{ transform }"
                     :defNodeSize="defNodeSize"
                     draggable
+                    hoverable
                     :boardZoom="zoom"
                     dynHeight
                     dynWidth
                     @node-size-map="setNodeSize"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
+                    @mouseover="mouseoverNode"
+                    @mouseout="mouseoutNode"
                 >
                     <template v-slot:default="{ data: { node } }">
                         <table class="entity-table">
@@ -120,7 +123,7 @@ export default {
             graphLinks: [],
             simulation: null,
             defNodeSize: { width: 200, height: 100 },
-            isDraggingNode: false,
+            highlightLinksMode: EVENT_TYPES.NONE,
             highlightedLinks: [],
             entityHeaderHeight: 32,
             linkInstance: null,
@@ -134,7 +137,7 @@ export default {
         },
         entityLinkConfig() {
             return {
-                linkConfig: { strokeWidth: 1 },
+                linkConfig: { strokeWidth: 1, opacity: 1 },
                 shapeConfig: {
                     type: this.linkShapeType,
                     entitySizeConfig: this.entitySizeConfig,
@@ -143,11 +146,11 @@ export default {
         },
     },
     watch: {
-        isDraggingNode(v) {
+        highlightLinksMode(v) {
             for (const link of this.highlightedLinks)
                 this.linkInstance.changeEntityLinkStyle({
                     link,
-                    eventType: v ? EVENT_TYPES.DRAGGING : EVENT_TYPES.NONE,
+                    eventType: v,
                 })
         },
         // wait until graph-nodes sizes are calculated
@@ -230,23 +233,34 @@ export default {
                 })
             )
         },
-        onNodeDrag({ node, diffX, diffY }) {
-            this.isDraggingNode = true
-            const nodeData = this.graphNodes.find(n => n.id === node.id)
-            nodeData.x = nodeData.x + diffX
-            nodeData.y = nodeData.y + diffY
+        setHighlightedLinks(node) {
             this.highlightedLinks = this.getLinks().filter(
                 d => d.source.id === node.id || d.target.id === node.id
             )
+        },
+        onNodeDrag({ node, diffX, diffY }) {
+            const nodeData = this.graphNodes.find(n => n.id === node.id)
+            nodeData.x = nodeData.x + diffX
+            nodeData.y = nodeData.y + diffY
+            this.setHighlightedLinks(node)
             this.drawLinks()
+            this.highlightLinksMode = EVENT_TYPES.DRAGGING
         },
         onNodeDragEnd() {
-            this.isDraggingNode = false
+            this.highlightLinksMode = EVENT_TYPES.NONE
         },
         getBorderStyle(node) {
             const { highlightColor } = node.data
             const style = `1px solid ${highlightColor}`
             return style
+        },
+        mouseoverNode({ node }) {
+            this.setHighlightedLinks(node)
+            //TODO: Change the color of links and highlight FK columns
+            this.highlightLinksMode = EVENT_TYPES.HOVER
+        },
+        mouseoutNode() {
+            this.highlightLinksMode = EVENT_TYPES.NONE
         },
     },
 }

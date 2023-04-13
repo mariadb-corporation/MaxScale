@@ -85,6 +85,7 @@ export default class EntityMarker {
         const { markerClass } = this.linkConfig
         elements
             .selectAll(`path.${markerClass}`)
+            .attr('stroke', d => scope.getStyle(d, 'color'))
             .attr('stroke-width', d =>
                 eventType
                     ? scope.getStyle(d, `${eventType}.strokeWidth`)

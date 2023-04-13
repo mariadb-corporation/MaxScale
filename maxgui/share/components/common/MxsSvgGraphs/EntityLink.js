@@ -145,7 +145,7 @@ export default class EntityLink extends Link {
                 pathPoints[isSrc ? 'y0' : 'y1'] = newY
                 //Redraw the link
                 const containerEle = getLinkCtr(id)
-                this.drawPath({
+                this.drawPaths({
                     containerEle,
                     type: 'update',
                     pathGenerator: this.shape.createPath(pathPoints),
