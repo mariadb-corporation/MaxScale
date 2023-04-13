@@ -30,8 +30,8 @@
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #undef MXB_MODULE_NAME
-#include "../../server/modules/protocol/Postgres/pgparser.hh"
-#include "../../server/core/internal/modules.hh"
+#include "../../protocol/Postgres/pgparser.hh"
+#include "../../../core/internal/modules.hh"
 #include "setsqlmodeparser.hh"
 #include "testreader.hh"
 
