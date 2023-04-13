@@ -35,10 +35,7 @@ public:
 
         struct Values
         {
-            std::string              main_sql;
-            std::string              secondary_sql;
-            std::string              lock_sql;
-            std::string              unlock_sql;
+            std::string              lock_id;
             std::chrono::seconds     retry_timeout;
             std::vector<std::string> retry_sqlstates;
         };

@@ -18,21 +18,10 @@ namespace
 {
 mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::ROUTER);
 
-mxs::config::ParamString s_main_sql(
-    &s_spec, "main_sql", "SQL executed on the main node",
-    "SET foo.bar = 'main'", mxs::config::Param::AT_RUNTIME);
-
-mxs::config::ParamString s_secondary_sql(
-    &s_spec, "secondary_sql", "SQL executed on the secondary nodes",
-    "SET foo.bar = 'secondary'", mxs::config::Param::AT_RUNTIME);
-
-mxs::config::ParamString s_lock_sql(
-    &s_spec, "lock_sql", "SQL executed to lock a node",
-    "SELECT pg_advisory_lock(1679475768)", mxs::config::Param::AT_RUNTIME);
-
-mxs::config::ParamString s_unlock_sql(
-    &s_spec, "unlock_sql", "SQL executed to unlock a node",
-    "SELECT pg_advisory_unlock(1679475768) ", mxs::config::Param::AT_RUNTIME);
+mxs::config::ParamString s_lock_id(
+    &s_spec, "lock_id",
+    "The lock identifier used with the locking SQL",
+    "1679475768", mxs::config::Param::AT_RUNTIME);
 
 mxs::config::ParamSeconds s_retry_timeout(
     &s_spec, "retry_timeout",
@@ -49,11 +38,9 @@ mxs::config::ParamStringList s_retry_sqlstates(
 XRouter::Config::Config(const std::string& name)
     : mxs::config::Configuration(name, &s_spec)
 {
-    add_native(&Config::m_v, &Values::main_sql, &s_main_sql);
-    add_native(&Config::m_v, &Values::secondary_sql, &s_secondary_sql);
-    add_native(&Config::m_v, &Values::lock_sql, &s_lock_sql);
-    add_native(&Config::m_v, &Values::unlock_sql, &s_unlock_sql);
+    add_native(&Config::m_v, &Values::lock_id, &s_lock_id);
     add_native(&Config::m_v, &Values::retry_timeout, &s_retry_timeout);
+    add_native(&Config::m_v, &Values::retry_sqlstates, &s_retry_sqlstates);
 }
 
 XRouter::XRouter(SERVICE& service)

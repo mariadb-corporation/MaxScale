@@ -93,7 +93,7 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
             // serialized with respect to the main node.
             MXB_SINFO("Multi-node command, sending `main_sql` and `lock_sql` to '" << m_main->name() << "'");
             m_state = State::LOCK_MAIN;
-            ok = send_query(m_main, m_config->main_sql) && send_query(m_main, m_config->lock_sql);
+            ok = send_query(m_main, main_sql()) && send_query(m_main, lock_sql(m_config->lock_id));
             m_queue.push_back(std::move(packet));
         }
         else
@@ -102,7 +102,7 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
             {
                 MXB_SINFO("Temporary table DDL on non-main node, "
                           << "send `main_sql` to '" << m_solo->name() << "'");
-                ok = send_query(m_solo, m_config->main_sql);
+                ok = send_query(m_solo, main_sql());
             }
 
             if (ok)
@@ -174,7 +174,7 @@ bool XRouterSession::route_main(GWBUF&& packet)
 bool XRouterSession::route_stored_command(mxs::Backend* backend)
 {
     MXB_SINFO("Sending `secondary_sql` to '" << backend->name() << "'");
-    bool ok = send_query(backend, m_config->secondary_sql);
+    bool ok = send_query(backend, secondary_sql());
 
     if (ok)
     {
@@ -514,7 +514,7 @@ GWBUF XRouterSession::finish_multinode()
     m_state = State::UNLOCK_MAIN;
     MXB_SINFO("Unlocking main backend.");
 
-    if (!send_query(m_main, m_config->unlock_sql))
+    if (!send_query(m_main, unlock_sql(m_config->lock_id)))
     {
         MXB_SINFO("Failed to unlock main backend, next query will close the session.");
         m_main->close(mxs::Backend::CLOSE_FATAL);
