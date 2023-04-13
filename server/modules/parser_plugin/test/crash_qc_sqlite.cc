@@ -18,7 +18,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/testparser.hh>
-#include "../../server/core/internal/modules.hh"
+#include "../../../core/internal/modules.hh"
 
 #define MYSQL_HEADER_LEN 4
 
