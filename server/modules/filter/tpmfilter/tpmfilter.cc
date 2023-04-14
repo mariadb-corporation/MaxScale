@@ -289,16 +289,15 @@ TpmSession::~TpmSession()
     m_instance->flush();
 }
 
-bool TpmSession::routeQuery(GWBUF&& buffer)
+bool TpmSession::routeQuery(GWBUF&& queue)
 {
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
-    if (m_active && mxs_mysql_get_command(*queue) == MXS_COM_QUERY)
+    if (m_active && mxs_mysql_get_command(queue) == MXS_COM_QUERY)
     {
-        const auto& sql = get_sql_string(*queue);
+        const auto& sql = get_sql(queue);
 
         if (!sql.empty())
         {
-            auto mask = parser().get_type_mask(*queue);
+            auto mask = parser().get_type_mask(queue);
 
             if (mask & mxs::sql::TYPE_COMMIT)
             {
@@ -323,13 +322,13 @@ bool TpmSession::routeQuery(GWBUF&& buffer)
                     m_trx_watch.lap();
                 }
 
-                m_sql.push_back(std::move(sql));
+                m_sql.emplace_back(sql);
                 m_watch.lap();
             }
         }
     }
 
-    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
+    return mxs::FilterSession::routeQuery(std::move(queue));
 }
 
 bool TpmSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
