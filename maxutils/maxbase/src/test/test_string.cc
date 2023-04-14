@@ -303,6 +303,48 @@ int compare_old_strtok()
 
     return rc;
 }
+
+int test_sv_strcasestr()
+{
+    int errors = 0;
+
+    std::vector<std::tuple<const char*, const char*, size_t>> test_cases
+    {
+        {"hello=world", "=", 5},
+        {"=world", "=", 0},
+        {"=world", "world", 1},
+        {"helloworld!", "!", 10},
+        {"helloworld!", "o", 4},
+        {"hellöworld!", "ö", 4},
+        {"hello world!", "world!", 5},
+        {"hello world!", "banana", std::string::npos},
+    };
+
+    for (auto [haystack, needle, offset] : test_cases)
+    {
+        if (auto result = mxb::sv_strcasestr(haystack, needle); result != offset)
+        {
+            std::cout << "Expected a match at offset "
+                      << offset << " but got a match at " << result << std::endl;
+            errors++;
+        }
+        else
+        {
+            const char* ptr = strcasestr(haystack, needle);
+            size_t expected = ptr ? ptr - haystack : std::string_view::npos;
+
+            if (offset != expected)
+            {
+                std::cout << "strcasestr matched at offset "
+                          << expected << " but mxb::sv_strcasestr matched at "
+                          << result << std::endl;
+                errors++;
+            }
+        }
+    }
+
+    return errors;
+}
 }
 
 int main(int argc, char* argv[])

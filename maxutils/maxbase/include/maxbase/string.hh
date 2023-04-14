@@ -104,6 +104,24 @@ inline bool sv_case_eq(std::string_view lhs, std::string_view rhs)
 }
 
 /**
+ * strcasestr for string_views
+ *
+ * @param haystack The string to be searched
+ * @param needle   The value to find
+ *
+ * @return The offset into `haystack` or std::string_view::npos if no match is found
+ */
+inline size_t sv_strcasestr(std::string_view haystack, std::string_view needle)
+{
+    auto it = std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(),
+                          [](auto lhs, auto rhs){
+        return std::tolower(lhs) == std::tolower(rhs);
+    });
+
+    return it == haystack.end() ? std::string_view::npos : std::distance(haystack.begin(), it);
+}
+
+/**
  * Left trim a string.
  *
  * @param str String to trim.

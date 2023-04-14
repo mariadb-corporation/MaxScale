@@ -18,18 +18,6 @@
 namespace
 {
 /**
- * Implementation of strcasestr for string_views
- */
-std::string_view::iterator find_token(std::string_view::iterator begin,
-                                      std::string_view::iterator end,
-                                      std::string_view token)
-{
-    return std::search(begin, end, token.begin(), token.end(), [](auto lhs, auto rhs){
-        return tolower(lhs) == tolower(rhs);
-    });
-}
-
-/**
  * Extract the raw password from the SQL and convert it into the salted format that Postgres stores it in
  */
 void presalt_password(const char* start, const char* ptr, const char* end,
@@ -106,15 +94,21 @@ void handle_create_user(const mxs::ProtocolModule& protocol, const mxs::Parser& 
         std::string_view TOK_ROLE = "ROLE";
         std::string_view TOK_USER = "USER";
         std::string_view TOK_PASSWORD = "PASSWORD";
-        std::string_view::const_iterator role;
+        size_t role = mxb::sv_strcasestr(sql, TOK_USER);
 
-        if ((role = find_token(sql.begin(), sql.end(), TOK_USER)) != sql.end()
-            || (role = find_token(sql.begin(), sql.end(), TOK_ROLE)) != sql.end())
+        if (role != std::string_view::npos)
         {
-            if (auto ptr = find_token(role, sql.end(), TOK_PASSWORD); ptr != sql.end())
+            role = mxb::sv_strcasestr(sql, TOK_ROLE);
+        }
+
+        if (role != std::string_view::npos)
+        {
+            auto pw = mxb::sv_strcasestr(sql.substr(role), TOK_PASSWORD);
+
+            if (pw != std::string_view::npos)
             {
-                ptr += TOK_PASSWORD.size();
-                presalt_password(sql.begin(), ptr, sql.end(), protocol, packet);
+                pw += TOK_PASSWORD.size();
+                presalt_password(sql.data(), sql.data() + pw, sql.data() + sql.size(), protocol, packet);
             }
         }
     }
