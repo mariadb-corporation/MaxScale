@@ -1401,7 +1401,7 @@ int main(int argc, char* argv[])
     Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
     std::optional<std::regex> test_regex;
     std::optional<std::regex> check_regex;
-    const Parser::Helper* pHelper = &MariaDBParser::Helper::get();
+    const Parser::Helper* pHelper = nullptr;
     bool solo = false;
     mxs::TestReader::Expect expect = mxs::TestReader::Expect::MARIADB;
     set<string> properties;
@@ -1588,8 +1588,11 @@ int main(int argc, char* argv[])
                         pPlugin2 = pPlugin1;
                     }
 
-                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser(pHelper);
-                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser(pHelper);
+                    const Parser::Helper* pHelper1 = pHelper ? pHelper : &pPlugin1->default_helper();
+                    std::unique_ptr<Parser> sParser1 = pPlugin1->create_parser(pHelper1);
+
+                    const Parser::Helper* pHelper2 = pHelper ? pHelper : &pPlugin2->default_helper();
+                    std::unique_ptr<Parser> sParser2 = pPlugin2->create_parser(pHelper2);
 
                     do
                     {
