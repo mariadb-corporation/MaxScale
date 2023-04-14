@@ -1367,7 +1367,7 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
         ListenerData::SMappingInfo mapping_info;
         mxb::proxy_protocol::SubnetArray proxy_networks;
 
-        if (ssl.configure(create_ssl_config()) && read_connection_init_sql(init_sql)
+        if (ssl.configure(create_ssl_config()) && read_connection_init_sql(*protocol_module, init_sql)
             && read_user_mapping(mapping_info) && read_proxy_networks(proxy_networks))
         {
             bool auth_modules_ok = true;
@@ -1465,7 +1465,8 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
  * @param output Output object
  * @return True on success, or if setting was not set.
  */
-bool Listener::read_connection_init_sql(ListenerData::ConnectionInitSql& output) const
+bool Listener::read_connection_init_sql(const mxs::ProtocolModule& protocol,
+                                        ListenerData::ConnectionInitSql& output) const
 {
     const string& filepath = m_config.connection_init_sql_file;
     bool file_ok = true;
@@ -1499,7 +1500,7 @@ bool Listener::read_connection_init_sql(ListenerData::ConnectionInitSql& output)
             GWBUF total_buf;
             for (const auto& query : queries)
             {
-                total_buf.append(m_shared_data->m_proto_module->make_query(query));
+                total_buf.append(protocol.make_query(query));
             }
             output.buffer_contents = std::move(total_buf);
         }

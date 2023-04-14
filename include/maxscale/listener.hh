@@ -500,7 +500,9 @@ private:
 
     uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events, Pollable::Context context) override;
 
-    bool           read_connection_init_sql(ListenerData::ConnectionInitSql& output) const;
+    bool read_connection_init_sql(const mxs::ProtocolModule& protocol,
+                                  ListenerData::ConnectionInitSql& output) const;
+
     bool           read_user_mapping(mxs::ListenerData::SMappingInfo& output) const;
     bool           read_proxy_networks(mxb::proxy_protocol::SubnetArray& output);
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
