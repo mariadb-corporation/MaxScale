@@ -305,8 +305,8 @@ public:
 
     static std::string type_mask_to_string(uint32_t type_mask);
 
-    virtual ParserPlugin& plugin() const = 0;
-    virtual const Helper& helper() const = 0;
+    virtual const ParserPlugin& plugin() const = 0;
+    virtual const Helper&       helper() const = 0;
 
     virtual Result           parse(const GWBUF& stmt, uint32_t collect) const = 0;
     std::unique_ptr<json_t>  parse_to_resource(const char* zHost, const GWBUF& stmt) const;
@@ -436,13 +436,13 @@ public:
      *
      * @return True, if the thread initialization succeeded, otherwise false.
      */
-    virtual bool thread_init(void) = 0;
+    virtual bool thread_init(void) const = 0;
 
     /**
      * Must be called once when a thread finishes. Note that this will
      * automatically be done in all MaxScale routing threads.
      */
-    virtual void thread_end(void) = 0;
+    virtual void thread_end(void) const = 0;
 
     /**
      * Return statement currently being classified.
@@ -455,7 +455,7 @@ public:
      * @return True, if a statement was returned (i.e. a statement is being
      *         classified), otherwise false.
      */
-    virtual bool get_current_stmt(const char** ppStmt, size_t* pLen) = 0;
+    virtual bool get_current_stmt(const char** ppStmt, size_t* pLen) const = 0;
 
     /**
      * Get result from info.
@@ -464,7 +464,7 @@ public:
      *
      * @return The result of the provided info.
      */
-    virtual Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) = 0;
+    virtual Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) const = 0;
 
     /**
      * Get canonical statement
@@ -478,7 +478,7 @@ public:
      *
      * @return The canonical statement.
      */
-    virtual std::string_view get_canonical(const GWBUF::ProtocolInfo* info) = 0;
+    virtual std::string_view get_canonical(const GWBUF::ProtocolInfo* info) const = 0;
 
     /**
      * Create a parser.

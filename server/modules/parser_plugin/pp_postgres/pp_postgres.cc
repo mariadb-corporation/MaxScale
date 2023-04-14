@@ -456,13 +456,13 @@ class PostgresParser : public mxs::Parser
 public:
     using Info = PostgresProtocolInfo;
 
-    PostgresParser(mxs::ParserPlugin* pPlugin, const Helper* pHelper)
+    PostgresParser(const mxs::ParserPlugin* pPlugin, const Helper* pHelper)
         : m_plugin(*pPlugin)
         , m_helper(*pHelper)
     {
     }
 
-    mxs::ParserPlugin& plugin() const override
+    const mxs::ParserPlugin& plugin() const override
     {
         return m_plugin;
     }
@@ -603,7 +603,7 @@ private:
         return PostgresProtocolInfo::get(m_helper, query, collect);
     }
 
-    mxs::ParserPlugin&         m_plugin;
+    const mxs::ParserPlugin&   m_plugin;
     const mxs::Parser::Helper& m_helper;
 };
 
@@ -618,37 +618,36 @@ public:
         return true;
     }
 
-    bool thread_init(void) override
+    bool thread_init(void) const override
     {
         return module_thread_init() == 0;
     }
 
-    void thread_end(void) override
+    void thread_end(void) const override
     {
         module_thread_finish();
     }
 
-    bool get_current_stmt(const char** ppStmt, size_t* pLen) override
+    bool get_current_stmt(const char** ppStmt, size_t* pLen) const override
     {
         *ppStmt = nullptr;
         *pLen = 0;
         return false;
     }
 
-    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* pInfo) override
+    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* pInfo) const override
     {
         return static_cast<const PostgresProtocolInfo*>(pInfo)->get_stmt_result();
     }
 
-    std::string_view get_canonical(const GWBUF::ProtocolInfo* pInfo) override
+    std::string_view get_canonical(const GWBUF::ProtocolInfo* pInfo) const override
     {
         return static_cast<const PostgresProtocolInfo*>(pInfo)->get_canonical();
     }
 
     std::unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const override
     {
-        // TODO: Get rid of the need for const casting.
-        return std::make_unique<PostgresParser>(const_cast<PostgresParserPlugin*>(this), pHelper);
+        return std::make_unique<PostgresParser>(this, pHelper);
     }
 };
 

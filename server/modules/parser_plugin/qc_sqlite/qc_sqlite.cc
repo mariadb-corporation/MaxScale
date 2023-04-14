@@ -5290,17 +5290,17 @@ public:
         return this_unit.setup;
     }
 
-    bool thread_init(void) override
+    bool thread_init(void) const override
     {
         return qc_sqlite_thread_init() == 0;
     }
 
-    void thread_end(void) override
+    void thread_end(void) const override
     {
         qc_sqlite_thread_end();
     }
 
-    bool get_current_stmt(const char** ppStmt, size_t* pLen) override
+    bool get_current_stmt(const char** ppStmt, size_t* pLen) const override
     {
         bool rv = false;
 
@@ -5314,12 +5314,12 @@ public:
         return rv;
     }
 
-    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* pInfo) override
+    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* pInfo) const override
     {
         return static_cast<const QcSqliteInfo*>(pInfo)->get_result();
     }
 
-    std::string_view get_canonical(const GWBUF::ProtocolInfo* pInfo) override
+    std::string_view get_canonical(const GWBUF::ProtocolInfo* pInfo) const override
     {
         string_view canonical;
 

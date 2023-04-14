@@ -722,7 +722,7 @@ void CachingParser::set_thread_cache_enabled(bool enabled)
     this_thread.use_cache = enabled;
 }
 
-mxs::ParserPlugin& CachingParser::plugin() const
+const mxs::ParserPlugin& CachingParser::plugin() const
 {
     return m_sParser->plugin();
 }

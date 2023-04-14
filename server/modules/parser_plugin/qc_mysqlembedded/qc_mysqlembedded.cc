@@ -4233,28 +4233,28 @@ public:
         return qc_mysql_setup(sql_mode, args) == QC_RESULT_OK;
     }
 
-    bool thread_init(void) override
+    bool thread_init(void) const override
     {
         return qc_mysql_thread_init() == QC_RESULT_OK;
     }
 
-    void thread_end(void) override
+    void thread_end(void) const override
     {
         qc_mysql_thread_end();
     }
 
-    bool get_current_stmt(const char** ppStmt, size_t* pLen) override
+    bool get_current_stmt(const char** ppStmt, size_t* pLen) const override
     {
         return qc_mysql_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
     }
 
-    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) override
+    Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) const override
     {
         // Not supported.
         return Parser::StmtResult {};
     }
 
-    std::string_view get_canonical(const GWBUF::ProtocolInfo* info) override
+    std::string_view get_canonical(const GWBUF::ProtocolInfo* info) const override
     {
         // Not supported.
         return std::string_view {};
