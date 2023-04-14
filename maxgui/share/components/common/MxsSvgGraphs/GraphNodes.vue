@@ -131,8 +131,8 @@ export default {
             if (this.hoverable)
                 events = {
                     ...events,
-                    mouseover: e => this.$emit('mouseover', { e, node }),
-                    mouseout: e => this.$emit('mouseout', { e, node }),
+                    mouseenter: e => this.$emit('mouseenter', { e, node }),
+                    mouseleave: e => this.$emit('mouseleave', { e, node }),
                 }
             return events
         },

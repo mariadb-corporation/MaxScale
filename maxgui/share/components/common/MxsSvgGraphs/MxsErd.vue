@@ -25,8 +25,8 @@
                     @node-size-map="setNodeSize"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
-                    @mouseover="mouseoverNode"
-                    @mouseout="mouseoutNode"
+                    @mouseenter="mouseenterNode"
+                    @mouseleave="mouseleaveNode"
                 >
                     <template v-slot:default="{ data: { node } }">
                         <table class="entity-table">
@@ -132,6 +132,7 @@ export default {
             linkShapeType: LINK_SHAPES.ORTHO,
             graphConfig: null,
             strokeWidth: 1,
+            isDragging: false,
         }
     },
     computed: {
@@ -250,22 +251,26 @@ export default {
             this.setHighlightedLinks(node)
             this.drawLinks()
             this.highlightLinksMode = EVENT_TYPES.DRAGGING
+            this.isDragging = true
         },
         onNodeDragEnd() {
             this.highlightLinksMode = EVENT_TYPES.NONE
+            this.isDragging = false
         },
         getBorderStyle(node) {
             const { highlightColor } = node.data
             const style = `1px solid ${highlightColor}`
             return style
         },
-        mouseoverNode({ node }) {
-            this.setHighlightedLinks(node)
-            //TODO: Change the color of links and highlight FK columns
-            this.highlightLinksMode = EVENT_TYPES.HOVER
+        mouseenterNode({ node }) {
+            if (!this.isDragging) {
+                this.setHighlightedLinks(node)
+                //TODO: Change the color of links and highlight FK columns
+                this.highlightLinksMode = EVENT_TYPES.HOVER
+            }
         },
-        mouseoutNode() {
-            this.highlightLinksMode = EVENT_TYPES.NONE
+        mouseleaveNode() {
+            if (!this.isDragging) this.highlightLinksMode = EVENT_TYPES.NONE
         },
     },
 }
