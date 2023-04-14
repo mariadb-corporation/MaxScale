@@ -70,6 +70,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/log.hh>
 #include <maxscale/parser.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include <maxscale/paths.hh>
@@ -4241,6 +4242,11 @@ public:
     void thread_end(void) const override
     {
         qc_mysql_thread_end();
+    }
+
+    const Parser::Helper& default_helper() const override
+    {
+        return MariaDBParser::Helper::get();
     }
 
     bool get_current_stmt(const char** ppStmt, size_t* pLen) const override

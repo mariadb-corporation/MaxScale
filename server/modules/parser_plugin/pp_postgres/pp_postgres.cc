@@ -25,6 +25,7 @@ extern "C"
 #include <maxscale/buffer.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/parser.hh>
+#include "../../protocol/Postgres/pgparser.hh"
 
 using mxs::Parser;
 namespace sql = mxs::sql;
@@ -626,6 +627,11 @@ public:
     void thread_end(void) const override
     {
         module_thread_finish();
+    }
+
+    const Parser::Helper& default_helper() const override
+    {
+        return PgParser::Helper::get();
     }
 
     bool get_current_stmt(const char** ppStmt, size_t* pLen) const override
