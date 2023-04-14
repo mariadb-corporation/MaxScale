@@ -355,7 +355,6 @@ RegexHintFSession::~RegexHintFSession()
  */
 bool RegexHintFSession::routeQuery(GWBUF&& buffer)
 {
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     if (m_active)
     {
         std::string_view sv = parser().get_sql(buffer);
@@ -366,7 +365,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
 
             // Is either a COM_QUERY or COM_STMT_PREPARE. In either case, generate hints.
             const RegexToServers* reg_serv = find_servers(sql, sql_len);
-            auto cmd = MYSQL_GET_COMMAND(queue->data());
+            auto cmd = MYSQL_GET_COMMAND(buffer.data());
             switch (cmd)
             {
             case MXS_COM_QUERY:
@@ -375,7 +374,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                 {
                     for (const auto& target : reg_serv->m_targets)
                     {
-                        queue->hints.emplace_back(reg_serv->m_htype, target);
+                        buffer.hints.emplace_back(reg_serv->m_htype, target);
                     }
                     m_n_diverted++;
                     m_fil_inst.m_total_diverted++;
@@ -396,7 +395,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                     {
                         // The PS ID is the id of the buffer. This is set by client protocol and should be
                         // used all over the routing chain.
-                        uint32_t ps_id = queue->id();
+                        uint32_t ps_id = buffer.id();
                         // Replacing an existing hint list is ok, although this should not happen as long
                         // as the PS IDs are unique.
                         auto& hints = m_ps_id_to_hints[ps_id];
@@ -422,17 +421,17 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                 mxb_assert(!true);
             }
         }
-        else if (gwbuf_length(queue) >= 9)
+        else if (buffer.length() >= 9)
         {
             // Can be a PS command with ID.
-            auto cmd = MYSQL_GET_COMMAND(queue->data());
+            auto cmd = MYSQL_GET_COMMAND(buffer.data());
             switch (cmd)
             {
             case MXS_COM_STMT_EXECUTE:
             case MXS_COM_STMT_BULK_EXECUTE:
             case MXS_COM_STMT_SEND_LONG_DATA:
                 {
-                    uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
+                    uint32_t ps_id = mxs_mysql_extract_ps_id(&buffer);
                     // -1 means use the last prepared stmt.
                     if (ps_id == MARIADB_PS_DIRECT_EXEC_ID && m_last_prepare_id > 0)
                     {
@@ -443,7 +442,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                     if (it != m_ps_id_to_hints.end())
                     {
                         const auto& new_hints = it->second;
-                        queue->hints.insert(queue->hints.end(), new_hints.begin(), new_hints.end());
+                        buffer.hints.insert(buffer.hints.end(), new_hints.begin(), new_hints.end());
 
                         m_n_diverted++;
                         m_fil_inst.m_total_diverted++;
@@ -458,7 +457,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
 
             case MXS_COM_STMT_CLOSE:
                 {
-                    uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
+                    uint32_t ps_id = mxs_mysql_extract_ps_id(&buffer);
                     m_ps_id_to_hints.erase(ps_id);
                 }
                 break;
@@ -469,7 +468,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
         }
     }
 
-    return FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
+    return FilterSession::routeQuery(std::move(buffer));
 }
 
 /**
