@@ -72,8 +72,8 @@ public:
     static std::unique_ptr<json_t> content_as_resource(const char* zHost);
 
 
-    ParserPlugin& plugin() const override;
-    const Helper& helper() const override;
+    const ParserPlugin& plugin() const override;
+    const Helper&       helper() const override;
 
     Result           parse(const GWBUF& stmt, uint32_t collect) const override;
 

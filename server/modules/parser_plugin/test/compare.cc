@@ -29,7 +29,6 @@
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#undef MXB_MODULE_NAME
 #include "../../protocol/Postgres/pgparser.hh"
 #include "../../../core/internal/modules.hh"
 #include "setsqlmodeparser.hh"

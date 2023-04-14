@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "postgresprotocol.hh"
+#include <maxscale/ccdefs.hh>
 #include <maxscale/cachingparser.hh>
 
 

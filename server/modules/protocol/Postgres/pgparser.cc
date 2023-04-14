@@ -11,8 +11,8 @@
  * Public License.
  */
 
-#include "pgparser.hh"
 #include "postgresprotocol.hh"
+#include "pgparser.hh"
 
 namespace
 {
