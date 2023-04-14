@@ -48,6 +48,7 @@
 #include <zlib.h>
 #include <inttypes.h>
 #include <algorithm>
+#include <optional>
 
 #include <mysqld_error.h>
 #include <maxbase/regex.hh>
@@ -94,22 +95,19 @@ BinlogFilterSession* BinlogFilterSession::create(MXS_SESSION* pSession, SERVICE*
     return new BinlogFilterSession(pSession, pService, pFilter);
 }
 
-static bool is_matching_query(GWBUF* buffer, const char* target)
+static bool is_matching_query(std::string_view haystack, std::string_view needle)
 {
-    char query[1024];       // Large enough for most practical cases
-    size_t bytes = buffer->copy_data(MYSQL_HEADER_LEN + 1, sizeof(query) - 1, (uint8_t*)query);
-    query[bytes] = '\0';
-    return strcasestr(query, target);
+    return mxb::sv_strcasestr(haystack, needle) != std::string_view::npos;
 }
 
-static bool is_master_binlog_checksum(GWBUF* buffer)
+static bool is_master_binlog_checksum(std::string_view sql)
 {
-    return is_matching_query(buffer, "SELECT @master_binlog_checksum");
+    return is_matching_query(sql, "SELECT @master_binlog_checksum");
 }
 
-static bool is_using_gtid(GWBUF* buffer)
+static bool is_using_gtid(std::string_view sql)
 {
-    return is_matching_query(buffer, "SET @slave_connect_state=");
+    return is_matching_query(sql, "SET @slave_connect_state=");
 }
 
 /**
@@ -122,13 +120,12 @@ static bool is_using_gtid(GWBUF* buffer)
  * When member variable m_state is BINLOG_MODE,
  * event filtering is possible.
  *
- * @param pPacket    The inout data from client
+ * @param packet     The inout data from client
  * @return           False on errors, true otherwise.
  */
 bool BinlogFilterSession::routeQuery(GWBUF&& packet)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
-    uint8_t* data = GWBUF_DATA(pPacket);
+    uint8_t* data = packet.data();
 
     switch (MYSQL_GET_COMMAND(data))
     {
@@ -140,7 +137,6 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
 
     case MXS_COM_XPAND_REPL:
         MXB_ERROR("XPand replication is not supported.");
-        gwbuf_free(pPacket);
         return false;
 
     case MXS_COM_BINLOG_DUMP:
@@ -150,7 +146,6 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
 
         if (!m_is_gtid && m_config.rewrite_src)
         {
-            gwbuf_free(pPacket);
             std::ostringstream ss;
             ss << "GTID replication is required when '"
                << REWRITE_SRC << "' and '" << REWRITE_DEST << "' are used";
@@ -166,10 +161,10 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
     case MXS_COM_QUERY:
         // Connected client is using SQL mode
         m_state = COMMAND_MODE;
-        m_reading_checksum = is_master_binlog_checksum(pPacket);
-        pPacket->set_type(GWBUF::TYPE_COLLECT_RESULT);
+        m_reading_checksum = is_master_binlog_checksum(get_sql(packet));
+        packet.set_type(GWBUF::TYPE_COLLECT_RESULT);
 
-        if (is_using_gtid(pPacket))
+        if (is_using_gtid(get_sql(packet)))
         {
             m_is_gtid = true;
         }
@@ -181,7 +176,7 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
     }
 
     // Route input data
-    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+    return mxs::FilterSession::routeQuery(std::move(packet));
 }
 
 /**
@@ -215,13 +210,12 @@ static void extract_header(const uint8_t* event, REP_HEADER* hdr)
 /**
  * Reply data to client: Binlog events can be filtered
  *
- * @param pPacket    GWBUF with binlog event
+ * @param packet     GWBUF with binlog event
  * @return           False on error, true otherwise.
  */
 bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
-    uint8_t* event = GWBUF_DATA(pPacket);
+    uint8_t* event = packet.data();
     uint32_t len = MYSQL_GET_PAYLOAD_LEN(event);
     REP_HEADER hdr;
 
@@ -236,7 +230,7 @@ bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
     case COMMAND_MODE:
         if (m_reading_checksum)
         {
-            getReplicationChecksum(pPacket);
+            getReplicationChecksum(packet);
             m_reading_checksum = false;
         }
         break;
@@ -251,7 +245,7 @@ bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
             extract_header(event, &hdr);
 
             // Check whether this event and next ones can be filtered
-            checkEvent(&pPacket, hdr);
+            checkEvent(packet, hdr);
 
             // Check whether this event is part of a large event being sent
             handlePackets(len, hdr);
@@ -267,7 +261,7 @@ bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
         // they are replaced by a RAND_EVENT event packet
         if (m_skip)
         {
-            replaceEvent(&pPacket, hdr);
+            replaceEvent(packet, hdr);
         }
         break;
 
@@ -276,7 +270,7 @@ bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
     }
 
     // Send data
-    return mxs::FilterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
+    return mxs::FilterSession::clientReply(std::move(packet), down, reply);
 }
 
 /**
@@ -290,11 +284,11 @@ bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
  * @return          True id TABLE_MAP_EVENT contains
  * db/table names to skip
  */
-bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
+bool BinlogFilterSession::checkEvent(GWBUF& buffer, const REP_HEADER& hdr)
 {
     mxb_assert(!m_is_large);
 
-    uint8_t* event = GWBUF_DATA(*buffer);
+    uint8_t* event = buffer.data();
     uint8_t* body = event + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
     uint32_t body_size = hdr.event_size - BINLOG_EVENT_HDR_LEN;
 
@@ -322,8 +316,8 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
                 // relay log and thus do not affect replication.
                 REP_HEADER hdr_copy = hdr;
                 hdr_copy.next_pos = 0xffffffff;
-                fixEvent(GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1,
-                         gwbuf_length(*buffer) - MYSQL_HEADER_LEN - 1,
+                fixEvent(buffer.data() + MYSQL_HEADER_LEN + 1,
+                         buffer.length() - MYSQL_HEADER_LEN - 1,
                          hdr_copy);
 
                 // Set m_skip = false anyway: cannot alter this event
@@ -350,15 +344,15 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
         case EXECUTE_LOAD_QUERY_EVENT:
             // EXECUTE_LOAD_QUERY_EVENT has an extra 13 bytes of data (file ID, file offset etc.)
             extra_bytes = 4 + 4 + 4 + 1;
-        /** Fallthrough */
+            /** Fallthrough */
 
         case QUERY_EVENT:
             // Handle the SQL statement: DDL, DML, BEGIN, COMMIT
             checkStatement(buffer, hdr, extra_bytes);
 
             // checkStatement can reallocate the buffer in case the size changes: use fresh pointers
-            fixEvent(GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1,
-                     gwbuf_length(*buffer) - MYSQL_HEADER_LEN - 1,
+            fixEvent(buffer.data() + MYSQL_HEADER_LEN + 1,
+                     buffer.length() - MYSQL_HEADER_LEN - 1,
                      hdr);
             break;
 
@@ -509,13 +503,13 @@ void BinlogFilterSession::fixEvent(uint8_t* event, uint32_t event_size, const RE
  * No memory allocation is done if current packet size
  * is bigger than (MYSQL_HEADER_LEN + 1 + RAND_EVENT)
  *
- * @param pPacket    The GWBUF with event data
+ * @param packet The GWBUF with event data
  */
-void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
+void BinlogFilterSession::replaceEvent(GWBUF& packet, const REP_HEADER& hdr)
 {
     if (hdr.event_type == QUERY_EVENT)
     {
-        uint8_t* event = GWBUF_DATA(*ppPacket) + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
+        uint8_t* event = packet.data() + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
         uint32_t event_size = hdr.event_size - BINLOG_EVENT_HDR_LEN;
 
         int db_name_len = event[4 + 4];
@@ -537,7 +531,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
         return;
     }
 
-    uint32_t buf_len = gwbuf_length(*ppPacket);
+    uint32_t buf_len = packet.length();
     uint32_t orig_event_type = 0;
 
     // If size < BINLOG_EVENT_HDR_LEN + crc32 add rand_event to buff contiguos
@@ -565,15 +559,13 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
      */
     if (buf_len < (MYSQL_HEADER_LEN + 1 + new_event_size))
     {
-        GWBUF* pTmpbuf;
-        pTmpbuf = gwbuf_alloc(MYSQL_HEADER_LEN + 1   \
-                              + (new_event_size - buf_len));
-        // Append new buff to current one
-        *ppPacket = gwbuf_append(*ppPacket, pTmpbuf);
+        size_t sz = MYSQL_HEADER_LEN + 1 + (new_event_size - buf_len);
+        packet.prepare_to_write(sz);
+        packet.write_complete(sz);
     }
 
     // point to data
-    uint8_t* ptr = GWBUF_DATA(*ppPacket);
+    uint8_t* ptr = packet.data();
 
     /**
      * Replication protocol:
@@ -653,10 +645,10 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
      * Now we remove the useless bytes in the buffer
      * in case of inout packet is bigger than RAND_EVENT packet
      */
-    if ((*ppPacket)->length() > (new_event_size + 1 + MYSQL_HEADER_LEN))
+    if (packet.length() > (new_event_size + 1 + MYSQL_HEADER_LEN))
     {
-        uint32_t remove_bytes = (*ppPacket)->length() - (new_event_size + 1 + MYSQL_HEADER_LEN);
-        (*ppPacket)->rtrim(remove_bytes);
+        uint32_t remove_bytes = packet.length() - (new_event_size + 1 + MYSQL_HEADER_LEN);
+        packet.rtrim(remove_bytes);
     }
 
     // Fix Event Next pos = 0 and set new CRC32
@@ -672,30 +664,25 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
  * @param col    The column number to extract
  * @return       The value of the column
  */
-static char* extract_column(GWBUF* buf, int col)
+static std::optional<std::string_view> extract_column(const GWBUF& buf, size_t col)
 {
     uint8_t* ptr;
-    int len, ncol, collen;
+    size_t len, ncol, collen;
     char* rval;
 
-    if (buf == NULL)
-    {
-        return NULL;
-    }
-
-    ptr = (uint8_t*)GWBUF_DATA(buf);
+    ptr = (uint8_t*)buf.data();
     /* First packet should be the column count */
     len = mariadb::get_byte3(ptr);
     ptr += 3;
     if (*ptr != 1)      // Check sequence number is 1
     {
-        return NULL;
+        return {};
     }
     ptr++;
     ncol = *ptr++;
     if (ncol < col)     // Not that many column in result
     {
-        return NULL;
+        return {};
     }
 
     // Now ptr points at the column definition
@@ -710,7 +697,7 @@ static char* extract_column(GWBUF* buf, int col)
     ptr += 4;       // Skip to payload
     if (*ptr != 0xfe)
     {
-        return NULL;
+        return {};
     }
     ptr += len;
 
@@ -726,7 +713,7 @@ static char* extract_column(GWBUF* buf, int col)
      */
     if (len == 5 && *ptr == 0xfe)
     {
-        return NULL;
+        return {};
     }
 
     while (--col > 0)
@@ -735,27 +722,17 @@ static char* extract_column(GWBUF* buf, int col)
         ptr += collen;
     }
     collen = *ptr++;
-    if ((rval = (char*)MXB_MALLOC(collen + 1)) == NULL)
-    {
-        return NULL;
-    }
-    memcpy(rval, ptr, collen);
-    rval[collen] = 0;       // NULL terminate
-
-    return rval;
+    return std::string_view{(const char*)ptr, collen};
 }
 
 /**
  * Abort filter operation
- *
- * @param pPacket    The buffer to free
  */
-void BinlogFilterSession::filterError(GWBUF* pPacket)
+void BinlogFilterSession::filterError()
 {
     /* Abort client connection on copy failure */
     m_state = ERRORED;
     m_pSession->kill();
-    gwbuf_free(pPacket);
 }
 
 /**
@@ -763,19 +740,17 @@ void BinlogFilterSession::filterError(GWBUF* pPacket)
  * Sets the member variable m_crc to true in case of found
  * CRC32 value.
  *
- * @param pPacket    The resultset
+ * @param packet     The resultset
  * @return           False on error
  */
-void BinlogFilterSession::getReplicationChecksum(GWBUF* pPacket)
+void BinlogFilterSession::getReplicationChecksum(const GWBUF& packet)
 {
-    if (char* crc = extract_column(pPacket, 1))
+    if (auto crc = extract_column(packet, 1))
     {
-        if (strcasestr(crc, "CRC32"))
+        if (mxb::sv_strcasestr(*crc, "CRC32"))
         {
             m_crc = true;
         }
-
-        MXB_FREE(crc);
     }
 }
 
@@ -844,9 +819,9 @@ void BinlogFilterSession::handleEventData(uint32_t len)
  * @param hdr       The extracted replication header
  * @param extra_len Extra static bytes that this event has (only EXECUTE_LOAD_QUERY_EVENT uses it)
  */
-void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, int extra_len)
+void BinlogFilterSession::checkStatement(GWBUF& buffer, const REP_HEADER& hdr, int extra_len)
 {
-    uint8_t* event = GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
+    uint8_t* event = buffer.data() + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
     uint32_t event_size = hdr.event_size - BINLOG_EVENT_HDR_LEN;
 
     int db_name_len = event[4 + 4];
@@ -883,24 +858,23 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
             if (len > 0)
             {
                 // Buffer is too short, extend it
-                *buffer = gwbuf_append(*buffer, gwbuf_alloc(len));
+                buffer.prepare_to_write(len);
+                buffer.write_complete(len);
             }
             else if (len < 0)
             {
                 // Make the buffer shorter (len is negative so we add it to the total length)
-                GWBUF* tmp = gwbuf_alloc_and_load(gwbuf_length(*buffer) + len, GWBUF_DATA(*buffer));
-                gwbuf_free(*buffer);
-                *buffer = tmp;
+                buffer.rtrim(-len);
             }
 
-            event = GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
+            event = buffer.data() + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
 
             memcpy(event + static_size + var_block_len, db.c_str(), db.length() + 1);
             memcpy(event + static_size + var_block_len + db.length() + 1, sql.c_str(), sql.length());
             event[4 + 4] = db.length();
 
             // Also fix the packet length
-            mariadb::set_byte3(GWBUF_DATA(*buffer), gwbuf_length(*buffer) - MYSQL_HEADER_LEN);
+            mariadb::set_byte3(buffer.data(), buffer.length() - MYSQL_HEADER_LEN);
 
             MXB_INFO("Rewrote query: (%s) %s", db.c_str(), sql.c_str());
         }

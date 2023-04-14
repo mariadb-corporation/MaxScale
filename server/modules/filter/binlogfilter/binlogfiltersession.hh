@@ -76,19 +76,19 @@ private:
     void skipDatabaseTable(const uint8_t* data);
 
     // Get Replication Checksum from registration query
-    void getReplicationChecksum(GWBUF* pPacket);
+    void getReplicationChecksum(const GWBUF& packet);
 
     // Abort filter operations
-    void filterError(GWBUF* pPacket);
+    void filterError();
 
     // Fix event: set next pos to 0 and set new CRC32
     void fixEvent(uint8_t* data, uint32_t event_size, const REP_HEADER& hdr);
 
     // Whether to skip current event
-    bool checkEvent(GWBUF** data, const REP_HEADER& hdr);
+    bool checkEvent(GWBUF& data, const REP_HEADER& hdr);
 
     // Filter the replication event
-    void replaceEvent(GWBUF** data, const REP_HEADER& hdr);
+    void replaceEvent(GWBUF& data, const REP_HEADER& hdr);
 
     // Handle event size
     void handlePackets(uint32_t len, const REP_HEADER& hdr);
@@ -97,7 +97,7 @@ private:
     void handleEventData(uint32_t len);
 
     // Check SQL statement in QUERY_EVENT or EXECUTE_LOAD_QUERY_EVENT
-    void checkStatement(GWBUF** buffer, const REP_HEADER& hdr, int extra_len = 0);
+    void checkStatement(GWBUF& buffer, const REP_HEADER& hdr, int extra_len = 0);
 
     // Check DB.TABLE in ANNOTATE_ROWS event
     void checkAnnotate(const uint8_t* event,
