@@ -32,9 +32,7 @@ public:
 
     bool routeQuery(GWBUF&& buffer) override;
 private:
-    bool delayed_routeQuery(maxbase::Worker::Callable::Action action,
-                            GWBUF* buffer);
-    int real_routeQuery(GWBUF* buffer, bool is_delayed);
+    int real_routeQuery(GWBUF&& buffer, bool is_delayed);
 
     // Configuration
     int64_t                   m_max_qps;

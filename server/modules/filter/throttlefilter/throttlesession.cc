@@ -47,7 +47,7 @@ ThrottleSession::~ThrottleSession()
     }
 }
 
-int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
+int ThrottleSession::real_routeQuery(GWBUF&& buffer, bool is_delayed)
 {
     using namespace std::chrono;
 
@@ -63,10 +63,12 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         int32_t delay = 1 + std::ceil(1000.0 / m_max_qps);
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
-        m_delayed_call_id = m_pSession->dcall(std::chrono::milliseconds(delay),
-                                              [this, buffer](mxb::Worker::Callable::Action action) {
-                                                  return delayed_routeQuery(action, buffer);
-                                              });
+
+        auto cb = [this](GWBUF&& buffer){
+            return real_routeQuery(std::move(buffer), true);
+        };
+
+        m_pSession->delay_routing(this, std::move(buffer), std::chrono::milliseconds(delay), cb);
 
         if (m_state == State::MEASURING)
         {
@@ -97,39 +99,17 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
             MXB_NOTICE("Query throttling Session %ld user %s, throttling limit reached. Disconnect.",
                        m_pSession->id(),
                        m_pSession->user().c_str());
-            gwbuf_free(buffer);
             return false;   // disconnect
         }
     }
 
     m_query_count.increment();
 
-    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(buffer));
-}
-
-bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Callable::Action action, GWBUF* buffer)
-{
-    MXS_SESSION::Scope scope(m_pSession);
-    m_delayed_call_id = 0;
-    switch (action)
-    {
-    case maxbase::Worker::Callable::EXECUTE:
-        if (!real_routeQuery(buffer, true))
-        {
-            m_pSession->kill();
-        }
-        break;
-
-    case maxbase::Worker::Callable::CANCEL:
-        gwbuf_free(buffer);
-        break;
-    }
-
-    return false;
+    return mxs::FilterSession::routeQuery(std::move(buffer));
 }
 
 bool ThrottleSession::routeQuery(GWBUF&& buffer)
 {
-    return real_routeQuery(mxs::gwbuf_to_gwbufptr(std::move(buffer)), false);
+    return real_routeQuery(std::move(buffer), false);
 }
 }   // throttle
