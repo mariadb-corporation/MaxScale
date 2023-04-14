@@ -42,7 +42,7 @@ public:
     // API methods
     void        create_instance(const std::string& name);
     void        new_session(MXS_SESSION* session);
-    bool        route_query(MXS_SESSION* session, GWBUF** buffer);
+    bool        route_query(MXS_SESSION* session, GWBUF* buffer);
     void        client_reply(MXS_SESSION* session, const char* target);
     void        close_session(MXS_SESSION* session);
     std::string diagnostics();

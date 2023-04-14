@@ -31,9 +31,9 @@ const LuaData& get_data(lua_State* state)
     return *static_cast<LuaData*>(lua_touserdata(state, lua_upvalueindex(1)));
 }
 
-void push_arg(lua_State* state, const std::string& str)
+void push_arg(lua_State* state, std::string_view str)
 {
-    lua_pushstring(state, str.c_str());
+    lua_pushlstring(state, str.data(), str.size());
 }
 
 void push_arg(lua_State* state, int64_t i)
@@ -255,20 +255,19 @@ void LuaContext::new_session(MXS_SESSION* session)
     call_function(m_state, "newSession", 0, session->user(), session->client_remote());
 }
 
-bool LuaContext::route_query(MXS_SESSION* session, GWBUF** buffer)
+bool LuaContext::route_query(MXS_SESSION* session, GWBUF* buffer)
 {
-    Scope scope(this, {session, *buffer});
+    Scope scope(this, {session, buffer});
     bool route = true;
+    std::string_view sql = session->protocol()->get_sql(*m_data.buffer);
 
-    std::string sql(session->client_connection()->parser()->helper().get_sql(*m_data.buffer));
     if (call_function(m_state, "routeQuery", 1, sql))
     {
         if (lua_gettop(m_state))
         {
             if (lua_isstring(m_state, -1))
             {
-                gwbuf_free(*buffer);
-                *buffer = mxs::gwbuf_to_gwbufptr(mariadb::create_query(lua_tostring(m_state, -1)));
+                *buffer = mariadb::create_query(lua_tostring(m_state, -1));
             }
             else if (lua_isboolean(m_state, -1))
             {

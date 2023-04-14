@@ -111,7 +111,7 @@ public:
     }
 
     void new_session(MXS_SESSION* session);
-    bool route_query(MXS_SESSION* session, GWBUF** buffer);
+    bool route_query(MXS_SESSION* session, GWBUF* buffer);
     void client_reply(MXS_SESSION* session, const char* target);
     void close_session(MXS_SESSION* session);
 
@@ -264,9 +264,8 @@ bool LuaFilterSession::clientReply(GWBUF&& queue, const maxscale::ReplyRoute& do
     return FilterSession::clientReply(std::move(queue), down, reply);
 }
 
-bool LuaFilterSession::routeQuery(GWBUF&& buffer)
+bool LuaFilterSession::routeQuery(GWBUF&& queue)
 {
-    GWBUF* queue = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     bool route = true;
 
     if (m_context)
@@ -283,11 +282,10 @@ bool LuaFilterSession::routeQuery(GWBUF&& buffer)
 
     if (route)
     {
-        ok = FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(queue));
+        ok = FilterSession::routeQuery(std::move(queue));
     }
     else
     {
-        gwbuf_free(queue);
         FilterSession::set_response(mariadb::create_error_packet(1, 1045, "28000", "Access denied."));
     }
 
@@ -331,7 +329,7 @@ void LuaFilter::new_session(MXS_SESSION* session)
     }
 }
 
-bool LuaFilter::route_query(MXS_SESSION* session, GWBUF** buffer)
+bool LuaFilter::route_query(MXS_SESSION* session, GWBUF* buffer)
 {
     bool rval = true;
     std::lock_guard guard(m_lock);
