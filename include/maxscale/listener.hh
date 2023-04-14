@@ -73,11 +73,11 @@ public:
     ListenerData(const ListenerData&) = delete;
     ListenerData& operator=(const ListenerData&) = delete;
 
-    const SSLContext           m_ssl;                  /**< SSL settings */
-    const mxs::Parser::SqlMode m_default_sql_mode;     /**< Default sql mode for the listener */
-    SERVICE&                   m_service;              /**< The service the listener feeds */
-    const SProtocol            m_proto_module;         /**< Protocol module */
-    const std::string          m_listener_name;        /**< Name of the owning listener */
+    const SSLContext           m_ssl;                   /**< SSL settings */
+    const mxs::Parser::SqlMode m_default_sql_mode;      /**< Default sql mode for the listener */
+    SERVICE&                   m_service;               /**< The service the listener feeds */
+    const SProtocol            m_proto_module;          /**< Protocol module */
+    const std::string          m_listener_name;         /**< Name of the owning listener */
 
     /**
      * Authenticator modules used by the sessions created from the listener. The session will select
@@ -249,8 +249,7 @@ public:
      * @note This function can only be called from the main worker or
      *       from @c worker provided as argument.
      *
-     * @param worker  The routing worker where the listener should also
-                      listen.
+     * @param worker  The routing worker where the listener should also listen.
      *
      * @return True if the listener could be added to the worker. True will
      *         unconditionally be returned if the listener is not started.
@@ -519,7 +518,6 @@ private:
     int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
     SData                 m_shared_data;    /**< Data shared with sessions */
 
-    static Manager s_manager; /**< Manager of all listener instances */
+    static Manager s_manager;   /**< Manager of all listener instances */
 };
-
 }
