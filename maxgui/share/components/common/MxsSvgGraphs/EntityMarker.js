@@ -14,26 +14,42 @@ import { getLinkStyles, getRelatedLinks } from '@share/components/common/MxsSvgG
 import { TARGET_POS, CARDINALITY_SYMBOLS } from '@share/components/common/MxsSvgGraphs/config'
 
 export default class EntityMarker {
-    constructor(linkConfig) {
-        this.linkConfig = linkConfig
+    constructor(graphConfig) {
+        this.config = graphConfig.marker
+        this.linkConfig = graphConfig.link
     }
     transform({ d, isSrc = false }) {
         const {
             pathPosData: { pathPoints, targetPos },
         } = d
-        const { LEFT, INTERSECT } = TARGET_POS
-        let x = pathPoints.x1,
-            y = pathPoints.y1,
-            k = 0
-        if (targetPos === INTERSECT || targetPos === LEFT) k = 180
-        if (isSrc) {
-            x = pathPoints.x0
-            y = pathPoints.y0
-            k = 180
-            if (targetPos === LEFT) k = 0
+        const { LEFT, RIGHT, INTERSECT } = TARGET_POS
+        const { width } = this.config
+        let offset = width
+        switch (targetPos) {
+            case RIGHT:
+                offset = isSrc ? width : -width
+                break
+            case LEFT:
+                offset = isSrc ? -width : width
+                break
         }
-        return `translate(${x}, ${y}) rotate(${k})`
+        let x = pathPoints.x1 + offset,
+            y = pathPoints.y1,
+            z = 0
+        if (targetPos === INTERSECT || targetPos === LEFT) z = 180
+        if (isSrc) {
+            x = pathPoints.x0 + offset
+            y = pathPoints.y0
+            z = 180
+            if (targetPos === LEFT) z = 0
+        }
+        return `translate(${x}, ${y}) rotate(${z})`
     }
+    /**
+     * Marker reuses link's styles such as color, strokeWidth because
+     * it isn't sensible to have its own styles, link and marker styles
+     * should be consistent.
+     */
     getStyle(link, styleNamePath) {
         return getLinkStyles({ link, styleNamePath, linkConfig: this.linkConfig })
     }
@@ -44,7 +60,7 @@ export default class EntityMarker {
      **/
     draw({ containerEle, type, isSrc = false }) {
         const scope = this
-        const { markerClass } = this.linkConfig
+        const { markerClass } = this.config
         const stroke = d => scope.getStyle(d, 'color')
         const markerCtrClass = `entity-marker-${isSrc ? 'src' : 'target'}`
         const markerPathClass = `${markerClass} ${markerClass}-${isSrc ? 'src' : 'target'}`
@@ -56,7 +72,7 @@ export default class EntityMarker {
                     .attr('transform', d => scope.transform({ d, isSrc }))
                     .append('path')
                     .attr('class', markerPathClass)
-                    .attr('fill', 'none')
+                    .attr('fill', 'white')
                     .attr('stroke', stroke)
                     .attr('d', d => scope.getMarker({ d, isSrc }))
                 break
@@ -82,7 +98,7 @@ export default class EntityMarker {
      */
     changeMarkersOfLinkStyle({ elements, eventType }) {
         const scope = this
-        const { markerClass } = this.linkConfig
+        const { markerClass } = this.config
         elements
             .selectAll(`path.${markerClass}`)
             .attr('stroke', d => scope.getStyle(d, 'color'))

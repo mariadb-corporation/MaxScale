@@ -14,11 +14,11 @@ import { getLinkStyles, getRelatedLinks } from '@share/components/common/MxsSvgG
 import { select as d3Select } from 'd3-selection'
 import { lodash } from '@share/utils/helpers'
 import { t } from 'typy'
-import defaultConfig, { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 
 export default class Link {
     constructor(config) {
-        this.config = lodash.merge(defaultConfig().link, t(config).safeObjectOrEmpty)
+        this.config = config
     }
     getStyle(link, styleNamePath) {
         return getLinkStyles({ link, styleNamePath, linkConfig: this.config })

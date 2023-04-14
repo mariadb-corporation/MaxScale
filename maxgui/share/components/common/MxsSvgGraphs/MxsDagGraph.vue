@@ -48,6 +48,7 @@ import * as d3d from 'd3-dag'
 import 'd3-transition'
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
+import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import Link from '@share/components/common/MxsSvgGraphs/Link'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 
@@ -165,7 +166,8 @@ export default {
             }, {})
         },
         initLinkInstance() {
-            this.linkInstance = new Link({ color: this.colorize })
+            const graphConfig = new GraphConfig({ link: { color: this.colorize } })
+            this.linkInstance = new Link(graphConfig.link)
         },
         /**
          * @param {Object} node - dag node

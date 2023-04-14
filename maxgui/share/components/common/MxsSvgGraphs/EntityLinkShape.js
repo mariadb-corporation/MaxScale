@@ -10,18 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { lodash } from '@share/utils/helpers'
-import { t } from 'typy'
-import defaultConfig, {
-    LINK_SHAPES,
-    TARGET_POS,
-} from '@share/components/common/MxsSvgGraphs/config'
+import { LINK_SHAPES, TARGET_POS } from '@share/components/common/MxsSvgGraphs/config'
 
 export default class EntityLinkShape {
-    constructor(config) {
-        this.config = lodash.merge(defaultConfig().linkShape, t(config).safeObjectOrEmpty)
+    constructor(graphConfig) {
+        this.config = graphConfig.linkShape
+        this.markerConfig = graphConfig.marker
     }
-
     setData(data) {
         const {
             source,
@@ -48,10 +43,6 @@ export default class EntityLinkShape {
 
         this.targetPos = targetPos
         this.relationshipData = relationshipData
-    }
-
-    updateConfig(newConfig) {
-        this.config = lodash.merge(this.config, newConfig)
     }
 
     /**
@@ -110,9 +101,6 @@ export default class EntityLinkShape {
      */
     getStartEndXValues() {
         const {
-            entitySizeConfig: { markerWidth },
-        } = this.config
-        const {
             source: { x: srcX },
             target: { x: targetX },
             halfSrcWidth,
@@ -125,19 +113,19 @@ export default class EntityLinkShape {
             x1 = targetX
         switch (this.targetPos) {
             case RIGHT: {
-                x0 = srcX + halfSrcWidth + markerWidth
-                x1 = targetX - halfTargetWidth - markerWidth
+                x0 = srcX + halfSrcWidth
+                x1 = targetX - halfTargetWidth
                 break
             }
             case LEFT: {
-                x0 = srcX - halfSrcWidth - markerWidth
-                x1 = targetX + halfTargetWidth + markerWidth
+                x0 = srcX - halfSrcWidth
+                x1 = targetX + halfTargetWidth
                 break
             }
             case INTERSECT: {
                 // move x0 & x1 to the right edge of the nodes
-                x0 = srcX + halfSrcWidth + markerWidth
-                x1 = targetX + halfTargetWidth + markerWidth
+                x0 = srcX + halfSrcWidth
+                x1 = targetX + halfTargetWidth
                 break
             }
         }
@@ -171,11 +159,9 @@ export default class EntityLinkShape {
      */
     getOrthoValuesX({ x0, x1 }) {
         let midPointX, dx1, dx4, dx2, dx3
-        const {
-            type,
-            entitySizeConfig: { markerWidth },
-        } = this.config
-        const offset = markerWidth / 2
+        const { type } = this.config
+        const { width: markerWidth = 0 } = this.markerConfig
+        const offset = markerWidth * 1.5
         const isEntityRelationShape = type === LINK_SHAPES.ENTITY_RELATION
         const { RIGHT, LEFT, INTERSECT } = TARGET_POS
         switch (this.targetPos) {

@@ -18,12 +18,12 @@ import { getLinkCtr } from '@share/components/common/MxsSvgGraphs/utils'
 import { lodash } from '@share/utils/helpers'
 
 export default class EntityLink extends Link {
-    constructor({ linkConfig, shapeConfig }) {
-        super(linkConfig)
-        this.shapeConfig = shapeConfig
-        this.shape = new EntityLinkShape(shapeConfig)
+    constructor(graphConfig) {
+        super(graphConfig.link)
+        this.graphConfig = graphConfig
+        this.marker = new EntityMarker(graphConfig)
+        this.shape = new EntityLinkShape(graphConfig)
         this.data = []
-        this.marker = new EntityMarker(this.config)
     }
     /**
      * @param {Object} params.link - The link object to mutate.
@@ -127,7 +127,7 @@ export default class EntityLink extends Link {
      * so that each point is visible and aligned in the row.
      */
     repositionOverlappedPoints() {
-        const { rowHeight, rowOffset } = this.shapeConfig.entitySizeConfig
+        const { rowHeight, rowOffset } = this.graphConfig.linkShape.entitySizeConfig
         Object.values(this.overlappedPoints()).forEach(points => {
             // divide the row into points.length equal parts
             const k = (rowHeight - rowOffset) / (points.length + 1)

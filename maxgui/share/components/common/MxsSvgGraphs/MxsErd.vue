@@ -100,6 +100,7 @@ import {
 } from 'd3-force'
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
+import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@share/components/common/MxsSvgGraphs/EntityLink'
 import { LINK_SHAPES, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 
@@ -126,19 +127,22 @@ export default {
             highlightLinksMode: EVENT_TYPES.NONE,
             highlightedLinks: [],
             entityHeaderHeight: 32,
-            linkInstance: null,
+            entityLink: null,
             //TODO: Add input to change this value
             linkShapeType: LINK_SHAPES.ORTHO,
+            graphConfig: null,
+            strokeWidth: 1,
         }
     },
     computed: {
         entitySizeConfig() {
             return { rowHeight: 32, rowOffset: 4, nodeOffsetHeight: this.entityHeaderHeight }
         },
-        entityLinkConfig() {
+        erdGraphConfig() {
             return {
-                linkConfig: { strokeWidth: 1, opacity: 1 },
-                shapeConfig: {
+                link: { strokeWidth: this.strokeWidth, opacity: 1, dashArr: '0' },
+                marker: { width: 18 },
+                linkShape: {
                     type: this.linkShapeType,
                     entitySizeConfig: this.entitySizeConfig,
                 },
@@ -148,7 +152,7 @@ export default {
     watch: {
         highlightLinksMode(v) {
             for (const link of this.highlightedLinks)
-                this.linkInstance.changeEntityLinkStyle({
+                this.entityLink.changeEntityLinkStyle({
                     link,
                     eventType: v,
                 })
@@ -203,7 +207,8 @@ export default {
             }
         },
         initLinkInstance() {
-            this.linkInstance = new EntityLink(this.entityLinkConfig)
+            this.graphConfig = new GraphConfig(this.erdGraphConfig)
+            this.entityLink = new EntityLink(this.graphConfig)
         },
         drawChart() {
             this.setGraphNodeCoordMap()
@@ -221,7 +226,7 @@ export default {
             return this.simulation.force('link').links()
         },
         drawLinks() {
-            this.linkInstance.draw({ containerEle: this.svgGroup, data: this.getLinks() })
+            this.entityLink.draw({ containerEle: this.svgGroup, data: this.getLinks() })
         },
         handleCollision() {
             this.simulation.force(

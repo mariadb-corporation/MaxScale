@@ -34,7 +34,6 @@ export default () => ({
         containerClass: 'link_container',
         pathClass: 'link_path',
         invisiblePathClass: 'link_path__invisible',
-        markerClass: 'entity-marker__path',
         /**
          * Path attributes can also be a function
          * e.g. element.attr('stroke', color:(d) => d.linkStyles.color )
@@ -55,6 +54,10 @@ export default () => ({
             opacity: 1,
         },
     },
+    marker: {
+        width: 18,
+        markerClass: 'entity-marker__path',
+    },
     linkShape: {
         type: LINK_SHAPES.ORTHO,
         entitySizeConfig: {
@@ -62,15 +65,13 @@ export default () => ({
             // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
             rowOffset: 4,
             nodeOffsetHeight: 32,
-            // Ensure that the marker remains visible while dragging a node by allocating a specific width.
-            markerWidth: 18,
         },
     },
 })
 
+const straight = 'M 8 0 L 18 0' // straight line
 const optionalSymbol = 'M 0 0 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0'
-const manySymbol = 'M 8 0 L 18 0 M 8 0 L 18 -5 M 8 0 L 18 5'
-const straight = 'M 0 0 L 18 0' // straight line
+const manySymbol = `${straight} M 8 0 L 18 -5 M 8 0 L 18 5`
 
 export const MIN_MAX_CARDINALITY = {
     ONE: '1',
@@ -83,9 +84,9 @@ export const MIN_MAX_CARDINALITY = {
 
 export const CARDINALITY_SYMBOLS = {
     [MIN_MAX_CARDINALITY.ONE]: `${straight} M 13 -5 L 13 5`,
-    [MIN_MAX_CARDINALITY.ONLY_ONE]: `${straight} M 8 -5 L 8 5 M 13 -5 L 13 5`,
-    [MIN_MAX_CARDINALITY.ZERO_OR_ONE]: `${optionalSymbol} M 8 0 L 18 0 M 13 -5 L 13 5`,
-    [MIN_MAX_CARDINALITY.MANY]: `M 0 0 L 8 0 ${manySymbol}`,
-    [MIN_MAX_CARDINALITY.ONE_OR_MANY]: `M 0 0 L 8 0 M 8 -5 L 8 5 ${manySymbol}`,
+    [MIN_MAX_CARDINALITY.ONLY_ONE]: `M 3 0 L 18 0 M 8 -5 L 8 5 M 13 -5 L 13 5`,
+    [MIN_MAX_CARDINALITY.ZERO_OR_ONE]: `${optionalSymbol} ${straight} M 13 -5 L 13 5`,
+    [MIN_MAX_CARDINALITY.MANY]: `M 3 0 L 8 0 ${manySymbol}`,
+    [MIN_MAX_CARDINALITY.ONE_OR_MANY]: `M 3 0 L 8 0 M 8 -5 L 8 5 ${manySymbol}`,
     [MIN_MAX_CARDINALITY.ZERO_OR_MANY]: `${optionalSymbol} ${manySymbol}`,
 }
