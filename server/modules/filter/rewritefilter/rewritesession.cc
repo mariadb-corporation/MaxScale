@@ -56,9 +56,8 @@ RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession,
 
 bool RewriteFilterSession::routeQuery(GWBUF&& buffer)
 {
-    GWBUF* pBuffer = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     auto& session_data = *m_sSession_data.get();
-    const auto& sql = get_sql_string(*pBuffer);
+    const auto& sql = get_sql_string(buffer);
     const auto* pSql_to_match = &sql;
 
     std::string new_sql;
@@ -83,8 +82,7 @@ bool RewriteFilterSession::routeQuery(GWBUF&& buffer)
 
             if (!r->template_def().what_if)
             {
-                gwbuf_free(pBuffer);
-                pBuffer = mxs::gwbuf_to_gwbufptr(mariadb::create_query(new_sql));
+                buffer = mariadb::create_query(new_sql);
             }
 
             if (r->template_def().continue_if_matched)
@@ -99,5 +97,5 @@ bool RewriteFilterSession::routeQuery(GWBUF&& buffer)
         }
     }
 
-    return mxs::FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pBuffer));
+    return mxs::FilterSession::routeQuery(std::move(buffer));
 }
