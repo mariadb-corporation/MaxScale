@@ -445,6 +445,11 @@ public:
     virtual void thread_end(void) const = 0;
 
     /**
+     * @return Default helper for this plugin.
+     */
+    virtual const Parser::Helper& default_helper() const = 0;
+
+    /**
      * Return statement currently being classified.
      *
      * @param ppStmp  Pointer to pointer that on return will point to the
