@@ -142,17 +142,17 @@ MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession,
     return new MaskingFilterSession(pSession, pService, pFilter);
 }
 
-bool MaskingFilterSession::check_query(GWBUF* pPacket)
+bool MaskingFilterSession::check_query(const GWBUF& packet)
 {
     const char* zUser = m_pSession->user().c_str();
     const char* zHost = m_pSession->client_remote().c_str();
     bool acceptable = true;
 
-    if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), mxs::sql::TYPE_USERVAR_WRITE))
+    if (Parser::type_mask_contains(parser().get_type_mask(packet), mxs::sql::TYPE_USERVAR_WRITE))
     {
         if (m_config.check_user_variables)
         {
-            if (is_variable_defined(pPacket, zUser, zHost))
+            if (is_variable_defined(packet, zUser, zHost))
             {
                 acceptable = false;
             }
@@ -160,13 +160,13 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     }
     else
     {
-        mxs::sql::OpCode op = parser().get_operation(*pPacket);
+        mxs::sql::OpCode op = parser().get_operation(packet);
 
         if (op == mxs::sql::OP_SELECT)
         {
             if (m_config.check_unions || m_config.check_subqueries)
             {
-                if (is_union_or_subquery_used(pPacket, zUser, zHost))
+                if (is_union_or_subquery_used(packet, zUser, zHost))
                 {
                     acceptable = false;
                 }
@@ -186,7 +186,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
             // allow you to probe a value e.g. using UPDATEs.
             if (op != mxs::sql::OP_INSERT)
             {
-                if (is_function_used(pPacket, zUser, zHost))
+                if (is_function_used(packet, zUser, zHost))
                 {
                     acceptable = false;
                 }
@@ -197,15 +197,15 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
     return acceptable;
 }
 
-bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
+bool MaskingFilterSession::check_textual_query(const GWBUF& packet)
 {
     bool rv = false;
 
     uint32_t option = m_config.treat_string_arg_as_field ? Parser::OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(parser(), option);
 
-    auto parse_result = parser().parse(*pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
-    auto op = parser().get_operation(*pPacket);
+    auto parse_result = parser().parse(packet, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
+    auto op = parser().get_operation(packet);
 
     if (op == mxs::sql::OP_EXPLAIN)
     {
@@ -213,13 +213,13 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     }
     else if (parse_result == Parser::Result::PARSED || !m_config.require_fully_parsed)
     {
-        if (Parser::type_mask_contains(parser().get_type_mask(*pPacket), mxs::sql::TYPE_PREPARE_NAMED_STMT))
+        if (Parser::type_mask_contains(parser().get_type_mask(packet), mxs::sql::TYPE_PREPARE_NAMED_STMT))
         {
-            GWBUF* pP = parser().get_preparable_stmt(*pPacket);
+            GWBUF* pP = parser().get_preparable_stmt(packet);
 
             if (pP)
             {
-                rv = check_textual_query(pP);
+                rv = check_textual_query(*pP);
             }
             else
             {
@@ -234,7 +234,7 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
         }
         else
         {
-            rv = check_query(pPacket);
+            rv = check_query(packet);
         }
     }
     else
@@ -245,15 +245,15 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     return rv;
 }
 
-bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
+bool MaskingFilterSession::check_binary_query(const GWBUF& packet)
 {
     bool rv = false;
 
     uint32_t option = m_config.treat_string_arg_as_field ? Parser::OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(parser(), option);
 
-    auto parse_result = parser().parse(*pPacket, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
-    auto op = parser().get_operation(*pPacket);
+    auto parse_result = parser().parse(packet, Parser::COLLECT_FIELDS | Parser::COLLECT_FUNCTIONS);
+    auto op = parser().get_operation(packet);
 
     if (op == mxs::sql::OP_EXPLAIN)
     {
@@ -261,7 +261,7 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
     }
     else if (parse_result == Parser::Result::PARSED || !m_config.require_fully_parsed)
     {
-        rv = check_query(pPacket);
+        rv = check_query(packet);
     }
     else
     {
@@ -278,8 +278,7 @@ bool MaskingFilterSession::routeQuery(GWBUF&& packet)
         return FilterSession::routeQuery(std::move(packet));
     }
 
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
-    ComRequest request(pPacket);
+    ComRequest request(&packet);
 
     // TODO: Breaks if responses are not waited for, before the next request is sent.
     switch (request.command())
@@ -289,7 +288,7 @@ bool MaskingFilterSession::routeQuery(GWBUF&& packet)
 
         if (m_config.is_parsing_needed())
         {
-            if (check_textual_query(pPacket))
+            if (check_textual_query(packet))
             {
                 m_state = EXPECTING_RESPONSE;
             }
@@ -307,7 +306,7 @@ bool MaskingFilterSession::routeQuery(GWBUF&& packet)
     case MXS_COM_STMT_PREPARE:
         if (m_config.is_parsing_needed())
         {
-            if (check_binary_query(pPacket))
+            if (check_binary_query(packet))
             {
                 m_state = IGNORING_RESPONSE;
             }
@@ -335,11 +334,7 @@ bool MaskingFilterSession::routeQuery(GWBUF&& packet)
 
     if (m_state != EXPECTING_NOTHING)
     {
-        rv = FilterSession::routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
-    }
-    else
-    {
-        gwbuf_free(pPacket);
+        rv = FilterSession::routeQuery(std::move(packet));
     }
 
     return rv;
@@ -352,8 +347,7 @@ bool MaskingFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& do
         return FilterSession::clientReply(std::move(packet), down, reply);
     }
 
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
-    ComResponse response(pPacket);
+    ComResponse response(&packet);
 
     if (response.is_err())
     {
@@ -371,20 +365,20 @@ bool MaskingFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& do
             break;
 
         case EXPECTING_RESPONSE:
-            handle_response(pPacket);
+            handle_response(packet);
             break;
 
         case EXPECTING_FIELD:
-            handle_field(pPacket);
+            handle_field(packet);
             break;
 
         case EXPECTING_ROW:
-            handle_row(pPacket);
+            handle_row(packet);
             break;
 
         case EXPECTING_FIELD_EOF:
         case EXPECTING_ROW_EOF:
-            handle_eof(pPacket);
+            handle_eof(packet);
             break;
 
         case SUPPRESSING_RESPONSE:
@@ -396,7 +390,7 @@ bool MaskingFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& do
     int rv;
     if (m_state != SUPPRESSING_RESPONSE)
     {
-        rv = FilterSession::clientReply(mxs::gwbufptr_to_gwbuf(pPacket), down, reply);
+        rv = FilterSession::clientReply(std::move(packet), down, reply);
     }
     else
     {
@@ -407,9 +401,9 @@ bool MaskingFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& do
     return rv;
 }
 
-void MaskingFilterSession::handle_response(GWBUF* pPacket)
+void MaskingFilterSession::handle_response(GWBUF& packet)
 {
-    ComResponse response(pPacket);
+    ComResponse response(&packet);
 
     switch (response.type())
     {
@@ -443,9 +437,9 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
     }
 }
 
-void MaskingFilterSession::handle_field(GWBUF* pPacket)
+void MaskingFilterSession::handle_field(GWBUF& packet)
 {
-    ComQueryResponse::ColumnDef column_def(pPacket);
+    ComQueryResponse::ColumnDef column_def(&packet);
 
     if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)     // Not particularly likely...
     {
@@ -465,9 +459,9 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
     }
 }
 
-void MaskingFilterSession::handle_eof(GWBUF* pPacket)
+void MaskingFilterSession::handle_eof(GWBUF& packet)
 {
-    ComResponse response(pPacket);
+    ComResponse response(&packet);
 
     if (response.is_eof())
     {
@@ -504,9 +498,9 @@ void warn_of_type_mismatch(const MaskingRules::Rule& rule)
 }
 }
 
-void MaskingFilterSession::handle_row(GWBUF* pPacket)
+void MaskingFilterSession::handle_row(GWBUF& packet)
 {
-    ComPacket response(pPacket);
+    ComPacket response(&packet);
 
     if ((response.payload_len() == ComEOF::PAYLOAD_LEN)
         && (ComResponse(response).type() == ComResponse::EOF_PACKET))
@@ -621,29 +615,29 @@ void MaskingFilterSession::mask_values(ComPacket& response)
     }
 }
 
-bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, const char* zHost)
+bool MaskingFilterSession::is_function_used(const GWBUF& packet, const char* zUser, const char* zHost)
 {
     bool is_used = false;
 
     auto pred1 = [this, zUser, zHost](const Parser::FieldInfo& field_info) {
-            const MaskingRules::Rule* pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
+        const MaskingRules::Rule* pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
 
-            return pRule ? true : false;
-        };
+        return pRule ? true : false;
+    };
 
     auto pred2 = [&pred1](const Parser::FunctionInfo& function_info) {
-            const Parser::FieldInfo* begin = function_info.fields;
-            const Parser::FieldInfo* end = begin + function_info.n_fields;
+        const Parser::FieldInfo* begin = function_info.fields;
+        const Parser::FieldInfo* end = begin + function_info.n_fields;
 
-            auto i = std::find_if(begin, end, pred1);
+        auto i = std::find_if(begin, end, pred1);
 
-            return i != end;
-        };
+        return i != end;
+    };
 
     const Parser::FunctionInfo* pInfos;
     size_t nInfos;
 
-    parser().get_function_info(*pPacket, &pInfos, &nInfos);
+    parser().get_function_info(packet, &pInfos, &nInfos);
 
     const Parser::FunctionInfo* begin = pInfos;
     const Parser::FunctionInfo* end = begin + nInfos;
@@ -664,32 +658,32 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
     return is_used;
 }
 
-bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost)
+bool MaskingFilterSession::is_variable_defined(const GWBUF& packet, const char* zUser, const char* zHost)
 {
-    mxb_assert(Parser::type_mask_contains(parser().get_type_mask(*pPacket), mxs::sql::TYPE_USERVAR_WRITE));
+    mxb_assert(Parser::type_mask_contains(parser().get_type_mask(packet), mxs::sql::TYPE_USERVAR_WRITE));
 
     bool is_defined = false;
 
     auto pred = [this, zUser, zHost](const Parser::FieldInfo& field_info) {
-            bool rv = false;
+        bool rv = false;
 
-            if (field_info.column ==  "*")
-            {
-                // If "*" is used, then we must block if there is any rule for the current user.
-                rv = m_config.sRules->has_rule_for(zUser, zHost);
-            }
-            else
-            {
-                rv = m_config.sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
-            }
+        if (field_info.column == "*")
+        {
+            // If "*" is used, then we must block if there is any rule for the current user.
+            rv = m_config.sRules->has_rule_for(zUser, zHost);
+        }
+        else
+        {
+            rv = m_config.sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+        }
 
-            return rv;
-        };
+        return rv;
+    };
 
     const Parser::FieldInfo* pInfos;
     size_t nInfos;
 
-    parser().get_field_info(*pPacket, &pInfos, &nInfos);
+    parser().get_field_info(packet, &pInfos, &nInfos);
 
     const Parser::FieldInfo* begin = pInfos;
     const Parser::FieldInfo* end = begin + nInfos;
@@ -718,9 +712,10 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     return is_defined;
 }
 
-bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost)
+bool MaskingFilterSession::is_union_or_subquery_used(const GWBUF& packet, const char* zUser,
+                                                     const char* zHost)
 {
-    mxb_assert(parser().get_operation(*pPacket) == mxs::sql::OP_SELECT);
+    mxb_assert(parser().get_operation(packet) == mxs::sql::OP_SELECT);
     mxb_assert(m_config.check_unions || m_config.check_subqueries);
 
     bool is_used = false;
@@ -738,28 +733,28 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
     }
 
     auto pred = [this, mask, zUser, zHost](const Parser::FieldInfo& field_info) {
-            bool rv = false;
+        bool rv = false;
 
-            if (field_info.context & mask)
+        if (field_info.context & mask)
+        {
+            if (field_info.column == "*")
             {
-                if (field_info.column == "*")
-                {
-                    // If "*" is used, then we must block if there is any rule for the current user.
-                    rv = m_config.sRules->has_rule_for(zUser, zHost);
-                }
-                else
-                {
-                    rv = m_config.sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
-                }
+                // If "*" is used, then we must block if there is any rule for the current user.
+                rv = m_config.sRules->has_rule_for(zUser, zHost);
             }
+            else
+            {
+                rv = m_config.sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+            }
+        }
 
-            return rv;
-        };
+        return rv;
+    };
 
     const Parser::FieldInfo* pInfos;
     size_t nInfos;
 
-    parser().get_field_info(*pPacket, &pInfos, &nInfos);
+    parser().get_field_info(packet, &pInfos, &nInfos);
 
     const Parser::FieldInfo* begin = pInfos;
     const Parser::FieldInfo* end = begin + nInfos;

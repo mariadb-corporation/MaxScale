@@ -57,21 +57,21 @@ private:
         SUPPRESSING_RESPONSE
     };
 
-    bool check_query(GWBUF* pPacket);
-    bool check_textual_query(GWBUF* pPacket);
-    bool check_binary_query(GWBUF* pPacket);
+    bool check_query(const GWBUF& packet);
+    bool check_textual_query(const GWBUF& packet);
+    bool check_binary_query(const GWBUF& packet);
 
-    void handle_response(GWBUF* pPacket);
-    void handle_field(GWBUF* pPacket);
-    void handle_row(GWBUF* pPacket);
-    void handle_eof(GWBUF* pPacket);
+    void handle_response(GWBUF& packet);
+    void handle_field(GWBUF& packet);
+    void handle_row(GWBUF& packet);
+    void handle_eof(GWBUF& packet);
     void handle_large_payload();
 
     void mask_values(ComPacket& response);
 
-    bool is_function_used(GWBUF* pPacket, const char* zUser, const char* zHost);
-    bool is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost);
-    bool is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost);
+    bool is_function_used(const GWBUF& packet, const char* zUser, const char* zHost);
+    bool is_variable_defined(const GWBUF& packet, const char* zUser, const char* zHost);
+    bool is_union_or_subquery_used(const GWBUF& packet, const char* zUser, const char* zHost);
 
 private:
 
