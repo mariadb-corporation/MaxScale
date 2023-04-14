@@ -111,7 +111,7 @@ void TeeSession::handle_reply(const mxs::Reply& reply, bool is_branch)
     {
         MXB_INFO("Both replies received, routing queued query: %s",
                  get_sql_string(m_queue.front()).c_str());
-        m_pSession->delay_routing(this, std::move(m_queue.front()), 0);
+        m_pSession->delay_routing(this, std::move(m_queue.front()), 0ms);
         m_queue.pop_front();
     }
 }

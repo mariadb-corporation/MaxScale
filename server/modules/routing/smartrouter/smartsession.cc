@@ -412,7 +412,7 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
         if (m_queued)
         {
             MXB_INFO("Routing queued query: %s", get_sql_string(m_queued).c_str());
-            m_pSession->delay_routing(this, std::move(m_queued), 0);
+            m_pSession->delay_routing(this, std::move(m_queued), 0ms);
             m_queued.clear();
         }
     });

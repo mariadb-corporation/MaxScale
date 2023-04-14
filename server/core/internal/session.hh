@@ -309,8 +309,8 @@ public:
 
     size_t varying_size() const override final;
 
-    void delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds) override final;
-    void delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds,
+    void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay) override final;
+    void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
                        std::function<bool(GWBUF &&)>&& fn) override final;
 
 protected:

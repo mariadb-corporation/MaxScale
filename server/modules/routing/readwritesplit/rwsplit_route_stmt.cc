@@ -68,7 +68,7 @@ void RWSplitSession::retry_query(GWBUF&& querybuf, int delay)
 
     // Route the query again later
     m_pSession->delay_routing(
-        this, std::move(querybuf), delay, [this](GWBUF&& buffer){
+        this, std::move(querybuf), std::chrono::seconds(delay), [this](GWBUF&& buffer){
         mxb_assert(m_pending_retries > 0);
         --m_pending_retries;
 

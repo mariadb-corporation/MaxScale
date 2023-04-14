@@ -474,9 +474,9 @@ public:
      *
      * @param down    The downstream component, either a filter or a router
      * @param buffer  The buffer to route
-     * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
+     * @param delay   How long to wait before routing the query. Use 0 for immediate re-routing.
      */
-    virtual void delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds) = 0;
+    virtual void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay) = 0;
 
     /**
      * @brief Route the query again but using a custom function
@@ -485,10 +485,11 @@ public:
      *
      * @param down    The downstream component, either a filter or a router
      * @param buffer  The buffer to route
-     * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
+     * @param delay   How long to wait before routing the query. Use 0 for immediate re-routing.
      * @param fn      The function to call
      */
-    virtual void delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds, std::function<bool(GWBUF &&)>&& fn) = 0;
+    virtual void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
+                               std::function<bool(GWBUF &&)>&& fn) = 0;
 
     /**
      * Returns memory statistics of the session.

@@ -652,7 +652,7 @@ uint32_t session_get_session_trace()
     return this_unit.session_trace;
 }
 
-void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds,
+void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
                             std::function<bool(GWBUF &&)>&& fn)
 {
     auto sbuf = std::make_shared<GWBUF>(std::move(buffer));
@@ -679,14 +679,12 @@ void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds,
         return false;
     };
 
-    int32_t delay = 1 + seconds * 1000;
-
-    dcall(std::chrono::milliseconds(delay), std::move(cb));
+    dcall(delay + 1ms, std::move(cb));
 }
 
-void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, int seconds)
+void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay)
 {
-    delay_routing(down, std::move(buffer), seconds, [this, down](GWBUF&& buffer){
+    delay_routing(down, std::move(buffer), delay, [this, down](GWBUF&& buffer){
         return down->routeQuery(std::move(buffer));
     });
 }

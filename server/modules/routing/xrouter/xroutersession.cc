@@ -589,12 +589,12 @@ bool XRouterSession::retry_secondary_query(mxs::Backend* backend)
         //
         // TODO: The GWBUF argument to delay_routing is unnecessary in this case. A similar function for
         //       safely delaying execution of router code would be useful.
-        m_pSession->delay_routing(this, GWBUF {}, 1, std::move(func));
+        m_pSession->delay_routing(this, GWBUF {}, 1s, std::move(func));
     }
     else if (mxb::Clock::now() - m_retry_start < m_config->retry_timeout)
     {
         MXB_SINFO("Retrying query again.");
-        m_pSession->delay_routing(this, GWBUF {}, 1, std::move(func));
+        m_pSession->delay_routing(this, GWBUF {}, 1s, std::move(func));
     }
     else
     {

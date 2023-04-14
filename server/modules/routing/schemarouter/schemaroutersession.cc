@@ -857,7 +857,7 @@ void SchemaRouterSession::route_queued_query()
 
     MXB_INFO("Routing queued query: %s", get_sql_string(tmp).c_str());
 
-    m_pSession->delay_routing(this, std::move(tmp), 0);
+    m_pSession->delay_routing(this, std::move(tmp), 0ms);
 }
 
 bool SchemaRouterSession::delay_routing()
