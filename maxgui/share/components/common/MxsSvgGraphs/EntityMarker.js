@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getLinkStyles, getRelatedLinks } from '@share/components/common/MxsSvgGraphs/utils'
+import { getLinkStyles } from '@share/components/common/MxsSvgGraphs/utils'
 import { TARGET_POS, CARDINALITY_SYMBOLS } from '@share/components/common/MxsSvgGraphs/config'
 
 export default class EntityMarker {
@@ -54,19 +54,20 @@ export default class EntityMarker {
         return getLinkStyles({ link, styleNamePath, linkConfig: this.linkConfig })
     }
     /**
-     * @param {Object} param.containerEle - Container element of the marker
+     * @param {Object} param.linkCtr - Link container element
      * @param {String} param.type - enter or update
      * @param {String} param.isSrc - whether the marker is placed on the source or target
      **/
-    draw({ containerEle, type, isSrc = false }) {
+    draw({ linkCtr, type, isSrc = false }) {
         const scope = this
         const { markerClass } = this.config
         const stroke = d => scope.getStyle(d, 'color')
+        const strokeWidth = d => scope.getStyle(d, 'strokeWidth')
         const markerCtrClass = `entity-marker-${isSrc ? 'src' : 'target'}`
-        const markerPathClass = `${markerClass} ${markerClass}-${isSrc ? 'src' : 'target'}`
+        const markerPathClass = `${markerClass}-${isSrc ? 'src' : 'target'}`
         switch (type) {
             case 'enter':
-                containerEle
+                linkCtr
                     .insert('g')
                     .attr('class', markerCtrClass)
                     .attr('transform', d => scope.transform({ d, isSrc }))
@@ -74,14 +75,17 @@ export default class EntityMarker {
                     .attr('class', markerPathClass)
                     .attr('fill', 'white')
                     .attr('stroke', stroke)
+                    .attr('stroke-width', strokeWidth)
                     .attr('d', d => scope.getMarker({ d, isSrc }))
                 break
             case 'update':
-                containerEle
+                linkCtr
                     .select(`g.${markerCtrClass}`)
                     .attr('transform', d => scope.transform({ d, isSrc }))
                     .select(`path.${markerPathClass}`)
+                    .attr('fill', 'white')
                     .attr('stroke', stroke)
+                    .attr('stroke-width', strokeWidth)
                     .attr('d', d => scope.getMarker({ d, isSrc }))
                 break
         }
@@ -92,33 +96,5 @@ export default class EntityMarker {
         } = d
         const [src, target] = type.split(':')
         return CARDINALITY_SYMBOLS[isSrc ? src : target]
-    }
-    /**
-     * Change the style of a link markers or multiple link markers
-     */
-    changeMarkersOfLinkStyle({ elements, eventType }) {
-        const scope = this
-        const { markerClass } = this.config
-        elements
-            .selectAll(`path.${markerClass}`)
-            .attr('stroke', d => scope.getStyle(d, 'color'))
-            .attr('stroke-width', d =>
-                eventType
-                    ? scope.getStyle(d, `${eventType}.strokeWidth`)
-                    : scope.getStyle(d, 'strokeWidth')
-            )
-    }
-    /**
-     * Change style of markers having the same source and target
-     */
-    changeMarkersStyle({ link, nodeIdPath, eventType }) {
-        this.changeMarkersOfLinkStyle({
-            elements: getRelatedLinks({
-                link,
-                linkCtrClass: this.linkConfig.containerClass,
-                nodeIdPath,
-            }),
-            eventType,
-        })
     }
 }

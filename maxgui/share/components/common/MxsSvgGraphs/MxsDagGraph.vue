@@ -77,8 +77,10 @@ export default {
             dynNodeSizeMap: {},
             arrowHeadHeight: 12,
             isDraggingNode: false,
-            highlightedLinks: [],
+            chosenLinks: [],
+            graphConfig: null,
             linkInstance: null,
+            dagLinks: [],
         }
     },
     computed: {
@@ -114,14 +116,6 @@ export default {
                 if (!this.$helpers.lodash.isEqual(v, oV)) this.graphNodes = v
             },
         },
-        isDraggingNode(v) {
-            for (const link of this.highlightedLinks)
-                this.linkInstance.changeLinksStyle({
-                    link,
-                    nodeIdPath: 'data.id',
-                    eventType: v ? EVENT_TYPES.DRAGGING : EVENT_TYPES.NONE,
-                })
-        },
     },
     mounted() {
         if (this.data.length) this.draw()
@@ -130,7 +124,7 @@ export default {
         draw() {
             this.initLinkInstance()
             this.computeLayout(this.data)
-            this.handleDrawLinks()
+            this.drawLinks()
             this.setGraphNodeCoordMap()
         },
         /**
@@ -152,6 +146,7 @@ export default {
 
             const { width, height } = this.layout(this.dag)
             this.dagDim = { width, height }
+            this.dagLinks = this.dag.links()
             this.repositioning()
         },
         setGraphNodeCoordMap() {
@@ -166,8 +161,8 @@ export default {
             }, {})
         },
         initLinkInstance() {
-            const graphConfig = new GraphConfig({ link: { color: this.colorize } })
-            this.linkInstance = new Link(graphConfig.link)
+            this.graphConfig = new GraphConfig({ link: { color: this.colorize } })
+            this.linkInstance = new Link(this.graphConfig.link)
         },
         /**
          * @param {Object} node - dag node
@@ -178,9 +173,8 @@ export default {
         },
         // Repositioning links by mutating x,y value
         repositioning() {
-            let links = this.dag.links()
             // repositioning links so that links are drawn at the middle point of the edge
-            links.forEach(d => {
+            this.dagLinks.forEach(d => {
                 let shouldRevert = this.handleRevertDiagonal(d)
                 const src = d.points[0]
                 const target = d.points[d.points.length - 1]
@@ -356,14 +350,14 @@ export default {
                     break
             }
         },
-        handleDrawLinks() {
+        drawLinks() {
             this.linkInstance.drawLinks({
                 containerEle: this.svgGroup,
-                data: this.dag.links(),
+                data: this.dagLinks,
                 nodeIdPath: 'data.id',
                 pathGenerator: this.pathGenerator,
-                onEnter: linkCtr => this.drawArrowHead({ linkCtr, type: 'enter' }),
-                onUpdate: linkCtr => this.drawArrowHead({ linkCtr, type: 'update' }),
+                afterEnter: this.drawArrowHead,
+                afterUpdate: this.drawArrowHead,
             })
         },
         //-------------------------draggable methods---------------------------
@@ -373,7 +367,7 @@ export default {
          * @param {Number} param.diffX - difference of old coordinate x and new coordinate x
          * @param {Number} param.diffY - difference of old coordinate y and new coordinate y
          */
-        redrawLinks({ nodeId, diffX, diffY }) {
+        updateLinkPositions({ nodeId, diffX, diffY }) {
             const dagNodes = this.dag.descendants()
             const dagNode = dagNodes.find(d => d.data.id === nodeId)
             // change coord of child links
@@ -395,14 +389,22 @@ export default {
                 point.y = point.y + diffY
             })
             // store links so that style applied to them can be reset to default after finish dragging
-            this.highlightedLinks = [...dagNode.ichildLinks(), ...parentLinks]
-            this.handleDrawLinks()
+            this.chosenLinks = this.dagLinks.filter(
+                d => d.source.data.id === nodeId || d.target.data.id === nodeId
+            )
+        },
+        tmpUpdateChosenLinksStyle(eventType) {
+            this.linkInstance.tmpUpdateLinksStyle({ links: this.chosenLinks, eventType })
+            this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
+            this.updateLinkPositions({ nodeId: node.id, diffX, diffY })
+            if (!this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.DRAGGING)
             this.isDraggingNode = true
-            this.redrawLinks({ nodeId: node.id, diffX, diffY })
+            this.drawLinks()
         },
         onNodeDragEnd() {
+            if (this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
             this.isDraggingNode = false
         },
     },

@@ -124,15 +124,14 @@ export default {
             graphLinks: [],
             simulation: null,
             defNodeSize: { width: 200, height: 100 },
-            highlightLinksMode: EVENT_TYPES.NONE,
-            highlightedLinks: [],
+            chosenLinks: [],
             entityHeaderHeight: 32,
             entityLink: null,
             //TODO: Add input to change this value
             linkShapeType: LINK_SHAPES.ORTHO,
             graphConfig: null,
             strokeWidth: 1,
-            isDragging: false,
+            isDraggingNode: false,
         }
     },
     computed: {
@@ -141,7 +140,12 @@ export default {
         },
         erdGraphConfig() {
             return {
-                link: { strokeWidth: this.strokeWidth, opacity: 1, dashArr: '0' },
+                link: {
+                    color: '#424f62',
+                    strokeWidth: this.strokeWidth,
+                    opacity: 1,
+                    dashArr: '5',
+                },
                 marker: { width: 18 },
                 linkShape: {
                     type: this.linkShapeType,
@@ -151,13 +155,6 @@ export default {
         },
     },
     watch: {
-        highlightLinksMode(v) {
-            for (const link of this.highlightedLinks)
-                this.entityLink.changeEntityLinkStyle({
-                    link,
-                    eventType: v,
-                })
-        },
         // wait until graph-nodes sizes are calculated
         areSizesCalculated(v) {
             if (v) {
@@ -239,38 +236,52 @@ export default {
                 })
             )
         },
-        setHighlightedLinks(node) {
-            this.highlightedLinks = this.getLinks().filter(
-                d => d.source.id === node.id || d.target.id === node.id
-            )
-        },
-        onNodeDrag({ node, diffX, diffY }) {
-            const nodeData = this.graphNodes.find(n => n.id === node.id)
-            nodeData.x = nodeData.x + diffX
-            nodeData.y = nodeData.y + diffY
-            this.setHighlightedLinks(node)
-            this.drawLinks()
-            this.highlightLinksMode = EVENT_TYPES.DRAGGING
-            this.isDragging = true
-        },
-        onNodeDragEnd() {
-            this.highlightLinksMode = EVENT_TYPES.NONE
-            this.isDragging = false
-        },
         getBorderStyle(node) {
             const { highlightColor } = node.data
             const style = `1px solid ${highlightColor}`
             return style
         },
+        setChosenLinks(node) {
+            this.chosenLinks = this.getLinks().filter(
+                d => d.source.id === node.id || d.target.id === node.id
+            )
+        },
+        /**
+         * TODO: Change the color of links and highlight FK columns
+         */
+        tmpUpdateChosenLinksStyle(eventType) {
+            this.entityLink.tmpUpdateLinksStyle({
+                links: this.chosenLinks,
+                eventType: eventType,
+            })
+            this.drawLinks()
+        },
+        onNodeDrag({ node, diffX, diffY }) {
+            const nodeData = this.graphNodes.find(n => n.id === node.id)
+            nodeData.x = nodeData.x + diffX
+            nodeData.y = nodeData.y + diffY
+            this.setChosenLinks(node)
+            if (!this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.DRAGGING)
+            this.isDraggingNode = true
+            /**
+             * drawLinks is called inside tmpUpdateChosenLinksStyle method but it run once.
+             * To ensure that the paths of links continue to be redrawn, call it again while
+             * dragging the node
+             */
+            this.drawLinks()
+        },
+        onNodeDragEnd() {
+            if (this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+            this.isDraggingNode = false
+        },
         mouseenterNode({ node }) {
-            if (!this.isDragging) {
-                this.setHighlightedLinks(node)
-                //TODO: Change the color of links and highlight FK columns
-                this.highlightLinksMode = EVENT_TYPES.HOVER
+            if (!this.isDraggingNode) {
+                this.setChosenLinks(node)
+                this.tmpUpdateChosenLinksStyle(EVENT_TYPES.HOVER)
             }
         },
         mouseleaveNode() {
-            if (!this.isDragging) this.highlightLinksMode = EVENT_TYPES.NONE
+            if (!this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
         },
     },
 }

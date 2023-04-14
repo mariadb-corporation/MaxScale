@@ -10,23 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { select as d3Select, selectAll as d3SelectAll } from 'd3-selection'
 import { lodash } from '@share/utils/helpers'
 import { t } from 'typy'
 
-export function getLinkCtr(id) {
-    return d3Select(`#${id}`)
-}
-/**
- * @param {Object} param.link - link object
- * @param {String} param.linkCtrClass - Link container class
- * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
- */
-export function getRelatedLinks({ link, linkCtrClass, nodeIdPath = 'id' }) {
-    const srcId = lodash.objGet(link.source, nodeIdPath)
-    const targetId = lodash.objGet(link.target, nodeIdPath)
-    return d3SelectAll(`.${linkCtrClass}[src-id="${srcId}"][target-id="${targetId}"]`)
-}
 /**
  *
  * @param {Object} param.link - link data

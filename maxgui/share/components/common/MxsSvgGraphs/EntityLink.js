@@ -13,8 +13,7 @@
 import Link from '@share/components/common/MxsSvgGraphs/Link'
 import EntityLinkShape from '@share/components/common/MxsSvgGraphs/EntityLinkShape'
 import EntityMarker from '@share/components/common/MxsSvgGraphs/EntityMarker'
-import { TARGET_POS, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
-import { getLinkCtr } from '@share/components/common/MxsSvgGraphs/utils'
+import { TARGET_POS } from '@share/components/common/MxsSvgGraphs/config'
 import { lodash } from '@share/utils/helpers'
 
 export default class EntityLink extends Link {
@@ -113,20 +112,18 @@ export default class EntityLink extends Link {
             return acc
         }, {})
     }
-
-    pathGenerator(link) {
-        const { points, yPosSrcTarget } = this.shape.genPathPoints(link)
-        this.mutateLinkData({ link, key: 'pathPoints', value: points })
-        this.mutateLinkData({ link, key: 'srcYPos', value: yPosSrcTarget.srcYPos })
-        this.mutateLinkData({ link, key: 'targetYPos', value: yPosSrcTarget.targetYPos })
-        return this.shape.createPath(points)
-    }
-
     /**
      * Repositions overlapped points for each entity,
      * so that each point is visible and aligned in the row.
      */
     repositionOverlappedPoints() {
+        this.data.forEach(link => {
+            this.setTargetXPos(link)
+            const { points, yPosSrcTarget } = this.shape.genPathPoints(link)
+            this.mutateLinkData({ link, key: 'pathPoints', value: points })
+            this.mutateLinkData({ link, key: 'srcYPos', value: yPosSrcTarget.srcYPos })
+            this.mutateLinkData({ link, key: 'targetYPos', value: yPosSrcTarget.targetYPos })
+        })
         const { rowHeight, rowOffset } = this.graphConfig.linkShape.entitySizeConfig
         Object.values(this.overlappedPoints()).forEach(points => {
             // divide the row into points.length equal parts
@@ -135,7 +132,6 @@ export default class EntityLink extends Link {
             points.forEach((point, i) => {
                 const {
                     linkData: {
-                        id,
                         pathPosData: { pathPoints, srcYPos, targetYPos },
                     },
                     isSrc,
@@ -143,63 +139,33 @@ export default class EntityLink extends Link {
                 const newY = (isSrc ? srcYPos.top : targetYPos.top) + (k * i + k)
                 // update coord
                 pathPoints[isSrc ? 'y0' : 'y1'] = newY
-                //Redraw the link
-                const containerEle = getLinkCtr(id)
-                this.drawPaths({
-                    containerEle,
-                    type: 'update',
-                    pathGenerator: this.shape.createPath(pathPoints),
-                })
-                this.drawMarkers({ containerEle, type: 'update' })
             })
         })
     }
     /**
      * Draw source && target markers
-     * @param {Object} param.containerEle - Container element of the marker
+     * @param {Object} param.linkCtr - Link container element
      * @param {String} param.type - enter or update
      */
-    drawMarkers({ containerEle, type }) {
-        this.marker.draw({ containerEle, type, isSrc: true })
-        this.marker.draw({ containerEle, type })
+    drawMarkers({ linkCtr, type }) {
+        this.marker.draw({ linkCtr, type, isSrc: true })
+        this.marker.draw({ linkCtr, type })
     }
-
     /**
      * @param {Object} param.containerEle - container element of links to be drawn
      * @param {String} param.data - Links data
      */
     draw({ containerEle, data }) {
         this.data = data
+        this.repositionOverlappedPoints()
         this.drawLinks({
             containerEle,
             data,
-            pathGenerator: this.pathGenerator.bind(this),
-            onEnter: linkCtr => linkCtr.each(this.setTargetXPos.bind(this)),
-            onUpdate: linkCtr => linkCtr.each(this.setTargetXPos.bind(this)),
-            afterEnter: linkCtr =>
-                linkCtr.each(link =>
-                    this.drawMarkers({ containerEle: getLinkCtr(link.id), type: 'enter' })
-                ),
-            afterUpdate: linkCtr =>
-                linkCtr.each(link =>
-                    this.drawMarkers({ containerEle: getLinkCtr(link.id), type: 'update' })
-                ),
-            mouseOver: linkCtr =>
-                this.marker.changeMarkersOfLinkStyle({
-                    elements: linkCtr,
-                    eventType: EVENT_TYPES.HOVER,
-                }),
-            mouseOut: linkCtr =>
-                this.marker.changeMarkersOfLinkStyle({
-                    elements: linkCtr,
-                    eventType: EVENT_TYPES.NONE,
-                }),
+            pathGenerator: link => this.shape.createPath(link.pathPosData.pathPoints),
+            afterEnter: this.drawMarkers.bind(this),
+            afterUpdate: this.drawMarkers.bind(this),
+            mouseOver: this.drawMarkers.bind(this),
+            mouseOut: this.drawMarkers.bind(this),
         })
-        this.repositionOverlappedPoints()
-    }
-
-    changeEntityLinkStyle(params) {
-        this.changeLinksStyle(params)
-        this.marker.changeMarkersStyle(params)
     }
 }
