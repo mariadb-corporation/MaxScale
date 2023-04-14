@@ -833,11 +833,6 @@ GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, std::string_view s
     return buffer;
 }
 
-GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg)
-{
-    return mxs::gwbuf_to_gwbufptr(create_error_packet(sequence, err_num, statemsg, msg));
-}
-
 // See: https://mariadb.com/kb/en/ok_packet/
 GWBUF create_ok_packet()
 {

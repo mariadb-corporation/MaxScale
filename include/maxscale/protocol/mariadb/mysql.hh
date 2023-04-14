@@ -268,8 +268,6 @@ bool trim_quotes(char* s);
 GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, std::string_view sqlstate,
                           std::string_view msg);
 
-GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg);
-
 /**
  * Extract error messages from buffers
  *
