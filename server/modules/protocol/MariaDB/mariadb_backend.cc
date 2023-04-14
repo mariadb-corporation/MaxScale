@@ -808,7 +808,7 @@ void MariaDBBackendConnection::normal_read()
             std::unique_ptr<GWBUF> sTmp_for_row_data;
             if (m_collect_rows)
             {
-                sTmp_for_row_data.reset(mxs::gwbuf_to_gwbufptr(stmt.shallow_clone()));
+                sTmp_for_row_data = std::make_unique<GWBUF>(stmt.shallow_clone());
             }
 
             thread_local mxs::ReplyRoute route;
