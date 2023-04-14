@@ -156,11 +156,9 @@ int test(mock::Session& session,
     mariases->set_autocommit(tc.trx_state == MYSQL_session::TRX_INACTIVE);
 
     string select(create_unique_select());
-    GWBUF* pStatement;
-    pStatement = mock::create_com_query(select);
 
     cout << "Performing select: \"" << select << "\"" << flush;
-    session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
+    session.route_query(mariadb::create_query(select));
 
     if (!router_session.idle())
     {
@@ -175,10 +173,8 @@ int test(mock::Session& session,
         mxb_assert(client.n_responses() == 1);
 
         // Let's do the select again.
-        pStatement = mock::create_com_query(select);
-
         cout << "Performing same select: \"" << select << "\"" << flush;
-        session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
+        session.route_query(mariadb::create_query(select));
 
         if (tc.should_use)
         {
@@ -216,10 +212,9 @@ int test(mock::Session& session,
             // A transaction, but not a read-only one.
 
             string update("UPDATE tbl SET a=1;");
-            pStatement = mock::create_com_query("UPDATE tbl SET a=1;");
 
             cout << "Performing update: \"" << update << "\"" << flush;
-            session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
+            session.route_query(mariadb::create_query(update));
 
             if (router_session.idle())
             {
@@ -233,10 +228,8 @@ int test(mock::Session& session,
                 router_session.respond();
 
                 // Let's make the select again.
-                pStatement = mock::create_com_query(select);
-
                 cout << "Performing select: \"" << select << "\"" << flush;
-                session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
+                session.route_query(mariadb::create_query(select));
 
                 if (router_session.idle())
                 {
@@ -260,10 +253,8 @@ int test(mock::Session& session,
         mariases->trx_state = MYSQL_session::TRX_INACTIVE;
         mariases->set_autocommit(true);
 
-        pStatement = mock::create_com_query(select);
-
         cout << "Performing select: \"" << select << "\"" << flush;
-        session.route_query(mxs::gwbufptr_to_gwbuf(pStatement));
+        session.route_query(mariadb::create_query(select));
 
         if (router_session.idle())
         {

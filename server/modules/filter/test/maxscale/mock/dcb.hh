@@ -13,7 +13,6 @@
  */
 #pragma once
 
-#include "mock.hh"
 #include <maxscale/dcb.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/session.hh>

@@ -32,7 +32,6 @@ add_executable(test_cacheoptions
   test_cacheoptions.cc
 
   ../../test/filtermodule.cc
-  ../../test/mock.cc
   ../../test/mock_backend.cc
   ../../test/mock_client.cc
   ../../test/mock_dcb.cc

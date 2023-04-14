@@ -13,7 +13,6 @@
  */
 #pragma once
 
-#include "mock.hh"
 #include <maxscale/listener.hh>
 #include "client.hh"
 #include <maxscale/protocol/mariadb/protocol_classes.hh>

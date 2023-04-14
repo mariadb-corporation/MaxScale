@@ -19,7 +19,6 @@
 #include <maxscale/router.hh>
 #include <maxscale/session.hh>
 #include "../filtermodule.hh"
-#include "mock.hh"
 #include "session.hh"
 
 namespace maxscale
