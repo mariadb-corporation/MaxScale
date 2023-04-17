@@ -16,6 +16,7 @@ export default class EntityLinkShape {
     constructor(graphConfig) {
         this.config = graphConfig.linkShape
         this.markerConfig = graphConfig.marker
+        this.linkConfig = graphConfig.link
     }
     setData(data) {
         const {
@@ -47,30 +48,35 @@ export default class EntityLinkShape {
 
     /**
      * Return the y position of a node based on its dynamic height and
-     * the provided column name
+     * the provided attribute name
      * @param {Object} param.node - The node to reposition.
-     * @param {String} param.col - The name of the relational column
+     * @param {String} param.attr - The name of the relational attribute
      * @param {Number} param.nodeHeight - Height of the node
      * @returns {Object} An object containing the y positions (top, center, bottom) of the node at
-     * the provided relational column
+     * the provided relational attribute
      */
-    getColYPos({ node, col, nodeHeight }) {
+    getColYPos({ node, attr, nodeHeight }) {
         const {
             entitySizeConfig: { rowHeight, rowOffset, nodeOffsetHeight },
         } = this.config
-
-        const colIdx = node.data.cols.findIndex(c => c.name === col)
-        const center =
-            node.y +
-            nodeHeight / 2 -
-            (nodeHeight - nodeOffsetHeight) +
-            colIdx * rowHeight +
-            rowHeight / 2
+        const { isAttrToAttr } = this.linkConfig
+        const colIdx = node.data.attrs.findIndex(c => c.name === attr)
+        const center = isAttrToAttr
+            ? node.y +
+              nodeHeight / 2 -
+              (nodeHeight - nodeOffsetHeight) +
+              colIdx * rowHeight +
+              rowHeight / 2
+            : node.y
 
         return {
-            top: center - (rowHeight - rowOffset) / 2,
+            top: isAttrToAttr
+                ? center - (rowHeight - rowOffset) / 2
+                : center - nodeHeight / 2 + rowOffset,
             center,
-            bottom: center + (rowHeight - rowOffset) / 2,
+            bottom: isAttrToAttr
+                ? center + (rowHeight - rowOffset) / 2
+                : center + nodeHeight / 2 - rowOffset,
         }
     }
 
@@ -79,17 +85,17 @@ export default class EntityLinkShape {
      * @returns {Object} An object containing the new y positions of the source and target nodes.
      */
     getYPositions() {
-        const { source_col, target_col } = this.relationshipData
+        const { source_attr, target_attr } = this.relationshipData
         const { srcHeight, targetHeight } = this
         return {
             srcYPos: this.getColYPos({
                 node: this.source,
-                col: source_col,
+                attr: source_attr,
                 nodeHeight: srcHeight,
             }),
             targetYPos: this.getColYPos({
                 node: this.target,
-                col: target_col,
+                attr: target_attr,
                 nodeHeight: targetHeight,
             }),
         }

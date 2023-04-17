@@ -53,6 +53,13 @@ export default () => ({
             dashArr: '0',
             opacity: 1,
         },
+        /**
+         * false: Link drawn from source node center to target node center.
+         * true: Link drawn from source node attribute to target node attribute. Each
+         * link must contain relationshipData.
+         * e.g.  relationshipData: { source_attr: 'id', target_attr: 'id' }
+         */
+        isAttrToAttr: false,
     },
     marker: {
         width: 18,

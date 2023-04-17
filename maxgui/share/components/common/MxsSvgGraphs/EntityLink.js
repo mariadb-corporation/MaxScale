@@ -59,7 +59,7 @@ export default class EntityLink extends Link {
         this.mutateLinkData({ link, key: 'targetPos', value })
     }
 
-    // flat links into points and caching its link data and positions of the relational column
+    // flat links into points and caching its link data and positions of the relational attributes
     connPoints() {
         return Object.values(this.data).reduce((points, link) => {
             const {
@@ -124,18 +124,28 @@ export default class EntityLink extends Link {
             this.mutateLinkData({ link, key: 'srcYPos', value: yPosSrcTarget.srcYPos })
             this.mutateLinkData({ link, key: 'targetYPos', value: yPosSrcTarget.targetYPos })
         })
-        const { rowHeight, rowOffset } = this.graphConfig.linkShape.entitySizeConfig
+        const {
+            link: { isAttrToAttr },
+            linkShape: {
+                entitySizeConfig: { rowHeight, rowOffset },
+            },
+        } = this.graphConfig
         Object.values(this.overlappedPoints()).forEach(points => {
+            const parts = points.length + 1
             // divide the row into points.length equal parts
-            const k = (rowHeight - rowOffset) / (points.length + 1)
+            let k = (rowHeight - rowOffset) / parts
+
             // reposition points
             points.forEach((point, i) => {
                 const {
                     linkData: {
                         pathPosData: { pathPoints, srcYPos, targetYPos },
+                        source,
+                        target,
                     },
                     isSrc,
                 } = point
+                if (!isAttrToAttr) k = (isSrc ? source.size.height : target.size.height) / parts
                 const newY = (isSrc ? srcYPos.top : targetYPos.top) + (k * i + k)
                 // update coord
                 pathPoints[isSrc ? 'y0' : 'y1'] = newY

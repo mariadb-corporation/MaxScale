@@ -45,26 +45,26 @@
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="(col, i) in node.data.cols"
-                                    :key="`key_${node.id}_${col.name}`"
+                                    v-for="(attr, i) in node.data.attrs"
+                                    :key="`key_${node.id}_${attr.name}`"
                                     :style="{ height: `${entitySizeConfig.rowHeight}px` }"
                                 >
                                     <td
                                         class="px-2"
                                         :class="{
                                             'rounded-bl-lg rounded-br-lg':
-                                                i === node.data.cols.length - 1,
+                                                i === node.data.attrs.length - 1,
                                         }"
                                         :style="{
                                             borderLeft: getBorderStyle(node),
                                             borderRight: getBorderStyle(node),
                                             borderBottom:
-                                                i === node.data.cols.length - 1
+                                                i === node.data.attrs.length - 1
                                                     ? getBorderStyle(node)
                                                     : 'none',
                                         }"
                                     >
-                                        {{ col.name }}
+                                        {{ attr.name }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -127,11 +127,12 @@ export default {
             chosenLinks: [],
             entityHeaderHeight: 32,
             entityLink: null,
-            //TODO: Add input to change this value
-            linkShapeType: LINK_SHAPES.ORTHO,
             graphConfig: null,
             strokeWidth: 1,
             isDraggingNode: false,
+            //TODO: Add inputs to change below values
+            isAttrToAttr: false,
+            linkShapeType: LINK_SHAPES.ORTHO,
         }
     },
     computed: {
@@ -145,6 +146,7 @@ export default {
                     strokeWidth: this.strokeWidth,
                     opacity: 1,
                     dashArr: '5',
+                    isAttrToAttr: this.isAttrToAttr,
                 },
                 marker: { width: 18 },
                 linkShape: {
