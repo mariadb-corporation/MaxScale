@@ -11,8 +11,10 @@
  * Public License.
  */
 
-#include <openssl/rand.h>
 #include "scram-sha-256.hh"
+#include <openssl/rand.h>
+#include <maxbase/format.hh>
+#include "../pgprotocoldata.hh"
 
 using std::string;
 using std::string_view;
@@ -239,7 +241,67 @@ std::string_view ScramClientAuth::read_sasl_response(const GWBUF& input)
  */
 GWBUF ScramClientAuth::sasl_handle_client_first_msg(std::string_view sasl_data, PgProtocolData& session)
 {
-    return GWBUF();
+    GWBUF rval;
+    // The client message has several fields that are not essential for the currently supported features.
+    // Only check that they seem reasonable. Closer inspection may be added later.
+
+    if (sasl_data.length() >= 8)
+    {
+        // Should start with either 'n,,' or 'y,,'.
+        auto start = sasl_data.substr(0, 3);
+        if (start == "n,," || start == "y,,")
+        {
+            m_cbind_flag = start[0];
+
+            // Next should be n=username,r=nonce[,extensions].
+            string_view client_first_message_bare = sasl_data.substr(3);
+            auto [user, nonce_extensions] = mxb::split(client_first_message_bare, ",");
+            if (user.substr(0, 2) == "n=")
+            {
+                // Ignore the username for now.
+                if (!nonce_extensions.empty())
+                {
+                    auto [nonce, extensions] = mxb::split(nonce_extensions, ",");
+                    if (nonce.substr(0, 2) == "r=" && nonce.length() > 2)
+                    {
+                        m_client_first_message_bare = client_first_message_bare;
+                        m_client_nonce = nonce.substr(2);
+                        m_server_nonce = create_nonce();
+
+                        auto scram = parse_scram_password(
+                            session.auth_data().user_entry.authid_entry.password);
+                        if (scram)
+                        {
+                            m_stored_key = scram->stored_key;
+                            m_server_key = scram->server_key;
+
+                            m_server_first_message = mxb::string_printf(
+                                "r=%s%s,s=%s,i=%s", m_client_nonce.c_str(), m_server_nonce.c_str(),
+                                scram->salt.c_str(), scram->iter.c_str());
+                            rval = create_sasl_continue(m_server_first_message);
+                        }
+                        else
+                        {
+                            MXB_ERROR("Password hash for role '%s' is not in SCRAM format.",
+                                      session.auth_data().user.c_str());
+                        }
+                    }
+                }
+            }
+
+            if (m_client_nonce.empty())
+            {
+                MXB_ERROR("Client sent malformed SCRAM message.");
+            }
+        }
+        else
+        {
+            MXB_ERROR("Client uses unsupported SASL features. Channel binding and authorization identity are "
+                      "not supported.");
+        }
+    }
+
+    return rval;
 }
 
 /**
@@ -256,68 +318,6 @@ ScramClientAuth::sasl_handle_client_proof(std::string_view sasl_data, PgProtocol
 {
     return std::tuple<bool, GWBUF>();
 }
-
-GWBUF ScramClientAuth::create_authentication_sasl_continue(const GWBUF& buffer,
-                                                           std::string& client_first_message,
-                                                           std::string& server_first_message)
-{
-    const uint8_t* ptr = buffer.data();
-    mxb_assert(*ptr == pg::SASL_INITIAL_RESPONSE);
-    ++ptr;
-    uint32_t len = pg::get_uint32(ptr);
-    ptr += 4;
-
-    auto mech = pg::get_string(ptr);
-    mxb_assert(mech == "SCRAM-SHA-256");
-    ptr += mech.size() + 1;
-
-    uint32_t msg_len = pg::get_uint32(ptr);
-    ptr += 4;
-    std::string first_message;
-    first_message.assign(ptr, ptr + msg_len);
-    std::string client_nonce;
-    std::string client_user;
-
-    for (auto tok : mxb::strtok(first_message, ","))
-    {
-        if (tok.substr(0, 2) == "r=")
-        {
-            client_nonce = tok.substr(2);
-            break;
-        }
-        else if (tok.substr(0, 2) == "n=")
-        {
-            // The user should always be empty
-            client_user = tok.substr(2);
-        }
-    }
-
-    std::string server_nonce = create_nonce();
-
-    // TODO: Get this from the UserAccountManager
-    auto user = parse_scram_password(THE_PASSWORD);
-
-    // This is the client-first-message-bare that is one part of the final auth-message
-    client_first_message = mxb::cat("n=", client_user, ",r=", client_nonce);
-
-    // This is also needed for the final step
-    server_first_message = mxb::cat("r=", client_nonce, server_nonce,
-                                    ",s=", user->salt,
-                                    ",i=", user->iter);
-
-    GWBUF response(9 + server_first_message.size());
-    uint8_t* out = response.data();
-
-    // AuthenticationSASLContinue
-    *out++ = pg::AUTHENTICATION;
-    out += pg::set_uint32(out, response.length() - 1);
-    out += pg::set_uint32(out, pg::AUTH_SASL_CONTINUE);
-    memcpy(out, server_first_message.data(), server_first_message.size());
-
-    return response;
-}
-
-
 
 GWBUF ScramClientAuth::create_authentication_sasl_final(const GWBUF& buffer,
                                                         std::string_view client_first_message_bare,

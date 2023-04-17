@@ -23,8 +23,6 @@ public:
     AuthRes authenticate(PgProtocolData& session) override;
 
 private:
-    GWBUF create_authentication_sasl_continue(const GWBUF& buffer, std::string& client_first_message,
-                                              std::string& server_first_message);
     GWBUF create_authentication_sasl_final(const GWBUF& buffer,
                                            std::string_view client_first_message_bare,
                                            std::string_view server_first_message,
@@ -37,6 +35,17 @@ private:
 
     enum class State {INIT, INIT_CONT, SALT_SENT, READY};
     State m_state {State::INIT};
+
+    std::string m_client_first_message_bare;
+    std::string m_server_first_message;
+
+    std::string m_client_nonce;
+    std::string m_server_nonce;
+
+    char m_cbind_flag {0};
+
+    Digest m_stored_key;
+    Digest m_server_key;
 
     struct InitialResponse
     {
