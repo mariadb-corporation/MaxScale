@@ -113,3 +113,28 @@ export function arrOfObjsDiff({ base, newArr, idField }) {
     resultMap.set('removed', removed)
     return resultMap
 }
+
+const IDENTIFIED_PATTERN = /IDENTIFIED\s*/gim
+const PWD_PATTERN = /['"][^'"]*['"]/
+
+const IDENTIFIED_BY_PATTERN = new RegExp(
+    '(\\b' + IDENTIFIED_PATTERN.source + 'BY(?:\\s*PASSWORD)?\\s*)' + PWD_PATTERN.source,
+    'gim'
+)
+const IDENTIFIED_PLUGIN_PATTERN = new RegExp(
+    '(\\b' +
+        IDENTIFIED_PATTERN.source +
+        '(VIA|WITH)\\s*\\w+\\s*(USING|AS)\\s*)' +
+        PWD_PATTERN.source,
+    'gim'
+)
+const PLUGIN_PWD_PATTERN = new RegExp(`PASSWORD\\s*\\(${PWD_PATTERN.source}`, 'gim')
+
+export function maskQueryPwd(query) {
+    if (query.match(IDENTIFIED_PATTERN) || query.match(PLUGIN_PWD_PATTERN))
+        return query
+            .replace(IDENTIFIED_BY_PATTERN, "$1'***'")
+            .replace(PLUGIN_PWD_PATTERN, "PASSWORD('***'")
+            .replace(IDENTIFIED_PLUGIN_PATTERN, `$1'***'`)
+    return query
+}
