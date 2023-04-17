@@ -140,8 +140,8 @@ public:
                      LuaFilter* filter, std::unique_ptr<LuaContext> context);
     ~LuaFilterSession();
 
-    bool routeQuery(GWBUF&& queue) override;
-    bool clientReply(GWBUF&& queue, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool routeQuery(GWBUF&& buffer) override;
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     LuaFilter*                  m_filter;
@@ -250,7 +250,7 @@ LuaFilterSession::~LuaFilterSession()
     m_filter->close_session(m_pSession);
 }
 
-bool LuaFilterSession::clientReply(GWBUF&& queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
+bool LuaFilterSession::clientReply(GWBUF&& buffer, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
     const char* target = down.empty() ? "" : down.front()->target()->name();
 
@@ -261,28 +261,28 @@ bool LuaFilterSession::clientReply(GWBUF&& queue, const maxscale::ReplyRoute& do
 
     m_filter->client_reply(m_pSession, target);
 
-    return FilterSession::clientReply(std::move(queue), down, reply);
+    return FilterSession::clientReply(std::move(buffer), down, reply);
 }
 
-bool LuaFilterSession::routeQuery(GWBUF&& queue)
+bool LuaFilterSession::routeQuery(GWBUF&& buffer)
 {
     bool route = true;
 
     if (m_context)
     {
-        route = m_context->route_query(m_pSession, &queue);
+        route = m_context->route_query(m_pSession, &buffer);
     }
 
     if (route)
     {
-        m_filter->route_query(m_pSession, &queue);
+        m_filter->route_query(m_pSession, &buffer);
     }
 
     bool ok = true;
 
     if (route)
     {
-        ok = FilterSession::routeQuery(std::move(queue));
+        ok = FilterSession::routeQuery(std::move(buffer));
     }
     else
     {
