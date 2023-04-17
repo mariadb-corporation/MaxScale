@@ -110,6 +110,18 @@ public:
         }
         PG_CATCH();
         {
+            ErrorData* pError_data = CopyErrorData();
+
+#if defined(SS_DEBUG)
+            int priority = LOG_WARNING;
+#else
+            int priority = LOG_INFO;
+#endif
+            MXB_LOG_MESSAGE(priority, "Parse error: '%s', SQL: %s", pError_data->message, sql.data());
+
+            FreeErrorData(pError_data);
+
+            FlushErrorState();
             // Invalid SQL it seems. We can just as well claim that
             // everything has been collected.
             m_collected = Parser::COLLECT_ALL;
