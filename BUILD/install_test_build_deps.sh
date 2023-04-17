@@ -36,7 +36,7 @@ then
        libsqlite3-dev libcurl4-gnutls-dev \
        mariadb-test cmake libpam0g-dev oathtool krb5-user \
        libatomic1 \
-       libsasl2-dev libxml2-dev libkrb5-dev
+       libsasl2-dev libkrb5-dev
 
   ## separate libgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
@@ -85,7 +85,7 @@ EOL
                  sqlite3 sqlite3-devel libcurl-devel \
                  gnutls-devel \
                  libatomic1 \
-                 cyrus-sasl-devel libxml2-devel krb5-devel
+                 cyrus-sasl-devel krb5-devel
     sudo zypper -n install java-1_8_0-openjdk
     sudo zypper -n install php-mysql
   else
@@ -108,7 +108,7 @@ EOL
                  sqlite sqlite-devel libcurl-devel \
                  gnutls-devel \
                  libatomic \
-                 cyrus-sasl-devel libxml2-devel krb5-devel
+                 cyrus-sasl-devel krb5-devel
     # Installing maven installs the correct version of Java as a dependency
     sudo yum install -y --nogpgcheck maven
     sudo yum install -y --nogpgcheck centos-release-scl

@@ -36,7 +36,6 @@ add_library(maxbase STATIC
   watchdognotifier.cc
   worker.cc
   workertask.cc
-  xml.cc
   cpuinfo.cc
   csv_writer.cc
   )
