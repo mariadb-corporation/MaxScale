@@ -415,11 +415,19 @@ bool XRouterSession::handleError(mxs::ErrorType type, const std::string& message
 
     if (backend != m_main && m_state == State::WAIT_SECONDARY)
     {
-        backend->close();
         ok = retry_secondary_query(backend);
     }
+    else if (backend == m_solo && backend->is_waiting_result())
+    {
+        mxb_assert(m_state == State::SOLO || m_state == State::WAIT_SOLO);
+        MXB_SINFO("Solo query was interrupted, closing session.");
+        ok = false;
+    }
 
-    return ok;
+    // Close the backend. If a reconnection takes place, it is done after handleError has returned.
+    backend->close();
+
+    return ok || mxs::RouterSession::handleError(type, message, pProblem, reply);
 }
 
 bool XRouterSession::route_queued()
