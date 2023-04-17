@@ -23,16 +23,6 @@ public:
     AuthRes authenticate(PgProtocolData& session) override;
 
 private:
-    GWBUF create_authentication_sasl_final(const GWBUF& buffer,
-                                           std::string_view client_first_message_bare,
-                                           std::string_view server_first_message,
-                                           Digest& client_key);
-
-    bool verify_authentication_sasl_final(const GWBUF& buffer,
-                                          std::string_view client_first_message_bare,
-                                          std::string_view server_first_message,
-                                          std::string_view client_final_message_without_proof);
-
     enum class State {INIT, INIT_CONT, SALT_SENT, READY};
     State m_state {State::INIT};
 
@@ -59,6 +49,9 @@ private:
     std::tuple<bool, GWBUF> sasl_handle_client_proof(std::string_view sasl_data, PgProtocolData& session);
 
     GWBUF create_sasl_continue(std::string_view response);
+    bool  nonces_match(std::string_view client_final_nonce);
+    GWBUF sasl_verify_proof(const Digest& proof, std::string_view client_final_message_without_proof,
+                            PgProtocolData& session);
 };
 
 class ScramBackendAuth : public PgBackendAuthenticator

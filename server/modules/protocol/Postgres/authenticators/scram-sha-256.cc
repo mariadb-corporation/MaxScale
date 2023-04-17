@@ -171,7 +171,11 @@ PgClientAuthenticator::ExchRes ScramClientAuth::exchange(GWBUF&& input, PgProtoc
 
 PgClientAuthenticator::AuthRes ScramClientAuth::authenticate(PgProtocolData& session)
 {
-    return PgClientAuthenticator::AuthRes();
+    // Client token already checked in exchange().
+    AuthRes rval;
+    rval.status = session.auth_data().client_token.empty() ? AuthRes::Status::FAIL_WRONG_PW :
+        AuthRes::Status::SUCCESS;
+    return rval;
 }
 
 GWBUF ScramClientAuth::create_sasl_continue(string_view response)
@@ -316,127 +320,119 @@ GWBUF ScramClientAuth::sasl_handle_client_first_msg(std::string_view sasl_data, 
 std::tuple<bool, GWBUF>
 ScramClientAuth::sasl_handle_client_proof(std::string_view sasl_data, PgProtocolData& session)
 {
-    return std::tuple<bool, GWBUF>();
-}
+    bool protocol_ok = false;
+    GWBUF sasl_final;
 
-GWBUF ScramClientAuth::create_authentication_sasl_final(const GWBUF& buffer,
-                                                        std::string_view client_first_message_bare,
-                                                        std::string_view server_first_message,
-                                                        Digest& client_key)
-{
-    mxb_assert(buffer[0] == pg::SASL_RESPONSE);
-    uint32_t len = pg::get_uint32(buffer.data() + 1);
-    std::string_view client_msg((const char*)buffer.data() + pg::HEADER_LEN, len - 4);
+    auto rsplit = [](std::string_view str, char delim) -> std::pair<string_view, string_view> {
+        auto pos = str.rfind(delim);
+        return {str.substr(0, pos), pos != std::string_view::npos ? str.substr(pos + 1) : ""};
+    };
 
-    std::string nonce;
-    std::string channel_bind;
-    Digest client_proof{};
+    auto [msg_without_proof, proof] = rsplit(sasl_data, ',');
+    auto [ch_binding, nonce_extensions] = mxb::split(msg_without_proof, ",");
+    auto [nonce, extensions] = mxb::split(nonce_extensions, ",");
 
-    for (auto tok : mxb::strtok(client_msg, ","))
+    if (!ch_binding.empty() && !nonce.empty() && !proof.empty())
     {
-        if (tok[0] == 'r')
+        // Not using channel binding yet, so should start with c=biws or c=eSws.
+        if ((m_cbind_flag == 'n' && ch_binding == "c=biws")
+            || (m_cbind_flag == 'y' && ch_binding == "c=eSws"))
         {
-            nonce = tok;
-        }
-        else if (tok[0] == 'c')
-        {
-            channel_bind = tok;
-        }
-        else if (tok[0] == 'p')
-        {
-            if (auto proof = mxs::from_base64(tok.substr(2)); proof.size() == SHA256_DIGEST_LENGTH)
+            if (nonce.substr(0, 2) == "r=" && proof.substr(0, 2) == "p=")
             {
-                memcpy(client_proof.data(), proof.data(), proof.size());
+                if (nonces_match(nonce.substr(2)))
+                {
+                    // Because scram sends a separate AuthenticationSASLFinal before AuthenticationOk,
+                    // need to check the password here. This means scram does not work with
+                    // "skip_authentication". TODO: handle this later
+                    auto proof_decoded = mxs::from_base64(proof.substr(2));
+                    if (proof_decoded.size() == SHA256_DIGEST_LENGTH)
+                    {
+                        protocol_ok = true;
+                        Digest proof_bytes;
+                        memcpy(proof_bytes.data(), proof_decoded.data(), proof_decoded.size());
+                        sasl_final = sasl_verify_proof(proof_bytes, msg_without_proof, session);
+                    }
+                    else
+                    {
+                        MXB_ERROR("Client sent malformed SCRAM proof.");
+                    }
+                }
+                else
+                {
+                    MXB_ERROR("Client sent mismatching SCRAM nonces.");
+                }
             }
             else
             {
-                mxb_assert_message(!true, "Invalid proof size: %lu", proof.size());
-                return GWBUF();
+                MXB_ERROR("Client sent malformed final SCRAM message, no nonce and/or proof.");
             }
         }
+        else
+        {
+            MXB_ERROR("Client sent mismatching SCRAM channel binding in client-final-message.");
+        }
+    }
+    else
+    {
+        MXB_ERROR("Client sent malformed final SCRAM message.");
     }
 
+    return {protocol_ok, std::move(sasl_final)};
+}
+
+GWBUF ScramClientAuth::sasl_verify_proof(const Digest& proof, string_view client_final_message_without_proof,
+                                         PgProtocolData& session)
+{
     // See: https://www.rfc-editor.org/rfc/rfc5802#section-3
 
     // AuthMessage     := client-first-message-bare + "," +
     //                    server-first-message + "," +
     //                    client-final-message-without-proof
-    auto client_final_message_without_proof = mxb::cat(channel_bind, ",", nonce);
-    auto auth_message = mxb::cat(client_first_message_bare, ",",
-                                 server_first_message, ",",
+    auto auth_message = mxb::cat(m_client_first_message_bare, ",", m_server_first_message, ",",
                                  client_final_message_without_proof);
-
-    // TODO: Get this from the UserAccountManager
-    auto user = parse_scram_password(THE_PASSWORD);
 
     // ClientSignature := HMAC(StoredKey, AuthMessage)
-    Digest client_sig = hmac(user->stored_key, auth_message);
-
+    Digest client_sig = hmac(m_stored_key, auth_message);
     // ClientProof     := ClientKey XOR ClientSignature
     // We do the inverse with the ClientProof to get the ClientKey
-    client_key = digest_xor(client_proof, client_sig);
-
+    Digest client_key = digest_xor(proof, client_sig);
     // StoredKey       := H(ClientKey)
-    if (hash(client_key) != user->stored_key)
+    if (hash(client_key) == m_stored_key)
     {
-        // Wrong password
-        return GWBUF();
+        // Correct password! Save ClientKey and StoredKey, they will be needed when logging in to backends.
+        auto& token_storage = session.auth_data().client_token;
+        token_storage.resize(client_key.size() + m_stored_key.size());
+        memcpy(token_storage.data(), client_key.data(), client_key.size());
+        memcpy(token_storage.data() + client_key.size(), m_stored_key.data(), m_stored_key.size());
+
+        // ServerSignature := HMAC(ServerKey, AuthMessage)
+        auto server_sig = hmac(m_server_key, auth_message);
+        string server_sig_msg = "v=";
+        server_sig_msg.append(mxs::to_base64(server_sig));
+
+        // Send AuthenticationSASLFinal packet to client.
+        GWBUF sasl_final(pg::HEADER_LEN + 4 + server_sig_msg.size());
+        auto ptr = sasl_final.data();
+        *ptr++ = pg::AUTHENTICATION;
+        ptr += pg::set_uint32(ptr, 8 + server_sig_msg.size());
+        ptr += pg::set_uint32(ptr, pg::AUTH_SASL_FINAL);
+        memcpy(ptr, server_sig_msg.data(), server_sig_msg.size());
+        return sasl_final;
     }
-
-    // ServerSignature := HMAC(ServerKey, AuthMessage)
-    std::string server_final = "v=" + mxs::to_base64(hmac(user->server_key, auth_message));
-
-    GWBUF response(9 + server_final.size());
-    uint8_t* ptr = response.data();
-
-    // AuthenticationSASLFinal
-    *ptr++ = pg::AUTHENTICATION;
-    ptr += pg::set_uint32(ptr, 8 + server_final.size());
-    ptr += pg::set_uint32(ptr, pg::AUTH_SASL_FINAL);
-    memcpy(ptr, server_final.data(), server_final.size());
-
-    // The AuthenticationOk, BackendKeyData and ReadyForQuery messages also need to be sent to the client
-
-    return response;
+    return GWBUF();
 }
 
-bool ScramClientAuth::verify_authentication_sasl_final(const GWBUF& buffer,
-                                                       std::string_view client_first_message_bare,
-                                                       std::string_view server_first_message,
-                                                       std::string_view client_final_message_without_proof)
+bool ScramClientAuth::nonces_match(std::string_view client_final_nonce)
 {
-    uint32_t len = pg::get_uint32(buffer.data() + 1) - 8;
-    std::string_view msg((const char*)buffer.data() + 9, len);
-    Digest server_sig{};
-
-    for (auto token : mxb::strtok(msg, ","))
+    bool rval = false;
+    if (client_final_nonce.length() == m_client_nonce.length() + m_server_nonce.length())
     {
-        if (token.substr(0, 2) == "v=")
-        {
-            if (auto sig = mxs::from_base64(token.substr(2)); sig.size() == server_sig.size())
-            {
-                memcpy(server_sig.data(), sig.data(), sig.size());
-                break;
-            }
-            else
-            {
-                mxb_assert_message(!true, "Invalid signature size: %lu", sig.size());
-                return false;
-            }
-        }
+        const auto ptr = client_final_nonce.data();
+        rval = (memcmp(ptr, m_client_nonce.data(), m_client_nonce.length()) == 0
+            && memcmp(ptr + m_client_nonce.length(), m_server_nonce.data(), m_server_nonce.length()) == 0);
     }
-
-    // AuthMessage     := client-first-message-bare + "," +
-    //                    server-first-message + "," +
-    //                    client-final-message-without-proof
-    auto auth_message = mxb::cat(client_first_message_bare, ",",
-                                 server_first_message, ",",
-                                 client_final_message_without_proof);
-
-    // TODO: Get this from the UserAccountManager
-    auto user = parse_scram_password(THE_PASSWORD);
-
-    return hmac(user->server_key, auth_message) == server_sig;
+    return rval;
 }
 
 GWBUF ScramBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
