@@ -107,7 +107,7 @@ bool PgParser::Helper::is_execute_immediately_ps(uint32_t id) const
 
 bool PgParser::Helper::is_multi_part_packet(const GWBUF& packet) const
 {
-    return true;
+    return false;
 }
 
 bool PgParser::Helper::is_prepare(const GWBUF& packet) const
