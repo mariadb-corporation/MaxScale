@@ -24,7 +24,6 @@ class MariaDBUserManager;
 class MariaDBUserCache;
 
 class MariaDBClientConnection : public mxs::ClientConnectionBase
-                              , public mariadb::QueryClassifier::Handler
 {
 public:
     /* Type of the kill-command sent by client. */
@@ -104,25 +103,6 @@ public:
      * @return True on success
      */
     static bool module_init();
-
-    //
-    // API functions for mariadb::QueryClassifier::Handler
-    //
-
-    bool lock_to_master() override
-    {
-        return true;
-    }
-
-    bool is_locked_to_master() const override
-    {
-        return false;
-    }
-
-    bool supports_hint(Hint::Type hint_type) const override
-    {
-        return false;
-    }
 
 private:
     /** Return type of process_special_commands() */

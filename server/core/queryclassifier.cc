@@ -26,6 +26,26 @@ namespace
 
 const int QC_TRACE_MSG_LEN = 1000;
 
+struct DummyHandler final : public mariadb::QueryClassifier::Handler
+{
+    bool lock_to_master() override
+    {
+        return true;
+    }
+
+    bool is_locked_to_master() const override
+    {
+        return false;
+    }
+
+    bool supports_hint(Hint::Type hint_type) const override
+    {
+        return false;
+    }
+};
+
+static DummyHandler dummy_handler;
+
 std::string get_current_db(MXS_SESSION* session)
 {
     return session->client_connection()->current_db();
@@ -268,6 +288,12 @@ private:
 //
 // QueryClassifier
 //
+
+QueryClassifier::QueryClassifier(mxs::Parser& parser, MXS_SESSION* pSession)
+    : QueryClassifier(parser, &dummy_handler, pSession, TYPE_ALL, Log::NONE)
+{
+    m_verbose = false;
+}
 
 QueryClassifier::QueryClassifier(mxs::Parser& parser,
                                  Handler* pHandler,

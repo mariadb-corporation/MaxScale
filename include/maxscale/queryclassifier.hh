@@ -323,6 +323,27 @@ public:
         NONE,   // Log nothing
     };
 
+    /**
+     * Constructs a simple QueryClassifier
+     *
+     * This version does not log errors or warnings, doesn't support routing hints and doesn't implement the
+     * "master locking" that is possible when a custom Handler class is used. This also disables the verbose
+     * mode so that any info level logging is omitted.
+     *
+     * @param parser   Parser to use
+     * @param pSession Session that uses this QueryClassifier
+     */
+    QueryClassifier(mxs::Parser& parser, MXS_SESSION* pSession);
+
+    /**
+     * Construct a QueryClassifier
+     *
+     * @param parser               Parser to use
+     * @param pHandler             The handler instance
+     * @param pSession             Session that uses this QueryClassifier
+     * @param use_sql_variables_in How to classify user variables (MASTER makes them behave like writes)
+     * @param log                  Whether to log errors and warnings
+     */
     QueryClassifier(mxs::Parser& parser,
                     Handler* pHandler,
                     MXS_SESSION* pSession,
