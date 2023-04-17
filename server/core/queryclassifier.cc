@@ -695,19 +695,19 @@ bool QueryClassifier::query_continues_ps(const GWBUF& buffer)
     return m_parser.continues_ps(buffer, m_route_info.command());
 }
 
-QueryClassifier::RouteInfo QueryClassifier::update_route_info(
-    QueryClassifier::current_target_t current_target,
-    GWBUF* pBuffer)
+const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buffer)
 {
     uint32_t route_target = TARGET_MASTER;
     uint8_t cmd = 0xFF;
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
+    bool locked_to_master = m_pHandler->is_locked_to_master();
+    current_target_t current_target = locked_to_master ? CURRENT_TARGET_MASTER : CURRENT_TARGET_UNDEFINED;
 
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
 
-    m_route_info.set_multi_part_packet(m_parser.is_multi_part_packet(*pBuffer));
+    m_route_info.set_multi_part_packet(m_parser.is_multi_part_packet(buffer));
 
     if (m_route_info.multi_part_packet())
     {
@@ -728,13 +728,13 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     {
         // A LOAD DATA LOCAL INFILE is ongoing
     }
-    else if (!m_parser.is_empty(*pBuffer))
+    else if (!m_parser.is_empty(buffer))
     {
-        cmd = m_parser.get_command(*pBuffer);
+        cmd = m_parser.get_command(buffer);
 
-        if (m_parser.is_ps_packet(*pBuffer))
+        if (m_parser.is_ps_packet(buffer))
         {
-            stmt_id = ps_id_internal_get(pBuffer);
+            stmt_id = ps_id_internal_get(&buffer);
         }
 
         /**
@@ -748,10 +748,10 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         }
         else
         {
-            type_mask = QueryClassifier::determine_query_type(*pBuffer);
+            type_mask = QueryClassifier::determine_query_type(buffer);
 
             current_target = handle_multi_temp_and_load(current_target,
-                                                        pBuffer,
+                                                        &buffer,
                                                         &type_mask);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
@@ -787,35 +787,35 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
         bool route_to_last_used = false;
 
-        if (m_pHandler->is_locked_to_master())
+        if (locked_to_master)
         {
             /** The session is locked to the master */
             route_target = TARGET_MASTER;
         }
         else
         {
-            bool is_query = m_parser.is_query(*pBuffer);
+            bool is_query = m_parser.is_query(buffer);
 
             if (!in_read_only_trx
                 && is_query
-                && m_parser.get_operation(*pBuffer) == mxs::sql::OP_EXECUTE)
+                && m_parser.get_operation(buffer) == mxs::sql::OP_EXECUTE)
             {
-                if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, *pBuffer)))
+                if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, buffer)))
                 {
                     type_mask = ps->type;
                     route_to_last_used = ps->route_to_last_used;
                 }
             }
-            else if (m_parser.is_ps_packet(*pBuffer))
+            else if (m_parser.is_ps_packet(buffer))
             {
                 if (const auto* ps = m_sPs_manager->get(stmt_id))
                 {
                     type_mask = ps->type;
                     route_to_last_used = ps->route_to_last_used;
-                    m_route_info.set_ps_continuation(query_continues_ps(*pBuffer));
+                    m_route_info.set_ps_continuation(query_continues_ps(buffer));
                 }
             }
-            else if (is_query && relates_to_previous_stmt(m_parser, pBuffer))
+            else if (is_query && relates_to_previous_stmt(m_parser, &buffer))
             {
                 route_to_last_used = true;
             }
@@ -828,7 +828,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             }
         }
 
-        process_routing_hints(pBuffer->hints, &route_target);
+        process_routing_hints(buffer.hints, &route_target);
 
         if (protocol_data->is_trx_ending() || Parser::type_mask_contains(type_mask, mxs::sql::TYPE_BEGIN_TRX))
         {
@@ -844,7 +844,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
     if (m_verbose && mxb_log_should_log(LOG_INFO))
     {
-        log_transaction_status(pBuffer, type_mask);
+        log_transaction_status(&buffer, type_mask);
     }
 
     m_route_info.set_target(route_target);

@@ -261,7 +261,7 @@ std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
     buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
 
     m_qc.revert_update();
-    m_qc.update_route_info(get_current_target(), &buffer);
+    m_qc.update_route_info(buffer);
     plan = resolve_route(buffer, route_info());
 
     // Now with MXS-4260 fixed, the attached routing hint will be more of a suggestion to the downstream

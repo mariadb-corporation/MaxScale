@@ -110,7 +110,7 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
 {
     bool rval = false;
 
-    m_qc.update_route_info(get_current_target(), &buffer);
+    m_qc.update_route_info(buffer);
     RoutingPlan res = resolve_route(buffer, route_info());
 
     if (can_route_query(buffer, res))

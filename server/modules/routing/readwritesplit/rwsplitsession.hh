@@ -360,13 +360,6 @@ private:
         return can_route;
     }
 
-    inline mariadb::QueryClassifier::current_target_t get_current_target() const
-    {
-        return m_locked_to_master ?
-               mariadb::QueryClassifier::CURRENT_TARGET_MASTER :
-               mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
-    }
-
     void update_statistics(const RoutingPlan& res)
     {
         if (res.route_target == TARGET_MASTER)

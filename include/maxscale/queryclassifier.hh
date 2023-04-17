@@ -422,12 +422,11 @@ public:
     /**
      * @brief Update the current RouteInfo.
      *
-     * @param current_target  What the current target is.
-     * @param pBuffer         A request buffer.
+     * @param buffer A request buffer.
      *
-     * @return A copy of the current route info.
+     * @return A const reference to the current route info.
      */
-    RouteInfo update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer);
+    const RouteInfo& update_route_info(GWBUF& buffer); // TODO: const correct
 
     /**
      * Update the RouteInfo state based on the reply from the downstream component

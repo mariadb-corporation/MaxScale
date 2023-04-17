@@ -1139,10 +1139,9 @@ MariaDBClientConnection::process_special_queries(GWBUF& buffer)
 bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
 {
     bool should_record = false;
-    const auto current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
 
     // Update the routing information. This must be done even if the command isn't added to the history.
-    const auto& info = m_qc.update_route_info(current_target, &buffer);
+    const auto& info = m_qc.update_route_info(buffer);
 
     switch (cmd)
     {
