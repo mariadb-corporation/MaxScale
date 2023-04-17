@@ -31,13 +31,13 @@ using mxs::Parser;
 namespace sql = mxs::sql;
 
 // For development
-#define ASSERT_ON_NOT_IMPLEMENTED
-#undef ASSERT_ON_NOT_IMPLEMENTED
+#define ASSERT_ON_NOT_HANDLED
+#undef ASSERT_ON_NOT_HANDLED
 
-#if defined(ASSERT_ON_NOT_IMPLEMENTED)
-#define niy_assert() mxb_assert(!true);
+#if defined(ASSERT_ON_NOT_HANDLED)
+#define nhy_assert() mxb_assert(!true);
 #else
-#define niy_assert()
+#define nhy_assert()
 #endif
 
 extern char* program_invocation_name;
@@ -139,33 +139,33 @@ public:
 
     std::string_view get_created_table_name() const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         return std::string_view {};
     }
 
     Parser::DatabaseNames get_database_names() const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         return Parser::DatabaseNames {};
     }
 
     void get_field_info(const Parser::FieldInfo** ppInfos, size_t* pnInfos) const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         *ppInfos = nullptr;
         *pnInfos = 0;
     }
 
     void get_function_info(const Parser::FunctionInfo** ppInfos, size_t* pnInfos) const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         *ppInfos = nullptr;
         *pnInfos = 0;
     }
 
     Parser::KillInfo get_kill_info() const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         return Parser::KillInfo {};
     }
 
@@ -176,19 +176,19 @@ public:
 
     GWBUF* get_preparable_stmt() const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         return nullptr;
     }
 
     std::string_view get_prepare_name() const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         return std::string_view {};
     }
 
     Parser::TableNames get_table_names() const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         return Parser::TableNames {};
     }
 
@@ -199,7 +199,7 @@ public:
 
     uint32_t get_trx_type_mask() const
     {
-        mxb_assert(!true);
+        MXB_ERROR("Not implemented yet: %s", __func__);
         return 0;
     }
 
@@ -223,7 +223,7 @@ private:
             break;
 
         default:
-            niy_assert();
+            nhy_assert();
         }
     }
 
@@ -234,6 +234,10 @@ private:
             // Specific Information.
         case T_AlterTableStmt:
             analyze(reinterpret_cast<const AlterTableStmt&>(x));
+            break;
+
+        case T_CreateRoleStmt:
+            analyze(reinterpret_cast<const CreateRoleStmt&>(x));
             break;
 
         case T_CreateStmt:
@@ -302,7 +306,6 @@ private:
         case T_CreateTrigStmt:
         case T_CreateEventTrigStmt:
         case T_CreatePLangStmt:
-        case T_CreateRoleStmt:
         case T_CreateSeqStmt:
         case T_CreateDomainStmt:
         case T_CreateOpClassStmt:
@@ -341,7 +344,7 @@ private:
             break;
 
         default:
-            niy_assert();
+            nhy_assert();
         }
     }
 
@@ -349,6 +352,12 @@ private:
     {
         m_type_mask |= sql::TYPE_WRITE;
         m_op = sql::OP_ALTER_TABLE;
+    }
+
+    void analyze(const CreateRoleStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+        m_op = sql::OP_CREATE;
     }
 
     void analyze(const CreateStmt& x)
@@ -399,7 +408,7 @@ private:
 
         if (pInfo)
         {
-            if ((~pInfo->m_collect & collect) != 0)
+            if ((~pInfo->m_collected & collect) != 0)
             {
                 // The statement has been parsed once, but the needed information
                 // was not collected at that time.
