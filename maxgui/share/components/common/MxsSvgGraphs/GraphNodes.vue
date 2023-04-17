@@ -116,9 +116,6 @@ export default {
     created() {
         if (this.draggable) this.setDefDraggingStates()
     },
-    beforeDestroy() {
-        if (this.draggable) this.rmMouseUpEvt()
-    },
     methods: {
         handleAddEvents(node) {
             let events = {}
@@ -126,7 +123,6 @@ export default {
                 events = {
                     ...events,
                     mousedown: e => this.dragStart({ e, node }),
-                    mousemove: e => this.drag({ e, node }),
                 }
             if (this.hoverable)
                 events = {
@@ -184,10 +180,12 @@ export default {
                 }
             })
         },
-        addMouseUpEvt() {
+        addDragEvents(node) {
+            document.addEventListener('mousemove', e => this.drag({ e, node }))
             document.addEventListener('mouseup', this.dragEnd)
         },
-        rmMouseUpEvt() {
+        rmDragEvents() {
+            document.removeEventListener('mousemove', this.drag)
             document.removeEventListener('mouseup', this.dragEnd)
         },
         dragStart({ e, node }) {
@@ -197,7 +195,7 @@ export default {
                 startCoord: { x: e.clientX, y: e.clientY },
             }
             this.$emit('drag-start', { e, node })
-            this.addMouseUpEvt()
+            this.addDragEvents(node)
         },
         drag({ e, node }) {
             e.preventDefault()
@@ -229,7 +227,7 @@ export default {
         },
         dragEnd(param) {
             this.$emit('drag-end', param)
-            this.rmMouseUpEvt()
+            this.rmDragEvents()
             this.setDefDraggingStates()
         },
     },

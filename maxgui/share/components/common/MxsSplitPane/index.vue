@@ -13,7 +13,7 @@
             :disable="disable"
             @mousedown.native="onMouseDown"
         />
-        <div v-if="active" class="resizing-mask" />
+        <div v-if="active" class="dragging-mask" />
     </div>
 </template>
 

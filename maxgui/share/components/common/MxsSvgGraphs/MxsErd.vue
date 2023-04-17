@@ -1,5 +1,6 @@
 <template>
     <div class="fill-height er-diagram">
+        <div v-if="isDraggingNode" class="dragging-mask" />
         <v-progress-linear v-if="isRendering" indeterminate color="primary" />
         <!-- Graph-board and its child components will be rendered but they won't be visible until
              the simulation is done. This ensures node size can be calculated dynamically.
@@ -277,13 +278,11 @@ export default {
             this.isDraggingNode = false
         },
         mouseenterNode({ node }) {
-            if (!this.isDraggingNode) {
-                this.setChosenLinks(node)
-                this.tmpUpdateChosenLinksStyle(EVENT_TYPES.HOVER)
-            }
+            this.setChosenLinks(node)
+            this.tmpUpdateChosenLinksStyle(EVENT_TYPES.HOVER)
         },
         mouseleaveNode() {
-            if (!this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+            this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
         },
     },
 }

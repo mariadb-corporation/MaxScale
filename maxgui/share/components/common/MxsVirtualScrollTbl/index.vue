@@ -100,7 +100,7 @@
                 {{ $mxs_t('$vuetify.noDataText') }}
             </div>
         </div>
-        <div v-if="isResizing" class="resizing-mask" />
+        <div v-if="isResizing" class="dragging-mask" />
     </div>
 </template>
 
