@@ -34,6 +34,22 @@ private:
                                           std::string_view client_first_message_bare,
                                           std::string_view server_first_message,
                                           std::string_view client_final_message_without_proof);
+
+    enum class State {INIT, INIT_CONT, SALT_SENT, READY};
+    State m_state {State::INIT};
+
+    struct InitialResponse
+    {
+        std::string_view mech;
+        std::string_view client_data;
+    };
+    std::optional<InitialResponse> read_sasl_initial_response(const GWBUF& input);
+    std::string_view               read_sasl_response(const GWBUF& input);
+
+    GWBUF                   sasl_handle_client_first_msg(std::string_view sasl_data, PgProtocolData& session);
+    std::tuple<bool, GWBUF> sasl_handle_client_proof(std::string_view sasl_data, PgProtocolData& session);
+
+    GWBUF create_sasl_continue(std::string_view response);
 };
 
 class ScramBackendAuth : public PgBackendAuthenticator

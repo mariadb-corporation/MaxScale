@@ -77,10 +77,12 @@ public:
         enum class Status
         {
             READY,      /**< Exchange with client complete, should continue to password check */
+            INCOMPLETE, /**< In progress, call again once client responds */
             FAIL,       /**< Packet processing failed */
         };
 
         Status status {Status::FAIL};   /**< Authentication exchange status */
+        GWBUF  packet;                  /**< Packet to send to client */
     };
 
     /**

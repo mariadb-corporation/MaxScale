@@ -14,10 +14,14 @@
 #include <openssl/rand.h>
 #include "scram-sha-256.hh"
 
-#define NONCE_SIZE 18
+using std::string;
+using std::string_view;
 
 namespace
 {
+const std::string MECH = "SCRAM-SHA-256";
+const int NONCE_SIZE = 18;
+
 template<class Key, class Data>
 Digest hmac(const Key& k, const Data& d)
 {
@@ -65,27 +69,192 @@ const char* THE_PASSWORD =
 
 GWBUF ScramClientAuth::authentication_request()
 {
-    std::string_view mech = "SCRAM-SHA-256";
-    GWBUF buffer(9 + mech.size() + 1 + 1);
+    GWBUF buffer(9 + MECH.size() + 1 + 1);
     uint8_t* ptr = buffer.data();
 
     // AuthenticationSASL
     *ptr++ = pg::AUTHENTICATION;
     ptr += pg::set_uint32(ptr, buffer.length() - 1);
     ptr += pg::set_uint32(ptr, pg::AUTH_SASL);
-    ptr += pg::set_string(ptr, mech);
+    ptr += pg::set_string(ptr, MECH);
     *ptr++ = 0;
     return buffer;
 }
 
 PgClientAuthenticator::ExchRes ScramClientAuth::exchange(GWBUF&& input, PgProtocolData& session)
 {
-    return PgClientAuthenticator::ExchRes();
+    ExchRes rval;
+    // All packets from client should have 'p' as first byte.
+    mxb_assert(input.length() >= 5);
+    if (input[0] == 'p')
+    {
+        switch (m_state)
+        {
+        case State::INIT:
+            {
+                // Client should have responded with SASLInitialResponse.
+                auto resp = read_sasl_initial_response(input);
+                if (resp)
+                {
+                    if (resp->mech == MECH)
+                    {
+                        if (resp->client_data.empty())
+                        {
+                            // Allowed, send empty challenge.
+                            rval.packet = create_sasl_continue({});
+                            rval.status = ExchRes::Status::INCOMPLETE;
+                            m_state = State::INIT_CONT;
+                        }
+                        else
+                        {
+                            GWBUF out = sasl_handle_client_first_msg(resp->client_data, session);
+                            if (out)
+                            {
+                                rval.packet = std::move(out);
+                                rval.status = ExchRes::Status::INCOMPLETE;
+                                m_state = State::SALT_SENT;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Client should not be attempting any other mechanism since our authentication
+                        // request only listed SCRAM-SHA-256.
+                        MXB_ERROR("Client is trying to use an unrecognized SASL mechanism.");
+                    }
+                }
+            }
+            break;
+
+        case State::INIT_CONT:
+            {
+                auto resp = read_sasl_response(input);
+                if (!resp.empty())
+                {
+                    GWBUF out = sasl_handle_client_first_msg(resp, session);
+                    if (out)
+                    {
+                        rval.packet = std::move(out);
+                        rval.status = ExchRes::Status::INCOMPLETE;
+                        m_state = State::SALT_SENT;
+                    }
+                }
+            }
+            break;
+
+        case State::SALT_SENT:
+            {
+                auto resp = read_sasl_response(input);
+                if (!resp.empty())
+                {
+                    auto [prot_ok, out] = sasl_handle_client_proof(resp, session);
+                    if (prot_ok)
+                    {
+                        rval.packet = std::move(out);
+                        rval.status = ExchRes::Status::READY;
+                        m_state = State::READY;
+                    }
+                }
+            }
+            break;
+
+        case State::READY:
+            mxb_assert(!true);
+            break;
+        }
+    }
+
+    return rval;
 }
 
 PgClientAuthenticator::AuthRes ScramClientAuth::authenticate(PgProtocolData& session)
 {
     return PgClientAuthenticator::AuthRes();
+}
+
+GWBUF ScramClientAuth::create_sasl_continue(string_view response)
+{
+    GWBUF rval(9 + response.size());
+    auto ptr = rval.data();
+    *ptr++ = pg::AUTHENTICATION;
+    ptr += pg::set_uint32(ptr, 8 + response.size());
+    ptr += pg::set_uint32(ptr, pg::AUTH_SASL_CONTINUE);
+    if (!response.empty())
+    {
+        memcpy(ptr, response.data(), response.size());
+    }
+    return rval;
+}
+
+std::optional<ScramClientAuth::InitialResponse>
+ScramClientAuth::read_sasl_initial_response(const GWBUF& input)
+{
+    std::optional<InitialResponse> rval;
+    auto ptr = input.data() + pg::HEADER_LEN;
+    const auto end = input.end();
+    if (end > ptr && memchr(ptr, '\0', end - ptr))
+    {
+        InitialResponse resp;
+        resp.mech = pg::get_string(ptr);
+        ptr += resp.mech.length() + 1;
+
+        if (end - ptr >= 4)
+        {
+            auto client_resp_len = pg::get_uint32(ptr);
+            ptr += 4;
+            if (client_resp_len > 0)
+            {
+                if (client_resp_len == (end - ptr))
+                {
+                    resp.client_data = {reinterpret_cast<const char*>(ptr), client_resp_len};
+                    rval = resp;
+                }
+            }
+            else
+            {
+                rval = resp;
+            }
+        }
+    }
+    return rval;
+}
+
+std::string_view ScramClientAuth::read_sasl_response(const GWBUF& input)
+{
+    string_view rval;
+    if (input.length() > pg::HEADER_LEN)
+    {
+        rval = {reinterpret_cast<const char*>(input.data()) + pg::HEADER_LEN,
+                input.length() - pg::HEADER_LEN};
+    }
+    return rval;
+}
+
+/**
+ * Parse and check SASL data. If valid, return AuthenticationSASLContinue packet.
+ *
+ * @param sasl_data Mechanism data
+ * @param session Protocol data
+ * @return Packet to client, if successful.
+ */
+GWBUF ScramClientAuth::sasl_handle_client_first_msg(std::string_view sasl_data, PgProtocolData& session)
+{
+    return GWBUF();
+}
+
+/**
+ * Parse and check SCRAM proof. If proof is valid (= client has correct password), return
+ * AuthenticationSASLFinal packet.
+ *
+ * @param sasl_data Mechanism data
+ * @param session Protocol data
+ * @return {true, packet} if authentication succeeded. {true, empty} if authentication failed. {false, empty}
+ * if client sent malformed or erroneous messages.
+ */
+std::tuple<bool, GWBUF>
+ScramClientAuth::sasl_handle_client_proof(std::string_view sasl_data, PgProtocolData& session)
+{
+    return std::tuple<bool, GWBUF>();
 }
 
 GWBUF ScramClientAuth::create_authentication_sasl_continue(const GWBUF& buffer,

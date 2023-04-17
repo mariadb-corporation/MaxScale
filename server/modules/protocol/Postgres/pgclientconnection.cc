@@ -197,6 +197,11 @@ PgClientConnection::State PgClientConnection::state_auth(GWBUF&& packet)
     auto result = Result::ERROR;
 
     auto res = m_authenticator->exchange(std::move(packet), *m_protocol_data);
+    if (!res.packet.empty())
+    {
+        m_dcb->writeq_append(std::move(res.packet));
+    }
+
     switch (res.status)
     {
     case ExchRes::Status::READY:
@@ -246,6 +251,10 @@ PgClientConnection::State PgClientConnection::state_auth(GWBUF&& packet)
                                                             m_session.user().c_str()));
             }
         }
+        break;
+
+    case ExchRes::Status::INCOMPLETE:
+        result = Result::CONTINUE;
         break;
 
     case ExchRes::Status::FAIL:

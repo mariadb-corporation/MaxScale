@@ -25,6 +25,7 @@
 #include "pgusermanager.hh"
 #include "authenticators/password.hh"
 #include "authenticators/trust.hh"
+#include "authenticators/scram-sha-256.hh"
 
 PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
     : m_config(name, this)
@@ -186,6 +187,10 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
             else if (auth_name == "trust")
             {
                 new_auth_module = std::make_unique<TrustAuthModule>();
+            }
+            else if (auth_name == "scram-sha-256")
+            {
+                new_auth_module = std::make_unique<ScramAuthModule>();
             }
 
             if (new_auth_module)
