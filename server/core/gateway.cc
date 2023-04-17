@@ -1804,7 +1804,13 @@ int main(int argc, char** argv)
     if (rc != 0)
     {
         cerr << "alert: Could not initialize the MaxScale log." << endl;
-        return rc;
+
+        // The atexit function was registered the first time the log was initialized and now that it failed to
+        // properly initialize again, the mxb_log_finish() function would end up being called with a
+        // log that's already closed. This would hit a debug assertion but is unlikely to cause problems with
+        // release mode binaries. Using _Exit skips the atexit function which avoids the problem. From this
+        // point onwards, the process should exit gracefully by returning the exit code from main.
+        _Exit(rc);
     }
 
     if (!init_base_libraries())
