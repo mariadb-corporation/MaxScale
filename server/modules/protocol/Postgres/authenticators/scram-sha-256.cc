@@ -437,24 +437,85 @@ bool ScramClientAuth::nonces_match(std::string_view client_final_nonce)
 
 GWBUF ScramBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
 {
-    return GWBUF();
+    mxb_assert(input.length() >= 5);
+    // All packets should start with 'R'.
+    GWBUF rval;
+    if (input[0] == pg::AUTHENTICATION)
+    {
+        switch (m_state)
+        {
+        case State::AUTH_REQ:
+            rval = handle_auth_request(input);
+            m_state = rval ? State::SALT : State::DONE;
+            break;
+
+        case State::SALT:
+            // TODO: Create proof.
+            break;
+
+        case State::FINAL:
+            // TODO: Check server signature.
+            break;
+
+        case State::DONE:
+            mxb_assert(!true);
+        }
+    }
+    return rval;
 }
 
-GWBUF ScramBackendAuth::create_sasl_initial_response(std::string& client_first_message_bare)
+GWBUF ScramBackendAuth::handle_auth_request(const GWBUF& input)
 {
-    client_first_message_bare = mxb::cat("n=,r=", create_nonce());
-    std::string client_first_message = mxb::cat("n,,", client_first_message_bare);
+    GWBUF rval;
+    auto [auth_type, sasl_data] = read_scram_data(input);
+    if (auth_type == pg::Auth::AUTH_SASL && !sasl_data.empty() && sasl_data.back() == '\0')
+    {
+        bool mechanism_found = false;
+        auto ptr = sasl_data.data();
+        auto end = ptr + sasl_data.length();
+        while (ptr < end)
+        {
+            // At this point, it's enough if server supports the standard mechanism.
+            string_view mech(ptr, strlen(ptr));
+            if (mech == MECH)
+            {
+                mechanism_found = true;
+                break;
+            }
+            else
+            {
+                ptr += mech.length() + 1;
+            }
+        }
 
-    std::string_view mech = "SCRAM-SHA-256";
-    GWBUF response(pg::HEADER_LEN + mech.length() + 1 + 4 + client_first_message.size());
+        if (mechanism_found)
+        {
+            rval = create_sasl_initial_response();
+        }
+        else
+        {
+            MXB_ERROR("Server does not support %s SASL mechanism.", MECH.c_str());
+        }
+    }
+
+    return rval;
+}
+
+GWBUF ScramBackendAuth::create_sasl_initial_response()
+{
+    m_client_nonce = create_nonce();
+    m_client_first_message_bare = mxb::cat("n=,r=", m_client_nonce);
+    int client_msg_size = 3 + m_client_first_message_bare.size();
+    GWBUF response(pg::HEADER_LEN + MECH.length() + 1 + 4 + client_msg_size);
+
     uint8_t* ptr = response.data();
-
     *ptr++ = pg::SASL_INITIAL_RESPONSE;
     ptr += pg::set_uint32(ptr, response.length() - 1);
-    ptr += pg::set_string(ptr, mech);
-    ptr += pg::set_uint32(ptr, client_first_message.size());
-    memcpy(ptr, client_first_message.data(), client_first_message.size());
-
+    ptr += pg::set_string(ptr, MECH);
+    ptr += pg::set_uint32(ptr, client_msg_size);
+    memcpy(ptr, "n,,", 3);
+    ptr += 3;
+    memcpy(ptr, m_client_first_message_bare.data(), m_client_first_message_bare.size());
     return response;
 }
 
@@ -515,6 +576,23 @@ GWBUF ScramBackendAuth::create_sasl_response(const GWBUF& buffer,
     memcpy(ptr, client_final_message.data(), client_final_message.size());
 
     return response;
+}
+
+std::tuple<int, std::string_view> ScramBackendAuth::read_scram_data(const GWBUF& input)
+{
+    int sasl_state = 0;
+    string_view sasl_data;
+    auto plen = input.length();
+    const size_t base_len = pg::HEADER_LEN + 4;
+    if (plen >= base_len)
+    {
+        sasl_state = pg::get_uint32(input.data() + pg::HEADER_LEN);
+        if (plen > base_len)
+        {
+            sasl_data = {reinterpret_cast<const char*>(input.data() + base_len), plen - base_len};
+        }
+    }
+    return {sasl_state, sasl_data};
 }
 
 std::unique_ptr<PgClientAuthenticator> ScramAuthModule::create_client_authenticator() const

@@ -60,12 +60,21 @@ public:
     GWBUF exchange(GWBUF&& input, PgProtocolData& session) override;
 
 private:
-    GWBUF create_sasl_initial_response(std::string& client_first_message_bare);
+    GWBUF create_sasl_initial_response();
     GWBUF create_sasl_response(const GWBUF& buffer,
                                std::string_view client_first_message_bare,
                                std::string& server_first_message,
                                std::string& client_final_message_without_proof,
                                const Digest& client_key);
+    enum class State {AUTH_REQ, SALT, FINAL, DONE};
+    State m_state {State::AUTH_REQ};
+
+    std::string m_client_first_message_bare;
+    std::string m_client_nonce;
+
+    GWBUF handle_auth_request(const GWBUF& input);
+
+    std::tuple<int, std::string_view> read_scram_data(const GWBUF& input);
 };
 
 class ScramAuthModule : public PgAuthenticatorModule
