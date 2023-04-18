@@ -21,75 +21,14 @@
 namespace
 {
 
-struct ThisUnit
-{
-    PgParser* pParser = nullptr;
-} this_unit;
-
 int module_init()
 {
-    mxb_assert(!this_unit.pParser);
-
-    int rv = 1;
-
-    // TODO: Until switch is permanently made.
-    if (getenv("PP_POSTGRES_NATIVE"))
-    {
-        MXB_NOTICE("Using Postgres parser for parsing Postgres SQL.");
-
-        const auto& config = mxs::Config::get();
-
-        const char* zPlugin = "pp_postgres";
-
-        mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(zPlugin);
-
-        if (pPlugin)
-        {
-            MXB_NOTICE("Parser plugin loaded.");
-
-            if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()))
-            {
-                auto& helper = PgParser::Helper::get();
-
-                this_unit.pParser = new PgParser(pPlugin->create_parser(&helper));
-                rv = 0;
-            }
-            else
-            {
-                MXB_ERROR("Could not setup parser plugin '%s'.", zPlugin);
-                mxs::ParserPlugin::unload(pPlugin);
-            }
-        }
-        else
-        {
-            MXB_NOTICE("Could not load parser plugin '%s'.", zPlugin);
-        }
-    }
-    else
-    {
-        MXB_NOTICE("Using MariaDB parser for parsing Postgres SQL.");
-
-        auto& pp = MariaDBParser::get().plugin();
-
-        this_unit.pParser = new PgParser(pp.create_parser(&PgParser::Helper::get()));
-        rv = 0;
-    }
-
-    return rv;
+    return 0;
 }
 
 void module_finish()
 {
-    mxb_assert(this_unit.pParser);
-    delete this_unit.pParser;
 }
-}
-
-PgParser& PgParser::get()
-{
-    mxb_assert(this_unit.pParser);
-
-    return *this_unit.pParser;
 }
 
 namespace postgres

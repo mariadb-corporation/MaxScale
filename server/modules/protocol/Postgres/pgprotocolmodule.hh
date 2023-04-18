@@ -16,6 +16,7 @@
 #include <maxscale/protocol2.hh>
 #include "pgconfiguration.hh"
 
+class PgParser;
 class SERVICE;
 
 class PgProtocolModule final : public mxs::ProtocolModule
@@ -51,13 +52,15 @@ public:
 
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
+    bool post_configure();
+
 private:
     PgProtocolModule(std::string name, SERVICE* pService);
 
 private:
-    PgConfiguration m_config;
-    SERVICE&        m_service;
-
-    bool m_check_password {true};       /**< Check client password */
-    bool m_match_host_pattern {true};   /**< Client address must match hba entry */
+    PgConfiguration           m_config;
+    SERVICE&                  m_service;
+    std::unique_ptr<PgParser> m_sParser;
+    bool                      m_check_password {true};     /**< Check client password */
+    bool                      m_match_host_pattern {true}; /**< Client address must match hba entry */
 };

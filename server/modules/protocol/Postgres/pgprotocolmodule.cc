@@ -15,16 +15,64 @@
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/listener.hh>
+#include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/service.hh>
 #include "pgauthenticatormodule.hh"
 #include "pgclientconnection.hh"
 #include "pgbackendconnection.hh"
+#include "pgparser.hh"
 #include "pgprotocoldata.hh"
 #include "postgresprotocol.hh"
 #include "pgusermanager.hh"
 #include "authenticators/password.hh"
 #include "authenticators/trust.hh"
 #include "authenticators/scram-sha-256.hh"
+
+namespace
+{
+
+std::unique_ptr<PgParser> create_mariadb_parser()
+{
+    MXB_NOTICE("Using MariaDB parser for parsing Postgres SQL.");
+
+    auto& pp = MariaDBParser::get().plugin();
+
+    return std::make_unique<PgParser>(pp.create_parser(&PgParser::Helper::get()));
+}
+
+std::unique_ptr<PgParser> create_postgres_parser(const char* zPlugin)
+{
+    MXB_NOTICE("Using parser plugin '%s' for parsing Postgres SQL.", zPlugin);
+
+    std::unique_ptr<PgParser> sParser;
+
+    const auto& config = mxs::Config::get();
+
+    mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(zPlugin);
+
+    if (pPlugin)
+    {
+        if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()))
+        {
+            auto& helper = PgParser::Helper::get();
+
+            sParser.reset(new PgParser(pPlugin->create_parser(&helper)));
+        }
+        else
+        {
+            MXB_ERROR("Could not setup parser plugin '%s'.", zPlugin);
+            mxs::ParserPlugin::unload(pPlugin);
+        }
+    }
+    else
+    {
+        MXB_NOTICE("Could not load parser plugin '%s'.", zPlugin);
+    }
+
+    return sParser;
+}
+
+}
 
 PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
     : m_config(name, this)
@@ -53,7 +101,7 @@ PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* 
     auth_settings.match_host_pattern = m_match_host_pattern;
     auth_settings.allow_root_user = pSession->service->config()->enable_root;
 
-    return std::make_unique<PgClientConnection>(pSession, pComponent, auth_settings);
+    return std::make_unique<PgClientConnection>(pSession, m_sParser.get(), pComponent, auth_settings);
 }
 
 std::unique_ptr<mxs::BackendConnection>
@@ -178,4 +226,20 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         authenticators.clear();
     }
     return authenticators;
+}
+
+bool PgProtocolModule::post_configure()
+{
+    mxb_assert(!m_sParser);
+
+    if (m_config.parser == PgConfiguration::MARIADB)
+    {
+        m_sParser = create_mariadb_parser();
+    }
+    else
+    {
+        m_sParser = create_postgres_parser(m_config.parser.c_str());
+    }
+
+    return m_sParser != nullptr;
 }

@@ -25,6 +25,12 @@ public:
     // static
     static mxs::config::Specification& specification();
 
+    std::string parser;
+
+    static constexpr const char* MARIADB = "mariadb";
+
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
+
 private:
     PgProtocolModule& m_instance;
 };
