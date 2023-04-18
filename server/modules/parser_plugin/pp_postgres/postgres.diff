@@ -1,5 +1,80 @@
+diff --git a/src/backend/utils/error/elog.c b/src/backend/utils/error/elog.c
+index 55ee5423af..f491cf1642 100644
+--- a/src/backend/utils/error/elog.c
++++ b/src/backend/utils/error/elog.c
+@@ -90,9 +90,9 @@
+ 
+ 
+ /* Global variables */
+-ErrorContextCallback *error_context_stack = NULL;
++__thread ErrorContextCallback *error_context_stack = NULL;
+ 
+-sigjmp_buf *PG_exception_stack = NULL;
++__thread sigjmp_buf *PG_exception_stack = NULL;
+ 
+ extern bool redirection_done;
+ 
+@@ -103,7 +103,7 @@ extern bool redirection_done;
+  * libraries will miss any log messages that are generated before the
+  * library is loaded.
+  */
+-emit_log_hook_type emit_log_hook = NULL;
++__thread emit_log_hook_type emit_log_hook = NULL;
+ 
+ /* GUC parameters */
+ int			Log_error_verbosity = PGERROR_VERBOSE;
+@@ -142,22 +142,22 @@ static void write_eventlog(int level, const char *line, int len);
+ /* We provide a small stack of ErrorData records for re-entrant cases */
+ #define ERRORDATA_STACK_SIZE  5
+ 
+-static ErrorData errordata[ERRORDATA_STACK_SIZE];
++static __thread ErrorData errordata[ERRORDATA_STACK_SIZE];
+ 
+-static int	errordata_stack_depth = -1; /* index of topmost active frame */
++static __thread int	errordata_stack_depth = -1; /* index of topmost active frame */
+ 
+-static int	recursion_depth = 0;	/* to detect actual recursion */
++static __thread int	recursion_depth = 0;	/* to detect actual recursion */
+ 
+ /*
+  * Saved timeval and buffers for formatted timestamps that might be used by
+  * both log_line_prefix and csv logs.
+  */
+-static struct timeval saved_timeval;
+-static bool saved_timeval_set = false;
++static __thread struct timeval saved_timeval;
++static __thread bool saved_timeval_set = false;
+ 
+ #define FORMATTED_TS_LEN 128
+-static char formatted_start_time[FORMATTED_TS_LEN];
+-static char formatted_log_time[FORMATTED_TS_LEN];
++static __thread char formatted_start_time[FORMATTED_TS_LEN];
++static __thread char formatted_log_time[FORMATTED_TS_LEN];
+ 
+ 
+ /* Macro for checking errordata_stack_depth is reasonable */
+@@ -1455,8 +1455,8 @@ getinternalerrposition(void)
+  * The result of format_elog_string() is stored in ErrorContext, and will
+  * therefore survive until FlushErrorState() is called.
+  */
+-static int	save_format_errnumber;
+-static const char *save_format_domain;
++static __thread int	save_format_errnumber;
++static __thread const char *save_format_domain;
+ 
+ void
+ pre_format_elog_string(int errnumber, const char *domain)
+@@ -2797,7 +2797,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
+ char *
+ unpack_sql_state(int sql_state)
+ {
+-	static char buf[12];
++	static __thread char buf[12];
+ 	int			i;
+ 
+ 	for (i = 0; i < 5; i++)
 diff --git a/src/backend/utils/mmgr/mcxt.c b/src/backend/utils/mmgr/mcxt.c
-index e12be1b9b..f0ed40433 100644
+index e12be1b9bd..f0ed40433d 100644
 --- a/src/backend/utils/mmgr/mcxt.c
 +++ b/src/backend/utils/mmgr/mcxt.c
 @@ -39,22 +39,22 @@
@@ -35,7 +110,7 @@ index e12be1b9b..f0ed40433 100644
  static void MemoryContextCallResetCallbacks(MemoryContext context);
  static void MemoryContextStatsInternal(MemoryContext context, int level,
 diff --git a/src/include/utils/catcache.h b/src/include/utils/catcache.h
-index d81e6fabb..1b8bcfaf4 100644
+index d81e6fabb7..1b8bcfaf4b 100644
 --- a/src/include/utils/catcache.h
 +++ b/src/include/utils/catcache.h
 @@ -187,7 +187,7 @@ typedef struct catcacheheader
@@ -47,8 +122,39 @@ index d81e6fabb..1b8bcfaf4 100644
  
  extern void CreateCacheMemoryContext(void);
  
+diff --git a/src/include/utils/elog.h b/src/include/utils/elog.h
+index f5c6cd904d..cc54db8b58 100644
+--- a/src/include/utils/elog.h
++++ b/src/include/utils/elog.h
+@@ -248,7 +248,7 @@ typedef struct ErrorContextCallback
+ 	void	   *arg;
+ } ErrorContextCallback;
+ 
+-extern PGDLLIMPORT ErrorContextCallback *error_context_stack;
++extern __thread PGDLLIMPORT ErrorContextCallback *error_context_stack;
+ 
+ 
+ /*----------
+@@ -355,7 +355,7 @@ extern PGDLLIMPORT ErrorContextCallback *error_context_stack;
+ 	(pg_re_throw(), pg_unreachable())
+ #endif
+ 
+-extern PGDLLIMPORT sigjmp_buf *PG_exception_stack;
++extern __thread PGDLLIMPORT sigjmp_buf *PG_exception_stack;
+ 
+ 
+ /* Stuff that error handlers might want to use */
+@@ -412,7 +412,7 @@ extern char *GetErrorContextStack(void);
+ 
+ /* Hook for intercepting messages before they are sent to the server log */
+ typedef void (*emit_log_hook_type) (ErrorData *edata);
+-extern PGDLLIMPORT emit_log_hook_type emit_log_hook;
++extern __thread PGDLLIMPORT emit_log_hook_type emit_log_hook;
+ 
+ 
+ /* GUC-configurable parameters */
 diff --git a/src/include/utils/memutils.h b/src/include/utils/memutils.h
-index 495d1af20..385080fd6 100644
+index 495d1af201..385080fd65 100644
 --- a/src/include/utils/memutils.h
 +++ b/src/include/utils/memutils.h
 @@ -52,16 +52,16 @@
@@ -77,7 +183,7 @@ index 495d1af20..385080fd6 100644
  /* Backwards compatibility macro */
  #define MemoryContextResetAndDeleteChildren(ctx) MemoryContextReset(ctx)
 diff --git a/src/include/utils/palloc.h b/src/include/utils/palloc.h
-index a0b62aa7b..3858e978b 100644
+index a0b62aa7b0..3858e978b4 100644
 --- a/src/include/utils/palloc.h
 +++ b/src/include/utils/palloc.h
 @@ -56,7 +56,7 @@ typedef struct MemoryContextCallback
