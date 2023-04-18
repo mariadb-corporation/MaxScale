@@ -12,6 +12,7 @@
  */
 
 #include "pgconfiguration.hh"
+#include "pgprotocolmodule.hh"
 
 
 namespace
@@ -24,6 +25,14 @@ const char* CONFIG_PREFIX = MXB_MODULE_NAME;
 
 mxs::config::Specification specification(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL,
                                          CONFIG_PREFIX);
+
+mxs::config::ParamString parser(
+    &specification,
+    "parser",
+    "What parser the Postgres protocol module should use. If 'mariadb' "
+    "then the one used by 'mariadbprotocol'.",
+    PgConfiguration::MARIADB);
+
 }
 }
 
@@ -31,10 +40,16 @@ PgConfiguration::PgConfiguration(const std::string& name, PgProtocolModule* pIns
     : mxs::config::Configuration(name, &postgresprotocol::specification)
     , m_instance(*pInstance)
 {
+    add_native(&PgConfiguration::parser, &postgresprotocol::parser);
 }
 
 // static
 mxs::config::Specification& PgConfiguration::specification()
 {
     return postgresprotocol::specification;
+}
+
+bool PgConfiguration::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_instance.post_configure();
 }

@@ -47,6 +47,4 @@ public:
 
     PgParser(std::unique_ptr<mxs::Parser> sParser);
     ~PgParser();
-
-    static PgParser& get();
 };

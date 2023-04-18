@@ -36,7 +36,9 @@ public:
         bool allow_root_user {false};   /**< From service */
     };
 
-    PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent,
+    PgClientConnection(MXS_SESSION* pSession,
+                       mxs::Parser* pParser,
+                       mxs::Component* pComponent,
                        const UserAuthSettings& auth_settings);
 
     // DCBHandler
@@ -92,6 +94,7 @@ private:
 
     State           m_state = State::INIT;
     MXS_SESSION&    m_session;
+    mxs::Parser&    m_parser;
     bool            m_ssl_required;
     mxs::Component* m_down;
     PgProtocolData* m_protocol_data {nullptr};

@@ -16,7 +16,6 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
-#include "pgparser.hh"
 #include "pgprotocoldata.hh"
 #include "pgusermanager.hh"
 
@@ -75,14 +74,17 @@ void add_packet_ready_for_query(GWBUF& gwbuf)
 }
 }
 
-PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent,
+PgClientConnection::PgClientConnection(MXS_SESSION* pSession,
+                                       mxs::Parser* pParser,
+                                       mxs::Component* pComponent,
                                        const UserAuthSettings& auth_settings)
     : m_session(*pSession)
+    , m_parser(*pParser)
     , m_ssl_required(m_session.listener_data()->m_ssl.config().enabled)
     , m_down(pComponent)
     , m_protocol_data(static_cast<PgProtocolData*>(pSession->protocol_data()))
     , m_user_auth_settings(auth_settings)
-    , m_qc(PgParser::get(), pSession)
+    , m_qc(m_parser, pSession)
 {
 }
 
@@ -453,7 +455,7 @@ bool PgClientConnection::safe_to_restart() const
 
 mxs::Parser* PgClientConnection::parser()
 {
-    return &PgParser::get();
+    return &m_parser;
 }
 
 size_t PgClientConnection::sizeof_buffers() const
