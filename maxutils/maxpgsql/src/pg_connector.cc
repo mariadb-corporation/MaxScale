@@ -12,8 +12,9 @@
  */
 
 #include <maxpgsql/pg_connector.hh>
-#include <libpq-fe.h>
 #include <utility>
+#include <thread>
+#include <maxbase/stopwatch.hh>
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
@@ -254,7 +255,7 @@ bool PgSQL::cmd(const string& query)
     bool rval = false;
     if (m_conn)
     {
-        auto result = PQexec(m_conn, query.c_str());
+        auto result = PQexec_with_timeout(query);
         auto res_status = PQresultStatus(result);   // ok even if result is null
         if (res_status == PGRES_COMMAND_OK)
         {
@@ -271,8 +272,10 @@ bool PgSQL::cmd(const string& query)
         }
         else if (res_status == PGRES_FATAL_ERROR)
         {
-            // The result may not exist, ask connection itself for error.
-            m_errormsg = mxb::string_printf(query_failed, query.c_str(), read_pg_error().c_str());
+            // If the error message is not empty, the PQexec_with_timeout call generated a custom error.
+            // If it's empty, the result may not exist, ask connection itself for error.
+            std::string msg = m_errormsg.empty() ? read_pg_error() : m_errormsg;
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), msg.c_str());
         }
         else
         {
@@ -306,7 +309,7 @@ std::unique_ptr<QueryResult> PgSQL::query(const std::string& query)
     std::unique_ptr<QueryResult> rval;
     if (m_conn)
     {
-        auto result = PQexec(m_conn, query.c_str());
+        auto result = PQexec_with_timeout(query);
         auto res_status = PQresultStatus(result);
         if (res_status == PGRES_TUPLES_OK)
         {
@@ -315,7 +318,10 @@ std::unique_ptr<QueryResult> PgSQL::query(const std::string& query)
         }
         else if (res_status == PGRES_FATAL_ERROR)
         {
-            m_errormsg = mxb::string_printf(query_failed, query.c_str(), read_pg_error().c_str());
+            // If the error message is not empty, the PQexec_with_timeout call generated a custom error.
+            // If it's empty, the result may not exist, ask connection itself for error.
+            std::string msg = m_errormsg.empty() ? read_pg_error() : m_errormsg;
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), msg.c_str());
             PQclear(result);
         }
         else
@@ -351,6 +357,69 @@ std::string PgSQL::read_pg_error() const
     std::replace(errormsg.begin(), errormsg.end(), '\n', ' ');
     mxb::rtrim(errormsg);
     return errormsg;
+}
+
+PGresult* PgSQL::PQexec_with_timeout(const std::string& query)
+{
+    // Clear out the error. This way the calling code can inspect the error message to determine whether
+    // this function created a custom, non-libpq error message.
+    m_errormsg.clear();
+
+    std::chrono::seconds limit(m_settings.timeout);
+    auto start = mxb::SteadyClock::now();
+
+    PQsetnonblocking(m_conn, 1);
+    PQsendQuery(m_conn, query.c_str());
+
+    // TODO: Using select() or poll() for this would be nicer.
+
+    while (PQflush(m_conn) == 1)
+    {
+        if (mxb::SteadyClock::now() - start > limit)
+        {
+            m_errormsg = "Sending query to the server timed out.";
+            PQsetnonblocking(m_conn, 0);
+            return nullptr;
+        }
+
+        std::this_thread::sleep_for(10ms);
+    }
+
+    do
+    {
+        if (PQconsumeInput(m_conn) == 0)
+        {
+            return nullptr;
+        }
+
+        if (PQisBusy(m_conn) == 1)
+        {
+            if (mxb::SteadyClock::now() - start > limit)
+            {
+                m_errormsg = "Reading result from the server timed out.";
+                PQsetnonblocking(m_conn, 0);
+                return nullptr;
+            }
+
+            std::this_thread::sleep_for(10ms);
+        }
+        else
+        {
+            break;
+        }
+    }
+    while (true);
+
+    auto result = PQgetResult(m_conn);
+
+    // Discard trailing results to behave like PQexec
+    while (auto res = PQgetResult(m_conn))
+    {
+        PQclear(res);
+    }
+
+    PQsetnonblocking(m_conn, 0);
+    return result;
 }
 }
 

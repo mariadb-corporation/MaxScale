@@ -18,8 +18,7 @@
 #include <string>
 #include <maxbase/ssl.hh>
 #include <maxbase/queryresult.hh>
-
-struct pg_conn;
+#include <libpq-fe.h>
 
 namespace maxpgsql
 {
@@ -95,11 +94,12 @@ public:
     std::unique_ptr<mxb::QueryResult> query(const std::string& query);
 
 private:
-    pg_conn*           m_conn {nullptr};
+    PGconn*            m_conn {nullptr};
     ConnectionSettings m_settings;
     std::string        m_errormsg;
 
     void        move_helper(PgSQL&& other);
     std::string read_pg_error() const;
+    PGresult*   PQexec_with_timeout(const std::string& query);
 };
 }
