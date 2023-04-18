@@ -687,7 +687,6 @@ struct
     PostgresParserPlugin parser_plugin;
 } this_unit;
 
-
 int32_t module_process_init(void)
 {
     mxb_assert(!this_unit.initialized);
@@ -715,6 +714,15 @@ void module_thread_finish(void)
     MemoryContextDelete(TopMemoryContext); // Postgres
 }
 
+}
+
+extern "C"
+{
+// To make it easy to get hold of the plugin when linking statically to the library.
+mxs::ParserPlugin* mxs_get_pp_postgres_plugin()
+{
+    return &this_unit.parser_plugin;
+}
 }
 
 /**
