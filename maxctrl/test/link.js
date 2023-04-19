@@ -112,5 +112,23 @@ describe("Link/Unlink Commands", function () {
     await doCommand("unlink service Read-Connection-Router RW-Split-Router server1 server2");
   });
 
+  it("link filters to a service", async function () {
+    await doCommand("create service link-test readconnroute user=maxuser password=maxpwd");
+    var res = await verifyCommand("link service link-test QLA", "services/link-test");
+    expect(res.data.relationships.filters.data[0].id).to.equal("QLA");
+    res = await verifyCommand("link service link-test Hint", "services/link-test");
+    expect(res.data.relationships.filters.data[0].id).to.equal("QLA");
+    expect(res.data.relationships.filters.data[1].id).to.equal("Hint");
+  });
+
+  it("unlink filters from a service", async function () {
+    var res = await verifyCommand("unlink service link-test QLA", "services/link-test");
+    expect(res.data.relationships.filters.data[0].id).to.equal("Hint");
+    expect(res.data.relationships.filters.data).to.have.length(1);
+    res = await verifyCommand("unlink service link-test Hint", "services/link-test");
+    expect(res.data.relationships).to.be.empty;
+    await doCommand("destroy service link-test");
+  });
+
   after(stopMaxScale);
 });

@@ -19,6 +19,7 @@ function removeServer(argv, path, targets) {
       var servers = _.get(res, "data.relationships.servers.data", []);
       var services = _.get(res, "data.relationships.services.data", []);
       var monitors = _.get(res, "data.relationships.monitors.data", []);
+      var filters = _.get(res, "data.relationships.filters.data", []);
 
       _.remove(servers, function (i) {
         return targets.indexOf(i.id) != -1;
@@ -32,6 +33,10 @@ function removeServer(argv, path, targets) {
         return targets.indexOf(i.id) != -1;
       });
 
+      _.remove(filters, function (i) {
+        return targets.indexOf(i.id) != -1;
+      });
+
       // Update relationships and remove unnecessary parts
       if (_.has(res, "data.relationships.servers.data")) {
         _.set(res, "data.relationships.servers.data", servers);
@@ -41,6 +46,9 @@ function removeServer(argv, path, targets) {
       }
       if (_.has(res, "data.relationships.monitors.data")) {
         _.set(res, "data.relationships.monitors.data", monitors);
+      }
+      if (_.has(res, "data.relationships.filters.data")) {
+        _.set(res, "data.relationships.filters.data", filters);
       }
       delete res.data.attributes;
 
@@ -60,11 +68,15 @@ exports.builder = function (yargs) {
       function (yargs) {
         return yargs
           .epilog(
-            "This command unlinks targets from a service, removing them from " +
-              "the list of available targets for that service. New connections to " +
-              "the service will not use the unlinked targets but existing " +
-              "connections can still use the targets. A target can be " +
-              "a server, another service or a cluster (a monitor)."
+            `
+This command unlinks objects from a service, removing them from the list of
+available objects for that service. Objects can be either a routing target
+(a server, another service or a cluster i.e. a monitor) or a filter used by
+the service.
+
+New connections to the service will no longer use the unlinked objects but existing
+connections that were created before the operation can still use them.
+`
           )
           .usage("Usage: unlink service <name> <target...>");
       },

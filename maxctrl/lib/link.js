@@ -18,6 +18,7 @@ function addServer(argv, path, targets) {
     var srvs;
     var mons;
     var svcs;
+    var fltrs;
 
     return getJson(host, "servers")
       .then((r) => {
@@ -30,12 +31,17 @@ function addServer(argv, path, targets) {
       })
       .then((r) => {
         svcs = r;
+        return getJson(host, "filters");
+      })
+      .then((r) => {
+        fltrs = r;
         return getJson(host, path);
       })
       .then((res) => {
         var servers = _.get(res, "data.relationships.servers.data", []);
         var services = _.get(res, "data.relationships.services.data", []);
         var monitors = _.get(res, "data.relationships.monitors.data", []);
+        var filters = _.get(res, "data.relationships.filters.data", []);
 
         for (const i of targets) {
           if (srvs.data.find((e) => e.id == i)) {
@@ -44,6 +50,8 @@ function addServer(argv, path, targets) {
             monitors.push({ id: i, type: "monitors" });
           } else if (svcs.data.find((e) => e.id == i)) {
             services.push({ id: i, type: "services" });
+          } else if (fltrs.data.find((e) => e.id == i)) {
+            filters.push({ id: i, type: "filters" });
           } else {
             return error("Object '" + i + "' is not a valid server, service or monitor");
           }
@@ -53,6 +61,7 @@ function addServer(argv, path, targets) {
         _.set(res, "data.relationships.servers.data", servers);
         _.set(res, "data.relationships.services.data", services);
         _.set(res, "data.relationships.monitors.data", monitors);
+        _.set(res, "data.relationships.filters.data", filters);
         delete res.data.attributes;
 
         return doRequest(host, path, { method: "PATCH", data: res });
@@ -71,14 +80,24 @@ exports.builder = function (yargs) {
       function (yargs) {
         return yargs
           .epilog(
-            "This command links targets to a service, making them available " +
-              "for any connections that use the service. A target can be a " +
-              "server, another service or a cluster (i.e. a monitor). Before a " +
-              "server is linked to a service, it should be linked to a monitor so that " +
-              "the server state is up to date. Newly linked targets are only " +
-              "available to new connections, existing connections will use the " +
-              "old list of targets. If a monitor (a cluster of servers) is linked " +
-              "to a service, the service must not have any other targets linked to it."
+            `
+This command links objects to a service, making them available for any
+connections that use the service. Objects can either be routing targets
+or filters.
+
+A target can be a server, another service or a cluster (i.e. a monitor).
+Before a server is linked to a service, it should be linked to a monitor
+so that the server state is up to date.
+
+Newly linked targets are only available to new connections, existing
+connections will use the old list of targets. If a monitor (a cluster of
+servers) is linked to a service, the service must not have any other targets
+linked to it.
+
+When linking filters, the order in which the filters appear in the argument
+list is the order in which they are added to the service. Unlike the
+'alter service-filters' command, this command appends filters to the service.
+`
           )
           .usage("Usage: link service <name> <target...>");
       },
