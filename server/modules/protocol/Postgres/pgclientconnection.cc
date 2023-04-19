@@ -315,7 +315,11 @@ PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)
         break;
     }
 
-    m_down->routeQuery(std::move(gwbuf));
+    if (!m_down->routeQuery(std::move(gwbuf)))
+    {
+        m_state = State::ERROR;
+        m_session.kill();
+    }
 
     return State::ROUTE;
 }
