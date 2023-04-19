@@ -32,7 +32,7 @@ private:
 class PasswordBackendAuth : public PgBackendAuthenticator
 {
 public:
-    GWBUF exchange(GWBUF&& input, PgProtocolData& session) override;
+    std::optional<GWBUF> exchange(GWBUF&& input, PgProtocolData& session) override;
 };
 
 class PasswordAuthModule : public PgAuthenticatorModule

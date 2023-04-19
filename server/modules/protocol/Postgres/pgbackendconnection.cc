@@ -484,7 +484,10 @@ bool PgBackendConnection::handle_auth()
                     auto reply = m_authenticator->exchange(std::move(buf), *m_protocol_data);
                     if (reply)
                     {
-                        m_dcb->writeq_append(std::move(reply));
+                        if (!reply->empty())
+                        {
+                            m_dcb->writeq_append(std::move(*reply));
+                        }
                     }
                     else
                     {

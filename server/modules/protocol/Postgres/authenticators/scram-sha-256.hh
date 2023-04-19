@@ -57,20 +57,22 @@ private:
 class ScramBackendAuth : public PgBackendAuthenticator
 {
 public:
-    GWBUF exchange(GWBUF&& input, PgProtocolData& session) override;
+    std::optional<GWBUF> exchange(GWBUF&& input, PgProtocolData& session) override;
 
 private:
     enum class State {AUTH_REQ, SALT, FINAL, DONE};
     State m_state {State::AUTH_REQ};
 
     std::string m_client_first_message_bare;
+    std::string m_auth_message;
     std::string m_client_nonce;
 
-    GWBUF handle_auth_request(const GWBUF& input);
-    GWBUF handle_sasl_continue(const GWBUF& input, PgProtocolData& session);
-    GWBUF create_sasl_initial_response();
-    GWBUF create_scram_proof(std::string_view full_nonce, std::string_view server_first_message,
-                             PgProtocolData& session);
+    std::optional<GWBUF> handle_auth_request(const GWBUF& input);
+    std::optional<GWBUF> handle_sasl_continue(const GWBUF& input, PgProtocolData& session);
+    bool                 check_sasl_final(const GWBUF& input, PgProtocolData& session);
+    GWBUF                create_sasl_initial_response();
+    GWBUF                create_scram_proof(std::string_view full_nonce,
+                                            std::string_view server_first_message, PgProtocolData& session);
 
     std::tuple<int, std::string_view> read_scram_data(const GWBUF& input);
 };

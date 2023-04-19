@@ -24,7 +24,7 @@ public:
 class TrustBackendAuth : public PgBackendAuthenticator
 {
 public:
-    GWBUF exchange(GWBUF&& input, PgProtocolData& session) override;
+    std::optional<GWBUF> exchange(GWBUF&& input, PgProtocolData& session) override;
 };
 
 class TrustAuthModule : public PgAuthenticatorModule

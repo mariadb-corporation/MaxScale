@@ -14,6 +14,7 @@
 
 #include "postgresprotocol.hh"
 #include <maxscale/authenticator.hh>
+#include <optional>
 
 class PgAuthenticatorModule;
 
@@ -127,14 +128,14 @@ public:
     virtual ~PgBackendAuthenticator() = default;
 
     /**
-     * Exchange authentication packets. It should read the input, optionally write to output,
-     * and return status.
+     * Exchange authentication packets. Reads the input and generate output to send to server.
      *
      * @param input Packet from backend
      * @param session Protocol session
-     * @return Reply to backend. Empty on error.
+     * @return Reply to backend. An empty optional on error. An empty yet existing GWBUF means the
+     * operation succeeded but there is nothing to send.
      */
-    virtual GWBUF exchange(GWBUF&& input, PgProtocolData& session) = 0;
+    virtual std::optional<GWBUF> exchange(GWBUF&& input, PgProtocolData& session) = 0;
 };
 
 class PgAuthenticatorModule : public mxs::AuthenticatorModule

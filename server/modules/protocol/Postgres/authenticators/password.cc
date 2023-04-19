@@ -223,14 +223,14 @@ PasswordClientAuth::scram_salted_password(std::string_view pw, std::string_view 
     return rval;
 }
 
-GWBUF PasswordBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
+std::optional<GWBUF> PasswordBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
 {
-    GWBUF rval;
+    std::optional<GWBUF> rval;
     if (input.length() == password_request.size()
         && memcmp(input.data(), password_request.data(), password_request.size()) == 0)
     {
         const auto& token = session.auth_data().client_token;
-        rval.append(token.data(), token.size());
+        rval = GWBUF(token.data(), token.size());
     }
     return rval;
 }

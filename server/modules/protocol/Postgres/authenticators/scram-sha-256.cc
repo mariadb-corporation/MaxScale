@@ -401,10 +401,13 @@ GWBUF ScramClientAuth::sasl_verify_proof(const Digest& proof, string_view client
     if (hash(client_key) == m_stored_key)
     {
         // Correct password! Save ClientKey and StoredKey, they will be needed when logging in to backends.
+        // Save ServerKey as well, required for checking server signature.
         auto& token_storage = session.auth_data().client_token;
-        token_storage.resize(client_key.size() + m_stored_key.size());
-        memcpy(token_storage.data(), client_key.data(), client_key.size());
-        memcpy(token_storage.data() + client_key.size(), m_stored_key.data(), m_stored_key.size());
+        const size_t digest_len = SHA256_DIGEST_LENGTH;
+        token_storage.resize(3 * digest_len);
+        auto storage_ptr = mempcpy(token_storage.data(), client_key.data(), digest_len);
+        storage_ptr = mempcpy(storage_ptr, m_stored_key.data(), digest_len);
+        memcpy(storage_ptr, m_server_key.data(), digest_len);
 
         // ServerSignature := HMAC(ServerKey, AuthMessage)
         auto server_sig = hmac(m_server_key, auth_message);
@@ -435,11 +438,12 @@ bool ScramClientAuth::nonces_match(std::string_view client_final_nonce)
     return rval;
 }
 
-GWBUF ScramBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
+std::optional<GWBUF> ScramBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
 {
     mxb_assert(input.length() >= 5);
+    std::optional<GWBUF> rval;
+
     // All packets should start with 'R'.
-    GWBUF rval;
     if (input[0] == pg::AUTHENTICATION)
     {
         switch (m_state)
@@ -455,7 +459,14 @@ GWBUF ScramBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
             break;
 
         case State::FINAL:
-            // TODO: Check server signature.
+            if (check_sasl_final(input, session))
+            {
+                rval = GWBUF();     // Ok, nothing to do.
+            }
+            else
+            {
+                MXB_ERROR("Invalid server key.");
+            }
             break;
 
         case State::DONE:
@@ -465,9 +476,9 @@ GWBUF ScramBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
     return rval;
 }
 
-GWBUF ScramBackendAuth::handle_auth_request(const GWBUF& input)
+std::optional<GWBUF> ScramBackendAuth::handle_auth_request(const GWBUF& input)
 {
-    GWBUF rval;
+    std::optional<GWBUF> rval;
     auto [auth_type, sasl_data] = read_scram_data(input);
     if (auth_type == pg::Auth::AUTH_SASL && !sasl_data.empty() && sasl_data.back() == '\0')
     {
@@ -520,9 +531,9 @@ GWBUF ScramBackendAuth::create_sasl_initial_response()
     return response;
 }
 
-GWBUF ScramBackendAuth::handle_sasl_continue(const GWBUF& input, PgProtocolData& session)
+std::optional<GWBUF> ScramBackendAuth::handle_sasl_continue(const GWBUF& input, PgProtocolData& session)
 {
-    GWBUF rval;
+    std::optional<GWBUF> rval;
     auto [auth_type, sasl_data] = read_scram_data(input);
     if (auth_type == pg::Auth::AUTH_SASL_CONTINUE && !sasl_data.empty())
     {
@@ -559,8 +570,8 @@ GWBUF ScramBackendAuth::create_scram_proof(string_view full_nonce, string_view s
 {
     string client_final_msg_wo_proof = "c=biws";    // Base64 of n,,
     client_final_msg_wo_proof.append(",r=").append(full_nonce.substr(2));
-    auto auth_message = mxb::cat(m_client_first_message_bare, ",", server_first_message, ",",
-                                 client_final_msg_wo_proof);
+    m_auth_message = mxb::cat(m_client_first_message_bare, ",", server_first_message, ",",
+                              client_final_msg_wo_proof);
 
     auto& token_storage = session.auth_data().client_token;
     Digest client_key;
@@ -570,7 +581,7 @@ GWBUF ScramBackendAuth::create_scram_proof(string_view full_nonce, string_view s
 
     // ClientSignature := HMAC(StoredKey, AuthMessage)
     // ClientProof     := ClientKey XOR ClientSignature
-    Digest client_sig = hmac(stored_key, auth_message);
+    Digest client_sig = hmac(stored_key, m_auth_message);
     Digest client_proof = digest_xor(client_key, client_sig);
     string client_final_msg = mxb::cat(client_final_msg_wo_proof, ",p=", mxs::to_base64(client_proof));
 
@@ -597,6 +608,23 @@ std::tuple<int, std::string_view> ScramBackendAuth::read_scram_data(const GWBUF&
         }
     }
     return {sasl_state, sasl_data};
+}
+
+bool ScramBackendAuth::check_sasl_final(const GWBUF& input, PgProtocolData& session)
+{
+    bool rval = false;
+    auto [auth_type, sasl_data] = read_scram_data(input);
+    if (auth_type == pg::Auth::AUTH_SASL_FINAL && sasl_data.substr(0, 2) == "v=")
+    {
+        auto server_sig_bytes = mxs::from_base64(sasl_data.substr(2));
+        Digest server_key;
+        memcpy(server_key.data(), session.auth_data().client_token.data() + 2 * server_key.size(),
+               server_key.size());
+        Digest correct_server_sig = hmac(server_key, m_auth_message);
+
+        rval = memcmp(server_sig_bytes.data(), correct_server_sig.data(), correct_server_sig.size()) == 0;
+    }
+    return rval;
 }
 
 std::unique_ptr<PgClientAuthenticator> ScramAuthModule::create_client_authenticator() const

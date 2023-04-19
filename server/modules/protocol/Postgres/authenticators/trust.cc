@@ -31,10 +31,10 @@ TrustClientAuth::authenticate(PgProtocolData& session)
     return AuthRes {AuthRes::Status::SUCCESS};
 }
 
-GWBUF TrustBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
+std::optional<GWBUF> TrustBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
 {
     // Getting here means backend does not consider us trusted.
-    return GWBUF();
+    return {};
 }
 
 std::unique_ptr<PgClientAuthenticator> TrustAuthModule::create_client_authenticator() const
