@@ -326,6 +326,10 @@ PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)
         }
         break;
 
+    case pg::PARSE:
+        record_parse_for_history(gwbuf);
+        break;
+
     default:
         if (pg::will_respond(cmd))
         {
@@ -597,6 +601,30 @@ bool PgClientConnection::record_for_history(GWBUF& buffer)
     }
 
     return recorded;
+}
+
+void PgClientConnection::record_parse_for_history(GWBUF& buffer)
+{
+    if (m_session.capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    {
+        buffer.set_id(m_next_id);
+
+        // We need to record the Parse in the history. Since the Parse command does not generate a response on
+        // its own, we need to add a Sync packet after it to "commit" the batch of extended query operations.
+        // This'll be handled transparently by the history replay since it expects one response per executed
+        // "session command". An optimization would be to batch the parse commands and send only one Sync
+        // command.
+        constexpr uint8_t sync_packet[] = {'S', 0, 0, 0, 4};
+        GWBUF tmp = buffer.deep_clone();
+        tmp.append(sync_packet, sizeof(sync_packet));
+
+        m_requests.push_back(HistoryRequest {std::make_unique<GWBUF>(std::move(tmp))});
+
+        if (++m_next_id == MAX_SESCMD_ID)
+        {
+            m_next_id = 1;
+        }
+    }
 }
 
 void PgClientConnection::handle_response(SimpleRequest&& req, const mxs::Reply& reply)

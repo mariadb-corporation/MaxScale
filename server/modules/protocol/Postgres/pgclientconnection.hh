@@ -82,6 +82,7 @@ private:
     bool check_allow_login();
     void send_error(std::string_view sqlstate, std::string_view msg);
     bool record_for_history(GWBUF& buffer);
+    void record_parse_for_history(GWBUF& buffer);
 
     void handle_response(SimpleRequest&& req, const mxs::Reply& reply);
     void handle_response(HistoryRequest&& req, const mxs::Reply& reply);
