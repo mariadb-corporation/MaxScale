@@ -313,8 +313,9 @@ std::string_view get_sql(const GWBUF& packet)
     if (packet.length() > pg::HEADER_LEN)
     {
         auto ptr = packet.data();
+        uint8_t cmd = *ptr++;
 
-        if (*ptr++ == pg::QUERY)
+        if (cmd == pg::QUERY)
         {
             uint32_t len = pg::get_uint32(ptr) - 4;     // Exclude the 4 bytes of length information.
 
@@ -337,6 +338,21 @@ std::string_view get_sql(const GWBUF& packet)
                           "packet is %lu bytes.",
                           (unsigned long) pg::HEADER_LEN + len,
                           (unsigned long) packet.length());
+            }
+        }
+        else if (cmd == pg::PARSE)
+        {
+            ptr += 4;   // Ignore the length
+
+            if (auto id_end = std::find(ptr, packet.end(), 0); id_end != packet.end())
+            {
+                ++id_end;
+
+                if (auto sql_end = std::find(id_end, packet.end(), 0); sql_end != packet.end())
+                {
+                    rv = std::string_view{reinterpret_cast<const char*>(id_end),
+                                          static_cast<size_t>(sql_end - id_end)};
+                }
             }
         }
     }
