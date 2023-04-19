@@ -16,6 +16,10 @@
 #include "postgresprotocol.hh"
 #include <maxscale/protocol2.hh>
 #include <maxscale/session.hh>
+#include <maxscale/queryclassifier.hh>
+
+#include <vector>
+#include <variant>
 
 class PgProtocolData;
 class PgUserCache;
@@ -63,6 +67,9 @@ private:
         ERROR
     };
 
+    using SimpleRequest = std::monostate;
+    using HistoryRequest = std::unique_ptr<GWBUF>;
+
     State state_init(const GWBUF& gwbuf);
     State state_auth(GWBUF&& packet);
     State state_route(GWBUF&& gwbuf);
@@ -74,6 +81,10 @@ private:
     void update_user_account_entry();
     bool check_allow_login();
     void send_error(std::string_view sqlstate, std::string_view msg);
+    bool record_for_history(GWBUF& buffer);
+
+    void handle_response(SimpleRequest&& req, const mxs::Reply& reply);
+    void handle_response(HistoryRequest&& req, const mxs::Reply& reply);
 
     const PgUserCache*     user_account_cache();
     PgAuthenticatorModule* find_auth_module(const std::string& auth_method);
@@ -86,4 +97,13 @@ private:
 
     std::unique_ptr<PgClientAuthenticator> m_authenticator;
     const UserAuthSettings                 m_user_auth_settings;
+
+    // The query classifier. Used to detect which statements need to be kept in the history.
+    mariadb::QueryClassifier m_qc;
+
+    // The ID generator for buffer IDs
+    uint32_t m_next_id {1};
+
+    // All the pending requests executed by the client
+    std::vector<std::variant<SimpleRequest, HistoryRequest>> m_requests;
 };

@@ -27,6 +27,10 @@ namespace
 {
 const string invalid_auth = "28000";    // invalid_authorization_specification
 
+// Upper limit of the session command history. This will never be set as the buffer ID for a query which means
+// the range of possible values are from 1 to UINT32_MAX - 1.
+const uint32_t MAX_SESCMD_ID = std::numeric_limits<uint32_t>::max();
+
 void add_packet_auth_request(GWBUF& gwbuf, pg::Auth athentication_method)
 {
     const size_t auth_len = 1 + 4 + 4;      // Byte1('R'), Int32(8) len, Int32 auth_method
@@ -61,6 +65,7 @@ PgClientConnection::PgClientConnection(MXS_SESSION* pSession, mxs::Component* pC
     , m_down(pComponent)
     , m_protocol_data(static_cast<PgProtocolData*>(pSession->protocol_data()))
     , m_user_auth_settings(auth_settings)
+    , m_qc(PgParser::get(), pSession)
 {
 }
 
@@ -304,14 +309,28 @@ bool PgClientConnection::start_session()
 
 PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)
 {
-    switch (gwbuf[0])
+    uint8_t cmd = gwbuf[0];
+
+    switch (cmd)
     {
     case pg::TERMINATE:
         m_session.set_normal_quit();
         m_session.set_can_pool_backends(true);
         break;
 
+    case pg::QUERY:
+        if (!record_for_history(gwbuf))
+        {
+            // Wasn't recorded in the history, treat as a simple request.
+            m_requests.push_back(SimpleRequest {});
+        }
+        break;
+
     default:
+        if (pg::will_respond(cmd))
+        {
+            m_requests.push_back(SimpleRequest {});
+        }
         break;
     }
 
@@ -368,12 +387,24 @@ bool PgClientConnection::clientReply(GWBUF&& buffer,
 {
     if (reply.is_complete())
     {
-        if (auto trx_state = reply.get_variable(pg::TRX_STATE_VARIABLE); !trx_state.empty())
+        if (!m_requests.empty())
         {
-            auto data = static_cast<PgProtocolData*>(m_session.protocol_data());
+            auto visitor = [&](auto&& response){
+                handle_response(std::move(response), reply);
+            };
 
-            // If the value is anything other than 'I', a transaction is open.
-            data->set_in_trx(trx_state[0] != 'I');
+            std::visit(visitor, std::move(m_requests.front()));
+            m_requests.erase(m_requests.begin());
+        }
+        else
+        {
+            m_session.kill();
+            mxb_assert_message(!true, "Unexpected response");
+        }
+
+        if (m_session.capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+        {
+            m_qc.update_from_reply(reply);
         }
     }
 
@@ -539,4 +570,51 @@ bool PgClientConnection::check_allow_login()
                                                     m_session.user().c_str()));
     }
     return rval;
+}
+
+bool PgClientConnection::record_for_history(GWBUF& buffer)
+{
+    bool recorded = false;
+
+    if (m_session.capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    {
+        // Update the routing information. This must be done even if the command isn't added to the history.
+        const auto& info = m_qc.update_route_info(buffer);
+
+        if (m_qc.target_is_all(info.target()))
+        {
+            // We need to record this response in the history
+            buffer.set_id(m_next_id);
+            m_requests.push_back(HistoryRequest {std::make_unique<GWBUF>(buffer.deep_clone())});
+
+            if (++m_next_id == MAX_SESCMD_ID)
+            {
+                m_next_id = 1;
+            }
+
+            recorded = true;
+        }
+    }
+
+    return recorded;
+}
+
+void PgClientConnection::handle_response(SimpleRequest&& req, const mxs::Reply& reply)
+{
+    if (auto trx_state = reply.get_variable(pg::TRX_STATE_VARIABLE); !trx_state.empty())
+    {
+        // If the value is anything other than 'I', a transaction is open.
+        m_protocol_data->set_in_trx(trx_state[0] != 'I');
+    }
+}
+
+void PgClientConnection::handle_response(HistoryRequest&& req, const mxs::Reply& reply)
+{
+    mxb_assert(m_session.capabilities() & RCAP_TYPE_SESCMD_HISTORY);
+    m_protocol_data->history().add(std::move(*req), !reply.error());
+
+    // Check the history responses once we've returned from clientReply
+    m_session.worker()->lcall([this](){
+        m_protocol_data->history().check_early_responses();
+    });
 }
