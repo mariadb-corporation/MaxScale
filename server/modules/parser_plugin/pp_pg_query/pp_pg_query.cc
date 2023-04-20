@@ -20,7 +20,11 @@
 #include <maxscale/parser.hh>
 #include "../../protocol/Postgres/pgparser.hh"
 #include <pg_query.h>
-#include <protobuf/pg_query.pb-c.h>
+extern "C"
+{
+#include <src/pg_query_internal.h>
+#include "parser/parser.h"
+}
 
 using mxs::Parser;
 namespace sql = mxs::sql;
@@ -93,104 +97,222 @@ public:
 
         m_collect = collect;
 
-        PgQueryScanResult result = pg_query_scan(std::string {sql}.c_str());
+        // See libpg_query/src/pg_query_parser.c:pg_query_parse
 
-        PgQuery__ScanResult* pScan_result = pg_query__scan_result__unpack(NULL,
-                                                                         result.pbuf.len,
-                                                                         (const uint8_t *) result.pbuf.data);
+        MemoryContext context = pg_query_enter_memory_context();
 
-        analyze(*pScan_result);
+        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(std::string{sql}.c_str());
 
-        pg_query__scan_result__free_unpacked(pScan_result, NULL);
-        pg_query_free_scan_result(result);
+        if (result.tree)
+        {
+            m_result = mxs::Parser::Result::PARSED;
+            analyze(*result.tree);
+        }
+        else
+        {
+            mxb_assert(result.error);
+
+            if (result.error)
+            {
+#if defined(SS_DEBUG)
+                int priority = LOG_WARNING;
+#else
+                int priority = LOG_INFO;
+#endif
+                MXB_LOG_MESSAGE(priority, "Parse error: '%s', SQL: %.*s",
+                                result.error->message, (int)sql.length(), sql.data());
+
+                pg_query_free_error(result.error);
+            }
+        }
+        free(result.stderr_buffer);
+
+        pg_query_exit_memory_context(context);
 
         m_collected |= collect;
     }
 
 public:
-    void analyze(const PgQuery__ScanResult& scan_result)
+    void analyze(const List& list)
     {
-        for (size_t i = 0; i < scan_result.n_tokens; ++i)
+        switch (list.type)
         {
-            analyze(scan_result.tokens, i, *scan_result.tokens[i]);
-        }
-    }
-
-    void analyze(const PgQuery__ScanToken* const * ppTokens,
-                 size_t i,
-                 const PgQuery__ScanToken& scan_token)
-    {
-        switch (scan_token.token)
-        {
-        case PG_QUERY__TOKEN__ALTER:
-            analyze_alter(ppTokens, i + 1, *ppTokens[i + 1]);
-            break;
-
-        case PG_QUERY__TOKEN__CREATE:
-            analyze_create(ppTokens, i + 1, *ppTokens[i + 1]);
-            break;
-
-        case PG_QUERY__TOKEN__DROP:
-            analyze_drop(ppTokens, i + 1, *ppTokens[i + 1]);
+        case T_List:
+            {
+                for (int i = 0; i < list.length; ++i)
+                {
+                    analyze(*static_cast<Node*>(list.elements[i].ptr_value));
+                }
+            }
             break;
 
         default:
-            break;
+            nhy_assert();
         }
     }
 
-    void analyze_alter(const PgQuery__ScanToken* const * ppTokens,
-                       size_t i,
-                       const PgQuery__ScanToken& scan_token)
+    void analyze(const Node& x)
+    {
+        switch (x.type)
+        {
+            // Specific Information.
+        case T_AlterTableStmt:
+            analyze(reinterpret_cast<const AlterTableStmt&>(x));
+            break;
+
+        case T_CreateRoleStmt:
+            analyze(reinterpret_cast<const CreateRoleStmt&>(x));
+            break;
+
+        case T_CreateStmt:
+            analyze(reinterpret_cast<const CreateStmt&>(x));
+            break;
+
+        case T_DropStmt:
+            analyze(reinterpret_cast<const DropStmt&>(x));
+            break;
+
+        case T_RawStmt:
+            analyze(reinterpret_cast<const RawStmt&>(x));
+            break;
+
+        case T_SelectStmt:
+            analyze(reinterpret_cast<const SelectStmt&>(x));
+            break;
+
+            // Generic Information.
+        case T_AlterCollationStmt:
+        case T_AlterDatabaseRefreshCollStmt:
+        case T_AlterDatabaseSetStmt:
+        case T_AlterDatabaseStmt:
+        case T_AlterDefaultPrivilegesStmt:
+        case T_AlterDomainStmt:
+        case T_AlterEnumStmt:
+        case T_AlterEventTrigStmt:
+        case T_AlterExtensionContentsStmt:
+        case T_AlterExtensionStmt:
+        case T_AlterFdwStmt:
+        case T_AlterForeignServerStmt:
+        case T_AlterFunctionStmt:
+        case T_AlterObjectDependsStmt:
+        case T_AlterObjectSchemaStmt:
+        case T_AlterOpFamilyStmt:
+        case T_AlterOperatorStmt:
+        case T_AlterOwnerStmt:
+        case T_AlterPolicyStmt:
+        case T_AlterPublicationStmt:
+        case T_AlterRoleSetStmt:
+        case T_AlterRoleStmt:
+        case T_AlterSeqStmt:
+        case T_AlterStatsStmt:
+        case T_AlterSubscriptionStmt:
+        case T_AlterSystemStmt:
+        case T_AlterTSConfigurationStmt:
+        case T_AlterTSDictionaryStmt:
+        case T_AlterTableCmd:
+        case T_AlterTableMoveAllStmt:
+        case T_AlterTableSpaceOptionsStmt:
+        case T_AlterTypeStmt:
+        case T_AlterUserMappingStmt:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_ALTER;
+            break;
+
+        case T_CreateSchemaStmt:
+        case T_CreateTableSpaceStmt:
+        case T_CreateExtensionStmt:
+        case T_CreateFdwStmt:
+        case T_CreateForeignServerStmt:
+        case T_CreateForeignTableStmt:
+        case T_CreateUserMappingStmt:
+        case T_CreatePolicyStmt:
+        case T_CreateAmStmt:
+        case T_CreateTrigStmt:
+        case T_CreateEventTrigStmt:
+        case T_CreatePLangStmt:
+        case T_CreateSeqStmt:
+        case T_CreateDomainStmt:
+        case T_CreateOpClassStmt:
+        case T_CreateOpClassItem:
+        case T_CreateOpFamilyStmt:
+        case T_CreateStatsStmt:
+        case T_CreateFunctionStmt:
+        case T_CreateEnumStmt:
+        case T_CreateRangeStmt:
+        case T_CreatedbStmt:
+        case T_CreateTableAsStmt:
+        case T_CreateConversionStmt:
+        case T_CreateCastStmt:
+        case T_CreateTransformStmt:
+        case T_CreatePublicationStmt:
+        case T_CreateSubscriptionStmt:
+        case T_CreateReplicationSlotCmd:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_CREATE;
+            break;
+
+        case T_DropTableSpaceStmt:
+        case T_DropUserMappingStmt:
+        case T_DropRoleStmt:
+        case T_DropdbStmt:
+        case T_DropOwnedStmt:
+        case T_DropSubscriptionStmt:
+        case T_DropReplicationSlotCmd:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_DROP;
+            break;
+
+        case T_ViewStmt:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_CREATE;
+            break;
+
+        default:
+            nhy_assert();
+        }
+    }
+
+    void analyze(const AlterTableStmt& x)
     {
         m_type_mask |= sql::TYPE_WRITE;
-        m_op = sql::OP_ALTER;
-
-        switch (scan_token.token)
-        {
-        case PG_QUERY__TOKEN__TABLE:
-            m_op = sql::OP_ALTER_TABLE;
-            break;
-
-        default:
-            break;
-        }
+        m_op = sql::OP_ALTER_TABLE;
     }
 
-    void analyze_create(const PgQuery__ScanToken* const * ppTokens,
-                        size_t i,
-                        const PgQuery__ScanToken& scan_token)
+    void analyze(const CreateRoleStmt& x)
     {
         m_type_mask |= sql::TYPE_WRITE;
         m_op = sql::OP_CREATE;
+    }
 
-        switch (scan_token.token)
+    void analyze(const CreateStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+        m_op = sql::OP_CREATE_TABLE;
+    }
+
+    void analyze(const DropStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+
+        if (x.removeType == OBJECT_TABLE)
         {
-        case PG_QUERY__TOKEN__TABLE:
-            m_op = sql::OP_CREATE_TABLE;
-            break;
-
-        default:
-            break;
+            m_op = sql::OP_DROP_TABLE;
+        }
+        else
+        {
+            m_op = sql::OP_DROP;
         }
     }
 
-    void analyze_drop(const PgQuery__ScanToken* const * ppTokens,
-                      size_t i,
-                      const PgQuery__ScanToken& scan_token)
+    void analyze(const RawStmt& x)
     {
-        m_type_mask |= sql::TYPE_WRITE;
-        m_op = sql::OP_DROP;
+        analyze(*x.stmt);
+    }
 
-        switch (scan_token.token)
-        {
-        case PG_QUERY__TOKEN__TABLE:
-            m_op = sql::OP_DROP_TABLE;
-            break;
-
-        default:
-            break;
-        }
+    void analyze(const SelectStmt& x)
+    {
+        m_type_mask |= sql::TYPE_READ;
+        m_op = sql::OP_SELECT;
     }
 
     Parser::Result result() const

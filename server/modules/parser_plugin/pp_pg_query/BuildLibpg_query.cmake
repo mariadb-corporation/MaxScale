@@ -31,5 +31,6 @@ ExternalProject_Add(libpg_query
 set(LIBPG_QUERY_INCLUDE_DIR
   ${CMAKE_CURRENT_BINARY_DIR}/libpg_query
   ${CMAKE_CURRENT_BINARY_DIR}/libpg_query/vendor
+  ${CMAKE_CURRENT_BINARY_DIR}/libpg_query/src/postgres/include
   CACHE INTERNAL "")
 set(LIBPG_QUERY_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/libpg_query/libpg_query.a CACHE INTERNAL "")
