@@ -26,6 +26,7 @@ extern "C"
 #include "parser/parser.h"
 }
 
+using namespace std;
 using mxs::Parser;
 namespace sql = mxs::sql;
 
@@ -50,11 +51,11 @@ void module_thread_finish(void);
  */
 thread_local struct
 {
-    std::vector<const char*> markers;            // For use with maxsimd::get_canonical()
-    uint32_t                 options {0};
-    uint64_t                 server_version {0};
-    Parser::SqlMode          sql_mode {Parser::SqlMode::DEFAULT}; // What sql_mode is used.
-    uint64_t                 version {0};
+    vector<const char*> markers;            // For use with maxsimd::get_canonical()
+    uint32_t            options {0};
+    uint64_t            server_version {0};
+    Parser::SqlMode     sql_mode {Parser::SqlMode::DEFAULT}; // What sql_mode is used.
+    uint64_t            version {0};
 } this_thread;
 
 /*
@@ -63,7 +64,7 @@ thread_local struct
 class PgQueryInfo : public GWBUF::ProtocolInfo
 {
 public:
-    PgQueryInfo(std::string_view sql)
+    PgQueryInfo(string_view sql)
         : m_canonical(make_canonical(sql))
     {
     }
@@ -90,7 +91,7 @@ public:
         return sizeof(*this);
     }
 
-    void analyze(std::string_view sql, uint32_t collect)
+    void analyze(string_view sql, uint32_t collect)
     {
         mxb_assert(m_canonical == make_canonical(sql));
         mxb_assert(m_collected == 0 || (~m_collected & collect) != 0);
@@ -101,7 +102,7 @@ public:
 
         MemoryContext context = pg_query_enter_memory_context();
 
-        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(std::string{sql}.c_str());
+        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(string{sql}.c_str());
 
         if (result.tree)
         {
@@ -320,15 +321,15 @@ public:
         return m_result;
     }
 
-    std::string_view get_canonical() const
+    string_view get_canonical() const
     {
         return m_canonical;
     }
 
-    std::string_view get_created_table_name() const
+    string_view get_created_table_name() const
     {
         MXB_ERROR("Not implemented yet: %s", __func__);
-        return std::string_view {};
+        return string_view {};
     }
 
     Parser::DatabaseNames get_database_names() const
@@ -368,10 +369,10 @@ public:
         return nullptr;
     }
 
-    std::string_view get_prepare_name() const
+    string_view get_prepare_name() const
     {
         MXB_ERROR("Not implemented yet: %s", __func__);
-        return std::string_view {};
+        return string_view {};
     }
 
     Parser::TableNames get_table_names() const
@@ -397,9 +398,9 @@ public:
     }
 
 private:
-    static std::string make_canonical(std::string_view sql)
+    static string make_canonical(string_view sql)
     {
-        std::string s(sql);
+        string s(sql);
 
         maxsimd::get_canonical(&s, &this_thread.markers);
 
@@ -432,7 +433,7 @@ private:
     {
         mxb_assert(!is_query_parsed(query, collect));
 
-        std::string_view sql = helper.get_sql(query);
+        string_view sql = helper.get_sql(query);
 
         PgQueryInfo* pInfo = static_cast<PgQueryInfo*>(query.get_protocol_info().get());
         if (pInfo)
@@ -447,16 +448,16 @@ private:
         }
         else
         {
-            auto sInfo = std::make_unique<PgQueryInfo>(sql);
+            auto sInfo = make_unique<PgQueryInfo>(sql);
             pInfo = sInfo.get();
 
-            const_cast<GWBUF&>(query).set_protocol_info(std::move(sInfo));
+            const_cast<GWBUF&>(query).set_protocol_info(move(sInfo));
         }
 
         pInfo->analyze(sql, collect);
     }
 
-    std::string    m_canonical;
+    string         m_canonical;
     Parser::Result m_result    {Parser::Result::INVALID};
     uint32_t       m_type_mask {0};
     sql::OpCode    m_op        {sql::OP_UNDEFINED};
@@ -493,12 +494,12 @@ public:
         return get_info(query, collect)->result();
     }
 
-    std::string_view get_canonical(const GWBUF& query) const override
+    string_view get_canonical(const GWBUF& query) const override
     {
         return get_info(query)->get_canonical();
     }
 
-    std::string_view get_created_table_name(const GWBUF& query) const override
+    string_view get_created_table_name(const GWBUF& query) const override
     {
         return get_info(query, Parser::COLLECT_TABLES)->get_created_table_name();
     }
@@ -542,7 +543,7 @@ public:
         return get_info(query)->get_preparable_stmt();
     }
 
-    std::string_view get_prepare_name(const GWBUF& query) const override
+    string_view get_prepare_name(const GWBUF& query) const override
     {
         return get_info(query)->get_prepare_name();
     }
@@ -661,14 +662,14 @@ public:
         return static_cast<const PgQueryInfo*>(pInfo)->get_stmt_result();
     }
 
-    std::string_view get_canonical(const GWBUF::ProtocolInfo* pInfo) const override
+    string_view get_canonical(const GWBUF::ProtocolInfo* pInfo) const override
     {
         return static_cast<const PgQueryInfo*>(pInfo)->get_canonical();
     }
 
-    std::unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const override
+    unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const override
     {
-        return std::make_unique<PgQueryParser>(this, pHelper);
+        return make_unique<PgQueryParser>(this, pHelper);
     }
 };
 
