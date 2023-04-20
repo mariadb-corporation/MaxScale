@@ -24,6 +24,9 @@ endif()
 
 target_link_libraries(compare postgresprotocol maxscale-common)
 
+add_executable(pp_concurrency pp_concurrency.cc)
+target_link_libraries(pp_concurrency maxscale-common)
+
 add_executable(qc_cache qc_cache.cc)
 target_link_libraries(qc_cache maxscale-common)
 
