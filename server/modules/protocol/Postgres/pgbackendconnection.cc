@@ -137,7 +137,7 @@ bool PgBackendConnection::write(GWBUF&& buffer)
 {
     if (m_state != State::ROUTING)
     {
-        MXB_INFO("Delaying routing of '%c'", (char)buffer[0]);
+        MXB_INFO("Store packet in backlog: %s", pg::describe(buffer).c_str());
         m_backlog.emplace_back(std::move(buffer));
         return true;
     }
@@ -561,7 +561,7 @@ void PgBackendConnection::send_history()
     for (const auto& buffer : m_subscriber->history())
     {
         MXB_INFO("Execute %u on '%s': %s", buffer.id(), m_dcb->server()->name(),
-                 m_session->protocol()->describe(buffer).c_str());
+                 pg::describe(buffer).c_str());
 
         track_query(buffer);
         m_dcb->writeq_append(buffer.shallow_clone());
@@ -625,6 +625,8 @@ void PgBackendConnection::send_backlog()
 
     for (auto it = packets.begin(); it != packets.end(); ++it)
     {
+        MXB_INFO("Routing packet from backlog: %s", pg::describe(*it).c_str());
+
         if (!write(std::move(*it)))
         {
             handle_error("Failed to process delayed packets");
