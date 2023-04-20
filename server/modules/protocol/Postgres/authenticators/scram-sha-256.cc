@@ -450,7 +450,8 @@ GWBUF ScramBackendAuth::exchange(GWBUF&& input, PgProtocolData& session)
             break;
 
         case State::SALT:
-            // TODO: Create proof.
+            rval = handle_sasl_continue(input, session);
+            m_state = rval ? State::FINAL : State::DONE;
             break;
 
         case State::FINAL:
@@ -519,62 +520,65 @@ GWBUF ScramBackendAuth::create_sasl_initial_response()
     return response;
 }
 
-
-
-GWBUF ScramBackendAuth::create_sasl_response(const GWBUF& buffer,
-                                             std::string_view client_first_message_bare,
-                                             std::string& server_first_message,
-                                             std::string& client_final_message_without_proof,
-                                             const Digest& client_key)
+GWBUF ScramBackendAuth::handle_sasl_continue(const GWBUF& input, PgProtocolData& session)
 {
-    mxb_assert(buffer[0] == pg::AUTHENTICATION);
-    mxb_assert(pg::get_uint32(buffer.data() + pg::HEADER_LEN) == pg::AUTH_SASL_CONTINUE);
-    uint32_t len = pg::get_uint32(buffer.data() + 1) - 8;
-    server_first_message.assign((const char*)buffer.data() + 9, len);
-    std::string nonce;
-
-    for (auto token : mxb::strtok(server_first_message, ","))
+    GWBUF rval;
+    auto [auth_type, sasl_data] = read_scram_data(input);
+    if (auth_type == pg::Auth::AUTH_SASL_CONTINUE && !sasl_data.empty())
     {
-        if (token.substr(0, 2) == "r=")
+        // In theory, the server first message could contain various extension data. However, server source
+        // code shows that it always contains just the minimum.
+        auto [full_nonce, salt_iter] = mxb::split(sasl_data, ",");
+        auto [salt, iter] = mxb::split(salt_iter, ",");
+        if (full_nonce.substr(0, 2) != "r=" || salt.substr(0, 2) != "s=" || iter.substr(0, 2) != "i=")
         {
-            // The server sends the final combined nonce. Since we have the ClientKey, we don't need the salt
-            // or the iteration count.
-            nonce = std::move(token);
-            break;
+            MXB_ERROR("Malformed SCRAM message from server.");
+        }
+        else if (full_nonce.length() <= (2 + m_client_nonce.length()))
+        {
+            MXB_ERROR("No valid server nonce in SCRAM message.");
+        }
+        else if (full_nonce.substr(2, m_client_nonce.length()) != m_client_nonce)
+        {
+            MXB_ERROR("Server sent mismatching client nonce.");
+        }
+        else
+        {
+            // The salt and iteration count are not needed since we don't have real client password.
+            // Just assume the ClientKey received from the original client is calculated using the
+            // same parameters. Can't do anything if it's not, in any case.
+            rval = create_scram_proof(full_nonce, sasl_data, session);
         }
     }
 
-    // Without a channel bind, this is always "c=biws". Support for channel binding requires the base64 value
-    // to be calculated.
-    client_final_message_without_proof = mxb::cat("c=biws,", nonce);
+    return rval;
+}
 
-    // See: https://www.rfc-editor.org/rfc/rfc5802#section-3
+GWBUF ScramBackendAuth::create_scram_proof(string_view full_nonce, string_view server_first_message,
+                                           PgProtocolData& session)
+{
+    string client_final_msg_wo_proof = "c=biws";    // Base64 of n,,
+    client_final_msg_wo_proof.append(",r=").append(full_nonce.substr(2));
+    auto auth_message = mxb::cat(m_client_first_message_bare, ",", server_first_message, ",",
+                                 client_final_msg_wo_proof);
 
-    // AuthMessage     := client-first-message-bare + "," +
-    //                    server-first-message + "," +
-    //                    client-final-message-without-proof
-    auto auth_message = mxb::cat(client_first_message_bare, ",",
-                                 server_first_message, ",",
-                                 client_final_message_without_proof);
-
-    // TODO: Get this from the UserAccountManager
-    auto user = parse_scram_password(THE_PASSWORD);
+    auto& token_storage = session.auth_data().client_token;
+    Digest client_key;
+    memcpy(client_key.data(), token_storage.data(), client_key.size());
+    Digest stored_key;
+    memcpy(stored_key.data(), token_storage.data() + client_key.size(), stored_key.size());
 
     // ClientSignature := HMAC(StoredKey, AuthMessage)
-    Digest client_sig = hmac(user->stored_key, auth_message);
-
     // ClientProof     := ClientKey XOR ClientSignature
-    auto client_proof = mxs::to_base64(digest_xor(client_key, client_sig));
-    std::string client_final_message = mxb::cat(client_final_message_without_proof, ",p=", client_proof);
+    Digest client_sig = hmac(stored_key, auth_message);
+    Digest client_proof = digest_xor(client_key, client_sig);
+    string client_final_msg = mxb::cat(client_final_msg_wo_proof, ",p=", mxs::to_base64(client_proof));
 
-    // SASLResponse
-    GWBUF response(pg::HEADER_LEN + client_final_message.length());
+    GWBUF response(pg::HEADER_LEN + client_final_msg.length());
     uint8_t* ptr = response.data();
-
     *ptr++ = pg::SASL_RESPONSE;
     ptr += pg::set_uint32(ptr, response.length() - 1);
-    memcpy(ptr, client_final_message.data(), client_final_message.size());
-
+    memcpy(ptr, client_final_msg.data(), client_final_msg.length());
     return response;
 }
 
