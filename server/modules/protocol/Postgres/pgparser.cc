@@ -117,14 +117,12 @@ bool PgParser::Helper::is_prepare(const GWBUF& packet) const
 
 bool PgParser::Helper::is_ps_direct_exec_id(uint32_t id) const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
     return false;
 }
 
 bool PgParser::Helper::is_ps_packet(const GWBUF& packet) const
 {
-    MXB_ALERT("Not implemented yet: %s", __func__);
-    return false;
+    return packet[0] == pg::PARSE;
 }
 
 bool PgParser::Helper::is_query(const GWBUF& packet) const
