@@ -114,7 +114,7 @@ bool PgSQL::open(const std::string& host, int port, const std::string& db)
     add_param("user", m_settings.user.c_str());
     add_param("password", m_settings.password.c_str());
 
-    string timeout_str = std::to_string(m_settings.timeout);
+    string timeout_str = std::to_string(m_settings.connect_timeout);
     add_param("connect_timeout", timeout_str.c_str());
 
     // If ssl-mode is not defined, the PG connector will try ssl first, then downgrade to unencrypted.
@@ -365,7 +365,8 @@ PGresult* PgSQL::PQexec_with_timeout(const std::string& query)
     // this function created a custom, non-libpq error message.
     m_errormsg.clear();
 
-    std::chrono::seconds limit(m_settings.timeout);
+    std::chrono::seconds write_limit(m_settings.write_timeout);
+    std::chrono::seconds read_limit(m_settings.read_timeout);
     auto start = mxb::SteadyClock::now();
 
     PQsetnonblocking(m_conn, 1);
@@ -375,7 +376,7 @@ PGresult* PgSQL::PQexec_with_timeout(const std::string& query)
 
     while (PQflush(m_conn) == 1)
     {
-        if (mxb::SteadyClock::now() - start > limit)
+        if (mxb::SteadyClock::now() - start > write_limit)
         {
             m_errormsg = "Sending query to the server timed out.";
             PQsetnonblocking(m_conn, 0);
@@ -384,6 +385,8 @@ PGresult* PgSQL::PQexec_with_timeout(const std::string& query)
 
         std::this_thread::sleep_for(10ms);
     }
+
+    start = mxb::SteadyClock::now();
 
     do
     {
@@ -394,7 +397,7 @@ PGresult* PgSQL::PQexec_with_timeout(const std::string& query)
 
         if (PQisBusy(m_conn) == 1)
         {
-            if (mxb::SteadyClock::now() - start > limit)
+            if (mxb::SteadyClock::now() - start > read_limit)
             {
                 m_errormsg = "Reading result from the server timed out.";
                 PQsetnonblocking(m_conn, 0);

@@ -124,7 +124,9 @@ PgUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw, ve
     sett.password = mxs::decrypt_password(conn_pw);
 
     mxs::Config& glob_config = mxs::Config::get();
-    sett.timeout = glob_config.auth_conn_timeout.get().count();
+    sett.connect_timeout = glob_config.auth_conn_timeout.get().count();
+    sett.read_timeout = glob_config.auth_read_timeout.get().count();
+    sett.write_timeout = glob_config.auth_write_timeout.get().count();
 
     const bool union_over_bes = union_over_backends();
 

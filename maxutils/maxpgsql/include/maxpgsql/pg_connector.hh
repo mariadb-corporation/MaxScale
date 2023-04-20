@@ -41,7 +41,9 @@ public:
         std::string user;
         std::string password;
 
-        int            timeout {0};
+        int            connect_timeout {0};
+        int            read_timeout {0};
+        int            write_timeout {0};
         mxb::SSLConfig ssl;
     };
     /**
