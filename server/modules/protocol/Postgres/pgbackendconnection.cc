@@ -517,7 +517,7 @@ bool PgBackendConnection::handle_auth()
 
 void PgBackendConnection::track_query(const GWBUF& buffer)
 {
-    mxb_assert(pg::will_respond(buffer));
+    mxb_assert(pg::will_respond(buffer) || pg::is_prepare(buffer));
     TrackedQuery query{buffer};
 
     if (m_reply.is_complete())
@@ -540,7 +540,10 @@ void PgBackendConnection::start_tracking(const TrackedQuery& query)
     m_reply.set_command(query.command);
     m_reply.add_upload_bytes(query.size);
 
-    m_subscriber->set_current_id(query.id);
+    if (query.id)
+    {
+        m_subscriber->set_current_id(query.id);
+    }
 }
 
 bool PgBackendConnection::track_next_result()
