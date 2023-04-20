@@ -132,7 +132,7 @@ Currently, MariaDB MaxScale only supports GSSAPI authentication when the backend
 connections use GSSAPI authentication. Client side GSSAPI authentication with a
 different backend authentication module is not supported.
 
-### Limitations in the MySQL authenticator (MySQLAuth)
+### Limitations in the MySQL authenticator (MariaDBAuth)
 
 * MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
 a new authentication protocol which does not support pre-4.1 style passwords.
