@@ -348,6 +348,18 @@ bool is_prepare(const GWBUF& packet);
  */
 bool is_query(const GWBUF& packet);
 
+/**
+ * Returns a human-readable description of the @c packet
+ *
+ * Only describes the first complete packet in the buffer.
+ *
+ * @param packet  The packet to describe
+ * @param max_len Maximum length of the packet
+ *
+ * @return Human-readable description of the packet
+ */
+std::string describe(const GWBUF& buffer, int max_len = 1000);
+
 enum class Severity {ERROR, FATAL};
 
 /**

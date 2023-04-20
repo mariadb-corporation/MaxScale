@@ -13,6 +13,7 @@
 
 #include "postgresprotocol.hh"
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
+#include <maxbase/pretty_print.hh>
 #include "pgprotocolmodule.hh"
 #include "pgparser.hh"
 
@@ -368,6 +369,57 @@ bool is_prepare(const GWBUF& packet)
 bool is_query(const GWBUF& packet)
 {
     return packet.length() > 0 && packet[0] == pg::QUERY;
+}
+
+std::string describe(const GWBUF& packet, int max_len)
+{
+    std::ostringstream ss;
+    const uint8_t* ptr = packet.data();
+
+    char cmd = *ptr++;
+    uint32_t len = pg::get_uint32(ptr);
+    ptr += 4;
+    ss << pg::client_command_to_str(cmd) << " (" << mxb::pretty_size(len) << ")";
+
+    switch (cmd)
+    {
+    case pg::QUERY:
+        ss << " stmt: " << pg::get_string(ptr).substr(0, max_len);
+        break;
+
+    case pg::PARSE:
+        {
+            auto id = pg::get_string(ptr);
+            ptr += id.size() + 1;
+            ss << " id: '" << id << "' stmt: " << pg::get_string(ptr).substr(0, max_len);
+        }
+        break;
+
+    case pg::CLOSE:
+    case pg::DESCRIBE:
+        {
+            char type = *ptr++;
+            ss << " type: '" << type << "' id: '" << pg::get_string(ptr) << "'";
+        }
+        break;
+
+    case pg::EXECUTE:
+        ss << " id: '" << pg::get_string(ptr) << "'";
+        break;
+
+    case pg::BIND:
+        {
+            auto portal = pg::get_string(ptr);
+            ptr += portal.size() + 1;
+            ss << " portal: '" << portal << "' id: '" << pg::get_string(ptr) << "'";
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return ss.str();
 }
 
 GWBUF make_error(Severity sev, std::string_view sqlstate, std::string_view msg)

@@ -13,7 +13,6 @@
 
 #include "pgprotocolmodule.hh"
 
-#include <maxbase/pretty_print.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
@@ -83,53 +82,7 @@ std::string_view PgProtocolModule::get_sql(const GWBUF& packet) const
 
 std::string PgProtocolModule::describe(const GWBUF& packet, int max_len) const
 {
-    std::ostringstream ss;
-    const uint8_t* ptr = packet.data();
-
-    char cmd = *ptr++;
-    uint32_t len = pg::get_uint32(ptr);
-    ptr += 4;
-    ss << pg::client_command_to_str(cmd) << " (" << mxb::pretty_size(len) << ")";
-
-    switch (cmd)
-    {
-    case pg::QUERY:
-        ss << " stmt: " << pg::get_string(ptr).substr(0, max_len);
-        break;
-
-    case pg::PARSE:
-        {
-            auto id = pg::get_string(ptr);
-            ptr += id.size() + 1;
-            ss << " id: '" << id << "' stmt: " << pg::get_string(ptr).substr(0, max_len);
-        }
-        break;
-
-    case pg::CLOSE:
-    case pg::DESCRIBE:
-        {
-            char type = *ptr++;
-            ss << " type: '" << type << "' id: '" << pg::get_string(ptr) << "'";
-        }
-        break;
-
-    case pg::EXECUTE:
-        ss << " id: '" << pg::get_string(ptr) << "'";
-        break;
-
-    case pg::BIND:
-        {
-            auto portal = pg::get_string(ptr);
-            ptr += portal.size() + 1;
-            ss << " portal: '" << portal << "' id: '" << pg::get_string(ptr) << "'";
-        }
-        break;
-
-    default:
-        break;
-    }
-
-    return ss.str();
+    return pg::describe(packet, max_len);
 }
 
 GWBUF PgProtocolModule::make_query(std::string_view sql) const
