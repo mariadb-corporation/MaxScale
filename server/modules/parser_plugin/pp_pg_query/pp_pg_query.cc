@@ -111,8 +111,6 @@ public:
         }
         else
         {
-            mxb_assert(result.error);
-
             if (result.error)
             {
 #if defined(SS_DEBUG)
