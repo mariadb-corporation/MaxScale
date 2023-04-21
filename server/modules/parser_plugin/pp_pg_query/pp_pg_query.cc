@@ -263,6 +263,11 @@ public:
             m_op = sql::OP_DROP;
             break;
 
+        case T_IndexStmt:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_CREATE;
+            break;
+
         case T_ViewStmt:
             m_type_mask |= sql::TYPE_WRITE;
             m_op = sql::OP_CREATE;
