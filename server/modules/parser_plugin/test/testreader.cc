@@ -248,229 +248,253 @@ TestReader::TestReader(Expect expect,
 
 TestReader::result_t TestReader::get_statement(std::string& stmt)
 {
-    bool error = false;     // Whether an error has occurred.
-    bool found = false;     // Whether we have found a statement.
-    bool skip = false;      // Whether next statement should be skipped.
+    bool error;     // Whether an error has occurred.
+    bool found;     // Whether we have found a statement.
+    bool skip;      // Whether next statement should be skipped.
 
     stmt.clear();
 
     string line;
 
-    while (!error && !found && std::getline(m_in, line))
+    do
     {
-        m_line++;
+        error = false;
+        found = false;
+        skip = false;
 
-        trim(line);
-
-        if (line.empty())
+        while (!error && !found && std::getline(m_in, line))
         {
-            continue;
-        }
+            m_line++;
 
-        if (is_postgres())
-        {
-            // Ignore all meta-commands such as '\d'.
-            if (line.substr(0, 1) == "\\")
+            trim(line);
+
+            if (line.empty())
             {
                 continue;
             }
 
-            // In Postgres can only be a comment and not a mysqltest command.
-            if (line.substr(0, 2) == "--")
+            if (is_postgres())
             {
-                continue;
-            }
-
-            if (strncasecmp(line.c_str(), "copy", 4) == 0)
-            {
-                // Apparently a COPY statement. Does it read from stdin?
-                if (strcasestr(line.c_str(), "stdin") != nullptr)
+                // Ignore all meta-commands such as '\d'.
+                if (line.substr(0, 1) == "\\")
                 {
-                    skip_postgres_stdin_input();
+                    if (!stmt.empty())
+                    {
+                        // If something has been read already, then this will also
+                        // terminate the statement.
+                        found = true;
+                    }
                     continue;
                 }
-            }
 
-            auto i = line.find("/*");
-
-            if (i != string::npos)
-            {
-                auto j = line.find("*/", i + 2);
-
-                if (j != string::npos)
+                // In Postgres can only be a comment and not a mysqltest command.
+                if (line.substr(0, 2) == "--")
                 {
-                    // Single line /* ... */ comment. Assume there is just one and remove it.
-                    line = line.substr(0, i) + line.substr(j + 2);
+                    continue;
                 }
-                else
+
+                if (strncasecmp(line.c_str(), "copy", 4) == 0)
                 {
-                    line = line.substr(0, i);
-
-                    string l;
-                    skip_postgres_block_quote(l);
-
-                    if (!l.empty())
+                    // Apparently a COPY statement. Does it read from stdin?
+                    if (strcasestr(line.c_str(), "stdin") != nullptr)
                     {
-                        line += " ";
-                        line += l;
+                        skip_postgres_stdin_input();
+                        continue;
                     }
                 }
 
-                trim(line);
-                if (line.empty())
+                auto i = line.find("/*");
+
+                if (i != string::npos)
                 {
-                    continue;
-                }
-            }
-        }
+                    auto j = line.find("*/", i + 2);
 
-        if (line.at(0) != '#')
-        {
-            // Ignore comment lines.
-            if ((line.substr(0, 3) == "-- ") || (line.substr(0, 1) == "#"))
-            {
-                continue;
-            }
-
-            if (!skip)
-            {
-                if (line.substr(0, 2) == "--")
-                {
-                    line = line.substr(2);
-                    trim(line);
-                }
-
-                string::iterator i = std::find_if(line.begin(),
-                                                  line.end(),
-                                                  std::ptr_fun<int, int>(std::isspace));
-                string keyword = line.substr(0, i - line.begin());
-
-                skip_action_t action = get_action(keyword, m_delimiter);
-
-                switch (action)
-                {
-                case SKIP_NOTHING:
-                    break;
-
-                case SKIP_BLOCK:
-                    skip_block();
-                    continue;
-
-                case SKIP_DELIMITER:
-                    line = line.substr(i - line.begin());
-                    trim(line);
-                    if (line.length() > 0)
+                    if (j != string::npos)
                     {
-                        if (line.length() >= m_delimiter.length())
+                        // Single line /* ... */ comment. Assume there is just one and remove it.
+                        line = line.substr(0, i) + line.substr(j + 2);
+                    }
+                    else
+                    {
+                        line = line.substr(0, i);
+
+                        string l;
+                        skip_postgres_block_quote(l);
+
+                        if (!l.empty())
                         {
-                            if (line.substr(line.length() - m_delimiter.length()) == m_delimiter)
+                            line += " ";
+                            line += l;
+                        }
+                    }
+
+                    trim(line);
+                    if (line.empty())
+                    {
+                        continue;
+                    }
+                }
+            }
+
+            if (line.at(0) != '#')
+            {
+                // Ignore comment lines.
+                if ((line.substr(0, 3) == "-- ") || (line.substr(0, 1) == "#"))
+                {
+                    continue;
+                }
+
+                if (!skip)
+                {
+                    if (line.substr(0, 2) == "--")
+                    {
+                        line = line.substr(2);
+                        trim(line);
+                    }
+
+                    string::iterator i = std::find_if(line.begin(),
+                                                      line.end(),
+                                                      std::ptr_fun<int, int>(std::isspace));
+                    string keyword = line.substr(0, i - line.begin());
+
+                    skip_action_t action = get_action(keyword, m_delimiter);
+
+                    switch (action)
+                    {
+                    case SKIP_NOTHING:
+                        break;
+
+                    case SKIP_BLOCK:
+                        skip_block();
+                        continue;
+
+                    case SKIP_DELIMITER:
+                        line = line.substr(i - line.begin());
+                        trim(line);
+                        if (line.length() > 0)
+                        {
+                            if (line.length() >= m_delimiter.length())
                             {
-                                m_delimiter = line.substr(0, line.length() - m_delimiter.length());
+                                if (line.substr(line.length() - m_delimiter.length()) == m_delimiter)
+                                {
+                                    m_delimiter = line.substr(0, line.length() - m_delimiter.length());
+                                }
+                                else
+                                {
+                                    m_delimiter = line;
+                                }
                             }
                             else
                             {
                                 m_delimiter = line;
                             }
                         }
+                        continue;
+
+                    case SKIP_LINE:
+                        continue;
+
+                    case SKIP_NEXT_STATEMENT:
+                        skip = true;
+                        continue;
+
+                    case SKIP_STATEMENT:
+                        skip = true;
+                        break;
+
+                    case SKIP_TERMINATE:
+                        MXB_ERROR("Cannot handle line %u: %s", (unsigned)m_line, line.c_str());
+                        error = true;
+                        break;
+                    }
+                }
+
+                stmt += line;
+
+                if (is_postgres())
+                {
+                    skip_postgres_dollar_quotes(line, stmt);
+                }
+
+                // Look for a ';'. If we are dealing with a one line test statment
+                // the delimiter will in practice be ';' and if it is a multi-line
+                // test statement then the test-script delimiter will be something
+                // else than ';' and ';' will be the delimiter used in the multi-line
+                // statement.
+                auto i = line.find(";");
+
+                if (i != string::npos)
+                {
+                    // Is there a "-- " or "#" after the delimiter?
+                    if ((line.find("-- ", i) != string::npos)
+                        || (line.find("#", i) != string::npos))
+                    {
+                        if (is_postgres())
+                        {
+                            found = true;
+                            continue;
+                        }
                         else
                         {
-                            m_delimiter = line;
+                            // If so, add a newline. Otherwise the rest of the
+                            // statement would be included in the comment.
+                            stmt += "\n";
                         }
                     }
-                    continue;
 
-                case SKIP_LINE:
-                    continue;
-
-                case SKIP_NEXT_STATEMENT:
-                    skip = true;
-                    continue;
-
-                case SKIP_STATEMENT:
-                    skip = true;
-                    break;
-
-                case SKIP_TERMINATE:
-                    MXB_ERROR("Cannot handle line %u: %s", (unsigned)m_line, line.c_str());
-                    error = true;
-                    break;
+                    // This is somewhat fragile as a ";", "#" or "-- " inside a
+                    // string will trigger this behaviour...
                 }
-            }
 
-            stmt += line;
+                string c;
 
-            if (is_postgres())
-            {
-                skip_postgres_dollar_quotes(line, stmt);
-            }
-
-            // Look for a ';'. If we are dealing with a one line test statment
-            // the delimiter will in practice be ';' and if it is a multi-line
-            // test statement then the test-script delimiter will be something
-            // else than ';' and ';' will be the delimiter used in the multi-line
-            // statement.
-            auto i = line.find(";");
-
-            if (i != string::npos)
-            {
-                // Is there a "-- " or "#" after the delimiter?
-                if ((line.find("-- ", i) != string::npos)
-                    || (line.find("#", i) != string::npos))
+                if (line.length() >= m_delimiter.length())
                 {
-                    if (is_postgres())
+                    c = line.substr(line.length() - m_delimiter.length());
+                }
+
+                if (c == m_delimiter)
+                {
+                    if (c != ";")
+                    {
+                        // If the delimiter was something else but ';' we need to
+                        // remove that before giving the line to the classifiers.
+                        stmt.erase(stmt.length() - m_delimiter.length());
+                    }
+
+                    if (!skip)
                     {
                         found = true;
-                        continue;
                     }
                     else
                     {
-                        // If so, add a newline. Otherwise the rest of the
-                        // statement would be included in the comment.
-                        stmt += "\n";
+                        skip = false;
+                        stmt.clear();
                     }
                 }
-
-                // This is somewhat fragile as a ";", "#" or "-- " inside a
-                // string will trigger this behaviour...
-            }
-
-            string c;
-
-            if (line.length() >= m_delimiter.length())
-            {
-                c = line.substr(line.length() - m_delimiter.length());
-            }
-
-            if (c == m_delimiter)
-            {
-                if (c != ";")
+                else if (!skip)
                 {
-                    // If the delimiter was something else but ';' we need to
-                    // remove that before giving the line to the classifiers.
-                    stmt.erase(stmt.length() - m_delimiter.length());
-                }
-
-                if (!skip)
-                {
-                    found = true;
-                }
-                else
-                {
-                    skip = false;
-                    stmt.clear();
+                    stmt += " ";
                 }
             }
-            else if (!skip)
+            else if (line.substr(0, 7) == "--error")
             {
-                stmt += " ";
+                // Next statement is supposed to fail, no need to check.
+                skip = true;
             }
         }
-        else if (line.substr(0, 7) == "--error")
+
+        if (!error && is_postgres())
         {
-            // Next statement is supposed to fail, no need to check.
-            skip = true;
+            // If '-- fail' is found anywhere, the whole line is ignored.
+            if (stmt.find("-- fail") != string::npos)
+            {
+                stmt.clear();
+                found = false;
+            }
         }
     }
+    while (!error && !found && stmt.empty() && m_in);
 
     result_t result;
 

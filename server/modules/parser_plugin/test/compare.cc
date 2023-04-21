@@ -55,7 +55,8 @@ namespace
 
 char USAGE[] =
     "usage: compare [-r count] [-d] [-0 classifier] [-1 classfier1] [-2 classifier2] "
-    "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-H (postgres|mariadb)] "
+    "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] "
+    "[-H (postgres|mariadb)] [-E (postgres|mariadb)] "
     "[-p properties] [-x regex] [-c regex] [-s statement]|[file+]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
@@ -70,8 +71,11 @@ char USAGE[] =
     "-S    strict, also require that the parse result is identical\n"
     "-R    strict reporting, report if parse result is different\n"
     "-x    test only statements matching the regex\n"
-    "-H    use MariaDB or Postgres Parser helper, default 'mariadb'\n"
-    "-p    only test and print properties\n"
+    "-H    use MariaDB or Postgres Parser helper, default is the default of the plugin\n"
+    "-E    expect MariaDB or Postgres SQL, default 'mariadb'\n"
+    "-p    only test and print properties, properties can be 'type', 'operation', \n"
+    "      'created_table_name', 'table_names', 'database_names', 'prepare_name', \n"
+    "      'field_info' and 'function_info', separated by '|', e.g. 'type|operation'\n"
     "-c    check that response matches regex (type and operation)\n"
     "-v 0, only return code\n"
     "   1, query and result for failed cases\n"
@@ -1409,7 +1413,7 @@ int main(int argc, char* argv[])
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:c:s:SRH:p:")) != -1)
+    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:x:c:s:SRH:E:p:")) != -1)
     {
         switch (c)
         {
@@ -1521,6 +1525,21 @@ int main(int argc, char* argv[])
             global.strict_reporting = true;
             break;
 
+        case 'E':
+            if (strcmp(optarg, "mariadb") == 0)
+            {
+                expect = mxs::TestReader::Expect::MARIADB;
+            }
+            else if(strcmp(optarg, "postgres") == 0)
+            {
+                expect = mxs::TestReader::Expect::POSTGRES;
+            }
+            else
+            {
+                rc = EXIT_FAILURE;
+            }
+            break;
+
         case 'H':
             if (strcmp(optarg, "mariadb") == 0)
             {
@@ -1529,12 +1548,10 @@ int main(int argc, char* argv[])
             else if(strcmp(optarg, "postgres") == 0)
             {
                 pHelper = &PgParser::Helper::get();
-                expect = mxs::TestReader::Expect::POSTGRES;
             }
             else
             {
                 rc = EXIT_FAILURE;
-                break;
             }
             break;
 
