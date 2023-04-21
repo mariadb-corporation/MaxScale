@@ -50,9 +50,7 @@ struct AuthenticationData
     std::string     user;           /**< Username */
     UserEntryResult user_entry;     /**< User account information */
 
-    std::vector<uint8_t> client_token;      /**< Token sent by client */
-    std::vector<uint8_t> backend_token;     /**< Token to be sent to backends */
-
+    std::vector<uint8_t>   client_token;    /**< Token sent by client */
     PgAuthenticatorModule* auth_module {nullptr};
 };
 

@@ -247,9 +247,6 @@ PgClientConnection::State PgClientConnection::state_auth(GWBUF&& packet)
                 else
                 {
                     auth_res.status = AuthRes::Status::SUCCESS;
-                    // Copy auth tokens manually. Should work with at least cleartext passwords.
-                    auto& auth_data = m_protocol_data->auth_data();
-                    auth_data.backend_token = auth_data.client_token;
                     result = Result::READY;
                 }
 

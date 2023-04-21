@@ -22,35 +22,28 @@ using std::string_view;
 namespace
 {
 const std::string MECH = "SCRAM-SHA-256";
-const int NONCE_SIZE = 18;
 const size_t DIGEST_B64_LEN = 44;   // Base64 from 32 bytes
 
-template<class Key, class Data>
-Digest hmac(const Key& k, const Data& d)
+Digest hmac(const Digest& k, string_view d)
 {
     Digest digest;
     unsigned int size = digest.size();
-
     HMAC(EVP_sha256(), (uint8_t*)k.data(), k.size(), (uint8_t*)d.data(), d.size(), digest.data(), &size);
     mxb_assert(size == digest.size());
-
     return digest;
 }
 
 Digest digest_xor(const Digest& lhs, const Digest& rhs)
 {
     Digest result{};
-
-    for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    for (size_t i = 0; i < result.size(); i++)
     {
         result[i] = lhs[i] ^ rhs[i];
     }
-
     return result;
 }
 
-template<class Input>
-Digest hash(const Input& in)
+Digest hash(const Digest& in)
 {
     Digest digest;
     SHA256(in.data(), in.size(), digest.data());
@@ -88,16 +81,12 @@ std::array<char, DIGEST_B64_LEN> to_base64(const Digest digest)
 
 std::string create_nonce()
 {
-    std::array<uint8_t, NONCE_SIZE> nonce{};
+    // Similar to Pg Server. Ensures that the nonce is composed of printable characters.
+    std::array<uint8_t, 18> nonce{};
     RAND_bytes(nonce.data(), nonce.size());
-    // This is what e.g. pgbouncer does when generating the nonce.
     return mxs::to_base64(nonce);
 }
 }
-// This is just an example password which will not work. It needs to be replaced with the actual entry
-// from the database for the authentication to work.
-const char* THE_PASSWORD =
-    "SCRAM-SHA-256$4096:fcyQNek/oqCBB5+HBZYCBw==$IyjIV2enCngF0p4pOouPlvKyISzmHFdoXeM0V/+nUr4=:+vF1tu+XCwHxdmfo1X3zpgvDXpCx06LJjJ2emDgXCs0=";
 
 GWBUF ScramClientAuth::authentication_request()
 {
