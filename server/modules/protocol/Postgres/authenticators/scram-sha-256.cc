@@ -23,6 +23,7 @@ namespace
 {
 const std::string MECH = "SCRAM-SHA-256";
 const int NONCE_SIZE = 18;
+const size_t DIGEST_B64_LEN = 44;   // Base64 from 32 bytes
 
 template<class Key, class Data>
 Digest hmac(const Key& k, const Data& d)
@@ -54,6 +55,35 @@ Digest hash(const Input& in)
     Digest digest;
     SHA256(in.data(), in.size(), digest.data());
     return digest;
+}
+
+std::optional<Digest> from_base64(string_view input)
+{
+    std::optional<Digest> rval;
+    // Using OpenSSL decoding, which assumes input length is divisible by 4 (=-padded). Luckily this is what
+    // PG also uses. The input must be exactly 44 chars with one = at the end to produce 32 bytes.
+    if (input.length() == DIGEST_B64_LEN && input.back() == '=' && input[input.length() - 2] != '=')
+    {
+        const auto decoded_len = 32 + 1;    // One extra due to OpenSSL 0-padding.
+        uint8_t bytes[decoded_len];
+        int res = EVP_DecodeBlock(bytes, (uint8_t*)input.data(), input.size());
+        if (res == decoded_len)
+        {
+            rval = Digest();
+            memcpy(rval->data(), bytes, rval->size());
+        }
+    }
+    return rval;
+}
+
+std::array<char, DIGEST_B64_LEN> to_base64(const Digest digest)
+{
+    uint8_t temp[DIGEST_B64_LEN + 1 + 1];   // 1 for padding, 1 for 0-term.
+    MXB_AT_DEBUG(int n = ) EVP_EncodeBlock(temp, digest.data(), digest.size());
+    mxb_assert(n == DIGEST_B64_LEN);
+    std::array<char, DIGEST_B64_LEN> rval;
+    memcpy(rval.data(), temp, rval.size());
+    return rval;
 }
 
 std::string create_nonce()
@@ -345,13 +375,11 @@ ScramClientAuth::sasl_handle_client_proof(std::string_view sasl_data, PgProtocol
                     // Because scram sends a separate AuthenticationSASLFinal before AuthenticationOk,
                     // need to check the password here. This means scram does not work with
                     // "skip_authentication". TODO: handle this later
-                    auto proof_decoded = mxs::from_base64(proof.substr(2));
-                    if (proof_decoded.size() == SHA256_DIGEST_LENGTH)
+                    auto proof_bytes = from_base64(proof.substr(2));
+                    if (proof_bytes)
                     {
                         protocol_ok = true;
-                        Digest proof_bytes;
-                        memcpy(proof_bytes.data(), proof_decoded.data(), proof_decoded.size());
-                        sasl_final = sasl_verify_proof(proof_bytes, msg_without_proof, session);
+                        sasl_final = sasl_verify_proof(*proof_bytes, msg_without_proof, session);
                     }
                     else
                     {
@@ -410,17 +438,20 @@ GWBUF ScramClientAuth::sasl_verify_proof(const Digest& proof, string_view client
         memcpy(storage_ptr, m_server_key.data(), digest_len);
 
         // ServerSignature := HMAC(ServerKey, AuthMessage)
-        auto server_sig = hmac(m_server_key, auth_message);
-        string server_sig_msg = "v=";
-        server_sig_msg.append(mxs::to_base64(server_sig));
+        auto server_sig_b64 = to_base64(hmac(m_server_key, auth_message));
+
+        const char delim[] = "v=";
+        const size_t delim_len = sizeof(delim) - 1;
 
         // Send AuthenticationSASLFinal packet to client.
-        GWBUF sasl_final(pg::HEADER_LEN + 4 + server_sig_msg.size());
+        GWBUF sasl_final(pg::HEADER_LEN + 4 + delim_len + server_sig_b64.size());
         auto ptr = sasl_final.data();
         *ptr++ = pg::AUTHENTICATION;
-        ptr += pg::set_uint32(ptr, 8 + server_sig_msg.size());
+        ptr += pg::set_uint32(ptr, sasl_final.length() - 1);
         ptr += pg::set_uint32(ptr, pg::AUTH_SASL_FINAL);
-        memcpy(ptr, server_sig_msg.data(), server_sig_msg.size());
+        memcpy(ptr, delim, delim_len);
+        ptr += delim_len;
+        memcpy(ptr, server_sig_b64.data(), server_sig_b64.size());
         return sasl_final;
     }
     return GWBUF();
@@ -582,14 +613,20 @@ GWBUF ScramBackendAuth::create_scram_proof(string_view full_nonce, string_view s
     // ClientSignature := HMAC(StoredKey, AuthMessage)
     // ClientProof     := ClientKey XOR ClientSignature
     Digest client_sig = hmac(stored_key, m_auth_message);
-    Digest client_proof = digest_xor(client_key, client_sig);
-    string client_final_msg = mxb::cat(client_final_msg_wo_proof, ",p=", mxs::to_base64(client_proof));
+    auto client_proof_b64 = to_base64(digest_xor(client_key, client_sig));
 
-    GWBUF response(pg::HEADER_LEN + client_final_msg.length());
+    const char delim[] = ",p=";
+    const size_t delim_len = sizeof(delim) - 1;
+
+    GWBUF response(pg::HEADER_LEN + client_final_msg_wo_proof.length() + delim_len + client_proof_b64.size());
     uint8_t* ptr = response.data();
     *ptr++ = pg::SASL_RESPONSE;
     ptr += pg::set_uint32(ptr, response.length() - 1);
-    memcpy(ptr, client_final_msg.data(), client_final_msg.length());
+    memcpy(ptr, client_final_msg_wo_proof.data(), client_final_msg_wo_proof.length());
+    ptr += client_final_msg_wo_proof.length();
+    memcpy(ptr, delim, delim_len);
+    ptr += delim_len;
+    memcpy(ptr, client_proof_b64.data(), client_proof_b64.size());
     return response;
 }
 
@@ -616,13 +653,15 @@ bool ScramBackendAuth::check_sasl_final(const GWBUF& input, PgProtocolData& sess
     auto [auth_type, sasl_data] = read_scram_data(input);
     if (auth_type == pg::Auth::AUTH_SASL_FINAL && sasl_data.substr(0, 2) == "v=")
     {
-        auto server_sig_bytes = mxs::from_base64(sasl_data.substr(2));
-        Digest server_key;
-        memcpy(server_key.data(), session.auth_data().client_token.data() + 2 * server_key.size(),
-               server_key.size());
-        Digest correct_server_sig = hmac(server_key, m_auth_message);
-
-        rval = memcmp(server_sig_bytes.data(), correct_server_sig.data(), correct_server_sig.size()) == 0;
+        auto server_sig = from_base64(sasl_data.substr(2));
+        if (server_sig)
+        {
+            Digest server_key;
+            memcpy(server_key.data(), session.auth_data().client_token.data() + 2 * server_key.size(),
+                   server_key.size());
+            Digest correct_server_sig = hmac(server_key, m_auth_message);
+            rval = *server_sig == correct_server_sig;
+        }
     }
     return rval;
 }
