@@ -43,7 +43,7 @@ static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, NULL};
 typedef struct modulecmd_domain
 {
     std::string              domain;    /**< The domain */
-    MODULECMD*               commands;  /**< List of registered commands */
+    std::vector<MODULECMD>   commands;  /**< List of registered commands */
     struct modulecmd_domain* next;      /**< Next domain */
 } MODULECMD_DOMAIN;
 
@@ -86,7 +86,6 @@ static MODULECMD_DOMAIN* domain_create(const char* domain)
     MODULECMD_DOMAIN* rval = new MODULECMD_DOMAIN;
     rval->domain = domain;
     rval->next = nullptr;
-    rval->commands = nullptr;
     return rval;
 }
 
@@ -120,63 +119,54 @@ static MODULECMD_DOMAIN* get_or_create_domain(const char* domain)
     return dm;
 }
 
-static MODULECMD* command_create(const char* identifier,
-                                 const char* domain,
-                                 enum modulecmd_type type,
-                                 MODULECMDFN entry_point,
-                                 int argc,
-                                 const modulecmd_arg_type_t* argv,
-                                 const char* description)
+static MODULECMD command_create(const char* identifier,
+                                const char* domain,
+                                enum modulecmd_type type,
+                                MODULECMDFN entry_point,
+                                int argc,
+                                const modulecmd_arg_type_t* argv,
+                                const char* description)
 {
     mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
     mxb_assert(description);
-    MODULECMD* rval = new MODULECMD;
+    MODULECMD rval;
 
     int argc_min = 0;
 
     if (argc == 0)
     {
         /** The command requires no arguments */
-        rval->arg_types.push_back(modulecmd_arg_type_t{MODULECMD_ARG_NONE, ""});
+        rval.arg_types.push_back(modulecmd_arg_type_t {MODULECMD_ARG_NONE, ""});
     }
     else
     {
-        rval->arg_types.resize(argc);
+        rval.arg_types.resize(argc);
         for (int i = 0; i < argc; i++)
         {
             if (MODULECMD_ARG_IS_REQUIRED(&argv[i]))
             {
                 argc_min++;
             }
-            rval->arg_types[i] = argv[i];
+            rval.arg_types[i] = argv[i];
         }
     }
 
-    rval->type = type;
-    rval->func = entry_point;
-    rval->identifier = identifier;
-    rval->domain = domain;
-    rval->description = description;
-    rval->arg_count_min = argc_min;
-    rval->arg_count_max = argc;
-    rval->next = NULL;
+    rval.type = type;
+    rval.func = entry_point;
+    rval.identifier = identifier;
+    rval.domain = domain;
+    rval.description = description;
+    rval.arg_count_min = argc_min;
+    rval.arg_count_max = argc;
 
     return rval;
 }
 
-static void command_free(MODULECMD* cmd)
-{
-    if (cmd)
-    {
-        delete cmd;
-    }
-}
-
 static bool domain_has_command(MODULECMD_DOMAIN* dm, const char* id)
 {
-    for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
+    for (const MODULECMD& cmd : dm->commands)
     {
-        if (strcasecmp(cmd->identifier.c_str(), id) == 0)
+        if (strcasecmp(cmd.identifier.c_str(), id) == 0)
         {
             return true;
         }
@@ -408,20 +398,9 @@ bool modulecmd_register_command(const char* domain,
         }
         else
         {
-            MODULECMD* cmd = command_create(identifier,
-                                            domain,
-                                            type,
-                                            entry_point,
-                                            argc,
-                                            argv,
-                                            description);
-
-            if (cmd)
-            {
-                cmd->next = dm->commands;
-                dm->commands = cmd;
-                rval = true;
-            }
+            dm->commands.emplace_back(command_create(identifier, domain, type, entry_point,
+                                                     argc, argv, description));
+            rval = true;
         }
     }
 
@@ -434,18 +413,18 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
 
     std::string effective_domain = module_get_effective_name(domain);
 
-    MODULECMD* rval = NULL;
+    const MODULECMD* rval = NULL;
     std::lock_guard<std::mutex> guard(modulecmd_lock);
 
     for (MODULECMD_DOMAIN* dm = modulecmd_domains; dm; dm = dm->next)
     {
         if (strcasecmp(effective_domain.c_str(), dm->domain.c_str()) == 0)
         {
-            for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
+            for (const MODULECMD& cmd : dm->commands)
             {
-                if (strcasecmp(cmd->identifier.c_str(), identifier) == 0)
+                if (strcasecmp(cmd.identifier.c_str(), identifier) == 0)
                 {
-                    rval = cmd;
+                    rval = &cmd;
                     break;
                 }
             }
@@ -605,15 +584,15 @@ bool modulecmd_foreach(const char* domain_re,
 
         if (d_res == MXS_PCRE2_MATCH)
         {
-            for (MODULECMD* cmd = domain->commands; cmd && rval; cmd = cmd->next)
+            for (const MODULECMD& cmd : domain->commands)
             {
                 mxs_pcre2_result_t i_res = ident_re ?
-                    mxs_pcre2_simple_match(ident_re, cmd->identifier.c_str(), PCRE2_CASELESS, &err) :
+                    mxs_pcre2_simple_match(ident_re, cmd.identifier.c_str(), PCRE2_CASELESS, &err) :
                     MXS_PCRE2_MATCH;
 
                 if (i_res == MXS_PCRE2_MATCH)
                 {
-                    if (!fn(cmd, data))
+                    if (!fn(&cmd, data))
                     {
                         stop = true;
                         break;
@@ -626,6 +605,7 @@ bool modulecmd_foreach(const char* domain_re,
                     MXB_ERROR("Failed to match command identifier with '%s': %s", ident_re, errbuf);
                     modulecmd_set_error("Failed to match command identifier with '%s': %s", ident_re, errbuf);
                     rval = false;
+                    break;
                 }
             }
         }

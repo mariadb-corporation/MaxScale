@@ -143,7 +143,6 @@ struct MODULECMD
     int                               arg_count_min;/**< Minimum number of arguments */
     int                               arg_count_max;/**< Maximum number of arguments */
     std::vector<modulecmd_arg_type_t> arg_types;    /**< Argument types */
-    MODULECMD*                        next;         /**< Next command */
 };
 
 /** Check if the module command can modify the data/state of the module */
