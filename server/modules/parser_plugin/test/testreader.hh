@@ -91,6 +91,7 @@ private:
     void skip_postgres_block_quote(std::string& line);
     void skip_postgres_dollar_quotes(std::string& line, std::string& stmt);
     void skip_postgres_stdin_input();
+    void skip_postgres_until_ok();
 
     bool is_mariadb() const
     {

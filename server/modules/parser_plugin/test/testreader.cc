@@ -287,6 +287,13 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     continue;
                 }
 
+                // If '-- fail', then the following statements are expected to fail.
+                if (line.substr(0, 7) == "-- fail")
+                {
+                    skip_postgres_until_ok();
+                    continue;
+                }
+
                 // In Postgres can only be a comment and not a mysqltest command.
                 if (line.substr(0, 2) == "--")
                 {
@@ -409,6 +416,14 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     }
                 }
 
+                // If there is a trailing comment "CREATE TABLE t ( -- t is for ...", remove
+                // it before appending to the statement.
+                auto i = line.find("-- ");
+                if (i != string::npos)
+                {
+                    line = line.substr(0, i);
+                }
+
                 stmt += line;
 
                 if (is_postgres())
@@ -421,7 +436,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                 // test statement then the test-script delimiter will be something
                 // else than ';' and ';' will be the delimiter used in the multi-line
                 // statement.
-                auto i = line.find(";");
+                i = line.find(";");
 
                 if (i != string::npos)
                 {
@@ -648,4 +663,21 @@ void TestReader::skip_postgres_stdin_input()
         }
     }
 }
+
+void TestReader::skip_postgres_until_ok()
+{
+    string line;
+    while (std::getline(m_in, line))
+    {
+        ++m_line;
+
+        ltrim(line);
+
+        if (line.substr(0, 6) == "-- ok")
+        {
+            break;
+        }
+    }
+}
+
 }
