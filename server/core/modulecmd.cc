@@ -143,13 +143,10 @@ static MODULECMD* command_create(const char* identifier,
 {
     mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
     mxb_assert(description);
-    MODULECMD* rval = (MODULECMD*)MXB_MALLOC(sizeof(*rval));
-    char* id = MXB_STRDUP(identifier);
-    char* dm = MXB_STRDUP(domain);
-    char* desc = MXB_STRDUP(description);
+    MODULECMD* rval = new MODULECMD;
     modulecmd_arg_type_t* types = (modulecmd_arg_type_t*)MXB_MALLOC(sizeof(*types) * (argc ? argc : 1));
 
-    if (rval && id && dm && types && desc)
+    if (rval && types)
     {
         int argc_min = 0;
 
@@ -171,9 +168,9 @@ static MODULECMD* command_create(const char* identifier,
 
         rval->type = type;
         rval->func = entry_point;
-        rval->identifier = id;
-        rval->domain = dm;
-        rval->description = desc;
+        rval->identifier = identifier;
+        rval->domain = domain;
+        rval->description = description;
         rval->arg_types = types;
         rval->arg_count_min = argc_min;
         rval->arg_count_max = argc;
@@ -181,11 +178,8 @@ static MODULECMD* command_create(const char* identifier,
     }
     else
     {
-        MXB_FREE(rval);
-        MXB_FREE(id);
-        MXB_FREE(dm);
+        delete rval;
         MXB_FREE(types);
-        MXB_FREE(desc);
         rval = NULL;
     }
 
@@ -196,10 +190,8 @@ static void command_free(MODULECMD* cmd)
 {
     if (cmd)
     {
-        MXB_FREE(cmd->identifier);
-        MXB_FREE(cmd->domain);
         MXB_FREE(cmd->arg_types);
-        MXB_FREE(cmd);
+        delete cmd;
     }
 }
 
@@ -207,7 +199,7 @@ static bool domain_has_command(MODULECMD_DOMAIN* dm, const char* id)
 {
     for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
     {
-        if (strcasecmp(cmd->identifier, id) == 0)
+        if (strcasecmp(cmd->identifier.c_str(), id) == 0)
         {
             return true;
         }
@@ -269,7 +261,7 @@ static bool process_argument(const MODULECMD* cmd,
             if ((arg->value.service = Service::find((char*)value)))
             {
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type)
-                    || strcmp(cmd->domain, arg->value.service->router_name()) == 0)
+                    || strcmp(cmd->domain.c_str(), arg->value.service->router_name()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_SERVICE;
                     rval = true;
@@ -322,7 +314,7 @@ static bool process_argument(const MODULECMD* cmd,
             if ((arg->value.monitor = MonitorManager::find_monitor((char*) value)))
             {
                 std::string eff_name = module_get_effective_name(arg->value.monitor->m_module);
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name.c_str()) == 0)
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_MONITOR;
                     rval = true;
@@ -344,7 +336,7 @@ static bool process_argument(const MODULECMD* cmd,
                 arg->value.filter = f.get();
                 const char* orig_name = f->module();
                 std::string eff_name = module_get_effective_name(orig_name);
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name.c_str()) == 0)
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_FILTER;
                     rval = true;
@@ -474,7 +466,7 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
         {
             for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
             {
-                if (strcasecmp(cmd->identifier, identifier) == 0)
+                if (strcasecmp(cmd->identifier.c_str(), identifier) == 0)
                 {
                     rval = cmd;
                     break;
@@ -639,7 +631,7 @@ bool modulecmd_foreach(const char* domain_re,
             for (MODULECMD* cmd = domain->commands; cmd && rval; cmd = cmd->next)
             {
                 mxs_pcre2_result_t i_res = ident_re ?
-                    mxs_pcre2_simple_match(ident_re, cmd->identifier, PCRE2_CASELESS, &err) :
+                    mxs_pcre2_simple_match(ident_re, cmd->identifier.c_str(), PCRE2_CASELESS, &err) :
                     MXS_PCRE2_MATCH;
 
                 if (i_res == MXS_PCRE2_MATCH)

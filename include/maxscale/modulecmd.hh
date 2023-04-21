@@ -133,18 +133,18 @@ typedef bool (* MODULECMDFN)(const MODULECMD_ARG* argv, json_t** output);
 /**
  * A registered command
  */
-typedef struct modulecmd
+struct MODULECMD
 {
-    char*                 identifier;   /**< Unique identifier */
-    char*                 domain;       /**< Command domain */
-    char*                 description;  /**< Command description */
-    enum modulecmd_type   type;         /**< Command type, either active or passive */
+    std::string           identifier;   /**< Unique identifier */
+    std::string           domain;       /**< Command domain */
+    std::string           description;  /**< Command description */
+    modulecmd_type        type;         /**< Command type, either active or passive */
     MODULECMDFN           func;         /**< The registered function */
     int                   arg_count_min;/**< Minimum number of arguments */
     int                   arg_count_max;/**< Maximum number of arguments */
     modulecmd_arg_type_t* arg_types;    /**< Argument types */
-    struct modulecmd*     next;         /**< Next command */
-} MODULECMD;
+    MODULECMD*            next;         /**< Next command */
+};
 
 /** Check if the module command can modify the data/state of the module */
 #define MODULECMD_MODIFIES_DATA(t) (t->type == MODULECMD_TYPE_ACTIVE)

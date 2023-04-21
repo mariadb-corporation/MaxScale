@@ -449,7 +449,7 @@ bool modulecmd_cb(const MODULECMD* cmd, void* data)
     cb_param* d = static_cast<cb_param*>(data);
 
     json_t* obj = json_object();
-    json_object_set_new(obj, CN_ID, json_string(cmd->identifier));
+    json_object_set_new(obj, CN_ID, json_string(cmd->identifier.c_str()));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
 
     json_t* attr = json_object();
@@ -457,7 +457,7 @@ bool modulecmd_cb(const MODULECMD* cmd, void* data)
     json_object_set_new(attr, CN_METHOD, json_string(method));
     json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd->arg_count_min));
     json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd->arg_count_max));
-    json_object_set_new(attr, CN_DESCRIPTION, json_string(cmd->description));
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(cmd->description.c_str()));
 
     json_t* param = json_array();
 
@@ -473,7 +473,7 @@ bool modulecmd_cb(const MODULECMD* cmd, void* data)
     std::string s = d->domain;
     s += "/";
     s += cmd->identifier;
-    mxb_assert(strcasecmp(d->domain, cmd->domain) == 0);
+    mxb_assert(strcasecmp(d->domain, cmd->domain.c_str()) == 0);
 
     json_object_set_new(obj, CN_LINKS, mxs_json_self_link(d->host, CN_MODULES, s.c_str()));
     json_object_set_new(attr, CN_PARAMETERS, param);
