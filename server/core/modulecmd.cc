@@ -42,7 +42,7 @@ static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, NULL};
  */
 typedef struct modulecmd_domain
 {
-    char*                    domain;    /**< The domain */
+    std::string              domain;    /**< The domain */
     MODULECMD*               commands;  /**< List of registered commands */
     struct modulecmd_domain* next;      /**< Next domain */
 } MODULECMD_DOMAIN;
@@ -83,22 +83,10 @@ static void report_argc_mismatch(const MODULECMD* cmd, int argc)
 
 static MODULECMD_DOMAIN* domain_create(const char* domain)
 {
-    MODULECMD_DOMAIN* rval = (MODULECMD_DOMAIN*)MXB_MALLOC(sizeof(*rval));
-    char* dm = MXB_STRDUP(domain);
-
-    if (rval && dm)
-    {
-        rval->domain = dm;
-        rval->commands = NULL;
-        rval->next = NULL;
-    }
-    else
-    {
-        MXB_FREE(rval);
-        MXB_FREE(dm);
-        rval = NULL;
-    }
-
+    MODULECMD_DOMAIN* rval = new MODULECMD_DOMAIN;
+    rval->domain = domain;
+    rval->next = nullptr;
+    rval->commands = nullptr;
     return rval;
 }
 
@@ -106,8 +94,7 @@ static void domain_free(MODULECMD_DOMAIN* dm)
 {
     if (dm)
     {
-        MXB_FREE(dm->domain);
-        MXB_FREE(dm);
+        delete dm;
     }
 }
 
@@ -118,7 +105,7 @@ static MODULECMD_DOMAIN* get_or_create_domain(const char* domain)
 
     for (dm = modulecmd_domains; dm; dm = dm->next)
     {
-        if (strcasecmp(dm->domain, domain) == 0)
+        if (strcasecmp(dm->domain.c_str(), domain) == 0)
         {
             return dm;
         }
@@ -452,7 +439,7 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
 
     for (MODULECMD_DOMAIN* dm = modulecmd_domains; dm; dm = dm->next)
     {
-        if (strcasecmp(effective_domain.c_str(), dm->domain) == 0)
+        if (strcasecmp(effective_domain.c_str(), dm->domain.c_str()) == 0)
         {
             for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
             {
@@ -613,7 +600,7 @@ bool modulecmd_foreach(const char* domain_re,
     {
         int err;
         mxs_pcre2_result_t d_res = domain_re ?
-            mxs_pcre2_simple_match(domain_re, domain->domain, PCRE2_CASELESS, &err) :
+            mxs_pcre2_simple_match(domain_re, domain->domain.c_str(), PCRE2_CASELESS, &err) :
             MXS_PCRE2_MATCH;
 
         if (d_res == MXS_PCRE2_MATCH)
