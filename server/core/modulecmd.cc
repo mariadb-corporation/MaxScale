@@ -32,7 +32,7 @@
 using maxscale::Monitor;
 
 /** Thread local error buffer */
-thread_local char* errbuf = NULL;
+thread_local std::array<char, MODULECMD_ERRBUF_SIZE> errbuf;
 
 /** Parameter passed to functions that do not always expect arguments */
 static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, NULL};
@@ -55,16 +55,6 @@ typedef struct modulecmd_domain
 static MODULECMD_DOMAIN* modulecmd_domains = NULL;
 static std::mutex modulecmd_lock;
 
-static inline void prepare_error()
-{
-    if (errbuf == NULL)
-    {
-        errbuf = (char*)MXB_MALLOC(MODULECMD_ERRBUF_SIZE);
-        MXB_ABORT_IF_NULL(errbuf);
-        errbuf[0] = '\0';
-    }
-}
-
 /**
  * @brief Reset error message
  *
@@ -73,7 +63,6 @@ static inline void prepare_error()
  */
 static void reset_error()
 {
-    prepare_error();
     errbuf[0] = '\0';
 }
 
@@ -566,7 +555,6 @@ void modulecmd_arg_free(MODULECMD_ARG* arg)
 
 static void modulecmd_clear_error()
 {
-    prepare_error();
     errbuf[0] = '\0';
 }
 
@@ -598,18 +586,15 @@ bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, jso
 
 void modulecmd_set_error(const char* format, ...)
 {
-    prepare_error();
-
     va_list list;
     va_start(list, format);
-    vsnprintf(errbuf, MODULECMD_ERRBUF_SIZE, format, list);
+    vsnprintf(errbuf.data(), errbuf.size(), format, list);
     va_end(list);
 }
 
 const char* modulecmd_get_error()
 {
-    prepare_error();
-    return errbuf;
+    return errbuf.data();
 }
 
 json_t* modulecmd_get_json_error()
