@@ -26,6 +26,8 @@
 #include "internal/servermanager.hh"
 #include "internal/session.hh"
 
+namespace
+{
 /** Size of the error buffer */
 #define MODULECMD_ERRBUF_SIZE 512
 
@@ -42,9 +44,8 @@ static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, NULL};
  */
 typedef struct modulecmd_domain
 {
-    std::string              domain;    /**< The domain */
-    std::vector<MODULECMD>   commands;  /**< List of registered commands */
-    struct modulecmd_domain* next;      /**< Next domain */
+    std::string            domain;      /**< The domain */
+    std::vector<MODULECMD> commands;    /**< List of registered commands */
 } MODULECMD_DOMAIN;
 
 /**
@@ -52,8 +53,13 @@ typedef struct modulecmd_domain
  */
 
 /** The global list of registered domains */
-static MODULECMD_DOMAIN* modulecmd_domains = NULL;
-static std::mutex modulecmd_lock;
+struct ThisUnit
+{
+    std::vector<MODULECMD_DOMAIN> domains;
+    std::mutex                    lock;
+};
+
+static ThisUnit this_unit;
 
 /**
  * @brief Reset error message
@@ -81,42 +87,25 @@ static void report_argc_mismatch(const MODULECMD* cmd, int argc)
     }
 }
 
-static MODULECMD_DOMAIN* domain_create(const char* domain)
+static MODULECMD_DOMAIN domain_create(const char* domain)
 {
-    MODULECMD_DOMAIN* rval = new MODULECMD_DOMAIN;
-    rval->domain = domain;
-    rval->next = nullptr;
+    MODULECMD_DOMAIN rval;
+    rval.domain = domain;
     return rval;
 }
 
-static void domain_free(MODULECMD_DOMAIN* dm)
+static MODULECMD_DOMAIN& get_or_create_domain(const char* domain)
 {
-    if (dm)
+    for (auto& dm : this_unit.domains)
     {
-        delete dm;
-    }
-}
-
-static MODULECMD_DOMAIN* get_or_create_domain(const char* domain)
-{
-
-    MODULECMD_DOMAIN* dm;
-
-    for (dm = modulecmd_domains; dm; dm = dm->next)
-    {
-        if (strcasecmp(dm->domain.c_str(), domain) == 0)
+        if (strcasecmp(dm.domain.c_str(), domain) == 0)
         {
             return dm;
         }
     }
 
-    if ((dm = domain_create(domain)))
-    {
-        dm->next = modulecmd_domains;
-        modulecmd_domains = dm;
-    }
-
-    return dm;
+    this_unit.domains.push_back(domain_create(domain));
+    return this_unit.domains.back();
 }
 
 static MODULECMD command_create(const char* identifier,
@@ -162,9 +151,9 @@ static MODULECMD command_create(const char* identifier,
     return rval;
 }
 
-static bool domain_has_command(MODULECMD_DOMAIN* dm, const char* id)
+static bool domain_has_command(const MODULECMD_DOMAIN& dm, const char* id)
 {
-    for (const MODULECMD& cmd : dm->commands)
+    for (const MODULECMD& cmd : dm.commands)
     {
         if (strcasecmp(cmd.identifier.c_str(), id) == 0)
         {
@@ -370,6 +359,7 @@ static void free_argument(struct arg_node* arg)
         break;
     }
 }
+}
 
 /**
  * Public functions declared in modulecmd.h
@@ -385,23 +375,20 @@ bool modulecmd_register_command(const char* domain,
 {
     reset_error();
     bool rval = false;
-    std::lock_guard<std::mutex> guard(modulecmd_lock);
+    std::lock_guard guard(this_unit.lock);
 
-    MODULECMD_DOMAIN* dm = get_or_create_domain(domain);
+    MODULECMD_DOMAIN& dm = get_or_create_domain(domain);
 
-    if (dm)
+    if (domain_has_command(dm, identifier))
     {
-        if (domain_has_command(dm, identifier))
-        {
-            modulecmd_set_error("Command registered more than once: %s::%s", domain, identifier);
-            MXB_ERROR("Command registered more than once: %s::%s", domain, identifier);
-        }
-        else
-        {
-            dm->commands.emplace_back(command_create(identifier, domain, type, entry_point,
-                                                     argc, argv, description));
-            rval = true;
-        }
+        modulecmd_set_error("Command registered more than once: %s::%s", domain, identifier);
+        MXB_ERROR("Command registered more than once: %s::%s", domain, identifier);
+    }
+    else
+    {
+        dm.commands.emplace_back(command_create(identifier, domain, type, entry_point,
+                                                argc, argv, description));
+        rval = true;
     }
 
     return rval;
@@ -414,13 +401,13 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
     std::string effective_domain = module_get_effective_name(domain);
 
     const MODULECMD* rval = NULL;
-    std::lock_guard<std::mutex> guard(modulecmd_lock);
+    std::lock_guard guard(this_unit.lock);
 
-    for (MODULECMD_DOMAIN* dm = modulecmd_domains; dm; dm = dm->next)
+    for (const MODULECMD_DOMAIN& dm : this_unit.domains)
     {
-        if (strcasecmp(effective_domain.c_str(), dm->domain.c_str()) == 0)
+        if (strcasecmp(effective_domain.c_str(), dm.domain.c_str()) == 0)
         {
-            for (const MODULECMD& cmd : dm->commands)
+            for (const MODULECMD& cmd : dm.commands)
             {
                 if (strcasecmp(cmd.identifier.c_str(), identifier) == 0)
                 {
@@ -573,18 +560,18 @@ bool modulecmd_foreach(const char* domain_re,
 {
     bool rval = true;
     bool stop = false;
-    std::lock_guard<std::mutex> guard(modulecmd_lock);
+    std::lock_guard guard(this_unit.lock);
 
-    for (MODULECMD_DOMAIN* domain = modulecmd_domains; domain && rval && !stop; domain = domain->next)
+    for (const MODULECMD_DOMAIN& domain : this_unit.domains)
     {
         int err;
         mxs_pcre2_result_t d_res = domain_re ?
-            mxs_pcre2_simple_match(domain_re, domain->domain.c_str(), PCRE2_CASELESS, &err) :
+            mxs_pcre2_simple_match(domain_re, domain.domain.c_str(), PCRE2_CASELESS, &err) :
             MXS_PCRE2_MATCH;
 
         if (d_res == MXS_PCRE2_MATCH)
         {
-            for (const MODULECMD& cmd : domain->commands)
+            for (const MODULECMD& cmd : domain.commands)
             {
                 mxs_pcre2_result_t i_res = ident_re ?
                     mxs_pcre2_simple_match(ident_re, cmd.identifier.c_str(), PCRE2_CASELESS, &err) :
@@ -616,6 +603,11 @@ bool modulecmd_foreach(const char* domain_re,
             MXB_ERROR("Failed to match command domain with '%s': %s", domain_re, errbuf);
             modulecmd_set_error("Failed to match command domain with '%s': %s", domain_re, errbuf);
             rval = false;
+        }
+
+        if (stop || !rval)
+        {
+            break;
         }
     }
 
