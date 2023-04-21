@@ -45,7 +45,10 @@ export default class TableParser {
             generated_exp,
             generated,
             ai,
+            defaultExp,
+            comment,
         ] = def.match(tokenizer.colDef) || []
+
         if (isMatched) {
             return {
                 name,
@@ -59,7 +62,9 @@ export default class TableParser {
                 generated_exp,
                 generated,
                 isAI: Boolean(ai),
-                //TODO: Parse PK, UQ, DEFAULT exp, and COMMENT
+                defaultExp,
+                comment,
+                //TODO: Parse PK, UQ
             }
         }
         //TODO: Parse reference_definition
