@@ -135,15 +135,15 @@ typedef bool (* MODULECMDFN)(const MODULECMD_ARG* argv, json_t** output);
  */
 struct MODULECMD
 {
-    std::string           identifier;   /**< Unique identifier */
-    std::string           domain;       /**< Command domain */
-    std::string           description;  /**< Command description */
-    modulecmd_type        type;         /**< Command type, either active or passive */
-    MODULECMDFN           func;         /**< The registered function */
-    int                   arg_count_min;/**< Minimum number of arguments */
-    int                   arg_count_max;/**< Maximum number of arguments */
-    modulecmd_arg_type_t* arg_types;    /**< Argument types */
-    MODULECMD*            next;         /**< Next command */
+    std::string                       identifier;   /**< Unique identifier */
+    std::string                       domain;       /**< Command domain */
+    std::string                       description;  /**< Command description */
+    modulecmd_type                    type;         /**< Command type, either active or passive */
+    MODULECMDFN                       func;         /**< The registered function */
+    int                               arg_count_min;/**< Minimum number of arguments */
+    int                               arg_count_max;/**< Maximum number of arguments */
+    std::vector<modulecmd_arg_type_t> arg_types;    /**< Argument types */
+    MODULECMD*                        next;         /**< Next command */
 };
 
 /** Check if the module command can modify the data/state of the module */
@@ -298,4 +298,4 @@ bool modulecmd_foreach(const char* domain_re,
  * @param type Type to convert
  * @return New string or NULL on memory allocation error
  */
-const char* modulecmd_argtype_to_str(modulecmd_arg_type_t* type);
+const char* modulecmd_argtype_to_str(const modulecmd_arg_type_t* type);

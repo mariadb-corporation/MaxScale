@@ -144,44 +144,35 @@ static MODULECMD* command_create(const char* identifier,
     mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
     mxb_assert(description);
     MODULECMD* rval = new MODULECMD;
-    modulecmd_arg_type_t* types = (modulecmd_arg_type_t*)MXB_MALLOC(sizeof(*types) * (argc ? argc : 1));
 
-    if (rval && types)
+    int argc_min = 0;
+
+    if (argc == 0)
     {
-        int argc_min = 0;
-
+        /** The command requires no arguments */
+        rval->arg_types.push_back(modulecmd_arg_type_t{MODULECMD_ARG_NONE, ""});
+    }
+    else
+    {
+        rval->arg_types.resize(argc);
         for (int i = 0; i < argc; i++)
         {
             if (MODULECMD_ARG_IS_REQUIRED(&argv[i]))
             {
                 argc_min++;
             }
-            types[i] = argv[i];
+            rval->arg_types[i] = argv[i];
         }
-
-        if (argc == 0)
-        {
-            /** The command requires no arguments */
-            types[0].type = MODULECMD_ARG_NONE;
-            types[0].description = "";
-        }
-
-        rval->type = type;
-        rval->func = entry_point;
-        rval->identifier = identifier;
-        rval->domain = domain;
-        rval->description = description;
-        rval->arg_types = types;
-        rval->arg_count_min = argc_min;
-        rval->arg_count_max = argc;
-        rval->next = NULL;
     }
-    else
-    {
-        delete rval;
-        MXB_FREE(types);
-        rval = NULL;
-    }
+
+    rval->type = type;
+    rval->func = entry_point;
+    rval->identifier = identifier;
+    rval->domain = domain;
+    rval->description = description;
+    rval->arg_count_min = argc_min;
+    rval->arg_count_max = argc;
+    rval->next = NULL;
 
     return rval;
 }
@@ -190,7 +181,6 @@ static void command_free(MODULECMD* cmd)
 {
     if (cmd)
     {
-        MXB_FREE(cmd->arg_types);
         delete cmd;
     }
 }
@@ -208,7 +198,7 @@ static bool domain_has_command(MODULECMD_DOMAIN* dm, const char* id)
 }
 
 static bool process_argument(const MODULECMD* cmd,
-                             modulecmd_arg_type_t* type,
+                             const modulecmd_arg_type_t* type,
                              const void* value,
                              struct arg_node* arg,
                              const char** err)
@@ -667,7 +657,7 @@ bool modulecmd_foreach(const char* domain_re,
 
 #define format_type(a, b) (MODULECMD_ARG_IS_REQUIRED(a) ? b : "[" b "]")
 
-const char* modulecmd_argtype_to_str(modulecmd_arg_type_t* type)
+const char* modulecmd_argtype_to_str(const modulecmd_arg_type_t* type)
 {
     const char* rval = "UNKNOWN";
 
