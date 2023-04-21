@@ -16,11 +16,13 @@
 #include <maxbase/ccdefs.hh>
 #include <maxbase/assert.hh>
 #include <algorithm>
+#include <array>
 #include <string>
 #include <sstream>
 #include <cstring>
 #include <vector>
 #include <type_traits>
+#include <tuple>
 
 /**
  * Thread-safe (but not re-entrant) strerror.
@@ -305,19 +307,45 @@ inline std::vector<std::string> strtok(std::string_view str, std::string_view de
     return rval;
 }
 
+namespace impl
+{
+template<size_t ... Idx>
+constexpr auto split(std::string_view str, std::string_view delim, std::index_sequence<Idx...>)
+{
+    std::array<std::string_view, sizeof...(Idx)> arr{};
+
+    for (size_t i = 0; i < arr.size(); i++)
+    {
+        auto pos = delim.empty() ? std::string_view::npos : str.find(delim);
+        arr[i] = str.substr(0, pos);
+        str = pos != std::string_view::npos ? str.substr(pos + delim.size()) : "";
+    }
+
+    return std::make_tuple(std::string_view {arr[Idx]} ...);
+}
+}
+
 /**
  * Split a string
+ *
+ * @tparam Num  How many parts to split the string into. By default the string is split into two.
  *
  * @param str   String to split
  * @param delim Delimiter to find
  *
- * @return The string split into two parts without the delimiter or the original string and an empty string if
- *         the delimiter was not found.
+ * @return A @c std::tuple with @c Num instances of std::string_view, by default this is
+ *         std::tuple<std::string_view, std::string_view>. If @c str contains fewer occurrences of @c delim
+ *         than was expected, the remaining strings in the return value will contain an empty string.
  */
-inline std::pair<std::string_view, std::string_view> split(std::string_view str, std::string_view delim)
+template<size_t Num = 2>
+constexpr inline auto split(std::string_view str, std::string_view delim)
 {
-    auto pos = delim.empty() ? std::string_view::npos : str.find(delim);
-    return {str.substr(0, pos), pos != std::string_view::npos ? str.substr(pos + delim.size()) : ""};
+    static_assert(Num >= 2, "Can only split into two or more parts.");
+    // Passing a std::index_sequence as an argument is the usual method of getting indexes into an array from
+    // either a variadic argument list or for repeating a type multiple times. The use of auto in the function
+    // return values lets the compiler deduce the return type from the impl::split function call which is much
+    // easier than having to write it out by hand.
+    return impl::split(str, delim, std::make_index_sequence<Num> {});
 }
 
 /**

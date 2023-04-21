@@ -121,6 +121,8 @@ int test_rtrim()
     return test(rtrim_testcases, n_rtrim_testcases, mxb::rtrim);
 }
 
+#define ASSERT_BOTH(Value) static_assert(Value); mxb_assert(Value)
+
 int test_split()
 {
     cout << "split()" << endl;
@@ -154,6 +156,12 @@ int test_split()
             rc = 1;
         }
     }
+
+    ASSERT_BOTH(mxb::split("hello world", " ") == std::make_tuple("hello", "world"));
+    ASSERT_BOTH(mxb::split<3>("hello world !", " ") == std::make_tuple("hello", "world", "!"));
+    ASSERT_BOTH(mxb::split<3>("a,b,c", ",") == std::make_tuple("a", "b", "c"));
+    ASSERT_BOTH(mxb::split<3>("a,b,c", "!") == std::make_tuple("a,b,c", "", ""));
+    ASSERT_BOTH(mxb::split<5>("hello world !", "@") == std::make_tuple("hello world !", "", "", "", ""));
 
     return rc;
 }
