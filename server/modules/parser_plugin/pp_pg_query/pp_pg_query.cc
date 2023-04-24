@@ -23,7 +23,8 @@
 extern "C"
 {
 #include <src/pg_query_internal.h>
-#include "parser/parser.h"
+#include <catalog/pg_class.h>
+#include <parser/parser.h>
 }
 
 using namespace std;
@@ -217,6 +218,11 @@ public:
             m_op = sql::OP_ALTER;
             break;
 
+        case T_CompositeTypeStmt:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_CREATE;
+            break;
+
         case T_CreateSchemaStmt:
         case T_CreateTableSpaceStmt:
         case T_CreateExtensionStmt:
@@ -250,6 +256,11 @@ public:
             m_op = sql::OP_CREATE;
             break;
 
+        case T_DefineStmt:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_CREATE;
+            break;
+
         case T_DropTableSpaceStmt:
         case T_DropUserMappingStmt:
         case T_DropRoleStmt:
@@ -262,6 +273,11 @@ public:
             break;
 
         case T_IndexStmt:
+            m_type_mask |= sql::TYPE_WRITE;
+            m_op = sql::OP_CREATE;
+            break;
+
+        case T_RuleStmt:
             m_type_mask |= sql::TYPE_WRITE;
             m_op = sql::OP_CREATE;
             break;
@@ -292,6 +308,11 @@ public:
     {
         m_type_mask |= sql::TYPE_WRITE;
         m_op = sql::OP_CREATE_TABLE;
+
+        if (x.relation->relpersistence == RELPERSISTENCE_TEMP)
+        {
+            m_type_mask |= sql::TYPE_CREATE_TMP_TABLE;
+        }
     }
 
     void analyze(const DropStmt& x)
