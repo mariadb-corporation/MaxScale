@@ -156,6 +156,10 @@ public:
         switch (x.type)
         {
             // Specific Information.
+        case T_AlterObjectSchemaStmt:
+            analyze(reinterpret_cast<const AlterObjectSchemaStmt&>(x));
+            break;
+
         case T_AlterTableStmt:
             analyze(reinterpret_cast<const AlterTableStmt&>(x));
             break;
@@ -174,6 +178,10 @@ public:
 
         case T_RawStmt:
             analyze(reinterpret_cast<const RawStmt&>(x));
+            break;
+
+        case T_RenameStmt:
+            analyze(reinterpret_cast<const RenameStmt&>(x));
             break;
 
         case T_SelectStmt:
@@ -199,7 +207,6 @@ public:
         case T_AlterForeignServerStmt:
         case T_AlterFunctionStmt:
         case T_AlterObjectDependsStmt:
-        case T_AlterObjectSchemaStmt:
         case T_AlterOpFamilyStmt:
         case T_AlterOperatorStmt:
         case T_AlterOwnerStmt:
@@ -295,6 +302,20 @@ public:
         }
     }
 
+    void analyze(const AlterObjectSchemaStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+
+        if (x.objectType == OBJECT_TABLE)
+        {
+            m_op = sql::OP_ALTER_TABLE;
+        }
+        else
+        {
+            m_op = sql::OP_ALTER;
+        }
+    }
+
     void analyze(const AlterTableStmt& x)
     {
         m_type_mask |= sql::TYPE_WRITE;
@@ -341,6 +362,22 @@ public:
     void analyze(const RawStmt& x)
     {
         analyze(*x.stmt);
+    }
+
+    void analyze(const RenameStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+
+        if (x.renameType == OBJECT_TABLE
+            || x.renameType == OBJECT_TABCONSTRAINT
+            || (x.renameType == OBJECT_COLUMN && x.relationType == OBJECT_TABLE))
+        {
+            m_op = sql::OP_ALTER_TABLE;
+        }
+        else
+        {
+            m_op = sql::OP_ALTER;
+        }
     }
 
     void analyze(const SelectStmt& x)
