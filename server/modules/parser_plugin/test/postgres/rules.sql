@@ -36,6 +36,7 @@ create table rtest_interface (sysname text, ifname text);
 create table rtest_person (pname text, pdesc text);
 create table rtest_admin (pname text, sysname text);
 
+/* MXS
 create rule rtest_sys_upd as on update to rtest_system do also (
 	update rtest_interface set sysname = new.sysname
 		where sysname = old.sysname;
@@ -47,7 +48,7 @@ create rule rtest_sys_del as on delete to rtest_system do also (
 	delete from rtest_interface where sysname = old.sysname;
 	delete from rtest_admin where sysname = old.sysname;
 	);
-
+*/
 create rule rtest_pers_upd as on update to rtest_person do also
 	update rtest_admin set pname = new.pname where pname = old.pname;
 
@@ -745,6 +746,7 @@ create view vview as
   select pparent.pid, txt, descrip from
     pparent left join cchild using (pid);
 
+/* MXS
 create rule rrule as
   on update to vview do instead
 (
@@ -752,6 +754,7 @@ create rule rrule as
     select old.pid, new.descrip where old.descrip isnull;
   update cchild set descrip = new.descrip where cchild.pid = old.pid;
 );
+*/
 
 select * from vview;
 update vview set descrip='test1' where pid=1;

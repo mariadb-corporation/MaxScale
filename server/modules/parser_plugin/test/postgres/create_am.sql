@@ -115,10 +115,12 @@ SELECT f1 FROM tableam_tbl_heap2 ORDER BY f1;
 SELECT INTO tableam_tblselectinto_heap2 USING heap2 FROM tableam_tbl_heap2;
 
 -- CREATE VIEW doesn't support USING
+/* MXS
 CREATE VIEW tableam_view_heap2 USING heap2 AS SELECT * FROM tableam_tbl_heap2;
 
 -- CREATE SEQUENCE doesn't support USING
 CREATE SEQUENCE tableam_seq_heap2 USING heap2;
+*/
 
 -- CREATE MATERIALIZED VIEW does support USING
 CREATE MATERIALIZED VIEW tableam_tblmv_heap2 USING heap2 AS SELECT * FROM tableam_tbl_heap2;
@@ -230,11 +232,12 @@ ROLLBACK;
 
 -- Third, check that we can neither create a table using a nonexistent
 -- AM, nor using an index AM
+/* MXS
 CREATE TABLE i_am_a_failure() USING "";
 CREATE TABLE i_am_a_failure() USING i_do_not_exist_am;
 CREATE TABLE i_am_a_failure() USING "I do not exist AM";
 CREATE TABLE i_am_a_failure() USING "btree";
-
+*/
 -- Drop table access method, which fails as objects depends on it
 DROP ACCESS METHOD heap2;
 

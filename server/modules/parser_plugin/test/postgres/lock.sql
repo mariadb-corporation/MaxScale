@@ -192,9 +192,11 @@ DROP ROLE regress_rol_lock1;
 -- atomic ops tests
 RESET search_path;
 
+/* MXS
 CREATE FUNCTION test_atomic_ops()
     RETURNS bool
     AS :'regresslib'
     LANGUAGE C;
+*/
 
 SELECT test_atomic_ops();

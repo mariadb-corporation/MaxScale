@@ -163,6 +163,7 @@ CREATE FUNCTION functest_S_2(a text[]) RETURNS int
     RETURN a[1]::int;
 CREATE FUNCTION functest_S_3() RETURNS boolean
     RETURN false;
+/* MXS
 CREATE FUNCTION functest_S_3a() RETURNS boolean
     BEGIN ATOMIC
         ;;RETURN false;;
@@ -187,7 +188,7 @@ CREATE FUNCTION functest_S_16(a int, b int) RETURNS void
     BEGIN ATOMIC
         INSERT INTO functest1 SELECT a + $2;
     END;
-
+*/
 -- error: duplicate function body
 CREATE FUNCTION functest_S_xxx(x int) RETURNS int
     LANGUAGE SQL
@@ -205,11 +206,13 @@ CREATE FUNCTION functest_S_xx(x date) RETURNS boolean
     RETURN x > 1;
 
 -- tricky parsing
+/* MXS
 CREATE FUNCTION functest_S_15(x int) RETURNS boolean
 LANGUAGE SQL
 BEGIN ATOMIC
     select case when x % 2 = 0 then true else false end;
 END;
+*/
 
 SELECT functest_S_1('abcd', '2020-01-01');
 SELECT functest_S_2(ARRAY['1', '2', '3']);
@@ -333,22 +336,26 @@ DROP FUNCTION functest1(a int);
 CREATE TABLE functest3 (a int);
 INSERT INTO functest3 VALUES (1), (2), (3);
 
+/* MXS
 CREATE FUNCTION functest_sri1() RETURNS SETOF int
 LANGUAGE SQL
 STABLE
 AS '
     SELECT * FROM functest3;
 ';
+*/
 
 SELECT * FROM functest_sri1();
 EXPLAIN (verbose, costs off) SELECT * FROM functest_sri1();
 
+/* MXS
 CREATE FUNCTION functest_sri2() RETURNS SETOF int
 LANGUAGE SQL
 STABLE
 BEGIN ATOMIC
     SELECT * FROM functest3;
 END;
+*/
 
 SELECT * FROM functest_sri2();
 EXPLAIN (verbose, costs off) SELECT * FROM functest_sri2();

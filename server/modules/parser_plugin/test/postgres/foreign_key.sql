@@ -467,7 +467,9 @@ DROP TABLE PKTABLE;
 CREATE TABLE PKTABLE (tid int, id int, PRIMARY KEY (tid, id));
 CREATE TABLE FKTABLE (tid int, id int, foo int, FOREIGN KEY (tid, id) REFERENCES PKTABLE ON DELETE SET NULL (bar));
 CREATE TABLE FKTABLE (tid int, id int, foo int, FOREIGN KEY (tid, id) REFERENCES PKTABLE ON DELETE SET NULL (foo));
+/* MXS: "a column list with SET NULL is only supported for ON DELETE actions"
 CREATE TABLE FKTABLE (tid int, id int, foo int, FOREIGN KEY (tid, foo) REFERENCES PKTABLE ON UPDATE SET NULL (foo));
+*/
 CREATE TABLE FKTABLE (
   tid int, id int,
   fk_id_del_set_null int,

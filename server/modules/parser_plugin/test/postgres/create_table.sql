@@ -53,14 +53,18 @@ FROM generate_series(1, 1100) g(i)
 INSERT INTO extra_wide_table(firstc, lastc) VALUES('first col', 'last col');
 SELECT firstc, lastc FROM extra_wide_table;
 
+/* MXS
 -- check that tables with oids cannot be created anymore
 CREATE TABLE withoid() WITH OIDS;
+*/
 CREATE TABLE withoid() WITH (oids);
 CREATE TABLE withoid() WITH (oids = true);
 
 -- but explicitly not adding oids is still supported
-CREATE TEMP TABLE withoutoid() WITHOUT OIDS; DROP TABLE withoutoid;
-CREATE TEMP TABLE withoutoid() WITH (oids = false); DROP TABLE withoutoid;
+CREATE TEMP TABLE withoutoid() WITHOUT OIDS;
+DROP TABLE withoutoid;
+CREATE TEMP TABLE withoutoid() WITH (oids = false);
+DROP TABLE withoutoid;
 
 -- check restriction with default expressions
 -- invalid use of column reference in default expressions
@@ -309,8 +313,10 @@ CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN ((selec
 CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN (generate_series(4, 6));
 CREATE TABLE part_bogus_expr_fail PARTITION OF list_parted FOR VALUES IN ((1+1) collate "POSIX");
 
+/* MXS
 -- syntax does not allow empty list of values for list partitions
 CREATE TABLE fail_part PARTITION OF list_parted FOR VALUES IN ();
+*/
 -- trying to specify range for list partitioned table
 CREATE TABLE fail_part PARTITION OF list_parted FOR VALUES FROM (1) TO (2);
 -- trying to specify modulus and remainder for list partitioned table

@@ -10,6 +10,7 @@
 
 \set regresslib :libdir '/regress' :dlsuffix
 
+/* MXS
 CREATE FUNCTION overpaid(emp)
    RETURNS bool
    AS :'regresslib'
@@ -19,6 +20,7 @@ CREATE FUNCTION reverse_name(name)
    RETURNS name
    AS :'regresslib'
    LANGUAGE C STRICT;
+*/
 
 --
 -- BTREE

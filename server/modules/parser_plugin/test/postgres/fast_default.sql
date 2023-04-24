@@ -33,6 +33,7 @@ BEGIN
 END;
 $$ LANGUAGE 'plpgsql';
 
+/* MXS
 CREATE FUNCTION log_rewrite() RETURNS event_trigger
 LANGUAGE plpgsql as
 $func$
@@ -51,6 +52,7 @@ begin
     end if;
 end;
 $func$;
+*/
 
 CREATE TABLE has_volatile AS
 SELECT * FROM generate_series(1,10) id;

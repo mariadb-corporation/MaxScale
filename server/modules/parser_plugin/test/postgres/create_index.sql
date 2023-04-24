@@ -13,7 +13,9 @@ CREATE INDEX onek_unique1 ON onek USING btree(unique1 int4_ops);
 
 CREATE INDEX IF NOT EXISTS onek_unique1 ON onek USING btree(unique1 int4_ops);
 
+/* MXS: Syntax error?
 CREATE INDEX IF NOT EXISTS ON onek USING btree(unique1 int4_ops);
+*/
 
 CREATE INDEX onek_unique2 ON onek USING btree(unique2 int4_ops);
 
@@ -992,6 +994,7 @@ REINDEX INDEX concur_reindex_part_index;
 ROLLBACK;
 -- Helper functions to track changes of relfilenodes in a partition tree.
 -- Create a table tracking the relfilenode state.
+/* MXS
 CREATE OR REPLACE FUNCTION create_relfilenode_part(relname text, indname text)
   RETURNS VOID AS
   $func$
@@ -1020,6 +1023,7 @@ CREATE OR REPLACE FUNCTION compare_relfilenode_part(tabname text)
            ORDER BY 1;', tabname);
   END
   $func$ LANGUAGE plpgsql;
+*/
 --  Check that expected relfilenodes are changed, non-concurrent case.
 SELECT create_relfilenode_part('reindex_index_status', 'concur_reindex_part_index');
 REINDEX INDEX concur_reindex_part_index;

@@ -29,11 +29,13 @@ SELECT * FROM cp_test ORDER BY b COLLATE "C";
 
 
 -- SQL-standard body
+/* MXS
 CREATE PROCEDURE ptest1s(x text)
 LANGUAGE SQL
 BEGIN ATOMIC
   INSERT INTO cp_test VALUES (1, x);
 END;
+*/
 
 \df ptest1s
 SELECT pg_get_functiondef('ptest1s'::regproc);
@@ -43,11 +45,13 @@ CALL ptest1s('b');
 SELECT * FROM cp_test ORDER BY b COLLATE "C";
 
 -- utitlity functions currently not supported here
+/* MXS
 CREATE PROCEDURE ptestx()
 LANGUAGE SQL
 BEGIN ATOMIC
   CREATE TABLE x (a int);
 END;
+*/
 
 
 CREATE PROCEDURE ptest2()

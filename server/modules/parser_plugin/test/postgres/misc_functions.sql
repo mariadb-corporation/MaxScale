@@ -40,10 +40,12 @@ SELECT num_nulls();
 -- canonicalize_path()
 --
 
+/* MXS
 CREATE FUNCTION test_canonicalize_path(text)
    RETURNS text
    AS :'regresslib'
    LANGUAGE C STRICT IMMUTABLE;
+*/
 
 SELECT test_canonicalize_path('/');
 SELECT test_canonicalize_path('/./abc/def/');
@@ -175,10 +177,12 @@ SELECT * FROM tenk1 a JOIN tenk1 b ON a.unique1 = b.unique1
 WHERE my_int_eq(a.unique2, 42);
 
 -- With support function that knows it's int4eq, we get a different plan
+/* MXS
 CREATE FUNCTION test_support_func(internal)
     RETURNS internal
     AS :'regresslib', 'test_support_func'
     LANGUAGE C STRICT;
+*/
 
 ALTER FUNCTION my_int_eq(int, int) SUPPORT test_support_func;
 

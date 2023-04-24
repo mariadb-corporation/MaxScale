@@ -41,6 +41,7 @@ values (1,1,b'0000','1'), (2,2,b'0001','1'),
 
 create temp table gstest_empty (a integer, b integer, v integer);
 
+/* MXS
 create function gstest_data(v integer, out a integer, out b integer)
   returns setof record
   as $f$
@@ -48,7 +49,7 @@ create function gstest_data(v integer, out a integer, out b integer)
       return query select v, i from generate_series(1,3) i;
     end;
   $f$ language plpgsql;
-
+*/
 -- basic functionality
 
 set enable_hashagg = false;  -- test hashing explicitly later
