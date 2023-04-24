@@ -142,7 +142,9 @@ SELECT * FROM attmp;
 
 CREATE INDEX attmp_idx ON attmp (a, (d + e), b);
 
+/* MXS "column number must be in range from 1 to 32767"
 ALTER INDEX attmp_idx ALTER COLUMN 0 SET STATISTICS 1000;
+*/
 
 ALTER INDEX attmp_idx ALTER COLUMN 1 SET STATISTICS 1000;
 
