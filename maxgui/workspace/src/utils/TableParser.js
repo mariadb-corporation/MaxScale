@@ -31,6 +31,11 @@ export default class TableParser {
         }
         return opts
     }
+    /**
+     * Parse create and column definitions
+     * @param {String} def - Column definition string
+     * @returns {object|string} - object if it is column def, otherwise initial def string will be returned
+     */
     parseColDef(def) {
         const [
             isMatched,
@@ -48,7 +53,6 @@ export default class TableParser {
             defaultExp,
             comment,
         ] = def.match(tokenizer.colDef) || []
-
         if (isMatched) {
             return {
                 name,
@@ -64,15 +68,39 @@ export default class TableParser {
                 isAI: Boolean(ai),
                 defaultExp,
                 comment,
-                //TODO: Parse PK, UQ
             }
         }
-        //TODO: Parse reference_definition
         return def
     }
+    /**
+     * Parses a string to extract its key
+     * @param {String} def - A string containing key definition.
+     * @returns {{ category: string, name: string, colNames: string[] }}
+     */
+    parseKey(def) {
+        const match = def.match(tokenizer.nonFks)
+        if (match) {
+            const [, category, name, colNames] = match
+            return { category, name, colNames }
+        }
+        // TODO: parse FKs
+    }
+    /**
+     * @param {String} defsStr - table definitions including create, column and constraint definitions
+     * @returns {Object}
+     */
     parseTableDefs(defsStr) {
-        const defs = defsStr.split('\n')
-        return defs.map(def => this.parseColDef(def.trim().replace(/,\s*$/, '')))
+        const defLines = defsStr.split('\n')
+        let cols = [],
+            keys = []
+
+        defLines.forEach(def => {
+            const parsedDef = this.parseColDef(def.trim().replace(/,\s*$/, ''))
+            if (t(parsedDef).isString) {
+                keys.push(this.parseKey(parsedDef))
+            } else cols.push(parsedDef)
+        })
+        return { cols, keys }
     }
     // Parse the result of SHOW CREATE TABLE
     parse(sql) {

@@ -117,4 +117,22 @@ export default {
             createGroup({ token: `${WHITESPACE_REQ}|$`, ignore: true }),
         'i'
     ),
+    nonFks: new RegExp(
+        '^' +
+            [
+                // index category group
+                createGroup({
+                    token: [tokens.primary, tokens.unique, tokens.fullText, tokens.spatial].join(
+                        '|'
+                    ),
+                    optional: true,
+                }),
+                tokens.key,
+                // index_name (optional as PK doesn't have name)
+                createGroup({ token: `${ESCAPED_NAME}`, optional: true }),
+                // index_col_name group
+                `${PAREN_OPEN}(${ESCAPED_NAME})${PAREN_CLOSE}`,
+            ].join(WHITESPACE_OPT),
+        'i'
+    ),
 }

@@ -24,4 +24,11 @@ export default Object.freeze({
     default: 'DEFAULT',
     comment: 'COMMENT',
     createTable: 'CREATE TABLE',
+    constraint: 'CONSTRAINT',
+    primary: 'PRIMARY',
+    unique: 'UNIQUE',
+    foreign: 'FOREIGN',
+    fullText: 'FULLTEXT',
+    spatial: 'SPATIAL',
+    key: 'KEY',
 })
