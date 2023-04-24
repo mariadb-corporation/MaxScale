@@ -96,6 +96,8 @@ const int PIDFD_CLOSED = -1;
 extern char* program_invocation_name;
 extern char* program_invocation_short_name;
 
+namespace
+{
 static struct ThisUnit
 {
     char datadir[PATH_MAX + 1] = "";/* Data directory created for this gateway instance */
@@ -117,6 +119,7 @@ static struct ThisUnit
     pthread_mutex_t* ssl_locks = nullptr;
 #endif
 } this_unit;
+}
 
 static const char* maxscale_commit = MAXSCALE_COMMIT;
 

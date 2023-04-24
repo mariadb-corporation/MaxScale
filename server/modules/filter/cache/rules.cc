@@ -67,6 +67,8 @@ std::map<V, K> invert_map(const std::map<K, V>& from)
     return to;
 }
 
+namespace
+{
 struct ThisUnit
 {
     ThisUnit()
@@ -94,6 +96,7 @@ struct ThisUnit
     const std::map<std::string_view, CacheRule::Op> ops_by_name;
     const std::map<CacheRule::Op, std::string_view> ops_by_id;
 } this_unit;
+}
 
 template<class V>
 const char* value_to_string(const std::map<V, std::string_view>& values_by_id, V value)
