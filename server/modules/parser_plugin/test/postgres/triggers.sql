@@ -9,7 +9,7 @@
 \set autoinclib :libdir '/autoinc' :dlsuffix
 \set refintlib :libdir '/refint' :dlsuffix
 \set regresslib :libdir '/regress' :dlsuffix
-
+/* MXS
 CREATE FUNCTION autoinc ()
 	RETURNS trigger
 	AS :'autoinclib'
@@ -34,7 +34,7 @@ CREATE FUNCTION set_ttdummy (int4)
         RETURNS int4
         AS :'regresslib'
         LANGUAGE C STRICT;
-
+*/
 create table pkeys (pkey1 int4 not null, pkey2 text not null);
 create table fkeys (fkey1 int4, fkey2 text, fkey3 int);
 create table fkeys2 (fkey21 int4, fkey22 text, pkey23 int not null);
@@ -301,11 +301,11 @@ COPY main_table (a,b) FROM stdin;
 80	15
 \.
 
-CREATE FUNCTION trigger_func() RETURNS trigger LANGUAGE plpgsql AS '
+CREATE FUNCTION trigger_func() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
 	RAISE NOTICE ''trigger_func(%) called: action = %, when = %, level = %'', TG_ARGV[0], TG_OP, TG_WHEN, TG_LEVEL;
 	RETURN NULL;
-END;';
+END;$$;
 
 CREATE TRIGGER before_ins_stmt_trig BEFORE INSERT ON main_table
 FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('before_ins_stmt');

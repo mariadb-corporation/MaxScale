@@ -40,11 +40,13 @@ SELECT * FROM DEFAULTEXPR_TBL;
 
 -- syntax errors
 --  test for extraneous comma
+/* MXS
 CREATE TABLE error_tbl (i int DEFAULT (100, ));
 --  this will fail because gram.y uses b_expr not a_expr for defaults,
 --  to avoid a shift/reduce conflict that arises from NOT NULL being
 --  part of the column definition syntax:
 CREATE TABLE error_tbl (b1 bool DEFAULT 1 IN (1, 2));
+*/
 --  this should work, however:
 CREATE TABLE error_tbl (b1 bool DEFAULT (1 IN (1, 2)));
 

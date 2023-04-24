@@ -371,7 +371,8 @@ BEGIN
 END
 $$;
 CREATE COLLATION test3 (provider = icu, lc_collate = 'en_US.utf8'); -- fail, needs "locale"
-CREATE COLLATION testx (provider = icu, locale = 'nonsense'); /* never fails with ICU */  DROP COLLATION testx;
+CREATE COLLATION testx (provider = icu, locale = 'nonsense'); /* never fails with ICU */
+DROP COLLATION testx;
 
 CREATE COLLATION test4 FROM nonsense;
 CREATE COLLATION test5 FROM test0;

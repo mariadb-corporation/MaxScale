@@ -8,11 +8,12 @@
 
 \set regresslib :libdir '/regress' :dlsuffix
 
+/* MXS
 CREATE FUNCTION test_opclass_options_func(internal)
     RETURNS void
     AS :'regresslib', 'test_opclass_options_func'
     LANGUAGE C;
-
+*/
 -- Clean up in case a prior regression run failed
 SET client_min_messages TO 'warning';
 

@@ -8,10 +8,12 @@
 
 \set regresslib :libdir '/regress' :dlsuffix
 
+/* MXS
 CREATE FUNCTION test_fdw_handler()
     RETURNS fdw_handler
     AS :'regresslib', 'test_fdw_handler'
     LANGUAGE C;
+*/
 
 -- Clean up in case a prior regression run failed
 

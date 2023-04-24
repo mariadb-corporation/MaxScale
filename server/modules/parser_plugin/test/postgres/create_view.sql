@@ -11,10 +11,12 @@
 
 \set regresslib :libdir '/regress' :dlsuffix
 
+/* MXS
 CREATE FUNCTION interpt_pp(path, path)
     RETURNS point
     AS :'regresslib'
     LANGUAGE C STRICT;
+*/
 
 CREATE TABLE real_city (
 	pop			int4,

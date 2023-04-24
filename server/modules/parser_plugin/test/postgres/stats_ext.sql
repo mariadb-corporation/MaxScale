@@ -27,6 +27,7 @@ begin
 end;
 $$;
 
+/* MXS
 -- Verify failures
 CREATE TABLE ext_stats_test (x text, y int, z int);
 CREATE STATISTICS tst;
@@ -44,6 +45,7 @@ CREATE STATISTICS tst (unrecognized) ON x, y FROM ext_stats_test;
 CREATE STATISTICS tst ON (y) FROM ext_stats_test; -- single column reference
 CREATE STATISTICS tst ON y + z FROM ext_stats_test; -- missing parentheses
 CREATE STATISTICS tst ON (x, y) FROM ext_stats_test; -- tuple expression
+*/
 DROP TABLE ext_stats_test;
 
 -- Ensure stats are dropped sanely, and test IF NOT EXISTS while at it

@@ -92,9 +92,11 @@ ALTER TABLE document ENABLE ROW LEVEL SECURITY;
 CREATE POLICY p1 ON document AS PERMISSIVE
     USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user));
 
+/* MXS:
 -- try to create a policy of bogus type
 CREATE POLICY p1 ON document AS UGLY
     USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user));
+*/
 
 -- but Dave isn't allowed to anything at cid 50 or above
 -- this is to make sure that we sort the policies by name first

@@ -224,11 +224,11 @@ BEGIN;
 CREATE DOMAIN arrdomain AS int[];
 
 CREATE FUNCTION make_ad(int,int) returns arrdomain as
-  'declare x arrdomain;
+  $$declare x arrdomain;
    begin
      x := array[$1,$2];
      return x;
-   end' language plpgsql volatile;
+   end$$ language plpgsql volatile;
 
 CREATE FUNCTION ad_eq(arrdomain, arrdomain) returns boolean as
   'begin return array_eq($1, $2); end' language plpgsql;

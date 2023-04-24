@@ -127,14 +127,14 @@ create unique index PHone_name on PHone using btree (slotname bpchar_ops);
 -- * AFTER UPDATE on Room
 -- *	- If room no changes let wall slots follow
 -- ************************************************************
-create function tg_room_au() returns trigger as '
+create function tg_room_au() returns trigger as $$
 begin
     if new.roomno != old.roomno then
         update WSlot set roomno = new.roomno where roomno = old.roomno;
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_room_au after update
     on Room for each row execute procedure tg_room_au();
@@ -144,12 +144,12 @@ create trigger tg_room_au after update
 -- * AFTER DELETE on Room
 -- *	- delete wall slots in this room
 -- ************************************************************
-create function tg_room_ad() returns trigger as '
+create function tg_room_ad() returns trigger as $$
 begin
     delete from WSlot where roomno = old.roomno;
     return old;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_room_ad after delete
     on Room for each row execute procedure tg_room_ad();
@@ -176,14 +176,14 @@ create trigger tg_wslot_biu before insert or update
 -- * AFTER UPDATE on PField
 -- *	- Let PSlots of this field follow
 -- ************************************************************
-create function tg_pfield_au() returns trigger as '
+create function tg_pfield_au() returns trigger as $$
 begin
     if new.name != old.name then
         update PSlot set pfname = new.name where pfname = old.name;
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_pfield_au after update
     on PField for each row execute procedure tg_pfield_au();
@@ -193,12 +193,12 @@ create trigger tg_pfield_au after update
 -- * AFTER DELETE on PField
 -- *	- Remove all slots of this patchfield
 -- ************************************************************
-create function tg_pfield_ad() returns trigger as '
+create function tg_pfield_ad() returns trigger as $$
 begin
     delete from PSlot where pfname = old.name;
     return old;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_pfield_ad after delete
     on PField for each row execute procedure tg_pfield_ad();
@@ -208,6 +208,7 @@ create trigger tg_pfield_ad after delete
 -- * BEFORE INSERT or UPDATE on PSlot
 -- *	- Ensure that our patchfield does exist
 -- ************************************************************
+/* MXS $proc$
 create function tg_pslot_biu() returns trigger as $proc$
 declare
     pfrec	record;
@@ -220,6 +221,7 @@ begin
     return ps;
 end;
 $proc$ language plpgsql;
+*/
 
 create trigger tg_pslot_biu before insert or update
     on PSlot for each row execute procedure tg_pslot_biu();
@@ -229,14 +231,14 @@ create trigger tg_pslot_biu before insert or update
 -- * AFTER UPDATE on System
 -- *	- If system name changes let interfaces follow
 -- ************************************************************
-create function tg_system_au() returns trigger as '
+create function tg_system_au() returns trigger as $$
 begin
     if new.name != old.name then
         update IFace set sysname = new.name where sysname = old.name;
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_system_au after update
     on System for each row execute procedure tg_system_au();
@@ -274,7 +276,7 @@ create trigger tg_iface_biu before insert or update
 -- * AFTER INSERT or UPDATE or DELETE on Hub
 -- *	- insert/delete/rename slots as required
 -- ************************************************************
-create function tg_hub_a() returns trigger as '
+create function tg_hub_a() returns trigger as $$
 declare
     hname	text;
     dummy	integer;
@@ -295,7 +297,7 @@ begin
 	return old;
     end if;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_hub_a after insert or update or delete
     on Hub for each row execute procedure tg_hub_a();
@@ -307,7 +309,7 @@ create trigger tg_hub_a after insert or update or delete
 create function tg_hub_adjustslots(hname bpchar,
                                    oldnslots integer,
                                    newnslots integer)
-returns integer as '
+returns integer as $$
 begin
     if newnslots = oldnslots then
         return 0;
@@ -322,7 +324,7 @@ begin
     end loop;
     return 0;
 end
-' language plpgsql;
+$$ language plpgsql;
 
 -- Test comments
 COMMENT ON FUNCTION tg_hub_adjustslots_wrong(bpchar, integer, integer) IS 'function with args';
@@ -334,7 +336,7 @@ COMMENT ON FUNCTION tg_hub_adjustslots(bpchar, integer, integer) IS NULL;
 -- *	- prevent from manual manipulation
 -- *	- set the slotname to HS.hubname.slotno
 -- ************************************************************
-create function tg_hslot_biu() returns trigger as '
+create function tg_hslot_biu() returns trigger as $$
 declare
     sname	text;
     xname	HSlot.slotname%TYPE;
@@ -361,7 +363,7 @@ begin
     new.slotname := sname;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_hslot_biu before insert or update
     on HSlot for each row execute procedure tg_hslot_biu();
@@ -371,7 +373,7 @@ create trigger tg_hslot_biu before insert or update
 -- * BEFORE DELETE on HSlot
 -- *	- prevent from manual manipulation
 -- ************************************************************
-create function tg_hslot_bd() returns trigger as '
+create function tg_hslot_bd() returns trigger as $$
 declare
     hubrec	record;
 begin
@@ -384,7 +386,7 @@ begin
     end if;
     raise exception ''no manual manipulation of HSlot'';
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_hslot_bd before delete
     on HSlot for each row execute procedure tg_hslot_bd();
@@ -394,14 +396,14 @@ create trigger tg_hslot_bd before delete
 -- * BEFORE INSERT on all slots
 -- *	- Check name prefix
 -- ************************************************************
-create function tg_chkslotname() returns trigger as '
+create function tg_chkslotname() returns trigger as $$
 begin
     if substr(new.slotname, 1, 2) != tg_argv[0] then
         raise exception ''slotname must begin with %'', tg_argv[0];
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_chkslotname before insert
     on PSlot for each row execute procedure tg_chkslotname('PS');
@@ -423,14 +425,14 @@ create trigger tg_chkslotname before insert
 -- * BEFORE INSERT or UPDATE on all slots with slotlink
 -- *	- Set slotlink to empty string if NULL value given
 -- ************************************************************
-create function tg_chkslotlink() returns trigger as '
+create function tg_chkslotlink() returns trigger as $$
 begin
     if new.slotlink isnull then
         new.slotlink := '''';
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_chkslotlink before insert or update
     on PSlot for each row execute procedure tg_chkslotlink();
@@ -452,14 +454,14 @@ create trigger tg_chkslotlink before insert or update
 -- * BEFORE INSERT or UPDATE on all slots with backlink
 -- *	- Set backlink to empty string if NULL value given
 -- ************************************************************
-create function tg_chkbacklink() returns trigger as '
+create function tg_chkbacklink() returns trigger as $$
 begin
     if new.backlink isnull then
         new.backlink := '''';
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_chkbacklink before insert or update
     on PSlot for each row execute procedure tg_chkbacklink();
@@ -475,7 +477,7 @@ create trigger tg_chkbacklink before insert or update
 -- * BEFORE UPDATE on PSlot
 -- *	- do delete/insert instead of update if name changes
 -- ************************************************************
-create function tg_pslot_bu() returns trigger as '
+create function tg_pslot_bu() returns trigger as $$
 begin
     if new.slotname != old.slotname then
         delete from PSlot where slotname = old.slotname;
@@ -494,7 +496,7 @@ begin
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_pslot_bu before update
     on PSlot for each row execute procedure tg_pslot_bu();
@@ -504,7 +506,7 @@ create trigger tg_pslot_bu before update
 -- * BEFORE UPDATE on WSlot
 -- *	- do delete/insert instead of update if name changes
 -- ************************************************************
-create function tg_wslot_bu() returns trigger as '
+create function tg_wslot_bu() returns trigger as $$
 begin
     if new.slotname != old.slotname then
         delete from WSlot where slotname = old.slotname;
@@ -523,7 +525,7 @@ begin
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_wslot_bu before update
     on WSlot for each row execute procedure tg_Wslot_bu();
@@ -533,7 +535,7 @@ create trigger tg_wslot_bu before update
 -- * BEFORE UPDATE on PLine
 -- *	- do delete/insert instead of update if name changes
 -- ************************************************************
-create function tg_pline_bu() returns trigger as '
+create function tg_pline_bu() returns trigger as $$
 begin
     if new.slotname != old.slotname then
         delete from PLine where slotname = old.slotname;
@@ -552,7 +554,7 @@ begin
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_pline_bu before update
     on PLine for each row execute procedure tg_pline_bu();
@@ -562,7 +564,7 @@ create trigger tg_pline_bu before update
 -- * BEFORE UPDATE on IFace
 -- *	- do delete/insert instead of update if name changes
 -- ************************************************************
-create function tg_iface_bu() returns trigger as '
+create function tg_iface_bu() returns trigger as $$
 begin
     if new.slotname != old.slotname then
         delete from IFace where slotname = old.slotname;
@@ -581,7 +583,7 @@ begin
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_iface_bu before update
     on IFace for each row execute procedure tg_iface_bu();
@@ -591,7 +593,7 @@ create trigger tg_iface_bu before update
 -- * BEFORE UPDATE on HSlot
 -- *	- do delete/insert instead of update if name changes
 -- ************************************************************
-create function tg_hslot_bu() returns trigger as '
+create function tg_hslot_bu() returns trigger as $$
 begin
     if new.slotname != old.slotname or new.hubname != old.hubname then
         delete from HSlot where slotname = old.slotname;
@@ -610,7 +612,7 @@ begin
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_hslot_bu before update
     on HSlot for each row execute procedure tg_hslot_bu();
@@ -620,7 +622,7 @@ create trigger tg_hslot_bu before update
 -- * BEFORE UPDATE on PHone
 -- *	- do delete/insert instead of update if name changes
 -- ************************************************************
-create function tg_phone_bu() returns trigger as '
+create function tg_phone_bu() returns trigger as $$
 begin
     if new.slotname != old.slotname then
         delete from PHone where slotname = old.slotname;
@@ -637,7 +639,7 @@ begin
     end if;
     return new;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 create trigger tg_phone_bu before update
     on PHone for each row execute procedure tg_phone_bu();
@@ -647,7 +649,7 @@ create trigger tg_phone_bu before update
 -- * AFTER INSERT or UPDATE or DELETE on slot with backlink
 -- *	- Ensure that the opponent correctly points back to us
 -- ************************************************************
-create function tg_backlink_a() returns trigger as '
+create function tg_backlink_a() returns trigger as $$
 declare
     dummy	integer;
 begin
@@ -679,7 +681,7 @@ begin
 	return old;
     end if;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 create trigger tg_backlink_a after insert or update or delete
@@ -697,7 +699,7 @@ create trigger tg_backlink_a after insert or update or delete
 -- * if it does not already point to the requested slot
 -- ************************************************************
 create function tg_backlink_set(myname bpchar, blname bpchar)
-returns integer as '
+returns integer as $$
 declare
     mytype	char(2);
     link	char(4);
@@ -745,7 +747,7 @@ begin
     end if;
     raise exception ''illegal backlink beginning with %'', mytype;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 -- ************************************************************
@@ -753,7 +755,7 @@ end;
 -- * it still points to specific slot
 -- ************************************************************
 create function tg_backlink_unset(bpchar, bpchar)
-returns integer as '
+returns integer as $$
 declare
     myname	alias for $1;
     blname	alias for $2;
@@ -792,14 +794,14 @@ begin
 	return 0;
     end if;
 end
-' language plpgsql;
+$$ language plpgsql;
 
 
 -- ************************************************************
 -- * AFTER INSERT or UPDATE or DELETE on slot with slotlink
 -- *	- Ensure that the opponent correctly points back to us
 -- ************************************************************
-create function tg_slotlink_a() returns trigger as '
+create function tg_slotlink_a() returns trigger as $$
 declare
     dummy	integer;
 begin
@@ -831,7 +833,7 @@ begin
 	return old;
     end if;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 create trigger tg_slotlink_a after insert or update or delete
@@ -855,7 +857,7 @@ create trigger tg_slotlink_a after insert or update or delete
 -- * if it does not already point to the requested slot
 -- ************************************************************
 create function tg_slotlink_set(bpchar, bpchar)
-returns integer as '
+returns integer as $$
 declare
     myname	alias for $1;
     blname	alias for $2;
@@ -933,7 +935,7 @@ begin
     end if;
     raise exception ''illegal slotlink beginning with %'', mytype;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 -- ************************************************************
@@ -941,7 +943,7 @@ end;
 -- * it still points to specific slot
 -- ************************************************************
 create function tg_slotlink_unset(bpchar, bpchar)
-returns integer as '
+returns integer as $$
 declare
     myname	alias for $1;
     blname	alias for $2;
@@ -1000,14 +1002,14 @@ begin
 	return 0;
     end if;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 -- ************************************************************
 -- * Describe the backside of a patchfield slot
 -- ************************************************************
 create function pslot_backlink_view(bpchar)
-returns text as '
+returns text as $$
 <<outer>>
 declare
     rec		record;
@@ -1045,14 +1047,14 @@ begin
     end if;
     return rec.backlink;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 -- ************************************************************
 -- * Describe the front of a patchfield slot
 -- ************************************************************
 create function pslot_slotlink_view(bpchar)
-returns text as '
+returns text as $$
 declare
     psrec	record;
     sltype	char(2);
@@ -1081,14 +1083,14 @@ begin
     end if;
     return psrec.slotlink;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 -- ************************************************************
 -- * Describe the front of a wall connector slot
 -- ************************************************************
 create function wslot_slotlink_view(bpchar)
-returns text as '
+returns text as $$
 declare
     rec		record;
     sltype	char(2);
@@ -1131,7 +1133,7 @@ begin
     end if;
     return rec.slotlink;
 end;
-' language plpgsql;
+$$ language plpgsql;
 
 
 
@@ -1426,7 +1428,7 @@ insert into IFace values ('IF', 'orion', 'ethernet_interface_name_too_long', '')
 --
 -- Test recursion, per bug report 7-Sep-01
 --
-CREATE FUNCTION recursion_test(int,int) RETURNS text AS '
+CREATE FUNCTION recursion_test(int,int) RETURNS text AS $$
 DECLARE rslt text;
 BEGIN
     IF $1 <= 0 THEN
@@ -1435,7 +1437,7 @@ BEGIN
         rslt = CAST($1 AS TEXT) || '','' || recursion_test($1 - 1, $2);
     END IF;
     RETURN rslt;
-END;' LANGUAGE plpgsql;
+END;$$ language plpgsql;
 
 SELECT recursion_test(4,3);
 
@@ -1445,7 +1447,7 @@ SELECT recursion_test(4,3);
 CREATE TABLE found_test_tbl (a int);
 
 create function test_found()
-  returns boolean as '
+  returns boolean as $$
   declare
   begin
   insert into found_test_tbl values (1);
@@ -1478,7 +1480,7 @@ create function test_found()
     insert into found_test_tbl values (6);
   end if;
   return true;
-  end;' language plpgsql;
+  end;$$ language plpgsql;
 
 select test_found();
 select * from found_test_tbl;
@@ -1487,7 +1489,7 @@ select * from found_test_tbl;
 -- Test set-returning functions for PL/pgSQL
 --
 
-create function test_table_func_rec() returns setof found_test_tbl as '
+create function test_table_func_rec() returns setof found_test_tbl as $$
 DECLARE
 	rec RECORD;
 BEGIN
@@ -1495,11 +1497,11 @@ BEGIN
 		RETURN NEXT rec;
 	END LOOP;
 	RETURN;
-END;' language plpgsql;
+END;$$ language plpgsql;
 
 select * from test_table_func_rec();
 
-create function test_table_func_row() returns setof found_test_tbl as '
+create function test_table_func_row() returns setof found_test_tbl as $$
 DECLARE
 	row found_test_tbl%ROWTYPE;
 BEGIN
@@ -1507,11 +1509,11 @@ BEGIN
 		RETURN NEXT row;
 	END LOOP;
 	RETURN;
-END;' language plpgsql;
+END;$$ language plpgsql;
 
 select * from test_table_func_row();
 
-create function test_ret_set_scalar(int,int) returns setof int as '
+create function test_ret_set_scalar(int,int) returns setof int as $$
 DECLARE
 	i int;
 BEGIN
@@ -1519,11 +1521,11 @@ BEGIN
 		RETURN NEXT i + 1;
 	END LOOP;
 	RETURN;
-END;' language plpgsql;
+END;$$ language plpgsql;
 
 select * from test_ret_set_scalar(1,10);
 
-create function test_ret_set_rec_dyn(int) returns setof record as '
+create function test_ret_set_rec_dyn(int) returns setof record as $$
 DECLARE
 	retval RECORD;
 BEGIN
@@ -1537,12 +1539,12 @@ BEGIN
 		RETURN NEXT retval;
 	END IF;
 	RETURN;
-END;' language plpgsql;
+END;$$ language plpgsql;
 
 SELECT * FROM test_ret_set_rec_dyn(1500) AS (a int, b int, c int);
 SELECT * FROM test_ret_set_rec_dyn(5) AS (a int, b numeric, c text);
 
-create function test_ret_rec_dyn(int) returns record as '
+create function test_ret_rec_dyn(int) returns record as $$
 DECLARE
 	retval RECORD;
 BEGIN
@@ -1553,7 +1555,7 @@ BEGIN
 		SELECT INTO retval 50, 5::numeric, ''xxx''::text;
 		RETURN retval;
 	END IF;
-END;' language plpgsql;
+END;$$ language plpgsql;
 
 SELECT * FROM test_ret_rec_dyn(1500) AS (a int, b int, c int);
 SELECT * FROM test_ret_rec_dyn(5) AS (a int, b numeric, c text);
@@ -1776,7 +1778,7 @@ create table perform_test (
 	b	INT
 );
 
-create function perform_simple_func(int) returns boolean as '
+create function perform_simple_func(int) returns boolean as $$
 BEGIN
 	IF $1 < 20 THEN
 		INSERT INTO perform_test VALUES ($1, $1 + 10);
@@ -1784,9 +1786,9 @@ BEGIN
 	ELSE
 		RETURN FALSE;
 	END IF;
-END;' language plpgsql;
+END;$$ language plpgsql;
 
-create function perform_test_func() returns void as '
+create function perform_test_func() returns void as $$
 BEGIN
 	IF FOUND then
 		INSERT INTO perform_test VALUES (100, 100);
@@ -1805,7 +1807,7 @@ BEGIN
 	END IF;
 
 	RETURN;
-END;' language plpgsql;
+END;$$ language plpgsql;
 
 SELECT perform_test_func();
 SELECT * FROM perform_test;

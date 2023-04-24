@@ -12,6 +12,7 @@
 -- Test the "old style" approach of making the I/O functions first,
 -- with no explicit shell type creation.
 --
+/* MXS
 CREATE FUNCTION widget_in(cstring)
    RETURNS widget
    AS :'regresslib'
@@ -31,7 +32,7 @@ CREATE FUNCTION int44out(city_budget)
    RETURNS cstring
    AS :'regresslib'
    LANGUAGE C STRICT IMMUTABLE;
-
+*/
 CREATE TYPE widget (
    internallength = 24,
    input = widget_in,
@@ -140,9 +141,9 @@ CREATE TYPE bogus_type (INPUT = array_in,
 
 CREATE TYPE default_test_row AS (f1 text_w_default, f2 int42);
 
-CREATE FUNCTION get_default_test() RETURNS SETOF default_test_row AS '
+CREATE FUNCTION get_default_test() RETURNS SETOF default_test_row AS $$
   SELECT * FROM default_test;
-' LANGUAGE SQL;
+$$ LANGUAGE SQL;
 
 SELECT * FROM get_default_test();
 
@@ -193,12 +194,12 @@ select format_type('bpchar'::regtype, null);
 select format_type('bpchar'::regtype, -1);
 
 -- Test creation of an operator over a user-defined type
-
+/* MXS
 CREATE FUNCTION pt_in_widget(point, widget)
    RETURNS bool
    AS :'regresslib'
    LANGUAGE C STRICT;
-
+*/
 CREATE OPERATOR <% (
    leftarg = point,
    rightarg = widget,

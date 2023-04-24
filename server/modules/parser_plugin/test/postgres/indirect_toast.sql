@@ -8,10 +8,12 @@
 
 \set regresslib :libdir '/regress' :dlsuffix
 
+/* MXS
 CREATE FUNCTION make_tuple_indirect (record)
         RETURNS record
         AS :'regresslib'
         LANGUAGE C STRICT;
+*/
 
 -- Other compression algorithms may cause the compressed data to be stored
 -- inline.  pglz guarantees that the data is externalized, so stick to it.

@@ -477,6 +477,7 @@ window w as
 -- grammar hack to resolve such cases as the keyword.  The following
 -- tests record this behavior.
 
+/* MXS
 CREATE FUNCTION unbounded_syntax_test1a(x int) RETURNS TABLE (a int, b int, c int)
 LANGUAGE SQL
 BEGIN ATOMIC
@@ -492,11 +493,12 @@ AS $$
          unique1, four
   FROM tenk1 WHERE unique1 < 10;
 $$;
-
+*/
 -- These will apply the argument to the window specification inside the function.
 SELECT * FROM unbounded_syntax_test1a(2);
 SELECT * FROM unbounded_syntax_test1b(2);
 
+/* MXS
 CREATE FUNCTION unbounded_syntax_test2a(unbounded int) RETURNS TABLE (a int, b int, c int)
 LANGUAGE SQL
 BEGIN ATOMIC
@@ -512,7 +514,7 @@ AS $$
          unique1, four
   FROM tenk1 WHERE unique1 < 10;
 $$;
-
+*/
 -- These will not apply the argument but instead treat UNBOUNDED as a keyword.
 SELECT * FROM unbounded_syntax_test2a(2);
 SELECT * FROM unbounded_syntax_test2b(2);
