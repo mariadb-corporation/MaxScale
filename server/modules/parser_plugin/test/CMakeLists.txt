@@ -117,9 +117,12 @@ endif()
 if (BUILD_PP_PG_QUERY)
   file(GLOB POSTGRES_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.sql)
 
-  # From all files in the directory, pick statements that match the regex "^CREATE TABLE "
-  # and check that the output for "operation" matches the regex "OP_CREATE_TABLE".
-  add_test(pg_create_table compare -v 3 -0 pp_pg_query -E postgres -x "^CREATE TABLE " -p operation -c "CREATE_TABLE" ${POSTGRES_TEST_FILES})
+  # From all files in the directory, pick statements that match the regex "^ALTER TABLE "
+  # and check that the output for "operation" matches the regex "OP_ALTER_TABLE".
+  add_test(pg_alter_table compare -v 3 -0 pp_pg_query -E postgres -x "^ALTER TABLE " -p operation -c "ALTER_TABLE" ${POSTGRES_TEST_FILES})
+  add_test(pg_alter compare -v 3 -0 pp_pg_query -E postgres -x "^ALTER" -p operation -c "ALTER" ${POSTGRES_TEST_FILES})
 
+  add_test(pg_create_table compare -v 3 -0 pp_pg_query -E postgres -x "^CREATE TABLE " -p operation -c "CREATE_TABLE" ${POSTGRES_TEST_FILES})
   add_test(pg_create compare -v 3 -0 pp_pg_query -E postgres -x "^CREATE" -p operation -c "CREATE" ${POSTGRES_TEST_FILES})
+
 endif()
