@@ -1640,11 +1640,21 @@ int main(int argc, char* argv[])
                                 {
                                     rc = run(expect, properties, test_regex, check_regex,
                                              *sParser1, *sParser2, in);
+
+                                    if (rc == EXIT_FAILURE && global.stop_at_error)
+                                    {
+                                        terminate = true;
+                                    }
                                 }
                                 else
                                 {
                                     terminate = true;
                                     cerr << "error: Could not open " << argv[argc - 1] << "." << endl;
+                                }
+
+                                if (terminate)
+                                {
+                                    break;
                                 }
                             }
                         }
