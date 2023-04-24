@@ -180,6 +180,10 @@ public:
             analyze(reinterpret_cast<const SelectStmt&>(x));
             break;
 
+        case T_CreateTableAsStmt:
+            analyze(reinterpret_cast<const CreateTableAsStmt&>(x));
+            break;
+
             // Generic Information.
         case T_AlterCollationStmt:
         case T_AlterDatabaseRefreshCollStmt:
@@ -223,35 +227,34 @@ public:
             m_op = sql::OP_CREATE;
             break;
 
-        case T_CreateSchemaStmt:
-        case T_CreateTableSpaceStmt:
+        case T_CreateAmStmt:
+        case T_CreateCastStmt:
+        case T_CreateConversionStmt:
+        case T_CreateDomainStmt:
+        case T_CreateEnumStmt:
+        case T_CreateEventTrigStmt:
         case T_CreateExtensionStmt:
         case T_CreateFdwStmt:
         case T_CreateForeignServerStmt:
         case T_CreateForeignTableStmt:
-        case T_CreateUserMappingStmt:
-        case T_CreatePolicyStmt:
-        case T_CreateAmStmt:
-        case T_CreateTrigStmt:
-        case T_CreateEventTrigStmt:
-        case T_CreatePLangStmt:
-        case T_CreateSeqStmt:
-        case T_CreateDomainStmt:
-        case T_CreateOpClassStmt:
-        case T_CreateOpClassItem:
-        case T_CreateOpFamilyStmt:
-        case T_CreateStatsStmt:
         case T_CreateFunctionStmt:
-        case T_CreateEnumStmt:
-        case T_CreateRangeStmt:
-        case T_CreatedbStmt:
-        case T_CreateTableAsStmt:
-        case T_CreateConversionStmt:
-        case T_CreateCastStmt:
-        case T_CreateTransformStmt:
+        case T_CreateOpClassItem:
+        case T_CreateOpClassStmt:
+        case T_CreateOpFamilyStmt:
+        case T_CreatePLangStmt:
+        case T_CreatePolicyStmt:
         case T_CreatePublicationStmt:
-        case T_CreateSubscriptionStmt:
+        case T_CreateRangeStmt:
         case T_CreateReplicationSlotCmd:
+        case T_CreateSchemaStmt:
+        case T_CreateSeqStmt:
+        case T_CreateStatsStmt:
+        case T_CreateSubscriptionStmt:
+        case T_CreateTableSpaceStmt:
+        case T_CreateTransformStmt:
+        case T_CreateTrigStmt:
+        case T_CreateUserMappingStmt:
+        case T_CreatedbStmt:
             m_type_mask |= sql::TYPE_WRITE;
             m_op = sql::OP_CREATE;
             break;
@@ -313,6 +316,12 @@ public:
         {
             m_type_mask |= sql::TYPE_CREATE_TMP_TABLE;
         }
+    }
+
+    void analyze(const CreateTableAsStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+        m_op = sql::OP_CREATE_TABLE;
     }
 
     void analyze(const DropStmt& x)
