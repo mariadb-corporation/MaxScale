@@ -273,6 +273,15 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                 continue;
             }
 
+            auto i = line.find("-- ");
+
+            if (i != string::npos && i != 0)
+            {
+                // A "-- " not the the beginning, so has to be a regular comment.
+                line = line.substr(0, i);
+                rtrim(line);
+            }
+
             if (is_postgres())
             {
                 // Ignore all meta-commands such as '\d'.
@@ -287,8 +296,8 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     continue;
                 }
 
-                // If '-- fail', then the following statements are expected to fail.
-                if (line.substr(0, 7) == "-- fail")
+                // If '-- fail' or '-- bogus', then the following statements are expected to fail.
+                if (line.substr(0, 7) == "-- fail" || line.substr(0, 8) == "-- bogus")
                 {
                     skip_postgres_until_ok();
                     continue;
@@ -673,8 +682,15 @@ void TestReader::skip_postgres_until_ok()
 
         ltrim(line);
 
-        if (line.substr(0, 6) == "-- ok")
+        // If '-- fail' or '-- bogus' encountered again...
+        if (line.substr(0, 7) == "-- fail" || line.substr(0, 8) == "-- bogus")
         {
+            // ...continue ignoring.
+            continue;
+        }
+        else if (line.substr(0, 6) == "--")
+        {
+            // Stop ignoring at any other '--' line.
             break;
         }
     }
