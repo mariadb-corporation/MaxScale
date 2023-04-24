@@ -52,11 +52,6 @@ using mxs::ModuleType;
 
 namespace
 {
-const char CN_ARG_MAX[] = "arg_max";
-const char CN_ARG_MIN[] = "arg_min";
-const char CN_METHOD[] = "method";
-const char CN_MODULES[] = "modules";
-const char CN_MODULE_COMMAND[] = "module_command";
 const char wrong_mod_type[] = "Module '%s' is a %s, not a %s.";
 
 struct LOADED_MODULE
@@ -437,53 +432,6 @@ void unload_all_modules()
     this_unit.loaded_modules.clear();
 }
 
-struct cb_param
-{
-    json_t*     commands;
-    const char* domain;
-    const char* host;
-};
-
-bool modulecmd_cb(const MODULECMD* cmd, void* data)
-{
-    cb_param* d = static_cast<cb_param*>(data);
-
-    json_t* obj = json_object();
-    json_object_set_new(obj, CN_ID, json_string(cmd->identifier.c_str()));
-    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
-
-    json_t* attr = json_object();
-    const char* method = MODULECMD_MODIFIES_DATA(cmd) ? "POST" : "GET";
-    json_object_set_new(attr, CN_METHOD, json_string(method));
-    json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd->arg_count_min));
-    json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd->arg_count_max));
-    json_object_set_new(attr, CN_DESCRIPTION, json_string(cmd->description.c_str()));
-
-    json_t* param = json_array();
-
-    for (int i = 0; i < cmd->arg_count_max; i++)
-    {
-        json_t* p = json_object();
-        json_object_set_new(p, CN_DESCRIPTION, json_string(cmd->arg_types[i].description));
-        json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(&cmd->arg_types[i])));
-        json_object_set_new(p, CN_REQUIRED, json_boolean(MODULECMD_ARG_IS_REQUIRED(&cmd->arg_types[i])));
-        json_array_append_new(param, p);
-    }
-
-    std::string s = d->domain;
-    s += "/";
-    s += cmd->identifier;
-    mxb_assert(strcasecmp(d->domain, cmd->domain.c_str()) == 0);
-
-    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(d->host, CN_MODULES, s.c_str()));
-    json_object_set_new(attr, CN_PARAMETERS, param);
-    json_object_set_new(obj, CN_ATTRIBUTES, attr);
-
-    json_array_append_new(d->commands, obj);
-
-    return true;
-}
-
 namespace
 {
 
@@ -533,10 +481,6 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_object_set_new(attr, CN_DESCRIPTION, json_string(mod_info->description));
     json_object_set_new(attr, "api", json_string(module_type_to_string(mod_info->modapi)));
     json_object_set_new(attr, "maturity", json_string(module_maturity_to_string(mod_info->status)));
-
-    json_t* commands = json_array();
-    cb_param p = {commands, module_name, host};
-    modulecmd_foreach(module_name, NULL, modulecmd_cb, &p);
 
     json_t* params = nullptr;
 
@@ -600,7 +544,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
         json_decref(core_params);
     }
 
-    json_object_set_new(attr, "commands", commands);
+    json_object_set_new(attr, "commands", modulecmd_to_json(module_name, host));
     json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, module_name));

@@ -261,40 +261,11 @@ const char* modulecmd_get_error();
 json_t* modulecmd_get_json_error();
 
 /**
- * @brief Call a function for each command
+ * Print the module's commands as JSON
  *
- * Calls a function for each matching command in the matched domains. The filters
- * for the domain and identifier are PCRE2 expressions that are matched against
- * the domain and identifier. These are optional and both @c domain and @c ident
- * can be NULL.
+ * @param module The module to print
+ * @param host   The hostname to use
  *
- * @param domain_re Command domain filter, NULL for all domains
- *
- * @param ident_re Command identifier filter, NULL for all commands
- *
- * @param fn Function that is called for every command. The first parameter is
- *           the current command. The second parameter is the value of @c data.
- *           The function should return true to continue iteration or false to
- *           stop iteration early. The function must not call any of the functions
- *           declared in modulecmd.h.
- *
- * @param data User defined data passed as the second parameter to @c fn
- *
- * @return True on success, false on PCRE2 error. Use modulecmd_get_error()
- * to retrieve the error.
+ * @return The module's commands as JSON
  */
-bool modulecmd_foreach(const char* domain_re,
-                       const char* ident_re,
-                       bool (* fn)(const MODULECMD* cmd, void* data),
-                       void* data);
-
-/**
- * @brief Return argument type as string
- *
- * This returns the string type of @c type. The returned string must be freed
- * by the called.
- *
- * @param type Type to convert
- * @return New string or NULL on memory allocation error
- */
-const char* modulecmd_argtype_to_str(const modulecmd_arg_type_t* type);
+json_t* modulecmd_to_json(std::string_view module, const char* host);

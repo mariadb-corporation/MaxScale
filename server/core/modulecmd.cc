@@ -17,7 +17,11 @@
 #include <string>
 
 #include <maxbase/alloc.hh>
+#include <maxbase/json.hh>
+#include <maxbase/string.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
+#include <maxscale/json_api.hh>
 #include <maxscale/pcre2.hh>
 
 #include "internal/filter.hh"
@@ -28,6 +32,11 @@
 
 namespace
 {
+const char CN_ARG_MAX[] = "arg_max";
+const char CN_ARG_MIN[] = "arg_min";
+const char CN_METHOD[] = "method";
+const char CN_MODULE_COMMAND[] = "module_command";
+
 /** Size of the error buffer */
 #define MODULECMD_ERRBUF_SIZE 512
 
@@ -553,67 +562,6 @@ json_t* modulecmd_get_json_error()
     return obj;
 }
 
-bool modulecmd_foreach(const char* domain_re,
-                       const char* ident_re,
-                       bool (* fn)(const MODULECMD* cmd, void* data),
-                       void* data)
-{
-    bool rval = true;
-    bool stop = false;
-    std::lock_guard guard(this_unit.lock);
-
-    for (const MODULECMD_DOMAIN& domain : this_unit.domains)
-    {
-        int err;
-        mxs_pcre2_result_t d_res = domain_re ?
-            mxs_pcre2_simple_match(domain_re, domain.domain.c_str(), PCRE2_CASELESS, &err) :
-            MXS_PCRE2_MATCH;
-
-        if (d_res == MXS_PCRE2_MATCH)
-        {
-            for (const MODULECMD& cmd : domain.commands)
-            {
-                mxs_pcre2_result_t i_res = ident_re ?
-                    mxs_pcre2_simple_match(ident_re, cmd.identifier.c_str(), PCRE2_CASELESS, &err) :
-                    MXS_PCRE2_MATCH;
-
-                if (i_res == MXS_PCRE2_MATCH)
-                {
-                    if (!fn(&cmd, data))
-                    {
-                        stop = true;
-                        break;
-                    }
-                }
-                else if (i_res == MXS_PCRE2_ERROR)
-                {
-                    PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
-                    pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-                    MXB_ERROR("Failed to match command identifier with '%s': %s", ident_re, errbuf);
-                    modulecmd_set_error("Failed to match command identifier with '%s': %s", ident_re, errbuf);
-                    rval = false;
-                    break;
-                }
-            }
-        }
-        else if (d_res == MXS_PCRE2_ERROR)
-        {
-            PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
-            pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-            MXB_ERROR("Failed to match command domain with '%s': %s", domain_re, errbuf);
-            modulecmd_set_error("Failed to match command domain with '%s': %s", domain_re, errbuf);
-            rval = false;
-        }
-
-        if (stop || !rval)
-        {
-            break;
-        }
-    }
-
-    return rval;
-}
-
 #define format_type(a, b) (MODULECMD_ARG_IS_REQUIRED(a) ? b : "[" b "]")
 
 const char* modulecmd_argtype_to_str(const modulecmd_arg_type_t* type)
@@ -671,4 +619,57 @@ bool modulecmd_arg_is_present(const MODULECMD_ARG* arg, int idx)
 {
     return arg->argc > idx
            && MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
+}
+
+mxb::Json to_json(const MODULECMD& cmd, const char* host)
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, CN_ID, json_string(cmd.identifier.c_str()));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
+
+    json_t* attr = json_object();
+    const char* method = cmd.type == MODULECMD_TYPE_ACTIVE ? "POST" : "GET";
+    json_object_set_new(attr, CN_METHOD, json_string(method));
+    json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd.arg_count_min));
+    json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd.arg_count_max));
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(cmd.description.c_str()));
+
+    json_t* param = json_array();
+
+    for (int i = 0; i < cmd.arg_count_max; i++)
+    {
+        json_t* p = json_object();
+        json_object_set_new(p, CN_DESCRIPTION, json_string(cmd.arg_types[i].description));
+        json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(&cmd.arg_types[i])));
+        json_object_set_new(p, CN_REQUIRED, json_boolean(MODULECMD_ARG_IS_REQUIRED(&cmd.arg_types[i])));
+        json_array_append_new(param, p);
+    }
+
+    std::string self = mxb::cat(cmd.domain, "/", cmd.identifier);
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, self.c_str()));
+    json_object_set_new(attr, CN_PARAMETERS, param);
+    json_object_set_new(obj, CN_ATTRIBUTES, attr);
+
+    return mxb::Json(obj, mxb::Json::RefType::STEAL);
+}
+
+json_t* modulecmd_to_json(std::string_view domain, const char* host)
+{
+    mxb::Json rval(mxb::Json::Type::ARRAY);
+    std::lock_guard guard(this_unit.lock);
+
+    for (const auto& d : this_unit.domains)
+    {
+        if (mxb::sv_case_eq(d.domain, domain))
+        {
+            for (const auto& cmd : d.commands)
+            {
+                rval.add_array_elem(to_json(cmd, host));
+            }
+
+            break;
+        }
+    }
+
+    return rval.release();
 }
