@@ -2717,7 +2717,9 @@ select tgrelid::regclass, tgname,
 (select tgname from pg_trigger tr where tr.oid = pg_trigger.tgparentid) parent_tgname
 from pg_trigger where tgrelid in (select relid from pg_partition_tree('grandparent'))
 order by tgname, tgrelid::regclass::text COLLATE "C";
+/* MXS "syntax error at or near \"only\""
 alter trigger a on only grandparent rename to b;	-- ONLY not supported
+*/
 alter trigger b on middle rename to c;	-- can't rename trigger on partition
 create trigger c after insert on middle
 for each row execute procedure f();
