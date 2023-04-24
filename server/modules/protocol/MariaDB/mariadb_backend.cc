@@ -30,6 +30,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include "user_data.hh"
 
 using mxs::ReplyState;
@@ -164,6 +165,7 @@ void MariaDBBackendConnection::finish_connection()
 
 uint64_t MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
 {
+    mxb_assert(session->protocol()->name() == MXS_MARIADB_PROTOCOL_NAME);
     MYSQL_session* data = static_cast<MYSQL_session*>(session->protocol_data());
 
     const uint64_t RELEVANT_CAPS = GW_MYSQL_CAPABILITIES_DEPRECATE_EOF | GW_MYSQL_CAPABILITIES_MULTI_RESULTS

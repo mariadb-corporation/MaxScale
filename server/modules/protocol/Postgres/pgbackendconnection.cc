@@ -167,6 +167,7 @@ void PgBackendConnection::finish_connection()
 
 uint64_t PgBackendConnection::can_reuse(MXS_SESSION* session) const
 {
+    mxb_assert (session->protocol()->name() == MXS_POSTGRESQL_PROTOCOL_NAME);
     uint64_t reuse_type = REUSE_NOT_POSSIBLE;
     const auto& data = *static_cast<const PgProtocolData*>(session->protocol_data());
 
