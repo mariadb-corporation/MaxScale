@@ -125,4 +125,7 @@ if (BUILD_PP_PG_QUERY)
   add_test(pg_create_table compare -v 3 -0 pp_pg_query -E postgres -x "^CREATE TABLE " -p operation -c "CREATE_TABLE" ${POSTGRES_TEST_FILES})
   add_test(pg_create compare -v 3 -0 pp_pg_query -E postgres -x "^CREATE" -p operation -c "CREATE" ${POSTGRES_TEST_FILES})
 
+  add_test(pg_drop_table compare -v 3 -0 pp_pg_query -E postgres -x "^DROP TABLE " -p operation -c "DROP_TABLE" ${POSTGRES_TEST_FILES})
+  add_test(pg_drop compare -v 3 -0 pp_pg_query -E postgres -x "^DROP" -p operation -c "DROP" ${POSTGRES_TEST_FILES})
+
 endif()
