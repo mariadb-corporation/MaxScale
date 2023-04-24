@@ -31,7 +31,7 @@ mxs::config::ParamString parser(
     "parser",
     "What parser the Postgres protocol module should use. If 'mariadb' "
     "then the one used by 'mariadbprotocol'.",
-    PgConfiguration::MARIADB);
+    PgConfiguration::PP_PG_QUERY);
 
 }
 }
