@@ -19,16 +19,56 @@ const PAREN_CLOSE = '\\)'
 const ANY_CHARS_REQ = '[\\s\\S]+'
 const ESCAPE = '[\'"`]'
 const WORD_REQ = '\\w+'
-const ESCAPED_NAME = `${ESCAPE}.*?${ESCAPE}`
+
+const NOT_SINGLE_QUOTE = "[^']*"
+const NOT_DBL_QUOTE = '[^"]*'
+const NOT_BACKTICK = '[^`]*'
+/**
+ *
+ * @param {Boolean} isMultiple - If true, match `col_a`, otherwise match `col_a`
+ * @returns {String}
+ */
+function getEscapeStrReg(isMultiple) {
+    return [
+        createGroup({
+            token: `'${NOT_SINGLE_QUOTE}(?:''${NOT_SINGLE_QUOTE})*'` + (isMultiple ? ',\\s*' : ''),
+            ignore: true,
+        }),
+        createGroup({
+            token: `"${NOT_DBL_QUOTE}(?:""${NOT_DBL_QUOTE})*"` + (isMultiple ? ',\\s*' : ''),
+            ignore: true,
+        }),
+        createGroup({
+            token: `\`${NOT_BACKTICK}(?:\`\`${NOT_BACKTICK})*\`` + (isMultiple ? ',\\s*' : ''),
+            ignore: true,
+        }),
+    ].join('|')
+}
 
 /**
+ * @param {String} param.name - named capturing group for the string.
+ * @param {Boolean} param.isMultiple - captures escaped string separated by a comma. e.g. `col_a`,`col_b`
+ * @returns {String} regex for capturing: `t1` or `my test``s table`, ...
+ */
+function createEscapeStrGroup({ name, isMultiple }) {
+    let escapedStrGroup = `(?:${getEscapeStrReg(isMultiple)})`
+    if (isMultiple) escapedStrGroup += '*' + `(?:${getEscapeStrReg()})`
+    return `(?<${name}>${escapedStrGroup})`
+}
+/**
  * @param {String} param.token - regex token to be grouped
+ * @param {String} [param.name] - named group, ignore param must be false
  * @param {Boolean} [param.optional] - optional group. add ? after group
  * @param {Boolean} [param.ignore] - ignore capturing the group. e.g (?:\\w+)?
  * @returns {String} e.g (\\w+)?
  */
-function createGroup({ token, optional = false, ignore = false }) {
-    return `(${ignore ? '?:' : ''}${token})${optional ? '?' : ''}`
+function createGroup({ token, name = '', optional = false, ignore = false }) {
+    let res = '('
+    if (ignore) res += '?:'
+    else if (name) res += `?<${name}>`
+    res += `${token})`
+    if (optional) res += '?'
+    return res
 }
 
 function genDefaultValuePattern() {
@@ -42,31 +82,33 @@ function genDefaultValuePattern() {
             ignore: true,
         }) // e.g. current_timestamp()
 
-    return [ESCAPED_NAME, DEFAULT_NUM, DEFAULT_EXP, DEFAULT_FN].join('|')
+    return [
+        createEscapeStrGroup({ name: 'default_exp_name_escape' }),
+        DEFAULT_NUM,
+        DEFAULT_EXP,
+        DEFAULT_FN,
+    ].join('|')
 }
 
-// Capturing groups
-const TBL_DEFS = [PAREN_OPEN, createGroup({ token: ANY_CHARS_REQ }), PAREN_CLOSE].join(
-    WHITESPACE_OPT
-)
-const TBL_OPTS = createGroup({ token: ANY_CHARS_REQ })
+const COL_NAME = createEscapeStrGroup({ name: 'col_name' })
+const DATA_TYPE = createGroup({ token: WORD_REQ, name: 'data_type' })
+const DATA_TYPE_SIZE = createGroup({
+    token: PAREN_OPEN + createGroup({ token: '.*?', name: 'data_type_size' }) + PAREN_CLOSE,
+    optional: true,
+    ignore: true,
+})
 
-// name + size groups
-const DATA_TYPE_DEF =
-    createGroup({ token: WORD_REQ }) +
-    createGroup({ token: PAREN_OPEN + '(.*?)' + PAREN_CLOSE, optional: true, ignore: true })
-
-const UN = createGroup({ token: tokens.un, optional: true })
-const ZF = createGroup({ token: tokens.zf, optional: true })
-const NN = createGroup({ token: tokens.nn, optional: true })
+const UN = createGroup({ token: tokens.un, name: 'un', optional: true })
+const ZF = createGroup({ token: tokens.zf, name: 'zf', optional: true })
+const NN = createGroup({ token: tokens.nn, name: 'nn', optional: true })
 
 const CHARSET = createGroup({
-    token: tokens.charset + WHITESPACE_REQ + `(${WORD_REQ})`,
+    token: tokens.charset + WHITESPACE_REQ + createGroup({ token: WORD_REQ, name: 'charset' }),
     optional: true,
     ignore: true,
 })
 const COLLATE = createGroup({
-    token: tokens.collate + WHITESPACE_REQ + `(${WORD_REQ})`,
+    token: tokens.collate + WHITESPACE_REQ + createGroup({ token: WORD_REQ, name: 'collate' }),
     optional: true,
     ignore: true,
 })
@@ -74,32 +116,50 @@ const COLLATE = createGroup({
 const GENERATED = createGroup({
     token: [
         tokens.generated,
-        '(?:\\((.*)\\))', //generated expression value
-        `(${tokens.virtual}|${tokens.persistent}|${tokens.stored})`, //type of generated
+        createGroup({
+            token: PAREN_OPEN + createGroup({ token: '.*', name: 'generated_exp' }) + PAREN_CLOSE,
+            ignore: true,
+        }),
+        createGroup({
+            token: `${tokens.virtual}|${tokens.persistent}|${tokens.stored}`,
+            name: 'generated_type',
+        }),
     ].join(WHITESPACE_REQ),
     optional: true,
     ignore: true,
 })
 
-const AI = createGroup({ token: tokens.ai, optional: true }) // AUTO_INCREMENT
+const AI = createGroup({ token: tokens.ai, optional: true, name: 'ai' }) // AUTO_INCREMENT
 
 const DEFAULT = createGroup({
-    token: tokens.default + WHITESPACE_REQ + `(${genDefaultValuePattern()})`,
+    token:
+        tokens.default +
+        WHITESPACE_REQ +
+        createGroup({ token: genDefaultValuePattern(), name: 'default_exp' }),
     optional: true,
     ignore: true,
 })
 
 const COMMENT = createGroup({
-    token: tokens.comment + WHITESPACE_REQ + `(${ESCAPED_NAME})`,
+    token: tokens.comment + WHITESPACE_REQ + createEscapeStrGroup({ name: 'comment' }),
     optional: true,
     ignore: true,
 })
 
+const NON_FK_TOKENS = [tokens.primary, tokens.unique, tokens.fullText, tokens.spatial]
+
 export default {
     createTable: new RegExp(
-        [tokens.createTable, createGroup({ token: ESCAPED_NAME }), TBL_DEFS, TBL_OPTS].join(
-            WHITESPACE_OPT
-        ),
+        [
+            tokens.createTable,
+            createEscapeStrGroup({ name: 'table_name' }),
+            [
+                PAREN_OPEN,
+                createGroup({ token: ANY_CHARS_REQ, name: 'table_definitions' }),
+                PAREN_CLOSE,
+            ].join(WHITESPACE_OPT),
+            createGroup({ token: ANY_CHARS_REQ, name: 'table_options' }),
+        ].join(WHITESPACE_OPT),
         'i'
     ),
     tableOptions: new RegExp(
@@ -111,7 +171,7 @@ export default {
         'gi'
     ),
     colDef: new RegExp(
-        [`(${ESCAPED_NAME})`, DATA_TYPE_DEF].join(WHITESPACE_REQ) +
+        [COL_NAME, DATA_TYPE + DATA_TYPE_SIZE].join(WHITESPACE_REQ) +
             WHITESPACE_OPT +
             [UN, ZF, NN, CHARSET, COLLATE, GENERATED, AI, DEFAULT, COMMENT].join(WHITESPACE_OPT) +
             createGroup({ token: `${WHITESPACE_REQ}|$`, ignore: true }),
@@ -120,18 +180,29 @@ export default {
     nonFks: new RegExp(
         '^' +
             [
-                // index category group
                 createGroup({
-                    token: [tokens.primary, tokens.unique, tokens.fullText, tokens.spatial].join(
-                        '|'
-                    ),
+                    token: createGroup({ token: NON_FK_TOKENS.join('|'), name: 'category' }),
                     optional: true,
                 }),
                 tokens.key,
                 // index_name (optional as PK doesn't have name)
-                createGroup({ token: `${ESCAPED_NAME}`, optional: true }),
+                createGroup({
+                    token: createEscapeStrGroup({ name: 'name' }),
+                    optional: true,
+                }),
                 // index_col_name group
-                `${PAREN_OPEN}(${ESCAPED_NAME})${PAREN_CLOSE}`,
+                createGroup({
+                    token:
+                        PAREN_OPEN +
+                        createGroup({
+                            token: createEscapeStrGroup({
+                                name: 'escaped_str_group',
+                                isMultiple: true,
+                            }),
+                            name: 'col_names',
+                        }) +
+                        PAREN_CLOSE,
+                }),
             ].join(WHITESPACE_OPT),
         'i'
     ),

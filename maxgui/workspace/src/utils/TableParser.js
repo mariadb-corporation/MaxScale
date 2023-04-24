@@ -37,36 +37,36 @@ export default class TableParser {
      * @returns {object|string} - object if it is column def, otherwise initial def string will be returned
      */
     parseColDef(def) {
-        const [
-            isMatched,
-            name,
-            dataType,
-            dataTypeValue,
-            un,
-            zf,
-            nn,
-            charset,
-            collate,
-            generated_exp,
-            generated,
-            ai,
-            defaultExp,
-            comment,
-        ] = def.match(tokenizer.colDef) || []
-        if (isMatched) {
-            return {
-                name,
-                dataType,
-                dataTypeValue,
-                isUN: Boolean(un),
-                isZF: Boolean(zf),
-                isNN: Boolean(nn),
+        const match = def.match(tokenizer.colDef)
+        if (match) {
+            const {
+                col_name: name,
+                data_type,
+                data_type_size,
+                un,
+                zf,
+                nn,
                 charset,
                 collate,
                 generated_exp,
-                generated,
-                isAI: Boolean(ai),
-                defaultExp,
+                generated_type,
+                ai,
+                default_exp,
+                comment,
+            } = match.groups
+            return {
+                name,
+                data_type,
+                data_type_size,
+                is_un: Boolean(un),
+                is_zf: Boolean(zf),
+                is_nn: Boolean(nn),
+                charset,
+                collate,
+                generated_exp,
+                generated_type,
+                is_ai: Boolean(ai),
+                default_exp,
                 comment,
             }
         }
@@ -75,13 +75,13 @@ export default class TableParser {
     /**
      * Parses a string to extract its key
      * @param {String} def - A string containing key definition.
-     * @returns {{ category: string, name: string, colNames: string[] }}
+     * @returns {{ category: string, name: string, col_names: string[] }}
      */
     parseKey(def) {
         const match = def.match(tokenizer.nonFks)
         if (match) {
-            const [, category, name, colNames] = match
-            return { category, name, colNames }
+            const { category, name, col_names } = match.groups
+            return { category, name, col_names }
         }
         // TODO: parse FKs
     }
@@ -93,28 +93,29 @@ export default class TableParser {
         const defLines = defsStr.split('\n')
         let cols = [],
             keys = []
-
         defLines.forEach(def => {
             const parsedDef = this.parseColDef(def.trim().replace(/,\s*$/, ''))
-            if (t(parsedDef).isString) {
-                keys.push(this.parseKey(parsedDef))
-            } else cols.push(parsedDef)
+            if (parsedDef) {
+                if (t(parsedDef).isString) keys.push(this.parseKey(parsedDef))
+                else cols.push(parsedDef)
+            }
         })
         return { cols, keys }
     }
     // Parse the result of SHOW CREATE TABLE
     parse(sql) {
         const match = sql.match(tokenizer.createTable)
-        let tbl_name, table_options, table_definitions
+        let name, definitions, options
         if (match) {
-            tbl_name = t(match, '[1]').safeString.trim()
-            table_definitions = this.parseTableDefs(t(match, '[2]').safeString.trim())
-            table_options = this.parseTableOpts(t(match, '[3]').safeString)
+            const { table_name, table_options, table_definitions } = match.groups
+            name = table_name
+            definitions = this.parseTableDefs(table_definitions)
+            options = this.parseTableOpts(table_options)
         }
         return {
-            tbl_name,
-            table_options,
-            table_definitions,
+            name,
+            definitions,
+            options,
         }
     }
 }
