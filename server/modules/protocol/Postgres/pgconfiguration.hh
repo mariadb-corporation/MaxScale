@@ -28,6 +28,7 @@ public:
     std::string parser;
 
     static constexpr const char* MARIADB = "mariadb";
+    static constexpr const char* PP_PG_QUERY = "pp_pg_query";
 
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 

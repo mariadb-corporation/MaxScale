@@ -40,7 +40,7 @@ std::unique_ptr<PgParser> create_mariadb_parser()
     return std::make_unique<PgParser>(pp.create_parser(&PgParser::Helper::get()));
 }
 
-std::unique_ptr<PgParser> create_postgres_parser(const char* zPlugin)
+std::unique_ptr<PgParser> create_loaded_parser(const char* zPlugin)
 {
     MXB_NOTICE("Using parser plugin '%s' for parsing Postgres SQL.", zPlugin);
 
@@ -66,7 +66,8 @@ std::unique_ptr<PgParser> create_postgres_parser(const char* zPlugin)
     }
     else
     {
-        MXB_NOTICE("Could not load parser plugin '%s'.", zPlugin);
+        MXB_WARNING("Could not load parser plugin '%s', using MariaDB parser instead.", zPlugin);
+        sParser = create_mariadb_parser();
     }
 
     return sParser;
@@ -238,7 +239,7 @@ bool PgProtocolModule::post_configure()
     }
     else
     {
-        m_sParser = create_postgres_parser(m_config.parser.c_str());
+        m_sParser = create_loaded_parser(m_config.parser.c_str());
     }
 
     return m_sParser != nullptr;
