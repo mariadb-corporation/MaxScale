@@ -251,6 +251,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
     bool error;     // Whether an error has occurred.
     bool found;     // Whether we have found a statement.
     bool skip;      // Whether next statement should be skipped.
+    bool postgres_skip;
 
     stmt.clear();
 
@@ -261,6 +262,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
         error = false;
         found = false;
         skip = false;
+        postgres_skip = false;
 
         while (!error && !found && std::getline(m_in, line))
         {
@@ -271,15 +273,6 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
             if (line.empty())
             {
                 continue;
-            }
-
-            auto i = line.find("-- ");
-
-            if (i != string::npos && i != 0)
-            {
-                // A "-- " not the the beginning, so has to be a regular comment.
-                line = line.substr(0, i);
-                rtrim(line);
             }
 
             if (is_postgres())
@@ -296,8 +289,17 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     continue;
                 }
 
+                string l = line;
+                mxb::lower_case(l);
+
+                if (l.find("-- error") != string::npos
+                    || l.find("-- fail") != string::npos)
+                {
+                    postgres_skip = true;
+                }
+
                 // If '-- fail' or '-- bogus', then the following statements are expected to fail.
-                if (line.substr(0, 7) == "-- fail" || line.substr(0, 8) == "-- bogus")
+                if (l.substr(0, 7) == "-- fail" || l.substr(0, 8) == "-- bogus")
                 {
                     skip_postgres_until_ok();
                     continue;
@@ -350,6 +352,15 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                         continue;
                     }
                 }
+            }
+
+            auto i = line.find("-- ");
+
+            if (i != string::npos && i != 0)
+            {
+                // A "-- " not the the beginning, so has to be a regular comment.
+                line = line.substr(0, i);
+                rtrim(line);
             }
 
             if (line.at(0) != '#')
@@ -508,14 +519,10 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
             }
         }
 
-        if (!error && is_postgres())
+        if (!error && is_postgres() && postgres_skip)
         {
-            // If '-- fail' is found anywhere, the whole line is ignored.
-            if (stmt.find("-- fail") != string::npos)
-            {
-                stmt.clear();
-                found = false;
-            }
+            stmt.clear();
+            found = false;
         }
     }
     while (!error && !found && stmt.empty() && m_in);
@@ -681,6 +688,7 @@ void TestReader::skip_postgres_until_ok()
         ++m_line;
 
         ltrim(line);
+        mxb::lower_case(line);
 
         // If '-- fail' or '-- bogus' encountered again...
         if (line.substr(0, 7) == "-- fail" || line.substr(0, 8) == "-- bogus")
