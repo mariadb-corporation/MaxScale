@@ -77,6 +77,7 @@ export default {
         ) {
             try {
                 const { queryResErrToStr } = this.vue.$helpers
+                const maskedQuery = this.vue.$helpers.maskQueryPwd(sql)
                 const { execution_time, results } = this.vue.$typy(
                     res,
                     'data.data.attributes'
@@ -107,7 +108,7 @@ export default {
                     response += `${key}: ${resultData[key]} \n`
                 })
                 let action = {
-                    name: sql, // if no name is defined, use sql as name
+                    name: maskedQuery, // if no name is defined, use sql as name
                     response,
                     type: queryType,
                 }
@@ -116,7 +117,7 @@ export default {
                     action.execution_time = execution_time.toFixed(4)
 
                 if (name) {
-                    action.sql = sql
+                    action.sql = maskedQuery
                     action.name = name
                 }
                 commit('UPDATE_QUERY_HISTORY', {
@@ -152,7 +153,7 @@ export default {
                             formatType: 'HH:mm:ss',
                         }),
                         name,
-                        sql,
+                        sql: this.vue.$helpers.maskQueryPwd(sql),
                     },
                 })
             } catch (e) {
