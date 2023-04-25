@@ -36,19 +36,11 @@ public:
     TestParser();
 
     TestParser(const Parser::Helper* pHelper, const std::string& plugin)
-        : TestParser(pHelper, plugin, SqlMode::DEFAULT, std::string {})
+        : TestParser(pHelper, plugin, SqlMode::DEFAULT)
     {
     }
 
-    TestParser(const Parser::Helper* pHelper, const std::string& plugin, SqlMode sql_mode)
-        : TestParser(pHelper, plugin, sql_mode, std::string {})
-    {
-    }
-
-    TestParser(const Parser::Helper* pHelper, const std::string& plugin, const std::string& plugin_args)
-        : TestParser(pHelper, plugin, SqlMode::DEFAULT, plugin_args)
-    {
-    }
+    TestParser(const Parser::Helper* pHelper, const std::string& plugin, SqlMode sql_mode);
 
     TestParser(const Parser::Helper* pHelper,
                const std::string& plugin,

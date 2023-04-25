@@ -87,9 +87,9 @@ private:
 
         if (pPlugin)
         {
-            const char* args = "parse_as=10.3,log_unrecognized_statements=1";
+            setenv("PP_ARGS", "log_unrecognized_statements=1", 1);
 
-            if (!pPlugin->setup(mxs::Parser::SqlMode::DEFAULT, args) || !pPlugin->thread_init())
+            if (!pPlugin->setup(mxs::Parser::SqlMode::DEFAULT) || !pPlugin->thread_init())
             {
                 std::cerr << "error: Could not setup or init plugin " << name << "." << std::endl;
                 mxs::ParserPlugin::unload(pPlugin);

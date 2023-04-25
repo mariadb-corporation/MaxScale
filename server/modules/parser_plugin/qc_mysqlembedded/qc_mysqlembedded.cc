@@ -3911,20 +3911,13 @@ void configure_options(const char* datadir, const char* langdir)
 }
 }
 
-int32_t qc_mysql_setup(Parser::SqlMode sql_mode, const char* zArgs)
+int32_t qc_mysql_setup(Parser::SqlMode sql_mode)
 {
     this_unit.sql_mode = sql_mode;
 
     if (sql_mode == Parser::SqlMode::ORACLE)
     {
         this_unit.function_name_mappings = function_name_mappings_oracle;
-    }
-
-    if (zArgs)
-    {
-        MXB_WARNING("'%s' provided as arguments, "
-                    "even though no arguments are supported.",
-                    zArgs);
     }
 
     return QC_RESULT_OK;
@@ -4229,9 +4222,9 @@ private:
 class MysqlParserPlugin : public ParserPlugin
 {
 public:
-    bool setup(Parser::SqlMode sql_mode, const char* args) override
+    bool setup(Parser::SqlMode sql_mode) override
     {
-        return qc_mysql_setup(sql_mode, args) == QC_RESULT_OK;
+        return qc_mysql_setup(sql_mode) == QC_RESULT_OK;
     }
 
     bool thread_init(void) const override

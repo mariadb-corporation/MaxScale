@@ -700,10 +700,7 @@ private:
 class PgQueryParserPlugin : public mxs::ParserPlugin
 {
 public:
-    bool setup(Parser::SqlMode sql_mode, const char* args) override
-    {
-        return true;
-    }
+    bool setup(Parser::SqlMode sql_mode) override;
 
     bool thread_init(void) const override
     {
@@ -749,8 +746,15 @@ public:
 struct
 {
     bool                initialized {false};
+    Parser::SqlMode     sql_mode {Parser::SqlMode::DEFAULT};
     PgQueryParserPlugin parser_plugin;
 } this_unit;
+
+bool PgQueryParserPlugin::setup(Parser::SqlMode sql_mode)
+{
+    this_unit.sql_mode = sql_mode;
+    return true;
+}
 
 int32_t module_process_init(void)
 {
@@ -770,6 +774,7 @@ void module_process_finish(void)
 
 int32_t module_thread_init(void)
 {
+    this_thread.sql_mode = this_unit.sql_mode;
     return 0;
 }
 
