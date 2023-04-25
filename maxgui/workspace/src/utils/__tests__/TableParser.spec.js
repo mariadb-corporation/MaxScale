@@ -45,6 +45,28 @@ function stubColDef({
     }
 }
 
+function stubKeyDef({
+    category,
+    name,
+    col_names,
+    match_option,
+    referenced_col_names,
+    referenced_table_name,
+    on_delete,
+    on_update,
+}) {
+    return {
+        category,
+        name,
+        col_names,
+        match_option,
+        referenced_col_names,
+        referenced_table_name,
+        on_delete,
+        on_update,
+    }
+}
+
 const expectedColDefs = {
     '`id` INT unsigned AUTO_INCREMENT': stubColDef({
         name: '`id`',
@@ -108,26 +130,59 @@ const expectedColDefs = {
 }
 
 const expectedKeyDefs = {
-    'PRIMARY KEY (`col_int`)': {
+    'PRIMARY KEY (`col_int`)': stubKeyDef({
         category: 'PRIMARY',
-        name: undefined,
         col_names: '`col_int`',
-    },
-    'UNIQUE KEY `col_invisible_UNIQUE` (`col_invisible`)': {
+    }),
+    'UNIQUE KEY `col_invisible_UNIQUE` (`col_invisible`)': stubKeyDef({
         category: 'UNIQUE',
         name: '`col_invisible_UNIQUE`',
         col_names: '`col_invisible`',
-    },
-    'UNIQUE KEY `col_invisible_col_string_UNIQUE` (`col_invisible`,`col_string`)': {
+    }),
+    'UNIQUE KEY `col_invisible_col_string_UNIQUE` (`col_invisible`,`col_string`)': stubKeyDef({
         category: 'UNIQUE',
         name: '`col_invisible_col_string_UNIQUE`',
         col_names: '`col_invisible`,`col_string`',
-    },
-    'KEY `col_a_PLAIN` (`col_a`)': {
-        category: undefined,
+    }),
+    'KEY `col_a_PLAIN` (`col_a`)': stubKeyDef({
         name: '`col_a_PLAIN`',
         col_names: '`col_a`',
-    },
+    }),
+    'CONSTRAINT `songs_album_id` FOREIGN KEY (`album_id`) REFERENCES `albums` (`id`)': stubKeyDef({
+        category: 'FOREIGN',
+        name: '`songs_album_id`',
+        col_names: '`album_id`',
+        referenced_col_names: '`id`',
+        referenced_table_name: '`albums`',
+    }),
+    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES `customers` (`id`) " +
+    'ON DELETE CASCADE']: stubKeyDef({
+        category: 'FOREIGN',
+        name: '`orders_ibfk_1`',
+        col_names: "`customer's id`",
+        referenced_col_names: '`id`',
+        referenced_table_name: '`customers`',
+        on_delete: 'CASCADE',
+    }),
+    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES `customers` (`id`) " +
+    'ON UPDATE SET NULL']: stubKeyDef({
+        category: 'FOREIGN',
+        name: '`orders_ibfk_1`',
+        col_names: "`customer's id`",
+        referenced_col_names: '`id`',
+        referenced_table_name: '`customers`',
+        on_update: 'SET NULL',
+    }),
+    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES `customers` (`id`) " +
+    'ON DELETE CASCADE ON UPDATE NO ACTION']: stubKeyDef({
+        category: 'FOREIGN',
+        name: '`orders_ibfk_1`',
+        col_names: "`customer's id`",
+        referenced_col_names: '`id`',
+        referenced_table_name: '`customers`',
+        on_delete: 'CASCADE',
+        on_update: 'NO ACTION',
+    }),
 }
 const tableOpt = `ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8mb4 COMMENT="My table"`
 const expectTableOpts = {

@@ -13,6 +13,11 @@
 import { t } from 'typy'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
 
+const tableOptionsReg = tokenizer.tableOptions
+const colDefReg = tokenizer.colDef
+const nonFksReg = tokenizer.nonFks
+const fksReg = tokenizer.fks
+const createTableReg = tokenizer.createTable
 /**
  * This parser works when sql_quote_show_create on
  */
@@ -24,7 +29,7 @@ export default class TableParser {
     parseTableOpts(optsStr) {
         let match
         let opts = {}
-        while ((match = tokenizer.tableOptions.exec(optsStr)) !== null) {
+        while ((match = tableOptionsReg.exec(optsStr)) !== null) {
             const key = match[1]
             const value = match[2]
             opts[key.toLocaleLowerCase()] = value
@@ -37,7 +42,7 @@ export default class TableParser {
      * @returns {object|string} - object if it is column def, otherwise initial def string will be returned
      */
     parseColDef(def) {
-        const match = def.match(tokenizer.colDef)
+        const match = def.match(colDefReg)
         if (match) {
             const {
                 col_name: name,
@@ -75,15 +80,33 @@ export default class TableParser {
     /**
      * Parses a string to extract its key
      * @param {String} def - A string containing key definition.
-     * @returns {{ category: string, name: string, col_names: string[] }}
+     * @returns {object|string}
      */
     parseKey(def) {
-        const match = def.match(tokenizer.nonFks)
-        if (match) {
-            const { category, name, col_names } = match.groups
-            return { category, name, col_names }
+        const match = def.match(nonFksReg) || def.match(fksReg)
+        if (!match) {
+            return def
         }
-        // TODO: parse FKs
+        const {
+            category,
+            name,
+            col_names,
+            match_option,
+            referenced_col_names,
+            referenced_table_name,
+            on_delete,
+            on_update,
+        } = match.groups
+        return {
+            category,
+            name,
+            col_names,
+            match_option,
+            referenced_col_names,
+            referenced_table_name,
+            on_delete,
+            on_update,
+        }
     }
     /**
      * @param {String} defsStr - table definitions including create, column and constraint definitions
@@ -104,7 +127,7 @@ export default class TableParser {
     }
     // Parse the result of SHOW CREATE TABLE
     parse(sql) {
-        const match = sql.match(tokenizer.createTable)
+        const match = sql.match(createTableReg)
         let name, definitions, options
         if (match) {
             const { table_name, table_options, table_definitions } = match.groups
