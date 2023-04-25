@@ -143,8 +143,8 @@ allows clients to log in. Even with this setting enabled, a user account
 matching the incoming client username and IP must exist on the backends for
 MaxScale to accept the client.
 
-This setting is incompatible with standard MySQL authentication plugin
-(*mysqlauth* in MaxScale). If enabled, MaxScale cannot authenticate clients to
+This setting is incompatible with standard MariaDB/MySQL authentication plugin
+(*MariaDBAuth* in MaxScale). If enabled, MaxScale cannot authenticate clients to
 backend servers using standard authentication.
 
 ```
