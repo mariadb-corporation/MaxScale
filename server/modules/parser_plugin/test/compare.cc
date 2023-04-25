@@ -157,7 +157,9 @@ ParserPlugin* get_plugin(const char* zName, Parser::SqlMode sql_mode, const char
 
         if (pPlugin)
         {
-            if (!pPlugin->setup(sql_mode, zArgs) || !pPlugin->thread_init())
+            setenv("PP_ARGS", zArgs, 1);
+
+            if (!pPlugin->setup(sql_mode) || !pPlugin->thread_init())
             {
                 cerr << "error: Could not setup or init classifier " << zName << "." << endl;
                 ParserPlugin::unload(pPlugin);

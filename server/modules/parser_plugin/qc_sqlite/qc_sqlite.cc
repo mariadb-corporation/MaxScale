@@ -5223,13 +5223,14 @@ private:
 class SqliteParserPlugin : public ParserPlugin
 {
 public:
-    bool setup(Parser::SqlMode sql_mode, const char* cargs) override
+    bool setup(Parser::SqlMode sql_mode) override
     {
         QC_TRACE();
         mxb_assert(!this_unit.setup);
 
         qc_log_level_t log_level = QC_LOG_NOTHING;
         QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
+        const char* cargs = getenv("PP_ARGS");
 
         if (cargs)
         {

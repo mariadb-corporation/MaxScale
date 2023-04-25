@@ -424,11 +424,10 @@ public:
      * Must be called once to setup the parser plugin.
      *
      * @param sql_mode  The default sql mode.
-     * @param args      The value of `query_classifier_args` in the configuration file.
      *
      * @return True, if the parser plugin be setup, otherwise false.
      */
-    virtual bool setup(Parser::SqlMode sql_mode, const char* args) = 0;
+    virtual bool setup(Parser::SqlMode sql_mode) = 0;
 
     /**
      * Must be called once per thread where the parser will be used. Note that

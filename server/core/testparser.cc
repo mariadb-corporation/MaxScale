@@ -22,8 +22,7 @@ namespace
 
 std::unique_ptr<mxs::Parser> create_parser(const mxs::Parser::Helper* pHelper,
                                            const string& plugin,
-                                           mxs::Parser::SqlMode sql_mode,
-                                           const string& plugin_args)
+                                           mxs::Parser::SqlMode sql_mode)
 {
     mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(plugin.c_str());
 
@@ -35,7 +34,7 @@ std::unique_ptr<mxs::Parser> create_parser(const mxs::Parser::Helper* pHelper,
         throw std::runtime_error(ss.str());
     }
 
-    if (!pPlugin->setup(sql_mode, plugin_args.c_str()))
+    if (!pPlugin->setup(sql_mode))
     {
         mxs::ParserPlugin::unload(pPlugin);
         ostringstream ss;
@@ -66,15 +65,14 @@ namespace maxscale
 {
 
 TestParser::TestParser()
-    : TestParser(&MariaDBParser::Helper::get(), DEFAULT_PLUGIN, SqlMode::DEFAULT, std::string {})
+    : TestParser(&MariaDBParser::Helper::get(), DEFAULT_PLUGIN, SqlMode::DEFAULT)
 {
 }
 
 TestParser::TestParser(const Parser::Helper* pHelper,
                        const string& plugin,
-                       SqlMode sql_mode,
-                       const string& plugin_args)
-    : CachingParser(create_parser(pHelper, plugin, sql_mode, plugin_args))
+                       SqlMode sql_mode)
+    : CachingParser(create_parser(pHelper, plugin, sql_mode))
 {
 }
 
