@@ -24,11 +24,7 @@
 
 namespace
 {
-#ifdef EPOLLRDHUP
 static constexpr uint32_t EVENTS = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
-#else
-static constexpr uint32_t EVENTS = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
-#endif
 
 struct ThisUnit
 {

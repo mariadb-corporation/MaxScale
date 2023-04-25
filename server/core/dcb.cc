@@ -71,11 +71,7 @@ namespace
 static struct THIS_UNIT
 {
     std::atomic<uint64_t> uid_generator {0};
-#ifdef EPOLLRDHUP
     static constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
-#else
-    static constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
-#endif
 } this_unit;
 
 static thread_local struct
@@ -1287,7 +1283,6 @@ uint32_t DCB::process_events(uint32_t events)
         }
     }
 
-#ifdef EPOLLRDHUP
     if ((events & EPOLLRDHUP) && (m_open))
     {
         mxb_assert(m_handler);
@@ -1301,7 +1296,6 @@ uint32_t DCB::process_events(uint32_t events)
             m_hanged_up = true;
         }
     }
-#endif
 
     if (m_session)
     {
@@ -1442,12 +1436,7 @@ void DCB::trigger_read_event()
 
 void DCB::trigger_hangup_event()
 {
-#ifdef EPOLLRDHUP
-    uint32_t ev = EPOLLRDHUP;
-#else
-    uint32_t ev = EPOLLHUP;
-#endif
-    add_event(ev);
+    add_event(EPOLLRDHUP);
 }
 
 void DCB::trigger_write_event()
