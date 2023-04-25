@@ -1,7 +1,7 @@
-# MySQL Authenticator
+# MariaDB/MySQL Authenticator
 
-The *mysqlauth*-module implements the client and backend authentication for the
-server plugin *mysql_ native_password*. This is the default authentication
+The *MariaDBAuth*-module implements the client and backend authentication for the
+server plugin *mysql_native_password*. This is the default authentication
 plugin used by both MariaDB and MySQL.
 
 ## Authenticator options

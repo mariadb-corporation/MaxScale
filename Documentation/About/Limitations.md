@@ -126,7 +126,7 @@ transaction or change the autocommit mode using a prepared statement.
 
 ## Authenticator limitations
 
-### Limitations in the MySQL authenticator (MySQLAuth)
+### Limitations in the MySQL authenticator (MariaDBAuth)
 
 * MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
 a new authentication protocol which does not support pre-4.1 style passwords.
