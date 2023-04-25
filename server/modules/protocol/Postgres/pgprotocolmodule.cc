@@ -117,9 +117,16 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
     auto auth_names = params.get_string(CN_AUTHENTICATOR);
     auto auth_opts = params.get_string(CN_AUTHENTICATOR_OPTIONS);
 
+    const std::string auth_trust = "trust";
+    const std::string auth_pw = "password";
+    const std::string auth_scram = "scram-sha-256";
     if (auth_names.empty())
     {
-        auth_names = "password";    // TODO: likely not final
+        auth_names = auth_scram;
+    }
+    else if (auth_names == "all")
+    {
+        auth_names = mxb::cat(auth_trust, ",", auth_pw, ",", auth_scram);
     }
 
     AuthenticatorList authenticators;
@@ -133,15 +140,15 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         if (!auth_name.empty())
         {
             std::unique_ptr<mxs::AuthenticatorModule> new_auth_module;
-            if (auth_name == "password")
+            if (auth_name == auth_pw)
             {
                 new_auth_module = std::make_unique<PasswordAuthModule>();
             }
-            else if (auth_name == "trust")
+            else if (auth_name == auth_trust)
             {
                 new_auth_module = std::make_unique<TrustAuthModule>();
             }
-            else if (auth_name == "scram-sha-256")
+            else if (auth_name == auth_scram)
             {
                 new_auth_module = std::make_unique<ScramAuthModule>();
             }
@@ -166,5 +173,9 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         }
     }
 
+    if (error)
+    {
+        authenticators.clear();
+    }
     return authenticators;
 }
