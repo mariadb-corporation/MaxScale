@@ -57,31 +57,11 @@ public:
         }
 
         /**
-         * Starts the watchdog workaround that will ensure that the systemd
-         * watchdog is notified, even if the dependent would perform a lengthy
-         * synchronous operation.
-         *
-         * It is permissible to call this function multiple times, but
-         * each call should be matched with a call to
-         * @c stop_watchdog_workaround().
-         *
-         * @note This should be considered as the last resort, the right
-         *       approach is to replace the synchronous operation with
-         *       an asynchronous one.
-         */
-        void start_watchdog_workaround();
-
-        /**
-         * Stops the watchdog workaround.
-         */
-        void stop_watchdog_workaround();
-
-        /**
          * @return True, if the dependent is alive and kicking.
          */
         bool is_ticking() const
         {
-            return m_ticking.load(std::memory_order_acquire);
+            return m_state.load(std::memory_order_relaxed) & (TICKING | BLOCKED);
         }
 
     protected:
@@ -92,27 +72,33 @@ public:
          */
         void mark_ticking_if_currently_not()
         {
-            if (m_ticking.load(std::memory_order_acquire) == false)
-            {
-                m_ticking.store(true, std::memory_order_release);
-            }
+            set_state(TICKING);
         }
 
     private:
         friend class WatchdogNotifier;
 
+        static constexpr uint8_t TICKING = 0x1;     // Working normally
+        static constexpr uint8_t BLOCKED = 0x2;     // Doing a blocking operation
+
         void mark_not_ticking()
         {
-            m_ticking.store(false, std::memory_order_release);
+            clear_state(TICKING);
+        }
+
+        void set_state(uint8_t state)
+        {
+            m_state.fetch_or(state, std::memory_order_relaxed);
+        }
+
+        void clear_state(uint8_t state)
+        {
+            m_state.fetch_and(~state, std::memory_order_relaxed);
         }
 
     private:
-        class Ticker;
-        friend Ticker;
-
-        WatchdogNotifier& m_notifier;
-        std::atomic<bool> m_ticking;
-        Ticker*           m_pTicker {nullptr};  /*< Watchdog ticker, if systemd enabled. */
+        WatchdogNotifier&    m_notifier;
+        std::atomic<uint8_t> m_state {TICKING};
     };
 
     /**
@@ -141,7 +127,7 @@ public:
             : m_dependent(*pDependent)
         {
             mxb_assert(pDependent);
-            m_dependent.start_watchdog_workaround();
+            m_dependent.set_state(Dependent::BLOCKED);
         }
 
         /**
@@ -149,7 +135,7 @@ public:
          */
         ~Workaround()
         {
-            m_dependent.stop_watchdog_workaround();
+            m_dependent.clear_state(Dependent::BLOCKED);
         }
 
     private:

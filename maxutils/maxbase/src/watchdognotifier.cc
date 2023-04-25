@@ -33,114 +33,15 @@ static struct ThisUnit
 
 namespace maxbase
 {
-
-/**
- * @class WatchdogNotifier::Dependent::Ticker
- *
- * This class is capable making an instance of Dependent appear
- * to be ticking, even if it actually is not while performing some
- * lengthy synchronous operation.
- */
-class WatchdogNotifier::Dependent::Ticker
-{
-    Ticker(const Ticker&) = delete;
-    Ticker& operator=(const Ticker&) = delete;
-
-public:
-    Ticker(Dependent* pOwner)
-        : m_owner(*pOwner)
-        , m_nClients(0)
-        , m_terminate(false)
-    {
-        m_thread = std::thread(&Ticker::run, this);
-    }
-
-    ~Ticker()
-    {
-        mxb_assert(m_nClients == 0);
-        m_terminate.store(true, std::memory_order_release);
-        m_cond.notify_one();
-        m_thread.join();
-    }
-
-    void start()
-    {
-        int clients = m_nClients.fetch_add(1, std::memory_order_relaxed);
-
-        if (clients == 0)
-        {
-            m_cond.notify_one();
-        }
-    }
-
-    void stop()
-    {
-        MXB_AT_DEBUG(int clients = ) m_nClients.fetch_sub(1, std::memory_order_relaxed);
-        mxb_assert(clients > 0);
-    }
-
-private:
-    // Run in thread created in constructor.
-    void run()
-    {
-        auto interval = m_owner.notifier().interval();
-
-        while (!m_terminate.load(std::memory_order_acquire))
-        {
-            Guard guard(m_lock);
-
-            if (m_nClients.load(std::memory_order_relaxed) > 0)
-            {
-                m_owner.mark_ticking_if_currently_not();
-            }
-
-            m_cond.wait_for(guard, interval);
-        }
-    }
-
-    using Guard = std::unique_lock<std::mutex>;
-
-    Dependent&             m_owner;
-    std::atomic<int>       m_nClients;
-    std::atomic<bool>      m_terminate;
-    std::thread            m_thread;
-    std::mutex             m_lock;
-    mxb::ConditionVariable m_cond;
-};
-
 WatchdogNotifier::Dependent::Dependent(WatchdogNotifier* pNotifier)
     : m_notifier(*pNotifier)
-    , m_ticking(true)
 {
-    if (m_notifier.interval().count() != 0)
-    {
-        m_pTicker = new Ticker(this);
-    }
-
     m_notifier.add(this);
 }
 
 WatchdogNotifier::Dependent::~Dependent()
 {
     m_notifier.remove(this);
-
-    delete m_pTicker;
-}
-
-void WatchdogNotifier::Dependent::start_watchdog_workaround()
-{
-    if (m_pTicker)
-    {
-        m_pTicker->start();
-    }
-}
-
-void WatchdogNotifier::Dependent::stop_watchdog_workaround()
-{
-    if (m_pTicker)
-    {
-        m_pTicker->stop();
-    }
 }
 
 WatchdogNotifier::WatchdogNotifier(uint64_t usecs)

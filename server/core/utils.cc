@@ -49,6 +49,7 @@
 
 #include <maxscale/config.hh>
 #include <maxscale/secrets.hh>
+#include <maxscale/routingworker.hh>
 
 #if !defined (PATH_MAX)
 # if defined (__USE_POSIX)
@@ -612,6 +613,9 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
 
 int connect_socket(const char* host, int port)
 {
+    // Start the watchdog notifier workaround, the getaddrinfo call done by connect_socket() can take a long
+    // time in some corner cases.
+    mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
     struct sockaddr_storage addr = {};
     int so;
     size_t sz;
