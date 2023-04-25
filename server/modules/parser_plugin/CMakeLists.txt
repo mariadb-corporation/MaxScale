@@ -1,7 +1,7 @@
-add_subdirectory(qc_sqlite)
+add_subdirectory(pp_sqlite)
 
-if(BUILD_QC_MYSQLEMBEDDED)
-  add_subdirectory(qc_mysqlembedded)
+if(BUILD_PP_MYSQLEMBEDDED)
+  add_subdirectory(pp_mysqlembedded)
 endif()
 
 if(BUILD_PP_PG_QUERY)
