@@ -8,10 +8,6 @@ if(BUILD_PP_PG_QUERY)
   add_subdirectory(pp_pg_query)
 endif()
 
-if(BUILD_PP_POSTGRES)
-  add_subdirectory(pp_postgres)
-endif()
-
 if(BUILD_TESTS)
   add_subdirectory(test)
 endif()
