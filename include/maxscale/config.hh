@@ -292,8 +292,6 @@ public:
 
     int64_t              n_threads;                    /**< Number of polling threads */
     int64_t              n_threads_max;                /**< Hard maximum for number of polling threads. */
-    std::string          qc_name;                      /**< The name of the query classifier to load */
-    std::string          qc_args;                      /**< Arguments for the query classifieer */
     mxs::Parser::SqlMode qc_sql_mode;                  /**< The query classifier sql mode */
     std::string          admin_host;                   /**< Admin interface host */
     int64_t              admin_port;                   /**< Admin interface port */
@@ -433,8 +431,8 @@ private:
 
     static ParamThreadsCount                            s_n_threads;
     static config::ParamCount                           s_n_threads_max;
-    static config::ParamString                          s_qc_name;
-    static config::ParamString                          s_qc_args;
+    static config::ParamDeprecated<config::ParamString> s_qc_name;
+    static config::ParamDeprecated<config::ParamString> s_qc_args;
     static config::ParamEnum<mxs::Parser::SqlMode>      s_qc_sql_mode;
     static config::ParamString                          s_admin_host;
     static config::ParamInteger                         s_admin_port;

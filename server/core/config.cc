@@ -630,13 +630,13 @@ config::ParamCount Config::s_n_threads_max(
     Config::DEFAULT_THREADS_MAX,
     1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max()); // min, max
 
-config::ParamString Config::s_qc_name(
+config::ParamDeprecated<config::ParamString> Config::s_qc_name(
     &Config::s_specification,
     CN_QUERY_CLASSIFIER,
     "The name of the query classifier to load.",
     "qc_sqlite");
 
-config::ParamString Config::s_qc_args(
+config::ParamDeprecated<config::ParamString> Config::s_qc_args(
     &Config::s_specification,
     CN_QUERY_CLASSIFIER_ARGS,
     "Arguments for the query classifier.",
@@ -1070,8 +1070,6 @@ Config::Config(int argc, char** argv)
     add_native(&Config::auto_tune, &s_auto_tune);
     add_native<ParamThreadsCount, Config, ThreadsCount>(&Config::n_threads, &s_n_threads);
     add_native(&Config::n_threads_max, &s_n_threads_max);
-    add_native(&Config::qc_name, &s_qc_name);
-    add_native(&Config::qc_args, &s_qc_args);
     add_native(&Config::qc_sql_mode, &s_qc_sql_mode);
     add_native(&Config::admin_host, &s_admin_host);
     add_native(&Config::admin_port, &s_admin_port);
