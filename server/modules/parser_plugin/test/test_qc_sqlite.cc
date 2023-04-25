@@ -547,7 +547,7 @@ int main(int argc, char** argv)
 
     try
     {
-        Tester tester("qc_sqlite", &MariaDBParser::Helper::get());
+        Tester tester("pp_sqlite", &MariaDBParser::Helper::get());
 
         for (const auto& t : test_cases)
         {

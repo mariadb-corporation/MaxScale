@@ -204,7 +204,7 @@ const char* suffixes[] =
     ";\n",
     "  ;  ",
     "-- comment this, comment that",
-    // "# comment this, comment that" /* qc_sqlite does not handle this */
+    // "# comment this, comment that" /* pp_sqlite does not handle this */
 };
 
 const int N_SUFFIXES = sizeof(suffixes) / sizeof(suffixes[0]);
@@ -450,7 +450,7 @@ int main(int argc, char* argv[])
 
         if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
-            mxs::set_libdir("../../../parser_plugin/qc_sqlite");
+            mxs::set_libdir("../../../parser_plugin/pp_sqlite");
 
             // TODO: The following line is due to MXS-4548, remove when that has been fixed.
             mxs::CachingParser::set_thread_cache_enabled(false);

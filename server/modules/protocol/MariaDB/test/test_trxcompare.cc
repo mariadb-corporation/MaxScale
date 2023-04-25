@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 
         if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
-            mxs::set_libdir("../../../parser_plugin/qc_sqlite");
+            mxs::set_libdir("../../../parser_plugin/pp_sqlite");
 
             mxs::TestParser parser;
 

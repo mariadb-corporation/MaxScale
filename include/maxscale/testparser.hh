@@ -28,7 +28,7 @@ namespace maxscale
 class TestParser : public CachingParser
 {
 public:
-    static constexpr const char* DEFAULT_PLUGIN = "qc_sqlite";
+    static constexpr const char* DEFAULT_PLUGIN = "pp_sqlite";
 
     TestParser(const TestParser&) = delete;
     TestParser& operator=(const TestParser&) = delete;
