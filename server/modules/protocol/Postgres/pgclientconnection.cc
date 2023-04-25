@@ -105,26 +105,33 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
 
     pg::ExpectCmdByte expect = m_state == State::INIT ? pg::ExpectCmdByte::NO : pg::ExpectCmdByte::YES;
 
-    if (auto [ok, gwbuf] = pg::read_packet(m_dcb, expect); ok && gwbuf)
+    if (auto [ok, gwbuf] = pg::read_packet(m_dcb, expect); ok)
     {
-        switch (m_state)
+        if (gwbuf)
         {
-        case State::INIT:
-            m_state = state_init(gwbuf);
-            break;
+            switch (m_state)
+            {
+            case State::INIT:
+                m_state = state_init(gwbuf);
+                break;
 
-        case State::AUTH:
-            m_state = state_auth(std::move(gwbuf));
-            break;
+            case State::AUTH:
+                m_state = state_auth(std::move(gwbuf));
+                break;
 
-        case State::ROUTE:
-            m_state = state_route(std::move(gwbuf));
-            break;
+            case State::ROUTE:
+                m_state = state_route(std::move(gwbuf));
+                break;
 
-        case State::ERROR:
-            // pass, handled below
-            break;
+            case State::ERROR:
+                // pass, handled below
+                break;
+            }
         }
+    }
+    else
+    {
+        m_state = State::ERROR;
     }
 
     // TODO: This is not efficient, especially if the client normally sends
