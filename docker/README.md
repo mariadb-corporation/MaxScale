@@ -16,7 +16,7 @@ You must mount your configuration file into `/etc/maxscale.cnf.d/`. To do
 this, pass it as an argument to the `-v` option:
 
 ```
-docker run -v $PWD/my-maxscale.cnf:/etc/maxscale.cnf.d/my-maxscale.cnf maxscale:latest
+docker run -v $PWD/my-maxscale.cnf:/etc/maxscale.cnf.d/my-maxscale.cnf mariadb/maxscale:latest
 ```
 
 By default, MaxScale runs with the `-l stdout` arguments. To explicitly
