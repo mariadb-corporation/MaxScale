@@ -1,7 +1,0 @@
-{
-    global:
-        mxs_get_module_object;
-        mxs_get_pp_postgres_plugin;
-    local:
-        *;
-};
