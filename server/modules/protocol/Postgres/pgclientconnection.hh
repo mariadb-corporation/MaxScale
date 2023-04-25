@@ -96,6 +96,9 @@ private:
     mxs::Component* m_down;
     PgProtocolData* m_protocol_data {nullptr};
 
+    // The "secret" key used when the connection is killed
+    uint32_t m_secret {0};
+
     std::unique_ptr<PgClientAuthenticator> m_authenticator;
     const UserAuthSettings                 m_user_auth_settings;
 

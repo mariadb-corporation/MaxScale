@@ -44,6 +44,23 @@ void add_packet_auth_request(GWBUF& gwbuf, pg::Auth athentication_method)
     gwbuf.append(begin(data), data.size());
 }
 
+void add_packet_keydata(GWBUF& gwbuf, uint32_t id, uint32_t key)
+{
+    const size_t auth_len = 1   // Byte1('K')
+        + 4                     // Int32(12) len
+        + 4                     // Int32 PID (session ID in maxscale)
+        + 4;                    // Int32 The "secret" key
+    std::array<uint8_t, auth_len> data;
+
+    uint8_t* ptr = begin(data);
+    *ptr++ = pg::BACKEND_KEY_DATA;
+    ptr += pg::set_uint32(ptr, 12);
+    ptr += pg::set_uint32(ptr, id);
+    ptr += pg::set_uint32(ptr, key);
+
+    gwbuf.append(begin(data), data.size());
+}
+
 void add_packet_ready_for_query(GWBUF& gwbuf)
 {
     const size_t rdy_len = 1 + 4 + 1;       // Byte1('R'), Int32(8) len, Int8 trx status
@@ -295,6 +312,15 @@ bool PgClientConnection::start_session()
     {
         GWBUF rdy;
         add_packet_auth_request(rdy, pg::AUTH_OK);
+
+        // The random "secret" is used when the connection is killed and it must match the value we generate
+        // here. This is because the Postgres protocol allows killing connections without a need to
+        // authenticate the user who's doing the killing. As the secret is either sent in plaintext, in which
+        // case it's not really a secret, or over TLS, it doesn't need to be from a cryptographically secure
+        // pseudorandom number generate.
+        m_session.worker()->gen_random_bytes(reinterpret_cast<uint8_t*>(&m_secret), sizeof(m_secret));
+        add_packet_keydata(rdy, m_session.id(), m_secret);
+
         add_packet_ready_for_query(rdy);
         write(std::move(rdy));
         rval = true;
