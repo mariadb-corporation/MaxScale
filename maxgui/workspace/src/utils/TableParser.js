@@ -90,9 +90,9 @@ export default class TableParser {
         const {
             category,
             name,
-            col_names,
+            index_col_names,
             match_option,
-            referenced_col_names,
+            referenced_index_col_names,
             referenced_table_name,
             on_delete,
             on_update,
@@ -100,9 +100,9 @@ export default class TableParser {
         return {
             category,
             name,
-            col_names,
+            index_col_names,
             match_option,
-            referenced_col_names,
+            referenced_index_col_names,
             referenced_table_name,
             on_delete,
             on_update,

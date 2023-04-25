@@ -24,40 +24,19 @@ const NOT_SINGLE_QUOTE = "[^']*"
 const NOT_DBL_QUOTE = '[^"]*'
 const NOT_BACKTICK = '[^`]*'
 
-/**
- *
- * @param {Boolean} isMultiple - If true, match `col_a`, otherwise match `col_a`
- * @returns {String}
- */
-function getEscapeStrReg(isMultiple) {
-    return [
-        createGroup({
-            token: `'${NOT_SINGLE_QUOTE}(?:''${NOT_SINGLE_QUOTE})*'` + (isMultiple ? ',\\s*' : ''),
-            ignore: true,
-        }),
-        createGroup({
-            token: `"${NOT_DBL_QUOTE}(?:""${NOT_DBL_QUOTE})*"` + (isMultiple ? ',\\s*' : ''),
-            ignore: true,
-        }),
-        createGroup({
-            token: `\`${NOT_BACKTICK}(?:\`\`${NOT_BACKTICK})*\`` + (isMultiple ? ',\\s*' : ''),
-            ignore: true,
-        }),
-    ].join('|')
-}
+const INDEX_LENGTH = createGroup({
+    token: '\\(\\d+\\)',
+    ignore: true,
+    optional: true,
+})
+const INDEX_ORDER = createGroup({
+    token: 'ASC|DESC',
+    ignore: true,
+    optional: true,
+})
+// [(length)] [ASC | DESC]
+const INDEX_LENGTH_ORDER_REG = [INDEX_LENGTH, INDEX_ORDER].join(WHITESPACE_OPT)
 
-/**
- * @param {String} [param.name] - named capturing group for the string.
- * @param {Boolean} param.isMultiple - captures escaped string separated by a comma. e.g. `col_a`,`col_b`
- * @returns {String} regex for capturing: `t1` or `my test``s table`, ...
- */
-function createEscapeStrGroup({ name, isMultiple }) {
-    let escapedStrGroup = `(?:${getEscapeStrReg(isMultiple)})`
-    if (isMultiple) escapedStrGroup += '*' + `(?:${getEscapeStrReg()})`
-    let res = escapedStrGroup
-    if (name) res = `(?<${name}>${escapedStrGroup})`
-    return res
-}
 /**
  * @param {String} param.token - regex token to be grouped
  * @param {String} [param.name] - named group, ignore param must be false
@@ -73,6 +52,43 @@ function createGroup({ token, name = '', optional = false, ignore = false }) {
     if (optional) res += '?'
     return res
 }
+
+/**
+ *
+ * @param {String} append - append additional reg
+ * @returns {String}
+ */
+function getEscapeStrReg(append = '') {
+    return [
+        createGroup({
+            token: `'${NOT_SINGLE_QUOTE}(?:''${NOT_SINGLE_QUOTE})*'` + append,
+            ignore: true,
+        }),
+        createGroup({
+            token: `"${NOT_DBL_QUOTE}(?:""${NOT_DBL_QUOTE})*"` + append,
+            ignore: true,
+        }),
+        createGroup({
+            token: `\`${NOT_BACKTICK}(?:\`\`${NOT_BACKTICK})*\`` + append,
+            ignore: true,
+        }),
+    ].join('|')
+}
+
+/**
+ * @param {String} name - named capturing group for the string.
+ * @returns {String} regex for capturing: `t1` or `my test``s table`, ...
+ */
+function createEscapeStrGroup(name) {
+    return createGroup({
+        token: createGroup({
+            token: getEscapeStrReg(),
+            ignore: true,
+        }),
+        name,
+    })
+}
+
 /**
  *
  * @param {String} action - delete or update
@@ -92,12 +108,36 @@ function createOnActionToken(action) {
     })
 }
 
+/**
+ * @param {String} name - name of the group
+ * @returns {String} reg for capturing (index_col_name,...)
+ */
+function createIdxColNamesReg(name) {
+    return (
+        PAREN_OPEN +
+        createGroup({
+            token:
+                createGroup({
+                    token: getEscapeStrReg(INDEX_LENGTH_ORDER_REG + ',\\s*'),
+                    ignore: true,
+                }) +
+                '*' +
+                createGroup({
+                    token: getEscapeStrReg(INDEX_LENGTH_ORDER_REG),
+                    ignore: true,
+                }),
+            name,
+        }) +
+        PAREN_CLOSE
+    )
+}
+
 function wrapExp(reg, flag) {
     return new RegExp('^' + reg + createGroup({ token: `${WHITESPACE_REQ}|$`, ignore: true }), flag)
 }
 
 // ========== Column definition groups ==========
-const COL_NAME = createEscapeStrGroup({ name: 'col_name' })
+const COL_NAME = createEscapeStrGroup('col_name')
 const DATA_TYPE = createGroup({ token: WORD_REQ, name: 'data_type' })
 const DATA_TYPE_SIZE = createGroup({
     token: PAREN_OPEN + createGroup({ token: '.*?', name: 'data_type_size' }) + PAREN_CLOSE,
@@ -150,7 +190,7 @@ const DEFAULT_FN =
     }) // e.g. current_timestamp()
 
 const DEFAULT_VALUE_PATTERNS = [
-    createEscapeStrGroup({ name: 'default_exp_name_escape' }),
+    createEscapeStrGroup('default_exp_name_escape'),
     DEFAULT_NUM,
     DEFAULT_EXP,
     DEFAULT_FN,
@@ -165,13 +205,13 @@ const DEFAULT = createGroup({
 })
 
 const COMMENT = createGroup({
-    token: tokens.comment + WHITESPACE_REQ + createEscapeStrGroup({ name: 'comment' }),
+    token: tokens.comment + WHITESPACE_REQ + createEscapeStrGroup('comment'),
     optional: true,
     ignore: true,
 })
 
 // ========== Index definition groups ==========
-const INDEX_NAME = createEscapeStrGroup({ name: 'name' })
+const INDEX_NAME = createEscapeStrGroup('name')
 // optional to handle also plain index
 const NON_FKS_CATEGORY = createGroup({
     token: createGroup({
@@ -181,23 +221,11 @@ const NON_FKS_CATEGORY = createGroup({
     optional: true,
 })
 const FK_CATEGORY = createGroup({ token: tokens.foreign, name: 'category' })
-const INDEX_COL_NAMES =
-    PAREN_OPEN +
-    createGroup({
-        token: createEscapeStrGroup({ isMultiple: true }),
-        name: 'col_names',
-    }) +
-    PAREN_CLOSE
+const INDEX_COL_NAMES = createIdxColNamesReg('index_col_names')
 
 // === Reference definitions groups ===
-const REFERENCED_TBL_NAME = createEscapeStrGroup({ name: 'referenced_table_name' })
-const REFERENCED_COL_NAMES =
-    PAREN_OPEN +
-    createGroup({
-        token: createEscapeStrGroup({ isMultiple: true }),
-        name: 'referenced_col_names',
-    }) +
-    PAREN_CLOSE
+const REFERENCED_TBL_NAME = createEscapeStrGroup('referenced_table_name')
+const REFERENCED_COL_NAMES = createIdxColNamesReg('referenced_index_col_names')
 
 const MATCH_OPTION = createGroup({
     token:
@@ -216,7 +244,7 @@ export default {
     createTable: wrapExp(
         [
             tokens.createTable,
-            createEscapeStrGroup({ name: 'table_name' }),
+            createEscapeStrGroup('table_name'),
             [
                 PAREN_OPEN,
                 createGroup({ token: ANY_CHARS_REQ, name: 'table_definitions' }),
