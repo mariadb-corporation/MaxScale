@@ -98,6 +98,16 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
  */
 int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path);
 
+/**
+ * Connects a TCP socket to the given host and port
+ *
+ * @param host The host to connect to
+ * @param port The port to connect to
+ *
+ * @return The connected file descriptor or -1 on error
+ */
+int connect_socket(const char* host, int port);
+
 int   setnonblocking(int fd);
 int   setblocking(int fd);
 char* gw_strend(const char* s);

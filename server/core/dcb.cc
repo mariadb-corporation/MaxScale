@@ -109,48 +109,6 @@ void set_SSL_mode_bits(SSL* ssl)
     auto bits = SSL_set_mode(ssl, SSL_MODE_BITS);
     mxb_assert((bits & SSL_MODE_BITS) == SSL_MODE_BITS);
 }
-
-/**
- * Create a low level connection to a server.
- *
- * @param host The host to connect to
- * @param port The port to connect to
- *
- * @return File descriptor. Negative on failure.
- */
-int connect_socket(const char* host, int port)
-{
-    struct sockaddr_storage addr = {};
-    int so;
-    size_t sz;
-
-    if (host[0] == '/')
-    {
-        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&addr, host);
-        sz = sizeof(sockaddr_un);
-    }
-    else
-    {
-        so = open_network_socket(MXS_SOCKET_NETWORK, &addr, host, port);
-        sz = sizeof(sockaddr_storage);
-    }
-
-    if (so != -1)
-    {
-        if (::connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
-        {
-            MXB_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
-                      host, port, errno, mxb_strerror(errno));
-            ::close(so);
-            so = -1;
-        }
-    }
-    else
-    {
-        MXB_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
-    }
-    return so;
-}
 }
 
 static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal);
