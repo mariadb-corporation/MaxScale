@@ -52,7 +52,7 @@ std::unique_ptr<PgParser> create_loaded_parser(const char* zPlugin)
 
     if (pPlugin)
     {
-        if (pPlugin->setup(config.qc_sql_mode, config.qc_args.c_str()))
+        if (pPlugin->setup(config.qc_sql_mode, ""))
         {
             auto& helper = PgParser::Helper::get();
 

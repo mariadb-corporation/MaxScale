@@ -177,8 +177,6 @@ runtime and can only be defined in a configuration file:
 * `module_configdir`
 * `persistdir`
 * `piddir`
-* `query_classifier_args`
-* `query_classifier`
 * `query_retries`
 * `sharedir`
 * `sql_mode`
@@ -941,10 +939,7 @@ language=/var/lib/maxscale/
 
 ### `query_classifier`
 
-The module used by MariaDB MaxScale for query classification. The information
-provided by this module is used by MariaDB MaxScale when deciding where a
-particular statement should be sent. The default query classifier is
-_qc_sqlite_.
+Deprecated since MariaDB MaxScale 23.08.
 
 ### `query_classifier_cache_size`
 
@@ -993,28 +988,7 @@ QC cache evictions|How many times a cache entry has had to be removed from the c
 
 ### `query_classifier_args`
 
-Arguments for the query classifier. What arguments are accepted depends on the
-particular query classifier being used. The default query classifier -
-_qc_sqlite_ - supports the following arguments:
-
-#### `log_unrecognized_statements`
-
-An integer argument taking the following values:
-   * 0: Nothing is logged. This is the default.
-   * 1: Statements that cannot be parsed completely are logged. They may have been
-partially parsed, or classified based on keyword matching.
-   * 2: Statements that cannot even be partially parsed are logged. They may have
-been classified based on keyword matching.
-   * 3: Statements that cannot even be classified by keyword matching are logged.
-
-```
-query_classifier=qc_sqlite
-query_classifier_args=log_unrecognized_statements=1
-```
-
-This will log all statements that cannot be parsed completely. This may be
-useful if you suspect that MariaDB MaxScale routes statements to the wrong
-server (e.g. to a replica instead of to a primary).
+Deprecated since MariaDB MaxScale 23.08.
 
 ### `substitute_variables`
 
