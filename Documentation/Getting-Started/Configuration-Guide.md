@@ -2872,7 +2872,7 @@ The authenticator module to use. Each protocol module defines a default
 authentication module, which is used if the setting is left undefined.
 *MariaDBClient*-protocol supports multiple authenticators and they can be used
 simultaneously by giving a comma-separated list e.g.
-`authenticator=PAMAuth,mysqlauth,gssapiauth`
+`authenticator=PAMAuth,mariadbauth,gssapiauth`
 
 ### `authenticator_options`
 
