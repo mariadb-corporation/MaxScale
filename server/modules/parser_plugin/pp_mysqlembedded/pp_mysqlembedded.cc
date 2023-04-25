@@ -97,10 +97,10 @@ using mxs::ParserPlugin;
 namespace
 {
 
-enum qc_result_t
+enum pp_result_t
 {
-    QC_RESULT_OK,
-    QC_RESULT_ERROR
+    PP_RESULT_OK,
+    PP_RESULT_ERROR
 };
 
 }
@@ -118,8 +118,8 @@ my_bool _db_my_assert(const char *file, int line, const char *msg)
 #if defined (CTE_SUPPORTED)
 // We need to be able to access private data of With_element that has no
 // public access methods. So, we use this very questionable method of
-// making the private parts public. Ok, as qc_myselembedded is only
-// used for verifying the output of qc_sqlite.
+// making the private parts public. Ok, as pp_myselembedded is only
+// used for verifying the output of pp_sqlite.
 #define private public
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
@@ -327,7 +327,7 @@ static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
 static bool        ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query);
 static bool        parse_query(const Parser::Helper& helper, const GWBUF* querybuf);
 static bool        query_is_parsed(const GWBUF* buf);
-int32_t            qc_mysql_get_field_info(const Parser::Helper& helper,
+int32_t            pp_mysql_get_field_info(const Parser::Helper& helper,
                                            const GWBUF* buf,
                                            const Parser::FieldInfo** infos,
                                            uint32_t* n_infos);
@@ -391,8 +391,8 @@ inline const char* qcme_string_get(const LEX_CSTRING& s)
     return s.str && s.length ? s.str : (s.str != nullptr && *s.str == 0 ? s.str : nullptr);
 }
 
-#define QC_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICIT_COMMIT_BEGIN
-#define QC_CF_IMPLICIT_COMMIT_END   CF_IMPLICIT_COMMIT_END
+#define PP_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICIT_COMMIT_BEGIN
+#define PP_CF_IMPLICIT_COMMIT_END   CF_IMPLICIT_COMMIT_END
 
 inline SELECT_LEX* qcme_get_first_select_lex(LEX* lex)
 {
@@ -443,8 +443,8 @@ inline const char* qcme_string_get(const char* s)
     return s;
 }
 
-#define QC_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICT_COMMIT_BEGIN
-#define QC_CF_IMPLICIT_COMMIT_END   CF_IMPLICIT_COMMIT_END
+#define PP_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICT_COMMIT_BEGIN
+#define PP_CF_IMPLICIT_COMMIT_END   CF_IMPLICIT_COMMIT_END
 
 inline SELECT_LEX* qcme_get_first_select_lex(LEX* lex)
 {
@@ -575,12 +575,12 @@ bool ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query)
         // initialized.
         //
         // However, for whatever reason, the offset of that variable is
-        // different when accessed from within libmysqld and qc_mysqlembedded,
+        // different when accessed from within libmysqld and pp_mysqlembedded,
         // so we will not modify the right variable even if it appears we do.
         //
         // So, for the time being we modify global_system_variables.sql_mode and
-        // serialize the parsing. That's ok, since qc_mysqlembedded is only
-        // used for verifying the behaviour of qc_sqlite.
+        // serialize the parsing. That's ok, since pp_mysqlembedded is only
+        // used for verifying the behaviour of pp_sqlite.
 
         MXB_AT_DEBUG(int rv);
 
@@ -610,7 +610,7 @@ bool ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query)
     return parsed;
 }
 
-int32_t qc_mysql_parse(const Parser::Helper& helper,
+int32_t pp_mysql_parse(const Parser::Helper& helper,
                        const GWBUF* querybuf, uint32_t collect, Parser::Result* result)
 {
     bool parsed = ensure_query_is_parsed(helper, querybuf);
@@ -632,13 +632,13 @@ int32_t qc_mysql_parse(const Parser::Helper& helper,
         *result = Parser::Result::INVALID;
     }
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_get_type_mask(const Parser::Helper& helper,
+int32_t pp_mysql_get_type_mask(const Parser::Helper& helper,
                                const GWBUF* querybuf, uint32_t* type_mask)
 {
-    int32_t rv = QC_RESULT_OK;
+    int32_t rv = PP_RESULT_OK;
 
     *type_mask = mxs::sql::TYPE_UNKNOWN;
     MYSQL* mysql;
@@ -673,9 +673,9 @@ int32_t qc_mysql_get_type_mask(const Parser::Helper& helper,
                 const Parser::FieldInfo* field_infos;
                 uint32_t n_field_infos;
 
-                rv = qc_mysql_get_field_info(helper, querybuf, &field_infos, &n_field_infos);
+                rv = pp_mysql_get_field_info(helper, querybuf, &field_infos, &n_field_infos);
 
-                if (rv == QC_RESULT_OK)
+                if (rv == PP_RESULT_OK)
                 {
                     *type_mask |= pi->type_mask;
                 }
@@ -732,12 +732,12 @@ static bool parse_query(const Parser::Helper& helper, const GWBUF* querybuf)
     /** Add complete parsing info struct to the query buffer */
     const_cast<GWBUF*>(querybuf)->set_protocol_info(std::move(pi));
 
-    // By calling qc_mysql_get_field_info() now, the result will be
+    // By calling pp_mysql_get_field_info() now, the result will be
     // Parser::Result::PARTIALLY_PARSED, if some field is not found in the
     // canonical string.
     const Parser::FieldInfo* infos;
     uint32_t n_infos;
-    qc_mysql_get_field_info(helper, querybuf, &infos, &n_infos);
+    pp_mysql_get_field_info(helper, querybuf, &infos, &n_infos);
 
     return true;
 }
@@ -1136,11 +1136,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     {
         if (mxb_log_should_log(LOG_INFO))
         {
-            if (sql_command_flags[lex->sql_command] & QC_CF_IMPLICIT_COMMIT_BEGIN)
+            if (sql_command_flags[lex->sql_command] & PP_CF_IMPLICIT_COMMIT_BEGIN)
             {
                 MXB_INFO("Implicit COMMIT before executing the next command.");
             }
-            else if (sql_command_flags[lex->sql_command] & QC_CF_IMPLICIT_COMMIT_END)
+            else if (sql_command_flags[lex->sql_command] & PP_CF_IMPLICIT_COMMIT_END)
             {
                 MXB_INFO("Implicit COMMIT after executing the next command.");
             }
@@ -1795,7 +1795,7 @@ return_rc:
 
 #if defined (NOT_USED)
 
-char* qc_get_stmtname(const GWBUF* buf)
+char* pp_get_stmtname(const GWBUF* buf)
 {
     MYSQL* mysql;
 
@@ -1935,7 +1935,7 @@ static bool is_show_command(int sql_command)
     return rv;
 }
 
-int32_t qc_mysql_get_table_names(const Parser::Helper& helper,
+int32_t pp_mysql_get_table_names(const Parser::Helper& helper,
                                  const GWBUF* querybuf, vector<Parser::TableName>* tables)
 {
     LEX* lex;
@@ -1943,7 +1943,7 @@ int32_t qc_mysql_get_table_names(const Parser::Helper& helper,
 
     if (!ensure_query_is_parsed(helper, querybuf))
     {
-        return QC_RESULT_OK;
+        return PP_RESULT_OK;
     }
 
     auto* pi = get_pinfo(querybuf);
@@ -1952,12 +1952,12 @@ int32_t qc_mysql_get_table_names(const Parser::Helper& helper,
     {
         if ((lex = get_lex(querybuf)) == NULL)
         {
-            return QC_RESULT_OK;
+            return PP_RESULT_OK;
         }
 
         if (lex->describe || (is_show_command(lex->sql_command) && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
         {
-            return QC_RESULT_OK;
+            return PP_RESULT_OK;
         }
 
         lex->current_select = lex->all_selects_list;
@@ -2004,22 +2004,22 @@ int32_t qc_mysql_get_table_names(const Parser::Helper& helper,
 
     tables->assign(pi->table_names.begin(), pi->table_names.end());
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_get_created_table_name(const Parser::Helper& helper,
+int32_t pp_mysql_get_created_table_name(const Parser::Helper& helper,
                                         const GWBUF* querybuf, string_view* table_name)
 {
     *table_name = string_view {};
 
     if (querybuf == NULL)
     {
-        return QC_RESULT_OK;
+        return PP_RESULT_OK;
     }
 
     if (!ensure_query_is_parsed(helper, querybuf))
     {
-        return QC_RESULT_ERROR;
+        return PP_RESULT_ERROR;
     }
 
     LEX* lex = get_lex(querybuf);
@@ -2041,7 +2041,7 @@ int32_t qc_mysql_get_created_table_name(const Parser::Helper& helper,
         *table_name = pi->created_table_name;
     }
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
 /**
@@ -2063,12 +2063,12 @@ static std::unique_ptr<parsing_info_t> parsing_info_init(const Parser::Helper& h
  *
  * @return void
  */
-int32_t qc_mysql_get_database_names(const Parser::Helper& helper,
+int32_t pp_mysql_get_database_names(const Parser::Helper& helper,
                                     const GWBUF* querybuf, vector<string_view>* pNames)
 {
     if (!querybuf || !ensure_query_is_parsed(helper, querybuf))
     {
-        return QC_RESULT_OK;
+        return PP_RESULT_OK;
     }
 
     auto* pi = get_pinfo(querybuf);
@@ -2079,14 +2079,14 @@ int32_t qc_mysql_get_database_names(const Parser::Helper& helper,
 
         if (!lex)
         {
-            return QC_RESULT_OK;
+            return PP_RESULT_OK;
         }
 
         if (lex->describe || (is_show_command(lex->sql_command)
                               && !(lex->sql_command == SQLCOM_SHOW_TABLES)
                               && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
         {
-            return QC_RESULT_OK;
+            return PP_RESULT_OK;
         }
 
         if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
@@ -2141,16 +2141,16 @@ int32_t qc_mysql_get_database_names(const Parser::Helper& helper,
     pNames->clear();
     copy(pi->database_names.begin(), pi->database_names.end(), back_inserter(*pNames));
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_get_kill_info(const GWBUF* querybuf, Parser::KillInfo* pKill)
+int32_t pp_mysql_get_kill_info(const GWBUF* querybuf, Parser::KillInfo* pKill)
 {
     // TODO: Implement this
-    return QC_RESULT_ERROR;
+    return PP_RESULT_ERROR;
 }
 
-int32_t qc_mysql_get_operation(const Parser::Helper& helper,
+int32_t pp_mysql_get_operation(const Parser::Helper& helper,
                                const GWBUF* querybuf, int32_t* operation)
 {
     *operation = mxs::sql::OP_UNDEFINED;
@@ -2324,10 +2324,10 @@ int32_t qc_mysql_get_operation(const Parser::Helper& helper,
         }
     }
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_get_prepare_name(const Parser::Helper& helper,
+int32_t pp_mysql_get_prepare_name(const Parser::Helper& helper,
                                   const GWBUF* stmt, std::string_view* namep)
 {
     *namep = std::string_view {};
@@ -2359,10 +2359,10 @@ int32_t qc_mysql_get_prepare_name(const Parser::Helper& helper,
         }
     }
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_get_preparable_stmt(const Parser::Helper& helper,
+int32_t pp_mysql_get_preparable_stmt(const Parser::Helper& helper,
                                      const GWBUF* stmt, GWBUF** preparable_stmt)
 {
     if (stmt)
@@ -2474,7 +2474,7 @@ int32_t qc_mysql_get_preparable_stmt(const Parser::Helper& helper,
         }
     }
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
 static bool should_exclude(const char* name, List<Item>* excludep)
@@ -3222,7 +3222,7 @@ static void update_field_infos(parsing_info_t* pi,
             if (dot)
             {
                 // If there is a dot in the name we assume we have something like
-                // db.fn(). We remove the scope, can't return that in qc_sqlite
+                // db.fn(). We remove the scope, can't return that in pp_sqlite
                 ++dot;
                 memmove(func_name, dot, strlen(func_name) - (dot - func_name) + 1);
                 remove_surrounding_back_ticks(func_name);
@@ -3247,7 +3247,7 @@ static void update_field_infos(parsing_info_t* pi,
                 {
                     // Embedded library silently changes "mod" into "%". We need to check
                     // what it originally was, so that the result agrees with that of
-                    // qc_sqlite.
+                    // pp_sqlite.
                     const char* s;
                     size_t l;
                     get_string_and_length(func_item->name, &s, &l);
@@ -3258,7 +3258,7 @@ static void update_field_infos(parsing_info_t* pi,
                 }
                 else if (strcmp(func_name, "<=>") == 0)
                 {
-                    // qc_sqlite does not distinguish between "<=>" and "=", so we
+                    // pp_sqlite does not distinguish between "<=>" and "=", so we
                     // change "<=>" into "=".
                     strcpy(func_name, "=");
                 }
@@ -3266,7 +3266,7 @@ static void update_field_infos(parsing_info_t* pi,
                 {
                     // Embedded library silently changes "substring" into "substr". We need
                     // to check what it originally was, so that the result agrees with
-                    // that of qc_sqlite. We reserved space for this above.
+                    // that of pp_sqlite. We reserved space for this above.
                     const char* s;
                     size_t l;
                     get_string_and_length(func_item->name, &s, &l);
@@ -3583,7 +3583,7 @@ void add_value_func_item(parsing_info_t* pi, Item_func* func_item)
 
 }
 
-int32_t qc_mysql_get_field_info(const Parser::Helper& helper,
+int32_t pp_mysql_get_field_info(const Parser::Helper& helper,
                                 const GWBUF* buf, const Parser::FieldInfo** infos, uint32_t* n_infos)
 {
     *infos = NULL;
@@ -3591,12 +3591,12 @@ int32_t qc_mysql_get_field_info(const Parser::Helper& helper,
 
     if (!buf)
     {
-        return QC_RESULT_OK;
+        return PP_RESULT_OK;
     }
 
     if (!ensure_query_is_parsed(helper, buf))
     {
-        return QC_RESULT_ERROR;
+        return PP_RESULT_ERROR;
     }
 
     parsing_info_t* pi = get_pinfo(buf);
@@ -3609,14 +3609,14 @@ int32_t qc_mysql_get_field_info(const Parser::Helper& helper,
 
         if (!lex)
         {
-            return QC_RESULT_ERROR;
+            return PP_RESULT_ERROR;
         }
 
         if (lex->describe || is_show_command(lex->sql_command))
         {
             *infos = NULL;
             *n_infos = 0;
-            return QC_RESULT_OK;
+            return PP_RESULT_OK;
         }
 
         SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
@@ -3809,10 +3809,10 @@ int32_t qc_mysql_get_field_info(const Parser::Helper& helper,
     *infos = pi->field_infos;
     *n_infos = pi->field_infos_len;
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_get_function_info(const Parser::Helper& helper,
+int32_t pp_mysql_get_function_info(const Parser::Helper& helper,
                                    const GWBUF* buf,
                                    const Parser::FunctionInfo** function_infos,
                                    uint32_t* n_function_infos)
@@ -3820,7 +3820,7 @@ int32_t qc_mysql_get_function_info(const Parser::Helper& helper,
     *function_infos = NULL;
     *n_function_infos = 0;
 
-    int32_t rv = QC_RESULT_OK;
+    int32_t rv = PP_RESULT_OK;
 
     if (buf)
     {
@@ -3828,9 +3828,9 @@ int32_t qc_mysql_get_function_info(const Parser::Helper& helper,
         uint32_t n_field_infos;
 
         // We ensure the information has been collected by querying the fields first.
-        rv = qc_mysql_get_field_info(helper, buf, &field_infos, &n_field_infos);
+        rv = pp_mysql_get_field_info(helper, buf, &field_infos, &n_field_infos);
 
-        if (rv == QC_RESULT_OK)
+        if (rv == PP_RESULT_OK)
         {
             parsing_info_t* pi = get_pinfo(buf);
             mxb_assert(pi);
@@ -3843,12 +3843,12 @@ int32_t qc_mysql_get_function_info(const Parser::Helper& helper,
     return rv;
 }
 
-void qc_mysql_set_server_version(uint64_t version)
+void pp_mysql_set_server_version(uint64_t version)
 {
     this_thread.version = version;
 }
 
-void qc_mysql_get_server_version(uint64_t* version)
+void pp_mysql_get_server_version(uint64_t* version)
 {
     *version = this_thread.version;
 }
@@ -3902,7 +3902,7 @@ void configure_options(const char* datadir, const char* langdir)
     server_options[IDX_DATADIR] = datadir_arg;
 
     rv = sprintf(language_arg, "--language=%s", langdir);
-    mxb_assert(rv < OPTIONS_LANGUAGE_SIZE);     // Ensured by qc_process_init().
+    mxb_assert(rv < OPTIONS_LANGUAGE_SIZE);     // Ensured by pp_process_init().
     server_options[IDX_LANGUAGE] = language_arg;
 
     // To prevent warning of unused variable when built in release mode,
@@ -3911,7 +3911,7 @@ void configure_options(const char* datadir, const char* langdir)
 }
 }
 
-int32_t qc_mysql_setup(Parser::SqlMode sql_mode)
+int32_t pp_mysql_setup(Parser::SqlMode sql_mode)
 {
     this_unit.sql_mode = sql_mode;
 
@@ -3920,10 +3920,10 @@ int32_t qc_mysql_setup(Parser::SqlMode sql_mode)
         this_unit.function_name_mappings = function_name_mappings_oracle;
     }
 
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_process_init(void)
+int32_t pp_mysql_process_init(void)
 {
     bool inited = false;
 
@@ -3959,15 +3959,15 @@ int32_t qc_mysql_process_init(void)
         }
     }
 
-    return inited ? QC_RESULT_OK : QC_RESULT_ERROR;
+    return inited ? PP_RESULT_OK : PP_RESULT_ERROR;
 }
 
-void qc_mysql_process_end(void)
+void pp_mysql_process_end(void)
 {
     mysql_library_end();
 }
 
-int32_t qc_mysql_thread_init(void)
+int32_t pp_mysql_thread_init(void)
 {
     this_thread.sql_mode = this_unit.sql_mode;
     mxb_assert(this_unit.function_name_mappings);
@@ -3980,23 +3980,23 @@ int32_t qc_mysql_thread_init(void)
         MXB_ERROR("mysql_thread_init() failed.");
     }
 
-    return inited ? QC_RESULT_OK : QC_RESULT_ERROR;
+    return inited ? PP_RESULT_OK : PP_RESULT_ERROR;
 }
 
-void qc_mysql_thread_end(void)
+void pp_mysql_thread_end(void)
 {
     mysql_thread_end();
 }
 
-int32_t qc_mysql_get_sql_mode(Parser::SqlMode* sql_mode)
+int32_t pp_mysql_get_sql_mode(Parser::SqlMode* sql_mode)
 {
     *sql_mode = this_thread.sql_mode;
-    return QC_RESULT_OK;
+    return PP_RESULT_OK;
 }
 
-int32_t qc_mysql_set_sql_mode(Parser::SqlMode sql_mode)
+int32_t pp_mysql_set_sql_mode(Parser::SqlMode sql_mode)
 {
-    int32_t rv = QC_RESULT_OK;
+    int32_t rv = PP_RESULT_OK;
 
     switch (sql_mode)
     {
@@ -4011,20 +4011,20 @@ int32_t qc_mysql_set_sql_mode(Parser::SqlMode sql_mode)
         break;
 
     default:
-        rv = QC_RESULT_ERROR;
+        rv = PP_RESULT_ERROR;
     }
 
     return rv;
 }
 
-uint32_t qc_mysql_get_options()
+uint32_t pp_mysql_get_options()
 {
     return this_thread.options;
 }
 
-int32_t qc_mysql_set_options(uint32_t options)
+int32_t pp_mysql_set_options(uint32_t options)
 {
-    int32_t rv = QC_RESULT_OK;
+    int32_t rv = PP_RESULT_OK;
 
     if ((options & ~Parser::OPTION_MASK) == 0)
     {
@@ -4032,15 +4032,15 @@ int32_t qc_mysql_set_options(uint32_t options)
     }
     else
     {
-        rv = QC_RESULT_ERROR;
+        rv = PP_RESULT_ERROR;
     }
 
     return rv;
 }
 
-int32_t qc_mysql_get_current_stmt(const char** ppStmt, size_t* pLen)
+int32_t pp_mysql_get_current_stmt(const char** ppStmt, size_t* pLen)
 {
-    return QC_RESULT_ERROR;
+    return PP_RESULT_ERROR;
 }
 
 namespace
@@ -4065,7 +4065,7 @@ public:
     {
         Result result = Parser::Result::INVALID;
 
-        qc_mysql_parse(m_helper, &stmt, collect, &result);
+        pp_mysql_parse(m_helper, &stmt, collect, &result);
 
         return result;
     }
@@ -4088,7 +4088,7 @@ public:
     {
         std::string_view name;
 
-        qc_mysql_get_created_table_name(m_helper, &stmt, &name);
+        pp_mysql_get_created_table_name(m_helper, &stmt, &name);
 
         return name;
     }
@@ -4097,7 +4097,7 @@ public:
     {
         Parser::DatabaseNames names;
 
-        qc_mysql_get_database_names(m_helper, &stmt, &names);
+        pp_mysql_get_database_names(m_helper, &stmt, &names);
 
         return names;
     }
@@ -4105,7 +4105,7 @@ public:
     void get_field_info(const GWBUF& stmt, const Parser::FieldInfo** ppInfos, size_t* pnInfos) const override
     {
         uint32_t n = 0;
-        qc_mysql_get_field_info(m_helper, &stmt, ppInfos, &n);
+        pp_mysql_get_field_info(m_helper, &stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
@@ -4114,7 +4114,7 @@ public:
                            size_t* pnInfos) const override
     {
         uint32_t n = 0;
-        qc_mysql_get_function_info(m_helper, &stmt, ppInfos, &n);
+        pp_mysql_get_function_info(m_helper, &stmt, ppInfos, &n);
         *pnInfos = n;
     }
 
@@ -4122,7 +4122,7 @@ public:
     {
         Parser::KillInfo kill;
 
-        qc_mysql_get_kill_info(&stmt, &kill);
+        pp_mysql_get_kill_info(&stmt, &kill);
 
         return kill;
     }
@@ -4131,21 +4131,21 @@ public:
     {
         int32_t op = 0;
 
-        qc_mysql_get_operation(m_helper, &stmt, &op);
+        pp_mysql_get_operation(m_helper, &stmt, &op);
 
         return static_cast<mxs::sql::OpCode>(op);
     }
 
     uint32_t get_options() const override
     {
-        return qc_mysql_get_options();
+        return pp_mysql_get_options();
     }
 
     GWBUF* get_preparable_stmt(const GWBUF& stmt) const override
     {
         GWBUF* pPreparable_stmt = nullptr;
 
-        qc_mysql_get_preparable_stmt(m_helper, &stmt, &pPreparable_stmt);
+        pp_mysql_get_preparable_stmt(m_helper, &stmt, &pPreparable_stmt);
 
         return pPreparable_stmt;
     }
@@ -4154,7 +4154,7 @@ public:
     {
         std::string_view name;
 
-        qc_mysql_get_prepare_name(m_helper, &stmt, &name);
+        pp_mysql_get_prepare_name(m_helper, &stmt, &name);
 
         return name;
     }
@@ -4162,7 +4162,7 @@ public:
     uint64_t get_server_version() const override
     {
         uint64_t version = 0;
-        qc_mysql_get_server_version(&version);
+        pp_mysql_get_server_version(&version);
 
         return version;
     }
@@ -4171,7 +4171,7 @@ public:
     {
         Parser::SqlMode sql_mode;
 
-        qc_mysql_get_sql_mode(&sql_mode);
+        pp_mysql_get_sql_mode(&sql_mode);
 
         return sql_mode;
     }
@@ -4180,7 +4180,7 @@ public:
     {
         Parser::TableNames names;
 
-        qc_mysql_get_table_names(m_helper, &stmt, &names);
+        pp_mysql_get_table_names(m_helper, &stmt, &names);
 
         return names;
     }
@@ -4195,24 +4195,24 @@ public:
     {
         uint32_t type_mask = 0;
 
-        qc_mysql_get_type_mask(m_helper, &stmt, &type_mask);
+        pp_mysql_get_type_mask(m_helper, &stmt, &type_mask);
 
         return type_mask;
     }
 
     void set_sql_mode(Parser::SqlMode sql_mode) override
     {
-        qc_mysql_set_sql_mode(sql_mode);
+        pp_mysql_set_sql_mode(sql_mode);
     }
 
     bool set_options(uint32_t options) override
     {
-        return qc_mysql_set_options(options) == QC_RESULT_OK;
+        return pp_mysql_set_options(options) == PP_RESULT_OK;
     }
 
     void set_server_version(uint64_t version) override
     {
-        qc_mysql_set_server_version(version);
+        pp_mysql_set_server_version(version);
     }
 
 private:
@@ -4224,17 +4224,17 @@ class MysqlParserPlugin : public ParserPlugin
 public:
     bool setup(Parser::SqlMode sql_mode) override
     {
-        return qc_mysql_setup(sql_mode) == QC_RESULT_OK;
+        return pp_mysql_setup(sql_mode) == PP_RESULT_OK;
     }
 
     bool thread_init(void) const override
     {
-        return qc_mysql_thread_init() == QC_RESULT_OK;
+        return pp_mysql_thread_init() == PP_RESULT_OK;
     }
 
     void thread_end(void) const override
     {
-        qc_mysql_thread_end();
+        pp_mysql_thread_end();
     }
 
     const Parser::Helper& default_helper() const override
@@ -4244,7 +4244,7 @@ public:
 
     bool get_current_stmt(const char** ppStmt, size_t* pLen) const override
     {
-        return qc_mysql_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
+        return pp_mysql_get_current_stmt(ppStmt, pLen) == PP_RESULT_OK;
     }
 
     Parser::StmtResult get_stmt_result(const GWBUF::ProtocolInfo* info) const override
@@ -4286,7 +4286,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        "qc_mysqlembedded",
+        "pp_mysqlembedded",
         mxs::ModuleType::PARSER,
         mxs::ModuleStatus::GA,
         MXS_PARSER_VERSION,
@@ -4294,10 +4294,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mysql_plugin,
-        qc_mysql_process_init,
-        qc_mysql_process_end,
-        qc_mysql_thread_init,
-        qc_mysql_thread_end
+        pp_mysql_process_init,
+        pp_mysql_process_end,
+        pp_mysql_thread_init,
+        pp_mysql_thread_end
     };
 
     return &info;
