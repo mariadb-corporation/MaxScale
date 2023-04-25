@@ -28,7 +28,7 @@ using std::string;
 
 namespace
 {
-const char DEFAULT_QC_NAME[] = "qc_sqlite";
+const char DEFAULT_PP_NAME[] = "pp_sqlite";
 
 struct ThisUnit
 {
@@ -413,11 +413,11 @@ int module_init()
 
     const auto& config = mxs::Config::get();
 
-    mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(DEFAULT_QC_NAME);
+    mxs::ParserPlugin* pPlugin = mxs::ParserPlugin::load(DEFAULT_PP_NAME);
 
     if (pPlugin)
     {
-        MXB_NOTICE("Classifier loaded.");
+        MXB_NOTICE("Parser plugin loaded.");
 
         if (pPlugin->setup(config.qc_sql_mode))
         {
@@ -433,7 +433,7 @@ int module_init()
     }
     else
     {
-        MXB_NOTICE("Could not load classifier.");
+        MXB_NOTICE("Could not load parser plugin.");
     }
 
     if (rv == 0)

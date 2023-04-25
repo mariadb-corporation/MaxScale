@@ -949,7 +949,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         }
         else if (type & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
         {
-            // Currently only qc_sqlite should return these types
+            // Currently only pp_sqlite should return these types
             mxb_assert(use_parser && parser()->get_operation(*packetbuf) == mxs::sql::OP_SET_TRANSACTION);
             uint32_t mode = type & mxs::sql::TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
             m_session_data->next_trx_mode = mode;

@@ -62,7 +62,7 @@ char USAGE[] =
     "-d    don't stop after first failed query\n"
     "-0    sanity check mode, compares the statement twice with the same classifier\n"
     "-1    the first classifier, default 'pp_mysqlembedded'\n"
-    "-2    the second classifier, default 'qc_sqlite'\n"
+    "-2    the second classifier, default 'pp_sqlite'\n"
     "-A    arguments for the first classifier\n"
     "-B    arguments for the second classifier\n"
     "-C    arguments for both classifiers\n"
@@ -849,7 +849,7 @@ bool compare_get_field_info(const Parser& parser1,
     {
         ss << "Ok : ";
 
-        // TODO: Currently qc_sqlite provides context information, while pp_mysqlembedded
+        // TODO: Currently pp_sqlite provides context information, while pp_mysqlembedded
         // TODO: does not. To ensure that the output always contains the maximum amount
         // TODO: of information, we simply generate both output and print the longest.
 
@@ -1103,7 +1103,7 @@ bool compare_get_function_info(const Parser& parser1,
 
         if (!real_error)
         {
-            // We assume that names1 are from the pp_mysqlembedded and names2 from qc_sqlite.
+            // We assume that names1 are from the pp_mysqlembedded and names2 from pp_sqlite.
             for (std::set<std::string>::iterator i = names1.begin(); i != names1.end(); ++i)
             {
                 if (*i == "date_add_interval")
@@ -1399,7 +1399,7 @@ int main(int argc, char* argv[])
     int rc = EXIT_SUCCESS;
 
     const char* zClassifier1 = "pp_mysqlembedded";
-    const char* zClassifier2 = "qc_sqlite";
+    const char* zClassifier2 = "pp_sqlite";
     string classifier1Args;
     string classifier2Args("log_unrecognized_statements=1");
     string statement;

@@ -43,7 +43,7 @@ int main()
 {
     maxbase::MaxBase init(MXB_LOG_TARGET_FS);
 
-    mxs::set_libdir("../qc_sqlite");
+    mxs::set_libdir("../pp_sqlite");
 
     mxs::TestParser parser;
 
@@ -51,7 +51,7 @@ int main()
 
     GWBUF* pStmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
 
-    // In 2.0.1 this crashed due to is_submitted_query() in qc_sqlite.c
+    // In 2.0.1 this crashed due to is_submitted_query() in pp_sqlite.c
     // being of the opinion that the statement was not the one to be
     // classified and hence an alien parse-tree being passed to sqlite3's
     // code generator.
