@@ -582,12 +582,11 @@ void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffe
 const char* session_state_to_string(MXS_SESSION::State);
 
 /**
- * Get the next available unique (assuming no overflow) session id number.
+ * Get the maximum session ID ever created by MaxScale
  *
- * @return An unused session id.
+ * @return The highest ever created session ID
  */
-uint64_t session_get_next_id();
-
+uint64_t session_max_id();
 /**
  * @brief Get a session reference
  *

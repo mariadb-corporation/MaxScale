@@ -76,6 +76,11 @@ struct ThisThread
 };
 
 thread_local ThisThread this_thread;
+
+uint64_t session_get_next_id()
+{
+    return mxb::atomic::add(&this_unit.next_session_id, 1, mxb::atomic::RELAXED);
+}
 }
 
 // static
@@ -381,9 +386,9 @@ void session_put_ref(MXS_SESSION* session)
     }
 }
 
-uint64_t session_get_next_id()
+uint64_t session_max_id()
 {
-    return mxb::atomic::add(&this_unit.next_session_id, 1, mxb::atomic::RELAXED);
+    return mxb::atomic::load(&this_unit.next_session_id, mxb::atomic::RELAXED) - 1;
 }
 
 json_t* Session::as_json_resource(const char* host, bool rdns) const
