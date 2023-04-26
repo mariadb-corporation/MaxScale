@@ -34,6 +34,7 @@ function mockShowingDbListTree() {
 
 describe('sidebar-ctr', () => {
     let wrapper
+
     describe(`Child component's data communication tests`, () => {
         const evtFnMap = {
             'get-node-data': 'fetchNodePrvwData',
@@ -89,7 +90,14 @@ describe('sidebar-ctr', () => {
         })
     })
 
-    describe(`Filter objects tests`, () => {
+    describe(`Button tests`, () => {
+        it(`Should disable reload-schemas button`, () => {
+            wrapper = mountFactory({
+                shallow: false,
+                computed: { disableReload: () => true },
+            })
+            expect(wrapper.find('.reload-schemas').attributes().disabled).to.be.equals('disabled')
+        })
         it(`Should disable filter-objects input`, () => {
             wrapper = mountFactory({
                 shallow: false,
@@ -101,6 +109,19 @@ describe('sidebar-ctr', () => {
                     .find('input')
                     .attributes().disabled
             ).to.be.equals('disabled')
+        })
+
+        it(`Should call fetchSchemas when reload-schemas button is clicked`, async () => {
+            let callCount = 0
+            wrapper = mountFactory({
+                shallow: false,
+                computed: { disableReload: () => false, isCollapsed: () => false },
+                methods: {
+                    fetchSchemas: () => callCount++,
+                },
+            })
+            await wrapper.find(`.reload-schemas`).trigger('click')
+            expect(callCount).to.be.equals(1)
         })
     })
 })

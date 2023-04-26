@@ -10,22 +10,7 @@
                 >
                     {{ title }}
                 </span>
-                <mxs-tooltip-btn
-                    v-if="!isCollapsed"
-                    btnClass="reload-schemas"
-                    icon
-                    small
-                    :disabled="disableReload"
-                    :color="disableReload ? '' : 'primary'"
-                    @click="$emit('reload')"
-                >
-                    <template v-slot:btn-content>
-                        <v-icon size="12">
-                            $vuetify.icons.mxs_reload
-                        </v-icon>
-                    </template>
-                    {{ $mxs_t('reload') }}
-                </mxs-tooltip-btn>
+                <slot v-if="!isCollapsed" name="collapse-btn-prepend" />
                 <mxs-tooltip-btn
                     btnClass="toggle-sidebar"
                     icon
@@ -69,7 +54,6 @@ export default {
     props: {
         value: { type: Boolean, required: true },
         title: { type: String, required: true },
-        disableReload: { type: Boolean, default: false },
     },
     computed: {
         isCollapsed: {

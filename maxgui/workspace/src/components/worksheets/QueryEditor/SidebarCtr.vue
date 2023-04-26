@@ -3,9 +3,25 @@
         v-model="isCollapsed"
         :title="$mxs_t('schemas')"
         :class="{ 'not-allowed': isSidebarDisabled }"
-        :disableReload="disableReload"
-        @reload="fetchSchemas"
     >
+        <template v-slot:collapse-btn-prepend>
+            <mxs-tooltip-btn
+                v-if="!isCollapsed"
+                btnClass="reload-schemas"
+                icon
+                small
+                :disabled="disableReload"
+                :color="disableReload ? '' : 'primary'"
+                @click="fetchSchemas"
+            >
+                <template v-slot:btn-content>
+                    <v-icon size="12">
+                        $vuetify.icons.mxs_reload
+                    </v-icon>
+                </template>
+                {{ $mxs_t('reload') }}
+            </mxs-tooltip-btn>
+        </template>
         <template v-slot:toolbar-append>
             <v-text-field
                 v-if="!isCollapsed"

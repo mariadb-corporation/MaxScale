@@ -1,25 +1,24 @@
 <template>
-    <mxs-split-pane
-        v-model="sidebarPct"
-        class="query-view__content"
-        :boundary="ctrDim.width"
-        :minPercent="minSidebarPct"
-        :deactivatedMinPctZone="deactivatedMinSizeBarPoint"
-        :maxPercent="maxSidebarPct"
-        split="vert"
-        progress
-        revertRender
-        @resizing="onResizing"
-    >
-        <template slot="pane-left">
-            <er-sidebar-ctr />
-        </template>
-        <template slot="pane-right">
-            <div class="fill-height">
-                <mxs-erd :ctrDim="dim" :data="graphData" />
-            </div>
-        </template>
-    </mxs-split-pane>
+    <div class="fill-height">
+        <mxs-split-pane
+            v-model="erdPctHeight"
+            :boundary="dim.height"
+            split="horiz"
+            :minPercent="minErdPct"
+            :maxPercent="maxErdPct"
+            :deactivatedMaxPctZone="maxErdPct - (100 - maxErdPct) * 2"
+        >
+            <template slot="pane-left">
+                <div class="fill-height relative">
+                    <er-toolbar-ctr class="absolute" />
+                    <mxs-erd :ctrDim="erdDim" :data="graphData" />
+                </div>
+            </template>
+            <template slot="pane-right">
+                <entity-editor-ctr />
+            </template>
+        </mxs-split-pane>
+    </div>
 </template>
 
 <script>
@@ -37,73 +36,56 @@
  */
 import { mapState, mapMutations } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
-import ErSidebarCtr from '@wkeComps/ErdWke/ErSidebarCtr.vue'
+import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
+import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 
 export default {
     name: 'erd-wke',
-    components: { ErSidebarCtr },
+    components: { ErToolbarCtr, EntityEditorCtr },
     props: {
         ctrDim: { type: Object, required: true },
     },
     computed: {
         ...mapState({
-            erd_sidebar_pct_width: state => state.prefAndStorage.erd_sidebar_pct_width,
-            is_erd_sidebar_collapsed: state => state.prefAndStorage.is_erd_sidebar_collapsed,
+            erd_pct_height: state => state.prefAndStorage.erd_pct_height,
         }),
+        dim() {
+            const { width, height } = this.ctrDim
+            return { width: width, height: height }
+        },
+        erdDim() {
+            return { width: this.ctrDim.width, height: this.erGraphHeight }
+        },
+        erGraphHeight() {
+            return this.$helpers.pctToPx({
+                pct: this.erdPctHeight,
+                containerPx: this.dim.height,
+            })
+        },
+        erdPctHeight: {
+            get() {
+                return this.erd_pct_height
+            },
+            set(v) {
+                this.SET_ERD_PCT_HEIGHT(v)
+            },
+        },
+        minErdPct() {
+            //TODO: If there is no entity chosen in the diagram, return 0
+            return this.$helpers.pxToPct({ px: 26, containerPx: this.dim.height })
+        },
+        maxErdPct() {
+            return 100 - this.minErdPct
+        },
         //TODO: Convert to get/set
         graphData() {
             return ErdTask.getters('getActiveGraphData') || {}
         },
-        dim() {
-            const { width, height } = this.ctrDim
-            return { width: width - this.sidebarWidth, height }
-        },
-        sidebarWidth() {
-            return this.$helpers.pctToPx({ pct: this.sidebarPct, containerPx: this.ctrDim.width })
-        },
-        minSidebarPct() {
-            return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
-        },
-        deactivatedMinSizeBarPoint() {
-            return this.minSidebarPct * 3
-        },
-        maxSidebarPct() {
-            return 100 - this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
-        },
-        defSidebarPct() {
-            return this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
-        },
-        sidebarPct: {
-            get() {
-                if (this.is_erd_sidebar_collapsed) return this.minSidebarPct
-                return this.erd_sidebar_pct_width
-            },
-            set(v) {
-                this.SET_ERD_SIDEBAR_PCT_WIDTH(v)
-            },
-        },
-    },
-    watch: {
-        is_erd_sidebar_collapsed(v) {
-            if (!v && this.sidebarPct <= this.minSidebarPct) this.sidebarPct = this.defSidebarPct
-        },
-    },
-    created() {
-        this.handleSetDefSidebarPct()
     },
     methods: {
         ...mapMutations({
-            SET_ERD_SIDEBAR_PCT_WIDTH: 'prefAndStorage/SET_ERD_SIDEBAR_PCT_WIDTH',
-            SET_IS_ERD_SIDEBAR_COLLAPSED: 'prefAndStorage/SET_IS_ERD_SIDEBAR_COLLAPSED',
+            SET_ERD_PCT_HEIGHT: 'prefAndStorage/SET_ERD_PCT_HEIGHT',
         }),
-        handleSetDefSidebarPct() {
-            if (!this.sidebarPct) this.sidebarPct = this.defSidebarPct
-        },
-        onResizing(v) {
-            //auto collapse sidebar
-            if (v <= this.minSidebarPct) this.SET_IS_ERD_SIDEBAR_COLLAPSED(true)
-            else if (v >= this.deactivatedMinSizeBarPoint) this.SET_IS_ERD_SIDEBAR_COLLAPSED(false)
-        },
     },
 }
 </script>

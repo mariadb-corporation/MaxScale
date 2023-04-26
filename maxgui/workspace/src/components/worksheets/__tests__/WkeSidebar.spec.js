@@ -28,19 +28,22 @@ describe('wke-sidebar', () => {
         const titleElement = wrapper.find('.sidebar-toolbar__title')
         expect(titleElement.exists()).to.be.false
     })
-    it('Disables the reload button when disableReload prop is true', async () => {
-        await wrapper.setProps({ disableReload: true })
-        expect(wrapper.find('.reload-schemas').attributes().disabled).to.be.equals('disabled')
-    })
-
-    it('Emits a reload event when the reload button is clicked', () => {
-        wrapper.find('.reload-schemas').trigger('click')
-        expect(wrapper.emitted()).to.have.property('reload')
-    })
 
     it('Emits an input event with the new value when the collapse button is clicked', () => {
         wrapper.find('.toggle-sidebar').trigger('click')
         expect(wrapper.emitted()).to.have.property('input')
         expect(wrapper.emitted().input[0]).to.be.eql([true])
+    })
+
+    it('should not render the collapse-btn-prepend slot when collapsed', () => {
+        wrapper = mount({
+            shallow: false,
+            component: WkeSidebar,
+            propsData: { value: true, title: 'Schemas' },
+            slots: {
+                'collapse-btn-prepend': '<button class="btn-prepend">Prepend</button>',
+            },
+        })
+        expect(wrapper.find('.btn-prepend').exists()).to.be.false
     })
 })

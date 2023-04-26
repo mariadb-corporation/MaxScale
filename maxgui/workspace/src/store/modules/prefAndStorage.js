@@ -16,8 +16,7 @@ import { addDaysToNow } from '@wsSrc/utils/helpers'
 const getUserPrefStates = () => ({
     sidebar_pct_width: 0,
     is_sidebar_collapsed: false,
-    erd_sidebar_pct_width: 0,
-    is_erd_sidebar_collapsed: false,
+    erd_pct_height: 100,
     query_pane_pct_height: 60,
     is_fullscreen: false,
     query_row_limit: 10000,
