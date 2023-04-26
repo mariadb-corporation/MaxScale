@@ -8,7 +8,7 @@ drop table if exists t1,t2,t3;
 
 create table t1 (a int not null);
 insert into t1 values (1);
-#MXS qc_mysqlembedded does not pick up 'a', but perhaps it is qc_sqlite that should not.
+#MXS qc_mysqlembedded does not pick up 'a', but perhaps it is pp_sqlite that should not.
 #MXS insert into t1 values (a+2);
 #MXS insert into t1 values (a+3),(a+4);
 #MXS insert into t1 values (5),(a+6);
@@ -224,10 +224,10 @@ select row_count();
 # Reports that 2 rows are affected. This conforms to documentation.
 # (Useful for differentiating inserts from updates).
 # MXSTODO: insert into t1 values (2, 2) on duplicate key update data= data + 10;
-# qc_sqlite: Cannot parse "on duplicate"
+# pp_sqlite: Cannot parse "on duplicate"
 select row_count();
 # MXSTODO: insert into t1 values (5, 5) on duplicate key update data= data + 10;
-# qc_sqlite: Cannot parse "on duplicate"
+# pp_sqlite: Cannot parse "on duplicate"
 select row_count();
 drop table t1;
 

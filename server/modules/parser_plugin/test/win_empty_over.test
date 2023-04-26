@@ -53,7 +53,7 @@ where a = 1;
 
 select a + min(a) over () from t1 where a = 1;
 
-#MXS qc_sqlite
+#MXS pp_sqlite
 #MXS Statement was classified only based on keywords (Sqlite3 error: SQL logic
 #MXS error or missing database, near "(": syntax error): "create view win_view
 #MXS as (select a, min(a) over () from t1 where a = 1);"

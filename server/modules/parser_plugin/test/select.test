@@ -1283,7 +1283,7 @@ select fld3 from t2 order by fld3 desc limit 5,5;
 # The table is read directly with read-next on fld3
 #
 
-#MXS qc_sqlite
+#MXS pp_sqlite
 #MXS qc_get_function_info     : ERR: =(t2.fld3) != =(fld3)
 #MXS select t2.fld3 from t2 where fld3 = 'honeysuckle';
 # MXS: qc_get_function_info     : ERR: =()[QC_USED_IN_WHERE] like(t2.fld3)[QC_USED_IN_WHERE] != =()[QC_USED_IN_WHERE] like(fld3)[QC_USED_IN_WHERE]
@@ -2911,7 +2911,7 @@ insert into t1 values(1),(2);
 insert into t2 values(1),(2);
 insert into t3 values(1),(NULL);
 select * from t3 where f3 is null;
-# MXS qc_sqlite does not realize that f2 is t2.f2.
+# MXS pp_sqlite does not realize that f2 is t2.f2.
 # MXS select t2.f2 from t1 left join t2 on f1=f2 join t3 on f1=f3 where f1=1;
 drop table t1,t2,t3;
 
@@ -3838,7 +3838,7 @@ INSERT INTO t1 VALUES ();
 CREATE TABLE t2(c INT);
 --echo # Should not err out because of out-of-memory
 # MXS: Embedded parser converts "NOT a >= b" to "a < b", so there's a discrepancy
-# MXS: in what qc_sqlite and qc_mysqlembedded returns as functions. Further, qc_sqlite
+# MXS: in what pp_sqlite and qc_mysqlembedded returns as functions. Further, pp_sqlite
 # MXS: misses the equality in "ON 1=1".
 # MXS: SELECT 1 FROM t2 JOIN t1 ON 1=1
 # MXS:  WHERE a != '1' AND NOT a >= b OR NOT ROW(b,a )<> ROW(a,a);
@@ -4077,9 +4077,9 @@ SELECT table4 . `time_nokey` AS field1 FROM
             table1 . `int_nokey` != 'f')
   GROUP BY field1  ORDER BY field1 , field1;
 
-# MXS qc_mysqlembedded as fields "A.date_nokey A.int_nokey B.time_key" while qc_sqlite
+# MXS qc_mysqlembedded as fields "A.date_nokey A.int_nokey B.time_key" while pp_sqlite
 # MXS reports "A.date_nokey B.time_key", and qc_mysqlembedded reports that the function
-# MXS "<>" is used, while qc_sqlite is not aware of something like that.
+# MXS "<>" is used, while pp_sqlite is not aware of something like that.
 # MXS SELECT table1 .`time_key` field2  FROM B table1  LEFT JOIN  BB JOIN A table5 ON table5 .`date_nokey`  ON table5 .`int_nokey` GROUP  BY field2;
 --enable_warnings
 

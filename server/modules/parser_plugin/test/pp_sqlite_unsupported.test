@@ -1,5 +1,5 @@
 #
-# This file contains statements qc_sqlite is known not to parse.
+# This file contains statements pp_sqlite is known not to parse.
 #
 
 (SELECT a, b AS c FROM t1) ORDER BY c+1;
@@ -22,28 +22,28 @@ SET @x:= (SELECT h FROM t1 WHERE (a,b,c,d,e,f,g)=(1,2,3,4,5,6,7));
 # ADD   : expr(A) ::= LP exprlist RP. { ... }
 
 insert into t1 values (2, 2) on duplicate key update data= data + 10;
-# Problem: warning: [qc_sqlite] Statement was only partially parsed (Sqlite3 error: SQL logic error
+# Problem: warning: [pp_sqlite] Statement was only partially parsed (Sqlite3 error: SQL logic error
 #          or missing database, near "on": syntax error): "insert into t1 values (2, 2) on duplicate
 #          key update data= data + 10;"
 
 SET @`a b`='hello';
-# warning: qc_sqlite: Statement was classified only based on keywords
+# warning: pp_sqlite: Statement was classified only based on keywords
 # (Sqlite3 error: SQL logic error or missing database, unrecognized token: "@"): "set @=4"
 #
 # sqlite3GetToken needs to be modified to accept a quoted variable name.
 
 INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a);
-# warning: [qc_sqlite] Statement was only partially parsed
+# warning: [pp_sqlite] Statement was only partially parsed
 # (Sqlite3 error: SQL logic error or missing database, near "ON": syntax error):
 # "INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a)"
 
 PREPARE stmt FROM 'UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1';
-# warning: [qc_sqlite] Statement was classified only based on keywords
+# warning: [pp_sqlite] Statement was classified only based on keywords
 # (Sqlite3 error: SQL logic error or missing database, near "SET": syntax error):
 # "UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1"
 
 SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));
-# warning: [qc_sqlite] Statement was classified only based on keywords
+# warning: [pp_sqlite] Statement was classified only based on keywords
 # (Sqlite3 error: SQL logic error or missing database, near "0xC39F": syntax error):
 # "SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));"
 
@@ -54,11 +54,11 @@ SELECT t.f FROM d.t;
 select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
 with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
 
-#MXS qc_sqlite cannot parse this
+#MXS pp_sqlite cannot parse this
 #MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_TOKENIZED
 set statement standard_compliant_cte=0 for select 1;
 
-#MXS qc_sqlite cannot parse this
+#MXS pp_sqlite cannot parse this
 #MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_PARTIALLY_PARSED
 create table my_ancestors
 (
@@ -77,7 +77,7 @@ as
 select p.* from folks as p, ancestor_ids as a where p.id = a.id
 );
 
-#MXS qc_sqlite cannot parse this
+#MXS pp_sqlite cannot parse this
 #MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_INVALID
 analyze format=json 
 with recursive src(counter) as 
@@ -86,7 +86,7 @@ with recursive src(counter) as
  select counter+1 from src where counter<10
 ) select * from src;
 
-#MXS qc_sqlite
+#MXS pp_sqlite
 #MXS Statement was classified only based on keywords (Sqlite3 error: SQL logic
 #MXS error or missing database, near "(": syntax error): "create view win_view
 #MXS as (select a, min(a) over () from t1 where a = 1);"
@@ -95,14 +95,14 @@ as (select a, min(a) over () from t1 where a = 1);
 
 select t2.fld3 from t2 where companynr = 58 and fld3 like "%imaginable%";
 # qc_get_function_info     : ERR: =()[QC_USED_IN_WHERE] like(t2.fld3)[QC_USED_IN_WHERE] != =()[QC_USED_IN_WHERE] like(fld3)[QC_USED_IN_WHERE]
-# qc_sqlite is not capable of amending a field name with the table name, in cases
+# pp_sqlite is not capable of amending a field name with the table name, in cases
 # where there is only table. However, neither is qc_mysqlembedded always either.
 # E.g. "select a from t where length(a) = 5" results in just a.
 
-#MXS qc_sqlite
+#MXS pp_sqlite
 #MXS qc_get_function_info     : ERR: >(a, b)[QC_USED_IN_WHERE] avg(a)[QC_USED_IN_SUBSELECT|QC_USED_IN_WHERE] != >(a)[QC_USED_IN_WHERE] avg(a)[QC_USED_IN_SUBSELECT|QC_USED_IN_WHERE]
 CREATE VIEW v1 AS SELECT a,1 as b FROM t1 WHERE a>(SELECT AVG(a) FROM t1) AND b>(SELECT 1);
 
-#MXS qc_sqlite
+#MXS pp_sqlite
 #MXS qc_get_function_info     : ERR: =(t2.fld3) != =(fld3)
 select t2.fld3 from t2 where fld3 = 'honeysuckle';
