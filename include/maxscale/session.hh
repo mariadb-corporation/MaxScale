@@ -216,6 +216,8 @@ public:
         FREE,       /*< The session is freed, only for completeness sake */
     };
 
+    using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
+
     // RAII class for managing the currently active session
     class Scope
     {
@@ -345,6 +347,13 @@ public:
 
     virtual const mxs::ListenerData*   listener_data() const = 0;
     virtual const mxs::ProtocolModule* protocol() const = 0;
+
+    /**
+     * Get the list of backend connections that have been created by this session
+     *
+     * @return The list of backend connections
+     */
+    virtual const BackendConnectionVector& backend_connections() const = 0;
 
     /**
      * Start the session. Called after the session is initialized and authentication is complete.

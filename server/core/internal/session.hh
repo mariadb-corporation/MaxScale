@@ -128,7 +128,6 @@ public:
     };
 
     using FilterList = std::vector<SessionFilter>;
-    using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
 
     Session(std::shared_ptr<const mxs::ListenerData> listener_data,
             const std::string& host);
@@ -198,7 +197,7 @@ public:
     mxs::BackendConnection*
     create_backend_connection(Server* server, BackendDCB::Manager* manager, mxs::Component* upstream);
 
-    const BackendConnectionVector& backend_connections() const
+    const BackendConnectionVector& backend_connections() const override
     {
         return m_backends_conns;
     }

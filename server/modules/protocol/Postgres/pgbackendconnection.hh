@@ -53,6 +53,16 @@ public:
     json_t* diagnostics() const override;
     size_t  sizeof_buffers() const override;
 
+    uint32_t pid()
+    {
+        return m_process_id;
+    }
+
+    uint32_t secret()
+    {
+        return m_secret_key;
+    }
+
 private:
     enum class State
     {

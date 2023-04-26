@@ -12,6 +12,7 @@
  */
 
 #include "pgclientconnection.hh"
+#include "pgbackendconnection.hh"
 #include <maxbase/format.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
@@ -29,6 +30,75 @@ const string invalid_auth = "28000";    // invalid_authorization_specification
 // Upper limit of the session command history. This will never be set as the buffer ID for a query which means
 // the range of possible values are from 1 to UINT32_MAX - 1.
 const uint32_t MAX_SESCMD_ID = std::numeric_limits<uint32_t>::max();
+
+// A helper class that writes a CancelRequest packet into a TCP socket and then closes it.
+class CancelRequest : public mxb::Pollable
+{
+public:
+    CancelRequest(int fd, uint32_t pid, uint32_t secret)
+        : m_fd(fd)
+    {
+        auto ptr = m_data.data();
+        pg::set_uint32(ptr, 16);
+        pg::set_uint32(ptr + 4, pg::CANCEL_MAGIC);
+        pg::set_uint32(ptr + 8, pid);
+        pg::set_uint32(ptr + 12, secret);
+
+        m_it = m_data.begin();
+    }
+
+    int poll_fd() const override
+    {
+        return m_fd;
+    }
+    uint32_t handle_poll_events(mxb::Worker* pWorker, uint32_t events, Context context) override
+    {
+        bool stop = false;
+
+        if (events & EPOLLOUT)
+        {
+            int rc = write(m_fd, m_it, std::distance(m_it, m_data.end()));
+
+            if (rc >= 0)
+            {
+                m_it += rc;
+
+                if (m_it == m_data.end())
+                {
+                    stop = true;
+                }
+            }
+            else if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                MXB_INFO("Failed to write CancelRequest: %d, %s", errno, mxb_strerror(errno));
+                stop = true;
+            }
+        }
+        else if (events & (EPOLLHUP | EPOLLRDHUP | EPOLLERR))
+        {
+            MXB_INFO("Network error event during CancelRequest handling");
+            stop = true;
+        }
+
+        if (stop)
+        {
+            pWorker->remove_pollable(this);
+            delete this;
+        }
+
+        return events;
+    }
+
+    ~CancelRequest()
+    {
+        close(m_fd);
+    }
+
+private:
+    int                     m_fd;
+    std::array<uint8_t, 16> m_data;
+    uint8_t*                m_it;
+};
 
 void add_packet_auth_request(GWBUF& gwbuf, pg::Auth athentication_method)
 {
@@ -169,6 +239,16 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
         {
             next_state = State::INIT;   // Waiting for Startup message
         }
+    }
+    else if (gwbuf.length() == 16 && first_word == pg::CANCEL_MAGIC)
+    {
+        uint32_t id = pg::get_uint32(gwbuf.data() + 8);
+        uint32_t secret = pg::get_uint32(gwbuf.data() + 12);
+        MXB_INFO("CancelRequest for session %u with secret %u.", id, secret);
+        send_cancel_request(id, secret);
+
+        // Technically this is not an error but treating it as one is OK since no response is sent.
+        next_state = State::ERROR;
     }
     else if (parse_startup_message(gwbuf))
     {
@@ -677,4 +757,72 @@ void PgClientConnection::handle_response(HistoryRequest&& req, const mxs::Reply&
     m_session.worker()->lcall([this](){
         m_protocol_data->history().check_early_responses();
     });
+}
+
+void PgClientConnection::send_cancel_request(uint32_t id, uint32_t secret)
+{
+    mxs::RoutingWorker::broadcast([secret, id](){
+        if (auto ses = find_matching_session(id, secret))
+        {
+            MXS_SESSION::Scope scope(ses);
+
+            for (mxs::BackendConnection* b : ses->backend_connections())
+            {
+                auto p = static_cast<PgBackendConnection*>(b);
+                SERVER* srv = b->dcb()->server();
+                MXB_INFO("Sending CancelRequest to '%s'", srv->name());
+
+                if (int fd = connect_socket(srv->address(), srv->port()); fd != -1)
+                {
+                    // We're not expecting any EPOLLIN events
+                    constexpr uint32_t poll_events = EPOLLOUT | EPOLLHUP | EPOLLRDHUP | EPOLLET;
+                    CancelRequest* req = new CancelRequest(fd, p->pid(), p->secret());
+
+                    if (!mxs::RoutingWorker::get_current()->add_pollable(poll_events, req))
+                    {
+                        delete req;
+                    }
+                }
+            }
+        }
+    }, mxs::RoutingWorker::EXECUTE_AUTO);
+}
+
+MXS_SESSION* PgClientConnection::find_matching_session(uint32_t id, uint32_t secret)
+{
+    MXS_SESSION* rv = nullptr;
+    const auto& registry = mxs::RoutingWorker::get_current()->session_registry();
+
+    // If we haven't created enough sessions to overflow the 32-bit unsigned int range, a single
+    // lookup into the registry will tell us if the session is there.
+    MXS_SESSION* session = registry.lookup(id);
+
+    if (session && session->protocol()->name() == MXS_POSTGRESQL_PROTOCOL_NAME)
+    {
+        auto client = static_cast<PgClientConnection*>(session->client_connection());
+
+        if (client->m_secret == secret)
+        {
+            rv = session;
+        }
+    }
+    // Otherwise, we'll have to iterate over the whole registry to see if any of the sessions match
+    else if (session_max_id() > std::numeric_limits<uint32_t>::max())
+    {
+        for (auto [cand_id, candidate] : registry)
+        {
+            if ((uint32_t)cand_id == id && candidate->protocol()->name() == MXS_POSTGRESQL_PROTOCOL_NAME)
+            {
+                auto client = static_cast<PgClientConnection*>(candidate->client_connection());
+
+                if (client->m_secret == secret)
+                {
+                    rv = candidate;
+                    break;
+                }
+            }
+        }
+    }
+
+    return rv;
 }

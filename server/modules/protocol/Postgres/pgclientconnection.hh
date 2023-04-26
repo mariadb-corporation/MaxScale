@@ -86,6 +86,10 @@ private:
     bool record_for_history(GWBUF& buffer);
     void record_parse_for_history(GWBUF& buffer);
 
+    // Functions that deal with CancelRequest handling
+    void                send_cancel_request(uint32_t id, uint32_t secret);
+    static MXS_SESSION* find_matching_session(uint32_t id, uint32_t secret);
+
     void handle_response(SimpleRequest&& req, const mxs::Reply& reply);
     void handle_response(HistoryRequest&& req, const mxs::Reply& reply);
 
