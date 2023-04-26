@@ -22,14 +22,14 @@ insert into mysqltest.t1 values (2,10), (1,30);
 create table mysqltest.t2 (c int, d char(32));
 insert into mysqltest.t2 values (1,'xxx'), (1,'zzz');
 
-# qc_sqlite: Does not parse all grant statements
+# pp_sqlite: Does not parse all grant statements
 #grant select on mysqltest.t1 to mysqltest_1@localhost;
 #grant select (c) on mysqltest.t2 to mysqltest_1@localhost;
 
 connection user1;
 with t as (select c from mysqltest.t2 where c < 2)
 
-#MXS: qc_sqlite cannot currently return mysqltest.t1.b as
+#MXS: pp_sqlite cannot currently return mysqltest.t1.b as
 #MXS: the affected field, but only t1.b.
 #select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
 select t.c,t1.b from t,t1 where t.c=t1.a;
@@ -44,7 +44,7 @@ select t.c,t.d,t1.b from t,mysqltest.t1 where t.c=t1.a;
 connection root;
 
 create view mysqltest.v1(f1,f2) as
-#MXS: qc_sqlite reports t1.a and not mysqltest.t1.a
+#MXS: pp_sqlite reports t1.a and not mysqltest.t1.a
 #with t as (select c from mysqltest.t2 where c < 2)
 #select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
 with t as (select c from mysqltest.t2 where c < 2)
@@ -53,7 +53,7 @@ create view mysqltest.v2(c,d) as
 with t as (select a from mysqltest.t1 where a>=3)
 select t.a,b from t,mysqltest.t1 where mysqltest.t1.a = t.a;
 
-# qc_sqlite: Does not parse all grant statements
+# pp_sqlite: Does not parse all grant statements
 #grant select on mysqltest.v1 to mysqltest_1@localhost;
 #grant select (c) on mysqltest.v2 to mysqltest_1@localhost;
 #grant create view on mysqltest.* to mysqltest_1@localhost;
@@ -61,7 +61,7 @@ select t.a,b from t,mysqltest.t1 where mysqltest.t1.a = t.a;
 connection user1;
 
 create view mysqltest.v3(c,d) as
-#MXS: qc_sqlite reports t1.a and not mysqltest.t1.a
+#MXS: pp_sqlite reports t1.a and not mysqltest.t1.a
 #with t as (select c from mysqltest.t2 where c < 2)
 #select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a; 
 with t as (select c from mysqltest.t2 where c < 2)
@@ -81,13 +81,13 @@ select d from mysqltest.v2;
 --error ER_TABLEACCESS_DENIED_ERROR
 select * from mysqltest.v3;
 connection root;
-# qc_sqlite: Does not parse all grant statements
+# pp_sqlite: Does not parse all grant statements
 #grant select on mysqltest.v3 to mysqltest_1@localhost;
 connection user1;
 select * from mysqltest.v3;
 	
 connection root;
-# qc_sqlite: Does not parse all revoke statements
+# pp_sqlite: Does not parse all revoke statements
 #revoke all privileges on mysqltest.v1 from mysqltest_1@localhost;
 drop user mysqltest_1@localhost;
 drop database mysqltest;

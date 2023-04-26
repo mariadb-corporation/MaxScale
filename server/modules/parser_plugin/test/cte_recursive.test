@@ -248,7 +248,7 @@ as
 select ancestors.name, ancestors.dob from ancestors;
 
 --echo # recursive definition with two attached non-recursive
-#MXS qc_sqlite
+#MXS pp_sqlite
 #MXS qc_get_function_info     : ERR: =(folks.name, folks.father, folks.id, folks.mother, mother.child_id, ancestors.id, father.child_id) != =(mother.child_id, ancestors.id, folks.father, folks.id, folks.mother, mother.id, father.child_id, name)
 #MXS The reported function arguments to '=' are disjoint. The relevant are there though (folks.*).
 #MXS with recursive 
@@ -413,7 +413,7 @@ select h_name, h_dob, w_name, w_dob
 
 
 --echo # mutual recursion with union all
-#MXS qc_mysqlembedded and qc_sqlite disagree in the used fields.
+#MXS qc_mysqlembedded and pp_sqlite disagree in the used fields.
 #MXS Both return correctly the folks fields (i.e. the real ones),
 #MXS but disagree on the fields of the CTE tables.
 #
@@ -473,7 +473,7 @@ select h_name, h_dob, w_name, w_dob
 
 
 --echo # mutual recursion with union all
-#MXS qc_mysqlembedded and qc_sqlite disagree in the used fields.
+#MXS qc_mysqlembedded and pp_sqlite disagree in the used fields.
 #MXS Both return correctly the folks fields (i.e. the real ones),
 #MXS but disagree on the fields of the CTE tables.
 #
@@ -503,7 +503,7 @@ select h_name, h_dob, w_name, w_dob
 #MXS   from ancestor_couples;
 
 --echo # mutual recursion with one select in the first definition
-#MXS qc_mysqlembedded and qc_sqlite disagree in the used fields.
+#MXS qc_mysqlembedded and pp_sqlite disagree in the used fields.
 #MXS Both return correctly the folks fields (i.e. the real ones),
 #MXS but disagree on the fields of the CTE tables.
 #
@@ -535,7 +535,7 @@ select h_name, h_dob, w_name, w_dob
 
 
 --echo # join of a mutually recursive table with base tables
-#MXS qc_mysqlembedded and qc_sqlite disagree in the used fields.
+#MXS qc_mysqlembedded and pp_sqlite disagree in the used fields.
 #MXS Both return correctly the folks fields (i.e. the real ones),
 #MXS but disagree on the fields of the CTE tables.
 #
@@ -568,7 +568,7 @@ select h_name, h_dob, w_name, w_dob
 
 
 --echo # join of two mutually recursive tables
-#MXS qc_mysqlembedded and qc_sqlite disagree in the used fields.
+#MXS qc_mysqlembedded and pp_sqlite disagree in the used fields.
 #MXS Both return correctly the folks fields (i.e. the real ones),
 #MXS but disagree on the fields of the CTE tables.
 #
@@ -892,7 +892,7 @@ as
 select p.* from coupled_ancestor_ids a, folks p
   where a.id = p.id;
 
-#MXS qc_sqlite does not handle "SET STATEMENT ... FOR ..."
+#MXS pp_sqlite does not handle "SET STATEMENT ... FOR ..."
 #MXS set statement standard_compliant_cte=0 for
 with recursive
 coupled_ancestor_ids (id)
@@ -938,7 +938,7 @@ as
 )
 select * from ancestors;
 
-#MXS qc_sqlite does not handle "SET STATEMENT ... FOR ..."
+#MXS pp_sqlite does not handle "SET STATEMENT ... FOR ..."
 #MXS set statement standard_compliant_cte=0 for
 #MXS qc_mysqlembedded reports a.id, although a actually is ancestor_ids.
 #MXS with recursive
@@ -1008,7 +1008,7 @@ as
 )
 select * from ancestors;
 
-#MXS qc_sqlite does not handle "SET STATEMENT ... FOR ..."
+#MXS pp_sqlite does not handle "SET STATEMENT ... FOR ..."
 #MXS set statement standard_compliant_cte=0 for
 with recursive
 ancestor_ids (id, generation)
@@ -1034,7 +1034,7 @@ as
 )
 select * from ancestors;
 
-#MXS qc_sqlite does not handle "SET STATEMENT ... FOR ..."
+#MXS pp_sqlite does not handle "SET STATEMENT ... FOR ..."
 #MXS set statement max_recursive_iterations=1 for
 with recursive
 ancestor_ids (id, generation)
@@ -1301,7 +1301,7 @@ drop table my_ancestors;
 --echo #             CREATE SELECT      
 --echo #
 
-#MXS qc_sqlite cannot parse this
+#MXS pp_sqlite cannot parse this
 #MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_PARTIALLY_PARSED
 #MXS create table my_ancestors
 #MXS (
@@ -1545,7 +1545,7 @@ drop table t1;
 
 --source include/analyze-format.inc
 
-#MXS qc_sqlite cannot parse this
+#MXS pp_sqlite cannot parse this
 #MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_INVALID
 #MXS analyze format=json 
 #MXS with recursive src(counter) as 
@@ -1667,10 +1667,10 @@ insert into module_results values
   ('m6','v12'), ('m6','v4'),
   ('m7','v2');
 
-#MXS qc_sqlite does not handle "SET STATEMENT ... FOR ..."
+#MXS pp_sqlite does not handle "SET STATEMENT ... FOR ..."
 #MXS set statement max_recursive_iterations=2, standard_compliant_cte=0 for
 #MXS qc_mysqlembedded thinks only module_arguments.m is an argument to isNull
-#MXS while qc_sqlite thinks reached_values.v is.
+#MXS while pp_sqlite thinks reached_values.v is.
 #MXS with recursive
 #MXS reached_values as 
 #MXS (

@@ -223,7 +223,7 @@ drop table t1;
 #
 # MXSTODO: CREATE TABLE t1 (a INT); INSERT INTO t1 VALUES (1);
 # MXSTODO: qc_get_table_names       : ERR: t1 != NULL
-# MXSTODO: qc_sqlite does not handle multiple statements.
+# MXSTODO: pp_sqlite does not handle multiple statements.
 
 --error ER_BAD_FIELD_ERROR
 DELETE FROM t1 ORDER BY x;

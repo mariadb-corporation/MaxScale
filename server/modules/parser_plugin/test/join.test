@@ -405,10 +405,10 @@ create algorithm=merge view v1d(b, a, c) as
 select a as c, c as b, b as a from t1 natural join t2;
 
 # Views with JOIN ... ON
-#MXS qc_sqlite reports that "+" uses b, and misses the fact that b really must be t1.b.
+#MXS pp_sqlite reports that "+" uses b, and misses the fact that b really must be t1.b.
 #MXS create algorithm=merge view v2a as
 #MXS select t1.c, t1.b, t2.a from t1 join (t2 join t4 on b + 1 = y) on t1.c = t4.c;
-#MXS qc_sqlite reports that "+" uses b, even though b is just an alias for t1.c.
+#MXS pp_sqlite reports that "+" uses b, even though b is just an alias for t1.c.
 #MXS create algorithm=merge view v2b as
 #MXS select t1.c as b, t1.b as a, t2.a as c
 #MXS from t1 join (t2 join t4 on b + 1 = y) on t1.c = t4.c;
@@ -551,7 +551,7 @@ select * from v1a join v1b on t1.b = t2.b;
 
 #MXS With the alias modifications made to qc_mysqlembedded, for a select like
 #MXS "select t.f from d.t" it will report "d.t.f" as the affected field. That
-#MXS is correct, but in qc_sqlite that cannot easily be done as the table
+#MXS is correct, but in pp_sqlite that cannot easily be done as the table
 #MXS information is not collected in an appropriate way.
 #
 # Bug #17523 natural join and information_schema
@@ -844,7 +844,7 @@ CREATE TABLE t2 (f1 int);
 #MXS INSERT INTO t2  VALUES (1);
 #MXS CREATE VIEW v1 AS SELECT * FROM t2;
 
-#qc_sqlite.c does not parse this completely.
+#pp_sqlite.c does not parse this completely.
 #MXS PREPARE stmt FROM 'UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1';
 #MXS EXECUTE stmt;
 #MXS EXECUTE stmt;
