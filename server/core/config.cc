@@ -70,6 +70,10 @@
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
 
+#ifdef MXS_WITH_ASAN
+#include <sanitizer/lsan_interface.h>
+#endif
+
 using std::set;
 using std::string;
 using maxscale::Monitor;
@@ -4186,6 +4190,11 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(attr, "activated_at", json_string(http_to_date(activated).c_str()));
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
     json_object_set_new(attr, "process_datadir", json_string(mxs::process_datadir()));
+
+#ifdef MXS_WITH_ASAN
+    int leaking = __lsan_do_recoverable_leak_check();
+    json_object_set_new(attr, "memory_leak", json_boolean(leaking));
+#endif
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);

@@ -410,9 +410,21 @@ public:
 
     void alter_monitor(const std::string& mon_name, const std::string& setting, const std::string& value);
 
+    /**
+     * Controls whether leak checks are done on shutdown.
+     *
+     * @param value If true, leak checks are made (default). If not, any leaks are ignored and will not cause
+     *              a test failure.
+     */
+    void leak_check(bool value)
+    {
+        m_leak_check = value;
+    }
+
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
     bool m_ssl {false};         /**< Use ssl when connecting to MaxScale */
+    bool m_leak_check {true};
 
     int  m_valgrind_log_num {0};    /**< Counter for Maxscale restarts to avoid Valgrind log overwriting */
     bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */

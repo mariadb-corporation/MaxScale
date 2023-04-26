@@ -83,6 +83,7 @@ int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections test {argc, argv};
+    test.maxscale->leak_check(false);
 
     std::string lua_file("/infinite_loop.lua");
     std::string from = mxt::SOURCE_DIR + lua_file;

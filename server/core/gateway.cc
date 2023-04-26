@@ -85,6 +85,10 @@
 #error OpenSSL library does not support multi-threading.
 #endif
 
+#ifdef MXS_WITH_ASAN
+#include <sanitizer/lsan_interface.h>
+#endif
+
 using namespace maxscale;
 using std::string;
 
@@ -461,6 +465,10 @@ static void sigfatal_handler(int i)
         pStmt = "none/unknown";
         nStmt = strlen(pStmt);
     }
+
+#ifdef MXS_WITH_ASAN
+    __lsan_do_leak_check();
+#endif
 
     MXS_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
     MXS_SESSION* session = nullptr;
