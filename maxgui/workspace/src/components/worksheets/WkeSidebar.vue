@@ -30,7 +30,7 @@
                     {{ isCollapsed ? $mxs_t('expand') : $mxs_t('collapse') }}
                 </mxs-tooltip-btn>
             </div>
-            <slot name="toolbar-append" />
+            <slot v-if="!isCollapsed" name="toolbar-append" />
         </div>
         <slot />
     </div>

@@ -423,6 +423,7 @@
         "selected": "selected",
         "selectNodeOrEnterIp": "Select a node or enter the IP of the node",
         "selectObjsToMigrate": "Select objects to migrate",
+        "selectObjsToVisualize": "Select objects to visualize",
         "selectOdbcDriver": "Select an ODBC driver",
         "selectResultSet": "Select result set",
         "selectRoutingTargets": "Select routing targets",
@@ -509,6 +510,7 @@
         "viewDetails": "View Details",
         "visFilters": "Visualize filters",
         "visualization": "Visualization",
+        "visualize": "Visualize",
         "visualizedConfig": "{action} visualized configuration",
         "warning": "Warning",
         "warnings": {

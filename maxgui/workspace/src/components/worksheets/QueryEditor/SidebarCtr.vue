@@ -6,7 +6,21 @@
     >
         <template v-slot:collapse-btn-prepend>
             <mxs-tooltip-btn
-                v-if="!isCollapsed"
+                btnClass="visualize-schemas"
+                icon
+                small
+                :disabled="isSidebarDisabled"
+                :color="isSidebarDisabled ? '' : 'primary'"
+                @click="handleShowGenErdDlg()"
+            >
+                <template v-slot:btn-content>
+                    <v-icon size="12">
+                        $vuetify.icons.mxs_reports
+                    </v-icon>
+                </template>
+                {{ $mxs_t('genErd') }}
+            </mxs-tooltip-btn>
+            <mxs-tooltip-btn
                 btnClass="reload-schemas"
                 icon
                 small
@@ -24,7 +38,6 @@
         </template>
         <template v-slot:toolbar-append>
             <v-text-field
-                v-if="!isCollapsed"
                 v-model="filterTxt"
                 name="searchSchema"
                 dense
@@ -45,10 +58,11 @@
                 @alter-tbl="onAlterTable"
                 @drop-action="handleOpenExecSqlDlg"
                 @truncate-tbl="handleOpenExecSqlDlg"
-                @gen-erd="handleShowGenErdDlg"
+                @gen-erd="handleShowGenErdDlg([$event])"
                 v-on="$listeners"
             />
         </keep-alive>
+        <obj-select-dlg v-model="isObjSelectDlgOpened" :preselectedSchemas="preselectedSchemas" />
     </wke-sidebar>
 </template>
 
@@ -82,16 +96,19 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import WkeSidebar from '@wkeComps/WkeSidebar.vue'
+import ObjSelectDlg from '@wkeComps/QueryEditor/ObjSelectDlg.vue'
 
 export default {
     name: 'sidebar-ctr',
-    components: { SchemaTreeCtr, WkeSidebar },
+    components: { SchemaTreeCtr, WkeSidebar, ObjSelectDlg },
     props: {
         execSqlDlg: { type: Object, required: true },
     },
     data() {
         return {
             actionName: '',
+            isObjSelectDlgOpened: false,
+            preselectedSchemas: [],
         }
     },
     computed: {
@@ -135,6 +152,9 @@ export default {
         },
         hasConn() {
             return Boolean(this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString)
+        },
+        dbTreeData() {
+            return SchemaSidebar.getters('getDbTreeData')
         },
     },
     methods: {
@@ -201,8 +221,12 @@ export default {
         clearExeStatementsResult() {
             QueryEditorTmp.update({ where: this.queryEditorId, data: { exe_stmt_result: {} } })
         },
-        //TODO: Show entity-select-dlg component
-        handleShowGenErdDlg() {},
+
+        handleShowGenErdDlg(nodes) {
+            this.isObjSelectDlgOpened = true
+            if (nodes) this.preselectedSchemas = nodes.map(n => n.qualified_name)
+            else this.preselectedSchemas = []
+        },
     },
 }
 </script>
