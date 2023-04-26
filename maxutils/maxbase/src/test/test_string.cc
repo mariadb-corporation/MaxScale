@@ -367,7 +367,7 @@ int main(int argc, char* argv[])
     rv += test_split();
     rv += test_cat();
     rv += test_strtok(strtok_old, "strtok_old");
-    rv += test_strtok(mxb::strtok, "strtok");
+    rv += test_strtok(mxb::strtok<std::string>, "strtok");
     rv += compare_old_strtok();
 
     return rv;

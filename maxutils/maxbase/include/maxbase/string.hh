@@ -292,9 +292,10 @@ inline std::string upper_case_copy(std::string_view str)
  *
  * @return List of tokenized strings
  */
-inline std::vector<std::string> strtok(std::string_view str, std::string_view delim)
+template<class T = std::string>
+std::vector<T> strtok(std::string_view str, std::string_view delim)
 {
-    std::vector<std::string> rval;
+    std::vector<T> rval;
     size_t pos = 0;
 
     while ((pos = str.find_first_not_of(delim, pos)) != std::string_view::npos)

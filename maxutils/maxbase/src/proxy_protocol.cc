@@ -224,45 +224,30 @@ SubnetParseResult parse_networks_from_string(const std::string& networks_str)
         return rval;
     }
 
-    char token[256];
-    size_t i = 0;
-    size_t len = networks_str.length();
+    char token[256] {};
+    auto tokens = mxb::strtok<std::string_view>(networks_str, ", ");
 
-    while (i < len)
+    for (const auto& token_str : tokens)
     {
-        char c = networks_str[i];
-        if (c == ',' || c == ' ')
+        if (token_str.length() < sizeof(token))
         {
-            i++;
-            continue;
-        }
+            memcpy(token, token_str.data(), token_str.length());
+            *(token + token_str.length()) = 0;
 
-        size_t j = 0;
-        while (i < len && c != ',' && c != ' ' && j < sizeof(token) - 1)
-        {
-            token[j++] = networks_str[i++];
-            if (i < len)
+            Subnet subnet;
+            if (parse_subnet(token, &subnet))
             {
-                c = networks_str[i];
+                rval.subnets.push_back(subnet);
             }
-        }
-
-        token[j++] = '\0';
-        if (j == sizeof(token))
-        {
-            // Max length reached. It's possible the token is not completely read yet, so print error.
-            rval.errmsg = mxb::string_printf("Subnet definition starting with '%s' is too long.", token);
-            break;
-        }
-
-        Subnet subnet;
-        if (parse_subnet(token, &subnet))
-        {
-            rval.subnets.push_back(subnet);
+            else
+            {
+                rval.errmsg = mxb::string_printf("Parse error near '%s'.", token);
+                break;
+            }
         }
         else
         {
-            rval.errmsg = mxb::string_printf("Parse error near '%s'.", token);
+            rval.errmsg = mxb::string_printf("Subnet definition starting with '%s' is too long.", token);
             break;
         }
     }
@@ -755,36 +740,30 @@ bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out)
         return true;
     }
 
+    bool mask_ok = false;
     char* pmask = strchr(addr_str, '/');
     if (!pmask)
     {
         subnet_out->bits = max_mask_bits;
+        mask_ok = true;
     }
     else
     {
         // Parse the number after '/'.
-        *pmask++ = 0;
-        int b = 0;
-
-        do
+        *pmask++ = 0;   // So inet_pton() stops reading.
+        if (isdigit(*pmask))
         {
-            if (*pmask < '0' || *pmask > '9')
+            char* endptr = nullptr;
+            long int n_bits = strtol(pmask, &endptr, 10);
+            if (endptr && *endptr == '\0' && n_bits >= 0 && n_bits <= max_mask_bits)
             {
-                return false;
+                subnet_out->bits = n_bits;
+                mask_ok = true;
             }
-            b = 10 * b + *pmask - '0';
-            if (b > max_mask_bits)
-            {
-                return false;
-            }
-            pmask++;
         }
-        while (*pmask);
-
-        subnet_out->bits = (unsigned short)b;
     }
 
-    if (inet_pton(subnet_out->family, addr_str, subnet_out->addr) == 1
+    if (mask_ok && inet_pton(subnet_out->family, addr_str, subnet_out->addr) == 1
         && normalize_subnet(subnet_out))
     {
         return true;
