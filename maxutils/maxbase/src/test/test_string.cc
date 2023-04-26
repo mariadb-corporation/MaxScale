@@ -159,6 +159,8 @@ int test_split()
 
     ASSERT_BOTH(mxb::split("hello world", " ") == std::make_tuple("hello", "world"));
     ASSERT_BOTH(mxb::split<3>("hello world !", " ") == std::make_tuple("hello", "world", "!"));
+    ASSERT_BOTH(mxb::split<2>("a,b,c", ",") == std::make_tuple("a", "b,c"));
+    ASSERT_BOTH(mxb::split<2>("a,b,c,d", ",") == std::make_tuple("a", "b,c,d"));
     ASSERT_BOTH(mxb::split<3>("a,b,c", ",") == std::make_tuple("a", "b", "c"));
     ASSERT_BOTH(mxb::split<3>("a,b,c", "!") == std::make_tuple("a,b,c", "", ""));
     ASSERT_BOTH(mxb::split<5>("hello world !", "@") == std::make_tuple("hello world !", "", "", "", ""));

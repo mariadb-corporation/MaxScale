@@ -314,12 +314,17 @@ constexpr auto split(std::string_view str, std::string_view delim, std::index_se
 {
     std::array<std::string_view, sizeof...(Idx)> arr{};
 
-    for (size_t i = 0; i < arr.size(); i++)
+    // Process only N-1 elements from the string, processing N elements would end up discarding the tail if
+    // the delimiter could match more than once.
+    for (size_t i = 0; i < arr.size() - 1; i++)
     {
         auto pos = delim.empty() ? std::string_view::npos : str.find(delim);
         arr[i] = str.substr(0, pos);
         str = pos != std::string_view::npos ? str.substr(pos + delim.size()) : "";
     }
+
+    // Store the remainder as the last element.
+    arr[arr.size() - 1] = str;
 
     return std::make_tuple(std::string_view {arr[Idx]} ...);
 }
