@@ -36,6 +36,8 @@ struct ScramSecrets
     std::array<uint8_t, SCRAM_HASH_SIZE> stored_key{};
 };
 
+using ScramSalt = std::array<uint8_t, SCRAM_SALT_SIZE>;
+
 /**
  * Get SCRAM-SHA-256 secrets from a password and a salt
  *
@@ -44,7 +46,7 @@ struct ScramSecrets
  *
  * @return The SCRAM-SHA-256 secrets
  */
-ScramSecrets get_scram_secrets(const std::string& pw, const std::array<uint8_t, SCRAM_HASH_SIZE>& salt);
+ScramSecrets get_scram_secrets(const std::string& pw, const ScramSalt& salt);
 
 /**
  * Salt a password into Postgres storage format

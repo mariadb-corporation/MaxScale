@@ -44,7 +44,7 @@ ScramSecrets get_scram_secrets(const std::string& pw, const std::array<uint8_t, 
 std::string salt_password(const std::string& pw)
 {
     // Create a new random salt
-    std::array<uint8_t, SCRAM_SALT_SIZE> salt{};
+    ScramSalt salt{};
     gsasl_random((char*)salt.data(), salt.size());
 
     ScramSecrets secrets = get_scram_secrets(pw, salt);

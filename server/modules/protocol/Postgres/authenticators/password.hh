@@ -24,9 +24,6 @@ public:
 private:
     bool check_password_md5_hash(std::string_view pw, std::string_view username, std::string_view hash) const;
     bool check_password_scram_hash(std::string_view pw, const ScramUser& scram) const;
-
-    std::optional<Digest> scram_salted_password(std::string_view pw, std::string_view salt, int iterations,
-                                                const EVP_MD* algo) const;
 };
 
 class PasswordBackendAuth : public PgBackendAuthenticator
