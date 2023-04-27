@@ -747,7 +747,7 @@ void BinlogFilterSession::getReplicationChecksum(const GWBUF& packet)
 {
     if (auto crc = extract_column(packet, 1))
     {
-        if (mxb::sv_strcasestr(*crc, "CRC32"))
+        if (mxb::sv_strcasestr(*crc, "CRC32") != std::string_view::npos)
         {
             m_crc = true;
         }
