@@ -846,7 +846,8 @@ public:
                             int prev_token,
                             const Expr* pExpr,
                             qc_token_position_t pos,
-                            const ExprList* pExclude)
+                            const ExprList* pExclude,
+                            bool ignore_assignment = false)
     {
         const Expr* pLeft = pExpr->pLeft;
         const Expr* pRight = pExpr->pRight;
@@ -933,8 +934,7 @@ public:
 
         default:
             MXB_DEBUG("Token %d not handled explicitly.", pExpr->op);
-
-        // Fallthrough intended.
+            [[fallthrough]]
         case TK_BETWEEN:
         case TK_CASE:
         case TK_EXISTS:
@@ -945,7 +945,13 @@ public:
             {
             case TK_IN:
                 ignore_function = is_pure_limit(pExpr);
+                [[fallthrough]];
             case TK_EQ:
+                if (pExpr->op == TK_EQ)
+                {
+                    ignore_function = ignore_assignment;
+                }
+                [[fallthrough]];
             case TK_GE:
             case TK_GT:
             case TK_LE:
@@ -1261,13 +1267,15 @@ public:
     void update_field_infos_from_exprlist(QcAliases* pAliases,
                                           uint32_t context,
                                           const ExprList* pEList,
-                                          const ExprList* pExclude)
+                                          const ExprList* pExclude,
+                                          bool ignore_assignment = false)
     {
         for (int i = 0; i < pEList->nExpr; ++i)
         {
             ExprList::ExprList_item* pItem = &pEList->a[i];
 
-            update_field_infos(pAliases, context, 0, pItem->pExpr, QC_TOKEN_MIDDLE, pExclude);
+            update_field_infos(pAliases, context, 0, pItem->pExpr, QC_TOKEN_MIDDLE, pExclude,
+                               ignore_assignment);
         }
     }
 
@@ -1302,7 +1310,8 @@ public:
                                         uint32_t context,
                                         const Select* pSelect,
                                         const ExprList* pExclude,
-                                        compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
+                                        compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS,
+                                        bool ignore_assignment = false)
     {
         if (pSelect->pSrc)
         {
@@ -1320,7 +1329,9 @@ public:
                     update_field_infos_from_select(aliases,
                                                    context | QC_FIELD_SUBQUERY,
                                                    pSrc->a[i].pSelect,
-                                                   pExclude);
+                                                   pExclude,
+                                                   compound_approach,
+                                                   ignore_assignment);
                 }
 
                 if (pSrc->a[i].pOn)
@@ -1343,7 +1354,7 @@ public:
 
         if (pSelect->pEList)
         {
-            update_field_infos_from_exprlist(&aliases, context, pSelect->pEList, NULL);
+            update_field_infos_from_exprlist(&aliases, context, pSelect->pEList, NULL, ignore_assignment);
         }
 
         if (pSelect->pWhere)
@@ -1964,36 +1975,20 @@ public:
             if (pColumns)
             {
                 update_field_infos_from_idlist(&aliases, context, pColumns, NULL);
-
-                int i = update_function_info(&aliases, "=", NULL);
-
-                if (i != -1)
-                {
-                    vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
-
-                    for (int j = 0; j < pColumns->nId; ++j)
-                    {
-                        update_function_fields(&aliases, NULL, NULL, pColumns->a[j].zName, fields);
-                    }
-
-                    if (fields.size() != 0)
-                    {
-                        QC_FUNCTION_INFO& info = m_function_infos[i];
-
-                        info.fields = &fields[0];
-                        info.n_fields = fields.size();
-                    }
-                }
             }
+
+            // We do not want the assignment '=' to be reported as a function.
+            bool ignore_assignment = true;
 
             if (pSelect)
             {
-                update_field_infos_from_select(aliases, context, pSelect, NULL);
+                update_field_infos_from_select(aliases, context, pSelect, NULL,
+                                               ANALYZE_COMPOUND_SELECTS, ignore_assignment);
             }
 
             if (pSet)
             {
-                update_field_infos_from_exprlist(&aliases, context, pSet, NULL);
+                update_field_infos_from_exprlist(&aliases, context, pSet, NULL, ignore_assignment);
             }
         }
 
@@ -3576,12 +3571,18 @@ private:
         // As a failure to find a symbol in the canonical statement is not necessarily
         // an indication of a canonicalization bug, unconditional logging can't really
         // be done. In debug we log a warning so that it is possible to become aware
-        // of problems. The functions '=' and '-' are special cases that will not necessarily
-        // be found in the canonical form. The former appears to be an internal function that
-        // usually appears in INSERT statements whereas the latter will be eliminated from
-        // the canonical form if it's a part of a negative number.
+        // of problems.
 #if defined(SS_DEBUG)
-        if (*zKey != '=' && *zKey != '-')
+        // Some symbols will not be found, either
+        // * because the canonicalization process removes some symbols entirelly, or
+        // * because during parsing some symbols are turned into something else.
+        if (*zKey != '-'                                  // 1-1 => ?
+            && *zKey != '+'                               // 1+1 => ?
+            && strcmp(zKey, "<>") != 0                    // != => <>
+            && strcasecmp(zKey, "current_timestamp") != 0 // now() => current_timestamp()
+            && strcasecmp(zKey, "ifnull") != 0            // NVL() => ifnull()
+            && strcasecmp(zKey, "isnull") != 0            // is null => isnull()
+            && strcasecmp(zKey, "isnotnull") != 0)        // is not null => isnotnull()
         {
             MXB_WARNING("The %s '%s' is not found in the canonical statement '%s' created from "
                         "the statement '%.*s'.",

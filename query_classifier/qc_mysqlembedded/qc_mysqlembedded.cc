@@ -256,16 +256,20 @@ public:
 
     void complain_about_missing(const char* zWhat, const char* zKey)
     {
-        int priority;
 #if defined(SS_DEBUG)
-        priority = LOG_ERR;
-#else
-        priority = LOG_INFO;
-#endif
-        MXB_LOG_MESSAGE(priority,
-                        "The %s '%s' is not found in the canonical statement '%s' created from "
+        if (strcmp(zKey, "<>") != 0                        // != => <>
+            && strcasecmp(zKey, "cast") != 0               // convert() => cast()
+            && strcasecmp(zKey, "current_timestamp") != 0  // now() => current_timestamp()
+            && strcasecmp(zKey, "ifnull") != 0             // NVL() => ifnull()
+            && strcasecmp(zKey, "isnull") != 0             // is null => isnull()
+            && strcasecmp(zKey, "isnotnull") != 0          // is not null => isnotnull()
+            && strcasecmp(zKey, "date_add_interval") != 0) // Various date functions
+        {
+            MXB_WARNING("The %s '%s' is not found in the canonical statement '%s' created from "
                         "the statement '%s'.",
                         zWhat, zKey, this->canonical.c_str(), this->pi_query_plain_str);
+        }
+#endif
     }
 
     size_t size() const override
@@ -3734,17 +3738,9 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 
             if (item)
             {
-                // We get here in case of "insert into t set a = 0".
-                QC_FUNCTION_INFO* fi = get_function_info(pi, "=");
-
                 while (item)
                 {
                     update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
-
-                    if (item->type() == Item::FIELD_ITEM)
-                    {
-                        add_function_field_usage(pi, lex->current_select, static_cast<Item_field*>(item), fi);
-                    }
 
                     item = ilist++;
                 }
