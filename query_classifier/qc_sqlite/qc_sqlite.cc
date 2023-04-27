@@ -3576,11 +3576,17 @@ private:
         // As a failure to find a symbol in the canonical statement is not necessarily
         // an indication of a canonicalization bug, unconditional logging can't really
         // be done. In debug we log a warning so that it is possible to become aware
-        // of problems.
+        // of problems. The functions '=' and '-' are special cases that will not necessarily
+        // be found in the canonical form. The former appears to be an internal function that
+        // usually appears in INSERT statements whereas the latter will be eliminated from
+        // the canonical form if it's a part of a negative number.
 #if defined(SS_DEBUG)
-        MXB_WARNING("The %s '%s' is not found in the canonical statement '%s' created from "
-                    "the statement '%.*s'.",
-                    zWhat, zKey, m_canonical.c_str(), (int)m_nQuery, m_pQuery);
+        if (*zKey != '=' && *zKey != '-')
+        {
+            MXB_WARNING("The %s '%s' is not found in the canonical statement '%s' created from "
+                        "the statement '%.*s'.",
+                        zWhat, zKey, m_canonical.c_str(), (int)m_nQuery, m_pQuery);
+        }
 #endif
     }
 
