@@ -329,7 +329,6 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 
     while (!pMarkers->empty())
     {
-        bool did_conversion = false;
         auto pMarker = pMarkers->back();
         pMarkers->pop_back();
 
@@ -388,14 +387,8 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 
             if (num_end)
             {
-                if (!was_converted && *(write_ptr - 1) == '-')
-                {
-                    // Remove the sign
-                    --write_ptr;
-                }
                 *write_ptr++ = '?';
                 read_ptr = num_end;
-                did_conversion = true;
             }
         }
         else if (lut(IS_COMMENT, *pMarker))
@@ -415,8 +408,6 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
         {
             mxb_assert(!true);
         }
-
-        was_converted = did_conversion;
     }
 
 break_out:

@@ -207,7 +207,6 @@ std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
 
     auto it_out = (uint8_t*) it;
     uint8_t* it_out_begin = it_out;
-    bool was_converted = false;
 
     for (; it != end; ++it)
     {
@@ -225,14 +224,8 @@ std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
 
             if (num_end.first)
             {
-                if (!was_converted && *(it_out - 1) == '-')
-                {
-                    // Remove the sign
-                    --it_out;
-                }
                 *it_out++ = '?';
                 it = num_end.second;
-                did_conversion = true;
             }
             else
             {
@@ -297,8 +290,6 @@ std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
         {
             *it_out++ = *it;
         }
-
-        was_converted = did_conversion;
 
         mxb_assert(it != end);
     }
