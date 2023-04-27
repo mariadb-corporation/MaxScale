@@ -10,10 +10,10 @@
     >
         <template v-slot:body-prepend>
             <selectable-schema-table-tree
-                v-model="selectedObjs"
                 :connId="activeQueryEditorConnId"
                 :preselectedSchemas="preselectedSchemas"
-                :shouldRefresh="isOpened"
+                :triggerDataFetch="isOpened"
+                @selected-tables="selectedTables = $event"
             />
         </template>
     </mxs-conf-dlg>
@@ -43,8 +43,7 @@ export default {
     },
     data() {
         return {
-            selectedObjs: [],
-            visualizingErr: '',
+            selectedTables: [],
         }
     },
     computed: {
@@ -60,7 +59,7 @@ export default {
             return this.$typy(QueryConn.getters('getQueryEditorConn'), 'id').safeString
         },
         hasSavingErr() {
-            return Boolean(this.visualizingErr)
+            return Boolean(this.errMsg) || Boolean(!this.selectedTables.length)
         },
     },
     methods: {

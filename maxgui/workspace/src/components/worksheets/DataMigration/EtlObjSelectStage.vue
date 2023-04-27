@@ -50,8 +50,8 @@
                 <p v-if="errMsg" class="v-messages__message error--text">
                     {{ errMsg }}
                 </p>
-                <p v-else-if="infoMsg" class="v-messages__message warning--text">
-                    {{ infoMsg }}
+                <p v-else-if="waringMsg" class="v-messages__message warning--text">
+                    {{ waringMsg }}
                 </p>
                 <v-checkbox
                     v-if="showConfirm"
@@ -132,7 +132,7 @@ export default {
         return {
             selectedObjs: [],
             errMsg: '',
-            infoMsg: '',
+            waringMsg: '',
             isLarge: true,
             isConfirmed: false,
         }
@@ -183,10 +183,10 @@ export default {
                 if (v.length) {
                     if (this.tables.length) {
                         this.errMsg = ''
-                        this.infoMsg = this.parsedObjs.emptySchemas.length
-                            ? this.$mxs_t('info.ignoreSchemas')
+                        this.waringMsg = this.parsedObjs.emptySchemas.length
+                            ? this.$mxs_t('warnings.ignoredMigrationSchemas')
                             : ''
-                    } else this.errMsg = this.$mxs_t('errors.invalidChosenSchemas')
+                    } else this.errMsg = this.$mxs_t('errors.emptyMigrationSchema')
                 } else this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
 
                 EtlTaskTmp.update({ where: this.task.id, data: { migration_objs: this.tables } })
