@@ -1057,18 +1057,7 @@ add_test_executable(admin_audit.cpp admin_audit admin_audit LABELS LIGHT CONFIG)
 # BEGIN: tests for Xpand monitor           #
 ############################################
 
-# Also covers the following bugs:
-# MXS-3934: https://jira.mariadb.org/browse/MXS-3934
-add_test_executable(xpand_basics.cpp xpand_basics xpand_basics LABELS XPAND_BACKEND)
-set_tests_properties(xpand_basics PROPERTIES TIMEOUT 7200)
-
-add_test_executable(xpand_transaction_replay.cpp xpand_transaction_replay xpand_transaction_replay LABELS XPAND_BACKEND)
-set_tests_properties(xpand_transaction_replay PROPERTIES TIMEOUT 7200)
-
-add_test_executable(xpand_distribution.cpp xpand_distribution xpand_distribution LABELS XPAND_BACKEND)
-
-add_test_executable(xpand_alter_cluster.cpp xpand_alter_cluster xpand_alter_cluster LABELS XPAND_BACKEND)
-add_test_executable(xpand_repl.cc xpand_repl xpand_basics LABELS XPAND_BACKEND)
+add_subdirectory(xpand)
 
 ############################################
 # END: tests for Xpand monitor             #
