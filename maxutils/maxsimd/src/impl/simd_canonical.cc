@@ -247,12 +247,12 @@ inline const char* probe_number(const char* it, const char* const pEnd)
                 is_hex = false;
                 allow_hex = true;
             }
-            else if (*it == 'e')
+            else if (*it == 'e' || *it == 'E')
             {
                 // Possible scientific notation number
                 auto next_it = it + 1;
 
-                if (next_it == pEnd || !(*next_it != '-' || *next_it != '+') || lut(IS_DIGIT, *next_it))
+                if (next_it == pEnd || !(*next_it != '-' || *next_it != '+' || lut(IS_DIGIT, *next_it)))
                 {
                     rval = nullptr;
                     break;

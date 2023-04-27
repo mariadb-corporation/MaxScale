@@ -115,12 +115,12 @@ inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
                 is_hex = false;
                 allow_hex = true;
             }
-            else if (*it == 'e')
+            else if (*it == 'e' || *it == 'E')
             {
                 // Possible scientific notation number
                 auto next_it = it + 1;
 
-                if (next_it == end || !(*next_it != '-' || *next_it != '+') || lut(IS_DIGIT, *next_it))
+                if (next_it == end || !(*next_it != '-' || *next_it != '+' || lut(IS_DIGIT, *next_it)))
                 {
                     rval.first = false;
                     break;
