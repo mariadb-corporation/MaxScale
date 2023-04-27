@@ -513,6 +513,7 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
         if (m_first_reply)
         {
             m_first_response_time = m_pSession->worker()->epoll_tick_now();
+            m_first_reply = false;
         }
 
         if (reply.is_complete())
