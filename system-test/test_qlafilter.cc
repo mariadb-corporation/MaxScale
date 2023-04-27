@@ -86,6 +86,21 @@ int main(int argc, char** argv)
     });
 
 
+    test.tprintf("Test SQL matching");
+
+    test.check_maxctrl("alter filter QLA match=/something\\|anything/ "
+                       "filebase=/tmp/qla.match.log");
+
+    query(test, {"SELECT 'nothing'", "SELECT 'something'", "SELECT 'everything'", "SELECT 'anything'"});
+    check_contents(test, "/tmp/qla.match.log.unified", {
+        {1, 2, "SELECT 'something'"},
+        {2, 2, "SELECT 'anything'"}
+    });
+
+    test.maxscale->ssh_node("rm -f /tmp/qla.match.log.unified", true);
+    test.check_maxctrl("alter filter QLA match=/.*/");
+
+
     test.tprintf("Test filebase=/tmp/qla.second.log");
 
     test.check_maxctrl("alter filter QLA filebase=/tmp/qla.second.log");
