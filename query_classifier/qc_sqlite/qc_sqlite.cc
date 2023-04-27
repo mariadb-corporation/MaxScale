@@ -974,7 +974,7 @@ public:
 
         default:
             MXB_DEBUG("Token %d not handled explicitly.", pExpr->op);
-            [[fallthrough]]
+            [[fallthrough]];
         case TK_BETWEEN:
         case TK_CASE:
         case TK_EXISTS:
