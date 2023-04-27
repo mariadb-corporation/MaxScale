@@ -58,3 +58,4 @@ select @v, coercibility(@v);
 select @@version, @@version_comment, @@version_compile_machine,       @@version_compile_os;
 SELECT @x_str_1, @x_int_1, @x_int_2, @x_int_3;
 SELECT user,host,password,insert_priv FROM user WHERE user=@u AND host=@h;
+SELECT 0e0, 0.0e-0, -1e+1,  -999.999e999, -00.99e-99, +00.99e+99, +42-42e42, 42E-1-2+3
