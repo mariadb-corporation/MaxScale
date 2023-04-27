@@ -34,16 +34,15 @@ export default {
             const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
             const request_sent_time = new Date().valueOf()
             let field, sql, queryName
-            const escapedQN = this.vue.$helpers.escapeIdentifiers(qualified_name)
             switch (query_mode) {
                 case rootState.mxsWorkspace.config.QUERY_MODES.PRVW_DATA:
-                    sql = `SELECT * FROM ${escapedQN} LIMIT 1000;`
-                    queryName = `Preview ${escapedQN} data`
+                    sql = `SELECT * FROM ${qualified_name} LIMIT 1000;`
+                    queryName = `Preview ${qualified_name} data`
                     field = 'prvw_data'
                     break
                 case rootState.mxsWorkspace.config.QUERY_MODES.PRVW_DATA_DETAILS:
-                    sql = `DESCRIBE ${escapedQN};`
-                    queryName = `View ${escapedQN} details`
+                    sql = `DESCRIBE ${qualified_name};`
+                    queryName = `View ${qualified_name} details`
                     field = 'prvw_data_details'
                     break
             }

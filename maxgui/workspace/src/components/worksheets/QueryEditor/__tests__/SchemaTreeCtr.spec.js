@@ -27,13 +27,15 @@ const mountFactory = opts =>
             opts
         )
     )
+//TODO: create a stub function
 const dummy_db_tree_data = [
     {
         key: 'node_key_0',
         type: 'SCHEMA',
         name: 'mysql',
         id: 'mysql',
-        qualified_name: 'mysql',
+        qualified_name: '`mysql`',
+        parentNameData: { SCHEMA: 'mysql' },
         data: {
             CATALOG_NAME: 'def',
             SCHEMA_NAME: 'mysql',
@@ -43,7 +45,7 @@ const dummy_db_tree_data = [
             SCHEMA_COMMENT: '',
         },
         draggable: true,
-        level: 0,
+        level: 1,
         isSys: true,
         children: [
             {
@@ -51,9 +53,9 @@ const dummy_db_tree_data = [
                 type: 'Tables',
                 name: 'Tables',
                 id: 'mysql.Tables',
-                qualified_name: 'mysql.Tables',
+                qualified_name: '`mysql`.`Tables`',
                 draggable: false,
-                level: 1,
+                level: 2,
                 children: [],
             },
             {
@@ -61,9 +63,9 @@ const dummy_db_tree_data = [
                 type: 'Stored Procedures',
                 name: 'Stored Procedures',
                 id: 'mysql.Stored Procedures',
-                qualified_name: 'mysql.Stored Procedures',
+                qualified_name: '`mysql`.`Stored Procedures`',
                 draggable: false,
-                level: 1,
+                level: 2,
                 children: [],
             },
         ],
@@ -73,7 +75,8 @@ const dummy_db_tree_data = [
         type: 'SCHEMA',
         name: 'test',
         id: 'test',
-        qualified_name: 'test',
+        qualified_name: '`test`',
+        parentNameData: { SCHEMA: 'test' },
         data: {
             CATALOG_NAME: 'def',
             SCHEMA_NAME: 'test',
@@ -83,7 +86,7 @@ const dummy_db_tree_data = [
             SCHEMA_COMMENT: '',
         },
         draggable: true,
-        level: 0,
+        level: 1,
         isSys: false,
         children: [
             {
@@ -91,9 +94,9 @@ const dummy_db_tree_data = [
                 type: 'Tables',
                 name: 'Tables',
                 id: 'test.Tables',
-                qualified_name: 'test.Tables',
+                qualified_name: '`test`.`Tables`',
                 draggable: false,
-                level: 1,
+                level: 2,
                 children: [],
             },
             {
@@ -101,9 +104,9 @@ const dummy_db_tree_data = [
                 type: 'Stored Procedures',
                 name: 'Stored Procedures',
                 id: 'test.Stored Procedures',
-                qualified_name: 'test.Stored Procedures',
+                qualified_name: '`test`.`Stored Procedures`',
                 draggable: false,
-                level: 1,
+                level: 2,
                 children: [],
             },
         ],
@@ -112,7 +115,7 @@ const dummy_db_tree_data = [
 const dummy_schema_node = dummy_db_tree_data[0]
 const dummy_tbl_node = {
     id: 'test.Tables.t1',
-    qualified_name: 'test.t1',
+    qualified_name: '`test`.`t1`',
     type: 'TABLE',
     name: 't1',
     draggable: true,
@@ -422,6 +425,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         expect(minimizeNode).to.be.eql({
             id: node.id,
             qualified_name: node.qualified_name,
+            parentNameData: { SCHEMA: node.name },
             name: node.name,
             type: node.type,
             level: node.level,
@@ -449,7 +453,6 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         it(`genTxtOpts should return valid text option for context type ${type}`, () => {
             wrapper = mountFactory()
             expect(wrapper.vm.genTxtOpts(type)).to.be.eql([
-                { text: wrapper.vm.$mxs_t('qualifiedNameQuoted'), type },
                 { text: wrapper.vm.$mxs_t('qualifiedName'), type },
                 { text: wrapper.vm.$mxs_t('nameQuoted'), type },
                 { text: wrapper.vm.$mxs_t('name'), type },
@@ -470,7 +473,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
                         expect(wrapper.emitted()).to.have.property('place-to-editor')
                         if (text.includes('(Quoted)'))
                             expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(
-                                wrapper.vm.$helpers.escapeIdentifiers(dummy_schema_node.id)
+                                wrapper.vm.$helpers.quotingIdentifier(dummy_schema_node.name)
                             )
                         else
                             expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(

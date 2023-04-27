@@ -362,11 +362,10 @@ export default {
             const config = Worksheet.getters('getActiveRequestConfig')
             const { id, meta: { name: connection_name } = {} } = getters.getActiveQueryTabConn
             const now = new Date().valueOf()
-            const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
-            const sql = `USE ${escapedDb};`
+            const sql = `USE ${db};`
             const [e, res] = await this.vue.$helpers.to(queries.post({ id, body: { sql }, config }))
             if (!e && res) {
-                let queryName = `Change default database to ${escapedDb}`
+                let queryName = `Change default database to ${db}`
                 const errObj = this.vue.$typy(res, 'data.data.attributes.results[0]')
                     .safeObjectOrEmpty
 
@@ -379,7 +378,7 @@ export default {
                         },
                         { root: true }
                     )
-                    queryName = `Failed to change default database to ${escapedDb}`
+                    queryName = `Failed to change default database to ${db}`
                 } else
                     QueryConn.update({
                         where: id,

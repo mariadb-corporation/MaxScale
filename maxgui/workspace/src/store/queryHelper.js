@@ -20,22 +20,22 @@ import {
 } from '@wsSrc/store/config'
 import { lodash, to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { getObjectRows } from '@wsSrc/utils/helpers'
+import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 
 /**
  * @public
- * @param {Object} node - schema node
+ * @param {Object} node
  * @returns {String} database name
  */
-const getSchemaName = node => node.qualified_name.split('.')[0]
+const getSchemaName = node => node.parentNameData[NODE_TYPES.SCHEMA]
 
 /**
  * @private
- * @param {Object} node - TRIGGER_G || COL_G || IDX_G node
+ * @param {Object} node
  * @returns {String} table name
  */
-const getTblName = node => node.qualified_name.split('.')[1]
+const getTblName = node => node.parentNameData[NODE_TYPES.TBL]
 
 /**
  * @private
@@ -127,10 +127,11 @@ function genNode({
 }) {
     const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
     const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
-    const schemaName = nodeGroup ? getSchemaName(nodeGroup) : name
+    const schemaName = type === SCHEMA ? name : getSchemaName(nodeGroup)
     let node = {
         id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
-        qualified_name: '',
+        parentNameData:
+            type === SCHEMA ? { [type]: name } : { ...nodeGroup.parentNameData, [type]: name },
         key: genNodeKey(),
         type,
         name,
@@ -144,22 +145,24 @@ function genNode({
      */
     if (type === IDX) node.id = `${nodeGroup.id}.${name}-${node.key}`
 
-    node.level = lodash.countBy(node.id)['.'] || 0
-
+    node.level = Object.keys(node.parentNameData).length
+    //TODO: Rename qualified_name to qualifiedName as others properties are using camelCase
     switch (type) {
         case TBL:
         case VIEW:
         case SP:
         case FN:
-            node.qualified_name = `${schemaName}.${node.name}`
+            node.qualified_name = `${quotingIdentifier(schemaName)}.${quotingIdentifier(node.name)}`
             break
         case TRIGGER:
         case COL:
         case IDX:
-            node.qualified_name = `${getTblName(nodeGroup)}.${node.name}`
+            node.qualified_name = `${quotingIdentifier(getTblName(nodeGroup))}.${quotingIdentifier(
+                node.name
+            )}`
             break
         case SCHEMA:
-            node.qualified_name = node.name
+            node.qualified_name = quotingIdentifier(node.name)
             break
     }
     // Auto assign child node groups unless nodeAttrs is provided with values other than the default ones
@@ -196,7 +199,7 @@ function genNode({
 function genNodeGroup({ parentNode, type }) {
     return {
         id: `${parentNode.id}.${type}`,
-        qualified_name: `${parentNode.qualified_name}.${type}`,
+        parentNameData: { ...parentNode.parentNameData, [type]: type },
         key: genNodeKey(),
         type,
         name: type,
@@ -457,6 +460,7 @@ function getDatabase(connection_string) {
 
 export default {
     getSchemaName,
+    getTblName,
     genNodeGroup,
     genNodeData,
     getChildNodeData,
