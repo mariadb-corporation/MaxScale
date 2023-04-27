@@ -199,7 +199,7 @@ const char* dbg_decode_response(GWBUF* pPacket);
 bool ClientConnection::write(GWBUF&& buffer)
 {
     GWBUF* pMariaDB_response = mxs::gwbuf_to_gwbufptr(std::move(buffer));
-    int32_t rv = 1;
+    bool rv = true;
 
     if (m_nosql.is_busy())
     {

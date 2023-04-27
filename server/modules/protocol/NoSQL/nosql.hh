@@ -1049,7 +1049,7 @@ public:
         return pResponse;
     }
 
-    int32_t clientReply(GWBUF&& sMariaDB_response, DCB* pDcb);
+    bool clientReply(GWBUF&& sMariaDB_response, DCB* pDcb);
 
 private:
     template<class T>

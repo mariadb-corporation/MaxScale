@@ -2902,7 +2902,7 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
     return state;
 }
 
-int32_t NoSQL::clientReply(GWBUF&& response, DCB* pDcb)
+bool NoSQL::clientReply(GWBUF&& response, DCB* pDcb)
 {
     GWBUF* pMariadb_response = mxs::gwbuf_to_gwbufptr(std::move(response));
     mxb_assert(m_sDatabase.get());
@@ -2948,7 +2948,7 @@ int32_t NoSQL::clientReply(GWBUF&& response, DCB* pDcb)
         mxb_assert(pProtocol_response == nullptr);
     }
 
-    return 0;
+    return true;
 }
 
 void NoSQL::kill_client()
