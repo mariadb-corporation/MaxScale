@@ -970,11 +970,13 @@ struct ClientConn
 static ClientConn accept_one_connection(int fd)
 {
     ClientConn conn = {};
-    socklen_t client_len = sizeof(conn.addr);
-    conn.fd = accept(fd, (sockaddr*)&conn.addr, &client_len);
+    sockaddr_storage addr {};
+    socklen_t client_len = sizeof(addr);
+    conn.fd = accept(fd, (sockaddr*)&addr, &client_len);
 
     if (conn.fd != -1)
     {
+        mxb::get_normalized_ip(addr, &conn.addr);
         void* ptr = nullptr;
 
         if (conn.addr.ss_family == AF_INET)

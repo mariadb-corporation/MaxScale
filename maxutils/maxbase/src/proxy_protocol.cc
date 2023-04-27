@@ -21,7 +21,6 @@
 namespace
 {
 
-void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst);
 bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol::Subnet& subnet);
 int  compare_bits(const void* s1, const void* s2, size_t n_bits);
 bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out);
@@ -623,10 +622,6 @@ BinHdrRes gen_binary_header(const sockaddr_storage& client_addr, const sockaddr_
     return rval;
 }
 }
-}
-
-namespace
-{
 
 void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst)
 {
@@ -669,7 +664,10 @@ void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst)
         }
     }
 }
+}
 
+namespace
+{
 bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol::Subnet& subnet)
 {
     mxb_assert(subnet.family == AF_UNIX || subnet.family == AF_INET || subnet.family == AF_INET6);

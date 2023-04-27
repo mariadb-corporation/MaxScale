@@ -22,6 +22,8 @@
 
 namespace maxbase
 {
+void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst);
+
 namespace proxy_protocol
 {
 struct TextHdrRes
