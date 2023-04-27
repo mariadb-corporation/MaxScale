@@ -852,16 +852,16 @@ public:
         , m_org_name(&m_pData)
         , m_length_fixed_fields(&m_pData)
     {
-        m_character_set = *reinterpret_cast<const uint16_t*>(m_pData);
+        m_character_set = mariadb::get_byte2(m_pData);
         m_pData += 2;
 
-        m_column_length = *reinterpret_cast<const uint32_t*>(m_pData);
+        m_column_length = mariadb::get_byte4(m_pData);
         m_pData += 4;
 
         m_type = static_cast<enum_field_types>(*m_pData);
         m_pData += 1;
 
-        m_flags = *reinterpret_cast<const uint16_t*>(m_pData);
+        m_flags = mariadb::get_byte2(m_pData);
         m_pData += 2;
 
         m_decimals = *m_pData;
