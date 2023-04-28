@@ -110,7 +110,7 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
         // Only 32 bit bitmasks after this point
         const uint32_t all_digits_bitmask = _mm256_movemask_epi8(all_digits);
         const bool rightmost_is_ident_char = (ident_bitmask & 0x8000'0000)
-                || (all_digits_bitmask & 0x8000'0000);
+                | (all_digits_bitmask & 0x8000'0000);
 
         const uint32_t left_shifted_bitmask = all_digits_bitmask << 1;
         const uint32_t xored_bitmask = all_digits_bitmask ^ left_shifted_bitmask;
@@ -122,7 +122,7 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
         uint32_t ident_shift_left = ident_bitmask << 1;
         uint32_t not_a_number = leading_digit_bitmask & ident_shift_left;
         leading_digit_bitmask ^= not_a_number;
-        leading_digit_bitmask &= ~int32_t(previous_rightmost_is_ident_char);
+        leading_digit_bitmask &= ~uint32_t(previous_rightmost_is_ident_char);
 
         previous_rightmost_is_ident_char = rightmost_is_ident_char;
 
