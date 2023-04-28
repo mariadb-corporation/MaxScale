@@ -19,7 +19,7 @@
 #include <maxbase/string.hh>
 
 #define INI_HANDLER_LINENO 1
-#include "../../../inih/ini.h"
+#include "inih/ini.h"
 
 using std::move;
 using std::string;

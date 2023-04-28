@@ -1,3 +1,8 @@
+# Needed by inih
+add_compile_definitions(INI_MAX_LINE=16777216 INI_USE_STACK=0 INI_ALLOW_REALLOC=1 INI_INITIAL_ALLOC=1024
+        INI_ALLOW_MULTILINE=1 INI_ALLOW_INLINE_COMMENTS=0 INI_ALLOW_NO_VALUE=1 INI_HANDLER_LINENO=1
+        INI_CALL_HANDLER_ON_NEW_SECTION=1)
+
 add_library(maxbase STATIC
   alloc.cc
   atomic.cc
@@ -34,6 +39,7 @@ add_library(maxbase STATIC
   workertask.cc
   cpuinfo.cc
   csv_writer.cc
+  inih/ini.c
   )
 
 if(HAVE_SYSTEMD)
@@ -42,7 +48,7 @@ endif()
 
 add_dependencies(maxbase pcre2 jansson)
 set_target_properties(maxbase PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
-target_link_libraries(maxbase ${CURL_LIBRARIES} ${PAM_LIBRARIES} ${PCRE2_LIBRARIES} pthread rt inih)
+target_link_libraries(maxbase ${CURL_LIBRARIES} ${PAM_LIBRARIES} ${PCRE2_LIBRARIES} pthread rt)
 if (BUILD_TESTS)
   add_subdirectory(test)
 endif()

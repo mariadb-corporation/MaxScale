@@ -215,7 +215,6 @@ include_directories(maxutils/maxbase/include)
 include_directories(maxutils/maxsql/include)
 include_directories(maxutils/maxsimd/include)
 
-add_subdirectory(inih)
 add_subdirectory(maxutils)
 add_subdirectory(server)
 add_subdirectory(include/maxscale)
