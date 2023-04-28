@@ -350,6 +350,16 @@ void run_test(TestConnections& test, const vector<string>& ips)
         test.tprintf("WARNING: Only one IP-address found on MaxScale node, 'local_address' "
                      "not properly tested.");
     }
+
+    start_maxscale_with_local_address(test, "local_address.*", "");
+    test.maxscale->connect();
+
+    drop_user(test, zUser1, ip1);
+    drop_user(test, zUser1, local_ip);
+    drop_user(test, zUser1, gateway_ip);
+    drop_user(test, zUser2, ip2);
+    drop_user(test, zUser2, local_ip);
+    drop_user(test, zUser2, gateway_ip);
 }
 }
 
