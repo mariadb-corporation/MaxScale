@@ -51,6 +51,7 @@ function stubKeyDef({
     index_col_names,
     match_option,
     referenced_index_col_names,
+    referenced_schema_name,
     referenced_table_name,
     on_delete,
     on_update,
@@ -61,6 +62,7 @@ function stubKeyDef({
         index_col_names,
         match_option,
         referenced_index_col_names,
+        referenced_schema_name,
         referenced_table_name,
         on_delete,
         on_update,
@@ -190,6 +192,15 @@ const expectedKeyDefs = {
         referenced_table_name: '`customers`',
         on_delete: 'CASCADE',
         on_update: 'NO ACTION',
+    }),
+    ['CONSTRAINT `orders_ibfk_1` ' +
+    'FOREIGN KEY (`customer_id`) REFERENCES `db1`.`customers` (`customer_id`)']: stubKeyDef({
+        category: 'FOREIGN',
+        name: '`orders_ibfk_1`',
+        index_col_names: '`customer_id`',
+        referenced_index_col_names: '`customer_id`',
+        referenced_schema_name: '`db1`',
+        referenced_table_name: '`customers`',
     }),
 }
 const tableOpt = `ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8mb4 COMMENT="My table"`

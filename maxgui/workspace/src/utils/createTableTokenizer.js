@@ -224,7 +224,15 @@ const FK_CATEGORY = createGroup({ token: tokens.foreign, name: 'category' })
 const INDEX_COL_NAMES = createIdxColNamesReg('index_col_names')
 
 // === Reference definitions groups ===
-const REFERENCED_TBL_NAME = createEscapeStrGroup('referenced_table_name')
+const REFERENCED_TARGET = createGroup({
+    token:
+        createGroup({
+            token: createEscapeStrGroup('referenced_schema_name') + '.',
+            optional: true,
+            ignore: true,
+        }) + createEscapeStrGroup('referenced_table_name'),
+    ignore: true,
+})
 const REFERENCED_COL_NAMES = createIdxColNamesReg('referenced_index_col_names')
 
 const MATCH_OPTION = createGroup({
@@ -289,7 +297,7 @@ export default {
                     tokens.key,
                     INDEX_COL_NAMES,
                     tokens.references,
-                    REFERENCED_TBL_NAME,
+                    REFERENCED_TARGET,
                     REFERENCED_COL_NAMES,
                 ].join(WHITESPACE_REQ) +
                 WHITESPACE_OPT +
