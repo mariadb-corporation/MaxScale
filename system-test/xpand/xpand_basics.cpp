@@ -12,50 +12,18 @@
  * Public License.
  */
 
-#include <iostream>
-#include <maxbase/string.hh>
-#include <maxbase/jansson.hh>
-#include <maxtest/maxrest.hh>
+#include <string>
 #include <maxtest/testconnections.hh>
-#include <maxbase/format.hh>
+#include <maxtest/maxrest.hh>
 
-using namespace std;
+using std::string;
 
 namespace
 {
-
 const std::string monitor_name = "Xpand-Monitor";
-
-void expect_all_servers_to_be(const MaxRest& maxrest, const std::string& state)
-{
-    cout << "Expecting the state of all servers to be: " << state << endl;
-
-    TestConnections& test = maxrest.test();
-    auto servers = maxrest.list_servers();
-
-    for (const auto& server : servers)
-    {
-        cout << server.name << "(" << server.address << "): " << server.state << endl;
-        test.expect(server.state.find(state) != string::npos,
-                    "State of %s(%s) is '%s', expected '%s.",
-                    server.name.c_str(),
-                    server.address.c_str(),
-                    server.state.c_str(),
-                    state.c_str());
-    }
-}
-
-void expect_server_to_be(const MaxRest& maxrest, const MaxRest::Server& server, const std::string& state)
-{
-    TestConnections& test = maxrest.test();
-    cout << "Expecting the state of '" << server.name << "' to be '" << state << "'." << endl;
-
-    test.expect(server.state.find(state) != string::npos,
-                "State of '%s' was not '%s', but '%s'.",
-                server.name.c_str(),
-                state.c_str(),
-                server.state.c_str());
-}
+auto master = mxt::ServerInfo::master_st;
+auto down = mxt::ServerInfo::DOWN;
+auto base_states = {down, master, master, master, master};
 
 void check_for_servers(TestConnections& test)
 {
@@ -65,8 +33,7 @@ void check_for_servers(TestConnections& test)
     servers.print();
 
     test.expect(servers.size() == 4 + 1, "Expected 5 servers (1 bootstrap + 4 discovered.");
-    auto master = mxt::ServerInfo::master_st;
-    servers.check_servers_status({mxt::ServerInfo::DOWN, master, master, master, master});
+    servers.check_servers_status(base_states);
 
     bool bootstrap_found = false;
     string prefix = "@@" + monitor_name;
@@ -87,195 +54,161 @@ void check_for_servers(TestConnections& test)
     test.expect(bootstrap_found, "Did not find server '%s'.", bootstrap_server.c_str());
 }
 
-void check_state_change(const MaxRest& maxrest)
+void check_state_change(TestConnections& test)
 {
-    TestConnections& test = maxrest.test();
+    auto& mxs = *test.maxscale;
+    auto& xpand = *test.xpand;
 
     // The Xpand-monitor depends on the internal monitor of the Xpand-cluster itself. Since it has a delay,
     // some sleeps are required when expecting state changes.
     const int cycles = 4;
-    test.maxscale->sleep_and_wait_for_monitor(cycles, cycles);
-    expect_all_servers_to_be(maxrest, "Master, Running");
-    cout << endl;
+
+    mxs.check_print_servers_status(base_states);
 
     int node = 0;
-    string address = test.xpand->ip_private(node);
+    string address = xpand.ip_private(node);
 
-    cout << "Blocking node: " << node << endl;
-    test.xpand->block_node(node);
+    test.tprintf("Blocking node %i and waiting for %i monitor ticks.", node, cycles);
 
-    cout << "Waiting for " << cycles << " monitor cycles." << endl;
-    test.maxscale->sleep_and_wait_for_monitor(cycles, cycles);
+    xpand.block_node(node);
+    mxs.sleep_and_wait_for_monitor(cycles, cycles);
+    mxs.check_print_servers_status({down, down, master, master, master});
 
-    auto servers = maxrest.list_servers();
-
-    for (const auto& server : servers)
-    {
-        cout << server.name << "(" << server.address << "): " << server.state << endl;
-        if (server.address == address)
-        {
-            test.expect(server.state == "Down",
-                        "Blocked server was not 'Down' but '%s'.", server.state.c_str());
-        }
-    }
-
-    cout << endl;
-
-    test.xpand->unblock_node(node);
-    cout << "Waiting for " << cycles << " monitor cycles." << endl;
-    test.maxscale->sleep_and_wait_for_monitor(cycles, cycles);
-
-    expect_all_servers_to_be(maxrest, "Master, Running");
-    cout << endl;
+    test.tprintf("Unblocking node %i and waiting for %i monitor ticks.", node, cycles);
+    xpand.unblock_node(node);
+    mxs.sleep_and_wait_for_monitor(cycles, cycles);
+    mxs.check_print_servers_status(base_states);
 }
 
-void check_softfailing(const MaxRest& maxrest)
+void check_softfailing(TestConnections& test)
 {
-    TestConnections& test = maxrest.test();
+    int node = 4;
 
-    // We'll softfail the node with the largest nid. Any node would do,
-    // but for repeatability the same should be selected each time.
-    auto servers = maxrest.list_servers();
-    string id;
-    int max_nid = -1;
+    auto expect_node_status = [&test, node](mxt::ServerInfo::bitfield expected) {
+        auto servers = test.maxscale->get_servers();
+        servers.print();
+        auto server = servers.get(node);
+        test.expect(server.status == expected, "Wrong status. Found %s, expected %s.",
+                    server.status_to_string().c_str(), mxt::ServerInfo::status_to_string(expected).c_str());
+    };
+    expect_node_status(master);
 
-    for (const auto& server : servers)
+    auto server_info = test.maxscale->get_servers().get(node);
+    auto srvname = server_info.name;
+
+    try
     {
-        auto i = server.name.find_last_of("-");
-        auto s = server.name.substr(i + 1);
-        int nid = atoi(s.c_str());
+        MaxRest maxrest(&test);
+        test.tprintf("Softfailing %s.", srvname.c_str());
+        maxrest.call_command("xpandmon", "softfail", monitor_name, {srvname});
+        expect_node_status(master | mxt::ServerInfo::DRAINED);
 
-        if (nid > max_nid)
-        {
-            id = server.name;
-            max_nid = nid;
-        }
+        test.tprintf("Unsoftfailing %s.", srvname.c_str());
+        maxrest.call_command("xpandmon", "unsoftfail", monitor_name, {srvname});
+        expect_node_status(master);
     }
-
-    MaxRest::Server before = maxrest.show_server(id);
-    expect_server_to_be(maxrest, before, "Master, Running");
-
-    cout << "Softfailing " << id << "." << endl;
-    maxrest.call_command("xpandmon", "softfail", monitor_name, {id});
-
-    MaxRest::Server during = maxrest.show_server(id);
-    expect_server_to_be(maxrest, during, "Drained");
-
-    cout << "Unsoftfailing " << id << "." << endl;
-    maxrest.call_command("xpandmon", "unsoftfail", monitor_name, {id});
-
-    MaxRest::Server after = maxrest.show_server(id);
-    expect_server_to_be(maxrest, after, "Master, Running");
+    catch (const std::exception& x)
+    {
+        test.add_failure("Exception: %s", x.what());
+    }
 }
 
 void check_login(TestConnections& test)
 {
-    test.maxscale->stop();
-    test.xpand->connect();
-    auto conn = test.xpand->nodes[0];
-    const char svc_user[] = "rwsplit_user";
-    const char svc_user_host[] = "'rwsplit_user'@'%'";
-    const char svc_pw[] = "rwsplit_pw";
+    auto& mxs = *test.maxscale;
+    auto& xpand = *test.xpand;
 
     const char drop_fmt[] = "DROP USER %s;";
     const char create_fmt[] = "CREATE USER %s IDENTIFIED BY '%s';";
 
-    string drop_query = mxb::string_printf(drop_fmt, svc_user_host);
-    execute_query_silent(conn, drop_query.c_str());
-    test.try_query(conn, create_fmt, svc_user_host, svc_pw);
-    test.try_query(conn, "GRANT SELECT ON system.membership TO %s;", svc_user_host);
-    test.try_query(conn, "GRANT SELECT ON system.nodeinfo TO %s;", svc_user_host);
-    test.try_query(conn, "GRANT SELECT ON system.softfailed_nodes TO %s;", svc_user_host);
-    test.try_query(conn, "GRANT SUPER ON *.* TO %s;", svc_user_host);
+    const char super_user[] = "super_user";
+    const char super_user_host[] = "'super_user'@'%'";
+    const char super_pw[] = "super_pw";
 
-    const char db_user[] = "tester1";
-    const char db_user_host[] = "'tester1'@'%'";
-    const char db_pw[] = "tester1_pw";
+    const char db_user[] = "db_user";
+    const char db_user_host[] = "'db_user'@'%'";
+    const char db_pw[] = "db_pw";
 
-    drop_query = mxb::string_printf(drop_fmt, db_user_host);
-    execute_query_silent(conn, drop_query.c_str());
-    test.try_query(conn, create_fmt, db_user_host, db_pw);
-    test.try_query(conn, "GRANT SELECT ON test.* TO %s;", db_user_host);
+    const char no_db_user[] = "no_db_acc_user";
+    const char no_db_user_host[] = "'no_db_acc_user'@'%'";
+    const char no_db_pw[] = "no_db_acc_pw";
 
-    const char no_db_user[] = "tester2";
-    const char no_db_user_host[] = "'tester2'@'%'";
-    const char no_db_pw[] = "tester2_pw";
+    test.tprintf("Testing logging in. Stopping MaxScale and creating users.");
+    mxs.stop();
 
-    drop_query = mxb::string_printf(drop_fmt, no_db_user_host);
-    execute_query_silent(conn, drop_query.c_str());
-    test.try_query(conn, create_fmt, no_db_user_host, no_db_pw);
+    auto conn = xpand.backend(0)->open_connection();
+    conn->try_cmd_f(drop_fmt, super_user_host);
+    conn->try_cmd_f(drop_fmt, db_user_host);
+    conn->try_cmd_f(drop_fmt, no_db_user_host);
+
+    conn->cmd_f(create_fmt, super_user_host, super_pw);
+    conn->cmd_f("GRANT SUPER ON *.* TO %s;", super_user_host);
+    conn->cmd_f(create_fmt, db_user_host, db_pw);
+    conn->cmd_f("GRANT SELECT ON test.* TO %s;", db_user_host);
+    conn->cmd_f(create_fmt, no_db_user_host, no_db_pw);
 
     sleep(1);
-    test.maxscale->start();
+    test.tprintf("Users created, starting MaxScale.");
+    mxs.start();
     sleep(1);
 
-    int port = test.maxscale->rwsplit_port;
-
-    auto test_login = [&](const char* user, const char* pw, const char* db, bool expect_success) {
-
-            auto ip = test.maxscale->ip();
-
-            MYSQL* rwsplit_conn = db ? open_conn_db(port, ip, db, user, pw) :
-                open_conn_no_db(port, ip, user, pw);
-
-            if (expect_success)
+    auto test_login = [&test](int port, const string& user, const string& pw, const string& db,
+                              bool expect_success) {
+        test.tprintf("Logging in to db '%s' as user '%s'.", db.c_str(), user.c_str());
+        auto conn = test.maxscale->try_open_connection(port, user, pw, db);
+        if (expect_success)
+        {
+            test.expect(conn->is_open(), "Connection failed: '%s'", conn->error());
+            if (conn->is_open())
             {
-                test.expect(mysql_errno(rwsplit_conn) == 0, "RWSplit connection failed: '%s'",
-                            mysql_error(rwsplit_conn));
-                if (test.ok())
+                auto res = conn->query("select rand();");
+                test.expect(res.get(), "Query failed.");
+                if (res)
                 {
-                    test.try_query(rwsplit_conn, "select rand();");
-                    test.tprintf("%s logged in and queried", user);
+                    test.tprintf("Login and query success.");
                 }
             }
-            else
-            {
-                test.expect(mysql_errno(rwsplit_conn) != 0,
-                            "RWSplit connection succeeded when failure was expected");
-            }
-            mysql_close(rwsplit_conn);
-        };
+        }
+        else
+        {
+            test.expect(!conn->is_open(), "Connection succeeded when failure was expected.");
+        }
+    };
+
+    int port = mxs.rwsplit_port;
+    if (test.ok())
+    {
+        test.tprintf("Testing normal rwsplit service.");
+        test_login(port, super_user, super_pw, "", true);
+        test_login(port, super_user, super_pw, "test", true);
+        test_login(port, db_user, db_pw, "test", true);
+    }
 
     if (test.ok())
     {
-        test_login(svc_user, svc_pw, nullptr, true);
-    }
-    if (test.ok())
-    {
-        test_login(db_user, db_pw, "test", true);
+        // Login works but query will fail. Login will start failing if Xpand-user management is improved
+        // at some point.
+        test.tprintf("Logging in to db 'test' as user '%s'.", no_db_user);
+        auto test_conn = mxs.try_open_connection(port, no_db_user, no_db_pw, "test");
+        test.expect(test_conn->is_open(), "Connection failed.");
+        if (test_conn->is_open())
+        {
+            auto res = test_conn->try_query("select rand();");
+            test.expect(!res, "Query succeeded when failure was expected.");
+        }
     }
 
-    /*
-     *  if (test.ok())
-     *  {
-     *   // TODO: this case should fail if the db grant check for Xpand would work. Fix later.
-     *   test_login(no_db_user, no_db_pw, "test", true);
-     *  }
-     */
-    test.try_query(conn, drop_fmt, svc_user_host);
-    test.try_query(conn, drop_fmt, db_user_host);
-    test.try_query(conn, drop_fmt, no_db_user_host);
+    conn->cmd_f(drop_fmt, super_user_host);
+    conn->cmd_f(drop_fmt, db_user_host);
+    conn->cmd_f(drop_fmt, no_db_user_host);
 }
 
 void test_main(TestConnections& test)
 {
     check_for_servers(test);
     check_login(test);
-
-    if (test.ok())
-    {
-        try
-        {
-            MaxRest maxrest(&test);
-
-            check_state_change(maxrest);
-            check_softfailing(maxrest);
-        }
-        catch (const std::exception& x)
-        {
-            cout << "Exception: " << x.what() << endl;
-        }
-    }
+    check_state_change(test);
+    check_softfailing(test);
 }
 }
 
