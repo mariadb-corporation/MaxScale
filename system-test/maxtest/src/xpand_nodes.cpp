@@ -26,6 +26,8 @@ namespace
 const string type_xpand = "xpand";
 const string my_nwconf_prefix = "xpand";
 const string my_name = "Xpand-cluster";
+const string ssl_cert_dst = "/data/clustrix/server-cert.pem";
+const string ssl_key_dst = "/data/clustrix/server-key.pem";
 }
 
 XpandCluster::XpandCluster(mxt::SharedData* shared)
@@ -113,7 +115,34 @@ bool XpandCluster::reset_server(int m)
         }
     }
 
-    return running;
+    bool ssl_ok = false;
+    if (running)
+    {
+        // Copy ssl-certificate and key to backend. Taken into use once cluster is set up.
+        string ssl_cert_src = mxb::cat(m_test_dir, "/ssl-cert/server-cert.pem");
+        string ssl_key_src = mxb::cat(m_test_dir, "/ssl-cert/server-key.pem");
+
+        if (vm.copy_to_node_sudo(ssl_cert_src, ssl_cert_dst)
+            && vm.copy_to_node_sudo(ssl_key_src, ssl_key_dst))
+        {
+            auto res1 = vm.run_cmd_output_sudof("sudo chown xpand:xpand %s", ssl_cert_dst.c_str());
+            auto res2 = vm.run_cmd_output_sudof("sudo chown xpand:xpand %s", ssl_key_dst.c_str());
+            if (res1.rc == 0 && res2.rc == 0)
+            {
+                ssl_ok = true;
+            }
+            else
+            {
+                logger().log_msgf("Failed to chown ssl-files on %s.", name);
+            }
+        }
+        else
+        {
+            logger().log_msgf("Failed to copy ssl-files to %s.", name);
+        }
+    }
+
+    return ssl_ok;
 }
 
 bool XpandCluster::start_replication()
@@ -239,6 +268,36 @@ bool XpandCluster::start_replication()
         logger().log_msgf("Failed to generate base users on %s.", name().c_str());
     }
 
+    if (rval)
+    {
+        // Cluster should be properly set up, enable ssl.
+        auto conn = backend(0)->admin_connection();
+        if (conn->try_cmd_f("SET GLOBAL ssl_cert = '%s';", ssl_cert_dst.c_str())
+            && conn->try_cmd_f("SET GLOBAL ssl_key = '%s';", ssl_key_dst.c_str())
+            && conn->try_cmd("ALTER CLUSTER RELOAD SSL;")
+            && conn->try_cmd("SET GLOBAL ssl_enabled = TRUE;"))
+        {
+            // Test each node.
+            for (int i = 0; i < n; i++)
+            {
+                auto ssl_conn = backend(i)->try_open_connection(mxt::MariaDBServer::SslMode::ON, "");
+                if (!ssl_conn->is_open())
+                {
+                    rval = false;
+                }
+            }
+
+            if (rval)
+            {
+                logger().log_msgf("SSL set up and working on %s.", name().c_str());
+            }
+        }
+        else
+        {
+            logger().log_msgf("SSL setup failed on %s.", name().c_str());
+            rval = false;
+        }
+    }
     return rval;
 }
 
