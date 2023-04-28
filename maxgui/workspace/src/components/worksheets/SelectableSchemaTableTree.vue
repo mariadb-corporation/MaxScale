@@ -97,6 +97,7 @@ export default {
                 if (v) {
                     this.items = []
                     await this.fetchSchemas()
+                    await this.handlePreselectedSchemas()
                 }
             },
         },
@@ -150,9 +151,22 @@ export default {
                         nodeAttrs: { isEmptyChildren: true },
                     })
                     this.items = nodes
-                    this.selectedObjs = nodes.filter(n => this.preselectedSchemas.includes(n.id))
                 }
             }
+        },
+        async handlePreselectedSchemas() {
+            const nodes = this.items.filter(n => this.preselectedSchemas.includes(n.qualified_name))
+            let selectedObjs = []
+            for (const node of nodes) {
+                await this.loadTables(node)
+                /**
+                 * If preselected schemas have no tables, add the schema node to selectedObjs
+                 * so the input validation message can be shown.
+                 */
+                if (node.children.length) selectedObjs = [...selectedObjs, ...node.children]
+                else selectedObjs = [...selectedObjs, node]
+            }
+            this.selectedObjs = selectedObjs
         },
         async loadTables(node) {
             const { nodes } = await queryHelper.getChildNodeData({
