@@ -60,7 +60,7 @@ export default class EntityLinkShape {
             entitySizeConfig: { rowHeight, rowOffset, nodeOffsetHeight },
         } = this.config
         const { isAttrToAttr } = this.linkConfig
-        const colIdx = node.data.attrs.findIndex(c => c.name === attr)
+        const colIdx = node.data.definitions.cols.findIndex(c => c.name === attr)
         const center = isAttrToAttr
             ? node.y +
               nodeHeight / 2 -

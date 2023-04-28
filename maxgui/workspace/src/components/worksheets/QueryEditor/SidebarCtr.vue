@@ -62,7 +62,7 @@
                 v-on="$listeners"
             />
         </keep-alive>
-        <obj-select-dlg v-model="isObjSelectDlgOpened" :preselectedSchemas="preselectedSchemas" />
+        <gen-erd-dlg v-model="isObjSelectDlgOpened" :preselectedSchemas="preselectedSchemas" />
     </wke-sidebar>
 </template>
 
@@ -96,11 +96,11 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import WkeSidebar from '@wkeComps/WkeSidebar.vue'
-import ObjSelectDlg from '@wkeComps/QueryEditor/ObjSelectDlg.vue'
+import GenErdDlg from '@wkeComps/QueryEditor/GenErdDlg.vue'
 
 export default {
     name: 'sidebar-ctr',
-    components: { SchemaTreeCtr, WkeSidebar, ObjSelectDlg },
+    components: { SchemaTreeCtr, WkeSidebar, GenErdDlg },
     props: {
         execSqlDlg: { type: Object, required: true },
     },

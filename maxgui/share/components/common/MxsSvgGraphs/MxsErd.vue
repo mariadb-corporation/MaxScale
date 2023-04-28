@@ -34,19 +34,19 @@
                             <thead>
                                 <tr :style="{ height: `${entityHeaderHeight}px` }">
                                     <th
-                                        class="px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold"
+                                        class="px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold text-no-wrap"
                                         :style="{
-                                            backgroundColor: node.data.highlightColor,
-                                            color: node.data.headerTxtColor,
+                                            backgroundColor: node.styles.highlightColor,
+                                            color: node.styles.headerTxtColor,
                                         }"
                                     >
-                                        {{ node.id }}
+                                        {{ $helpers.unquoteIdentifier(node.data.name) }}
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="(attr, i) in node.data.attrs"
+                                    v-for="(attr, i) in node.data.definitions.cols"
                                     :key="`key_${node.id}_${attr.name}`"
                                     :style="{ height: `${entitySizeConfig.rowHeight}px` }"
                                 >
@@ -54,18 +54,18 @@
                                         class="px-2"
                                         :class="{
                                             'rounded-bl-lg rounded-br-lg':
-                                                i === node.data.attrs.length - 1,
+                                                i === node.data.definitions.cols.length - 1,
                                         }"
                                         :style="{
                                             borderLeft: getBorderStyle(node),
                                             borderRight: getBorderStyle(node),
                                             borderBottom:
-                                                i === node.data.attrs.length - 1
+                                                i === node.data.definitions.cols.length - 1
                                                     ? getBorderStyle(node)
                                                     : 'none',
                                         }"
                                     >
-                                        {{ attr.name }}
+                                        {{ $helpers.unquoteIdentifier(attr.name) }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -240,7 +240,7 @@ export default {
             )
         },
         getBorderStyle(node) {
-            const { highlightColor } = node.data
+            const { highlightColor } = node.styles
             const style = `1px solid ${highlightColor}`
             return style
         },

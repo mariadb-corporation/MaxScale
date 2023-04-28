@@ -458,6 +458,34 @@ function getDatabase(connection_string) {
     return matched.replace(/(database=)+/gi, '')
 }
 
+/**
+ * @param {string} param.schema - schema name
+ * @param {object} param.parsedTable - parsed ddl of a table
+ */
+function genErdNode({ schema, parsedTable }) {
+    return {
+        id: `${schema}.${parsedTable.name}`,
+        data: parsedTable,
+        //TODO: Gen random color from palette
+        styles: { highlightColor: '#525A65', headerTxtColor: 'white' },
+    }
+}
+/**
+ * @param {Object} parsedDdl - parsed ddl map of schemas
+ */
+function genErdData(parsedDdl) {
+    let nodes = [],
+        links = []
+    Object.keys(parsedDdl).forEach(schema => {
+        nodes = [
+            ...nodes,
+            ...parsedDdl[schema].map(tbl => genErdNode({ schema, parsedTable: tbl })),
+        ]
+    })
+    //TODO: Generate links
+    return { nodes, links }
+}
+
 export default {
     getSchemaName,
     getTblName,
@@ -472,4 +500,5 @@ export default {
     categorizeConns,
     genConnStr,
     getDatabase,
+    genErdData,
 }

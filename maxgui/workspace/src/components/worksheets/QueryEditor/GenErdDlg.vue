@@ -37,13 +37,16 @@
  * Public License.
  */
 import { mapState, mapActions } from 'vuex'
+import ErdTask from '@wsSrc/store/orm/models/ErdTask'
 import QueryConn from '@wsSrc/store/orm/models/QueryConn'
 import Worksheet from '@wsSrc/store/orm/models/Worksheet'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 import SelectableSchemaTableTree from '@wkeComps/SelectableSchemaTableTree'
 import connection from '@wsSrc/api/connection'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
-    name: 'obj-select-dlg',
+    name: 'gen-erd-dlg',
     components: { SelectableSchemaTableTree },
     props: {
         value: { type: Boolean, required: true },
@@ -58,6 +61,7 @@ export default {
     computed: {
         ...mapState({
             parsed_ddl: state => state.editorsMem.parsed_ddl,
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
         }),
         isOpened: {
             get() {
@@ -67,8 +71,11 @@ export default {
                 this.$emit('input', v)
             },
         },
+        activeQueryEditorConn() {
+            return QueryConn.getters('getQueryEditorConn')
+        },
         activeQueryEditorConnId() {
-            return this.$typy(QueryConn.getters('getQueryEditorConn'), 'id').safeString
+            return this.$typy(this.activeQueryEditorConn, 'id').safeString
         },
         activeRequestConfig() {
             return Worksheet.getters('getActiveRequestConfig')
@@ -81,28 +88,43 @@ export default {
         ...mapActions({
             queryAndParseDDL: 'editorsMem/queryAndParseDDL',
         }),
-        async cloneConn() {
+        async cloneConn({ queryEditorConn, config }) {
             const [e, res] = await this.$helpers.to(
-                connection.clone({
-                    id: this.activeQueryEditorConnId,
-                    config: this.activeRequestConfig,
-                })
+                connection.clone({ id: queryEditorConn.id, config })
             )
             if (e) this.errVisualizingMsg = this.$helpers.getErrorsArr(e).join('\n')
             return this.$typy(res, 'data.data').safeObjectOrEmpty
         },
-        /**
-         * TODO:
-         * Generate ERD data from parsed_ddl
-         * Open new ERD worksheet and bind cloned connection
-         */
         async visualize() {
-            const conn = await this.cloneConn()
-            if (conn.id) {
+            /**
+             * Copy current query editor data .i.e. connection and request_config data
+             * before inserting a new worksheet
+             */
+            const queryEditorConn = this.$helpers.lodash.cloneDeep(this.activeQueryEditorConn)
+            const config = this.$helpers.lodash.cloneDeep(this.activeRequestConfig)
+
+            const clonedConn = await this.cloneConn({ queryEditorConn, config })
+
+            if (clonedConn.id) {
                 await this.queryAndParseDDL({
-                    connId: conn.id,
+                    connId: clonedConn.id,
                     tableNodes: this.selectedTableNodes,
                 })
+                const erdData = queryHelper.genErdData(this.parsed_ddl)
+                Worksheet.dispatch('insertErdWke')
+                // activeWkeId is also erd_task_id
+                const activeWkeId = Worksheet.getters('getActiveWkeId')
+                // Bind the cloned connection as ERD connection
+                const erdConn = {
+                    id: clonedConn.id,
+                    attributes: clonedConn.attributes,
+                    binding_type: this.QUERY_CONN_BINDING_TYPES.ERD,
+                    erd_task_id: activeWkeId,
+                    meta: queryEditorConn.meta,
+                }
+                QueryConn.insert({ data: erdConn })
+                WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
+                ErdTask.update({ where: activeWkeId, data: { data: erdData } })
             }
         },
     },

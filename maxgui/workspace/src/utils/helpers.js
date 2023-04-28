@@ -33,6 +33,14 @@ export function quotingIdentifier(identifier) {
 }
 
 /**
+ * @param {String} identifier  quoted identifier name
+ * @return {String} Return unquoted identifier name
+ */
+export function unquoteIdentifier(identifier) {
+    return identifier.slice(1, -1).replace(/``/g, '`')
+}
+
+/**
  * @param {Array} payload.columns table fields
  * @param {Array} payload.rows table rows
  * @return {Array} Return object rows
