@@ -267,7 +267,9 @@ export default {
                 switch (binding_type) {
                     case ETL_SRC:
                         target = $mxs_t('source').toLowerCase() + `: ${src_type}`
-                        connData.active_db = queryHelper.getDatabase(body.connection_string)
+                        connData.active_db = $helpers.quotingIdentifier(
+                            queryHelper.getDatabase(body.connection_string)
+                        )
                         break
                     case ETL_DEST:
                         target = $mxs_t('destination').toLowerCase() + `: ${dest_name}`
@@ -346,10 +348,9 @@ export default {
                 queries.post({ id, body: { sql: 'SELECT DATABASE()' } }, config)
             )
             if (!e && res) {
-                const resActiveDb = this.vue
-                    .$typy(res, 'data.data.attributes.results[0].data')
-                    .safeArray.flat()[0]
-
+                let resActiveDb = this.vue.$typy(res, 'data.data.attributes.results[0].data[0][0]')
+                    .safeString
+                resActiveDb = this.vue.$helpers.quotingIdentifier(resActiveDb)
                 if (!resActiveDb) QueryConn.update({ where: id, data: { active_db: '' } })
                 else if (active_db !== resActiveDb)
                     QueryConn.update({ where: id, data: { active_db: resActiveDb } })

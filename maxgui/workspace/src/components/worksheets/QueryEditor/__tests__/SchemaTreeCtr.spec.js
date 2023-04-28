@@ -170,11 +170,11 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
             fnSpy.restore()
         })
     })
-    it(`Should bold SCHEMA type node if active_db value equals to the name of that node`, () => {
+    it(`Should bold SCHEMA node if active_db === node.qualified_name`, () => {
         wrapper = mountFactory({
             shallow: false,
             computed: {
-                activeQueryTabConn: () => ({ active_db: dummy_schema_node.name }),
+                activeQueryTabConn: () => ({ active_db: dummy_schema_node.qualified_name }),
             },
         })
         const schemaNodeNameEle = wrapper

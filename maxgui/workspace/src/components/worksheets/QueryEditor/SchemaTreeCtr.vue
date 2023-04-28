@@ -35,7 +35,7 @@
                         :class="{
                             'font-weight-bold':
                                 node.type === NODE_TYPES.SCHEMA &&
-                                activeQueryTabConn.active_db === node.name,
+                                activeQueryTabConn.active_db === node.qualified_name,
                         }"
                     >
                         {{ node.name }}
