@@ -108,6 +108,9 @@ public:
     ServerInfo        get(const std::string& cnf_name) const;
     size_t            size() const;
 
+    std::vector<ServerInfo>::iterator begin();
+    std::vector<ServerInfo>::iterator end();
+
     /**
      * Return the server info of the master. If no masters are found, returns a default server info object.
      * If multiple masters are found, returns the first.

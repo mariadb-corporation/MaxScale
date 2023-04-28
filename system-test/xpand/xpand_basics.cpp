@@ -21,18 +21,8 @@
 
 using namespace std;
 
-void check_login(TestConnections& test);
-
 namespace
 {
-
-const set<string> bootstrap_servers =
-{
-    "xpand_server1",
-    "xpand_server2",
-    "xpand_server3",
-    "xpand_server4",
-};
 
 const std::string monitor_name = "Xpand-Monitor";
 
@@ -67,52 +57,34 @@ void expect_server_to_be(const MaxRest& maxrest, const MaxRest::Server& server, 
                 server.state.c_str());
 }
 
-void check_for_servers(const MaxRest& maxrest)
+void check_for_servers(TestConnections& test)
 {
-    TestConnections& test = maxrest.test();
+    const string bootstrap_server = "bootstrap_server";
 
-    auto servers = maxrest.list_servers();
+    auto servers = test.maxscale->get_servers();
+    servers.print();
 
-    test.expect(servers.size() >= bootstrap_servers.size(),
-                "Expected at least %d servers.", (int)bootstrap_servers.size());
+    test.expect(servers.size() == 4 + 1, "Expected 5 servers (1 bootstrap + 4 discovered.");
+    auto master = mxt::ServerInfo::master_st;
+    servers.check_servers_status({mxt::ServerInfo::DOWN, master, master, master, master});
 
-    set<string> static_servers;
-    set<string> dynamic_servers;
-
+    bool bootstrap_found = false;
     string prefix = "@@" + monitor_name;
 
     for (const auto& server : servers)
     {
-        string name = server.name;
-
-        cout << "Looking at: " << name << endl;
-
-        if (bootstrap_servers.find(name) != bootstrap_servers.end())
+        const string& name = server.name;
+        if (name == bootstrap_server)
         {
-            static_servers.insert(name);
-            continue;
+            bootstrap_found = true;
         }
-
-        if (name.find(prefix) != 0)
+        else
         {
-            test.expect(false, "The name of a dynamic Xpand node does not start with \"%s\": %s",
-                        prefix.c_str(), name.c_str());
+            test.expect(name.find(prefix) == 0, "The name of a dynamic Xpand node (%s) does not "
+                                                "start with \"%s\".", name.c_str(), prefix.c_str());
         }
-
-        dynamic_servers.insert(name);
     }
-
-    test.expect(static_servers == bootstrap_servers,
-                "Did not find expected servers.\n"
-                "Found   : %s\n"
-                "Expected: %s",
-                mxb::join(static_servers).c_str(),
-                mxb::join(bootstrap_servers).c_str());
-
-    test.expect(dynamic_servers.size() == 4,
-                "Did not find expected numbers of servers %d != 4: %s",
-                (int)dynamic_servers.size(),
-                mxb::join(dynamic_servers).c_str());
+    test.expect(bootstrap_found, "Did not find server '%s'.", bootstrap_server.c_str());
 }
 
 void check_state_change(const MaxRest& maxrest)
@@ -194,32 +166,6 @@ void check_softfailing(const MaxRest& maxrest)
 
     MaxRest::Server after = maxrest.show_server(id);
     expect_server_to_be(maxrest, after, "Master, Running");
-}
-
-void run_test(TestConnections& test)
-{
-    MaxRest maxrest(&test);
-    check_login(test);
-    check_for_servers(maxrest);
-    check_state_change(maxrest);
-    check_softfailing(maxrest);
-}
-}
-
-int main(int argc, char* argv[])
-{
-    TestConnections test(argc, argv);
-
-    try
-    {
-        run_test(test);
-    }
-    catch (const std::exception& x)
-    {
-        cout << "Exception: " << x.what() << endl;
-    }
-
-    return test.global_result;
 }
 
 void check_login(TestConnections& test)
@@ -330,4 +276,31 @@ void check_login(TestConnections& test)
     test.try_query(conn, drop_fmt, svc_user_host);
     test.try_query(conn, drop_fmt, db_user_host);
     test.try_query(conn, drop_fmt, no_db_user_host);
+}
+
+void test_main(TestConnections& test)
+{
+    check_for_servers(test);
+    check_login(test);
+
+    if (test.ok())
+    {
+        try
+        {
+            MaxRest maxrest(&test);
+
+            check_state_change(maxrest);
+            check_softfailing(maxrest);
+        }
+        catch (const std::exception& x)
+        {
+            cout << "Exception: " << x.what() << endl;
+        }
+    }
+}
+}
+
+int main(int argc, char* argv[])
+{
+    return TestConnections().run_test(argc, argv, test_main);
 }

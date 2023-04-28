@@ -1,13 +1,15 @@
 [maxscale]
 threads=###threads###
-log_info=1
 
-###xpand_server###
+[bootstrap_server]
+type=server
+address=###xpand_server_IP_1###
+port=###xpand_server_port_1###
 
 [Xpand-Monitor]
 type=monitor
 module=xpandmon
-servers=###xpand_server_line###
+servers=bootstrap_server
 user=xpandmon
 password=xpandmon
 
@@ -31,12 +33,10 @@ password=skysql
 [RWS-Listener]
 type=listener
 service=RWS
-protocol=MySQLClient
 port=4006
 
 [RCR-Listener]
 type=listener
 service=RCR
-protocol=MySQLClient
 port=4008
 

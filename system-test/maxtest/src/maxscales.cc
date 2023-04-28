@@ -1162,6 +1162,16 @@ ServersInfo::RoleInfo ServersInfo::get_role_info() const
     return rval;
 }
 
+std::vector<ServerInfo>::iterator ServersInfo::begin()
+{
+    return m_servers.begin();
+}
+
+std::vector<ServerInfo>::iterator ServersInfo::end()
+{
+    return m_servers.end();
+}
+
 void ServerInfo::status_from_string(const string& source, const string& details)
 {
     auto flags = mxb::strtok(source, ",");
