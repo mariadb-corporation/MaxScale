@@ -25,14 +25,11 @@ export function formatSQL(v) {
     })
 }
 /**
- * @param {String} str plain identifier string. e.g. db_name.tbl_name
- * @return {String} Return escaped identifier string. e.g.  \`db_name\`.\`tbl_name\`
+ * @param {String} identifier  identifier name
+ * @return {String} Return quoted identifier name. e.g.  `db_name`
  */
-export function escapeIdentifiers(str) {
-    return str
-        .split('.')
-        .map(identifier => `\`${identifier}\``)
-        .join('.')
+export function quotingIdentifier(identifier) {
+    return `\`${identifier.replace(/`/g, '``')}\``
 }
 
 /**

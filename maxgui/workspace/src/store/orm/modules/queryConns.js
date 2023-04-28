@@ -265,7 +265,9 @@ export default {
                 switch (binding_type) {
                     case ETL_SRC:
                         target = $mxs_t('source').toLowerCase() + `: ${src_type}`
-                        connData.active_db = queryHelper.getDatabase(body.connection_string)
+                        connData.active_db = $helpers.quotingIdentifier(
+                            queryHelper.getDatabase(body.connection_string)
+                        )
                         break
                     case ETL_DEST:
                         target = $mxs_t('destination').toLowerCase() + `: ${dest_name}`
@@ -344,10 +346,9 @@ export default {
                 queries.post({ id, body: { sql: 'SELECT DATABASE()' } }, config)
             )
             if (!e && res) {
-                const resActiveDb = this.vue
-                    .$typy(res, 'data.data.attributes.results[0].data')
-                    .safeArray.flat()[0]
-
+                let resActiveDb = this.vue.$typy(res, 'data.data.attributes.results[0].data[0][0]')
+                    .safeString
+                resActiveDb = this.vue.$helpers.quotingIdentifier(resActiveDb)
                 if (!resActiveDb) QueryConn.update({ where: id, data: { active_db: '' } })
                 else if (active_db !== resActiveDb)
                     QueryConn.update({ where: id, data: { active_db: resActiveDb } })
@@ -360,11 +361,10 @@ export default {
             const config = Worksheet.getters('getActiveRequestConfig')
             const { id, meta: { name: connection_name } = {} } = getters.getActiveQueryTabConn
             const now = new Date().valueOf()
-            const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
-            const sql = `USE ${escapedDb};`
+            const sql = `USE ${db};`
             const [e, res] = await this.vue.$helpers.to(queries.post({ id, body: { sql }, config }))
             if (!e && res) {
-                let queryName = `Change default database to ${escapedDb}`
+                let queryName = `Change default database to ${db}`
                 const errObj = this.vue.$typy(res, 'data.data.attributes.results[0]')
                     .safeObjectOrEmpty
 
@@ -377,7 +377,7 @@ export default {
                         },
                         { root: true }
                     )
-                    queryName = `Failed to change default database to ${escapedDb}`
+                    queryName = `Failed to change default database to ${db}`
                 } else
                     QueryConn.update({
                         where: id,

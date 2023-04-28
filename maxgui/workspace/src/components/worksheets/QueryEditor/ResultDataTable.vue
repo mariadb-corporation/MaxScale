@@ -350,7 +350,7 @@ export default {
             let v = ''
             switch (opt.text) {
                 case this.$mxs_t('fieldQuoted'):
-                    v = this.$helpers.escapeIdentifiers(this.processField(data.cell))
+                    v = this.$helpers.quotingIdentifier(this.processField(data.cell))
                     break
                 case this.$mxs_t('field'):
                     v = this.processField(data.cell)

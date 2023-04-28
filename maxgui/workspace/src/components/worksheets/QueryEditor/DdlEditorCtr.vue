@@ -161,14 +161,14 @@ export default {
          */
         buildTblOptSql({ dbName }) {
             let sql = ''
-            const { escapeIdentifiers: escape, deepDiff } = this.$helpers
+            const { quotingIdentifier: quoting, deepDiff } = this.$helpers
             const diffs = deepDiff(this.initialData.table_opts_data, this.formData.table_opts_data)
             diffs.forEach((diff, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const key = diff.path[0]
                 switch (key) {
                     case 'table_name':
-                        sql += `RENAME TO ${escape(dbName)}.${escape(diff.rhs)}`
+                        sql += `RENAME TO ${quoting(dbName)}.${quoting(diff.rhs)}`
                         break
                     case 'table_engine':
                         sql += `ENGINE = ${diff.rhs}`
@@ -193,10 +193,10 @@ export default {
          */
         buildDropColSql({ removedCols }) {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             removedCols.forEach((row, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
-                sql += `DROP COLUMN ${escape(row.column_name)}`
+                sql += `DROP COLUMN ${quoting(row.column_name)}`
             })
             return sql
         },
@@ -208,7 +208,7 @@ export default {
          */
         buildColsDfnSQL({ cols, isChanging }) {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             cols.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const colObj = isChanging ? this.$typy(col, 'newObj').safeObject : col
@@ -227,10 +227,10 @@ export default {
                 } = colObj
                 if (isChanging) {
                     const old_column_name = this.$typy(col, 'oriObj.column_name').safeString
-                    sql += `CHANGE COLUMN ${escape(old_column_name)} `
+                    sql += `CHANGE COLUMN ${quoting(old_column_name)} `
                 } else sql += 'ADD COLUMN '
 
-                sql += `${escape(column_name)}`
+                sql += `${quoting(column_name)}`
                 sql += ` ${column_type}`
                 if (UN) sql += ` ${UN}`
                 if (ZF) sql += ` ${ZF}`
@@ -250,13 +250,13 @@ export default {
          * @returns {String} - returns ADD COLUMN sql
          */
         buildAddColSQL({ addedCols }) {
-            const { escapeIdentifiers: escape } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             let sql = ''
             sql += this.buildColsDfnSQL({ cols: addedCols, isChanging: false })
             addedCols.forEach(({ UQ, column_name }) => {
                 if (UQ) {
                     sql += this.handleAddComma()
-                    sql += `ADD UNIQUE INDEX ${escape(UQ)} (${escape(column_name)})`
+                    sql += `ADD UNIQUE INDEX ${quoting(UQ)} (${quoting(column_name)})`
                 }
             })
             return sql
@@ -268,14 +268,14 @@ export default {
          */
         buildPKSQL() {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             const dropPKSQL = 'DROP PRIMARY KEY'
             const isDroppingPK = this.initialPkCols.length > 0 && this.currPkCols.length === 0
             const isAddingPK = this.currPkCols.length > 0
             if (isDroppingPK) {
                 sql += dropPKSQL
             } else if (isAddingPK) {
-                const keys = this.currPkCols.map(col => escape(col)).join(', ')
+                const keys = this.currPkCols.map(col => quoting(col)).join(', ')
                 const addPKsql = `ADD PRIMARY KEY (${keys})`
                 if (this.initialPkCols.length > 0) sql += `${dropPKSQL}, ${addPKsql}`
                 else sql += addPKsql
@@ -289,13 +289,14 @@ export default {
          */
         buildUQSQL({ uqColsChanged }) {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             uqColsChanged.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const { column_name } = col.newObj
                 col.diff.forEach(d => {
-                    if (!d.lhs) sql += `ADD UNIQUE INDEX ${escape(d.rhs)} (${escape(column_name)})`
-                    else if (!d.rhs) sql += `DROP INDEX ${escape(d.lhs)}`
+                    if (!d.lhs)
+                        sql += `ADD UNIQUE INDEX ${quoting(d.rhs)} (${quoting(column_name)})`
+                    else if (!d.rhs) sql += `DROP INDEX ${quoting(d.lhs)}`
                 })
             })
             return sql
@@ -387,9 +388,9 @@ export default {
             return sql
         },
         applyChanges() {
-            const { escapeIdentifiers: escape, formatSQL } = this.$helpers
+            const { quotingIdentifier: quoting, formatSQL } = this.$helpers
             const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
-            let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}`
+            let sql = `ALTER TABLE ${quoting(dbName)}.${quoting(initialTblName)}`
             let tblOptSql = '',
                 colsAlterSql = ''
             if (this.isTblOptsChanged) tblOptSql = this.buildTblOptSql({ sql, dbName })
@@ -409,11 +410,11 @@ export default {
             })
         },
         async confirmAlter() {
-            const { escapeIdentifiers: escape } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             const { dbName, table_name } = this.formData.table_opts_data
             await QueryEditor.dispatch('exeStmtAction', {
                 sql: this.execSqlDlg.sql,
-                action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
+                action: `Apply changes to ${quoting(dbName)}.${quoting(table_name)}`,
             })
             if (!this.isExecFailed) {
                 const data = this.$helpers.lodash.cloneDeep(this.formData)

@@ -35,7 +35,7 @@
                         :class="{
                             'font-weight-bold':
                                 node.type === NODE_TYPES.SCHEMA &&
-                                activeQueryTabConn.active_db === node.name,
+                                activeQueryTabConn.active_db === node.qualified_name,
                         }"
                     >
                         {{ node.name }}
@@ -120,6 +120,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'schema-tree-ctr',
@@ -260,7 +261,7 @@ export default {
                         nodes.sort((a, b) => a.level - b.level)
                         // Auto collapse all expanded nodes if schema node is collapsed
                         let validLevels = nodes.map(node => node.level)
-                        if (validLevels[0] === 0)
+                        if (validLevels[0] === 1)
                             SchemaSidebar.update({
                                 where: this.queryEditorId,
                                 data: {
@@ -306,9 +307,10 @@ export default {
          * @param {Array} node - a node in db_tree_map
          * @returns {Array} minimized node
          */
-        minimizeNode: ({ id, qualified_name, name, type, level }) => ({
+        minimizeNode: ({ id, parentNameData, qualified_name, name, type, level }) => ({
             id,
             qualified_name,
+            parentNameData,
             name,
             type,
             level,
@@ -357,7 +359,6 @@ export default {
          */
         genTxtOpts(type) {
             return [
-                { text: this.$mxs_t('qualifiedNameQuoted'), type },
                 { text: this.$mxs_t('qualifiedName'), type },
                 { text: this.$mxs_t('nameQuoted'), type },
                 { text: this.$mxs_t('name'), type },
@@ -380,14 +381,11 @@ export default {
         handleTxtOpt({ node, opt }) {
             let v = ''
             switch (opt.text) {
-                case this.$mxs_t('qualifiedNameQuoted'):
-                    v = this.$helpers.escapeIdentifiers(node.qualified_name)
-                    break
                 case this.$mxs_t('qualifiedName'):
                     v = node.qualified_name
                     break
                 case this.$mxs_t('nameQuoted'):
-                    v = this.$helpers.escapeIdentifiers(node.name)
+                    v = this.$helpers.quotingIdentifier(node.name)
                     break
                 case this.$mxs_t('name'):
                     v = node.name
@@ -453,7 +451,7 @@ export default {
                 GEN_ERD,
             } = this.NODE_CTX_TYPES
 
-            const { escapeIdentifiers: escape } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             const { TBL, IDX } = this.NODE_TYPES
 
             switch (opt.type) {
@@ -479,12 +477,12 @@ export default {
                     this.handleTxtOpt({ node, opt })
                     break
                 case DROP: {
-                    let sql = `DROP ${node.type} ${escape(node.qualified_name)};`
+                    let sql = `DROP ${node.type} ${node.qualified_name};`
                     if (node.type === IDX) {
-                        const tbl = node.qualified_name.split('.')[0]
-                        const db = node.id.split('.')[0]
-                        const target = `${escape(db)}.${escape(tbl)}`
-                        sql = `DROP ${node.type} ${escape(node.name)} ON ${target};`
+                        const db = queryHelper.getSchemaName(node)
+                        const tbl = queryHelper.getTblName(node)
+                        const target = `${quoting(db)}.${quoting(tbl)}`
+                        sql = `DROP ${node.type} ${quoting(node.name)} ON ${target};`
                     }
                     this.$emit('drop-action', sql)
                     break
@@ -494,7 +492,7 @@ export default {
                     break
                 case TRUNCATE:
                     if (node.type === TBL)
-                        this.$emit('truncate-tbl', `TRUNCATE TABLE ${escape(node.qualified_name)};`)
+                        this.$emit('truncate-tbl', `TRUNCATE TABLE ${node.qualified_name};`)
                     break
                 case GEN_ERD:
                     this.$emit('gen-erd', this.minimizeNode(node))
