@@ -13,8 +13,13 @@
                 :connId="activeQueryEditorConnId"
                 :preselectedSchemas="preselectedSchemas"
                 :triggerDataFetch="isOpened"
-                @selected-tables="selectedTables = $event"
+                @selected-tables="selectedTableNodes = $event"
             />
+            <div class="err-visualizing-message-ctr mt-3">
+                <p v-if="errVisualizingMsg" class="v-messages__message error--text">
+                    {{ errVisualizingMsg }}
+                </p>
+            </div>
         </template>
     </mxs-conf-dlg>
 </template>
@@ -31,8 +36,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState, mapActions } from 'vuex'
 import QueryConn from '@wsSrc/store/orm/models/QueryConn'
+import Worksheet from '@wsSrc/store/orm/models/Worksheet'
 import SelectableSchemaTableTree from '@wkeComps/SelectableSchemaTableTree'
+import connection from '@wsSrc/api/connection'
 
 export default {
     name: 'obj-select-dlg',
@@ -43,10 +51,14 @@ export default {
     },
     data() {
         return {
-            selectedTables: [],
+            selectedTableNodes: [],
+            errVisualizingMsg: '',
         }
     },
     computed: {
+        ...mapState({
+            parsed_ddl: state => state.editorsMem.parsed_ddl,
+        }),
         isOpened: {
             get() {
                 return this.value
@@ -58,19 +70,47 @@ export default {
         activeQueryEditorConnId() {
             return this.$typy(QueryConn.getters('getQueryEditorConn'), 'id').safeString
         },
+        activeRequestConfig() {
+            return Worksheet.getters('getActiveRequestConfig')
+        },
         hasSavingErr() {
-            return Boolean(this.errMsg) || Boolean(!this.selectedTables.length)
+            return Boolean(this.errVisualizingMsg) || Boolean(!this.selectedTableNodes.length)
         },
     },
     methods: {
+        ...mapActions({
+            queryAndParseDDL: 'editorsMem/queryAndParseDDL',
+        }),
+        async cloneConn() {
+            const [e, res] = await this.$helpers.to(
+                connection.clone({
+                    id: this.activeQueryEditorConnId,
+                    config: this.activeRequestConfig,
+                })
+            )
+            if (e) this.errVisualizingMsg = this.$helpers.getErrorsArr(e).join('\n')
+            return this.$typy(res, 'data.data').safeObjectOrEmpty
+        },
         /**
-         * TODO: Fetch DDL for chosen tables.
-         * Parse DDL.
-         * Generate ERD data.
-         * Clone current active query editor connection and use
-         * that for opening a new ERD worksheet.
+         * TODO:
+         * Generate ERD data from parsed_ddl
+         * Open new ERD worksheet and bind cloned connection
          */
-        visualize() {},
+        async visualize() {
+            const conn = await this.cloneConn()
+            if (conn.id) {
+                await this.queryAndParseDDL({
+                    connId: conn.id,
+                    tableNodes: this.selectedTableNodes,
+                })
+            }
+        },
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.err-visualizing-message-ctr {
+    min-height: 24px;
+}
+</style>

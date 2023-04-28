@@ -44,6 +44,10 @@
  * Public License.
  */
 // ========== Component for selecting schema and table objects ==========
+/*
+ * Emits
+ * $emit('selected-tables', object[])
+ */
 import { mapState } from 'vuex'
 import Worksheet from '@wsSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@wsSrc/store/orm/models/SchemaSidebar'
@@ -76,8 +80,9 @@ export default {
             return this.selectedObjs.reduce(
                 (obj, o) => {
                     // SCHEMA nodes will be included in selectedObjs even though those have no tables
-                    if (o.type === this.NODE_TYPES.SCHEMA) obj.emptySchemas.push(o.qualified_name)
-                    else obj.tables.push(o.qualified_name)
+                    if (o.type === this.NODE_TYPES.SCHEMA)
+                        obj.emptySchemas.push(this.minimizeNode(o))
+                    else obj.tables.push(this.minimizeNode(o))
                     return obj
                 },
                 { tables: [], emptySchemas: [] }
@@ -130,6 +135,13 @@ export default {
     methods: {
         iconSheet(node) {
             if (node.type === this.NODE_TYPES.SCHEMA) return '$vuetify.icons.mxs_database'
+        },
+        minimizeNode(node) {
+            return {
+                name: node.name,
+                qualified_name: node.qualified_name,
+                schema: node.parentNameData[this.NODE_TYPES.SCHEMA],
+            }
         },
         async fetchSchemas() {
             const [e, res] = await this.$helpers.to(
