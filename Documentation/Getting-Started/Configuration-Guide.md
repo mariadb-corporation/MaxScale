@@ -336,12 +336,22 @@ match at the beginning of the query, set `match=/^SELECT/`. To only match the en
 
 Modules which accept regular expression parameters also often accept options which affect
 how the patterns are compiled. Typically, this setting is called *options* and accepts
-values such as `ignorecase`, `case` and `extended`. `ignorecase` causes the regular
-expression matcher to ignore letter case, and is often on by default. `extended` ignores
-whitespace in the pattern. `case` turns on case-sensitive matching. These settings can
-also be defined in the pattern itself, so they can be used even in modules without
-pattern compilation settings. The pattern settings are `(?i)` for `ignorecase` and `(?x)`
-for `extended`. See the
+values such as `ignorecase`, `case` and `extended`.
+
+* `ignorecase`: Causes the regular expression matcher to ignore letter case, and
+  is often on by default. When enabled, `/SELECT/` would match both `SELECT` and
+  `select`.
+
+* `extended`: Ignores whitespace and `#` comments in the pattern. Note that this
+  is not the same as the extended regular expression syntax that for example
+  `grep -E` uses.
+
+* `case`: Turns on case-sensitive matching. This means that `/SELECT/` will not
+  match `select`.
+
+These settings can also be defined in the pattern itself, so they can be
+used even in modules without pattern compilation settings. The pattern
+settings are `(?i)` for `ignorecase` and `(?x)` for `extended`. See the
 [PCRE2 syntax documentation](https://www.pcre.org/current/doc/html/pcre2syntax.html#SEC16)
 for more information.
 
