@@ -148,11 +148,15 @@ void History::prune_history()
     // cleared.
     uint32_t min_id = m_history.front().id();
 
-    for (const auto& kv : m_history_info)
+    for (const auto& [sub, info] : m_history_info)
     {
-        if (kv.second.position > 0 && kv.second.position < min_id)
+        if (info.position > 0 && info.position < min_id)
         {
-            min_id = kv.second.position;
+            min_id = info.position;
+        }
+        else if (sub->current_id() != 0 && sub->current_id() < min_id)
+        {
+            min_id = sub->current_id();
         }
     }
 
@@ -163,10 +167,14 @@ void History::prune_history()
 
 void History::pin_responses(Subscriber* backend)
 {
+    uint32_t id = 0;
+
     if (!m_history.empty())
     {
-        m_history_info[backend].position = m_history.front().id();
+        id = m_history.front().id();
     }
+
+    m_history_info[backend].position = id;
 }
 
 void History::set_position(Subscriber* backend, uint32_t position)
