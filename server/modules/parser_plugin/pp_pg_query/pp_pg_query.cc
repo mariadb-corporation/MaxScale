@@ -325,7 +325,23 @@ public:
     void analyze(const CreateRoleStmt& x)
     {
         m_type_mask |= sql::TYPE_WRITE;
-        m_op = sql::OP_CREATE;
+
+        switch (x.stmt_type)
+        {
+        case ROLESTMT_USER:
+            m_op = sql::OP_CREATE_USER;
+            break;
+
+        case ROLESTMT_ROLE:
+            m_op = sql::OP_CREATE_ROLE;
+            break;
+
+        default:
+            mxb_assert(!true);
+            [[fallthrough]];
+        case ROLESTMT_GROUP:
+            m_op = sql::OP_CREATE;
+        }
     }
 
     void analyze(const CreateStmt& x)
