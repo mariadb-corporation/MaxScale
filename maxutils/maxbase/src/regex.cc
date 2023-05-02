@@ -135,7 +135,7 @@ bool Regex::match(const char* str, size_t len) const
     int rc;
     mxb_assert(m_code.get());
 
-    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str, len, 0, m_options, this_thread.md, NULL)) == 0)
+    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str, len, 0, 0, this_thread.md, NULL)) == 0)
     {
         this_thread.md.enlarge();
     }
@@ -148,7 +148,7 @@ std::vector<std::string> Regex::substr(const char* str, size_t len) const
     int rc;
     mxb_assert(m_code.get());
 
-    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str, len, 0, m_options, this_thread.md, NULL)) == 0)
+    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str, len, 0, 0, this_thread.md, NULL)) == 0)
     {
         this_thread.md.enlarge();
     }
@@ -211,7 +211,7 @@ std::string Regex::replace(const char* str, size_t len, const char* replacement)
     {
         int rc = pcre2_substitute(
             m_code.get(), (PCRE2_SPTR) str, len,
-            0, m_options | PCRE2_SUBSTITUTE_GLOBAL, this_thread.md, NULL,
+            0, PCRE2_SUBSTITUTE_GLOBAL, this_thread.md, NULL,
             (PCRE2_SPTR) replacement, PCRE2_ZERO_TERMINATED,
             (PCRE2_UCHAR*) &output[0], &size);
 

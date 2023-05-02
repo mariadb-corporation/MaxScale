@@ -184,7 +184,8 @@ inline int32_t get_byte1(const uint8_t* pBuffer, uint8_t* pHost8)
 
 inline int32_t get_byte4(const uint8_t* pBuffer, uint32_t* pHost32)
 {
-    uint32_t le32 = *(reinterpret_cast<const uint32_t*>(pBuffer));
+    uint32_t le32;
+    memcpy(&le32, pBuffer, sizeof(le32));
     *pHost32 = le32toh(le32);
     return 4;
 }
@@ -206,7 +207,8 @@ inline uint32_t get_byte4(const uint8_t* pBuffer)
 
 inline int32_t get_byte8(const uint8_t* pBuffer, uint64_t* pHost64)
 {
-    uint64_t le64 = *(reinterpret_cast<const uint64_t*>(pBuffer));
+    uint64_t le64;
+    memcpy(&le64, pBuffer, sizeof(le64));
     *pHost64 = le64toh(le64);
     return 8;
 }
@@ -244,16 +246,14 @@ inline int32_t set_byte1(uint8_t* pBuffer, uint8_t val)
 inline int32_t set_byte4(uint8_t* pBuffer, uint32_t val)
 {
     uint32_t le32 = htole32(val);
-    auto ple32 = reinterpret_cast<uint32_t*>(pBuffer);
-    *ple32 = le32;
+    memcpy(pBuffer, &le32, sizeof(le32));
     return 4;
 }
 
 inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
 {
     uint64_t le64 = htole64(val);
-    auto ple64 = reinterpret_cast<uint64_t*>(pBuffer);
-    *ple64 = le64;
+    memcpy(pBuffer, &le64, sizeof(le64));
     return 8;
 }
 
