@@ -74,11 +74,12 @@ void alter_readconnroute(TestConnections& test)
     for (int i = 0; i < 5; i++)
     {
         conn.connect();
-        Row row = conn.row("SELECT @@server_id");
+        auto id = conn.field("SELECT @@server_id");
+        test.expect(!id.empty(), "Expected a response: %s", conn.error());
         conn.disconnect();
-        test.expect(row[0] == master_id,
+        test.expect(id == master_id,
                     "First connection should use master: %s != %s",
-                    row[0].c_str(),
+                    id.c_str(),
                     master_id.c_str());
     }
 
@@ -87,11 +88,12 @@ void alter_readconnroute(TestConnections& test)
     for (int i = 0; i < 5; i++)
     {
         conn.connect();
-        Row row = conn.row("SELECT @@server_id");
+        auto id = conn.field("SELECT @@server_id");
+        test.expect(!id.empty(), "Expected a response: %s", conn.error());
         conn.disconnect();
-        test.expect(row[0] != master_id,
+        test.expect(id != master_id,
                     "Second connection should not use master: %s == %s",
-                    row[0].c_str(),
+                    id.c_str(),
                     master_id.c_str());
     }
 }
