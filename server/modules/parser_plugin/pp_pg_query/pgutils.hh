@@ -567,19 +567,19 @@ public:
 };
 
 template<class T>
-T cast(Node* pNode)
+T cast(::Node* pNode)
 {
     return pNode->type == TypeTag::of((T)nullptr) ? reinterpret_cast<T>(pNode) : nullptr;
 }
 
 template<class T>
-T cast(const Node* pNode)
+T cast(const ::Node* pNode)
 {
-    return cast<T>(const_cast<Node*>(pNode));
+    return cast<T>(const_cast<::Node*>(pNode));
 }
 
 template<class T>
-T cast(Node& node)
+T cast(::Node& node)
 {
     if (node.type != TypeTag::of((typename std::remove_reference<T>::type*)nullptr))
     {
@@ -590,22 +590,22 @@ T cast(Node& node)
 }
 
 template<class T>
-T cast(const Node& node)
+T cast(const ::Node& node)
 {
-    return cast<T>(const_cast<Node&>(node));
+    return cast<T>(const_cast<::Node&>(node));
 }
 
 template<>
-inline List* cast<List*>(Node* pNode)
+inline ::List* cast<::List*>(::Node* pNode)
 {
-    List* pList = nullptr;
+    ::List* pList = nullptr;
 
     switch (pNode->type)
     {
     case T_List:
     case T_IntList:
     case T_OidList:
-        pList = reinterpret_cast<List*>(pNode);
+        pList = reinterpret_cast<::List*>(pNode);
         break;
 
     default:
@@ -616,22 +616,22 @@ inline List* cast<List*>(Node* pNode)
 }
 
 template<>
-inline const List* cast<const List*>(const Node* pNode)
+inline const ::List* cast<const ::List*>(const ::Node* pNode)
 {
-    return cast<List*>(const_cast<Node*>(pNode));
+    return cast<::List*>(const_cast<::Node*>(pNode));
 }
 
 template<>
-inline List& cast<List&>(Node& node)
+inline ::List& cast<::List&>(::Node& node)
 {
-    List* pList = nullptr;
+    ::List* pList = nullptr;
 
     switch (node.type)
     {
     case T_List:
     case T_IntList:
     case T_OidList:
-        pList = reinterpret_cast<List*>(&node);
+        pList = reinterpret_cast<::List*>(&node);
         break;
 
     default:
@@ -642,10 +642,93 @@ inline List& cast<List&>(Node& node)
 }
 
 template<>
-inline const List& cast<const List&>(const Node& node)
+inline const ::List& cast<const ::List&>(const ::Node& node)
 {
-    return cast<List&>(const_cast<Node&>(node));
+    return cast<::List&>(const_cast<::Node&>(node));
 }
+
+// C++-wrapper for a T_List List. If a need for a T_IntList List and/or
+// a T_OidList List is needed, this can be turned into a template.
+class NodeList
+{
+public:
+    enum class Location
+    {
+        BEGIN,
+        END
+    };
+
+    class iterator
+    {
+    public:
+        explicit iterator()
+        {
+        }
+
+        explicit iterator(const ::List* pList, Location location)
+            : m_pList(pList)
+            , m_pos(location == Location::BEGIN ? 0 : m_pList->length)
+        {
+        }
+
+        iterator& operator++()
+        {
+            mxb_assert(m_pList);
+            mxb_assert(m_pos < m_pList->length);
+            ++m_pos;
+            return *this;
+        }
+
+        iterator operator++(int)
+        {
+            iterator rv(*this);
+            ++(*this);
+            return rv;
+        }
+
+        bool operator==(const iterator& rhs) const
+        {
+            mxb_assert(m_pList && m_pList == rhs.m_pList);
+            return m_pos == rhs.m_pos;
+        }
+
+        bool operator!=(const iterator& rhs) const
+        {
+            return !(*this == rhs);
+        }
+
+        Node* operator*() const
+        {
+            mxb_assert(m_pList);
+            mxb_assert(m_pos < m_pList->length);
+            return static_cast<::Node*>(m_pList->elements[m_pos].ptr_value);
+        }
+
+    private:
+        const ::List* m_pList { nullptr };
+        int           m_pos   { -1 };
+    };
+
+
+    NodeList(const ::List* pList)
+        : m_pList(pList)
+    {
+        mxb_assert(pList->type == T_List);
+    }
+
+    iterator begin() const
+    {
+        return iterator(m_pList, Location::BEGIN);
+    }
+
+    iterator end() const
+    {
+        return iterator(m_pList, Location::END);
+    }
+
+private:
+    const ::List* m_pList { nullptr };
+};
 
 }
 
