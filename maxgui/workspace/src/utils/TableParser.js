@@ -17,6 +17,7 @@ const tableOptionsReg = tokenizer.tableOptions
 const colDefReg = tokenizer.colDef
 const nonFksReg = tokenizer.nonFks
 const fksReg = tokenizer.fks
+const indexColNamesReg = tokenizer.indexColNames
 const createTableReg = tokenizer.createTable
 /**
  * This parser works when sql_quote_show_create on
@@ -78,6 +79,20 @@ export default class TableParser {
         return def
     }
     /**
+     * @param {string} index_col_names .e.g. `last_name`(30) ASC,`first_name`
+     * @returns {object[]}
+     */
+    parseIndexColNames(index_col_names) {
+        if (!index_col_names) return undefined
+        let match
+        let res = []
+        while ((match = indexColNamesReg.exec(index_col_names)) !== null) {
+            const { name, length, order } = match.groups
+            res.push({ name, length, order })
+        }
+        return res
+    }
+    /**
      * Parses a string to extract its key
      * @param {String} def - A string containing key definition.
      * @returns {object|string}
@@ -101,9 +116,9 @@ export default class TableParser {
         return {
             category,
             name,
-            index_col_names,
+            index_col_names: this.parseIndexColNames(index_col_names),
             match_option,
-            referenced_index_col_names,
+            referenced_index_col_names: this.parseIndexColNames(referenced_index_col_names),
             referenced_schema_name,
             referenced_table_name,
             on_delete,

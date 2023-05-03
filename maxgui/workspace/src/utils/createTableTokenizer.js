@@ -23,14 +23,16 @@ const WORD_REQ = '\\w+'
 const NOT_SINGLE_QUOTE = "[^']*"
 const NOT_DBL_QUOTE = '[^"]*'
 const NOT_BACKTICK = '[^`]*'
+const DIGIT_REQ = '\\d+'
+const ORDER = 'ASC|DESC'
 
 const INDEX_LENGTH = createGroup({
-    token: '\\(\\d+\\)',
+    token: PAREN_OPEN + DIGIT_REQ + PAREN_CLOSE,
     ignore: true,
     optional: true,
 })
 const INDEX_ORDER = createGroup({
-    token: 'ASC|DESC',
+    token: ORDER,
     ignore: true,
     optional: true,
 })
@@ -54,22 +56,20 @@ function createGroup({ token, name = '', optional = false, ignore = false }) {
 }
 
 /**
- *
- * @param {String} append - append additional reg
  * @returns {String}
  */
-function getEscapeStrReg(append = '') {
+function getEscapeStrReg() {
     return [
         createGroup({
-            token: `'${NOT_SINGLE_QUOTE}(?:''${NOT_SINGLE_QUOTE})*'` + append,
+            token: `'${NOT_SINGLE_QUOTE}(?:''${NOT_SINGLE_QUOTE})*'`,
             ignore: true,
         }),
         createGroup({
-            token: `"${NOT_DBL_QUOTE}(?:""${NOT_DBL_QUOTE})*"` + append,
+            token: `"${NOT_DBL_QUOTE}(?:""${NOT_DBL_QUOTE})*"`,
             ignore: true,
         }),
         createGroup({
-            token: `\`${NOT_BACKTICK}(?:\`\`${NOT_BACKTICK})*\`` + append,
+            token: `\`${NOT_BACKTICK}(?:\`\`${NOT_BACKTICK})*\``,
             ignore: true,
         }),
     ].join('|')
@@ -80,13 +80,7 @@ function getEscapeStrReg(append = '') {
  * @returns {String} regex for capturing: `t1` or `my test``s table`, ...
  */
 function createEscapeStrGroup(name) {
-    return createGroup({
-        token: createGroup({
-            token: getEscapeStrReg(),
-            ignore: true,
-        }),
-        name,
-    })
+    return createGroup({ token: getEscapeStrReg(), name })
 }
 
 /**
@@ -118,12 +112,12 @@ function createIdxColNamesReg(name) {
         createGroup({
             token:
                 createGroup({
-                    token: getEscapeStrReg(INDEX_LENGTH_ORDER_REG + ',\\s*'),
+                    token: getEscapeStrReg() + INDEX_LENGTH_ORDER_REG + ',\\s*',
                     ignore: true,
                 }) +
                 '*' +
                 createGroup({
-                    token: getEscapeStrReg(INDEX_LENGTH_ORDER_REG),
+                    token: getEscapeStrReg() + INDEX_LENGTH_ORDER_REG,
                     ignore: true,
                 }),
             name,
@@ -304,5 +298,17 @@ export default {
                 [MATCH_OPTION, ON_DELETE, ON_UPDATE].join(WHITESPACE_OPT),
         }),
         'i'
+    ),
+    indexColNames: new RegExp(
+        [
+            createGroup({ token: getEscapeStrReg(), name: 'name' }),
+            createGroup({
+                token: PAREN_OPEN + createGroup({ token: DIGIT_REQ, name: 'length' }) + PAREN_CLOSE,
+                ignore: true,
+                optional: true,
+            }),
+            createGroup({ token: ORDER, name: 'order', optional: true }),
+        ].join(WHITESPACE_OPT),
+        'g'
     ),
 }
