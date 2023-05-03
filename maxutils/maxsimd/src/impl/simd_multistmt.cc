@@ -130,7 +130,7 @@ namespace simd256
  *  2. If found and there are only spaces, semicolons and comments
  *     in the rest of the sql, it is NOT a multi-statement, else it is.
  */
-bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarkers)
+MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarkers)
 {
     // The characters that need to be classified.
     static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"(;"'`#-/\)");

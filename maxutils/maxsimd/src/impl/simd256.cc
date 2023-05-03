@@ -28,7 +28,7 @@ namespace maxsimd
 namespace simd256
 {
 
-std::string to_string(__m256i reg)
+MXS_AVX2_FUNC std::string to_string(__m256i reg)
 {
     using namespace std;
 
@@ -42,7 +42,7 @@ std::string to_string(__m256i reg)
     return os.str();
 }
 
-std::string to_hex_string(__m256i reg)
+MXS_AVX2_FUNC std::string to_hex_string(__m256i reg)
 {
     using namespace std;
 
@@ -60,7 +60,7 @@ std::string to_hex_string(__m256i reg)
     return os.str();
 }
 
-__m256i make_ascii_bitmap(const std::string& chars)
+MXS_AVX2_FUNC __m256i make_ascii_bitmap(const std::string& chars)
 {
     std::array<unsigned char, SIMD_BYTES> bitmap {};
     for (unsigned char ch : chars)

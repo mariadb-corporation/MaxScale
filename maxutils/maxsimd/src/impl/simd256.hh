@@ -21,6 +21,8 @@
 #include <vector>
 #include <immintrin.h>
 
+#define MXS_AVX2_FUNC __attribute__ ((__target__ ("avx2")))
+
 namespace maxsimd
 {
 namespace simd256
@@ -79,7 +81,7 @@ __m256i make_ascii_bitmap(const std::string& chars);
  *  There are 4 copies of the table in the __m256i, again for
  *  architectural reasons. This table also works for 8-bit chars.
  */
-inline __m256i bitmask_lookup()
+MXS_AVX2_FUNC inline __m256i bitmask_lookup()
 {
     return _mm256_setr_epi8(
         1, 2, 4, 8, 16, 32, 64, char(128),
@@ -101,7 +103,7 @@ inline __m256i bitmask_lookup()
  *                        bitmask where a bit is set corresponding to a classified
  *                        character in the input.
  */
-inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
+MXS_AVX2_FUNC inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
 {
     // ascii_classification[i] = ascii_bitmap[input[i] & 0x1111)]
     const __m256i ascii_classification = _mm256_shuffle_epi8(ascii_bitmap, input);
@@ -137,7 +139,7 @@ using Markers = std::vector<const char*>;
  *                   for the caller, reused for each call to make_markers()
  * @return Pointers into argument string for every classified character.
  */
-inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Markers* pMarkers)
+MXS_AVX2_FUNC inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Markers* pMarkers)
 {
     const char* pBegin = str.data();
     const char* pSource = pBegin;

@@ -36,7 +36,7 @@ namespace
 
 // The characters that need to be classified. Digits are handled
 // separately.
-inline __m256i sql_ascii_bit_map()
+MXS_AVX2_FUNC inline __m256i sql_ascii_bit_map()
 {
     static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"("'`/#-\)");
     return sql_ascii_bit_map;
@@ -44,7 +44,7 @@ inline __m256i sql_ascii_bit_map()
 
 // Characters that can start (and continue) an identifier.
 
-inline __m256i ident_begin_bit_map()
+MXS_AVX2_FUNC inline __m256i ident_begin_bit_map()
 {
     static const __m256i ident_begin_bit_map =
             make_ascii_bitmap(R"($_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
@@ -52,12 +52,12 @@ inline __m256i ident_begin_bit_map()
     return ident_begin_bit_map;
 }
 
-inline __m256i small_zeros()
+MXS_AVX2_FUNC inline __m256i small_zeros()
 {
     const __m256i small_zeros = _mm256_set1_epi8('0' - 1);
     return small_zeros;
 }
-inline __m256i large_nines()
+MXS_AVX2_FUNC inline __m256i large_nines()
 {
     const __m256i large_nines = _mm256_set1_epi8('9' + 1);
     return large_nines;
@@ -71,7 +71,7 @@ inline __m256i large_nines()
  *  The shift language is how the chars naturally look, so a shift
  *  right of the chars is a shift left of the bitmaps.
  */
-inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
+MXS_AVX2_FUNC inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
 {
     const char* pBegin = sql.data();
     const char* pSource = pBegin;
@@ -194,7 +194,7 @@ private:
 
 static LUT lut;
 
-inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
+MXS_AVX2_FUNC inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
 {
     while (!pMarkers->empty())
     {
@@ -224,7 +224,7 @@ inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
     return nullptr;
 }
 
-inline const char* probe_number(const char* it, const char* const pEnd)
+MXS_AVX2_FUNC inline const char* probe_number(const char* it, const char* const pEnd)
 {
     bool is_hex = *it == '0';
     bool allow_hex = false;
@@ -304,7 +304,7 @@ inline const char* probe_number(const char* it, const char* const pEnd)
  *  Note that where the sql is invalid the output should also be invalid so it cannot
  *  match a valid canonical TODO make sure.
  */
-std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
+MXS_AVX2_FUNC std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 {
     /* The call &*pSql->begin() ensures that a non-confirming
      * std::string will copy the data (COW, CentOS7)
