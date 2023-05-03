@@ -1,6 +1,8 @@
 include(BuildLibpg_query.cmake)
 
-add_library(pp_pg_query SHARED pp_pg_query.cc)
+add_library(pp_pg_query SHARED
+  pgutils.cc
+  pp_pg_query.cc)
 
 add_dependencies(pp_pg_query libpg_query postgresprotocol)
 

@@ -11,35 +11,17 @@
  * Public License.
  */
 
-#define MXB_MODULE_NAME "pp_pg_query"
-#include <maxscale/ccdefs.hh>
-
+#include "pp_pg_query.hh"
 #include <maxsimd/canonical.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/parser.hh>
 #include "../../protocol/Postgres/pgparser.hh"
-#include <pg_query.h>
-extern "C"
-{
-#include <src/pg_query_internal.h>
-#include <catalog/pg_class.h>
-#include <parser/parser.h>
-}
+#include "pgutils.hh"
 
 using namespace std;
 using mxs::Parser;
 namespace sql = mxs::sql;
-
-// For development
-#define ASSERT_ON_NOT_HANDLED
-#undef ASSERT_ON_NOT_HANDLED
-
-#if defined(ASSERT_ON_NOT_HANDLED)
-#define nhy_assert() mxb_assert(!true);
-#else
-#define nhy_assert()
-#endif
 
 namespace
 {
