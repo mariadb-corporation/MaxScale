@@ -384,6 +384,78 @@ public:
         m_op = sql::OP_SELECT;
     }
 
+    uint32_t get_transaction_type(const TransactionStmt& x)
+    {
+        uint32_t type_mask = 0;
+
+        if (x.options)
+        {
+            List* pOptions = x.options;
+            mxb_assert(pOptions->type == T_List);
+
+            if (pOptions->type == T_List)
+            {
+                for (int i = 0; i < pOptions->length; ++i)
+                {
+                    Node* pOption = static_cast<Node*>(pOptions->elements[i].ptr_value);
+                    if (const DefElem* pDef_elem = pgu::cast<const DefElem*>(pOption))
+                    {
+                        if (pDef_elem->defname && strcmp(pDef_elem->defname, "transaction_read_only") == 0)
+                        {
+                            if (const A_Const* pA_const = pgu::cast<const A_Const*>(pDef_elem->arg))
+                            {
+                                if (pgu::is_truthy(*pA_const))
+                                {
+                                    type_mask |= sql::TYPE_READ;
+                                }
+                                else
+                                {
+                                    type_mask |= sql::TYPE_WRITE;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return type_mask;
+    }
+
+    void analyze(const TransactionStmt& x)
+    {
+        switch (x.kind)
+        {
+        case TRANS_STMT_BEGIN:
+            m_type_mask |= (sql::TYPE_BEGIN_TRX | get_transaction_type(x));
+            break;
+
+        case TRANS_STMT_COMMIT:
+            m_type_mask |= sql::TYPE_COMMIT;
+            break;
+
+        case TRANS_STMT_ROLLBACK:
+            m_type_mask |= sql::TYPE_ROLLBACK;
+            break;
+
+        case TRANS_STMT_START:
+            m_type_mask |= (sql::TYPE_BEGIN_TRX | get_transaction_type(x));
+            break;
+
+        default:
+            mxb_assert(!true);
+            [[fallthrough]];
+        case TRANS_STMT_SAVEPOINT:
+	case TRANS_STMT_RELEASE:
+	case TRANS_STMT_ROLLBACK_TO:
+	case TRANS_STMT_PREPARE:
+	case TRANS_STMT_COMMIT_PREPARED:
+	case TRANS_STMT_ROLLBACK_PREPARED:
+            // TODO: What to do with these?
+            break;
+        }
+    }
+
     Parser::Result result() const
     {
         return m_result;
