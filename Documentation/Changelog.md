@@ -9,6 +9,8 @@
   commit when `transaction_replay` is enabled. To retain the old behavior where
   transactions were always replayed, disable `transaction_replay_safe_commit`.
 
+* Added the new [XRouter](./Routers/XRouter.md) module.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
