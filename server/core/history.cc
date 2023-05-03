@@ -116,13 +116,33 @@ History::History(size_t limit, bool allow_pruning, bool disable_history)
 
 void History::add(GWBUF&& buffer, bool ok)
 {
+    if (m_allow_pruning)
+    {
+        auto is_same = [&](const GWBUF& buf){
+            return buf.compare(buffer) == 0;
+        };
+
+        if (auto it = std::find_if(m_history.begin(), m_history.end(), is_same); it != m_history.end())
+        {
+            // The same statement was executed again, remove the old one before adding the new one at the back
+            // of the queue.
+            m_history.erase(it);
+        }
+    }
+
     m_history_responses.emplace(buffer.id(), ok);
     m_history.emplace_back(std::move(buffer));
 
     if (m_history.size() > m_max_sescmd_history)
     {
-        prune_history();
+        // Too many commands, discard the oldest one to make more space. This loses information and the
+        // session state cannot be fully recovered anymore. As a result, some features (e.g. connection
+        // sharing) are disabled.
+        m_history.pop_front();
+        m_history_pruned = true;
     }
+
+    prune_responses();
 }
 
 bool History::erase(uint32_t id)
@@ -141,12 +161,18 @@ bool History::erase(uint32_t id)
     return erased;
 }
 
-void History::prune_history()
+void History::prune_responses()
 {
-    // Using the about-to-be-pruned command as the minimum ID prevents the removal of responses that are still
+    // Using the latest added command as the minimum ID prevents the removal of responses that are still
     // needed when the ID overflows. If only the stored positions were used, the whole history would be
     // cleared.
-    uint32_t min_id = m_history.front().id();
+    //
+    // Using the oldest response would prevent the responses from being pruned if duplicate
+    // elimination was effective in never dropping that command. For example, if the command with the ID 1
+    // is executed once and then a cyclical pattern of commands occurs, the lowest ID would always be 1 and
+    // the response history would never shrink. When the 32-bit unsigned integer overflows, some unpruned
+    // responses will remain that only get overwritten and/or pruned once the ID is about to overflow again.
+    uint32_t min_id = m_history.back().id();
 
     for (const auto& [sub, info] : m_history_info)
     {
@@ -160,9 +186,24 @@ void History::prune_history()
         }
     }
 
-    m_history_responses.erase(m_history_responses.begin(), m_history_responses.lower_bound(min_id));
-    m_history.pop_front();
-    m_history_pruned = true;
+    auto it = m_history_responses.begin();
+    auto end = m_history_responses.lower_bound(min_id);
+
+    while (it != end)
+    {
+        auto found = std::find_if(m_history.begin(), m_history.end(), [&](const auto& buf){
+            return buf.id() == it->first;
+        });
+
+        if (found == m_history.end())
+        {
+            it = m_history_responses.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }
 
 void History::pin_responses(Subscriber* backend)

@@ -2218,6 +2218,30 @@ session state and instead re-initialize it with new values. This causes the
 session command history to grow at roughly a constant rate for the lifetime of
 the pooled connection.
 
+Starting with MaxScale 23.08, the session command history is also simplified
+before being stored. The simplification is done by removing repeated occurrences
+of the same command and only executing the latest one of them. The order in
+which the commands are executed still remains the same but inter-dependencies
+between commands are not preserved.
+
+For example, the following set of commands demonstrates how the history
+simplification works and how inter-dependencies can be lost.
+
+```sql
+SET @my_planet='Earth';                            -- This command will be removed by history simplification
+SET @my_home='My home is: ' || @my_planet;         -- Command #1 in the history
+SET @my_planet='Earth';                            -- Command #2 in the history
+```
+
+In the example, the value of `@my_home` has a dependency on the value of
+`@my_planet` which is lost when the same statement is executed again and
+the history simplification removes the earlier one.
+
+This same problem can occur even in older versions of MaxScale that used
+a sliding window of the history when the window moves past the statement
+that later statement dependend on. If inter-dependent session commands
+are being used, the history pruning should be disabled.
+
 Each client-side session that uses a pooled connection only executes a finite
 amount of session commands. By retaining a shorter history that encompasses all
 session commands the individual clients execute, the session state of a pooled

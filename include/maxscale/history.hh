@@ -229,7 +229,7 @@ private:
      */
     void remove(Subscriber* subscriber);
 
-    void prune_history();
+    void prune_responses();
 
     // The struct used to communicate information from the subscriber protocol to the client protocol.
     struct HistoryInfo
