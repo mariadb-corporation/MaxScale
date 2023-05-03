@@ -117,19 +117,9 @@ public:
 public:
     void analyze(const List& list)
     {
-        switch (list.type)
+        for (Node* pNode : pgu::NodeList(&list))
         {
-        case T_List:
-            {
-                for (int i = 0; i < list.length; ++i)
-                {
-                    analyze(*static_cast<Node*>(list.elements[i].ptr_value));
-                }
-            }
-            break;
-
-        default:
-            nhy_assert();
+            analyze(*pNode);
         }
     }
 
@@ -390,28 +380,21 @@ public:
 
         if (x.options)
         {
-            List* pOptions = x.options;
-            mxb_assert(pOptions->type == T_List);
-
-            if (pOptions->type == T_List)
+            for (Node* pNode : pgu::NodeList(x.options))
             {
-                for (int i = 0; i < pOptions->length; ++i)
+                if (const DefElem* pDef_elem = pgu::cast<const DefElem*>(pNode))
                 {
-                    Node* pOption = static_cast<Node*>(pOptions->elements[i].ptr_value);
-                    if (const DefElem* pDef_elem = pgu::cast<const DefElem*>(pOption))
+                    if (pDef_elem->defname && strcmp(pDef_elem->defname, "transaction_read_only") == 0)
                     {
-                        if (pDef_elem->defname && strcmp(pDef_elem->defname, "transaction_read_only") == 0)
+                        if (const A_Const* pA_const = pgu::cast<const A_Const*>(pDef_elem->arg))
                         {
-                            if (const A_Const* pA_const = pgu::cast<const A_Const*>(pDef_elem->arg))
+                            if (pgu::is_truthy(*pA_const))
                             {
-                                if (pgu::is_truthy(*pA_const))
-                                {
-                                    type_mask |= sql::TYPE_READ;
-                                }
-                                else
-                                {
-                                    type_mask |= sql::TYPE_WRITE;
-                                }
+                                type_mask |= sql::TYPE_READ;
+                            }
+                            else
+                            {
+                                type_mask |= sql::TYPE_WRITE;
                             }
                         }
                     }
