@@ -66,8 +66,7 @@ std::unique_ptr<PgParser> create_loaded_parser(const char* zPlugin)
     }
     else
     {
-        MXB_WARNING("Could not load parser plugin '%s', using MariaDB parser instead.", zPlugin);
-        sParser = create_mariadb_parser();
+        MXB_ERROR("Could not load parser plugin '%s'.", zPlugin);
     }
 
     return sParser;
