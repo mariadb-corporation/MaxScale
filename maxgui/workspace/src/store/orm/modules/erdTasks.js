@@ -28,19 +28,23 @@ export default {
         },
         /**
          * Insert a blank ErdTask and its mandatory relational entities
-         * @param {String} param.worksheet_id - worksheet_id
+         * @param {String} param.wkeId - worksheet id
          */
-        insertErdTask(_, worksheet_id) {
-            ErdTask.insert({ data: { id: worksheet_id } })
-            ErdTaskTmp.insert({ data: { id: worksheet_id } })
+        insertErdTask(_, { wkeId, count }) {
+            ErdTask.insert({ data: { id: wkeId, count } })
+            ErdTaskTmp.insert({ data: { id: wkeId } })
         },
         /**
          * Init ErdTask entities if they don't exist in the active worksheet.
          */
         initErdEntities({ dispatch }) {
             const wkeId = Worksheet.getters('getActiveWkeId')
-            if (!ErdTask.find(wkeId)) dispatch('insertErdTask', wkeId)
-            Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name: 'ERD' } })
+            const lastErdTask = ErdTask.query().last()
+            const count = this.vue.$typy(lastErdTask, 'count').safeNumber + 1,
+                name = `ERD ${count}`
+
+            if (!ErdTask.find(wkeId)) dispatch('insertErdTask', { wkeId, count })
+            Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name } })
         },
     },
     getters: {
