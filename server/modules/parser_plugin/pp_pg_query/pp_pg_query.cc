@@ -139,39 +139,39 @@ public:
         {
             // Specific Information.
         case T_AlterObjectSchemaStmt:
-            analyze(reinterpret_cast<const AlterObjectSchemaStmt&>(x));
+            analyze(pgu::cast<const AlterObjectSchemaStmt&>(x));
             break;
 
         case T_AlterTableStmt:
-            analyze(reinterpret_cast<const AlterTableStmt&>(x));
+            analyze(pgu::cast<const AlterTableStmt&>(x));
             break;
 
         case T_CreateRoleStmt:
-            analyze(reinterpret_cast<const CreateRoleStmt&>(x));
+            analyze(pgu::cast<const CreateRoleStmt&>(x));
             break;
 
         case T_CreateStmt:
-            analyze(reinterpret_cast<const CreateStmt&>(x));
+            analyze(pgu::cast<const CreateStmt&>(x));
             break;
 
         case T_DropStmt:
-            analyze(reinterpret_cast<const DropStmt&>(x));
+            analyze(pgu::cast<const DropStmt&>(x));
             break;
 
         case T_RawStmt:
-            analyze(reinterpret_cast<const RawStmt&>(x));
+            analyze(pgu::cast<const RawStmt&>(x));
             break;
 
         case T_RenameStmt:
-            analyze(reinterpret_cast<const RenameStmt&>(x));
+            analyze(pgu::cast<const RenameStmt&>(x));
             break;
 
         case T_SelectStmt:
-            analyze(reinterpret_cast<const SelectStmt&>(x));
+            analyze(pgu::cast<const SelectStmt&>(x));
             break;
 
         case T_CreateTableAsStmt:
-            analyze(reinterpret_cast<const CreateTableAsStmt&>(x));
+            analyze(pgu::cast<const CreateTableAsStmt&>(x));
             break;
 
             // Generic Information.
