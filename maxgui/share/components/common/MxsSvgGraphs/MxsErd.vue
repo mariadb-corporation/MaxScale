@@ -39,6 +39,7 @@
                                             backgroundColor: node.styles.highlightColor,
                                             color: node.styles.headerTxtColor,
                                         }"
+                                        colspan="2"
                                     >
                                         {{ $helpers.unquoteIdentifier(node.data.name) }}
                                     </th>
@@ -46,26 +47,35 @@
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="(attr, i) in node.data.definitions.cols"
-                                    :key="`key_${node.id}_${attr.name}`"
+                                    v-for="col in node.data.definitions.cols"
+                                    :key="`key_${node.id}_${col.name}`"
                                     :style="{ height: `${entitySizeConfig.rowHeight}px` }"
                                 >
                                     <td
-                                        class="px-2"
-                                        :class="{
-                                            'rounded-bl-lg rounded-br-lg':
-                                                i === node.data.definitions.cols.length - 1,
-                                        }"
+                                        class="pl-1 pr-2"
                                         :style="{
                                             borderLeft: getBorderStyle(node),
-                                            borderRight: getBorderStyle(node),
-                                            borderBottom:
-                                                i === node.data.definitions.cols.length - 1
-                                                    ? getBorderStyle(node)
-                                                    : 'none',
+                                            ...getCellStyle({ node, colName: col.name }),
                                         }"
                                     >
-                                        {{ $helpers.unquoteIdentifier(attr.name) }}
+                                        <div class="d-flex align-center">
+                                            <div class="key-icon-ctr">
+                                                <!-- TODO: Add key icons for PK, Index, Unique Index, FK -->
+                                            </div>
+                                            {{ $helpers.unquoteIdentifier(col.name) }}
+                                        </div>
+                                    </td>
+                                    <td
+                                        class="px-2 text-end mxs-color-helper text-small-text"
+                                        :style="{
+                                            borderRight: getBorderStyle(node),
+                                            ...getCellStyle({ node, colName: col.name }),
+                                        }"
+                                    >
+                                        {{ col.data_type }}
+                                        <template v-if="$typy(col, 'data_type_size').isDefined">
+                                            ({{ col.data_type_size }})
+                                        </template>
                                     </td>
                                 </tr>
                             </tbody>
@@ -244,6 +254,14 @@ export default {
             const style = `1px solid ${highlightColor}`
             return style
         },
+        isLastCol: ({ node, colName }) => colName === node.data.definitions.cols.at(-1).name,
+        getCellStyle({ node, colName }) {
+            return {
+                borderBottom: this.isLastCol({ node, colName })
+                    ? this.getBorderStyle(node)
+                    : 'none',
+            }
+        },
         setChosenLinks(node) {
             this.chosenLinks = this.getLinks().filter(
                 d => d.source.id === node.id || d.target.id === node.id
@@ -297,6 +315,20 @@ export default {
         tr {
             &:hover {
                 background: $tr-hovered-color;
+            }
+            td {
+                white-space: nowrap;
+                .key-icon-ctr {
+                    width: 20px;
+                }
+            }
+            &:last-of-type {
+                td:first-of-type {
+                    border-bottom-left-radius: 8px !important;
+                }
+                td:last-of-type {
+                    border-bottom-right-radius: 8px !important;
+                }
             }
         }
     }
