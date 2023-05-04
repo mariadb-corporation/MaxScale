@@ -1,8 +1,6 @@
-const { startMaxScale, stopMaxScale, doCommand, verifyCommand } = require("../test_utils.js");
+const { doCommand, verifyCommand } = require("../test_utils.js");
 
 describe("Alter Commands", function () {
-  before(startMaxScale);
-
   it("rejects null parameter", function () {
     return doCommand("alter server server1 port null").should.be.rejected;
   });
@@ -331,5 +329,12 @@ describe("Alter Commands", function () {
       .then(() => doCommand("-u bob -p bob destroy user bob"));
   });
 
-  after(stopMaxScale);
+  after(async function () {
+    await doCommand("alter server server1 port=3000");
+    await doCommand("alter service Read-Connection-Router user=maxuser password=maxpwd");
+    await doCommand(
+      "alter monitor MariaDB-Monitor monitor_interval=1s " +
+        "backend_read_timeout=1s backend_connect_timeout=1s"
+    );
+  });
 });

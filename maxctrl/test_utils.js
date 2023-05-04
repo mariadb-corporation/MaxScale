@@ -1,6 +1,6 @@
 var child_process = require("child_process");
 const mariadb = require("mariadb");
-var conn;
+var conn = null;
 var connectionError = false;
 
 if (process.env.MAXSCALE_DIR == null) {

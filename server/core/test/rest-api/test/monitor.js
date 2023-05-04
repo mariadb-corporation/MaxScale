@@ -15,7 +15,6 @@ const monitor = {
 };
 
 describe("Monitor", function () {
-  before(startMaxScale);
 
   describe("Actions", function () {
     it("stop monitor", function () {
@@ -282,5 +281,5 @@ describe("Monitor", function () {
     });
   });
 
-  after(stopMaxScale);
+  after(restartMaxScale);
 });

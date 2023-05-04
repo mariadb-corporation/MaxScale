@@ -58,7 +58,6 @@ var test_types = [
 ];
 
 describe("Query API ", async function () {
-  before(startMaxScale);
   before(check_odbc);
 
   it("lists ODBC drivers", async function () {
@@ -378,6 +377,4 @@ describe("Query API ", async function () {
       conn = null;
     });
   });
-
-  after(stopMaxScale);
 });

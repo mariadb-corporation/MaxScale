@@ -1,8 +1,6 @@
 require("../utils.js")();
 
 describe("HTTP", function () {
-  before(startMaxScale);
-
   describe("Headers", function () {
     it("ETag changes after modification", function () {
       var etag_one;
@@ -250,6 +248,4 @@ describe("HTTP", function () {
       expect(res.links.last).to.equal(res.links.first);
     });
   });
-
-  after(stopMaxScale);
 });

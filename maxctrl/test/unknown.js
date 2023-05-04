@@ -1,8 +1,6 @@
-const { startMaxScale, stopMaxScale, doCommand } = require("../test_utils.js");
+const { doCommand } = require("../test_utils.js");
 
 describe("Unknown Commands", function () {
-  before(startMaxScale);
-
   var endpoints = [
     "list",
     "show",
@@ -32,6 +30,4 @@ describe("Unknown Commands", function () {
   it("generic unknown command", function () {
     return doCommand("something").should.be.rejected;
   });
-
-  after(stopMaxScale);
 });

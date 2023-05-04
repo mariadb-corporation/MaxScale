@@ -1,14 +1,6 @@
-const {
-  startMaxScale,
-  stopMaxScale,
-  doCommand,
-  createConnection,
-  getConnectionId,
-  closeConnection,
-} = require("../test_utils.js");
+const { doCommand, createConnection, getConnectionId, closeConnection } = require("../test_utils.js");
 
 describe("Reload Commands", function () {
-  before(startMaxScale);
   before(createConnection);
 
   it("reload service", function () {
@@ -28,5 +20,4 @@ describe("Reload Commands", function () {
   });
 
   after(closeConnection);
-  after(stopMaxScale);
 });

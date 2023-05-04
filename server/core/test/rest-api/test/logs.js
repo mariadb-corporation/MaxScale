@@ -67,7 +67,6 @@ async function testWebSocket() {
 }
 
 describe("Logs", function () {
-  before(startMaxScale);
 
   describe("Log Data", function () {
     it("returns log data", async function () {
@@ -204,6 +203,4 @@ describe("Logs", function () {
       return request.post(base_url + "/maxscale/logs/flush").should.be.fulfilled;
     });
   });
-
-  after(stopMaxScale);
 });
