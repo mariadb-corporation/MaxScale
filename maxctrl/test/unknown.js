@@ -1,7 +1,6 @@
 require("../test_utils.js")();
 
 describe("Unknown Commands", function () {
-  before(startMaxScale);
 
   var endpoints = [
     "list",
@@ -32,6 +31,4 @@ describe("Unknown Commands", function () {
   it("generic unknown command", function () {
     return doCommand("something").should.be.rejected;
   });
-
-  after(stopMaxScale);
 });

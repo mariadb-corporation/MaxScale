@@ -2,6 +2,7 @@ var child_process = require("child_process");
 const mariadb = require("mariadb");
 var conn;
 var connectionError = false;
+var connectionId = 0;
 
 module.exports = function () {
   if (process.env.MAXSCALE_DIR == null) {
@@ -70,7 +71,7 @@ module.exports = function () {
         if (err) {
           reject(err);
         } else {
-          resolve();
+          resolve(startMaxScale());
         }
       });
     });
@@ -103,12 +104,17 @@ module.exports = function () {
     return connectionError;
   };
 
+  this.connectionId = function () {
+    return connectionId;
+  };
+
   this.createConnection = function () {
     connectionError = false;
     return mariadb
       .createConnection({ host: "127.0.0.1", port: 4006, user: "maxuser", password: "maxpwd" })
       .then((c) => {
         conn = c;
+        connectionId = conn.threadId;
         conn.on("error", (err) => {
           connectionError = true;
         });

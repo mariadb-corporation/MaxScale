@@ -2,12 +2,7 @@ require("../test_utils.js")();
 
 describe("Set/Clear Commands", function () {
   before(async function () {
-    await startMaxScale();
-    await axios({
-      url: host + "monitors/MariaDB-Monitor/stop",
-      method: "put",
-      auth: { username: "admin", password: "mariadb" },
-    });
+    doCommand("stop monitor MariaDB-Monitor");
   });
 
   it("set correct state", function () {
@@ -42,5 +37,7 @@ describe("Set/Clear Commands", function () {
     return doCommand("clear server server2 something").should.be.rejected;
   });
 
-  after(stopMaxScale);
+  after(async function () {
+    doCommand("start monitor MariaDB-Monitor");
+  });
 });

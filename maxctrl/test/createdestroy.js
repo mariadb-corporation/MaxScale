@@ -5,8 +5,6 @@ var opts = { extra_args: ["--quiet"] };
 const fs = require("fs");
 
 describe("Create/Destroy Commands", function () {
-  before(startMaxScale);
-
   it("create monitor", function () {
     return verifyCommand(
       "create monitor my-monitor mysqlmon user=maxuser password=maxpwd",
@@ -192,8 +190,9 @@ describe("Create/Destroy Commands", function () {
   });
 
   it("create user with numbers as a name", function () {
-    return verifyCommand("create user 1234 1234", "users/inet/1234")
-      .then(() => doCommand("destroy user 1234"))
+    return verifyCommand("create user 1234 1234", "users/inet/1234").then(() =>
+      doCommand("destroy user 1234")
+    );
   });
 
   it("create admin user", function () {
@@ -344,5 +343,8 @@ describe("Create/Destroy Commands", function () {
     expect(js.maxscale).to.be.an("object");
   });
 
-  after(stopMaxScale);
+  after(async function () {
+    await stopMaxScale();
+    await startMaxScale();
+  });
 });

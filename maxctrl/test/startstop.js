@@ -1,8 +1,6 @@
 require("../test_utils.js")();
 
 describe("Start/Stop Commands", function () {
-  before(startMaxScale);
-
   it("stop service", function () {
     return verifyCommand("stop service Read-Connection-Router", "services/Read-Connection-Router").then(
       function (res) {
@@ -92,6 +90,4 @@ describe("Start/Stop Commands", function () {
 
     doCommand("start listener RW-Split-Listener");
   });
-
-  after(stopMaxScale);
 });

@@ -1,7 +1,6 @@
 require("../test_utils.js")();
 
 describe("Enable/Disable Commands", function () {
-  before(startMaxScale);
 
   it("enable log-priority", function () {
     return verifyCommand("enable log-priority info", "maxscale/logs").then(function (res) {
@@ -22,6 +21,4 @@ describe("Enable/Disable Commands", function () {
   it("will not disable log-priority with bad parameter", function () {
     return doCommand("disable log-priority bad-stuff").should.be.rejected;
   });
-
-  after(stopMaxScale);
 });

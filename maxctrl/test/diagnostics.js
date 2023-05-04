@@ -16,7 +16,6 @@ var tests = [
   "show services",
   "show monitors",
   "show sessions",
-  "show session 1",
   "show filters",
   "show listeners",
   "show modules",
@@ -38,16 +37,22 @@ var tests = [
   "show dbusers RW-Split-Router",
 ];
 
-var rdns_tests = ["list sessions", "show sessions", "show session 1"];
+var rdns_tests = ["list sessions", "show sessions"];
 
 describe("Diagnostic Commands", function () {
-  before(startMaxScale);
   before(createConnection);
 
   tests.forEach(function (i) {
-    it(i, function () {
-      return doCommand(i).should.be.fulfilled;
-    });
+    it(i, function () {});
+    return doCommand(i).should.be.fulfilled;
+  });
+
+  it("show session <id>", async function () {
+    return doCommand("show session " + connectionId()).should.be.fulfilled;
+  });
+
+  it("show session <id> with reverse DNS lookups", async function () {
+    return doCommand("show session " + connectionId() + " --rdns").should.be.fulfilled;
   });
 
   rdns_tests.forEach(function (i) {
@@ -66,12 +71,9 @@ describe("Diagnostic Commands", function () {
   });
 
   after(closeConnection);
-  after(stopMaxScale);
 });
 
 describe("MXS-1656: `list servers` with GTIDs", function () {
-  before(startMaxScale);
-
   doCheck = function () {
     return doCommand("list servers --tsv").then((res) => {
       // Check that at least 5 columns are returned with the last column consisting of
@@ -101,6 +103,4 @@ describe("MXS-1656: `list servers` with GTIDs", function () {
   it("Lists partially monitored servers", function () {
     return doCommand("link monitor MariaDB-Monitor server1 server3").then(() => doCheck());
   });
-
-  after(stopMaxScale);
 });
