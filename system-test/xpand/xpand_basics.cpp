@@ -245,27 +245,6 @@ void check_login(TestConnections& test)
         test_login(db_user, db_pw, "test", true);
     }
 
-    // MXS-3934: Services created at runtime don't work with xpandmon
-    if (test.ok())
-    {
-        test.check_maxctrl("create service my-test-service readwritesplit user=maxskysql password=skysql");
-        test.check_maxctrl("link service my-test-service Xpand-Monitor");
-        test.check_maxctrl("create listener my-test-service my-test-listener 4009");
-
-        port = 4009;
-        test_login(svc_user, svc_pw, nullptr, true);
-        test_login(db_user, db_pw, "test", true);
-    }
-
-    // MXS-3938: Should be possible to unlink servers
-    if (test.ok())
-    {
-        test.check_maxctrl("unlink monitor Xpand-Monitor xpand_server2 xpand_server3 xpand_server4");
-
-        // Remove the created (if success) dynamic config file, so as not to cause trouble later.
-        test.maxscale->ssh_node("rm -f /var/lib/maxscale/maxscale.cnf.d/Xpand-Monitor.cnf", true);
-    }
-
     /*
      *  if (test.ok())
      *  {

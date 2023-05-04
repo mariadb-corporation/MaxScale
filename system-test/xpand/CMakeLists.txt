@@ -1,5 +1,3 @@
-# Also covers the following bugs:
-# MXS-3934: https://jira.mariadb.org/browse/MXS-3934
 add_test_executable_ex(NAME xpand_basics SOURCE xpand_basics.cpp
         CONFIG xpand_basics.cnf VMS xpand_backend LABELS xpand)
 set_tests_properties(xpand_basics PROPERTIES TIMEOUT 7200)
@@ -15,3 +13,7 @@ add_test_executable_ex(NAME xpand_alter_cluster SOURCE xpand_alter_cluster.cpp
         CONFIG xpand_alter_cluster.cnf VMS xpand_backend LABELS xpand)
 add_test_executable_ex(NAME xpand_repl SOURCE xpand_repl.cc CONFIG xpand_basics.cnf VMS xpand_backend
         LABELS xpand)
+
+# MXS-3934, MXS-3938
+add_test_executable_ex(NAME xpand_runtime_config SOURCE xpand_runtime_config.cc
+        CONFIG xpand_runtime_config.cnf VMS xpand_backend LABELS xpand)
