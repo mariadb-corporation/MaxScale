@@ -387,7 +387,6 @@ public:
     }
 
 
-    virtual std::string_view get_created_table_name(const GWBUF& stmt) const = 0;
     virtual DatabaseNames    get_database_names(const GWBUF& stmt) const = 0;
     virtual void             get_field_info(const GWBUF& stmt,
                                             const FieldInfo** ppInfos,

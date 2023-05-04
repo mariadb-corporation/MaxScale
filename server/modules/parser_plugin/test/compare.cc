@@ -465,35 +465,6 @@ bool compare_get_operation(const std::optional<std::regex>& check_regex,
     return success;
 }
 
-bool compare_get_created_table_name(const Parser& parser1,
-                                    const GWBUF& copy1,
-                                    const Parser& parser2,
-                                    const GWBUF& copy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_get_created_table_name: ";
-
-    std::string_view rv1 = parser1.get_created_table_name(copy1);
-    std::string_view rv2 = parser2.get_created_table_name(copy2);
-
-    stringstream ss;
-    ss << HEADING;
-
-    if (rv1 == rv2)
-    {
-        ss << "Ok : '" << rv1 << "'";
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: '" << rv1 << "' != '" << rv2 << "'";
-    }
-
-    report(success, ss.str());
-
-    return success;
-}
-
 bool compare_get_table_names(const Parser& parser1,
                              const GWBUF& copy1,
                              const Parser& parser2,
@@ -1189,11 +1160,6 @@ bool compare(const set<string>& properties,
     if (specified(properties, "operation"))
     {
         errors += !compare_get_operation(check_regex, parser1, copy1, parser2, copy2);
-    }
-
-    if (specified(properties, "created_table_name"))
-    {
-        errors += !compare_get_created_table_name(parser1, copy1, parser2, copy2);
     }
 
     if (specified(properties, "table_names"))

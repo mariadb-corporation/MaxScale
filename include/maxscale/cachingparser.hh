@@ -78,7 +78,6 @@ public:
     Result           parse(const GWBUF& stmt, uint32_t collect) const override;
 
     std::string_view get_canonical(const GWBUF& stmt) const override;
-    std::string_view get_created_table_name(const GWBUF& stmt) const override;
     DatabaseNames    get_database_names(const GWBUF& stmt) const override;
     void             get_field_info(const GWBUF& stmt,
                                     const FieldInfo** ppInfos,

@@ -2007,43 +2007,6 @@ int32_t pp_mysql_get_table_names(const Parser::Helper& helper,
     return PP_RESULT_OK;
 }
 
-int32_t pp_mysql_get_created_table_name(const Parser::Helper& helper,
-                                        const GWBUF* querybuf, string_view* table_name)
-{
-    *table_name = string_view {};
-
-    if (querybuf == NULL)
-    {
-        return PP_RESULT_OK;
-    }
-
-    if (!ensure_query_is_parsed(helper, querybuf))
-    {
-        return PP_RESULT_ERROR;
-    }
-
-    LEX* lex = get_lex(querybuf);
-
-    if (lex && (lex->sql_command == SQLCOM_CREATE_TABLE))
-    {
-        auto* pi = get_pinfo(querybuf);
-        mxb_assert(pi);
-
-        if (pi->created_table_name.empty())
-        {
-            if (lex->create_last_non_select_table
-                && qcme_string_get(lex->create_last_non_select_table->table_name))
-            {
-                pi->created_table_name = qcme_string_get(lex->create_last_non_select_table->table_name);
-            }
-        }
-
-        *table_name = pi->created_table_name;
-    }
-
-    return PP_RESULT_OK;
-}
-
 /**
  * Create parsing information; initialize mysql handle, allocate parsing info
  * struct and set handle and free function pointer to it.
@@ -4082,15 +4045,6 @@ public:
         }
 
         return rv;
-    }
-
-    std::string_view get_created_table_name(const GWBUF& stmt) const override
-    {
-        std::string_view name;
-
-        pp_mysql_get_created_table_name(m_helper, &stmt, &name);
-
-        return name;
     }
 
     Parser::DatabaseNames get_database_names(const GWBUF& stmt) const override

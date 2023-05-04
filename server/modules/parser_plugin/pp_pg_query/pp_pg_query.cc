@@ -449,12 +449,6 @@ public:
         return m_canonical;
     }
 
-    string_view get_created_table_name() const
-    {
-        MXB_ERROR("Not implemented yet: %s", __func__);
-        return string_view {};
-    }
-
     Parser::DatabaseNames get_database_names() const
     {
         MXB_ERROR("Not implemented yet: %s", __func__);
@@ -620,11 +614,6 @@ public:
     string_view get_canonical(const GWBUF& query) const override
     {
         return get_info(query)->get_canonical();
-    }
-
-    string_view get_created_table_name(const GWBUF& query) const override
-    {
-        return get_info(query, Parser::COLLECT_TABLES)->get_created_table_name();
     }
 
     mxs::Parser::DatabaseNames get_database_names(const GWBUF& query) const override

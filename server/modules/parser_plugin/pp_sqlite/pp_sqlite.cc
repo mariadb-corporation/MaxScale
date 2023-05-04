@@ -363,22 +363,6 @@ public:
         return rv;
     }
 
-    bool get_created_table_name(string_view* pCreated_table_name) const
-    {
-        bool rv = false;
-
-        if (is_valid())
-        {
-            if (!m_created_table_name.empty())
-            {
-                *pCreated_table_name = m_created_table_name;
-            }
-            rv = true;
-        }
-
-        return rv;
-    }
-
     bool get_table_names(vector<Parser::TableName>* pTables) const
     {
         bool rv = false;
@@ -2004,21 +1988,6 @@ public:
         {
             update_names(NULL, name, NULL, NULL, Exclude::NONE);
         }
-
-        if (m_collect & Parser::COLLECT_TABLES)
-        {
-            // If information is collected in several passes, then we may
-            // this information already.
-            if (m_created_table_name.empty())
-            {
-                m_created_table_name = m_table_names[0].table;
-            }
-            else
-            {
-                mxb_assert(m_collect != m_collected);
-                mxb_assert(m_created_table_name == m_table_names[0].table);
-            }
-        }
     }
 
     void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Expr* pWhere, int onError)
@@ -3554,7 +3523,6 @@ public:
     size_t                            m_nQuery;                  // The length of the query.
     uint32_t                          m_type_mask;               // The type mask of the query.
     mxs::sql::OpCode                  m_operation;               // The operation in question.
-    string_view                       m_created_table_name;      // The name of a created table.
     string_view                       m_prepare_name;            // The name of a prepared statement.
     GWBUF*                            m_pPreparable_stmt;        // The preparable statement.
     Parser::KillInfo                  m_kill;
@@ -4963,21 +4931,6 @@ public:
         }
 
         return rv;
-    }
-
-    std::string_view get_created_table_name(const GWBUF& stmt) const override
-    {
-        std::string_view name;
-
-        if (PpSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_TABLES))
-        {
-            if (!pInfo->get_created_table_name(&name))
-            {
-                log_invalid_data(stmt, "cannot report created table");
-            }
-        }
-
-        return name;
     }
 
     Parser::DatabaseNames get_database_names(const GWBUF& stmt) const override

@@ -745,12 +745,6 @@ std::string_view CachingParser::get_canonical(const GWBUF& stmt) const
     return m_sParser->get_canonical(stmt);
 }
 
-std::string_view CachingParser::get_created_table_name(const GWBUF& stmt) const
-{
-    QCInfoCacheScope scope(m_sParser.get(), &stmt);
-    return m_sParser->get_created_table_name(stmt);
-}
-
 CachingParser::DatabaseNames CachingParser::get_database_names(const GWBUF& stmt) const
 {
     QCInfoCacheScope scope(m_sParser.get(), &stmt);
