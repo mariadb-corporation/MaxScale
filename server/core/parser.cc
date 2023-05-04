@@ -385,77 +385,9 @@ const char* sql::to_string(sql::OpCode op)
 {
     switch (op)
     {
-    case OP_UNDEFINED:
-        return "sql::OP_UNDEFINED";
-
-    case OP_ALTER:
-        return "sql::OP_ALTER";
-
-    case OP_ALTER_TABLE:
-        return "sql::OP_ALTER_TABLE";
-
-    case OP_CALL:
-        return "sql::OP_CALL";
-
-    case OP_CHANGE_DB:
-        return "sql::OP_CHANGE_DB";
-
-    case OP_CREATE:
-        return "sql::OP_CREATE";
-
-    case OP_CREATE_TABLE:
-        return "sql::OP_CREATE_TABLE";
-
-    case OP_DELETE:
-        return "sql::OP_DELETE";
-
-    case OP_DROP:
-        return "sql::OP_DROP";
-
-    case OP_DROP_TABLE:
-        return "sql::OP_DROP_TABLE";
-
-    case OP_EXECUTE:
-        return "sql::OP_EXECUTE";
-
-    case OP_EXPLAIN:
-        return "sql::OP_EXPLAIN";
-
-    case OP_GRANT:
-        return "sql::OP_GRANT";
-
-    case OP_INSERT:
-        return "sql::OP_INSERT";
-
-    case OP_KILL:
-        return "sql::OP_KILL";
-
-    case OP_LOAD:
-        return "sql::OP_LOAD";
-
-    case OP_LOAD_LOCAL:
-        return "sql::OP_LOAD_LOCAL";
-
-    case OP_REVOKE:
-        return "sql::OP_REVOKE";
-
-    case OP_SELECT:
-        return "sql::OP_SELECT";
-
-    case OP_SET:
-        return "sql::OP_SET";
-
-    case OP_SET_TRANSACTION:
-        return "sql::OP_SET_TRANSACTION";
-
-    case OP_SHOW:
-        return "sql::OP_SHOW";
-
-    case OP_TRUNCATE:
-        return "sql::OP_TRUNCATE";
-
-    case OP_UPDATE:
-        return "sql::OP_UPDATE";
+#undef PP_SQL_OPCODE
+#define PP_SQL_OPCODE(X) case X: return "sql::" #X ;
+#include <maxscale/parser_opcode.hh>
 
     default:
         mxb_assert(!true);

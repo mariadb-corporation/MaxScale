@@ -64,33 +64,10 @@ enum Type
 
 enum OpCode : uint32_t
 {
-    OP_UNDEFINED = 0,
+#undef PP_SQL_OPCODE
+#define PP_SQL_OPCODE(X) X,
 
-    OP_ALTER,
-    OP_ALTER_TABLE,
-    OP_CALL,
-    OP_CHANGE_DB,
-    OP_CREATE,
-    OP_CREATE_ROLE,
-    OP_CREATE_TABLE,
-    OP_CREATE_USER,
-    OP_DELETE,
-    OP_DROP,
-    OP_DROP_TABLE,
-    OP_EXECUTE,
-    OP_EXPLAIN,
-    OP_GRANT,
-    OP_INSERT,
-    OP_KILL,
-    OP_LOAD,
-    OP_LOAD_LOCAL,
-    OP_REVOKE,
-    OP_SELECT,
-    OP_SET,
-    OP_SET_TRANSACTION,
-    OP_SHOW,
-    OP_TRUNCATE,
-    OP_UPDATE,
+#include <maxscale/parser_opcode.hh>
 };
 
 const char* to_string(OpCode code);
