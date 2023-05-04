@@ -153,9 +153,6 @@ export default {
         }
     },
     computed: {
-        plainKeyType() {
-            return 'PLAIN'
-        },
         entitySizeConfig() {
             return { rowHeight: 32, rowOffset: 4, nodeOffsetHeight: this.entityHeaderHeight }
         },
@@ -177,10 +174,7 @@ export default {
         },
         nodeKeyMap() {
             return this.graphNodes.reduce((map, node) => {
-                map[node.id] = this.$helpers.lodash.groupBy(
-                    node.data.definitions.keys,
-                    obj => obj.category || this.plainKeyType
-                )
+                map[node.id] = node.data.definitions.keys
                 return map
             }, {})
         },
@@ -324,7 +318,7 @@ export default {
         },
         findKeyTypeByColName({ node, colName }) {
             const nodeKeys = this.nodeKeyMap[node.id]
-            const keyTypes = [tokens.primary, tokens.unique, this.plainKeyType]
+            const keyTypes = [tokens.primaryKey, tokens.uniqueKey, tokens.key]
             return keyTypes.find(type =>
                 this.$typy(nodeKeys, `[${type}]`).safeArray.some(key =>
                     key.index_col_names.some(item => item.name === colName)
@@ -334,7 +328,7 @@ export default {
         getKeyIcon({ node, colName }) {
             const keyType = this.findKeyTypeByColName({ node, colName })
             switch (keyType) {
-                case tokens.primary:
+                case tokens.primaryKey:
                     return {
                         icon: 'mdi-key-variant',
                         color: 'primary',
@@ -343,13 +337,13 @@ export default {
                         },
                         size: 18,
                     }
-                case tokens.unique:
+                case tokens.uniqueKey:
                     return {
                         icon: '$vuetify.icons.mxs_uniqueIndexKey',
                         color: 'navigation',
                         size: 16,
                     }
-                case this.plainKeyType:
+                case tokens.key:
                     return {
                         icon: '$vuetify.icons.mxs_indexKey',
                         color: 'navigation',

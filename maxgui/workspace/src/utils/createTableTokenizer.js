@@ -209,12 +209,18 @@ const INDEX_NAME = createEscapeStrGroup('name')
 // optional to handle also plain index
 const NON_FKS_CATEGORY = createGroup({
     token: createGroup({
-        token: [tokens.primary, tokens.unique, tokens.fullText, tokens.spatial].join('|'),
+        token: [
+            tokens.primaryKey,
+            tokens.uniqueKey,
+            tokens.fullTextKey,
+            tokens.spatialKey,
+            tokens.key,
+        ].join('|'),
         name: 'category',
     }),
     optional: true,
 })
-const FK_CATEGORY = createGroup({ token: tokens.foreign, name: 'category' })
+const FK_CATEGORY = createGroup({ token: tokens.foreignKey, name: 'category' })
 const INDEX_COL_NAMES = createIdxColNamesReg('index_col_names')
 
 // === Reference definitions groups ===
@@ -273,7 +279,6 @@ export default {
     nonFks: wrapExp(
         [
             NON_FKS_CATEGORY,
-            tokens.key,
             // index_name (optional as PK doesn't have name)
             createGroup({ token: INDEX_NAME, optional: true }),
             // index_col_name group
@@ -288,7 +293,6 @@ export default {
                     tokens.constraint,
                     INDEX_NAME,
                     FK_CATEGORY,
-                    tokens.key,
                     INDEX_COL_NAMES,
                     tokens.references,
                     REFERENCED_TARGET,

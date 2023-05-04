@@ -132,12 +132,16 @@ export default class TableParser {
     parseTableDefs(defsStr) {
         const defLines = defsStr.split('\n')
         let cols = [],
-            keys = []
+            keys = {}
         defLines.forEach(def => {
             const parsedDef = this.parseColDef(def.trim().replace(/,\s*$/, ''))
             if (parsedDef) {
-                if (t(parsedDef).isString) keys.push(this.parseKey(parsedDef))
-                else cols.push(parsedDef)
+                if (t(parsedDef).isString) {
+                    const parsedKey = this.parseKey(parsedDef)
+                    const category = parsedKey.category
+                    if (!keys[category]) keys[category] = []
+                    keys[category].push(parsedKey)
+                } else cols.push(parsedDef)
             }
         })
         return { cols, keys }
