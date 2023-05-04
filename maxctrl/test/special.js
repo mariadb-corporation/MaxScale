@@ -1,7 +1,6 @@
-const { startMaxScale, stopMaxScale, createConnection, closeConnection } = require("../test_utils.js");
+const { createConnection, closeConnection, getConnectionId } = require("../test_utils.js");
 
 describe("Library invocation", function () {
-  before(startMaxScale);
   before(createConnection);
 
   var ctrl = require("../lib/core.js");
@@ -64,17 +63,16 @@ describe("Library invocation", function () {
 
   it("reverse DNS lookup", async function () {
     await ctrl.execute("show sessions --rdns".split(" ")).should.be.fulfilled;
-    await ctrl.execute("show session 1 --rdns".split(" ")).should.be.fulfilled;
+    await ctrl.execute("show session " + getConnectionId() + " --rdns".split(" ")).should.be.fulfilled;
   });
 
   after(closeConnection);
-  after(stopMaxScale);
 });
 
 describe("Error handling", function () {
   var ctrl = require("../lib/core.js");
 
   it("reject on connection failure", function () {
-    return ctrl.execute("list servers".split(" ")).should.be.rejected;
+    return ctrl.execute("--host=127.0.0.1:8999 list servers".split(" ")).should.be.rejected;
   });
 });

@@ -1,7 +1,6 @@
 require("../utils.js")();
 
 describe("Service", function () {
-  before(startMaxScale);
 
   it("change service parameter", function () {
     return request
@@ -312,5 +311,5 @@ describe("Service", function () {
       .fulfilled;
   });
 
-  after(stopMaxScale);
+  after(restartMaxScale);
 });

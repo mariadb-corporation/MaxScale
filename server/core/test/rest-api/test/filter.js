@@ -20,7 +20,6 @@ var rel = {
 };
 
 describe("Filter", function () {
-  before(startMaxScale);
 
   describe("Creation", function () {
     it("create new filter", function () {
@@ -80,6 +79,4 @@ describe("Filter", function () {
       return request.delete(base_url + "/filters/" + rel_filter.data.id).should.be.fulfilled;
     });
   });
-
-  after(stopMaxScale);
 });

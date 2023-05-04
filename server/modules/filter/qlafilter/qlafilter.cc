@@ -484,7 +484,7 @@ bool QlaFilterSession::routeQuery(GWBUF&& queue)
 {
     std::string_view query = parser().get_sql(queue);
 
-    if (m_active && !query.empty() && m_log->match_exclude(query.data(), query.length()))
+    if (m_active && !query.empty() && (m_matched = m_log->match_exclude(query.data(), query.length())))
     {
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
 
@@ -529,9 +529,10 @@ bool QlaFilterSession::clientReply(GWBUF&& queue, const mxs::ReplyRoute& down, c
         if (m_first_reply)
         {
             m_first_response_time = m_pSession->worker()->epoll_tick_now();
+            m_first_reply = false;
         }
 
-        if (reply.is_complete())
+        if (reply.is_complete() & m_matched)
         {
             LogEventElems elems(m_begin_time,
                                 m_sql,

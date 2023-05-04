@@ -1,8 +1,6 @@
-const { startMaxScale, stopMaxScale, doCommand, verifyCommand, expect } = require("../test_utils.js");
+const { doCommand, verifyCommand, expect } = require("../test_utils.js");
 
 describe("Link/Unlink Commands", function () {
-  before(startMaxScale);
-
   it("link servers to a service", function () {
     return verifyCommand(
       "link service Read-Connection-Router server1 server2 server3 server4",
@@ -129,6 +127,4 @@ describe("Link/Unlink Commands", function () {
     expect(res.data.relationships).to.be.empty;
     await doCommand("destroy service link-test");
   });
-
-  after(stopMaxScale);
 });
