@@ -34,12 +34,13 @@
                             <thead>
                                 <tr :style="{ height: `${entityHeaderHeight}px` }">
                                     <th
-                                        class="px-4 rounded-tr-lg rounded-tl-lg py-1 text-center font-weight-bold text-no-wrap"
-                                        :style="{
-                                            backgroundColor: node.styles.highlightColor,
-                                            color: node.styles.headerTxtColor,
-                                        }"
+                                        class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg px-4"
                                         colspan="2"
+                                        :style="{
+                                            borderTop: `8px solid ${node.styles.highlightColor}`,
+                                            borderRight: getBorderStyle(node),
+                                            borderLeft: getBorderStyle(node),
+                                        }"
                                     >
                                         {{ $helpers.unquoteIdentifier(node.data.name) }}
                                     </th>
@@ -272,8 +273,10 @@ export default {
             return style
         },
         isLastCol: ({ node, colName }) => colName === node.data.definitions.cols.at(-1).name,
+        isFirstCol: ({ node, colName }) => colName === node.data.definitions.cols.at(0).name,
         getCellStyle({ node, colName }) {
             return {
+                borderTop: this.isFirstCol({ node, colName }) ? this.getBorderStyle(node) : 'none',
                 borderBottom: this.isLastCol({ node, colName })
                     ? this.getBorderStyle(node)
                     : 'none',

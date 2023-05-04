@@ -9,7 +9,7 @@
                 btnClass="visualize-schemas"
                 icon
                 small
-                :disabled="isSidebarDisabled"
+                :disabled="isSidebarDisabled || !hasConn"
                 :color="isSidebarDisabled ? '' : 'primary'"
                 @click="handleShowGenErdDlg()"
             >

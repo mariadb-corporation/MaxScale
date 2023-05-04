@@ -18,7 +18,7 @@ import {
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
 } from '@wsSrc/store/config'
-import { lodash, to } from '@share/utils/helpers'
+import { lodash, to, dynamicColors } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
@@ -461,13 +461,13 @@ function getDatabase(connection_string) {
 /**
  * @param {string} param.schema - schema name
  * @param {object} param.parsedTable - parsed ddl of a table
+ *  @param {string} param.highlightColor - highlight color
  */
-function genErdNode({ schema, parsedTable }) {
+function genErdNode({ schema, parsedTable, highlightColor }) {
     return {
         id: `${schema}.${parsedTable.name}`,
         data: parsedTable,
-        //TODO: Gen random color from palette
-        styles: { highlightColor: '#525A65', headerTxtColor: 'white' },
+        styles: { highlightColor },
     }
 }
 /**
@@ -479,7 +479,9 @@ function genErdData(parsedDdl) {
     Object.keys(parsedDdl).forEach(schema => {
         nodes = [
             ...nodes,
-            ...parsedDdl[schema].map(tbl => genErdNode({ schema, parsedTable: tbl })),
+            ...parsedDdl[schema].map((tbl, i) =>
+                genErdNode({ schema, parsedTable: tbl, highlightColor: dynamicColors(i) })
+            ),
         ]
     })
     //TODO: Generate links

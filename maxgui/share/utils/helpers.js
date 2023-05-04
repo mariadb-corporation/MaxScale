@@ -56,11 +56,17 @@ export function dynamicColors(dataIndex) {
         'rgba(245,157,52,1)',
         'rgba(47,153,163,1)',
         'rgba(150,221,207,1)',
+        'rgba(14,155,192,1)',
         'rgba(125,208,18,1)',
         'rgba(14,100,136,1)',
         'rgba(66,79,98,1)',
+        'rgba(163,186,192,1)',
         'rgba(0,53,69,1)',
         'rgba(45,156,219,1)',
+        'rgba(235,87,87,1)',
+        'rgba(48,48,51,1)',
+        'rgba(134,205,223,1)',
+        'rgba(76,76,79,1)',
     ]
     return palette[dataIndex % palette.length]
 }
