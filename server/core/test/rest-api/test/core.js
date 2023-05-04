@@ -16,7 +16,6 @@ function set_value(key, value) {
 }
 
 describe("MaxScale Core", function () {
-  before(startMaxScale);
 
   describe("Core Parameters", function () {
     it("auth_connect_timeout", function () {
@@ -70,6 +69,4 @@ describe("MaxScale Core", function () {
       return request.get(base_url + "/maxscale/debug/monitor_wait");
     });
   });
-
-  after(stopMaxScale);
 });

@@ -36,8 +36,6 @@ var c = axios.create({ auth: credentials, withCredentials: true });
 var conn = null;
 
 describe("Query API ", function () {
-  before(startMaxScale);
-
   describe("Usage", function () {
     it("opens connection", async function () {
       var res = await c.post(base_url + "/sql/", { ...db_credentials, target: "server1" });
@@ -134,14 +132,14 @@ describe("Query API ", function () {
     it("reconnects", async function () {
       var query = "SELECT @@pseudo_thread_id";
       var res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
-      var first_id = res.data.data.attributes.results[0].data[0][0]
-      expect(first_id).to.be.a("number")
+      var first_id = res.data.data.attributes.results[0].data[0][0];
+      expect(first_id).to.be.a("number");
 
       await c.post(conn.data.links.self + "reconnect/?token=" + conn.meta.token, { sql: query });
 
       res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
-      var second_id = res.data.data.attributes.results[0].data[0][0]
-      expect(second_id).to.be.a("number")
+      var second_id = res.data.data.attributes.results[0].data[0][0];
+      expect(second_id).to.be.a("number");
 
       expect(second_id).to.not.equal(first_id);
     });
@@ -245,6 +243,4 @@ describe("Query API ", function () {
       conn = null;
     });
   });
-
-  after(stopMaxScale);
 });
