@@ -60,7 +60,9 @@
                                     >
                                         <div class="d-flex align-center">
                                             <div class="key-icon-ctr">
-                                                <!-- TODO: Add key icons for PK, Index, Unique Index, FK -->
+                                                <erd-key-icon
+                                                    :data="getKeyIcon({ node, colName: col.name })"
+                                                />
                                             </div>
                                             {{ $helpers.unquoteIdentifier(col.name) }}
                                         </div>
@@ -113,13 +115,16 @@ import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@share/components/common/MxsSvgGraphs/EntityLink'
+import ErdKeyIcon from '@share/components/common/MxsSvgGraphs/ErdKeyIcon'
 import { LINK_SHAPES, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import tokens from '@wsSrc/utils/createTableTokens'
 
 export default {
     name: 'mxs-erd',
     components: {
         'graph-board': GraphBoard,
         'graph-nodes': GraphNodes,
+        'erd-key-icon': ErdKeyIcon,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -147,6 +152,9 @@ export default {
         }
     },
     computed: {
+        plainKeyType() {
+            return 'PLAIN'
+        },
         entitySizeConfig() {
             return { rowHeight: 32, rowOffset: 4, nodeOffsetHeight: this.entityHeaderHeight }
         },
@@ -165,6 +173,15 @@ export default {
                     entitySizeConfig: this.entitySizeConfig,
                 },
             }
+        },
+        nodeKeyMap() {
+            return this.graphNodes.reduce((map, node) => {
+                map[node.id] = this.$helpers.lodash.groupBy(
+                    node.data.definitions.keys,
+                    obj => obj.category || this.plainKeyType
+                )
+                return map
+            }, {})
         },
     },
     watch: {
@@ -301,6 +318,41 @@ export default {
         },
         mouseleaveNode() {
             this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+        },
+        findKeyTypeByColName({ node, colName }) {
+            const nodeKeys = this.nodeKeyMap[node.id]
+            const keyTypes = [tokens.primary, tokens.unique, this.plainKeyType]
+            return keyTypes.find(type =>
+                this.$typy(nodeKeys, `[${type}]`).safeArray.some(key =>
+                    key.index_col_names.some(item => item.name === colName)
+                )
+            )
+        },
+        getKeyIcon({ node, colName }) {
+            const keyType = this.findKeyTypeByColName({ node, colName })
+            switch (keyType) {
+                case tokens.primary:
+                    return {
+                        icon: 'mdi-key-variant',
+                        color: 'primary',
+                        style: {
+                            transform: 'rotate(180deg) scale(1, -1)',
+                        },
+                        size: 18,
+                    }
+                case tokens.unique:
+                    return {
+                        icon: '$vuetify.icons.mxs_uniqueIndexKey',
+                        color: 'navigation',
+                        size: 16,
+                    }
+                case this.plainKeyType:
+                    return {
+                        icon: '$vuetify.icons.mxs_indexKey',
+                        color: 'navigation',
+                        size: 16,
+                    }
+            }
         },
     },
 }
