@@ -1,8 +1,6 @@
-const { startMaxScale, stopMaxScale, doCommand } = require("../test_utils.js");
+const { doCommand } = require("../test_utils.js");
 
 describe("Classify Commands", function () {
-  before(startMaxScale);
-
   it("classifies query", function () {
     return doCommand("--tsv classify SELECT\t1").should.eventually.match(/QC_QUERY_PARSED/);
   });
@@ -21,6 +19,4 @@ describe("Classify Commands", function () {
   it("rejects no query", function () {
     return doCommand("classify").should.be.rejected;
   });
-
-  after(stopMaxScale);
 });

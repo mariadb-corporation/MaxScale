@@ -1,8 +1,6 @@
-const { startMaxScale, stopMaxScale, doCommand } = require("../test_utils.js");
+const { doCommand } = require("../test_utils.js");
 
 describe("API", function () {
-  before(startMaxScale);
-
   it("gets resource", function () {
     return doCommand("api get servers").should.be.fulfilled;
   });
@@ -50,6 +48,4 @@ describe("API", function () {
   it("ignores unknown command", function () {
     return doCommand("api upgrade").should.be.rejected;
   });
-
-  after(stopMaxScale);
 });

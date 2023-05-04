@@ -19,8 +19,6 @@ function set_auth(auth, value) {
 }
 
 describe("Authentication", function () {
-  before(startMaxScale);
-
   describe("Basic Authentication", function () {
     var user1 = {
       data: {
@@ -107,11 +105,16 @@ describe("Authentication", function () {
     it("request with correct user", function () {
       return request.get(base_url + "/maxscale", { auth: auth2 }).should.be.fulfilled;
     });
+
+    after(() => {
+      return Promise.all([
+        request.delete(base_url + "/users/inet/" + user2.data.id),
+        request.delete(base_url + "/users/inet/" + user3.data.id),
+      ]);
+    });
   });
 
   describe("JSON Web Tokens", function () {
-    before(startMaxScale);
-
     // TODO: Enable this when test uses TLS without admin_secure_gui=false
     // it("rejects /auth endpoint without HTTPS", function () {
     //   var token = "";
@@ -282,6 +285,4 @@ describe("Authentication", function () {
       return request.delete(base_url + "/users/inet/user1").should.be.rejected;
     });
   });
-
-  after(stopMaxScale);
 });

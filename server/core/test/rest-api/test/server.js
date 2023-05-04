@@ -24,7 +24,6 @@ var rel = {
 };
 
 describe("Server", function () {
-  before(startMaxScale);
 
   describe("Creation", function () {
     it("rejects new server with only `port`", function () {
@@ -304,6 +303,4 @@ describe("Server", function () {
       return request.delete(base_url + "/servers/" + server.data.id).should.be.fulfilled;
     });
   });
-
-  after(stopMaxScale);
 });

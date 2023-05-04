@@ -36,8 +36,6 @@ var c = axios.create({ auth: credentials, withCredentials: true });
 var conn = null;
 
 describe("Query API ", function () {
-  before(startMaxScale);
-
   describe("Usage", function () {
     it("opens connection", async function () {
       var res = await c.post(base_url + "/sql/", { ...db_credentials, target: "server1" });
@@ -270,6 +268,4 @@ describe("Query API ", function () {
       conn = null;
     });
   });
-
-  after(stopMaxScale);
 });

@@ -18,7 +18,6 @@ function closeConnection() {
 }
 
 describe("Schema Validation", function () {
-  before(startMaxScale);
   before(createConnection);
 
   describe("Resource Collections", function () {
@@ -138,5 +137,4 @@ describe("Schema Validation", function () {
   });
 
   after(closeConnection);
-  after(stopMaxScale);
 });

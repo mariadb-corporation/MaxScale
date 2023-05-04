@@ -13,8 +13,6 @@ const {
 const fs = require("fs");
 
 describe("Create/Destroy Commands", function () {
-  before(startMaxScale);
-
   // The other test cases modify the runtime configuration. Run the session destroy tests
   // so that we don't restart MaxScale before it.
   it("destroys session", async function () {
@@ -223,8 +221,9 @@ describe("Create/Destroy Commands", function () {
   });
 
   it("create user with numbers as a name", function () {
-    return verifyCommand("create user 1234 1234", "users/inet/1234")
-      .then(() => doCommand("destroy user 1234"))
+    return verifyCommand("create user 1234 1234", "users/inet/1234").then(() =>
+      doCommand("destroy user 1234")
+    );
   });
 
   it("create admin user", function () {
@@ -375,5 +374,8 @@ describe("Create/Destroy Commands", function () {
     expect(js.maxscale).to.be.an("object");
   });
 
-  after(stopMaxScale);
+  after(async function () {
+    await stopMaxScale();
+    await startMaxScale();
+  });
 });

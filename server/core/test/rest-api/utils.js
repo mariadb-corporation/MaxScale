@@ -436,18 +436,15 @@ module.exports = function () {
     },
   };
 
-  this.startMaxScale = function (done) {
-    child_process.execFile("./start_maxscale.sh", function (err, stdout, stderr) {
-      if (process.env.MAXSCALE_DIR == null) {
-        throw new Error("MAXSCALE_DIR is not set");
-      }
+  this.restartMaxScale = function (done) {
+    if (process.env.MAXSCALE_DIR == null) {
+      throw new Error("MAXSCALE_DIR is not set");
+    }
 
-      done();
-    });
-  };
-  this.stopMaxScale = function (done) {
     child_process.execFile("./stop_maxscale.sh", function (err, stdout, stderr) {
-      done();
+      child_process.execFile("./start_maxscale.sh", function (err, stdout, stderr) {
+        done();
+      });
     });
   };
 };

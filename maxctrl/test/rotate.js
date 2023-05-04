@@ -1,11 +1,7 @@
-const { startMaxScale, stopMaxScale, doCommand } = require("../test_utils.js");
+const { doCommand } = require("../test_utils.js");
 
 describe("Rotate Commands", function () {
-  before(startMaxScale);
-
   it("rotate logs", function () {
     return doCommand("rotate logs").should.be.fulfilled;
   });
-
-  after(stopMaxScale);
 });

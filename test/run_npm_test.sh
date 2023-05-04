@@ -118,10 +118,13 @@ cd $testdir
 
 # Make sure no stale processes of files are left from an earlier run
 ./stop_maxscale.sh
+./start_maxscale.sh
 
 # Run tests
 npm test
 rval=$?
+
+./stop_maxscale.sh
 
 # Stop MariaDB servers
 if [ -z  "$SKIP_SHUTDOWN" ]

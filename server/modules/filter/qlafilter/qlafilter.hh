@@ -242,7 +242,8 @@ private:
     int   m_rotation_count {0};         /* Log rotation counter */
     bool  m_write_error_logged {false}; /* Has write error been logged */
 
-    bool                 m_first_reply;
+    bool                 m_first_reply {true};
+    bool                 m_matched {false};
     std::string          m_sql;                 // Sql, in canonical form if asked for
     mxb::TimePoint       m_begin_time;          // Timer value at the moment of receiving query.
     mxb::TimePoint       m_trx_begin_time{};    // Timer value when the last transactions started.

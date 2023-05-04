@@ -1,8 +1,6 @@
-const { startMaxScale, stopMaxScale, doCommand, verifyCommand, expect } = require("../test_utils.js");
+const { doCommand, verifyCommand, expect } = require("../test_utils.js");
 
 describe("Link/Unlink Commands", function () {
-  before(startMaxScale);
-
   it("link servers to a service", function () {
     return verifyCommand(
       "link service Read-Connection-Router server1 server2 server3 server4",
@@ -111,6 +109,4 @@ describe("Link/Unlink Commands", function () {
   it("unlink services and servers from a service", async function () {
     await doCommand("unlink service Read-Connection-Router RW-Split-Router server1 server2");
   });
-
-  after(stopMaxScale);
 });

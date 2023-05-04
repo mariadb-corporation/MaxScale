@@ -463,7 +463,7 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
     int query_len = 0;
 
     if (m_active && modutil_extract_SQL(*queue, &query, &query_len)
-        && m_log->match_exclude(query, query_len))
+        && (m_matched = m_log->match_exclude(query, query_len)))
     {
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
 
@@ -508,9 +508,10 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
         if (m_first_reply)
         {
             m_first_response_time = m_pSession->worker()->epoll_tick_now();
+            m_first_reply = false;
         }
 
-        if (reply.is_complete())
+        if (reply.is_complete() & m_matched)
         {
             LogEventElems elems(m_begin_time,
                                 m_sql,

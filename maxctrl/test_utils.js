@@ -1,6 +1,6 @@
 var child_process = require("child_process");
 const mariadb = require("mariadb");
-var conn;
+var conn = null;
 var connectionError = false;
 
 if (process.env.MAXSCALE_DIR == null) {
@@ -51,8 +51,9 @@ function stopMaxScale() {
 }
 
 // Stop two MaxScales
-function stopDoubleMaxScale() {
-  return runScript("./stop_double_maxscale.sh");
+async function stopDoubleMaxScale() {
+  await runScript("./stop_double_maxscale.sh");
+  return runScript("./start_maxscale.sh");
 }
 
 // Execute a single MaxCtrl command, returns a Promise
