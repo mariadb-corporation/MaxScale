@@ -1833,7 +1833,7 @@ string::size_type get_encryption_version(const std::string& data,
 
 string UserManagerMariaDB::decrypt_data(std::string data, const std::string& mariadb_user) const
 {
-    int version;
+    int version = -1;
     auto i = get_encryption_version(data, mariadb_user, &version);
 
     if (!m_config.encryption_key.empty())
