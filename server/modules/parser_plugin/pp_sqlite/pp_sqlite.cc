@@ -2780,7 +2780,7 @@ public:
 
                 case TK_TABLES:
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = mxs::sql::TYPE_SHOW_TABLES;
+                    m_type_mask = mxs::sql::TYPE_READ;
                     break;
 
                 default:
@@ -3201,7 +3201,7 @@ public:
             break;
 
         case MXS_SHOW_TABLES:
-            m_type_mask = mxs::sql::TYPE_SHOW_TABLES;
+            m_type_mask = mxs::sql::TYPE_READ;
             if (pShow->pDatabase->z)
             {
                 update_database_names(pShow->pDatabase->z, pShow->pDatabase->n);

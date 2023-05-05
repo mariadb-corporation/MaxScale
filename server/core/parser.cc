@@ -52,7 +52,6 @@ static const sql::Type SQL_TYPES[] =
     sql::TYPE_EXEC_STMT,
     sql::TYPE_CREATE_TMP_TABLE,
     sql::TYPE_SHOW_DATABASES,
-    sql::TYPE_SHOW_TABLES,
     sql::TYPE_DEALLOC_PREPARE,
     sql::TYPE_READONLY,
     sql::TYPE_READWRITE,
@@ -230,14 +229,6 @@ struct type_name_info type_to_type_name_info(sql::Type type)
     case mxs::sql::TYPE_SHOW_DATABASES:
         {
             static const char name[] = "sql::TYPE_SHOW_DATABASES";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
-
-    case mxs::sql::TYPE_SHOW_TABLES:
-        {
-            static const char name[] = "sql::TYPE_SHOW_TABLES";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }

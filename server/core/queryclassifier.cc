@@ -338,7 +338,6 @@ bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
     if (!Parser::type_mask_contains(qtype, mxs::sql::TYPE_MASTER_READ)
         && !Parser::type_mask_contains(qtype, mxs::sql::TYPE_WRITE)
         && (Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ)
-            || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SHOW_TABLES)
             || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SHOW_DATABASES)
             || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ)
             || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)

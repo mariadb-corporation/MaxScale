@@ -1400,11 +1400,6 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         goto return_qtype;
         break;
 
-    case SQLCOM_SHOW_TABLES:
-        type |= mxs::sql::TYPE_SHOW_TABLES;
-        goto return_qtype;
-        break;
-
     case SQLCOM_SHOW_CREATE:
     case SQLCOM_SHOW_CREATE_DB:
     case SQLCOM_SHOW_CREATE_FUNC:
@@ -1416,6 +1411,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     case SQLCOM_SHOW_SLAVE_HOSTS:
     case SQLCOM_SHOW_SLAVE_STAT:
     case SQLCOM_SHOW_STATUS:
+    case SQLCOM_SHOW_TABLES:
         type |= mxs::sql::TYPE_READ;
         goto return_qtype;
         break;
