@@ -21,6 +21,8 @@
 #include <vector>
 #include <immintrin.h>
 
+#define MXS_AVX2_FUNC __attribute__ ((__target__ ("avx2")))
+
 namespace maxsimd
 {
 namespace simd256
@@ -52,7 +54,7 @@ std::string to_hex_string(__m256i reg);
  *         E.g. 'C' = 0b01000011, the low nibble is 0b0011, or decimal 3,
  *         which is the index (the 4th byte), in which the bit 1 << high_nibble
  *         is set. The high nibble is 0b0100 so the 5th bit is set. Look
- *         for the bitmask_lookup_const comment how a character is classified.
+ *         for the bitmask_lookup comment how a character is classified.
  *
  *         In AVX2 there are actually two independent 128bit lanes,
  *         so the __m256i has two identical 16*8 bitmaps.
@@ -65,7 +67,7 @@ std::string to_hex_string(__m256i reg);
 __m256i make_ascii_bitmap(const std::string& chars);
 
 /**
- * This is a static lookup table that when indexed with the high nibble
+ * This is a lookup table that when indexed with the high nibble
  * gives the bit position corresponding to that nibble.
  *
  * E.g. Given the character 'C' = 0b01000011, the low nibble is used to
@@ -79,16 +81,14 @@ __m256i make_ascii_bitmap(const std::string& chars);
  *  There are 4 copies of the table in the __m256i, again for
  *  architectural reasons. This table also works for 8-bit chars.
  */
-inline __m256i bitmask_lookup_const()
+MXS_AVX2_FUNC inline __m256i bitmask_lookup()
 {
-    static const __m256i bitmask = _mm256_setr_epi8(
+    return _mm256_setr_epi8(
         1, 2, 4, 8, 16, 32, 64, char(128),
         1, 2, 4, 8, 16, 32, 64, char(128),
         1, 2, 4, 8, 16, 32, 64, char(128),
         1, 2, 4, 8, 16, 32, 64, char(128)
         );
-
-    return bitmask;
 }
 
 /**
@@ -103,7 +103,7 @@ inline __m256i bitmask_lookup_const()
  *                        bitmask where a bit is set corresponding to a classified
  *                        character in the input.
  */
-inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
+MXS_AVX2_FUNC inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
 {
     // ascii_classification[i] = ascii_bitmap[input[i] & 0x1111)]
     const __m256i ascii_classification = _mm256_shuffle_epi8(ascii_bitmap, input);
@@ -111,8 +111,8 @@ inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
     // shift high nibbles into place (into low nibble position for shuffle)
     const __m256i high_nibbles = _mm256_and_si256(_mm256_srli_epi16(input, 4), _mm256_set1_epi8(0x0f));
 
-    // bits[i] = bitmask_lookup256[input[i]>>4],
-    const __m256i bits = _mm256_shuffle_epi8(bitmask_lookup_const(), high_nibbles);
+    // bits[i] = bitmask_lookup([input[i]>>4]),
+    const __m256i bits = _mm256_shuffle_epi8(bitmask_lookup(), high_nibbles);
 
     // classified[i] = ascii_classification[i] & bits[i],
     const __m256i classified = _mm256_and_si256(ascii_classification, bits);
@@ -139,7 +139,7 @@ using Markers = std::vector<const char*>;
  *                   for the caller, reused for each call to make_markers()
  * @return Pointers into argument string for every classified character.
  */
-inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Markers* pMarkers)
+MXS_AVX2_FUNC inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Markers* pMarkers)
 {
     const char* pBegin = str.data();
     const char* pSource = pBegin;
