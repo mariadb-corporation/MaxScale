@@ -57,14 +57,14 @@ export default class EntityLinkShape {
      */
     getColYPos({ node, attr, nodeHeight }) {
         const {
-            entitySizeConfig: { rowHeight, rowOffset, nodeOffsetHeight },
+            entitySizeConfig: { rowHeight, rowOffset, headerHeight },
         } = this.config
         const { isAttrToAttr } = this.linkConfig
         const colIdx = node.data.definitions.cols.findIndex(c => c.name === attr)
         const center = isAttrToAttr
             ? node.y +
               nodeHeight / 2 -
-              (nodeHeight - nodeOffsetHeight) +
+              (nodeHeight - headerHeight) +
               colIdx * rowHeight +
               rowHeight / 2
             : node.y

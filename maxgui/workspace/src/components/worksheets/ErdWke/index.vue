@@ -9,10 +9,7 @@
             :deactivatedMaxPctZone="maxErdPct - (100 - maxErdPct) * 2"
         >
             <template slot="pane-left">
-                <div class="fill-height relative">
-                    <er-toolbar-ctr class="absolute" />
-                    <mxs-erd :ctrDim="erdDim" :data="graphData" />
-                </div>
+                <diagram-ctr :dim="erdDim" />
             </template>
             <template slot="pane-right">
                 <entity-editor-ctr />
@@ -35,13 +32,12 @@
  * Public License.
  */
 import { mapState, mapMutations } from 'vuex'
-import ErdTask from '@wsModels/ErdTask'
-import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
+import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 
 export default {
     name: 'erd-wke',
-    components: { ErToolbarCtr, EntityEditorCtr },
+    components: { DiagramCtr, EntityEditorCtr },
     props: {
         ctrDim: { type: Object, required: true },
     },
@@ -76,10 +72,6 @@ export default {
         },
         maxErdPct() {
             return 100 - this.minErdPct
-        },
-        //TODO: Convert to get/set
-        graphData() {
-            return ErdTask.getters('getActiveGraphData') || {}
         },
     },
     methods: {

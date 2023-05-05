@@ -32,7 +32,7 @@
                     <template v-slot:default="{ data: { node } }">
                         <table class="entity-table">
                             <thead>
-                                <tr :style="{ height: `${entityHeaderHeight}px` }">
+                                <tr :style="{ height: `${entitySizeConfig.headerHeight}px` }">
                                     <th
                                         class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg px-4"
                                         colspan="2"
@@ -117,7 +117,7 @@ import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@share/components/common/MxsSvgGraphs/EntityLink'
 import ErdKeyIcon from '@share/components/common/MxsSvgGraphs/ErdKeyIcon'
-import { LINK_SHAPES, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 import tokens from '@wsSrc/utils/createTableTokens'
 
 export default {
@@ -130,6 +130,7 @@ export default {
     props: {
         ctrDim: { type: Object, required: true },
         data: { type: Object, required: true },
+        graphConfigData: { type: Object, required: true },
     },
     data() {
         return {
@@ -142,41 +143,20 @@ export default {
             simulation: null,
             defNodeSize: { width: 200, height: 100 },
             chosenLinks: [],
-            entityHeaderHeight: 32,
             entityLink: null,
             graphConfig: null,
-            strokeWidth: 1,
             isDraggingNode: false,
-            //TODO: Add inputs to change below values
-            isAttrToAttr: false,
-            linkShapeType: LINK_SHAPES.ORTHO,
         }
     },
     computed: {
-        entitySizeConfig() {
-            return { rowHeight: 32, rowOffset: 4, nodeOffsetHeight: this.entityHeaderHeight }
-        },
-        erdGraphConfig() {
-            return {
-                link: {
-                    color: '#424f62',
-                    strokeWidth: this.strokeWidth,
-                    opacity: 1,
-                    dashArr: '5',
-                    isAttrToAttr: this.isAttrToAttr,
-                },
-                marker: { width: 18 },
-                linkShape: {
-                    type: this.linkShapeType,
-                    entitySizeConfig: this.entitySizeConfig,
-                },
-            }
-        },
         nodeKeyMap() {
             return this.graphNodes.reduce((map, node) => {
                 map[node.id] = node.data.definitions.keys
                 return map
             }, {})
+        },
+        entitySizeConfig() {
+            return this.graphConfigData.linkShape.entitySizeConfig
         },
     },
     watch: {
@@ -230,7 +210,7 @@ export default {
             }
         },
         initLinkInstance() {
-            this.graphConfig = new GraphConfig(this.erdGraphConfig)
+            this.graphConfig = new GraphConfig(this.graphConfigData)
             this.entityLink = new EntityLink(this.graphConfig)
         },
         drawChart() {

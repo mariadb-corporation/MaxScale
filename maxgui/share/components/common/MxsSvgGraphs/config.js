@@ -71,7 +71,7 @@ export default () => ({
             rowHeight: 32,
             // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
             rowOffset: 4,
-            nodeOffsetHeight: 32,
+            headerHeight: 32,
         },
     },
 })
