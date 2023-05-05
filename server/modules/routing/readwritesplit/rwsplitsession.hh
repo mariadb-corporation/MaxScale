@@ -371,7 +371,7 @@ private:
             mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
         }
 
-        const uint32_t read_only_types = mxs::sql::TYPE_READ | mxs::sql::TYPE_LOCAL_READ
+        const uint32_t read_only_types = mxs::sql::TYPE_READ
             | mxs::sql::TYPE_USERVAR_READ | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ;
 
         if ((route_info().type_mask() & ~read_only_types) && !trx_is_read_only()

@@ -33,8 +33,9 @@ namespace sql
  */
 enum Type
 {
+    // NOTE: If anything is changed here, then pp_sqlite's parse.y must be
+    // NOTE: updated accordingly.
     TYPE_UNKNOWN            = 0,      /*< Initial value, can't be tested bitwisely */
-    TYPE_LOCAL_READ         = 1 << 0, /*< Read non-database data, execute in MaxScale:any */
     TYPE_READ               = 1 << 1, /*< Read database data:any */
     TYPE_WRITE              = 1 << 2, /*< Master data will be  modified:master */
     TYPE_MASTER_READ        = 1 << 3, /*< Read from the master:master */

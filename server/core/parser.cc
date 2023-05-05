@@ -31,7 +31,6 @@ static const sql::Type SQL_TYPES[] =
 {
     /* Excluded by design */
     // sql::TYPE_UNKNOWN,
-    sql::TYPE_LOCAL_READ,
     sql::TYPE_READ,
     sql::TYPE_WRITE,
     sql::TYPE_MASTER_READ,
@@ -78,14 +77,6 @@ struct type_name_info type_to_type_name_info(sql::Type type)
     case mxs::sql::TYPE_UNKNOWN:
         {
             static const char name[] = "sql::TYPE_UNKNOWN";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
-
-    case mxs::sql::TYPE_LOCAL_READ:
-        {
-            static const char name[] = "sql::TYPE_LOCAL_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
         }

@@ -1455,7 +1455,6 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     // TODO: This test is meaningless, since at this point
     // TODO: qtype (not type) is mxs::sql::TYPE_UNKNOWN.
     if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_UNKNOWN)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_LOCAL_READ)
         || Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ)
         || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ)
         || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)

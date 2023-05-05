@@ -63,7 +63,7 @@ namespace
 
 /* This router handles different query types in a different manner. Some queries
  * require that a "write_backend" is set. */
-const uint32_t q_route_to_rr = (mxs::sql::TYPE_LOCAL_READ | mxs::sql::TYPE_READ
+const uint32_t q_route_to_rr = (mxs::sql::TYPE_READ
                                 | mxs::sql::TYPE_MASTER_READ | mxs::sql::TYPE_USERVAR_READ
                                 | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ
                                 | mxs::sql::TYPE_SHOW_DATABASES | mxs::sql::TYPE_SHOW_TABLES);

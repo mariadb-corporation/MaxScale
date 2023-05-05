@@ -59,12 +59,12 @@
 %include {
 #include "sqliteInt.h"
 
-// Copied from query_classifier.h
+// Copied from parser.hh
 enum
 {
-  QUERY_TYPE_READ               = 0x000002, /*< Read database data:any */
-  QUERY_TYPE_WRITE              = 0x000004, /*< Master data will be  modified:master */
-  QUERY_TYPE_USERVAR_READ       = 0x000040, /*< Read a user variable:master or any */
+  QUERY_TYPE_READ               = 1 << 1, /*< Read database data:any */
+  QUERY_TYPE_WRITE              = 1 << 2, /*< Master data will be  modified:master */
+  QUERY_TYPE_USERVAR_READ       = 1 << 6, /*< Read a user variable:master or any */
 };
 
 typedef enum qc_field_usage

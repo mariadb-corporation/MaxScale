@@ -394,16 +394,6 @@ bool compare_get_type(const std::optional<std::regex>& check_regex,
             rv2b &= ~(uint32_t)sql::TYPE_READ;
         }
 
-        if (rv1b & sql::TYPE_READ)
-        {
-            rv1b &= ~(uint32_t)sql::TYPE_LOCAL_READ;
-        }
-
-        if (rv2b & sql::TYPE_READ)
-        {
-            rv2b &= ~(uint32_t)sql::TYPE_LOCAL_READ;
-        }
-
         auto types1 = Parser::type_mask_to_string(rv1);
         auto types2 = Parser::type_mask_to_string(rv2);
 

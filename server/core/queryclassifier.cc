@@ -603,7 +603,6 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
     bool rval = false;
 
     if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_LOCAL_READ)
         || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_READ)
         || Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)
         || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_READ))
