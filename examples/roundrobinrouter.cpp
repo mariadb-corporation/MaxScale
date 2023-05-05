@@ -65,8 +65,7 @@ namespace
  * require that a "write_backend" is set. */
 const uint32_t q_route_to_rr = (mxs::sql::TYPE_READ
                                 | mxs::sql::TYPE_MASTER_READ | mxs::sql::TYPE_USERVAR_READ
-                                | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ
-                                | mxs::sql::TYPE_SHOW_DATABASES);
+                                | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ);
 
 const uint32_t q_route_to_all = (mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_USERVAR_WRITE
                                  | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT

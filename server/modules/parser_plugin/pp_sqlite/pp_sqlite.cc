@@ -2775,7 +2775,8 @@ public:
                 {
                 case TK_DATABASES_KW:
                     m_status = Parser::Result::TOKENIZED;
-                    m_type_mask = mxs::sql::TYPE_SHOW_DATABASES;
+                    m_type_mask = mxs::sql::TYPE_READ;
+                    m_operation = mxs::sql::OP_SHOW_DATABASES;
                     break;
 
                 case TK_TABLES:
@@ -3160,7 +3161,8 @@ public:
             break;
 
         case MXS_SHOW_DATABASES:
-            m_type_mask = mxs::sql::TYPE_SHOW_DATABASES;
+            m_type_mask = mxs::sql::TYPE_READ;
+            m_operation = mxs::sql::OP_SHOW_DATABASES;
             break;
 
         case MXS_SHOW_INDEX:

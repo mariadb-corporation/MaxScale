@@ -1395,15 +1395,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         goto return_qtype;
         break;
 
-    case SQLCOM_SHOW_DATABASES:
-        type |= mxs::sql::TYPE_SHOW_DATABASES;
-        goto return_qtype;
-        break;
-
     case SQLCOM_SHOW_CREATE:
     case SQLCOM_SHOW_CREATE_DB:
     case SQLCOM_SHOW_CREATE_FUNC:
     case SQLCOM_SHOW_CREATE_PROC:
+    case SQLCOM_SHOW_DATABASES:
     case SQLCOM_SHOW_FIELDS:
     case SQLCOM_SHOW_FUNC_CODE:
     case SQLCOM_SHOW_GRANTS:
@@ -2241,11 +2237,14 @@ int32_t pp_mysql_get_operation(const Parser::Helper& helper,
                         }
                         break;
 
+                    case SQLCOM_SHOW_DATABASES:
+                        *operation = mxs::sql::OP_SHOW_DATABASES;
+                        break;
+
                     case SQLCOM_SHOW_CREATE:
                     case SQLCOM_SHOW_CREATE_DB:
                     case SQLCOM_SHOW_CREATE_FUNC:
                     case SQLCOM_SHOW_CREATE_PROC:
-                    case SQLCOM_SHOW_DATABASES:
                     case SQLCOM_SHOW_FIELDS:
                     case SQLCOM_SHOW_FUNC_CODE:
                     case SQLCOM_SHOW_GRANTS:

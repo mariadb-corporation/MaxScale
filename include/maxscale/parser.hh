@@ -54,7 +54,6 @@ enum Type
     TYPE_PREPARE_STMT       = 1 << 16,/*< Prepared stmt with id provided by server:all */
     TYPE_EXEC_STMT          = 1 << 17,/*< Execute prepared statement:master or any */
     TYPE_CREATE_TMP_TABLE   = 1 << 18,/*< Create temporary table:master (could be all) */
-    TYPE_SHOW_DATABASES     = 1 << 20,/*< Show list of databases */
     TYPE_DEALLOC_PREPARE    = 1 << 22,/*< Dealloc named prepare stmt:all */
     TYPE_READONLY           = 1 << 23,/*< The READ ONLY part of SET TRANSACTION */
     TYPE_READWRITE          = 1 << 24,/*< The READ WRITE part of SET TRANSACTION  */

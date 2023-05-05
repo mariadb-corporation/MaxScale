@@ -326,7 +326,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         inspect_query(parser(), packet, &type, &op, command);
 
         /** Create the response to the SHOW DATABASES from the mapped databases */
-        if (Parser::type_mask_contains(type, mxs::sql::TYPE_SHOW_DATABASES))
+        if (op == mxs::sql::OP_SHOW_DATABASES)
         {
             send_databases();
             return 1;
