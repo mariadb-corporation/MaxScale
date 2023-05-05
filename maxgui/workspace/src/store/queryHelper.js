@@ -18,10 +18,11 @@ import {
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
 } from '@wsSrc/store/config'
-import { lodash, to, dynamicColors } from '@share/utils/helpers'
+import { lodash, to, dynamicColors, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
+import tokens from '@wsSrc/utils/createTableTokens'
 
 /**
  * @public
@@ -466,9 +467,57 @@ function getDatabase(connection_string) {
 function genErdNode({ schema, parsedTable, highlightColor }) {
     return {
         id: `${schema}.${parsedTable.name}`,
+        schema,
         data: parsedTable,
         styles: { highlightColor },
     }
+}
+
+/**
+ * @param {object} param.srcNode - source node
+ * @param {object} param.fk - parsed fk data
+ * @param {string} param.indexColName - source column name
+ * @param {string} param.referencedIndexColName - target column name
+ * @param {boolean} param.isPartOfCompositeKey - is a part of composite FK
+ */
+function genErdLink({ srcNode, fk, indexColName, referencedIndexColName, isPartOfCompositeKey }) {
+    const { name, referenced_schema_name, referenced_table_name, on_delete, on_update } = fk
+    let link = {
+        id: `link_${uuidv1()}`,
+        source: srcNode.id,
+        target: `${referenced_schema_name}.${referenced_table_name}`,
+        relationshipData: {
+            //TODO: Detect relationship type
+            type: `1..N:1..1`,
+            name,
+            on_delete,
+            on_update,
+            source_attr: indexColName,
+            target_attr: referencedIndexColName,
+        },
+    }
+    if (isPartOfCompositeKey) link.isPartOfCompositeKey = isPartOfCompositeKey
+    return link
+}
+
+function handleGenErdLink({ srcNode, fk }) {
+    const { index_col_names, referenced_index_col_names } = fk
+    let links = []
+    for (const [i, item] of index_col_names.entries()) {
+        const indexColName = item.name
+        const referencedIndexColName = referenced_index_col_names[i].name
+        links.push(
+            genErdLink({
+                srcNode,
+                fk,
+                indexColName,
+                referencedIndexColName,
+                isPartOfCompositeKey: i >= 1,
+            })
+        )
+    }
+
+    return links
 }
 /**
  * @param {Object} parsedDdl - parsed ddl map of schemas
@@ -476,6 +525,7 @@ function genErdNode({ schema, parsedTable, highlightColor }) {
 function genErdData(parsedDdl) {
     let nodes = [],
         links = []
+
     Object.keys(parsedDdl).forEach(schema => {
         nodes = [
             ...nodes,
@@ -484,7 +534,18 @@ function genErdData(parsedDdl) {
             ),
         ]
     })
-    //TODO: Generate links
+    nodes.forEach(node => {
+        const fks = typy(node.data.definitions.keys[tokens.foreignKey]).safeArray
+        fks.forEach(fk => {
+            links = [
+                ...links,
+                ...handleGenErdLink({
+                    srcNode: node,
+                    fk: { ...fk, referenced_schema_name: fk.referenced_schema_name || node.schema },
+                }),
+            ]
+        })
+    })
     return { nodes, links }
 }
 
