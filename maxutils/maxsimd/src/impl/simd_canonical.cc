@@ -36,7 +36,7 @@ namespace
 
 // The characters that need to be classified. Digits are handled
 // separately.
-inline __m256i sql_ascii_bit_map()
+MXS_AVX2_FUNC inline __m256i sql_ascii_bit_map()
 {
     static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"("'`/#-\)");
     return sql_ascii_bit_map;
@@ -44,7 +44,7 @@ inline __m256i sql_ascii_bit_map()
 
 // Characters that can start (and continue) an identifier.
 
-inline __m256i ident_begin_bit_map()
+MXS_AVX2_FUNC inline __m256i ident_begin_bit_map()
 {
     static const __m256i ident_begin_bit_map =
             make_ascii_bitmap(R"($_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
@@ -52,12 +52,12 @@ inline __m256i ident_begin_bit_map()
     return ident_begin_bit_map;
 }
 
-inline __m256i small_zeros()
+MXS_AVX2_FUNC inline __m256i small_zeros()
 {
     const __m256i small_zeros = _mm256_set1_epi8('0' - 1);
     return small_zeros;
 }
-inline __m256i large_nines()
+MXS_AVX2_FUNC inline __m256i large_nines()
 {
     const __m256i large_nines = _mm256_set1_epi8('9' + 1);
     return large_nines;
@@ -71,7 +71,7 @@ inline __m256i large_nines()
  *  The shift language is how the chars naturally look, so a shift
  *  right of the chars is a shift left of the bitmaps.
  */
-inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
+MXS_AVX2_FUNC inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
 {
     const char* pBegin = sql.data();
     const char* pSource = pBegin;
@@ -110,7 +110,7 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
         // Only 32 bit bitmasks after this point
         const uint32_t all_digits_bitmask = _mm256_movemask_epi8(all_digits);
         const bool rightmost_is_ident_char = (ident_bitmask & 0x8000'0000)
-                || (all_digits_bitmask & 0x8000'0000);
+                | (all_digits_bitmask & 0x8000'0000);
 
         const uint32_t left_shifted_bitmask = all_digits_bitmask << 1;
         const uint32_t xored_bitmask = all_digits_bitmask ^ left_shifted_bitmask;
@@ -122,7 +122,7 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
         uint32_t ident_shift_left = ident_bitmask << 1;
         uint32_t not_a_number = leading_digit_bitmask & ident_shift_left;
         leading_digit_bitmask ^= not_a_number;
-        leading_digit_bitmask &= ~int32_t(previous_rightmost_is_ident_char);
+        leading_digit_bitmask &= ~uint32_t(previous_rightmost_is_ident_char);
 
         previous_rightmost_is_ident_char = rightmost_is_ident_char;
 
@@ -194,7 +194,7 @@ private:
 
 static LUT lut;
 
-inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
+MXS_AVX2_FUNC inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
 {
     while (!pMarkers->empty())
     {
@@ -224,7 +224,7 @@ inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
     return nullptr;
 }
 
-inline const char* probe_number(const char* it, const char* const pEnd)
+MXS_AVX2_FUNC inline const char* probe_number(const char* it, const char* const pEnd)
 {
     bool is_hex = *it == '0';
     bool allow_hex = false;
@@ -247,12 +247,12 @@ inline const char* probe_number(const char* it, const char* const pEnd)
                 is_hex = false;
                 allow_hex = true;
             }
-            else if (*it == 'e')
+            else if (*it == 'e' || *it == 'E')
             {
                 // Possible scientific notation number
                 auto next_it = it + 1;
 
-                if (next_it == pEnd || !(*next_it != '-' || *next_it != '+') || lut(IS_DIGIT, *next_it))
+                if (next_it == pEnd || !(*next_it != '-' || *next_it != '+' || lut(IS_DIGIT, *next_it)))
                 {
                     rval = nullptr;
                     break;
@@ -304,7 +304,7 @@ inline const char* probe_number(const char* it, const char* const pEnd)
  *  Note that where the sql is invalid the output should also be invalid so it cannot
  *  match a valid canonical TODO make sure.
  */
-std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
+MXS_AVX2_FUNC std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 {
     /* The call &*pSql->begin() ensures that a non-confirming
      * std::string will copy the data (COW, CentOS7)
@@ -329,7 +329,6 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 
     while (!pMarkers->empty())
     {
-        bool did_conversion = false;
         auto pMarker = pMarkers->back();
         pMarkers->pop_back();
 
@@ -388,14 +387,8 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 
             if (num_end)
             {
-                if (!was_converted && *(write_ptr - 1) == '-')
-                {
-                    // Remove the sign
-                    --write_ptr;
-                }
                 *write_ptr++ = '?';
                 read_ptr = num_end;
-                did_conversion = true;
             }
         }
         else if (lut(IS_COMMENT, *pMarker))
@@ -415,8 +408,6 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
         {
             mxb_assert(!true);
         }
-
-        was_converted = did_conversion;
     }
 
 break_out:
