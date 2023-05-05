@@ -1,7 +1,7 @@
 <template>
     <div class="fill-height relative">
-        <er-toolbar-ctr class="absolute" />
-        <mxs-erd :ctrDim="dim" :data="graphData" :graphConfigData="graphConfigData" />
+        <er-toolbar-ctr v-model="graphConfigData" class="absolute" />
+        <mxs-erd ref="diagram" :ctrDim="dim" :data="graphData" :graphConfigData="graphConfigData" />
     </div>
 </template>
 
@@ -30,34 +30,60 @@ export default {
     },
     data() {
         return {
-            strokeWidth: 1,
-            //TODO: Add inputs to change below values
-            isAttrToAttr: false,
-            linkShapeType: LINK_SHAPES.ORTHO,
-        }
-    },
-    computed: {
-        entitySizeConfig() {
-            return { rowHeight: 32, rowOffset: 4, headerHeight: 32 }
-        },
-        graphConfigData() {
-            return {
+            graphConfigData: {
                 link: {
                     color: '#424f62',
-                    strokeWidth: this.strokeWidth,
+                    strokeWidth: 1,
                     opacity: 1,
                     dashArr: '5',
-                    isAttrToAttr: this.isAttrToAttr,
+                    isAttrToAttr: false,
                 },
                 marker: { width: 18 },
                 linkShape: {
-                    type: this.linkShapeType,
-                    entitySizeConfig: this.entitySizeConfig,
+                    type: LINK_SHAPES.ORTHO,
+                    entitySizeConfig: { rowHeight: 32, rowOffset: 4, headerHeight: 32 },
                 },
-            }
-        },
+            },
+        }
+    },
+    computed: {
         graphData() {
             return ErdTask.getters('getActiveGraphData') || {}
+        },
+        diagram() {
+            return this.$refs.diagram
+        },
+    },
+    watch: {
+        graphConfigData: {
+            deep: true,
+            handler(v, oV) {
+                /**
+                 * Because only one attribute can be changed at a time, so it's safe to
+                 * access the diff with hard-code indexes.
+                 */
+                const diff = this.$typy(this.$helpers.deepDiff(oV, v), '[0]').safeObjectOrEmpty
+                const value = this.$helpers.lodash.objGet(v, diff.path.join('.'))
+
+                this.diagram.graphConfig.updateConfig({
+                    key: diff.path[0],
+                    patch: { [diff.path[1]]: value },
+                })
+                if (diff.path[1] === 'isAttrToAttr') this.handleIsAttrToAttrMode(value)
+                this.diagram.drawLinks()
+            },
+        },
+    },
+    methods: {
+        /**
+         * If value is true, the diagram shows all links including composite links for composite keys
+         * @param {boolean} value
+         */
+        handleIsAttrToAttrMode(value) {
+            const graphLinks = this.diagram.graphLinks
+            if (value) this.diagram.graphLinks = this.diagram.stagingData.links
+            else this.diagram.graphLinks = graphLinks.filter(link => !link.isPartOfCompositeKey)
+            this.diagram.simulation.force('link').links(this.diagram.graphLinks)
         },
     },
 }

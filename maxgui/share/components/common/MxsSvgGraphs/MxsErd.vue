@@ -138,6 +138,7 @@ export default {
             areSizesCalculated: false,
             svgGroup: null,
             graphNodeCoordMap: {},
+            stagingData: null,
             graphNodes: [],
             graphLinks: [],
             simulation: null,
@@ -169,17 +170,17 @@ export default {
     },
     created() {
         this.isRendering = true
-        this.assignData(this.data)
+        this.assignData()
     },
     methods: {
         /**
          * D3 mutates data, this method deep clones data to make the original is intact
          * @param {Object} data
          */
-        assignData(data) {
-            const cloned = this.$helpers.lodash.cloneDeep(data)
-            this.graphNodes = cloned.nodes
-            this.graphLinks = cloned.links
+        assignData() {
+            this.stagingData = this.$helpers.lodash.cloneDeep(this.data)
+            this.graphNodes = this.stagingData.nodes
+            this.graphLinks = this.stagingData.links
         },
         setNodeSize(map) {
             this.graphNodes = this.graphNodes.map(node => ({ ...node, size: map[node.id] }))

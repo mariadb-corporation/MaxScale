@@ -1,6 +1,18 @@
 <template>
-    <div class="d-flex justify-end er-toolbar-ctr px-3">
+    <div class="d-flex justify-start er-toolbar-ctr pt-1 px-3">
         <!-- TODO: Add buttons to change diagram options and button to generate ERD from existing db  -->
+        <mxs-tooltip-btn
+            btnClass="mr-2 toolbar-square-btn"
+            :color="config.link.isAttrToAttr ? 'primary' : '#e8eef1'"
+            @click="toggleIsAttrToAttr"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22" :color="config.link.isAttrToAttr ? 'white' : 'blue-azure'">
+                    mdi-key-link
+                </v-icon>
+            </template>
+            {{ $mxs_t('info.drawFkLinks') }}
+        </mxs-tooltip-btn>
     </div>
 </template>
 
@@ -20,6 +32,28 @@
 
 export default {
     name: 'er-toolbar-ctr',
+    props: {
+        value: { type: Object, required: true },
+    },
+    computed: {
+        config: {
+            get() {
+                return this.value
+            },
+            set(v) {
+                this.$emit('input', v)
+            },
+        },
+    },
+    methods: {
+        toggleIsAttrToAttr() {
+            this.config = this.$helpers.immutableUpdate(this.config, {
+                link: {
+                    isAttrToAttr: { $set: !this.config.link.isAttrToAttr },
+                },
+            })
+        },
+    },
 }
 </script>
 <style lang="scss" scoped>
