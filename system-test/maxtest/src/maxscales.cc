@@ -843,6 +843,10 @@ mxt::ServersInfo MaxScale::get_servers()
     const string field_pers_conns = "persistent_connections";
     const string field_connections = "connections";
 
+    // Parameters
+    const string field_parameters = "parameters";
+    const string field_ssl = "ssl";
+
     auto try_get_int = [](const Json& json, const string& key, int64_t failval) {
         int64_t rval = failval;
         json.try_get_int(key, &rval);
@@ -904,6 +908,8 @@ mxt::ServersInfo MaxScale::get_servers()
                 info.pool_conns = try_get_int(stats, field_pers_conns, -1);
                 info.connections = try_get_int(stats, field_connections, 0);
 
+                auto params = attr.get_object(field_parameters);
+                info.ssl_configured = try_get_bool(params, field_ssl, false);
                 rval.add(info);
             }
         }

@@ -2,6 +2,11 @@ add_test_executable_ex(NAME xpand_basics SOURCE xpand_basics.cpp
         CONFIG xpand_basics.cnf VMS xpand_backend LABELS xpand)
 set_tests_properties(xpand_basics PROPERTIES TIMEOUT 7200)
 
+# Automatic backend_ssl configuration does not work with Xpand because it does not support the user
+# generation option "require ssl". Using a manually generated config file.
+add_test_executable_ex(NAME xpand_basics_ssl ORIG_NAME xpand_basics
+        CONFIG xpand_basics_ssl.cnf VMS xpand_backend LABELS xpand LISTENER_SSL)
+
 add_test_executable_ex(NAME xpand_transaction_replay SOURCE xpand_transaction_replay.cpp
         CONFIG xpand_transaction_replay.cnf VMS xpand_backend LABELS xpand)
 set_tests_properties(xpand_transaction_replay PROPERTIES TIMEOUT 7200)

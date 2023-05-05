@@ -152,6 +152,41 @@ void check_login(TestConnections& test)
     mxs.start();
     sleep(1);
 
+    auto servers_info = mxs.get_servers();
+    if (mxs.ssl())
+    {
+        // Test is in ssl-mode. Check that backends accept ssl-connections.
+        for (int i = 0; i < xpand.N; i++)
+        {
+            auto be = xpand.backend(i);
+            auto ssl_conn = be->try_open_connection(mxt::MariaDBServer::SslMode::ON, "");
+            if (ssl_conn->is_open())
+            {
+                test.tprintf("SSL connection to backend %i works.", i);
+            }
+            else
+            {
+                test.add_failure("SSL connection to backend %i failed.", i);
+            }
+        }
+
+        // Xpand does not support "require ssl"-mode for users, so just logging in does not prove that
+        // MaxScale enforces ssl. Check rest-api for ssl settings.
+        for (const auto& srv_info : servers_info)
+        {
+            test.expect(srv_info.ssl_configured, "SSL is not configured on backend %s.",
+                        srv_info.name.c_str());
+        }
+    }
+    else
+    {
+        for (const auto& srv_info : servers_info)
+        {
+            test.expect(!srv_info.ssl_configured, "SSL is configured on backend %s when it should not be.",
+                        srv_info.name.c_str());
+        }
+    }
+
     auto test_login = [&test](int port, const string& user, const string& pw, const string& db,
                               bool expect_success) {
         test.tprintf("Logging in to db '%s' as user '%s'.", db.c_str(), user.c_str());
