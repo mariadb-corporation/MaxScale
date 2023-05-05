@@ -78,7 +78,7 @@ const uint32_t q_trx_end = (mxs::sql::TYPE_ROLLBACK | mxs::sql::TYPE_COMMIT);
 
 const uint32_t q_route_to_write = (mxs::sql::TYPE_WRITE | mxs::sql::TYPE_PREPARE_NAMED_STMT
                                    | mxs::sql::TYPE_PREPARE_STMT | mxs::sql::TYPE_EXEC_STMT
-                                   | mxs::sql::TYPE_CREATE_TMP_TABLE | mxs::sql::TYPE_READ_TMP_TABLE);
+                                   | mxs::sql::TYPE_CREATE_TMP_TABLE);
 
 
 namespace cfg = mxs::config;

@@ -492,7 +492,6 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype)
                        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_COMMIT)
                        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_EXEC_STMT)
                        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_CREATE_TMP_TABLE)
-                       || Parser::type_mask_contains(qtype, mxs::sql::TYPE_READ_TMP_TABLE)
                        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_UNKNOWN))
                    || Parser::type_mask_contains(qtype, mxs::sql::TYPE_EXEC_STMT));
 
