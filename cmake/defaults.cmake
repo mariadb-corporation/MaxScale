@@ -43,6 +43,3 @@ set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
 
 # Which component to build (core, experimental, devel, cdc-connector, all)
 set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel, cdc-connector, all)")
-
-# Default user for the administrative interface
-set(DEFAULT_ADMIN_USER "root" CACHE STRING "Default user for the administrative interface")
