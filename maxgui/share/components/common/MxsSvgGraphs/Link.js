@@ -34,34 +34,32 @@ export default class Link {
         const { pathClass, invisiblePathClass } = this.config
         const className = isInvisible ? invisiblePathClass : pathClass
 
-        const stroke = d => (isInvisible ? 'transparent' : scope.getStyle(d, 'color'))
+        let paths
+        switch (type) {
+            case 'enter':
+                paths = containerEle.append('path').attr('class', className)
+                break
+            case 'update':
+                paths = containerEle.select(`path.${className}`)
+                break
+        }
+
+        const stroke = d => scope.getStyle(d, 'color')
         const strokeWidth = d =>
             isInvisible
                 ? scope.getStyle(d, 'invisibleStrokeWidth')
                 : scope.getStyle(d, 'strokeWidth')
         const strokeDashArray = d => (isInvisible ? 0 : scope.getStyle(d, 'dashArr'))
+        const opacity = d =>
+            isInvisible ? scope.getStyle(d, 'invisibleOpacity') : scope.getStyle(d, 'opacity')
 
-        switch (type) {
-            case 'enter':
-                containerEle
-                    .append('path')
-                    .attr('class', className)
-                    .attr('fill', 'none')
-                    .attr('stroke-width', strokeWidth)
-                    .attr('stroke-dasharray', strokeDashArray)
-                    .attr('stroke', stroke)
-                    .attr('d', pathGenerator)
-                break
-            case 'update':
-                containerEle
-                    .select(`path.${className}`)
-                    .attr('fill', 'none')
-                    .attr('stroke-width', strokeWidth)
-                    .attr('stroke-dasharray', strokeDashArray)
-                    .attr('stroke', stroke)
-                    .attr('d', pathGenerator)
-                break
-        }
+        paths
+            .attr('fill', 'none')
+            .attr('opacity', opacity)
+            .attr('stroke-width', strokeWidth)
+            .attr('stroke-dasharray', strokeDashArray)
+            .attr('stroke', stroke)
+            .attr('d', pathGenerator)
     }
     drawPaths(params) {
         this.drawPath(params)
@@ -104,7 +102,6 @@ export default class Link {
                         .attr('class', `${containerClass} pointer`)
                         .attr('src-id', d => lodash.objGet(d.source, nodeIdPath))
                         .attr('target-id', d => lodash.objGet(d.target, nodeIdPath))
-                        .style('opacity', d => scope.getStyle(d, 'opacity'))
                         .on('mouseover', function(e, d) {
                             const linkCtr = d3Select(this)
                             scope.tmpUpdateLinksStyle({
@@ -137,7 +134,7 @@ export default class Link {
                 },
                 // update is called when node changes it size or its position
                 update => {
-                    const linkCtr = update.style('opacity', d => scope.getStyle(d, 'opacity'))
+                    const linkCtr = update
                     this.drawPaths({ containerEle: linkCtr, type: 'update', pathGenerator })
                     t(afterUpdate).safeFunction({ linkCtr, type: 'update' })
                     return linkCtr
@@ -150,21 +147,19 @@ export default class Link {
      * @param {Array} params.links - Links data
      * @param {string} params.eventType - The type of event to update styles for.
      * @param {Function} [params.linkStylesMod] - The function to return the modified styles for the link.
-     * If this is not provided, it will use the global config base one eventType
      */
     tmpUpdateLinksStyle({ links, eventType, linkStylesMod }) {
         const scope = this
         links.forEach(link => {
             if (eventType) {
                 if (link.linkStyles) link.linkStylesTmp = link.linkStyles
-                if (t(linkStylesMod).isFunction)
-                    link.linkStyles = { ...link.linkStyles, ...linkStylesMod(link.linkStyles) }
-                else {
-                    link.linkStyles = {
-                        ...link.linkStyles,
-                        strokeWidth: scope.getStyle(link, `${eventType}.strokeWidth`),
-                        dashArr: scope.getStyle(link, `${eventType}.dashArr`),
-                    }
+                link.linkStyles = {
+                    ...link.linkStyles, // specific link styles
+                    ...Object.keys(scope.config[eventType]).reduce((obj, style) => {
+                        obj[style] = scope.getStyle(link, `${eventType}.${style}`)
+                        return obj
+                    }, {}), // event styles overrides specific link styles
+                    ...t(linkStylesMod).safeFunction(), // linkStylesMod overrides above styles
                 }
             } else {
                 if (link.linkStylesTmp) {

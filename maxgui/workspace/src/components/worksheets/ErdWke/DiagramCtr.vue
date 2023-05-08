@@ -35,7 +35,6 @@ export default {
                     color: '#424f62',
                     strokeWidth: 1,
                     opacity: 1,
-                    dashArr: '5',
                     isAttrToAttr: false,
                 },
                 marker: { width: 18 },

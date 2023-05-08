@@ -330,25 +330,24 @@ export default {
         drawArrowHead({ linkCtr, type }) {
             const className = 'link__arrow'
             const transform = d => this.transformArrow(d)
+            const opacity = d => this.linkInstance.getStyle(d, 'opacity')
+            let arrowPaths
             switch (type) {
                 case 'enter':
-                    linkCtr
-                        .append('path')
-                        .attr('class', className)
-                        .attr('stroke-width', 3)
-                        .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
-                        .attr('stroke-linecap', 'round')
-                        .attr('stroke-linejoin', 'round')
-                        .attr('fill', this.colorize)
-                        .attr('transform', transform)
+                    arrowPaths = linkCtr.append('path').attr('class', className)
                     break
                 case 'update':
-                    linkCtr
-                        .select(`path.${className}`)
-                        .attr('fill', this.colorize)
-                        .attr('transform', transform)
+                    arrowPaths = linkCtr.select(`path.${className}`)
                     break
             }
+            arrowPaths
+                .attr('stroke-width', 3)
+                .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
+                .attr('stroke-linecap', 'round')
+                .attr('stroke-linejoin', 'round')
+                .attr('fill', this.colorize)
+                .attr('transform', transform)
+                .attr('opacity', opacity)
         },
         drawLinks() {
             this.linkInstance.drawLinks({
@@ -358,6 +357,8 @@ export default {
                 pathGenerator: this.pathGenerator,
                 afterEnter: this.drawArrowHead,
                 afterUpdate: this.drawArrowHead,
+                mouseOver: this.drawArrowHead,
+                mouseOut: this.drawArrowHead,
             })
         },
         //-------------------------draggable methods---------------------------

@@ -37,7 +37,7 @@
                                         class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg px-4"
                                         colspan="2"
                                         :style="{
-                                            borderTop: `8px solid ${node.styles.highlightColor}`,
+                                            borderTop: `8px solid ${getNodeHighlightColor(node)}`,
                                             borderRight: getBorderStyle(node),
                                             borderLeft: getBorderStyle(node),
                                         }"
@@ -50,7 +50,10 @@
                                 <tr
                                     v-for="col in node.data.definitions.cols"
                                     :key="`key_${node.id}_${col.name}`"
-                                    :style="{ height: `${entitySizeConfig.rowHeight}px` }"
+                                    :style="{
+                                        height: `${entitySizeConfig.rowHeight}px`,
+                                        ...getHighlightColStyle({ node, colName: col.name }),
+                                    }"
                                 >
                                     <td
                                         class="pl-1 pr-2"
@@ -69,10 +72,18 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="px-2 text-end mxs-color-helper text-small-text"
+                                        class="px-2 text-end"
                                         :style="{
                                             borderRight: getBorderStyle(node),
                                             ...getCellStyle({ node, colName: col.name }),
+                                            color:
+                                                $typy(
+                                                    getHighlightColStyle({
+                                                        node,
+                                                        colName: col.name,
+                                                    }),
+                                                    'color'
+                                                ).safeString || '#6c7c7b',
                                         }"
                                     >
                                         {{ col.data_type }}
@@ -147,6 +158,7 @@ export default {
             entityLink: null,
             graphConfig: null,
             isDraggingNode: false,
+            currentNode: null, // The node being hovered, dragged
         }
     },
     computed: {
@@ -158,6 +170,26 @@ export default {
         },
         entitySizeConfig() {
             return this.graphConfigData.linkShape.entitySizeConfig
+        },
+        highlightColStyleMap() {
+            return this.chosenLinks.reduce((map, link) => {
+                const {
+                    source,
+                    target,
+                    relationshipData: { source_attr, target_attr },
+                    linkStyles: { color: highlightColor } = {},
+                } = link
+
+                if (!map[source.id]) map[source.id] = []
+                if (!map[target.id]) map[target.id] = []
+                const style = {
+                    backgroundColor: highlightColor,
+                    color: highlightColor ? 'white' : '',
+                }
+                map[source.id].push({ col: source_attr, ...style })
+                map[target.id].push({ col: target_attr, ...style })
+                return map
+            }, {})
         },
     },
     watch: {
@@ -242,9 +274,9 @@ export default {
                 })
             )
         },
+        getNodeHighlightColor: node => node.styles.highlightColor,
         getBorderStyle(node) {
-            const { highlightColor } = node.styles
-            const style = `1px solid ${highlightColor}`
+            const style = `1px solid ${this.getNodeHighlightColor(node)}`
             return style
         },
         isLastCol: ({ node, colName }) => colName === node.data.definitions.cols.at(-1).name,
@@ -261,14 +293,16 @@ export default {
             this.chosenLinks = this.getLinks().filter(
                 d => d.source.id === node.id || d.target.id === node.id
             )
+            this.currentNode = node
         },
-        /**
-         * TODO: Change the color of links and highlight FK columns
-         */
         tmpUpdateChosenLinksStyle(eventType) {
-            this.entityLink.tmpUpdateLinksStyle({
-                links: this.chosenLinks,
-                eventType: eventType,
+            this.chosenLinks.forEach(link => {
+                const highlightColor = this.getLinkHighlightColor(link)
+                this.entityLink.tmpUpdateLinksStyle({
+                    links: [link],
+                    eventType,
+                    linkStylesMod: () => ({ color: highlightColor }),
+                })
             })
             this.drawLinks()
         },
@@ -289,6 +323,7 @@ export default {
         onNodeDragEnd() {
             if (this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
             this.isDraggingNode = false
+            this.chosenLinks = []
         },
         mouseenterNode({ node }) {
             this.setChosenLinks(node)
@@ -296,6 +331,7 @@ export default {
         },
         mouseleaveNode() {
             this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+            this.chosenLinks = []
         },
         findKeyTypeByColName({ node, colName }) {
             const nodeKeys = this.nodeKeyMap[node.id]
@@ -306,13 +342,20 @@ export default {
                 )
             )
         },
+        getColNamesByKeyType({ node, keyType }) {
+            const nodeKeys = this.nodeKeyMap[node.id]
+            return this.$typy(nodeKeys, `[${keyType}]`)
+                .safeArray.map(key => key.index_col_names.map(item => item.name))
+                .flat()
+        },
         getKeyIcon({ node, colName }) {
             const keyType = this.findKeyTypeByColName({ node, colName })
+            const { color } = this.getHighlightColStyle({ node, colName }) || {}
             switch (keyType) {
                 case tokens.primaryKey:
                     return {
                         icon: 'mdi-key-variant',
-                        color: 'primary',
+                        color: color ? color : 'primary',
                         style: {
                             transform: 'rotate(180deg) scale(1, -1)',
                         },
@@ -321,16 +364,39 @@ export default {
                 case tokens.uniqueKey:
                     return {
                         icon: '$vuetify.icons.mxs_uniqueIndexKey',
-                        color: 'navigation',
+                        color: color ? color : 'navigation',
                         size: 16,
                     }
                 case tokens.key:
                     return {
                         icon: '$vuetify.icons.mxs_indexKey',
-                        color: 'navigation',
+                        color: color ? color : 'navigation',
                         size: 16,
                     }
             }
+        },
+        getHighlightColStyle({ node, colName }) {
+            const cols = this.highlightColStyleMap[node.id] || []
+            return cols.find(item => item.col === colName)
+        },
+        getLinkHighlightColor(link) {
+            const {
+                source,
+                target,
+                relationshipData: { source_attr, target_attr },
+            } = link
+
+            const [srcNode, targetNode, hightLightAttr] =
+                this.currentNode.id === source.id
+                    ? [source, target, source_attr, target_attr]
+                    : [target, source, target_attr, source_attr]
+            const fkCols = this.getColNamesByKeyType({
+                node: srcNode,
+                keyType: tokens.foreignKey,
+            })
+            return fkCols.includes(hightLightAttr)
+                ? this.getNodeHighlightColor(targetNode)
+                : this.getNodeHighlightColor(srcNode)
         },
     },
 }
