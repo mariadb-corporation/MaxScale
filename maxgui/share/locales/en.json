@@ -449,6 +449,7 @@
         "set": "Set",
         "settings": "setting | settings",
         "setUpConns": "Set up connections",
+        "shapeOfLinks": "Shape of links",
         "show": "Show",
         "showQueryConfirm": "Show confirmation before executing the statements",
         "showSysSchemas": "Show system schemas",
