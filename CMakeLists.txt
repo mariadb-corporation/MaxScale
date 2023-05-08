@@ -38,7 +38,6 @@ include(cmake/CheckPlatform.cmake)
 
 check_dirs()
 find_package(OpenSSL)
-find_package(Valgrind)
 find_package(Pandoc)
 find_package(TCMalloc)
 find_package(Jemalloc)
