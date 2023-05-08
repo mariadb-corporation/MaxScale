@@ -165,7 +165,7 @@ bool create_schema(sqlite3* pDb)
 sqlite3* open_or_create_db(const std::string& path)
 {
     sqlite3* pDb = nullptr;
-    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_CREATE;
+    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_CREATE;
     int rv = sqlite3_open_v2(path.c_str(), &pDb, flags, nullptr);
 
     if (rv == SQLITE_OK)
@@ -293,26 +293,6 @@ bool XpandMonitor::post_configure()
         return false;
     }
 
-    check_bootstrap_servers();
-
-    m_health_urls.clear();
-    m_nodes_by_id.clear();
-
-    if (m_config.dynamic_node_detection())
-    {
-        // At startup we accept softfailed nodes in an attempt to be able to
-        // connect at any cost. It'll be replaced once there is an alternative.
-        check_cluster(xpand::Softfailed::ACCEPT);
-    }
-    else
-    {
-        populate_from_bootstrap_servers();
-    }
-
-    m_worker->execute([this]() {
-        make_health_check();
-    }, mxb::Worker::EXECUTE_AUTO);
-
     return true;
 }
 
@@ -372,6 +352,11 @@ mxs::config::Configuration& XpandMonitor::configuration()
 
 void XpandMonitor::pre_loop()
 {
+    check_bootstrap_servers();
+
+    m_health_urls.clear();
+    m_nodes_by_id.clear();
+
     read_journal();
 }
 
@@ -408,6 +393,22 @@ void XpandMonitor::post_loop()
 
 void XpandMonitor::tick()
 {
+    if (ticks() == 0)
+    {
+        if (m_config.dynamic_node_detection())
+        {
+            // At startup we accept softfailed nodes in an attempt to be able to
+            // connect at any cost. It'll be replaced once there is an alternative.
+            check_cluster(xpand::Softfailed::ACCEPT);
+        }
+        else
+        {
+            populate_from_bootstrap_servers();
+        }
+
+        make_health_check();
+    }
+
     check_maintenance_requests();
     if (m_config.dynamic_node_detection() && should_check_cluster())
     {
