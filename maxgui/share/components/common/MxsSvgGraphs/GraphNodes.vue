@@ -64,15 +64,14 @@ export default {
         nodeStyle: { type: Object, default: () => ({}) },
         defNodeSize: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
-        dynHeight: { type: Boolean, default: false },
-        dynWidth: { type: Boolean, default: false },
+        autoWidth: { type: Boolean, default: false },
         revertDrag: { type: Boolean, default: false },
         boardZoom: { type: Object, required: true },
         hoverable: { type: Boolean, default: false },
     },
     data() {
         return {
-            dynNodeSizeMap: {},
+            nodeSizeMap: {},
             // states for dragging graph-node
             defDraggingStates: {
                 isDragging: false,
@@ -105,9 +104,8 @@ export default {
                     this.$helpers.doubleRAF(() => this.setNodeSizeMap())
             },
         },
-        dynNodeSizeMap: {
+        nodeSizeMap: {
             deep: true,
-            immediate: true,
             handler(v) {
                 this.$emit('node-size-map', v)
             },
@@ -142,11 +140,11 @@ export default {
                 const { width, height } = node.getBoundingClientRect()
                 nodeSizeMap[node.getAttribute('node_id')] = { width, height }
             })
-            if (!this.$helpers.lodash.isEqual(this.dynNodeSizeMap, nodeSizeMap))
-                this.dynNodeSizeMap = nodeSizeMap
+            if (!this.$helpers.lodash.isEqual(this.nodeSizeMap, nodeSizeMap))
+                this.nodeSizeMap = nodeSizeMap
         },
         getNodeSize(id) {
-            return this.dynNodeSizeMap[id] || this.defNodeSize
+            return this.nodeSizeMap[id] || this.defNodeSize
         },
         getPosStyle(id) {
             const { x = 0, y = 0 } = this.nodeCoordMap[id] || {}
@@ -158,10 +156,10 @@ export default {
             }
         },
         getNodeSizeStyle(id) {
-            const { width, height } = this.getNodeSize(id)
+            const { width } = this.getNodeSize(id)
             return {
-                width: this.dynWidth ? 'unset' : `${width}px`,
-                height: this.dynHeight ? 'unset' : `${height}px`,
+                width: this.autoWidth ? 'unset' : `${width}px`,
+                height: 'unset',
             }
         },
         /**
@@ -176,7 +174,7 @@ export default {
                 )
                 if (nodeEle) {
                     const { width, height } = nodeEle.getBoundingClientRect()
-                    this.$set(this.dynNodeSizeMap, node.id, { width, height })
+                    this.$set(this.nodeSizeMap, node.id, { width, height })
                 }
             })
         },

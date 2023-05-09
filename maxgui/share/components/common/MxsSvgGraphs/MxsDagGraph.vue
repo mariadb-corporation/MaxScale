@@ -9,7 +9,7 @@
         <template v-slot:append="{ data: { transform, zoom } }">
             <graph-nodes
                 ref="graphNodes"
-                v-bind="graphNodesProps"
+                autoWidth
                 :nodes="graphNodes"
                 :coordMap.sync="graphNodeCoordMap"
                 :style="{ transform }"
@@ -18,7 +18,7 @@
                 draggable
                 :revertDrag="revert"
                 :boardZoom="zoom"
-                @node-size-map="dynNodeSizeMap = $event"
+                @node-size-map="nodeSizeMap = $event"
                 @drag="onNodeDrag"
                 @drag-end="onNodeDragEnd"
             >
@@ -62,7 +62,6 @@ export default {
         data: { type: Array, required: true },
         dim: { type: Object, required: true },
         defNodeSize: { type: Object, default: () => ({ width: 200, height: 100 }) },
-        graphNodesProps: { type: Object, default: () => ({ dynHeight: false, dynWidth: false }) },
         revert: { type: Boolean, default: false },
         colorizingLinkFn: { type: Function, default: () => '' },
         handleRevertDiagonal: { type: Function, default: () => false },
@@ -74,7 +73,7 @@ export default {
             dagDim: { width: 0, height: 0 },
             graphNodes: [],
             graphNodeCoordMap: {},
-            dynNodeSizeMap: {},
+            nodeSizeMap: {},
             arrowHeadHeight: 12,
             isDraggingNode: false,
             chosenLinks: [],
@@ -102,7 +101,7 @@ export default {
                 if (!this.$helpers.lodash.isEqual(v, oV)) this.draw()
             },
         },
-        dynNodeSizeMap: {
+        nodeSizeMap: {
             deep: true,
             handler() {
                 this.draw()

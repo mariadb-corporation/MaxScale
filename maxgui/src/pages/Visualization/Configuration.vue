@@ -11,7 +11,6 @@
                 draggable
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
-                :graphNodesProps="{ dynHeight: true }"
             >
                 <template
                     v-slot:graph-node-content="{
@@ -57,7 +56,6 @@ export default {
         return {
             //states for mxs-dag-graph
             ctrDim: {},
-            dynNodeHeightMap: {},
         }
     },
     computed: {

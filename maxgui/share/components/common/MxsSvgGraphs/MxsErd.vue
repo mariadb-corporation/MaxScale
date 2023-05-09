@@ -21,8 +21,7 @@
                     draggable
                     hoverable
                     :boardZoom="zoom"
-                    dynHeight
-                    dynWidth
+                    autoWidth
                     @node-size-map="setNodeSize"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
@@ -30,17 +29,15 @@
                     @mouseleave="mouseleaveNode"
                 >
                     <template v-slot:default="{ data: { node } }">
-                        <table class="entity-table">
+                        <table
+                            class="entity-table"
+                            :style="{ borderColor: node.styles.highlightColor }"
+                        >
                             <thead>
                                 <tr :style="{ height: `${entitySizeConfig.headerHeight}px` }">
                                     <th
                                         class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg px-4"
-                                        colspan="2"
-                                        :style="{
-                                            borderTop: `8px solid ${getNodeHighlightColor(node)}`,
-                                            borderRight: getBorderStyle(node),
-                                            borderLeft: getBorderStyle(node),
-                                        }"
+                                        colspan="3"
                                     >
                                         {{ $helpers.unquoteIdentifier(node.data.name) }}
                                     </th>
@@ -55,27 +52,25 @@
                                         ...getHighlightColStyle({ node, colName: col.name }),
                                     }"
                                 >
-                                    <td
-                                        class="pl-1 pr-2"
-                                        :style="{
-                                            borderLeft: getBorderStyle(node),
-                                            ...getCellStyle({ node, colName: col.name }),
-                                        }"
-                                    >
-                                        <div class="d-flex align-center">
-                                            <div class="key-icon-ctr">
-                                                <erd-key-icon
-                                                    :data="getKeyIcon({ node, colName: col.name })"
-                                                />
-                                            </div>
-                                            {{ $helpers.unquoteIdentifier(col.name) }}
+                                    <td>
+                                        <erd-key-icon
+                                            class="fill-height d-flex align-center"
+                                            :data="getKeyIcon({ node, colName: col.name })"
+                                        />
+                                    </td>
+                                    <td>
+                                        <div class="fill-height d-flex align-center">
+                                            <mxs-truncate-str
+                                                :tooltipItem="{
+                                                    txt: $helpers.unquoteIdentifier(col.name),
+                                                }"
+                                                :maxWidth="tdMaxWidth"
+                                            />
                                         </div>
                                     </td>
                                     <td
-                                        class="px-2 text-end"
+                                        class="text-end"
                                         :style="{
-                                            borderRight: getBorderStyle(node),
-                                            ...getCellStyle({ node, colName: col.name }),
                                             color:
                                                 $typy(
                                                     getHighlightColStyle({
@@ -86,10 +81,18 @@
                                                 ).safeString || '#6c7c7b',
                                         }"
                                     >
-                                        {{ col.data_type }}
-                                        <template v-if="$typy(col, 'data_type_size').isDefined">
-                                            ({{ col.data_type_size }})
-                                        </template>
+                                        <div class="fill-height d-flex align-center">
+                                            <mxs-truncate-str
+                                                :tooltipItem="{
+                                                    txt: `${col.data_type}${
+                                                        $typy(col, 'data_type_size').isDefined
+                                                            ? `(${col.data_type_size})`
+                                                            : ''
+                                                    }`,
+                                                }"
+                                                :maxWidth="tdMaxWidth"
+                                            />
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -153,7 +156,7 @@ export default {
             graphNodes: [],
             graphLinks: [],
             simulation: null,
-            defNodeSize: { width: 200, height: 100 },
+            defNodeSize: { width: 250, height: 100 },
             chosenLinks: [],
             entityLink: null,
             graphConfig: null,
@@ -161,6 +164,10 @@ export default {
         }
     },
     computed: {
+        tdMaxWidth() {
+            // entity max-width / 2 - offset. Offset includes padding and border
+            return 320 / 2 - 27
+        },
         nodeKeyMap() {
             return this.graphNodes.reduce((map, node) => {
                 map[node.id] = node.data.definitions.keys
@@ -203,8 +210,10 @@ export default {
         },
     },
     created() {
-        this.isRendering = true
-        this.assignData()
+        if (this.$typy(this.data, 'nodes').safeArray.length) {
+            this.isRendering = true
+            this.assignData()
+        }
     },
     beforeDestroy() {
         this.$typy(this.unwatch_graphConfigData).safeFunction()
@@ -225,32 +234,32 @@ export default {
             this.handleFilterCompositeKeys(this.isAttrToAttr)
         },
         setNodeSize(map) {
-            this.graphNodes = this.graphNodes.map(node => ({ ...node, size: map[node.id] }))
+            this.graphNodes.forEach(node => {
+                node.size = map[node.id]
+            })
             this.areSizesCalculated = Boolean(Object.keys(map).length)
         },
         runSimulation() {
-            if (this.graphNodes.length) {
-                this.simulation = forceSimulation(this.graphNodes)
-                    .force(
-                        'link',
-                        forceLink(this.graphLinks).id(d => d.id)
-                    )
-                    .force(
-                        'charge',
-                        forceManyBody()
-                            .strength(-15)
-                            .theta(0.5)
-                    )
-                    .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
-                    .force('x', forceX().strength(0.1))
-                    .force('y', forceY().strength(0.1))
-                    .alphaMin(0.1)
-                    .on('end', () => {
-                        this.drawChart()
-                        this.isRendering = false
-                    })
-                this.handleCollision()
-            }
+            this.simulation = forceSimulation(this.graphNodes)
+                .force(
+                    'link',
+                    forceLink(this.graphLinks).id(d => d.id)
+                )
+                .force(
+                    'charge',
+                    forceManyBody()
+                        .strength(-15)
+                        .theta(0.5)
+                )
+                .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
+                .force('x', forceX().strength(0.1))
+                .force('y', forceY().strength(0.1))
+                .alphaMin(0.1)
+                .on('end', () => {
+                    this.drawChart()
+                    this.isRendering = false
+                })
+            this.handleCollision()
         },
         initLinkInstance() {
             this.graphConfig = new GraphConfig(this.graphConfigData)
@@ -265,7 +274,7 @@ export default {
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {
                 const { x, y, id } = n
-                if (id) map[id] = { x, y: y }
+                if (id) map[id] = { x, y }
                 return map
             }, {})
         },
@@ -284,21 +293,6 @@ export default {
                     return Math.sqrt(width * width + height * height) / 2 + 100
                 })
             )
-        },
-        getNodeHighlightColor: node => node.styles.highlightColor,
-        getBorderStyle(node) {
-            const style = `1px solid ${this.getNodeHighlightColor(node)}`
-            return style
-        },
-        isLastCol: ({ node, colName }) => colName === node.data.definitions.cols.at(-1).name,
-        isFirstCol: ({ node, colName }) => colName === node.data.definitions.cols.at(0).name,
-        getCellStyle({ node, colName }) {
-            return {
-                borderTop: this.isFirstCol({ node, colName }) ? this.getBorderStyle(node) : 'none',
-                borderBottom: this.isLastCol({ node, colName })
-                    ? this.getBorderStyle(node)
-                    : 'none',
-            }
         },
         setChosenLinks(node) {
             this.chosenLinks = this.getLinks().filter(
@@ -420,6 +414,15 @@ export default {
     background: white;
     width: 100%;
     border-spacing: 0px;
+    thead {
+        th {
+            border-top: 8px solid;
+            border-right: 1px solid;
+            border-bottom: 1px solid;
+            border-left: 1px solid;
+            border-color: inherit;
+        }
+    }
     tbody {
         tr {
             &:hover {
@@ -427,16 +430,31 @@ export default {
             }
             td {
                 white-space: nowrap;
-                .key-icon-ctr {
-                    width: 20px;
+                padding: 0px 8px;
+                &:first-of-type {
+                    padding-left: 8px;
+                    padding-right: 0px;
+                    border-left: 1px solid;
+                    border-color: inherit;
+                }
+                &:nth-of-type(2) {
+                    padding-left: 2px;
+                }
+                &:last-of-type {
+                    border-right: 1px solid;
+                    border-color: inherit;
                 }
             }
             &:last-of-type {
-                td:first-of-type {
-                    border-bottom-left-radius: 8px !important;
-                }
-                td:last-of-type {
-                    border-bottom-right-radius: 8px !important;
+                td {
+                    border-bottom: 1px solid;
+                    border-color: inherit;
+                    &:first-of-type {
+                        border-bottom-left-radius: 8px !important;
+                    }
+                    &:last-of-type {
+                        border-bottom-right-radius: 8px !important;
+                    }
                 }
             }
         }
