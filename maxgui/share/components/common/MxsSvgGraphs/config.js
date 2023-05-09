@@ -36,7 +36,7 @@ export default () => ({
         invisiblePathClass: 'link_path__invisible',
         /**
          * Path attributes can also be a function
-         * e.g. element.attr('stroke', color:(d) => d.linkStyles.color )
+         * e.g. element.attr('stroke', color:(d) => d.styles.color )
          */
         color: '#0e9bc0',
         strokeWidth: 2.5,

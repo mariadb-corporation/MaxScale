@@ -506,7 +506,7 @@ function genErdLink({
             source_attr: indexColName,
             target_attr: referencedIndexColName,
         },
-        linkStyles: {
+        styles: {
             invisibleHighlightColor: getNodeHighlightColor(nodes.find(n => n.id === target)),
         },
     }

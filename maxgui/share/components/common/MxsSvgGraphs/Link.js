@@ -105,7 +105,7 @@ export default class Link {
                         .attr('target-id', d => lodash.objGet(d.target, nodeIdPath))
                         .on('mouseover', function(e, d) {
                             const linkCtr = d3Select(this)
-                            scope.tmpUpdateLinksStyle({
+                            scope.setEventStyles({
                                 links: [d],
                                 eventType: EVENT_TYPES.HOVER,
                             })
@@ -118,7 +118,7 @@ export default class Link {
                         })
                         .on('mouseout', function(e, d) {
                             const linkCtr = d3Select(this)
-                            scope.tmpUpdateLinksStyle({
+                            scope.setEventStyles({
                                 links: [d],
                                 eventType: EVENT_TYPES.NONE,
                             })
@@ -144,23 +144,23 @@ export default class Link {
             )
     }
     /**
-     * Updates the styles of the links based on the specified event type and modified link styles.
+     * Set the event styles of the links based on the specified event type and modified link styles.
      * @param {Array} params.links - Links data
      * @param {string} params.eventType - The type of event to update styles for.
      * @param {Function} [params.linkStylesMod] - The function to return the modified styles for the link.
      */
-    tmpUpdateLinksStyle({ links, eventType, linkStylesMod }) {
+    setEventStyles({ links, eventType, linkStylesMod }) {
         const scope = this
         links.forEach(link => {
             if (eventType) {
-                link.evtLinkStyles = lodash.merge(
+                link.evtStyles = lodash.merge(
                     Object.keys(scope.config[eventType]).reduce((obj, style) => {
                         obj[style] = scope.getStyle(link, `${eventType}.${style}`)
                         return obj
                     }, {}),
                     t(linkStylesMod).safeFunction(link)
                 )
-            } else delete link.evtLinkStyles
+            } else delete link.evtStyles
         })
     }
 }

@@ -176,7 +176,7 @@ export default {
                     source,
                     target,
                     relationshipData: { source_attr, target_attr },
-                    linkStyles: { invisibleHighlightColor },
+                    styles: { invisibleHighlightColor },
                 } = link
 
                 if (!map[source.id]) map[source.id] = []
@@ -305,8 +305,8 @@ export default {
                 d => d.source.id === node.id || d.target.id === node.id
             )
         },
-        tmpUpdateChosenLinksStyle(eventType) {
-            this.entityLink.tmpUpdateLinksStyle({ links: this.chosenLinks, eventType })
+        setEventLinkStyles(eventType) {
+            this.entityLink.setEventStyles({ links: this.chosenLinks, eventType })
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
@@ -314,10 +314,10 @@ export default {
             nodeData.x = nodeData.x + diffX
             nodeData.y = nodeData.y + diffY
             this.setChosenLinks(node)
-            if (!this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.DRAGGING)
+            if (!this.isDraggingNode) this.setEventLinkStyles(EVENT_TYPES.DRAGGING)
             this.isDraggingNode = true
             /**
-             * drawLinks is called inside tmpUpdateChosenLinksStyle method but it run once.
+             * drawLinks is called inside setEventLinkStyles method but it run once.
              * To ensure that the paths of links continue to be redrawn, call it again while
              * dragging the node
              */
@@ -325,17 +325,17 @@ export default {
         },
         onNodeDragEnd() {
             if (this.isDraggingNode) {
-                this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+                this.setEventLinkStyles(EVENT_TYPES.NONE)
                 this.isDraggingNode = false
                 this.chosenLinks = []
             }
         },
         mouseenterNode({ node }) {
             this.setChosenLinks(node)
-            this.tmpUpdateChosenLinksStyle(EVENT_TYPES.HOVER)
+            this.setEventLinkStyles(EVENT_TYPES.HOVER)
         },
         mouseleaveNode() {
-            this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+            this.setEventLinkStyles(EVENT_TYPES.NONE)
             this.chosenLinks = []
         },
         findKeyTypeByColName({ node, colName }) {

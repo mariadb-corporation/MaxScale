@@ -400,18 +400,18 @@ export default {
                 d => d.source.data.id === nodeId || d.target.data.id === nodeId
             )
         },
-        tmpUpdateChosenLinksStyle(eventType) {
-            this.linkInstance.tmpUpdateLinksStyle({ links: this.chosenLinks, eventType })
+        setEventLinkStyles(eventType) {
+            this.linkInstance.setEventStyles({ links: this.chosenLinks, eventType })
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
             this.updateLinkPositions({ nodeId: node.id, diffX, diffY })
-            if (!this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.DRAGGING)
+            if (!this.isDraggingNode) this.setEventLinkStyles(EVENT_TYPES.DRAGGING)
             this.isDraggingNode = true
             this.drawLinks()
         },
         onNodeDragEnd() {
-            if (this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+            if (this.isDraggingNode) this.setEventLinkStyles(EVENT_TYPES.NONE)
             this.isDraggingNode = false
         },
     },
