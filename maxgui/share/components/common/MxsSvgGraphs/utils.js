@@ -21,7 +21,11 @@ import { t } from 'typy'
  * @returns {String|Number} style value
  */
 export function getLinkStyles({ link, styleNamePath, linkConfig }) {
-    const linkStyle = lodash.cloneDeep(t(link, 'linkStyles').safeObjectOrEmpty)
+    const evtLinkStyles = lodash.cloneDeep(t(link, 'evtLinkStyles').safeObjectOrEmpty)
+    const linkStyle = lodash.merge(
+        lodash.cloneDeep(t(link, 'linkStyles').safeObjectOrEmpty),
+        evtLinkStyles // event styles override link specific styles
+    )
     const globalValue = lodash.objGet(linkConfig, styleNamePath)
     // use global config style as a fallback value
     return lodash.objGet(

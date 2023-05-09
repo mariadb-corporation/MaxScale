@@ -161,7 +161,13 @@ export default {
             }, {})
         },
         initLinkInstance() {
-            this.graphConfig = new GraphConfig({ link: { color: this.colorize } })
+            this.graphConfig = new GraphConfig({
+                link: {
+                    color: this.colorize,
+                    [EVENT_TYPES.HOVER]: { dashArr: '0' },
+                    [EVENT_TYPES.DRAGGING]: { dashArr: '0' },
+                },
+            })
             this.linkInstance = new Link(this.graphConfig.link)
         },
         /**

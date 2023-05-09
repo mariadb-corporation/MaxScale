@@ -473,19 +473,30 @@ function genErdNode({ schema, parsedTable, highlightColor }) {
     }
 }
 
+const getNodeHighlightColor = node => node.styles.highlightColor
+
 /**
  * @param {object} param.srcNode - source node
  * @param {object} param.fk - parsed fk data
  * @param {string} param.indexColName - source column name
  * @param {string} param.referencedIndexColName - target column name
  * @param {boolean} param.isPartOfCompositeKey - is a part of composite FK
+ * @param {array} param.nodes - all erd nodes
  */
-function genErdLink({ srcNode, fk, indexColName, referencedIndexColName, isPartOfCompositeKey }) {
+function genErdLink({
+    srcNode,
+    fk,
+    indexColName,
+    referencedIndexColName,
+    isPartOfCompositeKey,
+    nodes,
+}) {
     const { name, referenced_schema_name, referenced_table_name, on_delete, on_update } = fk
+    const target = `${referenced_schema_name}.${referenced_table_name}`
     let link = {
         id: `link_${uuidv1()}`,
         source: srcNode.id,
-        target: `${referenced_schema_name}.${referenced_table_name}`,
+        target,
         relationshipData: {
             //TODO: Detect relationship type
             type: `1..N:1..1`,
@@ -495,12 +506,15 @@ function genErdLink({ srcNode, fk, indexColName, referencedIndexColName, isPartO
             source_attr: indexColName,
             target_attr: referencedIndexColName,
         },
+        linkStyles: {
+            invisibleHighlightColor: getNodeHighlightColor(nodes.find(n => n.id === target)),
+        },
     }
     if (isPartOfCompositeKey) link.isPartOfCompositeKey = isPartOfCompositeKey
     return link
 }
 
-function handleGenErdLink({ srcNode, fk }) {
+function handleGenErdLink({ srcNode, fk, nodes }) {
     const { index_col_names, referenced_index_col_names } = fk
     let links = []
     for (const [i, item] of index_col_names.entries()) {
@@ -513,6 +527,7 @@ function handleGenErdLink({ srcNode, fk }) {
                 indexColName,
                 referencedIndexColName,
                 isPartOfCompositeKey: i >= 1,
+                nodes,
             })
         )
     }
@@ -542,6 +557,7 @@ function genErdData(parsedDdl) {
                 ...handleGenErdLink({
                     srcNode: node,
                     fk: { ...fk, referenced_schema_name: fk.referenced_schema_name || node.schema },
+                    nodes,
                 }),
             ]
         })

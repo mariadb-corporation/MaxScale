@@ -158,7 +158,6 @@ export default {
             entityLink: null,
             graphConfig: null,
             isDraggingNode: false,
-            currentNode: null, // The node being hovered, dragged
         }
     },
     computed: {
@@ -177,14 +176,14 @@ export default {
                     source,
                     target,
                     relationshipData: { source_attr, target_attr },
-                    linkStyles: { color: highlightColor } = {},
+                    linkStyles: { invisibleHighlightColor },
                 } = link
 
                 if (!map[source.id]) map[source.id] = []
                 if (!map[target.id]) map[target.id] = []
                 const style = {
-                    backgroundColor: highlightColor,
-                    color: highlightColor ? 'white' : '',
+                    backgroundColor: invisibleHighlightColor,
+                    color: 'white',
                 }
                 map[source.id].push({ col: source_attr, ...style })
                 map[target.id].push({ col: target_attr, ...style })
@@ -293,17 +292,9 @@ export default {
             this.chosenLinks = this.getLinks().filter(
                 d => d.source.id === node.id || d.target.id === node.id
             )
-            this.currentNode = node
         },
         tmpUpdateChosenLinksStyle(eventType) {
-            this.chosenLinks.forEach(link => {
-                const highlightColor = this.getLinkHighlightColor(link)
-                this.entityLink.tmpUpdateLinksStyle({
-                    links: [link],
-                    eventType,
-                    linkStylesMod: () => ({ color: highlightColor }),
-                })
-            })
+            this.entityLink.tmpUpdateLinksStyle({ links: this.chosenLinks, eventType })
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
@@ -321,9 +312,11 @@ export default {
             this.drawLinks()
         },
         onNodeDragEnd() {
-            if (this.isDraggingNode) this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
-            this.isDraggingNode = false
-            this.chosenLinks = []
+            if (this.isDraggingNode) {
+                this.tmpUpdateChosenLinksStyle(EVENT_TYPES.NONE)
+                this.isDraggingNode = false
+                this.chosenLinks = []
+            }
         },
         mouseenterNode({ node }) {
             this.setChosenLinks(node)
@@ -341,12 +334,6 @@ export default {
                     key.index_col_names.some(item => item.name === colName)
                 )
             )
-        },
-        getColNamesByKeyType({ node, keyType }) {
-            const nodeKeys = this.nodeKeyMap[node.id]
-            return this.$typy(nodeKeys, `[${keyType}]`)
-                .safeArray.map(key => key.index_col_names.map(item => item.name))
-                .flat()
         },
         getKeyIcon({ node, colName }) {
             const keyType = this.findKeyTypeByColName({ node, colName })
@@ -378,25 +365,6 @@ export default {
         getHighlightColStyle({ node, colName }) {
             const cols = this.highlightColStyleMap[node.id] || []
             return cols.find(item => item.col === colName)
-        },
-        getLinkHighlightColor(link) {
-            const {
-                source,
-                target,
-                relationshipData: { source_attr, target_attr },
-            } = link
-
-            const [srcNode, targetNode, hightLightAttr] =
-                this.currentNode.id === source.id
-                    ? [source, target, source_attr, target_attr]
-                    : [target, source, target_attr, source_attr]
-            const fkCols = this.getColNamesByKeyType({
-                node: srcNode,
-                keyType: tokens.foreignKey,
-            })
-            return fkCols.includes(hightLightAttr)
-                ? this.getNodeHighlightColor(targetNode)
-                : this.getNodeHighlightColor(srcNode)
         },
     },
 }

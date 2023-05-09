@@ -21,6 +21,7 @@
 import ErdTask from '@wsModels/ErdTask'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
+import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
 
 export default {
     name: 'diagram-ctr',
@@ -34,8 +35,9 @@ export default {
                 link: {
                     color: '#424f62',
                     strokeWidth: 1,
-                    opacity: 1,
                     isAttrToAttr: false,
+                    [EVENT_TYPES.HOVER]: { color: 'white', invisibleOpacity: 1 },
+                    [EVENT_TYPES.DRAGGING]: { color: 'white', invisibleOpacity: 1 },
                 },
                 marker: { width: 18 },
                 linkShape: {

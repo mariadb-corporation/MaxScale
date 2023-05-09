@@ -124,7 +124,7 @@ export default {
                     ...events,
                     mousedown: e => this.dragStart({ e, node }),
                 }
-            if (this.hoverable)
+            if (this.hoverable && !this.draggingStates.isDragging)
                 events = {
                     ...events,
                     mouseenter: e => this.$emit('mouseenter', { e, node }),

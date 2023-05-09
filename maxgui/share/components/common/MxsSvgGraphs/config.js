@@ -42,16 +42,11 @@ export default () => ({
         strokeWidth: 2.5,
         invisibleStrokeWidth: 12,
         invisibleOpacity: 0,
+        invisibleHighlightColor: '#0e9bc0',
         dashArr: '5',
         opacity: 0.5,
-        [EVENT_TYPES.HOVER]: {
-            opacity: 1,
-            invisibleOpacity: 0.5,
-        },
-        [EVENT_TYPES.DRAGGING]: {
-            opacity: 1,
-            invisibleOpacity: 0.5,
-        },
+        [EVENT_TYPES.HOVER]: { opacity: 1 },
+        [EVENT_TYPES.DRAGGING]: { opacity: 1 },
         /**
          * false: Link drawn from source node center to target node center.
          * true: Link drawn from source node attribute to target node attribute. Each

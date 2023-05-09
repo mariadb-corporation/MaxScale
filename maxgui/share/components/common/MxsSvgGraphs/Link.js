@@ -44,7 +44,8 @@ export default class Link {
                 break
         }
 
-        const stroke = d => scope.getStyle(d, 'color')
+        const stroke = d =>
+            isInvisible ? scope.getStyle(d, 'invisibleHighlightColor') : scope.getStyle(d, 'color')
         const strokeWidth = d =>
             isInvisible
                 ? scope.getStyle(d, 'invisibleStrokeWidth')
@@ -62,8 +63,8 @@ export default class Link {
             .attr('d', pathGenerator)
     }
     drawPaths(params) {
-        this.drawPath(params)
         this.drawPath({ ...params, isInvisible: true })
+        this.drawPath(params)
     }
     /**
      * The mouseover event on link <g/> element only works when the mouse is over the
@@ -152,22 +153,14 @@ export default class Link {
         const scope = this
         links.forEach(link => {
             if (eventType) {
-                if (link.linkStyles) link.linkStylesTmp = link.linkStyles
-                link.linkStyles = {
-                    ...link.linkStyles, // specific link styles
-                    ...Object.keys(scope.config[eventType]).reduce((obj, style) => {
+                link.evtLinkStyles = lodash.merge(
+                    Object.keys(scope.config[eventType]).reduce((obj, style) => {
                         obj[style] = scope.getStyle(link, `${eventType}.${style}`)
                         return obj
-                    }, {}), // event styles overrides specific link styles
-                    ...t(linkStylesMod).safeFunction(), // linkStylesMod overrides above styles
-                }
-            } else {
-                if (link.linkStylesTmp) {
-                    // revert styles
-                    link.linkStyles = link.linkStylesTmp
-                    delete link.linkStylesTmp
-                } else delete link.linkStyles
-            }
+                    }, {}),
+                    t(linkStylesMod).safeFunction(link)
+                )
+            } else delete link.evtLinkStyles
         })
     }
 }
