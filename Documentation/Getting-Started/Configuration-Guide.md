@@ -105,6 +105,11 @@ associated with the same service.
 
 Listeners have sections of their own in the MaxScale configuration file.
 
+### Include
+
+An _include_ is a special kind of object, using which common parameters of
+any other object can be specified.
+
 # Administration
 
 The administation of MaxScale can be divided in two parts:
@@ -3036,6 +3041,102 @@ An example mapping file is below.
     ]
 }
 ```
+
+## Include
+
+An _include_ is a special kind of section/object, using which common
+parameters of any other object can be specified. Its use is best
+illustrated with an example. Consider the following configuration.
+```
+[Monitor1]
+type=monitor
+module=mariadbmon
+user=the_user
+password=the_password
+handle_events=false
+monitor_interval=2000ms
+backend_connect_timeout = 3s
+backend_connect_attempts = 5
+servers=Server1, Server2
+
+[Monitor2]
+type=monitor
+module=mariadbmon
+user=the_user
+password=the_password
+handle_events=false
+monitor_interval=2000ms
+backend_connect_timeout = 3s
+backend_connect_attempts = 5
+servers=Server3, Server4
+```
+But for the `servers` setting, the two configurations are identical.
+If the configurations otherwise should be identical, a change must
+be made in two places, which is tedious and errorprone. With an
+`include` section that problem can be solved.
+
+```
+[Monitor-Common]
+type=include
+module=mariadbmon
+user=the_user
+password=the_password
+handle_events=false
+monitor_interval=2000ms
+backend_connect_timeout = 3s
+backend_connect_attempts = 5
+
+[Monitor1]
+type=monitor
+@include=Monitor-Common
+servers=Server1, Server2
+
+[Monitor2]
+type=monitor
+@include=Monitor-Common
+servers=Server3, Server3
+```
+With an `include` section all common settings can be defined in one
+place, and then included to any number of other sections using the
+`@include` parameter.
+
+The `@include` parameter takes a list of section names, so settings
+can be distributed across several `include` sections.
+```
+@include=Some-Common-Attributes, Other-Common-Attributes
+```
+
+It is permissible to specify parameters in the _including_ section
+that have already been specified in the _included_ section and they
+will take presedence. For instance, if `Monitor2` in the example
+above should have a longer backend connect timeout that can be
+specified as follows.
+```
+[Monitor2]
+type=monitor
+@include=Monitor-Common
+servers=Server3, Server3
+backend_connect_timeout = 5s
+```
+
+Note that an included section **must** be an `include` section and
+that an `include` section **cannot** include another `include`
+section. For instance, the following would cause an error at startup.
+```
+[Monitor-Common]
+type=include
+@include=Base-Common
+...
+
+[Monitor2]
+type=monitor
+@include=Monitor1
+...
+
+Note also that if an included parameter is changed using `maxctrl`,
+it will be changed _only_ on the actual object the change is applied
+on, not on the `include` section where the parameter is originally
+specified.
 
 # Available Protocols
 

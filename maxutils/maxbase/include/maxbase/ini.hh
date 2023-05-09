@@ -66,6 +66,9 @@ struct ValueDef
     std::string value;
     int         lineno {-1};
 
+    explicit ValueDef()
+    {
+    }
     explicit ValueDef(std::string value, int lineno = -1);
 };
 

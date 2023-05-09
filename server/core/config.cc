@@ -1764,13 +1764,117 @@ void fix_object_name(std::string& name)
     name.assign(buf);
 }
 
-static bool is_empty_string(const string& str)
+namespace
+{
+
+bool is_empty_string(const string& str)
 {
     return std::all_of(str.begin(), str.end(), isspace);
 }
 
+std::string get_section_type(const maxbase::ini::map_result::ConfigSection& section)
+{
+    auto it = section.key_values.find(CN_TYPE);
+
+    return it != section.key_values.end() ? it->second.value : std::string {};
+}
+
+mxb::ini::map_result::Configuration process_includes(const mxb::ini::map_result::Configuration& input,
+                                                     int* pErrors)
+{
+    mxb::ini::map_result::Configuration rv;
+
+    int& errors = *pErrors;
+    for (const auto& section : input)
+    {
+        const auto& header = section.first;
+        const auto& config = section.second;
+
+        auto it = config.key_values.find(CN_AT_INCLUDE);
+
+        if (it != config.key_values.end())
+        {
+            auto type = get_section_type(config);
+
+            if (type.empty())
+            {
+                MXB_ERROR("Section [%s] has no type.", header.c_str());
+                ++errors;
+            }
+            else if (type == CN_INCLUDE)
+            {
+                // Could be allowed, but would require cycle detection, so postponed until
+                // there is a clear need for it.
+                MXB_ERROR("Section [%s] is of type 'include' and can thus not include other sections.",
+                          header.c_str());
+                ++errors;
+            }
+            else
+            {
+                auto includes = mxb::strtok(it->second.value, ",");
+
+                maxbase::ini::map_result::ConfigSection merged_config;
+                merged_config.lineno = config.lineno;
+
+                for (auto include : includes)
+                {
+                    mxb::trim(include);
+
+                    auto jt = input.find(include);
+
+                    if (jt != input.end())
+                    {
+                        const maxbase::ini::map_result::ConfigSection& included_config = jt->second;
+
+                        auto type = get_section_type(included_config);
+
+                        if (type == CN_INCLUDE)
+                        {
+                            for (const auto& kv : included_config.key_values)
+                            {
+                                merged_config.key_values[kv.first] = kv.second;
+                            }
+                        }
+                        else
+                        {
+                            MXB_ERROR("Section [%s] includes section [%s] whose type is not 'include', "
+                                      "but '%s'.",
+                                      header.c_str(), include.c_str(), type.c_str());
+                            ++errors;
+                        }
+                    }
+                    else
+                    {
+                        MXB_ERROR("Section [%s] includes section [%s], which does not exist.",
+                                  header.c_str(), include.c_str());
+                        ++errors;
+                    }
+                }
+
+                for (const auto& kv : config.key_values)
+                {
+                    if (kv.first != CN_AT_INCLUDE)
+                    {
+                        merged_config.key_values[kv.first] = kv.second;
+                    }
+                }
+
+                rv.emplace(header, merged_config);
+            }
+        }
+        else
+        {
+            rv.emplace(section);
+        }
+    }
+
+    return rv;
+}
+
+}
+
 bool config_add_to_context(const std::string& source_file, ConfigSection::SourceType source_type,
-                           const mxb::ini::map_result::Configuration& input, ConfigSectionMap& output)
+                           const mxb::ini::map_result::Configuration& raw_input, ConfigSectionMap& output)
 {
     using Type = ConfigSection::SourceType;
     auto type_to_str = [](Type type) {
@@ -1789,6 +1893,8 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
     };
 
     int errors = 0;
+
+    auto input = process_includes(raw_input, &errors);
 
     for (const auto& section : input)
     {
@@ -2387,7 +2493,12 @@ std::unordered_set<ConfigSection*> get_dependencies(const std::vector<ConfigSect
     std::unordered_set<ConfigSection*> rval;
     std::string type = obj->m_parameters.get_string(CN_TYPE);
 
-    if (type == CN_SERVER)
+    if (type == CN_INCLUDE)
+    {
+        // Includes do not have dependencies by themselves.
+        return rval;
+    }
+    else if (type == CN_SERVER)
     {
         // Servers are leaf objects in the dependency tree, they never have dependencies
         return rval;
@@ -2886,7 +2997,11 @@ static bool check_config_objects(ConfigSectionMap& context)
         std::string type = obj.m_parameters.get_string(CN_TYPE);
         const char* filec = obj.source_file.c_str();
 
-        if (!valid_object_type(type))
+        if (type == CN_INCLUDE)
+        {
+            // An include, no processing at this point.
+        }
+        else if (!valid_object_type(type))
         {
             MXB_ERROR("Invalid module type '%s' for object '%s' in file '%s'.",
                       type.c_str(), obj.name(), filec);
