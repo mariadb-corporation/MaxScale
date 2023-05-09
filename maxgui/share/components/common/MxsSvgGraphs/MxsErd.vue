@@ -190,6 +190,9 @@ export default {
                 return map
             }, {})
         },
+        isAttrToAttr() {
+            return this.$typy(this.graphConfigData, 'link.isAttrToAttr').safeBoolean
+        },
     },
     watch: {
         // wait until graph-nodes sizes are calculated
@@ -203,7 +206,14 @@ export default {
         this.isRendering = true
         this.assignData()
     },
+    beforeDestroy() {
+        this.$typy(this.unwatch_graphConfigData).safeFunction()
+    },
     methods: {
+        handleFilterCompositeKeys(v) {
+            if (v) this.graphLinks = this.stagingData.links
+            else this.graphLinks = this.graphLinks.filter(link => !link.isPartOfCompositeKey)
+        },
         /**
          * D3 mutates data, this method deep clones data to make the original is intact
          * @param {Object} data
@@ -212,6 +222,7 @@ export default {
             this.stagingData = this.$helpers.lodash.cloneDeep(this.data)
             this.graphNodes = this.stagingData.nodes
             this.graphLinks = this.stagingData.links
+            this.handleFilterCompositeKeys(this.isAttrToAttr)
         },
         setNodeSize(map) {
             this.graphNodes = this.graphNodes.map(node => ({ ...node, size: map[node.id] }))
@@ -244,6 +255,7 @@ export default {
         initLinkInstance() {
             this.graphConfig = new GraphConfig(this.graphConfigData)
             this.entityLink = new EntityLink(this.graphConfig)
+            this.watchConfig()
         },
         drawChart() {
             this.setGraphNodeCoordMap()
@@ -365,6 +377,39 @@ export default {
         getHighlightColStyle({ node, colName }) {
             const cols = this.highlightColStyleMap[node.id] || []
             return cols.find(item => item.col === colName)
+        },
+        watchConfig() {
+            this.unwatch_graphConfigData = this.$watch(
+                'graphConfigData',
+                (v, oV) => {
+                    /**
+                     * Because only one attribute can be changed at a time, so it's safe to
+                     * access the diff with hard-code indexes.
+                     */
+                    const diff = this.$typy(this.$helpers.deepDiff(oV, v), '[0]').safeObjectOrEmpty
+                    const diffKey = diff.path[1]
+                    const aValueDiff = this.$helpers.lodash.objGet(v, diff.path.join('.'))
+                    this.graphConfig.updateConfig({
+                        key: diff.path[0],
+                        patch: { [diffKey]: aValueDiff },
+                    })
+                    switch (diffKey) {
+                        case 'isAttrToAttr':
+                            this.handleIsAttrToAttrMode(aValueDiff)
+                            break
+                    }
+                    this.drawLinks()
+                },
+                { deep: true }
+            )
+        },
+        /**
+         * If value is true, the diagram shows all links including composite links for composite keys
+         * @param {boolean} v
+         */
+        handleIsAttrToAttrMode(v) {
+            this.handleFilterCompositeKeys(v)
+            this.simulation.force('link').links(this.graphLinks)
         },
     },
 }
