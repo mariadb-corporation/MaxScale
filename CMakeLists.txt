@@ -38,9 +38,6 @@ include(cmake/CheckPlatform.cmake)
 
 check_dirs()
 find_package(OpenSSL)
-find_package(Pandoc)
-find_package(TCMalloc)
-find_package(Jemalloc)
 find_package(Git)
 find_package(LibUUID)
 find_package(GSSAPI)
@@ -114,16 +111,6 @@ if(GIT_FOUND)
 else()
   message(WARNING "Could not find git, MaxScale commit ID will not be resolved. Will use 'source-build' for commit ID.")
   set(MAXSCALE_COMMIT "source-build")
-endif()
-
-# Make sure the release notes for this release are present if it is a stable one
-# TODO: Since we don't use "-stable", this seems to be dead code.
-if(${MAXSCALE_VERSION} MATCHES "-stable")
-  file(GLOB ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes RELEASE_NOTES *${MAXSCALE_VERSION}*.md)
-  list(LENGTH RELEASE_NOTES HAVE_NOTES)
-  if( NOT HAVE_NOTES EQUAL 1)
-    message(FATAL_ERROR "Could not find the release notes for this stable release: ${MAXSCALE_VERSION}")
-  endif()
 endif()
 
 # Copy cmake_flags, JENKINS_BUILD_TAG, source and value evironmental variables
@@ -215,24 +202,8 @@ if(BUILD_SYSTEM_TESTS)
   add_subdirectory(system-test)
 endif()
 
-# Generate text versions of some documents
-execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
-${CMAKE_SOURCE_DIR}/Documentation/Changelog.md
-${CMAKE_BINARY_DIR}/Changelog.txt)
-execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
-${CMAKE_SOURCE_DIR}/Documentation/Release-Notes/MaxScale-1.2.0-Release-Notes.md
- ${CMAKE_BINARY_DIR}/ReleaseNotes.txt)
-execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
-${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.md
- ${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt)
-
-
-install_file(${CMAKE_BINARY_DIR}/Changelog.txt core)
-install_file(${CMAKE_BINARY_DIR}/ReleaseNotes.txt core)
-install_file(${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt core)
+install_file(Documentation/Changelog.md core)
 install_file(etc/maxscale.cnf.template core)
-install_program(script/create_grants core)
-install_file(script/create_roles.sql core)
 install_script(script/maxscale_generate_support_info.py core)
 
 # Install the template into /etc
@@ -300,34 +271,6 @@ if(DOXYGEN_FOUND)
   add_custom_target(documentation
     COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygate)
 endif()
-
-# Generates PDF documentation
-add_custom_target(generate_pdf
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
-  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/Documentation ${CMAKE_COMMAND}
-  -DBUILD_DIR=${CMAKE_BINARY_DIR}
-  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
-  -P generate-pdf.cmake
-  COMMENT "Generating PDF files" VERBATIM)
-
-# Creates text versions of the release notes
-add_custom_target(generate_txt_release
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
-  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/Documentation ${CMAKE_COMMAND}
-  -DBUILD_DIR=${CMAKE_BINARY_DIR}
-  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
-  -P generate-txt-release.cmake
-  COMMENT "Generating TXT release notes" VERBATIM)
-
-# Generates HTML documentation
-add_custom_target(generate_html
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
-  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/Documentation ${CMAKE_COMMAND}
-  -DBUILD_DIR=${CMAKE_BINARY_DIR}
-  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
-  -P generate-html.cmake
-  COMMENT "Generating HTML files" VERBATIM)
-
 # NOTE: If you make changes here, ensure they are compatible with the
 #       situation in paths.h.in.
 if (NOT PACKAGE)
