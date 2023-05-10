@@ -61,8 +61,8 @@
 #include <set_var.h>
 #include <strfunc.h>
 #include <item_func.h>
+#undef UNKNOWN
 #pragma GCC diagnostic pop
-
 #include <pthread.h>
 
 #define json_type mxs_json_type
@@ -75,7 +75,6 @@
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
-#undef UNKNOWN
 #include <maxscale/modinfo.hh>
 
 #include <stdio.h>

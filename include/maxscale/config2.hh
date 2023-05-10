@@ -38,6 +38,13 @@ namespace maxscale
 namespace config
 {
 
+enum class Origin
+{
+    DEFAULT, // Default value.
+    CONFIG,  // Value obtained from a configuration file.
+    USER     // Value explicitly set.
+};
+
 class Configuration;
 class Param;
 class Type;

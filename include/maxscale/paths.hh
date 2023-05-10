@@ -14,74 +14,76 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/config2.hh>
 
 namespace maxscale
 {
+
 /**
  * Set the library directory. Modules will be loaded from here.
  */
-void set_libdir(const char* param);
+void set_libdir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the share directory
  */
-void set_sharedir(const char* param);
+void set_sharedir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the data directory
  */
-void set_datadir(const char* param);
+void set_datadir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the process data directory
  */
-void set_process_datadir(const char* param);
+void set_process_datadir(const char* path);
 
 /**
  * Set the cache directory
  */
-void set_cachedir(const char* param);
+void set_cachedir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the configuration file directory
  */
-void set_configdir(const char* param);
+void set_configdir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the configuration parts file directory
  */
-void set_config_persistdir(const char* param);
+void set_config_persistdir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the module configuration file directory
  */
-void set_module_configdir(const char* param);
+void set_module_configdir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the log file directory
  */
-void set_logdir(const char* param);
+void set_logdir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the language file directory
  */
-void set_langdir(const char* param);
+void set_langdir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the PID file directory
  */
-void set_piddir(const char* param);
+void set_piddir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the executable directory. Internal processes will look for executables
  * from here.
  */
-void set_execdir(const char* param);
+void set_execdir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the connector plugin directory.
  */
-void set_connector_plugindir(const char* param);
+void set_connector_plugindir(const char* path, config::Origin origin = config::Origin::USER);
 
 /**
  * Get the directory with all the modules.
