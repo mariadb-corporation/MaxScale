@@ -119,6 +119,21 @@ constexpr char CN_SERVER[] = "server";
 
 static int64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
 static int64_t DEFAULT_MAX_READ_AMOUNT = 0;
+
+struct ThisUnit
+{
+    bool mask_passwords = true;
+
+    // The set of objects that were read from the configuration files
+    std::set<std::string> static_objects {"maxscale"};
+
+    // The objects that were created at runtime or read from persisted configuration files
+    std::set<std::string> dynamic_objects;
+
+    // The names of all objects mapped to the source file they were read from.
+    std::map<std::string, std::string> source_files;
+} this_unit;
+
 }
 
 namespace maxscale
@@ -915,20 +930,6 @@ Config::ParamKeyManager Config::s_key_manager(
 
 namespace
 {
-
-struct ThisUnit
-{
-    bool mask_passwords = true;
-
-    // The set of objects that were read from the configuration files
-    std::set<std::string> static_objects {"maxscale"};
-
-    // The objects that were created at runtime or read from persisted configuration files
-    std::set<std::string> dynamic_objects;
-
-    // The names of all objects mapped to the source file they were read from.
-    std::map<std::string, std::string> source_files;
-} this_unit;
 
 void reconnect_config_manager(const std::string& ignored)
 {
