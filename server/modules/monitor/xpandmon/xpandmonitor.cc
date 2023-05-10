@@ -774,10 +774,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                                                health_check_threshold, pServer);
 
                                 m_nodes_by_id.insert(make_pair(id, node));
-
-                                run_in_mainworker([this, pServer]() {
-                                                          add_server(pServer);
-                                                      });
+                                add_server(pServer);
                             }
 
                             memberships.erase(mit);
@@ -1128,9 +1125,7 @@ void XpandMonitor::populate_from_bootstrap_servers()
 
         // New server, so it needs to be added to all services that
         // use this monitor for defining its cluster of servers.
-        run_in_mainworker([this, pServer]() {
-                              add_server(pServer);
-                          });
+        add_server(pServer);
     }
 
     update_http_urls();
@@ -1138,7 +1133,7 @@ void XpandMonitor::populate_from_bootstrap_servers()
 
 void XpandMonitor::add_server(SERVER* pServer)
 {
-    mxb_assert(mxs::MainWorker::is_current());
+    mxb_assert(mxb::Worker::get_current() == m_worker.get());
 
     // Servers are never deleted, but once created they stay around, also
     // in m_cluster_servers. Thus, to prevent double book-keeping it must
@@ -1152,7 +1147,9 @@ void XpandMonitor::add_server(SERVER* pServer)
     {
         m_cluster_servers.push_back(pServer);
         // TODO: call set_active_servers(). Need to add MonitorServer* array
-        service_add_server(this, pServer);
+        mxs::MainWorker::get()->execute([this, pServer]() {
+            service_add_server(this, pServer);
+        }, mxb::Worker::EXECUTE_AUTO);
     }
 }
 
