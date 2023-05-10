@@ -241,8 +241,8 @@ public:
      */
     void assign(Stored& t)
     {
-        mxb_assert_message(MainWorker::is_current() || mxs::test::is_test(),
-                           "this method must be called from the main worker thread");
+        mxb_assert_message(mxs::RoutingWorker::get_current() == nullptr,
+                           "this method cannot be called from a RoutingWorker thread");
 
         auto new_val = std::make_shared<Stored>(t);
         // Update the value of the master copy
@@ -250,7 +250,9 @@ public:
         this->m_value = std::move(new_val);
         guard.unlock();
 
-        update_local_value();
+        mxs::MainWorker::get()->execute([this] {
+            update_local_value();
+        }, mxs::MainWorker::EXECUTE_AUTO);
 
         // Update the local value of all workers from the master copy
         mxs::RoutingWorker::execute_concurrently(
