@@ -100,8 +100,6 @@ namespace
 {
 static struct ThisUnit
 {
-    char datadir[PATH_MAX + 1] = "";/* Data directory created for this gateway instance */
-    bool datadir_defined = false;   /*< If the datadir was already set */
     char pidfile[PATH_MAX + 1] = "";
     int  pidfd = PIDFD_CLOSED;
 
@@ -1395,9 +1393,6 @@ int main(int argc, char** argv)
 
     maxscale_reset_starttime();
 
-    snprintf(this_unit.datadir, PATH_MAX, "%s", cmake_defaults::DEFAULT_DATADIR);
-    this_unit.datadir[PATH_MAX] = '\0';
-
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:J:p:R:r:";
     const char* specified_user = NULL;
@@ -1524,10 +1519,14 @@ int main(int argc, char** argv)
             break;
 
         case 'D':
-            snprintf(this_unit.datadir, PATH_MAX, "%s", optarg);
-            this_unit.datadir[PATH_MAX] = '\0';
-            mxs::set_datadir(optarg);
-            this_unit.datadir_defined = true;
+            if (handle_path_arg(&tmp_path, optarg, NULL))
+            {
+                mxs::set_datadir(optarg);
+            }
+            else
+            {
+                succp = false;
+            }
             break;
 
         case 'C':
@@ -1941,14 +1940,15 @@ int main(int argc, char** argv)
          * Set the data directory. We use a unique directory name to avoid conflicts
          * if multiple instances of MaxScale are being run on the same machine.
          */
-        if (create_datadir(mxs::datadir(), this_unit.datadir))
+        char process_datadir[PATH_MAX + 1];
+        if (create_datadir(mxs::datadir(), process_datadir))
         {
-            mxs::set_process_datadir(this_unit.datadir);
+            mxs::set_process_datadir(process_datadir);
             atexit(cleanup_process_datadir);
         }
         else
         {
-            MXB_ALERT("Cannot create data directory '%s': %s", this_unit.datadir, mxb_strerror(errno));
+            MXB_ALERT("Cannot create data directory '%s': %s", process_datadir, mxb_strerror(errno));
             rc = MAXSCALE_BADCONFIG;
             return rc;
         }
@@ -2533,104 +2533,68 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
     // These will not override command line parameters but will override default values. */
     if (find_helper(CN_LOGDIR))
     {
-        if (strcmp(mxs::logdir(), cmake_defaults::DEFAULT_LOGDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_logdir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_logdir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_LIBDIR))
     {
-        if (strcmp(mxs::libdir(), cmake_defaults::DEFAULT_LIBDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_libdir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_libdir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_SHAREDIR))
     {
-        if (strcmp(mxs::sharedir(), cmake_defaults::DEFAULT_SHAREDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_sharedir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_sharedir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_PIDDIR))
     {
-        if (strcmp(mxs::piddir(), cmake_defaults::DEFAULT_PIDDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_piddir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_piddir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_DATADIR))
     {
-        if (!this_unit.datadir_defined)
-        {
-            auto tmp = add_slash(value);
-            snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
-            this_unit.datadir[PATH_MAX] = '\0';
-            mxs::set_datadir(tmp.c_str());
-            this_unit.datadir_defined = true;
-        }
+        auto tmp = add_slash(value);
+        mxs::set_datadir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_CACHEDIR))
     {
-        if (strcmp(mxs::cachedir(), cmake_defaults::DEFAULT_CACHEDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_cachedir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_cachedir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_LANGUAGE))
     {
-        if (strcmp(mxs::langdir(), cmake_defaults::DEFAULT_LANGDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            mxs::set_langdir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        mxs::set_langdir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_EXECDIR))
     {
-        if (strcmp(mxs::execdir(), cmake_defaults::DEFAULT_EXECDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_execdir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_execdir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_CONNECTOR_PLUGINDIR))
     {
-        if (strcmp(mxs::connector_plugindir(), cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_connector_plugindir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_connector_plugindir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_PERSISTDIR))
     {
-        if (strcmp(mxs::config_persistdir(), cmake_defaults::DEFAULT_CONFIG_PERSISTDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_config_persistdir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_config_persistdir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_MODULE_CONFIGDIR))
     {
-        if (strcmp(mxs::module_configdir(), cmake_defaults::DEFAULT_MODULE_CONFIGDIR) == 0)
-        {
-            auto tmp = add_slash(value);
-            set_module_configdir(tmp.c_str());
-        }
+        auto tmp = add_slash(value);
+        set_module_configdir(tmp.c_str(), mxs::config::Origin::CONFIG);
     }
 
     mxs::Config& cnf = mxs::Config::get();
