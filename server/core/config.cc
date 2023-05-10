@@ -131,15 +131,20 @@ struct TrackedValue
     }
 
     template<class SetType>
-    void set(SetType value, mxs::config::Origin origin)
+    bool set(SetType value, mxs::config::Origin origin)
     {
         mxb_assert(origin != mxs::config::Origin::DEFAULT);
+
+        bool rv = false;
 
         if (static_cast<int>(origin) >= static_cast<int>(this->origin))
         {
             this->value = value;
             this->origin = origin;
+            rv = true;
         }
+
+        return rv;
     }
 
     StoredType          value;
@@ -172,6 +177,7 @@ struct ThisUnit
     TrackedValue<std::string> piddir              { cmake_defaults::DEFAULT_PIDDIR };
     TrackedValue<std::string> execdir             { cmake_defaults::DEFAULT_EXECDIR };
     TrackedValue<std::string> connector_plugindir { cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR };
+    TrackedValue<uint32_t>    log_augmentation    { 0 };
 } this_unit;
 
 }
@@ -242,6 +248,14 @@ void set_execdir(std::string_view path, config::Origin origin)
 void set_connector_plugindir(std::string_view path, config::Origin origin)
 {
     this_unit.connector_plugindir.set(clean_up_pathname(std::string{path}), origin);
+}
+
+void set_log_augmentation(uint32_t bits, config::Origin origin)
+{
+    if (this_unit.log_augmentation.set(bits, origin))
+    {
+        mxb_log_set_augmentation(bits);
+    }
 }
 
 const char* libdir()

@@ -91,6 +91,11 @@ void set_execdir(std::string_view path, config::Origin origin = config::Origin::
 void set_connector_plugindir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
+ * The augmentation bits.
+ */
+void set_log_augmentation(uint32_t bits, config::Origin origin = config::Origin::USER);
+
+/**
  * Get the directory with all the modules.
  */
 const char* libdir();

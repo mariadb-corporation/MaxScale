@@ -167,7 +167,6 @@ static void unlock_pidfile();
 static int  ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool handle_path_arg(std::string* dest, const char* path, const char* arg, const char* arg2 = nullptr);
 static bool handle_debug_args(char* args);
-static void set_log_augmentation(const char* value);
 static void usage(void);
 static bool check_paths();
 static int  set_user(const char* user);
@@ -1688,7 +1687,7 @@ int main(int argc, char** argv)
             break;
 
         case 'G':
-            set_log_augmentation(optarg);
+            set_log_augmentation(atoi(optarg));
             break;
 
         case '?':
@@ -2482,21 +2481,6 @@ static bool check_paths()
            && check_dir_access(mxs::execdir(), true, false);
 }
 
-void set_log_augmentation(const char* value)
-{
-    // Command line arguments are handled first, thus command line argument
-    // has priority.
-
-    static bool augmentation_set = false;
-
-    if (!augmentation_set)
-    {
-        mxb_log_set_augmentation(atoi(value));
-
-        augmentation_set = true;
-    }
-}
-
 /**
  * Read various directory paths and log settings from configuration. Variable substitution is
  * assumed to be already performed.
@@ -2599,7 +2583,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_LOG_AUGMENTATION))
     {
-        set_log_augmentation(value->c_str());
+        set_log_augmentation(atoi(value->c_str()), mxs::config::Origin::CONFIG);
     }
 }
 
