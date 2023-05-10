@@ -2522,57 +2522,57 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
     // These will not override command line parameters but will override default values. */
     if (find_helper(CN_LOGDIR))
     {
-        set_logdir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_logdir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_LIBDIR))
     {
-        set_libdir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_libdir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_SHAREDIR))
     {
-        set_sharedir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_sharedir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_PIDDIR))
     {
-        set_piddir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_piddir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_DATADIR))
     {
-        mxs::set_datadir(value->c_str(), mxs::config::Origin::CONFIG);
+        mxs::set_datadir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_CACHEDIR))
     {
-        set_cachedir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_cachedir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_LANGUAGE))
     {
-        mxs::set_langdir(value->c_str(), mxs::config::Origin::CONFIG);
+        mxs::set_langdir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_EXECDIR))
     {
-        set_execdir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_execdir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_CONNECTOR_PLUGINDIR))
     {
-        set_connector_plugindir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_connector_plugindir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_PERSISTDIR))
     {
-        set_config_persistdir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_config_persistdir(*value, mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_MODULE_CONFIGDIR))
     {
-        set_module_configdir(value->c_str(), mxs::config::Origin::CONFIG);
+        set_module_configdir(*value, mxs::config::Origin::CONFIG);
     }
 
     mxs::Config& cnf = mxs::Config::get();

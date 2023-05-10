@@ -22,68 +22,68 @@ namespace maxscale
 /**
  * Set the library directory. Modules will be loaded from here.
  */
-void set_libdir(const char* path, config::Origin origin = config::Origin::USER);
+void set_libdir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the share directory
  */
-void set_sharedir(const char* path, config::Origin origin = config::Origin::USER);
+void set_sharedir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the data directory
  */
-void set_datadir(const char* path, config::Origin origin = config::Origin::USER);
+void set_datadir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the process data directory
  */
-void set_process_datadir(const char* path);
+void set_process_datadir(std::string_view path);
 
 /**
  * Set the cache directory
  */
-void set_cachedir(const char* path, config::Origin origin = config::Origin::USER);
+void set_cachedir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the configuration file directory
  */
-void set_configdir(const char* path, config::Origin origin = config::Origin::USER);
+void set_configdir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the configuration parts file directory
  */
-void set_config_persistdir(const char* path, config::Origin origin = config::Origin::USER);
+void set_config_persistdir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the module configuration file directory
  */
-void set_module_configdir(const char* path, config::Origin origin = config::Origin::USER);
+void set_module_configdir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the log file directory
  */
-void set_logdir(const char* path, config::Origin origin = config::Origin::USER);
+void set_logdir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the language file directory
  */
-void set_langdir(const char* path, config::Origin origin = config::Origin::USER);
+void set_langdir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the PID file directory
  */
-void set_piddir(const char* path, config::Origin origin = config::Origin::USER);
+void set_piddir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the executable directory. Internal processes will look for executables
  * from here.
  */
-void set_execdir(const char* path, config::Origin origin = config::Origin::USER);
+void set_execdir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Set the connector plugin directory.
  */
-void set_connector_plugindir(const char* path, config::Origin origin = config::Origin::USER);
+void set_connector_plugindir(std::string_view path, config::Origin origin = config::Origin::USER);
 
 /**
  * Get the directory with all the modules.

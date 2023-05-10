@@ -30,13 +30,13 @@ struct Directory
     {
     }
 
-    void set(const std::string& path, config::Origin origin)
+    void set(std::string_view path, config::Origin origin)
     {
         mxb_assert(origin != config::Origin::DEFAULT);
 
         if (static_cast<int>(origin) >= static_cast<int>(this->origin))
         {
-            this->path = clean_up_pathname(path);
+            this->path = clean_up_pathname(std::string{path});
             this->origin = origin;
         }
     }
@@ -66,67 +66,67 @@ struct
 namespace maxscale
 {
 
-void set_configdir(const char* path, config::Origin origin)
+void set_configdir(std::string_view path, config::Origin origin)
 {
     this_unit.configdir.set(path, origin);
 }
 
-void set_module_configdir(const char* path, config::Origin origin)
+void set_module_configdir(std::string_view path, config::Origin origin)
 {
     this_unit.module_configdir.set(path, origin);
 }
 
-void set_config_persistdir(const char* path, config::Origin origin)
+void set_config_persistdir(std::string_view path, config::Origin origin)
 {
     this_unit.config_persistdir.set(path, origin);
 }
 
-void set_logdir(const char* path, config::Origin origin)
+void set_logdir(std::string_view path, config::Origin origin)
 {
     this_unit.logdir.set(path, origin);
 }
 
-void set_langdir(const char* path, config::Origin origin)
+void set_langdir(std::string_view path, config::Origin origin)
 {
     this_unit.langdir.set(path, origin);
 }
 
-void set_piddir(const char* path, config::Origin origin)
+void set_piddir(std::string_view path, config::Origin origin)
 {
     this_unit.piddir.set(path, origin);
 }
 
-void set_cachedir(const char* path, config::Origin origin)
+void set_cachedir(std::string_view path, config::Origin origin)
 {
     this_unit.cachedir.set(path, origin);
 }
 
-void set_datadir(const char* path, config::Origin origin)
+void set_datadir(std::string_view path, config::Origin origin)
 {
     this_unit.datadir.set(path, origin);
 }
 
-void set_process_datadir(const char* path)
+void set_process_datadir(std::string_view path)
 {
-    this_unit.processdatadir = clean_up_pathname(path);
+    this_unit.processdatadir = clean_up_pathname(std::string{path});
 }
 
-void set_libdir(const char* path, config::Origin origin)
+void set_libdir(std::string_view path, config::Origin origin)
 {
     this_unit.libdir.set(path, origin);
 }
 
-void set_sharedir(const char* path, config::Origin origin)
+void set_sharedir(std::string_view path, config::Origin origin)
 {
     this_unit.sharedir.set(path, origin);
 }
 
-void set_execdir(const char* path, config::Origin origin)
+void set_execdir(std::string_view path, config::Origin origin)
 {
     this_unit.execdir.set(path, origin);
 }
 
-void set_connector_plugindir(const char* path, config::Origin origin)
+void set_connector_plugindir(std::string_view path, config::Origin origin)
 {
     this_unit.connector_plugindir.set(path, origin);
 }
