@@ -105,8 +105,6 @@ static struct ThisUnit
 
     std::map<std::string, int> directory_locks;
     bool                       daemon_mode = true;
-    bool                       syslog_configured = false;
-    bool                       maxlog_configured = false;
     volatile sig_atomic_t      last_signal = 0;
     bool                       unload_modules_at_exit = true;
     std::string                redirect_output_to;
@@ -1646,14 +1644,12 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        cnf.maxlog.set(config_truth_value(tok));
-                        this_unit.maxlog_configured = true;
+                        set_maxlog(config_truth_value(tok));
                     }
                 }
                 else
                 {
-                    cnf.maxlog.set(config_truth_value(optarg));
-                    this_unit.maxlog_configured = true;
+                    set_maxlog(config_truth_value(optarg));
                 }
             }
             break;
@@ -1666,14 +1662,12 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        cnf.syslog.set(config_truth_value(tok));
-                        this_unit.syslog_configured = true;
+                        set_syslog(config_truth_value(tok));
                     }
                 }
                 else
                 {
-                    cnf.syslog.set(config_truth_value(optarg));
-                    this_unit.syslog_configured = true;
+                    set_syslog(config_truth_value(optarg));
                 }
             }
             break;
@@ -2562,18 +2556,12 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
     mxs::Config& cnf = mxs::Config::get();
     if (find_helper(CN_SYSLOG))
     {
-        if (!this_unit.syslog_configured)
-        {
-            cnf.syslog.set(config_truth_value(*value));
-        }
+        set_syslog(config_truth_value(*value), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_MAXLOG))
     {
-        if (!this_unit.maxlog_configured)
-        {
-            cnf.maxlog.set(config_truth_value(*value));
-        }
+        set_maxlog(config_truth_value(*value), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_LOAD_PERSISTED_CONFIGS))

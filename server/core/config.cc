@@ -151,6 +151,9 @@ struct TrackedValue
     mxs::config::Origin origin { mxs::config::Origin::DEFAULT };
 };
 
+const bool DEFAULT_MAXLOG = true;
+const bool DEFAULT_SYSLOG = false;
+
 struct ThisUnit
 {
     bool mask_passwords = true;
@@ -178,6 +181,8 @@ struct ThisUnit
     TrackedValue<std::string> execdir             { cmake_defaults::DEFAULT_EXECDIR };
     TrackedValue<std::string> connector_plugindir { cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR };
     TrackedValue<uint32_t>    log_augmentation    { 0 };
+    TrackedValue<bool>        maxlog              { DEFAULT_MAXLOG };
+    TrackedValue<bool>        syslog              { DEFAULT_SYSLOG };
 } this_unit;
 
 }
@@ -255,6 +260,26 @@ void set_log_augmentation(uint32_t bits, config::Origin origin)
     if (this_unit.log_augmentation.set(bits, origin))
     {
         mxb_log_set_augmentation(bits);
+    }
+}
+
+// TODO: The maxlog setting is now kept in two places; in this_unit.maxlog above
+// TODO: and in Configuration::maxlog. The configuration system should be extended
+// TODO: so that change origin tracking is performed by it.
+void set_maxlog(bool on, config::Origin origin)
+{
+    if (this_unit.maxlog.set(on, origin))
+    {
+        Config::get().maxlog.set(on);
+    }
+}
+
+// TODO: See maxlog above.
+void set_syslog(bool on, config::Origin origin)
+{
+    if (this_unit.syslog.set(on, origin))
+    {
+        Config::get().syslog.set(on);
     }
 }
 
@@ -669,14 +694,14 @@ config::ParamBool Config::s_syslog(
     &Config::s_specification,
     CN_SYSLOG,
     "Log to syslog.",
-    false,
+    DEFAULT_SYSLOG,
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool Config::s_maxlog(
     &Config::s_specification,
     CN_MAXLOG,
     "Log to MaxScale's own log.",
-    true,
+    DEFAULT_MAXLOG,
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamSeconds Config::s_auth_conn_timeout(
