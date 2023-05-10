@@ -4209,3 +4209,166 @@ parse_mxs_config_file_to_map(const string& config_file)
     }
     return {std::move(res), std::move(warning)};
 }
+
+namespace
+{
+
+/**
+ * Read various directory paths and log settings from configuration. Variable substitution is
+ * assumed to be already performed.
+ *
+ * @param main_config Parsed [maxscale]-section from the main configuration file.
+ */
+void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main_config)
+{
+    const string* value = nullptr;
+
+    auto find_helper = [&main_config, &value](const string& key) {
+            bool rval = false;
+            const auto& kvs = main_config.key_values;
+            auto it = kvs.find(key);
+            if (it != kvs.end())
+            {
+                value = &it->second.value;
+                rval = true;
+            }
+            return rval;
+        };
+
+    // These will not override command line parameters but will override default values. */
+    if (find_helper(CN_LOGDIR))
+    {
+        mxs::set_logdir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_LIBDIR))
+    {
+        mxs::set_libdir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_SHAREDIR))
+    {
+        mxs::set_sharedir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_PIDDIR))
+    {
+        mxs::set_piddir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_DATADIR))
+    {
+        mxs::set_datadir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_CACHEDIR))
+    {
+        mxs::set_cachedir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_LANGUAGE))
+    {
+        mxs::set_langdir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_EXECDIR))
+    {
+        mxs::set_execdir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_CONNECTOR_PLUGINDIR))
+    {
+        mxs::set_connector_plugindir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_PERSISTDIR))
+    {
+        mxs::set_config_persistdir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_MODULE_CONFIGDIR))
+    {
+        mxs::set_module_configdir(*value, mxs::config::Origin::CONFIG);
+    }
+
+    mxs::Config& cnf = mxs::Config::get();
+    if (find_helper(CN_SYSLOG))
+    {
+        mxs::set_syslog(config_truth_value(*value), mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_MAXLOG))
+    {
+        mxs::set_maxlog(config_truth_value(*value), mxs::config::Origin::CONFIG);
+    }
+
+    if (find_helper(CN_LOAD_PERSISTED_CONFIGS))
+    {
+        cnf.load_persisted_configs = config_truth_value(*value);
+    }
+
+    if (find_helper(CN_LOG_AUGMENTATION))
+    {
+        mxs::set_log_augmentation(atoi(value->c_str()), mxs::config::Origin::CONFIG);
+    }
+}
+
+}
+
+SniffResult sniff_configuration(const string& filepath)
+{
+    SniffResult rval;
+    auto [load_res, warning] = parse_mxs_config_file_to_map(filepath);
+    if (load_res.errors.empty())
+    {
+        rval.success = true;
+        // At this point, we are only interested in the "maxscale"-section.
+        auto& config = load_res.config;
+        auto it = config.find(CN_MAXSCALE);
+        if (it != config.end())
+        {
+            bool substitution_ok = true;
+
+            auto& mxs_section = it->second.key_values;
+            auto it2 = mxs_section.find(CN_SUBSTITUTE_VARIABLES);
+            if (it2 != mxs_section.end())
+            {
+                bool subst_on = config_truth_value(it2->second.value);
+                // Substitution affects other config files as well so save the setting.
+                if (subst_on)
+                {
+                    mxs::Config& cnf = mxs::Config::get();
+                    cnf.substitute_variables = true;
+                    auto subst_errors = mxb::ini::substitute_env_vars(config);
+                    if (!subst_errors.empty())
+                    {
+                        string errmsg = mxb::string_printf("Variable substitution to file '%s' failed. ",
+                                                           filepath.c_str());
+                        errmsg += mxb::create_list_string(subst_errors, " ");
+                        MXB_ALERT("%s", errmsg.c_str());
+                        substitution_ok = false;
+                    }
+                }
+            }
+
+            if (substitution_ok)
+            {
+                apply_dir_log_config(it->second);
+            }
+            rval.success = substitution_ok;
+        }
+
+        if (rval.success)
+        {
+            rval.config = move(load_res.config);
+            // The warning, if any, cannot be printed yet since log is not initialized.
+            rval.warning = std::move(warning);
+        }
+    }
+    else
+    {
+        string all_errors = mxb::create_list_string(load_res.errors, " ");
+        MXB_ALERT("Failed to read configuration file '%s': %s", filepath.c_str(), all_errors.c_str());
+    }
+    return rval;
+}

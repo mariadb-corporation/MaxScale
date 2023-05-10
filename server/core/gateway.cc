@@ -223,15 +223,7 @@ string get_absolute_fname(const string& relative_path, const char* fname);
 bool   is_file_and_readable(const string& absolute_pathname);
 bool   path_is_readable(const string& absolute_pathname);
 
-struct SniffResult
-{
-    bool                                success {false};
-    mxb::ini::map_result::Configuration config;
-    std::string                         warning;
-};
-
-SniffResult sniff_configuration(const string& filepath);
-string      resolve_maxscale_conf_fname(const string& cnf_file_arg);
+string resolve_maxscale_conf_fname(const string& cnf_file_arg);
 }
 
 #define VA_MESSAGE(message, format) \
@@ -2779,74 +2771,6 @@ static int daemonize(void)
     }
 
     return child_pipe;
-}
-
-namespace
-{
-/**
- * Sniffs the configuration file, primarily for various directory paths, so that certain settings
- * take effect immediately.
- *
- * @param filepath The path of the configuration file.
- * @return Result object
- */
-SniffResult sniff_configuration(const string& filepath)
-{
-    SniffResult rval;
-    auto [load_res, warning] = parse_mxs_config_file_to_map(filepath);
-    if (load_res.errors.empty())
-    {
-        rval.success = true;
-        // At this point, we are only interested in the "maxscale"-section.
-        auto& config = load_res.config;
-        auto it = config.find(CN_MAXSCALE);
-        if (it != config.end())
-        {
-            bool substitution_ok = true;
-
-            auto& mxs_section = it->second.key_values;
-            auto it2 = mxs_section.find(CN_SUBSTITUTE_VARIABLES);
-            if (it2 != mxs_section.end())
-            {
-                bool subst_on = config_truth_value(it2->second.value);
-                // Substitution affects other config files as well so save the setting.
-                if (subst_on)
-                {
-                    mxs::Config& cnf = mxs::Config::get();
-                    cnf.substitute_variables = true;
-                    auto subst_errors = mxb::ini::substitute_env_vars(config);
-                    if (!subst_errors.empty())
-                    {
-                        string errmsg = mxb::string_printf("Variable substitution to file '%s' failed. ",
-                                                           filepath.c_str());
-                        errmsg += mxb::create_list_string(subst_errors, " ");
-                        MXB_ALERT("%s", errmsg.c_str());
-                        substitution_ok = false;
-                    }
-                }
-            }
-
-            if (substitution_ok)
-            {
-                apply_dir_log_config(it->second);
-            }
-            rval.success = substitution_ok;
-        }
-
-        if (rval.success)
-        {
-            rval.config = move(load_res.config);
-            // The warning, if any, cannot be printed yet since log is not initialized.
-            rval.warning = std::move(warning);
-        }
-    }
-    else
-    {
-        string all_errors = mxb::create_list_string(load_res.errors, " ");
-        MXB_ALERT("Failed to read configuration file '%s': %s", filepath.c_str(), all_errors.c_str());
-    }
-    return rval;
-}
 }
 
 static void enable_module_unloading(const char* arg)

@@ -35,6 +35,22 @@
 /** Object type specific parameter lists */
 extern const char* config_pre_parse_global_params[];
 
+struct SniffResult
+{
+    bool                                success {false};
+    mxb::ini::map_result::Configuration config;
+    std::string                         warning;
+};
+
+/**
+ * Sniffs the configuration file, primarily for various directory paths, so that certain settings
+ * take effect immediately.
+ *
+ * @param filepath The path of the configuration file.
+ * @return Result object
+ */
+SniffResult sniff_configuration(const std::string& filepath);
+
 /**
  * Config section structure. Holds configuration data during startup.
  */
