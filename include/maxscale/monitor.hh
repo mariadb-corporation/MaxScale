@@ -570,7 +570,8 @@ public:
      */
     void active_servers_updated();
 
-    const std::vector<SERVER*>& active_routing_servers() const;
+    // Returns a copy for thread safety.
+    std::vector<SERVER*> active_routing_servers() const;
 
 protected:
 
@@ -745,14 +746,27 @@ protected:
 
     bool post_configure();
 
+    enum class SetRouting {YES, NO};
     /**
      * Tells the base class which servers are actually monitored. The servers will have their events logged
      * etc. Should only be called from MainWorker when monitor is stopped (or otherwise not reading the
      * array) to prevent concurrency issues.
      *
      * @param servers Monitored servers
+     * @param routing Are the monitored servers also routing servers. If not, the monitor should call
+     * set_routing_servers() separately.
      */
-    void set_active_servers(std::vector<MonitorServer*>&& servers);
+    void set_active_servers(std::vector<MonitorServer*>&& servers, SetRouting routing = SetRouting::YES);
+
+    /**
+     * Set routing servers. These are the servers a service will see if configured with
+     * "cluster=<monitor_name>". In the ideal case routing servers should be equal to active servers, but
+     * that would require larger changes due to concurrency issues and differing monitor design. This
+     * function is only called from XpandMon.
+     *
+     * @param servers Routing servers
+     */
+    void set_routing_servers(std::vector<SERVER*>&& servers);
 
     friend bool Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
@@ -869,11 +883,11 @@ private:
     /** Currently configured servers. Only written to and accessed from MainWorker. Changes only when
      * monitor is stopped for reconfiguration. */
     std::vector<SERVER*> m_conf_servers;
-    /** Actively monitored servers. Set by implementation during reconfiguration. Read by monitor when
-     * running and also by MainWorker (e.g. diagnostics). */
+    /** Actively monitored servers. Set by implementation during reconfiguration. */
     std::vector<MonitorServer*> m_servers;
-    /**< Same as above. Usually accessed by services and only from MainWorker. */
+    /** Routing servers, readable by other threads. Access protected by mutex. */
     std::vector<SERVER*> m_routing_servers;
+    mutable std::mutex   m_routing_servers_lock;
 
     std::string journal_filepath() const;
     bool        call_run_one_tick();

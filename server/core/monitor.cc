@@ -574,36 +574,55 @@ bool Monitor::prepare_servers()
     return claim_ok;
 }
 
-void Monitor::set_active_servers(std::vector<MonitorServer*>&& servers)
+void Monitor::set_active_servers(std::vector<MonitorServer*>&& servers, SetRouting routing)
 {
     mxb_assert(!is_running() && is_main_worker());
     m_servers = std::move(servers);
-    auto n_servers = m_servers.size();
-    m_routing_servers.resize(n_servers);
-    for (size_t i = 0; i < n_servers; i++)
+
+    if (routing == SetRouting::YES)
     {
-        m_routing_servers[i] = m_servers[i]->server;
+        auto n_servers = m_servers.size();
+        std::vector<SERVER*> new_routing_servers;
+        new_routing_servers.resize(n_servers);
+        for (size_t i = 0; i < n_servers; i++)
+        {
+            new_routing_servers[i] = m_servers[i]->server;
+        }
+
+        set_routing_servers(std::move(new_routing_servers));
     }
-    // Update any services which use this monitor as a source of routing targets.
-    active_servers_updated();
+}
+
+void Monitor::set_routing_servers(std::vector<SERVER*>&& servers)
+{
+    {
+        Guard guard(m_routing_servers_lock);
+        m_routing_servers = std::move(servers);
+    }
+
+    // Update any services which use this monitor as a source of routing targets. Monitors are never
+    // deleted so sending *this* to another thread is ok.
+    mxs::MainWorker::get()->execute([this]() {
+        active_servers_updated();
+    }, mxb::Worker::EXECUTE_AUTO);
 }
 
 void Monitor::active_servers_updated()
 {
-    mxb_assert(!is_running() && is_main_worker());
-    service_update_targets(*this);
+    mxb_assert(is_main_worker());
+    service_update_targets(this);
 }
 
 const std::vector<MonitorServer*>& Monitor::active_servers() const
 {
     // Should only be called by a running monitor.
-    mxb_assert(mxb::Worker::get_current() == m_worker.get());
+    mxb_assert(is_running() && mxb::Worker::get_current() == m_worker.get());
     return m_servers;
 }
 
-const std::vector<SERVER*>& Monitor::active_routing_servers() const
+std::vector<SERVER*> Monitor::active_routing_servers() const
 {
-    mxb_assert(is_main_worker());
+    Guard guard(m_routing_servers_lock);
     return m_routing_servers;
 }
 

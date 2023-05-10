@@ -1146,10 +1146,7 @@ void XpandMonitor::add_server(SERVER* pServer)
     if (std::find(b, e, pServer) == e)
     {
         m_cluster_servers.push_back(pServer);
-        // TODO: call set_active_servers(). Need to add MonitorServer* array
-        mxs::MainWorker::get()->execute([this, pServer]() {
-            service_add_server(this, pServer);
-        }, mxb::Worker::EXECUTE_AUTO);
+        set_routing_servers({m_cluster_servers.begin(), m_cluster_servers.end()});
     }
 }
 
@@ -1574,8 +1571,11 @@ mxs::config::Specification* XpandMonitor::specification()
 
 void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& servers)
 {
-    // XpandMon does not have its own server class derived from MonitorServer, yet the configured servers
-    // are not the active servers. TODO: think more on how this should work with the volatile servers
+    // XpandMon currently has two different server classes. Also, the configured servers are not really
+    // the active servers as more servers can be discovered. However, fixing this requires larger changes to
+    // general monitor server handling, so disregard it for now. Use the configured servers as active servers
+    // so the monitor has at least some. This also matches with update_server_statuses() and
+    // flush_server_status() calls in tick().
     for (auto srv : m_servers)
     {
         delete srv;
@@ -1587,6 +1587,8 @@ void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& server
     {
         m_servers[i] = new XpandServer(servers[i], shared_settings);
     }
+
+    set_active_servers(std::vector<MonitorServer*>(m_servers.begin(), m_servers.end()), SetRouting::NO);
 }
 
 XpandServer::XpandServer(SERVER* server, const MonitorServer::SharedSettings& shared)

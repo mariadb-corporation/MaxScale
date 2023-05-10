@@ -216,8 +216,8 @@ public:
     void remove_target(SERVER* target);
     void remove_target(Service* target);
 
-    // Update targets from a monitor
-    void update_targets(const mxs::Monitor& mon);
+    // Update targets from a server list
+    void update_targets(const std::vector<SERVER*>& servers);
 
     bool has_target(mxs::Target* target) const
     {
@@ -645,16 +645,8 @@ json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::str
                                      const std::string& self);
 
 /**
- * @brief Add server to all services associated with a monitor
- *
- * @param monitor  A monitor.
- * @param server   A server.
- */
-void service_add_server(mxs::Monitor* pMonitor, SERVER* pServer);
-
-/**
  * Update routing targets of every service that reads its targets from a given monitor.
  *
  * @param monitor Monitor to update from
  */
-void service_update_targets(const mxs::Monitor& monitor);
+void service_update_targets(const mxs::Monitor* monitor);
