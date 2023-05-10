@@ -500,7 +500,7 @@ parsing_info_t::parsing_info_t(const Parser::Helper& helper, const GWBUF* queryb
     : pi_query_plain_str(helper.get_sql(*querybuf))
     , canonical(pi_query_plain_str)
 {
-    maxsimd::get_canonical(&this->canonical, &this_thread.markers);
+    maxsimd::get_canonical(&this->canonical, &::this_thread.markers);
 
     MYSQL* mysql = mysql_init(NULL);
     mxb_assert(mysql);
@@ -519,8 +519,8 @@ parsing_info_t::parsing_info_t(const Parser::Helper& helper, const GWBUF* queryb
 
     /** Set handle and free function to parsing info struct */
     this->pi_handle = mysql;
-    mxb_assert(this_thread.function_name_mappings);
-    this->function_name_mappings = this_thread.function_name_mappings;
+    mxb_assert(::this_thread.function_name_mappings);
+    this->function_name_mappings = ::this_thread.function_name_mappings;
 }
 
 parsing_info_t::~parsing_info_t()
@@ -586,7 +586,7 @@ bool ensure_query_is_parsed(const Parser::Helper& helper, const GWBUF* query)
         MXB_AT_DEBUG(rv = ) pthread_mutex_lock(&this_unit.sql_mode_mutex);
         mxb_assert(rv == 0);
 
-        if (this_thread.sql_mode == Parser::SqlMode::ORACLE)
+        if (::this_thread.sql_mode == Parser::SqlMode::ORACLE)
         {
             global_system_variables.sql_mode |= MODE_ORACLE;
         }
@@ -2352,7 +2352,7 @@ int32_t pp_mysql_get_preparable_stmt(const Parser::Helper& helper,
                     // We copy the statment, blindly replacing all '?':s (always)
                     // and ':N' (in Oracle mode) with '0':s as otherwise the parsing of the
                     // preparable statement as a regular statement will not always succeed.
-                    Parser::SqlMode sql_mode = this_thread.sql_mode;
+                    Parser::SqlMode sql_mode = ::this_thread.sql_mode;
                     const char* p = preparable_stmt;
                     const char* end = preparable_stmt + preparable_stmt_len;
                     bool replacement = false;
@@ -2748,7 +2748,7 @@ static void add_function_field_usage(parsing_info_t* pi,
         default:
             if (qcme_item_is_string(item))
             {
-                if (this_thread.options & Parser::OPTION_STRING_ARG_AS_FIELD)
+                if (::this_thread.options & Parser::OPTION_STRING_ARG_AS_FIELD)
                 {
                     String* s = item->val_str();
                     int len = s->length();
@@ -3347,7 +3347,7 @@ static void update_field_infos(parsing_info_t* pi,
     default:
         if (qcme_item_is_string(item))
         {
-            if (this_thread.options & Parser::OPTION_STRING_AS_FIELD)
+            if (::this_thread.options & Parser::OPTION_STRING_AS_FIELD)
             {
                 String* s = item->val_str();
                 int len = s->length();
@@ -3801,12 +3801,12 @@ int32_t pp_mysql_get_function_info(const Parser::Helper& helper,
 
 void pp_mysql_set_server_version(uint64_t version)
 {
-    this_thread.version = version;
+    ::this_thread.version = version;
 }
 
 void pp_mysql_get_server_version(uint64_t* version)
 {
-    *version = this_thread.version;
+    *version = ::this_thread.version;
 }
 
 namespace
@@ -3899,9 +3899,9 @@ int32_t pp_mysql_process_init(void)
 
         if (rc != 0)
         {
-            this_thread.sql_mode = this_unit.sql_mode;
+            ::this_thread.sql_mode = this_unit.sql_mode;
             mxb_assert(this_unit.function_name_mappings);
-            this_thread.function_name_mappings = this_unit.function_name_mappings;
+            ::this_thread.function_name_mappings = this_unit.function_name_mappings;
 
             MXB_ERROR("mysql_library_init() failed. Error code: %d", rc);
         }
@@ -3925,9 +3925,9 @@ void pp_mysql_process_end(void)
 
 int32_t pp_mysql_thread_init(void)
 {
-    this_thread.sql_mode = this_unit.sql_mode;
+    ::this_thread.sql_mode = this_unit.sql_mode;
     mxb_assert(this_unit.function_name_mappings);
-    this_thread.function_name_mappings = this_unit.function_name_mappings;
+    ::this_thread.function_name_mappings = this_unit.function_name_mappings;
 
     bool inited = (mysql_thread_init() == 0);
 
@@ -3946,7 +3946,7 @@ void pp_mysql_thread_end(void)
 
 int32_t pp_mysql_get_sql_mode(Parser::SqlMode* sql_mode)
 {
-    *sql_mode = this_thread.sql_mode;
+    *sql_mode = ::this_thread.sql_mode;
     return PP_RESULT_OK;
 }
 
@@ -3957,13 +3957,13 @@ int32_t pp_mysql_set_sql_mode(Parser::SqlMode sql_mode)
     switch (sql_mode)
     {
     case Parser::SqlMode::DEFAULT:
-        this_thread.sql_mode = sql_mode;
-        this_thread.function_name_mappings = function_name_mappings_default;
+        ::this_thread.sql_mode = sql_mode;
+        ::this_thread.function_name_mappings = function_name_mappings_default;
         break;
 
     case Parser::SqlMode::ORACLE:
-        this_thread.sql_mode = sql_mode;
-        this_thread.function_name_mappings = function_name_mappings_oracle;
+        ::this_thread.sql_mode = sql_mode;
+        ::this_thread.function_name_mappings = function_name_mappings_oracle;
         break;
 
     default:
@@ -3975,7 +3975,7 @@ int32_t pp_mysql_set_sql_mode(Parser::SqlMode sql_mode)
 
 uint32_t pp_mysql_get_options()
 {
-    return this_thread.options;
+    return ::this_thread.options;
 }
 
 int32_t pp_mysql_set_options(uint32_t options)
@@ -3984,7 +3984,7 @@ int32_t pp_mysql_set_options(uint32_t options)
 
     if ((options & ~Parser::OPTION_MASK) == 0)
     {
-        this_thread.options = options;
+        ::this_thread.options = options;
     }
     else
     {
