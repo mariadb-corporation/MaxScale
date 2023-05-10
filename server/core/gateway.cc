@@ -2519,82 +2519,60 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
             return rval;
         };
 
-    auto add_slash = [](const string* path) {
-            string rval;
-            rval.reserve(path->length() + 1);
-            rval += *path;
-            if (rval.empty() || rval.back() != '/')
-            {
-                rval += '/';
-            }
-            return rval;
-        };
-
     // These will not override command line parameters but will override default values. */
     if (find_helper(CN_LOGDIR))
     {
-        auto tmp = add_slash(value);
-        set_logdir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_logdir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_LIBDIR))
     {
-        auto tmp = add_slash(value);
-        set_libdir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_libdir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_SHAREDIR))
     {
-        auto tmp = add_slash(value);
-        set_sharedir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_sharedir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_PIDDIR))
     {
-        auto tmp = add_slash(value);
-        set_piddir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_piddir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_DATADIR))
     {
-        auto tmp = add_slash(value);
-        mxs::set_datadir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        mxs::set_datadir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_CACHEDIR))
     {
-        auto tmp = add_slash(value);
-        set_cachedir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_cachedir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_LANGUAGE))
     {
-        auto tmp = add_slash(value);
-        mxs::set_langdir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        mxs::set_langdir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_EXECDIR))
     {
-        auto tmp = add_slash(value);
-        set_execdir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_execdir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_CONNECTOR_PLUGINDIR))
     {
-        auto tmp = add_slash(value);
-        set_connector_plugindir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_connector_plugindir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_PERSISTDIR))
     {
-        auto tmp = add_slash(value);
-        set_config_persistdir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_config_persistdir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     if (find_helper(CN_MODULE_CONFIGDIR))
     {
-        auto tmp = add_slash(value);
-        set_module_configdir(tmp.c_str(), mxs::config::Origin::CONFIG);
+        set_module_configdir(value->c_str(), mxs::config::Origin::CONFIG);
     }
 
     mxs::Config& cnf = mxs::Config::get();
