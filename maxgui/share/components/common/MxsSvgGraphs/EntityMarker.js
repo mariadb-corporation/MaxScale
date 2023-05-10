@@ -11,39 +11,51 @@
  * Public License.
  */
 import { getLinkStyles } from '@share/components/common/MxsSvgGraphs/utils'
-import { TARGET_POS, CARDINALITY_SYMBOLS } from '@share/components/common/MxsSvgGraphs/config'
+import {
+    TARGET_POS,
+    CARDINALITY_SYMBOLS,
+    LINK_SHAPES,
+} from '@share/components/common/MxsSvgGraphs/config'
 
 export default class EntityMarker {
     constructor(graphConfig) {
         this.config = graphConfig.marker
         this.linkConfig = graphConfig.link
+        this.linkShape = graphConfig.linkShape
     }
     transform({ d, isSrc = false }) {
         const {
-            pathPosData: { pathPoints, targetPos },
+            pathPosData: {
+                pathPoints: { x0, y0, x1, y1 },
+                targetPos,
+            },
         } = d
+        const { type } = this.linkShape
         const { LEFT, RIGHT, INTERSECT } = TARGET_POS
         const { width } = this.config
-        let offset = width
+
+        let x = isSrc ? x0 : x1,
+            y = isSrc ? y0 : y1,
+            offset = 0,
+            z = 0
+        // When shape is STRAIGHT, x0 and x1 values have deducted marker's width value.
+        let offsetSrc = type === LINK_SHAPES.STRAIGHT ? -width : 0
+        let offsetDest = type === LINK_SHAPES.STRAIGHT ? 0 : -width
         switch (targetPos) {
             case RIGHT:
-                offset = isSrc ? width : -width
+                offset = isSrc ? offsetSrc : offsetDest
+                z = isSrc ? 180 : 0
                 break
             case LEFT:
-                offset = isSrc ? -width : width
+                offset = isSrc ? offsetDest : offsetSrc
+                z = isSrc ? 0 : 180
+                break
+            case INTERSECT:
+                offset = offsetSrc
+                z = 180
                 break
         }
-        let x = pathPoints.x1 + offset,
-            y = pathPoints.y1,
-            z = 0
-        if (targetPos === INTERSECT || targetPos === LEFT) z = 180
-        if (isSrc) {
-            x = pathPoints.x0 + offset
-            y = pathPoints.y0
-            z = 180
-            if (targetPos === LEFT) z = 0
-        }
-        return `translate(${x}, ${y}) rotate(${z})`
+        return `translate(${x + offset}, ${y}) rotate(${z})`
     }
     /**
      * Marker reuses link's styles such as color, strokeWidth because
@@ -61,34 +73,32 @@ export default class EntityMarker {
     draw({ linkCtr, type, isSrc = false }) {
         const scope = this
         const { markerClass } = this.config
-        const stroke = d => scope.getStyle(d, 'color')
-        const strokeWidth = d => scope.getStyle(d, 'strokeWidth')
         const markerCtrClass = `entity-marker-${isSrc ? 'src' : 'target'}`
         const markerPathClass = `${markerClass}-${isSrc ? 'src' : 'target'}`
+
+        let markers, paths
         switch (type) {
             case 'enter':
-                linkCtr
-                    .insert('g')
-                    .attr('class', markerCtrClass)
-                    .attr('transform', d => scope.transform({ d, isSrc }))
-                    .append('path')
-                    .attr('class', markerPathClass)
-                    .attr('fill', 'white')
-                    .attr('stroke', stroke)
-                    .attr('stroke-width', strokeWidth)
-                    .attr('d', d => scope.getMarker({ d, isSrc }))
+                markers = linkCtr.insert('g').attr('class', markerCtrClass)
+                paths = markers.append('path').attr('class', markerPathClass)
                 break
             case 'update':
-                linkCtr
-                    .select(`g.${markerCtrClass}`)
-                    .attr('transform', d => scope.transform({ d, isSrc }))
-                    .select(`path.${markerPathClass}`)
-                    .attr('fill', 'white')
-                    .attr('stroke', stroke)
-                    .attr('stroke-width', strokeWidth)
-                    .attr('d', d => scope.getMarker({ d, isSrc }))
+                markers = linkCtr.select(`g.${markerCtrClass}`)
+                paths = markers.select(`path.${markerPathClass}`)
                 break
         }
+
+        const stroke = d => scope.getStyle(d, 'color')
+        const strokeWidth = d => scope.getStyle(d, 'strokeWidth')
+
+        markers
+            .attr('transform', d => scope.transform({ d, isSrc }))
+            .attr('style', 'transform-box: fill-box;transform-origin:center')
+        paths
+            .attr('fill', 'white')
+            .attr('stroke', stroke)
+            .attr('stroke-width', strokeWidth)
+            .attr('d', d => scope.getMarker({ d, isSrc }))
     }
     getMarker({ d, isSrc }) {
         const {

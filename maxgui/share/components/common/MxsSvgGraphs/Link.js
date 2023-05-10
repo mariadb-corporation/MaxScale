@@ -147,9 +147,9 @@ export default class Link {
      * Set the event styles of the links based on the specified event type and modified link styles.
      * @param {Array} params.links - Links data
      * @param {string} params.eventType - The type of event to update styles for.
-     * @param {Function} [params.linkStylesMod] - The function to return the modified styles for the link.
+     * @param {Function} [params.evtStylesMod] - The function to return the modified event styles for the link.
      */
-    setEventStyles({ links, eventType, linkStylesMod }) {
+    setEventStyles({ links, eventType, evtStylesMod }) {
         const scope = this
         links.forEach(link => {
             if (eventType) {
@@ -158,7 +158,7 @@ export default class Link {
                         obj[style] = scope.getStyle(link, `${eventType}.${style}`)
                         return obj
                     }, {}),
-                    t(linkStylesMod).safeFunction(link)
+                    t(evtStylesMod).safeFunction(link)
                 )
             } else delete link.evtStyles
         })

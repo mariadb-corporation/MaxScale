@@ -131,7 +131,7 @@ import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@share/components/common/MxsSvgGraphs/EntityLink'
 import ErdKeyIcon from '@share/components/common/MxsSvgGraphs/ErdKeyIcon'
-import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import { EVENT_TYPES, LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
 import tokens from '@wsSrc/utils/createTableTokens'
 
 export default {
@@ -199,6 +199,15 @@ export default {
         },
         isAttrToAttr() {
             return this.$typy(this.graphConfigData, 'link.isAttrToAttr').safeBoolean
+        },
+        isStraightShape() {
+            return (
+                this.$typy(this.graphConfigData, 'linkShape.type').safeString ===
+                LINK_SHAPES.STRAIGHT
+            )
+        },
+        globalLinkColor() {
+            return this.$typy(this.graphConfigData, 'link.color').safeString
         },
     },
     watch: {
@@ -300,7 +309,11 @@ export default {
             )
         },
         setEventLinkStyles(eventType) {
-            this.entityLink.setEventStyles({ links: this.chosenLinks, eventType })
+            this.entityLink.setEventStyles({
+                links: this.chosenLinks,
+                eventType,
+                evtStylesMod: () => (this.isStraightShape ? { color: this.globalLinkColor } : null),
+            })
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {

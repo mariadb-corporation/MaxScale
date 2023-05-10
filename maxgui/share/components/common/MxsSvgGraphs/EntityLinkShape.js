@@ -113,25 +113,36 @@ export default class EntityLinkShape {
             halfTargetWidth,
         } = this
         const { RIGHT, LEFT, INTERSECT } = TARGET_POS
+        const { type } = this.config
 
+        let offset = 0
+        /**
+         * To enhance marker visibility in STRAIGHT shape, the link is drawn from the marker's
+         * edge instead of the node's edge. The EntityMarker reverses the offset values of x0 and x1,
+         * ensuring that the markers are drawn starting from the node's edge.
+         */
+        if (type === LINK_SHAPES.STRAIGHT) {
+            const { width: markerWidth = 0 } = this.markerConfig
+            offset = markerWidth
+        }
         // D3 returns the mid point of the entities for source.x, target.x
         let x0 = srcX,
             x1 = targetX
         switch (this.targetPos) {
             case RIGHT: {
-                x0 = srcX + halfSrcWidth
-                x1 = targetX - halfTargetWidth
+                x0 = srcX + halfSrcWidth + offset
+                x1 = targetX - halfTargetWidth - offset
                 break
             }
             case LEFT: {
-                x0 = srcX - halfSrcWidth
-                x1 = targetX + halfTargetWidth
+                x0 = srcX - halfSrcWidth - offset
+                x1 = targetX + halfTargetWidth + offset
                 break
             }
             case INTERSECT: {
                 // move x0 & x1 to the right edge of the nodes
-                x0 = srcX + halfSrcWidth
-                x1 = targetX + halfTargetWidth
+                x0 = srcX + halfSrcWidth + offset
+                x1 = targetX + halfTargetWidth + offset
                 break
             }
         }
