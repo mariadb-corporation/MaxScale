@@ -450,6 +450,13 @@ void RCRSession::clientReply(GWBUF* pPacket, const maxscale::ReplyRoute& down, c
     m_query_timer.end_interval();
 }
 
+bool RCRSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem,
+                             const mxs::Reply& pReply)
+{
+    MXS_INFO("Server '%s' failed: %s", pProblem->target()->name(), mxs::extract_error(pMessage).c_str());
+    return false;
+}
+
 maxscale::SessionStats& RCR::session_stats(maxscale::Target* pTarget)
 {
     return (*m_target_stats)[pTarget];

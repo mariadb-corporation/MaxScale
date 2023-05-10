@@ -47,11 +47,8 @@ public:
 
     void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply);
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
-    {
-        MXS_INFO("Server '%s' failed", pProblem->target()->name());
-        return false;
-    }
+    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
+                     mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
 private:
     RCR*           m_instance;  /**< Router instance */
