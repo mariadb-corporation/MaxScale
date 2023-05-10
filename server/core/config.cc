@@ -4369,6 +4369,7 @@ SniffResult sniff_configuration(const string& filepath)
     {
         string all_errors = mxb::create_list_string(load_res.errors, " ");
         MXB_ALERT("Failed to read configuration file '%s': %s", filepath.c_str(), all_errors.c_str());
+        rval.errors = std::move(load_res.errors);
     }
     return rval;
 }

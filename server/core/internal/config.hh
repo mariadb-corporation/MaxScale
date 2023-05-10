@@ -40,6 +40,7 @@ struct SniffResult
     bool                                success {false};
     mxb::ini::map_result::Configuration config;
     std::string                         warning;
+    std::vector<std::string>            errors;
 };
 
 /**
