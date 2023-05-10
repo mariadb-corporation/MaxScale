@@ -191,16 +191,16 @@ int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
     {
         if (!is_busy)
         {
-            priority = 0;   // highest priority, idle servers
+            priority = 0;   // Highest priority, idle servers
         }
         else
         {
-            priority = 2;   // lowest priority, busy servers
+            priority = 1;   // Lower priority, busy servers
         }
     }
     else
     {
-        priority = 1;   // idle masters with masters_accept_reads==false
+        priority = 2;   // Lowest priority, idle masters with masters_accept_reads==false
     }
 
     return priority;
