@@ -23,8 +23,13 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## New Features
 
-###
+### [MXS-4377](https://jira.mariadb.org/browse/MXS-4377) Common options
 
+It is now possible to specify options in an _include_-section, to be included
+by other sections. This is useful, for instance, if there are multiple monitors
+that otherwise are identically configured, but for their list of servers. More
+information about this functionality can be found
+[here](../Getting-Started/Configuration-Guide.md#include-1).
 
 ### MaxGUI
 

@@ -11,6 +11,9 @@
 
 * Added the new [XRouter](./Routers/XRouter.md) module.
 
+* Common configuration settings can now be specified in a separate section,
+  to be included by other sections.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
