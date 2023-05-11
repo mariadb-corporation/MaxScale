@@ -53,6 +53,15 @@ struct SniffResult
 SniffResult sniff_configuration(const std::string& filepath);
 
 /**
+ * Sniffs the configuration, primarily for various directory paths, so that certain settings
+ * take effect immediately.
+ *
+ * @param config_text The config in a string.
+ * @return Result object
+ */
+SniffResult sniff_configuration_text(const std::string& config_text);
+
+/**
  * Config section structure. Holds configuration data during startup.
  */
 struct ConfigSection
@@ -91,6 +100,16 @@ using ConfigSectionMap = std::map<std::string, ConfigSection>;
  */
 std::tuple<mxb::ini::map_result::ParseResult, std::string>
 parse_mxs_config_file_to_map(const std::string& config_file);
+
+/**
+ * Calls mxb::ini::parse_config_text_to_map and handles a possible case-insensitively labeled [maxscale]-
+ * section.
+ *
+ * @param config_file Config file to load
+ * @return Tuple of actual parse results and a possible warning message regarding the maxscale-section.
+ */
+std::tuple<mxb::ini::map_result::ParseResult, std::string>
+parse_mxs_config_text_to_map(const std::string& config_text);
 
 /**
  * @brief Load the specified configuration file for MaxScale

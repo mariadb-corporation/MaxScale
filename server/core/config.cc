@@ -4157,10 +4157,12 @@ bool config_mask_passwords()
     return this_unit.mask_passwords;
 }
 
-std::tuple<mxb::ini::map_result::ParseResult, std::string>
-parse_mxs_config_file_to_map(const string& config_file)
+namespace
 {
-    auto res = mxb::ini::parse_config_file_to_map(config_file);
+
+std::tuple<mxb::ini::map_result::ParseResult, std::string>
+post_process_config(mxb::ini::map_result::ParseResult&& res)
+{
     string warning;
     if (res.errors.empty())
     {
@@ -4208,6 +4210,23 @@ parse_mxs_config_file_to_map(const string& config_file)
         }
     }
     return {std::move(res), std::move(warning)};
+}
+}
+
+std::tuple<mxb::ini::map_result::ParseResult, std::string>
+parse_mxs_config_file_to_map(const string& config_file)
+{
+    auto res = mxb::ini::parse_config_file_to_map(config_file);
+
+    return post_process_config(std::move(res));
+}
+
+std::tuple<mxb::ini::map_result::ParseResult, std::string>
+parse_mxs_config_text_to_map(const string& config_text)
+{
+    auto res = mxb::ini::parse_config_text_to_map(config_text);
+
+    return post_process_config(std::move(res));
 }
 
 namespace
@@ -4315,10 +4334,16 @@ void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main_config
 
 }
 
-SniffResult sniff_configuration(const string& filepath)
+namespace
+{
+SniffResult sniff_configuration(std::tuple<mxb::ini::map_result::ParseResult, std::string>&& result,
+                                std::string_view filepath = std::string_view {})
 {
     SniffResult rval;
-    auto [load_res, warning] = parse_mxs_config_file_to_map(filepath);
+
+    mxb::ini::map_result::ParseResult& load_res = std::get<0>(result);
+    std::string& warning = std::get<1>(result);
+
     if (load_res.errors.empty())
     {
         rval.success = true;
@@ -4342,8 +4367,18 @@ SniffResult sniff_configuration(const string& filepath)
                     auto subst_errors = mxb::ini::substitute_env_vars(config);
                     if (!subst_errors.empty())
                     {
-                        string errmsg = mxb::string_printf("Variable substitution to file '%s' failed. ",
-                                                           filepath.c_str());
+                        string errmsg;
+
+                        if (!filepath.empty())
+                        {
+                            errmsg = mxb::string_printf("Variable substitution to file '%.*s' failed. ",
+                                                        (int)filepath.length(), filepath.data());
+                        }
+                        else
+                        {
+                            errmsg = mxb::string_printf("Variable substitution failed.");
+                        }
+
                         errmsg += mxb::create_list_string(subst_errors, " ");
                         MXB_ALERT("%s", errmsg.c_str());
                         substitution_ok = false;
@@ -4361,15 +4396,35 @@ SniffResult sniff_configuration(const string& filepath)
         if (rval.success)
         {
             rval.config = move(load_res.config);
-            // The warning, if any, cannot be printed yet since log is not initialized.
             rval.warning = std::move(warning);
         }
     }
     else
     {
         string all_errors = mxb::create_list_string(load_res.errors, " ");
-        MXB_ALERT("Failed to read configuration file '%s': %s", filepath.c_str(), all_errors.c_str());
+        if (!filepath.empty())
+        {
+            MXB_ALERT("Failed to read configuration file '%.*s': %s",
+                      (int)filepath.length(), filepath.data(), all_errors.c_str());
+        }
+        else
+        {
+            MXB_ALERT("Failed to parse configuration: %s", all_errors.c_str());
+        }
+
         rval.errors = std::move(load_res.errors);
     }
     return rval;
+}
+
+}
+
+SniffResult sniff_configuration(const string& filepath)
+{
+    return sniff_configuration(parse_mxs_config_file_to_map(filepath), filepath);
+}
+
+SniffResult sniff_configuration_text(const string& config)
+{
+    return sniff_configuration(parse_mxs_config_text_to_map(config));
 }
