@@ -37,27 +37,48 @@
                     </v-sheet>
                 </v-menu>
             </template>
-            <!-- TODO: Get dynamic width instead of hard-code value (200) -->
-            <v-tabs
-                v-model="activeResSet"
-                show-arrows
-                hide-slider
-                :height="20"
-                class="v-tabs--query-editor-style v-tabs--custom-small-pagination-btn"
-                :style="{ maxWidth: `calc(100% - ${200}px)` }"
-                center-active
+            <v-menu
+                v-if="resultSetItems.length"
+                v-model="isResultSetsMenuOpened"
+                transition="slide-y-transition"
+                offset-y
+                left
+                content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+                close-on-content-click
             >
-                <v-tab
-                    v-for="(resSet, name) in resultData"
-                    :key="name"
-                    :href="`#${name}`"
-                    class="tab-btn px-3 text-uppercase"
-                    :class="{ 'tab-btn--err-tab': getErrTabName() === name }"
-                    active-class="tab-btn--active font-weight-medium"
-                >
-                    {{ name }}
-                </v-tab>
-            </v-tabs>
+                <template v-slot:activator="{ on, attrs, value }">
+                    <v-btn
+                        x-small
+                        class="text-capitalize font-weight-medium"
+                        outlined
+                        depressed
+                        :color="`${isErrorTab ? 'error' : 'accent-dark'}`"
+                        v-bind="attrs"
+                        v-on="on"
+                    >
+                        {{ activeResSet }}
+                        <v-icon size="24" :class="[value ? 'rotate-up' : 'rotate-down']">
+                            mdi-menu-down
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <virtual-list
+                    ref="resultSetItems"
+                    v-model="activeResSet"
+                    data-key="id"
+                    :data-sources="resultSetItems"
+                    :data-component="ResultSetItem"
+                    class="result-sets-list"
+                    item-class="result-set-item"
+                    :extra-props="{
+                        activeId: activeResSet,
+                        errorTabId: errorTabId,
+                        onClick: onClickResSetTab,
+                    }"
+                    :estimate-size="36"
+                    :style="{ maxHeight: `300px` }"
+                />
+            </v-menu>
             <v-spacer />
             <keep-alive>
                 <duration-timer
@@ -92,21 +113,21 @@
             v-if="isLoading"
             :loading="isLoading"
             type="table: table-thead, table-tbody"
-            :height="dynDim.height - headerHeight"
+            :height="resultTableHeight"
         />
         <template v-else>
             <keep-alive v-for="(resSet, name) in resultData" :key="name">
                 <template v-if="activeResSet === name">
                     <result-data-table
                         v-if="$typy(resSet, 'data').isDefined"
-                        :height="dynDim.height - headerHeight"
+                        :height="resultTableHeight"
                         :width="dynDim.width"
                         :headers="resSet.fields.map(field => ({ text: field }))"
                         :rows="resSet.data"
                         showGroupBy
                         v-on="$listeners"
                     />
-                    <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
+                    <div v-else :style="{ height: `${resultTableHeight}px` }">
                         <div v-for="(v, key) in resSet" :key="key">
                             <b>{{ key }}:</b>
                             <span class="d-inline-block ml-4">{{ v }}</span>
@@ -131,14 +152,17 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import VirtualList from 'vue-virtual-scroll-list'
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
+import ResultSetItem from './ResultSetItem.vue'
 import { mapState } from 'vuex'
 export default {
     name: 'results-tab',
     components: {
         ResultDataTable,
         DurationTimer,
+        VirtualList,
     },
     props: {
         dynDim: {
@@ -159,14 +183,21 @@ export default {
             headerHeight: 0,
             activeResSet: '',
             runSeconds: 0,
+            isResultSetsMenuOpened: false,
         }
     },
     computed: {
         ...mapState({
             OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
         }),
+        ResultSetItem() {
+            return ResultSetItem
+        },
         queryTxt() {
             return this.$typy(this.data, 'data.attributes.sql').safeObject
+        },
+        resultSetItems() {
+            return Object.keys(this.resultData).map(key => ({ id: key }))
         },
         resultData() {
             if (this.$typy(this.data, 'data.attributes.results').isDefined) {
@@ -178,7 +209,7 @@ export default {
                         ++resSetCount
                         resultData[`Result set ${resSetCount}`] = res
                     } else if (this.$typy(res, 'errno').isDefined) {
-                        resultData[`Error`] = res
+                        resultData[this.errorTabId] = res
                     } else {
                         ++resCount
                         resultData[`Result ${resCount}`] = res
@@ -187,33 +218,53 @@ export default {
                 return resultData
             } else return {}
         },
+        resultTableHeight() {
+            return this.dynDim.height - this.headerHeight
+        },
+        errorTabId() {
+            return 'Error'
+        },
+        isErrorTab() {
+            return this.activeResSet === this.errorTabId
+        },
+    },
+    watch: {
+        isResultSetsMenuOpened(v) {
+            if (v)
+                this.$helpers.doubleRAF(() => {
+                    if (this.isErrorTab) this.$refs.resultSetItems.scrollToBottom()
+                })
+        },
     },
     activated() {
         this.setHeaderHeight()
-        this.watch_resultData()
+        this.watch_resultSetItems()
     },
     deactivated() {
-        this.$typy(this.unwatch_resultData).safeFunction()
+        this.$typy(this.unwatch_resultSetItems).safeFunction()
     },
     methods: {
-        watch_resultData() {
-            this.unwatch_resultData = this.$watch('resultData', () => {
-                if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
+        watch_resultSetItems() {
+            this.unwatch_resultSetItems = this.$watch('resultSetItems', v => {
+                if (v.length) {
+                    const errResSetIdx = v.findIndex(item => item.id === this.errorTabId)
+                    this.activeResSet = errResSetIdx >= 0 ? v[errResSetIdx].id : v[0].id
+                }
             })
-        },
-        /**
-         * This function checks for result set having syntax error or error message
-         * @returns {String} Return resultData key tab name. e.g. Result_set_0
-         */
-        getErrTabName() {
-            for (const key in this.resultData) {
-                if (this.$typy(this.resultData[key], 'errno').isDefined) return key
-            }
         },
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
         },
+        onClickResSetTab(item) {
+            this.activeResSet = item.id
+        },
     },
 }
 </script>
+<style lang="scss" scoped>
+.result-sets-list {
+    overflow-y: auto;
+    background: white;
+}
+</style>
