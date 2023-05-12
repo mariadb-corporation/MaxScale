@@ -21,7 +21,7 @@ import queries from '@wsSrc/api/queries'
 export default {
     namespaced: true,
     actions: {
-        async queryTblCreationInfo({ commit }, node) {
+        async queryTblCreationInfo({ commit, rootState }, node) {
             const config = Worksheet.getters('getActiveRequestConfig')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
@@ -75,15 +75,13 @@ export default {
                 })
                 tblOptsData = $typy(optsRows, '[0]').safeObject
                 colsOptsData = $typy(colsOptsRes, 'data.data.attributes.results[0]').safeObject
-
-                const schemas = node.qualified_name.split('.')
-                const db = schemas[0]
-
+                const { NODE_TYPES } = rootState.mxsWorkspace.config
+                const schema = node.parentNameData[NODE_TYPES.SCHEMA]
                 Editor.update({
                     where: activeQueryTabId,
                     data(editor) {
                         editor.tbl_creation_info.data = {
-                            table_opts_data: { dbName: db, ...tblOptsData },
+                            table_opts_data: { dbName: schema, ...tblOptsData },
                             cols_opts_data: colsOptsData,
                         }
                         editor.tbl_creation_info.loading_tbl_creation_info = false
