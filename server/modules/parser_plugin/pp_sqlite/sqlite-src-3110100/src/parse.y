@@ -86,7 +86,7 @@ typedef enum qc_field_usage
 extern void mxs_sqlite3AlterFinishAddColumn(Parse *, Token *);
 extern void mxs_sqlite3AlterBeginAddColumn(Parse *, SrcList *);
 extern void mxs_sqlite3Analyze(Parse *, SrcList *);
-extern void mxs_sqlite3BeginTransaction(Parse*, int token, int type);
+extern void mxs_sqlite3BeginTransaction(Parse*, mxs_begin_t, int token, int type);
 extern void mxs_sqlite3CommitTransaction(Parse*);
 extern void mxs_sqlite3CreateIndex(Parse*,Token*,Token*,SrcList*,ExprList*,int,Token*,
                                    Expr*, int, int);
@@ -337,7 +337,10 @@ cmdx ::= cmd.           { sqlite3FinishCoding(pParse); }
 %ifdef MAXSCALE
 work_opt ::= WORK.
 work_opt ::= .
-cmd ::= BEGIN work_opt. {mxs_sqlite3BeginTransaction(pParse, TK_BEGIN, 0);} // BEGIN [WORK]
+cmd ::= BEGIN work_opt. {
+  mxs_sqlite3BeginTransaction(pParse, MXS_BEGIN_TRANSACTION, TK_BEGIN, 0);
+} // BEGIN [WORK]
+cmd ::= BEGIN NOT ATOMIC. {mxs_sqlite3BeginTransaction(pParse, MXS_BEGIN_NOT_ATOMIC, TK_BEGIN, 0);}
 %endif
 %ifndef MAXSCALE
 cmd ::= BEGIN transtype(Y) trans_opt.  {sqlite3BeginTransaction(pParse, Y);}
@@ -3574,7 +3577,7 @@ start_transaction_characteristics(A) ::=
 }
 
 cmd ::= START TRANSACTION start_transaction_characteristics(X). {
-  mxs_sqlite3BeginTransaction(pParse, TK_START, X);
+  mxs_sqlite3BeginTransaction(pParse, MXS_BEGIN_TRANSACTION, TK_START, X);
 }
 
 //////////////////////// The XA statement ////////////////////////////////////
@@ -3594,7 +3597,7 @@ xa_start ::= START.
 xa_start ::= BEGIN.
 
 cmd ::= XA xa_start xid xa_start_opt. {
-  mxs_sqlite3BeginTransaction(pParse, TK_START, 0);
+  mxs_sqlite3BeginTransaction(pParse, MXS_BEGIN_TRANSACTION, TK_START, 0);
 }
 
 xa_end_opt ::= .
