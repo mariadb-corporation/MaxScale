@@ -22,14 +22,14 @@ set(CPACK_STRIP_FILES FALSE)
 set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
-set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
-set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
+set(CPACK_PACKAGE_CONTACT "MariaDB plc")
+set(CPACK_PACKAGE_VENDOR "MariaDB plc")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
 # Descriptions for the main packages
 set(core_PACKAGE_SUMMARY "MaxScale - An intelligent database proxy")
 set(core_PACKAGE_DESCRIPTION "
-The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
+MariaDB MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database servers using complex rules,
 a semantic understanding of the database statements and the roles of
 the various servers within the backend cluster of databases.
