@@ -338,7 +338,9 @@ bool Reply::is_complete() const
 
 bool Reply::has_started() const
 {
-    return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
+    bool partially_read = m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
+    bool multiple_results = m_multiresult && m_reply_state == ReplyState::START;
+    return partially_read || multiple_results;
 }
 
 bool Reply::is_resultset() const
@@ -447,6 +449,11 @@ void Reply::set_server_status(uint16_t status)
     m_server_status = status;
 }
 
+void Reply::set_multiresult(bool multiresult)
+{
+    m_multiresult = multiresult;
+}
+
 void Reply::clear()
 {
     m_command = 0;
@@ -458,6 +465,7 @@ void Reply::clear()
     m_generated_id = 0;
     m_param_count = 0;
     m_is_ok = false;
+    m_multiresult = false;
     m_field_counts.clear();
     m_variables.clear();
 }
