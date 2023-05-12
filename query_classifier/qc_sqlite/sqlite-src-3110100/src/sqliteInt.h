@@ -4092,6 +4092,12 @@ int sqlite3DbstatRegister(sqlite3*);
 
 #ifdef MAXSCALE
 
+typedef enum mxs_begin
+{
+    MXS_BEGIN_TRANSACTION,
+    MXS_BEGIN_NOT_ATOMIC
+} mxs_begin_t;
+
 typedef enum mxs_drop
 {
     MXS_DROP_DATABASE,
