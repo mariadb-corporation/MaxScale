@@ -1,7 +1,7 @@
 # RPM specific CPack configuration parameters
 
 set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
-set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
+set(CPACK_RPM_PACKAGE_VENDOR "MariaDB plc")
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc /etc/ld.so.conf.d /etc/init.d /etc/rc.d/init.d /usr/share/man /usr/share/man1")
 set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
 set(CPACK_RPM_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
