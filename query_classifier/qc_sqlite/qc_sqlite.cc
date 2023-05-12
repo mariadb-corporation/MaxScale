@@ -3323,7 +3323,7 @@ public:
 
         char* zDatabase;
 
-        char database[pDatabase ? pDatabase->n + 1 : 0];
+        char database[pDatabase ? pDatabase->n + 1 : 1];
         if (pDatabase)
         {
             memcpy(database, pDatabase->z, pDatabase->n);
