@@ -23,7 +23,6 @@
         "chartjs-plugin-streaming": "^1.8.0",
         "core-js": "^3.6.5",
         "deepmerge": "^4.2.2",
-        "fibers": "^4.0.3",
         "git-describe": "^4.0.4",
         "lodash": "^4.17.19",
         "moment-duration-format": "^2.3.2",
