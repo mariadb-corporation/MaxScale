@@ -194,3 +194,8 @@ SET STATEMENT max_statement_time = 60 FOR INSERT INTO t (f) VALUES (current_time
 # "transaction" is always parsed as a registered keyword. It should be parsed as an
 # identifier if it cannot be used as a keyword.
 SELECT uuid FROM Transaction LIMIT 1;
+
+# MXS-4614
+# This not the beginning of a transaction but of a non atomic block. qc_mysqlembedded
+# classifies as QUERY_TYPE_WRITE but qc_sqlite used to classify as QUERY_TYPE_BEGIN_TRX.
+BEGIN NOT ATOMIC SELECT 1; SELECT 2; END;
