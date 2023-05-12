@@ -1725,11 +1725,16 @@ public:
         exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
     }
 
-    void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
+    void mxs_sqlite3BeginTransaction(Parse* pParse, mxs_begin_t what, int token, int type)
     {
         mxb_assert(this_thread.initialized);
 
-        if ((m_sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
+        if (what == MXS_BEGIN_NOT_ATOMIC)
+        {
+            m_status = QC_QUERY_PARSED;
+            m_type_mask = QUERY_TYPE_WRITE;
+        }
+        else if ((m_sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
         {
             m_status = QC_QUERY_PARSED;
             m_type_mask = QUERY_TYPE_BEGIN_TRX | type;
@@ -3639,7 +3644,7 @@ extern "C"
 extern void mxs_sqlite3AlterFinishAddColumn(Parse*, Token*);
 extern void mxs_sqlite3AlterBeginAddColumn(Parse*, SrcList*);
 extern void mxs_sqlite3Analyze(Parse*, SrcList*);
-extern void mxs_sqlite3BeginTransaction(Parse*, int token, int type);
+extern void mxs_sqlite3BeginTransaction(Parse*, mxs_begin_t, int token, int type);
 extern void mxs_sqlite3CommitTransaction(Parse*);
 extern void mxs_sqlite3CreateIndex(Parse*,
                                    Token*,
@@ -4222,14 +4227,14 @@ void mxs_sqlite3Analyze(Parse* pParse, SrcList* pSrcList)
     QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Analyze(pParse, pSrcList));
 }
 
-void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
+void mxs_sqlite3BeginTransaction(Parse* pParse, mxs_begin_t what, int token, int type)
 {
     QC_TRACE();
 
     QcSqliteInfo* pInfo = this_thread.pInfo;
     mxb_assert(pInfo);
 
-    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3BeginTransaction(pParse, token, type));
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3BeginTransaction(pParse, what, token, type));
 }
 
 void mxs_sqlite3BeginTrigger(Parse* pParse,         /* The parse context of the CREATE TRIGGER statement */

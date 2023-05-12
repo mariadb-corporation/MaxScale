@@ -166,6 +166,9 @@ static Keyword aKeywordTable[] = {
   { "AND",              "TK_AND",          ALWAYS                 },
   { "AS",               "TK_AS",           ALWAYS                 },
   { "ASC",              "TK_ASC",          ALWAYS                 },
+#ifdef MAXSCALE
+  { "ATOMIC",           "TK_ATOMIC",       ALWAYS                 },
+#endif
   { "ATTACH",           "TK_ATTACH",       ATTACH                 },
   { "AUTOINCREMENT",    "TK_AUTOINCR",     AUTOINCR               },
 #ifdef MAXSCALE
