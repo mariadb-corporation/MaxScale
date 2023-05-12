@@ -73,11 +73,14 @@ export default () => ({
 const optionalSymbol = 'M 0 0 a 4 4 0 1 0 9 0 a 4 4 0 1 0 -9 0'
 const manySymbol = 'M 9 0 L 18 0 M 9 0 L 18 -5 M 9 0 L 18 5'
 
+export const RELATIONSHIP_OPTIONALITY = {
+    MANDATORY: '1',
+    OPTIONAL: '0',
+}
+
 export const MIN_MAX_CARDINALITY = {
-    ONE: '1',
     ONLY_ONE: '1..1',
     ZERO_OR_ONE: '0..1',
-    MANY: 'N',
     ONE_OR_MANY: '1..N',
     ZERO_OR_MANY: '0..N',
 }

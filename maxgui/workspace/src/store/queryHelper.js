@@ -23,6 +23,7 @@ import { t as typy } from 'typy'
 import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 import tokens from '@wsSrc/utils/createTableTokens'
+import { RELATIONSHIP_OPTIONALITY } from '@share/components/common/MxsSvgGraphs/config'
 
 /**
  * @public
@@ -473,7 +474,13 @@ function genErdNode({ schema, parsedTable, highlightColor }) {
     }
 }
 
-const getNodeHighlightColor = node => node.styles.highlightColor
+const getNodeHighlightColor = node => typy(node, 'styles.highlightColor').safeString
+
+const getColDefData = ({ node, colName }) =>
+    node.data.definitions.cols.find(col => col.name === colName)
+
+const getOptionality = colData =>
+    colData.is_nn ? RELATIONSHIP_OPTIONALITY.MANDATORY : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
 /**
  * @param {object} param.srcNode - source node
@@ -493,13 +500,19 @@ function genErdLink({
 }) {
     const { name, referenced_schema_name, referenced_table_name, on_delete, on_update } = fk
     const target = `${referenced_schema_name}.${referenced_table_name}`
+    const targetNode = nodes.find(n => n.id === target)
+    if (!targetNode) return null
+
+    const colData = getColDefData({ node: srcNode, colName: indexColName })
+    const referencedColData = getColDefData({ node: targetNode, colName: referencedIndexColName })
+
     let link = {
         id: `link_${uuidv1()}`,
         source: srcNode.id,
         target,
         relationshipData: {
             //TODO: Detect relationship type
-            type: `1..N:1..1`,
+            type: `${getOptionality(colData)}..N:${getOptionality(referencedColData)}..1`,
             name,
             on_delete,
             on_update,
@@ -520,16 +533,15 @@ function handleGenErdLink({ srcNode, fk, nodes }) {
     for (const [i, item] of index_col_names.entries()) {
         const indexColName = item.name
         const referencedIndexColName = referenced_index_col_names[i].name
-        links.push(
-            genErdLink({
-                srcNode,
-                fk,
-                indexColName,
-                referencedIndexColName,
-                isPartOfCompositeKey: i >= 1,
-                nodes,
-            })
-        )
+        const linkObj = genErdLink({
+            srcNode,
+            fk,
+            indexColName,
+            referencedIndexColName,
+            isPartOfCompositeKey: i >= 1,
+            nodes,
+        })
+        if (linkObj) links.push(linkObj)
     }
 
     return links
