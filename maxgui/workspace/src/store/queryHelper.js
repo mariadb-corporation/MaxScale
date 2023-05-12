@@ -482,45 +482,59 @@ const getColDefData = ({ node, colName }) =>
 const getOptionality = colData =>
     colData.is_nn ? RELATIONSHIP_OPTIONALITY.MANDATORY : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
+const isIndex = ({ indexDefs, indexCols }) =>
+    indexDefs.some(def => lodash.isEqual(def.index_cols, indexCols))
+
+function getTargetCardinality({ node, indexCols }) {
+    const keys = node.data.definitions.keys
+    const pks = keys[tokens.primaryKey] || []
+    const uniqueKeys = keys[tokens.uniqueKey] || []
+    if (!pks.length && !uniqueKeys.length) return false
+    const isUnique =
+        isIndex({ indexDefs: pks, indexCols }) || isIndex({ indexDefs: uniqueKeys, indexCols })
+    return isUnique ? '1' : 'N'
+}
+
 /**
- * @param {object} param.srcNode - source node
+ * @param {object} param.srcNode - referencing table
+ * @param {object} param.targetNode - referenced table
  * @param {object} param.fk - parsed fk data
  * @param {string} param.indexColName - source column name
  * @param {string} param.referencedIndexColName - target column name
  * @param {boolean} param.isPartOfCompositeKey - is a part of composite FK
- * @param {array} param.nodes - all erd nodes
+ * @param {string} param.srcCardinality - either 1 or N
+ * @param {string} param.targetCardinality - either 1 or N
  */
 function genErdLink({
     srcNode,
+    targetNode,
     fk,
     indexColName,
     referencedIndexColName,
     isPartOfCompositeKey,
-    nodes,
+    srcCardinality,
+    targetCardinality,
 }) {
-    const { name, referenced_schema_name, referenced_table_name, on_delete, on_update } = fk
-    const target = `${referenced_schema_name}.${referenced_table_name}`
-    const targetNode = nodes.find(n => n.id === target)
-    if (!targetNode) return null
+    const { name, on_delete, on_update } = fk
 
     const colData = getColDefData({ node: srcNode, colName: indexColName })
     const referencedColData = getColDefData({ node: targetNode, colName: referencedIndexColName })
 
+    const srcOptionality = getOptionality(colData)
+    const targetOptionality = getOptionality(referencedColData)
+    const type = `${srcOptionality}..${srcCardinality}:${targetOptionality}..${targetCardinality}`
+
     let link = {
         id: `link_${uuidv1()}`,
         source: srcNode.id,
-        target,
+        target: targetNode.id,
         relationshipData: {
-            //TODO: Detect relationship type
-            type: `${getOptionality(colData)}..N:${getOptionality(referencedColData)}..1`,
+            type,
             name,
             on_delete,
             on_update,
             source_attr: indexColName,
             target_attr: referencedIndexColName,
-        },
-        styles: {
-            invisibleHighlightColor: getNodeHighlightColor(nodes.find(n => n.id === target)),
         },
     }
     if (isPartOfCompositeKey) link.isPartOfCompositeKey = isPartOfCompositeKey
@@ -528,22 +542,36 @@ function genErdLink({
 }
 
 function handleGenErdLink({ srcNode, fk, nodes }) {
-    const { index_col_names, referenced_index_col_names } = fk
+    const { index_cols, referenced_schema_name, referenced_table_name, referenced_index_cols } = fk
     let links = []
-    for (const [i, item] of index_col_names.entries()) {
-        const indexColName = item.name
-        const referencedIndexColName = referenced_index_col_names[i].name
-        const linkObj = genErdLink({
-            srcNode,
-            fk,
-            indexColName,
-            referencedIndexColName,
-            isPartOfCompositeKey: i >= 1,
-            nodes,
-        })
-        if (linkObj) links.push(linkObj)
-    }
 
+    const target = `${referenced_schema_name}.${referenced_table_name}`
+    const targetNode = nodes.find(n => n.id === target)
+    const invisibleHighlightColor = getNodeHighlightColor(targetNode)
+    if (targetNode) {
+        //TODO: Detect the cardinality type of the source
+        const srcCardinality = '1'
+        const targetCardinality = getTargetCardinality({
+            node: targetNode,
+            indexCols: referenced_index_cols,
+        })
+        for (const [i, item] of index_cols.entries()) {
+            const indexColName = item.name
+            const referencedIndexColName = referenced_index_cols[i].name
+            let linkObj = genErdLink({
+                srcNode,
+                targetNode,
+                fk,
+                indexColName,
+                referencedIndexColName,
+                isPartOfCompositeKey: i >= 1,
+                srcCardinality,
+                targetCardinality,
+            })
+            linkObj.styles = { invisibleHighlightColor }
+            links.push(linkObj)
+        }
+    }
     return links
 }
 /**

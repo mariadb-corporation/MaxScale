@@ -48,9 +48,9 @@ function stubColDef({
 function stubKeyDef({
     category,
     name,
-    index_col_names,
+    index_cols,
     match_option,
-    referenced_index_col_names,
+    referenced_index_cols,
     referenced_schema_name,
     referenced_table_name,
     on_delete,
@@ -59,9 +59,9 @@ function stubKeyDef({
     return {
         category,
         name,
-        index_col_names,
+        index_cols,
         match_option,
-        referenced_index_col_names,
+        referenced_index_cols,
         referenced_schema_name,
         referenced_table_name,
         on_delete,
@@ -158,17 +158,17 @@ const expectedColIndexNameDefs = {
 const expectedKeyDefs = {
     'PRIMARY KEY (`col_int`)': stubKeyDef({
         category: 'PRIMARY KEY',
-        index_col_names: [stubIndexColNameDef({ name: '`col_int`' })],
+        index_cols: [stubIndexColNameDef({ name: '`col_int`' })],
     }),
     'UNIQUE KEY `col_invisible_UNIQUE` (`col_invisible`)': stubKeyDef({
         category: 'UNIQUE KEY',
         name: '`col_invisible_UNIQUE`',
-        index_col_names: [stubIndexColNameDef({ name: '`col_invisible`' })],
+        index_cols: [stubIndexColNameDef({ name: '`col_invisible`' })],
     }),
     'UNIQUE KEY `col_invisible_col_string_UNIQUE` (`col_invisible`,`col_string`)': stubKeyDef({
         category: 'UNIQUE KEY',
         name: '`col_invisible_col_string_UNIQUE`',
-        index_col_names: [
+        index_cols: [
             stubIndexColNameDef({ name: '`col_invisible`' }),
             stubIndexColNameDef({ name: '`col_string`' }),
         ],
@@ -176,12 +176,12 @@ const expectedKeyDefs = {
     'KEY `col_a_PLAIN` (`col_a`)': stubKeyDef({
         category: 'KEY',
         name: '`col_a_PLAIN`',
-        index_col_names: [stubIndexColNameDef({ name: '`col_a`' })],
+        index_cols: [stubIndexColNameDef({ name: '`col_a`' })],
     }),
     'KEY `name_idx` (`last_name`(30) DESC,`first_name`(30))': stubKeyDef({
         category: 'KEY',
         name: '`name_idx`',
-        index_col_names: [
+        index_cols: [
             stubIndexColNameDef({ name: '`last_name`', length: '30', order: 'DESC' }),
             stubIndexColNameDef({ name: '`first_name`', length: '30' }),
         ],
@@ -189,7 +189,7 @@ const expectedKeyDefs = {
     'KEY `name_idx` (`last_name`(30) ASC,`first_name`)': stubKeyDef({
         category: 'KEY',
         name: '`name_idx`',
-        index_col_names: [
+        index_cols: [
             stubIndexColNameDef({ name: '`last_name`', length: '30', order: 'ASC' }),
             stubIndexColNameDef({ name: '`first_name`' }),
         ],
@@ -197,16 +197,16 @@ const expectedKeyDefs = {
     'CONSTRAINT `songs_album_id` FOREIGN KEY (`album_id`) REFERENCES `albums` (`id`)': stubKeyDef({
         category: 'FOREIGN KEY',
         name: '`songs_album_id`',
-        index_col_names: [stubIndexColNameDef({ name: '`album_id`' })],
-        referenced_index_col_names: [stubIndexColNameDef({ name: '`id`' })],
+        index_cols: [stubIndexColNameDef({ name: '`album_id`' })],
+        referenced_index_cols: [stubIndexColNameDef({ name: '`id`' })],
         referenced_table_name: '`albums`',
     }),
     ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES `customers` (`id`) " +
     'ON DELETE CASCADE']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: '`orders_ibfk_1`',
-        index_col_names: [stubIndexColNameDef({ name: "`customer's id`" })],
-        referenced_index_col_names: [stubIndexColNameDef({ name: '`id`' })],
+        index_cols: [stubIndexColNameDef({ name: "`customer's id`" })],
+        referenced_index_cols: [stubIndexColNameDef({ name: '`id`' })],
         referenced_table_name: '`customers`',
         on_delete: 'CASCADE',
     }),
@@ -214,8 +214,8 @@ const expectedKeyDefs = {
     'ON UPDATE SET NULL']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: '`orders_ibfk_1`',
-        index_col_names: [stubIndexColNameDef({ name: "`customer's id`" })],
-        referenced_index_col_names: [stubIndexColNameDef({ name: '`id`' })],
+        index_cols: [stubIndexColNameDef({ name: "`customer's id`" })],
+        referenced_index_cols: [stubIndexColNameDef({ name: '`id`' })],
         referenced_table_name: '`customers`',
         on_update: 'SET NULL',
     }),
@@ -223,8 +223,8 @@ const expectedKeyDefs = {
     'ON DELETE CASCADE ON UPDATE NO ACTION']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: '`orders_ibfk_1`',
-        index_col_names: [stubIndexColNameDef({ name: "`customer's id`" })],
-        referenced_index_col_names: [stubIndexColNameDef({ name: '`id`' })],
+        index_cols: [stubIndexColNameDef({ name: "`customer's id`" })],
+        referenced_index_cols: [stubIndexColNameDef({ name: '`id`' })],
         referenced_table_name: '`customers`',
         on_delete: 'CASCADE',
         on_update: 'NO ACTION',
@@ -233,8 +233,8 @@ const expectedKeyDefs = {
     'FOREIGN KEY (`customer_id`) REFERENCES `db1`.`customers` (`customer_id`)']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: '`orders_ibfk_1`',
-        index_col_names: [stubIndexColNameDef({ name: '`customer_id`' })],
-        referenced_index_col_names: [stubIndexColNameDef({ name: '`customer_id`' })],
+        index_cols: [stubIndexColNameDef({ name: '`customer_id`' })],
+        referenced_index_cols: [stubIndexColNameDef({ name: '`customer_id`' })],
         referenced_schema_name: '`db1`',
         referenced_table_name: '`customers`',
     }),

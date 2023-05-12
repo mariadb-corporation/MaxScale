@@ -350,7 +350,7 @@ export default {
             const keyTypes = [tokens.primaryKey, tokens.uniqueKey, tokens.key]
             return keyTypes.find(type =>
                 this.$typy(nodeKeys, `[${type}]`).safeArray.some(key =>
-                    key.index_col_names.some(item => item.name === colName)
+                    key.index_cols.some(item => item.name === colName)
                 )
             )
         },

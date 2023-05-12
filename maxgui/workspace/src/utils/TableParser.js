@@ -116,9 +116,9 @@ export default class TableParser {
         return {
             category,
             name,
-            index_col_names: this.parseIndexColNames(index_col_names),
+            index_cols: this.parseIndexColNames(index_col_names),
             match_option,
-            referenced_index_col_names: this.parseIndexColNames(referenced_index_col_names),
+            referenced_index_cols: this.parseIndexColNames(referenced_index_col_names),
             referenced_schema_name,
             referenced_table_name,
             on_delete,
