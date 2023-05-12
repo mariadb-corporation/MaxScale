@@ -486,7 +486,7 @@ private:
     {
         result_t rv = IS_SET_SQL_MODE;
 
-        char c = *pSql_mode;
+        char c = 0;
 
         do
         {
