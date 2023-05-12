@@ -1,6 +1,6 @@
 {
     "name": "mxs-workspace",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "description": "MaxScale workspace UI",
     "author": "MariaDB Corporation Ab",
     "license": "https://mariadb.com/bsl11/",
