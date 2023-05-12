@@ -873,6 +873,9 @@ add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_ca
 # MXS-4440: connection_keepalive doesn't work with long queries
 add_test_executable(mxs4440_long_query_keepalive.cc mxs4440_long_query_keepalive mxs4440_long_query_keepalive LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4615: Partially executed multistatements aren't treated as partial results
+add_test_executable(mxs4615_partial_multistmt.cc mxs4615_partial_multistmt mxs4615_partial_multistmt LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
