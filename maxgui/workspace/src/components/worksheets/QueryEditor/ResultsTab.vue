@@ -52,7 +52,7 @@
                         class="text-capitalize font-weight-medium"
                         outlined
                         depressed
-                        :color="`${isErrorTab ? 'error' : 'accent-dark'}`"
+                        :color="`${isErrorTab ? 'error' : 'primary'}`"
                         v-bind="attrs"
                         v-on="on"
                     >
