@@ -372,7 +372,6 @@ bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
             m_readq.prepare_to_write(BASE_READ_BUFFER_SIZE);
 
         auto ret = ::read(m_fd, ptr, read_limit);
-        m_stats.n_reads++;
         if (ret > 0)
         {
             MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
@@ -486,7 +485,6 @@ bool DCB::socket_read_SSL(size_t maxbytes)
 
         ERR_clear_error();
         auto ret = SSL_read(m_encryption.handle, ptr, read_limit);
-        m_stats.n_reads++;
         if (ret > 0)
         {
             m_readq.write_complete(ret);
@@ -680,14 +678,12 @@ bool DCB::writeq_append(GWBUF&& data)
         mxb_assert(m_state != DCB::State::DISCONNECTED);
     }
 
-    m_stats.n_buffered++;
     writeq_drain();
 
     if (m_high_water > 0 && m_writeq.length() > m_high_water && !m_high_water_reached)
     {
         call_callback(Reason::HIGH_WATER);
         m_high_water_reached = true;
-        m_stats.n_high_water++;
     }
     return true;    // Propagate this change to callers once it's clear the asserts are not hit.
 }
@@ -746,7 +742,6 @@ void DCB::writeq_drain()
     {
         call_callback(Reason::LOW_WATER);
         m_high_water_reached = false;
-        m_stats.n_low_water++;
     }
 }
 

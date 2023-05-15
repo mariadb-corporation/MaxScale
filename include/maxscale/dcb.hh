@@ -83,16 +83,6 @@ public:
         }
     };
 
-    struct Stats
-    {
-        int n_reads = 0;        /*< Number of reads on this descriptor */
-        int n_writes = 0;       /*< Number of writes on this descriptor */
-        int n_accepts = 0;      /*< Number of accepts on this descriptor */
-        int n_buffered = 0;     /*< Number of buffered writes */
-        int n_high_water = 0;   /*< Number of crosses of high water mark */
-        int n_low_water = 0;    /*< Number of crosses of low water mark */
-    };
-
     enum class Role
     {
         CLIENT,         /*< Serves dedicated client */
@@ -215,14 +205,6 @@ public:
     void clear();
 
     SERVICE* service() const;
-
-    /**
-     * @return DCB statistics.
-     */
-    const Stats& stats() const
-    {
-        return m_stats;
-    }
 
     /**
      * @return True, if SSL has been enabled, false otherwise.
@@ -649,7 +631,6 @@ protected:
     int64_t    m_last_read;             /**< Last time the DCB received data */
     int64_t    m_last_write;            /**< Last time the DCB sent data */
     Encryption m_encryption;            /**< Encryption state */
-    Stats      m_stats;                 /**< DCB related statistics */
 
     GWBUF    m_writeq;                  /**< Write Data Queue */
     GWBUF    m_readq;                   /**< Read queue for incomplete reads */
