@@ -1549,16 +1549,6 @@ bool MariaDBClientConnection::write(GWBUF&& buffer)
     return m_dcb->writeq_append(move(buffer));
 }
 
-void MariaDBClientConnection::write_ready(DCB* event_dcb)
-{
-    mxb_assert(m_dcb == event_dcb);
-    mxb_assert(m_dcb->state() != DCB::State::DISCONNECTED);
-    if ((m_dcb->state() != DCB::State::DISCONNECTED) && (m_state == State::READY))
-    {
-        m_dcb->writeq_drain();
-    }
-}
-
 void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);

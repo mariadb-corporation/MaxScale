@@ -764,7 +764,6 @@ private:
         DCBHandler(RoutingWorker* pOwner);
 
         void ready_for_reading(DCB* pDcb) override;
-        void write_ready(DCB* pDcb) override;
         void error(DCB* dcb) override;
         void hangup(DCB* dcb) override;
 

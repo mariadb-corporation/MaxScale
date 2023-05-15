@@ -168,18 +168,6 @@ void ClientConnection::ready_for_reading(DCB* pDcb)
     }
 }
 
-void ClientConnection::write_ready(DCB* pDcb)
-{
-    mxb_assert(m_pDcb == pDcb);
-    mxb_assert(m_pDcb->state() != DCB::State::DISCONNECTED);
-
-    if (m_pDcb->state() != DCB::State::DISCONNECTED)
-    {
-        // TODO: Probably some state management will be needed.
-        m_pDcb->writeq_drain();
-    }
-}
-
 void ClientConnection::error(DCB* pDcb)
 {
     mxb_assert(m_pDcb == pDcb);

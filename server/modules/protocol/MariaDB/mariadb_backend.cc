@@ -1032,56 +1032,6 @@ void MariaDBBackendConnection::read_com_ping_response()
     }
 }
 
-void MariaDBBackendConnection::write_ready(DCB* event_dcb)
-{
-    mxb_assert(m_dcb == event_dcb);
-    auto dcb = m_dcb;
-    if (dcb->state() != DCB::State::POLLING)
-    {
-        /** Don't write to backend if backend_dcb is not in poll set anymore */
-        const uint8_t* data = NULL;
-        bool com_quit = false;
-
-        if (!dcb->writeq_empty())
-        {
-            data = dcb->writeq().data();
-            com_quit = MYSQL_IS_COM_QUIT(data);
-        }
-
-        if (data)
-        {
-            if (!com_quit)
-            {
-                MXB_ERROR("Attempt to write buffered data to backend failed due internal inconsistent "
-                          "state: %s", mxs::to_string(dcb->state()));
-            }
-        }
-        else
-        {
-            MXB_DEBUG("Dcb %p in state %s but there's nothing to write either.",
-                      dcb, mxs::to_string(dcb->state()));
-        }
-    }
-    else
-    {
-        if (m_state == State::HANDSHAKING && m_hs_state == HandShakeState::SEND_PROHY_HDR)
-        {
-            // Write ready is usually the first event delivered after a connection is made.
-            // Proxy header should be sent in case the server is waiting for it.
-            if (m_server.proxy_protocol())
-            {
-                m_hs_state = (send_proxy_protocol_header()) ? HandShakeState::EXPECT_HS :
-                    HandShakeState::FAIL;
-            }
-            else
-            {
-                m_hs_state = HandShakeState::EXPECT_HS;
-            }
-        }
-        dcb->writeq_drain();
-    }
-}
-
 bool MariaDBBackendConnection::write(GWBUF&& queue)
 {
     int rc = 0;
@@ -2493,6 +2443,21 @@ MariaDBBackendConnection::~MariaDBBackendConnection()
 void MariaDBBackendConnection::set_dcb(DCB* dcb)
 {
     m_dcb = static_cast<BackendDCB*>(dcb);
+
+    if (m_state == State::HANDSHAKING && m_hs_state == HandShakeState::SEND_PROHY_HDR)
+    {
+        // Write ready is usually the first event delivered after a connection is made.
+        // Proxy header should be sent in case the server is waiting for it.
+        if (m_server.proxy_protocol())
+        {
+            m_hs_state = (send_proxy_protocol_header()) ? HandShakeState::EXPECT_HS :
+                HandShakeState::FAIL;
+        }
+        else
+        {
+            m_hs_state = HandShakeState::EXPECT_HS;
+        }
+    }
 }
 
 const BackendDCB* MariaDBBackendConnection::dcb() const

@@ -317,12 +317,6 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
     }
 }
 
-void CDCClientConnection::write_ready(DCB* event_dcb)
-{
-    mxb_assert(m_dcb == event_dcb);
-    m_dcb->writeq_drain();
-}
-
 bool CDCClientConnection::write(GWBUF&& buffer)
 {
     return m_dcb->writeq_append(std::move(buffer));

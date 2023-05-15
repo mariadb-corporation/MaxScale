@@ -43,7 +43,6 @@ public:
 
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;
-    void write_ready(DCB* dcb) override;
     void error(DCB* dcb) override;
     void hangup(DCB* dcb) override;
 

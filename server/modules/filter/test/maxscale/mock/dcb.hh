@@ -103,11 +103,6 @@ private:
             mxb_assert(!true);
         }
 
-        void write_ready(DCB*) override
-        {
-            mxb_assert(!true);
-        }
-
         void error(DCB*) override
         {
             mxb_assert(!true);

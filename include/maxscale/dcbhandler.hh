@@ -28,13 +28,6 @@ public:
     virtual void ready_for_reading(DCB* dcb) = 0;
 
     /**
-     * EPOLLOUT handler, used to write buffered data
-     *
-     * @param dcb  DCB to write to.
-     */
-    virtual void write_ready(DCB* dcb) = 0;
-
-    /**
      * EPOLLERR handler
      *
      * @param dcb  DCB for which the error occurred.

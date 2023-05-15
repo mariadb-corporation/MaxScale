@@ -118,11 +118,6 @@ void PgBackendConnection::ready_for_reading(DCB* dcb)
     }
 }
 
-void PgBackendConnection::write_ready(DCB* dcb)
-{
-    m_dcb->writeq_drain();
-}
-
 void PgBackendConnection::error(DCB* dcb)
 {
     m_upstream->handleError(mxs::ErrorType::TRANSIENT, "Error", nullptr, m_reply);

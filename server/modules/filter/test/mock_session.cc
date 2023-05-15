@@ -48,10 +48,6 @@ public:
     {
     }
 
-    void write_ready(DCB* dcb) override
-    {
-    }
-
     bool write(GWBUF&& buffer)override
     {
         return true;

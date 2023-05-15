@@ -1229,7 +1229,7 @@ uint32_t DCB::process_events(uint32_t events)
 
         rc |= mxb::poll_action::WRITE;
 
-        m_handler->write_ready(this);
+        writeq_drain();
     }
 
     if ((events & EPOLLIN) && (m_open))

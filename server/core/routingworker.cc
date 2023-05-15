@@ -243,11 +243,6 @@ void RoutingWorker::DCBHandler::ready_for_reading(DCB* pDcb)
     m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
 }
 
-void RoutingWorker::DCBHandler::write_ready(DCB* pDcb)
-{
-    m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
-}
-
 void RoutingWorker::DCBHandler::error(DCB* pDcb)
 {
     m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));

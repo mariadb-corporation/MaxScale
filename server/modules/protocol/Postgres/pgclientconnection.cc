@@ -459,16 +459,6 @@ PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)
     return State::ROUTE;
 }
 
-void PgClientConnection::write_ready(DCB* dcb)
-{
-    mxb_assert(m_dcb == dcb);
-    mxb_assert(m_dcb->state() != DCB::State::DISCONNECTED);
-
-    // TODO: Probably some state handling is needed.
-
-    m_dcb->writeq_drain();
-}
-
 void PgClientConnection::error(DCB* dcb)
 {
     // TODO: Add some logging in case we didn't expect this
