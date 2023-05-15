@@ -134,6 +134,16 @@ public:
     }
 
     /**
+     * The sockaddr struct of the connected peer
+     */
+    const sockaddr_storage& ip() const
+    {
+        return m_ip;
+    }
+
+    void set_remote_ip_port(const sockaddr_storage& ip, std::string&& ip_str);
+
+    /**
      * @return The remote host of the DCB.
      */
     const std::string& remote() const
@@ -574,6 +584,7 @@ public:
 
 protected:
     DCB(int fd,
+        const sockaddr_storage& ip,
         const std::string& remote,
         Role role,
         MXS_SESSION* session,
@@ -587,8 +598,6 @@ protected:
     bool create_SSL(const mxs::SSLContext& ssl);
 
     bool verify_peer_host();
-
-    void set_remote(std::string&& remote);
 
     /**
      * Release the instance from the associated session.
@@ -612,9 +621,10 @@ protected:
         int      retry_write_size = 0;
     };
 
-    mxb::Worker*   m_owner { nullptr };
-    const uint64_t m_uid;   /**< Unique identifier for this DCB */
-    int            m_fd;    /**< The descriptor */
+    mxb::Worker*     m_owner {nullptr};
+    const uint64_t   m_uid; /**< Unique identifier for this DCB */
+    int              m_fd;  /**< The descriptor */
+    sockaddr_storage m_ip;  /**< remote IPv4/IPv6 address */
 
     const Role        m_role;           /**< The role of the DCB */
     std::string       m_remote;         /**< The remote host */
@@ -693,13 +703,6 @@ public:
            std::unique_ptr<mxs::ClientConnection> protocol,
            DCB::Manager* manager);
 
-    const sockaddr_storage& ip() const
-    {
-        return m_ip;
-    }
-
-    void set_remote_ip_port(const sockaddr_storage& ip, std::string&& ip_str);
-
     /**
      * @brief Return the port number this DCB is connected to
      *
@@ -762,7 +765,6 @@ private:
 
     bool release_from(MXS_SESSION* session) override;
 
-    sockaddr_storage                       m_ip;                /**< remote IPv4/IPv6 address */
     std::unique_ptr<mxs::ClientConnection> m_protocol;          /**< The protocol session */
 };
 
@@ -854,7 +856,7 @@ public:
     std::string whoami() const override;
 
 private:
-    BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
+    BackendDCB(SERVER* server, int fd, const sockaddr_storage& ip, MXS_SESSION* session,
                DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;

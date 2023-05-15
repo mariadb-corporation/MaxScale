@@ -1447,20 +1447,8 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
     const ClientDCB* client_dcb = m_session->client_connection()->dcb();
     const auto& client_addr = client_dcb->ip();         // Client address was filled in by accept().
 
-    // Fill in the target server's address.
-    sockaddr_storage server_addr {};
-    socklen_t server_addrlen = sizeof(server_addr);
-    int res = getpeername(m_dcb->fd(), (sockaddr*)&server_addr, &server_addrlen);
-    if (res != 0)
-    {
-        int eno = errno;
-        MXB_ERROR("getpeername() failed on connection to '%s' when forming proxy protocol header. "
-                  "Error %d: '%s'", m_server.name(), eno, mxb_strerror(eno));
-        return false;
-    }
-
     bool success = false;
-    auto proxyhdr_res = mxb::proxy_protocol::gen_text_header(client_addr, server_addr);
+    auto proxyhdr_res = mxb::proxy_protocol::gen_text_header(client_addr, m_dcb->ip());
     if (proxyhdr_res.errmsg.empty())
     {
         auto ptr = reinterpret_cast<uint8_t*>(proxyhdr_res.header);

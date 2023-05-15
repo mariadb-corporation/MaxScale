@@ -121,6 +121,7 @@ static mxb::Worker* get_dcb_owner()
 }
 
 DCB::DCB(int fd,
+         const sockaddr_storage& ip,
          const std::string& remote,
          Role role,
          MXS_SESSION* session,
@@ -129,6 +130,7 @@ DCB::DCB(int fd,
     : m_owner(get_dcb_owner())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
+    , m_ip(ip)
     , m_role(role)
     , m_remote(remote)
     , m_client_remote(session->client_remote())
@@ -1711,8 +1713,7 @@ ClientDCB::ClientDCB(int fd,
                      MXS_SESSION* session,
                      std::unique_ptr<ClientConnection> protocol,
                      Manager* manager)
-    : DCB(fd, remote, role, session, protocol.get(), manager)
-    , m_ip(ip)
+    : DCB(fd, ip, remote, role, session, protocol.get(), manager)
     , m_protocol(std::move(protocol))
 {
     if (m_high_water)
@@ -1865,12 +1866,6 @@ void ClientDCB::close(ClientDCB* dcb)
     DCB::close(dcb);
 }
 
-void ClientDCB::set_remote_ip_port(const sockaddr_storage& ip, std::string&& ip_str)
-{
-    m_ip = ip;
-    set_remote(std::move(ip_str));
-}
-
 void DCB::close(DCB* dcb)
 {
 #if defined (SS_DEBUG)
@@ -1911,8 +1906,9 @@ void DCB::unread(GWBUF&& buffer)
     m_readq.merge_front(move(buffer));
 }
 
-void DCB::set_remote(string&& remote)
+void DCB::set_remote_ip_port(const sockaddr_storage& ip, string&& remote)
 {
+    m_ip = ip;
     m_remote = std::move(remote);
 }
 
@@ -1922,11 +1918,12 @@ void DCB::set_remote(string&& remote)
 BackendDCB* BackendDCB::connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager)
 {
     BackendDCB* rval = nullptr;
-    int fd = connect_socket(server->address(), server->port());
+    sockaddr_storage addr{};
+    int fd = connect_socket(server->address(), server->port(), &addr);
 
     if (fd >= 0)
     {
-        rval = new(std::nothrow) BackendDCB(server, fd, session, manager);
+        rval = new(std::nothrow) BackendDCB(server, fd, addr, session, manager);
         if (!rval)
         {
             ::close(fd);
@@ -2081,9 +2078,9 @@ int BackendDCB::ssl_handshake()
     return return_code;
 }
 
-BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
+BackendDCB::BackendDCB(SERVER* server, int fd, const sockaddr_storage& ip, MXS_SESSION* session,
                        DCB::Manager* manager)
-    : DCB(fd, server->address(), DCB::Role::BACKEND, session, nullptr, manager)
+    : DCB(fd, ip, server->address(), DCB::Role::BACKEND, session, nullptr, manager)
     , m_server(server)
     , m_ssl(static_cast<Server*>(server)->ssl())
 {

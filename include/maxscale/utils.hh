@@ -103,10 +103,11 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path);
  *
  * @param host The host to connect to
  * @param port The port to connect to
+ * @param addr The resolved address to the target server
  *
  * @return The connected file descriptor or -1 on error
  */
-int connect_socket(const char* host, int port);
+int connect_socket(const char* host, int port, sockaddr_storage* addr);
 
 int   setnonblocking(int fd);
 int   setblocking(int fd);

@@ -611,29 +611,28 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
     return fd;
 }
 
-int connect_socket(const char* host, int port)
+int connect_socket(const char* host, int port, sockaddr_storage* addr)
 {
     // Start the watchdog notifier workaround, the getaddrinfo call done by connect_socket() can take a long
     // time in some corner cases.
     mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
-    struct sockaddr_storage addr = {};
     int so;
     size_t sz;
 
     if (host[0] == '/')
     {
-        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&addr, host);
+        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)addr, host);
         sz = sizeof(sockaddr_un);
     }
     else
     {
-        so = open_network_socket(MXS_SOCKET_NETWORK, &addr, host, port);
+        so = open_network_socket(MXS_SOCKET_NETWORK, addr, host, port);
         sz = sizeof(sockaddr_storage);
     }
 
     if (so != -1)
     {
-        if (::connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
+        if (::connect(so, (struct sockaddr*)addr, sz) == -1 && errno != EINPROGRESS)
         {
             MXB_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
                       host, port, errno, mxb_strerror(errno));
