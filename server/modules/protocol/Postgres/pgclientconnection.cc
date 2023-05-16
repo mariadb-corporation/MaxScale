@@ -459,13 +459,7 @@ PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)
     return State::ROUTE;
 }
 
-void PgClientConnection::error(DCB* dcb)
-{
-    // TODO: Add some logging in case we didn't expect this
-    m_session.kill();
-}
-
-void PgClientConnection::hangup(DCB* dcb)
+void PgClientConnection::error(DCB* dcb, const char* errmsg)
 {
     // TODO: Add some logging in case we didn't expect this
     m_session.kill();

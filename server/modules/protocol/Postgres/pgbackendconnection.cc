@@ -118,14 +118,9 @@ void PgBackendConnection::ready_for_reading(DCB* dcb)
     }
 }
 
-void PgBackendConnection::error(DCB* dcb)
+void PgBackendConnection::error(DCB* dcb, const char* errmsg)
 {
-    m_upstream->handleError(mxs::ErrorType::TRANSIENT, "Error", nullptr, m_reply);
-}
-
-void PgBackendConnection::hangup(DCB* dcb)
-{
-    m_upstream->handleError(mxs::ErrorType::TRANSIENT, "Hangup", nullptr, m_reply);
+    m_upstream->handleError(mxs::ErrorType::TRANSIENT, errmsg, nullptr, m_reply);
 }
 
 bool PgBackendConnection::write(GWBUF&& buffer)

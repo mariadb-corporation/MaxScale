@@ -1549,14 +1549,7 @@ bool MariaDBClientConnection::write(GWBUF&& buffer)
     return m_dcb->writeq_append(move(buffer));
 }
 
-void MariaDBClientConnection::error(DCB* event_dcb)
-{
-    mxb_assert(m_dcb == event_dcb);
-    mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
-    m_session->kill();
-}
-
-void MariaDBClientConnection::hangup(DCB* event_dcb)
+void MariaDBClientConnection::error(DCB* event_dcb, const char* errmsg)
 {
     mxb_assert(m_dcb == event_dcb);
 

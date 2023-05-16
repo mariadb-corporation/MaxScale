@@ -53,11 +53,7 @@ public:
         return true;
     }
 
-    void error(DCB* dcb) override
-    {
-    }
-
-    void hangup(DCB* dcb) override
+    void error(DCB* dcb, const char* errmsg) override
     {
     }
 

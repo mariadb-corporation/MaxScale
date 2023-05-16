@@ -43,8 +43,7 @@ public:
 
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;
-    void error(DCB* dcb) override;
-    void hangup(DCB* dcb) override;
+    void error(DCB* dcb, const char* errmsg) override;
 
     // mxs::ProtocolConnection
     bool write(GWBUF&& buffer) override;

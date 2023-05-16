@@ -103,12 +103,7 @@ private:
             mxb_assert(!true);
         }
 
-        void error(DCB*) override
-        {
-            mxb_assert(!true);
-        }
-
-        void hangup(DCB*) override
+        void error(DCB*, const char* errmsg) override
         {
             mxb_assert(!true);
         }

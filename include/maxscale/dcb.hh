@@ -804,7 +804,7 @@ public:
      *
      * @param server  BackendDCBs connected to this server should be closed.
      */
-    static void hangup(const SERVER* server);
+    static void generate_hangup(const SERVER* server, const std::string& reason);
     void        shutdown() override;
 
     SERVER* server() const
@@ -861,7 +861,7 @@ private:
 
     bool release_from(MXS_SESSION* session) override;
 
-    static void hangup_cb(const SERVER* server);
+    static void hangup_cb(const SERVER* server, const std::string& reason);
 
     SERVER* const                           m_server;   /**< The associated backend server */
     std::shared_ptr<mxs::SSLContext>        m_ssl;      /**< SSL context for this connection */

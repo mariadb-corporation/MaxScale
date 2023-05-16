@@ -1217,64 +1217,10 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
  * closed and call DCB close function which triggers closing router session
  * and related backends (if any exists.
  */
-void MariaDBBackendConnection::error(DCB* event_dcb)
+void MariaDBBackendConnection::error(DCB* event_dcb, const char* errmsg)
 {
     mxb_assert(m_dcb == event_dcb);
-
-    const auto dcb_state = m_dcb->state();
-    if (dcb_state != DCB::State::POLLING || m_session->state() != MXS_SESSION::State::STARTED)
-    {
-        int error = 0;
-        int len = sizeof(error);
-
-        if (getsockopt(m_dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
-        {
-            MXB_ERROR("Network error in connection to server '%s', session in state '%s' (%s): %d, %s",
-                      m_server.name(), session_state_to_string(m_session->state()), mxs::to_string(dcb_state),
-                      error, mxb_strerror(error));
-        }
-    }
-    else
-    {
-        do_handle_error(m_dcb, "Lost connection to backend server: network error");
-    }
-}
-
-/**
- * Error event handler.
- * Create error message, pass it to router's error handler and if error
- * handler fails in providing enough backend servers, mark session being
- * closed and call DCB close function which triggers closing router session
- * and related backends (if any exists.
- *
- * @param event_dcb The current Backend DCB
- * @return 1 always
- */
-void MariaDBBackendConnection::hangup(DCB* event_dcb)
-{
-    mxb_assert(m_dcb == event_dcb);
-    mxb_assert(m_dcb->is_open());
-    MXS_SESSION* session = m_dcb->session();
-    mxb_assert(session);
-
-    if (session->state() != MXS_SESSION::State::STARTED)
-    {
-        int error;
-        int len = sizeof(error);
-        if (getsockopt(m_dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
-        {
-            if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
-            {
-                MXB_ERROR("Network hangup in connection to server '%s', session in state '%s' (%s): %d, %s",
-                          m_server.name(), session_state_to_string(m_session->state()),
-                          mxs::to_string(m_dcb->state()), error, mxb_strerror(error));
-            }
-        }
-    }
-    else
-    {
-        do_handle_error(m_dcb, "Lost connection to backend server: connection closed by peer");
-    }
+    do_handle_error(m_dcb, mxb::cat("Lost connection to backend server: ", errmsg));
 }
 
 GWBUF MariaDBBackendConnection::create_reset_connection_packet()

@@ -322,13 +322,7 @@ bool CDCClientConnection::write(GWBUF&& buffer)
     return m_dcb->writeq_append(std::move(buffer));
 }
 
-void CDCClientConnection::error(DCB* event_dcb)
-{
-    mxb_assert(m_dcb == event_dcb);
-    ClientDCB::close(m_dcb);
-}
-
-void CDCClientConnection::hangup(DCB* event_dcb)
+void CDCClientConnection::error(DCB* event_dcb, const char* errmsg)
 {
     mxb_assert(m_dcb == event_dcb);
     ClientDCB::close(m_dcb);

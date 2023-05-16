@@ -1313,7 +1313,7 @@ HttpResponse cb_set_server(const HttpRequest& request)
         {
             if (status_is_in_maint(opt) && request.is_truthy_option(CN_FORCE))
             {
-                BackendDCB::hangup(server);
+                BackendDCB::generate_hangup(server, "Server was forced into maintenance");
             }
 
             return HttpResponse(MHD_HTTP_NO_CONTENT);

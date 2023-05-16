@@ -243,16 +243,10 @@ void RoutingWorker::DCBHandler::ready_for_reading(DCB* pDcb)
     m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
 }
 
-void RoutingWorker::DCBHandler::error(DCB* pDcb)
+void RoutingWorker::DCBHandler::error(DCB* pDcb, const char* errmsg)
 {
     m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
 }
-
-void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
-{
-    m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
-}
-
 
 RoutingWorker::RoutingWorker(int index, size_t rebalance_window)
     : mxb::WatchedWorker(this_unit.pNotifier)

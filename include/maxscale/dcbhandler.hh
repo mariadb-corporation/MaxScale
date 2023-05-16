@@ -28,16 +28,10 @@ public:
     virtual void ready_for_reading(DCB* dcb) = 0;
 
     /**
-     * EPOLLERR handler
+     * EPOLLERR, EPOLLHUP and EPOLLRDHUP handler
      *
-     * @param dcb  DCB for which the error occurred.
+     * @param dcb    DCB for which the error occurred.
+     * @param errmsg Human-readable description of the error
      */
-    virtual void error(DCB* dcb) = 0;
-
-    /**
-     * EPOLLHUP and EPOLLRDHUP handler
-     *
-     * @param dcb  DCB for which the hangup occurred.
-     */
-    virtual void hangup(DCB* dcb) = 0;
+    virtual void error(DCB* dcb, const char* errmsg) = 0;
 };

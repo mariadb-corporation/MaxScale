@@ -1220,7 +1220,16 @@ uint32_t DCB::process_events(uint32_t events)
 
         rc |= mxb::poll_action::ERROR;
 
-        m_handler->error(this);
+        std::string errmsg = "Network error";
+        int error = 0;
+        socklen_t len = sizeof(error);
+
+        if (getsockopt(m_fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
+        {
+            errmsg += mxb::cat(": ", std::to_string(error), ", ", mxb_strerror(error));
+        }
+
+        m_handler->error(this, errmsg.c_str());
     }
 
     if ((events & EPOLLOUT) && (m_open))
@@ -1263,11 +1272,11 @@ uint32_t DCB::process_events(uint32_t events)
         }
         else if (-1 == return_code)
         {
-            m_handler->error(this);
+            m_handler->error(this, "TLS handshake failed");
         }
     }
 
-    if ((events & EPOLLHUP) && (m_open))
+    if ((events & (EPOLLHUP | EPOLLRDHUP)) && (m_open))
     {
         mxb_assert(m_handler);
 
@@ -1275,21 +1284,10 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            m_handler->hangup(this);
-
-            m_hanged_up = true;
-        }
-    }
-
-    if ((events & EPOLLRDHUP) && (m_open))
-    {
-        mxb_assert(m_handler);
-
-        rc |= mxb::poll_action::HUP;
-
-        if (!m_hanged_up)
-        {
-            m_handler->hangup(this);
+            if (m_session->state() == MXS_SESSION::State::STARTED)
+            {
+                m_handler->error(this, "Connection closed by peer");
+            }
 
             m_hanged_up = true;
         }
@@ -1947,7 +1945,7 @@ void BackendDCB::reset(MXS_SESSION* session)
 }
 
 // static
-void BackendDCB::hangup_cb(const SERVER* server)
+void BackendDCB::hangup_cb(const SERVER* server, const std::string& reason)
 {
     auto* rworker = RoutingWorker::get_current();
     DCB* old_current = this_thread.current_dcb;
@@ -1965,7 +1963,7 @@ void BackendDCB::hangup_cb(const SERVER* server)
                 {
                     this_thread.current_dcb = backend_dcb;
                     backend_dcb->m_is_fake_event = true;
-                    backend_dcb->m_protocol->hangup(dcb);
+                    backend_dcb->m_protocol->error(dcb, reason.c_str());
                     backend_dcb->m_is_fake_event = false;
                     backend_dcb->m_hanged_up = true;
                 }
@@ -1980,10 +1978,10 @@ void BackendDCB::hangup_cb(const SERVER* server)
  * Call all the callbacks on all DCB's that match the server and the reason given
  */
 // static
-void BackendDCB::hangup(const SERVER* server)
+void BackendDCB::generate_hangup(const SERVER* server, const std::string& reason)
 {
-    auto hangup_server = [server]() {
-        hangup_cb(server);
+    auto hangup_server = [server, reason]() {
+        hangup_cb(server, reason);
     };
     mxs::RoutingWorker::broadcast(hangup_server, mxs::RoutingWorker::EXECUTE_QUEUED);
 }

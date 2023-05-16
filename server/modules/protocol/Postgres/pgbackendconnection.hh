@@ -29,8 +29,7 @@ public:
     PgBackendConnection(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 
     void ready_for_reading(DCB* dcb) override;
-    void error(DCB* dcb) override;
-    void hangup(DCB* dcb) override;
+    void error(DCB* dcb, const char* errmsg) override;
 
     bool write(GWBUF&& buffer) override;
 

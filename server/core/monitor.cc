@@ -1455,7 +1455,7 @@ void Monitor::hangup_failed_servers()
     {
         if (ptr->status_changed() && (!(ptr->server->is_usable()) || !(ptr->server->is_in_cluster())))
         {
-            BackendDCB::hangup(ptr->server);
+            BackendDCB::generate_hangup(ptr->server, "Server is no longer usable");
         }
     }
 }

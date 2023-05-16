@@ -168,14 +168,7 @@ void ClientConnection::ready_for_reading(DCB* pDcb)
     }
 }
 
-void ClientConnection::error(DCB* pDcb)
-{
-    mxb_assert(m_pDcb == pDcb);
-
-    m_session.kill();
-}
-
-void ClientConnection::hangup(DCB* pDcb)
+void ClientConnection::error(DCB* pDcb, const char* errmsg)
 {
     mxb_assert(m_pDcb == pDcb);
 
