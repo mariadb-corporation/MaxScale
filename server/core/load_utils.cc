@@ -124,6 +124,7 @@ LoadAttempt load_module(const string& fpath, mxs::ModuleType type, const string&
 bool        run_module_thread_init(MXS_MODULE* mod_info);
 
 const char madbproto[] = "mariadbprotocol";
+const char pgproto[] = "postgresprotocol";
 NAME_MAPPING name_mappings[] =
 {
     {ModuleType::MONITOR,       "clustrixmon",   "xpandmon",    false},
@@ -131,6 +132,8 @@ NAME_MAPPING name_mappings[] =
     {ModuleType::PROTOCOL,      "mysqlclient",   madbproto,     false},
     {ModuleType::PROTOCOL,      "mariadb",       madbproto,     true },
     {ModuleType::PROTOCOL,      "mariadbclient", madbproto,     true },
+    {ModuleType::PROTOCOL,      "postgres",      pgproto,       true },
+    {ModuleType::PROTOCOL,      "postgresql",    pgproto,       true },
     {ModuleType::AUTHENTICATOR, "mysqlauth",     "mariadbauth", false},
 };
 }
