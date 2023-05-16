@@ -23,7 +23,7 @@ namespace
 const std::string monitor_name = "Xpand-Monitor";
 auto master = mxt::ServerInfo::master_st;
 auto down = mxt::ServerInfo::DOWN;
-auto base_states = {down, master, master, master, master};
+auto base_states = {master, master, master, master, master};
 
 void check_for_servers(TestConnections& test)
 {

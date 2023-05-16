@@ -45,8 +45,7 @@ void test_main(TestConnections& test)
     auto& mxs = *test.maxscale;
     auto& xpand = *test.xpand;
 
-    auto base_states = {master, master, master, master};
-    mxs.check_print_servers_status(base_states);
+    mxs.check_print_servers_status({master, master, master, master, master, master, master, master});
 
     const char drop_fmt[] = "DROP USER %s;";
     const char create_fmt[] = "CREATE USER %s IDENTIFIED BY '%s';";
