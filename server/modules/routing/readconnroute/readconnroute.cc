@@ -424,6 +424,13 @@ RCR::RCR(SERVICE* service)
 {
 }
 
+bool RCRSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem,
+                             const mxs::Reply& reply)
+{
+    MXS_INFO("Server '%s' failed: %s", pProblem->target()->name(), mxs::extract_error(pMessage).c_str());
+    return false;
+}
+
 maxscale::SessionStats& RCR::session_stats(maxscale::Target* pTarget)
 {
     return (*m_target_stats)[pTarget];

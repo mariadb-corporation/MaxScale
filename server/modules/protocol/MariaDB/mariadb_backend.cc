@@ -2240,7 +2240,9 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             status |= *it << 8;
 
             m_reply.set_server_status(status);
-            set_reply_state((status & SERVER_MORE_RESULTS_EXIST) == 0 ? ReplyState::DONE : ReplyState::START);
+            bool more_results = (status & SERVER_MORE_RESULTS_EXIST);
+            m_reply.set_multiresult(more_results);
+            set_reply_state(more_results ? ReplyState::START : ReplyState::DONE);
         }
         else if (cmd == MYSQL_REPLY_EOF && len < 0xffffff - MYSQL_HEADER_LEN)
         {
@@ -2286,8 +2288,10 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     status |= (*it++) << 8;
 
     m_reply.set_server_status(status);
+    bool more_results = (status & SERVER_MORE_RESULTS_EXIST);
+    m_reply.set_multiresult(more_results);
 
-    if ((status & SERVER_MORE_RESULTS_EXIST) == 0)
+    if (!more_results)
     {
         // No more results
         set_reply_state(ReplyState::DONE);
