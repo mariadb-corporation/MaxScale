@@ -702,6 +702,8 @@ public:
 
     void clear_row_data();
 
+    void set_multiresult(bool multiresult);
+
     void clear();
 
     template<typename ... Args>
@@ -721,6 +723,7 @@ private:
     uint16_t              m_num_warnings {0};
     uint16_t              m_server_status {0};
     bool                  m_is_ok {false};
+    bool                  m_multiresult {false};
     std::vector<uint64_t> m_field_counts;
 
     std::unordered_map<std::string, std::string> m_variables;

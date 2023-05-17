@@ -43,11 +43,7 @@ public:
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,
-                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override
-    {
-        MXB_INFO("Server '%s' failed", pProblem->target()->name());
-        return false;
-    }
+                     mxs::Endpoint* pProblem, const mxs::Reply& reply) override;
 
 private:
     uint32_t       m_bitvalue;  /**< Session specific required value of server->status */
