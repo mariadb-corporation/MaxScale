@@ -615,8 +615,8 @@ void Monitor::active_servers_updated()
 
 const std::vector<MonitorServer*>& Monitor::active_servers() const
 {
-    // Should only be called by a running monitor.
-    mxb_assert(is_running() && mxb::Worker::get_current() == m_worker.get());
+    // Should only be called by the current monitor thread.
+    mxb_assert(mxb::Worker::get_current() == m_worker.get());
     return m_servers;
 }
 
