@@ -1289,20 +1289,23 @@ bool Session::routeQuery(GWBUF&& buffer)
 {
     mxb_assert(buffer);
 
-    if (std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
-                    std::mem_fn(&mxs::BackendConnection::is_idle)))
+    if (m_restart || m_rebuild_chain)
     {
-        if (m_restart && m_client_conn->safe_to_restart())
+        if (std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
+                        std::mem_fn(&mxs::BackendConnection::is_idle)))
         {
-            do_restart();
-            m_restart = false;
-        }
+            if (m_restart && m_client_conn->safe_to_restart())
+            {
+                do_restart();
+                m_restart = false;
+            }
 
-        if (m_rebuild_chain)
-        {
-            m_filters = std::move(m_pending_filters);
-            m_rebuild_chain = false;
-            setup_routing_chain();
+            if (m_rebuild_chain)
+            {
+                m_filters = std::move(m_pending_filters);
+                m_rebuild_chain = false;
+                setup_routing_chain();
+            }
         }
     }
 
