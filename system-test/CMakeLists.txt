@@ -929,6 +929,9 @@ add_test_executable(mxs4488_garbage.cc mxs4488_garbage mxs4488_garbage LABELS RE
 # MXS-4540: transaction_replay_retry_on_mismatch=true leads to infinite replays
 add_test_executable(mxs4540_mismatch_replay.cc mxs4540_mismatch_replay mxs4540_mismatch_replay LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4615: Partially executed multistatements aren't treated as partial results
+add_test_executable(mxs4615_partial_multistmt.cc mxs4615_partial_multistmt mxs4615_partial_multistmt LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
