@@ -2845,7 +2845,7 @@ sudden connection spikes and rejected connections. For more information see
 [MyListener1]
 type=listener
 service=MyService1
-protocol=MariaDBClient
+protocol=MariaDB
 port=3006
 ```
 
@@ -2858,7 +2858,7 @@ that is defined elsewhere in the configuration file.
 
 The name of the protocol module used for communication between the client and
 MaxScale. The same protocol is also used for backend communication. Usually this
-is set to `MariaDBClient`.
+is set to "mariadb". Other allowed values are "postgresql" and "nosqlprotocol".
 
 ### `address`
 
@@ -2883,16 +2883,15 @@ define two separate listeners that connect to the same service.
 
 The authenticator module to use. Each protocol module defines a default
 authentication module, which is used if the setting is left undefined.
-*MariaDBClient*-protocol supports multiple authenticators and they can be used
-simultaneously by giving a comma-separated list e.g.
+MariaDB and PostgreSQL protocols support multiple authenticators and they can
+be used simultaneously by giving a comma-separated list e.g.
 `authenticator=PAMAuth,mariadbauth,gssapiauth`
 
 ### `authenticator_options`
 
-This defines additional options for authentication. As of MaxScale 2.5.0, only
-*MariaDBClient* and its authenticators support additional options. The value of
-this parameter should be a comma-separated list of key-value pairs. See
-authenticator specific documentation for more details.
+Defines additional options for authentication. The value should be a
+comma-separated list of key-value pairs. See protocol and authenticator specific
+documentation for more details.
 
 ### `sql_mode`
 
@@ -3140,23 +3139,34 @@ specified.
 
 # Available Protocols
 
-The protocols supported by MariaDB MaxScale are implemented as external modules
-that are loaded dynamically into the MariaDB MaxScale core. They allow MariaDB
-MaxScale to communicate in various protocols both on the client side and the
-backend side. Each of the protocols can be either a client protocol or a backend
-protocol. Client protocols are used for client-MariaDB MaxScale communication
-and backend protocols are for MariaDB MaxScale-database communication.
+Protocol modules in MaxScale define what kind of clients can connect to a
+listener and what type of backend servers are supported. Protocol is defined in
+listener settings, and affects both the listener and any services the listener
+is linked to.
 
-## `MariaDBClient`
+## `MariaDB` or `MariaDBClient`
 
-This is the implementation of the MySQL-protocol. When defined for a listener,
-the listener will accept MySQL-connections from clients, assign them to a
-MaxScale service and route the queries from the client to backend servers. Any
-backends used by the service should be MariaDB/MySQL-servers or compatible.
+Implements MariaDB protocol. The listener will accept MariaDB/MySQL connections
+from clients and route the client queries through a linked MaxScale service
+to backend servers. The backends used by the service should be
+MariaDB servers or compatible.
 
 ## `CDC`
 
 See [Change Data Capture Protocol](../Protocols/CDC.md) for more information.
+
+## `Postgresql` or `Postgresprotocol`
+
+Implements [Postgresql protocol](https://www.postgresql.org/docs/current/protocol.html).
+The listener will accept Postgresql connections from clients and route the
+client queries through a linked MaxScale service to backend servers. The
+backends used by the service should be PostgreSQL servers or compatible.
+
+## `nosqlprotocol`
+
+Accepts MongoDB® connections, yet stores and fetches results to/from
+MariaDB servers. See [NoSQL documentation](../Protocols/NoSQL.md)
+for more information.
 
 # TLS/SSL encryption
 
