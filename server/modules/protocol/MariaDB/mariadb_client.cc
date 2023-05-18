@@ -907,10 +907,17 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     if (mxs_mysql_get_command(*packetbuf) == MXS_COM_QUERY)
     {
         bool use_parser = rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION);
-        const auto parser_type = use_parser
-            ? mxs::Parser::ParseTrxUsing::DEFAULT : mxs::Parser::ParseTrxUsing::CUSTOM;
+        const auto parser_type = use_parser ?
+            mxs::Parser::ParseTrxUsing::DEFAULT : mxs::Parser::ParseTrxUsing::CUSTOM;
 
         uint32_t type = parser()->get_trx_type_mask_using(*packetbuf, parser_type);
+
+        mxb_assert_message(!rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION)
+                           || parser()->get_trx_type_mask_using(*packetbuf,
+                                                                mxs::Parser::ParseTrxUsing::DEFAULT)
+                           == parser()->get_trx_type_mask_using(*packetbuf,
+                                                                mxs::Parser::ParseTrxUsing::CUSTOM),
+                           "Parser and query classifier should parse transactions identically");
 
         if (type & mxs::sql::TYPE_BEGIN_TRX)
         {

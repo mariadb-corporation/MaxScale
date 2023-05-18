@@ -206,7 +206,7 @@ static cfg::ParamBool s_transaction_replay(
 
 static cfg::ParamSize s_transaction_replay_max_size(
     &s_spec, "transaction_replay_max_size", "Maximum size of transaction to retry",
-    1024 * 1024 * 1024, cfg::Param::AT_RUNTIME);
+    1024 * 1024, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_transaction_replay_timeout(
     &s_spec, "transaction_replay_timeout", "Timeout for transaction replay",
