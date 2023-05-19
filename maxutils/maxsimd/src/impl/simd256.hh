@@ -15,7 +15,9 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <maxbase/assert.hh>
 
+#include <array>
 #include <string>
 #include <cstring>
 #include <vector>
@@ -64,7 +66,24 @@ std::string to_hex_string(__m256i reg);
  *                 be printable characters in the normal case.
  * @return A bitmap for classification of ASCII chars.
  */
-__m256i make_ascii_bitmap(const std::string& chars);
+static inline std::array<unsigned char, SIMD_BYTES> make_ascii_bitmap(const std::string& chars)
+{
+    std::array<unsigned char, SIMD_BYTES> bitmap {};
+    for (unsigned char ch : chars)
+    {
+        if (ch & 0b10000000 || ch == '\0')
+        {
+            mxb_assert(!true);
+            continue;
+        }
+        auto index = ch & 0b00001111;
+        char bit = 1 << (ch >> 4);
+        bitmap[index] |= bit;           // upper 128-bit lane
+        bitmap[index + 16] |= bit;      // lower 128-bit lane
+    }
+
+    return bitmap;
+}
 
 /**
  * This is a lookup table that when indexed with the high nibble
@@ -163,12 +182,16 @@ MXS_AVX2_FUNC inline Markers* make_markers(const std::string& str, __m256i ascii
         }
 
         uint32_t bitmask = _mm256_movemask_epi8(classify_ascii(ascii_bitmap, chunk));
+        size_t added = __builtin_popcount(bitmask);
+        auto old_size = pMarkers->size();
+        pMarkers->resize(old_size + added);
+        auto ptr = pMarkers->data() + old_size;
 
         while (bitmask)
         {
             auto i = __builtin_ctz(bitmask);
             bitmask = bitmask & (bitmask - 1);      // clear the lowest bit
-            pMarkers->push_back(pBegin + index_offset + i);
+            *ptr++ = (pBegin + index_offset + i);
         }
 
         index_offset += SIMD_BYTES;

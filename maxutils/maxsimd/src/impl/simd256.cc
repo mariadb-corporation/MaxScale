@@ -59,25 +59,6 @@ MXS_AVX2_FUNC std::string to_hex_string(__m256i reg)
 
     return os.str();
 }
-
-MXS_AVX2_FUNC __m256i make_ascii_bitmap(const std::string& chars)
-{
-    std::array<unsigned char, SIMD_BYTES> bitmap {};
-    for (unsigned char ch : chars)
-    {
-        if (ch & 0b10000000 || ch == '\0')
-        {
-            mxb_assert(!true);
-            continue;
-        }
-        auto index = ch & 0b00001111;
-        char bit = 1 << (ch >> 4);
-        bitmap[index] |= bit;           // upper 128-bit lane
-        bitmap[index + 16] |= bit;      // lower 128-bit lane
-    }
-
-    return _mm256_loadu_si256((__m256i*) bitmap.data());
-}
 }
 }
 #endif

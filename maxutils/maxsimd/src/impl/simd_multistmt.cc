@@ -31,6 +31,8 @@ const char IS_QUOTE = 1 << 2;
 const char IS_COMMENT = 1 << 3;
 const char IS_ESCAPE = 1 << 4;
 
+static const auto s_sql_ascii_bit_map = maxsimd::simd256::make_ascii_bitmap(R"(;"'`#-/\)");
+
 /** This LUT checks that a character can only have one classification
  *  which allows the bitmap to be used in a switch. Minimal class,
  *  but it would make sense to move it into maxbase. TODO.
@@ -133,7 +135,7 @@ namespace simd256
 MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarkers)
 {
     // The characters that need to be classified.
-    static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"(;"'`#-/\)");
+    const auto sql_ascii_bit_map = _mm256_loadu_si256((__m256i*) s_sql_ascii_bit_map.data());
     make_markers(sql, sql_ascii_bit_map, pMarkers);
 
     bool has_semicolons = false;

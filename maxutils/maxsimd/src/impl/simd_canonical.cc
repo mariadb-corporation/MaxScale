@@ -36,20 +36,20 @@ namespace
 
 // The characters that need to be classified. Digits are handled
 // separately.
-MXS_AVX2_FUNC inline __m256i sql_ascii_bit_map()
-{
-    static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"("'`/#-\)");
-    return sql_ascii_bit_map;
-}
+static const auto s_sql_ascii_bit_map = make_ascii_bitmap(R"("'`/#-\)");
 
 // Characters that can start (and continue) an identifier.
+static const auto s_ident_begin_bit_map =
+    make_ascii_bitmap(R"($_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
+
+MXS_AVX2_FUNC inline __m256i sql_ascii_bit_map()
+{
+    return _mm256_loadu_si256((__m256i*) s_sql_ascii_bit_map.data());
+}
 
 MXS_AVX2_FUNC inline __m256i ident_begin_bit_map()
 {
-    static const __m256i ident_begin_bit_map =
-            make_ascii_bitmap(R"($_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
-
-    return ident_begin_bit_map;
+    return _mm256_loadu_si256((__m256i*) s_ident_begin_bit_map.data());
 }
 
 MXS_AVX2_FUNC inline __m256i small_zeros()
@@ -128,11 +128,19 @@ MXS_AVX2_FUNC inline Markers* make_markers_sql_optimized(const std::string& sql,
 
         uint32_t bitmask = ascii_bitmask | leading_digit_bitmask;
 
-        while (bitmask)
+        // The number of markers that will be added is the number of set bits in the bitmask. Allocating space
+        // and then using a pointer to set the values saves us the capacity check that would otherwise be done
+        // in std::vector::push_back().
+        size_t added = __builtin_popcount(bitmask);
+        auto old_size = pMarkers->size();
+        pMarkers->resize(old_size + added);
+        auto ptr = pMarkers->data() + old_size;
+
+        for (size_t bits = 0; bits < added; bits++)
         {
             auto i = __builtin_ctz(bitmask);
             bitmask = bitmask & (bitmask - 1);      // clear the lowest bit
-            pMarkers->push_back(pBegin + index_offset + i);
+            *ptr++ = (pBegin + index_offset + i);
         }
 
         index_offset += SIMD_BYTES;
