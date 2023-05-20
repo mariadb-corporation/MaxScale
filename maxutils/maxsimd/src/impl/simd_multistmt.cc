@@ -89,7 +89,7 @@ static LUT lut;
 using namespace maxsimd::simd256;
 
 // Copy pasted from simd_canonical.
-inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
+inline const char* find_matching_delimiter(maxsimd::Markers* pMarkers, char ch)
 {
     while (!pMarkers->empty())
     {
@@ -132,7 +132,7 @@ namespace simd256
  *  2. If found and there are only spaces, semicolons and comments
  *     in the rest of the sql, it is NOT a multi-statement, else it is.
  */
-MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarkers)
+MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* pMarkers)
 {
     // The characters that need to be classified.
     const auto sql_ascii_bit_map = _mm256_loadu_si256((__m256i*) s_sql_ascii_bit_map.data());

@@ -34,7 +34,6 @@ void module_thread_finish(void);
  */
 thread_local struct
 {
-    vector<const char*> markers;            // For use with maxsimd::get_canonical()
     uint32_t            options {0};
     uint64_t            server_version {0};
     Parser::SqlMode     sql_mode {Parser::SqlMode::DEFAULT}; // What sql_mode is used.
@@ -519,7 +518,7 @@ private:
     {
         string s(sql);
 
-        maxsimd::get_canonical(&s, &this_thread.markers);
+        maxsimd::get_canonical(&s);
 
         return s;
     }

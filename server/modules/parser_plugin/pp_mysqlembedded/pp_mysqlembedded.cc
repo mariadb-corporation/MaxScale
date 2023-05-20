@@ -492,7 +492,6 @@ static thread_local struct
     uint32_t                 options { 0 };
     NAME_MAPPING*            function_name_mappings { function_name_mappings_default };
     uint64_t                 version { 0 };
-    std::vector<const char*> markers;
 } this_thread;
 
 
@@ -500,7 +499,7 @@ parsing_info_t::parsing_info_t(const Parser::Helper& helper, const GWBUF* queryb
     : pi_query_plain_str(helper.get_sql(*querybuf))
     , canonical(pi_query_plain_str)
 {
-    maxsimd::get_canonical(&this->canonical, &::this_thread.markers);
+    maxsimd::get_canonical(&this->canonical);
 
     MYSQL* mysql = mysql_init(NULL);
     mxb_assert(mysql);

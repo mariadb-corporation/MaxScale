@@ -14,24 +14,16 @@
 
 #pragma once
 
-#include <string>
 #include <vector>
 
-#include "markers.hh"
-
-/** The concrete implementations of is_multi_stmt */
 namespace maxsimd
 {
-namespace generic
-{
-bool is_multi_stmt_impl(const std::string& sql);
-}
-}
+using Markers = std::vector<const char*>;
 
-namespace maxsimd
-{
-namespace simd256
-{
-bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* pMarkers);
-}
+/**
+ * Gets the thread-local marker vector. This space is temporarily used to store the points of interest in the
+ * SQL strings. Using the same thread-local variable saves space that would otherwise be wasted by
+ * implementing it internally in both the query canonicalization and multi-statement detection.
+ */
+Markers* markers();
 }

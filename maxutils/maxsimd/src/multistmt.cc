@@ -27,11 +27,11 @@ const maxbase::CpuInfo& cpu_info {maxbase::CpuInfo::instance()};
 }
 
 #if defined (__x86_64__)
-bool is_multi_stmt(const std::string& sql, Markers* pMarkers)
+bool is_multi_stmt(const std::string& sql)
 {
     if (cpu_info.has_avx2)
     {
-        return simd256::is_multi_stmt_impl(sql, pMarkers);
+        return simd256::is_multi_stmt_impl(sql, maxsimd::markers());
     }
     else
     {
@@ -40,7 +40,7 @@ bool is_multi_stmt(const std::string& sql, Markers* pMarkers)
 }
 #else
 
-bool is_multi_stmt(const std::string& sql, Markers*)
+bool is_multi_stmt(const std::string& sql)
 {
     return generic::is_multi_stmt_impl(sql);
 }

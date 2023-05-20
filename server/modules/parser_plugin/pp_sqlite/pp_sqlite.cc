@@ -152,7 +152,6 @@ static thread_local struct
     uint32_t                 version_patch;
     PP_NAME_MAPPING*         pFunction_name_mappings;   // How function names should be mapped.
     const Parser::Helper*    pHelper;
-    std::vector<const char*> markers;       // For use with maxsimd::get_canonical()
 } this_thread;
 
 const uint32_t VERSION_MAJOR_DEFAULT = 10;
@@ -3800,7 +3799,7 @@ static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, u
                 const_cast<GWBUF&>(query).set_protocol_info(std::move(sInfo));
 
                 pInfo->m_canonical = helper.get_sql(query);
-                maxsimd::get_canonical(&pInfo->m_canonical, &this_thread.markers);
+                maxsimd::get_canonical(&pInfo->m_canonical);
 
                 if (is_prepare)
                 {

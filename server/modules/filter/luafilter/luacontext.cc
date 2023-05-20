@@ -129,8 +129,7 @@ static int lua_get_canonical(lua_State* state)
     if (data.session && data.buffer)
     {
         sql = std::string(data.session->client_connection()->parser()->get_sql(*data.buffer));
-        maxsimd::Markers markers;
-        maxsimd::get_canonical(&sql, &markers);
+        maxsimd::get_canonical(&sql);
     }
 
     lua_pushstring(state, sql.c_str());

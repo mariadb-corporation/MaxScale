@@ -26,9 +26,7 @@ namespace
 {
 std::string wrap_in_atomic_block(const std::string& sql)
 {
-    maxsimd::Markers markers;
-
-    if (!maxsimd::is_multi_stmt(sql, &markers))
+    if (!maxsimd::is_multi_stmt(sql))
     {
         return sql;
     }

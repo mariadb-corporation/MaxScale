@@ -27,22 +27,22 @@ const maxbase::CpuInfo& cpu_info {maxbase::CpuInfo::instance()};
 }
 
 #if defined (__x86_64__)
-std::string* get_canonical(std::string* pSql, Markers* pMarkers)
+std::string* get_canonical(std::string* pSql)
 {
     if (cpu_info.has_avx2)
     {
-        return simd256::get_canonical_impl(pSql, pMarkers);
+        return simd256::get_canonical_impl(pSql, maxsimd::markers());
     }
     else
     {
-        return generic::get_canonical_impl(pSql, pMarkers);
+        return generic::get_canonical_impl(pSql, maxsimd::markers());
     }
 }
 #else
 
-std::string* get_canonical(std::string* pSql, Markers* pMarkers)
+std::string* get_canonical(std::string* pSql)
 {
-    return generic::get_canonical_impl(pSql, pMarkers);
+    return generic::get_canonical_impl(pSql, maxsimd::markers());
 }
 
 #endif

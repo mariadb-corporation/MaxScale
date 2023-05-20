@@ -23,7 +23,6 @@ using std::chrono::milliseconds;
 int main(int argc, char* argv[])
 {
     int ITERATIONS = 10000000;
-    maxsimd::Markers markers;
 
     for (std::string line; std::getline(std::cin, line);)
     {
@@ -32,7 +31,7 @@ int main(int argc, char* argv[])
         for (int i = 0; i < ITERATIONS; i++)
         {
             std::string line_cp(line);
-            maxsimd::get_canonical(&line_cp, &markers);
+            maxsimd::get_canonical(&line_cp);
         }
 
         auto end = maxbase::Clock::now();

@@ -12,26 +12,23 @@
  * Public License.
  */
 
-#pragma once
-
-#include <string>
-#include <vector>
-
 #include "markers.hh"
 
-/** The concrete implementations of is_multi_stmt */
-namespace maxsimd
+namespace
 {
-namespace generic
+struct  ThisThread
 {
-bool is_multi_stmt_impl(const std::string& sql);
-}
+    maxsimd::Markers markers;
+};
+
+thread_local ThisThread this_thread;
 }
 
 namespace maxsimd
 {
-namespace simd256
+Markers* markers()
 {
-bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* pMarkers);
+    this_thread.markers.clear();
+    return &this_thread.markers;
 }
 }

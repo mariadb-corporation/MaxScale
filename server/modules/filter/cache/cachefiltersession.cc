@@ -420,10 +420,7 @@ bool CacheFilterSession::routeQuery(GWBUF&& packet)
 
             case MXS_COM_QUERY:
                 {
-                    thread_local std::vector<const char*> markers;
-                    markers.clear();
-
-                    if (!maxsimd::is_multi_stmt(get_sql_string(*pPacket), &markers))
+                    if (!maxsimd::is_multi_stmt(get_sql_string(*pPacket)))
                     {
                         action = route_COM_QUERY(pPacket);
                     }

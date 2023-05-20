@@ -16,6 +16,8 @@
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 
+#include "markers.hh"
+
 #include <array>
 #include <string>
 #include <functional>
@@ -197,7 +199,7 @@ namespace generic
 #define likely(x)   __builtin_expect (!!(x), 1)
 #define unlikely(x) __builtin_expect (!!(x), 0)
 
-std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
+std::string* get_canonical_impl(std::string* pSql, maxsimd::Markers* /*pMarkers*/)
 {
     /* The call &*pSql->begin() ensures that a non-confirming
      * std::string will copy the data (COW, CentOS7)

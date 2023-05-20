@@ -67,7 +67,6 @@ thread_local struct
     QCInfoCache*             pInfo_cache { nullptr };
     uint32_t                 options { 0 };
     bool                     use_cache { true };
-    std::vector<const char*> markers;
 } this_thread;
 
 
@@ -399,7 +398,7 @@ public:
             // allows us to look up whether the parsing info already exists. Besides,
             // calling m_parser.get_canonical(m_stmt) would cause an infinite recursion.
             m_canonical = m_parser.get_sql(m_stmt);
-            maxsimd::get_canonical(&m_canonical, &this_thread.markers);
+            maxsimd::get_canonical(&m_canonical);
 
             if (m_parser.is_prepare(m_stmt))
             {

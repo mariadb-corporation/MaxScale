@@ -654,7 +654,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
             // This is wasteful, the sql is extracted multiple times
             // it should be in the Context, after first call.
             const std::string sql { m_parser.helper().get_sql(*querybuf) };
-            is_multi = maxsimd::is_multi_stmt(sql, &m_markers);
+            is_multi = maxsimd::is_multi_stmt(sql);
         }
 
         if (is_multi)

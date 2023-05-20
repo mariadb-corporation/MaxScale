@@ -23,6 +23,8 @@
 #include <vector>
 #include <immintrin.h>
 
+#include "../markers.hh"
+
 #define MXS_AVX2_FUNC __attribute__ ((__target__ ("avx2")))
 
 namespace maxsimd
@@ -147,8 +149,6 @@ MXS_AVX2_FUNC inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
     return mask;
 }
 
-using Markers = std::vector<const char*>;
-
 /**
  * @brief  make_markers - create a vector of ptrs, pointing into the
  *         argument string for every classified char.
@@ -158,13 +158,12 @@ using Markers = std::vector<const char*>;
  *                   for the caller, reused for each call to make_markers()
  * @return Pointers into argument string for every classified character.
  */
-MXS_AVX2_FUNC inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Markers* pMarkers)
+MXS_AVX2_FUNC inline maxsimd::Markers* make_markers(const std::string& str, __m256i ascii_bitmap, maxsimd::Markers* pMarkers)
 {
     const char* pBegin = str.data();
     const char* pSource = pBegin;
     const char* pEnd = pBegin + str.length();
 
-    pMarkers->clear();
     size_t index_offset = 0;
 
     for (; pSource < pEnd; pSource += SIMD_BYTES)

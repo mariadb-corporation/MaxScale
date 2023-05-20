@@ -77,7 +77,6 @@ MXS_AVX2_FUNC inline Markers* make_markers_sql_optimized(const std::string& sql,
     const char* pSource = pBegin;
     const char* pEnd = pBegin + sql.length();
 
-    pMarkers->clear();
     size_t index_offset = 0;
 
     // By setting this initially to true there can be no digit marker
