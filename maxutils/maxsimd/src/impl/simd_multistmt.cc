@@ -87,37 +87,6 @@ private:
 static LUT lut;
 
 using namespace maxsimd::simd256;
-
-// Copy pasted from simd_canonical.
-inline const char* find_matching_delimiter(maxsimd::Markers* pMarkers, char ch)
-{
-    while (!pMarkers->empty())
-    {
-        auto pMarker = pMarkers->back();
-        if (*pMarker == ch)
-        {
-            // don't care if a quote is escaped with a double quote,
-            // it will look like two quoted strings after each other.
-            pMarkers->pop_back();
-            return pMarker;
-        }
-        else if (*pMarker == '\\')
-        {
-            // pop if what we are looking for is escaped, or an escape is escaped.
-            if (*++pMarker == ch || *pMarker == '\\')
-            {
-                if (pMarkers->size() > 1)       // branch here to avoid it outside
-                {
-                    pMarkers->pop_back();
-                }
-            }
-        }
-
-        pMarkers->pop_back();
-    }
-
-    return nullptr;
-}
 }
 
 namespace maxsimd
@@ -153,32 +122,31 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* 
         return false;
     }
 
-    std::reverse(begin(*pMarkers), end(*pMarkers));
-
     const char* read_begin = sql.data();
     const char* read_ptr = read_begin;
     const char* read_end = read_begin + sql.length();
 
-    if (!pMarkers->empty())
+    auto it = pMarkers->begin();
+    auto end = pMarkers->end();
+
+    if (it != end)
     {   // advance to the first marker
-        read_ptr += pMarkers->back() - read_ptr;
+        read_ptr += *it - read_ptr;
     }
 
     bool is_multi = false;
 
-    while (!pMarkers->empty())
+    while (it != end)
     {
-        auto pMarker = pMarkers->back();
-        pMarkers->pop_back();
+        auto pMarker = *it++;
 
         while (read_ptr > pMarker)
         {
-            if (pMarkers->empty())
+            if (it != end)
             {
                 goto break_out;
             }
-            pMarker = pMarkers->back();
-            pMarkers->pop_back();
+            pMarker = *it++;
         }
 
         read_ptr += pMarker - read_ptr;
@@ -189,7 +157,7 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* 
         {
         case IS_QUOTE:
             {
-                auto tmp_ptr = find_matching_delimiter(pMarkers, *read_ptr);
+                auto tmp_ptr = maxsimd::simd256::find_matching_delimiter(it, end, *read_ptr);
                 if (tmp_ptr == nullptr)
                 {
                     goto break_out;

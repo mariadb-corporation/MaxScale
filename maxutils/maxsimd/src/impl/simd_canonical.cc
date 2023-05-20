@@ -71,7 +71,7 @@ MXS_AVX2_FUNC inline __m256i large_nines()
  *  The shift language is how the chars naturally look, so a shift
  *  right of the chars is a shift left of the bitmaps.
  */
-MXS_AVX2_FUNC inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
+MXS_AVX2_FUNC inline void make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
 {
     const char* pBegin = sql.data();
     const char* pSource = pBegin;
@@ -144,8 +144,6 @@ MXS_AVX2_FUNC inline Markers* make_markers_sql_optimized(const std::string& sql,
 
         index_offset += SIMD_BYTES;
     }
-
-    return pMarkers;
 }
 
 // A make_markers version optimized for strings
@@ -200,36 +198,6 @@ private:
 };
 
 static LUT lut;
-
-MXS_AVX2_FUNC inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
-{
-    while (!pMarkers->empty())
-    {
-        auto pMarker = pMarkers->back();
-        if (*pMarker == ch)
-        {
-            // don't care if a quote is escaped with a double quote,
-            // two questions marks instead of one.
-            pMarkers->pop_back();
-            return pMarker;
-        }
-        else if (*pMarker == '\\')
-        {
-            // pop if what we are looking for is escaped, or an escape is escaped.
-            if (*++pMarker == ch || *pMarker == '\\')
-            {
-                if (pMarkers->size() > 1)       // branch here to avoid it outside
-                {
-                    pMarkers->pop_back();
-                }
-            }
-        }
-
-        pMarkers->pop_back();
-    }
-
-    return nullptr;
-}
 
 MXS_AVX2_FUNC inline const char* probe_number(const char* it, const char* const pEnd)
 {
@@ -324,32 +292,31 @@ MXS_AVX2_FUNC std::string* get_canonical_impl(std::string* pSql, Markers* pMarke
     auto write_ptr = const_cast<char*>(write_begin);
     bool was_converted = false;     // differentiates between a negative number and subtraction
 
-    auto markers = make_markers_sql_optimized(*pSql, pMarkers);
-    std::reverse(begin(*pMarkers), end(*pMarkers));     // for pop_back(), an index would likely be better.
+    make_markers_sql_optimized(*pSql, pMarkers);
+    auto it = pMarkers->begin();
+    auto end = pMarkers->end();
 
-    if (!pMarkers->empty())
+    if (it != end)
     {   // advance to the first marker
-        auto len = pMarkers->back() - read_ptr;
+        auto len = *it - read_ptr;
         read_ptr += len;
         write_ptr += len;
     }
 
-    while (!pMarkers->empty())
+    while (it != end)
     {
-        auto pMarker = pMarkers->back();
-        pMarkers->pop_back();
+        auto pMarker = *it++;
 
         // The code further down can read passed pmarkers-> For example, a comment
         // can contain multiple markers, but the code that handles comments reads
         // to the end of the comment.
         while (read_ptr > pMarker)
         {
-            if (pMarkers->empty())
+            if (it == end)
             {
                 goto break_out;
             }
-            pMarker = pMarkers->back();
-            pMarkers->pop_back();
+            pMarker = *it++;
         }
 
         // With "select 1 from T where id=42", the first marker would
@@ -368,7 +335,7 @@ MXS_AVX2_FUNC std::string* get_canonical_impl(std::string* pSql, Markers* pMarke
 
         if (lut(IS_QUOTE, *pMarker))
         {
-            auto tmp_ptr = find_matching_delimiter(markers, *read_ptr);
+            auto tmp_ptr = find_matching_delimiter(it, end, *read_ptr);
             if (tmp_ptr == nullptr)
             {
                 // Invalid SQL, copy the the rest to make canonical invalid.
