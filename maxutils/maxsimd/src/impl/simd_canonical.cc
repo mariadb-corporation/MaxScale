@@ -139,7 +139,7 @@ MXS_AVX2_FUNC inline void make_markers_sql_optimized(const std::string& sql, Mar
         {
             auto i = __builtin_ctz(bitmask);
             bitmask = bitmask & (bitmask - 1);      // clear the lowest bit
-            *ptr++ = (pBegin + index_offset + i);
+            *ptr++ = (index_offset + i);
         }
 
         index_offset += SIMD_BYTES;
@@ -298,14 +298,14 @@ MXS_AVX2_FUNC std::string* get_canonical_impl(std::string* pSql, Markers* pMarke
 
     if (it != end)
     {   // advance to the first marker
-        auto len = *it - read_ptr;
+        auto len = *it;
         read_ptr += len;
         write_ptr += len;
     }
 
     while (it != end)
     {
-        auto pMarker = *it++;
+        auto pMarker = read_begin + *it++;
 
         // The code further down can read passed pmarkers-> For example, a comment
         // can contain multiple markers, but the code that handles comments reads
@@ -316,7 +316,7 @@ MXS_AVX2_FUNC std::string* get_canonical_impl(std::string* pSql, Markers* pMarke
             {
                 goto break_out;
             }
-            pMarker = *it++;
+            pMarker = read_begin + *it++;
         }
 
         // With "select 1 from T where id=42", the first marker would
@@ -335,7 +335,7 @@ MXS_AVX2_FUNC std::string* get_canonical_impl(std::string* pSql, Markers* pMarke
 
         if (lut(IS_QUOTE, *pMarker))
         {
-            auto tmp_ptr = find_matching_delimiter(it, end, *read_ptr);
+            auto tmp_ptr = find_matching_delimiter(it, end, read_begin, *read_ptr);
             if (tmp_ptr == nullptr)
             {
                 // Invalid SQL, copy the the rest to make canonical invalid.

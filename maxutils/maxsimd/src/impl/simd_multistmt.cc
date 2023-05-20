@@ -108,9 +108,9 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* 
     make_markers(sql, sql_ascii_bit_map, pMarkers);
 
     bool has_semicolons = false;
-    for (const auto& ptr : *pMarkers)
+    for (const uint32_t offset : *pMarkers)
     {
-        if (*ptr == ';')
+        if (sql[offset] == ';')
         {
             has_semicolons = true;
             break;
@@ -131,14 +131,14 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* 
 
     if (it != end)
     {   // advance to the first marker
-        read_ptr += *it - read_ptr;
+        read_ptr += *it;
     }
 
     bool is_multi = false;
 
     while (it != end)
     {
-        auto pMarker = *it++;
+        auto pMarker = read_begin + *it++;
 
         while (read_ptr > pMarker)
         {
@@ -146,7 +146,7 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* 
             {
                 goto break_out;
             }
-            pMarker = *it++;
+            pMarker = read_begin + *it++;
         }
 
         read_ptr += pMarker - read_ptr;
@@ -157,7 +157,7 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* 
         {
         case IS_QUOTE:
             {
-                auto tmp_ptr = maxsimd::simd256::find_matching_delimiter(it, end, *read_ptr);
+                auto tmp_ptr = maxsimd::simd256::find_matching_delimiter(it, end, read_begin, *read_ptr);
                 if (tmp_ptr == nullptr)
                 {
                     goto break_out;

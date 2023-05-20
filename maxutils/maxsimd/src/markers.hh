@@ -15,10 +15,11 @@
 #pragma once
 
 #include <vector>
+#include <cstdint>
 
 namespace maxsimd
 {
-using Markers = std::vector<const char*>;
+using Markers = std::vector<uint32_t>;
 
 /**
  * Gets the thread-local marker vector. This space is temporarily used to store the points of interest in the

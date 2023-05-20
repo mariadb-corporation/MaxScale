@@ -190,7 +190,7 @@ MXS_AVX2_FUNC inline maxsimd::Markers* make_markers(const std::string& str, __m2
         {
             auto i = __builtin_ctz(bitmask);
             bitmask = bitmask & (bitmask - 1);      // clear the lowest bit
-            *ptr++ = (pBegin + index_offset + i);
+            *ptr++ = (index_offset + i);
         }
 
         index_offset += SIMD_BYTES;
@@ -200,11 +200,11 @@ MXS_AVX2_FUNC inline maxsimd::Markers* make_markers(const std::string& str, __m2
 }
 
 template<class Iter>
-MXS_AVX2_FUNC inline const char* find_matching_delimiter(Iter& it, Iter& end, char ch)
+MXS_AVX2_FUNC inline const char* find_matching_delimiter(Iter& it, Iter& end, const char* read_begin, char ch)
 {
     while (it != end)
     {
-        auto pMarker = *it;
+        auto pMarker = read_begin + *it;
         if (*pMarker == ch)
         {
             // don't care if a quote is escaped with a double quote,
