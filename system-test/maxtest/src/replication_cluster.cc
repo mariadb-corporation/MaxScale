@@ -633,13 +633,18 @@ bool ReplicationCluster::create_users(int i)
         mxt::MariaDBUserDef mdbmon_user = {"mariadbmon", "%", "mariadbmon"};
         mdbmon_user.grants = {"SUPER, FILE, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.*",
                               "SELECT ON mysql.user"};
-        if (vrs.major == 10 && vrs.minor >= 5)
+        if (vrs.as_number() >= 10'05'00)
         {
             mdbmon_user.grants.emplace_back("REPLICATION SLAVE ADMIN ON *.*");
         }
         else
         {
             mdbmon_user.grants.emplace_back("REPLICATION CLIENT ON *.*");
+        }
+
+        if (vrs.as_number() >= 10'11'00)
+        {
+            mdbmon_user.grants.emplace_back("READ ONLY ADMIN ON *.*");
         }
 
         bool error = false;
@@ -651,7 +656,7 @@ bool ReplicationCluster::create_users(int i)
             error = true;
         }
 
-        if (vrs.major == 10 && ((vrs.minor == 5 && vrs.patch >= 8) || ( vrs.minor >= 6 )))
+        if (vrs.as_number() >= 10'05'06)
         {
             if (!be->admin_connection()->try_cmd("GRANT SLAVE MONITOR ON *.* TO 'repl'@'%';"))
             {
