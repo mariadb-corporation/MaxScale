@@ -536,7 +536,8 @@ std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb)
         bytes_to_read = MAX_PACKET_SIZE;
     }
 
-    auto [read_ok, buffer] = dcb->read(MYSQL_HEADER_LEN, bytes_to_read);
+    auto rval = dcb->read(MYSQL_HEADER_LEN, bytes_to_read);
+    auto& [read_ok, buffer] = rval;
 
     if (!buffer.empty())
     {
@@ -566,7 +567,7 @@ std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb)
             buffer = GWBUF();
         }
     }
-    return {read_ok, move(buffer)};
+    return rval;
 }
 
 uint8_t* write_header(uint8_t* buffer, uint32_t pl_size, uint8_t seq)
