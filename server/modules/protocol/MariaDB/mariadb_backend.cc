@@ -1501,13 +1501,13 @@ int MariaDBBackendConnection::send_mysql_native_password_response(const GWBUF& r
     const auto& sha1_pw = m_current_auth_token;
     const uint8_t* curr_passwd = sha1_pw.empty() ? null_client_sha1 : sha1_pw.data();
 
-    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
-    uint8_t* data = GWBUF_DATA(buffer);
+    GWBUF buffer(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
+    uint8_t* data = buffer.data();
     mariadb::set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
     data[3] = seqno;    // This is the third packet after the COM_CHANGE_USER
     mxs_mysql_calculate_hash(m_auth_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
-    return dcb->writeq_append(buffer);
+    return dcb->writeq_append(std::move(buffer));
 }
 
 /**

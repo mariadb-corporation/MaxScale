@@ -648,14 +648,6 @@ int DCB::log_errors_SSL(int ret)
     return -1;
 }
 
-bool DCB::writeq_append(GWBUF* queue)
-{
-    mxb_assert(queue);
-    GWBUF buffer(move(*queue));
-    delete queue;
-    return writeq_append(move(buffer));
-}
-
 bool DCB::writeq_append(GWBUF&& data)
 {
     // polling_worker() can not be used here, the last backend write takes place
@@ -1888,15 +1880,6 @@ void DCB::close(DCB* dcb)
 size_t DCB::readq_peek(size_t n_bytes, uint8_t* dst) const
 {
     return m_readq.copy_data(0, n_bytes, dst);
-}
-
-void DCB::unread(GWBUF* buffer)
-{
-    if (buffer)
-    {
-        m_readq.merge_front(move(*buffer));
-        delete buffer;
-    }
 }
 
 void DCB::unread(GWBUF&& buffer)

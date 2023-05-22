@@ -288,8 +288,6 @@ public:
      * @param data   The data to be appended to the write queue.
      * @return True if the data could be appended, false otherwise.
      */
-    bool writeq_append(GWBUF* data);
-
     bool writeq_append(GWBUF&& data);
 
     /**
@@ -404,8 +402,6 @@ public:
      *
      * @param buffer The buffer to prepend
      */
-    void unread(GWBUF* buffer);
-
     void unread(GWBUF&& buffer);
 
     int64_t last_read() const

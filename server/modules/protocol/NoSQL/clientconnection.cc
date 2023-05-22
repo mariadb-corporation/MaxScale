@@ -135,21 +135,21 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
             pPacket = gwbuf_split(&pBuffer, pHeader->msg_len);
             mxb_assert((int)gwbuf_length(pPacket) == pHeader->msg_len);
 
-            m_pDcb->unread(pBuffer);
+            m_pDcb->unread(mxs::gwbufptr_to_gwbuf(pBuffer));
             m_pDcb->trigger_read_event();
         }
 
         GWBUF* pResponse = handle_one_packet(pPacket);
         if (pResponse)
         {
-            m_pDcb->writeq_append(pResponse);
+            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pResponse));
         }
     }
     else
     {
         MXB_INFO("%d bytes received, still need %d bytes for the package.",
                  buffer_len, pHeader->msg_len - buffer_len);
-        m_pDcb->unread(pBuffer);
+        m_pDcb->unread(mxs::gwbufptr_to_gwbuf(pBuffer));
     }
 }
 
