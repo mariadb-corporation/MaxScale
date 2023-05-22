@@ -85,6 +85,10 @@
 #error OpenSSL library does not support multi-threading.
 #endif
 
+#ifdef MXS_WITH_ASAN
+#include <sanitizer/lsan_interface.h>
+#endif
+
 using namespace maxscale;
 using std::cerr;
 using std::cout;
@@ -500,6 +504,11 @@ static void sigfatal_handler(int i)
     }
 
     MXB_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
+
+#ifdef MXS_WITH_ASAN
+    __lsan_do_leak_check();
+#endif
+
     DCB* dcb = dcb_get_current();
     MXS_SESSION* ses = dcb ? dcb->session() : session_get_current();
 
