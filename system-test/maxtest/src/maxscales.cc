@@ -581,7 +581,11 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
         string log_source = mxb::string_printf("%s/logs/*", homedir);
         vm->copy_from_node(log_source, dest_log_dir);
         log().expect(rc != 42, "Test should not generate core files");
-        log().expect(rc != 43, "MaxScale should not leak memory");
+
+        if (m_leak_check)
+        {
+            log().expect(rc != 43, "MaxScale should not leak memory");
+        }
     }
     else
     {

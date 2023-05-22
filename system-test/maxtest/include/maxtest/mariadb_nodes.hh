@@ -63,6 +63,11 @@ public:
         uint32_t major {0};
         uint32_t minor {0};
         uint32_t patch {0};
+
+        int64_t as_number() const
+        {
+            return major * 10000 + minor * 100 + patch;
+        }
     };
     Version version();
 
