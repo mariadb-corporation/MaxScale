@@ -69,6 +69,10 @@
 #include "internal/service.hh"
 #include "internal/defaults.hh"
 
+#ifdef MXS_WITH_ASAN
+#include <sanitizer/lsan_interface.h>
+#endif
+
 using std::move;
 using std::set;
 using std::string;
@@ -3623,6 +3627,11 @@ json_t* mxs::Config::maxscale_to_json(const char* host) const
     json_object_set_new(attr, "config_sync", json_incref(manager.get_json()));
 
     json_object_set_new(attr, "system", system_to_json());
+
+#ifdef MXS_WITH_ASAN
+    int leaking = __lsan_do_recoverable_leak_check();
+    json_object_set_new(attr, "memory_leak", json_boolean(leaking));
+#endif
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
