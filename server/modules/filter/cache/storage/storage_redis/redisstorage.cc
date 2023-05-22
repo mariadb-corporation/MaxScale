@@ -648,7 +648,7 @@ public:
                 switch (reply.type())
                 {
                     case REDIS_REPLY_STRING:
-                        pValue = gwbuf_alloc_and_load(reply.len(), reply.str());
+                        pValue = mxs::gwbuf_to_gwbufptr(GWBUF(reply.str(), reply.len()));
                         rv = CACHE_RESULT_OK;
                         break;
 

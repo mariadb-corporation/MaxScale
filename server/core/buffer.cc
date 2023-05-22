@@ -161,27 +161,6 @@ GWBUF GWBUF::deep_clone() const
 }
 
 /**
- * Allocate a new gateway buffer structure of size bytes and load with data.
- *
- * @param       size    The size in bytes of the data area required
- * @param       data    Pointer to the data (size bytes) to be loaded
- * @return      Pointer to the buffer structure or NULL if memory could not
- *              be allocated.
- */
-GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data)
-{
-    mxb_assert(size > 0);
-    GWBUF* rval = gwbuf_alloc(size);
-
-    if (rval)
-    {
-        memcpy(GWBUF_DATA(rval), data, size);
-    }
-
-    return rval;
-}
-
-/**
  * Free a list of gateway buffers
  *
  * @param buf The head of the list of buffers to free

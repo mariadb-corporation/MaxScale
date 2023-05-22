@@ -39,7 +39,7 @@ public:
      *
      * @return A GWBUF containing an OK response packet.
      */
-    static GWBUF* create_ok_response();
+    static GWBUF create_ok_response();
 
     /**
      * Called to handle a statement from a "client".
@@ -114,15 +114,15 @@ protected:
      * Enqueues a response for a particular router session.
      *
      * @param pSession   The session to enqueue the response for.
-     * @param pResponse  The response.
+     * @param response   The response.
      */
-    void enqueue_response(const RouterSession* pSession, GWBUF* pResponse);
+    void enqueue_response(const RouterSession* pSession, GWBUF&& response);
 
 private:
-    GWBUF* dequeue_response(const RouterSession* pSession, bool* pEmpty);
+    GWBUF dequeue_response(const RouterSession* pSession, bool* pEmpty);
 
 private:
-    typedef std::deque<GWBUF*>                        Responses;
+    typedef std::deque<GWBUF>                         Responses;
     typedef std::map<const RouterSession*, Responses> SessionResponses;
 
     SessionResponses m_session_responses;

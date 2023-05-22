@@ -169,7 +169,7 @@ public:
                         }
                         else if (!is_soft_stale || include_stale)
                         {
-                            pValue = gwbuf_alloc_and_load(nData, pData);
+                            pValue = mxs::gwbuf_to_gwbufptr(GWBUF(pData, nData));
 
                             rv = CACHE_RESULT_OK;
 

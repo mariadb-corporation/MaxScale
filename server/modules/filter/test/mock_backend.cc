@@ -41,16 +41,13 @@ Backend::~Backend()
 }
 
 // static
-GWBUF* Backend::create_ok_response()
+GWBUF Backend::create_ok_response()
 {
     /* Note: sequence id is always 01 (4th byte) */
     const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] =
     {07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00};
 
-    GWBUF* pResponse = gwbuf_alloc_and_load(sizeof(ok), &ok);
-    mxb_assert(pResponse);
-
-    return pResponse;
+    return GWBUF{ok, sizeof(ok)};
 }
 
 //
@@ -67,12 +64,12 @@ BufferBackend::~BufferBackend()
 bool BufferBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
 {
     bool empty = false;
-    GWBUF* pResponse = dequeue_response(pSession, &empty);
+    GWBUF response = dequeue_response(pSession, &empty);
 
-    if (pResponse)
+    if (response)
     {
         mxs::ReplyRoute down;
-        pSession->clientReply(mxs::gwbufptr_to_gwbuf(pResponse), down, reply);
+        pSession->clientReply(std::move(response), down, reply);
     }
 
     return !empty;
@@ -96,7 +93,7 @@ bool BufferBackend::idle(const RouterSession* pSession) const
 bool BufferBackend::discard_one_response(const RouterSession* pSession)
 {
     bool empty = false;
-    gwbuf_free(dequeue_response(pSession, &empty));
+    dequeue_response(pSession, &empty);
 
     return !empty;
 }
@@ -109,23 +106,19 @@ void BufferBackend::discard_all_responses(const RouterSession* pSession)
     {
         Responses& responses = m_session_responses[pSession];
         mxb_assert(!responses.empty());
-
-        std::for_each(responses.begin(), responses.end(), gwbuf_free);
         responses.clear();
     }
 }
 
-void BufferBackend::enqueue_response(const RouterSession* pSession, GWBUF* pResponse)
+void BufferBackend::enqueue_response(const RouterSession* pSession, GWBUF&& response)
 {
-    Responses& responses = m_session_responses[pSession];
-
-    responses.push_back(pResponse);
+    m_session_responses[pSession].emplace_back(std::move(response));
 }
 
-GWBUF* BufferBackend::dequeue_response(const RouterSession* pSession, bool* pEmpty)
+GWBUF BufferBackend::dequeue_response(const RouterSession* pSession, bool* pEmpty)
 {
     mxb_assert(!idle(pSession));
-    GWBUF* pResponse = NULL;
+    GWBUF response;
     *pEmpty = true;
 
     if (!idle(pSession))
@@ -135,14 +128,14 @@ GWBUF* BufferBackend::dequeue_response(const RouterSession* pSession, bool* pEmp
 
         if (!responses.empty())
         {
-            pResponse = responses.front();
+            response = std::move(responses.front());
             responses.pop_front();
         }
 
         *pEmpty = responses.empty();
     }
 
-    return pResponse;
+    return response;
 }
 
 
@@ -181,9 +174,9 @@ public:
     {
     }
 
-    GWBUF* create_response() const
+    GWBUF create_response() const
     {
-        return gwbuf_alloc_and_load(m_response.size(), &m_response.front());
+        return GWBUF(reinterpret_cast<const uint8_t*>(m_response.data()), m_response.size());
     }
 
 private:

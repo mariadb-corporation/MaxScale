@@ -34,8 +34,8 @@ int test_checksums()
         'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!'
     };
 
-    GWBUF* d1 = gwbuf_alloc_and_load(sizeof(data), data);
-    GWBUF* d2 = gwbuf_alloc_and_load(sizeof(data), data);
+    GWBUF d1(data, sizeof(data));
+    GWBUF d2(data, sizeof(data));
 
     T sum1, sum2;
     sum1.update(d1);
@@ -69,9 +69,6 @@ int test_checksums()
     mxb_assert(sum1 == sum2);
     mxb_assert(sum1.hex() == saved);
     mxb_assert(sum2.hex() == saved);
-
-    gwbuf_free(d1);
-    gwbuf_free(d2);
 
     return 0;
 }

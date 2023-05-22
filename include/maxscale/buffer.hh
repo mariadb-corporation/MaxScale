@@ -469,17 +469,6 @@ inline size_t gwbuf_link_length(const GWBUF* b)
 extern GWBUF* gwbuf_alloc(unsigned int size);
 
 /**
- * Allocate a new gateway buffer structure of specified size and load with data.
- *
- * @param size  The size in bytes of the data area required
- * @param data  Pointer to the data (size bytes) to be loaded
- *
- * @return Pointer to the buffer structure or NULL if memory could not
- *         be allocated.
- */
-extern GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data);
-
-/**
  * Free a chain of gateway buffers
  *
  * @param buf  The head of the list of buffers to free, can be NULL.
@@ -874,23 +863,6 @@ public:
     }
 
     /**
-     * Creates a buffer from existing data.
-     *
-     * @param pData  Pointer to data.
-     * @param size   The size of the data.
-     *
-     * @attention  @c std::bad_alloc is thrown if the allocation fails.
-     */
-    Buffer(const void* pData, size_t size)
-        : m_pBuffer(gwbuf_alloc_and_load(size, pData))
-    {
-        if (!m_pBuffer)
-        {
-            throw std::bad_alloc();
-        }
-    }
-
-    /**
      * Creates a buffer from a std::vector.
      *
      * @param data  The data to be copied.
@@ -1140,22 +1112,6 @@ public:
     Buffer& append(Buffer& buffer)
     {
         m_pBuffer = gwbuf_append(m_pBuffer, buffer.release());
-        return *this;
-    }
-
-    /**
-     * Appends a vector of bytes to this.
-     *
-     * @param buffer  The std::vector<uint8_t> to append
-     *
-     * @return this
-     *
-     * @attention  Does not invalidate any iterators, but an iterator
-     *             that has reached the end will remain there.
-     */
-    Buffer& append(const std::vector<uint8_t>& data)
-    {
-        m_pBuffer = gwbuf_append(m_pBuffer, gwbuf_alloc_and_load(data.size(), data.data()));
         return *this;
     }
 
