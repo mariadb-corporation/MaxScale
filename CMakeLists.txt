@@ -172,6 +172,7 @@ if (WITH_ASAN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
   # Only relevant when MaxScale is linked with -fsanitize=address
   set(SERVICE_FILE_ASAN_OPTIONS "Environment=ASAN_OPTIONS=abort_on_error=1:unmap_shadow_on_exit=1")
+  add_definitions(-DMXS_WITH_ASAN=1)
 endif()
 if (WITH_TSAN)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
