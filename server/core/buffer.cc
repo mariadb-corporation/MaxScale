@@ -166,9 +166,19 @@ GWBUF& GWBUF::operator=(const GWBUF& rhs)
 }
 
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
-    : GWBUF()
+    : hints(std::move(rhs.hints))
+    , m_sbuf(std::move(rhs.m_sbuf))
+    , m_start(std::exchange(rhs.m_start, nullptr))
+    , m_end(std::exchange(rhs.m_end, nullptr))
+    , m_id(std::exchange(rhs.m_id, 0))
+    , m_type(std::exchange(rhs.m_type, TYPE_UNDEFINED))
+#ifdef SS_DEBUG
+    , m_owner(RoutingWorker::get_current_id())
+#endif
+    , m_sql(std::move(rhs.m_sql))
+    , m_canonical(std::move(rhs.m_canonical))
+    , m_markers(std::move(rhs.m_markers))
 {
-    move_helper(move(rhs));
 }
 
 GWBUF& GWBUF::operator=(GWBUF&& rhs) noexcept
