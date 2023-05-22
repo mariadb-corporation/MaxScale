@@ -318,11 +318,33 @@ std::unique_ptr<QueryResult> PgSQL::query(const std::string& query)
         }
         else if (res_status == PGRES_FATAL_ERROR)
         {
-            // If the error message is not empty, the PQexec_with_timeout call generated a custom error.
-            // If it's empty, the result may not exist, ask connection itself for error.
-            std::string msg = m_errormsg.empty() ? read_pg_error() : m_errormsg;
-            m_errormsg = mxb::string_printf(query_failed, query.c_str(), msg.c_str());
-            PQclear(result);
+            // Gets here also if result is null.
+            if (m_errormsg.empty())
+            {
+                if (result)
+                {
+                    const char* errmsg = PQresultErrorMessage(result);
+                    if (*errmsg)
+                    {
+                        m_errormsg = mxb::string_printf(query_failed, query.c_str(), errmsg);
+                    }
+                    PQclear(result);
+                }
+
+                if (m_errormsg.empty())
+                {
+                    // Still no error message. Try to get one from the connection object.
+                    m_errormsg = mxb::string_printf(query_failed, query.c_str(), read_pg_error().c_str());
+                }
+            }
+            else
+            {
+                mxb_assert(!result);
+                // PQexec_with_timeout() generated a custom error. This only happens with serious errors
+                // which require a reconnection as the result may not have been read out.
+                m_errormsg = mxb::string_printf(query_failed, query.c_str(), m_errormsg.c_str());
+                PQreset(m_conn);
+            }
         }
         else
         {
