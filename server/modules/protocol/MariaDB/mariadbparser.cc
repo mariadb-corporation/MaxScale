@@ -134,7 +134,7 @@ mxs::Parser::PacketTypeMask MariaDBParser::Helper::get_packet_type_mask(const GW
 
 uint32_t MariaDBParser::Helper::get_ps_id(const GWBUF& packet) const
 {
-    return mxs_mysql_extract_ps_id(&packet);
+    return mxs_mysql_extract_ps_id(packet);
 }
 
 std::string_view MariaDBParser::Helper::get_sql(const GWBUF& packet) const

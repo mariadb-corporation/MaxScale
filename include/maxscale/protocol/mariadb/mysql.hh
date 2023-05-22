@@ -524,7 +524,7 @@ uint8_t mxs_mysql_get_command(const GWBUF& buffer);
  *
  * @return The statement ID
  */
-uint32_t mxs_mysql_extract_ps_id(const GWBUF* buffer);
+uint32_t mxs_mysql_extract_ps_id(const GWBUF& buffer);
 
 /**
  * @brief Determine if a packet contains a one way message

@@ -1159,7 +1159,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
 
     case MXS_COM_STMT_EXECUTE:
         {
-            uint32_t id = mxs_mysql_extract_ps_id(&buffer);
+            uint32_t id = mxs_mysql_extract_ps_id(buffer);
             uint16_t params = m_qc.get_param_count(id);
 
             if (params > 0)
@@ -1186,7 +1186,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
             // replay as all stored commands generate a response and none of them refer to any previous
             // commands. This means that the history can be executed in a single batch without waiting for any
             // responses.
-            uint32_t id = mxs_mysql_extract_ps_id(&buffer);
+            uint32_t id = mxs_mysql_extract_ps_id(buffer);
 
             if (m_session_data->history().erase(id))
             {

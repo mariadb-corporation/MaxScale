@@ -431,7 +431,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
             case MXS_COM_STMT_BULK_EXECUTE:
             case MXS_COM_STMT_SEND_LONG_DATA:
                 {
-                    uint32_t ps_id = mxs_mysql_extract_ps_id(&buffer);
+                    uint32_t ps_id = mxs_mysql_extract_ps_id(buffer);
                     // -1 means use the last prepared stmt.
                     if (ps_id == MARIADB_PS_DIRECT_EXEC_ID && m_last_prepare_id > 0)
                     {
@@ -457,7 +457,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
 
             case MXS_COM_STMT_CLOSE:
                 {
-                    uint32_t ps_id = mxs_mysql_extract_ps_id(&buffer);
+                    uint32_t ps_id = mxs_mysql_extract_ps_id(buffer);
                     m_ps_id_to_hints.erase(ps_id);
                 }
                 break;

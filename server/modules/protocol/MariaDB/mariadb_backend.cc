@@ -1084,7 +1084,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
 
             if (mxs_mysql_is_ps_command(cmd))
             {
-                uint32_t ps_id = mxs_mysql_extract_ps_id(&queue);
+                uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
                 auto it = m_ps_map.find(ps_id);
 
                 if (it != m_ps_map.end())

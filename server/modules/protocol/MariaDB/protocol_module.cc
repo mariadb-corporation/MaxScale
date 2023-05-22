@@ -131,7 +131,7 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
     std::string sql;
     if (mxs_mysql_is_ps_command(command))
     {
-        sql = "ID: " + std::to_string(mxs_mysql_extract_ps_id(&packet));
+        sql = "ID: " + std::to_string(mxs_mysql_extract_ps_id(packet));
         pSql = sql.c_str();
         len = sql.length();
     }

@@ -381,11 +381,11 @@ uint8_t mxs_mysql_get_command(const GWBUF& buffer)
     return buffer.length() > MYSQL_HEADER_LEN ? buffer[MYSQL_HEADER_LEN] : MXS_COM_UNDEFINED;
 }
 
-uint32_t mxs_mysql_extract_ps_id(const GWBUF* buffer)
+uint32_t mxs_mysql_extract_ps_id(const GWBUF& buffer)
 {
     uint32_t rval = 0;
     uint8_t id[MYSQL_PS_ID_SIZE];
-    size_t sz = buffer->copy_data(MYSQL_PS_ID_OFFSET, sizeof(id), id);
+    size_t sz = buffer.copy_data(MYSQL_PS_ID_OFFSET, sizeof(id), id);
     mxb_assert(sz == sizeof(id));
 
     if (sz == sizeof(id))

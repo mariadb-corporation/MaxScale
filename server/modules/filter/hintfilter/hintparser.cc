@@ -399,7 +399,7 @@ HintParser::HintVector HintParser::parse(InputIter it, InputIter end)
 
 uint32_t HintSession::get_id(GWBUF* buffer) const
 {
-    auto ps_id = mxs_mysql_extract_ps_id(buffer);
+    auto ps_id = mxs_mysql_extract_ps_id(*buffer);
 
     if (ps_id == MARIADB_PS_DIRECT_EXEC_ID && m_prev_id)
     {

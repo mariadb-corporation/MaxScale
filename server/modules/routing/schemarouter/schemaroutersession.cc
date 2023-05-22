@@ -1470,7 +1470,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     }
     else if (mxs_mysql_is_ps_command(command))
     {
-        uint32_t id = mxs_mysql_extract_ps_id(&buffer);
+        uint32_t id = mxs_mysql_extract_ps_id(buffer);
         rval = m_shard.get_statement(id);
 
         if (command == MXS_COM_STMT_CLOSE)
