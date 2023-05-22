@@ -66,7 +66,7 @@ HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
 
 bool HintSession::routeQuery(GWBUF&& queue)
 {
-    auto hints = process_hints(&queue);
+    auto hints = process_hints(queue);
     if (!hints.empty())
     {
         auto& dest = queue.hints;

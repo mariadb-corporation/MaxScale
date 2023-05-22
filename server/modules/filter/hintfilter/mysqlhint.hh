@@ -64,7 +64,7 @@ enum TOKEN_VALUE
 class HintParser
 {
 public:
-    using InputIter = mxs::Buffer::iterator;
+    using InputIter = GWBUF::const_iterator;
     using HintVector = std::vector<Hint>;
 
     /**
@@ -117,6 +117,6 @@ private:
     // A mapping of prepared statement IDs to the hints that they contain
     std::unordered_map<uint32_t, std::vector<Hint>> m_ps;
 
-    std::vector<Hint> process_hints(GWBUF* data);
-    uint32_t          get_id(GWBUF* buffer) const;
+    std::vector<Hint> process_hints(const GWBUF& data);
+    uint32_t          get_id(const GWBUF& buffer) const;
 };

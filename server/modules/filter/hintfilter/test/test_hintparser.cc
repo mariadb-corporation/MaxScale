@@ -30,7 +30,7 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
 {
     bool rval = true;
     auto it = expected.begin();
-    mxs::Buffer buffer(input.c_str(), input.size());
+    GWBUF buffer(reinterpret_cast<const uint8_t*>(input.c_str()), input.size());
 
     for (auto output : get_all_comments(buffer.begin(), buffer.end()))
     {
@@ -77,7 +77,7 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
 
 void test_parse(const std::string& input, Hint::Type expected_type)
 {
-    mxs::Buffer buffer(input.c_str(), input.size());
+    GWBUF buffer(reinterpret_cast<const uint8_t*>(input.c_str()), input.size());
     HintParser parser;
     auto hints = parser.parse(buffer.begin(), buffer.end());
 
@@ -101,7 +101,7 @@ void test_parse(const std::string& input, Hint::Type expected_type)
 
 void count_hints(const std::string& input, int num_expected)
 {
-    mxs::Buffer buffer(input.c_str(), input.size());
+    GWBUF buffer(reinterpret_cast<const uint8_t*>(input.c_str()), input.size());
     HintParser parser;
     int n = 0;
     auto hints = parser.parse(buffer.begin(), buffer.end());

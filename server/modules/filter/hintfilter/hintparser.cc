@@ -397,9 +397,9 @@ HintParser::HintVector HintParser::parse(InputIter it, InputIter end)
     return rval;
 }
 
-uint32_t HintSession::get_id(GWBUF* buffer) const
+uint32_t HintSession::get_id(const GWBUF& buffer) const
 {
-    auto ps_id = mxs_mysql_extract_ps_id(*buffer);
+    auto ps_id = mxs_mysql_extract_ps_id(buffer);
 
     if (ps_id == MARIADB_PS_DIRECT_EXEC_ID && m_prev_id)
     {
@@ -409,11 +409,10 @@ uint32_t HintSession::get_id(GWBUF* buffer) const
     return ps_id;
 }
 
-std::vector<Hint> HintSession::process_hints(GWBUF* data)
+std::vector<Hint> HintSession::process_hints(const GWBUF& buffer)
 {
     HintParser::HintVector hints;
-    mxs::Buffer buffer(data);
-    uint8_t cmd = mxs_mysql_get_command(*buffer.get());
+    uint8_t cmd = mxs_mysql_get_command(buffer);
 
     if (cmd == MXS_COM_QUERY)
     {
@@ -438,11 +437,11 @@ std::vector<Hint> HintSession::process_hints(GWBUF* data)
     }
     else if (cmd == MXS_COM_STMT_CLOSE)
     {
-        m_ps.erase(get_id(buffer.get()));
+        m_ps.erase(get_id(buffer));
     }
     else if (mxs_mysql_is_ps_command(cmd))
     {
-        auto it = m_ps.find(get_id(buffer.get()));
+        auto it = m_ps.find(get_id(buffer));
 
         if (it != m_ps.end())
         {
@@ -450,6 +449,5 @@ std::vector<Hint> HintSession::process_hints(GWBUF* data)
         }
     }
 
-    buffer.release();
     return hints;
 }
