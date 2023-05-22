@@ -157,7 +157,7 @@ PgUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw, ve
         // Different backends may have different ssl settings so need to update.
         sett.ssl = srv->ssl_config();
 
-        if (con.open(srv->address(), srv->port()))
+        if (con.open(srv->address(), srv->port(), "postgres"))
         {
             auto load_result = LoadResult::QUERY_FAILED;
 
