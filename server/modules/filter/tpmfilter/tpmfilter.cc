@@ -405,7 +405,7 @@ void TpmFilter::check_named_pipe()
     int ret = 0;
     char buffer[2];
     char buf[4096];
-    int pipe_fd;
+    int pipe_fd = -1;
 
     // open named pipe and this will block until middleware opens it.
     while (!m_shutdown && ((pipe_fd = open(m_config.named_pipe.c_str(), O_RDONLY)) > 0))
