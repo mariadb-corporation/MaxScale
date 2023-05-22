@@ -92,9 +92,6 @@ public:
     using iterator = uint8_t*;
     using const_iterator = const uint8_t*;
 
-    // TODO: make private?
-    HintVector hints;   /*< Hint data for this buffer */
-
     /**
      * Constructs an empty GWBUF. Does not allocate any storage. Calling most storage-accessing functions
      * on an empty buffer is an error.
@@ -178,6 +175,21 @@ public:
      * @return True if buffer is not empty
      */
     explicit operator bool() const;
+
+    /**
+     * Get the hints attached to this buffer
+     *
+     * @return The hints if there were any
+     */
+    const HintVector& hints() const;
+
+    /**
+     * Add a routing hint to this buffer
+     *
+     * @param args Arguments given to the Hint object
+     */
+    template<typename ... Args>
+    void add_hint(Args && ... args);
 
     // Sets the buffer type
     void set_type(Type type);
@@ -355,8 +367,9 @@ public:
     size_t runtime_size() const;
 
 private:
-    std::shared_ptr<SHARED_BUF>   m_sbuf;          /**< The shared buffer with the real data */
-    std::shared_ptr<ProtocolInfo> m_protocol_info; /**< Protocol info */
+    std::shared_ptr<SHARED_BUF>   m_sbuf;           /**< The shared buffer with the real data */
+    std::shared_ptr<ProtocolInfo> m_protocol_info;  /**< Protocol info */
+    HintVector                    m_hints;          /**< Hint data for this buffer */
 
     uint8_t* m_start {nullptr};         /**< Start of the valid data */
     uint8_t* m_end {nullptr};           /**< First byte after the valid data */
@@ -384,6 +397,17 @@ inline bool GWBUF::type_is_collect_result() const
 inline bool GWBUF::type_is_collect_rows() const
 {
     return m_type & TYPE_COLLECT_ROWS;
+}
+
+inline const GWBUF::HintVector& GWBUF::hints() const
+{
+    return m_hints;
+}
+
+template<typename ... Args>
+void GWBUF::add_hint(Args&& ... args)
+{
+    m_hints.emplace_back(std::forward<Args>(args)...);
 }
 
 inline uint8_t* GWBUF::data()

@@ -782,7 +782,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_tar
     int config_max_rlag = get_max_replication_lag();    // From router configuration.
     RWBackend* target = nullptr;
 
-    for (const Hint& hint : querybuf.hints)
+    for (const Hint& hint : querybuf.hints())
     {
         if (hint.type == Hint::Type::ROUTE_TO_NAMED_SERVER)
         {

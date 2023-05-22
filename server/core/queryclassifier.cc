@@ -824,7 +824,7 @@ const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buff
             }
         }
 
-        process_routing_hints(buffer.hints, &route_target);
+        process_routing_hints(buffer.hints(), &route_target);
 
         if (protocol_data->is_trx_ending() || Parser::type_mask_contains(type_mask, mxs::sql::TYPE_BEGIN_TRX))
         {

@@ -171,7 +171,7 @@ bool RWSplitSession::continue_causal_read()
         if (m_wait_gtid == RETRYING_ON_MASTER)
         {
             // Retry the query on the master
-            m_current_query.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+            m_current_query.add_hint(Hint::Type::ROUTE_TO_MASTER);
             retry_query(std::move(m_current_query), 0);
             m_current_query.clear();
             rval = true;
@@ -231,7 +231,7 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
 {
     // Add a routing hint to the copy of the current query to prevent it from being routed to a slave if it
     // has to be retried.
-    m_current_query.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+    m_current_query.add_hint(Hint::Type::ROUTE_TO_MASTER);
 
     int64_t timeout = m_config->causal_reads_timeout.count();
     std::string gtid = m_config->causal_reads == CausalReads::GLOBAL ?
@@ -257,7 +257,7 @@ std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
     m_wait_gtid = READING_GTID;
     auto& [buffer, plan] = rval;
     buffer = mariadb::create_query("SELECT @@gtid_current_pos");
-    buffer.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+    buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
     buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
 
     m_qc.revert_update();

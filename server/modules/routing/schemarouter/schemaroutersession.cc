@@ -163,8 +163,8 @@ static void inspect_query(const Parser& parser,
         MXB_INFO("> Command: %s, stmt: %s %s%s",
                  mariadb::cmd_to_string(command),
                  std::string(parser.get_sql(packet)).c_str(),
-                 (packet.hints.empty() ? "" : ", Hint:"),
-                 (packet.hints.empty() ? "" : Hint::type_to_str(packet.hints[0].type)));
+                 (packet.hints().empty() ? "" : ", Hint:"),
+                 (packet.hints().empty() ? "" : Hint::type_to_str(packet.hints()[0].type)));
     }
 }
 
@@ -345,7 +345,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         // Route all transaction control commands to all backends. This will keep the transaction state
         // consistent even if no default database is used or if the default database being used is located
         // on more than one node.
-        if (packet.hints.empty()
+        if (packet.hints().empty()
             && (type & (mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK)))
         {
             MXB_INFO("Routing trx control statement to all nodes.");
@@ -1248,9 +1248,9 @@ mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t
         rval = get_ps_target(buffer, qtype, op);
     }
 
-    if (!buffer.hints.empty() && buffer.hints[0].type == Hint::Type::ROUTE_TO_NAMED_SERVER)
+    if (!buffer.hints().empty() && buffer.hints()[0].type == Hint::Type::ROUTE_TO_NAMED_SERVER)
     {
-        const char* hinted_server = buffer.hints[0].data.c_str();
+        const char* hinted_server = buffer.hints()[0].data.c_str();
         for (const auto& b : m_backends)
         {
             // TODO: What if multiple servers have same name when case-compared?

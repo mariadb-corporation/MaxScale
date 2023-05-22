@@ -148,8 +148,8 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
     }
 
     const char* zType_mask = type_mask.empty() ? "N/A" : type_mask.c_str();
-    const char* zHint = packet.hints.empty() ? "" : ", Hint:";
-    const char* zHint_type = packet.hints.empty() ? "" : Hint::type_to_str(packet.hints[0].type);
+    const char* zHint = packet.hints().empty() ? "" : ", Hint:";
+    const char* zHint_type = packet.hints().empty() ? "" : Hint::type_to_str(packet.hints()[0].type);
 
     return mxb::string_printf("cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
                               command,

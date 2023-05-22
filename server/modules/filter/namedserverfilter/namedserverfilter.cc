@@ -374,7 +374,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                 {
                     for (const auto& target : reg_serv->m_targets)
                     {
-                        buffer.hints.emplace_back(reg_serv->m_htype, target);
+                        buffer.add_hint(reg_serv->m_htype, target);
                     }
                     m_n_diverted++;
                     m_fil_inst.m_total_diverted++;
@@ -441,8 +441,10 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                     auto it = m_ps_id_to_hints.find(ps_id);
                     if (it != m_ps_id_to_hints.end())
                     {
-                        const auto& new_hints = it->second;
-                        buffer.hints.insert(buffer.hints.end(), new_hints.begin(), new_hints.end());
+                        for (const auto& new_hint : it->second)
+                        {
+                            buffer.add_hint(new_hint);
+                        }
 
                         m_n_diverted++;
                         m_fil_inst.m_total_diverted++;

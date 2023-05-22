@@ -50,7 +50,7 @@ bool HintRouterSession::routeQuery(GWBUF&& packet)
 
     bool success = false;
 
-    const auto& hints = packet.hints;
+    const auto& hints = packet.hints();
     for (auto it = hints.begin(); !success && it != hints.end(); it++)
     {
         // Look for matching hint.

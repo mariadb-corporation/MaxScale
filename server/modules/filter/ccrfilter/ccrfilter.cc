@@ -342,7 +342,7 @@ bool CCRSession::routeQuery(GWBUF&& queue)
         }
         else if (m_hints_left > 0)
         {
-            queue.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+            queue.add_hint(Hint::Type::ROUTE_TO_MASTER);
             m_hints_left--;
             filter->m_stats.n_add_count++;
             MXB_INFO("%d queries left", m_hints_left);
@@ -354,7 +354,7 @@ bool CCRSession::routeQuery(GWBUF&& queue)
 
             if (dt < m_time.count())
             {
-                queue.hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+                queue.add_hint(Hint::Type::ROUTE_TO_MASTER);
                 filter->m_stats.n_add_time++;
                 MXB_INFO("%.0f seconds left", m_time.count() - dt);
             }
@@ -375,16 +375,11 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF& buffer)
 {
     const char CCR[] = "ccr";
     CcrHintValue rval = CCR_HINT_NONE;
-    bool found_ccr = false;
-    auto it = buffer.hints.begin();
-    auto end = buffer.hints.end();
 
-    while (it != end && !found_ccr)
+    for (const auto& hint : buffer.hints())
     {
-        const auto& hint = *it;
         if (hint.type == Hint::Type::PARAMETER && strcasecmp(hint.data.c_str(), CCR) == 0)
         {
-            found_ccr = true;
             auto val = hint.value.c_str();
             if (strcasecmp(val, "match") == 0)
             {
@@ -399,17 +394,8 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF& buffer)
                 MXB_ERROR("Unknown value for hint parameter %s: '%s'.", CCR, val);
             }
         }
-        else
-        {
-            it++;
-        }
     }
 
-    // Remove the ccr-hint from the hint chain. Otherwise, rwsplit will complain.
-    if (found_ccr)
-    {
-        buffer.hints.erase(it);
-    }
     return rval;
 }
 

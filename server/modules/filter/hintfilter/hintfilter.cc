@@ -66,11 +66,9 @@ HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
 
 bool HintSession::routeQuery(GWBUF&& queue)
 {
-    auto hints = process_hints(queue);
-    if (!hints.empty())
+    for (auto hint : process_hints(queue))
     {
-        auto& dest = queue.hints;
-        dest.insert(dest.end(), hints.begin(), hints.end());
+        queue.add_hint(std::move(hint));
     }
 
     return mxs::FilterSession::routeQuery(std::move(queue));

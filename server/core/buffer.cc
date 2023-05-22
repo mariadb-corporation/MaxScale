@@ -116,9 +116,9 @@ GWBUF GWBUF::shallow_clone() const
 }
 
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
-    : hints(std::move(rhs.hints))
-    , m_sbuf(std::move(rhs.m_sbuf))
+    : m_sbuf(std::move(rhs.m_sbuf))
     , m_protocol_info(std::move(rhs.m_protocol_info))
+    , m_hints(std::move(rhs.m_hints))
     , m_start(std::exchange(rhs.m_start, nullptr))
     , m_end(std::exchange(rhs.m_end, nullptr))
     , m_id(std::exchange(rhs.m_id, 0))
@@ -147,7 +147,7 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     m_type = exchange(rhs.m_type, TYPE_UNDEFINED);
     m_id = exchange(rhs.m_id, 0);
 
-    hints = move(rhs.hints);
+    m_hints = move(rhs.m_hints);
     m_protocol_info = std::move(rhs.m_protocol_info);
     m_sbuf = move(rhs.m_sbuf);
 }
@@ -172,7 +172,7 @@ void gwbuf_free(GWBUF* buf)
 
 void GWBUF::clone_helper(const GWBUF& other)
 {
-    hints = other.hints;
+    m_hints = other.m_hints;
     m_type = other.m_type;
     m_id = other.m_id;
     m_protocol_info = other.m_protocol_info;
@@ -206,7 +206,7 @@ GWBUF GWBUF::split(uint64_t n_bytes)
         rval.m_start = m_start;
         rval.m_end = m_end;
 
-        hints.clear();
+        m_hints.clear();
         m_type = TYPE_UNDEFINED;
         m_id = 0;
         m_protocol_info.reset();
@@ -397,7 +397,7 @@ void GWBUF::reset()
         mxb_assert(m_start == nullptr && m_end == nullptr);
     }
 
-    hints.clear();
+    m_hints.clear();
     m_protocol_info.reset();
     m_type = TYPE_UNDEFINED;
     m_id = 0;
