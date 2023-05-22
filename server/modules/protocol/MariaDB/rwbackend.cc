@@ -17,7 +17,6 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 
-using Iter = mxs::Buffer::iterator;
 using std::chrono::seconds;
 
 namespace maxscale

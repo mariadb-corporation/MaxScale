@@ -314,7 +314,6 @@ private:
     std::string    m_close_reason;          /**< Why the backend was closed */
     time_t         m_opened_at {0};         /**< Timestamp when the backend was last opened */
     mxs::Endpoint* m_backend {nullptr};     /**< Backend server */
-    mxs::Buffer    m_pending_cmd;           /**< Pending commands */
     int            m_state {0};             /**< State of the backend */
 
     maxbase::StopWatch     m_session_timer;

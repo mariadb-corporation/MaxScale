@@ -60,7 +60,7 @@ public:
     /**
      * Convert the resultset into its raw binary form
      *
-     * @return The resultset as a mxs::Buffer
+     * @return The resultset as a GWBUF
      */
     GWBUF as_buffer() const;
 
