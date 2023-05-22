@@ -63,8 +63,8 @@ public:
         mxb_assert(nBuffer >= MYSQL_HEADER_LEN + m_payload_len);
     }
 
-    ComPacket(mxs::Buffer& buffer)
-        : ComPacket(GWBUF_DATA(buffer.get()), gwbuf_link_length(buffer.get()))
+    ComPacket(GWBUF& buffer)
+        : ComPacket(buffer.data(), buffer.length())
     {
     }
 
@@ -166,7 +166,7 @@ public:
         ++m_pData;
     }
 
-    ComResponse(mxs::Buffer& buffer)
+    ComResponse(GWBUF& buffer)
         : ComPacket(buffer)
         , m_type(get_type())
     {

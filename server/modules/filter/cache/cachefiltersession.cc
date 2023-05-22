@@ -343,15 +343,15 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
 
 bool CacheFilterSession::routeQuery(GWBUF&& packet)
 {
-    GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
     int rv = 1;
 
     if (m_processing)
     {
-        m_queued_packets.push_back(pPacket);
+        m_queued_packets.push_back(std::move(packet));
     }
     else
     {
+        GWBUF* pPacket = mxs::gwbuf_to_gwbufptr(std::move(packet));
         routing_action_t action = ROUTING_CONTINUE;
 
         reset_response_state();
@@ -367,8 +367,8 @@ bool CacheFilterSession::routeQuery(GWBUF&& packet)
             // it is ensured that the packets are handled in the right order.
             if (!m_queued_packets.empty())
             {
-                m_queued_packets.push_back(pPacket);
-                pPacket = m_queued_packets.front().release();
+                m_queued_packets.push_back(mxs::gwbufptr_to_gwbuf(pPacket));
+                pPacket = mxs::gwbuf_to_gwbufptr(std::move(m_queued_packets.front()));
                 m_queued_packets.pop_front();
             }
 
@@ -1677,11 +1677,10 @@ void CacheFilterSession::ready_for_another_call()
                 {
                     if (!m_queued_packets.empty())
                     {
-                        GWBUF* pPacket = m_queued_packets.front().release();
-                        mxb_assert(pPacket);
+                        GWBUF packet = std::move(m_queued_packets.front());
                         m_queued_packets.pop_front();
 
-                        routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+                        routeQuery(std::move(packet));
                     }
                 }
             });

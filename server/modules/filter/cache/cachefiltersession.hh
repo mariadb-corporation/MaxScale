@@ -195,7 +195,7 @@ private:
     Tables                  m_tables;         /**< Tables selected or modified. */
     bool                    m_clear_cache;    /**< Whether the entire cache should be cleared. */
     bool                    m_user_specific;  /**< Whether a user specific cache should be used. */
-    std::deque<mxs::Buffer> m_queued_packets; /**< Queued statements, waiting for current to finish. */
+    std::deque<GWBUF>       m_queued_packets; /**< Queued statements, waiting for current to finish. */
     bool                    m_processing;     /**< Is query processing on-going. */
     bool                    m_load_active {false};
 };
