@@ -15,7 +15,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-4615](https://jira.mariadb.org/browse/MXS-4615) Partially executed multi-result queries are not treated as partial results
-* [MXS-4614](https://jira.mariadb.org/browse/MXS-4614) Query classifier does not refognize BEGIN NOT ATOMIC ... END
+* [MXS-4614](https://jira.mariadb.org/browse/MXS-4614) Query classifier does not recognize BEGIN NOT ATOMIC ... END
 * [MXS-4611](https://jira.mariadb.org/browse/MXS-4611) Readwritesplit prefers idle primary over busy replicas
 * [MXS-4586](https://jira.mariadb.org/browse/MXS-4586) transaction_replay_max_size default is 1GiB instead of 1MiB
 * [MXS-4560](https://jira.mariadb.org/browse/MXS-4560) Not all passwords were obfuscated in the maxctrl report
