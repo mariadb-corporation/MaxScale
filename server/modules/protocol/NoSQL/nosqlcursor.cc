@@ -213,13 +213,13 @@ NoSQLCursor::NoSQLCursor(const std::string& ns)
 
 NoSQLCursor::NoSQLCursor(const std::string& ns,
                          const vector<string>& extractions,
-                         mxs::Buffer&& mariadb_response)
+                         GWBUF&& mariadb_response)
     : m_ns(ns)
     , m_id(this_unit.next_id() | BSON_LONG_BIT)
     , m_extractions(std::move(extractions))
-    , m_mariadb_response(mariadb_response)
-    , m_pBuffer(m_mariadb_response.get()->data())
-    , m_nBuffer(m_mariadb_response.get()->length())
+    , m_mariadb_response(std::move(mariadb_response))
+    , m_pBuffer(m_mariadb_response.data())
+    , m_nBuffer(m_mariadb_response.length())
 {
     initialize();
 }
@@ -233,7 +233,7 @@ std::unique_ptr<NoSQLCursor> NoSQLCursor::create(const std::string& ns)
 //static
 std::unique_ptr<NoSQLCursor> NoSQLCursor::create(const std::string& ns,
                                                  const std::vector<std::string>& extractions,
-                                                 mxs::Buffer&& mariadb_response)
+                                                 GWBUF&& mariadb_response)
 {
     return std::unique_ptr<NoSQLCursor>(new NoSQLCursor(ns, extractions, std::move(mariadb_response)));
 }

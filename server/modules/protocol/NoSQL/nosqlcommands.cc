@@ -264,7 +264,7 @@ State OpDeleteCommand::execute(GWBUF** ppNoSQL_response)
     return State::BUSY;
 }
 
-State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpDeleteCommand::translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     ComResponse response(mariadb_response.data());
 
@@ -334,7 +334,7 @@ State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
     return State::BUSY;
 }
 
-State OpInsertCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpInsertCommand::translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     State state = State::BUSY;
     GWBUF* pResponse = nullptr;
@@ -456,7 +456,7 @@ State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
     return State::BUSY;
 }
 
-State OpUpdateCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpUpdateCommand::translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     State state = State::READY;
 
@@ -789,7 +789,7 @@ State OpQueryCommand::execute(GWBUF** ppNoSQL_response)
     return state;
 }
 
-State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpQueryCommand::translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     GWBUF* pResponse = nullptr;
 
@@ -993,7 +993,7 @@ State OpGetMoreCommand::execute(GWBUF** ppNoSQL_response)
     return State::READY;
 }
 
-State OpGetMoreCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpGetMoreCommand::translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     mxb_assert(!true);
     *ppNoSQL_response = nullptr;
@@ -1016,7 +1016,7 @@ State OpKillCursorsCommand::execute(GWBUF** ppNoSQL_response)
     return State::READY;
 }
 
-State OpKillCursorsCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpKillCursorsCommand::translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     mxb_assert(!true);
     *ppNoSQL_response = nullptr;
@@ -1319,7 +1319,7 @@ State ImmediateCommand::execute(GWBUF** ppNoSQL_response)
     return State::READY;
 }
 
-State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppProtocol_response)
+State ImmediateCommand::translate(GWBUF&& mariadb_response, GWBUF** ppProtocol_response)
 {
     // This will never be called.
     mxb_assert(!true);

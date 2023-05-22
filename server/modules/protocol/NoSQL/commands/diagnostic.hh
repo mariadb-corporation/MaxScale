@@ -159,7 +159,7 @@ public:
         return m_sSub_command->execute(ppNoSQL_response);
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         mxb_assert(m_sSub_command.get());
 
@@ -191,7 +191,7 @@ private:
         }
 
         virtual State execute(GWBUF** ppNoSQL_response) = 0;
-        virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
+        virtual State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
 
     protected:
         void add_execution_stats(DocumentBuilder& doc)
@@ -272,7 +272,7 @@ private:
             return State::READY;
         }
 
-        State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+        State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
         {
             mxb_assert(!true);
             return State::READY;
@@ -322,7 +322,7 @@ private:
             return m_sCommand->execute(ppResponse);
         }
 
-        State translate(mxs::Buffer&& response, GWBUF** ppResponse) override final
+        State translate(GWBUF&& response, GWBUF** ppResponse) override final
         {
             mxb_assert(m_sCommand.get());
 
@@ -628,7 +628,7 @@ public:
         return ss.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -664,7 +664,7 @@ public:
 
         default:
             ok = 1;
-            n = get_n(GWBUF_DATA(mariadb_response.get()));
+            n = get_n(mariadb_response.data());
         }
 
         DocumentBuilder doc;

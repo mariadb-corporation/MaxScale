@@ -200,7 +200,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         ComResponse response(mariadb_response.data());
 

@@ -87,7 +87,7 @@ public:
 
     virtual State execute(GWBUF** ppNoSQL_response) = 0;
 
-    virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
+    virtual State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
 
     enum class IsError
     {

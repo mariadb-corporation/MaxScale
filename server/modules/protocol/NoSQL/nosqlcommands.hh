@@ -81,7 +81,7 @@ class TableCreating : public T
 public:
     using T::T;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override final
     {
         State state;
 
@@ -98,7 +98,7 @@ public:
     }
 
 protected:
-    virtual State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) = 0;
+    virtual State translate2(GWBUF&& mariadb_response, GWBUF** ppResponse) = 0;
 
     virtual State table_created(GWBUF** ppResponse) = 0;
 
@@ -133,7 +133,7 @@ protected:
     }
 
 private:
-    State translate_create_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_create_table(GWBUF&& mariadb_response, GWBUF** ppResponse)
     {
         mxb_assert(m_creating_table);
         m_creating_table = false;
@@ -217,7 +217,7 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
 
 //
@@ -238,7 +238,7 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
     State table_created(GWBUF** ppResponse) override final;
 
@@ -269,7 +269,7 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
     State table_created(GWBUF** ppResponse) override final;
 
@@ -314,7 +314,7 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
 private:
     void send_query(const bsoncxx::document::view& query,
@@ -352,7 +352,7 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
 
 //
@@ -372,7 +372,7 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
 
 //
@@ -620,7 +620,7 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
     void diagnose(DocumentBuilder& doc) override;
 
@@ -640,7 +640,7 @@ public:
     using OpMsgCommand::OpMsgCommand;
 
     State execute(GWBUF** ppNoSQL_response) override;
-    virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override = 0;
+    virtual State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override = 0;
 
     void diagnose(DocumentBuilder& doc) override;
 

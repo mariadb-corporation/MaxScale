@@ -126,7 +126,7 @@ State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppRespons
     return state;
 }
 
-GWBUF* Database::translate(mxs::Buffer&& mariadb_response)
+GWBUF* Database::translate(GWBUF&& mariadb_response)
 {
     mxb_assert(is_busy());
     mxb_assert(m_sCommand.get());

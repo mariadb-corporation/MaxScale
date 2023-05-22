@@ -36,7 +36,7 @@ public:
 
     static std::unique_ptr<NoSQLCursor> create(const std::string& ns,
                                                const std::vector<std::string>& extractions,
-                                               mxs::Buffer&& mariadb_response);
+                                               GWBUF&& mariadb_response);
 
     static std::unique_ptr<NoSQLCursor> get(const std::string& collection, int64_t id);
     static void put(std::unique_ptr<NoSQLCursor> sCursor);
@@ -96,7 +96,7 @@ private:
 
     NoSQLCursor(const std::string& ns,
                 const std::vector<std::string>& extractions,
-                mxs::Buffer&& mariadb_response);
+                GWBUF&& mariadb_response);
 
     void initialize();
 
@@ -126,7 +126,7 @@ private:
     int32_t                       m_position { 0 };
     bool                          m_exhausted { false };
     std::vector<std::string>      m_extractions;
-    mxs::Buffer                   m_mariadb_response;
+    GWBUF                         m_mariadb_response;
     uint8_t*                      m_pBuffer { nullptr };
     size_t                        m_nBuffer { 0 };
     std::vector<std::string>      m_names;

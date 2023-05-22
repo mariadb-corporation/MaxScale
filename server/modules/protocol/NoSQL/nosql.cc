@@ -2904,11 +2904,9 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
 
 bool NoSQL::clientReply(GWBUF&& response, DCB* pDcb)
 {
-    GWBUF* pMariadb_response = mxs::gwbuf_to_gwbufptr(std::move(response));
     mxb_assert(m_sDatabase.get());
 
-    mxs::Buffer mariadb_response(pMariadb_response);
-    GWBUF* pProtocol_response = m_sDatabase->translate(std::move(mariadb_response));
+    GWBUF* pProtocol_response = m_sDatabase->translate(std::move(response));
 
     if (m_sDatabase->is_ready())
     {

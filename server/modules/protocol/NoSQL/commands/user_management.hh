@@ -254,7 +254,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         State state = State::READY;
 
@@ -379,7 +379,7 @@ private:
         return success;
     }
 
-    State translate_create(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_create(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
     {
         State state = State::READY;
 
@@ -451,7 +451,7 @@ private:
         return state;
     }
 
-    State translate_drop(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_drop(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
     {
         ComResponse response(mariadb_response.data());
 
@@ -544,7 +544,7 @@ public:
         return state;
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         State state = State::READY;
 
@@ -671,7 +671,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         ComResponse response(mariadb_response.data());
 
@@ -784,7 +784,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
@@ -986,7 +986,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
@@ -1235,7 +1235,7 @@ public:
         return state;
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         State state = State::READY;
 
@@ -1325,7 +1325,7 @@ private:
         return mxb::join(m_statements, ";");
     }
 
-    State translate_update_pwd(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_update_pwd(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
     {
         State state = State::READY;
 
@@ -1421,7 +1421,7 @@ private:
         return state;
     }
 
-    State translate_update_grants(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_update_grants(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
     {
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();

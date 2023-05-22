@@ -66,7 +66,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -99,7 +99,7 @@ public:
 
         default:
             ok = 1;
-            n = get_n(GWBUF_DATA(mariadb_response.get()));
+            n = get_n(mariadb_response.data());
         }
 
         DocumentBuilder doc;
@@ -208,7 +208,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         uint8_t* pBuffer = mariadb_response.data();
 

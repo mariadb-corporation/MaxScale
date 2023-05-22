@@ -96,7 +96,7 @@ public:
      *
      * @return @c mariadb_response translated into the equivalent NoSQL response.
      */
-    GWBUF* translate(mxs::Buffer&& mariadb_response);
+    GWBUF* translate(GWBUF&& mariadb_response);
 
     /**
      * @return True, if there is no pending activity, false otherwise.

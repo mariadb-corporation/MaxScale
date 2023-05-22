@@ -42,7 +42,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         State state = State::READY;
         GWBUF* pResponse = nullptr;
@@ -103,7 +103,7 @@ private:
         return "ns does not exist: " + table(Quoted::NO);
     }
 
-    State translate_normal_action(mxs::Buffer&& mariadb_response, GWBUF **ppResponse)
+    State translate_normal_action(GWBUF&& mariadb_response, GWBUF **ppResponse)
     {
         State state = State::READY;
         GWBUF* pResponse = nullptr;
@@ -152,7 +152,7 @@ private:
         return state;
     }
 
-    State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_creating_table(GWBUF&& mariadb_response, GWBUF** ppResponse)
     {
         mxb_assert(m_action == Action::CREATING_TABLE);
 
@@ -219,7 +219,7 @@ private:
         return state;
     }
 
-    State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_creating_database(GWBUF&& mariadb_response, GWBUF** ppResponse)
     {
         mxb_assert(m_action == Action::CREATING_DATABASE);
 
@@ -354,7 +354,7 @@ public:
         return m_statement;
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         State state = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -374,7 +374,7 @@ public:
         return state;
     }
 
-    State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_creating_table(GWBUF&& mariadb_response, GWBUF** ppResponse)
     {
         mxb_assert(m_action == Action::CREATING_TABLE);
 
@@ -448,7 +448,7 @@ public:
         return state;
     }
 
-    State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_creating_database(GWBUF&& mariadb_response, GWBUF** ppResponse)
     {
         mxb_assert(m_action == Action::CREATING_DATABASE);
 
@@ -755,7 +755,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -818,7 +818,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -1097,7 +1097,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -1128,7 +1128,7 @@ public:
 
         default:
             {
-                uint8_t* pBuffer = mariadb_response.get()->data();
+                uint8_t* pBuffer = mariadb_response.data();
 
                 ComQueryResponse cqr(&pBuffer);
                 auto nFields = cqr.nFields();
@@ -1248,7 +1248,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -1267,7 +1267,7 @@ public:
 
         default:
             {
-                uint8_t* pBuffer = mariadb_response.get()->data();
+                uint8_t* pBuffer = mariadb_response.data();
 
                 ComQueryResponse cqr(&pBuffer);
                 auto nFields = cqr.nFields();
@@ -1458,7 +1458,7 @@ public:
         return sql;
     };
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         uint8_t* pData = mariadb_response.data();
 

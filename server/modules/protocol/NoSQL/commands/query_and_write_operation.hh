@@ -201,7 +201,7 @@ public:
         return State::BUSY;
     }
 
-    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate2(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         State rv = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -740,7 +740,7 @@ public:
         return sql.str();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
@@ -893,7 +893,7 @@ protected:
         return m_sSub_command->create_initial_select();
     }
 
-    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate2(GWBUF&& mariadb_response, GWBUF** ppResponse) override
     {
         return m_sSub_command->translate(std::move(mariadb_response), ppResponse);
     }
@@ -968,7 +968,7 @@ private:
             return Query(Query::MULTI, 2, sql.str());
         }
 
-        virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        virtual State translate(GWBUF&& mariadb_response, GWBUF** ppResponse)
         {
             State state = State::READY;
 
@@ -1113,7 +1113,7 @@ private:
         DocumentBuilder                m_last_error_object;
 
     private:
-        State translate_commit(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        State translate_commit(GWBUF&& mariadb_response, GWBUF** ppResponse)
         {
             ComResponse response(mariadb_response.data());
 
@@ -1127,7 +1127,7 @@ private:
             return State::READY;
         }
 
-        State translate_initial_select(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        State translate_initial_select(GWBUF&& mariadb_response, GWBUF** ppResponse)
         {
             uint8_t* pBegin = mariadb_response.data();
             uint8_t* pBuffer = pBegin;
@@ -1216,7 +1216,7 @@ private:
             }
         }
 
-        State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+        State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override final
         {
             State state = State::READY;
 
@@ -1234,7 +1234,7 @@ private:
         }
 
     private:
-        State translate_delete(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        State translate_delete(GWBUF&& mariadb_response, GWBUF** ppResponse)
         {
             State state = State::BUSY;
 
@@ -1349,7 +1349,7 @@ private:
             optional(key::UPSERT, &m_upsert);
         }
 
-        State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+        State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override final
         {
             State state = State::READY;
 
@@ -1371,7 +1371,7 @@ private:
         }
 
     private:
-        State translate_update(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        State translate_update(GWBUF&& mariadb_response, GWBUF** ppResponse)
         {
             State state = State::BUSY;
 
@@ -1437,7 +1437,7 @@ private:
             return state;
         }
 
-        State translate_insert(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        State translate_insert(GWBUF&& mariadb_response, GWBUF** ppResponse)
         {
             State state = State::BUSY;
 
