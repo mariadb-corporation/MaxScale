@@ -1711,7 +1711,6 @@ bool runtime_create_volatile_server(const std::string& name, const std::string& 
                                     const mxs::ConfigParameters& extra)
 {
     UnmaskPasswords unmask;
-    mxb_assert(mxs::MainWorker::is_main_worker());
 
     bool rval = false;
     if (ServerManager::find_by_unique_name(name) == nullptr)

@@ -175,12 +175,17 @@ std::string generate_config_string(const std::string& instance_name, const mxs::
 class UnmaskPasswords
 {
 public:
+    UnmaskPasswords(const UnmaskPasswords&) = delete;
+    UnmaskPasswords& operator=(const UnmaskPasswords&) = delete;
+
     UnmaskPasswords();
 
     ~UnmaskPasswords();
 
 private:
     bool m_old_val;
+
+    static std::recursive_mutex s_guard;
 };
 
 /**

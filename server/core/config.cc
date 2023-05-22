@@ -4960,14 +4960,21 @@ bool config_set_rebalance_threshold(const char* value)
     return rv;
 }
 
+//static
+std::recursive_mutex UnmaskPasswords::s_guard;
+
 UnmaskPasswords::UnmaskPasswords()
-    : m_old_val(std::exchange(this_unit.mask_passwords, false))
 {
+    s_guard.lock();
+
+    m_old_val = std::exchange(this_unit.mask_passwords, false);
 }
 
 UnmaskPasswords::~UnmaskPasswords()
 {
     this_unit.mask_passwords = m_old_val;
+
+    s_guard.unlock();
 }
 
 bool config_mask_passwords()
