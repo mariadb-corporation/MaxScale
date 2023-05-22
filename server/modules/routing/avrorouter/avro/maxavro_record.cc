@@ -360,30 +360,30 @@ bool maxavro_record_set_pos(MAXAVRO_FILE* file, long pos)
  * @return Buffer containing the complete binary data block or NULL if an error
  * occurred. Consult maxavro_get_error for more details.
  */
-GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
+GWBUF maxavro_record_read_binary(MAXAVRO_FILE* file)
 {
-    GWBUF* rval = NULL;
+    GWBUF rval;
 
     if (file->last_error == MAXAVRO_ERR_NONE)
     {
         if (!file->metadata_read && !maxavro_read_datablock_start(file))
         {
-            return NULL;
+            return rval;
         }
 
         long data_size = (file->data_start_pos - file->block_start_pos) + file->buffer_size;
         mxb_assert(data_size > 0);
-        rval = gwbuf_alloc(data_size + SYNC_MARKER_SIZE);
+        rval = GWBUF(data_size + SYNC_MARKER_SIZE);
 
         if (rval)
         {
             auto prev = ftell(file->file);
             fseek(file->file, file->block_start_pos, SEEK_SET);
 
-            if (fread(GWBUF_DATA(rval), 1, data_size, file->file) == (size_t)data_size)
+            if (fread(rval.data(), 1, data_size, file->file) == (size_t)data_size)
             {
                 fseek(file->file, prev, SEEK_SET);
-                memcpy(((uint8_t*) GWBUF_DATA(rval)) + data_size, file->sync, sizeof(file->sync));
+                memcpy(rval.data() + data_size, file->sync, sizeof(file->sync));
                 maxavro_next_block(file);
             }
             else
@@ -396,8 +396,7 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
                               mxb_strerror(errno));
                     file->last_error = MAXAVRO_ERR_IO;
                 }
-                gwbuf_free(rval);
-                rval = NULL;
+                rval.clear();
             }
         }
         else

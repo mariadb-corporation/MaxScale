@@ -375,51 +375,42 @@ static void rotate_to_file(Avro* router, uint64_t pos, const char* next_binlog)
  * @param pos Starting position of the event header
  * @return The event data or NULL if an error occurred
  */
-static GWBUF* read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
+static GWBUF read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
 {
-    GWBUF* result;
-    /* Allocate a GWBUF for the event */
-    if ((result = gwbuf_alloc(hdr->event_size - BINLOG_EVENT_HDR_LEN + 1)))
-    {
-        uint8_t* data = GWBUF_DATA(result);
-        int n = pread(router->binlog_fd,
-                      data,
-                      hdr->event_size - BINLOG_EVENT_HDR_LEN,
-                      pos + BINLOG_EVENT_HDR_LEN);
-        /** NULL-terminate for QUERY_EVENT processing */
-        data[hdr->event_size - BINLOG_EVENT_HDR_LEN] = '\0';
+    GWBUF result(hdr->event_size - BINLOG_EVENT_HDR_LEN + 1);
 
-        if (n != static_cast<int>(hdr->event_size - BINLOG_EVENT_HDR_LEN))
-        {
-            if (n == -1)
-            {
-                MXB_ERROR("Error reading the event at %lu in %s. "
-                          "%s, expected %d bytes.",
-                          pos,
-                          router->binlog_name.c_str(),
-                          mxb_strerror(errno),
-                          hdr->event_size - BINLOG_EVENT_HDR_LEN);
-            }
-            else
-            {
-                MXB_ERROR("Short read when reading the event at %lu in %s. "
-                          "Expected %d bytes got %d bytes.",
-                          pos,
-                          router->binlog_name.c_str(),
-                          hdr->event_size - BINLOG_EVENT_HDR_LEN,
-                          n);
-            }
-            gwbuf_free(result);
-            result = NULL;
-        }
-    }
-    else
+    uint8_t* data = result.data();
+    int n = pread(router->binlog_fd,
+                  data,
+                  hdr->event_size - BINLOG_EVENT_HDR_LEN,
+                  pos + BINLOG_EVENT_HDR_LEN);
+    /** NULL-terminate for QUERY_EVENT processing */
+    data[hdr->event_size - BINLOG_EVENT_HDR_LEN] = '\0';
+
+    if (n != static_cast<int>(hdr->event_size - BINLOG_EVENT_HDR_LEN))
     {
-        MXB_ERROR("Failed to allocate memory for binlog entry, "
-                  "size %d at %lu.",
-                  hdr->event_size,
-                  pos);
+        if (n == -1)
+        {
+            MXB_ERROR("Error reading the event at %lu in %s. "
+                      "%s, expected %d bytes.",
+                      pos,
+                      router->binlog_name.c_str(),
+                      mxb_strerror(errno),
+                      hdr->event_size - BINLOG_EVENT_HDR_LEN);
+        }
+        else
+        {
+            MXB_ERROR("Short read when reading the event at %lu in %s. "
+                      "Expected %d bytes got %d bytes.",
+                      pos,
+                      router->binlog_name.c_str(),
+                      hdr->event_size - BINLOG_EVENT_HDR_LEN,
+                      n);
+        }
+
+        result.clear();
     }
+
     return result;
 }
 
@@ -549,9 +540,9 @@ bool read_fde(Avro* router)
 
     if (read_header(router, 4, &hdr, &rc))
     {
-        if (GWBUF* result = read_event_data(router, &hdr, 4))
+        if (GWBUF result = read_event_data(router, &hdr, 4))
         {
-            router->handler->handle_event(hdr, GWBUF_DATA(result));
+            router->handler->handle_event(hdr, result.data());
             rval = true;
         }
     }
@@ -615,16 +606,16 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
             return rc;
         }
 
-        GWBUF* result = read_event_data(router, &hdr, pos);
+        GWBUF result = read_event_data(router, &hdr, pos);
 
-        if (result == NULL)
+        if (!result)
         {
             router->current_pos = pos;
             return AVRO_BINLOG_ERROR;
         }
 
         /* get event content */
-        uint8_t* ptr = GWBUF_DATA(result);
+        uint8_t* ptr = result.data();
 
         // These events are only related to binary log files
         if (hdr.event_type == ROTATE_EVENT)
@@ -641,7 +632,6 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
             MXB_INFO("Annotate_rows_event: %.*s", annotate_len, ptr);
             pos += hdr.event_size;
             router->current_pos = pos;
-            gwbuf_free(result);
             continue;
         }
         else
@@ -658,8 +648,6 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
 
             router->handler->handle_event(hdr, ptr);
         }
-
-        gwbuf_free(result);
 
         if (router->row_count >= router->config().row_target
             || router->trx_count >= router->config().trx_target)

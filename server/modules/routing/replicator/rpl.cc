@@ -2150,12 +2150,7 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
 
     if (warn_not_row_format)
     {
-        GWBUF* buffer = gwbuf_alloc(sql.length() + 5);
-        mariadb::set_byte3(GWBUF_DATA(buffer), sql.length() + 1);
-        GWBUF_DATA(buffer)[4] = 0x03;
-        memcpy(GWBUF_DATA(buffer) + 5, sql.c_str(), sql.length());
-        mxs::sql::OpCode op = MariaDBParser::get().get_operation(*buffer);
-        gwbuf_free(buffer);
+        mxs::sql::OpCode op = MariaDBParser::get().get_operation(mariadb::create_query(sql));
 
         if (op == mxs::sql::OP_UPDATE || op == mxs::sql::OP_INSERT || op == mxs::sql::OP_DELETE)
         {

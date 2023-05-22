@@ -457,16 +457,15 @@ bool AvroSession::stream_json()
  */
 bool AvroSession::stream_binary()
 {
-    GWBUF* buffer;
     uint64_t bytes = 0;
     int rc = 1;
 
     while (rc > 0 && bytes < AVRO_DATA_BURST_SIZE)
     {
         bytes += m_file_handle->buffer_size;
-        if ((buffer = maxavro_record_read_binary(m_file_handle)))
+        if (auto buffer = maxavro_record_read_binary(m_file_handle))
         {
-            rc = m_client->write(mxs::gwbufptr_to_gwbuf(buffer));
+            rc = m_client->write(std::move(buffer));
         }
         else
         {
@@ -607,9 +606,9 @@ bool AvroSession::stream_data()
     return read_more;
 }
 
-GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
+GWBUF read_avro_json_schema(std::string avrofile, std::string dir)
 {
-    GWBUF* rval = NULL;
+    GWBUF rval;
 
     // Copy the name and swap the suffix from .avro to .avsc
     std::string schemafile = dir + "/" + avrofile.substr(0, avrofile.length() - 2) + "sc";
@@ -622,8 +621,7 @@ GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
         std::string text = ss.str();
         mxb::rtrim(text);
         text += '\n';
-        mxs::Buffer buffer(std::vector<uint8_t>(text.begin(), text.end()));
-        rval = buffer.release();
+        rval = GWBUF(reinterpret_cast<const uint8_t*>(text.data()), text.size());
     }
     else
     {
@@ -636,9 +634,9 @@ GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
     return rval;
 }
 
-GWBUF* read_avro_binary_schema(std::string avrofile, std::string dir)
+GWBUF read_avro_binary_schema(std::string avrofile, std::string dir)
 {
-    GWBUF* rval = NULL;
+    GWBUF rval;
     std::string filename = dir + '/' + avrofile;
     MAXAVRO_FILE* file = maxavro_file_open(filename.c_str());
 
@@ -728,7 +726,7 @@ void AvroSession::client_callback()
             m_last_sent_pos = 1;
 
             /** Send the schema of the current file */
-            GWBUF* schema = NULL;
+            GWBUF schema;
 
             switch (m_format)
             {
@@ -747,7 +745,7 @@ void AvroSession::client_callback()
 
             if (schema)
             {
-                m_client->write(mxs::gwbufptr_to_gwbuf(schema));
+                m_client->write(std::move(schema));
             }
         }
 

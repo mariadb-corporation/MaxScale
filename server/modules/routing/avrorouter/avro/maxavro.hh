@@ -141,7 +141,7 @@ void          maxavro_file_close(MAXAVRO_FILE* file);
 
 /** Reading records */
 json_t* maxavro_record_read_json(MAXAVRO_FILE* file);
-GWBUF*  maxavro_record_read_binary(MAXAVRO_FILE* file);
+GWBUF   maxavro_record_read_binary(MAXAVRO_FILE* file);
 
 /** Navigation of the file */
 bool maxavro_record_seek(MAXAVRO_FILE* file, uint64_t offset);
@@ -150,7 +150,7 @@ bool maxavro_next_block(MAXAVRO_FILE* file);
 bool maxavro_to_last_block(MAXAVRO_FILE* file);
 
 /** Get binary format header */
-GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file);
+GWBUF maxavro_file_binary_header(MAXAVRO_FILE* file);
 
 /** File error functions */
 enum maxavro_error maxavro_get_error(MAXAVRO_FILE* file);

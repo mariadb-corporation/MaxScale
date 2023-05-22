@@ -425,38 +425,35 @@ void maxavro_file_close(MAXAVRO_FILE* file)
  * @param file File to read from
  * @return Binary header or NULL if an error occurred
  */
-GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file)
+GWBUF maxavro_file_binary_header(MAXAVRO_FILE* file)
 {
     long pos = file->header_end_pos;
-    GWBUF* rval = NULL;
+    GWBUF rval;
 
     if (fseek(file->file, 0, SEEK_SET) == 0)
     {
-        if ((rval = gwbuf_alloc(pos)))
+        rval.prepare_to_write(pos);
+
+        if (fread(rval.data(), 1, pos, file->file) != (size_t)pos)
         {
-            if (fread(GWBUF_DATA(rval), 1, pos, file->file) != (size_t)pos)
+            if (ferror(file->file))
             {
-                if (ferror(file->file))
-                {
-                    MXB_ERROR("Failed to read binary header: %d, %s",
-                              errno,
-                              mxb_strerror(errno));
-                }
-                else if (feof(file->file))
-                {
-                    MXB_ERROR("Short read when reading binary header.");
-                }
-                else
-                {
-                    MXB_ERROR("Unspecified error when reading binary header.");
-                }
-                gwbuf_free(rval);
-                rval = NULL;
+                MXB_ERROR("Failed to read binary header: %d, %s",
+                            errno,
+                            mxb_strerror(errno));
+            }
+            else if (feof(file->file))
+            {
+                MXB_ERROR("Short read when reading binary header.");
+            }
+            else
+            {
+                MXB_ERROR("Unspecified error when reading binary header.");
             }
         }
         else
         {
-            MXB_ERROR("Memory allocation failed when allocating %ld bytes.", pos);
+            rval.write_complete(pos);
         }
     }
     else
