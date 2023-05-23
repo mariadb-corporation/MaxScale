@@ -169,6 +169,7 @@ GWBUF& GWBUF::operator=(const GWBUF& rhs)
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
     : hints(std::move(rhs.hints))
     , m_sbuf(std::move(rhs.m_sbuf))
+    , m_stmt_info(std::move(rhs.m_stmt_info))
     , m_start(std::exchange(rhs.m_start, nullptr))
     , m_end(std::exchange(rhs.m_end, nullptr))
     , m_id(std::exchange(rhs.m_id, 0))
