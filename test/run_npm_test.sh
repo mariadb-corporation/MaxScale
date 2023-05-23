@@ -60,11 +60,16 @@ docker-compose up -d || exit 1
 cd $testdir
 npm install || exit 1
 
+# UBSAN won't abort the process without these options
+export UBSAN_OPTIONS=abort_on_error=1:print_stacktrace=1
+
 # Configure and install MaxScale
 cd $maxscaledir
 cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_INSTALL_PREFIX=$maxscaledir \
       -DBUILD_TESTS=N \
+      -DWITH_ASAN=Y \
+      -DWITH_UBSAN=Y \
       -DMAXSCALE_VARDIR=$maxscaledir \
       -DWITH_SCRIPTS=N \
       -DWITH_MAXSCALE_CNF=N \
