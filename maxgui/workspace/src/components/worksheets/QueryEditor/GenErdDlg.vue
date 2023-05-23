@@ -4,11 +4,17 @@
         :title="$mxs_t('selectObjsToVisualize')"
         saveText="visualize"
         minBodyWidth="768px"
-        allowEnterToSubmit
+        :allowEnterToSubmit="false"
         :hasSavingErr="hasSavingErr"
         :onSave="visualize"
     >
         <template v-slot:body-prepend>
+            <mxs-txt-field-with-label
+                v-model.trim="name"
+                :label="$mxs_t('name')"
+                :required="true"
+                class="mb-3"
+            />
             <selectable-schema-table-tree
                 :connId="activeQueryEditorConnId"
                 :preselectedSchemas="preselectedSchemas"
@@ -56,6 +62,7 @@ export default {
         return {
             selectedTableNodes: [],
             errVisualizingMsg: '',
+            name: '',
         }
     },
     computed: {
@@ -82,6 +89,16 @@ export default {
         },
         hasSavingErr() {
             return Boolean(this.errVisualizingMsg) || Boolean(!this.selectedTableNodes.length)
+        },
+    },
+    watch: {
+        isOpened: {
+            handler(v) {
+                if (v) {
+                    const count = this.$typy(ErdTask.query().last(), 'count').safeNumber + 1
+                    this.name = `ERD ${count}`
+                }
+            },
         },
     },
     methods: {
@@ -111,7 +128,7 @@ export default {
                     tableNodes: this.selectedTableNodes,
                 })
                 const erdData = queryHelper.genErdData(this.parsed_ddl)
-                Worksheet.dispatch('insertErdWke')
+                Worksheet.dispatch('insertErdWke', this.name)
                 // activeWkeId is also erd_task_id
                 const activeWkeId = Worksheet.getters('getActiveWkeId')
                 // Bind the cloned connection as ERD connection

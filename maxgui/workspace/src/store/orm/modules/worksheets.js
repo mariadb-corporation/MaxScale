@@ -63,9 +63,9 @@ export default {
         /**
          * Insert an ERD worksheet
          */
-        insertErdWke({ dispatch }) {
+        insertErdWke({ dispatch }, name) {
             dispatch('insertBlankWke')
-            ErdTask.dispatch('initErdEntities')
+            ErdTask.dispatch('initErdEntities', name)
         },
         /**
          * @param {String} id - worksheet_id

@@ -36,15 +36,15 @@ export default {
         },
         /**
          * Init ErdTask entities if they don't exist in the active worksheet.
+         * @param {String} name - name of the erd worksheet
          */
-        initErdEntities({ dispatch }) {
+        initErdEntities({ dispatch }, name) {
             const wkeId = Worksheet.getters('getActiveWkeId')
             const lastErdTask = ErdTask.query().last()
-            const count = this.vue.$typy(lastErdTask, 'count').safeNumber + 1,
-                name = `ERD ${count}`
-
+            const count = this.vue.$typy(lastErdTask, 'count').safeNumber + 1
+            const erdName = name ? name : `ERD ${count}`
             if (!ErdTask.find(wkeId)) dispatch('insertErdTask', { wkeId, count })
-            Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name } })
+            Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name: erdName } })
         },
     },
     getters: {
