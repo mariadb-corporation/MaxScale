@@ -1,16 +1,36 @@
-find_package(MySQL)
+if (NOT DEFINED MARIADB_SERVER_SOURCE_DIR)
+  message(FATAL_ERROR "MARIADB_SERVER_SOURCE_DIR must be defined if pp_mysqlembedded is to be built.")
+endif()
+
+if (NOT DEFINED MARIADB_SERVER_BUILD_DIR)
+  set(MARIADB_SERVER_BUILD_DIR ${MARIADB_SERVER_SOURCE_DIR}/build CACHE INTERNAL "")
+endif()
+
+if (NOT DEFINED MARIADB_ERRMSG)
+  set(MARIADB_ERRMSG ${MARIADB_SERVER_BUILD_DIR}/sql/share/english/errmsg.sys CACHE INTERNAL "")
+endif()
+
+set(MARIADB_EMBEDDED_INCLUDE_DIRS
+  ${MARIADB_SERVER_SOURCE_DIR}/include
+  ${MARIADB_SERVER_SOURCE_DIR}/libmariadb/include
+  ${MARIADB_SERVER_BUILD_DIR}/include
+  ${MARIADB_SERVER_SOURCE_DIR}/sql
+  ${MARIADB_SERVER_SOURCE_DIR}/libmysqld
+  CACHE INTERNAL "")
 
 add_library(pp_mysqlembedded SHARED pp_mysqlembedded.cc)
-# Include the embedded library headers
-target_include_directories(pp_mysqlembedded BEFORE PUBLIC ${MYSQL_EMBEDDED_INCLUDE_DIR}/..)
-subdirs(MYSQL_INCLUDE_DIR_ALL ${MYSQL_EMBEDDED_INCLUDE_DIR})
-foreach(DIR ${MYSQL_INCLUDE_DIR_ALL})
-  target_include_directories(pp_mysqlembedded BEFORE PUBLIC ${DIR})
-endforeach()
 
-target_link_libraries(pp_mysqlembedded ${MYSQL_EMBEDDED_LIBRARIES} aio crypt crypto dl m ${PCRE_LINK_FLAGS} ssl stdc++ z)
+target_include_directories(pp_mysqlembedded BEFORE PUBLIC ${MARIADB_EMBEDDED_INCLUDE_DIRS})
+
+target_link_libraries(pp_mysqlembedded
+  ${MARIADB_SERVER_BUILD_DIR}/libmysqld/libsql_embedded.a
+  ${MARIADB_SERVER_BUILD_DIR}/libmysqld/libmariadbd.a
+  aio crypt crypto dl m
+  pcre
+  ssl stdc++ z)
 set_target_properties(pp_mysqlembedded PROPERTIES VERSION "1.0.0")
 set_target_properties(pp_mysqlembedded PROPERTIES LINK_FLAGS -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/pp_mysqlembedded.map)
 #set_target_properties(pp_mysqlembedded PROPERTIES LINK_FLAGS -Wl,-z,defs)
+
 install_module(pp_mysqlembedded libmysqld-parser)
-install(PROGRAMS ${ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
+install(PROGRAMS ${MARIADB_ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)

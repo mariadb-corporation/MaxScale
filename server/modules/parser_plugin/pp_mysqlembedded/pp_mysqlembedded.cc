@@ -65,6 +65,7 @@
 #pragma GCC diagnostic pop
 #include <pthread.h>
 
+#undef PCRE2_CODE_UNIT_WIDTH
 #define json_type mxs_json_type
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
