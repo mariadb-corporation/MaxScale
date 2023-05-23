@@ -251,12 +251,12 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
         }
     }
 
-    GWBUF rval_buf;
-    bool rval_ok = false;
+    std::tuple<bool, GWBUF> rval;
+    auto& [rval_ok, rval_buf] = rval;
+    rval_ok = read_success;
 
     if (read_success)
     {
-        rval_ok = true;
         auto readq_len = m_readq.length();
 
         MXB_DEBUG("Read %lu bytes from dcb %p (%s) in state %s fd %d.",
@@ -290,7 +290,7 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
             trigger_read_event();
         }
     }
-    return {rval_ok, move(rval_buf)};
+    return rval;
 }
 
 int DCB::socket_bytes_readable() const
@@ -697,6 +697,7 @@ void DCB::writeq_drain()
     // polling_worker() can not be used here, the last backend drain takes place
     // when the DCB has already been removed from the epoll-set.
     mxb_assert(m_owner == RoutingWorker::get_current());
+    bool had_data = !m_writeq.empty();
 
     if (m_encryption.handle)
     {
@@ -713,7 +714,7 @@ void DCB::writeq_drain()
         socket_write();
     }
 
-    if (m_writeq.empty())
+    if (had_data && m_writeq.empty())
     {
         /**
          * Writeq has been completely consumed. Take some simple steps to recycle buffers.

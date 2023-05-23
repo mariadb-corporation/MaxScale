@@ -42,7 +42,7 @@ inline void ensure_owned(const GWBUF* buf)
         // TODO: is no simple way to track those GWBUFS down in order to change the
         // TODO: owner. So for the time being we don't check the owner if rebalancing
         // TODO: is active.
-        mxb_assert(buf->owner == RoutingWorker::get_current_id());
+        mxb_assert(buf->owner == RoutingWorker::get_current());
     }
 #endif
 }
@@ -116,10 +116,16 @@ GWBUF GWBUF::shallow_clone() const
 }
 
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
-    : GWBUF()
+    : hints(std::move(rhs.hints))
+    , m_sbuf(std::move(rhs.m_sbuf))
+    , m_start(std::exchange(rhs.m_start, nullptr))
+    , m_end(std::exchange(rhs.m_end, nullptr))
+    , m_id(std::exchange(rhs.m_id, 0))
+    , m_type(std::exchange(rhs.m_type, TYPE_UNDEFINED))
+#ifdef SS_DEBUG
+    , m_owner(RoutingWorker::get_current())
+#endif
 {
-    move_helper(move(rhs));
-    mxb_assert(rhs.empty());
 }
 
 GWBUF& GWBUF::operator=(GWBUF&& rhs) noexcept
