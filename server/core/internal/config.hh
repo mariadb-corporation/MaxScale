@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-03-14
+ * Change Date: 2027-05-22
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -141,12 +141,17 @@ bool config_add_to_context(const std::string& type, ConfigSection::SourceType so
 class UnmaskPasswords
 {
 public:
+    UnmaskPasswords(const UnmaskPasswords&) = delete;
+    UnmaskPasswords& operator=(const UnmaskPasswords&) = delete;
+
     UnmaskPasswords();
 
     ~UnmaskPasswords();
 
 private:
     bool m_old_val;
+
+    static std::recursive_mutex s_guard;
 };
 
 /**

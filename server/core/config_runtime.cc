@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-03-14
+ * Change Date: 2027-05-22
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1491,7 +1491,6 @@ bool runtime_create_volatile_server(const std::string& name, const std::string& 
                                     const mxs::ConfigParameters& extra)
 {
     UnmaskPasswords unmask;
-    mxb_assert(mxs::MainWorker::is_main_worker());
 
     bool rval = false;
     if (ServerManager::find_by_unique_name(name) == nullptr)
