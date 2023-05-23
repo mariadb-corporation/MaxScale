@@ -608,6 +608,28 @@ bool MariaDBCluster::prepare_servers_for_test()
                 }
             }
         }
+
+        // MariaDB 10.11 has some PUBLIC grants on all test databases, drop them to make the tests work the
+        // same way with older versions. Using SHOW GRANTS will work with all versions whereas SHOW GRANTS FOR
+        // PUBLIC only works with 10.11 and newer versions.
+        if (auto r = conn->query("SHOW GRANTS"))
+        {
+            const std::string GRANT = "GRANT";
+            const std::string TO_PUBLIC = "TO PUBLIC";
+
+            while (r->next_row())
+            {
+                auto value = r->get_string(0);
+                auto grant_pos = value.find(GRANT);
+                auto to_public_pos = value.find(TO_PUBLIC);
+
+                if (grant_pos != std::string::npos && to_public_pos != std::string::npos)
+                {
+                    std::string middle(value.begin() + GRANT.size(), value.begin() + to_public_pos);
+                    conn->cmd_f("REVOKE %s FROM PUBLIC", middle.c_str());
+                }
+            }
+        }
     }
 
     bool rval = false;
