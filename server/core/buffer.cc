@@ -91,28 +91,21 @@ GWBUF::GWBUF()
 }
 
 GWBUF::GWBUF(size_t size)
-    : GWBUF()
+    : m_sbuf(std::make_shared<SHARED_BUF>(size))
+    , m_start(m_sbuf->buf_start.get())
+    , m_end(m_start + size)
 {
-    m_sbuf = std::make_shared<SHARED_BUF>(size);
-    m_start = m_sbuf->buf_start.get();
-    m_end = m_start + size;
 }
 
 GWBUF::GWBUF(const uint8_t* data, size_t datasize)
-    : GWBUF()
+    : GWBUF(datasize)
 {
-    append(data, datasize);
+    memcpy(m_start, data, datasize);
 }
 
 GWBUF GWBUF::shallow_clone() const
 {
-    GWBUF rval;
-    rval.clone_helper(*this);
-
-    rval.m_start = m_start;
-    rval.m_end = m_end;
-    rval.m_sbuf = m_sbuf;
-    return rval;
+    return GWBUF(*this);
 }
 
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
@@ -123,6 +116,20 @@ GWBUF::GWBUF(GWBUF&& rhs) noexcept
     , m_end(std::exchange(rhs.m_end, nullptr))
     , m_id(std::exchange(rhs.m_id, 0))
     , m_type(std::exchange(rhs.m_type, TYPE_UNDEFINED))
+#ifdef SS_DEBUG
+    , m_owner(RoutingWorker::get_current())
+#endif
+{
+}
+
+GWBUF::GWBUF(const GWBUF& rhs) noexcept
+    : m_sbuf(rhs.m_sbuf)
+    , m_protocol_info(rhs.m_protocol_info)
+    , m_hints(rhs.m_hints)
+    , m_start(rhs.m_start)
+    , m_end(rhs.m_end)
+    , m_id(rhs.m_id)
+    , m_type(rhs.m_type)
 #ifdef SS_DEBUG
     , m_owner(RoutingWorker::get_current())
 #endif
@@ -154,10 +161,7 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
 
 GWBUF GWBUF::deep_clone() const
 {
-    GWBUF rval;
-    rval.clone_helper(*this);
-    rval.append(*this);
-    return rval;
+    return GWBUF(data(), length());
 }
 
 /**
@@ -168,14 +172,6 @@ GWBUF GWBUF::deep_clone() const
 void gwbuf_free(GWBUF* buf)
 {
     delete buf;
-}
-
-void GWBUF::clone_helper(const GWBUF& other)
-{
-    m_hints = other.m_hints;
-    m_type = other.m_type;
-    m_id = other.m_id;
-    m_protocol_info = other.m_protocol_info;
 }
 
 GWBUF* gwbuf_clone_shallow(GWBUF* buf)

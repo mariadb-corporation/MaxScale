@@ -141,7 +141,8 @@ public:
 
     /**
      * Deep-clones the source buffer. Only allocates minimal capacity. Is best used when the GWBUF is
-     * stored for later use.
+     * stored for later use. The buffer will be as if it was just read from memory and will not contain any of
+     * the auxiliary data or the protocol information.
      *
      * @return Cloned buffer
      */
@@ -380,8 +381,10 @@ private:
     mxb::Worker* m_owner {nullptr};     /**< Owning thread. Used for debugging */
 #endif
 
+    // The copy-constructor is only used by shallow_clone()
+    GWBUF(const GWBUF& rhs) noexcept;
+
     void move_helper(GWBUF&& other) noexcept;
-    void clone_helper(const GWBUF& other);
 };
 
 inline bool GWBUF::type_is_undefined() const
