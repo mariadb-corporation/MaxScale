@@ -43,8 +43,9 @@ describe("Diagnostic Commands", function () {
   before(createConnection);
 
   tests.forEach(function (i) {
-    it(i, function () {});
-    return doCommand(i).should.be.fulfilled;
+    it(i, function () {
+      return doCommand(i).should.be.fulfilled;
+    });
   });
 
   it("show session <id>", async function () {
