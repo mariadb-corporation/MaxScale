@@ -3368,14 +3368,15 @@ mariadb::AuthenticatorModule* MariaDBClientConnection::find_auth_module(const st
  */
 std::tuple<bool, GWBUF> MariaDBClientConnection::read_protocol_packet()
 {
-    auto [read_ok, buffer] = mariadb::read_protocol_packet(m_dcb);
+    auto rval = mariadb::read_protocol_packet(m_dcb);
+    auto& [read_ok, buffer] = rval;
     if (!buffer.empty())
     {
         uint8_t seq = MYSQL_GET_PACKET_NO(buffer.data());
         m_sequence = seq;
         m_next_sequence = seq + 1;
     }
-    return {read_ok, move(buffer)};
+    return rval;
 }
 
 mariadb::AuthenticationData& MariaDBClientConnection::authentication_data(AuthType type)
