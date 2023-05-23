@@ -485,14 +485,15 @@ const getOptionality = colData =>
 const isIndex = ({ indexDefs, indexCols }) =>
     indexDefs.some(def => lodash.isEqual(def.index_cols, indexCols))
 
-function getTargetCardinality({ node, indexCols }) {
+function isUniqueCol({ node, indexCols }) {
     const keys = node.data.definitions.keys
     const pks = keys[tokens.primaryKey] || []
     const uniqueKeys = keys[tokens.uniqueKey] || []
     if (!pks.length && !uniqueKeys.length) return false
-    const isUnique =
-        isIndex({ indexDefs: pks, indexCols }) || isIndex({ indexDefs: uniqueKeys, indexCols })
-    return isUnique ? '1' : 'N'
+    return isIndex({ indexDefs: pks, indexCols }) || isIndex({ indexDefs: uniqueKeys, indexCols })
+}
+function getCardinality(params) {
+    return isUniqueCol(params) ? '1' : 'N'
 }
 
 /**
@@ -549,9 +550,8 @@ function handleGenErdLink({ srcNode, fk, nodes }) {
     const targetNode = nodes.find(n => n.id === target)
     const invisibleHighlightColor = getNodeHighlightColor(targetNode)
     if (targetNode) {
-        //TODO: Detect the cardinality type of the source
-        const srcCardinality = '1'
-        const targetCardinality = getTargetCardinality({
+        const srcCardinality = getCardinality({ node: srcNode, indexCols: index_cols })
+        const targetCardinality = getCardinality({
             node: targetNode,
             indexCols: referenced_index_cols,
         })
