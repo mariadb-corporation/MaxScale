@@ -169,7 +169,8 @@ public:
                         }
                         else if (!is_soft_stale || include_stale)
                         {
-                            pValue = mxs::gwbuf_to_gwbufptr(GWBUF(pData, nData));
+                            pValue = mxs::gwbuf_to_gwbufptr(GWBUF(
+                                reinterpret_cast<const uint8_t*>(pData), nData));
 
                             rv = CACHE_RESULT_OK;
 
