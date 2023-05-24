@@ -128,6 +128,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 6.4.7 Release Notes](Release-Notes/MaxScale-6.4.7-Release-Notes.md)
 * [MariaDB MaxScale 6.4.6 Release Notes](Release-Notes/MaxScale-6.4.6-Release-Notes.md)
 * [MariaDB MaxScale 6.4.5 Release Notes](Release-Notes/MaxScale-6.4.5-Release-Notes.md)
 * [MariaDB MaxScale 6.4.4 Release Notes](Release-Notes/MaxScale-6.4.4-Release-Notes.md)
