@@ -15,3 +15,7 @@ add_subdirectory(topfilter)
 add_subdirectory(tpmfilter)
 add_subdirectory(comment)
 add_subdirectory(rewritefilter)
+
+if (BUILD_LDI)
+  add_subdirectory(ldi)
+endif()
