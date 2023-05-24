@@ -4398,11 +4398,6 @@ json_t* config_maxscale_to_json(const char* host)
     auto manager = mxs::ConfigManager::get()->to_json();
     json_object_set_new(attr, "config_sync", json_incref(manager.get_json()));
 
-#ifdef MXS_WITH_ASAN
-    int leaking = __lsan_do_recoverable_leak_check();
-    json_object_set_new(attr, "memory_leak", json_boolean(leaking));
-#endif
-
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_object_set_new(obj, CN_ID, json_string(CN_MAXSCALE));
