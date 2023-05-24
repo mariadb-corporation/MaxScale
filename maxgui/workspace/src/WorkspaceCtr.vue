@@ -98,6 +98,7 @@ export default {
         ...mapState({
             QUERY_SHORTCUT_KEYS: state => state.mxsWorkspace.config.QUERY_SHORTCUT_KEYS,
             MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
             is_fullscreen: state => state.prefAndStorage.is_fullscreen,
             is_validating_conn: state => state.queryConnsMem.is_validating_conn,
             hidden_comp: state => state.mxsWorkspace.hidden_comp,
@@ -132,7 +133,11 @@ export default {
                     icon: '$vuetify.icons.mxs_workspace',
                     iconSize: 26,
                     disabled: this.disableRunQueries,
-                    click: () => this.SET_IS_CONN_DLG_OPENED(true),
+                    click: () =>
+                        this.SET_CONN_DLG({
+                            is_opened: true,
+                            type: this.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
+                        }),
                 },
                 {
                     title: this.$mxs_t('dataMigration'),
@@ -173,7 +178,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG',
             SET_MIGR_DLG: 'mxsWorkspace/SET_MIGR_DLG',
         }),
         ...mapActions({

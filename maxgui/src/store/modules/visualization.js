@@ -88,7 +88,7 @@ export default {
          * dialog with pre-select object
          * @param {String} param.conn_name - connection name
          */
-        async chooseQueryEditorWke({ commit }, { type, conn_name }) {
+        async chooseQueryEditorWke({ commit, rootState }, { type, conn_name }) {
             const { $typy } = this.vue
             const queryEditorConns = QueryConn.getters('getQueryEditorConns')
             // Find connection
@@ -116,7 +116,14 @@ export default {
                     { type, id: conn_name },
                     { root: true }
                 )
-                commit('mxsWorkspace/SET_IS_CONN_DLG_OPENED', true, { root: true })
+                commit(
+                    'mxsWorkspace/SET_CONN_DLG',
+                    {
+                        is_opened: true,
+                        type: rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
+                    },
+                    { root: true }
+                )
             }
         },
     },

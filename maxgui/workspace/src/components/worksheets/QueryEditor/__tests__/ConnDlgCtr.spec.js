@@ -206,7 +206,7 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
             }),
         })
         wrapper.vm.onSave()
-        spy.should.have.been.calledOnceWith('openQueryEditorConn', {
+        spy.should.have.been.calledOnceWith('handleOpenConn', {
             body: { target: mockSelectedResource.id, ...mockBodyFormData },
             meta: { name: mockSelectedResource.id },
         })

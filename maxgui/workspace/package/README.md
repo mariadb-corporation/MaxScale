@@ -268,7 +268,7 @@ example are importable.
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         />
-        <conn-dlg v-model="isConnDlgOpened" :handleSave="handleOpenConn" />
+        <conn-dlg v-model="isConnDlgOpened" :handleSave="openConn" />
         <migr-create-dlg :handleSave="createEtlTask">
             <template v-slot:form-prepend>
                 <!-- Add other input here. e.g. Input to determine MaxScale API. -->
@@ -297,17 +297,17 @@ export default {
     },
     computed: {
         ...mapState({
-            is_conn_dlg_opened: state => state.mxsWorkspace.is_conn_dlg_opened,
+            conn_dlg: state => state.mxsWorkspace.conn_dlg,
         }),
         allConns() {
             return models.QueryConn.all()
         },
         isConnDlgOpened: {
             get() {
-                return this.is_conn_dlg_opened
+                return this.conn_dlg.is_opened
             },
             set(v) {
-                this.SET_IS_CONN_DLG_OPENED(v)
+                this.SET_CONN_DLG({ ...this.conn_dlg, is_opened: v })
             },
         },
     },
@@ -329,7 +329,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG',
         }),
         /**
          * When the workspace UI is used with multiple MaxScales, the base URL is dynamic,
@@ -378,9 +378,9 @@ export default {
          * @param {Object} params.meta - extra info about the connection.
          * @param {String} params.meta.name - connection name.
          */
-        async handleOpenConn(params) {
+        async openConn(params) {
             this.setRequestConfig(models.Worksheet.getters('getActiveWkeId'))
-            await models.QueryConn.dispatch('openQueryEditorConn', params)
+            await models.QueryConn.dispatch('handleOpenConn', params)
         },
         createEtlTask(name) {
             this.setRequestConfig(models.Worksheet.getters('getActiveWkeId'))

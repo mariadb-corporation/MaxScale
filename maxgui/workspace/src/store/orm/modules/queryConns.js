@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import ErdTask from '@wsModels/ErdTask'
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
@@ -102,7 +103,11 @@ export default {
             for (const { id } of getters.getQueryEditorConns)
                 await dispatch('cascadeDisconnect', { showSnackbar: false, id })
             await this.vue.$helpers.to(
-                Promise.all(getters.getEtlConns.map(({ id }) => dispatch('disconnect', { id })))
+                Promise.all(
+                    [...getters.getErdConns, ...getters.getEtlConns].map(({ id }) =>
+                        dispatch('disconnect', { id })
+                    )
+                )
             )
         },
         /**
@@ -152,17 +157,15 @@ export default {
                 QUERY_CONN_BINDING_TYPES: { QUERY_EDITOR },
             } = rootState.mxsWorkspace.config
 
-            const activeQueryEditorConn = getters.getQueryEditorConn
-
             const [e, res] = await $helpers.to(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
+                const activeQueryEditorConn = getters.getQueryEditorConn
                 // clean up previous conn after binding the new one
                 if (activeQueryEditorConn.id)
                     await QueryConn.dispatch('cascadeDisconnect', {
                         id: activeQueryEditorConn.id,
                     })
-
                 QueryEditor.dispatch('initQueryEditorEntities')
                 const queryEditorId = QueryEditor.getters('getQueryEditorId')
                 const queryEditorConn = {
@@ -301,6 +304,55 @@ export default {
                 id: etl_task_id,
                 log: { timestamp: new Date().valueOf(), name: logMsgs.join('\n') },
             })
+        },
+        /**
+         * @param {Object} param.body - request body
+         * @param {Object} param.meta - meta - connection meta
+         */
+        async openErdConn({ commit, getters, rootState }, { body, meta }) {
+            const config = Worksheet.getters('getActiveRequestConfig')
+            const { $helpers, $mxs_t } = this.vue
+
+            const [e, res] = await $helpers.to(connection.open({ body, config }))
+            if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
+            else if (res.status === 201) {
+                const activeErdConn = getters.getActiveErdConn
+                // clean up previous conn after binding the new one
+                if (activeErdConn.id)
+                    await QueryConn.dispatch('cascadeDisconnect', { id: activeErdConn.id })
+                const {
+                    QUERY_CONN_BINDING_TYPES: { ERD },
+                } = rootState.mxsWorkspace.config
+                QueryConn.insert({
+                    data: {
+                        id: res.data.data.id,
+                        attributes: res.data.data.attributes,
+                        binding_type: ERD,
+                        erd_task_id: ErdTask.getters('getActiveErdTaskId'),
+                        meta,
+                    },
+                })
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: [$mxs_t('success.connected')],
+                        type: 'success',
+                    },
+                    { root: true }
+                )
+                commit('queryConnsMem/SET_CONN_ERR_STATE', false, { root: true })
+            }
+        },
+        async handleOpenConn({ rootState, dispatch }, params) {
+            const { ERD, QUERY_EDITOR } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+            switch (rootState.mxsWorkspace.conn_dlg.type) {
+                case ERD:
+                    await dispatch('openErdConn', params)
+                    break
+                case QUERY_EDITOR:
+                    await dispatch('openQueryEditorConn', params)
+                    break
+            }
         },
         /**
          * @param {Object} param.ids - connections to be reconnected
@@ -471,5 +523,16 @@ export default {
         getIsActiveEtlDestAlive: (state, getters) => Boolean(getters.getActiveDestConn.id),
         getAreActiveEtlConnsAlive: (state, getters) =>
             getters.getIsActiveEtlSrcAlive && getters.getIsActiveEtlDestAlive,
+        // ERD connection getters
+        getActiveErdConn: () =>
+            QueryConn.query()
+                .where('erd_task_id', ErdTask.getters('getActiveErdTaskId'))
+                .first() || {},
+        getErdConns: (state, getters, rootState) => {
+            const { ERD } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+            return QueryConn.query()
+                .where('binding_type', v => v === ERD)
+                .get()
+        },
     },
 }

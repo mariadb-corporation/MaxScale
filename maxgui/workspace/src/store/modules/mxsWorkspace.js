@@ -29,7 +29,7 @@ export default {
         migr_dlg: { is_opened: false, etl_task_id: '', type: '' },
         etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
-        is_conn_dlg_opened: false, // control showing connection dialog
+        conn_dlg: { is_opened: false, type: config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR },
     },
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
@@ -41,8 +41,8 @@ export default {
         SET_ETL_POLLING_INTERVAL(state, payload) {
             state.etl_polling_interval = payload
         },
-        SET_IS_CONN_DLG_OPENED(state, payload) {
-            state.is_conn_dlg_opened = payload
+        SET_CONN_DLG(state, payload) {
+            state.conn_dlg = payload
         },
     },
     actions: {

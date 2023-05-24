@@ -46,17 +46,17 @@ export default {
     },
     computed: {
         ...mapState({
-            is_conn_dlg_opened: state => state.mxsWorkspace.is_conn_dlg_opened,
+            conn_dlg: state => state.mxsWorkspace.conn_dlg,
         }),
         allConns() {
             return QueryConn.all()
         },
         isConnDlgOpened: {
             get() {
-                return this.is_conn_dlg_opened
+                return this.conn_dlg.is_opened
             },
             set(v) {
-                this.SET_IS_CONN_DLG_OPENED(v)
+                this.SET_CONN_DLG({ ...this.conn_dlg, is_opened: v })
             },
         },
     },
@@ -92,7 +92,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG',
         }),
         async onConfirm(shouldDelAll) {
             if (shouldDelAll) await QueryConn.dispatch('disconnectAll')

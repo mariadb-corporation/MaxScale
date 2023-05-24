@@ -14,21 +14,12 @@
             </v-btn>
         </div>
         <div ref="toolbarRight" class="ml-auto d-flex align-center mx-3 fill-height">
-            <mxs-tooltip-btn
-                :tooltipProps="{ disabled: !connectedServerName }"
-                x-small
-                text
-                color="primary"
-                @click="SET_IS_CONN_DLG_OPENED(true)"
-            >
-                <template v-slot:btn-content>
-                    <v-icon size="14" color="primary" class="mr-1">
-                        mdi-server
-                    </v-icon>
-                    {{ connectedServerName ? connectedServerName : $mxs_t('connect') }}
-                </template>
-                {{ $mxs_t('changeConn') }}
-            </mxs-tooltip-btn>
+            <connection-btn
+                :activeConn="activeQueryEditorConn"
+                @click="
+                    SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR })
+                "
+            />
             <!-- A slot for SkySQL Query Editor in service details page where the worksheet tab is hidden  -->
             <slot name="query-tab-nav-toolbar-right" />
         </div>
@@ -51,12 +42,16 @@
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
-import { mapMutations } from 'vuex'
+import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
+import { mapMutations, mapState } from 'vuex'
 
 export default {
     name: 'query-tab-nav-toolbar-ctr',
-    components: {},
+    components: { ConnectionBtn },
     computed: {
+        ...mapState({
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
+        }),
         queryEditorId() {
             return QueryEditor.getters('getQueryEditorId')
         },
@@ -80,7 +75,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG',
         }),
         calcWidth() {
             this.$nextTick(() =>

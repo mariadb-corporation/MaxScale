@@ -1,11 +1,11 @@
 <template>
-    <div class="d-flex justify-start er-toolbar-ctr pt-1 px-3">
+    <div class="er-toolbar-ctr d-flex pr-3 white mxs-color-helper border-bottom-table-border">
         <!-- TODO: Add button to generate ERD from existing db  -->
 
         <mxs-tooltip-btn
-            btnClass="mr-2 toolbar-square-btn"
+            btnClass="toolbar-square-btn"
             :color="config.link.isAttrToAttr ? 'primary' : '#e8eef1'"
-            elevation="0"
+            depressed
             @click="toggleIsAttrToAttr"
         >
             <template v-slot:btn-content>
@@ -25,7 +25,7 @@
                         item-value="id"
                         name="linkShapeType"
                         outlined
-                        class="link-shape-select mr-2 vuetify-input--override v-select--mariadb error--text__bottom"
+                        class="link-shape-select vuetify-input--override v-select--mariadb error--text__bottom"
                         :menu-props="{
                             contentClass: 'v-select--menu-mariadb',
                             bottom: true,
@@ -51,6 +51,14 @@
             </template>
             {{ $mxs_t('shapeOfLinks') }}
         </v-tooltip>
+        <v-spacer />
+        <connection-btn
+            btnClass="connection-btn"
+            depressed
+            :height="28"
+            :activeConn="activeErdConn"
+            @click="SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })"
+        />
     </div>
 </template>
 
@@ -67,14 +75,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryConn from '@wsModels/QueryConn'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
+import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
+import { mapMutations, mapState } from 'vuex'
 
 export default {
     name: 'er-toolbar-ctr',
+    components: { ConnectionBtn },
     props: {
         value: { type: Object, required: true },
     },
     computed: {
+        ...mapState({
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
+        }),
         config: {
             get() {
                 return this.value
@@ -86,8 +101,14 @@ export default {
         allLinkShapes() {
             return Object.values(LINK_SHAPES)
         },
+        activeErdConn() {
+            return QueryConn.getters('getActiveErdConn')
+        },
     },
     methods: {
+        ...mapMutations({
+            SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG',
+        }),
         immutableUpdateConfig(obj, path, value) {
             const updatedObj = this.$helpers.lodash.cloneDeep(obj)
             this.$helpers.lodash.update(updatedObj, path, () => value)
@@ -109,17 +130,29 @@ export default {
 <style lang="scss" scoped>
 .er-toolbar-ctr {
     width: 100%;
-    height: 32px;
+    height: 28px;
     top: 0;
     z-index: 4;
 }
 </style>
 <style lang="scss">
-.link-shape-select {
-    max-width: 64px;
-    .v-input__slot {
-        padding-left: 8px !important;
-        padding-right: 0px !important;
+.er-toolbar-ctr {
+    .link-shape-select {
+        max-width: 64px;
+        fieldset {
+            border-radius: 0;
+        }
+        .v-input__slot {
+            padding-left: 8px !important;
+            padding-right: 0px !important;
+        }
+    }
+    .connection-btn {
+        height: 28px !important;
+        border-radius: 0px !important;
+        &:hover {
+            border-radius: 0px !important;
+        }
     }
 }
 </style>
