@@ -65,7 +65,7 @@ public:
  * flexible data pointers is designed to minimise the need for data to
  * be copied within the gateway.
  */
-class GWBUF
+class GWBUF final
 {
 public:
     class ProtocolInfo
@@ -117,7 +117,7 @@ public:
      */
     explicit GWBUF(const uint8_t* data, size_t datasize);
 
-    GWBUF(GWBUF&& rhs) noexcept;
+    GWBUF(GWBUF&& rhs) noexcept = default;
 
     /**
      * Move-assignment operator
@@ -130,7 +130,7 @@ public:
      *
      * @return *this
      */
-    GWBUF& operator=(GWBUF&& rhs) noexcept;
+    GWBUF& operator=(GWBUF&& rhs) noexcept = default;
 
     /**
      * Shallow-clones the source buffer. In general, should not be used to create long-term copies as this
@@ -382,9 +382,7 @@ private:
 #endif
 
     // The copy-constructor is only used by shallow_clone()
-    GWBUF(const GWBUF& rhs) noexcept;
-
-    void move_helper(GWBUF&& other) noexcept;
+    GWBUF(const GWBUF& rhs) = default;
 };
 
 inline bool GWBUF::type_is_undefined() const

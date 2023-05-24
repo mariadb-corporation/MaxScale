@@ -108,63 +108,10 @@ GWBUF GWBUF::shallow_clone() const
     return GWBUF(*this);
 }
 
-GWBUF::GWBUF(GWBUF&& rhs) noexcept
-    : m_sbuf(std::move(rhs.m_sbuf))
-    , m_protocol_info(std::move(rhs.m_protocol_info))
-    , m_hints(std::move(rhs.m_hints))
-    , m_start(std::exchange(rhs.m_start, nullptr))
-    , m_end(std::exchange(rhs.m_end, nullptr))
-    , m_id(std::exchange(rhs.m_id, 0))
-    , m_type(std::exchange(rhs.m_type, TYPE_UNDEFINED))
-#ifdef SS_DEBUG
-    , m_owner(RoutingWorker::get_current())
-#endif
-{
-}
-
-GWBUF::GWBUF(const GWBUF& rhs) noexcept
-    : m_sbuf(rhs.m_sbuf)
-    , m_protocol_info(rhs.m_protocol_info)
-    , m_hints(rhs.m_hints)
-    , m_start(rhs.m_start)
-    , m_end(rhs.m_end)
-    , m_id(rhs.m_id)
-    , m_type(rhs.m_type)
-#ifdef SS_DEBUG
-    , m_owner(RoutingWorker::get_current())
-#endif
-{
-}
-
-GWBUF& GWBUF::operator=(GWBUF&& rhs) noexcept
-{
-    if (this != &rhs)
-    {
-        move_helper(move(rhs));
-        mxb_assert(rhs.empty());
-    }
-    return *this;
-}
-
-void GWBUF::move_helper(GWBUF&& rhs) noexcept
-{
-    using std::exchange;
-    m_start = exchange(rhs.m_start, nullptr);
-    m_end = exchange(rhs.m_end, nullptr);
-    m_type = exchange(rhs.m_type, TYPE_UNDEFINED);
-    m_id = exchange(rhs.m_id, 0);
-
-    m_hints = move(rhs.m_hints);
-    m_protocol_info = std::move(rhs.m_protocol_info);
-    m_sbuf = move(rhs.m_sbuf);
-}
-
 GWBUF GWBUF::deep_clone() const
 {
-    GWBUF rval(data(), length());
-    rval.m_id = m_id;
-    rval.m_type = m_type;
-    rval.m_hints = m_hints;
+    GWBUF rval = shallow_clone();
+    rval.ensure_unique();
     return rval;
 }
 
@@ -196,7 +143,8 @@ GWBUF GWBUF::split(uint64_t n_bytes)
     }
     else if (n_bytes == len)
     {
-        rval.move_helper(move(*this));
+        rval = std::move(*this);
+        clear();
     }
     else
     {
@@ -382,7 +330,13 @@ void GWBUF::rtrim(uint64_t bytes)
 
 void GWBUF::clear()
 {
-    move_helper(GWBUF());
+    m_sbuf.reset();
+    m_protocol_info.reset();
+    m_hints.clear();
+    m_start = nullptr;
+    m_end = nullptr;
+    m_id = 0;
+    m_type = TYPE_UNDEFINED;
 }
 
 void GWBUF::reset()
@@ -438,7 +392,7 @@ void GWBUF::merge_front(GWBUF&& buffer)
     {
         buffer.append(*this);
         // TODO: can be improved with similar logic as in prepare_to_write.
-        move_helper(move(buffer));
+        *this = std::move(buffer);
     }
 }
 
@@ -448,7 +402,7 @@ void GWBUF::merge_back(GWBUF&& buffer)
     {
         if (empty())
         {
-            move_helper(move(buffer));
+            *this = std::move(buffer);
         }
         else
         {
