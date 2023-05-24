@@ -2236,6 +2236,7 @@ bool MariaDBClientConnection::complete_change_user_p1()
         m_changing_state = ChangingState::USER;
         rval = true;
     }
+    m_change_user.client_query.clear();
     return rval;
 }
 

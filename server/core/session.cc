@@ -1303,6 +1303,7 @@ bool Session::routeQuery(GWBUF&& buffer)
             if (m_rebuild_chain)
             {
                 m_filters = std::move(m_pending_filters);
+                m_pending_filters.clear();
                 m_rebuild_chain = false;
                 setup_routing_chain();
             }

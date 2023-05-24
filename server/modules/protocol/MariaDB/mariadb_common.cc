@@ -624,7 +624,7 @@ std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb)
         {
             // Could not read enough, try again later. Save results to dcb.
             dcb->unread(move(buffer));
-            buffer = GWBUF();
+            buffer.clear();
         }
     }
     return rval;

@@ -772,6 +772,7 @@ void MariaDBBackendConnection::normal_read()
         }
 
         buffer = std::move(m_collectq);
+        m_collectq.clear();
         m_collect_result = false;
         result_collected = true;
     }
@@ -801,6 +802,7 @@ void MariaDBBackendConnection::normal_read()
         else
         {
             stmt = std::move(buffer);
+            buffer.clear();
         }
 
         if (session_ok_to_route(m_dcb))
@@ -2693,6 +2695,7 @@ bool MariaDBBackendConnection::send_delayed_packets()
     // iterating it. This can happen if one of the packets causes the state to change from State::ROUTING to
     // something else (e.g. multiple COM_STMT_PREPARE packets being sent at the same time).
     auto packets = std::move(m_delayed_packets);
+    m_delayed_packets.clear();
 
     for (auto it = packets.begin(); it != packets.end(); ++it)
     {

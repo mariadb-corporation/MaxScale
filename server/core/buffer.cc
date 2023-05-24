@@ -161,7 +161,11 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
 
 GWBUF GWBUF::deep_clone() const
 {
-    return GWBUF(data(), length());
+    GWBUF rval(data(), length());
+    rval.m_id = m_id;
+    rval.m_type = m_type;
+    rval.m_hints = m_hints;
+    return rval;
 }
 
 /**

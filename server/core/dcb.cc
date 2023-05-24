@@ -277,11 +277,13 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
             {
                 // If socket has data left, a read has already been scheduled by a lower level function.
                 rval_buf = move(m_readq);
+                m_readq.clear();
             }
         }
         else if ((minbytes > 0 && readq_len >= minbytes) || (minbytes == 0 && readq_len > 0))
         {
             rval_buf = move(m_readq);
+            m_readq.clear();
         }
 
         // If there's extra data left after a ReadLimit::STRICT, a read event is not triggered and the caller
@@ -721,15 +723,13 @@ void DCB::writeq_drain()
         if (m_writeq.is_unique() && writeq_cap > 0 && writeq_cap <= BASE_READ_BUFFER_SIZE
             && m_readq.empty() && m_readq.capacity() < writeq_cap)
         {
-            m_writeq.reset();
             m_readq = std::move(m_writeq);
+            m_readq.reset();
         }
-        else
-        {
-            // Would end up happening later on anyway, best to clear now. If the underlying data was
-            // shared the other owner may become unique and won't need to allocate when writing.
-            m_writeq.clear();
-        }
+
+        // Would end up happening later on anyway, best to clear now. If the underlying data was
+        // shared the other owner may become unique and won't need to allocate when writing.
+        m_writeq.clear();
     }
 
     if (m_high_water_reached && m_writeq.length() <= m_low_water)
