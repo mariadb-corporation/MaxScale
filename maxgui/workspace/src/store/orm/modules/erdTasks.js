@@ -12,19 +12,26 @@
  */
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
+import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     namespaced: true,
     actions: {
-        cascadeDelete(_, payload) {
+        async cascadeDelete(_, payload) {
             const entityIds = queryHelper.filterEntity(ErdTask, payload).map(entity => entity.id)
-            entityIds.forEach(id => {
+            for (const id of entityIds) {
+                const { id: connId } =
+                    QueryConn.query()
+                        .where('erd_task_id', id)
+                        .first() || {}
+                // delete the connection
+                if (connId) await QueryConn.dispatch('disconnect', { id: connId })
                 ErdTask.delete(id) // delete itself
                 // delete record in its the relational tables
                 ErdTaskTmp.delete(id)
-            })
+            }
         },
         /**
          * Insert a blank ErdTask and its mandatory relational entities
