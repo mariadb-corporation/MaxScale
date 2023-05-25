@@ -120,26 +120,6 @@ GWBUF GWBUF::split(uint64_t n_bytes)
     return rval;
 }
 
-GWBUF* gwbuf_split(GWBUF** buf, size_t length)
-{
-    mxb_assert(buf && *buf);
-    GWBUF* rval = nullptr;
-
-    if (length > 0)
-    {
-        GWBUF* source = *buf;
-        auto splitted = source->split(length);
-        rval = new GWBUF(move(splitted));
-
-        if (source->empty())
-        {
-            delete source;
-            *buf = nullptr;
-        }
-    }
-    return rval;
-}
-
 int GWBUF::compare(const GWBUF& rhs) const
 {
     size_t llen = length();

@@ -469,12 +469,6 @@ inline uint32_t GWBUF::id() const
     return m_id;
 }
 
-/*< Number of bytes in the individual buffer */
-inline size_t gwbuf_link_length(const GWBUF* b)
-{
-    return b->length();
-}
-
 /**
  * Allocate a new gateway buffer of specified size.
  *
@@ -512,19 +506,6 @@ GWBUF* gwbuf_clone_shallow(GWBUF* buf);
  * @return The new head of the linked list
  */
 GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
-
-/**
- * @brief Split a buffer in two
- *
- * The returned value will be @c length bytes long. If the length of @c buf
- * exceeds @c length, the remaining buffers are stored in @buf.
- *
- * @param buf Buffer chain to split
- * @param length Number of bytes that the returned buffer should contain
- *
- * @return Head of the buffer chain.
- */
-extern GWBUF* gwbuf_split(GWBUF** buf, size_t length);
 
 namespace maxscale
 {

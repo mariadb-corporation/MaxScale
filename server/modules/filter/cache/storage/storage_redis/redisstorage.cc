@@ -948,7 +948,7 @@ private:
         MXB_AT_DEBUG(rc = ) m_redis.appendCommand(m_set_format.c_str(),
                                                   rkey.data(), rkey.size(),
                                                   reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                  gwbuf_link_length(pClone));
+                                                  pClone->length());
         mxb_assert(rc == REDIS_OK);
 
         // Commit the transaction, will actually be sent only when we ask for the reply.

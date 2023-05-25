@@ -103,10 +103,7 @@ int TesterStorage::HitTask::run()
 
                 if (CACHE_RESULT_IS_OK(result))
                 {
-                    mxb_assert(gwbuf_link_length(pQuery) == gwbuf_link_length(cache_item.second));
-                    mxb_assert(memcmp(GWBUF_DATA(pQuery),
-                                      GWBUF_DATA(cache_item.second),
-                                      gwbuf_link_length(pQuery)) == 0);
+                    mxb_assert(pQuery->compare(*cache_item.second) == 0);
 
                     gwbuf_free(pQuery);
                     ++m_gets;

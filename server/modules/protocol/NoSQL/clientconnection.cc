@@ -132,7 +132,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
         else
         {
             // More than one.
-            pPacket = gwbuf_split(&pBuffer, pHeader->msg_len);
+            pPacket = mxs::gwbuf_to_gwbufptr(pBuffer->split(pHeader->msg_len));
             mxb_assert((int)pPacket->length() == pHeader->msg_len);
 
             m_pDcb->unread(mxs::gwbufptr_to_gwbuf(pBuffer));

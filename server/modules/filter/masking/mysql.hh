@@ -69,7 +69,7 @@ public:
     }
 
     explicit ComPacket(GWBUF* pPacket)
-        : ComPacket(GWBUF_DATA(pPacket), gwbuf_link_length(pPacket))
+        : ComPacket(GWBUF_DATA(pPacket), pPacket->length())
     {
     }
 
