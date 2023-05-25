@@ -117,7 +117,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
     // Got the header, the full packet may be available.
     protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(pBuffer->data());
 
-    int buffer_len = gwbuf_length(pBuffer);
+    int buffer_len = pBuffer->length();
     if (buffer_len >= pHeader->msg_len)
     {
         // Ok, we have at least one full packet.
@@ -133,7 +133,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
         {
             // More than one.
             pPacket = gwbuf_split(&pBuffer, pHeader->msg_len);
-            mxb_assert((int)gwbuf_length(pPacket) == pHeader->msg_len);
+            mxb_assert((int)pPacket->length() == pHeader->msg_len);
 
             m_pDcb->unread(mxs::gwbufptr_to_gwbuf(pBuffer));
             m_pDcb->trigger_read_event();
@@ -221,8 +221,8 @@ bool ClientConnection::write(GWBUF&& buffer)
             break;
 
         default:
-            MXB_ERROR("Unexpected %d bytes received from server when no request was in progress, ignoring.",
-                      gwbuf_length(pMariaDB_response));
+            MXB_ERROR("Unexpected %lu bytes received from server when no request was in progress, ignoring.",
+                      pMariaDB_response->length());
         }
 
         gwbuf_free(pMariaDB_response);
@@ -321,7 +321,7 @@ void ClientConnection::prepare_session(const string& user, const vector<uint8_t>
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 {
-    mxb_assert(gwbuf_length(pPacket) >= protocol::HEADER_LEN);
+    mxb_assert(pPacket->length() >= protocol::HEADER_LEN);
 
     return m_nosql.handle_request(pPacket);
 }

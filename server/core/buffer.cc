@@ -140,11 +140,6 @@ GWBUF* gwbuf_split(GWBUF** buf, size_t length)
     return rval;
 }
 
-int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
-{
-    return lhs->compare(*rhs);
-}
-
 int GWBUF::compare(const GWBUF& rhs) const
 {
     size_t llen = length();
@@ -169,24 +164,6 @@ GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
     {
         return tail;
     }
-}
-
-GWBUF* gwbuf_consume(GWBUF* head, uint64_t length)
-{
-    // TODO: Avoid calling this function.
-    auto rval = head;
-    head->consume(length);
-    if (head->empty())
-    {
-        gwbuf_free(head);
-        rval = nullptr;
-    }
-    return rval;
-}
-
-unsigned int gwbuf_length(const GWBUF* head)
-{
-    return head->length();
 }
 
 void GWBUF::set_type(Type type)

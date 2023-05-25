@@ -243,8 +243,7 @@ public:
 
         if (m_pPreparable_stmt)
         {
-            size += sizeof(*m_pPreparable_stmt);
-            size += gwbuf_length(m_pPreparable_stmt);
+            size += m_pPreparable_stmt->varying_size();
         }
 
         // m_canonical not to be shrink_to_fit(). Not needed and should actaully be

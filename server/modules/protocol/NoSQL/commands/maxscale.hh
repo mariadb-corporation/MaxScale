@@ -266,7 +266,7 @@ public:
             unique_ptr<OpMsgCommand> sCommand;
 
             packet::Msg req(m_req);
-            sCommand = OpMsgCommand::get(&m_database, m_pRequest, std::move(req), command, arguments);
+            sCommand = OpMsgCommand::get(&m_database, &m_request, std::move(req), command, arguments);
 
             try
             {

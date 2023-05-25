@@ -2834,7 +2834,7 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
             // If no database operation is in progress, we proceed.
             packet::Packet req(pRequest);
 
-            mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
+            mxb_assert(req.msg_len() == (int)pRequest->length());
 
             switch (req.opcode())
             {

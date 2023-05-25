@@ -80,11 +80,7 @@ string Command::to_json() const
 
 void Command::free_request()
 {
-    if (m_pRequest)
-    {
-        gwbuf_free(m_pRequest);
-        m_pRequest = nullptr;
-    }
+    m_request.clear();
 }
 
 void Command::send_downstream(const string& sql)

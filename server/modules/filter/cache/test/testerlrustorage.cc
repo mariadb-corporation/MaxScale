@@ -30,7 +30,7 @@ int TesterLRUStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
 
     for (CacheItems::const_iterator i = cache_items.begin(); i < cache_items.end(); ++i)
     {
-        size += gwbuf_length(i->second);
+        size += i->second->length();
     }
 
     int rv1 = test_smoke(cache_items);
@@ -95,7 +95,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
                         out() << "Last put value did not become the head." << endl;
                         rv = EXIT_FAILURE;
                     }
-                    else if (gwbuf_compare(pValue, cache_item.second) != 0)
+                    else if (pValue->compare(*cache_item.second) != 0)
                     {
                         out() << "Obtained value not the same as that which was put." << endl;
                         rv = EXIT_FAILURE;
@@ -117,7 +117,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
                     {
                         out() << "First put value is not the tail." << endl;
                     }
-                    else if (gwbuf_compare(pValue, cache_items[0].second))
+                    else if (pValue->compare(*cache_items[0].second))
                     {
                         out() << "Obtained value not the same as that which was put." << endl;
                         rv = EXIT_FAILURE;

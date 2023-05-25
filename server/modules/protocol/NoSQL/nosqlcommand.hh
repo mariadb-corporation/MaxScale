@@ -128,7 +128,7 @@ protected:
             int32_t request_id,
             ResponseKind response_kind)
         : m_database(*pDatabase)
-        , m_pRequest(gwbuf_clone_shallow(pRequest))
+        , m_request(pRequest->shallow_clone())
         , m_request_id(request_id)
         , m_response_kind(response_kind)
     {
@@ -147,7 +147,7 @@ protected:
     MXS_SESSION& session();
 
     Database&     m_database;
-    GWBUF*        m_pRequest;
+    GWBUF         m_request;
     const int32_t m_request_id;
     std::string   m_last_statement;
 

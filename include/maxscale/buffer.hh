@@ -504,25 +504,6 @@ extern void gwbuf_free(GWBUF* buf);
 GWBUF* gwbuf_clone_shallow(GWBUF* buf);
 
 /**
- * Compare two GWBUFs. Two GWBUFs are considered identical if their
- * content is identical, irrespective of whether one is segmented and
- * the other is not.
- *
- * @param lhs  One GWBUF
- * @param rhs  Another GWBUF
- *
- * @return  0 if the content is identical,
- *         -1 if @c lhs is less than @c rhs, and
- *          1 if @c lhs is more than @c rhs.
- *
- * @attention A shorter @c GWBUF less than a longer one. Otherwise the
- *            sign of the return value is determined by the sign of the
- *            difference between the first pair of bytes (interpreted as
- *            unsigned char) that differ in lhs and rhs.
- */
-extern int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs);
-
-/**
  * Append a buffer onto a linked list of buffer structures.
  *
  * @param head  The current head of the linked list or NULL.
@@ -531,30 +512,6 @@ extern int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs);
  * @return The new head of the linked list
  */
 GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
-
-/**
- * @brief Consume data from buffer chain
- *
- * Data is consumed from @p head until either @p length bytes have been
- * processed or @p head is empty. If @p head points to a chain of buffers,
- * those buffers are counted as a part of @p head and will also be consumed if
- * @p length exceeds the size of the first buffer.
- *
- * @param head    The head of the linked list
- * @param length  Number of bytes to consume
- *
- * @return The head of the linked list or NULL if everything was consumed
- */
-GWBUF* gwbuf_consume(GWBUF* head, uint64_t length);
-
-/**
- * Return the number of bytes of data in the linked list.
- *
- * @param head  The current head of the linked list
- *
- * @return The number of bytes of data in the linked list
- */
-extern unsigned int gwbuf_length(const GWBUF* head);
 
 /**
  * @brief Split a buffer in two
@@ -568,10 +525,6 @@ extern unsigned int gwbuf_length(const GWBUF* head);
  * @return Head of the buffer chain.
  */
 extern GWBUF* gwbuf_split(GWBUF** buf, size_t length);
-
-#if defined (BUFFER_TRACE)
-extern void dprintAllBuffers(void* pdcb);
-#endif
 
 namespace maxscale
 {

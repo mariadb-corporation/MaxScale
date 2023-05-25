@@ -185,7 +185,7 @@ bool CDCClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     uint8_t* client_auth_packet = GWBUF_DATA(buf);
-    int client_auth_packet_size = gwbuf_length(buf);
+    int client_auth_packet_size = buf->length();
     return set_client_data(client_auth_packet, client_auth_packet_size);
 }
 

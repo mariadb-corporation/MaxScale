@@ -313,7 +313,7 @@ private:
             packet::Msg req(m_super.m_req);
             m_sCommand.reset(new Find(Find::KEY,
                                       &m_super.m_database,
-                                      m_super.m_pRequest,
+                                      &m_super.m_request,
                                       std::move(req),
                                       m_doc,
                                       m_arguments,
