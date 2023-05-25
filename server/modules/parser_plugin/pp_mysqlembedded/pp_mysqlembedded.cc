@@ -532,7 +532,9 @@ parsing_info_t::~parsing_info_t()
         auto* thd = (THD*) mysql->thd;
         thd->end_statement();
         thd->cleanup_after_query();
+#if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR < 7
         (*mysql->methods->free_embedded_thd)(mysql);
+#endif
         mysql->thd = NULL;
     }
 
@@ -829,7 +831,9 @@ static THD* get_or_create_thd_for_parsing(MYSQL* mysql, const char* query_str)
     goto return_thd;
 
 return_err_with_thd:
+#if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR < 7
     (*mysql->methods->free_embedded_thd)(mysql);
+#endif
     thd = 0;
     mysql->thd = 0;
 return_thd:
@@ -2159,7 +2163,9 @@ int32_t pp_mysql_get_operation(const Parser::Helper& helper,
                     case SQLCOM_ALTER_FUNCTION:
                     case SQLCOM_ALTER_PROCEDURE:
                     case SQLCOM_ALTER_SERVER:
-                    case SQLCOM_ALTER_TABLESPACE:
+#if MYSQL_VERSION_MAJOR != 10 || MYSQL_VERSION_MINOR < 7
+                        case SQLCOM_ALTER_TABLESPACE:
+#endif
                         *operation = mxs::sql::OP_ALTER;
                         break;
 

@@ -51,6 +51,13 @@ using mxs::Parser;
 using mxs::ParserPlugin;
 namespace sql = mxs::sql;
 
+extern "C" const char* __asan_default_options()
+{
+    // There are leaks in pp_mysqlembedded. We are not interested in those, as
+    // pp_mysqlembedded is only used for verifying the behaviour of pp_sqlite.
+    return "detect_leaks=0";
+}
+
 namespace
 {
 

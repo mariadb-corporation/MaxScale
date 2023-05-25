@@ -29,8 +29,8 @@ if(MYSQL_VERSION VERSION_LESS 10.4)
   message(FATAL_ERROR "Cannot build using MariaDB server version older than 10.4")
 endif()
 
-if(MYSQL_VERSION VERSION_GREATER_EQUAL 10.6)
-  message(WARNING "${MYSQL_VERSION} not verified to work with pp_mysqlembedded.")
+if(MYSQL_VERSION VERSION_GREATER_EQUAL 10.9)
+  message(FATAL_ERROR "Cannot build using MariaDB server version newer than 10.8")
 endif()
 
 ##
