@@ -93,13 +93,16 @@ export default {
         hasSavingErr() {
             return Boolean(this.errVisualizingMsg) || Boolean(!this.selectedTableNodes.length)
         },
+        activeWkeId() {
+            return Worksheet.getters('getActiveWkeId') // activeWkeId is also erd_task_id
+        },
     },
     watch: {
         isOpened: {
             handler(v) {
                 if (v) {
-                    const count = this.$typy(ErdTask.query().last(), 'count').safeNumber + 1
-                    this.name = `ERD ${count}`
+                    const { id, count = 0 } = ErdTask.query().last() || {}
+                    this.name = `ERD ${this.activeWkeId === id ? count : count + 1}`
                 }
             },
         },
@@ -116,7 +119,7 @@ export default {
             const config = this.$helpers.lodash.cloneDeep(this.activeRequestConfig)
             let conn = this.$helpers.lodash.cloneDeep(this.conn),
                 connMeta = conn.meta,
-                activeWkeId = Worksheet.getters('getActiveWkeId') // activeWkeId is also erd_task_id
+                activeWkeId = this.activeWkeId
             /**
              * Clone the current connection and request_config data
              */
@@ -130,7 +133,7 @@ export default {
                 const erdData = queryHelper.genErdData(this.parsed_ddl)
                 // Bind connection to a new worksheet
                 if (this.genInNewWs) {
-                    Worksheet.dispatch('insertErdWke', this.name)
+                    Worksheet.dispatch('insertErdWke')
                     activeWkeId = Worksheet.getters('getActiveWkeId')
                     QueryConn.insert({
                         data: {
@@ -143,6 +146,7 @@ export default {
                     })
                 }
                 WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
+                Worksheet.update({ where: activeWkeId, data: { name: this.name } })
                 ErdTask.update({ where: activeWkeId, data: { data: erdData } })
             }
         },
