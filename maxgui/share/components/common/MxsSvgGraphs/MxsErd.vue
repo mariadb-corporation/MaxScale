@@ -22,7 +22,7 @@
                     hoverable
                     :boardZoom="zoom"
                     autoWidth
-                    @node-size-map="setNodeSize"
+                    @node-size-map="onNodesRendered"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
                     @mouseenter="mouseenterNode"
@@ -149,7 +149,6 @@ export default {
     data() {
         return {
             isRendering: false,
-            areSizesCalculated: false,
             svgGroup: null,
             graphNodeCoordMap: {},
             stagingData: null,
@@ -210,43 +209,56 @@ export default {
             return this.$typy(this.graphConfigData, 'link.color').safeString
         },
     },
-    watch: {
-        // wait until graph-nodes sizes are calculated
-        areSizesCalculated(v) {
-            if (v) {
-                this.runSimulation()
-            }
-        },
-    },
     created() {
-        if (this.$typy(this.data, 'nodes').safeArray.length) {
-            this.isRendering = true
-            this.assignData()
-        }
+        this.assignData(this.data)
+    },
+    activated() {
+        this.watchData()
+    },
+    deactivated() {
+        this.$typy(this.unwatch_data).safeFunction()
     },
     beforeDestroy() {
+        this.$typy(this.unwatch_data).safeFunction()
         this.$typy(this.unwatch_graphConfigData).safeFunction()
     },
     methods: {
+        watchData() {
+            this.unwatch_data = this.$watch(
+                'data',
+
+                v => {
+                    this.assignData(v)
+                },
+                { deep: true }
+            )
+        },
         handleFilterCompositeKeys(v) {
             if (v) this.graphLinks = this.stagingData.links
             else this.graphLinks = this.graphLinks.filter(link => !link.isPartOfCompositeKey)
         },
         /**
-         * D3 mutates data, this method deep clones data to make the original is intact
+         * D3 mutates data, this method deep clones data leaving the original intact.
          * @param {Object} data
          */
-        assignData() {
-            this.stagingData = this.$helpers.lodash.cloneDeep(this.data)
-            this.graphNodes = this.stagingData.nodes
-            this.graphLinks = this.stagingData.links
-            this.handleFilterCompositeKeys(this.isAttrToAttr)
+        assignData(data) {
+            if (this.$typy(this.data, 'nodes').safeArray.length) {
+                this.isRendering = true
+                this.stagingData = this.$helpers.lodash.cloneDeep(data)
+                this.graphNodes = this.stagingData.nodes
+                this.graphLinks = this.stagingData.links
+                this.handleFilterCompositeKeys(this.isAttrToAttr)
+            }
         },
-        setNodeSize(map) {
+        /**
+         *
+         * @param {Object} nodeSizeMap - size of nodes
+         */
+        onNodesRendered(nodeSizeMap) {
             this.graphNodes.forEach(node => {
-                node.size = map[node.id]
+                node.size = nodeSizeMap[node.id]
             })
-            this.areSizesCalculated = Boolean(Object.keys(map).length)
+            if (Object.keys(nodeSizeMap).length) this.runSimulation()
         },
         runSimulation() {
             this.simulation = forceSimulation(this.graphNodes)
@@ -265,7 +277,7 @@ export default {
                 .force('y', forceY().strength(0.1))
                 .alphaMin(0.1)
                 .on('end', () => {
-                    this.drawChart()
+                    this.draw()
                     this.isRendering = false
                 })
             this.handleCollision()
@@ -275,7 +287,7 @@ export default {
             this.entityLink = new EntityLink(this.graphConfig)
             this.watchConfig()
         },
-        drawChart() {
+        draw() {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
             this.drawLinks()
