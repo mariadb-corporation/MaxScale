@@ -27,6 +27,12 @@ export default {
         config: { ...config, COMMON_CONFIG: commonConfig },
         hidden_comp: [''],
         migr_dlg: { is_opened: false, etl_task_id: '', type: '' },
+        gen_erd_dlg: {
+            is_opened: false,
+            preselected_schemas: [],
+            connection: null,
+            gen_in_new_ws: false, // generate erd in a new worksheet
+        },
         etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
         conn_dlg: { is_opened: false, type: config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR },
@@ -37,6 +43,9 @@ export default {
         },
         SET_MIGR_DLG(state, payload) {
             state.migr_dlg = payload
+        },
+        SET_GEN_ERD_DLG(state, payload) {
+            state.gen_erd_dlg = payload
         },
         SET_ETL_POLLING_INTERVAL(state, payload) {
             state.etl_polling_interval = payload

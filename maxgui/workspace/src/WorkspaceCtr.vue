@@ -41,6 +41,7 @@
             </template>
             <migr-delete-dlg />
             <reconn-dlg-ctr />
+            <gen-erd-dlg />
         </div>
     </div>
 </template>
@@ -69,6 +70,7 @@ import QueryEditor from '@wkeComps/QueryEditor'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
+import GenErdDlg from '@wsSrc/components/GenErdDlg.vue'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 import '@wsSrc/styles/workspace.scss'
 
@@ -82,6 +84,7 @@ export default {
         QueryEditor,
         DataMigration,
         ReconnDlgCtr,
+        GenErdDlg,
     },
     props: {
         disableRunQueries: { type: Boolean, default: false },

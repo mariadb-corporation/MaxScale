@@ -16,7 +16,7 @@
                 class="mb-3"
             />
             <selectable-schema-table-tree
-                :connId="activeQueryEditorConnId"
+                :connId="connId"
                 :preselectedSchemas="preselectedSchemas"
                 :triggerDataFetch="isOpened"
                 @selected-tables="selectedTableNodes = $event"
@@ -42,7 +42,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions, mapMutations } from 'vuex'
 import ErdTask from '@wsSrc/store/orm/models/ErdTask'
 import QueryConn from '@wsSrc/store/orm/models/QueryConn'
 import Worksheet from '@wsSrc/store/orm/models/Worksheet'
@@ -54,10 +54,6 @@ import queryHelper from '@wsSrc/store/queryHelper'
 export default {
     name: 'gen-erd-dlg',
     components: { SelectableSchemaTableTree },
-    props: {
-        value: { type: Boolean, required: true },
-        preselectedSchemas: { type: Array, required: true },
-    },
     data() {
         return {
             selectedTableNodes: [],
@@ -69,20 +65,27 @@ export default {
         ...mapState({
             parsed_ddl: state => state.editorsMem.parsed_ddl,
             QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
+            gen_erd_dlg: state => state.mxsWorkspace.gen_erd_dlg,
         }),
         isOpened: {
             get() {
-                return this.value
+                return this.gen_erd_dlg.is_opened
             },
             set(v) {
-                this.$emit('input', v)
+                this.SET_GEN_ERD_DLG({ ...this.gen_erd_dlg, is_opened: v })
             },
         },
-        activeQueryEditorConn() {
-            return QueryConn.getters('getQueryEditorConn')
+        preselectedSchemas() {
+            return this.gen_erd_dlg.preselected_schemas
         },
-        activeQueryEditorConnId() {
-            return this.$typy(this.activeQueryEditorConn, 'id').safeString
+        conn() {
+            return this.$typy(this.gen_erd_dlg, 'connection').safeObject
+        },
+        connId() {
+            return this.$typy(this.conn, 'id').safeString
+        },
+        genInNewWs() {
+            return this.$typy(this.gen_erd_dlg, 'gen_in_new_ws').safeBoolean
         },
         activeRequestConfig() {
             return Worksheet.getters('getActiveRequestConfig')
@@ -102,44 +105,43 @@ export default {
         },
     },
     methods: {
-        ...mapActions({
-            queryAndParseDDL: 'editorsMem/queryAndParseDDL',
-        }),
-        async cloneConn({ queryEditorConn, config }) {
-            const [e, res] = await this.$helpers.to(
-                connection.clone({ id: queryEditorConn.id, config })
-            )
+        ...mapActions({ queryAndParseDDL: 'editorsMem/queryAndParseDDL' }),
+        ...mapMutations({ SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG' }),
+        async cloneConn({ conn, config }) {
+            const [e, res] = await this.$helpers.to(connection.clone({ id: conn.id, config }))
             if (e) this.errVisualizingMsg = this.$helpers.getErrorsArr(e).join('\n')
             return this.$typy(res, 'data.data').safeObjectOrEmpty
         },
         async visualize() {
-            /**
-             * Copy current query editor data .i.e. connection and request_config data
-             * before inserting a new worksheet
-             */
-            const queryEditorConn = this.$helpers.lodash.cloneDeep(this.activeQueryEditorConn)
             const config = this.$helpers.lodash.cloneDeep(this.activeRequestConfig)
+            let conn = this.$helpers.lodash.cloneDeep(this.conn),
+                connMeta = conn.meta,
+                activeWkeId = Worksheet.getters('getActiveWkeId') // activeWkeId is also erd_task_id
+            /**
+             * Clone the current connection and request_config data
+             */
+            if (this.genInNewWs) conn = await this.cloneConn({ conn, config })
 
-            const clonedConn = await this.cloneConn({ queryEditorConn, config })
-
-            if (clonedConn.id) {
+            if (conn.id) {
                 await this.queryAndParseDDL({
-                    connId: clonedConn.id,
+                    connId: conn.id,
                     tableNodes: this.selectedTableNodes,
                 })
                 const erdData = queryHelper.genErdData(this.parsed_ddl)
-                Worksheet.dispatch('insertErdWke', this.name)
-                // activeWkeId is also erd_task_id
-                const activeWkeId = Worksheet.getters('getActiveWkeId')
-                // Bind the cloned connection as ERD connection
-                const erdConn = {
-                    id: clonedConn.id,
-                    attributes: clonedConn.attributes,
-                    binding_type: this.QUERY_CONN_BINDING_TYPES.ERD,
-                    erd_task_id: activeWkeId,
-                    meta: queryEditorConn.meta,
+                // Bind connection to a new worksheet
+                if (this.genInNewWs) {
+                    Worksheet.dispatch('insertErdWke', this.name)
+                    activeWkeId = Worksheet.getters('getActiveWkeId')
+                    QueryConn.insert({
+                        data: {
+                            id: conn.id,
+                            attributes: conn.attributes,
+                            binding_type: this.QUERY_CONN_BINDING_TYPES.ERD,
+                            erd_task_id: activeWkeId,
+                            meta: connMeta,
+                        },
+                    })
                 }
-                QueryConn.insert({ data: erdConn })
                 WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
                 ErdTask.update({ where: activeWkeId, data: { data: erdData } })
             }

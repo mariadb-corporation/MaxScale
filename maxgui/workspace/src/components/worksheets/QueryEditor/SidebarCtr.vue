@@ -58,11 +58,10 @@
                 @alter-tbl="onAlterTable"
                 @drop-action="handleOpenExecSqlDlg"
                 @truncate-tbl="handleOpenExecSqlDlg"
-                @gen-erd="handleShowGenErdDlg([$event])"
+                @gen-erd="handleShowGenErdDlg([$event.qualified_name])"
                 v-on="$listeners"
             />
         </keep-alive>
-        <gen-erd-dlg v-model="isObjSelectDlgOpened" :preselectedSchemas="preselectedSchemas" />
     </wke-sidebar>
 </template>
 
@@ -96,19 +95,16 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import WkeSidebar from '@wkeComps/WkeSidebar.vue'
-import GenErdDlg from '@wkeComps/QueryEditor/GenErdDlg.vue'
 
 export default {
     name: 'sidebar-ctr',
-    components: { SchemaTreeCtr, WkeSidebar, GenErdDlg },
+    components: { SchemaTreeCtr, WkeSidebar },
     props: {
         execSqlDlg: { type: Object, required: true },
     },
     data() {
         return {
             actionName: '',
-            isObjSelectDlgOpened: false,
-            preselectedSchemas: [],
         }
     },
     computed: {
@@ -156,10 +152,14 @@ export default {
         dbTreeData() {
             return SchemaSidebar.getters('getDbTreeData')
         },
+        activeQueryEditorConn() {
+            return QueryConn.getters('getQueryEditorConn')
+        },
     },
     methods: {
         ...mapMutations({
             SET_IS_SIDEBAR_COLLAPSED: 'prefAndStorage/SET_IS_SIDEBAR_COLLAPSED',
+            SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG',
         }),
         ...mapActions({
             queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
@@ -221,11 +221,13 @@ export default {
         clearExeStatementsResult() {
             QueryEditorTmp.update({ where: this.queryEditorId, data: { exe_stmt_result: {} } })
         },
-
-        handleShowGenErdDlg(nodes) {
-            this.isObjSelectDlgOpened = true
-            if (nodes) this.preselectedSchemas = nodes.map(n => n.qualified_name)
-            else this.preselectedSchemas = []
+        handleShowGenErdDlg(preselectedSchemas) {
+            this.SET_GEN_ERD_DLG({
+                is_opened: true,
+                preselected_schemas: this.$typy(preselectedSchemas).safeArray,
+                connection: this.activeQueryEditorConn,
+                gen_in_new_ws: true,
+            })
         },
     },
 }

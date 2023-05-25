@@ -1,7 +1,12 @@
 <template>
-    <div class="fill-height relative">
-        <er-toolbar-ctr v-model="graphConfigData" class="absolute" />
-        <mxs-erd ref="diagram" :ctrDim="dim" :data="graphData" :graphConfigData="graphConfigData" />
+    <div class="fill-height">
+        <er-toolbar-ctr v-model="graphConfigData" :height="toolbarHeight" />
+        <mxs-erd
+            ref="diagram"
+            :ctrDim="diagramDim"
+            :data="graphData"
+            :graphConfigData="graphConfigData"
+        />
     </div>
 </template>
 
@@ -53,6 +58,12 @@ export default {
         },
         diagram() {
             return this.$refs.diagram
+        },
+        toolbarHeight() {
+            return 28
+        },
+        diagramDim() {
+            return { width: this.dim.width, height: this.dim.height - this.toolbarHeight }
         },
     },
 }
