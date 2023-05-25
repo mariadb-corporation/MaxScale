@@ -96,7 +96,7 @@ public:
      * Constructs an empty GWBUF. Does not allocate any storage. Calling most storage-accessing functions
      * on an empty buffer is an error.
      */
-    GWBUF();
+    GWBUF() = default;
 
     /**
      * Create an uninitialized buffer.
@@ -340,10 +340,6 @@ public:
      */
     uint32_t id() const;
 
-#ifdef SS_DEBUG
-    void set_owner(mxb::Worker* owner);
-#endif
-
     /**
      * Access byte at the given offset
      *
@@ -376,10 +372,6 @@ private:
     uint8_t* m_end {nullptr};           /**< First byte after the valid data */
     uint32_t m_id {0};                  /**< Buffer ID. Typically used for session command tracking. */
     uint32_t m_type {TYPE_UNDEFINED};   /**< Data type information */
-
-#ifdef SS_DEBUG
-    mxb::Worker* m_owner {nullptr};     /**< Owning thread. Used for debugging */
-#endif
 
     // The copy-constructor is only used by shallow_clone()
     GWBUF(const GWBUF& rhs) = default;

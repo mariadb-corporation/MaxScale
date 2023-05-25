@@ -513,10 +513,6 @@ public:
         // Can't be polled, when owner is changed.
         mxb_assert(this->polling_worker() == nullptr);
         m_owner = worker;
-#ifdef SS_DEBUG
-        m_writeq.set_owner(worker);
-        m_readq.set_owner(worker);
-#endif
     }
 
     /**

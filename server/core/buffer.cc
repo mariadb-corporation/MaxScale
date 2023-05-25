@@ -27,44 +27,6 @@
 using mxs::RoutingWorker;
 using std::move;
 
-#if defined (SS_DEBUG)
-
-inline void ensure_owned(const GWBUF* buf)
-{
-    // TODO: Currently not possible to know whether manually triggered
-    // TODO: rebalance has taken place.
-#ifdef CAN_DETECT_WHETHER_REBALANCE_IN_PROCESS
-    if (config_get_global_options()->rebalance_threshold == 0)
-    {
-        // TODO: If rebalancing occurs, then if a session has been moved while a
-        // TODO: router session has kept a reference to a GWBUF, then buf->owner
-        // TODO: will not be correct and the assertion would fire. Currently there
-        // TODO: is no simple way to track those GWBUFS down in order to change the
-        // TODO: owner. So for the time being we don't check the owner if rebalancing
-        // TODO: is active.
-        mxb_assert(buf->owner == RoutingWorker::get_current());
-    }
-#endif
-}
-
-inline bool validate_buffer(const GWBUF* buf)
-{
-    mxb_assert(buf);
-    ensure_owned(buf);
-    return true;
-}
-
-#else
-inline void ensure_owned(const GWBUF* head)
-{
-}
-
-inline bool validate_buffer(const GWBUF* head)
-{
-    return true;
-}
-#endif
-
 /**
  * Allocate a new gateway buffer structure of size bytes.
  *
@@ -81,13 +43,6 @@ GWBUF* gwbuf_alloc(unsigned int size)
     mxb_assert(size > 0);
     auto rval = new GWBUF(size);
     return rval;
-}
-
-GWBUF::GWBUF()
-{
-#ifdef SS_DEBUG
-    m_owner = mxb::Worker::get_current();
-#endif
 }
 
 GWBUF::GWBUF(size_t size)
@@ -378,13 +333,6 @@ void GWBUF::set_id(uint32_t new_id)
     mxb_assert(m_id == 0);
     m_id = new_id;
 }
-
-#ifdef SS_DEBUG
-void GWBUF::set_owner(mxb::Worker* owner)
-{
-    m_owner = owner;
-}
-#endif
 
 void GWBUF::merge_front(GWBUF&& buffer)
 {
