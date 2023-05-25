@@ -252,7 +252,7 @@ bool RWSplitSession::is_gtid_synced(mxs::RWBackend* backend)
 {
     bool rv = true;
 
-    if (m_config->causal_reads == CausalReads::FAST)
+    if (m_config->causal_reads == CausalReads::FAST || m_config->causal_reads == CausalReads::FAST_UNIVERSAL)
     {
         rv = gtid_pos_is_ok(backend, m_gtid_pos);
     }

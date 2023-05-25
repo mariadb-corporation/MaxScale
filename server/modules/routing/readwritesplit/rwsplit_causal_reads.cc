@@ -143,6 +143,7 @@ bool RWSplitSession::should_do_causal_read() const
 
     case CausalReads::FAST:
     case CausalReads::FAST_GLOBAL:
+    case CausalReads::FAST_UNIVERSAL:
     case CausalReads::NONE:
         return false;
 

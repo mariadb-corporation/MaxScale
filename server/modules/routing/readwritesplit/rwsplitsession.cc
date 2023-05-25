@@ -1137,8 +1137,8 @@ bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
 bool RWSplitSession::need_gtid_probe(const RoutingPlan& plan) const
 {
     uint8_t cmd = route_info().command();
-
-    return m_config->causal_reads == CausalReads::UNIVERSAL
+    const auto cr = m_config->causal_reads;
+    return (cr == CausalReads::UNIVERSAL || cr == CausalReads::FAST_UNIVERSAL)
            && plan.route_target == TARGET_SLAVE
            && m_wait_gtid == NONE
            && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE)

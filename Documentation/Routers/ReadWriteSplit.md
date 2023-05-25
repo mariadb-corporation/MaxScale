@@ -769,7 +769,7 @@ All limitations that apply to `transaction_replay` also apply to
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Values**: `none`, `local`, `global`, `fast`, `fast_global`, `universal`
+- **Values**: `none`, `local`, `global`, `fast`, `fast_global`, `universal`, `fast_universal`
 - **Default**: `none`
 
 Enable causal reads. This parameter is disabled by default and was introduced in
@@ -784,19 +784,20 @@ The following table contains a comparison of the modes.  Read the
 information on what a sync consists of and why minimizing the number of them is
 important.
 
-|Mode         |Level of Causality |Latency                                                  |
-|-------------|-------------------|---------------------------------------------------------|
-|`local`      |Session            |Low, one sync per write.                                 |
-|`fast`       |Session            |None, no sync at all.                                    |
-|`global`     |Service            |Medium, one sync per read.                               |
-|`fast_global`|Service            |None, no sync at all.                                    |
-|`universal`  |Cluster            |High, one sync per read plus a roundtrip to the primary. |
+|Mode            |Level of Causality |Latency                                                  |
+|----------------|-------------------|---------------------------------------------------------|
+|`local`         |Session            |Low, one sync per write.                                 |
+|`fast`          |Session            |None, no sync at all.                                    |
+|`global`        |Service            |Medium, one sync per read.                               |
+|`fast_global`   |Service            |None, no sync at all.                                    |
+|`universal`     |Cluster            |High, one sync per read plus a roundtrip to the primary. |
+|`fast_universal`|Cluster            |Low, one roundtrip to the primary.                       |
 
-The `fast` and `fast_global` modes should only be used when low latency is more
-important than proper distribution of reads. These modes should only be used
-when the workload is mostly read-only with only occasional writes. If used with
-a mixed or a write-heavy workload, the traffic will end up being routed almost
-exclusively to the primary server.
+The `fast`, `fast_global` and `fast_universal` modes should only be used when
+low latency is more important than proper distribution of reads. These modes
+should only be used when the workload is mostly read-only with only occasional
+writes. If used with a mixed or a write-heavy workload, the traffic will end up
+being routed almost exclusively to the primary server.
 
 **Note:** This feature requires MariaDB 10.2.16 or newer to function. In
   addition to this, the `session_track_system_variables` parameter must include
@@ -878,6 +879,19 @@ The possible values for this parameter are:
     by roughly twice the network latency between MaxScale and the database
     cluster. In addition, an extra SELECT statement is always executed on the
     primary which places some load on the server.
+
+* `fast_universal`
+
+  * A mix of `fast` and `universal`. This mode that guarantees that all SELECT
+    statements always see the latest observable transaction state but unlike the
+    `universal` mode that waits on the server to catch up, this mode behaves
+    like `fast` and routes the query to the current primary if no replicas are
+    available that have caught up.
+
+    This mode provides the same consistency guarantees of `universal` with a
+    constant latency overhead of one extra roundtrip. However, this also puts
+    the most load on the primary node as even a moderate write load can cause
+    the GTIDs of replicas to lag too far behind.
 
 Before MaxScale 2.5.0, the `causal_reads` parameter was a boolean
 parameter. False values translated to `none` and true values translated to

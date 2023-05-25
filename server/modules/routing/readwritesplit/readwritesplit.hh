@@ -89,12 +89,13 @@ enum failure_mode
 
 enum class CausalReads
 {
-    NONE,       // No causal reads, default
-    LOCAL,      // Causal reads are done on a session level with MASTER_GTID_WAIT
-    GLOBAL,     // Causal reads are done globally with MASTER_GTID_WAIT
-    FAST,       // Causal reads use GTID position to pick an up-to-date server
-    FAST_GLOBAL,// Same as FAST except the global GTID is used
-    UNIVERSAL   // Causal reads verifies the GTID before starting the read
+    NONE,           // No causal reads, default
+    LOCAL,          // Causal reads are done on a session level with MASTER_GTID_WAIT
+    GLOBAL,         // Causal reads are done globally with MASTER_GTID_WAIT
+    FAST,           // Causal reads use GTID position to pick an up-to-date server
+    FAST_GLOBAL,    // Same as FAST except the global GTID is used
+    UNIVERSAL,      // Causal reads verifies the GTID before starting the read
+    FAST_UNIVERSAL  // Causal reads verifies the GTID and then behaves like FAST
 };
 
 enum class TrxChecksum
@@ -149,6 +150,7 @@ static cfg::ParamEnum<CausalReads> s_causal_reads(
     {CausalReads::FAST_GLOBAL, "fast_global"},
     {CausalReads::FAST, "fast"},
     {CausalReads::UNIVERSAL, "universal"},
+    {CausalReads::FAST_UNIVERSAL, "fast_universal"},
 }, CausalReads::NONE, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_max_slave_replication_lag(
