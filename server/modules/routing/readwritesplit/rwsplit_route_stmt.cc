@@ -23,6 +23,8 @@
 
 #include <mysqld_error.h>
 
+#include <maxbase/string.hh>
+#include <maxbase/format.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/router.hh>
@@ -90,7 +92,7 @@ bool RWSplitSession::have_connected_slaves() const
 
 bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
 {
-    return m_config->optimistic_trx                  // Optimistic transactions are enabled
+    return m_config->optimistic_trx                 // Optimistic transactions are enabled
            && !is_locked_to_master()                // Not locked to master
            && m_state == ROUTING                    // In normal routing mode
            && TARGET_IS_MASTER(route_target)        // The target type is master
@@ -777,8 +779,6 @@ int RWSplitSession::get_max_replication_lag()
  */
 RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_target_t route_target)
 {
-    const char rlag_hint_tag[] = "max_slave_replication_lag";
-    const int comparelen = sizeof(rlag_hint_tag);
     int config_max_rlag = get_max_replication_lag();    // From router configuration.
     RWBackend* target = nullptr;
 
@@ -788,48 +788,23 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_tar
         {
             // Set the name of searched backend server.
             const char* named_server = hint.data.c_str();
-            MXB_INFO("Hint: route to server '%s'.", named_server);
             target = get_target_backend(BE_UNDEFINED, named_server, config_max_rlag);
-            if (!target)
-            {
-                // Target may differ from the requested name if the routing target is locked, e.g. by a trx.
-                // Target is null only if not locked and named server was not found or was invalid.
-                if (mxb_log_should_log(LOG_INFO))
-                {
-                    std::string status;
-                    for (const auto& a : m_backends)
-                    {
-                        if (strcmp(a->target()->name(), named_server) == 0)
-                        {
-                            status = a->target()->status_string();
-                            break;
-                        }
-                    }
-                    MXB_INFO("Was supposed to route to named server %s but couldn't find the server in a "
-                             "suitable state. Server state: %s",
-                             named_server, !status.empty() ? status.c_str() : "Could not find server");
-                }
-            }
+            MXB_INFO("Hint: route to server '%s', %s.", named_server,
+                     target ? "found target" : "target not valid");
         }
         else if (hint.type == Hint::Type::PARAMETER
-                 && (strncasecmp(hint.data.c_str(), rlag_hint_tag, comparelen) == 0))
+                 && mxb::sv_case_eq(hint.data, "max_slave_replication_lag"))
         {
-            const char* str_val = hint.value.c_str();
-            int hint_max_rlag = (int)strtol(str_val, nullptr, 10);
-            if (hint_max_rlag != 0 || errno == 0)
+            auto hint_max_rlag = strtol(hint.value.c_str(), nullptr, 10);
+            if (hint_max_rlag > 0)
             {
-                MXB_INFO("Hint: %s=%d", rlag_hint_tag, hint_max_rlag);
                 target = get_target_backend(BE_SLAVE, nullptr, hint_max_rlag);
-                if (!target)
-                {
-                    MXB_INFO("Was supposed to route to server with replication lag "
-                             "at most %d but couldn't find such a replica.", hint_max_rlag);
-                }
+                MXB_INFO("Hint: %s=%s, %s.", hint.data.c_str(), hint.value.c_str(),
+                         target ? "found target" : "target not valid");
             }
             else
             {
-                MXB_ERROR("Hint: Could not parse value of %s: '%s' is not a valid number.",
-                          rlag_hint_tag, str_val);
+                MXB_INFO("Ignoring invalid hint value: %s", hint.value.c_str());
             }
         }
 
@@ -908,49 +883,49 @@ void RWSplitSession::log_master_routing_failure(bool found,
                                                 RWBackend* old_master,
                                                 RWBackend* curr_master)
 {
-    char errmsg[1024 * 2 + 100];        // Extra space for error message
+    std::string errmsg;
 
     if (m_config->delayed_retry && m_retry_duration >= m_config->delayed_retry_timeout.count())
     {
-        sprintf(errmsg, "'delayed_retry_timeout' exceeded before a primary could be found");
+        errmsg = mxb::string_printf("'delayed_retry_timeout' exceeded before a primary could be found");
     }
     else if (!found)
     {
-        sprintf(errmsg, "Could not find a valid master connection");
+        errmsg = mxb::string_printf("Could not find a valid master connection");
     }
     else if (old_master && curr_master && old_master->in_use())
     {
         /** We found a master but it's not the same connection */
         mxb_assert(old_master != curr_master);
-        sprintf(errmsg,
-                "Master server changed from '%s' to '%s'",
-                old_master->name(),
-                curr_master->name());
+        errmsg = mxb::string_printf(
+            "Master server changed from '%s' to '%s'",
+            old_master->name(),
+            curr_master->name());
     }
     else if (old_master && old_master->in_use())
     {
         // TODO: Figure out if this is an impossible situation
         mxb_assert(!curr_master);
         /** We have an original master connection but we couldn't find it */
-        sprintf(errmsg,
-                "The connection to primary server '%s' is not available",
-                old_master->name());
+        errmsg = mxb::string_printf(
+            "The connection to primary server '%s' is not available",
+            old_master->name());
     }
     else
     {
         /** We never had a master connection, the session must be in read-only mode */
         if (m_config->master_failure_mode != RW_FAIL_INSTANTLY)
         {
-            sprintf(errmsg,
-                    "Session is in read-only mode because it was created "
-                    "when no primary was available");
+            errmsg = mxb::string_printf(
+                "Session is in read-only mode because it was created "
+                "when no primary was available");
         }
         else
         {
             mxb_assert(old_master && !old_master->in_use());
-            sprintf(errmsg,
-                    "Was supposed to route to primary but the primary connection is %s",
-                    old_master->is_closed() ? "closed" : "not in a suitable state");
+            errmsg = mxb::string_printf(
+                "Was supposed to route to primary but the primary connection is %s",
+                old_master->is_closed() ? "closed" : "not in a suitable state");
             mxb_assert(old_master->is_closed());
         }
     }
@@ -959,7 +934,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
                 m_router->service()->name(),
                 m_pSession->user().c_str(),
                 m_pSession->client_remote().c_str(),
-                errmsg);
+                errmsg.c_str());
 }
 
 bool RWSplitSession::trx_is_starting() const
