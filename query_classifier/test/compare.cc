@@ -27,6 +27,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
+#include "../../server/modules/protocol/MariaDB/trxboundaryparser.hh"
 #include "testreader.hh"
 
 using std::cerr;
@@ -438,6 +439,102 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
         {
             ss << "ERR: " << types1 << " != " << types2;
         }
+    }
+
+    report(success, ss.str());
+
+    return success;
+}
+
+static uint32_t qc_get_trx_type_mask_using_qc(QUERY_CLASSIFIER* pClassifier, GWBUF* pStmt)
+{
+    uint32_t type_mask;
+    pClassifier->qc_get_type_mask(pStmt, &type_mask);
+
+    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE)
+        && qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
+    {
+        // This is a commit reported for "CREATE TABLE...",
+        // "DROP TABLE...", etc. that cause an implicit commit.
+        type_mask = 0;
+    }
+    else
+    {
+        // Only START TRANSACTION can be explicitly READ or WRITE.
+        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+        {
+            // So, strip them away for everything else.
+            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+        }
+
+        // Then leave only the bits related to transaction and
+        // autocommit state.
+        type_mask &= (QUERY_TYPE_BEGIN_TRX
+                      | QUERY_TYPE_WRITE
+                      | QUERY_TYPE_READ
+                      | QUERY_TYPE_COMMIT
+                      | QUERY_TYPE_ROLLBACK
+                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
+                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
+                      | QUERY_TYPE_READONLY
+                      | QUERY_TYPE_READWRITE
+                      | QUERY_TYPE_NEXT_TRX);
+    }
+
+    return type_mask;
+}
+
+static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* pStmt)
+{
+    maxscale::TrxBoundaryParser parser;
+
+    return parser.type_mask_of(pStmt);
+}
+
+bool compare_get_trx_type(QUERY_CLASSIFIER* pClassifier1,
+                          GWBUF* pCopy1,
+                          QUERY_CLASSIFIER* pClassifier2,
+                          GWBUF* pCopy2)
+{
+    bool success = false;
+    const char HEADING[] = "qc_get_trx_type_mask     : ";
+
+    uint32_t rv1 = qc_get_trx_type_mask_using_qc(pClassifier1, pCopy1);
+    uint32_t rv2 = qc_get_trx_type_mask_using_qc(pClassifier2, pCopy2);
+    uint32_t rv3 = qc_get_trx_type_mask_using_parser(pCopy2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    if (rv1 == rv2)
+    {
+        string types = qc_typemask_to_string(rv1);
+        ss << "Ok : " << types;
+        success = true;
+    }
+    else
+    {
+        string types1 = qc_typemask_to_string(rv1);
+        string types2 = qc_typemask_to_string(rv2);
+
+        ss << "ERR: " << types1 << " != " << types2;
+    }
+
+    if (rv1 != rv3 || rv2 != rv3)
+    {
+        if (success == true)
+        {
+            ss << ", BUT custom: ";
+            success = false;
+        }
+        else
+        {
+            ss << ", AND custom: ";
+        }
+
+        string types = qc_typemask_to_string(rv1);
+
+        ss << types;
     }
 
     report(success, ss.str());
@@ -1262,6 +1359,7 @@ bool compare(QUERY_CLASSIFIER* pClassifier1,
 
     errors += !compare_parse(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_trx_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_operation(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_created_table_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
