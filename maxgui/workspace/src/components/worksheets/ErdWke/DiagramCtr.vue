@@ -41,6 +41,7 @@ export default {
                     color: '#424f62',
                     strokeWidth: 1,
                     isAttrToAttr: false,
+                    opacity: 1,
                     [EVENT_TYPES.HOVER]: { color: 'white', invisibleOpacity: 1 },
                     [EVENT_TYPES.DRAGGING]: { color: 'white', invisibleOpacity: 1 },
                 },
