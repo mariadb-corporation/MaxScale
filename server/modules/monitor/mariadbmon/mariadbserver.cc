@@ -1599,86 +1599,10 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
     {
         // Step 2: If this server is master, disable writes and scheduled events, flush logs,
         // update gtid:s, run demotion_sql_file.
-
-        // In theory, this part should be ran in the opposite order so it would "reverse"
-        // the promotion code. However, it's probably better to run the most
-        // likely part to fail, setting read_only=1, first to make undoing easier. Setting
-        // read_only may fail if another session has table locks or is doing long writes.
         bool demotion_error = false;
-        if (demotion.to_from_master)
+        if (demotion.to_from_master && !demote_master(general, type))
         {
-            // The server should either be the master or be a standalone being rejoined.
-            mxb_assert(is_master() || m_slave_status.empty());
-
-            // Step 2a: Remove [Master] from this server. This prevents compatible routers (RWS)
-            // from routing writes to this server. Writes in flight will go through, at least until
-            // read_only is set.
-            this->server->clear_status(SERVER_MASTER);
-
-            // Step 2b: If other users with SUPER privileges are on, kick them out now since
-            // read_only doesn't stop them from doing writes. This does not stop them from immediately
-            // logging back in but it's better than nothing. This also stops super-user writes going
-            // through MaxScale.
-            if (type == OperationType::SWITCHOVER && !kick_out_super_users(general))
-            {
-                demotion_error = true;
-            }
-
-            // Step 2c: Enabling read-only can take time if writes are on or table locks taken.
-            StopWatch timer;
-            if (!demotion_error)
-            {
-                bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, general.time_remaining, error_out);
-                general.time_remaining -= timer.lap();
-                if (!ro_enabled)
-                {
-                    demotion_error = true;
-                }
-            }
-
-            if (!demotion_error && m_settings.handle_event_scheduler)
-            {
-                // TODO: Add query replying to enable_events
-                // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
-                // which could break external replication.
-                bool events_disabled = disable_events(BinlogMode::BINLOG_OFF, error_out);
-                general.time_remaining -= timer.lap();
-                if (!events_disabled)
-                {
-                    demotion_error = true;
-                    PRINT_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
-                }
-            }
-
-            // Step 2e: Run demotion_sql_file if no errors so far.
-            const string& sql_file = m_settings.demotion_sql_file;
-            if (!demotion_error && !sql_file.empty())
-            {
-                bool file_ran_ok = run_sql_from_file(sql_file, error_out);
-                general.time_remaining -= timer.lap();
-                if (!file_ran_ok)
-                {
-                    demotion_error = true;
-                    PRINT_JSON_ERROR(error_out,
-                                     "Execution of file '%s' failed during demotion of server '%s'.",
-                                     sql_file.c_str(), name());
-                }
-            }
-
-            if (!demotion_error)
-            {
-                // Step 2f: FLUSH LOGS to ensure that all events have been written to binlog.
-                string error_msg;
-                bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining,
-                                                           &error_msg);
-                general.time_remaining -= timer.lap();
-                if (!logs_flushed)
-                {
-                    demotion_error = true;
-                    PRINT_JSON_ERROR(error_out, "Failed to flush binary logs of '%s' during demotion: %s.",
-                                     name(), error_msg.c_str());
-                }
-            }
+            demotion_error = true;
         }
 
         if (!demotion_error)
@@ -1709,6 +1633,96 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
         }
     }
     return success;
+}
+
+bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
+{
+    // The server should either be the master or be a standalone being rejoined.
+    mxb_assert(is_master() || m_slave_status.empty());
+    auto& error_out = general.error_out;
+
+    // Step 2a: Remove [Master] from this server. This prevents compatible routers (RWS)
+    // from routing writes to this server. Writes in flight will go through, at least until
+    // read_only is set. Also set draining so that no new connections come from MaxScale.
+    server->clear_status(SERVER_MASTER);
+    bool was_draining = server->is_draining();
+    if (!was_draining)
+    {
+        server->set_status(SERVER_DRAINING);
+    }
+
+    bool demotion_error = false;
+    // Step 2b: Enabling read-only can take a while if large trx are committing or table locks taken.
+    StopWatch timer;
+    bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, general.time_remaining, error_out);
+    general.time_remaining -= timer.lap();
+    if (ro_enabled)
+    {
+        if (type == OperationType::SWITCHOVER)
+        {
+            // Step 2b: If other users with SUPER privileges are on, kick them out now since
+            // read_only doesn't stop them from doing writes. As the server is draining, MaxScale
+            // should not make new routing connections. Outside connections cannot be prevented.
+            if (!kick_out_super_users(general))
+            {
+                demotion_error = true;
+            }
+        }
+    }
+    else
+    {
+        demotion_error = true;
+    }
+
+    if (!demotion_error && m_settings.handle_event_scheduler)
+    {
+        // TODO: Add query replying to enable_events
+        // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
+        // which could break external replication.
+        bool events_disabled = disable_events(BinlogMode::BINLOG_OFF, error_out);
+        general.time_remaining -= timer.lap();
+        if (!events_disabled)
+        {
+            demotion_error = true;
+            PRINT_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
+        }
+    }
+
+    // Step 2e: Run demotion_sql_file if no errors so far.
+    const string& sql_file = m_settings.demotion_sql_file;
+    if (!demotion_error && !sql_file.empty())
+    {
+        bool file_ran_ok = run_sql_from_file(sql_file, error_out);
+        general.time_remaining -= timer.lap();
+        if (!file_ran_ok)
+        {
+            demotion_error = true;
+            PRINT_JSON_ERROR(error_out, "Execution of file '%s' failed during demotion of server '%s'.",
+                             sql_file.c_str(), name());
+        }
+    }
+
+    if (!demotion_error)
+    {
+        // Step 2f: FLUSH LOGS to ensure that all events have been written to binlog.
+        string error_msg;
+        bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining,
+                                                   &error_msg);
+        general.time_remaining -= timer.lap();
+        if (!logs_flushed)
+        {
+            demotion_error = true;
+            PRINT_JSON_ERROR(error_out, "Failed to flush binary logs of '%s' during demotion: %s.",
+                             name(), error_msg.c_str());
+        }
+    }
+
+    if (!was_draining)
+    {
+        // TODO: Do this later?
+        server->clear_status(SERVER_DRAINING);
+    }
+    return !demotion_error;
 }
 
 /**

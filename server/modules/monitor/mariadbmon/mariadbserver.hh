@@ -619,6 +619,7 @@ private:
 
     bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge,
                            SlaveStatus::Settings::GtidMode gtid_mode);
+    bool demote_master(GeneralOpData& general, OperationType type);
 
     struct ChangeMasterCmd
     {
