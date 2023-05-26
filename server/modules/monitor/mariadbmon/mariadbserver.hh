@@ -642,5 +642,12 @@ private:
     int64_t conn_id() const;
     void    clear_locks_info();
 
+    struct ConnInfo
+    {
+        int64_t     conn_id {-1};
+        std::string username;
+    };
+    std::tuple<bool, std::vector<ConnInfo>> get_super_user_conns(mxb::Json& error_out);
+
     const std::string& permission_test_query() const override;
 };

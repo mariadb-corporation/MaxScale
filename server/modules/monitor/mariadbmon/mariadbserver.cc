@@ -2357,65 +2357,81 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
 
 bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
 {
-    bool error = false;
-    Duration time_remaining = op.time_remaining;
-    auto& error_out = op.error_out;
-    // Only select unique rows...
-    string get_ids_query = "SELECT DISTINCT * FROM ("
-        // select conn id and username from live connections ...
-                           "SELECT P.id,P.user FROM information_schema.PROCESSLIST as P "
-        // match with user information ...
-                           "INNER JOIN mysql.user as U ON (U.user = P.user) WHERE "
-        // where the user has super-privileges, is not replicating ...
-                           "(U.Super_priv = 'Y' AND P.COMMAND != 'Binlog Dump' "
-        // and is not the current user.
-                           "AND P.id != (SELECT CONNECTION_ID()))) as I;";
-
-    string error_msg;
-    unsigned int error_num = 0;
-    auto res = execute_query(get_ids_query, &error_msg, &error_num);
-    if (res)
+    bool success = false;
+    bool keep_trying = true;
+    int attempts = 0;
+    // Only stop once there are no more super-users logged in. If killing connections succeeds but users
+    // keep coming back, they must be repeatedly logging in.
+    do
     {
-        int id_col = 0;
-        int user_col = 1;
-        while (res->next_row())
+        StopWatch timer;
+        auto [fetch_ok, conns] = get_super_user_conns(op.error_out);
+        if (!conns.empty())
         {
-            auto conn_id = res->get_int(id_col);
-            auto user = res->get_string(user_col);
-            string kill_query = mxb::string_printf("KILL SOFT CONNECTION %li;", conn_id);
-            StopWatch timer;
-            if (execute_cmd_time_limit(kill_query, time_remaining, &error_msg))
+            MXB_NOTICE("Detected %li super or read_only admin users logged in on %s. Kicking them out.",
+                       conns.size(), name());
+            int kills = 0;
+
+            for (const auto& user : conns)
             {
-                MXB_WARNING("Killed connection id %lu to '%s' from super-user '%s' to prevent writes.",
-                            conn_id, name(), user.c_str());
+                string kill_query = mxb::string_printf("KILL SOFT CONNECTION %li;", user.conn_id);
+                string error_msg;
+                if (execute_cmd(kill_query, &error_msg))
+                {
+                    kills++;
+                }
+                else
+                {
+                    MXB_WARNING("Could not kill connection %lu from super-user/read-only admin '%s': "
+                                "%s", user.conn_id, user.username.c_str(), error_msg.c_str());
+                }
+            }
+
+            if (kills > 0)
+            {
+                MXB_NOTICE("Killed %i super or read-only admin user connections on '%s'.", kills, name());
+            }
+        }
+
+        if (fetch_ok)
+        {
+            if (conns.empty())
+            {
+                success = true;
             }
             else
             {
-                error = true;
-                PRINT_JSON_ERROR(error_out, "Could not kill connection %lu from super-user '%s': %s",
-                                 conn_id, user.c_str(), error_msg.c_str());
+                // Likely killed (or tried to kill) some connections. Check again to ensure they are gone.
+                if (attempts == 0 || (attempts < 4 && op.time_remaining > 0ms))
+                {
+                    // Wait a bit to give server some time, perhaps it takes a moment for the KILL-queries
+                    // to take effect.
+                    std::this_thread::sleep_for(500ms);
+                }
+                else
+                {
+                    // Give up. Print one username as example so that dba can believe MaxScale and perhaps
+                    // investigates further.
+                    PRINT_JSON_ERROR(op.error_out,
+                                     "Could not kick out all super or read-only admin users. %li such users "
+                                     "remain, for example '%s'. Either 'KILL CONNECTION'-query failed or "
+                                     "super-users keep logging back in.",
+                                     conns.size(), conns.front().username.c_str());
+                    keep_trying = false;
+                }
             }
-            time_remaining -= timer.split();
-        }
-    }
-    else
-    {
-        // If query failed because of insufficient rights, don't consider this an error, just print a warning.
-        // Perhaps the user doesn't want the monitor doing this.
-        if (error_num == ER_DBACCESS_DENIED_ERROR || error_num == ER_TABLEACCESS_DENIED_ERROR
-            || error_num == ER_COLUMNACCESS_DENIED_ERROR)
-        {
-            MXB_WARNING("Insufficient rights to query logged in super-users for server '%s': %s Super-users "
-                        "may perform writes during the cluster manipulation operation.",
-                        name(), error_msg.c_str());
         }
         else
         {
-            error = true;
-            PRINT_JSON_ERROR(error_out, "Could not query connected super-users: %s", error_msg.c_str());
+            // Fetch failed due to unexpected reason, fail and cancel switchover.
+            keep_trying = false;
         }
+        op.time_remaining -= timer.lap();
+        attempts++;
     }
-    return !error;
+    while (!success && keep_trying);
+
+    return success;
 }
 
 void MariaDBServer::update_locks_status()
@@ -2752,4 +2768,79 @@ void MariaDBServer::restore_connector_timeouts()
         mysql_close(con);
     }
     con = std::exchange(m_old_conn, nullptr);
+}
+
+
+std::tuple<bool, std::vector<MariaDBServer::ConnInfo>>
+MariaDBServer::get_super_user_conns(mxb::Json& error_out)
+{
+    std::vector<ConnInfo> super_user_conns;
+    // Select conn id and username from live connections, match with super-user accounts.
+    // Filter out replicating connections and the current connection. Global privileges are stored
+    // differently on more recent server versions so the join-clause also changes.
+    const char query_fmt[] =
+        "SELECT DISTINCT P.id,P.user FROM (SELECT * FROM information_schema.PROCESSLIST WHERE "
+        "ID != (SELECT CONNECTION_ID()) AND COMMAND != 'Binlog Dump') AS P INNER JOIN (%s) AS U ON "
+        "(U.user = P.user);";
+    string admin_users_select;
+    if (m_capabilities.read_only_admin)
+    {
+        // Magic numbers from MariaDB Server source.
+        // See https://github.com/MariaDB/server/blob/11.1/sql/privilege.h
+        uint64_t SUPER_ACL = (1UL << 15);
+        uint64_t READ_ONLY_ADMIN_ACL = (1ULL << 33);
+        uint64_t mask = READ_ONLY_ADMIN_ACL;
+        if (!m_capabilities.separate_ro_admin)
+        {
+            // Super includes ro-admin, so need to kick them out too.
+            mask |= SUPER_ACL;
+        }
+        admin_users_select = mxb::string_printf(
+            "SELECT * FROM (SELECT user, JSON_VALUE(priv,'$.access') AS access FROM mysql.global_priv) "
+            "AS A where A.access & %li > 0", mask);
+    }
+    else
+    {
+        admin_users_select = "SELECT * FROM mysql.user WHERE Super_priv = 'Y'";
+    }
+
+    bool rval = false;
+    string error_msg;
+    unsigned int error_num;
+    string query = mxb::string_printf(query_fmt, admin_users_select.c_str());
+
+    auto res = execute_query(query, &error_msg, &error_num);
+    if (res)
+    {
+        rval = true;
+        int id_col = 0;
+        int user_col = 1;
+        super_user_conns.reserve(res->get_row_count());
+
+        while (res->next_row())
+        {
+            auto conn_id = res->get_int(id_col);
+            auto user = res->get_string(user_col);
+            super_user_conns.emplace_back(ConnInfo {conn_id, user});
+        }
+    }
+    else
+    {
+        // If query failed because of insufficient rights, don't consider this an error, just print
+        // a warning. Perhaps the user doesn't want the monitor doing this.
+        if (error_num == ER_DBACCESS_DENIED_ERROR || error_num == ER_TABLEACCESS_DENIED_ERROR
+            || error_num == ER_COLUMNACCESS_DENIED_ERROR)
+        {
+            rval = true;
+            MXB_WARNING("Monitor has insufficient grants to query logged in super-users on server '%s': "
+                        "%s Super-users may perform writes during the cluster manipulation operation.",
+                        name(), error_msg.c_str());
+        }
+        else
+        {
+            PRINT_JSON_ERROR(error_out, "Could not query connected super-users: %s",
+                             error_msg.c_str());
+        }
+    }
+    return {rval, super_user_conns};
 }
