@@ -418,37 +418,7 @@ static uint32_t get_trx_type_mask_using_qc(const Parser& parser, const GWBUF& st
 {
     uint32_t type_mask = parser.get_type_mask(stmt);
 
-    if (Parser::type_mask_contains(type_mask, sql::TYPE_WRITE)
-        && Parser::type_mask_contains(type_mask, sql::TYPE_COMMIT))
-    {
-        // This is a commit reported for "CREATE TABLE...",
-        // "DROP TABLE...", etc. that cause an implicit commit.
-        type_mask = 0;
-    }
-    else
-    {
-        // Only START TRANSACTION can be explicitly READ or WRITE.
-        if (!(Parser::type_mask_contains(type_mask, sql::TYPE_BEGIN_TRX)))
-        {
-            // So, strip them away for everything else.
-            type_mask &= ~(sql::TYPE_WRITE | sql::TYPE_READ);
-        }
-
-        // Then leave only the bits related to transaction and
-        // autocommit state.
-        type_mask &= (sql::TYPE_BEGIN_TRX
-                      | sql::TYPE_WRITE
-                      | sql::TYPE_READ
-                      | sql::TYPE_COMMIT
-                      | sql::TYPE_ROLLBACK
-                      | sql::TYPE_ENABLE_AUTOCOMMIT
-                      | sql::TYPE_DISABLE_AUTOCOMMIT
-                      | sql::TYPE_READONLY
-                      | sql::TYPE_READWRITE
-                      | sql::TYPE_NEXT_TRX);
-    }
-
-    return type_mask;
+    return Parser::remove_non_trx_type_bits(type_mask);
 }
 
 static uint32_t get_trx_type_mask_using_parser(std::string_view sql)
