@@ -10,7 +10,7 @@ static size_t sql_size = 0;
 
 int execute_select_query_and_check(MYSQL* conn, const char* sql, unsigned long long int rows)
 {
-    MYSQL_RES* res;
+    MYSQL_RES* res = nullptr;
     MYSQL_ROW row;
     unsigned long long int i;
     unsigned long long int num_fields;

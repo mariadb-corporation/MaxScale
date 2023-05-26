@@ -194,9 +194,9 @@ void* query_thread1(void* ptr)
 
 void* query_thread2(void* ptr)
 {
-    MYSQL* conn1;
-    MYSQL* conn2;
-    MYSQL* conn3;
+    MYSQL* conn1 = nullptr;
+    MYSQL* conn2 = nullptr;
+    MYSQL* conn3 = nullptr;
     thread_data* data = (thread_data*) ptr;
     auto mxs_ip = data->Test->maxscale->ip4();
     auto mxs_user = data->Test->maxscale->user_name();
