@@ -240,8 +240,9 @@ export default {
             )
         },
         handleFilterCompositeKeys(v) {
-            if (v) this.graphLinks = this.stagingData.links
-            else this.graphLinks = this.graphLinks.filter(link => !link.isPartOfCompositeKey)
+            this.graphLinks.forEach(link => {
+                if (link.isPartOfCompositeKey) link.hidden = !v
+            })
         },
         /**
          * Call this function will trigger rerender the graph
@@ -311,7 +312,10 @@ export default {
             return this.simulation.force('link').links()
         },
         drawLinks() {
-            this.entityLink.draw({ containerEle: this.svgGroup, data: this.getLinks() })
+            this.entityLink.draw({
+                containerEle: this.svgGroup,
+                data: this.getLinks().filter(link => !link.hidden),
+            })
         },
         handleCollision() {
             this.simulation.force(
