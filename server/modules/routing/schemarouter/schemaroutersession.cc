@@ -739,7 +739,7 @@ bool SchemaRouterSession::have_servers()
 {
     for (const auto& b : m_backends)
     {
-        if (b->in_use() && !b->is_closed())
+        if (b->in_use())
         {
             return true;
         }
@@ -1210,7 +1210,7 @@ void SchemaRouterSession::query_databases()
 
     for (const auto& b : m_backends)
     {
-        if (b->in_use() && !b->is_closed() && b->target()->is_usable())
+        if (b->in_use() && b->target()->is_usable())
         {
             if (!b->write(buffer.shallow_clone()))
             {

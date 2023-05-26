@@ -34,43 +34,17 @@ Backend::~Backend()
 
 void Backend::close(close_type type)
 {
-    if (!m_closed)
+    mxb_assert(in_use());
+
+    /** Clean operation counter in bref and in SERVER */
+    while (!m_responses.empty())
     {
-        m_closed = true;
-        m_closed_at = time(NULL);
-
-        if (in_use())
-        {
-            /** Clean operation counter in bref and in SERVER */
-            while (!m_responses.empty())
-            {
-                ack_write();
-            }
-
-            clear_state(IN_USE);
-
-            if (type == CLOSE_FATAL)
-            {
-                set_state(FATAL_FAILURE);
-            }
-
-            m_backend->close();
-        }
+        ack_write();
     }
-    else
-    {
-        mxb_assert(false);
-    }
-}
 
-void Backend::clear_state(backend_state state)
-{
-    m_state &= ~state;
-}
+    m_state = type == CLOSE_FATAL ? FATAL_FAILURE : CLOSED;
 
-void Backend::set_state(backend_state state)
-{
-    m_state |= state;
+    m_backend->close();
 }
 
 bool Backend::connect()
@@ -80,7 +54,6 @@ bool Backend::connect()
 
     if (m_backend->connect())
     {
-        m_closed = false;
         m_closed_at = 0;
         m_opened_at = time(NULL);
         m_state = IN_USE;
@@ -155,7 +128,6 @@ std::string Backend::get_verbose_status() const
 
     if (m_closed_at)
     {
-        mxb_assert(m_closed);
         ctime_r(&m_closed_at, closed_at);
         char* nl = strrchr(closed_at, '\n');
         mxb_assert(nl);
@@ -180,27 +152,21 @@ std::string Backend::get_verbose_status() const
     return ss.str();
 }
 
-std::string Backend::to_string(backend_state state)
+// static
+const char* Backend::to_string(backend_state state)
 {
-    std::string rval;
-
-    if (state == 0)
+    switch (state)
     {
-        rval = "NOT_IN_USE";
-    }
-    else
-    {
-        if (state & IN_USE)
-        {
-            rval += "IN_USE";
-        }
+    case CLOSED:
+        return "CLOSED";
 
-        if (state & FATAL_FAILURE)
-        {
-            rval += rval.empty() ? "" : "|";
-            rval += "FATAL_FAILURE";
-        }
+    case IN_USE:
+        return "IN_USE";
+
+    case FATAL_FAILURE:
+        return "FATAL_FAILURE";
     }
 
-    return rval;
+    mxb_assert(!true);
+    return "UNKNOWN";
 }

@@ -923,10 +923,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
         else
         {
             mxb_assert(old_master && !old_master->in_use());
-            errmsg = mxb::string_printf(
-                "Was supposed to route to primary but the primary connection is %s",
-                old_master->is_closed() ? "closed" : "not in a suitable state");
-            mxb_assert(old_master->is_closed());
+            errmsg = "Was supposed to route to primary but the primary connection is closed";
         }
     }
 

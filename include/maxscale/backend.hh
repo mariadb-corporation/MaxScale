@@ -129,7 +129,7 @@ public:
      */
     inline bool in_use() const
     {
-        return m_state & IN_USE;
+        return m_state == IN_USE;
     }
 
     /**
@@ -186,16 +186,6 @@ public:
     }
 
     /**
-     * @brief Check if the backend is closed
-     *
-     * @return True if the backend is closed
-     */
-    inline bool is_closed() const
-    {
-        return m_closed;
-    }
-
-    /**
      * @brief Check if the server is a master
      *
      * @return True if server is a master
@@ -236,7 +226,7 @@ public:
      */
     inline bool has_failed() const
     {
-        return m_state & FATAL_FAILURE;
+        return m_state == FATAL_FAILURE;
     }
 
     /**
@@ -288,33 +278,19 @@ private:
      */
     enum backend_state
     {
-        IN_USE        = 0x01,   /**< Backend has been taken into use */
-        FATAL_FAILURE = 0x02    /**< Backend references that should be dropped */
+        CLOSED,         /**< Backend is not in use*/
+        IN_USE,         /**< Backend has been taken into use */
+        FATAL_FAILURE,  /**< Backend references that should be dropped */
     };
 
-    /**
-     * @brief Clear state
-     *
-     * @param state State to clear
-     */
-    void clear_state(backend_state state);
-
-    /**
-     * @brief Set state
-     *
-     * @param state State to set
-     */
-    void set_state(backend_state state);
-
     // Stringification function
-    static std::string to_string(backend_state state);
+    static const char* to_string(backend_state state);
 
-    bool           m_closed {false};        /**< True if a connection has been opened and closed */
     time_t         m_closed_at {0};         /**< Timestamp when the backend was last closed */
     std::string    m_close_reason;          /**< Why the backend was closed */
     time_t         m_opened_at {0};         /**< Timestamp when the backend was last opened */
     mxs::Endpoint* m_backend {nullptr};     /**< Backend server */
-    int            m_state {0};             /**< State of the backend */
+    backend_state  m_state {CLOSED};        /**< State of the backend */
 
     maxbase::StopWatch     m_session_timer;
     maxbase::IntervalTimer m_select_timer;
