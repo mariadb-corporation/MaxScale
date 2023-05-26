@@ -451,37 +451,7 @@ static uint32_t qc_get_trx_type_mask_using_qc(QUERY_CLASSIFIER* pClassifier, GWB
     uint32_t type_mask;
     pClassifier->qc_get_type_mask(pStmt, &type_mask);
 
-    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE)
-        && qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
-    {
-        // This is a commit reported for "CREATE TABLE...",
-        // "DROP TABLE...", etc. that cause an implicit commit.
-        type_mask = 0;
-    }
-    else
-    {
-        // Only START TRANSACTION can be explicitly READ or WRITE.
-        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
-        {
-            // So, strip them away for everything else.
-            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
-        }
-
-        // Then leave only the bits related to transaction and
-        // autocommit state.
-        type_mask &= (QUERY_TYPE_BEGIN_TRX
-                      | QUERY_TYPE_WRITE
-                      | QUERY_TYPE_READ
-                      | QUERY_TYPE_COMMIT
-                      | QUERY_TYPE_ROLLBACK
-                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
-                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
-                      | QUERY_TYPE_READONLY
-                      | QUERY_TYPE_READWRITE
-                      | QUERY_TYPE_NEXT_TRX);
-    }
-
-    return type_mask;
+    return qc_remove_non_trx_type_bits(type_mask);
 }
 
 static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* pStmt)

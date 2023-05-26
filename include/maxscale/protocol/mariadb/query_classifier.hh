@@ -432,6 +432,9 @@ uint32_t qc_get_type_mask(GWBUF* stmt);
  *    QUERY_TYPE_DISABLE_AUTOCOMMIT
  *    QUERY_TYPE_READ  (explicitly read only transaction)
  *    QUERY_TYPE_WRITE (explicitly read write transaction)
+ *    QUERY_TYPE_READONLY
+ *    QUERY_TYPE_READWRITE
+ *    QUERY_TYPE_NEXT_TRX
  *
  * Otherwise the result will be 0.
  *
@@ -441,6 +444,17 @@ uint32_t qc_get_type_mask(GWBUF* stmt);
  *         related, otherwise 0.
  */
 uint32_t qc_get_trx_type_mask(GWBUF* stmt);
+
+/**
+ * Remove all non-trx related type bits.
+ *
+ * @param type_mask  A type mask.
+ *
+ * @return Same type mask with all non-trx related bits removed.
+ *
+ * @note See qc_get_trx_type_mask
+ */
+uint32_t qc_remove_non_trx_type_bits(uint32_t type_mask);
 
 /**
  * Returns the string representation of a query operation.
