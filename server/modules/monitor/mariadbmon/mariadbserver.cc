@@ -909,34 +909,38 @@ void MariaDBServer::update_server_version()
 
     if (type == ServerType::MARIADB || type == ServerType::MYSQL || type == ServerType::BLR)
     {
-        /* Not a binlog server, check version number and supported features. */
-        auto& srv_version = info.version_num();
-        auto major = srv_version.major;
-        auto minor = srv_version.minor;
-        auto patch = srv_version.patch;
+        // Recognized server type, check version number and supported features.
+        // TODO: most of the features could be just assumed if support for really old MariaDB Server versions
+        // is dropped.
+        auto total = info.version_num().total;
         // MariaDB/MySQL 5.5 is the oldest supported version. MySQL 6 and later are treated as 5.5.
-        if ((major == 5 && minor >= 5) || major > 5)
+        if (total >= 50500)
         {
             m_capabilities.basic_support = true;
-            // For more specific features, at least MariaDB 10.X is needed.
-            if ((type == ServerType::MARIADB || type == ServerType::BLR)
-                && major >= 10)
+            // For more specific features, at least MariaDB 10.0.2 is needed.
+            if ((type == ServerType::MARIADB || type == ServerType::BLR) && total >= 100002)
             {
-                // 10.0.2 or 10.1.X or greater than 10
-                if (((minor == 0 && patch >= 2) || minor >= 1) || major > 10)
+                m_capabilities.gtid = true;
+                m_capabilities.slave_status_all = true;
+
+                if (type == ServerType::MARIADB)
                 {
-                    // Versions with gtid also support the extended slave status query.
-                    m_capabilities.gtid = true;
-                    m_capabilities.slave_status_all = true;
-                    if (type != ServerType::BLR)
+                    m_capabilities.events = true;
+                    // 10.1.2 and greater support max_statement_time.
+                    if (total >= 100102)
                     {
-                        m_capabilities.events = true;
+                        m_capabilities.max_statement_time = true;
+                        // 10.5.2 adds read-only admin.
+                        if (total >= 100502)
+                        {
+                            m_capabilities.read_only_admin = true;
+                            // 10.11.0 separates it from super.
+                            if (total >= 101100)
+                            {
+                                m_capabilities.separate_ro_admin = true;
+                            }
+                        }
                     }
-                }
-                // 10.1.2 (10.1.1 has limited support, not enough) or 10.2.X or greater than 10
-                if (((minor == 1 && patch >= 2) || minor >= 2) || major > 10)
-                {
-                    m_capabilities.max_statement_time = true;
                 }
             }
         }

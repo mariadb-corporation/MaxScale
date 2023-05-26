@@ -106,6 +106,8 @@ public:
         bool slave_status_all {false};      // Supports "show all slaves status"?
         bool max_statement_time {false};    // Supports max_statement_time?
         bool events {false};                // Supports event handling?
+        bool read_only_admin {false};       // Implements read-only admin priv?
+        bool separate_ro_admin {false};     // Is read-only admin separate from super?
     };
 
     // This class groups some miscellaneous replication related settings together.
