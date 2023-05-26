@@ -1247,10 +1247,8 @@ std::string qc_typemask_to_string(uint32_t types)
     return rv;
 }
 
-static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
+uint32_t qc_remove_non_trx_type_bits(uint32_t type_mask)
 {
-    uint32_t type_mask = qc_get_type_mask(stmt);
-
     if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE)
         && qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
     {
@@ -1282,6 +1280,13 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
     }
 
     return type_mask;
+}
+
+static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
+{
+    uint32_t type_mask = qc_get_type_mask(stmt);
+
+    return qc_remove_non_trx_type_bits(type_mask);
 }
 
 static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* stmt)
