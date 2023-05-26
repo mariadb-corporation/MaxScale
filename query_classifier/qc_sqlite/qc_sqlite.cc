@@ -2856,6 +2856,26 @@ public:
                 default:
                     break;
                 }
+                break;
+
+            case TK_XA:
+                {
+                    switch (m_keyword_2)
+                    {
+                    case TK_BEGIN:
+                    case TK_START:
+                        m_type_mask = QUERY_TYPE_BEGIN_TRX;
+                        break;
+
+                    case TK_END:
+                        m_type_mask = QUERY_TYPE_COMMIT;
+                        break;
+
+                    default:
+                        break;
+                    };
+                }
+                break;
             }
         }
 
