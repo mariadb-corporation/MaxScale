@@ -2799,11 +2799,11 @@ public:
                     {
                     case TK_BEGIN:
                     case TK_START:
-                        m_type_mask = QUERY_TYPE_BEGIN_TRX;
+                        m_type_mask = mxs::sql::TYPE_BEGIN_TRX;
                         break;
 
                     case TK_END:
-                        m_type_mask = QUERY_TYPE_COMMIT;
+                        m_type_mask = mxs::sql::TYPE_COMMIT;
                         break;
 
                     default:

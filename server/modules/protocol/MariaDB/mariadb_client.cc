@@ -912,13 +912,14 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
         uint32_t type = parser()->get_trx_type_mask_using(*packetbuf, parser_type);
 
+        MXB_AT_DEBUG(auto sql = parser()->get_sql(*packetbuf));
         mxb_assert_message(!rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION)
                            || parser()->get_trx_type_mask_using(*packetbuf,
                                                                 mxs::Parser::ParseTrxUsing::DEFAULT)
                            == parser()->get_trx_type_mask_using(*packetbuf,
                                                                 mxs::Parser::ParseTrxUsing::CUSTOM),
-                           "Parser and query classifier should parse transactions identically: %s",
-                           packetbuf->get_sql().c_str());
+                           "Parser and query classifier should parse transactions identically: %.*s",
+                           (int)sql.length(), sql.data());
 
         if (type & mxs::sql::TYPE_BEGIN_TRX)
         {

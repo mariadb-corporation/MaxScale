@@ -428,7 +428,7 @@ static uint32_t get_trx_type_mask_using_qc(const Parser& parser, const GWBUF& st
     else
     {
         // Only START TRANSACTION can be explicitly READ or WRITE.
-        if (!(Parser::type_mask_contains(type_mask, sql::TYPE_BEGIN_TRX))
+        if (!(Parser::type_mask_contains(type_mask, sql::TYPE_BEGIN_TRX)))
         {
             // So, strip them away for everything else.
             type_mask &= ~(sql::TYPE_WRITE | sql::TYPE_READ);
@@ -451,11 +451,11 @@ static uint32_t get_trx_type_mask_using_qc(const Parser& parser, const GWBUF& st
     return type_mask;
 }
 
-static uint32_t qc_get_trx_type_mask_using_parser(const GWBUF& stmt)
+static uint32_t get_trx_type_mask_using_parser(std::string_view sql)
 {
     maxscale::TrxBoundaryParser parser;
 
-    return parser.type_mask_of(stmt);
+    return parser.type_mask_of(sql);
 }
 
 bool compare_get_trx_type(const Parser& parser1,
@@ -466,9 +466,9 @@ bool compare_get_trx_type(const Parser& parser1,
     bool success = false;
     const char HEADING[] = "qc_get_trx_type_mask     : ";
 
-    uint32_t rv1 = qc_get_trx_type_mask_using_qc(parser1, copy1);
-    uint32_t rv2 = qc_get_trx_type_mask_using_qc(parser2, Copy2);
-    uint32_t rv3 = qc_get_trx_type_mask_using_parser(copy2);
+    uint32_t rv1 = get_trx_type_mask_using_qc(parser1, copy1);
+    uint32_t rv2 = get_trx_type_mask_using_qc(parser2, copy2);
+    uint32_t rv3 = get_trx_type_mask_using_parser(parser2.get_sql(copy2));
 
     stringstream ss;
     ss << HEADING;
@@ -1241,7 +1241,7 @@ bool compare(const set<string>& properties,
     if (specified(properties, "type"))
     {
         errors += !compare_get_type(check_regex, parser1, copy1, parser2, copy2);
-        errors += !compare_get_trx_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
+        errors += !compare_get_trx_type(parser1, copy1, parser2, copy2);
     }
 
     if (specified(properties, "operation"))
@@ -1273,18 +1273,6 @@ bool compare(const set<string>& properties,
     {
         errors += !compare_get_function_info(parser1, copy1, parser2, copy2);
     }
-=======
-    errors += !compare_parse(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_operation(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_created_table_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_database_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_prepare_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_field_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_function_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
->>>>>>> 23.02:query_classifier/test/compare.cc
 
     if (global.result_printed)
     {
