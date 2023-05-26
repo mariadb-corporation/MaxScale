@@ -282,6 +282,8 @@ public:
 
     static std::string type_mask_to_string(uint32_t type_mask);
 
+    static uint32_t remove_non_trx_type_bits(uint32_t type_mask);
+
     virtual const ParserPlugin& plugin() const = 0;
     virtual const Helper&       helper() const = 0;
 

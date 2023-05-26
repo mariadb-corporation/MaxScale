@@ -345,6 +345,42 @@ std::string Parser::type_mask_to_string(uint32_t type_mask)
 }
 
 //static
+uint32_t Parser::remove_non_trx_type_bits(uint32_t type_mask)
+{
+    if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_WRITE)
+        && Parser::type_mask_contains(type_mask, mxs::sql::TYPE_COMMIT))
+    {
+        // This is a commit reported for "CREATE TABLE...",
+        // "DROP TABLE...", etc. that cause an implicit commit.
+        type_mask = 0;
+    }
+    else
+    {
+        // Only START TRANSACTION can be explicitly READ or WRITE.
+        if (!(type_mask & mxs::sql::TYPE_BEGIN_TRX))
+        {
+            // So, strip them away for everything else.
+            type_mask &= ~(mxs::sql::TYPE_WRITE | mxs::sql::TYPE_READ);
+        }
+
+        // Then leave only the bits related to transaction and
+        // autocommit state.
+        type_mask &= (mxs::sql::TYPE_BEGIN_TRX
+                      | mxs::sql::TYPE_WRITE
+                      | mxs::sql::TYPE_READ
+                      | mxs::sql::TYPE_COMMIT
+                      | mxs::sql::TYPE_ROLLBACK
+                      | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
+                      | mxs::sql::TYPE_DISABLE_AUTOCOMMIT
+                      | mxs::sql::TYPE_READONLY
+                      | mxs::sql::TYPE_READWRITE
+                      | mxs::sql::TYPE_NEXT_TRX);
+    }
+
+    return type_mask;
+}
+
+//static
 const char* sql::to_string(sql::OpCode op)
 {
     switch (op)
@@ -464,37 +500,7 @@ uint32_t get_trx_type_mask_using_default(const mxs::Parser& parser, const GWBUF&
 {
     uint32_t type_mask = parser.get_type_mask(stmt);
 
-    if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_WRITE)
-        && Parser::type_mask_contains(type_mask, mxs::sql::TYPE_COMMIT))
-    {
-        // This is a commit reported for "CREATE TABLE...",
-        // "DROP TABLE...", etc. that cause an implicit commit.
-        type_mask = 0;
-    }
-    else
-    {
-        // Only START TRANSACTION can be explicitly READ or WRITE.
-        if (!(type_mask & mxs::sql::TYPE_BEGIN_TRX))
-        {
-            // So, strip them away for everything else.
-            type_mask &= ~(mxs::sql::TYPE_WRITE | mxs::sql::TYPE_READ);
-        }
-
-        // Then leave only the bits related to transaction and
-        // autocommit state.
-        type_mask &= (mxs::sql::TYPE_BEGIN_TRX
-                      | mxs::sql::TYPE_WRITE
-                      | mxs::sql::TYPE_READ
-                      | mxs::sql::TYPE_COMMIT
-                      | mxs::sql::TYPE_ROLLBACK
-                      | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
-                      | mxs::sql::TYPE_DISABLE_AUTOCOMMIT
-                      | mxs::sql::TYPE_READONLY
-                      | mxs::sql::TYPE_READWRITE
-                      | mxs::sql::TYPE_NEXT_TRX);
-    }
-
-    return type_mask;
+    return Parser::remove_non_trx_type_bits(type_mask);
 }
 
 }
