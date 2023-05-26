@@ -246,32 +246,6 @@ public:
     const maxbase::StopWatch&     session_timer() const;
     const maxbase::IntervalTimer& select_timer() const;
 
-    /**
-     * Get verbose status description
-     *
-     * @return A verbose description of the backend's status
-     */
-    std::string get_verbose_status() const;
-
-    /**
-     * Add explanation message to latest close reason
-     *
-     * The message is printed in get_verbose_status() if the backend is closed.
-     *
-     * @param reason The human-readable message
-     */
-    void set_close_reason(const std::string& reason);
-
-    /**
-     * Get latest close reason
-     *
-     * @return A human-readable reason why the connection was closed
-     */
-    const std::string& close_reason() const
-    {
-        return m_close_reason;
-    }
-
 private:
     /**
      * Internal state of the backend
@@ -283,12 +257,6 @@ private:
         FATAL_FAILURE,  /**< Backend references that should be dropped */
     };
 
-    // Stringification function
-    static const char* to_string(backend_state state);
-
-    time_t         m_closed_at {0};         /**< Timestamp when the backend was last closed */
-    std::string    m_close_reason;          /**< Why the backend was closed */
-    time_t         m_opened_at {0};         /**< Timestamp when the backend was last opened */
     mxs::Endpoint* m_backend {nullptr};     /**< Backend server */
     backend_state  m_state {CLOSED};        /**< State of the backend */
 

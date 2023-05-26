@@ -491,7 +491,7 @@ bool SchemaRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
     if (error.is_unexpected_error())
     {
         // All unexpected errors are related to server shutdown.
-        bref->set_close_reason(std::string("Server '") + bref->name() + "' is shutting down");
+        MXB_SINFO("Server '" << bref->name() << "' is shutting down");
 
         // The server sent an error that we either didn't expect or we don't want. If retrying is going to
         // take place, it'll be done in handleError.

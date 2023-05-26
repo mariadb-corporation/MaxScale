@@ -318,15 +318,13 @@ private:
 
     std::string get_verbose_status()
     {
-        std::string status;
-
-        for (const auto& a : m_backends)
-        {
-            status += "\n";
-            status += a->get_verbose_status();
-        }
-
-        return status;
+        return mxb::transform_join(m_backends, [](const auto& a){
+            return mxb::cat("{",
+                            " Name: ", a->name(),
+                            " Open: ", a->in_use() ? "Yes" : "No",
+                            " Status: ", a->target()->status_string(),
+                            " }");
+        });
     }
 
     inline bool can_route_query(const GWBUF& buffer, const RoutingPlan& res) const

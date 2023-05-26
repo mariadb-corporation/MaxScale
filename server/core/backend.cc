@@ -54,10 +54,7 @@ bool Backend::connect()
 
     if (m_backend->connect())
     {
-        m_closed_at = 0;
-        m_opened_at = time(NULL);
         m_state = IN_USE;
-        m_close_reason.clear();
         rval = true;
     }
     else
@@ -113,60 +110,4 @@ void Backend::select_finished()
 int64_t Backend::num_selects() const
 {
     return m_num_selects;
-}
-
-void Backend::set_close_reason(const std::string& reason)
-{
-    m_close_reason = reason;
-}
-
-std::string Backend::get_verbose_status() const
-{
-    std::stringstream ss;
-    char closed_at[30] = "not closed";
-    char opened_at[30] = "not opened";
-
-    if (m_closed_at)
-    {
-        ctime_r(&m_closed_at, closed_at);
-        char* nl = strrchr(closed_at, '\n');
-        mxb_assert(nl);
-        *nl = '\0';
-    }
-
-    if (m_opened_at)
-    {
-        ctime_r(&m_opened_at, opened_at);
-        char* nl = strrchr(opened_at, '\n');
-        mxb_assert(nl);
-        *nl = '\0';
-    }
-
-    ss << "name: [" << name() << "] "
-       << "status: [" << m_backend->target()->status_string() << "] "
-       << "state: [" << to_string((backend_state)m_state) << "] "
-       << "last opened at: [" << opened_at << "] "
-       << "last closed at: [" << closed_at << "] "
-       << "last close reason: [" << m_close_reason << "] ";
-
-    return ss.str();
-}
-
-// static
-const char* Backend::to_string(backend_state state)
-{
-    switch (state)
-    {
-    case CLOSED:
-        return "CLOSED";
-
-    case IN_USE:
-        return "IN_USE";
-
-    case FATAL_FAILURE:
-        return "FATAL_FAILURE";
-    }
-
-    mxb_assert(!true);
-    return "UNKNOWN";
 }

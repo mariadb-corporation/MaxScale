@@ -479,7 +479,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
     if (error.is_unexpected_error())
     {
         // All unexpected errors are related to server shutdown.
-        backend->set_close_reason(std::string("Server '") + backend->name() + "' is shutting down");
+        MXB_SINFO("Server '" << backend->name() << "' is shutting down");
 
         // The server sent an error that we either didn't expect or we don't want. If retrying is going to
         // take place, it'll be done in handleError.
@@ -920,8 +920,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             errmsg = mxb::string_printf(
                 "Lost connection to the primary server, closing session.%s "
                 "Connection has been idle for %d seconds. Error caused by: %s. "
-                "Last close reason: %s. Last error: %s", errmsg.c_str(), idle, message.c_str(),
-                backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str(),
+                "Last error: %s", errmsg.c_str(), idle, message.c_str(),
                 reply.error().message().c_str());
         }
 
@@ -934,7 +933,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
         }
 
         backend->close(failure_type);
-        backend->set_close_reason("Primary connection failed: " + message);
+        MXB_SINFO("Primary connection failed: " << message);
     }
     else
     {
@@ -956,7 +955,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             // Try to replay the transaction on another node
             can_continue = start_trx_replay();
             backend->close(failure_type);
-            backend->set_close_reason("Read-only trx failed: " + message);
+            MXB_SINFO("Read-only trx failed: " << message);
 
             if (!can_continue)
             {
@@ -976,7 +975,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             mxb_assert(trx_is_open());
             can_continue = start_trx_replay();
             backend->close(failure_type);
-            backend->set_close_reason("Optimistic trx failed: " + message);
+            MXB_SINFO("Optimistic trx failed: " << message);
         }
         else
         {
@@ -1003,7 +1002,7 @@ void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
     if (can_recover_servers() && (!backend->is_master() || m_config->master_reconnection))
     {
         backend->close(RWBackend::CLOSE_NORMAL);
-        backend->set_close_reason("Backend pooled");
+        MXB_INFO("Backend pooled");
     }
 }
 
@@ -1059,7 +1058,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, const std::
      * is closed, it's possible that the routing logic will pick the failed
      * server as the target. */
     backend->close(failure_type);
-    backend->set_close_reason("Replica connection failed: " + errmsg);
+    MXB_SINFO("Replica connection failed: " << errmsg);
 
     if (can_be_fixed && route_stored)
     {

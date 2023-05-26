@@ -210,7 +210,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
 
     else
     {
-        MXB_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
+        MXB_ERROR("Could not find valid server for target type %s (%s: %s), closing connection. %s",
                   route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
                   get_sql_string(buffer).c_str(), get_verbose_status().c_str());
         ok = false;
@@ -971,8 +971,8 @@ void RWSplitSession::discard_connection(mxs::RWBackend* target, const std::strin
 {
     if (target && target->in_use())
     {
+        MXB_INFO("Discarding connection to '%s': %s", target->name(), error.c_str());
         target->close();
-        target->set_close_reason(error);
 
         if (target == m_current_master)
         {
