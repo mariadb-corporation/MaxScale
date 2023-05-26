@@ -1,4 +1,4 @@
-# MariaDB MaxScale 22.08.6 Release Notes
+# MariaDB MaxScale 22.08.6 Release Notes -- 2023-05-26
 
 Release 22.08.6 is a GA release.
 
@@ -14,6 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4625](https://jira.mariadb.org/browse/MXS-4625) Query classifier does not classify XA transactions correctly.
 * [MXS-4615](https://jira.mariadb.org/browse/MXS-4615) Partially executed multi-result queries are not treated as partial results
 * [MXS-4614](https://jira.mariadb.org/browse/MXS-4614) Query classifier does not recognize BEGIN NOT ATOMIC ... END
 * [MXS-4612](https://jira.mariadb.org/browse/MXS-4612) Query Editor: High memory usage when multiple statements are executed in a batch query
