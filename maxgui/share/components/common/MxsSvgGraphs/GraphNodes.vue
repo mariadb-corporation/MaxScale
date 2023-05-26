@@ -47,6 +47,7 @@
  * drag({ e, node, diffX, diffY })
  * drag-end(e)
  * node-size-map(obj): size of nodes, keyed by node id
+ * dbl-click-node({ e, node })
  */
 export default {
     name: 'graph-nodes',
@@ -116,7 +117,9 @@ export default {
     },
     methods: {
         handleAddEvents(node) {
-            let events = {}
+            let events = {
+                dblclick: e => this.$emit('dbl-click-node', { e, node }),
+            }
             if (this.draggable)
                 events = {
                     ...events,

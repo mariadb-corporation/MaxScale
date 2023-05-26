@@ -8,7 +8,7 @@
         <graph-board
             :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
             :dim="ctrDim"
-            :graphDim="ctrDim"
+            :graphDim="graphDim"
             @get-graph-ctr="svgGroup = $event"
         >
             <template v-slot:append="{ data: { transform, zoom } }">
@@ -27,6 +27,7 @@
                     @drag-end="onNodeDragEnd"
                     @mouseenter="mouseenterNode"
                     @mouseleave="mouseleaveNode"
+                    v-on="$listeners"
                 >
                     <template v-slot:default="{ data: { node } }">
                         <table
@@ -160,6 +161,7 @@ export default {
             entityLink: null,
             graphConfig: null,
             isDraggingNode: false,
+            graphDim: {},
         }
     },
     computed: {
@@ -208,27 +210,31 @@ export default {
         globalLinkColor() {
             return this.$typy(this.graphConfigData, 'link.color').safeString
         },
+        nodeKeys() {
+            return this.data.nodes.map(n => n.key)
+        },
     },
     created() {
         this.assignData(this.data)
+        //TODO: if ctrDim changes, graph-board should change its transform value to re-center the graph
+        this.graphDim = this.ctrDim
     },
     activated() {
-        this.watchData()
+        this.watchNodeKeys()
     },
     deactivated() {
-        this.$typy(this.unwatch_data).safeFunction()
+        this.$typy(this.unwatch_nodeKeys).safeFunction()
     },
     beforeDestroy() {
-        this.$typy(this.unwatch_data).safeFunction()
+        this.$typy(this.unwatch_nodeKeys).safeFunction()
         this.$typy(this.unwatch_graphConfigData).safeFunction()
     },
     methods: {
-        watchData() {
-            this.unwatch_data = this.$watch(
-                'data',
-
-                v => {
-                    this.assignData(v)
+        watchNodeKeys() {
+            this.unwatch_nodeKeys = this.$watch(
+                'nodeKeys',
+                (v, oV) => {
+                    if (!this.$helpers.lodash.isEqual(v, oV)) this.assignData(this.data)
                 },
                 { deep: true }
             )
@@ -238,12 +244,14 @@ export default {
             else this.graphLinks = this.graphLinks.filter(link => !link.isPartOfCompositeKey)
         },
         /**
+         * Call this function will trigger rerender the graph
          * D3 mutates data, this method deep clones data leaving the original intact.
          * @param {Object} data
          */
         assignData(data) {
             if (this.$typy(this.data, 'nodes').safeArray.length) {
                 this.isRendering = true
+                //TODO: Move stagingData to the parent component
                 this.stagingData = this.$helpers.lodash.cloneDeep(data)
                 this.graphNodes = this.stagingData.nodes
                 this.graphLinks = this.stagingData.links

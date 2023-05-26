@@ -1,11 +1,12 @@
 <template>
-    <div class="fill-height">
+    <div class="fill-height d-flex flex-column">
         <er-toolbar-ctr v-model="graphConfigData" :height="toolbarHeight" />
         <mxs-erd
             ref="diagram"
             :ctrDim="diagramDim"
             :data="graphData"
             :graphConfigData="graphConfigData"
+            v-on="$listeners"
         />
     </div>
 </template>

@@ -1,7 +1,7 @@
 <template>
     <div class="fill-height">
         <mxs-split-pane
-            v-model="erdPctHeight"
+            v-model="graphHeightPct"
             :boundary="dim.height"
             split="horiz"
             :minPercent="minErdPct"
@@ -9,10 +9,10 @@
             :deactivatedMaxPctZone="maxErdPct - (100 - maxErdPct) * 2"
         >
             <template slot="pane-left">
-                <diagram-ctr :dim="erdDim" />
+                <diagram-ctr :dim="erdDim" @dbl-click-node="onNodeDblClick" />
             </template>
             <template slot="pane-right">
-                <entity-editor-ctr />
+                <entity-editor-ctr v-show="activeEntityId" />
             </template>
         </mxs-split-pane>
     </div>
@@ -31,7 +31,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations } from 'vuex'
+import ErdTask from '@wsModels/ErdTask'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 
@@ -42,9 +42,6 @@ export default {
         ctrDim: { type: Object, required: true },
     },
     computed: {
-        ...mapState({
-            erd_pct_height: state => state.prefAndStorage.erd_pct_height,
-        }),
         dim() {
             const { width, height } = this.ctrDim
             return { width: width, height: height }
@@ -54,30 +51,41 @@ export default {
         },
         erGraphHeight() {
             return this.$helpers.pctToPx({
-                pct: this.erdPctHeight,
+                pct: this.graphHeightPct,
                 containerPx: this.dim.height,
             })
         },
-        erdPctHeight: {
-            get() {
-                return this.erd_pct_height
-            },
-            set(v) {
-                this.SET_ERD_PCT_HEIGHT(v)
-            },
-        },
         minErdPct() {
-            //TODO: If there is no entity chosen in the diagram, return 0
-            return this.$helpers.pxToPct({ px: 26, containerPx: this.dim.height })
+            return this.$helpers.pxToPct({
+                px: this.activeEntityId ? 26 : 0,
+                containerPx: this.dim.height,
+            })
         },
         maxErdPct() {
             return 100 - this.minErdPct
         },
+        activeErdTask() {
+            return ErdTask.getters('getActiveErdTask')
+        },
+        activeEntityId() {
+            return this.$typy(this.activeErdTask, 'active_entity_id').safeString
+        },
+        graphHeightPct: {
+            get() {
+                return this.$typy(this.activeErdTask, 'graph_height_pct').safeNumber
+            },
+            set(v) {
+                ErdTask.update({ where: this.activeErdTask.id, data: { graph_height_pct: v } })
+            },
+        },
     },
     methods: {
-        ...mapMutations({
-            SET_ERD_PCT_HEIGHT: 'prefAndStorage/SET_ERD_PCT_HEIGHT',
-        }),
+        onNodeDblClick({ node }) {
+            ErdTask.update({
+                where: this.activeErdTask.id,
+                data: { graph_height_pct: 50, active_entity_id: node.id },
+            })
+        },
     },
 }
 </script>

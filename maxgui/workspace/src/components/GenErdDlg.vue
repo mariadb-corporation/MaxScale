@@ -147,7 +147,10 @@ export default {
                 }
                 WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
                 Worksheet.update({ where: activeWkeId, data: { name: this.name } })
-                ErdTask.update({ where: activeWkeId, data: { data: erdData } })
+                ErdTask.update({
+                    where: activeWkeId,
+                    data: { data: erdData, graph_height_pct: 100, active_entity_id: '' },
+                })
             }
         },
     },
