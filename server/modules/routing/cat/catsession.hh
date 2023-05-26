@@ -28,16 +28,16 @@ class CatSession : public mxs::RouterSession
     CatSession& operator=(const CatSession&) = delete;
 public:
 
-    CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backends);
+    CatSession(MXS_SESSION* session, Cat* router, mxs::RWBackends backends);
 
     bool routeQuery(GWBUF&& packet) override;
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 private:
-    mxs::SRWBackends           m_backends;
+    mxs::RWBackends            m_backends;
     uint64_t                   m_completed;
     uint8_t                    m_packet_num;
-    mxs::SRWBackends::iterator m_current;
+    mxs::RWBackends::iterator  m_current;
     GWBUF                      m_query;
 
     /**

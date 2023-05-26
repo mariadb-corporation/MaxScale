@@ -37,9 +37,9 @@ mxs::RouterSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endp
     auto backends = RWBackend::from_endpoints(endpoints);
     bool connected = false;
 
-    for (const auto& a : backends)
+    for (auto& a : backends)
     {
-        if (a->can_connect() && a->connect())
+        if (a.can_connect() && a.connect())
         {
             connected = true;
         }

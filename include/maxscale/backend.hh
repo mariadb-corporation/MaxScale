@@ -266,7 +266,4 @@ private:
     // were sent to the backend but not all of the results should be sent to the client.
     std::deque<response_type> m_responses;
 };
-
-typedef std::shared_ptr<Backend> SBackend;
-typedef std::list<SBackend>      BackendList;
 }

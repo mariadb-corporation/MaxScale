@@ -25,7 +25,17 @@ using namespace maxscale;
 using namespace std::chrono;
 using mariadb::QueryClassifier;
 
-RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends)
+std::vector<RWBackend*> sptr_vec_to_ptr_vec(std::vector<RWBackend>& sVec)
+{
+    std::vector<RWBackend*> pVec;
+    for (auto& smart : sVec)
+    {
+        pVec.push_back(&smart);
+    }
+    return pVec;
+}
+
+RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::RWBackends backends)
     : mxs::RouterSession(session)
     , m_backends(std::move(backends))
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
@@ -48,7 +58,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
 
     if (router->have_enough_servers())
     {
-        SRWBackends backends = RWBackend::from_endpoints(endpoints);
+        RWBackends backends = RWBackend::from_endpoints(endpoints);
 
         if ((rses = new(std::nothrow) RWSplitSession(router, session, std::move(backends))))
         {

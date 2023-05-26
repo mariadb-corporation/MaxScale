@@ -18,7 +18,7 @@
 
 using namespace maxscale;
 
-CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backends)
+CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::RWBackends backends)
     : RouterSession(session)
     , m_backends(std::move(backends))
     , m_completed(0)
@@ -29,7 +29,7 @@ CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backe
 bool CatSession::next_backend()
 {
     // Skip unused backends
-    while (m_current != m_backends.end() && !(*m_current)->in_use())
+    while (m_current != m_backends.end() && !m_current->in_use())
     {
         m_current++;
     }
@@ -50,7 +50,7 @@ bool CatSession::routeQuery(GWBUF&& packet)
     {
         // We have a backend, write the query only to this one. It will be
         // propagated onwards in clientReply.
-        rval = (*m_current)->write(m_query.shallow_clone());
+        rval = m_current->write(m_query.shallow_clone());
     }
 
     return rval;
@@ -58,8 +58,7 @@ bool CatSession::routeQuery(GWBUF&& packet)
 
 bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    auto& backend = *m_current;
-    mxb_assert(backend->backend() == down.back());
+    mxb_assert(m_current->backend() == down.back());
     bool send = false;
 
     if (reply.is_complete())
@@ -74,7 +73,7 @@ bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const 
         }
         else
         {
-            (*m_current)->write(m_query.shallow_clone());
+            m_current->write(m_query.shallow_clone());
         }
     }
 

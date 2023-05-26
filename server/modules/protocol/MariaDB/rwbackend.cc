@@ -54,17 +54,9 @@ void RWBackend::sync_averages()
     m_response_stat.sync();
 }
 
-mxs::SRWBackends RWBackend::from_endpoints(const Endpoints& endpoints)
+mxs::RWBackends RWBackend::from_endpoints(const Endpoints& endpoints)
 {
-    SRWBackends backends;
-    backends.reserve(endpoints.size());
-
-    for (auto e : endpoints)
-    {
-        backends.emplace_back(new mxs::RWBackend(e));
-    }
-
-    return backends;
+    return RWBackends{endpoints.begin(), endpoints.end()};
 }
 
 void RWBackend::select_started()

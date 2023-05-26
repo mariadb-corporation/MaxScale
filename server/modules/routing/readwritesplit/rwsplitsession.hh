@@ -101,7 +101,7 @@ public:
     }
 
 private:
-    RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends);
+    RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::RWBackends backends);
 
     struct RoutingPlan
     {
@@ -320,9 +320,9 @@ private:
     {
         return mxb::transform_join(m_backends, [](const auto& a){
             return mxb::cat("{",
-                            " Name: ", a->name(),
-                            " Open: ", a->in_use() ? "Yes" : "No",
-                            " Status: ", a->target()->status_string(),
+                            " Name: ", a.name(),
+                            " Open: ", a.in_use() ? "Yes" : "No",
+                            " Status: ", a.target()->status_string(),
                             " }");
         });
     }
@@ -420,7 +420,7 @@ private:
 
     State m_state = ROUTING;
 
-    mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
+    mxs::RWBackends  m_backends;                /**< Mem. management, not for use outside RWSplitSession */
     mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
     mxs::RWBackend*  m_current_master;          /**< Current master server */
     RoutingPlan      m_prev_plan;               /**< The previous routing plan */

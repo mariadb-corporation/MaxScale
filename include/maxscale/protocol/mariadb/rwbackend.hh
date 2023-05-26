@@ -26,17 +26,6 @@ using Endpoints = std::vector<mxs::Endpoint*>;
 namespace maxscale
 {
 
-/** Move this somewhere else */
-template<typename Smart>
-std::vector<typename Smart::pointer> sptr_vec_to_ptr_vec(const std::vector<Smart>& sVec)
-{
-    std::vector<typename Smart::pointer> pVec;
-    std::for_each(sVec.begin(), sVec.end(), [&pVec](const Smart& smart) {
-                      pVec.push_back(smart.get());
-                  });
-    return pVec;
-}
-
 typedef std::map<uint32_t, uint32_t> BackendHandleMap;      /** Internal ID to external ID */
 
 class RWBackend;
@@ -45,16 +34,17 @@ class RWBackend;
 using PRWBackends = std::vector<RWBackend*>;
 
 // Internal storage for a class containing RWBackend:s.
-using SRWBackends = std::vector<std::unique_ptr<RWBackend>>;
+using RWBackends = std::vector<RWBackend>;
 
 class RWBackend : public mxs::Backend
 {
-    RWBackend(const RWBackend&);
-    RWBackend& operator=(const RWBackend&);
-
 public:
+    RWBackend(const RWBackend&) = delete;
+    RWBackend& operator=(const RWBackend&) = delete;
+    RWBackend(RWBackend&&) = delete;
+    RWBackend& operator=(RWBackend&&) = delete;
 
-    static SRWBackends from_endpoints(const Endpoints& endpoints);
+    static RWBackends from_endpoints(const Endpoints& endpoints);
 
     RWBackend(mxs::Endpoint* endpoint);
     virtual ~RWBackend() = default;
