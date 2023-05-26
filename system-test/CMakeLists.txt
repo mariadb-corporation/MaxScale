@@ -15,6 +15,9 @@
 set(CTEST_BUILD_NAME "${BUILDNAME}")
 set(TEST_DEFINITIONS "" CACHE INTERNAL "")
 
+# GCC12 has problems with false positives in std::regex
+add_definitions(-Wno-maybe-uninitialized)
+
 # utilities.cmake contains all helper functions and extra tools
 include(utilities.cmake)
 
