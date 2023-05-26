@@ -58,6 +58,12 @@ export default {
         graphData() {
             return ErdTask.getters('getActiveGraphData') || {}
         },
+        activeGraphConfig() {
+            return ErdTask.getters('getActiveGraphConfig') || {}
+        },
+        erdTaskId() {
+            return ErdTask.getters('getActiveErdTaskId')
+        },
         diagram() {
             return this.$refs.diagram
         },
@@ -67,6 +73,32 @@ export default {
         diagramDim() {
             return { width: this.dim.width, height: this.dim.height - this.toolbarHeight }
         },
+    },
+    watch: {
+        graphConfigData: {
+            deep: true,
+            handler(v) {
+                ErdTask.update({
+                    where: this.erdTaskId,
+                    data: {
+                        graph_config: this.$helpers.immutableUpdate(this.activeGraphConfig, {
+                            link: {
+                                isAttrToAttr: { $set: v.link.isAttrToAttr },
+                            },
+                            linkShape: {
+                                type: { $set: v.linkShape.type },
+                            },
+                        }),
+                    },
+                })
+            },
+        },
+    },
+    created() {
+        this.graphConfigData = this.$helpers.lodash.merge(
+            this.graphConfigData,
+            this.activeGraphConfig
+        )
     },
 }
 </script>

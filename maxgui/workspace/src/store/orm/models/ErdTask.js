@@ -12,6 +12,7 @@
  */
 import Extender from '@wsSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@wsSrc/store/config'
+import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class ErdTask extends Extender {
@@ -26,6 +27,10 @@ export default class ErdTask extends Extender {
             count: this.number(1),
             graph_height_pct: this.number(100),
             active_entity_id: this.string(''),
+            graph_config: this.attr({
+                link: { isAttrToAttr: false },
+                linkShape: { type: LINK_SHAPES.ORTHO },
+            }),
         }
     }
 
