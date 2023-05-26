@@ -73,9 +73,11 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
 
 RWSplitSession::~RWSplitSession()
 {
+    auto t = m_session_timer.split();
+
     for (auto& backend : m_raw_backends)
     {
-        m_server_stats[backend->target()].update(backend->session_timer().split(),
+        m_server_stats[backend->target()].update(t,
                                                  backend->select_timer().total(),
                                                  backend->num_selects());
     }

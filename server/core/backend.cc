@@ -86,11 +86,6 @@ void Backend::ack_write()
     m_backend->target()->stats().remove_current_op();
 }
 
-const maxbase::StopWatch& Backend::session_timer() const
-{
-    return m_session_timer;
-}
-
 const maxbase::IntervalTimer& Backend::select_timer() const
 {
     return m_select_timer;

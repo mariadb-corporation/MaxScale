@@ -458,6 +458,8 @@ private:
                                              * session object. This avoids the lookup involved in getting
                                              * the worker-local value from the worker's container. */
 
+    mxb::StopWatch m_session_timer;
+
     // Number of queries being replayed. If this is larger than zero, the normal routeQuery method is "corked"
     // until the retried queries have been processed. In practice this should always be either 1 or 0.
     int m_pending_retries {0};

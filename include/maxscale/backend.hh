@@ -243,7 +243,6 @@ public:
     virtual void select_finished();
 
     int64_t                       num_selects() const;
-    const maxbase::StopWatch&     session_timer() const;
     const maxbase::IntervalTimer& select_timer() const;
 
 private:
@@ -260,7 +259,6 @@ private:
     mxs::Endpoint* m_backend {nullptr};     /**< Backend server */
     backend_state  m_state {CLOSED};        /**< State of the backend */
 
-    maxbase::StopWatch     m_session_timer;
     maxbase::IntervalTimer m_select_timer;
     int64_t                m_num_selects {0};
 
