@@ -18,6 +18,7 @@ user=maxskysql
 password=skysql
 causal_reads=universal
 causal_reads_timeout=60s
+transaction_replay_safe_commit=false
 
 [RW-Split-Listener]
 type=listener
