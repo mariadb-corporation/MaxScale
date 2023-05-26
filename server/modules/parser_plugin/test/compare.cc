@@ -29,6 +29,7 @@
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include "../../protocol/Postgres/pgparser.hh"
 #include "../../../core/internal/modules.hh"
 #include "setsqlmodeparser.hh"
@@ -406,6 +407,101 @@ bool compare_get_type(const std::optional<std::regex>& check_regex,
         {
             ss << "ERR: " << types1 << " != " << types2;
         }
+    }
+
+    report(success, ss.str());
+
+    return success;
+}
+
+static uint32_t get_trx_type_mask_using_qc(const Parser& parser, const GWBUF& stmt)
+{
+    uint32_t type_mask = parser.get_type_mask(stmt);
+
+    if (Parser::type_mask_contains(type_mask, sql::TYPE_WRITE)
+        && Parser::type_mask_contains(type_mask, sql::TYPE_COMMIT))
+    {
+        // This is a commit reported for "CREATE TABLE...",
+        // "DROP TABLE...", etc. that cause an implicit commit.
+        type_mask = 0;
+    }
+    else
+    {
+        // Only START TRANSACTION can be explicitly READ or WRITE.
+        if (!(Parser::type_mask_contains(type_mask, sql::TYPE_BEGIN_TRX))
+        {
+            // So, strip them away for everything else.
+            type_mask &= ~(sql::TYPE_WRITE | sql::TYPE_READ);
+        }
+
+        // Then leave only the bits related to transaction and
+        // autocommit state.
+        type_mask &= (sql::TYPE_BEGIN_TRX
+                      | sql::TYPE_WRITE
+                      | sql::TYPE_READ
+                      | sql::TYPE_COMMIT
+                      | sql::TYPE_ROLLBACK
+                      | sql::TYPE_ENABLE_AUTOCOMMIT
+                      | sql::TYPE_DISABLE_AUTOCOMMIT
+                      | sql::TYPE_READONLY
+                      | sql::TYPE_READWRITE
+                      | sql::TYPE_NEXT_TRX);
+    }
+
+    return type_mask;
+}
+
+static uint32_t qc_get_trx_type_mask_using_parser(const GWBUF& stmt)
+{
+    maxscale::TrxBoundaryParser parser;
+
+    return parser.type_mask_of(stmt);
+}
+
+bool compare_get_trx_type(const Parser& parser1,
+                          const GWBUF& copy1,
+                          const Parser& parser2,
+                          const GWBUF& copy2)
+{
+    bool success = false;
+    const char HEADING[] = "qc_get_trx_type_mask     : ";
+
+    uint32_t rv1 = qc_get_trx_type_mask_using_qc(parser1, copy1);
+    uint32_t rv2 = qc_get_trx_type_mask_using_qc(parser2, Copy2);
+    uint32_t rv3 = qc_get_trx_type_mask_using_parser(copy2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    if (rv1 == rv2)
+    {
+        string types = Parser::type_mask_to_string(rv1);
+        ss << "Ok : " << types;
+        success = true;
+    }
+    else
+    {
+        string types1 = Parser::type_mask_to_string(rv1);
+        string types2 = Parser::type_mask_to_string(rv2);
+
+        ss << "ERR: " << types1 << " != " << types2;
+    }
+
+    if (rv1 != rv3 || rv2 != rv3)
+    {
+        if (success == true)
+        {
+            ss << ", BUT custom: ";
+            success = false;
+        }
+        else
+        {
+            ss << ", AND custom: ";
+        }
+
+        string types = Parser::type_mask_to_string(rv1);
+
+        ss << types;
     }
 
     report(success, ss.str());
@@ -1145,6 +1241,7 @@ bool compare(const set<string>& properties,
     if (specified(properties, "type"))
     {
         errors += !compare_get_type(check_regex, parser1, copy1, parser2, copy2);
+        errors += !compare_get_trx_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
     }
 
     if (specified(properties, "operation"))
@@ -1176,6 +1273,18 @@ bool compare(const set<string>& properties,
     {
         errors += !compare_get_function_info(parser1, copy1, parser2, copy2);
     }
+=======
+    errors += !compare_parse(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_operation(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_created_table_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_database_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_prepare_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_field_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_function_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
+>>>>>>> 23.02:query_classifier/test/compare.cc
 
     if (global.result_printed)
     {

@@ -917,7 +917,8 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
                                                                 mxs::Parser::ParseTrxUsing::DEFAULT)
                            == parser()->get_trx_type_mask_using(*packetbuf,
                                                                 mxs::Parser::ParseTrxUsing::CUSTOM),
-                           "Parser and query classifier should parse transactions identically");
+                           "Parser and query classifier should parse transactions identically: %s",
+                           packetbuf->get_sql().c_str());
 
         if (type & mxs::sql::TYPE_BEGIN_TRX)
         {

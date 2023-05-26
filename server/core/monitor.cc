@@ -1380,7 +1380,7 @@ bool MariaServer::fetch_variables()
         else
         {
             MXB_ERROR("Fetching server variables failed: (%d), %s", err, err_msg.c_str());
-            mxb_assert(!true);      // Suggests error in SQL
+            mxb_assert(!strcasestr(err_msg.c_str(), "You have an error in your SQL syntax"));
             rv = false;
         }
     }
