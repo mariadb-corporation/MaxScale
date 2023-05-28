@@ -808,8 +808,9 @@ void MariaDBBackendConnection::normal_read()
             buffer.clear();
         }
 
-        if (session_ok_to_route(m_dcb))
+        if (m_session->state() == MXS_SESSION::State::STARTED)
         {
+            mxb_assert(session_ok_to_route(m_dcb));
             // This keeps the row data in the mxs::Reply valid for the whole clientReply call even if the
             // buffer is freed by a router or a filter.
             std::unique_ptr<GWBUF> sTmp_for_row_data;
