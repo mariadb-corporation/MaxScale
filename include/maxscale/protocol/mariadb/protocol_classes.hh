@@ -105,10 +105,23 @@ public:
         uint64_t advertised_capabilities {0};   /*< The capabilities that were sent in the handshake packet */
     };
 
-    bool     ssl_capable() const;
-    uint32_t client_capabilities() const;
-    uint32_t extra_capabilities() const;
-    uint64_t full_capabilities() const;
+    bool ssl_capable() const;
+
+    uint32_t client_capabilities() const
+    {
+        return client_caps.basic_capabilities;
+    }
+
+    uint32_t extra_capabilities() const
+    {
+        return client_caps.ext_capabilities;
+    }
+
+    uint64_t full_capabilities() const
+    {
+        return client_capabilities() | (uint64_t)extra_capabilities() << 32;
+    }
+
 
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 

@@ -164,14 +164,20 @@ public:
      *
      * @param new_info  Out of band protocol information of the buffer.
      */
-    void set_protocol_info(std::shared_ptr<ProtocolInfo> new_info);
+    void set_protocol_info(std::shared_ptr<ProtocolInfo> new_info)
+    {
+        m_protocol_info = std::move(new_info);
+    }
 
     /**
      * Get out-of-band protocol information associated with the buffer.
      *
      * @return Information or null.
      */
-    const std::shared_ptr<ProtocolInfo>& get_protocol_info() const;
+    const std::shared_ptr<ProtocolInfo>& get_protocol_info() const
+    {
+        return m_protocol_info;
+    }
 
     iterator       begin();
     iterator       end();

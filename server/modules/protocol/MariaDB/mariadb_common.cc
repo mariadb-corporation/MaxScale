@@ -342,21 +342,6 @@ bool MYSQL_session::ssl_capable() const
     return (client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_SSL) != 0;
 }
 
-uint32_t MYSQL_session::client_capabilities() const
-{
-    return client_caps.basic_capabilities;
-}
-
-uint32_t MYSQL_session::extra_capabilities() const
-{
-    return client_caps.ext_capabilities;
-}
-
-uint64_t MYSQL_session::full_capabilities() const
-{
-    return client_capabilities() | (uint64_t)extra_capabilities() << 32;
-}
-
 std::string MYSQL_session::user_and_host() const
 {
     return mxb::string_printf("'%s'@'%s'", auth_data->user.c_str(), remote.c_str());
@@ -562,15 +547,6 @@ uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n)
 {
     memset(dest, val, n);
     return dest + n;
-}
-
-HeaderData get_header(const uint8_t* buffer)
-{
-    auto bytes = get_byte4(buffer);
-    HeaderData rval;
-    rval.pl_length = (bytes & 0xFFFFFFu);
-    rval.seq = bytes >> 24u;
-    return rval;
 }
 
 uint32_t get_packet_length(const uint8_t* buffer)

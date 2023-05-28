@@ -954,7 +954,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
         {
             // The COM_CHANGE_USER is now complete. The reply state must be updated here as the normal
             // result processing code doesn't deal with the COM_CHANGE_USER responses.
-            set_reply_state(ReplyState::DONE);
+            m_reply.set_reply_state(ReplyState::DONE);
 
             mxs::ReplyRoute route;
             m_reply.clear();
@@ -1801,7 +1801,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         if (cmd == MYSQL_REPLY_ERR)
         {
             update_error(++it, end);
-            set_reply_state(ReplyState::DONE);
+            m_reply.set_reply_state(ReplyState::DONE);
         }
         else if (cmd == MYSQL_REPLY_OK)
         {
@@ -1812,7 +1812,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             {
                 // The LOAD DATA LOCAL INFILE completed but we're expecting more results. Go back to the START
                 // state in order to process the next result.
-                set_reply_state(ReplyState::START);
+                m_reply.set_reply_state(ReplyState::START);
             }
         }
         else
@@ -1863,14 +1863,14 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 
         if (m_num_coldefs == 0)
         {
-            set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
+            m_reply.set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
         }
         break;
 
     case ReplyState::RSET_COLDEF_EOF:
         {
             mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
-            set_reply_state(ReplyState::RSET_ROWS);
+            m_reply.set_reply_state(ReplyState::RSET_ROWS);
 
             ++it;
             uint16_t warnings = mariadb::get_byte2(it);
@@ -1891,7 +1891,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
                 if (status & SERVER_STATUS_CURSOR_EXISTS)
                 {
                     MXB_INFO("Cursor successfully opened");
-                    set_reply_state(ReplyState::DONE);
+                    m_reply.set_reply_state(ReplyState::DONE);
                 }
             }
         }
@@ -1913,7 +1913,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             m_reply.set_server_status(status);
             bool more_results = (status & SERVER_MORE_RESULTS_EXIST);
             m_reply.set_multiresult(more_results);
-            set_reply_state(more_results ? ReplyState::START : ReplyState::DONE);
+            m_reply.set_reply_state(more_results ? ReplyState::START : ReplyState::DONE);
         }
         else if (cmd == MYSQL_REPLY_EOF && len < 0xffffff - MYSQL_HEADER_LEN)
         {
@@ -1923,14 +1923,14 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             if (m_reply.state() != ReplyState::DONE)
             {
                 // Resultset is complete but more data will follow
-                set_reply_state(ReplyState::START);
+                m_reply.set_reply_state(ReplyState::START);
             }
         }
         else if (cmd == MYSQL_REPLY_ERR)
         {
             ++it;
             update_error(it, end);
-            set_reply_state(ReplyState::DONE);
+            m_reply.set_reply_state(ReplyState::DONE);
         }
         else
         {
@@ -1956,7 +1956,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             // TODO: Extract the server status from the EOF packets
             if (--m_ps_packets == 0)
             {
-                set_reply_state(ReplyState::DONE);
+                m_reply.set_reply_state(ReplyState::DONE);
             }
         }
         break;
@@ -1978,7 +1978,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     if (!more_results)
     {
         // No more results
-        set_reply_state(ReplyState::DONE);
+        m_reply.set_reply_state(ReplyState::DONE);
     }
 
     // Two bytes of warnings
@@ -2133,7 +2133,7 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
         }
     }
 
-    set_reply_state(m_ps_packets == 0 ? ReplyState::DONE : ReplyState::PREPARE);
+    m_reply.set_reply_state(m_ps_packets == 0 ? ReplyState::DONE : ReplyState::PREPARE);
 }
 
 void MariaDBBackendConnection::process_reply_start(Iter it, Iter end)
@@ -2146,12 +2146,12 @@ void MariaDBBackendConnection::process_reply_start(Iter it, Iter end)
     {
         // COM_STATISTICS returns a single string and thus requires special handling:
         // https://mariadb.com/kb/en/library/com_statistics/#response
-        set_reply_state(ReplyState::DONE);
+        m_reply.set_reply_state(ReplyState::DONE);
     }
     else if (m_reply.command() == MXS_COM_FIELD_LIST && *it != MYSQL_REPLY_ERR)
     {
         // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
-        set_reply_state(ReplyState::RSET_ROWS);
+        m_reply.set_reply_state(ReplyState::RSET_ROWS);
     }
     else
     {
@@ -2181,14 +2181,14 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
     case MYSQL_REPLY_LOCAL_INFILE:
         // The client will send a request after this with the contents of the file which the server will
         // respond to with either an OK or an ERR packet
-        set_reply_state(ReplyState::LOAD_DATA);
+        m_reply.set_reply_state(ReplyState::LOAD_DATA);
         break;
 
     case MYSQL_REPLY_ERR:
         // Nothing ever follows an error packet
         ++it;
         update_error(it, end);
-        set_reply_state(ReplyState::DONE);
+        m_reply.set_reply_state(ReplyState::DONE);
         break;
 
     case MYSQL_REPLY_EOF:
@@ -2197,7 +2197,7 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         // it should respond with an OK packet.
         if (m_reply.command() == MXS_COM_SET_OPTION)
         {
-            set_reply_state(ReplyState::DONE);
+            m_reply.set_reply_state(ReplyState::DONE);
         }
         else
         {
@@ -2212,11 +2212,11 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
 
         if ((mysql_session()->extra_capabilities() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
         {
-            set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
+            m_reply.set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
         }
         else
         {
-            set_reply_state(ReplyState::RSET_COLDEF);
+            m_reply.set_reply_state(ReplyState::RSET_COLDEF);
         }
         break;
     }
@@ -2252,7 +2252,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
 {
     m_session = session;
     m_upstream = upstream;
-    MYSQL_session* client_data = mysql_session();
+    MYSQL_session* client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     m_auth_data.client_data = client_data;
     m_authenticator = client_data->auth_data->be_auth_module->create_backend_authenticator(m_auth_data);
 
@@ -2303,7 +2303,7 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 
     if (mxs_mysql_command_will_respond(m_reply.command()))
     {
-        set_reply_state(ReplyState::START);
+        m_reply.set_reply_state(ReplyState::START);
     }
 
     if (m_reply.command() == MXS_COM_STMT_EXECUTE)
@@ -2312,7 +2312,7 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
     }
     else if (m_reply.command() == MXS_COM_STMT_FETCH)
     {
-        set_reply_state(ReplyState::RSET_ROWS);
+        m_reply.set_reply_state(ReplyState::RSET_ROWS);
     }
 }
 
@@ -2348,11 +2348,6 @@ const BackendDCB* MariaDBBackendConnection::dcb() const
 BackendDCB* MariaDBBackendConnection::dcb()
 {
     return m_dcb;
-}
-
-void MariaDBBackendConnection::set_reply_state(mxs::ReplyState state)
-{
-    m_reply.set_reply_state(state);
 }
 
 std::string MariaDBBackendConnection::to_string(State auth_state)
