@@ -210,28 +210,20 @@ BackendSelectFunction RWSConfig::get_backend_select_function(select_criteria_t s
     return backend_cmp_current_load;
 }
 
-std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
+int get_slave_counts(PRWBackends& backends, RWBackend* master)
 {
-    int slaves_found = 0;
     int slaves_connected = 0;
 
     /** Calculate how many connections we already have */
-    for (PRWBackends::const_iterator it = backends.begin(); it != backends.end(); it++)
+    for (const auto& backend : backends)
     {
-        const RWBackend* backend = *it;
-
-        if (backend->can_connect() && valid_for_slave(backend, master))
+        if (backend->in_use() && valid_for_slave(backend, master))
         {
-            slaves_found += 1;
-
-            if (backend->in_use())
-            {
-                slaves_connected += 1;
-            }
+            slaves_connected += 1;
         }
     }
 
-    return std::make_pair(slaves_found, slaves_connected);
+    return slaves_connected;
 }
 
 bool RWSplitSession::is_gtid_synced(mxs::RWBackend* backend)
@@ -293,15 +285,16 @@ int64_t RWSplitSession::get_current_rank()
     return rv;
 }
 
+bool RWSplitSession::need_slaves()
+{
+    return get_slave_counts(m_raw_backends, m_current_master) < m_config->max_slave_connections;
+}
+
 RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
     PRWBackends candidates;
-
-    auto counts = get_slave_counts(m_raw_backends, m_current_master);
     int best_priority {INT_MAX};
     auto current_rank = get_current_rank();
-    // Slaves can be taken into use if we need more slave connections
-    bool need_slaves = counts.second < m_config->max_slave_connections;
 
     // Create a list of backends valid for read operations
     for (auto& backend : m_raw_backends)
@@ -312,8 +305,8 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
         bool master_or_slave = backend->is_master() || backend->is_slave();
 
         // The server is usable if it's already in use or it can be taken into use and we need either more
-        // slaves or a master.
-        bool is_usable = backend->in_use() || (can_take_into_use && (need_slaves || my_master));
+        // slaves or a master. Slaves can be taken into use if we need more slave connections.
+        bool is_usable = backend->in_use() || (can_take_into_use && (need_slaves() || my_master));
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
         int priority = get_backend_priority(backend, m_config->master_accept_reads);
         auto rank = backend->target()->rank();
@@ -470,7 +463,7 @@ bool RWSplitSession::open_connections()
         }
     }
 
-    int n_slaves = get_slave_counts(m_raw_backends, master).second;
+    int n_slaves = get_slave_counts(m_raw_backends, master);
     int max_nslaves = std::min(m_config->max_slave_connections, m_config->slave_connections);
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
     auto current_rank = get_current_rank();
