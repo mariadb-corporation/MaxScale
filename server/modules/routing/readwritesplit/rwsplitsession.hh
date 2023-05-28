@@ -442,6 +442,7 @@ private:
 
     int  m_expected_responses;          /**< Number of expected responses to the current query */
     bool m_locked_to_master {false};    /**< Whether session is permanently locked to the master */
+    bool m_check_stale {false};
 
     std::deque<GWBUF> m_query_queue;    /**< Queued commands waiting to be executed */
     RWSplit*          m_router;         /**< The router instance */

@@ -163,11 +163,11 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
 }
 
 // Calculates server priority
-int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
+int get_backend_priority(RWBackend* backend, uint64_t status, bool masters_accepts_reads)
 {
     int priority;
-    bool is_busy = backend->in_use() && backend->should_ignore_response();
-    bool acts_slave = backend->is_slave() || (backend->is_master() && masters_accepts_reads);
+    bool is_busy = backend->should_ignore_response();
+    bool acts_slave = status & (SERVER_SLAVE | (masters_accepts_reads ? SERVER_MASTER : 0));
 
     if (acts_slave)
     {
@@ -303,18 +303,23 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     {
         // We can take the current master back into use even for reads
         bool my_master = backend == m_current_master;
-        bool can_take_into_use = !backend->in_use() && can_recover_servers() && backend->can_connect();
-        bool master_or_slave = backend->is_master() || backend->is_slave();
+        bool already_used = backend->in_use();
+        bool can_take_into_use = !already_used && can_recover_servers() && backend->can_connect();
+        auto status = backend->target()->status();
+        bool master_or_slave = status & (SERVER_MASTER | SERVER_SLAVE);
+        bool in_maint = status & SERVER_MAINT;
 
         // The server is usable if it's already in use or it can be taken into use and we need either more
         // slaves or a master. Slaves can be taken into use if we need more slave connections.
-        bool is_usable = backend->in_use() || (can_take_into_use && (need_slaves() || my_master));
+        bool is_usable = already_used || (can_take_into_use && (need_slaves() || my_master));
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
-        int priority = get_backend_priority(backend, m_config->master_accept_reads);
+        int priority = get_backend_priority(backend, status, m_config->master_accept_reads);
         auto rank = backend->target()->rank();
         bool gtid_is_ok = my_master || is_gtid_synced(backend);
+        bool same_rank = rank == current_rank;
+        m_check_stale = already_used && (in_maint || !same_rank);
 
-        if (master_or_slave && is_usable && rlag_ok && rank == current_rank && gtid_is_ok)
+        if (master_or_slave && !in_maint && is_usable && rlag_ok && same_rank && gtid_is_ok)
         {
             if (priority < best_priority)
             {

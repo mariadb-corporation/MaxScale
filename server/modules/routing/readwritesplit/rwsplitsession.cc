@@ -694,13 +694,14 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         route_stored_query();
     }
 
-    if (m_expected_responses == 0 && !trx_is_open())
+    if (m_check_stale && m_expected_responses == 0 && !trx_is_open())
     {
         /**
          * Close stale connections to servers in maintenance. Done here to avoid closing the connections
          * before all responses have been received. Must not be done inside a transaction.
          */
         close_stale_connections();
+        m_check_stale = false;
     }
 
     return rc;
