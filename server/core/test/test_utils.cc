@@ -42,8 +42,6 @@ int test_checksums()
     sum1.finalize();
     sum2.finalize(d1);
     mxb_assert(sum1 == sum2);
-    sum1.reset();
-    sum2.reset();
 
     // Check that the hex strings match
     mxb_assert(sum1.hex() == sum2.hex());
@@ -52,6 +50,9 @@ int test_checksums()
 
     // The checksum must not be empty
     mxb_assert(!saved.empty());
+
+    sum1.reset();
+    sum2.reset();
 
     // Repeat the same test, should produce the same checksums
     sum1.update(d1);

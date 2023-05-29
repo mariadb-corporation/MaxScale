@@ -653,6 +653,9 @@ public:
     /**
      * Get hexadecimal representation of the checksum
      *
+     * The value must be finalized before this function is called. Calling reset() on a Checksum will
+     * also invalidate the calculation and the hex output.
+     *
      * @return String containing the hexadecimal form of the checksum
      */
     virtual std::string hex() const = 0;
@@ -718,31 +721,24 @@ static inline bool operator!=(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
 /**
  * A CRC32 checksum
  */
-class CRC32Checksum : public Checksum
+class CRC32Checksum final : public Checksum
 {
 public:
     using Checksum::update;
     using Checksum::finalize;
 
-    CRC32Checksum()
-    {
-        m_ctx = crc32(0L, NULL, 0);
-    }
-
     void update(const uint8_t* ptr, size_t len) override
     {
-        m_ctx = crc32(m_ctx, ptr, len);
+        m_sum = crc32(m_sum, ptr, len);
     }
 
     void finalize() override
     {
-        m_sum = m_ctx;
-        reset();
     }
 
     void reset() override
     {
-        m_ctx = crc32(0L, NULL, 0);
+        m_sum = 0;
     }
 
     std::string hex() const override
@@ -758,9 +754,7 @@ public:
     }
 
 private:
-
-    uint32_t m_ctx;     /**< Ongoing checksum value */
-    uint32_t m_sum;     /**< Final checksum */
+    uint32_t m_sum {0};     /**< Final checksum */
 };
 
 static inline bool operator==(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
