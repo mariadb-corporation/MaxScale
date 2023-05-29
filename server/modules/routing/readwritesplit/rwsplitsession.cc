@@ -105,11 +105,11 @@ bool RWSplitSession::routeQuery(GWBUF&& buffer)
         return 0;
     }
 
-    if (m_state == TRX_REPLAY || m_pending_retries > 0 || !m_query_queue.empty())
+    if (replaying_trx() || m_pending_retries > 0 || !m_query_queue.empty())
     {
         MXB_INFO("New %s received while %s is active: %s",
                  mariadb::cmd_to_string(buffer.data()[4]),
-                 m_state == TRX_REPLAY ?  "transaction replay" : "query execution",
+                 replaying_trx() ?  "transaction replay" : "query execution",
                  get_sql_string(buffer).c_str());
 
         m_query_queue.emplace_back(std::move(buffer));
@@ -231,11 +231,21 @@ void RWSplitSession::trx_replay_next_stmt()
 
     if (m_replayed_trx.have_stmts())
     {
-        // More statements to replay, pop the oldest one and execute it
-        GWBUF buf = m_replayed_trx.pop_stmt();
-        const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(buf));
-        MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
-        retry_query(std::move(buf), 0);
+        const auto& curr_trx = m_trx.checksums();
+        const auto& old_trx = m_replayed_trx.checksums();
+
+        if (old_trx[curr_trx.size() - 1] == curr_trx.back())
+        {
+            // More statements to replay, pop the oldest one and execute it
+            GWBUF buf = m_replayed_trx.pop_stmt();
+            const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(buf));
+            MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
+            retry_query(std::move(buf), 0);
+        }
+        else
+        {
+            checksum_mismatch();
+        }
     }
     else
     {
@@ -246,20 +256,19 @@ void RWSplitSession::trx_replay_next_stmt()
         if (!m_replayed_trx.empty())
         {
             // Check that the checksums match.
-            SHA1Checksum chksum = m_trx.checksum();
-            chksum.finalize();
-
-            if (chksum == m_replayed_trx.checksum())
+            if (m_trx.checksums().back() == m_replayed_trx.checksums().back())
             {
+                mxb_assert(m_trx.checksums() == m_replayed_trx.checksums());
                 MXB_INFO("Checksums match, replay successful. Replay took %ld seconds.",
                          trx_replay_seconds());
                 m_num_trx_replays = 0;
 
                 if (m_interrupted_query)
                 {
-                    MXB_INFO("Resuming execution: %s", get_sql_string(m_interrupted_query).c_str());
-                    retry_query(std::move(m_interrupted_query), 0);
-                    m_interrupted_query.clear();
+                    m_state = TRX_REPLAY_INTERRUPTED;
+                    MXB_INFO("Resuming execution: %s", get_sql_string(m_interrupted_query.buffer).c_str());
+                    retry_query(std::move(m_interrupted_query.buffer), 0);
+                    m_interrupted_query.buffer.clear();
                 }
                 else if (!m_query_queue.empty())
                 {
@@ -268,22 +277,7 @@ void RWSplitSession::trx_replay_next_stmt()
             }
             else
             {
-                // Turn the replay flag back on to prevent queries from getting routed before the hangup we
-                // just added is processed. For example, this can happen if the error is sent and the client
-                // manages to send a COM_QUIT that gets processed before the fake hangup event.
-                // This also makes it so that when transaction_replay_retry_on_mismatch is enabled, the replay
-                // will eventually stop.
-                m_state = TRX_REPLAY;
-
-                if (m_config->trx_retry_on_mismatch && start_trx_replay())
-                {
-                    MXB_INFO("Checksum mismatch, starting transaction replay again.");
-                }
-                else
-                {
-                    MXB_INFO("Checksum mismatch, transaction replay failed. Closing connection.");
-                    m_pSession->kill("Transaction checksum mismatch encountered when replaying transaction.");
-                }
+                checksum_mismatch();
             }
         }
         else
@@ -299,6 +293,26 @@ void RWSplitSession::trx_replay_next_stmt()
             mxb_assert_message(!m_interrupted_query, "Interrupted query should be empty");
             m_num_trx_replays = 0;
         }
+    }
+}
+
+void RWSplitSession::checksum_mismatch()
+{
+    // Turn the replay flag back on to prevent queries from getting routed before the hangup we
+    // just added is processed. For example, this can happen if the error is sent and the client
+    // manages to send a COM_QUIT that gets processed before the fake hangup event.
+    // This also makes it so that when transaction_replay_retry_on_mismatch is enabled, the replay
+    // will eventually stop.
+    m_state = TRX_REPLAY;
+
+    if (m_config->trx_retry_on_mismatch && start_trx_replay())
+    {
+        MXB_INFO("Checksum mismatch, starting transaction replay again.");
+    }
+    else
+    {
+        MXB_INFO("Checksum mismatch, transaction replay failed. Closing connection.");
+        m_pSession->kill("Transaction checksum mismatch encountered when replaying transaction.");
     }
 }
 
@@ -333,17 +347,22 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
                 /** Transaction size is OK, store the statement for replaying and
                  * update the checksum of the result */
 
-                if (include_in_checksum(reply))
-                {
-                    m_trx.add_result(writebuf);
-                }
+                m_current_query.bytes += writebuf.length();
+                m_current_query.checksum.update(writebuf);
 
-                if (m_current_query)
+                if (reply.is_complete())
                 {
                     const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(m_current_query.buffer));
-                    MXB_INFO("Adding %s to trx: %s", cmd, get_sql_string(m_current_query.buffer).c_str());
+                    MXB_INFO("Adding %s to trx: %s Checksum: %s",
+                             cmd, get_sql_string(m_current_query.buffer).c_str(),
+                             m_current_query.checksum.hex().c_str());
+                    // Add an empty checksum for any statements which we don't want to checksum. This allows
+                    // us to identify which statement it was that caused the checksum mismatch.
+                    m_current_query.checksum.finalize();
+                    m_trx.add_result(include_in_checksum(reply) ?
+                                     m_current_query.checksum : mxs::CRC32Checksum {});
 
-                    // Add the statement to the transaction once the first part of the result is received.
+                    // Add the statement to the transaction now that the result is complete.
                     m_trx.add_stmt(backend, std::move(m_current_query.buffer));
                     m_current_query.clear();
                 }
@@ -730,7 +749,8 @@ bool RWSplitSession::start_trx_replay()
         if (m_trx.have_stmts() || m_current_query)
         {
             // Stash any interrupted queries while we replay the transaction
-            m_interrupted_query = std::move(m_current_query.buffer);
+            m_interrupted_query = std::move(m_current_query);
+            m_interrupted_query.checksum.finalize();
             m_current_query.clear();
 
             MXB_INFO("Starting transaction replay %ld. Replay has been ongoing for %ld seconds.",
@@ -738,12 +758,10 @@ bool RWSplitSession::start_trx_replay()
             m_state = TRX_REPLAY;
 
             /**
-             * Copy the transaction for replaying and finalize it. This
-             * allows the checksums to be compared. The current transaction
+             * Copy the transaction for replaying. The current transaction
              * is closed as the replaying opens a new transaction.
              */
             m_replayed_trx = m_trx;
-            m_replayed_trx.finalize();
             m_trx.close();
 
             if (m_replayed_trx.have_stmts())
@@ -761,16 +779,18 @@ bool RWSplitSession::start_trx_replay()
                  * executed. The buffer should contain a query that starts
                  * or ends a transaction or autocommit should be disabled.
                  */
-                MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query));
+                MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query.buffer));
                 mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
                                    || !protocol_data().is_autocommit(),
                                    "The current query (%s) should start or stop a transaction "
                                    "or autocommit should be disabled",
-                                   get_sql_string(m_interrupted_query).c_str());
+                                   get_sql_string(m_interrupted_query.buffer).c_str());
 
-                MXB_INFO("Retrying interrupted query: %s", get_sql_string(m_interrupted_query).c_str());
-                retry_query(std::move(m_interrupted_query), 1);
-                m_interrupted_query.clear();
+                m_state = TRX_REPLAY_INTERRUPTED;
+                MXB_INFO("Retrying interrupted query: %s",
+                         get_sql_string(m_interrupted_query.buffer).c_str());
+                retry_query(std::move(m_interrupted_query.buffer), 1);
+                m_interrupted_query.buffer.clear();
             }
         }
         else

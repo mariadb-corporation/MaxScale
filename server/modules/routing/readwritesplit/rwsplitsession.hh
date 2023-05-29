@@ -196,6 +196,7 @@ private:
     void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
 
+    void checksum_mismatch();
     void trx_replay_next_stmt();
 
     // Do we have at least one open slave connection
@@ -403,6 +404,11 @@ private:
         return m_state == OTRX_STARTING || m_state == OTRX_ACTIVE || m_state == OTRX_ROLLBACK;
     }
 
+    bool replaying_trx() const
+    {
+        return m_state == TRX_REPLAY || m_state == TRX_REPLAY_INTERRUPTED;
+    }
+
     // How many seconds has the replay took so far. Only accurate during transaction replay.
     int64_t trx_replay_seconds() const
     {
@@ -411,11 +417,12 @@ private:
 
     enum State
     {
-        ROUTING,        // Normal routing
-        TRX_REPLAY,     // Replaying a transaction
-        OTRX_STARTING,  // Transaction starting on slave
-        OTRX_ACTIVE,    // Transaction open on a slave server
-        OTRX_ROLLBACK   // Transaction being rolled back on the slave server
+        ROUTING,                // Normal routing
+        TRX_REPLAY,             // Replaying a transaction
+        TRX_REPLAY_INTERRUPTED, // Replaying the interrupted query
+        OTRX_STARTING,          // Transaction starting on slave
+        OTRX_ACTIVE,            // Transaction open on a slave server
+        OTRX_ROLLBACK           // Transaction being rolled back on the slave server
     };
 
     State m_state = ROUTING;
@@ -447,7 +454,7 @@ private:
     Trx     m_trx;                  /**< Current transaction */
     bool    m_can_replay_trx;       /**< Whether the transaction can be replayed */
     Trx     m_replayed_trx;         /**< The transaction we are replaying */
-    GWBUF   m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
+    Stmt    m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
     Trx     m_orig_trx;             /**< The backup of the transaction we're replaying */
     Stmt    m_orig_stmt;            /**< The backup of the statement that was interrupted */
     int64_t m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */

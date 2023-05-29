@@ -16,6 +16,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <list>
+#include <vector>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
@@ -56,7 +57,8 @@ class Trx
 {
 public:
     // A log of executed queries, for transaction replay
-    typedef std::list<GWBUF> TrxLog;
+    typedef std::list<GWBUF>                TrxLog;
+    typedef std::vector<mxs::CRC32Checksum> ChecksumLog;
 
     Trx()
         : m_size(0)
@@ -66,7 +68,7 @@ public:
 
     Trx(const Trx& rhs)
     {
-        m_checksum = rhs.m_checksum;
+        m_checksums = rhs.m_checksums;
         m_size = rhs.m_size;
         m_target = rhs.m_target;
 
@@ -82,7 +84,7 @@ public:
     {
         if (this != &rhs)
         {
-            m_checksum = rhs.m_checksum;
+            m_checksums = rhs.m_checksums;
             m_size = rhs.m_size;
             m_target = rhs.m_target;
 
@@ -131,9 +133,9 @@ public:
      *
      * @param buf Result to add
      */
-    void add_result(const GWBUF& buf)
+    void add_result(const mxs::CRC32Checksum& checksum)
     {
-        m_checksum.update(buf);
+        m_checksums.push_back(checksum);
     }
 
     /**
@@ -150,18 +152,6 @@ public:
         GWBUF rval = std::move(m_log.front());
         m_log.pop_front();
         return rval;
-    }
-
-    /**
-     * Finalize the transaction
-     *
-     * This function marks the transaction as completed be that by a COMMIT
-     * or by a failure of the current server where the transaction was being
-     * executed.
-     */
-    void finalize()
-    {
-        m_checksum.finalize();
     }
 
     /**
@@ -205,27 +195,23 @@ public:
      */
     void close()
     {
-        m_checksum.reset();
+        m_checksums.clear();
         m_log.clear();
         m_size = 0;
         m_target = nullptr;
     }
 
     /**
-     * Return the current checksum
-     *
-     * finalize() must be called before the return value of this function is used.
-     *
-     * @return The checksum of the transaction
+     * @return The checksums of the transaction
      */
-    const mxs::SHA1Checksum& checksum() const
+    const ChecksumLog& checksums() const
     {
-        return m_checksum;
+        return m_checksums;
     }
 
 private:
-    mxs::SHA1Checksum m_checksum;   /**< Checksum of the transaction */
-    TrxLog            m_log;        /**< The transaction contents */
-    size_t            m_size;       /**< Transaction size in bytes */
-    mxs::RWBackend*   m_target;     /**< The target on which the transaction is done */
+    ChecksumLog     m_checksums;/**< Checksum of the transaction */
+    TrxLog          m_log;      /**< The transaction contents */
+    size_t          m_size;     /**< Transaction size in bytes */
+    mxs::RWBackend* m_target;   /**< The target on which the transaction is done */
 };
