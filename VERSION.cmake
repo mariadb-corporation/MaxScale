@@ -1,1 +1,1 @@
-include(${CMAKE_SOURCE_DIR}/VERSION6.cmake)
+include(${CMAKE_SOURCE_DIR}/versions/VERSION6.cmake)
