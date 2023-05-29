@@ -196,6 +196,7 @@ private:
     void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
 
+    bool discard_partial_result(GWBUF& buffer, const mxs::Reply& reply);
     void checksum_mismatch();
     void trx_replay_next_stmt();
 

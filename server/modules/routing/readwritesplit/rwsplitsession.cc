@@ -358,9 +358,13 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
                              m_current_query.checksum.hex().c_str());
                     // Add an empty checksum for any statements which we don't want to checksum. This allows
                     // us to identify which statement it was that caused the checksum mismatch.
+                    if (!include_in_checksum(reply))
+                    {
+                        m_current_query.checksum.reset();
+                    }
+
                     m_current_query.checksum.finalize();
-                    m_trx.add_result(include_in_checksum(reply) ?
-                                     m_current_query.checksum : mxs::CRC32Checksum {});
+                    m_trx.add_result(m_current_query.checksum);
 
                     // Add the statement to the transaction now that the result is complete.
                     m_trx.add_stmt(backend, std::move(m_current_query.buffer));
@@ -496,6 +500,56 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     m_can_replay_trx = true;
 }
 
+bool RWSplitSession::discard_partial_result(GWBUF& buffer, const mxs::Reply& reply)
+{
+    mxb_assert(m_interrupted_query.bytes >= m_current_query.bytes);
+    mxb_assert(m_config->transaction_replay);
+    bool discard = m_current_query.bytes + buffer.length() <= m_interrupted_query.bytes;
+
+    if (discard)
+    {
+        // Discard this part, we have already sent it.
+        m_current_query.bytes += buffer.length();
+        m_current_query.checksum.update(buffer);
+        MXB_INFO("Discarding result, client already has it. %s processed so far.",
+                 mxb::pretty_size(m_current_query.bytes).c_str());
+
+        if (reply.is_complete())
+        {
+            MXB_INFO("Replayed result was shorter than the original one.");
+            checksum_mismatch();
+        }
+    }
+    else
+    {
+        // We've returned some part of this result. Split it into two parts and return the trailing end of the
+        // result to the client.
+        MXB_INFO("Replay of interrupted query is complete.");
+        auto bytes_to_discard = m_interrupted_query.bytes - m_current_query.bytes;
+        m_current_query.checksum.update(buffer.data(), bytes_to_discard);
+        buffer.consume(bytes_to_discard);
+        m_current_query.bytes = m_interrupted_query.bytes;
+        m_state = ROUTING;
+
+        if (include_in_checksum(reply))
+        {
+            auto cksum = m_current_query.checksum;
+            cksum.finalize();
+
+            // In case the result wasn't the same, the resultset checksum will not match.
+            if (cksum != m_interrupted_query.checksum)
+            {
+                checksum_mismatch();
+                discard = true;
+            }
+        }
+
+        m_interrupted_query.clear();
+    }
+
+    return discard;
+}
+
 bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
@@ -503,6 +557,11 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
     if (!backend->should_ignore_response() && handle_causal_read_reply(writebuf, reply, backend))
     {
         return 1;   // Nothing to route, return
+    }
+
+    if (m_state == TRX_REPLAY_INTERRUPTED && discard_partial_result(writebuf, reply))
+    {
+        return true;    // Discard this chunk, the client already has it
     }
 
     const auto& error = reply.error();
@@ -835,7 +894,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
     mxb_assert(backend && backend->in_use());
     std::string errmsg;
 
-    if (reply.has_started())
+    if (reply.has_started() && backend->is_expected_response() && !m_config->transaction_replay)
     {
         errmsg = mxb::string_printf(
             "Server '%s' was lost in the middle of a resultset, cannot continue the session: %s",
