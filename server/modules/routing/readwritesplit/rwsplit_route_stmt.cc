@@ -125,7 +125,7 @@ void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res)
              * replace it with a ROLLBACK. The storing of the statement is
              * done here to avoid storage of the ROLLBACK.
              */
-            m_current_query = std::exchange(buffer, mariadb::create_query("ROLLBACK"));
+            m_current_query.buffer = std::exchange(buffer, mariadb::create_query("ROLLBACK"));
             m_state = OTRX_ROLLBACK;
         }
     }
@@ -610,9 +610,9 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
             // TODO: Fix this
             // m_router->update_max_sescmd_sz(protocol_data().history().size());
 
-            m_current_query = std::move(buffer);
+            m_current_query.buffer = std::move(buffer);
 
-            if (protocol_data().will_respond(m_current_query))
+            if (protocol_data().will_respond(m_current_query.buffer))
             {
                 m_expected_responses++;
                 mxb_assert(m_expected_responses == 1);
@@ -1028,7 +1028,7 @@ bool RWSplitSession::start_trx_migration(GWBUF&& querybuf)
      * Stash the current query so that the transaction replay treats
      * it as if the query was interrupted.
      */
-    m_current_query = std::move(querybuf);
+    m_current_query.buffer = std::move(querybuf);
 
     /**
      * After the transaction replay has been started, the rest of
@@ -1126,7 +1126,7 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
 
     if (store)
     {
-        m_current_query = buffer.shallow_clone();
+        m_current_query.buffer = buffer.shallow_clone();
 
         if (m_config->transaction_replay && m_config->trx_retry_safe_commit
             && parser().type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_COMMIT))

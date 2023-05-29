@@ -325,7 +325,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
             && m_wait_gtid != READING_GTID
             && m_wait_gtid != GTID_READ_DONE)
         {
-            int64_t size = m_trx.size() + m_current_query.length();
+            int64_t size = m_trx.size() + m_current_query.buffer.length();
 
             // A transaction is open and it is eligible for replaying
             if (size < m_config->trx_max_size)
@@ -340,11 +340,11 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
 
                 if (m_current_query)
                 {
-                    const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(m_current_query));
-                    MXB_INFO("Adding %s to trx: %s", cmd, get_sql_string(m_current_query).c_str());
+                    const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(m_current_query.buffer));
+                    MXB_INFO("Adding %s to trx: %s", cmd, get_sql_string(m_current_query.buffer).c_str());
 
                     // Add the statement to the transaction once the first part of the result is received.
-                    m_trx.add_stmt(backend, std::move(m_current_query));
+                    m_trx.add_stmt(backend, std::move(m_current_query.buffer));
                     m_current_query.clear();
                 }
             }
@@ -448,7 +448,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
         else if (m_config->retry_failed_reads)
         {
             ok = true;
-            retry_query(std::move(m_current_query));
+            retry_query(std::move(m_current_query.buffer));
             m_current_query.clear();
         }
     }
@@ -520,7 +520,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
     {
         if (m_current_query && !backend->should_ignore_response())
         {
-            const auto& current_sql = get_sql_string(m_current_query);
+            const auto& current_sql = get_sql_string(m_current_query.buffer);
             m_ps_cache[current_sql].append(writebuf.shallow_clone());
         }
     }
@@ -730,7 +730,7 @@ bool RWSplitSession::start_trx_replay()
         if (m_trx.have_stmts() || m_current_query)
         {
             // Stash any interrupted queries while we replay the transaction
-            m_interrupted_query = std::move(m_current_query);
+            m_interrupted_query = std::move(m_current_query.buffer);
             m_current_query.clear();
 
             MXB_INFO("Starting transaction replay %ld. Replay has been ongoing for %ld seconds.",
@@ -794,7 +794,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     {
         // A query was in progress, try to route it again
         mxb_assert(m_prev_plan.target == backend || m_prev_plan.route_target == TARGET_ALL);
-        retry_query(std::move(m_current_query));
+        retry_query(std::move(m_current_query.buffer));
         m_current_query.clear();
         can_continue = true;
     }
@@ -880,12 +880,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             }
             else if (m_wait_gtid == READING_GTID)
             {
-                m_current_query = reset_gtid_probe();
+                m_current_query.buffer = reset_gtid_probe();
 
                 if (can_retry_query())
                 {
                     // Not inside a transaction, we can retry the original query
-                    retry_query(std::move(m_current_query), 0);
+                    retry_query(std::move(m_current_query.buffer), 0);
                     m_current_query.clear();
                     can_continue = true;
                 }
@@ -1055,7 +1055,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, const std::
 
                 MXB_INFO("Re-routing failed read after server '%s' failed", backend->name());
                 route_stored = false;
-                retry_query(std::move(m_current_query));
+                retry_query(std::move(m_current_query.buffer));
                 m_current_query.clear();
             }
         }

@@ -21,7 +21,37 @@
 #include <maxscale/utils.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 
-// A transaction
+// A statement in a transaction.
+struct Stmt
+{
+    GWBUF              buffer;
+    mxs::CRC32Checksum checksum;
+    size_t             bytes {0};
+
+    Stmt shallow_clone()
+    {
+        return {buffer.shallow_clone(), checksum, bytes};
+    }
+
+    void clear()
+    {
+        buffer.clear();
+        checksum.reset();
+        bytes = 0;
+    }
+
+    operator bool() const
+    {
+        return !!buffer;
+    }
+
+    bool empty() const
+    {
+        return buffer.empty();
+    }
+};
+
+// A transaction consisting of statements
 class Trx
 {
 public:

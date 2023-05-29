@@ -172,8 +172,8 @@ bool RWSplitSession::continue_causal_read()
         if (m_wait_gtid == RETRYING_ON_MASTER)
         {
             // Retry the query on the master
-            m_current_query.add_hint(Hint::Type::ROUTE_TO_MASTER);
-            retry_query(std::move(m_current_query), 0);
+            m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+            retry_query(std::move(m_current_query.buffer), 0);
             m_current_query.clear();
             rval = true;
         }
@@ -222,7 +222,7 @@ void RWSplitSession::add_prefix_wait_gtid(GWBUF& origin)
     // Only do the replacement if it fits into one packet
     if (origin.length() + sql.size() < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
-        m_current_query = origin.shallow_clone();
+        m_current_query.buffer = origin.shallow_clone();
         origin = mariadb::create_query(mxb::cat(sql, get_sql(origin)));
         m_wait_gtid = WAITING_FOR_HEADER;
     }
@@ -232,7 +232,7 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
 {
     // Add a routing hint to the copy of the current query to prevent it from being routed to a slave if it
     // has to be retried.
-    m_current_query.add_hint(Hint::Type::ROUTE_TO_MASTER);
+    m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
 
     int64_t timeout = m_config->causal_reads_timeout.count();
     std::string gtid = m_config->causal_reads == CausalReads::GLOBAL ?
@@ -279,7 +279,7 @@ std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
 GWBUF RWSplitSession::reset_gtid_probe()
 {
     mxb_assert_message(m_current_query.empty(), "Current query should be empty but it contains: %s",
-                       get_sql_string(m_current_query).c_str());
+                       get_sql_string(m_current_query.buffer).c_str());
     mxb_assert_message(!m_query_queue.empty(), "Query queue should contain at least one query");
 
     // Retry the the original query that triggered the GTID probe.

@@ -443,13 +443,13 @@ private:
     mariadb::QueryClassifier m_qc;      /**< The query classifier. */
 
     int64_t m_retry_duration;       /**< Total time spent retrying queries */
-    GWBUF   m_current_query;        /**< Current query being executed */
+    Stmt    m_current_query;        /**< Current query being executed */
     Trx     m_trx;                  /**< Current transaction */
     bool    m_can_replay_trx;       /**< Whether the transaction can be replayed */
     Trx     m_replayed_trx;         /**< The transaction we are replaying */
     GWBUF   m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
     Trx     m_orig_trx;             /**< The backup of the transaction we're replaying */
-    GWBUF   m_orig_stmt;            /**< The backup of the statement that was interrupted */
+    Stmt    m_orig_stmt;            /**< The backup of the statement that was interrupted */
     int64_t m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
 
     mxb::StopWatch m_trx_replay_timer;      /**< When the last transaction replay started */
