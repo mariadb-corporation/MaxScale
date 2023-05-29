@@ -31,6 +31,7 @@ export default class ErdTask extends Extender {
                 link: { isAttrToAttr: false },
                 linkShape: { type: LINK_SHAPES.ORTHO },
             }),
+            is_laid_out: this.boolean(false), //conditionally skip the simulation
         }
     }
 

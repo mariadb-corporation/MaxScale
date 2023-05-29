@@ -14,7 +14,7 @@
             <template v-slot:append="{ data: { transform, zoom } }">
                 <graph-nodes
                     ref="graphNodes"
-                    :nodes="graphNodes"
+                    :nodes="graphData.nodes"
                     :coordMap.sync="graphNodeCoordMap"
                     :style="{ transform }"
                     :defNodeSize="defNodeSize"
@@ -118,6 +118,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+ * Emits:
+ * - $emit('on-nodes-coords-update', nodes:[])
+ * - $emit('dbl-click-node', { e:Event, node: {} })
+ */
 import {
     forceSimulation,
     forceLink,
@@ -146,15 +151,14 @@ export default {
         ctrDim: { type: Object, required: true },
         data: { type: Object, required: true },
         graphConfigData: { type: Object, required: true },
+        isLaidOut: { type: Boolean, default: false },
     },
     data() {
         return {
             isRendering: false,
             svgGroup: null,
             graphNodeCoordMap: {},
-            stagingData: null,
-            graphNodes: [],
-            graphLinks: [],
+            graphData: { nodes: [], links: [] },
             simulation: null,
             defNodeSize: { width: 250, height: 100 },
             chosenLinks: [],
@@ -169,8 +173,8 @@ export default {
             // entity max-width / 2 - offset. Offset includes padding and border
             return 320 / 2 - 27
         },
-        nodeKeyMap() {
-            return this.graphNodes.reduce((map, node) => {
+        entityKeyMap() {
+            return this.graphData.nodes.reduce((map, node) => {
                 map[node.id] = node.data.definitions.keys
                 return map
             }, {})
@@ -210,70 +214,69 @@ export default {
         globalLinkColor() {
             return this.$typy(this.graphConfigData, 'link.color').safeString
         },
-        nodeKeys() {
-            return this.data.nodes.map(n => n.key)
+        nodeIds() {
+            return this.$typy(this.data, 'nodes').safeArray.map(n => n.id)
         },
     },
     created() {
-        this.assignData(this.data)
+        this.init()
         //TODO: if ctrDim changes, graph-board should change its transform value to re-center the graph
         this.graphDim = this.ctrDim
     },
     activated() {
-        this.watchNodeKeys()
+        this.watchNodeIds()
     },
     deactivated() {
-        this.$typy(this.unwatch_nodeKeys).safeFunction()
+        this.$typy(this.unwatch_nodeIds).safeFunction()
     },
     beforeDestroy() {
-        this.$typy(this.unwatch_nodeKeys).safeFunction()
+        this.$typy(this.unwatch_nodeIds).safeFunction()
         this.$typy(this.unwatch_graphConfigData).safeFunction()
     },
     methods: {
-        watchNodeKeys() {
-            this.unwatch_nodeKeys = this.$watch(
-                'nodeKeys',
+        watchNodeIds() {
+            this.unwatch_nodeIds = this.$watch(
+                'nodeIds',
                 (v, oV) => {
-                    if (!this.$helpers.lodash.isEqual(v, oV)) this.assignData(this.data)
+                    if (!this.$helpers.lodash.isEqual(v, oV)) this.init()
                 },
                 { deep: true }
             )
         },
-        handleFilterCompositeKeys(v) {
-            this.graphLinks.forEach(link => {
-                if (link.isPartOfCompositeKey) link.hidden = !v
-            })
-        },
         /**
          * Call this function will trigger rerender the graph
          * D3 mutates data, this method deep clones data leaving the original intact.
-         * @param {Object} data
          */
-        assignData(data) {
+        init() {
             if (this.$typy(this.data, 'nodes').safeArray.length) {
                 this.isRendering = true
-                //TODO: Move stagingData to the parent component
-                this.stagingData = this.$helpers.lodash.cloneDeep(data)
-                this.graphNodes = this.stagingData.nodes
-                this.graphLinks = this.stagingData.links
+                this.assignData()
                 this.handleFilterCompositeKeys(this.isAttrToAttr)
             }
+        },
+        assignData() {
+            this.graphData = this.$helpers.lodash.cloneDeep(this.data)
+        },
+        handleFilterCompositeKeys(v) {
+            this.graphData.links.forEach(link => {
+                if (link.isPartOfCompositeKey) link.hidden = !v
+            })
         },
         /**
          *
          * @param {Object} nodeSizeMap - size of nodes
          */
         onNodesRendered(nodeSizeMap) {
-            this.graphNodes.forEach(node => {
+            this.graphData.nodes.forEach(node => {
                 node.size = nodeSizeMap[node.id]
             })
             if (Object.keys(nodeSizeMap).length) this.runSimulation()
         },
         runSimulation() {
-            this.simulation = forceSimulation(this.graphNodes)
+            this.simulation = forceSimulation(this.graphData.nodes)
                 .force(
                     'link',
-                    forceLink(this.graphLinks).id(d => d.id)
+                    forceLink(this.graphData.links).id(d => d.id)
                 )
                 .force(
                     'charge',
@@ -284,12 +287,15 @@ export default {
                 .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
                 .force('x', forceX().strength(0.1))
                 .force('y', forceY().strength(0.1))
-                .alphaMin(0.1)
-                .on('end', () => {
-                    this.draw()
-                    this.isRendering = false
-                })
-            this.handleCollision()
+
+            if (this.isLaidOut) {
+                this.simulation.stop()
+                // Adding a loading animation can enhance the smoothness, even if the graph is already laid out.
+                this.$helpers.delay(300).then(this.draw)
+            } else {
+                this.simulation.alphaMin(0.1).on('end', this.draw)
+                this.handleCollision()
+            }
         },
         initLinkInstance() {
             this.graphConfig = new GraphConfig(this.graphConfigData)
@@ -300,9 +306,11 @@ export default {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
             this.drawLinks()
+            this.isRendering = false
+            this.onNodesCoordsUpdate()
         },
         setGraphNodeCoordMap() {
-            this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {
+            this.graphNodeCoordMap = this.graphData.nodes.reduce((map, n) => {
                 const { x, y, id } = n
                 if (id) map[id] = { x, y }
                 return map
@@ -341,7 +349,7 @@ export default {
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
-            const nodeData = this.graphNodes.find(n => n.id === node.id)
+            const nodeData = this.graphData.nodes.find(n => n.id === node.id)
             nodeData.x = nodeData.x + diffX
             nodeData.y = nodeData.y + diffY
             this.setChosenLinks(node)
@@ -359,6 +367,7 @@ export default {
                 this.setEventLinkStyles(EVENT_TYPES.NONE)
                 this.isDraggingNode = false
                 this.chosenLinks = []
+                this.onNodesCoordsUpdate()
             }
         },
         mouseenterNode({ node }) {
@@ -370,7 +379,7 @@ export default {
             this.chosenLinks = []
         },
         findKeyTypeByColName({ node, colName }) {
-            const nodeKeys = this.nodeKeyMap[node.id]
+            const nodeKeys = this.entityKeyMap[node.id]
             const keyTypes = [tokens.primaryKey, tokens.uniqueKey, tokens.key]
             return keyTypes.find(type =>
                 this.$typy(nodeKeys, `[${type}]`).safeArray.some(key =>
@@ -440,7 +449,16 @@ export default {
          */
         handleIsAttrToAttrMode(v) {
             this.handleFilterCompositeKeys(v)
-            this.simulation.force('link').links(this.graphLinks)
+            this.simulation.force('link').links(this.graphData.links)
+        },
+        /**
+         * Call this function when node coordinates are updated.
+         */
+        onNodesCoordsUpdate() {
+            this.$emit(
+                'on-nodes-coords-update',
+                this.$helpers.lodash.cloneDeep(this.graphData.nodes)
+            )
         },
     },
 }

@@ -149,7 +149,12 @@ export default {
                 Worksheet.update({ where: activeWkeId, data: { name: this.name } })
                 ErdTask.update({
                     where: activeWkeId,
-                    data: { data: erdData, graph_height_pct: 100, active_entity_id: '' },
+                    data: {
+                        data: erdData,
+                        graph_height_pct: 100,
+                        active_entity_id: '',
+                        is_laid_out: false,
+                    },
                 })
             }
         },

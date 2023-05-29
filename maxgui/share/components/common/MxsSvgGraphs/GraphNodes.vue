@@ -143,8 +143,7 @@ export default {
                 const { width, height } = node.getBoundingClientRect()
                 nodeSizeMap[node.getAttribute('node_id')] = { width, height }
             })
-            if (!this.$helpers.lodash.isEqual(this.nodeSizeMap, nodeSizeMap))
-                this.nodeSizeMap = nodeSizeMap
+            this.nodeSizeMap = nodeSizeMap
         },
         getNodeSize(id) {
             return this.nodeSizeMap[id] || this.defNodeSize

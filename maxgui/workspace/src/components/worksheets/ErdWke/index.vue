@@ -9,7 +9,7 @@
             :deactivatedMaxPctZone="maxErdPct - (100 - maxErdPct) * 2"
         >
             <template slot="pane-left">
-                <diagram-ctr :dim="erdDim" @dbl-click-node="onNodeDblClick" />
+                <diagram-ctr :dim="erdDim" />
             </template>
             <template slot="pane-right">
                 <entity-editor-ctr v-show="activeEntityId" />
@@ -77,14 +77,6 @@ export default {
             set(v) {
                 ErdTask.update({ where: this.activeErdTask.id, data: { graph_height_pct: v } })
             },
-        },
-    },
-    methods: {
-        onNodeDblClick({ node }) {
-            ErdTask.update({
-                where: this.activeErdTask.id,
-                data: { graph_height_pct: 50, active_entity_id: node.id },
-            })
         },
     },
 }

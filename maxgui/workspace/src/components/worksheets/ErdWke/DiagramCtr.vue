@@ -2,11 +2,12 @@
     <div class="fill-height d-flex flex-column">
         <er-toolbar-ctr v-model="graphConfigData" :height="toolbarHeight" />
         <mxs-erd
-            ref="diagram"
-            :ctrDim="diagramDim"
             :data="graphData"
+            :ctrDim="diagramDim"
             :graphConfigData="graphConfigData"
-            v-on="$listeners"
+            :isLaidOut="isLaidOut"
+            @on-nodes-coords-update="onNodesCoordsUpdate"
+            @dbl-click-node="onNodeDblClick"
         />
     </div>
 </template>
@@ -55,17 +56,20 @@ export default {
         }
     },
     computed: {
-        graphData() {
-            return ErdTask.getters('getActiveGraphData') || {}
-        },
-        activeGraphConfig() {
-            return ErdTask.getters('getActiveGraphConfig') || {}
+        activeErdTask() {
+            return ErdTask.getters('getActiveErdTask')
         },
         erdTaskId() {
-            return ErdTask.getters('getActiveErdTaskId')
+            return this.activeErdTask.id
         },
-        diagram() {
-            return this.$refs.diagram
+        graphData() {
+            return this.$typy(this.activeErdTask, 'data').safeObjectOrEmpty
+        },
+        activeGraphConfig() {
+            return this.$typy(this.activeErdTask, 'graph_config').safeObjectOrEmpty
+        },
+        isLaidOut() {
+            return this.$typy(this.activeErdTask, 'is_laid_out').safeBoolean
         },
         toolbarHeight() {
             return 28
@@ -99,6 +103,23 @@ export default {
             this.graphConfigData,
             this.activeGraphConfig
         )
+    },
+    methods: {
+        onNodeDblClick({ node }) {
+            ErdTask.update({
+                where: this.erdTaskId,
+                data: { graph_height_pct: 50, active_entity_id: node.id },
+            })
+        },
+        onNodesCoordsUpdate(v) {
+            ErdTask.update({
+                where: this.erdTaskId,
+                data: {
+                    data: { ...this.graphData, nodes: v },
+                    is_laid_out: true,
+                },
+            })
+        },
     },
 }
 </script>

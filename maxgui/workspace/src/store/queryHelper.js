@@ -467,10 +467,15 @@ function getDatabase(connection_string) {
  */
 function genErdNode({ schema, parsedTable, highlightColor }) {
     return {
-        id: `${schema}.${parsedTable.name}`,
+        id: `node_${uuidv1()}`,
+        qualifiedName: `${schema}.${parsedTable.name}`, // using for generate links
         schema,
         data: parsedTable,
         styles: { highlightColor },
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
     }
 }
 
@@ -547,7 +552,7 @@ function handleGenErdLink({ srcNode, fk, nodes }) {
     let links = []
 
     const target = `${referenced_schema_name}.${referenced_table_name}`
-    const targetNode = nodes.find(n => n.id === target)
+    const targetNode = nodes.find(n => n.qualifiedName === target)
     const invisibleHighlightColor = getNodeHighlightColor(targetNode)
     if (targetNode) {
         const srcCardinality = getCardinality({ node: srcNode, indexCols: index_cols })

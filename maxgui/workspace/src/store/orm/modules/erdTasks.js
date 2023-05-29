@@ -56,7 +56,5 @@ export default {
     getters: {
         getActiveErdTaskId: () => Worksheet.getters('getActiveWkeId'),
         getActiveErdTask: (_, getters) => ErdTask.find(getters.getActiveErdTaskId) || {},
-        getActiveGraphData: (_, getters) => getters.getActiveErdTask.data,
-        getActiveGraphConfig: (_, getters) => getters.getActiveErdTask.graph_config,
     },
 }
