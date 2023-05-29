@@ -662,6 +662,10 @@ void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst)
 
             break;
         }
+
+    default:
+        memcpy(dst, &src, sizeof(src));
+        break;
     }
 }
 }
