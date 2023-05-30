@@ -31,7 +31,7 @@ import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
-import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
+import ConnDlgCtr from '@wsSrc/components/ConnDlgCtr.vue'
 import MigrCreateDlg from '@wkeComps/DataMigration/MigrCreateDlg.vue'
 import { mapState, mapMutations } from 'vuex'
 

@@ -221,7 +221,7 @@ export default {
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource
-            QueryConn.dispatch('handleOpenConn', {
+            await QueryConn.dispatch('handleOpenConn', {
                 body: { target: resourceName, ...this.body },
                 meta: { name: resourceName },
             })

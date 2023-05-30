@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
+import ConnDlgCtr from '@wsSrc/components/ConnDlgCtr.vue'
 import { lodash } from '@share/utils/helpers'
 import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
 import QueryConn from '@wsModels/QueryConn'
