@@ -83,8 +83,17 @@ void BaseUserManager::update_user_accounts()
 void BaseUserManager::set_credentials(const std::string& user, const std::string& pw)
 {
     Guard guard(m_settings_lock);
-    m_username = user;
-    m_password = pw;
+    if (user != m_username)
+    {
+        m_username = user;
+        m_password = pw;
+        m_prev_password.clear();
+    }
+    else if (pw != m_password)
+    {
+        m_prev_password = m_password;
+        m_password = pw;
+    }
 }
 
 void BaseUserManager::set_backends(const std::vector<SERVER*>& backends)
@@ -257,6 +266,7 @@ BaseUserManager::LoadSettings BaseUserManager::get_load_settings() const
     MutexLock lock(m_settings_lock);
     rval.conn_user = m_username;
     rval.conn_pw = m_password;
+    rval.conn_prev_pw = m_prev_password;
     rval.backends = m_backends;
     rval.users_file_path = m_users_file_path;
     rval.users_file_usage = m_users_file_usage;

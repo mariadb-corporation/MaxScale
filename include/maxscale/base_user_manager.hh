@@ -50,6 +50,7 @@ protected:
     {
         std::string          conn_user;
         std::string          conn_pw;
+        std::string          conn_prev_pw;
         std::vector<SERVER*> backends;
         std::string          users_file_path;
         UsersFileUsage       users_file_usage;
@@ -61,6 +62,11 @@ protected:
     std::atomic_bool m_warn_no_servers {false};
 
 private:
+    virtual bool update_users() = 0;
+
+private:
+    void updater_thread_function();
+
     // Fields for controlling the updater thread.
     std::thread             m_updater_thread;
     std::atomic_bool        m_keep_running {false};
@@ -82,6 +88,7 @@ private:
     mutable std::mutex   m_settings_lock;
     std::string          m_username;
     std::string          m_password;
+    std::string          m_prev_password;
     std::vector<SERVER*> m_backends;
     SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
 
@@ -93,8 +100,5 @@ private:
     std::atomic_bool m_union_over_backends {false};
     /** Remove escape characters '\' from database names when fetching user info from backend. */
     std::atomic_bool m_strip_db_esc {true};
-
-    virtual bool update_users() = 0;
-    void         updater_thread_function();
 };
 }
