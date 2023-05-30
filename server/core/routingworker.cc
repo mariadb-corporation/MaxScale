@@ -90,7 +90,7 @@ public:
 
         if (fd != -1)
         {
-            std::unique_ptr<RoutingWorker* []> spWorkers(new(std::nothrow) RoutingWorker* [this->nMax]());
+            std::unique_ptr<RoutingWorker*[]> spWorkers(new(std::nothrow) RoutingWorker* [this->nMax]());
 
             if (spWorkers)
             {
@@ -139,20 +139,20 @@ public:
         this->initialized = false;
     }
 
-    bool             initialized {false};            // Whether the initialization has been performed.
-    bool             running {false};                // True if worker threads are running
-    int              nMax {0};                       // Hard maximum of workers
-    std::atomic<int> nRunning {0};                   // "Running" amount of workers.
-    std::atomic<int> nConfigured {0};                // The configured amount of workers.
-    RoutingWorker**  ppWorkers {nullptr};            // Array of routing worker instances.
-    int              epoll_listener_fd {-1};         // Shared epoll descriptor for listening descriptors.
-    WN*              pNotifier {nullptr};            // Watchdog notifier.
-    bool             termination_in_process {false}; // Is a routing worker being terminated.
+    bool             initialized {false};           // Whether the initialization has been performed.
+    bool             running {false};               // True if worker threads are running
+    int              nMax {0};                      // Hard maximum of workers
+    std::atomic<int> nRunning {0};                  // "Running" amount of workers.
+    std::atomic<int> nConfigured {0};               // The configured amount of workers.
+    RoutingWorker**  ppWorkers {nullptr};           // Array of routing worker instances.
+    int              epoll_listener_fd {-1};        // Shared epoll descriptor for listening descriptors.
+    WN*              pNotifier {nullptr};           // Watchdog notifier.
+    bool             termination_in_process {false};// Is a routing worker being terminated.
 } this_unit;
 
 thread_local struct this_thread
 {
-    RoutingWorker* pCurrent_worker; // The worker of the current thread
+    RoutingWorker* pCurrent_worker;     // The worker of the current thread
 } this_thread =
 {
     nullptr
@@ -165,15 +165,14 @@ bool can_close_dcb(mxs::BackendConnection* b)
     auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - b->dcb()->last_read());
     return idle > SHOW_SHUTDOWN_TIMEOUT || b->can_close();
 }
-
 }
 
 namespace maxscale
 {
 
-//static
+// static
 RoutingWorker::Datas RoutingWorker::s_datas;
-//static
+// static
 std::mutex RoutingWorker::s_datas_lock;
 
 RoutingWorker::Data::Data()
@@ -201,8 +200,8 @@ void RoutingWorker::Data::initialize_workers()
             auto* pWorker = this_unit.ppWorkers[i];
 
             pWorker->call([pWorker, this]() {
-                    this->init_for(pWorker);
-                }, mxb::Worker::EXECUTE_QUEUED);
+                this->init_for(pWorker);
+            }, mxb::Worker::EXECUTE_QUEUED);
         }
     }
 }
@@ -280,7 +279,7 @@ void RoutingWorker::finish()
     this_unit.finish();
 }
 
-//static
+// static
 void RoutingWorker::register_data(Data* pData)
 {
     std::unique_lock guard(s_datas_lock);
@@ -291,7 +290,7 @@ void RoutingWorker::register_data(Data* pData)
     guard.unlock();
 }
 
-//static
+// static
 void RoutingWorker::deregister_data(Data* pData)
 {
     std::unique_lock guard(s_datas_lock);
@@ -303,7 +302,7 @@ void RoutingWorker::deregister_data(Data* pData)
     guard.unlock();
 }
 
-//static
+// static
 bool RoutingWorker::adjust_threads(int nCount)
 {
     mxb_assert(MainWorker::is_current());
@@ -364,7 +363,7 @@ void RoutingWorker::finish_datas()
     }
 }
 
-//static
+// static
 bool RoutingWorker::increase_workers(int nDelta)
 {
     mxb_assert(MainWorker::is_current());
@@ -405,7 +404,7 @@ bool RoutingWorker::increase_workers(int nDelta)
     return rv;
 }
 
-//static
+// static
 int RoutingWorker::activate_workers(int n)
 {
     mxb_assert(MainWorker::is_current());
@@ -424,8 +423,8 @@ int RoutingWorker::activate_workers(int n)
 
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
-                success = pWorker->activate(listeners);
-            }, Worker::EXECUTE_QUEUED);
+            success = pWorker->activate(listeners);
+        }, Worker::EXECUTE_QUEUED);
 
         if (!success)
         {
@@ -463,7 +462,7 @@ bool RoutingWorker::start_listening(const std::vector<SListener>& listeners)
     }
 
     rv = start_polling_on_shared_fd();
-    mxb_assert(rv); // Should not ever fail.
+    mxb_assert(rv);     // Should not ever fail.
 
     if (rv)
     {
@@ -496,7 +495,7 @@ bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
     if (rv)
     {
         rv = stop_polling_on_shared_fd();
-        mxb_assert(rv); // Should not ever fail.
+        mxb_assert(rv);     // Should not ever fail.
     }
 
     if (rv)
@@ -539,7 +538,7 @@ void RoutingWorker::deactivate()
     }
 }
 
-//static
+// static
 void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
 {
     mxb_assert(MainWorker::is_current());
@@ -567,7 +566,7 @@ void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
         return;
     }
 
-    mxb_assert(i > 0); // Should not be possible to terminate the first worker.
+    mxb_assert(i > 0);      // Should not be possible to terminate the first worker.
 
     if (first_attempt)
     {
@@ -582,8 +581,8 @@ void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
     this_unit.ppWorkers[nRunning] = nullptr;
 
     if (!pWorker->execute([pWorker]() {
-                pWorker->terminate();
-            }, Worker::EXECUTE_QUEUED))
+        pWorker->terminate();
+    }, Worker::EXECUTE_QUEUED))
     {
         MXB_ERROR("Could not post to (%s, %p), the worker will not go down.",
                   pWorker->thread_name().c_str(), pWorker);
@@ -609,7 +608,7 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
     return success;
 }
 
-//static
+// static
 bool RoutingWorker::create_workers(int n)
 {
     // Not all unit tests have a MainWorker.
@@ -652,7 +651,7 @@ bool RoutingWorker::create_workers(int n)
     return i != nBefore;
 }
 
-//static
+// static
 bool RoutingWorker::decrease_workers(int n)
 {
     mxb_assert(MainWorker::is_current());
@@ -671,29 +670,29 @@ bool RoutingWorker::decrease_workers(int n)
 
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
-                // If an active worker has explicitly been made not to listen,
-                // the listening need not be stopped.
-                if (pWorker->is_listening())
+            // If an active worker has explicitly been made not to listen,
+            // the listening need not be stopped.
+            if (pWorker->is_listening())
+            {
+                success = pWorker->stop_listening(listeners);
+            }
+            else
+            {
+                success = true;
+            }
+
+            if (success)
+            {
+                if (pWorker->can_deactivate())
                 {
-                    success = pWorker->stop_listening(listeners);
+                    pWorker->deactivate();
                 }
                 else
                 {
-                    success = true;
+                    pWorker->set_state(State::DRAINING);
                 }
-
-                if (success)
-                {
-                    if (pWorker->can_deactivate())
-                    {
-                        pWorker->deactivate();
-                    }
-                    else
-                    {
-                        pWorker->set_state(State::DRAINING);
-                    }
-                }
-            }, Worker::EXECUTE_QUEUED);
+            }
+        }, Worker::EXECUTE_QUEUED);
 
         if (!success)
         {
@@ -814,7 +813,7 @@ bool RoutingWorker::remove_listener(Listener* pListener)
     return rv;
 }
 
-//static
+// static
 RoutingWorker* RoutingWorker::get_current()
 {
     return this_thread.pCurrent_worker;
@@ -1519,8 +1518,8 @@ void RoutingWorker::post_run()
             auto* pWorker = this_unit.ppWorkers[i - 1];
 
             pWorker->execute([pWorker]() {
-                    pWorker->start_try_shutdown();
-                }, EXECUTE_QUEUED);
+                pWorker->start_try_shutdown();
+            }, EXECUTE_QUEUED);
         }
     }
     else
@@ -1548,7 +1547,7 @@ unique_ptr<RoutingWorker> RoutingWorker::create(int index,
                                                 size_t rebalance_window,
                                                 const std::vector<std::shared_ptr<Listener>>& listeners)
 {
-    unique_ptr<RoutingWorker> sWorker(new (std::nothrow) RoutingWorker(index, rebalance_window));
+    unique_ptr<RoutingWorker> sWorker(new(std::nothrow) RoutingWorker(index, rebalance_window));
 
     if (sWorker)
     {
@@ -1556,8 +1555,8 @@ unique_ptr<RoutingWorker> RoutingWorker::create(int index,
         {
             bool success = false;
             sWorker->call([&sWorker, &listeners, &success]() {
-                    success = sWorker->activate(listeners);
-                }, Worker::EXECUTE_QUEUED);
+                success = sWorker->activate(listeners);
+            }, Worker::EXECUTE_QUEUED);
 
             mxb_assert(success);
 
@@ -2038,56 +2037,56 @@ void RoutingWorker::terminate()
     auto start = std::chrono::steady_clock::now();
 
     m_callable.dcall(500ms, [this, start]() {
-            bool ready_to_proceed = false;
-            auto now = std::chrono::steady_clock::now();
+        bool ready_to_proceed = false;
+        auto now = std::chrono::steady_clock::now();
 
-            std::chrono::duration time_passed = now - start;
+        std::chrono::duration time_passed = now - start;
 
-            if (maxscale_is_shutting_down())
-            {
-                MXB_NOTICE("Terminating worker %d going down immediately, "
-                           "as MaxScale shutdown has been iniated.",
-                           index());
-                ready_to_proceed = true;
-            }
-            else if (time_passed > TERMINATION_DELAY)
-            {
-                MXB_NOTICE("Terminating worker %d going down as %d milliseconds has "
-                           "passed since termination was started.",
-                           index(),
-                           (int)std::chrono::duration_cast<std::chrono::milliseconds>(time_passed).count());
-                ready_to_proceed = true;
-            }
-            else
-            {
-                std::chrono::duration remaining = TERMINATION_DELAY - time_passed;
-                MXB_NOTICE("Terminating worker %d has been idle for %d milliseconds, "
-                           "still waiting %d milliseconds before going down.",
-                           index(),
-                           (int)std::chrono::duration_cast<std::chrono::milliseconds>(time_passed).count(),
-                           (int)std::chrono::duration_cast<std::chrono::milliseconds>(remaining).count());
-            }
+        if (maxscale_is_shutting_down())
+        {
+            MXB_NOTICE("Terminating worker %d going down immediately, "
+                       "as MaxScale shutdown has been iniated.",
+                       index());
+            ready_to_proceed = true;
+        }
+        else if (time_passed > TERMINATION_DELAY)
+        {
+            MXB_NOTICE("Terminating worker %d going down as %d milliseconds has "
+                       "passed since termination was started.",
+                       index(),
+                       (int)std::chrono::duration_cast<std::chrono::milliseconds>(time_passed).count());
+            ready_to_proceed = true;
+        }
+        else
+        {
+            std::chrono::duration remaining = TERMINATION_DELAY - time_passed;
+            MXB_NOTICE("Terminating worker %d has been idle for %d milliseconds, "
+                       "still waiting %d milliseconds before going down.",
+                       index(),
+                       (int)std::chrono::duration_cast<std::chrono::milliseconds>(time_passed).count(),
+                       (int)std::chrono::duration_cast<std::chrono::milliseconds>(remaining).count());
+        }
 
-            if (ready_to_proceed)
-            {
-                shutdown();
+        if (ready_to_proceed)
+        {
+            shutdown();
 
-                MainWorker* pMain = MainWorker::get();
+            MainWorker* pMain = MainWorker::get();
 
-                pMain->execute([this]() {
-                        mxb_assert(MainWorker::is_current());
-                        mxb_assert(this_unit.termination_in_process);
+            pMain->execute([this]() {
+                mxb_assert(MainWorker::is_current());
+                mxb_assert(this_unit.termination_in_process);
 
-                        this->join();
-                        delete this;
+                this->join();
+                delete this;
 
-                        // Others may be in line.
-                        terminate_last_if_dormant(false);
-                    }, Worker::EXECUTE_QUEUED);
-            }
+                // Others may be in line.
+                terminate_last_if_dormant(false);
+            }, Worker::EXECUTE_QUEUED);
+        }
 
-            return !ready_to_proceed;
-        });
+        return !ready_to_proceed;
+    });
 }
 
 // static
@@ -2185,8 +2184,8 @@ bool RoutingWorker::balance_workers(int threshold)
         mxb_assert(pTo);
 
         if (!pFrom->execute([pFrom, pTo]() {
-                                pFrom->rebalance(pTo);
-                            }, Worker::EXECUTE_QUEUED))
+            pFrom->rebalance(pTo);
+        }, Worker::EXECUTE_QUEUED))
         {
             MXB_ERROR("Could not post task to worker, worker load balancing will not take place.");
         }
@@ -2322,10 +2321,9 @@ public:
 private:
     std::vector<RoutingWorker::MemoryUsage> m_tmus;
 };
-
 }
 
-//static
+// static
 std::unique_ptr<json_t> RoutingWorker::memory_to_json(const char* zHost)
 {
     mxb_assert(MainWorker::is_current());
@@ -2385,11 +2383,11 @@ void RoutingWorker::start_shutdown()
     auto* pWorker = this_unit.ppWorkers[nRunning - 1];
 
     pWorker->execute([pWorker]() {
-            pWorker->start_try_shutdown();
-        }, EXECUTE_QUEUED);
+        pWorker->start_try_shutdown();
+    }, EXECUTE_QUEUED);
 }
 
-//static
+// static
 bool RoutingWorker::set_listen_mode(int index, bool enabled)
 {
     mxb_assert(MainWorker::is_current());
@@ -2408,37 +2406,37 @@ bool RoutingWorker::set_listen_mode(int index, bool enabled)
         bool success = false;
 
         if (!pWorker->call([pWorker, enabled, &listeners, &rv]() {
-                    mxb_assert(pWorker->is_active());
+            mxb_assert(pWorker->is_active());
 
-                    bool is_listening = pWorker->is_listening();
+            bool is_listening = pWorker->is_listening();
 
-                    if (is_listening && !enabled)
-                    {
-                        if (pWorker->stop_listening(listeners))
-                        {
-                            rv = true;
-                        }
-                        else
-                        {
-                            MXB_ERROR("Could not stop listening.");
-                        }
-                    }
-                    else if (!is_listening && enabled)
-                    {
-                        if (pWorker->start_listening(listeners))
-                        {
-                            rv = true;
-                        }
-                        else
-                        {
-                            MXB_ERROR("Could not start listening.");
-                        }
-                    }
-                    else
-                    {
-                        rv = true;
-                    }
-                }, EXECUTE_QUEUED))
+            if (is_listening && !enabled)
+            {
+                if (pWorker->stop_listening(listeners))
+                {
+                    rv = true;
+                }
+                else
+                {
+                    MXB_ERROR("Could not stop listening.");
+                }
+            }
+            else if (!is_listening && enabled)
+            {
+                if (pWorker->start_listening(listeners))
+                {
+                    rv = true;
+                }
+                else
+                {
+                    MXB_ERROR("Could not start listening.");
+                }
+            }
+            else
+            {
+                rv = true;
+            }
+        }, EXECUTE_QUEUED))
         {
             MXB_ERROR("Could not call routing worker %d.", index);
         }
@@ -2452,7 +2450,7 @@ bool RoutingWorker::set_listen_mode(int index, bool enabled)
 }
 
 
-//static
+// static
 bool RoutingWorker::termination_in_process()
 {
     return this_unit.termination_in_process;
@@ -2516,7 +2514,7 @@ void RoutingWorker::deregister_session(uint64_t session_id)
     }
 }
 
-//static
+// static
 void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)
 {
     auto* pWorker = RoutingWorker::get_current();
@@ -2602,10 +2600,10 @@ void RoutingWorker::notify_connection_available(SERVER* server)
         {
             // An endpoint is waiting for connection to this server.
             auto func = [this]() {
-                    activate_waiting_endpoints();
-                    m_ep_activation_scheduled = false;
-                    return false;
-                };
+                activate_waiting_endpoints();
+                m_ep_activation_scheduled = false;
+                return false;
+            };
 
             // The check will run once execution returns to the event loop.
             execute(func, execute_mode_t::EXECUTE_QUEUED);
@@ -2776,7 +2774,8 @@ public:
         ss << index;
 
         json_t* pJson = json_object();
-        json_object_set_new(pJson, CN_ID, json_string(ss.str().c_str())); // Index is the id for the outside.
+        // Index is the id for the outside.
+        json_object_set_new(pJson, CN_ID, json_string(ss.str().c_str()));
         json_object_set_new(pJson, CN_TYPE, json_string(CN_THREADS));
         json_object_set_new(pJson, CN_ATTRIBUTES, pAttr);
         json_object_set_new(pJson, CN_LINKS, mxs_json_self_link(m_zHost, CN_THREADS, ss.str().c_str()));
@@ -2865,7 +2864,6 @@ const char* to_string(RoutingWorker::State state)
     mxb_assert(!true);
     return "Unknown";
 }
-
 }
 
 namespace
@@ -2894,7 +2892,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
     mxb_assert(mxs::MainWorker::is_current());
 
     Worker* target = RoutingWorker::get_by_index(index);
-    mxb_assert(target); // REST-API should have checked the validity.
+    mxb_assert(target);     // REST-API should have checked the validity.
     RoutingWorker::InfoTask task(zHost, index + 1);
     Semaphore sem;
 
