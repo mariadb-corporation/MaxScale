@@ -1,21 +1,11 @@
 <template>
-    <div class="er-toolbar-ctr d-flex pr-3 white mxs-color-helper border-bottom-table-border">
-        <mxs-tooltip-btn
-            btnClass="toolbar-square-btn"
-            :color="config.link.isAttrToAttr ? 'primary' : '#e8eef1'"
-            depressed
-            @click="toggleIsAttrToAttr"
-        >
-            <template v-slot:btn-content>
-                <v-icon size="22" :color="config.link.isAttrToAttr ? 'white' : 'blue-azure'">
-                    mdi-key-link
-                </v-icon>
-            </template>
-            {{ $mxs_t('info.drawFkLinks') }}
-        </mxs-tooltip-btn>
+    <div
+        class="er-toolbar-ctr d-flex align-center pr-3 white mxs-color-helper border-bottom-table-border"
+        :style="{ minHeight: `${height}px`, maxHeight: `${height}px` }"
+    >
         <v-tooltip top transition="slide-y-transition">
             <template v-slot:activator="{ on }">
-                <div v-on="on">
+                <div class="er-toolbar__btn" v-on="on">
                     <v-select
                         :value="config.linkShape.type"
                         :items="allLinkShapes"
@@ -23,24 +13,25 @@
                         item-value="id"
                         name="linkShapeType"
                         outlined
-                        class="link-shape-select vuetify-input--override v-select--mariadb error--text__bottom"
+                        class="link-shape-select vuetify-input--override v-select--mariadb v-select--mariadb--borderless"
                         :menu-props="{
-                            contentClass: 'v-select--menu-mariadb',
+                            contentClass:
+                                'v-select--menu-mariadb v-menu--mariadb-with-shadow-no-border',
                             bottom: true,
                             offsetY: true,
                         }"
                         dense
-                        :height="height"
+                        :height="buttonHeight"
                         hide-details
                         @change="onChangeLinkShape"
                     >
                         <template v-slot:selection="{ item }">
-                            <v-icon size="28" color="blue-azure">
+                            <v-icon size="28" color="primary">
                                 {{ `$vuetify.icons.mxs_${$helpers.lodash.camelCase(item)}Shape` }}
                             </v-icon>
                         </template>
                         <template v-slot:item="{ item }">
-                            <v-icon size="28" color="blue-azure">
+                            <v-icon size="28" color="primary">
                                 {{ `$vuetify.icons.mxs_${$helpers.lodash.camelCase(item)}Shape` }}
                             </v-icon>
                         </template>
@@ -49,26 +40,74 @@
             </template>
             {{ $mxs_t('shapeOfLinks') }}
         </v-tooltip>
-        <v-spacer />
+        <v-tooltip top transition="slide-y-transition">
+            <template v-slot:activator="{ on }">
+                <div class="er-toolbar__btn" v-on="on">
+                    <v-select
+                        v-model.number="zoomValue"
+                        :items="ERD_ZOOM_OPTS"
+                        name="zoomSelect"
+                        outlined
+                        class="zoom-select vuetify-input--override v-select--mariadb v-select--mariadb--borderless"
+                        :menu-props="{
+                            contentClass:
+                                'v-select--menu-mariadb v-menu--mariadb-with-shadow-no-border',
+                            bottom: true,
+                            offsetY: true,
+                            closeOnContentClick: true,
+                        }"
+                        dense
+                        :height="buttonHeight"
+                        hide-details
+                        :maxlength="3"
+                        :placeholder="handleShowSelection()"
+                        @keypress="$helpers.preventNonNumericalVal($event)"
+                    >
+                        <template v-slot:prepend-item>
+                            <v-list-item link @click="$emit('set-zoom', { isFitIntoView: true })">
+                                {{ $mxs_t('fit') }}
+                            </v-list-item>
+                        </template>
+                        <template v-slot:selection> {{ handleShowSelection() }} </template>
+                        <template v-slot:item="{ item }"> {{ `${item}%` }} </template>
+                    </v-select>
+                </div>
+            </template>
+            {{ $mxs_t('zoom') }}
+        </v-tooltip>
+
+        <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
+
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
-            icon
-            small
+            :text="!config.link.isAttrToAttr"
+            depressed
+            color="primary"
+            @click="toggleIsAttrToAttr"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22">mdi-key-link </v-icon>
+            </template>
+            {{ $mxs_t('info.drawFkLinks') }}
+        </mxs-tooltip-btn>
+
+        <v-spacer />
+        <mxs-tooltip-btn
+            btnClass="er-toolbar__btn toolbar-square-btn"
+            text
             :disabled="!Boolean(activeErdConn.id)"
             :color="activeErdConn ? 'primary' : ''"
             @click="genErd"
         >
             <template v-slot:btn-content>
-                <v-icon size="20">
-                    $vuetify.icons.mxs_reports
-                </v-icon>
+                <v-icon size="20">$vuetify.icons.mxs_reports </v-icon>
             </template>
             {{ $mxs_t('genErd') }}
         </mxs-tooltip-btn>
         <connection-btn
-            btnClass="connection-btn"
+            btnClass="er-toolbar__btn connection-btn"
             depressed
-            :height="height"
+            :height="buttonHeight"
             :activeConn="activeErdConn"
             @click="SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })"
         />
@@ -99,10 +138,13 @@ export default {
     props: {
         value: { type: Object, required: true },
         height: { type: Number, required: true },
+        zoom: { type: Number, required: true },
+        isFitIntoView: { type: Boolean, required: true },
     },
     computed: {
         ...mapState({
             QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
+            ERD_ZOOM_OPTS: state => state.mxsWorkspace.config.ERD_ZOOM_OPTS,
         }),
         config: {
             get() {
@@ -117,6 +159,17 @@ export default {
         },
         activeErdConn() {
             return QueryConn.getters('getActiveErdConn')
+        },
+        buttonHeight() {
+            return 28
+        },
+        zoomValue: {
+            get() {
+                return Math.floor(this.zoom * 100)
+            },
+            set(v) {
+                if (v) this.$emit('set-zoom', { isFitIntoView: false, v: v / 100 })
+            },
         },
     },
     methods: {
@@ -147,26 +200,36 @@ export default {
                 gen_in_new_ws: false,
             })
         },
+        handleShowSelection() {
+            return `${this.isFitIntoView ? this.$mxs_t('fit') : `${this.zoomValue}%`}`
+        },
     },
 }
 </script>
 <style lang="scss" scoped>
 .er-toolbar-ctr {
-    width: 100%;
-    top: 0;
     z-index: 4;
+    .er-toolbar__separator {
+        min-height: 28px;
+        max-height: 28px;
+    }
 }
 </style>
 <style lang="scss">
 .er-toolbar-ctr {
+    .zoom-select,
     .link-shape-select {
         max-width: 64px;
-        fieldset {
-            border-radius: 0;
-        }
         .v-input__slot {
             padding-left: 8px !important;
             padding-right: 0px !important;
+        }
+    }
+    .zoom-select {
+        max-width: 76px;
+        input::placeholder {
+            color: black;
+            opacity: 1;
         }
     }
     .connection-btn {
@@ -174,6 +237,9 @@ export default {
         &:hover {
             border-radius: 0px !important;
         }
+    }
+    .er-toolbar__btn {
+        padding: 0px 2px;
     }
 }
 </style>

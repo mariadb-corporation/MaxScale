@@ -6,10 +6,10 @@
              the simulation is done. This ensures node size can be calculated dynamically.
         -->
         <graph-board
-            v-model="panAndZoom"
+            v-model="panAndZoomData"
             :scaleExtent="scaleExtent"
             :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
-            :dim="ctrDim"
+            :dim="dim"
             :graphDim="graphDim"
             @get-graph-ctr="svgGroup = $event"
         >
@@ -22,7 +22,7 @@
                     :defNodeSize="defNodeSize"
                     draggable
                     hoverable
-                    :boardZoom="panAndZoom.k"
+                    :boardZoom="panAndZoomData.k"
                     autoWidth
                     @node-size-map="onNodesRendered"
                     @drag="onNodeDrag"
@@ -122,6 +122,7 @@
  */
 /*
  * Emits:
+ * - $emit('on-rendered')
  * - $emit('on-nodes-coords-update', nodes:[])
  * - $emit('dbl-click-node', { e:Event, node: {} })
  */
@@ -151,7 +152,9 @@ export default {
         'erd-key-icon': ErdKeyIcon,
     },
     props: {
-        ctrDim: { type: Object, required: true },
+        dim: { type: Object, required: true },
+        panAndZoom: { type: Object, required: true }, // sync
+        scaleExtent: { type: Array, required: true },
         data: { type: Object, required: true },
         graphConfigData: { type: Object, required: true },
         isLaidOut: { type: Boolean, default: false },
@@ -169,12 +172,16 @@ export default {
             graphConfig: null,
             isDraggingNode: false,
             graphDim: {},
-            panAndZoom: { x: 0, y: 0, k: 1 },
         }
     },
     computed: {
-        scaleExtent() {
-            return [0.25, 2]
+        panAndZoomData: {
+            get() {
+                return this.panAndZoom
+            },
+            set(v) {
+                this.$emit('update:panAndZoom', v)
+            },
         },
         tdMaxWidth() {
             // entity max-width / 2 - offset. Offset includes padding and border
@@ -228,19 +235,16 @@ export default {
     created() {
         this.initGraphConfig()
         this.init()
-        this.graphDim = this.ctrDim
+        this.graphDim = this.dim
     },
     activated() {
         this.watchNodeIds()
-        this.watchCtrHeight()
     },
     deactivated() {
         this.$typy(this.unwatch_nodeIds).safeFunction()
-        this.$typy(this.unwatch_ctrHeight).safeFunction()
     },
     beforeDestroy() {
         this.$typy(this.unwatch_nodeIds).safeFunction()
-        this.$typy(this.unwatch_ctrHeight).safeFunction()
         this.$typy(this.unwatch_graphConfigData).safeFunction()
     },
     methods: {
@@ -252,11 +256,6 @@ export default {
                 },
                 { deep: true }
             )
-        },
-        watchCtrHeight() {
-            this.unwatch_ctrHeight = this.$watch('ctrDim.height', v => {
-                if (v) this.fitIntoView()
-            })
         },
         /**
          * Call this function will trigger rerender the graph
@@ -299,7 +298,7 @@ export default {
                         .strength(-15)
                         .theta(0.5)
                 )
-                .force('center', forceCenter(this.ctrDim.width / 2, this.ctrDim.height / 2))
+                .force('center', forceCenter(this.dim.width / 2, this.dim.height / 2))
                 .force('x', forceX().strength(0.1))
                 .force('y', forceY().strength(0.1))
 
@@ -323,7 +322,7 @@ export default {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
             this.drawLinks()
-            this.fitIntoView()
+            this.$emit('on-rendered')
             this.isRendering = false
             this.onNodesCoordsUpdate()
         },
@@ -479,31 +478,16 @@ export default {
             )
         },
         /**
-         * TODO: Add a mode to zoom in a particular node
-         * Auto adjust (zoom in or out) the contents of a graph to fit within the view.
+         * Function to be used by the parent component to get the correct dimension
+         * of the nodes for controlling the zoom
          */
-        fitIntoView() {
-            // set up zoom transform:
-            const minX = d3Min(this.graphData.nodes, n => n.x - n.size.width / 2)
-            const minY = d3Min(this.graphData.nodes, n => n.y - n.size.height / 2)
-            const maxX = d3Max(this.graphData.nodes, n => n.x + n.size.width / 2)
-            const maxY = d3Max(this.graphData.nodes, n => n.y + n.size.height / 2)
-            const graphWidth = maxX - minX
-            const graphHeight = maxY - minY
-
-            // scales with 2% padding
-            const xScale = (this.ctrDim.width / graphWidth) * 0.98
-            const yScale = (this.ctrDim.height / graphHeight) * 0.98
-
-            // get most restrictive scale and adjust value to fit within scaleExtent
-            let k = Math.min(xScale, yScale, this.scaleExtent[1])
-            if (k < this.scaleExtent[0]) k = this.scaleExtent[0]
-
-            if (k === 1) return null
-
-            const x = this.ctrDim.width / 2 - ((minX + maxX) / 2) * k
-            const y = this.ctrDim.height / 2 - ((minY + maxY) / 2) * k
-            this.panAndZoom = { x, y, k }
+        getGraphExtent() {
+            return {
+                minX: d3Min(this.graphData.nodes, n => n.x - n.size.width / 2),
+                minY: d3Min(this.graphData.nodes, n => n.y - n.size.height / 2),
+                maxX: d3Max(this.graphData.nodes, n => n.x + n.size.width / 2),
+                maxY: d3Max(this.graphData.nodes, n => n.y + n.size.height / 2),
+            }
         },
     },
 }

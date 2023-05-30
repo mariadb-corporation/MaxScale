@@ -83,7 +83,7 @@ export default {
                         .scaleExtent(this.scaleExtent)
                         .on('zoom', e => {
                             const { x, y, k } = e.transform
-                            this.panAndZoom = { x, y, k }
+                            this.panAndZoom = { x, y, k, eventType: e.sourceEvent.type }
                         })
                 )
                 .on('dblclick.zoom', null)
@@ -95,7 +95,7 @@ export default {
             const x = (this.dim.width - this.graphDim.width) / 2,
                 y = (this.dim.height - this.graphDim.height) / 2,
                 k = 1
-            this.panAndZoom = { x, y, k }
+            this.panAndZoom = { ...this.panAndZoom, x, y, k }
         },
         applyZoom(v) {
             this.svg.call(zoom().transform, zoomIdentity.translate(v.x, v.y).scale(v.k))

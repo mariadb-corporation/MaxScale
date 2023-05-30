@@ -1,11 +1,21 @@
 <template>
     <div class="fill-height d-flex flex-column">
-        <er-toolbar-ctr v-model="graphConfigData" :height="toolbarHeight" />
+        <er-toolbar-ctr
+            v-model="graphConfigData"
+            :height="toolbarHeight"
+            :zoom="panAndZoom.k"
+            :isFitIntoView="isFitIntoView"
+            @set-zoom="setZoom"
+        />
         <mxs-erd
+            ref="diagram"
+            :panAndZoom.sync="panAndZoom"
             :data="graphData"
-            :ctrDim="diagramDim"
+            :dim="diagramDim"
+            :scaleExtent="scaleExtent"
             :graphConfigData="graphConfigData"
             :isLaidOut="isLaidOut"
+            @on-rendered="fitIntoView"
             @on-nodes-coords-update="onNodesCoordsUpdate"
             @dbl-click-node="onNodeDblClick"
         />
@@ -53,6 +63,8 @@ export default {
                     entitySizeConfig: { rowHeight: 32, rowOffset: 4, headerHeight: 32 },
                 },
             },
+            isFitIntoView: false,
+            panAndZoom: { x: 0, y: 0, k: 1 },
         }
     },
     computed: {
@@ -72,10 +84,13 @@ export default {
             return this.$typy(this.activeErdTask, 'is_laid_out').safeBoolean
         },
         toolbarHeight() {
-            return 28
+            return 40
         },
         diagramDim() {
             return { width: this.dim.width, height: this.dim.height - this.toolbarHeight }
+        },
+        scaleExtent() {
+            return [0.25, 2]
         },
     },
     watch: {
@@ -97,6 +112,12 @@ export default {
                 })
             },
         },
+        panAndZoom: {
+            deep: true,
+            handler(v) {
+                if (v.eventType && v.eventType == 'wheel') this.isFitIntoView = false
+            },
+        },
     },
     created() {
         this.graphConfigData = this.$helpers.lodash.merge(
@@ -104,7 +125,21 @@ export default {
             this.activeGraphConfig
         )
     },
+    activated() {
+        this.watchDimHeight()
+    },
+    deactivated() {
+        this.$typy(this.unwatch_dimHeight).safeFunction()
+    },
+    beforeDestroy() {
+        this.$typy(this.unwatch_dimHeight).safeFunction()
+    },
     methods: {
+        watchDimHeight() {
+            this.unwatch_dimHeight = this.$watch('dim.height', v => {
+                if (v) this.fitIntoView()
+            })
+        },
         onNodeDblClick({ node }) {
             ErdTask.update({
                 where: this.erdTaskId,
@@ -119,6 +154,36 @@ export default {
                     is_laid_out: true,
                 },
             })
+        },
+        fitIntoView() {
+            this.setZoom({ isFitIntoView: true })
+        },
+        calcFitZoom({ minX, maxX, minY, maxY }) {
+            const graphWidth = maxX - minX
+            const graphHeight = maxY - minY
+            // scales with 2% padding
+            const xScale = (this.diagramDim.width / graphWidth) * 0.98
+            const yScale = (this.diagramDim.height / graphHeight) * 0.98
+            // Choose the minimum scale among xScale, yScale, and the maximum allowed scale
+            let k = Math.min(xScale, yScale, this.scaleExtent[1])
+            // Clamp the scale value within the scaleExtent range
+            k = Math.min(Math.max(k, this.scaleExtent[0]), this.scaleExtent[1])
+            return k
+        },
+        /**
+         * TODO: Add a mode to zoom in a particular node after calling onNodeDblClick
+         * Auto adjust (zoom in or out) the contents of a graph
+         * @param {Boolean} [param.isFitIntoView] - is fit into view
+         * @param {Number} [param.v] - zoom value
+         */
+        setZoom({ isFitIntoView, v }) {
+            this.isFitIntoView = isFitIntoView
+            const graphExtent = this.$refs.diagram.getGraphExtent()
+            const k = v ? v : this.calcFitZoom(graphExtent)
+            const { minX, minY, maxX, maxY } = graphExtent
+            const x = this.diagramDim.width / 2 - ((minX + maxX) / 2) * k
+            const y = this.diagramDim.height / 2 - ((minY + maxY) / 2) * k
+            this.panAndZoom = { x, y, k }
         },
     },
 }

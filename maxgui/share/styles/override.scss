@@ -228,4 +228,10 @@
             }
         }
     }
+    &--borderless {
+        fieldset {
+            border-radius: 0;
+            border: none;
+        }
+    }
 }

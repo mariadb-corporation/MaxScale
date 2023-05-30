@@ -243,6 +243,7 @@
         "filterResult": "Filter result",
         "filters": "filter | filters",
         "filterSchemaObjects": "Filter schema objects",
+        "fit": "Fit",
         "forceClosing": "Force closing",
         "forgotPassword": "Forgot Password",
         "genErd": "Generate ERD",
@@ -525,6 +526,7 @@
         "welcomeTo": "Welcome to",
         "withHeaders": "With headers",
         "workspace": "Workspace",
-        "writable": "Writable"
+        "writable": "Writable",
+        "zoom": "Zoom"
     }
 }
