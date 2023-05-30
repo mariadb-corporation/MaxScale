@@ -6,12 +6,13 @@
              the simulation is done. This ensures node size can be calculated dynamically.
         -->
         <graph-board
+            v-model="panAndZoom"
             :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
             :dim="ctrDim"
             :graphDim="graphDim"
             @get-graph-ctr="svgGroup = $event"
         >
-            <template v-slot:append="{ data: { transform, zoom } }">
+            <template v-slot:append="{ data: { transform } }">
                 <graph-nodes
                     ref="graphNodes"
                     :nodes="graphData.nodes"
@@ -20,7 +21,7 @@
                     :defNodeSize="defNodeSize"
                     draggable
                     hoverable
-                    :boardZoom="zoom"
+                    :boardZoom="panAndZoom.k"
                     autoWidth
                     @node-size-map="onNodesRendered"
                     @drag="onNodeDrag"
@@ -166,6 +167,7 @@ export default {
             graphConfig: null,
             isDraggingNode: false,
             graphDim: {},
+            panAndZoom: { x: 0, y: 0, k: 1 },
         }
     },
     computed: {
@@ -219,6 +221,7 @@ export default {
         },
     },
     created() {
+        this.initGraphConfig()
         this.init()
         //TODO: if ctrDim changes, graph-board should change its transform value to re-center the graph
         this.graphDim = this.ctrDim
@@ -297,8 +300,10 @@ export default {
                 this.handleCollision()
             }
         },
-        initLinkInstance() {
+        initGraphConfig() {
             this.graphConfig = new GraphConfig(this.graphConfigData)
+        },
+        initLinkInstance() {
             this.entityLink = new EntityLink(this.graphConfig)
             this.watchConfig()
         },

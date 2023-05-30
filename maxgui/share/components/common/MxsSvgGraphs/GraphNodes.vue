@@ -67,7 +67,7 @@ export default {
         draggable: { type: Boolean, default: false },
         autoWidth: { type: Boolean, default: false },
         revertDrag: { type: Boolean, default: false },
-        boardZoom: { type: Object, required: true },
+        boardZoom: { type: Number, required: true },
         hoverable: { type: Boolean, default: false },
     },
     data() {
@@ -203,8 +203,8 @@ export default {
             if (startCoord && draggingNodeId === node.id) {
                 const diffPos = { x: e.clientX - startCoord.x, y: e.clientY - startCoord.y }
                 // calc offset position
-                let diffX = diffPos.x / this.boardZoom.k,
-                    diffY = diffPos.y / this.boardZoom.k
+                let diffX = diffPos.x / this.boardZoom,
+                    diffY = diffPos.y / this.boardZoom
                 // update startCoord
                 this.draggingStates = {
                     ...this.draggingStates,

@@ -4,7 +4,7 @@
         <svg ref="svg" class="mxs-graph" :width="dim.width" height="100%">
             <g id="graph-ctr" :style="{ transform }" />
         </svg>
-        <slot name="append" :data="slotData" />
+        <slot name="append" :data="{ transform }" />
     </div>
 </template>
 
@@ -33,21 +33,22 @@ import { zoom, zoomIdentity } from 'd3-zoom'
 export default {
     name: 'graph-board',
     props: {
+        value: { type: Object, required: true },
         dim: { type: Object, required: true },
         graphDim: { type: Object, default: () => ({ width: 0, height: 0 }) },
     },
-    data() {
-        return {
-            graphBoardZoom: { x: 24, y: this.dim.height / 2, k: 1 },
-        }
-    },
     computed: {
         transform() {
-            const { x, y, k } = this.graphBoardZoom
+            const { x, y, k } = this.panAndZoom
             return `translate(${x}px, ${y}px) scale(${k})`
         },
-        slotData() {
-            return { transform: this.transform, zoom: this.graphBoardZoom }
+        panAndZoom: {
+            get() {
+                return this.value
+            },
+            set(v) {
+                this.$emit('input', v)
+            },
         },
     },
     watch: {
@@ -61,26 +62,30 @@ export default {
     mounted() {
         this.initSvg()
     },
-
     methods: {
         initSvg() {
             // Draw svg mxs-graph
             const svg = d3Select(this.$refs.svg)
-                .call(zoom().on('zoom', e => (this.graphBoardZoom = e.transform)))
+                .call(
+                    zoom()
+                        .scaleExtent([0.25, 2])
+                        .on('zoom', e => {
+                            const { x, y, k } = e.transform
+                            this.panAndZoom = { x, y, k }
+                        })
+                )
                 .on('dblclick.zoom', null)
             this.centerGraph()
             this.$emit('get-graph-ctr', svg.select('g#graph-ctr'))
         },
         // Vertically and horizontally Center graph
         centerGraph() {
-            this.graphBoardZoom = zoomIdentity
-                .translate(
-                    (this.dim.width - this.graphDim.width) / 2,
-                    (this.dim.height - this.graphDim.height) / 2
-                )
-                .scale(1)
+            const x = (this.dim.width - this.graphDim.width) / 2,
+                y = (this.dim.height - this.graphDim.height) / 2,
+                k = 1
+            this.panAndZoom = { x, y, k }
             // set transform
-            d3Select(this.$refs.svg).call(zoom().transform, this.graphBoardZoom)
+            d3Select(this.$refs.svg).call(zoom().transform, zoomIdentity.translate(x, y).scale(k))
         },
     },
 }

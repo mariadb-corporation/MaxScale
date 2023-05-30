@@ -19,6 +19,7 @@
                 >
                     <conf-node
                         :class="{ 'no-pointerEvent': isDragging }"
+                        :style="{ minWidth: '220px', maxWidth: '250px' }"
                         :node="node"
                         :nodeSize="nodeSize"
                         :onNodeResized="onNodeResized"

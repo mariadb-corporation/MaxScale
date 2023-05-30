@@ -1,12 +1,13 @@
 <template>
     <graph-board
+        v-model="panAndZoom"
         class="mxs-dag-graph-container"
         :style="revertGraphStyle"
         :dim="dim"
         :graphDim="dagDim"
         @get-graph-ctr="svgGroup = $event"
     >
-        <template v-slot:append="{ data: { transform, zoom } }">
+        <template v-slot:append="{ data: { transform } }">
             <graph-nodes
                 ref="graphNodes"
                 autoWidth
@@ -17,8 +18,8 @@
                 :defNodeSize="defNodeSize"
                 draggable
                 :revertDrag="revert"
-                :boardZoom="zoom"
-                @node-size-map="nodeSizeMap = $event"
+                :boardZoom="panAndZoom.k"
+                @node-size-map="onNodesRendered"
                 @drag="onNodeDrag"
                 @drag-end="onNodeDragEnd"
             >
@@ -73,13 +74,13 @@ export default {
             dagDim: { width: 0, height: 0 },
             graphNodes: [],
             graphNodeCoordMap: {},
-            nodeSizeMap: {},
             arrowHeadHeight: 12,
             isDraggingNode: false,
             chosenLinks: [],
             graphConfig: null,
             linkInstance: null,
             dagLinks: [],
+            panAndZoom: { x: 0, y: 0, k: 1 },
         }
     },
     computed: {
@@ -101,12 +102,6 @@ export default {
                 if (!this.$helpers.lodash.isEqual(v, oV)) this.draw()
             },
         },
-        nodeSizeMap: {
-            deep: true,
-            handler() {
-                this.draw()
-            },
-        },
         // Assign new data for graphNodes
         data: {
             deep: true,
@@ -116,10 +111,13 @@ export default {
             },
         },
     },
-    mounted() {
-        if (this.data.length) this.draw()
+    created() {
+        this.initGraphConfig()
     },
     methods: {
+        onNodesRendered() {
+            if (this.data.length) this.draw()
+        },
         draw() {
             this.initLinkInstance()
             this.computeLayout(this.data)
@@ -159,7 +157,7 @@ export default {
                 return map
             }, {})
         },
-        initLinkInstance() {
+        initGraphConfig() {
             this.graphConfig = new GraphConfig({
                 link: {
                     color: this.colorize,
@@ -167,6 +165,8 @@ export default {
                     [EVENT_TYPES.DRAGGING]: { dashArr: '0' },
                 },
             })
+        },
+        initLinkInstance() {
             this.linkInstance = new Link(this.graphConfig.link)
         },
         /**
