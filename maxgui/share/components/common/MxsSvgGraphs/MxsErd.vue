@@ -7,6 +7,7 @@
         -->
         <graph-board
             v-model="panAndZoom"
+            :scaleExtent="scaleExtent"
             :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
             :dim="ctrDim"
             :graphDim="graphDim"
@@ -133,6 +134,7 @@ import {
     forceX,
     forceY,
 } from 'd3-force'
+import { min as d3Min, max as d3Max } from 'd3-array'
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
@@ -171,6 +173,9 @@ export default {
         }
     },
     computed: {
+        scaleExtent() {
+            return [0.25, 2]
+        },
         tdMaxWidth() {
             // entity max-width / 2 - offset. Offset includes padding and border
             return 320 / 2 - 27
@@ -223,17 +228,19 @@ export default {
     created() {
         this.initGraphConfig()
         this.init()
-        //TODO: if ctrDim changes, graph-board should change its transform value to re-center the graph
         this.graphDim = this.ctrDim
     },
     activated() {
         this.watchNodeIds()
+        this.watchCtrHeight()
     },
     deactivated() {
         this.$typy(this.unwatch_nodeIds).safeFunction()
+        this.$typy(this.unwatch_ctrHeight).safeFunction()
     },
     beforeDestroy() {
         this.$typy(this.unwatch_nodeIds).safeFunction()
+        this.$typy(this.unwatch_ctrHeight).safeFunction()
         this.$typy(this.unwatch_graphConfigData).safeFunction()
     },
     methods: {
@@ -245,6 +252,11 @@ export default {
                 },
                 { deep: true }
             )
+        },
+        watchCtrHeight() {
+            this.unwatch_ctrHeight = this.$watch('ctrDim.height', v => {
+                if (v) this.fitIntoView()
+            })
         },
         /**
          * Call this function will trigger rerender the graph
@@ -311,6 +323,7 @@ export default {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
             this.drawLinks()
+            this.fitIntoView()
             this.isRendering = false
             this.onNodesCoordsUpdate()
         },
@@ -464,6 +477,33 @@ export default {
                 'on-nodes-coords-update',
                 this.$helpers.lodash.cloneDeep(this.graphData.nodes)
             )
+        },
+        /**
+         * TODO: Add a mode to zoom in a particular node
+         * Auto adjust (zoom in or out) the contents of a graph to fit within the view.
+         */
+        fitIntoView() {
+            // set up zoom transform:
+            const minX = d3Min(this.graphData.nodes, n => n.x - n.size.width / 2)
+            const minY = d3Min(this.graphData.nodes, n => n.y - n.size.height / 2)
+            const maxX = d3Max(this.graphData.nodes, n => n.x + n.size.width / 2)
+            const maxY = d3Max(this.graphData.nodes, n => n.y + n.size.height / 2)
+            const graphWidth = maxX - minX
+            const graphHeight = maxY - minY
+
+            // scales with 2% padding
+            const xScale = (this.ctrDim.width / graphWidth) * 0.98
+            const yScale = (this.ctrDim.height / graphHeight) * 0.98
+
+            // get most restrictive scale and adjust value to fit within scaleExtent
+            let k = Math.min(xScale, yScale, this.scaleExtent[1])
+            if (k < this.scaleExtent[0]) k = this.scaleExtent[0]
+
+            if (k === 1) return null
+
+            const x = this.ctrDim.width / 2 - ((minX + maxX) / 2) * k
+            const y = this.ctrDim.height / 2 - ((minY + maxY) / 2) * k
+            this.panAndZoom = { x, y, k }
         },
     },
 }

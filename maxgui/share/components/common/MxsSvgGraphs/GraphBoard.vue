@@ -36,6 +36,12 @@ export default {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
         graphDim: { type: Object, default: () => ({ width: 0, height: 0 }) },
+        scaleExtent: { type: Array, default: () => [0.25, 2] },
+    },
+    data() {
+        return {
+            svg: null,
+        }
     },
     computed: {
         transform() {
@@ -58,17 +64,23 @@ export default {
                 if (!this.$helpers.lodash.isEqual(v, oV)) this.centerGraph()
             },
         },
+        panAndZoom: {
+            deep: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.applyZoom(v)
+            },
+        },
     },
     mounted() {
         this.initSvg()
     },
     methods: {
         initSvg() {
-            // Draw svg mxs-graph
-            const svg = d3Select(this.$refs.svg)
+            this.svg = d3Select(this.$refs.svg)
+            this.svg
                 .call(
                     zoom()
-                        .scaleExtent([0.25, 2])
+                        .scaleExtent(this.scaleExtent)
                         .on('zoom', e => {
                             const { x, y, k } = e.transform
                             this.panAndZoom = { x, y, k }
@@ -76,7 +88,7 @@ export default {
                 )
                 .on('dblclick.zoom', null)
             this.centerGraph()
-            this.$emit('get-graph-ctr', svg.select('g#graph-ctr'))
+            this.$emit('get-graph-ctr', this.svg.select('g#graph-ctr'))
         },
         // Vertically and horizontally Center graph
         centerGraph() {
@@ -84,8 +96,9 @@ export default {
                 y = (this.dim.height - this.graphDim.height) / 2,
                 k = 1
             this.panAndZoom = { x, y, k }
-            // set transform
-            d3Select(this.$refs.svg).call(zoom().transform, zoomIdentity.translate(x, y).scale(k))
+        },
+        applyZoom(v) {
+            this.svg.call(zoom().transform, zoomIdentity.translate(v.x, v.y).scale(v.k))
         },
     },
 }
