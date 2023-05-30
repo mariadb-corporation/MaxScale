@@ -50,6 +50,7 @@ protected:
     {
         std::string          conn_user;
         std::string          conn_pw;
+        std::string          conn_prev_pw;
         std::vector<SERVER*> backends;
         std::string          users_file_path;
         UsersFileUsage       users_file_usage;
@@ -59,6 +60,16 @@ protected:
     /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
      *  ran yet. */
     std::atomic_bool m_warn_no_servers {false};
+
+    enum class UpdateResult
+    {
+        SUCCESS,
+        AUTH_ERROR,
+        ERROR
+    };
+
+private:
+    virtual UpdateResult update_users(const LoadSettings& sett) = 0;
 
 private:
     // Fields for controlling the updater thread.
@@ -82,6 +93,7 @@ private:
     mutable std::mutex   m_settings_lock;
     std::string          m_username;
     std::string          m_password;
+    std::string          m_prev_password;
     std::vector<SERVER*> m_backends;
     SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
 
@@ -94,7 +106,6 @@ private:
     /** Remove escape characters '\' from database names when fetching user info from backend. */
     std::atomic_bool m_strip_db_esc {true};
 
-    virtual bool update_users() = 0;
     void         updater_thread_function();
 };
 }

@@ -102,10 +102,9 @@ std::string MariaDBUserManager::protocol_name() const
     return MXS_MARIADB_PROTOCOL_NAME;
 }
 
-bool MariaDBUserManager::update_users()
+mxs::BaseUserManager::UpdateResult MariaDBUserManager::update_users(const LoadSettings& original_sett)
 {
-    LoadSettings sett = get_load_settings();
-
+    LoadSettings sett { original_sett };
     auto temp_userdata = std::make_unique<UserDatabase>();
     UserLoadRes res1;
     UserLoadRes res2;
@@ -163,7 +162,7 @@ bool MariaDBUserManager::update_users()
             MXB_NOTICE("%s", build_msg().c_str());
         }
     }
-    return res1.success;
+    return res1.success ? UpdateResult::SUCCESS : UpdateResult::ERROR;
 }
 
 MariaDBUserManager::UserLoadRes

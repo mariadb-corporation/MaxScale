@@ -228,7 +228,7 @@ private:
         INVALID_DATA,
     };
 
-    bool update_users() override;
+    UpdateResult update_users(const LoadSettings& sett) override;
 
     struct UserLoadRes
     {

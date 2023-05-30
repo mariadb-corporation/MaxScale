@@ -105,7 +105,7 @@ private:
     SUserDB            m_userdb;            /**< Contains user account info */
     std::atomic_int    m_userdb_version {0};/**< How many times the user database has changed */
 
-    bool update_users() override;
+    UpdateResult update_users(const LoadSettings& sett) override;
 
     enum class LoadResult
     {

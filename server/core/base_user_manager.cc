@@ -83,8 +83,17 @@ void BaseUserManager::update_user_accounts()
 void BaseUserManager::set_credentials(const std::string& user, const std::string& pw)
 {
     Guard guard(m_settings_lock);
-    m_username = user;
-    m_password = pw;
+    if (user != m_username)
+    {
+        m_username = user;
+        m_password = pw;
+        m_prev_password.clear();
+    }
+    else if (pw != m_password)
+    {
+        m_prev_password = m_password;
+        m_password = pw;
+    }
 }
 
 void BaseUserManager::set_backends(const std::vector<SERVER*>& backends)
@@ -192,7 +201,35 @@ void BaseUserManager::updater_thread_function()
 
         if (m_keep_running.load(acquire))
         {
-            if (update_users())
+            LoadSettings sett = get_load_settings();
+            auto rv = update_users(sett);
+
+            if (rv == UpdateResult::AUTH_ERROR)
+            {
+                MXB_INFO("Updating users of service '%s' using current password failed.", svc_name());
+
+                // Let's try with the previous password.
+                if (!m_prev_password.empty() && (m_prev_password != m_password))
+                {
+                    sett.conn_pw = sett.conn_prev_pw;
+
+                    rv = update_users(sett);
+
+                    if (rv == UpdateResult::SUCCESS)
+                    {
+                        MXB_WARNING("Updating users of service '%s' did not succeed using the current "
+                                    "password, but did succeed using the previous one.",
+                                    svc_name());
+                    }
+                    else
+                    {
+                        MXB_INFO("Updating users of service '%s' using previous password failed.",
+                                 svc_name());
+                    }
+                }
+            }
+
+            if (rv == UpdateResult::SUCCESS)
             {
                 m_consecutive_failed_loads = 0;
                 m_successful_loads++;
@@ -257,6 +294,7 @@ BaseUserManager::LoadSettings BaseUserManager::get_load_settings() const
     MutexLock lock(m_settings_lock);
     rval.conn_user = m_username;
     rval.conn_pw = m_password;
+    rval.conn_prev_pw = m_prev_password;
     rval.backends = m_backends;
     rval.users_file_path = m_users_file_path;
     rval.users_file_usage = m_users_file_usage;

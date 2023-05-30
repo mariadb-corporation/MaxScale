@@ -71,10 +71,9 @@ json_t* PgUserManager::users_to_json() const
     return ptr_copy->users_to_json();
 }
 
-bool PgUserManager::update_users()
+mxs::BaseUserManager::UpdateResult PgUserManager::update_users(const LoadSettings& original_sett)
 {
-    auto sett = get_load_settings();
-
+    LoadSettings sett { original_sett };
     auto temp_userdata = std::make_unique<PgUserDatabase>();
     bool file_enabled = !sett.users_file_path.empty();
 
@@ -111,7 +110,7 @@ bool PgUserManager::update_users()
             MXB_NOTICE("%s", total_msg.c_str());
         }
     }
-    return success;
+    return success ? UpdateResult::SUCCESS : UpdateResult::ERROR;
 }
 
 std::tuple<bool, std::string>
