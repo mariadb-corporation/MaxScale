@@ -1108,29 +1108,32 @@ bool Listener::unlisten_shared(mxs::RoutingWorker& worker)
     return false;
 }
 
+bool Listener::open_unique_listener(mxs::RoutingWorker& worker)
+{
+    bool rval = false;
+    int fd = start_listening(address(), port());
+
+    if (fd != -1)
+    {
+        // Set the worker-local fd to the unique value
+        *m_local_fd = fd;
+        rval = worker.add_pollable(EPOLLIN, this);
+
+        if (!rval)
+        {
+            *m_local_fd = -1;
+            close(fd);
+        }
+    }
+
+    return rval;
+}
+
 bool Listener::listen_unique()
 {
     auto open_socket = [this]() {
         mxb::LogScope scope(name());
-        bool rval = false;
-        int fd = start_listening(address(), port());
-
-        if (fd != -1)
-        {
-            // Set the worker-local fd to the unique value
-            *m_local_fd = fd;
-            if (mxs::RoutingWorker::get_current()->add_pollable(EPOLLIN, this))
-            {
-                rval = true;
-            }
-            else
-            {
-                *m_local_fd = -1;
-                close(fd);
-            }
-        }
-
-        return rval;
+        return open_unique_listener(*mxs::RoutingWorker::get_current());
     };
 
     bool rval = execute_and_check(open_socket);
@@ -1154,25 +1157,8 @@ bool Listener::listen_unique(mxs::RoutingWorker& worker)
 
         auto open_socket = [this, &worker, &rval]() {
             mxb_assert(*m_local_fd == -1);
-
             mxb::LogScope scope(name());
-
-            int fd = start_listening(address(), port());
-
-            if (fd != -1)
-            {
-                // Set the worker-local fd to the unique value
-                *m_local_fd = fd;
-                if (worker.add_pollable(EPOLLIN, this))
-                {
-                    rval = true;
-                }
-                else
-                {
-                    *m_local_fd = -1;
-                    close(fd);
-                }
-            }
+            rval = open_unique_listener(worker);
         };
 
         if (!worker.call(open_socket, mxb::Worker::EXECUTE_AUTO))
