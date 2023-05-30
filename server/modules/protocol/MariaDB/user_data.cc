@@ -102,12 +102,12 @@ std::string MariaDBUserManager::protocol_name() const
     return MXS_MARIADB_PROTOCOL_NAME;
 }
 
-mxs::BaseUserManager::UpdateResult MariaDBUserManager::update_users(const LoadSettings& original_sett)
+mxs::BaseUserManager::UpdateResult MariaDBUserManager::update_users(const LoadSettings& sett)
 {
-    LoadSettings sett { original_sett };
     auto temp_userdata = std::make_unique<UserDatabase>();
     UserLoadRes res1;
     UserLoadRes res2;
+    int mariadb_errnum = 0;
     bool file_enabled = !sett.users_file_path.empty();
 
     if (file_enabled && sett.users_file_usage == UsersFileUsage::FILE_ONLY_ALWAYS)
@@ -116,8 +116,8 @@ mxs::BaseUserManager::UpdateResult MariaDBUserManager::update_users(const LoadSe
     }
     else
     {
-        res1 = load_users_from_backends(std::move(sett.conn_user), std::move(sett.conn_pw),
-                                        std::move(sett.backends), *temp_userdata);
+        std::tie(res1, mariadb_errnum) = load_users_from_backends(sett.conn_user, sett.conn_pw,
+                                                                  sett.backends, *temp_userdata);
         if (file_enabled && sett.users_file_usage == UsersFileUsage::ADD_WHEN_LOAD_OK && res1.success)
         {
             res2 = load_users_from_file(sett.users_file_path, *temp_userdata);
@@ -162,16 +162,20 @@ mxs::BaseUserManager::UpdateResult MariaDBUserManager::update_users(const LoadSe
             MXB_NOTICE("%s", build_msg().c_str());
         }
     }
-    return res1.success ? UpdateResult::SUCCESS : UpdateResult::ERROR;
+    return res1.success
+        ? UpdateResult::SUCCESS
+        : (mariadb_errnum == ER_ACCESS_DENIED_ERROR ? UpdateResult::AUTH_ERROR : UpdateResult::ERROR);
 }
 
-MariaDBUserManager::UserLoadRes
-MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw,
-                                             std::vector<SERVER*>&& backends, UserDatabase& temp_userdata)
+std::pair<MariaDBUserManager::UserLoadRes, int>
+MariaDBUserManager::load_users_from_backends(const string& conn_user,
+                                             const string& conn_pw,
+                                             const std::vector<SERVER*>& all_backends,
+                                             UserDatabase& temp_userdata)
 {
     mxq::MariaDB con;
     auto& sett = con.connection_settings();
-    sett.user = move(conn_user);
+    sett.user = conn_user;
     sett.password = mxs::decrypt_password(conn_pw);
     sett.clear_sql_mode = true;
     sett.charset = "utf8mb4";
@@ -186,11 +190,15 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
     const bool union_over_bes = union_over_backends();
 
     // Filter out unusable backends.
-    auto is_unusable = [](const SERVER* srv) {
-        return !srv->active() || !srv->is_usable();
+    std::vector<SERVER*> backends;
+    backends.reserve(all_backends.size());
+
+    auto is_usable = [](const SERVER* srv) {
+        return srv->active() && srv->is_usable();
     };
-    auto erase_iter = std::remove_if(backends.begin(), backends.end(), is_unusable);
-    backends.erase(erase_iter, backends.end());
+
+    std::copy_if(all_backends.begin(), all_backends.end(), std::back_inserter(backends), is_usable);
+
     if (backends.empty() && m_warn_no_servers.load(relaxed))
     {
         MXB_ERROR("No valid servers from which to query MariaDB user accounts found.");
@@ -204,6 +212,7 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
     std::sort(backends.begin(), backends.end(), compare);
 
     bool got_data = false;
+    int mariadb_errnum = 0;
     std::vector<string> source_servernames;
     const char users_query_failed[] = "Failed to query server '%s' for user account info. %s";
 
@@ -264,6 +273,7 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
 
             case LoadResult::QUERY_FAILED:
                 MXB_ERROR(users_query_failed, srv->name(), con.error());
+                mariadb_errnum = con.errornum();
                 break;
 
             case LoadResult::INVALID_DATA:
@@ -279,6 +289,7 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
         else
         {
             MXB_ERROR(users_query_failed, srv->name(), con.error());
+            mariadb_errnum = con.errornum();
         }
     }
 
@@ -289,8 +300,10 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
         string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
         rval.msg = mxb::string_printf("%lu user@host entries from %s",
                                       temp_userdata.n_entries(), datasource.c_str());
+        mariadb_errnum = 0;
     }
-    return rval;
+
+    return std::make_pair(rval, mariadb_errnum);
 }
 
 MariaDBUserManager::LoadResult

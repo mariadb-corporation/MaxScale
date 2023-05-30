@@ -235,8 +235,10 @@ private:
         bool        success {false};
         std::string msg;
     };
-    UserLoadRes load_users_from_backends(std::string&& conn_user, std::string&& conn_pw,
-                                         std::vector<SERVER*>&& backends, UserDatabase& output);
+    std::pair<UserLoadRes,int> load_users_from_backends(const std::string& conn_user,
+                                                        const std::string& conn_pw,
+                                                        const std::vector<SERVER*>& all_backends,
+                                                        UserDatabase& output);
     UserLoadRes load_users_from_file(const std::string& source, UserDatabase& output);
 
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
