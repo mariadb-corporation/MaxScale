@@ -7,10 +7,10 @@
             <slot :name="`pane-${revertRender ? 'left' : 'right'}`" />
         </pane>
         <resizer
+            v-if="!disable"
             :style="resizerStyle"
             :split="split"
             :active="active"
-            :disable="disable"
             @mousedown.native="onMouseDown"
         />
         <div v-if="active" class="dragging-mask" />

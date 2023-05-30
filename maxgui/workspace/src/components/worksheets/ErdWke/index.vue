@@ -7,6 +7,7 @@
             :minPercent="minErdPct"
             :maxPercent="maxErdPct"
             :deactivatedMaxPctZone="maxErdPct - (100 - maxErdPct) * 2"
+            :disable="graphHeightPct === 100"
         >
             <template slot="pane-left">
                 <diagram-ctr :dim="erdDim" />
@@ -57,7 +58,7 @@ export default {
         },
         minErdPct() {
             return this.$helpers.pxToPct({
-                px: this.activeEntityId ? 26 : 0,
+                px: this.activeEntityId ? 42 : 0,
                 containerPx: this.dim.height,
             })
         },
