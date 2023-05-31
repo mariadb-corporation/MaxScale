@@ -117,7 +117,8 @@ bool MariaDBUserManager::update_users()
     }
     else
     {
-        res1 = load_users_from_backends(std::move(sett.conn_user), std::move(sett.conn_pw),
+        res1 = load_users_from_backends(std::move(sett.conn_user),
+                                        std::move(sett.conn_pw), std::move(sett.conn_prev_pw),
                                         std::move(sett.backends), *temp_userdata);
         if (file_enabled && sett.users_file_usage == UsersFileUsage::ADD_WHEN_LOAD_OK && res1.success)
         {
@@ -167,13 +168,14 @@ bool MariaDBUserManager::update_users()
 }
 
 MariaDBUserManager::UserLoadRes
-MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw,
+MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw, string&& conn_prev_pw,
                                              std::vector<SERVER*>&& backends, UserDatabase& temp_userdata)
 {
     mxq::MariaDB con;
     auto& sett = con.connection_settings();
     sett.user = move(conn_user);
     sett.password = mxs::decrypt_password(conn_pw);
+    sett.alternate_password = mxs::decrypt_password(conn_prev_pw);
     sett.clear_sql_mode = true;
     sett.charset = "utf8mb4";
 

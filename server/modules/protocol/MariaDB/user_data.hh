@@ -235,7 +235,8 @@ private:
         bool        success {false};
         std::string msg;
     };
-    UserLoadRes load_users_from_backends(std::string&& conn_user, std::string&& conn_pw,
+    UserLoadRes load_users_from_backends(std::string&& conn_user,
+                                         std::string&& conn_pw, std::string&& conn_prev_pw,
                                          std::vector<SERVER*>&& backends, UserDatabase& output);
     UserLoadRes load_users_from_file(const std::string& source, UserDatabase& output);
 
