@@ -1891,6 +1891,19 @@ See [MySQL protocol authentication documentation](../Authenticators/Authenticati
 for more information (such as required grants) and troubleshooting tips
 regarding user account management and client authentication.
 
+From 23.02.2 onwards, MaxScale will remember the previous password when the
+password is changed. If the fetching of the user account information fails
+using the new password, it will try the same using the previous one. The
+purpose of this change is to make it a smoother operation to change the
+password of the service user. The steps are now as follows:
+
+   1. `$ maxctrl alter service MyService password=TheNewPassword`
+   1. `MariaDB [(none)]> set password for TheServiceUser = password('TheNewPassword');
+
+Since the old password is remembered and used if the new password does not
+work, it is no longer vital to perform those steps simultaneously. However,
+until the latter step is made, errors will be logged.
+
 ### `enable_root_user`
 
 - **Type**: [boolean](#booleans)
