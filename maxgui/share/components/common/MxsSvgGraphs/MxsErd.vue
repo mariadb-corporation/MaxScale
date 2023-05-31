@@ -20,6 +20,7 @@
                     :coordMap.sync="graphNodeCoordMap"
                     :style="{ transform }"
                     :defNodeSize="defNodeSize"
+                    :nodeStyle="{ userSelect: 'none' }"
                     draggable
                     hoverable
                     :boardZoom="panAndZoomData.k"
@@ -32,6 +33,10 @@
                     v-on="$listeners"
                 >
                     <template v-slot:default="{ data: { node } }">
+                        <div
+                            v-if="node.id === activeNodeId"
+                            class="active-node-border-div absolute rounded-lg"
+                        />
                         <table
                             class="entity-table"
                             :style="{ borderColor: node.styles.highlightColor }"
@@ -158,6 +163,7 @@ export default {
         data: { type: Object, required: true },
         graphConfigData: { type: Object, required: true },
         isLaidOut: { type: Boolean, default: false },
+        activeNodeId: { type: String, default: '' },
     },
     data() {
         return {
@@ -548,5 +554,12 @@ export default {
             }
         }
     }
+}
+.active-node-border-div {
+    width: calc(100% + 12px);
+    height: calc(100% + 12px);
+    left: -6px;
+    top: -6px;
+    border: 4px solid $primary;
 }
 </style>

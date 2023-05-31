@@ -15,6 +15,7 @@
             :scaleExtent="scaleExtent"
             :graphConfigData="graphConfigData"
             :isLaidOut="isLaidOut"
+            :activeNodeId="activeEntityId"
             @on-rendered="fitIntoView"
             @on-nodes-coords-update="onNodesCoordsUpdate"
             @dbl-click-node="onNodeDblClick"
