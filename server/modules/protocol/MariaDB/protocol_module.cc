@@ -286,10 +286,10 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         auth_names = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
     }
 
-    // Contains protocol-level authentication options + plugin options.
-    mxs::ConfigParameters auth_config;
-    // Parse all options. Then read in authentication settings which affect the entire listener.
-    if (!parse_auth_options(auth_opts, &auth_config) || !read_authentication_options(&auth_config))
+    // Parse protocol-level authentication options + plugin options, the process and remove
+    // the protocol-level options.
+    auto [ok, auth_config] = mxs::parse_auth_options(auth_opts);
+    if (!ok || !read_authentication_options(&auth_config))
     {
         return {};      // error
     }
@@ -368,39 +368,6 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         authenticators.clear();
     }
     return authenticators;
-}
-
-/**
- * Parse the authenticator options string to config parameters object.
- *
- * @param opts Options string
- * @param params_out Config object to write to
- * @return True on success
- */
-bool MySQLProtocolModule::parse_auth_options(const std::string& opts, mxs::ConfigParameters* params_out)
-{
-    bool error = false;
-    auto opt_list = mxb::strtok(opts, ",");
-
-    for (const auto& opt : opt_list)
-    {
-        auto equals_pos = opt.find('=');
-        if (equals_pos != string::npos && equals_pos > 0 && opt.length() > equals_pos + 1)
-        {
-            string opt_name = opt.substr(0, equals_pos);
-            mxb::trim(opt_name);
-            string opt_value = opt.substr(equals_pos + 1);
-            mxb::trim(opt_value);
-            params_out->set(opt_name, opt_value);
-        }
-        else
-        {
-            MXB_ERROR("Invalid authenticator option setting: %s", opt.c_str());
-            error = true;
-            break;
-        }
-    }
-    return !error;
 }
 
 namespace

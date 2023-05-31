@@ -99,7 +99,6 @@ PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* 
     PgClientConnection::UserAuthSettings auth_settings;
     auth_settings.check_password = m_check_password;
     auth_settings.match_host_pattern = m_match_host_pattern;
-    auth_settings.allow_root_user = pSession->service->config()->enable_root;
 
     return std::make_unique<PgClientConnection>(pSession, m_sParser.get(), pComponent, auth_settings);
 }
@@ -164,6 +163,26 @@ PgProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
     // If no authenticator is set, the default authenticator will be loaded.
     auto auth_names = params.get_string(CN_AUTHENTICATOR);
     auto auth_opts = params.get_string(CN_AUTHENTICATOR_OPTIONS);
+
+    // Parse and process protocol-level authentication options.
+    auto [ok, auth_config] = mxs::parse_auth_options(auth_opts);
+    if (ok)
+    {
+        read_authentication_options(&auth_config);
+        if (!auth_config.empty())
+        {
+            // Any remaining settings in the config object are unrecognized.
+            for (const auto& elem : auth_config)
+            {
+                MXB_ERROR("Unrecognized authenticator option: '%s'", elem.first.c_str());
+            }
+            return {};
+        }
+    }
+    else
+    {
+        return {};
+    }
 
     const std::string auth_trust = "trust";
     const std::string auth_pw = "password";
@@ -242,4 +261,23 @@ bool PgProtocolModule::post_configure()
     }
 
     return m_sParser != nullptr;
+}
+
+void PgProtocolModule::read_authentication_options(mxs::ConfigParameters* params)
+{
+    // Read any values recognized by the protocol itself and remove them. The leftovers are given to
+    // authenticators if required.
+    const std::string opt_skip_auth = "skip_authentication";
+    const std::string opt_match_host = "match_host";
+
+    if (params->contains(opt_skip_auth))
+    {
+        m_check_password = !params->get_bool(opt_skip_auth);
+        params->remove(opt_skip_auth);
+    }
+    if (params->contains(opt_match_host))
+    {
+        m_match_host_pattern = params->get_bool(opt_match_host);
+        params->remove(opt_match_host);
+    }
 }

@@ -33,7 +33,6 @@ public:
     {
         bool check_password {true};     /**< From listener */
         bool match_host_pattern {true}; /**< From listener */
-        bool allow_root_user {false};   /**< From service */
     };
 
     PgClientConnection(MXS_SESSION* pSession,

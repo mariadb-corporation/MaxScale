@@ -183,6 +183,14 @@ public:
 private:
     ContainerType m_contents;
 };
+
+/**
+ * Parse the authenticator options string to config parameters object.
+ *
+ * @param opts Options string
+ * @return True on success + parsed parameters
+ */
+std::tuple<bool, mxs::ConfigParameters> parse_auth_options(std::string_view opts);
 }
 
 /**

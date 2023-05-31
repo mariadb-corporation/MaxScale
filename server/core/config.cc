@@ -1139,6 +1139,34 @@ Config::ParamKeyManager Config::s_key_manager(
     mxs::KeyManager::Type::NONE,
     config::Param::AT_RUNTIME
     );
+
+std::tuple<bool, mxs::ConfigParameters> parse_auth_options(std::string_view opts)
+{
+    bool success = true;
+    mxs::ConfigParameters params;
+
+    auto opt_list = mxb::strtok(opts, ",");
+    for (const auto& opt : opt_list)
+    {
+        auto equals_pos = opt.find('=');
+        if (equals_pos != string::npos && equals_pos > 0 && opt.length() > equals_pos + 1)
+        {
+            string opt_name = opt.substr(0, equals_pos);
+            mxb::trim(opt_name);
+            string opt_value = opt.substr(equals_pos + 1);
+            mxb::trim(opt_value);
+            params.set(opt_name, opt_value);
+        }
+        else
+        {
+            MXB_ERROR("Invalid authenticator option setting: %s", opt.c_str());
+            success = false;
+            params.clear();
+            break;
+        }
+    }
+    return {success, std::move(params)};
+}
 }
 
 namespace

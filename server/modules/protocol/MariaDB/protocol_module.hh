@@ -53,7 +53,6 @@ public:
 
 private:
     MySQLProtocolModule(const std::string& name);
-    bool parse_auth_options(const std::string& opts, mxs::ConfigParameters* params_out);
     bool read_authentication_options(mxs::ConfigParameters* params);
 
     /** Partial user search settings. These settings originate from the listener and do not

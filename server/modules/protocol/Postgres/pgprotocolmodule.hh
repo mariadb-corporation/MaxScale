@@ -56,11 +56,12 @@ public:
 
 private:
     PgProtocolModule(std::string name, SERVICE* pService);
+    void read_authentication_options(mxs::ConfigParameters* params);
 
 private:
     PgConfiguration           m_config;
     SERVICE&                  m_service;
     std::unique_ptr<PgParser> m_sParser;
-    bool                      m_check_password {true};     /**< Check client password */
-    bool                      m_match_host_pattern {true}; /**< Client address must match hba entry */
+    bool                      m_check_password {true};      /**< Check client password */
+    bool                      m_match_host_pattern {true};  /**< Client address must match hba entry */
 };
