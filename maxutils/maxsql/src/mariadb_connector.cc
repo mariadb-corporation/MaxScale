@@ -63,6 +63,39 @@ MariaDB::~MariaDB()
     close();
 }
 
+namespace
+{
+
+bool connect_mariadb(MYSQL* newconn,
+                     const std::string& host, int port,
+                     const char* userc, const char* passwdc, const char* dbc)
+{
+    bool connection_success = false;
+    int opts = CLIENT_REMEMBER_OPTIONS;
+
+    if (host.empty() || host[0] != '/')
+    {
+        const char* hostc = host.empty() ? nullptr : host.c_str();
+        // Assume the host is a normal address. Empty host is treated as "localhost".
+        if (mysql_real_connect(newconn, hostc, userc, passwdc, dbc, port, nullptr, opts) != nullptr)
+        {
+            connection_success = true;
+        }
+    }
+    else
+    {
+        // The host looks like an unix socket.
+        if (mysql_real_connect(newconn, nullptr, userc, passwdc, dbc, 0, host.c_str(), opts) != nullptr)
+        {
+            connection_success = true;
+        }
+    }
+
+    return connection_success;
+}
+
+}
+
 bool MariaDB::open(const std::string& host, int port, const std::string& db)
 {
     mxb_assert(port >= 0);      // MaxScale config loader should not accept negative values. 0 is ok.
@@ -204,25 +237,20 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
     const char* passwdc = m_settings.password.c_str();
     const char* dbc = db.c_str();
 
-    bool connection_success = false;
-    int opts = CLIENT_REMEMBER_OPTIONS;
+    bool connection_success = connect_mariadb(newconn, host, port, userc, passwdc, dbc);
 
-    if (host.empty() || host[0] != '/')
+    if (!connection_success
+        && mysql_errno(newconn) == ER_ACCESS_DENIED_ERROR
+        && m_settings.alternate_password != m_settings.password
+        && !m_settings.alternate_password.empty())
     {
-        const char* hostc = host.empty() ? nullptr : host.c_str();
-        // Assume the host is a normal address. Empty host is treated as "localhost".
-        if (mysql_real_connect(newconn, hostc, userc, passwdc, dbc, port, nullptr, opts) != nullptr)
-        {
-            connection_success = true;
-        }
-    }
-    else
-    {
-        // The host looks like an unix socket.
-        if (mysql_real_connect(newconn, nullptr, userc, passwdc, dbc, 0, host.c_str(), opts) != nullptr)
-        {
-            connection_success = true;
-        }
+        MXB_INFO("Connecting to %s as %s did not succeed using current password, now attempting "
+                 "with alternate (possibly previous) password.",
+                 host.c_str(), userc);
+
+        passwdc = m_settings.alternate_password.c_str();
+
+        connection_success = connect_mariadb(newconn, host, port, userc, passwdc, dbc);
     }
 
     bool rval = false;

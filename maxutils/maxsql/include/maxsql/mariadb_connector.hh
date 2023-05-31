@@ -49,6 +49,7 @@ public:
 
         std::string user;
         std::string password;
+        std::string alternate_password;
 
         std::string local_address;
         std::string plugin_dir;
