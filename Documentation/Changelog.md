@@ -14,6 +14,9 @@
 * Common configuration settings can now be specified in a separate section,
   to be included by other sections.
 
+* When changing the service password, the previous password will be retained
+  and continue to be used if the new does not work.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the

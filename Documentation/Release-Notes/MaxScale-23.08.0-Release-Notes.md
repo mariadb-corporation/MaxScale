@@ -23,6 +23,14 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## New Features
 
+### [MXS-4232](https://jira.mariadb.org/browse/MXS-4232) Remember old service password
+
+When the service password is changed, MaxScale will remember and use the previous
+password if the new does not work. This makes it easier to manage the changing of
+the password, as the password in the backend and in MaxScale need not be changed
+simultaneously. More information about this functionality can be found
+[here](../Getting-Started/Configuration-Guide.md#user-and-password).
+
 ### [MXS-4377](https://jira.mariadb.org/browse/MXS-4377) Common options
 
 It is now possible to specify options in an _include_-section, to be included
