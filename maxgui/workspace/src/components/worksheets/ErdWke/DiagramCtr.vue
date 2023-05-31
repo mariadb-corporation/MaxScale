@@ -36,6 +36,7 @@
  * Public License.
  */
 import ErdTask from '@wsModels/ErdTask'
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
@@ -92,6 +93,9 @@ export default {
         scaleExtent() {
             return [0.25, 2]
         },
+        activeEntityId() {
+            return ErdTask.getters('getActiveEntityId')
+        },
     },
     watch: {
         graphConfigData: {
@@ -126,22 +130,23 @@ export default {
         )
     },
     activated() {
-        this.watchDimHeight()
+        this.watchActiveEntityId()
     },
     deactivated() {
-        this.$typy(this.unwatch_dimHeight).safeFunction()
+        this.$typy(this.unwatch_activeEntityId).safeFunction()
     },
     beforeDestroy() {
-        this.$typy(this.unwatch_dimHeight).safeFunction()
+        this.$typy(this.unwatch_activeEntityId).safeFunction()
     },
     methods: {
-        watchDimHeight() {
-            this.unwatch_dimHeight = this.$watch('dim.height', v => {
-                if (v) this.fitIntoView()
+        watchActiveEntityId() {
+            this.unwatch_activeEntityId = this.$watch('activeEntityId', () => {
+                //TODO: Replace with method to zoom into the node
+                this.fitIntoView()
             })
         },
         onNodeDblClick({ node }) {
-            ErdTask.update({
+            ErdTaskTmp.update({
                 where: this.erdTaskId,
                 data: { graph_height_pct: 50, active_entity_id: node.id },
             })
@@ -171,7 +176,6 @@ export default {
             return k
         },
         /**
-         * TODO: Add a mode to zoom in a particular node after calling onNodeDblClick
          * Auto adjust (zoom in or out) the contents of a graph
          * @param {Boolean} [param.isFitIntoView] - is fit into view
          * @param {Number} [param.v] - zoom value

@@ -33,6 +33,7 @@
  * Public License.
  */
 import ErdTask from '@wsModels/ErdTask'
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 
@@ -65,18 +66,18 @@ export default {
         maxErdPct() {
             return 100 - this.minErdPct
         },
-        activeErdTask() {
-            return ErdTask.getters('getActiveErdTask')
-        },
         activeEntityId() {
-            return this.$typy(this.activeErdTask, 'active_entity_id').safeString
+            return ErdTask.getters('getActiveEntityId')
         },
         graphHeightPct: {
             get() {
-                return this.$typy(this.activeErdTask, 'graph_height_pct').safeNumber
+                return ErdTask.getters('getGraphHeightPct')
             },
             set(v) {
-                ErdTask.update({ where: this.activeErdTask.id, data: { graph_height_pct: v } })
+                ErdTaskTmp.update({
+                    where: ErdTask.getters('getActiveErdTaskId'),
+                    data: { graph_height_pct: v },
+                })
             },
         },
     },

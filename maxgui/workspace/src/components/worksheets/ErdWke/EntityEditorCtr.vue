@@ -21,18 +21,14 @@
  * Public License.
  */
 import ErdTask from '@wsModels/ErdTask'
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 
 export default {
     name: 'entity-editor-ctr',
-    computed: {
-        activeErdTask() {
-            return ErdTask.getters('getActiveErdTask')
-        },
-    },
     methods: {
         close() {
-            ErdTask.update({
-                where: this.activeErdTask.id,
+            ErdTaskTmp.update({
+                where: ErdTask.getters('getActiveErdTaskId'),
                 data: { graph_height_pct: 100, active_entity_id: '' },
             })
         },

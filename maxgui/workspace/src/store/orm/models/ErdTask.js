@@ -25,8 +25,6 @@ export default class ErdTask extends Extender {
         return {
             data: this.attr({ nodes: [], links: [] }),
             count: this.number(1),
-            graph_height_pct: this.number(100),
-            active_entity_id: this.string(''),
             graph_config: this.attr({
                 link: { isAttrToAttr: false },
                 linkShape: { type: LINK_SHAPES.ORTHO },

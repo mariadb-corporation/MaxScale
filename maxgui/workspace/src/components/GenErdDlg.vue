@@ -44,6 +44,7 @@
  */
 import { mapState, mapActions, mapMutations } from 'vuex'
 import ErdTask from '@wsSrc/store/orm/models/ErdTask'
+import ErdTaskTmp from '@wsSrc/store/orm/models/ErdTaskTmp'
 import QueryConn from '@wsSrc/store/orm/models/QueryConn'
 import Worksheet from '@wsSrc/store/orm/models/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
@@ -147,15 +148,11 @@ export default {
                 }
                 WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
                 Worksheet.update({ where: activeWkeId, data: { name: this.name } })
-                ErdTask.update({
+                ErdTaskTmp.update({
                     where: activeWkeId,
-                    data: {
-                        data: erdData,
-                        graph_height_pct: 100,
-                        active_entity_id: '',
-                        is_laid_out: false,
-                    },
+                    data: { graph_height_pct: 100, active_entity_id: '' },
                 })
+                ErdTask.update({ where: activeWkeId, data: { data: erdData, is_laid_out: false } })
             }
         },
     },

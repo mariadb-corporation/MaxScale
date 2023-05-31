@@ -56,5 +56,8 @@ export default {
     getters: {
         getActiveErdTaskId: () => Worksheet.getters('getActiveWkeId'),
         getActiveErdTask: (_, getters) => ErdTask.find(getters.getActiveErdTaskId) || {},
+        getActiveErdTaskTmp: (_, getters) => ErdTaskTmp.find(getters.getActiveErdTaskId) || {},
+        getGraphHeightPct: (_, getters) => getters.getActiveErdTaskTmp.graph_height_pct || 100,
+        getActiveEntityId: (_, getters) => getters.getActiveErdTaskTmp.active_entity_id,
     },
 }

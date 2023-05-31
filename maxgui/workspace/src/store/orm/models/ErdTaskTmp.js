@@ -21,7 +21,8 @@ export default class ErdTaskTmp extends Extender {
      */
     static getNonKeyFields() {
         return {
-            db_ddl: this.attr([]),
+            graph_height_pct: this.number(100),
+            active_entity_id: this.string(''),
         }
     }
 
