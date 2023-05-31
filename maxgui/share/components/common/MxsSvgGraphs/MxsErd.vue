@@ -498,6 +498,11 @@ export default {
     background: white;
     width: 100%;
     border-spacing: 0px;
+    tr,
+    thead,
+    tbody {
+        border-color: inherit;
+    }
     thead {
         th {
             border-top: 8px solid;
