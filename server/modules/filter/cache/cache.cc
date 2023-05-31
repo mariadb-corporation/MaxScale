@@ -85,7 +85,7 @@ cache_result_t Cache::get_default_key(const std::string& user,
 
     uint64_t crc = 0;
 
-    const Bytef* pData;
+    const uint8_t* pData;
 
     if (zDefault_db)
     {

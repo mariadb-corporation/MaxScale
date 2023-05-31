@@ -19,6 +19,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
+#include <maxbase/checksum.hh>
 #include <maxbase/json.hh>
 #include <maxbase/filesystem.hh>
 
@@ -495,7 +496,7 @@ std::string ConfigManager::checksum() const
     if (m_current_config)
     {
         auto cnf = m_current_config.get_object(CN_CONFIG).to_string(mxb::Json::Format::COMPACT);
-        rval = mxs::checksum<mxs::SHA1Checksum>(cnf);
+        rval = mxb::checksum<mxb::Sha1Sum>(cnf);
     }
 
     return rval;

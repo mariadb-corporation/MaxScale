@@ -17,6 +17,7 @@
 #include <map>
 #include <sstream>
 
+#include <maxbase/checksum.hh>
 #include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
 #include <maxscale/cachingparser.hh>
@@ -1948,7 +1949,7 @@ static HttpResponse handle_request(const HttpRequest& request)
 
     // Calculate the checksum from the generated JSON
     auto str = mxb::json_dump(rval.get_response(), JSON_COMPACT);
-    auto cksum = '"' + mxs::checksum<mxs::SHA1Checksum>(str) + '"';
+    auto cksum = '"' + mxb::checksum<mxb::Sha1Sum>(str) + '"';
 
     if (request_precondition_met(request, rval, cksum))
     {

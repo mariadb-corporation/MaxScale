@@ -21,6 +21,7 @@
 #include <maxscale/backend.hh>
 #include <maxscale/router.hh>
 #include <maxscale/utils.hh>
+#include <maxbase/checksum.hh>
 
 class MyBackend;
 using SMyBackends = std::vector<std::unique_ptr<MyBackend>>;
@@ -38,7 +39,7 @@ public:
 
     void process_result(const GWBUF& buffer, const mxs::Reply& reply);
 
-    const mxs::CRC32Checksum& checksum() const
+    const mxb::CRC32& checksum() const
     {
         return m_checksum;
     }
@@ -55,8 +56,8 @@ public:
     }
 
 private:
-    Clock::time_point  m_start;
-    Clock::time_point  m_end;
-    mxs::CRC32Checksum m_checksum;
-    mxs::Reply         m_reply;
+    Clock::time_point m_start;
+    Clock::time_point m_end;
+    mxb::CRC32        m_checksum;
+    mxs::Reply        m_reply;
 };

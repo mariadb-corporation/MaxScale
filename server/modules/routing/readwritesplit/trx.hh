@@ -18,6 +18,7 @@
 #include <list>
 #include <vector>
 
+#include <maxbase/checksum.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
@@ -25,9 +26,11 @@
 // A statement in a transaction.
 struct Stmt
 {
-    GWBUF              buffer;
-    mxs::CRC32Checksum checksum;
-    size_t             bytes {0};
+    using Checksum = mxb::CRC32;
+
+    GWBUF    buffer;
+    Checksum checksum;
+    size_t   bytes {0};
 
     Stmt shallow_clone()
     {
@@ -57,8 +60,8 @@ class Trx
 {
 public:
     // A log of executed queries, for transaction replay
-    typedef std::list<GWBUF>                TrxLog;
-    typedef std::vector<mxs::CRC32Checksum> ChecksumLog;
+    typedef std::list<GWBUF>                        TrxLog;
+    typedef std::vector<Stmt::Checksum::value_type> ChecksumLog;
 
     Trx()
         : m_size(0)
@@ -133,7 +136,7 @@ public:
      *
      * @param buf Result to add
      */
-    void add_result(const mxs::CRC32Checksum& checksum)
+    void add_result(const Stmt::Checksum::value_type& checksum)
     {
         m_checksums.push_back(checksum);
     }

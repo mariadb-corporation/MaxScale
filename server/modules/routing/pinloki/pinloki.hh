@@ -24,6 +24,8 @@
 #include <maxscale/router.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 
+#include <zlib.h>
+
 #include "writer.hh"
 #include "config.hh"
 #include "parser.hh"

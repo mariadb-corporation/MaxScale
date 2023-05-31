@@ -13,6 +13,7 @@
  */
 
 #include <maxbase/assert.hh>
+#include <maxbase/checksum.hh>
 #include <maxscale/utils.hh>
 #include <maxbase/random.hh>
 #include <string.h>
@@ -26,18 +27,19 @@ using std::endl;
 namespace
 {
 
+uint8_t data[] =
+{
+    'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!'
+};
+
 template<typename T>
 int test_checksums()
 {
-    uint8_t data[] =
-    {
-        'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!'
-    };
-
     GWBUF d1(data, sizeof(data));
     GWBUF d2(data, sizeof(data));
 
-    T sum1, sum2;
+    T sum1;
+    T sum2;
     sum1.update(d1);
     sum1.finalize();
     sum2.finalize(d1);
@@ -72,6 +74,22 @@ int test_checksums()
     mxb_assert(sum2.hex() == saved);
 
     return 0;
+}
+
+template<class Alg>
+int test_checksum_result(std::string_view input, std::string_view expected)
+{
+    int errors = 0;
+    Alg c;
+    c.finalize(reinterpret_cast<const uint8_t*>(input.data()), input.size());
+
+    if (auto val = c.hex(); val != expected)
+    {
+        std::cout << "Expected a result of " << expected << " but got " << val << " instead." << std::endl;
+        ++errors;
+    }
+
+    return errors;
 }
 
 int test_base64()
@@ -122,8 +140,10 @@ int main(int argc, char* argv[])
     int rv = 0;
 
     init_test_env();
-    rv += test_checksums<mxs::SHA1Checksum>();
-    rv += test_checksums<mxs::CRC32Checksum>();
+    rv += test_checksums<mxb::Sha1Sum>();
+    rv += test_checksums<mxb::CRC32>();
+    rv += test_checksum_result<mxb::CRC32>("hello world", "85114a0d");
+    rv += test_checksum_result<mxb::Sha1Sum>("hello world", "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed");
     rv += test_base64();
 
     return rv;
