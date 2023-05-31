@@ -71,7 +71,6 @@ const HexLookupTable hex_lookup_table = init_hex_lookup_table();
 
 /* used in the bin2hex function */
 const char hex_upper[] = "0123456789ABCDEF";
-const char hex_lower[] = "0123456789abcdef";
 
 HexLookupTable init_hex_lookup_table() noexcept
 {
@@ -861,14 +860,6 @@ std::string crypt(const std::string& password, const std::string& salt)
     std::string pw = crypt(password.c_str(), salt.c_str());
     return pw;
 #endif
-}
-
-std::string to_hex(uint8_t value)
-{
-    std::string out;
-    out += hex_lower[value >> 4];
-    out += hex_lower[value & 0x0F];
-    return out;
 }
 
 std::vector<uint8_t> from_hex(const std::string& str)

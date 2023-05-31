@@ -643,4 +643,54 @@ inline const char* consume_comment(const char* read_ptr,
 
     return read_ptr;
 }
+
+/**
+ * Get hexadecimal string representation of @c value
+ *
+ * @param value Value to convert
+ *
+ * @return Hexadecimal string representation of @c value
+ */
+static inline std::string to_hex(uint8_t value)
+{
+    std::string out;
+    const char hex_lower[] = "0123456789abcdef";
+    out += hex_lower[value >> 4];
+    out += hex_lower[value & 0x0F];
+    return out;
+}
+
+
+template<typename T, typename V>
+struct hex_iterator
+{
+};
+
+template<typename T>
+struct hex_iterator<T, uint8_t>
+{
+    std::string operator()(T begin, T end)
+    {
+        std::string rval;
+        for (auto it = begin; it != end; it++)
+        {
+            rval += to_hex(*it);
+        }
+        return rval;
+    }
+};
+
+/**
+ * Create hexadecimal representation of a type
+ *
+ * @param begin Starting iterator
+ * @param end   End iterator
+ *
+ * @return Hexadecimal string representation of the data
+ */
+template<typename Iter>
+std::string to_hex(Iter begin, Iter end)
+{
+    return hex_iterator<Iter, typename std::iterator_traits<Iter>::value_type>()(begin, end);
+}
 }

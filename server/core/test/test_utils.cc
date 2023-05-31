@@ -106,8 +106,8 @@ int test_base64()
 
         if (decoded != data)
         {
-            std::cout << "Original data: " << mxs::to_hex(data.begin(), data.end()) << std::endl;
-            std::cout << "Decoded data:  " << mxs::to_hex(decoded.begin(), decoded.end()) << std::endl;
+            std::cout << "Original data: " << mxb::to_hex(data.begin(), data.end()) << std::endl;
+            std::cout << "Decoded data:  " << mxb::to_hex(decoded.begin(), decoded.end()) << std::endl;
             std::cout << "Base64 data:   " << encoded << std::endl;
             return 1;
         }
