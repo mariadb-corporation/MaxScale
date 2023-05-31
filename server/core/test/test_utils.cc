@@ -142,8 +142,10 @@ int main(int argc, char* argv[])
     init_test_env();
     rv += test_checksums<mxb::Sha1Sum>();
     rv += test_checksums<mxb::CRC32>();
+    rv += test_checksums<mxb::xxHash>();
     rv += test_checksum_result<mxb::CRC32>("hello world", "85114a0d");
     rv += test_checksum_result<mxb::Sha1Sum>("hello world", "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed");
+    rv += test_checksum_result<mxb::xxHash>("hello world", "c7b615cc75879ba90049873fe9098ddf");
     rv += test_base64();
 
     return rv;

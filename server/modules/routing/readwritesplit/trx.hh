@@ -26,7 +26,7 @@
 // A statement in a transaction.
 struct Stmt
 {
-    using Checksum = mxb::CRC32;
+    using Checksum = mxb::xxHash;
 
     GWBUF    buffer;
     Checksum checksum;

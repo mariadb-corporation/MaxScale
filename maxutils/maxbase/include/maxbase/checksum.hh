@@ -19,6 +19,9 @@
 
 #include <maxbase/string.hh>
 
+#define XXH_INLINE_ALL 1
+#include <maxbase/xxHash/xxhash.h>
+
 namespace maxbase
 {
 
@@ -200,6 +203,48 @@ private:
     }
 
     value_type m_sum {0};       /**< Final checksum */
+};
+
+/**
+ * 128-bit xxHash checksum
+ */
+class xxHash final : public ChecksumBase<xxHash>
+{
+public:
+    friend class ChecksumBase<xxHash>;
+    using value_type = std::array<uint8_t, sizeof(XXH128_hash_t)>;
+
+    xxHash()
+    {
+        reset();
+    }
+
+private:
+    void update_impl(const uint8_t* ptr, size_t len)
+    {
+        XXH3_128bits_update(&m_state, ptr, len);
+    }
+
+    void finalize_impl()
+    {
+        static_assert(sizeof(decltype(XXH3_128bits_digest(&m_state))) == sizeof(m_sum));
+        const auto val = XXH3_128bits_digest(&m_state);
+        memcpy(m_sum.data(), &val, m_sum.size());
+    }
+
+    void reset_impl()
+    {
+        XXH3_128bits_reset(&m_state);
+        memset(&m_sum, 0, sizeof(m_sum));
+    }
+
+    auto value_impl() const
+    {
+        return m_sum;
+    }
+
+    XXH3_state_t m_state;
+    value_type   m_sum;
 };
 
 // Convenience function for calculating a hex checksum
