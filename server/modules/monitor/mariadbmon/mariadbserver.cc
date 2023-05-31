@@ -1656,6 +1656,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
 {
     // The server should either be the master or be a standalone being rejoined.
     mxb_assert(is_master() || m_slave_status.empty());
+    auto& time_remaining = general.time_remaining;
     auto& error_out = general.error_out;
 
     // Step 2a: Remove [Master] from this server. This prevents compatible routers (RWS)
@@ -1668,70 +1669,94 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
         server->set_status(SERVER_DRAINING);
     }
 
-    bool demotion_error = false;
+    bool demotion_ok = true;
     // Step 2b: Enabling read-only can take a while if large trx are committing or table locks taken.
     StopWatch timer;
     bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, general.time_remaining, error_out);
-    general.time_remaining -= timer.lap();
+    time_remaining -= timer.lap();
     if (ro_enabled)
     {
+        bool supers_handled = true;
+        // In the rejoin-case, just leave read-only on. If super-users are causing problems it's probably
+        // too late to prevent anyway.
         if (type == OperationType::SWITCHOVER)
         {
-            // Step 2b: If other users with SUPER privileges are on, kick them out now since
+            // Step 2c: If other users with SUPER privileges are on, kick them out now since
             // read_only doesn't stop them from doing writes. As the server is draining, MaxScale
             // should not make new routing connections. Outside connections cannot be prevented.
-            if (!kick_out_super_users(general))
+            // Kick super-users while "FLUSH TABLES WITH READ LOCK" is on to ensure no trx from
+            // super-users are committing.
+            string error_msg;
+            bool lock_ok = execute_cmd_time_limit("FLUSH TABLES WITH READ LOCK;", time_remaining, &error_msg);
+            if (!lock_ok)
             {
-                demotion_error = true;
+                PRINT_JSON_ERROR(error_out, "Failed to lock tables on '%s': %s", name(), error_msg.c_str());
             }
+            time_remaining -= timer.lap();
+
+            bool kick_ok = lock_ok && kick_out_super_users(general);
+            timer.restart();
+
+            // Run unlock regardless of previous success, just to be certain any lingering locks are freed.
+            // Need to unlock here as otherwise the next steps would be blocked.
+            bool unlock_ok = execute_cmd_time_limit("UNLOCK TABLES;", time_remaining, &error_msg);
+            if (!unlock_ok)
+            {
+                PRINT_JSON_ERROR(error_out, "Failed to unlock tables on '%s': %s", name(), error_msg.c_str());
+            }
+            time_remaining -= timer.lap();
+            supers_handled = lock_ok && kick_ok && unlock_ok;
+        }
+
+        if (supers_handled)
+        {
+            if (m_settings.handle_event_scheduler)
+            {
+                // Step 2d: Using BINLOG_OFF to avoid adding any gtid events which could break external
+                // replication.
+                if (!disable_events(BinlogMode::BINLOG_OFF, error_out))
+                {
+                    demotion_ok = false;
+                    PRINT_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
+                }
+                time_remaining -= timer.lap();
+            }
+
+            // Step 2e: Run demotion_sql_file if no errors so far.
+            const string& sql_file = m_settings.demotion_sql_file;
+            if (demotion_ok && !sql_file.empty())
+            {
+                if (!run_sql_from_file(sql_file, error_out))
+                {
+                    demotion_ok = false;
+                    PRINT_JSON_ERROR(error_out,
+                                     "Execution of file '%s' failed during demotion of server '%s'.",
+                                     sql_file.c_str(), name());
+                }
+                time_remaining -= timer.lap();
+            }
+
+            if (demotion_ok)
+            {
+                // Step 2f: FLUSH LOGS to ensure that all events have been written to binlog.
+                string error_msg;
+                if (!execute_cmd_time_limit("FLUSH LOGS;", time_remaining, &error_msg))
+                {
+                    demotion_ok = false;
+                    PRINT_JSON_ERROR(error_out, "Failed to flush binary logs of '%s' during demotion: %s.",
+                                     name(), error_msg.c_str());
+                }
+                time_remaining -= timer.lap();
+            }
+        }
+        else
+        {
+            demotion_ok = false;
         }
     }
     else
     {
-        demotion_error = true;
-    }
-
-    if (!demotion_error && m_settings.handle_event_scheduler)
-    {
-        // TODO: Add query replying to enable_events
-        // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
-        // which could break external replication.
-        bool events_disabled = disable_events(BinlogMode::BINLOG_OFF, error_out);
-        general.time_remaining -= timer.lap();
-        if (!events_disabled)
-        {
-            demotion_error = true;
-            PRINT_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
-        }
-    }
-
-    // Step 2e: Run demotion_sql_file if no errors so far.
-    const string& sql_file = m_settings.demotion_sql_file;
-    if (!demotion_error && !sql_file.empty())
-    {
-        bool file_ran_ok = run_sql_from_file(sql_file, error_out);
-        general.time_remaining -= timer.lap();
-        if (!file_ran_ok)
-        {
-            demotion_error = true;
-            PRINT_JSON_ERROR(error_out, "Execution of file '%s' failed during demotion of server '%s'.",
-                             sql_file.c_str(), name());
-        }
-    }
-
-    if (!demotion_error)
-    {
-        // Step 2f: FLUSH LOGS to ensure that all events have been written to binlog.
-        string error_msg;
-        bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining,
-                                                   &error_msg);
-        general.time_remaining -= timer.lap();
-        if (!logs_flushed)
-        {
-            demotion_error = true;
-            PRINT_JSON_ERROR(error_out, "Failed to flush binary logs of '%s' during demotion: %s.",
-                             name(), error_msg.c_str());
-        }
+        demotion_ok = false;
     }
 
     if (!was_draining)
@@ -1739,7 +1764,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
         // TODO: Do this later?
         server->clear_status(SERVER_DRAINING);
     }
-    return !demotion_error;
+    return demotion_ok;
 }
 
 /**
