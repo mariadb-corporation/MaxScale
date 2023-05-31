@@ -353,9 +353,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
                 if (reply.is_complete())
                 {
                     const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(m_current_query.buffer));
-                    MXB_INFO("Adding %s to trx: %s Checksum: %s",
-                             cmd, get_sql_string(m_current_query.buffer).c_str(),
-                             m_current_query.checksum.hex().c_str());
+
                     // Add an empty checksum for any statements which we don't want to checksum. This allows
                     // us to identify which statement it was that caused the checksum mismatch.
                     if (!include_in_checksum(reply))
@@ -365,6 +363,10 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
 
                     m_current_query.checksum.finalize();
                     m_trx.add_result(m_current_query.checksum.value());
+
+                    MXB_INFO("Adding %s to trx: %s Checksum: %s",
+                             cmd, get_sql_string(m_current_query.buffer).c_str(),
+                             m_current_query.checksum.hex().c_str());
 
                     // Add the statement to the transaction now that the result is complete.
                     m_trx.add_stmt(backend, std::move(m_current_query.buffer));
