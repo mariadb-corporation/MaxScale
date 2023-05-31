@@ -258,7 +258,7 @@ private:
     // Whether a transaction replay can remain active
     inline bool can_continue_trx_replay() const
     {
-        return m_state == TRX_REPLAY && m_retry_duration < m_config->delayed_retry_timeout.count();
+        return replaying_trx() && m_retry_duration < m_config->delayed_retry_timeout.count();
     }
 
     // Whether a new transaction replay can be started, limited by transaction_replay_max_attempts and

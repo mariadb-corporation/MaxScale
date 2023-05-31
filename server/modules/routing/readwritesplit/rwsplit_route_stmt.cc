@@ -1004,7 +1004,7 @@ bool RWSplitSession::should_migrate_trx() const
     bool migrate = false;
 
     if (m_config->transaction_replay
-        && m_state != TRX_REPLAY// Transaction replay is not active
+        && !replaying_trx()     // Transaction replay is not active
         && trx_is_open()        // We have an open transaction
         && m_can_replay_trx)    // The transaction can be replayed
     {
