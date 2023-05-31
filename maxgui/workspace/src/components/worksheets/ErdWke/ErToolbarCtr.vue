@@ -168,7 +168,7 @@ export default {
                 return Math.floor(this.zoom * 100)
             },
             set(v) {
-                if (v) this.$emit('set-zoom', { isFitIntoView: false, v: v / 100 })
+                if (v) this.$emit('set-zoom', { v: v / 100 })
             },
         },
     },

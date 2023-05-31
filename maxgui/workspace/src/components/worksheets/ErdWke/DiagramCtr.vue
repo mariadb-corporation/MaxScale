@@ -140,9 +140,8 @@ export default {
     },
     methods: {
         watchActiveEntityId() {
-            this.unwatch_activeEntityId = this.$watch('activeEntityId', () => {
-                //TODO: Replace with method to zoom into the node
-                this.fitIntoView()
+            this.unwatch_activeEntityId = this.$watch('activeEntityId', v => {
+                if (!v) this.fitIntoView()
             })
         },
         onNodeDblClick({ node }) {
@@ -150,6 +149,8 @@ export default {
                 where: this.erdTaskId,
                 data: { graph_height_pct: 50, active_entity_id: node.id },
             })
+            // call in the next tick to ensure diagramDim height is up to date
+            this.$nextTick(() => this.zoomIntoNode(node))
         },
         onNodesCoordsUpdate(v) {
             ErdTask.update({
@@ -163,30 +164,46 @@ export default {
         fitIntoView() {
             this.setZoom({ isFitIntoView: true })
         },
-        calcFitZoom({ minX, maxX, minY, maxY }) {
+        calcFitZoom({ extent: { minX, maxX, minY, maxY }, paddingPct = 2 }) {
             const graphWidth = maxX - minX
             const graphHeight = maxY - minY
-            // scales with 2% padding
-            const xScale = (this.diagramDim.width / graphWidth) * 0.98
-            const yScale = (this.diagramDim.height / graphHeight) * 0.98
+            const xScale = (this.diagramDim.width / graphWidth) * (1 - paddingPct / 100)
+            const yScale = (this.diagramDim.height / graphHeight) * (1 - paddingPct / 100)
             // Choose the minimum scale among xScale, yScale, and the maximum allowed scale
             let k = Math.min(xScale, yScale, this.scaleExtent[1])
             // Clamp the scale value within the scaleExtent range
             k = Math.min(Math.max(k, this.scaleExtent[0]), this.scaleExtent[1])
             return k
         },
+        zoomIntoNode(node) {
+            const minX = node.x - node.size.width / 2
+            const minY = node.y - node.size.height / 2
+            const maxX = minX + node.size.width
+            const maxY = minY + node.size.height
+            this.setZoom({
+                isFitIntoView: true,
+                customExtent: { minX, maxX, minY, maxY },
+                /* add a padding of 20%, so there'd be some reserved space if the users
+                 * alter the table by adding new column
+                 */
+                paddingPct: 20,
+            })
+        },
         /**
          * Auto adjust (zoom in or out) the contents of a graph
-         * @param {Boolean} [param.isFitIntoView] - is fit into view
+         * @param {Boolean} [param.isFitIntoView] - if it's true, v param will be ignored
+         * @param {Object} [param.customExtent] - custom extent
          * @param {Number} [param.v] - zoom value
          */
-        setZoom({ isFitIntoView, v }) {
+        setZoom({ isFitIntoView = false, customExtent, v, paddingPct = 2 }) {
             this.isFitIntoView = isFitIntoView
-            const graphExtent = this.$refs.diagram.getGraphExtent()
-            const k = v ? v : this.calcFitZoom(graphExtent)
-            const { minX, minY, maxX, maxY } = graphExtent
+            const extent = customExtent ? customExtent : this.$refs.diagram.getGraphExtent()
+            const { minX, minY, maxX, maxY } = extent
+
+            const k = isFitIntoView ? this.calcFitZoom({ extent, paddingPct }) : v
             const x = this.diagramDim.width / 2 - ((minX + maxX) / 2) * k
             const y = this.diagramDim.height / 2 - ((minY + maxY) / 2) * k
+
             this.panAndZoom = { x, y, k }
         },
     },
