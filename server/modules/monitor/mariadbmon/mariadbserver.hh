@@ -562,6 +562,9 @@ public:
 
     const EventList& new_custom_events() const override;
 
+    bool relax_connector_timeouts(std::chrono::seconds op_timeout);
+    void restore_connector_timeouts();
+
 private:
     using EventManipulator = std::function<void (const EventInfo& event, mxb::Json& error_out)>;
     using EventStatusMapper = std::function<std::string (const EventInfo& event)>;
@@ -600,6 +603,7 @@ private:
     mxs::RLagState m_rlag_state {mxs::RLagState::NONE};
 
     EventList m_new_events;
+    MYSQL*    m_old_conn {nullptr}; /**< Stored old connection for duration of switchover. */
 
     bool               update_slave_status(std::string* errmsg_out = nullptr);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status) const;

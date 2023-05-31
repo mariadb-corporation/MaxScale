@@ -183,16 +183,32 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
 {
     StopWatch timer;
     string max_stmt_time;
-    int connector_timeout = -1;
     if (m_capabilities.max_statement_time)
     {
-        MXB_AT_DEBUG(int rv = ) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT,
-                                                  &connector_timeout);
+        // The effective statement timeout should be <= connector timeout, but not much greater than
+        // total time limit.
+        int conn_to = -1;
+        MXB_AT_DEBUG(int rv = ) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT, &conn_to);
         mxb_assert(rv == 0);
-        if (connector_timeout > 0)
+        // Even if time has effectively run out, give an individual query a few seconds to complete.
+        auto time_limit_s = std::max(round_to_seconds(time_limit), 5);
+
+        int eff_stmt_time = -1;
+        if (conn_to <= 0)
         {
-            max_stmt_time = string_printf("SET STATEMENT max_statement_time=%i FOR ", connector_timeout);
+            eff_stmt_time = time_limit_s;
         }
+        else if (conn_to <= 4)
+        {
+            // Should not happen with switchover, but perhaps can happen with some other operation.
+            eff_stmt_time = conn_to;
+        }
+        else
+        {
+            // Use a statement timeout a bit smaller than hard connector timeout to ensure it's hit first.
+            eff_stmt_time = std::min(conn_to - 1, time_limit_s);
+        }
+        max_stmt_time = string_printf("SET STATEMENT max_statement_time=%i FOR ", eff_stmt_time);
     }
 
     string complete_cmd = max_stmt_time;
@@ -2680,4 +2696,59 @@ const MonitorServer::EventList& MariaDBServer::new_custom_events() const
 const std::string& MariaDBServer::permission_test_query() const
 {
     return grant_test_query;
+}
+
+bool MariaDBServer::relax_connector_timeouts(std::chrono::seconds op_timeout)
+{
+    // Limit final connector timeout. Statement timeout will be 1s less.
+    auto new_timeout_max = 41s;
+    auto new_timeout_min = 6s;
+    // Prefer a timeout a bit smaller than the remaining operation time so that one query cannot
+    // consume all the remaining time.
+    auto eff_op_timeout = op_timeout - 5s;
+
+    std::chrono::seconds new_timeout = std::clamp(eff_op_timeout, new_timeout_min, new_timeout_max);
+
+    int conn_to = -1;
+    mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT, &conn_to);
+    // If the existing connector timeout was already larger than the requested one (or unlimited),
+    // use the old one.
+    if (conn_to == 0 || conn_to > new_timeout.count())
+    {
+        new_timeout = conn_to * 1s;
+    }
+
+    // Save the previous connection to a backup field. This keeps the old connection with its old
+    // timeouts alive and also preserves any exclusive locks the connection may hold. Do this
+    // even if using the same timeout to keep behavior similar to the normal case.
+    mxb_assert(!m_old_conn && con);
+    m_old_conn = std::exchange(con, nullptr);
+
+    auto conn_settings = m_shared.conn_settings;
+    conn_settings.read_timeout = new_timeout;
+    conn_settings.write_timeout = new_timeout;
+
+    bool rval = false;
+    auto res = ping_or_connect_to_db(conn_settings, *server, &con, &m_latest_error);
+    if (res == ConnectResult::NEWCONN_OK)
+    {
+        rval = true;
+    }
+    else
+    {
+        mysql_close(con);
+        con = nullptr;
+    }
+    return rval;
+}
+
+void MariaDBServer::restore_connector_timeouts()
+{
+    // The relax-function swaps the fields even on failure. The current connection is null in that case.
+    mxb_assert(m_old_conn);
+    if (con)
+    {
+        mysql_close(con);
+    }
+    con = std::exchange(m_old_conn, nullptr);
 }

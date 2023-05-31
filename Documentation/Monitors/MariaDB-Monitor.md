@@ -441,13 +441,14 @@ has at least a valid primary server.
 following:
 
 1. Prepare the old primary for demotion:
-      1. Stop any external replication.
-      2. Kill connections from super-users since *read\_only* does not affect
+      1. If `backend_read_timeout` is short, extend it and reconnect.
+      2. Stop any external replication.
+      3. Kill connections from super-users since *read\_only* does not affect
       them.
-      3. Enable the *read\_only*-flag to stop writes.
-      4. Disable scheduled server events (if event handling is on).
-      5. Run the commands in `demotion_sql_file`.
-      6. Flush the binary log (FLUSH LOGS) so that all events are on disk.
+      4. Enable the *read\_only*-flag to stop writes.
+      5. Disable scheduled server events (if event handling is on).
+      6. Run the commands in `demotion_sql_file`.
+      7. Flush the binary log (FLUSH LOGS) so that all events are on disk.
 2. Wait for the new primary to catch up with the old primary.
 3. Promote new primary and redirect replicas as in failover steps 3 and 4. Also
 redirect the demoted old primary.

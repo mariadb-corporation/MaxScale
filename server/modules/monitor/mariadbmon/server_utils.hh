@@ -340,3 +340,5 @@ private:
     int64_t m_owner_id {CONN_ID_UNKNOWN};
     Status  m_status {Status::UNKNOWN};
 };
+
+int round_to_seconds(mxb::Duration dur);

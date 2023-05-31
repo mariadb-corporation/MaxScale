@@ -512,3 +512,8 @@ bool ServerLock::is_free() const
 {
     return m_status == Status::FREE;
 }
+
+int round_to_seconds(mxb::Duration dur)
+{
+    return mxb::to_secs(dur) + 0.5;
+}

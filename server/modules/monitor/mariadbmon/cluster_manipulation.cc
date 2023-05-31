@@ -29,6 +29,7 @@ using maxbase::string_printf;
 using maxbase::StopWatch;
 using maxbase::Duration;
 using GtidMode = SlaveStatus::Settings::GtidMode;
+using LockType = MariaDBServer::LockType;
 using namespace std::chrono_literals;
 
 namespace
@@ -858,19 +859,35 @@ bool MariaDBMonitor::server_is_rejoin_suspect(GeneralOpData& op, MariaDBServer* 
  */
 bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
 {
+    using std::chrono::seconds;
+    using std::chrono::duration_cast;
     mxb_assert(op.demotion.target && op.promotion.target);
     const OperationType type = OperationType::SWITCHOVER;
     MariaDBServer* const promotion_target = op.promotion.target;
     MariaDBServer* const demotion_target = op.demotion.target;
 
     bool rval = false;
-    // Step 1: Set read-only to on, flush logs, update gtid:s.
     m_state = State::DEMOTE;
-    if (demotion_target->demote(op.general, op.demotion, OperationType::SWITCHOVER))
+
+    // Step 0: Prepare connection to old master
+    // Some of the following commands (e.g. set read_only=1) can take a while. The basic monitor timeouts
+    // may be too small, so reconnect with larger. To retain any exclusive locks held by the monitor,
+    // backup the old connection.
+    bool ok_to_demote = false;
+    StopWatch timer;
+    auto new_conn_timeout = round_to_seconds(op.general.time_remaining) * 1s;
+    if (demotion_target->relax_connector_timeouts(new_conn_timeout))
+    {
+        ok_to_demote = true;
+    }
+    op.general.time_remaining -= timer.lap();
+
+    // Step 1: Set read-only to on, flush logs, update gtid:s.
+    if (ok_to_demote && demotion_target->demote(op.general, op.demotion, OperationType::SWITCHOVER))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
-        StopWatch timer;
+        timer.restart();
         // Step 2: Wait for the promotion target to catch up with the demotion target. Disregard the other
         // slaves of the promotion target to avoid needless waiting.
         // The gtid:s of the demotion target were updated at the end of demotion.
@@ -944,6 +961,8 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
             }
         }
     }
+
+    demotion_target->restore_connector_timeouts();
     m_state = State::IDLE;
     return rval;
 }
