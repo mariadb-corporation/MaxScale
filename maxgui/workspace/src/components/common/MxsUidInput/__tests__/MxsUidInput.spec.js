@@ -13,14 +13,14 @@
  */
 
 import mount from '@tests/unit/setup'
-import UidInput from '../UidInput.vue'
+import MxsUidInput from '@wsSrc/components/common/MxsUidInput'
 import { getErrMsgEle, inputChangeMock } from '@tests/unit/utils'
 
-describe(`uid-input - form input tests`, () => {
+describe(`mxs-uid-input - form input tests`, () => {
     let wrapper
 
     it(`Should show error message if userID value is empty`, async () => {
-        wrapper = mount({ shallow: false, component: UidInput, attrs: { value: 'maxskysql' } })
+        wrapper = mount({ shallow: false, component: MxsUidInput, attrs: { value: 'maxskysql' } })
         const inputComponent = wrapper
         await inputChangeMock(inputComponent, '')
         expect(getErrMsgEle(inputComponent).text()).to.be.equals(

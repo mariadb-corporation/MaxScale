@@ -111,7 +111,7 @@
         >
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
-                    <readonly-sql-editor
+                    <mxs-sql-editor
                         :value="confDlg.sqlTxt"
                         class="readonly-editor fill-height"
                         readOnly
@@ -177,7 +177,6 @@ import QueryConn from '@wsModels/QueryConn'
 import Editor from '@wsModels/Editor'
 import QueryResult from '@wsModels/QueryResult'
 import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
-import SqlEditor from '@wsComps/SqlEditor'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
@@ -185,7 +184,6 @@ export default {
     name: 'txt-editor-toolbar-ctr',
     components: {
         RowLimitCtr,
-        'readonly-sql-editor': SqlEditor,
         FileBtnsCtr,
     },
     props: {

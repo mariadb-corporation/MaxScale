@@ -24,7 +24,7 @@
  */
 
 export default {
-    name: 'uid-input',
+    name: 'mxs-uid-input',
     inheritAttrs: false,
 }
 </script>

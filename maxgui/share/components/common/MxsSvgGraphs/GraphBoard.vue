@@ -1,5 +1,5 @@
 <template>
-    <div class="mxs-graph-board fill-height">
+    <div class="mxs-svg-graph-board fill-height">
         <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.mxs_gridBg</v-icon>
         <svg ref="svg" class="mxs-graph" :width="dim.width" height="100%">
             <g id="graph-ctr" :style="{ transform }" />
@@ -105,7 +105,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.mxs-graph-board {
+.mxs-svg-graph-board {
     width: 100%;
     position: relative;
     overflow: hidden;

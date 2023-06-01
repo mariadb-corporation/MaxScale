@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { LINK_SHAPES, TARGET_POS } from '@share/components/common/MxsSvgGraphs/config'
+import { LINK_SHAPES, TARGET_POS } from '@wsSrc/components/worksheets/ErdWke/config'
 
 export default class EntityLinkShape {
     constructor(graphConfig) {

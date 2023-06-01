@@ -79,7 +79,7 @@
 @on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
 @on-ungroup: Emit when the header has groupable key
 */
-import TableCell from './TableCell.vue'
+import TableCell from '@wsSrc/components/common/MxsVirtualScrollTbl/TableCell.vue'
 
 export default {
     name: 'horiz-row',

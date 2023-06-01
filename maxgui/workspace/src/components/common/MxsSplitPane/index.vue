@@ -31,8 +31,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Resizer from './Resizer.vue'
-import Pane from './Pane.vue'
+import Resizer from '@wsSrc/components/common/MxsSplitPane/Resizer.vue'
+import Pane from '@wsSrc/components/common/MxsSplitPane/Pane.vue'
 export default {
     name: 'mxs-split-pane',
     components: { Resizer, Pane },

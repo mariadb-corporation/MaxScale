@@ -41,7 +41,7 @@
                             :disable="isChartMaximized || !showVisChart"
                         >
                             <template slot="pane-left">
-                                <sql-editor
+                                <mxs-sql-editor
                                     ref="sqlEditor"
                                     v-model="allQueryTxt"
                                     class="editor pt-2 pl-2"
@@ -112,7 +112,6 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import TxtEditorToolbarCtr from '@wkeComps/QueryEditor/TxtEditorToolbarCtr.vue'
-import SqlEditor from '@wsComps/SqlEditor'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import ChartConfig from '@wkeComps/QueryEditor/ChartConfig'
 import ChartPane from '@wkeComps/QueryEditor/ChartPane'
@@ -122,7 +121,6 @@ export default {
     name: 'txt-editor-ctr',
     components: {
         TxtEditorToolbarCtr,
-        'sql-editor': SqlEditor,
         QueryResultCtr,
         ChartConfig,
         ChartPane,

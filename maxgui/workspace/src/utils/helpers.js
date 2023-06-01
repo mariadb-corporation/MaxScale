@@ -13,7 +13,7 @@
  */
 import { startOfDay, differenceInCalendarDays } from 'date-fns'
 import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
-import sqlFormatter from '@wsComps/SqlEditor/formatter'
+import sqlFormatter from '@wsSrc/components/common/MxsSqlEditor/formatter'
 
 export const deepDiff = require('deep-diff')
 

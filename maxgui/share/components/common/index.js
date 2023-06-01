@@ -11,37 +11,31 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import CreateResource from './CreateResource'
-import DataTable from './DataTable'
-import MxsDlgs from './MxsDlgs'
-import DurationDropdown from './DurationDropdown'
-import DetailsPage from './DetailsPage'
-import GlobalSearch from './GlobalSearch'
-import IconSpriteSheet from './IconSpriteSheet'
-import MonitorPageHeader from './MonitorPageHeader'
-import MxsCharts from './MxsCharts'
-import MxsCollapse from './MxsCollapse'
-import MxsFilterList from './MxsFilterList'
-import MxsSvgGraphs from './MxsSvgGraphs'
-import MxsDataTable from './MxsDataTable'
-import MxsSelect from './MxsSelect'
-import MxsSplitPane from './MxsSplitPane'
-import MxsSubMenu from './MxsSubMenu'
-import MxsTooltipBtn from './MxsTooltipBtn'
-import MxsTreeview from './MxsTreeview'
-import MxsTruncateStr from './MxsTruncateStr'
-import MxsTxtFieldWithLabel from './MxsTxtFieldWithLabel'
-import MxsVirtualScrollTbl from './MxsVirtualScrollTbl'
-import PageWrapper from './PageWrapper'
-import Parameters from './Parameters'
-import RepTooltip from './RepTooltip'
-import RefreshRate from './RefreshRate'
-import RoutingTargetSelect from './RoutingTargetSelect'
-import SessionsTable from './SessionsTable'
-import OutlinedOverviewCard from './OutlinedOverviewCard'
+import CreateResource from '@share/components/common/CreateResource'
+import DataTable from '@share/components/common/DataTable'
+import DurationDropdown from '@share/components/common/DurationDropdown'
+import DetailsPage from '@share/components/common/DetailsPage'
+import GlobalSearch from '@share/components/common/GlobalSearch'
+import IconSpriteSheet from '@share/components/common/IconSpriteSheet'
+import MonitorPageHeader from '@share/components/common/MonitorPageHeader'
+import MxsLineChartStream from '@share/components/common/MxsCharts/MxsLineChartStream.vue'
+import MxsDagGraph from '@share/components/common/MxsSvgGraphs/MxsDagGraph.vue'
+import MxsTreeGraph from '@share/components/common/MxsSvgGraphs/MxsTreeGraph.vue'
+import MxsTreeGraphNode from '@share/components/common/MxsSvgGraphs/MxsTreeGraphNode.vue'
+import PageWrapper from '@share/components/common/PageWrapper'
+import Parameters from '@share/components/common/Parameters'
+import RepTooltip from '@share/components/common/RepTooltip'
+import RefreshRate from '@share/components/common/RefreshRate'
+import RoutingTargetSelect from '@share/components/common/RoutingTargetSelect'
+import SessionsTable from '@share/components/common/SessionsTable'
+import OutlinedOverviewCard from '@share/components/common/OutlinedOverviewCard'
 
-//TODO: Rename other components to have mxs prefix
+import shared from '@share/components/common/shared'
+import { workspaceComponents } from '@wsSrc/components/common'
+
 export default {
+    ...shared,
+    ...workspaceComponents,
     'create-resource': CreateResource,
     'data-table': DataTable,
     'duration-dropdown': DurationDropdown,
@@ -49,20 +43,10 @@ export default {
     'global-search': GlobalSearch,
     'icon-sprite-sheet': IconSpriteSheet,
     'monitor-page-header': MonitorPageHeader,
-    ...MxsCharts,
-    ...MxsDlgs,
-    'mxs-collapse': MxsCollapse,
-    'mxs-filter-list': MxsFilterList,
-    ...MxsSvgGraphs,
-    'mxs-data-table': MxsDataTable,
-    'mxs-select': MxsSelect,
-    'mxs-split-pane': MxsSplitPane,
-    'mxs-sub-menu': MxsSubMenu,
-    'mxs-tooltip-btn': MxsTooltipBtn,
-    'mxs-treeview': MxsTreeview,
-    ...MxsTruncateStr,
-    'mxs-txt-field-with-label': MxsTxtFieldWithLabel,
-    'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
+    'mxs-line-chart-stream': MxsLineChartStream,
+    'mxs-dag-graph': MxsDagGraph,
+    'mxs-tree-graph': MxsTreeGraph,
+    'mxs-tree-graph-node': MxsTreeGraphNode,
     'page-wrapper': PageWrapper,
     ...Parameters,
     'rep-tooltip': RepTooltip,

@@ -11,25 +11,13 @@
  * Public License.
  */
 
-export const LINK_SHAPES = {
-    ORTHO: 'Orthogonal',
-    ENTITY_RELATION: 'Entity Relation',
-    STRAIGHT: 'Straight',
-}
-
-export const TARGET_POS = {
-    RIGHT: 'right',
-    LEFT: 'left',
-    INTERSECT: 'intersect',
-}
-
 export const EVENT_TYPES = {
     HOVER: 'hover',
     DRAGGING: 'dragging',
     NONE: '', // for reversing the styles
 }
 
-export default () => ({
+export const getLinkConfig = () => ({
     link: {
         containerClass: 'link_container',
         pathClass: 'link_path',
@@ -55,39 +43,4 @@ export default () => ({
          */
         isAttrToAttr: false,
     },
-    marker: {
-        width: 18,
-        markerClass: 'entity-marker__path',
-    },
-    linkShape: {
-        type: LINK_SHAPES.ORTHO,
-        entitySizeConfig: {
-            rowHeight: 32,
-            // Reserve 4 px to make sure point won't be at the top or bottom edge of the row
-            rowOffset: 4,
-            headerHeight: 32,
-        },
-    },
 })
-
-const optionalSymbol = 'M 0 0 a 4 4 0 1 0 9 0 a 4 4 0 1 0 -9 0'
-const manySymbol = 'M 9 0 L 18 0 M 9 0 L 18 -5 M 9 0 L 18 5'
-
-export const RELATIONSHIP_OPTIONALITY = {
-    MANDATORY: '1',
-    OPTIONAL: '0',
-}
-
-export const MIN_MAX_CARDINALITY = {
-    ONLY_ONE: '1..1',
-    ZERO_OR_ONE: '0..1',
-    ONE_OR_MANY: '1..N',
-    ZERO_OR_MANY: '0..N',
-}
-
-export const CARDINALITY_SYMBOLS = {
-    [MIN_MAX_CARDINALITY.ONLY_ONE]: `M 0 0 L 18 0 M 6 -5 L 6 5 M 11 -5 L 11 5`,
-    [MIN_MAX_CARDINALITY.ZERO_OR_ONE]: `${optionalSymbol} M 9 0 L 18 0 M 13.5 -5 L 13.5 5`,
-    [MIN_MAX_CARDINALITY.ONE_OR_MANY]: `M 0 0 L 9 0 M 9 -5 L 9 5 ${manySymbol}`,
-    [MIN_MAX_CARDINALITY.ZERO_OR_MANY]: `${optionalSymbol} ${manySymbol}`,
-}

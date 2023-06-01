@@ -23,7 +23,7 @@ import { t as typy } from 'typy'
 import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 import tokens from '@wsSrc/utils/createTableTokens'
-import { RELATIONSHIP_OPTIONALITY } from '@share/components/common/MxsSvgGraphs/config'
+import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 
 /**
  * @public

@@ -15,7 +15,7 @@ import {
     TARGET_POS,
     CARDINALITY_SYMBOLS,
     LINK_SHAPES,
-} from '@share/components/common/MxsSvgGraphs/config'
+} from '@wsSrc/components/worksheets/ErdWke/config'
 
 export default class EntityMarker {
     constructor(graphConfig) {

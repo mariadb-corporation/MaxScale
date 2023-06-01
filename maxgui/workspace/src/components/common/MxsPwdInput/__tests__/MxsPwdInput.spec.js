@@ -13,14 +13,14 @@
  */
 
 import mount from '@tests/unit/setup'
-import PwdInput from '../PwdInput.vue'
+import MxsPwdInput from '@wsSrc/components/common/MxsPwdInput'
 import { getErrMsgEle, inputChangeMock } from '@tests/unit/utils'
 
-describe(`pwd-input - form input tests`, () => {
+describe(`mxs-pwd-input - form input tests`, () => {
     let wrapper
 
     it(`Should show error message if pwd value is empty`, async () => {
-        wrapper = mount({ shallow: false, component: PwdInput, attrs: { value: 'skysql' } })
+        wrapper = mount({ shallow: false, component: MxsPwdInput, attrs: { value: 'skysql' } })
         const inputComponent = wrapper
         await inputChangeMock(inputComponent, '')
         expect(getErrMsgEle(inputComponent).text()).to.be.equals(

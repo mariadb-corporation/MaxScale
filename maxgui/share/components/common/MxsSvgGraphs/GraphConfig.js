@@ -10,13 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import defaultConfig from '@share/components/common/MxsSvgGraphs/config'
+
 import { lodash } from '@share/utils/helpers'
-import { t } from 'typy'
 
 export default class GraphConfig {
     constructor(config) {
-        let allConfig = lodash.merge(defaultConfig(), t(config).safeObjectOrEmpty)
+        let allConfig = config
         this.link = allConfig.link
         this.marker = allConfig.marker
         this.linkShape = allConfig.linkShape

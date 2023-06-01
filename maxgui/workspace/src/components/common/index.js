@@ -12,40 +12,30 @@
  * Public License.
  */
 import '@share/components/common/MxsCharts/config.js'
-import MxsErd from '@share/components/common/MxsSvgGraphs/MxsErd.vue'
-import MxsDataTable from '@share/components/common/MxsDataTable'
-import MxsDlgs from '@share/components/common/MxsDlgs'
-import MxsLineChart from '@share/components/common/MxsCharts/MxsLineChart.vue'
-import MxsScatterChart from '@share/components/common/MxsCharts/MxsScatterChart.vue'
-import MxsBarChart from '@share/components/common/MxsCharts/MxsBarChart.vue'
-import MxsCollapse from '@share/components/common/MxsCollapse'
-import MxsFilterList from '@share/components/common/MxsFilterList'
-import MxsSelect from '@share/components/common/MxsSelect'
-import MxsSplitPane from '@share/components/common/MxsSplitPane'
-import MxsSubMenu from '@share/components/common/MxsSubMenu'
-import MxsTooltipBtn from '@share/components/common/MxsTooltipBtn'
-import MxsTreeview from '@share/components/common/MxsTreeview'
-import MxsTruncateStr from '@share/components/common/MxsTruncateStr'
-import MxsTxtFieldWithLabel from '@share/components/common/MxsTxtFieldWithLabel'
-import MxsVirtualScrollTbl from '@share/components/common/MxsVirtualScrollTbl'
-import PageWrapper from '@share/components/common/PageWrapper'
+import shared from '@share/components/common/shared'
+import MxsPwdInput from '@wsSrc/components/common/MxsPwdInput'
+import MxsSplitPane from '@wsSrc/components/common/MxsSplitPane'
+import MxsSubMenu from '@wsSrc/components/common/MxsSubMenu'
+import MxsSqlEditor from '@wsSrc/components/common/MxsSqlEditor'
+import MxsTimeoutInput from '@wsSrc/components/common/MxsTimeoutInput/'
+import MxsTreeview from '@wsSrc/components/common/MxsTreeview'
+import MxsTxtFieldWithLabel from '@wsSrc/components/common/MxsTxtFieldWithLabel'
+import MxsUidInput from '@wsSrc/components/common/MxsUidInput'
+import MxsVirtualScrollTbl from '@wsSrc/components/common/MxsVirtualScrollTbl'
 
-export default {
-    'mxs-erd': MxsErd,
-    'mxs-data-table': MxsDataTable,
-    ...MxsDlgs,
-    'mxs-line-chart': MxsLineChart,
-    'mxs-scatter-chart': MxsScatterChart,
-    'mxs-bar-chart': MxsBarChart,
-    'mxs-collapse': MxsCollapse,
-    'mxs-filter-list': MxsFilterList,
-    'mxs-select': MxsSelect,
+// export to register in @share dir for dev env
+export const workspaceComponents = {
+    'mxs-pwd-input': MxsPwdInput,
     'mxs-split-pane': MxsSplitPane,
     'mxs-sub-menu': MxsSubMenu,
-    'mxs-tooltip-btn': MxsTooltipBtn,
+    'mxs-timeout-input': MxsTimeoutInput,
     'mxs-treeview': MxsTreeview,
-    ...MxsTruncateStr,
     'mxs-txt-field-with-label': MxsTxtFieldWithLabel,
+    'mxs-uid-input': MxsUidInput,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
-    'page-wrapper': PageWrapper,
+    'mxs-sql-editor': MxsSqlEditor,
+}
+export default {
+    ...shared,
+    ...workspaceComponents,
 }

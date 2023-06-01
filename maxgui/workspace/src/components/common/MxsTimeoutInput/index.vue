@@ -1,16 +1,12 @@
 <template>
     <mxs-txt-field-with-label
         v-bind="{ ...$attrs }"
+        :label="$mxs_t('timeout')"
+        name="timeout"
+        type="number"
         :required="true"
-        :type="isPwdVisible ? 'text' : 'password'"
-        autocomplete="new-password"
-        :label="$mxs_t('password')"
         v-on="$listeners"
-    >
-        <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
-            {{ isPwdVisible ? 'mdi-eye-off' : 'mdi-eye' }}
-        </v-icon>
-    </mxs-txt-field-with-label>
+    />
 </template>
 
 <script>
@@ -27,14 +23,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 export default {
-    name: 'pwd-input',
+    name: 'mxs-timeout-input',
     inheritAttrs: false,
-    data() {
-        return {
-            isPwdVisible: false,
-        }
-    },
 }
 </script>

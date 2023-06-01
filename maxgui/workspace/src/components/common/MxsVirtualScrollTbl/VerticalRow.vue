@@ -79,7 +79,7 @@
  * 0: indicates the `COLUMN` index in the html table headers
  * 1: indicates the `VALUE` index in the html table headers
  */
-import TableCell from './TableCell.vue'
+import TableCell from '@wsSrc/components/common/MxsVirtualScrollTbl/TableCell.vue'
 
 export default {
     name: 'vertical-row',

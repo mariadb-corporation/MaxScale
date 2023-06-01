@@ -7,7 +7,7 @@
             :isFitIntoView="isFitIntoView"
             @set-zoom="setZoom"
         />
-        <mxs-erd
+        <entity-diagram
             ref="diagram"
             :panAndZoom.sync="panAndZoom"
             :data="graphData"
@@ -39,12 +39,13 @@
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
-import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
-import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
+import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
+import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 
 export default {
     name: 'diagram-ctr',
-    components: { ErToolbarCtr },
+    components: { ErToolbarCtr, EntityDiagram },
     props: {
         dim: { type: Object, required: true },
     },

@@ -1,5 +1,5 @@
 <template>
-    <div class="graph-nodes-ctr">
+    <div class="mxs-svg-graph-nodes-ctr">
         <div
             v-for="node in nodes"
             ref="graphNode"
@@ -50,7 +50,7 @@
  * dbl-click-node({ e, node })
  */
 export default {
-    name: 'graph-nodes',
+    name: 'mxs-svg-graph-nodes',
     props: {
         nodes: {
             type: Array,
@@ -235,7 +235,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.graph-nodes-ctr {
+.mxs-svg-graph-nodes-ctr {
     top: 0;
     height: 0;
     width: 0;

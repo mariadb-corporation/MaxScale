@@ -124,10 +124,10 @@
 @scroll-end: Emit when table scroll to the last row
 @is-grouping: boolean
 */
-import TableHeader from './TableHeader'
-import VerticalRow from './VerticalRow.vue'
-import HorizRow from './HorizRow.vue'
-import RowGroup from './RowGroup.vue'
+import TableHeader from '@wsSrc/components/common/MxsVirtualScrollTbl/TableHeader'
+import VerticalRow from '@wsSrc/components/common/MxsVirtualScrollTbl/VerticalRow.vue'
+import HorizRow from '@wsSrc/components/common/MxsVirtualScrollTbl/HorizRow.vue'
+import RowGroup from '@wsSrc/components/common/MxsVirtualScrollTbl/RowGroup.vue'
 import customDragEvt from '@share/mixins/customDragEvt'
 export default {
     name: 'mxs-virtual-scroll-tbl',

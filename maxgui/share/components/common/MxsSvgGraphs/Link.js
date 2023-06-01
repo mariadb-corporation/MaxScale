@@ -14,7 +14,7 @@ import { getLinkStyles } from '@share/components/common/MxsSvgGraphs/utils'
 import { select as d3Select } from 'd3-selection'
 import { lodash } from '@share/utils/helpers'
 import { t } from 'typy'
-import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 
 export default class Link {
     constructor(config) {

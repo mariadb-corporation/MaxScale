@@ -43,13 +43,13 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <timeout-input v-model.number="dest.timeout" />
+            <mxs-timeout-input v-model.number="dest.timeout" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <uid-input v-model.trim="dest.user" name="db-user" />
+            <mxs-uid-input v-model.trim="dest.user" name="db-user" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <pwd-input v-model.trim="dest.password" name="db-password" />
+            <mxs-pwd-input v-model.trim="dest.password" name="db-password" />
         </v-col>
     </v-row>
 </template>
@@ -68,13 +68,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import PwdInput from '@wkeComps/PwdInput.vue'
-import UidInput from '@wkeComps/UidInput.vue'
-import TimeoutInput from '@wkeComps/TimeoutInput.vue'
-
 export default {
     name: 'etl-dest-conn',
-    components: { PwdInput, UidInput, TimeoutInput },
     props: {
         value: { type: Object, required: true },
         allServers: { type: Array, required: true },

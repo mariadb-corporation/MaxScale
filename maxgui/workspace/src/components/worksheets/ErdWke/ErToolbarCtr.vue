@@ -128,7 +128,7 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
-import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
+import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
 import { mapMutations, mapState } from 'vuex'
 

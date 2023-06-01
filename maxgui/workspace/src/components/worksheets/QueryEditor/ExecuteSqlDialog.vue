@@ -35,7 +35,7 @@
                completion items
                https://github.com/microsoft/monaco-editor/issues/1957
                 -->
-                <sql-editor
+                <mxs-sql-editor
                     v-if="isConfDlgOpened"
                     v-model="currSql"
                     :class="`fill-height`"
@@ -69,12 +69,8 @@
  * Events
  * update:sqlTobeExecuted?: (string)
  */
-import SqlEditor from '@wsComps/SqlEditor'
 export default {
     name: 'execute-sql-dialog',
-    components: {
-        'sql-editor': SqlEditor,
-    },
     props: {
         value: { type: Boolean, required: true },
         title: { type: String, required: true },

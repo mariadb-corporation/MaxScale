@@ -12,7 +12,7 @@
  */
 import Extender from '@wsSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@wsSrc/store/config'
-import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
+import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class ErdTask extends Extender {

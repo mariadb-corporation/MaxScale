@@ -216,7 +216,7 @@ describe(`ConnDlgCtr - form input tests`, () => {
     let wrapper
     it(`Should parse value as number for timeout field`, async () => {
         wrapper = mountFactory({ shallow: false })
-        const inputComponent = wrapper.findComponent({ name: 'timeout-input' })
+        const inputComponent = wrapper.findComponent({ name: 'mxs-timeout-input' })
         await inputChangeMock(inputComponent, '300')
         expect(wrapper.vm.body.timeout).to.be.equals(300)
     })

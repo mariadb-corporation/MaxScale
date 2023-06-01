@@ -89,10 +89,10 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <uid-input v-model.trim="body.user" name="db-user" />
+                        <mxs-uid-input v-model.trim="body.user" name="db-user" />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <pwd-input v-model.trim="body.password" name="db-password" />
+                        <mxs-pwd-input v-model.trim="body.password" name="db-password" />
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
@@ -102,7 +102,7 @@
                         />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <timeout-input v-model.number="body.timeout" />
+                        <mxs-timeout-input v-model.number="body.timeout" />
                     </v-col>
                 </v-row>
             </v-container>
@@ -126,13 +126,9 @@
  */
 import { mapActions, mapMutations, mapState } from 'vuex'
 import QueryConn from '@wsModels/QueryConn'
-import TimeoutInput from '@wkeComps/TimeoutInput.vue'
-import PwdInput from '@wkeComps/PwdInput.vue'
-import UidInput from '@wkeComps/UidInput.vue'
 
 export default {
     name: 'conn-dlg-ctr',
-    components: { TimeoutInput, PwdInput, UidInput },
     props: {
         value: { type: Boolean, required: true },
     },

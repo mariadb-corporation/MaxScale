@@ -26,7 +26,7 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <timeout-input v-model.number="src.timeout" />
+            <mxs-timeout-input v-model.number="src.timeout" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
             <label class="field__label mxs-color-helper text-small-text label-required">
@@ -83,10 +83,10 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <uid-input v-model.trim="src.user" :disabled="isAdvanced" name="odbc--uid" />
+            <mxs-uid-input v-model.trim="src.user" :disabled="isAdvanced" name="odbc--uid" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <pwd-input v-model.trim="src.password" :disabled="isAdvanced" name="odbc--pwd" />
+            <mxs-pwd-input v-model.trim="src.password" :disabled="isAdvanced" name="odbc--pwd" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
             <v-switch
@@ -128,15 +128,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import PwdInput from '@wkeComps/PwdInput.vue'
-import UidInput from '@wkeComps/UidInput.vue'
-import TimeoutInput from '@wkeComps/TimeoutInput.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { mapState } from 'vuex'
 
 export default {
     name: 'odbc-form',
-    components: { PwdInput, UidInput, TimeoutInput },
     props: {
         value: { type: Object, required: true },
         drivers: { type: Array, required: true },

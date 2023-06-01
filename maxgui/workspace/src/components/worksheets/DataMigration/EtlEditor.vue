@@ -17,7 +17,7 @@
                 {{ isFullScreen ? $mxs_t('minimize') : $mxs_t('maximize') }}
             </mxs-tooltip-btn>
         </code>
-        <sql-editor
+        <mxs-sql-editor
             v-model="sql"
             class="etl-editor__body pl-2"
             :options="{
@@ -43,12 +43,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import SqlEditor from '@wsComps/SqlEditor'
 export default {
     name: 'etl-editor',
-    components: {
-        'sql-editor': SqlEditor,
-    },
     props: {
         value: { type: String, required: true },
         label: { type: String, required: true },

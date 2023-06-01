@@ -11,9 +11,9 @@
  * Public License.
  */
 import Link from '@share/components/common/MxsSvgGraphs/Link'
-import EntityLinkShape from '@share/components/common/MxsSvgGraphs/EntityLinkShape'
-import EntityMarker from '@share/components/common/MxsSvgGraphs/EntityMarker'
-import { TARGET_POS } from '@share/components/common/MxsSvgGraphs/config'
+import EntityLinkShape from '@wsSrc/components/worksheets/ErdWke/EntityLinkShape'
+import EntityMarker from '@wsSrc/components/worksheets/ErdWke/EntityMarker'
+import { TARGET_POS } from '@wsSrc/components/worksheets/ErdWke/config'
 import { lodash } from '@share/utils/helpers'
 
 export default class EntityLink extends Link {

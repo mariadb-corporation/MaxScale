@@ -5,7 +5,7 @@
         <!-- Graph-board and its child components will be rendered but they won't be visible until
              the simulation is done. This ensures node size can be calculated dynamically.
         -->
-        <graph-board
+        <mxs-svg-graph-board
             v-model="panAndZoomData"
             :scaleExtent="scaleExtent"
             :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
@@ -14,7 +14,7 @@
             @get-graph-ctr="svgGroup = $event"
         >
             <template v-slot:append="{ data: { transform } }">
-                <graph-nodes
+                <mxs-svg-graph-nodes
                     ref="graphNodes"
                     :nodes="graphData.nodes"
                     :coordMap.sync="graphNodeCoordMap"
@@ -106,9 +106,9 @@
                             </tbody>
                         </table>
                     </template>
-                </graph-nodes>
+                </mxs-svg-graph-nodes>
             </template>
-        </graph-board>
+        </mxs-svg-graph-board>
     </div>
 </template>
 
@@ -141,19 +141,16 @@ import {
     forceY,
 } from 'd3-force'
 import { min as d3Min, max as d3Max } from 'd3-array'
-import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
-import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
-import EntityLink from '@share/components/common/MxsSvgGraphs/EntityLink'
-import ErdKeyIcon from '@share/components/common/MxsSvgGraphs/ErdKeyIcon'
-import { EVENT_TYPES, LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/config'
+import EntityLink from '@wsSrc/components/worksheets/ErdWke/EntityLink'
+import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
+import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
+import { getConfig, LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import tokens from '@wsSrc/utils/createTableTokens'
 
 export default {
-    name: 'mxs-erd',
+    name: 'entity-diagram',
     components: {
-        'graph-board': GraphBoard,
-        'graph-nodes': GraphNodes,
         'erd-key-icon': ErdKeyIcon,
     },
     props: {
@@ -318,7 +315,9 @@ export default {
             }
         },
         initGraphConfig() {
-            this.graphConfig = new GraphConfig(this.graphConfigData)
+            this.graphConfig = new GraphConfig(
+                this.$helpers.lodash.merge(getConfig(), this.graphConfigData)
+            )
         },
         initLinkInstance() {
             this.entityLink = new EntityLink(this.graphConfig)

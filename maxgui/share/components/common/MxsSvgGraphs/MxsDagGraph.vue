@@ -1,5 +1,5 @@
 <template>
-    <graph-board
+    <mxs-svg-graph-board
         v-model="panAndZoom"
         class="mxs-dag-graph-container"
         :style="revertGraphStyle"
@@ -8,7 +8,7 @@
         @get-graph-ctr="svgGroup = $event"
     >
         <template v-slot:append="{ data: { transform } }">
-            <graph-nodes
+            <mxs-svg-graph-nodes
                 ref="graphNodes"
                 autoWidth
                 :nodes="graphNodes"
@@ -26,9 +26,9 @@
                 <template v-slot:default="{ data }">
                     <slot name="graph-node-content" :data="data" />
                 </template>
-            </graph-nodes>
+            </mxs-svg-graph-nodes>
         </template>
-    </graph-board>
+    </mxs-svg-graph-board>
 </template>
 
 <script>
@@ -47,18 +47,12 @@
  */
 import * as d3d from 'd3-dag'
 import 'd3-transition'
-import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
-import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import Link from '@share/components/common/MxsSvgGraphs/Link'
-import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/config'
+import { getLinkConfig, EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 
 export default {
     name: 'mxs-dag-graph',
-    components: {
-        'graph-board': GraphBoard,
-        'graph-nodes': GraphNodes,
-    },
     props: {
         data: { type: Array, required: true },
         dim: { type: Object, required: true },
@@ -158,13 +152,15 @@ export default {
             }, {})
         },
         initGraphConfig() {
-            this.graphConfig = new GraphConfig({
-                link: {
-                    color: this.colorize,
-                    [EVENT_TYPES.HOVER]: { dashArr: '0' },
-                    [EVENT_TYPES.DRAGGING]: { dashArr: '0' },
-                },
-            })
+            this.graphConfig = new GraphConfig(
+                this.$helpers.lodash.merge(getLinkConfig(), {
+                    link: {
+                        color: this.colorize,
+                        [EVENT_TYPES.HOVER]: { dashArr: '0' },
+                        [EVENT_TYPES.DRAGGING]: { dashArr: '0' },
+                    },
+                })
+            )
         },
         initLinkInstance() {
             this.linkInstance = new Link(this.graphConfig.link)
