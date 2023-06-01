@@ -180,7 +180,8 @@
         "force_version": ${force_maxscale_version}
       },
       {
-        "name" : "connector_odbc"
+        "name" : "connector_odbc",
+        "version": "3.1"
       },
       {
         "name" : "docker"
