@@ -130,6 +130,21 @@ void add_packet_keydata(GWBUF& gwbuf, uint32_t id, uint32_t key)
     gwbuf.append(begin(data), data.size());
 }
 
+void add_packet_parameter_status(GWBUF& gwbuf, std::string_view key, std::string_view value)
+{
+    const size_t len = 1    // Byte1('S')
+        + 4                 // Int32 len
+        + key.size() + 1    // String name
+        + value.size() + 1; // String status
+
+    auto [ptr, _] = gwbuf.prepare_to_write(len);
+    *ptr++ = pg::PARAMETER_STATUS;
+    ptr += pg::set_uint32(ptr, len - 1);    // Exclude the command byte
+    ptr += pg::set_string(ptr, key);
+    ptr += pg::set_string(ptr, value);
+    gwbuf.write_complete(len);
+}
+
 void add_packet_ready_for_query(GWBUF& gwbuf)
 {
     const size_t rdy_len = 1 + 4 + 1;       // Byte1('R'), Int32(8) len, Int8 trx status
@@ -407,6 +422,18 @@ bool PgClientConnection::start_session()
         m_session.worker()->gen_random_bytes(reinterpret_cast<uint8_t*>(&m_secret), sizeof(m_secret));
         add_packet_keydata(rdy, m_session.id(), m_secret);
 
+        // TODO: Probe the hard-coded values from the server
+        add_packet_parameter_status(rdy, "client_encoding", m_protocol_data->client_encoding());
+        add_packet_parameter_status(rdy, "application_name", m_protocol_data->application_name());
+        add_packet_parameter_status(rdy, "session_authorization", m_session.user());
+        add_packet_parameter_status(rdy, "DateStyle", "ISO, MDY");
+        add_packet_parameter_status(rdy, "server_encoding", "UTF8");
+        add_packet_parameter_status(rdy, "standard_conforming_strings", "on");
+        add_packet_parameter_status(rdy, "server_version", m_session.service->version_string());
+        add_packet_parameter_status(rdy, "default_transaction_read_only", "off");
+        add_packet_parameter_status(rdy, "in_hot_standby", "off");
+        add_packet_parameter_status(rdy, "is_superuser", "on");
+
         add_packet_ready_for_query(rdy);
         write(std::move(rdy));
         rval = true;
@@ -543,6 +570,8 @@ bool PgClientConnection::parse_startup_message(const GWBUF& buf)
     mxb_assert(buf.length() >= 8);
     string_view username;
     string_view database;
+    string_view app_name;
+    string_view client_encoding;
     // StartupMessage: 4 bytes length, 4 bytes magic number, then pairs of strings and finally 0 at end.
     auto ptr = buf.data();
     ptr += 4;   // Length should have already been checked.
@@ -571,6 +600,14 @@ bool PgClientConnection::parse_startup_message(const GWBUF& buf)
                 {
                     database = param_value;
                 }
+                else if (param_name == "application_name")
+                {
+                    app_name = param_value;
+                }
+                else if (param_name == "client_encoding")
+                {
+                    client_encoding = param_value;
+                }
             }
             else
             {
@@ -583,6 +620,8 @@ bool PgClientConnection::parse_startup_message(const GWBUF& buf)
         {
             m_session.set_user(string(username));
             m_protocol_data->set_default_database(database);
+            m_protocol_data->set_application_name(app_name);
+            m_protocol_data->set_client_encoding(client_encoding);
             m_protocol_data->set_connect_params(params_begin, end);
             rval = true;
         }

@@ -92,6 +92,16 @@ void PgProtocolData::set_default_database(std::string_view database)
     m_database = database;
 }
 
+void PgProtocolData::set_application_name(std::string_view name)
+{
+    m_application_name = name;
+}
+
+void PgProtocolData::set_client_encoding(std::string_view encoding)
+{
+    m_client_encoding = encoding;
+}
+
 void PgProtocolData::set_user_entry(const UserEntryResult& user_entry)
 {
     m_auth_data.user_entry = user_entry;
@@ -100,6 +110,16 @@ void PgProtocolData::set_user_entry(const UserEntryResult& user_entry)
 const std::string& PgProtocolData::default_db() const
 {
     return m_database;
+}
+
+const std::string& PgProtocolData::application_name() const
+{
+    return m_application_name;
+}
+
+const std::string& PgProtocolData::client_encoding() const
+{
+    return m_client_encoding;
 }
 
 AuthenticationData& PgProtocolData::auth_data()

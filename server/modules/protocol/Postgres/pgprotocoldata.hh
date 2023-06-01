@@ -38,6 +38,8 @@ public:
 
     void set_connect_params(const uint8_t* begin, const uint8_t* end);
     void set_default_database(std::string_view database);
+    void set_application_name(std::string_view name);
+    void set_client_encoding(std::string_view encoding);
     void set_user_entry(const UserEntryResult& user_entry);
 
     const std::vector<uint8_t>& connect_params() const
@@ -53,10 +55,14 @@ public:
     }
 
     const std::string&  default_db() const;
+    const std::string&  application_name() const;
+    const std::string&  client_encoding() const;
     AuthenticationData& auth_data();
 
 private:
     std::string          m_database;
+    std::string          m_application_name;
+    std::string          m_client_encoding;
     std::vector<uint8_t> m_params;
     bool                 m_in_trx {false};
     AuthenticationData   m_auth_data;
