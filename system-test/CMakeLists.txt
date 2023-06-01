@@ -944,6 +944,9 @@ add_test_executable(mxs4522_tmp_table_reconnect.cc mxs4522_tmp_table_reconnect m
 # MXS-4540: transaction_replay_retry_on_mismatch=true leads to infinite replays
 add_test_executable(mxs4540_mismatch_replay.cc mxs4540_mismatch_replay mxs4540_mismatch_replay LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4549: Replay queries with partially returned results
+add_test_executable(mxs4549_splice_results.cc mxs4549_splice_results mxs4549_splice_results LABELS REPL_BACKEND readwritesplit)
+
 # MXS-4615: Partially executed multistatements aren't treated as partial results
 add_test_executable(mxs4615_partial_multistmt.cc mxs4615_partial_multistmt mxs4615_partial_multistmt LABELS REPL_BACKEND readwritesplit)
 

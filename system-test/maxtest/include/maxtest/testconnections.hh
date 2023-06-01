@@ -17,6 +17,20 @@
 #include <maxtest/test_dir.hh>
 #include <maxtest/mariadb_connector.hh>
 
+/**
+ * @brief Helper macro for checking test results
+ *
+ * If the expression evaluates to false, an exception is thrown. The calling code should catch the exception.
+ * The TestConnections::run_test function already catches exceptions so it can be used directly with this.
+ * Note that all cleanup is skipped in this case and the RAII classes for table and user creation should be
+ * used.
+ */
+#define MXT_EXPECT(a) \
+        do{ \
+            if (!std::invoke(&TestConnections::expect, test, a, "Failure on line %d: " #a, \
+                             __LINE__)) {throw std::runtime_error(#a); \
+            }} while (false)
+
 typedef std::set<std::string> StringSet;
 
 namespace maxtest
