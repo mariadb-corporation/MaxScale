@@ -364,9 +364,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
                     m_current_query.checksum.finalize();
                     m_trx.add_result(m_current_query.checksum.value());
 
-                    MXB_INFO("Adding %s to trx: %s Checksum: %s",
-                             cmd, get_sql_string(m_current_query.buffer).c_str(),
-                             m_current_query.checksum.hex().c_str());
+                    MXB_INFO("Adding %s to trx: %s", cmd, get_sql_string(m_current_query.buffer).c_str());
 
                     // Add the statement to the transaction now that the result is complete.
                     m_trx.add_stmt(backend, std::move(m_current_query.buffer));
