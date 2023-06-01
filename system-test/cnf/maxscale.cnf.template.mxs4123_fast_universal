@@ -18,6 +18,9 @@ user=maxskysql
 password=skysql
 causal_reads=fast_universal
 transaction_replay_safe_commit=false
+transaction_replay_retry_on_deadlock=true
+transaction_replay_retry_on_mismatch=true
+transaction_replay_timeout=30s
 
 [RW-Split-Listener]
 type=listener
