@@ -119,7 +119,6 @@ const dummy_tbl_node = {
     type: 'TABLE',
     name: 't1',
     draggable: true,
-    activatable: true,
     children: [],
 }
 
@@ -155,7 +154,6 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
     })
 
     const fnEvtMap = {
-        onNodeClick: 'item:click',
         onContextMenu: 'item:contextmenu',
     }
     Object.keys(fnEvtMap).forEach(fn => {

@@ -74,14 +74,6 @@ VTreeviewNode.mixin({
                                         this.treeview.updateActive(this.key, this.isActive)
                                         this.treeview.emitActive()
                                     }
-                                    // item activatable
-                                    if (this.item.activatable) {
-                                        //persist highlighting active node when toggle node
-                                        this.isActive = true
-                                        this.treeview.updateActive(this.key, this.isActive)
-                                        this.treeview.emitActive()
-                                    }
-                                    this.treeview.emitClick(this.item)
                                 }
                             }, 200)
                         },
@@ -114,9 +106,6 @@ VTreeviewNode.mixin({
 
 export default VTreeview.mixin({
     methods: {
-        emitClick(item) {
-            this.$emit('item:click', item)
-        },
         emitDblclick(item) {
             this.$emit('item:dblclick', item)
         },

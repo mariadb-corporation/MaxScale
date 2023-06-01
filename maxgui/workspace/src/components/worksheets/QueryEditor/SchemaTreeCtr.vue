@@ -14,7 +14,6 @@
             :active.sync="activeNodes"
             :open.sync="expandedNodes"
             return-object
-            @item:click="onNodeClick"
             @item:contextmenu="onContextMenu"
             @item:hovered="hoveredNode = $event"
             @item:dblclick="onNodeDblClick"
@@ -44,16 +43,35 @@
             </template>
             <template v-slot:append="{ isHover, item: node }">
                 <v-btn
+                    v-if="node.type === NODE_TYPES.TBL || node.type === NODE_TYPES.VIEW"
+                    v-show="isHover"
+                    :id="`prvw-btn-tooltip-activator-${node.key}`"
+                    icon
+                    x-small
+                    :disabled="hasAlteringNode"
+                    class="mr-1"
+                    @click.stop="previewNode(node)"
+                >
+                    <v-icon size="14" color="primary">mdi-table-eye</v-icon>
+                </v-btn>
+                <v-btn
                     v-show="nodesHaveCtxMenu.includes(node.type) && (isHover || showCtxBtn(node))"
                     :id="`ctx-menu-activator-${node.key}`"
                     icon
                     x-small
                     @click="e => handleOpenCtxMenu({ e, node })"
                 >
-                    <v-icon size="12" color="navigation">mdi-dots-horizontal</v-icon>
+                    <v-icon size="14" color="primary">mdi-dots-horizontal</v-icon>
                 </v-btn>
             </template>
         </mxs-treeview>
+        <v-tooltip
+            v-if="hoveredNode"
+            top
+            :activator="`#prvw-btn-tooltip-activator-${hoveredNode.key}`"
+        >
+            {{ $mxs_t('previewData') }}
+        </v-tooltip>
         <v-tooltip
             v-if="hoveredNode && nodesHaveCtxMenu.includes(hoveredNode.type)"
             :value="Boolean(hoveredNode)"
@@ -184,8 +202,16 @@ export default {
             const { USE, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = this.NODE_CTX_TYPES
 
             const tblViewOpts = [
-                { text: this.$mxs_t('previewData'), type: PRVW_DATA },
-                { text: this.$mxs_t('viewDetails'), type: PRVW_DATA_DETAILS },
+                {
+                    text: this.$mxs_t('previewData'),
+                    type: PRVW_DATA,
+                    disabled: this.hasAlteringNode,
+                },
+                {
+                    text: this.$mxs_t('viewDetails'),
+                    type: PRVW_DATA_DETAILS,
+                    disabled: this.hasAlteringNode,
+                },
                 { divider: true },
                 ...this.txtOpts,
             ]
@@ -204,12 +230,14 @@ export default {
                 [TRIGGER]: this.txtOpts,
             }
         },
+        hasAlteringNode() {
+            return Boolean(this.$typy(this.alteredActiveNode, 'id').safeString)
+        },
         // Use either activePrvwNode or alteredActiveNode
         activeNodes: {
             get() {
                 let nodes = []
-                if (this.$typy(this.alteredActiveNode, 'id').safeString)
-                    nodes = [...nodes, this.alteredActiveNode]
+                if (this.hasAlteringNode) nodes = [...nodes, this.alteredActiveNode]
                 else if (this.$typy(this.activePrvwNode, 'id').safeString)
                     nodes = [...nodes, this.activePrvwNode]
                 return nodes
@@ -217,7 +245,7 @@ export default {
             set(v) {
                 if (v.length) {
                     const activeNodes = this.minimizeNodes(v)
-                    if (this.$typy(this.alteredActiveNode, 'id').safeString)
+                    if (this.hasAlteringNode)
                         Editor.update({
                             where: this.activeQueryTabId,
                             data(editor) {
@@ -412,12 +440,15 @@ export default {
                 this.activeCtxItemOpts = this.genNodeOpts(node)
             }
         },
-        onNodeClick(node) {
-            if (node.activatable)
-                this.$emit('get-node-data', {
-                    query_mode: this.QUERY_MODES.PRVW_DATA,
-                    qualified_name: node.qualified_name,
-                })
+        previewNode(node) {
+            QueryTabTmp.update({
+                where: this.activeQueryTabId,
+                data: { active_prvw_node: this.minimizeNode(node) },
+            })
+            this.$emit('get-node-data', {
+                query_mode: this.QUERY_MODES.PRVW_DATA,
+                qualified_name: node.qualified_name,
+            })
         },
         onNodeDblClick(node) {
             if (node.type === this.NODE_TYPES.SCHEMA) this.$emit('use-db', node.qualified_name)

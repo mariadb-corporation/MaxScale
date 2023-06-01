@@ -51,6 +51,7 @@
                     :key="`v-list-item-${index}`"
                     dense
                     link
+                    :disabled="item.disabled"
                     @click="emitClickEvent(item)"
                 >
                     <v-list-item-title class="mxs-color-helper text-text" v-text="item.text" />

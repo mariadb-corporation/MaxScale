@@ -190,7 +190,6 @@ export default {
                 nodeAttrs: {
                     onlyName: true,
                     isLeaf: true,
-                    activatable: false,
                 },
                 config: this.activeRequestConfig,
             })

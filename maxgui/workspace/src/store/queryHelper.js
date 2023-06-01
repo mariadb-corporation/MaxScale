@@ -116,7 +116,6 @@ function getNodeGroupSQL({ nodeGroup, nodeAttrs = { onlyName: false } }) {
  * @param {String} param.type - type of node to be generated
  * @param {String} param.name - name of the node
  * @param {Boolean} [param.nodeAttrs.isLeaf] -If it's true, child nodes are leaf nodes
- * @param {Boolean} [param.nodeAttrs.activatable] - Override the activatable value of the node
  * @param {Boolean} [param.nodeAttrs.isEmptyChildren] - generate node with empty children. i.e. node.children = []
  * @returns {Object}  A node in schema sidebar
  */
@@ -125,7 +124,7 @@ function genNode({
     data,
     type,
     name,
-    nodeAttrs = { isLeaf: false, activatable: undefined, isEmptyChildren: false },
+    nodeAttrs = { isLeaf: false, isEmptyChildren: false },
 }) {
     const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
     const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
@@ -174,10 +173,6 @@ function genNode({
         case SCHEMA: {
             let childTypes = []
             if (type === VIEW || type === TBL) {
-                // Only VIEW and TBL nodes are activatable
-                node.activatable = typy(nodeAttrs.activatable).isUndefined
-                    ? true
-                    : nodeAttrs.activatable
                 // only TBL node has IDX_G and TRIGGER_G
                 childTypes = type === VIEW ? [COL_G] : [COL_G, IDX_G, TRIGGER_G]
             } else childTypes = [TBL_G, VIEW_G, SP_G, FN_G]
