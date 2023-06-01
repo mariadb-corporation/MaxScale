@@ -38,7 +38,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_qc(this, session, m_config.use_sql_variables_in)
     , m_retry_duration(0)
     , m_can_replay_trx(true)
-    , m_server_stats(instance->local_server_stats())
 {
 }
 
@@ -82,9 +81,10 @@ RWSplitSession::~RWSplitSession()
             backend->close();
         }
 
-        m_server_stats[backend->target()].update(backend->session_timer().split(),
-                                                 backend->select_timer().total(),
-                                                 backend->num_selects());
+        auto& stats = m_router->local_server_stats()[backend->target()];
+        stats.update(backend->session_timer().split(),
+                     backend->select_timer().total(),
+                     backend->num_selects());
     }
 
     m_router->local_avg_sescmd_sz().add(protocol_data()->history.size());
