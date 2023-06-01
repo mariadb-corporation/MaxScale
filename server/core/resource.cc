@@ -1366,10 +1366,10 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             || (MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_POST))
         {
             int n_opts = (int)request.get_option_count();
-            char* opts[n_opts];
-            request.copy_options(opts);
+            std::vector<char*> opts(n_opts);
+            request.copy_options(opts.data());
 
-            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**)opts);
+            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**)opts.data());
             bool rval = false;
             json_t* output = NULL;
 
