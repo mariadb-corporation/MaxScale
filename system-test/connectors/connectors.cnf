@@ -1,6 +1,5 @@
 [maxscale]
 threads=###threads###
-session_trace=1000
 
 [server1]
 type=server
