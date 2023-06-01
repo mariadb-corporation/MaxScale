@@ -33,7 +33,7 @@
                                 :queryTab="queryTab"
                                 :dim="editorDim"
                             />
-                            <ddl-editor-ctr
+                            <mxs-ddl-editor
                                 v-else
                                 ref="editor"
                                 :dim="editorDim"
@@ -90,7 +90,6 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
-import DdlEditorCtr from '@wkeComps/QueryEditor/DdlEditorCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
 import ExecuteSqlDialog from '@wkeComps/QueryEditor/ExecuteSqlDialog.vue'
@@ -101,7 +100,6 @@ export default {
     components: {
         SidebarCtr,
         TxtEditorCtr,
-        DdlEditorCtr,
         QueryTabNavCtr,
         ExecuteSqlDialog,
         FileDlgCtr,

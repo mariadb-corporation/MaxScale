@@ -118,7 +118,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import CharsetCollateSelect from '@wkeComps/QueryEditor/CharsetCollateSelect.vue'
+import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
 export default {
     name: 'alter-table-opts',
     components: { CharsetCollateSelect },

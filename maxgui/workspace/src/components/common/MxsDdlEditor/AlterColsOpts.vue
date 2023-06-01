@@ -141,13 +141,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ColOptInput from '@wkeComps/QueryEditor/ColOptInput.vue'
+import ColOptInput from '@wsSrc/components/common/MxsDdlEditor/ColOptInput.vue'
 import {
     getColumnTypes,
     check_charset_support,
     check_UN_ZF_support,
     check_AI_support,
-} from '@wkeComps/QueryEditor/alterTblHelpers'
+} from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 
 export default {
     name: 'alter-cols-opts',

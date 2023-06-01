@@ -42,11 +42,11 @@
 import Editor from '@wsModels/Editor'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import DdlEditorFormCtr from '@wkeComps/QueryEditor/DdlEditorFormCtr.vue'
-import DdlEditorToolbar from '@wkeComps/QueryEditor/DdlEditorToolbar.vue'
+import DdlEditorFormCtr from '@wsSrc/components/common/MxsDdlEditor/DdlEditorFormCtr.vue'
+import DdlEditorToolbar from '@wsSrc/components/common/MxsDdlEditor/DdlEditorToolbar.vue'
 
 export default {
-    name: 'ddl-editor-ctr',
+    name: 'mxs-ddl-editor',
     components: {
         DdlEditorFormCtr,
         DdlEditorToolbar,

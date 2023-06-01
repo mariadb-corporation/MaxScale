@@ -187,12 +187,11 @@ export default {
                 name: `ALTER ${node.name}`,
             })
             const mode = this.EDITOR_MODES.DDL_EDITOR
-            const spec = this.DDL_ALTER_SPECS.COLUMNS
+
             Editor.update({
                 where: this.activeQueryTabId,
                 data(editor) {
                     editor.curr_editor_mode = mode
-                    editor.curr_ddl_alter_spec = spec
                     editor.tbl_creation_info.altered_active_node = node
                 },
             })

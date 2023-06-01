@@ -13,6 +13,7 @@
  */
 import '@share/components/common/MxsCharts/config.js'
 import shared from '@share/components/common/shared'
+import MxsDdlEditor from '@wsSrc/components/common/MxsDdlEditor'
 import MxsPwdInput from '@wsSrc/components/common/MxsPwdInput'
 import MxsSplitPane from '@wsSrc/components/common/MxsSplitPane'
 import MxsSubMenu from '@wsSrc/components/common/MxsSubMenu'
@@ -25,6 +26,7 @@ import MxsVirtualScrollTbl from '@wsSrc/components/common/MxsVirtualScrollTbl'
 
 // export to register in @share dir for dev env
 export const workspaceComponents = {
+    'mxs-ddl-editor': MxsDdlEditor,
     'mxs-pwd-input': MxsPwdInput,
     'mxs-split-pane': MxsSplitPane,
     'mxs-sub-menu': MxsSubMenu,

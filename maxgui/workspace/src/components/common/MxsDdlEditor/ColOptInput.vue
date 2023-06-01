@@ -113,12 +113,12 @@
  * on-input: (cell)
  */
 
-import CharsetCollateSelect from '@wkeComps/QueryEditor/CharsetCollateSelect.vue'
+import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
 import {
     check_charset_support,
     check_UN_ZF_support,
     check_AI_support,
-} from '@wkeComps/QueryEditor/alterTblHelpers'
+} from '@wsSrc/components/common/MxsDdlEditor/utils'
 export default {
     name: 'col-opt-input',
     components: {

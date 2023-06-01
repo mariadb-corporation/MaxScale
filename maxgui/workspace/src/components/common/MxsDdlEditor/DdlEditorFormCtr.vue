@@ -13,7 +13,7 @@
         </div>
         <v-tabs
             v-if="!isEmptyFormData && activated"
-            v-model="activeColSpec"
+            v-model="activeSpec"
             :height="24"
             class="v-tabs--mariadb"
         >
@@ -25,7 +25,7 @@
             <v-slide-x-transition>
                 <keep-alive>
                     <alter-cols-opts
-                        v-if="activeColSpec === DDL_ALTER_SPECS.COLUMNS"
+                        v-if="activeSpec === DDL_ALTER_SPECS.COLUMNS"
                         v-model="colsOptsData"
                         :charsetCollationMap="charset_collation_map"
                         :initialData="$typy(initialData, 'cols_opts_data').safeObjectOrEmpty"
@@ -55,10 +55,8 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import Editor from '@wsModels/Editor'
-import QueryEditor from '@wsModels/QueryEditor'
-import AlterTableOpts from '@wkeComps/QueryEditor/AlterTableOpts.vue'
-import AlterColsOpts from '@wkeComps/QueryEditor/AlterColsOpts.vue'
+import AlterTableOpts from '@wsSrc/components/common/MxsDdlEditor/AlterTableOpts.vue'
+import AlterColsOpts from '@wsSrc/components/common/MxsDdlEditor/AlterColsOpts.vue'
 
 export default {
     name: 'ddl-editor-form-ctr',
@@ -80,6 +78,7 @@ export default {
             isFormValid: true,
             headerHeight: 0,
             activated: false,
+            activeSpec: '',
         }
     },
     computed: {
@@ -105,17 +104,6 @@ export default {
                 this.$emit('input', { ...this.formData, cols_opts_data: v })
             },
         },
-        activeColSpec: {
-            get() {
-                return Editor.getters('getCurrDdlAlterSpec')
-            },
-            set(value) {
-                Editor.update({
-                    where: QueryEditor.getters('getActiveQueryTabId'),
-                    data: { curr_ddl_alter_spec: value },
-                })
-            },
-        },
         tabDim() {
             return {
                 width: this.dim.width - 24, // v-tab-item class px-3
@@ -134,6 +122,9 @@ export default {
         isEmptyFormData(v) {
             if (!v) this.setHeaderHeight()
         },
+    },
+    created() {
+        this.activeSpec = this.DDL_ALTER_SPECS.COLUMNS
     },
     activated() {
         this.activated = true
