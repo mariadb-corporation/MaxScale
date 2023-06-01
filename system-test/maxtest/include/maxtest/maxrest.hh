@@ -186,10 +186,13 @@ public:
     void alter(const std::string& resource, const std::vector<Parameter>& parameters) const;
 
     void alter_maxscale(const std::vector<Parameter>& parameters) const;
-
     void alter_maxscale(const Parameter& parameter) const;
-
     void alter_maxscale(const std::string& parameter_name, const Value& parameter_value) const;
+
+    void alter_service(const std::string& service, const std::vector<Parameter>& parameters) const;
+    void alter_service(const std::string& service, const Parameter& parameter) const;
+    void alter_service(const std::string& service,
+                       const std::string& parameter_name, const Value& parameter_value) const;
 
     /**
      * create

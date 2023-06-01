@@ -306,6 +306,26 @@ void MaxRest::alter_maxscale(const string& parameter_name, const Value& paramete
     alter_maxscale(Parameter { parameter_name, parameter_value });
 }
 
+void MaxRest::alter_service(const std::string& service, const std::vector<Parameter>& parameters) const
+{
+    string resource { "services/" };
+    resource += service;
+
+    alter(resource, parameters);
+}
+
+void MaxRest::alter_service(const std::string& service, const Parameter& parameter) const
+{
+    vector<Parameter> parameters = { parameter };
+    alter_service(service, parameters);
+}
+
+void MaxRest::alter_service(const std::string& service,
+                            const std::string& parameter_name, const Value& parameter_value) const
+{
+    alter_service(service, Parameter { parameter_name, parameter_value });
+}
+
 void MaxRest::create_listener(const std::string& service, const std::string& name, int port)
 {
     ostringstream body;
