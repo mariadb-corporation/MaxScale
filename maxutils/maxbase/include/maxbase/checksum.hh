@@ -247,6 +247,15 @@ private:
     value_type   m_sum;
 };
 
+struct xxHasher
+{
+    template<class T>
+    size_t operator()(T&& t) const
+    {
+        return XXH3_64bits(t.data(), t.size());
+    }
+};
+
 // Convenience function for calculating a hex checksum
 template<class T>
 std::string checksum(uint8_t* ptr, size_t len)

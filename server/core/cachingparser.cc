@@ -15,6 +15,7 @@
 #include <atomic>
 #include <map>
 #include <random>
+#include <maxbase/checksum.hh>
 #include <maxscale/buffer.hh>
 #include <maxsimd/canonical.hh>
 #include <maxscale/cn_strings.hh>
@@ -285,7 +286,7 @@ private:
         int64_t                              hits;
     };
 
-    typedef std::unordered_map<std::string_view, Entry> InfosByStmt;
+    typedef std::unordered_map<std::string_view, Entry, mxb::xxHasher> InfosByStmt;
 
     int64_t entry_size(const GWBUF::ProtocolInfo* pInfo)
     {
