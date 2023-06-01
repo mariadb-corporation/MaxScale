@@ -157,6 +157,15 @@ public:
     bool ping();
 
     /**
+     * Test if the connection is still alive.
+     *
+     * This attempts to test if the connection is alive without actually pinging the server.
+     *
+     * @return True if the TCP socket, if one was used, was still readable
+     */
+    bool still_alive();
+
+    /**
      * Run COM_CHANGE_USER. Connection settings are not changed.
      *
      * @param user New username
