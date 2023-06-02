@@ -1615,30 +1615,19 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
     if (remove_slave_conns(general, m_slave_status))
     {
         const bool demoting_master = demotion.target_type == ServerOperation::TargetType::MASTER;
-        // Step 2: If this server is master, disable writes and scheduled events, etc.
-        bool demotion_error = false;
-        if (demoting_master && !demote_master(general, type))
+        bool demotion_ok;
+        if (demoting_master)
         {
-            demotion_error = true;
+            // Step 2: Disable writes and scheduled events, etc.
+            demotion_ok = demote_master(general, type);
+        }
+        else
+        {
+            // If demoting a relay, it's enough to check that gtid is stable.
+            demotion_ok = check_gtid_stable(error_out);
         }
 
-        if (!demotion_error)
-        {
-            // Finally, update gtid:s.
-            string error_msg;
-            if (update_gtids(&error_msg))
-            {
-                success = true;
-            }
-            else
-            {
-                demotion_error = true;
-                PRINT_JSON_ERROR(error_out, "Failed to update gtid:s of '%s' during demotion: %s.",
-                                 name(), error_msg.c_str());
-            }
-        }
-
-        if (demotion_error && demoting_master)
+        if (!demotion_ok && demoting_master)
         {
             // Read_only was enabled (or tried to be enabled) but a later step failed.
             // Disable read_only. Connection is likely broken so use a short time limit.
@@ -1648,6 +1637,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             mxb::Json dummy(mxb::Json::Type::UNDEFINED);
             set_read_only(ReadOnlySetting::DISABLE, 0s, dummy);
         }
+        success = demotion_ok;
     }
     return success;
 }
@@ -1658,6 +1648,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
     mxb_assert(is_master() || m_slave_status.empty());
     auto& time_remaining = general.time_remaining;
     auto& error_out = general.error_out;
+    const bool is_switchover = (type == OperationType::SWITCHOVER);
 
     // Step 2a: Remove [Master] from this server. This prevents compatible routers (RWS)
     // from routing writes to this server. Writes in flight will go through, at least until
@@ -1679,7 +1670,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
         bool supers_handled = true;
         // In the rejoin-case, just leave read-only on. If super-users are causing problems it's probably
         // too late to prevent anyway.
-        if (type == OperationType::SWITCHOVER)
+        if (is_switchover)
         {
             // Step 2c: If other users with SUPER privileges are on, kick them out now since
             // read_only doesn't stop them from doing writes. As the server is draining, MaxScale
@@ -1747,6 +1738,12 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
                                      name(), error_msg.c_str());
                 }
                 time_remaining -= timer.lap();
+            }
+
+            if (demotion_ok && is_switchover)
+            {
+                // At this point, the gtid:s should be stable. Check it.
+                demotion_ok = check_gtid_stable(error_out);
             }
         }
         else
@@ -2873,4 +2870,45 @@ MariaDBServer::get_super_user_conns(mxb::Json& error_out)
         }
     }
     return {rval, super_user_conns};
+}
+
+bool MariaDBServer::check_gtid_stable(mxb::Json& error_out)
+{
+    // Look at gtid_binlog_pos, as that should exist for both a master and a relay.
+    bool gtid_stable = true;
+    string error_msg;
+    GtidList prev_gtid;
+
+    for (int i = 0; i < 3 && gtid_stable; i++)
+    {
+        if (i > 0)
+        {
+            std::this_thread::sleep_for(0.5s);
+        }
+
+        if (update_gtids(&error_msg))
+        {
+            if (i == 0)
+            {
+                prev_gtid = m_gtid_binlog_pos;
+            }
+            else if (!(m_gtid_binlog_pos == prev_gtid))
+            {
+                gtid_stable = false;
+                PRINT_JSON_ERROR(error_out,
+                                 "Gtid_Binlog_Pos of %s changed even when server was frozen "
+                                 "for demotion. Demotion cannot proceed safely. "
+                                 "Old gtid: %s New gtid: %s",
+                                 name(), prev_gtid.to_string().c_str(),
+                                 m_gtid_binlog_pos.to_string().c_str());
+            }
+        }
+        else
+        {
+            gtid_stable = false;
+            PRINT_JSON_ERROR(error_out, "Failed to update gtid:s of %s during demotion: %s.",
+                             name(), error_msg.c_str());
+        }
+    }
+    return gtid_stable;
 }
