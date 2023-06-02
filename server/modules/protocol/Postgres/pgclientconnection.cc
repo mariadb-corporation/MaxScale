@@ -571,7 +571,7 @@ bool PgClientConnection::parse_startup_message(const GWBUF& buf)
     string_view username;
     string_view database;
     string_view app_name;
-    string_view client_encoding;
+    string_view client_encoding = "UTF8";   // TODO: Probe this from the backend servers
     // StartupMessage: 4 bytes length, 4 bytes magic number, then pairs of strings and finally 0 at end.
     auto ptr = buf.data();
     ptr += 4;   // Length should have already been checked.
