@@ -1260,7 +1260,7 @@ Read queries are routed to the primary server in the following situations:
 * If there are multiple statements inside one query e.g.
   `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
 
-### Prepares Statement Limitations
+### Prepared Statement Limitations
 
 If a prepared statement targets a temporary table on the primary, the replica
 servers will fail to execute it. This will cause all replica connections to be
@@ -1288,8 +1288,15 @@ If the connection to the server where the transaction is being executed is
 lost when the final `COMMIT` is being executed, it is impossible to know
 whether the transaction was successfully committed. This means that there
 is a possibility for duplicate transaction execution which can result in
-data duplication in certain cases. Data duplication can happen if the
-transaction consists of the following statement types:
+data duplication in certain cases.
+
+In MaxScale 23.08, the `transaction_replay_safe_commit` variable controls
+whether a replay is attempted or not whenever a `COMMIT` is interrupted. By
+default the transaction will not be replayed. Older versions of MaxScale always
+replayed the transaction.
+
+Data duplication can happen if the transaction consists of the following
+statement types:
 
 * INSERT of rows into a table that does not have an auto-increment primary key
 * A "blind update" of one or more rows e.g. `UPDATE t SET c = c + 1 WHERE id = 123`
@@ -1316,6 +1323,8 @@ the transaction will be committed twice due to the implicit commit being
 present. The exception to this are the transaction management statements such as
 `BEGIN` and `START TRANSACTION`: they are detected and will cause the
 transaction to be correctly reset.
+
+#### Limitations in Session State Modifications
 
 Any changes to the session state (e.g. autocommit state, SQL mode) done inside a
 transaction will remain in effect even if the connection to the server where the
@@ -1352,6 +1361,8 @@ state after which the actual transaction is replayed. Due to the fact that the
 SQL_MODE was changed mid-transaction, one of the queries will now return an
 error instead of the result we expected leading to a transaction replay failure.
 
+#### Limitations in Service-to-Service Routing
+
 In a service-to-service configuration (i.e. a service using another service in
 its `targets` list ), if the topmost service starts a transaction, all
 lower-level readwritesplit services will also behave as if a transaction is
@@ -1359,17 +1370,6 @@ open. If a connection to a backend database fails during this, it can result in
 unnecessary transaction replays which in turn can end up with checksum
 conflicts. The recommended approach is to not use any commands inside a
 transaction that would be routed to more than one node.
-
-### Legacy Configuration
-
-In older versions of MaxScale, routers were configured via the _router_options_
-parameter. This functionality was deprecated in 2.2 and was removed in 2.3.
-
-### JDBC Batched Statements
-
-Readwritesplit does not support pipelining of JDBC batched statements. This is
-caused by the fact that readwritesplit executes the statements one at a time to
-track the state of the response.
 
 #### Limitations in multi-statement handling
 
