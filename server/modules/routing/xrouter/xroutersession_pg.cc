@@ -122,7 +122,7 @@ void XgresSession::preprocess(GWBUF& packet)
 
 std::string XgresSession::main_sql() const
 {
-    return "SET xgres.fdw_mode = 'pushdown'";
+    return "SET xgres.fdw_mode = 'passthrough'";
 }
 
 std::string XgresSession::secondary_sql() const
