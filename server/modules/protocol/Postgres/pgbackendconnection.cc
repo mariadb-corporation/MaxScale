@@ -745,10 +745,22 @@ GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
     size_t size = 0;
     auto it = buffer.begin();
 
-    while (it < buffer.end() && !m_reply.is_complete())
+    do
     {
+        if (it + pg::HEADER_LEN > buffer.end())
+        {
+            // Partial packet header
+            break;
+        }
+
         uint8_t command = *it;
         uint32_t len = pg::get_uint32(it + 1);
+
+        if (it + len + 1 > buffer.end())
+        {
+            // Complete header but partial payload
+            break;
+        }
 
         switch (command)
         {
@@ -793,11 +805,16 @@ GWBUF PgBackendConnection::process_packets(GWBUF& buffer)
         case pg::COPY_IN_RESPONSE:
             m_reply.set_reply_state(mxs::ReplyState::LOAD_DATA);
             break;
+
+        default:
+            MXB_SDEBUG("Result command '" << command << "' not handled");
+            break;
         }
 
         size += len + 1;
         it += len + 1;
     }
+    while (!m_reply.is_complete());
 
     m_reply.add_bytes(size);
 
