@@ -198,17 +198,17 @@ SlaveStatus::Settings::Settings(string owner)
 {
 }
 
-ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, SlaveStatusArray conns_to_copy,
-                                 EventNameSet events_to_enable)
+ServerOperation::ServerOperation(MariaDBServer* target, TargetType target_type,
+                                 SlaveStatusArray conns_to_copy, EventNameSet events_to_enable)
     : target(target)
-    , to_from_master(was_is_master)
+    , target_type(target_type)
     , conns_to_copy(move(conns_to_copy))
     , events_to_enable(move(events_to_enable))
 {
 }
 
-ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master)
-    : ServerOperation(target, was_is_master, SlaveStatusArray(), EventNameSet())
+ServerOperation::ServerOperation(MariaDBServer* target, TargetType target_type)
+    : ServerOperation(target, target_type, SlaveStatusArray(), EventNameSet())
 {
 }
 

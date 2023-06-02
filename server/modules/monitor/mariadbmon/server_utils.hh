@@ -306,16 +306,21 @@ public:
 class ServerOperation
 {
 public:
-    MariaDBServer* const   target;          // Target server
-    const bool             to_from_master;  // Was the target a master / should it become one
-    const SlaveStatusArray conns_to_copy;   // Slave connections the target should copy/merge
+    enum TargetType
+    {
+        MASTER, /**< Swapping master. Either demoting a master or promoting a new master. */
+        RELAY   /**< Just swapping a relay with a relay/replica. */
+    };
 
-    const EventNameSet events_to_enable;    // Scheduled event names last seen on master.
+    MariaDBServer* const   target;              // Target server
+    const TargetType       target_type {MASTER};// Was the target a master / should it become one
+    const SlaveStatusArray conns_to_copy;       // Slave connections the target should copy/merge
+    const EventNameSet     events_to_enable;    // Scheduled event names last seen on master.
 
-    ServerOperation(MariaDBServer* target, bool was_is_master, SlaveStatusArray conns_to_copy,
+    ServerOperation(MariaDBServer* target, TargetType target_type, SlaveStatusArray conns_to_copy,
                     EventNameSet events_to_enable);
 
-    ServerOperation(MariaDBServer* target, bool was_is_master);
+    ServerOperation(MariaDBServer* target, TargetType target_type);
 };
 
 /* Server lock status descriptor */

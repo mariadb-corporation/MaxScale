@@ -646,7 +646,7 @@ uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinabl
             {
                 // Assume that server is an old master which was failed over. Even if this is not really
                 // the case, the following is unlikely to do damage.
-                ServerOperation demotion(joinable, true);
+                ServerOperation demotion(joinable, ServerOperation::TargetType::MASTER);
                 if (joinable->demote(op, demotion, OperationType::REJOIN))
                 {
                     MXB_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
@@ -903,7 +903,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                 // Switchover considered at least partially successful.
                 catchup_and_promote_success = true;
                 rval = true;
-                if (op.promotion.to_from_master)
+                if (op.promotion.target_type == ServerOperation::TargetType::MASTER)
                 {
                     // Force a master swap on next tick.
                     m_next_master = promotion_target;
@@ -989,7 +989,7 @@ bool MariaDBMonitor::failover_perform(FailoverParams& op)
         // at least partially successful.
         rval = true;
         m_cluster_modified = true;
-        if (op.promotion.to_from_master)
+        if (op.promotion.target_type == ServerOperation::TargetType::MASTER)
         {
             // Force a master swap on next tick.
             m_next_master = promotion_target;
@@ -1508,8 +1508,9 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_o
         {
             // The Duration ctor taking a double interprets the value as seconds.
             auto time_limit = std::chrono::seconds(m_settings.failover_timeout);
-            bool promoting_to_master = (demotion_target == m_master);
-            ServerOperation promotion(promotion_target, promoting_to_master,
+            auto target_type = (demotion_target == m_master) ? ServerOperation::TargetType::MASTER :
+                ServerOperation::TargetType::RELAY;
+            ServerOperation promotion(promotion_target, target_type,
                                       demotion_target->m_slave_status, demotion_target->m_enabled_events);
             GeneralOpData general(start, error_out, time_limit);
             rval = std::make_unique<FailoverParams>(promotion, demotion_target, general);
@@ -1797,10 +1798,11 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
     if (promotion_target && demotion_target && gtid_ok)
     {
         maxbase::Duration time_limit(std::chrono::seconds(m_settings.shared.switchover_timeout));
-        bool master_swap = (demotion_target == m_master);
-        ServerOperation promotion(promotion_target, master_swap,
+        auto target_type = (demotion_target == m_master) ? ServerOperation::TargetType::MASTER :
+            ServerOperation::TargetType::RELAY;
+        ServerOperation promotion(promotion_target, target_type,
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
-        ServerOperation demotion(demotion_target, master_swap, promotion_target->m_slave_status,
+        ServerOperation demotion(demotion_target, target_type, promotion_target->m_slave_status,
                                  EventNameSet());
         GeneralOpData general(start, error_out, time_limit);
         rval = std::make_unique<SwitchoverParams>(promotion, demotion, general);

@@ -1514,7 +1514,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         // Step 2: If demotion target is master, meaning this server will become the master,
         // enable writing and scheduled events. Also, run promotion_sql_file.
         bool promotion_error = false;
-        if (promotion.to_from_master)
+        if (promotion.target_type == ServerOperation::TargetType::MASTER)
         {
             // Disabling read-only should be quick.
             bool ro_disabled = set_read_only(ReadOnlySetting::DISABLE, general.time_remaining, error_out);
@@ -1614,10 +1614,10 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
     // information has been backed up in the operation object.
     if (remove_slave_conns(general, m_slave_status))
     {
-        // Step 2: If this server is master, disable writes and scheduled events, flush logs,
-        // update gtid:s, run demotion_sql_file.
+        const bool demoting_master = demotion.target_type == ServerOperation::TargetType::MASTER;
+        // Step 2: If this server is master, disable writes and scheduled events, etc.
         bool demotion_error = false;
-        if (demotion.to_from_master && !demote_master(general, type))
+        if (demoting_master && !demote_master(general, type))
         {
             demotion_error = true;
         }
@@ -1638,7 +1638,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             }
         }
 
-        if (demotion_error && demotion.to_from_master)
+        if (demotion_error && demoting_master)
         {
             // Read_only was enabled (or tried to be enabled) but a later step failed.
             // Disable read_only. Connection is likely broken so use a short time limit.
