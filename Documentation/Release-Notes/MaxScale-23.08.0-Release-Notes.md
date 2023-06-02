@@ -39,6 +39,12 @@ that otherwise are identically configured, but for their list of servers. More
 information about this functionality can be found
 [here](../Getting-Started/Configuration-Guide.md#include-1).
 
+### [MXS-4549](https://jira.mariadb.org/browse/MXS-4549) Replay queries with partially returned results
+
+If a query in a transaction is interrupted and the result was partially
+delivered to the client, readwritesplit will now retry the execution of the
+query and discard the already delivered part of the result.
+
 ### MaxGUI
 
 

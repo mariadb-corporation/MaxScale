@@ -489,6 +489,10 @@ the replica server where the query is being executed fails, readwritesplit can
 retry the read on a replacement server. This makes the failure of a replica
 transparent to the client.
 
+If a part of the result was already delivered to the client, the query will not
+be retried. The retrying of queries with partially delivered results is only
+possible when `transaction_replay` is enabled.
+
 ### `delayed_retry`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
@@ -1323,6 +1327,14 @@ the transaction will be committed twice due to the implicit commit being
 present. The exception to this are the transaction management statements such as
 `BEGIN` and `START TRANSACTION`: they are detected and will cause the
 transaction to be correctly reset.
+
+In older versions of MaxScale, if a connection to a server is lost while a
+statement is being executed and the result was partially delivered to the
+client, readwritesplit would immediately close the session without attempting to
+replay the failing statement. Starting with MaxScale 23.08, this limitation no
+longer applies if the statement was done inside of a transaction and
+`transaction_replay` is enabled
+([MXS-4549](https://jira.mariadb.org/browse/MXS-4549)).
 
 #### Limitations in Session State Modifications
 

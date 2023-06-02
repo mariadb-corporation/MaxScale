@@ -9,6 +9,9 @@
   commit when `transaction_replay` is enabled. To retain the old behavior where
   transactions were always replayed, disable `transaction_replay_safe_commit`.
 
+* Readwritesplit will now retry queries with partially returned results if they
+  are done inside a transaction and `transaction_replay` is enabled.
+
 * Added the new [XRouter](./Routers/XRouter.md) module.
 
 * Common configuration settings can now be specified in a separate section,
