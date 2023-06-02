@@ -1269,6 +1269,13 @@ closed (MXS-1816).
 
 ### Transaction Replay Limitations
 
+When transaction replay is enabled, readwritesplit calculates a checksum of the
+server responses for each transaction. This is used to determine whether a
+replayed transaction was identical to the original transaction. Starting with
+MaxScale 23.08, a 128-bit xxHash checksum is stored for each statement that is
+in the transaction. Older versions of MaxScale used a single 160-bit SHA1
+checksum for the whole transaction.
+
 If the results from the replacement server are not identical when the
 transaction is replayed, the client connection is closed. This means that any
 transaction with a server specific result (e.g. `NOW()`, `@@server_id`) cannot
