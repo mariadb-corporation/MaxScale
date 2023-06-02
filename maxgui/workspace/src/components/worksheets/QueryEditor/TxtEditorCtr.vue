@@ -193,7 +193,7 @@ export default {
             // preview data
             const { PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
-            const activePrvwNode = SchemaSidebar.getters('getActivePrvwNode')
+            const previewingNode = SchemaSidebar.getters('getPreviewingNode')
             for (const mode of prvwModes) {
                 const data = this.$helpers.stringifyClone(
                     this.$typy(
@@ -212,7 +212,7 @@ export default {
                             break
                     }
                     resSets.push({
-                        id: `${resName} of ${activePrvwNode.qualified_name}`,
+                        id: `${resName} of ${previewingNode.qualified_name}`,
                         ...data,
                     })
                 }

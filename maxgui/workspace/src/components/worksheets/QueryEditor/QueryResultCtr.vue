@@ -46,7 +46,7 @@
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
                     :activeQueryMode="activeQueryMode"
-                    :activePrvwNodeQualifiedName="activePrvwNodeQualifiedName"
+                    :previewingNodeQualifiedName="previewingNodeQualifiedName"
                     :isLoading="isLoading"
                     :data="queryData"
                     :requestSentTime="requestSentTime"
@@ -177,8 +177,8 @@ export default {
         totalDuration() {
             return this.$typy(this.queryData, 'total_duration').safeNumber
         },
-        activePrvwNodeQualifiedName() {
-            return SchemaSidebar.getters('getActivePrvwNodeFQN')
+        previewingNodeQualifiedName() {
+            return SchemaSidebar.getters('getPreviewingNodeQualifiedName')
         },
     },
 }

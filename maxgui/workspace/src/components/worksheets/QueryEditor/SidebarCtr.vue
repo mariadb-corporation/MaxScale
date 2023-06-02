@@ -192,7 +192,7 @@ export default {
                 where: this.activeQueryTabId,
                 data(editor) {
                     editor.curr_editor_mode = mode
-                    editor.tbl_creation_info.altered_active_node = node
+                    editor.tbl_creation_info.altering_node = node
                 },
             })
             await this.queryAlterTblSuppData()

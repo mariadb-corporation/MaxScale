@@ -127,7 +127,8 @@ export default {
             lodash.uniqBy(QueryEditor.getters('getQueryEditorTmp').completion_items || [], 'label'),
         getDbTreeOfConn: () => QueryEditor.getters('getQueryEditorTmp').db_tree_of_conn || '',
         getDbTreeData: () => QueryEditor.getters('getQueryEditorTmp').db_tree || {},
-        getActivePrvwNode: () => QueryTab.getters('getActiveQueryTabTmp').active_prvw_node || {},
-        getActivePrvwNodeFQN: (state, getters) => getters.getActivePrvwNode.qualified_name || '',
+        getPreviewingNode: () => QueryTab.getters('getActiveQueryTabTmp').previewing_node || {},
+        getPreviewingNodeQualifiedName: (state, getters) =>
+            getters.getPreviewingNode.qualified_name || '',
     },
 }

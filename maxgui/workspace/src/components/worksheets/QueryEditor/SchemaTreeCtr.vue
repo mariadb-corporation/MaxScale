@@ -175,11 +175,11 @@ export default {
         dbTreeData() {
             return SchemaSidebar.getters('getDbTreeData')
         },
-        activePrvwNode() {
-            return SchemaSidebar.getters('getActivePrvwNode')
+        previewingNode() {
+            return SchemaSidebar.getters('getPreviewingNode')
         },
-        alteredActiveNode() {
-            return Editor.getters('getAlteredActiveNode')
+        alteringNode() {
+            return Editor.getters('getAlteringNode')
         },
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
@@ -231,15 +231,15 @@ export default {
             }
         },
         hasAlteringNode() {
-            return Boolean(this.$typy(this.alteredActiveNode, 'id').safeString)
+            return Boolean(this.$typy(this.alteringNode, 'id').safeString)
         },
-        // Use either activePrvwNode or alteredActiveNode
+        // Use either previewingNode or alteringNode
         activeNodes: {
             get() {
                 let nodes = []
-                if (this.hasAlteringNode) nodes = [...nodes, this.alteredActiveNode]
-                else if (this.$typy(this.activePrvwNode, 'id').safeString)
-                    nodes = [...nodes, this.activePrvwNode]
+                if (this.hasAlteringNode) nodes = [...nodes, this.alteringNode]
+                else if (this.$typy(this.previewingNode, 'id').safeString)
+                    nodes = [...nodes, this.previewingNode]
                 return nodes
             },
             set(v) {
@@ -249,14 +249,14 @@ export default {
                         Editor.update({
                             where: this.activeQueryTabId,
                             data(editor) {
-                                editor.tbl_creation_info.altered_active_node = activeNodes[0]
+                                editor.tbl_creation_info.altering_node = activeNodes[0]
                             },
                         })
                     else
                         QueryTabTmp.update({
                             where: this.activeQueryTabId,
                             data: {
-                                active_prvw_node: activeNodes[0],
+                                previewing_node: activeNodes[0],
                             },
                         })
                 }
@@ -443,7 +443,7 @@ export default {
         previewNode(node) {
             QueryTabTmp.update({
                 where: this.activeQueryTabId,
-                data: { active_prvw_node: this.minimizeNode(node) },
+                data: { previewing_node: this.minimizeNode(node) },
             })
             this.$emit('get-node-data', {
                 query_mode: this.QUERY_MODES.PRVW_DATA,

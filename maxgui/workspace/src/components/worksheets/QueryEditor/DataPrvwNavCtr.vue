@@ -86,7 +86,7 @@ export default {
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
                         await QueryResult.dispatch('fetchPrvw', {
-                            qualified_name: SchemaSidebar.getters('getActivePrvwNodeFQN'),
+                            qualified_name: SchemaSidebar.getters('getPreviewingNodeQualifiedName'),
                             query_mode,
                         })
                     }

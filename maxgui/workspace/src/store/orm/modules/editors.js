@@ -39,7 +39,7 @@ export default {
                 where: activeQueryTabId,
                 data(editor) {
                     editor.tbl_creation_info.loading_tbl_creation_info = true
-                    editor.tbl_creation_info.altered_active_node = node
+                    editor.tbl_creation_info.altering_node = node
                 },
             })
             if (errors.length) {
@@ -154,7 +154,6 @@ export default {
         getTblCreationInfo: (state, getters) => getters.getEditor.tbl_creation_info || {},
         getLoadingTblCreationInfo: (state, getters) =>
             getters.getTblCreationInfo.loading_tbl_creation_info || true,
-        getAlteredActiveNode: (state, getters) =>
-            getters.getTblCreationInfo.altered_active_node || {},
+        getAlteringNode: (state, getters) => getters.getTblCreationInfo.altering_node || {},
     },
 }
