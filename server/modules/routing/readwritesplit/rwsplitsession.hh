@@ -200,6 +200,8 @@ private:
     void checksum_mismatch();
     void trx_replay_next_stmt();
 
+    void track_tx_isolation(const mxs::Reply& reply);
+
     // Do we have at least one open slave connection
     bool have_connected_slaves() const;
 

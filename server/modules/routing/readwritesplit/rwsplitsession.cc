@@ -633,14 +633,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             m_expected_responses--;
             mxb_assert(m_expected_responses >= 0);
 
-            constexpr const char* LEVEL = "SERIALIZABLE";
-
-            if (reply.get_variable("trx_characteristics").find(LEVEL) != std::string_view::npos
-                || reply.get_variable("tx_isolation").find(LEVEL) != std::string_view::npos)
-            {
-                MXB_INFO("Transaction isolation level set to %s, locking session to primary", LEVEL);
-                m_locked_to_master = true;
-            }
+            track_tx_isolation(reply);
 
             if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())
             {
@@ -1233,4 +1226,29 @@ bool RWSplitSession::need_gtid_probe(const RoutingPlan& plan) const
            && m_wait_gtid == NONE
            && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE)
            && (route_info().type_mask() & (sql::TYPE_COMMIT | sql::TYPE_ROLLBACK)) == 0;
+}
+
+void RWSplitSession::track_tx_isolation(const mxs::Reply& reply)
+{
+    constexpr const char* LEVEL = "SERIALIZABLE";
+    bool was_serializable = m_locked_to_master;
+    std::string_view value;
+
+    if (auto trx_char = reply.get_variable("trx_characteristics"); !trx_char.empty())
+    {
+        m_locked_to_master = trx_char.find(LEVEL) != std::string_view::npos;
+        value = trx_char;
+    }
+
+    if (auto tx_isolation = reply.get_variable("tx_isolation"); !tx_isolation.empty())
+    {
+        m_locked_to_master = tx_isolation.find(LEVEL) != std::string_view::npos;
+        value = tx_isolation;
+    }
+
+    if (was_serializable != m_locked_to_master)
+    {
+        MXB_INFO("Transaction isolation level set to '%s', %s", std::string(value).c_str(),
+                 m_locked_to_master ? "locking session to primary" : "returning to normal routing");
+    }
 }

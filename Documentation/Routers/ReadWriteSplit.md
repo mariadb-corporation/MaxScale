@@ -1181,20 +1181,19 @@ statements that will be routed to replicas.)
 
 #### Transaction Isolation Level Tracking
 
-Use of the SERIALIZABLE transaction isolation level with readwritesplit is not
-recommended as it somewhat goes against the goals of load balancing.
-
 If either `session_track_transaction_info=CHARACTERISTICS` or
 `session_track_system_variables=tx_isolation` is configured for the MariaDB
 server, readwritesplit will track the transaction isolation level and lock the
 session to the primary when the isolation level is set to serializable. This
 retains the correctness of the isolation level which can otherwise cause
-problems. Once a session is locked to the primary, it will not be unlocked. To
-reinstate the normal routing behavior, a new connection must be created.
+problems.
 
-For example, if transaction isolation level tracking cannot be done and an
-autocommit SELECT is routed to a replica, it no longer behaves in a serializable
-manner. This can also have an effect on the replication in the replica server.
+Starting with MaxScale 23.08, once the transaction isolation level is set to
+something other than `SERIALIZABLE`, the session is no longer locked to the
+primary and returns to its normal state. Older versions of MaxScale remain
+locked to the primary even if the session goes out of the `SERIALIZABLE`
+isolation level.
+
 
 ### Routing to Replicas
 
