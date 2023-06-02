@@ -42,7 +42,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions, mapMutations } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 import ErdTask from '@wsSrc/store/orm/models/ErdTask'
 import ErdTaskTmp from '@wsSrc/store/orm/models/ErdTaskTmp'
 import QueryConn from '@wsSrc/store/orm/models/QueryConn'
@@ -64,7 +64,6 @@ export default {
     },
     computed: {
         ...mapState({
-            parsed_ddl: state => state.editorsMem.parsed_ddl,
             QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
             gen_erd_dlg: state => state.mxsWorkspace.gen_erd_dlg,
         }),
@@ -109,7 +108,6 @@ export default {
         },
     },
     methods: {
-        ...mapActions({ queryAndParseDDL: 'editorsMem/queryAndParseDDL' }),
         ...mapMutations({ SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG' }),
         async cloneConn({ conn, config }) {
             const [e, res] = await this.$helpers.to(connection.clone({ id: conn.id, config }))
@@ -127,11 +125,12 @@ export default {
             if (this.genInNewWs) conn = await this.cloneConn({ conn, config })
 
             if (conn.id) {
-                await this.queryAndParseDDL({
+                const [, parsedDdl] = await queryHelper.queryAndParseDDL({
                     connId: conn.id,
                     tableNodes: this.selectedTableNodes,
+                    config,
                 })
-                const erdData = queryHelper.genErdData(this.parsed_ddl)
+                const erdData = queryHelper.genErdData(parsedDdl)
                 // Bind connection to a new worksheet
                 if (this.genInNewWs) {
                     Worksheet.dispatch('insertErdWke')

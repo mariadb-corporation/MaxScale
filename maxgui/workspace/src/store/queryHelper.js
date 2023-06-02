@@ -24,7 +24,9 @@ import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 import tokens from '@wsSrc/utils/createTableTokens'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
+import TableParser from '@wsSrc/utils/TableParser'
 
+const parser = new TableParser()
 /**
  * @public
  * @param {Object} node
@@ -303,91 +305,22 @@ async function getNewTreeData({ connId, nodeGroup, data, completionItems = [], c
 }
 
 /**
+ * A node in db_tree_map has several attrs but some attrs are mainly of UX purpose.
+ * This function returns a minimized version of node containing only necessary attrs
+ * for identifying purpose and restoring expanded state of the schemas sidebar
  * @public
- * @param {Object} node - TBL node
- * @returns {String} - SQL
+ * @param {Object} node - a node in db_tree_map
+ * @returns {Object} minimized node
  */
-function getAlterTblOptsSQL(node) {
-    const schema = getSchemaName(node)
-    const tblName = getTblName(node)
-    return `SELECT
-                table_name,
-                ENGINE AS table_engine,
-                character_set_name AS table_charset,
-                table_collation,
-                table_comment
-            FROM
-                information_schema.tables t
-                JOIN information_schema.collations c ON t.table_collation = c.collation_name
-            WHERE
-                table_schema = "${schema}"
-                AND table_name = "${tblName}";`
-}
-
-/**
- * @public
- * @param {Object} node - TBL node
- * @returns {String} - SQL
- */
-function getAlterColsOptsSQL(node) {
-    const schema = getSchemaName(node)
-    const tblName = getTblName(node)
-    /**
-     * Exception for UQ column
-     * It needs to LEFT JOIN statistics and table_constraints tables to get accurate UNIQUE INDEX from constraint_name.
-     * LEFT JOIN statistics as it has column_name, index_name
-     * LEFT JOIN table_constraints as it has constraint_name. There is a sub-query in table_constraints to get
-     * get only rows having constraint_type = 'UNIQUE'.
-     * Notice: UQ column returns UNIQUE INDEX name.
-     *
-     */
-    return `SELECT
-                UUID() AS id,
-                a.column_name,
-                REGEXP_SUBSTR(UPPER(column_type), '[^)]*[)]?') AS column_type,
-                IF(column_key LIKE '%PRI%', 'YES', 'NO') AS PK,
-                IF(is_nullable LIKE 'YES', 'NULL', 'NOT NULL') AS NN,
-                IF(column_type LIKE '%UNSIGNED%', 'UNSIGNED', '') AS UN,
-                IF(c.constraint_name IS NULL, '', c.constraint_name) AS UQ,
-                IF(column_type LIKE '%ZEROFILL%', 'ZEROFILL', '') AS ZF,
-                IF(extra LIKE '%AUTO_INCREMENT%', 'AUTO_INCREMENT', '') AS AI,
-                IF(
-                   UPPER(extra) REGEXP 'VIRTUAL|STORED',
-                   REGEXP_SUBSTR(UPPER(extra), 'VIRTUAL|STORED'),
-                   '(none)'
-                ) AS generated,
-                COALESCE(generation_expression, column_default, '') AS 'default/expression',
-                IF(character_set_name IS NULL, '', character_set_name) AS charset,
-                IF(collation_name IS NULL, '', collation_name) AS collation,
-                column_comment AS comment
-            FROM
-                information_schema.columns a
-                LEFT JOIN information_schema.statistics b ON (
-                   a.table_schema = b.table_schema
-                   AND a.table_name = b.table_name
-                   AND a.column_name = b.column_name
-                )
-                LEFT JOIN (
-                   SELECT
-                      table_name,
-                      table_schema,
-                      constraint_name
-                   FROM
-                      information_schema.table_constraints
-                   WHERE
-                      constraint_type = 'UNIQUE'
-                ) c ON (
-                   a.table_name = c.table_name
-                   AND a.table_schema = c.table_schema
-                   AND b.index_name = c.constraint_name
-                )
-            WHERE
-                a.table_schema = '${schema}'
-                AND a.table_name = '${tblName}'
-            GROUP BY
-                a.column_name
-            ORDER BY
-                a.ordinal_position;`
+function minimizeNode({ id, parentNameData, qualified_name, name, type, level }) {
+    return {
+        id,
+        qualified_name,
+        parentNameData,
+        name,
+        type,
+        level,
+    }
 }
 
 /**
@@ -605,6 +538,65 @@ function genErdData(parsedDdl) {
     return { nodes, links }
 }
 
+/**
+ * @param {string} param.connId - id of connection
+ * @param {string[]} param.tableNodes - tables to be queried and parsed
+ * @param {Object} param.config - axios config
+ * @returns {Object} key is the schema name, value is the parsed data of tables
+ */
+async function queryAndParseDDL({ connId, tableNodes, config }) {
+    let errors = []
+    const [setVariableErr] = await to(
+        queries.post({ id: connId, body: { sql: 'SET SESSION sql_quote_show_create = 1' }, config })
+    )
+    const [getScriptErr, res] = await to(
+        queries.post({
+            id: connId,
+            body: {
+                sql: tableNodes.map(node => `SHOW CREATE TABLE ${node.qualified_name};`).join('\n'),
+                max_rows: 0,
+            },
+            config,
+        })
+    )
+    if (setVariableErr) errors.push(setVariableErr)
+    if (getScriptErr) errors.push(getScriptErr)
+    const parsedDdl = typy(res, 'data.data.attributes.results').safeArray.reduce((acc, item, i) => {
+        const schema = tableNodes[i].parentNameData[NODE_TYPES.SCHEMA]
+        if (!acc[schema]) acc[schema] = []
+        const parsed = parser.parse(typy(item, 'data[0][1]').safeString)
+        acc[schema].push(parsed)
+        return acc
+    }, {})
+    return [errors, parsedDdl]
+}
+
+/**
+ * @param {array} keys - parsed keys from DDL of a table
+ * @param {string} colName - column name to be looked up
+ * @returns {string} type of the key
+ */
+function findKeyTypeByColName({ keys, colName }) {
+    const keyTypes = [tokens.primaryKey, tokens.uniqueKey, tokens.key]
+    return keyTypes.find(type =>
+        typy(keys, `[${type}]`).safeArray.some(key =>
+            key.index_cols.some(item => item.name === colName)
+        )
+    )
+}
+
+/**
+ * @param {array} keys - parsed keys from DDL of a table
+ * @param {string} keyType - type of the key
+ * @param {string} colName - column name to be looked up
+ * @returns {string} constraint name of the key
+ */
+function getIdxNameByColName({ keys, keyType, colName }) {
+    for (const key of typy(keys, `[${keyType}]`).safeArray) {
+        if (key.index_cols.some(item => item.name === colName)) return key.name
+    }
+}
+
 export default {
     getSchemaName,
     getTblName,
@@ -613,11 +605,13 @@ export default {
     getChildNodeData,
     getNewTreeData,
     deepReplaceNode,
-    getAlterTblOptsSQL,
-    getAlterColsOptsSQL,
+    minimizeNode,
     filterEntity,
     categorizeConns,
     genConnStr,
     getDatabase,
     genErdData,
+    queryAndParseDDL,
+    findKeyTypeByColName,
+    getIdxNameByColName,
 }

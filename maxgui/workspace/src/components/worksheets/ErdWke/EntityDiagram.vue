@@ -147,6 +147,7 @@ import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { getConfig, LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import tokens from '@wsSrc/utils/createTableTokens'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'entity-diagram',
@@ -400,17 +401,11 @@ export default {
             this.setEventLinkStyles(EVENT_TYPES.NONE)
             this.chosenLinks = []
         },
-        findKeyTypeByColName({ node, colName }) {
-            const nodeKeys = this.entityKeyMap[node.id]
-            const keyTypes = [tokens.primaryKey, tokens.uniqueKey, tokens.key]
-            return keyTypes.find(type =>
-                this.$typy(nodeKeys, `[${type}]`).safeArray.some(key =>
-                    key.index_cols.some(item => item.name === colName)
-                )
-            )
-        },
         getKeyIcon({ node, colName }) {
-            const keyType = this.findKeyTypeByColName({ node, colName })
+            const keyType = queryHelper.findKeyTypeByColName({
+                keys: this.entityKeyMap[node.id],
+                colName,
+            })
             const { color } = this.getHighlightColStyle({ node, colName }) || {}
             switch (keyType) {
                 case tokens.primaryKey:

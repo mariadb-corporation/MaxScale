@@ -81,8 +81,8 @@ export default {
                 (obj, o) => {
                     // SCHEMA nodes will be included in selectedObjs even though those have no tables
                     if (o.type === this.NODE_TYPES.SCHEMA)
-                        obj.emptySchemas.push(this.minimizeNode(o))
-                    else obj.tables.push(this.minimizeNode(o))
+                        obj.emptySchemas.push(queryHelper.minimizeNode(o))
+                    else obj.tables.push(queryHelper.minimizeNode(o))
                     return obj
                 },
                 { tables: [], emptySchemas: [] }
@@ -135,13 +135,6 @@ export default {
     methods: {
         iconSheet(node) {
             if (node.type === this.NODE_TYPES.SCHEMA) return '$vuetify.icons.mxs_database'
-        },
-        minimizeNode(node) {
-            return {
-                name: node.name,
-                qualified_name: node.qualified_name,
-                schema: node.parentNameData[this.NODE_TYPES.SCHEMA],
-            }
         },
         async fetchSchemas() {
             const [e, res] = await this.$helpers.to(
