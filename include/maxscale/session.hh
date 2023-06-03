@@ -21,7 +21,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/routing.hh>
-#include <maxscale/utils.hh>
+#include <maxscale/registry.hh>
 
 class DCB;
 class SERVICE;

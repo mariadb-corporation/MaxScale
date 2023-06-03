@@ -21,6 +21,7 @@
 #include <maxscale/monitor.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
+#include <maxscale/utils.hh>
 #include "internal/config.hh"
 #include "internal/modules.hh"
 #include "internal/service.hh"

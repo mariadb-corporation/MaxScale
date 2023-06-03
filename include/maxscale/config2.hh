@@ -25,8 +25,10 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <functional>
 #include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
+#include <maxbase/string.hh>
 #include <maxbase/host.hh>
 #include <maxbase/log.hh>
 #include <maxscale/config_common.hh>

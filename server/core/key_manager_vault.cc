@@ -14,6 +14,7 @@
 
 #include "internal/key_manager_vault.hh"
 #include <maxbase/json.hh>
+#include <maxscale/utils.hh>
 
 #include <libvault/VaultClient.h>
 

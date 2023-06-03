@@ -35,6 +35,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>
+#include <maxscale/utils.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/defaults.hh"

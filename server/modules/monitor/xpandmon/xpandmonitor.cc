@@ -23,6 +23,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/sqlite3.hh>
+#include <maxscale/utils.hh>
 #include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/service.hh"
 

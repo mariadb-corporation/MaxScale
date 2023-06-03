@@ -30,7 +30,6 @@
 #include <maxbase/filesystem.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/utils.hh>
 #include <maxscale/event.hh>
 #include <maxbase/format.hh>
 

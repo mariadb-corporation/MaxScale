@@ -45,7 +45,6 @@ using maxbase::Semaphore;
 using maxbase::Worker;
 using maxbase::WorkerLoad;
 using maxscale::RoutingWorker;
-using maxscale::Closer;
 using std::lock_guard;
 using std::shared_ptr;
 using std::stringstream;

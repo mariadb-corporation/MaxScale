@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/regex.hh>
-#include <maxscale/utils.hh>
 
 #include <mutex>
 
@@ -76,54 +75,6 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
                                    const char* subject,
                                    int length,
                                    const char* calling_module);
-
-namespace maxscale
-{
-
-/**
- * @class CloserTraits<pcre2_code*> pcre2.hh <maxscale/pcre2.hh>
- *
- * Specialization of @c CloserTraits for @c pcre2_code*.
- */
-template<>
-struct CloserTraits<pcre2_code*>
-{
-    static void close_if(pcre2_code* pCode)
-    {
-        if (pCode)
-        {
-            pcre2_code_free(pCode);
-        }
-    }
-
-    static void reset(pcre2_code*& pCode)
-    {
-        pCode = NULL;
-    }
-};
-
-/**
- * @class CloserTraits<pcre2_match_data*> pcre2.hh <maxscale/pcre2.hh>
- *
- * Specialization of @c CloserTraits for @c pcre2_match_data*.
- */
-template<>
-struct CloserTraits<pcre2_match_data*>
-{
-    static void close_if(pcre2_match_data* pData)
-    {
-        if (pData)
-        {
-            pcre2_match_data_free(pData);
-        }
-    }
-
-    static void reset(pcre2_match_data*& pData)
-    {
-        pData = NULL;
-    }
-};
-}
 
 namespace std
 {

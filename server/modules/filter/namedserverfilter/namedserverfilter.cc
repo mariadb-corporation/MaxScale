@@ -1049,7 +1049,7 @@ bool RegexHintFilter::add_source_address(const std::shared_ptr<Setup>& setup, co
 
 void RegexHintFilter::set_source_addresses(const std::shared_ptr<Setup>& setup, const std::string& host_names)
 {
-    for (const auto& host : mxs::strtok(host_names, ","))
+    for (const auto& host : mxb::strtok(host_names, ","))
     {
         std::string trimmed_host = host;
         mxb::trim(trimmed_host);

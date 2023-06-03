@@ -29,7 +29,6 @@
 using std::unique_ptr;
 using std::string;
 using std::vector;
-using mxs::Closer;
 using mxs::Parser;
 
 namespace
@@ -133,12 +132,7 @@ public:
 
         if (pCode)
         {
-            Closer<pcre2_code*> code(pCode);
-
             sAccount.reset(new AccountRegexp(user, host, pCode));
-
-            // Ownership of pCode has been moved to the AccountRegexp object.
-            code.release();
         }
         else
         {
@@ -177,9 +171,8 @@ public:
 
             if (pData)
             {
-                Closer<pcre2_match_data*> data(pData);
-
                 rv = (pcre2_match(m_pCode, (PCRE2_SPTR)zHost, PCRE2_ZERO_TERMINATED, 0, 0, pData, NULL) >= 0);
+                pcre2_match_data_free(pData);
             }
         }
 
@@ -1021,7 +1014,6 @@ unique_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRul
 
             if (pCode)
             {
-                Closer<pcre2_code*> code(pCode);
                 // Instantiate the MatchRule class
                 sRule = unique_ptr<MaskingRules::MatchRule>(new MaskingRules::MatchRule(column,
                                                                                         table,
@@ -1031,9 +1023,6 @@ unique_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRul
                                                                                         pCode,
                                                                                         value,
                                                                                         fill));
-
-                // Ownership of pCode has been moved to the MatchRule object.
-                code.release();
             }
         }
     }
@@ -1208,7 +1197,6 @@ void MaskingRules::MatchRule::rewrite(mxq::LEncString& s) const
     {
         // Get the fill size
         size_t fill_len = m_fill.length();
-        Closer<pcre2_match_data*> data(pData);
 
         // Match all the compiled pattern
         while ((startoffset < total_len)
@@ -1247,6 +1235,8 @@ void MaskingRules::MatchRule::rewrite(mxq::LEncString& s) const
             // Set offset to the end of Full Match substring or break
             startoffset = ovector[1];
         }
+
+        pcre2_match_data_free(pData);
 
         // Log errors, exclding NO_MATCH or PARTIAL
         if (rv < 0 && (rv != PCRE2_ERROR_NOMATCH || PCRE2_ERROR_PARTIAL))
@@ -1336,10 +1326,9 @@ unique_ptr<MaskingRules> MaskingRules::load(const char* zPath)
 
     if (pFile)
     {
-        Closer<FILE*> file(pFile);
-
         json_error_t error;
-        json_t* pRoot = json_loadf(file.get(), JSON_DISABLE_EOF_CHECK, &error);
+        json_t* pRoot = json_loadf(pFile, JSON_DISABLE_EOF_CHECK, &error);
+        fclose(pFile);
 
         if (pRoot)
         {

@@ -15,16 +15,17 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <algorithm>
 #include <deque>
 #include <map>
 #include <string>
 #include <memory>
+#include <cstring>
 #include <cstdint>
 #include <microhttpd.h>
 
 #include <maxbase/alloc.hh>
 #include <maxbase/jansson.hh>
-#include <maxscale/utils.hh>
 #include <maxscale/http.hh>
 
 // The API version part of the URL

@@ -31,6 +31,7 @@
 #include <maxscale/log.hh>
 
 #include <utility>
+#include <cstring>
 
 /**
  * Utility wrapper for PCRE2 library function call pcre2_substitute.

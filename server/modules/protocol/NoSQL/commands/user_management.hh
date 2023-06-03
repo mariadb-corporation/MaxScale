@@ -22,6 +22,7 @@
 #include "../nosqlscram.hh"
 #include "../nosqlusermanager.hh"
 #include "maxscale.hh"
+#include <maxscale/utils.hh>
 
 using namespace std;
 

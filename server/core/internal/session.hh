@@ -23,7 +23,6 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
-#include <maxscale/utils.hh>
 #include <maxscale/target.hh>
 
 #include "filter.hh"

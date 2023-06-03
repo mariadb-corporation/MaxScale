@@ -13,6 +13,7 @@
 
 #include "pgauthenticatormodule.hh"
 #include <maxscale/protocol/postgresql/scram.hh>
+#include <maxscale/utils.hh>
 #include <gsasl.h>
 
 std::string PgAuthenticatorModule::supported_protocol() const

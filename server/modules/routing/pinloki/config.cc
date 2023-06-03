@@ -19,6 +19,7 @@
 #include <maxbase/log.hh>
 #include <sstream>
 #include <uuid/uuid.h>
+#include <maxscale/utils.hh>
 
 #include "pinloki.hh"
 

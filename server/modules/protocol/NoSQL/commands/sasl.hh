@@ -16,6 +16,7 @@
 #include "defs.hh"
 #include "../nosqlscram.hh"
 #include "authentication.hh"
+#include <maxscale/utils.hh>
 
 namespace nosql
 {

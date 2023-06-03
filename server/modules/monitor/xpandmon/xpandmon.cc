@@ -15,6 +15,7 @@
 #include "xpandmon.hh"
 #include <maxscale/modinfo.hh>
 #include <maxscale/modulecmd.hh>
+#include <maxscale/utils.hh>
 #include "xpandmonitor.hh"
 
 namespace

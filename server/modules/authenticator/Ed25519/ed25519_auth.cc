@@ -20,6 +20,7 @@
 #include <maxbase/format.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/utils.hh>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/rsa.h>

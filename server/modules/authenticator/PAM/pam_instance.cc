@@ -19,6 +19,7 @@
 #include <maxscale/config_common.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/secrets.hh>
+#include <maxscale/utils.hh>
 #include "pam_client_session.hh"
 #include "pam_backend_session.hh"
 #include "../MariaDBAuth/mysql_auth.hh"

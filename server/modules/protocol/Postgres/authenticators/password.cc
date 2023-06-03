@@ -15,6 +15,7 @@
 #include "../pgprotocoldata.hh"
 #include <openssl/md5.h>
 #include <maxscale/protocol/postgresql/scram.hh>
+#include <maxscale/utils.hh>
 #include "common.hh"
 
 using std::string;

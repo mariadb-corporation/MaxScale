@@ -21,6 +21,7 @@
 
 #include <maxbase/assert.hh>
 #include <maxsql/mariadb.hh>
+#include <maxscale/utils.hh>
 #include <maxscale/protocol/mariadb/binlog.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

@@ -20,7 +20,6 @@
 
 #include <maxscale/backend.hh>
 #include <maxscale/router.hh>
-#include <maxscale/utils.hh>
 #include <maxbase/checksum.hh>
 
 class MyBackend;

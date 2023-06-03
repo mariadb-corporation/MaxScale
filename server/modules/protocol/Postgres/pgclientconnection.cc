@@ -17,6 +17,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
+#include <maxscale/utils.hh>
 #include "pgprotocoldata.hh"
 #include "pgusermanager.hh"
 

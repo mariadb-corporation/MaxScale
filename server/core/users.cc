@@ -25,6 +25,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/users.hh>
 #include <maxscale/http.hh>
+#include <maxscale/utils.hh>
 
 namespace
 {

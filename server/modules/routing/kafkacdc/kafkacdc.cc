@@ -16,6 +16,7 @@
 
 #include <maxbase/alloc.hh>
 #include <maxscale/paths.hh>
+#include <maxscale/utils.hh>
 
 namespace
 {

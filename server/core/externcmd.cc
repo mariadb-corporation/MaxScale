@@ -23,6 +23,7 @@
 
 #include <maxbase/assert.hh>
 #include <maxbase/alloc.hh>
+#include <maxbase/string.hh>
 #include <maxscale/pcre2.hh>
 
 using std::string;

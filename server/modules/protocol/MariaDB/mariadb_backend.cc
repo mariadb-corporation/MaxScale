@@ -29,6 +29,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
+#include <maxscale/utils.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>

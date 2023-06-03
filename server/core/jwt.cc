@@ -26,6 +26,7 @@
 #include <maxbase/http.hh>
 #include <maxbase/filesystem.hh>
 #include <maxscale/config.hh>
+#include <maxscale/utils.hh>
 
 namespace
 {

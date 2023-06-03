@@ -23,6 +23,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
+#include <maxscale/utils.hh>
 #include "packet_parser.hh"
 
 using std::string;

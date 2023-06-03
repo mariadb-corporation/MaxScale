@@ -24,6 +24,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/users.hh>
+#include <maxscale/utils.hh>
 
 /* Allowed time interval (in seconds) after last update*/
 #define CDC_USERS_REFRESH_TIME 30

@@ -35,6 +35,7 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 #include <maxscale/ssl.hh>
+#include <maxscale/utils.hh>
 
 #include "internal/config.hh"
 #include "internal/modules.hh"
