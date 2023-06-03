@@ -304,7 +304,7 @@ bool XpandMonitor::softfail(SERVER* pServer, json_t** ppError)
     {
         m_worker->call([this, pServer, ppError, &rv]() {
             rv = perform_softfail(pServer, ppError);
-        }, mxb::Worker::EXECUTE_QUEUED);
+        });
     }
     else
     {
@@ -325,7 +325,7 @@ bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
     {
         m_worker->call([this, pServer, ppError, &rv]() {
             rv = perform_unsoftfail(pServer, ppError);
-        }, mxb::Worker::EXECUTE_QUEUED);
+        });
     }
     else
     {

@@ -811,16 +811,16 @@ bool Worker::execute(const function<void ()>& func, mxb::Semaphore* pSem, execut
     return rval;
 }
 
-bool Worker::call(Task& task, execute_mode_t mode)
+bool Worker::call(Task& task)
 {
     mxb::Semaphore sem;
-    return execute(&task, &sem, mode) && sem.wait();
+    return execute(&task, &sem, EXECUTE_AUTO) && sem.wait();
 }
 
-bool Worker::call(const function<void ()>& func, execute_mode_t mode)
+bool Worker::call(const function<void ()>& func)
 {
     mxb::Semaphore sem;
-    return execute(func, &sem, mode) && sem.wait();
+    return execute(func, &sem, EXECUTE_AUTO) && sem.wait();
 }
 
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)

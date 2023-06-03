@@ -201,7 +201,7 @@ void RoutingWorker::Data::initialize_workers()
 
             pWorker->call([pWorker, this]() {
                 this->init_for(pWorker);
-            }, mxb::Worker::EXECUTE_QUEUED);
+            });
         }
     }
 }
@@ -424,7 +424,7 @@ int RoutingWorker::activate_workers(int n)
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
             success = pWorker->activate(listeners);
-        }, Worker::EXECUTE_QUEUED);
+        });
 
         if (!success)
         {
@@ -692,7 +692,7 @@ bool RoutingWorker::decrease_workers(int n)
                     pWorker->set_state(State::DRAINING);
                 }
             }
-        }, Worker::EXECUTE_QUEUED);
+        });
 
         if (!success)
         {
@@ -1556,7 +1556,7 @@ unique_ptr<RoutingWorker> RoutingWorker::create(int index,
             bool success = false;
             sWorker->call([&sWorker, &listeners, &success]() {
                 success = sWorker->activate(listeners);
-            }, Worker::EXECUTE_QUEUED);
+            });
 
             mxb_assert(success);
 
@@ -2436,7 +2436,7 @@ bool RoutingWorker::set_listen_mode(int index, bool enabled)
             {
                 rv = true;
             }
-        }, EXECUTE_QUEUED))
+        }))
         {
             MXB_ERROR("Could not call routing worker %d.", index);
         }

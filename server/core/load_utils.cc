@@ -834,7 +834,7 @@ bool run_module_thread_init(MXS_MODULE* mod_info)
                             thread_init_ok = false;
                         }
                     };
-                main_worker->call(run_thread_init, exec_auto);
+                main_worker->call(run_thread_init);
             }
         }
 
@@ -876,7 +876,7 @@ bool run_module_thread_init(MXS_MODULE* mod_info)
 
                     if (main_worker)
                     {
-                        main_worker->call(thread_finish_func, exec_auto);
+                        main_worker->call(thread_finish_func);
                     }
                 }
             }

@@ -1223,7 +1223,7 @@ HttpResponse cb_alter_session(const HttpRequest& request)
                 {
                     ok = session->update(json);
                 }
-            }, mxb::Worker::EXECUTE_AUTO);
+            });
 
         if (ok)
         {
@@ -2014,7 +2014,7 @@ HttpResponse resource_handle_request(const HttpRequest& request)
     if (!worker->call([&request, &response, worker]() {
                           mxb::WatchdogNotifier::Workaround workaround(worker);
                           response = handle_request(request);
-                      }, mxb::Worker::EXECUTE_AUTO))
+                      }))
     {
         response = HttpResponse(MHD_HTTP_SERVICE_UNAVAILABLE);
     }

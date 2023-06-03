@@ -722,7 +722,7 @@ public:
      *
      * @return True if the task was executed on the worker.
      */
-    bool call(Task& task, enum execute_mode_t mode);
+    bool call(Task& task);
 
     /**
      * Executes function on worker thread and returns only when the function
@@ -733,7 +733,7 @@ public:
      *
      * @return True if function was executed on the worker.
      */
-    bool call(const std::function<void ()>& func, enum execute_mode_t mode);
+    bool call(const std::function<void ()>& func);
 
     /**
      * Post a message to a worker.

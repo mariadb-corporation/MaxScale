@@ -92,7 +92,7 @@ Producer::ConnectionInfo Producer::find_master() const
             rval.port = best->port();
             rval.proxy_protocol = best->proxy_protocol();
         }
-    }, mxb::Worker::EXECUTE_AUTO);
+    });
 
     return rval;
 }

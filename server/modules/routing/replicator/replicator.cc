@@ -62,7 +62,7 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
                 servers.push_back({s->address(), s->port(), cfg.user, cfg.password, s->proxy_protocol()});
             }
         }
-    }, mxs::RoutingWorker::EXECUTE_AUTO);
+    });
 
     return servers;
 }
@@ -275,7 +275,7 @@ bool Replicator::Imp::is_owner() const
             {
                 is_owner = cluster->is_running() && cluster->is_cluster_owner();
             }
-        }, mxs::MainWorker::EXECUTE_AUTO);
+        });
     }
 
     return is_owner;

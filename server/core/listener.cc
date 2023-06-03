@@ -1161,7 +1161,7 @@ bool Listener::listen_unique(mxs::RoutingWorker& worker)
             rval = open_unique_listener(worker);
         };
 
-        if (!worker.call(open_socket, mxb::Worker::EXECUTE_AUTO))
+        if (!worker.call(open_socket))
         {
             MXB_ERROR("Could not call worker thread; it will not start listening "
                       "on listener socket.");
@@ -1190,7 +1190,7 @@ bool Listener::unlisten_unique(mxs::RoutingWorker& worker)
             *m_local_fd = -1;
         };
 
-        if (!worker.call(close_socket, mxb::Worker::EXECUTE_AUTO))
+        if (!worker.call(close_socket))
         {
             MXB_ERROR("Could not call worker thread; it will not stop listening "
                       "on listener socket.");

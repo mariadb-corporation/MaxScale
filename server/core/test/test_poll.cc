@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 
             pWorker->call([service]() {
                     test1(service);
-                }, mxb::Worker::EXECUTE_QUEUED);
+                });
         });
     return 0;
 }

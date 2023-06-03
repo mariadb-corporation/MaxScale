@@ -325,7 +325,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
             {
                 ++rv;
             }
-        }, mxb::Worker::EXECUTE_QUEUED);
+        });
 
     return rv;
 }
