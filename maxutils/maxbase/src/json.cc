@@ -16,6 +16,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 #include <utility>
+#include <sstream>
 
 using std::string;
 
@@ -848,4 +849,42 @@ std::ostream& operator<<(std::ostream& out, mxb::Json::Type type)
 
     return out;
 }
+
+std::string json_to_string(json_t* json)
+{
+    std::stringstream ss;
+
+    switch (json_typeof(json))
+    {
+    case JSON_STRING:
+        ss << json_string_value(json);
+        break;
+
+    case JSON_INTEGER:
+        ss << json_integer_value(json);
+        break;
+
+    case JSON_REAL:
+        ss << json_real_value(json);
+        break;
+
+    case JSON_TRUE:
+        ss << "true";
+        break;
+
+    case JSON_FALSE:
+        ss << "false";
+        break;
+
+    case JSON_NULL:
+        break;
+
+    default:
+        mxb_assert(false);
+        break;
+    }
+
+    return ss.str();
+}
+
 }

@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <cstring>
 #include <string>
 
 #include <maxbase/alloc.hh>

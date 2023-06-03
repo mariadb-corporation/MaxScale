@@ -13,6 +13,8 @@
  */
 #pragma once
 
+#include <vector>
+
 /**
  * @file include/maxscale/secrets.h - MaxScale config file password decryption
  */

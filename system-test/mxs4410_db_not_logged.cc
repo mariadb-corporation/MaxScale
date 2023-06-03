@@ -13,6 +13,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <fstream>
+#include <iostream>
 
 using namespace std;
 

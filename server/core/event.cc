@@ -15,6 +15,7 @@
 #include "internal/event.hh"
 #include <algorithm>
 #include <atomic>
+#include <cstdarg>
 #include <string.h>
 #include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>

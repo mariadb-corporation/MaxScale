@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <openssl/sha.h>
 #include <optional>
+#include <array>
 
 using Digest = std::array<uint8_t, SHA256_DIGEST_LENGTH>;
 

@@ -70,11 +70,8 @@
  */
 #include <cstddef>
 #include <cstdint>
-#include <exception>
 #include <new>
 #include <string>
-#include <iostream>
-#include <iomanip>
 #include <chrono>
 
 using namespace std::string_literals;

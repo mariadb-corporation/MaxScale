@@ -2,6 +2,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <fstream>
+#include <iostream>
 
 static inline bool clone_repo(TestConnections& test, const std::string& repo,
                               const std::string& branch, const std::string& repo_dir)

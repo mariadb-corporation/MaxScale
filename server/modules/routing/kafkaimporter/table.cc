@@ -16,6 +16,7 @@
 
 #include <maxbase/alloc.hh>
 #include <maxbase/assert.hh>
+#include <maxbase/string.hh>
 #include <mysqld_error.h>
 
 #include <string>

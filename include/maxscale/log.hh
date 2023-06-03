@@ -16,13 +16,6 @@
 // NOTE: Do not include <maxscale/ccdefs.hh>, it includes this.
 #include <maxbase/ccdefs.hh>
 
-#include <assert.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <sstream>
-#include <functional>
-#include <set>
-
 #if defined (MXS_MODULE_NAME)
 #error In MaxScale >= 7, a module must not declare MXS_MODULE_NAME, but MXB_MODULE_NAME.
 #endif
@@ -32,8 +25,6 @@
 #endif
 
 #include <maxbase/log.hh>
-#include <maxbase/jansson.hh>
-#include <maxbase/string.hh>
 
 /**
  * Initializes MaxScale log manager
@@ -61,43 +52,6 @@ bool mxs_log_rotate();
  * @return Counter value
  */
 int mxs_get_log_rotation_count();
-
-/**
- * Get MaxScale logs as JSON
- *
- * @param host   The hostname of this MaxScale, sent by the client.
- *
- * @return The logs as a JSON API resource.
- */
-json_t* mxs_logs_to_json(const char* host);
-
-/**
- * Get MaxScale log data as JSON
- *
- * @param host     The hostname of this MaxScale, sent by the client.
- * @param cursor   The cursor where to read log entries for. An empty string means no cursor is open.
- * @param rows     How many rows of logs to read.
- * @param priority Log priorities to include or empty set for all priorities
- *
- * @return The log data as a JSON API resource.
- */
-json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows,
-                             const std::set<std::string>& priorities);
-
-/**
- * Create a stream of logs
- *
- * TODO: This should be in an internal header
- *
- * @param cursor   The cursor where to stream the entries for. An empty cursor means start
- *                 from the latest position.
- * @param priority Log priorities to include or empty set for all priorities
- *
- * @return Function that can be called to read the log. If an empty string is returned, the current
- *         end of the log is reached. Calling it again can return more data at a later time.
- */
-std::function<std::string()> mxs_logs_stream(const std::string& cursor,
-                                             const std::set<std::string>& priorities);
 
 inline void mxs_log_finish()
 {

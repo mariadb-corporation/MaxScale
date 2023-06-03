@@ -17,6 +17,7 @@
 #include <time.h>
 #include <string.h>
 #include <string>
+#include <iostream>
 #include <mysql.h>
 #include <maxbase/assert.hh>
 

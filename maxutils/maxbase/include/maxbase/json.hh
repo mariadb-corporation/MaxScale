@@ -26,6 +26,15 @@ namespace maxbase
 {
 
 /**
+ * Convert json_t to string.
+ *
+ * @param json  JSON to convert to string.
+ *
+ * @return The json_t value as string.
+ */
+std::string json_to_string(json_t* json);
+
+/**
  * Wrapper class for Jansson json-objects.
  */
 class Json

@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <vector>
 #include <sstream>
+#include <iomanip>
 #include <sys/epoll.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/average.hh>

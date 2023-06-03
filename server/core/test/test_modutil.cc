@@ -14,6 +14,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <cstdarg>
+#include <maxbase/string.hh>
 #include <maxbase/format.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

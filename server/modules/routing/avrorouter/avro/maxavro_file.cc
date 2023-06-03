@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <string.h>
 #include <maxbase/assert.hh>
+#include <maxbase/string.hh>
 #include <maxscale/log.hh>
 #include <zlib.h>
 

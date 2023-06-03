@@ -14,6 +14,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <maxbase/assert.hh>
 
 #include <map>
 #include <memory>

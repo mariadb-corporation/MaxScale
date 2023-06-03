@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <map>
 #include <iostream>
+#include <maxbase/string.hh>
 
 using std::istream;
 using std::string;

@@ -15,10 +15,12 @@
 
 #include <maxbase/shareddata.hh>
 #include <maxbase/threadpool.hh>
+#include <maxbase/string.hh>
 #include <vector>
 #include <numeric>
 #include <algorithm>
 #include <future>
+#include <iomanip>
 
 namespace maxbase
 {

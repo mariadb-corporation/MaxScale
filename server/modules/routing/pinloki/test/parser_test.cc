@@ -1,5 +1,6 @@
 #include "../parser.hh"
 
+#include <maxbase/string.hh>
 #include <iostream>
 #include <sstream>
 

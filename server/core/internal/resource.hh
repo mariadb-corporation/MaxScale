@@ -114,3 +114,38 @@ private:
  * @return Response to request
  */
 HttpResponse resource_handle_request(const HttpRequest& request);
+
+/**
+ * Get MaxScale logs as JSON
+ *
+ * @param host   The hostname of this MaxScale, sent by the client.
+ *
+ * @return The logs as a JSON API resource.
+ */
+json_t* mxs_logs_to_json(const char* host);
+
+/**
+ * Get MaxScale log data as JSON
+ *
+ * @param host     The hostname of this MaxScale, sent by the client.
+ * @param cursor   The cursor where to read log entries for. An empty string means no cursor is open.
+ * @param rows     How many rows of logs to read.
+ * @param priority Log priorities to include or empty set for all priorities
+ *
+ * @return The log data as a JSON API resource.
+ */
+json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows,
+                             const std::set<std::string>& priorities);
+
+/**
+ * Create a stream of logs
+ *
+ * @param cursor   The cursor where to stream the entries for. An empty cursor means start
+ *                 from the latest position.
+ * @param priority Log priorities to include or empty set for all priorities
+ *
+ * @return Function that can be called to read the log. If an empty string is returned, the current
+ *         end of the log is reached. Calling it again can return more data at a later time.
+ */
+std::function<std::string()> mxs_logs_stream(const std::string& cursor,
+                                             const std::set<std::string>& priorities);

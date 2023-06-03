@@ -15,6 +15,7 @@
 
 #include "nosqlprotocol.hh"
 #include <bsoncxx/document/view.hpp>
+#include <vector>
 
 namespace nosql
 {

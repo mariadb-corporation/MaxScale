@@ -20,10 +20,12 @@
 #include <string_view>
 #include <mutex>
 #include <map>
+#include <set>
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/buffer.hh>
 #include <maxbase/average.hh>
+#include <maxbase/jansson.hh>
 
 class MXS_SESSION;
 

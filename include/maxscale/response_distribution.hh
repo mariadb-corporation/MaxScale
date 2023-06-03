@@ -17,6 +17,7 @@
 #include <maxbase/stopwatch.hh>
 
 #include <map>
+#include <vector>
 
 using namespace std::chrono_literals;
 

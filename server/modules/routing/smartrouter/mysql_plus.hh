@@ -14,6 +14,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <array>
 #include <ostream>
 #include <sstream>
 #include <string>

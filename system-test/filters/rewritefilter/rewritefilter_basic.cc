@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <sstream>
+#include <iostream>
 
 #include <maxtest/testconnections.hh>
 #include <maxbase/exception.hh>

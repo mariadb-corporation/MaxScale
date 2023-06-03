@@ -15,6 +15,7 @@
 #pragma once
 #include <maxscale/ccdefs.hh>
 #include <memory>
+#include <vector>
 
 struct sftp_session_struct;
 
