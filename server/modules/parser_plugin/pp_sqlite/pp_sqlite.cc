@@ -27,6 +27,7 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
 #include <maxscale/modinfo.hh>
+#include <maxsimd/canonical.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>

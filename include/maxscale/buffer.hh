@@ -14,14 +14,9 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <algorithm>
-#include <iterator>
 #include <memory>
-#include <cstdint>
-#include <cstring>
 #include <vector>
 #include <maxbase/assert.hh>
-#include <maxsimd/canonical.hh>
 #include <maxscale/hint.hh>
 
 class SERVER;

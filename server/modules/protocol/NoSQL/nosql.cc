@@ -3488,7 +3488,7 @@ bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt
     return rv;
 }
 
-bool nosql::get_number_as_double(const bsoncxx::document::element& element, double_t* pDouble)
+bool nosql::get_number_as_double(const bsoncxx::document::element& element, double* pDouble)
 {
     bool rv = true;
 

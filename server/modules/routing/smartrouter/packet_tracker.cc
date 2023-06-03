@@ -19,6 +19,7 @@
 #include "mysql_plus.hh"
 
 #include <array>
+#include <algorithm>
 
 namespace maxsql
 {

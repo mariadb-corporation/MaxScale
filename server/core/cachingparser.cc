@@ -16,6 +16,7 @@
 #include <map>
 #include <random>
 #include <maxscale/buffer.hh>
+#include <maxsimd/canonical.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/routingworker.hh>

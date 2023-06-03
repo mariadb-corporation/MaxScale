@@ -15,6 +15,8 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <cstring>
+
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 
