@@ -18,7 +18,6 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <openssl/sha.h>
 #include <maxbase/jansson.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/service.hh>

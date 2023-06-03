@@ -19,7 +19,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <openssl/ssl.h>
+#include <openssl/core.h>
 #include <netinet/in.h>
 
 #include <maxbase/json.hh>
@@ -229,10 +229,7 @@ public:
      *
      * @return Current TLS cipher or empty string if SSL is not in use
      */
-    std::string ssl_cipher() const
-    {
-        return m_encryption.handle ? SSL_get_cipher_name(m_encryption.handle) : "";
-    }
+    std::string ssl_cipher() const;
 
     /**
      * @return The current SSL state.

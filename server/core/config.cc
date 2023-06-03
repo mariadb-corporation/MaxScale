@@ -1351,18 +1351,6 @@ Config::Config(int argc, char** argv)
         sprintf(this->release_string, "undefined");
     }
 
-    /* get first mac_address in SHA1 */
-    uint8_t mac_addr[6] = "";
-    if (get_ifaddr(mac_addr))
-    {
-        gw_sha1_str(mac_addr, 6, this->mac_sha1);
-    }
-    else
-    {
-        memset(this->mac_sha1, '\0', sizeof(this->mac_sha1));
-        memcpy(this->mac_sha1, "MAC-undef", 9);
-    }
-
     /* get uname info */
     struct utsname uname_data;
     if (uname(&uname_data) == 0)

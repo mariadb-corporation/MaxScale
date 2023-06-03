@@ -21,6 +21,7 @@
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/config_common.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <openssl/sha.h>
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using mariadb::UserEntry;

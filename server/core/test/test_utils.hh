@@ -30,6 +30,7 @@
 #include <maxscale/test.hh>
 
 #include <sys/stat.h>
+#include <openssl/ssl.h>
 
 #include "../internal/maxscale.hh"
 #include "../internal/modules.hh"

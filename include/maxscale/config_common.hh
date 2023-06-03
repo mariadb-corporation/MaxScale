@@ -23,7 +23,6 @@
 #include <string>
 #include <limits.h>
 #include <map>
-#include <openssl/sha.h>
 #include <sys/utsname.h>
 #include <time.h>
 #include <vector>

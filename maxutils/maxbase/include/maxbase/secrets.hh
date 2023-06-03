@@ -18,7 +18,7 @@
 #include <cstring>
 #include <vector>
 
-#include <openssl/evp.h>
+#include <openssl/core.h>
 
 #include <maxbase/exception.hh>
 

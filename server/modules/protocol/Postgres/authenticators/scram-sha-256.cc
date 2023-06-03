@@ -13,6 +13,7 @@
 
 #include "scram-sha-256.hh"
 #include <openssl/rand.h>
+#include <openssl/hmac.h>
 #include <maxbase/format.hh>
 #include "../pgprotocoldata.hh"
 

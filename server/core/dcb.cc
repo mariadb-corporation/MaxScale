@@ -42,6 +42,8 @@
 #ifdef OPENSSL_1_1
 #include <openssl/x509v3.h>
 #endif
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include <atomic>
 
@@ -2242,4 +2244,9 @@ bool mxs::ClientConnectionBase::in_routing_state() const
 size_t mxs::ClientConnectionBase::sizeof_buffers() const
 {
     return m_dcb ? m_dcb->runtime_size() : 0;
+}
+
+std::string DCB::ssl_cipher() const
+{
+    return m_encryption.handle ? SSL_get_cipher_name(m_encryption.handle) : "";
 }

@@ -21,7 +21,7 @@
 
 #include <atomic>
 #include <mutex>
-#include <openssl/sha.h>
+#include <openssl/core.h>
 #include <maxbase/json.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>

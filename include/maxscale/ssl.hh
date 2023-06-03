@@ -22,10 +22,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <memory>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
+#include <openssl/core.h>
 
 #include <maxbase/ssl.hh>
 #include <maxscale/modinfo.hh>
@@ -72,10 +69,7 @@ public:
     /**
      * Opens a new OpenSSL session for this configuration context
      */
-    SSL* open() const
-    {
-        return SSL_new(m_ctx);
-    }
+    SSL* open() const;
 
     // SSL configuration
     const mxb::SSLConfig& config() const
@@ -106,10 +100,8 @@ private:
     void reset();
     bool init();
 
-    SSL_CTX*    m_ctx {nullptr};
-    SSL_METHOD* m_method {nullptr};         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
-                                             * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+    SSL_CTX*       m_ctx {nullptr};
     mxb::SSLConfig m_cfg;
-    mxb::KeyUsage m_usage {mxb::KeyUsage::NONE};
+    mxb::KeyUsage  m_usage {mxb::KeyUsage::NONE};
 };
 }

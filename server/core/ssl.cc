@@ -20,6 +20,8 @@
 #ifdef OPENSSL_1_1
 #include <openssl/x509v3.h>
 #endif
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 namespace
 {
@@ -63,11 +65,13 @@ std::unique_ptr<SSLContext> SSLContext::create(const mxb::SSLConfig& config)
 
 bool SSLContext::init()
 {
+    SSL_METHOD* method = nullptr;
+
     switch (m_cfg.version)
     {
     case mxb::ssl_version::TLS10:
 #ifndef OPENSSL_1_1
-        m_method = (SSL_METHOD*)TLSv1_method();
+        method = (SSL_METHOD*)TLSv1_method();
 #else
         MXB_ERROR("TLSv1.0 is not supported on this system.");
         return false;
@@ -77,7 +81,7 @@ bool SSLContext::init()
 
     case mxb::ssl_version::TLS11:
 #if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
-        m_method = (SSL_METHOD*)TLSv1_1_method();
+        method = (SSL_METHOD*)TLSv1_1_method();
 #else
         MXB_ERROR("TLSv1.1 is not supported on this system.");
         return false;
@@ -86,7 +90,7 @@ bool SSLContext::init()
 
     case mxb::ssl_version::TLS12:
 #if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
-        m_method = (SSL_METHOD*)TLSv1_2_method();
+        method = (SSL_METHOD*)TLSv1_2_method();
 #else
         MXB_ERROR("TLSv1.2 is not supported on this system.");
         return false;
@@ -95,7 +99,7 @@ bool SSLContext::init()
 
     case mxb::ssl_version::TLS13:
 #ifdef OPENSSL_1_1
-        m_method = (SSL_METHOD*)TLS_method();
+        method = (SSL_METHOD*)TLS_method();
 #else
         MXB_ERROR("TLSv1.3 is not supported on this system.");
         return false;
@@ -106,15 +110,15 @@ bool SSLContext::init()
     case mxb::ssl_version::SSL_MAX:
     case mxb::ssl_version::TLS_MAX:
     case mxb::ssl_version::SSL_TLS_MAX:
-        m_method = (SSL_METHOD*)SSLv23_method();
+        method = (SSL_METHOD*)SSLv23_method();
         break;
 
     default:
-        m_method = (SSL_METHOD*)SSLv23_method();
+        method = (SSL_METHOD*)SSLv23_method();
         break;
     }
 
-    m_ctx = SSL_CTX_new(m_method);
+    m_ctx = SSL_CTX_new(method);
 
     if (m_ctx == NULL)
     {
@@ -267,10 +271,8 @@ SSLContext::~SSLContext()
 
 SSLContext::SSLContext(SSLContext&& rhs) noexcept
     : m_ctx(rhs.m_ctx)
-    , m_method(rhs.m_method)
     , m_cfg(std::move(rhs.m_cfg))
 {
-    rhs.m_method = nullptr;
     rhs.m_ctx = nullptr;
 }
 
@@ -278,7 +280,6 @@ SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
 {
     reset();
     m_cfg = std::move(rhs.m_cfg);
-    std::swap(m_method, rhs.m_method);
     std::swap(m_ctx, rhs.m_ctx);
     return *this;
 }
@@ -286,7 +287,6 @@ SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
 void SSLContext::reset()
 {
     m_cfg = mxb::SSLConfig();
-    m_method = nullptr;
     SSL_CTX_free(m_ctx);
     m_ctx = nullptr;
 }
@@ -309,5 +309,10 @@ bool SSLContext::configure(const mxb::SSLConfig& config)
 #endif
 
     return m_cfg.enabled ? init() : true;
+}
+
+SSL* SSLContext::open() const
+{
+    return SSL_new(m_ctx);
 }
 }

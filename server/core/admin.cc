@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <gnutls/abstract.h>
+#include <openssl/sha.h>
 
 #include <maxbase/assert.hh>
 #include <maxbase/filesystem.hh>

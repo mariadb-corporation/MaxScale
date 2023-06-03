@@ -37,6 +37,8 @@
 #include <fstream>
 
 #include <openssl/opensslconf.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <pwd.h>
 #include <sys/file.h>
 #include <sys/prctl.h>

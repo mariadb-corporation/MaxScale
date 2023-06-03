@@ -483,8 +483,6 @@ public:
     std::string version {"undefined"};      // Current version level of this release
     std::string machine {"undefined"};      // Name of the hardware type the system is running on
 
-    uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
-
     mxb_log_target_t    log_target;                 /**< Log type */
     bool                substitute_variables;       /**< Should environment variables be substituted */
     using CacheProperties = mxs::CachingParser::Properties;

@@ -16,6 +16,7 @@
 
 #include <arpa/inet.h>
 #include <openssl/rand.h>
+#include <openssl/sha.h>
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/format.hh>

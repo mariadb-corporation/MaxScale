@@ -17,17 +17,11 @@
 
 #include <cmath>
 #include <ctime>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
 
 #include <maxbase/jansson.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/protocol.hh>
-#include <maxscale/dcb.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/server.hh>
 #include <maxscale/target.hh>
 #include <maxscale/workerlocal.hh>
 #include <maxscale/router.hh>

@@ -17,6 +17,7 @@
 #include "../../cache.hh"
 #include "inmemorystoragest.hh"
 #include "inmemorystoragemt.hh"
+#include <openssl/sha.h>
 
 using std::unique_ptr;
 using std::string;
