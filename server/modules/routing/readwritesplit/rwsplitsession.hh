@@ -16,16 +16,7 @@
 #include "readwritesplit.hh"
 #include "trx.hh"
 
-#include <chrono>
-#include <string>
-#include <deque>
-
-#include <maxbase/stopwatch.hh>
-#include <maxscale/buffer.hh>
-#include <maxscale/parser.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
-#include <maxscale/protocol/mariadb/rwbackend.hh>
-#include <maxscale/queryclassifier.hh>
+#include <unordered_map>
 
 #define TARGET_IS_MASTER(t)       mariadb::QueryClassifier::target_is_master(t)
 #define TARGET_IS_SLAVE(t)        mariadb::QueryClassifier::target_is_slave(t)

@@ -14,10 +14,6 @@
 
 #include "rwsplitsession.hh"
 
-#include <cmath>
-#include <mysqld_error.h>
-#include <maxscale/clock.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
 

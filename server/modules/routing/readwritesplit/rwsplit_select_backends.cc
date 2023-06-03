@@ -12,22 +12,7 @@
  * Public License.
  */
 
-#include "readwritesplit.hh"
 #include "rwsplitsession.hh"
-
-#include <stdio.h>
-#include <strings.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <sstream>
-#include <functional>
-#include <random>
-#include <iostream>
-#include <array>
-
-#include <maxbase/stopwatch.hh>
-#include <maxscale/router.hh>
 
 using namespace maxscale;
 

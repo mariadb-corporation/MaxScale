@@ -13,23 +13,6 @@
  */
 
 #include "readwritesplit.hh"
-
-#include <inttypes.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <cmath>
-#include <new>
-#include <sstream>
-
-#include <maxscale/cn_strings.hh>
-#include <maxscale/dcb.hh>
-#include <maxscale/modinfo.hh>
-#include <maxscale/router.hh>
-#include <maxscale/routingworker.hh>
-
 #include "rwsplitsession.hh"
 
 using namespace maxscale;

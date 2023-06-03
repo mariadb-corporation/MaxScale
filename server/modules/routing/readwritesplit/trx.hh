@@ -15,13 +15,8 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <list>
-#include <vector>
-
 #include <maxbase/checksum.hh>
-#include <maxscale/buffer.hh>
-#include <maxscale/utils.hh>
-#include <maxscale/protocol/mariadb/rwbackend.hh>
+#include <maxscale/target.hh>
 
 // A statement in a transaction.
 struct Stmt

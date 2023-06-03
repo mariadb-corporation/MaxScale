@@ -12,25 +12,13 @@
  * Public License.
  */
 
-#include "readwritesplit.hh"
 #include "rwsplitsession.hh"
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
 #include <utility>
 
 #include <mysqld_error.h>
 
-#include <maxbase/string.hh>
 #include <maxbase/format.hh>
-#include <maxscale/clock.hh>
-#include <maxscale/parser.hh>
-#include <maxscale/router.hh>
-#include <maxscale/server.hh>
-#include <maxscale/utils.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using std::chrono::seconds;
 using maxscale::Parser;
