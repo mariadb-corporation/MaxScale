@@ -91,7 +91,8 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
         {
             // Send the lock query to the main node before doing the DDL. This way the operations are
             // serialized with respect to the main node.
-            MXB_SINFO("Multi-node command, sending `main_sql` and `lock_sql` to '" << m_main->name() << "'");
+            MXB_SINFO("Multi-node command, sending `main_sql` and `lock_sql` to '"
+                      << m_main->name() << "': " << describe(packet));
             m_state = State::LOCK_MAIN;
             ok = send_query(m_main, main_sql()) && send_query(m_main, lock_sql(m_config->lock_id));
             m_queue.push_back(std::move(packet));
@@ -101,8 +102,12 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
             if (is_tmp_table_ddl(packet) && m_solo != m_main)
             {
                 MXB_SINFO("Temporary table DDL on non-main node, "
-                          << "send `main_sql` to '" << m_solo->name() << "'");
+                          << "send `main_sql` to '" << m_solo->name() << "': " << describe(packet));
                 ok = send_query(m_solo, main_sql());
+            }
+            else
+            {
+                MXB_SINFO("Single-node command on '" << m_main->name() << "': " << describe(packet));
             }
 
             if (ok)
@@ -319,11 +324,18 @@ bool XRouterSession::reply_state_lock_main(mxs::Backend* backend, GWBUF&& packet
     bool complete = reply.is_complete();
     bool rv = true;
 
-    if (complete && backend->is_idle())
+    if (complete)
     {
-        MXB_SINFO("Main node locked, routing query to main node.");
-        m_state = State::MAIN;
-        rv = route_queued();
+        if (backend->is_idle())
+        {
+            MXB_SINFO("Main node locked, routing query to main node.");
+            m_state = State::MAIN;
+            rv = route_queued();
+        }
+        else
+        {
+            MXB_SINFO("`main_sql` response received, waiting for `lock_sql` response.");
+        }
     }
 
     return rv;
