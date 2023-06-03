@@ -14,6 +14,7 @@
 
 #include "readwritesplit.hh"
 #include "rwsplitsession.hh"
+#include <maxscale/service.hh>
 
 using namespace maxscale;
 
@@ -301,7 +302,13 @@ RWSplit* RWSplit::create(SERVICE* service)
 
 mxs::RouterSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    return RWSplitSession::create(this, session, endpoints);
+    if (!m_service->get_children().empty())
+    {
+        // Have at least one server
+        return RWSplitSession::create(this, session, endpoints);
+    }
+
+    return nullptr;
 }
 
 json_t* RWSplit::diagnostics() const

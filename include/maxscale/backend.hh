@@ -16,11 +16,9 @@
 #include <maxscale/ccdefs.hh>
 
 #include <deque>
-#include <list>
-#include <string>
-#include <memory>
+#include <algorithm>
 
-#include <maxscale/service.hh>
+#include <maxscale/target.hh>
 #include <maxbase/stopwatch.hh>
 
 

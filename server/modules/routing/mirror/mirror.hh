@@ -19,6 +19,7 @@
 #include <maxscale/backend.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxbase/shared_mutex.hh>
+#include <maxscale/service.hh>
 
 #include "exporter.hh"
 #include "config.hh"

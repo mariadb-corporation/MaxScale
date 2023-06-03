@@ -49,28 +49,16 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::RWB
 
 RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints)
 {
-    RWSplitSession* rses = nullptr;
+    RWSplitSession* rses = new RWSplitSession(router, session, RWBackend::from_endpoints(endpoints));
 
-    if (router->have_enough_servers())
+    if (rses->open_connections())
     {
-        RWBackends backends = RWBackend::from_endpoints(endpoints);
-
-        if ((rses = new(std::nothrow) RWSplitSession(router, session, std::move(backends))))
-        {
-            if (rses->open_connections())
-            {
-                mxb::atomic::add(&router->stats().n_sessions, 1, mxb::atomic::RELAXED);
-            }
-            else
-            {
-                delete rses;
-                rses = nullptr;
-            }
-        }
+        mxb::atomic::add(&router->stats().n_sessions, 1, mxb::atomic::RELAXED);
     }
     else
     {
-        MXB_ERROR("Service has no servers.");
+        delete rses;
+        rses = nullptr;
     }
 
     return rses;

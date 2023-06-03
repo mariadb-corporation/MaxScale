@@ -28,6 +28,7 @@
 #include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/session_stats.hh>
+#include <maxscale/workerlocal.hh>
 
 namespace cfg = maxscale::config;
 using namespace std::literals::chrono_literals;
@@ -359,11 +360,6 @@ public:
     void                        set_last_gtid(std::string_view str);
 
     const mxs::WorkerGlobal<RWSConfig::Values>& config() const;
-
-    bool have_enough_servers() const
-    {
-        return !m_service->get_children().empty();
-    }
 
     // API functions
 

@@ -13,13 +13,13 @@
  */
 #pragma once
 
-#include <algorithm>
-#include <chrono>
-#include <map>
-#include <memory>
+#include <maxscale/ccdefs.hh>
 
 #include <maxscale/backend.hh>
 #include <maxscale/response_stat.hh>
+
+#include <map>
+#include <vector>
 
 using Endpoints = std::vector<mxs::Endpoint*>;
 

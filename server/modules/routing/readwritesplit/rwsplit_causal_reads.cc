@@ -13,6 +13,7 @@
  */
 
 #include "rwsplitsession.hh"
+#include <maxscale/service.hh>
 
 /**
  * Discard the result of MASTER_GTID_WAIT statement

@@ -915,8 +915,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
         }
     }
 
-    MXB_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
-                m_router->service()->name(),
+    MXB_WARNING("Write query received from %s@%s. %s. Closing client connection.",
                 m_pSession->user().c_str(),
                 m_pSession->client_remote().c_str(),
                 errmsg.c_str());

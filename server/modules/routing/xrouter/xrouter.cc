@@ -13,6 +13,7 @@
 
 #include "xrouter.hh"
 #include "xroutersession.hh"
+#include <maxscale/service.hh>
 
 namespace
 {

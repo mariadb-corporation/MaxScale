@@ -14,6 +14,7 @@
 
 #include "cat.hh"
 #include "catsession.hh"
+#include <maxscale/service.hh>
 
 using namespace maxscale;
 

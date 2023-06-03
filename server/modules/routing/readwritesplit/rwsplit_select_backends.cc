@@ -13,6 +13,7 @@
  */
 
 #include "rwsplitsession.hh"
+#include <cmath>
 
 using namespace maxscale;
 
