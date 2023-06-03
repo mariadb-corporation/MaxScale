@@ -343,7 +343,6 @@ private:
                    std::chrono::milliseconds timeout,
                    uint32_t soft_ttl, uint32_t hard_ttl, uint32_t mcd_ttl)
         : m_pMemc(pMemc)
-        , m_config(*pConfig)
         , m_timeout(timeout)
         , m_pWorker(mxb::Worker::get_current())
         , m_soft_ttl(soft_ttl)
@@ -441,7 +440,6 @@ private:
 
 private:
     memcached_st*                         m_pMemc;
-    const MemcachedConfig&                m_config;
     std::chrono::milliseconds             m_timeout;
     mxb::Worker*                          m_pWorker;
     uint32_t                              m_soft_ttl; // Soft TTL in milliseconds

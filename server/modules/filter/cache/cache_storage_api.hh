@@ -156,8 +156,9 @@ static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
 
 const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
 
-struct StorageLimits
+class StorageLimits
 {
+public:
     StorageLimits() = default;
 
     StorageLimits(uint32_t max_value_size)

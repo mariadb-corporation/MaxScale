@@ -689,7 +689,7 @@ void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::mi
 
 void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay)
 {
-    delay_routing(down, std::move(buffer), delay, [this, down](GWBUF&& buffer){
+    delay_routing(down, std::move(buffer), delay, [down](GWBUF&& buffer){
         return down->routeQuery(std::move(buffer));
     });
 }

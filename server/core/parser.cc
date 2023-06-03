@@ -447,7 +447,7 @@ void append_function_info(const mxs::Parser& parser, json_t* pParams, const GWBU
     size_t n;
     parser.get_function_info(stmt, &begin, &n);
 
-    std::for_each(begin, begin + n, [&parser, pFunctions](const mxs::Parser::FunctionInfo& info) {
+    std::for_each(begin, begin + n, [pFunctions](const mxs::Parser::FunctionInfo& info) {
                       json_t* pFunction = json_object();
 
                       json_object_set_new(pFunction, CN_NAME,

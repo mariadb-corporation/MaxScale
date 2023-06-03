@@ -501,7 +501,7 @@ HttpResponse query(const HttpRequest& request)
             if (async)
             {
                 mxs::thread_pool().execute(
-                    [managed_conn, sql, max_rows, timeout]() {
+                    [managed_conn = managed_conn, sql, max_rows, timeout]() {
                     managed_conn->result = managed_conn->query(sql, max_rows, timeout);
                     managed_conn->release();
                 }, "sql" + id_str);
@@ -553,7 +553,8 @@ HttpResponse query_result(const HttpRequest& request)
     std::string self = request.get_uri();
     std::string query_id = request.uri_part(3);
 
-    auto result_cb = [id, query_id = std::move(query_id), host = std::move(host), self = std::move(self)]() {
+    auto result_cb =
+        [id = id, query_id = std::move(query_id), host = std::move(host), self = std::move(self)]() {
         HttpResponse response;
 
         if (auto [conn, reason, info] = this_unit.manager.get_connection(id); conn)
@@ -574,7 +575,8 @@ HttpResponse query_result(const HttpRequest& request)
         else if (reason == Reason::BUSY)
         {
             auto exec_time = mxb::Clock::now() - info.last_query_started;
-            response = construct_result_response(info.status.release(), host, self, info.sql, query_id, exec_time);
+            response = construct_result_response(info.status.release(), host, self,
+                                                 info.sql, query_id, exec_time);
             response.set_code(MHD_HTTP_ACCEPTED);
             response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self);
         }
@@ -602,7 +604,7 @@ HttpResponse erase_query_result(const HttpRequest& request)
     std::string host = request.host();
     std::string self = request.get_uri();
 
-    auto result_cb = [id, host = std::move(host), self = std::move(self)]() {
+    auto result_cb = [id = id, host = std::move(host), self = std::move(self)]() {
         HttpResponse response;
 
         if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
@@ -661,7 +663,7 @@ HttpResponse cancel(const HttpRequest& request)
     }
 
     return HttpResponse(
-        [id]() {
+        [id = id]() {
         HttpResponse response;
 
         if (!this_unit.manager.cancel(id))
@@ -745,7 +747,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
     string host = request.host();
     string self = request.uri_segment(0, 2);
 
-    auto exec_query_cb = [id, host = move(host), self = move(self), etl]() {
+    auto exec_query_cb = [id = id, host = move(host), self = move(self), etl]() {
         if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
         {
             conn->set_cancel_handler([etl = etl](){
@@ -763,7 +765,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
             conn->query_start("ETL");
 
-            mxs::thread_pool().execute([conn, id, etl = move(etl)]() {
+            mxs::thread_pool().execute([conn = conn, id, etl = move(etl)]() {
                 conn->result = std::invoke(func, *etl);
                 conn->query_end();
                 conn->clear_status_handler();

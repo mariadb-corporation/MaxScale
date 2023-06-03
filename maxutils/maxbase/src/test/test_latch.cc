@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 
         for (int i = 0; i < 100; i++)
         {
-            threads.emplace_back([&, i](){
+            threads.emplace_back([&](){
                 value.fetch_add(1, std::memory_order_relaxed);
                 sync_latch.arrive_and_wait();
                 int v = value.load(std::memory_order_relaxed);

@@ -1273,7 +1273,6 @@ private:
         : m_pSsl_context(pSsl_context)
         , m_config(*pConfig)
         , m_timeout(timeout)
-        , m_invalidate(invalidate)
         , m_pWorker(mxb::Worker::get_current())
         , m_set_format("SET %b %b")
         , m_connecting(false)
@@ -1557,7 +1556,6 @@ private:
     const RedisConfig&                    m_config;
     Redis                                 m_redis;
     std::chrono::milliseconds             m_timeout;
-    bool                                  m_invalidate;
     mxb::Worker*                          m_pWorker;
     string                                m_set_format;
     std::chrono::steady_clock::time_point m_context_got;

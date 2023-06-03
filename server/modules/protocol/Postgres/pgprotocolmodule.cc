@@ -76,7 +76,6 @@ std::unique_ptr<PgParser> create_loaded_parser(const char* zPlugin)
 
 PgProtocolModule::PgProtocolModule(std::string name, SERVICE* pService)
     : m_config(name, this)
-    , m_service(*pService)
 {
 }
 
