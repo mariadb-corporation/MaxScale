@@ -22,6 +22,7 @@
 #include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>
 #include <errmsg.h>
+#include <sys/socket.h>
 
 using std::move;
 using std::string;
@@ -511,6 +512,24 @@ bool MariaDB::ping()
     {
         m_errornum = USER_ERROR;
         m_errormsg = no_connection;
+    }
+
+    return rval;
+}
+
+bool MariaDB::still_alive()
+{
+    bool rval = false;
+
+    if (m_conn)
+    {
+        int sock = mysql_get_socket(m_conn);
+
+        if (sock != MARIADB_INVALID_SOCKET)
+        {
+            uint8_t b;
+            rval = recv(sock, &b, 1, MSG_PEEK | MSG_DONTWAIT) == 0 || errno == EAGAIN;
+        }
     }
 
     return rval;

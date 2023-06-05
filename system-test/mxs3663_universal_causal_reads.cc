@@ -51,6 +51,7 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
     test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT PRIMARY KEY)"),
                 "%s: Table creation should work: %u, %s", func, conn.thread_id(), conn.error());
     conn.disconnect();
+    int inserted = 0;
 
     for (int i = 0; i < 100 && running && test.ok(); i++)
     {
@@ -63,14 +64,16 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
                         func, query.c_str(), conn.thread_id(), conn.error());
         }
 
-        bool ok = conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')");
+        bool insert_ok = conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')");
         bool ro_error = conn.errnum() == ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION && ignore_errors;
         bool duplicate = conn.errnum() == ER_DUP_ENTRY;
-        test.expect(ok || ignore_errors || duplicate, "%s: INSERT should work: %u, %s",
+        test.expect(insert_ok || ignore_errors || duplicate, "%s: INSERT should work: %u, %s",
                     func, conn.thread_id(), conn.error());
         auto first_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
-        test.expect(first_count == i + 1 || ro_error, "%s: Missing %d rows.", func, (i + 1) - first_count);
+        test.expect(first_count == inserted + 1 || ro_error,
+                    "%s: Missing %d rows.", func, (i + 1) - first_count);
 
+        bool after_ok = true;
 
         for (const auto& query : after)
         {
@@ -78,13 +81,25 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
             bool replay_error = query == "COMMIT" && strstr(conn.error(), "Transaction checksum mismatch");
             test.expect(query_ok || replay_error, "%s: %s should work: %u, %s",
                         func, query.c_str(), conn.thread_id(), conn.error());
+
+            if (!query_ok)
+            {
+                after_ok = false;
+            }
         }
 
-        conn.disconnect();
-        conn.connect();
-        auto second_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
-        test.expect(second_count == i + 1 || ro_error, "%s: Missing %d rows.", func, (i + 1) - second_count);
-        conn.disconnect();
+        if (insert_ok && after_ok)
+        {
+            // Check that the inserted row is visible from a different connection
+            conn.disconnect();
+            conn.connect();
+            auto second_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
+            test.expect(second_count == i + 1 || ro_error,
+                        "%s: Missing %d rows with the second connection.", func, (i + 1) - second_count);
+            conn.disconnect();
+
+            ++inserted;
+        }
     }
 }
 

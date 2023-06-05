@@ -50,10 +50,10 @@ private:
     mxs::Endpoint* m_backend;
     mxs::Endpoints m_endpoints;
 
-    maxscale::SessionStats& m_session_stats;
-    maxbase::StopWatch      m_session_timer;
-    maxbase::IntervalTimer  m_query_timer;
-    int64_t                 m_session_queries = 0;
+    RCR*                   m_router;
+    maxbase::StopWatch     m_session_timer;
+    maxbase::IntervalTimer m_query_timer;
+    int64_t                m_session_queries = 0;
 
     bool connection_is_valid() const;
 };

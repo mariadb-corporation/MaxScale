@@ -382,7 +382,6 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
                 m_prev_plan.target = target;
 
                 mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-                m_server_stats[target->target()].inc_total();
             }
         }
     }
@@ -484,8 +483,9 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
 
     if (backend->write(buffer.release(), type))
     {
-        m_server_stats[backend->target()].inc_total();
-        m_server_stats[backend->target()].inc_read();
+        auto& stats = m_router->local_server_stats()[backend->target()];
+        stats.inc_total();
+        stats.inc_read();
         MXB_INFO("Route query to %s: %s", backend == m_current_master ? "primary" : "replica", backend->name());
     }
     else
