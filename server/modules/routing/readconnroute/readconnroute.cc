@@ -166,7 +166,7 @@ RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
     , m_bitvalue(bitvalue)
     , m_backend(backend)
     , m_endpoints(endpoints)
-    , m_session_stats(inst->session_stats(backend->target()))
+    , m_router(inst)
 {
     if (backend->target()->is_master() && (m_bitvalue & SERVER_SLAVE))
     {
@@ -179,9 +179,8 @@ RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
 
 RCRSession::~RCRSession()
 {
-    m_session_stats.update(m_session_timer.split(),
-                           m_query_timer.total(),
-                           m_session_queries);
+    m_router->session_stats(m_backend->target()).update(
+        m_session_timer.split(), m_query_timer.total(), m_session_queries);
 }
 
 mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
@@ -381,16 +380,17 @@ bool RCRSession::routeQuery(GWBUF&& buffer)
 
     m_query_timer.start_interval();
 
-    m_session_stats.inc_total();
+    auto& stats = m_router->session_stats(m_backend->target());
+    stats.inc_total();
     if ((m_bitvalue & (SERVER_MASTER | SERVER_SLAVE)) == SERVER_MASTER)
     {
         // not necessarily a write, but explicitely routed to a master
-        m_session_stats.inc_write();
+        stats.inc_write();
     }
     else
     {
         // could be a write, in which case the user has other problems
-        m_session_stats.inc_read();
+        stats.inc_read();
     }
 
     ++m_session_queries;

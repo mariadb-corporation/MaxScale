@@ -83,7 +83,7 @@ public:
 
         virtual bool reconnect() = 0;
 
-        virtual bool ping() = 0;
+        virtual bool still_alive() = 0;
 
         void cancel();
 
@@ -127,7 +127,7 @@ public:
         bool        cmd(const std::string& cmd) override final;
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
-        bool        ping() override final;
+        bool        still_alive() override final;
 
     protected:
         mxb::Json do_query(const std::string& sql, int64_t max_rows, int64_t timeout) override final;
@@ -153,7 +153,7 @@ public:
         bool        cmd(const std::string& cmd) override final;
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
-        bool        ping() override final;
+        bool        still_alive() override final;
 
     protected:
         mxb::Json do_query(const std::string& sql, int64_t max_rows, int64_t timeout) override final;

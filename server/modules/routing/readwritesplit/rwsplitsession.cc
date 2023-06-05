@@ -44,7 +44,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::RWB
     , m_qc(parser(), this, session, m_config->use_sql_variables_in)
     , m_retry_duration(0)
     , m_can_replay_trx(true)
-    , m_server_stats(instance->local_server_stats())
 {
 }
 
@@ -83,9 +82,8 @@ RWSplitSession::~RWSplitSession()
 
     for (auto& backend : m_raw_backends)
     {
-        m_server_stats[backend->target()].update(t,
-                                                 backend->select_timer().total(),
-                                                 backend->num_selects());
+        auto& stats = m_router->local_server_stats()[backend->target()];
+        stats.update(t, backend->select_timer().total(), backend->num_selects());
     }
 
     // TODO: Fix this
