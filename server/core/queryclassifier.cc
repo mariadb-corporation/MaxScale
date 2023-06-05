@@ -77,23 +77,6 @@ std::string get_text_ps_id(const mxs::Parser& parser, const GWBUF& buffer)
     return std::string(parser.get_prepare_name(buffer));
 }
 
-bool relates_to_previous_stmt(const mxs::Parser& parser, GWBUF* pBuffer)
-{
-    const mxs::Parser::FunctionInfo* infos = nullptr;
-    size_t n_infos = 0;
-    parser.get_function_info(*pBuffer, &infos, &n_infos);
-
-    for (size_t i = 0; i < n_infos; ++i)
-    {
-        if (mxb::sv_case_eq(infos[i].name, "FOUND_ROWS"))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool foreach_table(QueryClassifier& qc,
                    MXS_SESSION* pSession,
                    GWBUF* querybuf,
@@ -164,7 +147,7 @@ public:
 
         PreparedStmt stmt;
         stmt.type = get_prepare_type(m_parser, *buffer);
-        stmt.route_to_last_used = relates_to_previous_stmt(m_parser, buffer);
+        stmt.route_to_last_used = m_parser.relates_to_previous(*buffer);
 
         if (is_prepare)
         {
@@ -811,7 +794,7 @@ const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buff
                     m_route_info.set_ps_continuation(query_continues_ps(buffer));
                 }
             }
-            else if (is_query && relates_to_previous_stmt(m_parser, &buffer))
+            else if (is_query && m_parser.relates_to_previous(buffer))
             {
                 route_to_last_used = true;
             }
