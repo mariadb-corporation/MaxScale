@@ -129,7 +129,6 @@ void ConnectionManager::cleanup_thread_func()
 {
     // TODO: make configurable?
     const auto idle_suspect_limit = mxb::from_secs(5 * 60);     // Ping these and close if ping fails.
-    const auto idle_hard_limit = mxb::from_secs(60 * 60);       // Close these unconditionally.
     const auto check_interval = mxb::from_secs(5 * 60);
 
     auto should_stop_waiting = [this]() {
@@ -166,10 +165,7 @@ void ConnectionManager::cleanup_thread_func()
                 // It's possible that the connection was used just after the previous loop, so check again.
                 bool should_close = false;
                 auto idle_time = now - managed_conn->last_query_time;
-                // TODO: If auto-reconnection is ever enabled on the connector, may need to detect
-                // it happening. To do that, check if mysql thread id changes during 'ping'.
-                if ((idle_time > idle_hard_limit)
-                    || (idle_time > idle_suspect_limit && !managed_conn->conn.ping()))
+                if (idle_time > idle_suspect_limit && !managed_conn->conn.still_alive())
                 {
                     should_close = true;
                 }
