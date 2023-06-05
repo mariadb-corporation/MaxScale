@@ -1459,8 +1459,8 @@ bool XpandMonitor::perform_operation(Operation operation,
             const char ZQUERY_FORMAT[] = "ALTER CLUSTER %s %d";
 
             int id = node.id();
-            // ZUNSOFTFAIL is longer
-            char zQuery[sizeof(ZQUERY_FORMAT) + sizeof(ZUNSOFTFAIL) + UINTLEN(id)];
+            // ZUNSOFTFAIL is longer, 21 characters is enough for all intergers
+            char zQuery[sizeof(ZQUERY_FORMAT) + sizeof(ZUNSOFTFAIL) + 21];
 
             sprintf(zQuery, ZQUERY_FORMAT, zOperation, id);
 

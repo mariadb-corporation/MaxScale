@@ -451,7 +451,7 @@ json_t* RCR::diagnostics() const
 
         total_packets += stats.total_queries;
 
-        double active_pct = std::round(100 * stats.ave_session_active_pct) / 100;
+        double active_pct = (100 * stats.ave_session_active_pct) / 100;
 
         json_t* obj = json_object();
         json_object_set_new(obj, "id", json_string(a.first->name()));

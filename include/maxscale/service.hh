@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <cmath>
 #include <ctime>
 
 #include <maxbase/jansson.hh>

@@ -32,8 +32,6 @@
 #include <maxbase/string.hh>
 #include <maxscale/buffer.hh>
 
-#define CALCLEN(i)              ((size_t)(floor(log10(abs((int64_t)i))) + 1))
-#define UINTLEN(i)              (i < 10 ? 1 : (i < 100 ? 2 : (i < 1000 ? 3 : CALCLEN(i))))
 #define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array) / sizeof(array[0])))
 
 /** The type of the socket */

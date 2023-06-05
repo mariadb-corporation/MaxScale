@@ -18,6 +18,7 @@
 #include <algorithm>
 
 #include <glob.h>
+#include <math.h>
 
 #include <maxbase/assert.hh>
 #include <maxsql/mariadb.hh>

@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <glob.h>
 #include <net/if.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
