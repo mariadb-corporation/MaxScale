@@ -1,21 +1,18 @@
 <template>
-    <v-card class="ddl-editor-ctr fill-height" :loading="isLoading" tile>
-        <div v-show="!isLoading" class="relative fill-height">
-            <ddl-editor-toolbar
-                :height="ddlEditorToolbarHeight"
-                :disableRevert="!hasChanged"
-                :disableApply="!hasValidChanges"
-                @on-revert="revertChanges"
-                @on-apply="applyChanges"
-            />
-            <ddl-editor-form-ctr
-                v-model="formData"
-                :initialData="initialData"
-                :dim="formDim"
-                @is-form-valid="isFormValid = $event"
-            />
-        </div>
-    </v-card>
+    <div class="relative fill-height">
+        <ddl-editor-toolbar
+            :height="ddlEditorToolbarHeight"
+            :disableRevert="!hasChanged"
+            :disableApply="!hasValidChanges"
+            v-on="$listeners"
+        />
+        <ddl-editor-form-ctr
+            v-model="stagingData"
+            :initialData="data"
+            :dim="formDim"
+            @is-form-valid="isFormValid = $event"
+        />
+    </div>
 </template>
 
 <script>
@@ -32,9 +29,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-import Editor from '@wsModels/Editor'
-import QueryEditor from '@wsModels/QueryEditor'
+/*
+ * Emits:
+ * - $emit('on-revert')
+ * - $emit('on-apply')
+ */
 import DdlEditorFormCtr from '@wsSrc/components/common/MxsDdlEditor/DdlEditorFormCtr.vue'
 import DdlEditorToolbar from '@wsSrc/components/common/MxsDdlEditor/DdlEditorToolbar.vue'
 
@@ -45,63 +44,51 @@ export default {
         DdlEditorToolbar,
     },
     props: {
+        value: { type: Object, required: true },
         dim: { type: Object, required: true },
+        data: { type: Object, required: true },
     },
     data() {
         return {
             ddlEditorToolbarHeight: 28,
-            /**
-             * TODO: move formData to SchemaSidebar model so that the changes can be kept
-             * after page refresh, changing active queryTab or worksheet.
-             */
-            formData: {},
             isFormValid: true,
         }
     },
     computed: {
-        ...mapState({ exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg }),
-        ...mapGetters({ isExecFailed: 'mxsWorkspace/isExecFailed' }),
-        tblCreationInfo() {
-            return Editor.getters('getTblCreationInfo')
+        stagingData: {
+            get() {
+                return this.value
+            },
+            set(v) {
+                this.$emit('input', v)
+            },
         },
         formDim() {
             return { ...this.dim, height: this.dim.height - this.ddlEditorToolbarHeight }
         },
-        isLoading() {
-            return Boolean(
-                Editor.getters('getLoadingTblCreationInfo') &&
-                    this.$typy(this.initialData).isEmptyObject
-            )
-        },
-        initialData() {
-            return this.$typy(this.tblCreationInfo, 'data').safeObjectOrEmpty
-        },
         hasChanged() {
-            return !this.$helpers.lodash.isEqual(
-                this.$typy(this.initialData).safeObject,
-                this.$typy(this.formData).safeObject
-            )
+            return !this.$helpers.lodash.isEqual(this.data, this.stagingData)
         },
         hasValidChanges() {
             return this.isFormValid && this.hasChanged
         },
         isTblOptsChanged() {
             return !this.$helpers.lodash.isEqual(
-                this.$typy(this.initialData, 'table_opts_data').safeObject,
-                this.$typy(this.formData, 'table_opts_data').safeObject
+                this.$typy(this.data, 'table_opts_data').safeObject,
+                this.$typy(this.stagingData, 'table_opts_data').safeObject
             )
         },
         isColsOptsChanged() {
             return !this.$helpers.lodash.isEqual(
-                this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
-                this.$typy(this.formData, 'cols_opts_data.data').safeArray
+                this.$typy(this.data, 'cols_opts_data.data').safeArray,
+                this.$typy(this.stagingData, 'cols_opts_data.data').safeArray
             )
         },
         currColsData() {
-            return this.$typy(this.formData, 'cols_opts_data.data').safeArray
+            return this.$typy(this.stagingData, 'cols_opts_data.data').safeArray
         },
         initialColsData() {
-            return this.$typy(this.initialData, 'cols_opts_data.data').safeArray
+            return this.$typy(this.data, 'cols_opts_data.data').safeArray
         },
         currPkCols() {
             return this.getPKCols(this.currColsData)
@@ -109,33 +96,16 @@ export default {
         initialPkCols() {
             return this.getPKCols(this.initialColsData)
         },
-    },
-    activated() {
-        this.watch_initialData()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_initialData).safeFunction()
-    },
-    methods: {
-        ...mapMutations({ SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG' }),
-        ...mapActions({ exeStmtAction: 'mxsWorkspace/exeStmtAction' }),
-        //Watcher to work with multiple worksheets which are kept alive
-        watch_initialData() {
-            this.unwatch_initialData = this.$watch(
-                'initialData',
-                v => {
-                    if (v && !this.$helpers.lodash.isEqual(this.formData, v)) {
-                        this.formData = this.$helpers.lodash.cloneDeep(v)
-                    }
-                },
-                { deep: true, immediate: true }
+        tableOptsDataDiff() {
+            return this.$helpers.deepDiff(
+                this.data.table_opts_data,
+                this.stagingData.table_opts_data
             )
         },
-        revertChanges() {
-            this.formData = this.$helpers.lodash.cloneDeep(this.initialData)
-        },
+    },
+    methods: {
         getPKCols(colsData) {
-            const headers = this.$typy(this.formData, 'cols_opts_data.fields').safeArray
+            const headers = this.$typy(this.stagingData, 'cols_opts_data.fields').safeArray
             let cols = []
             const idxOfPk = headers.findIndex(h => h === 'PK')
             const idxOfColumnName = headers.findIndex(h => h === 'column_name')
@@ -151,14 +121,13 @@ export default {
         handleAddComma: ({ ignore = false } = {}) => (ignore ? '' : ', '),
         /**
          * This builds table_options SQL
-         * @param {String} payload.dbName - db name
          * @returns {String} - returns alter table_options sql
          */
-        buildTblOptSql({ dbName }) {
+        buildTblOptSql() {
             let sql = ''
-            const { quotingIdentifier: quoting, deepDiff } = this.$helpers
-            const diffs = deepDiff(this.initialData.table_opts_data, this.formData.table_opts_data)
-            diffs.forEach((diff, i) => {
+            const { dbName } = this.data.table_opts_data
+            const { quotingIdentifier: quoting } = this.$helpers
+            this.tableOptsDataDiff.forEach((diff, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const key = diff.path[0]
                 switch (key) {
@@ -347,12 +316,12 @@ export default {
                 lodash: { isEqual },
             } = this.$helpers
             const base = getObjectRows({
-                columns: this.$typy(this.initialData, 'cols_opts_data.fields').safeArray,
-                rows: this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
+                columns: this.$typy(this.data, 'cols_opts_data.fields').safeArray,
+                rows: this.$typy(this.data, 'cols_opts_data.data').safeArray,
             })
             const newData = getObjectRows({
-                columns: this.$typy(this.formData, 'cols_opts_data.fields').safeArray,
-                rows: this.$typy(this.formData, 'cols_opts_data.data').safeArray,
+                columns: this.$typy(this.stagingData, 'cols_opts_data.fields').safeArray,
+                rows: this.$typy(this.stagingData, 'cols_opts_data.data').safeArray,
             })
             const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
             const removedCols = diff.get('removed')
@@ -382,52 +351,25 @@ export default {
 
             return sql
         },
-        applyChanges() {
+        /**
+         * @public
+         */
+        buildAlterScript() {
             const { quotingIdentifier: quoting, formatSQL } = this.$helpers
-            const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
-            let sql = `ALTER TABLE ${quoting(dbName)}.${quoting(initialTblName)}`
+            const { dbName, table_name } = this.data.table_opts_data
+            let sql = `ALTER TABLE ${quoting(dbName)}.${quoting(table_name)}`
             let tblOptSql = '',
                 colsAlterSql = ''
-            if (this.isTblOptsChanged) tblOptSql = this.buildTblOptSql({ sql, dbName })
+            if (this.isTblOptsChanged) tblOptSql = this.buildTblOptSql()
             if (this.isColsOptsChanged) colsAlterSql = this.buildColsAlterSQL()
             sql += tblOptSql
             if (colsAlterSql) {
                 if (tblOptSql) sql += this.handleAddComma()
                 sql += colsAlterSql
             }
-            this.SET_EXEC_SQL_DLG({
-                ...this.exec_sql_dlg,
-                is_opened: true,
-                sql: formatSQL(`${sql};`),
-                on_exec: this.confirmAlter,
-                on_after_cancel: this.clearAlterResult,
-            })
-        },
-        async confirmAlter() {
-            const { quotingIdentifier: quoting } = this.$helpers
-            const { dbName, table_name } = this.formData.table_opts_data
-            await this.exeStmtAction({
-                sql: this.exec_sql_dlg.sql,
-                action: `Apply changes to ${quoting(dbName)}.${quoting(table_name)}`,
-            })
-            if (!this.isExecFailed) {
-                const data = this.$helpers.lodash.cloneDeep(this.formData)
-                Editor.update({
-                    where: QueryEditor.getters('getActiveQueryTabId'),
-                    data(editor) {
-                        editor.tbl_creation_info.data = data
-                    },
-                })
-            }
-        },
-        clearAlterResult() {
-            this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null })
+            sql = formatSQL(`${sql};`)
+            return sql
         },
     },
 }
 </script>
-<style lang="scss" scoped>
-.ddl-editor-ctr {
-    box-shadow: none !important;
-}
-</style>

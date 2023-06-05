@@ -179,15 +179,7 @@ export default {
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,
-            })
-            const mode = this.EDITOR_MODES.DDL_EDITOR
-
-            Editor.update({
-                where: this.activeQueryTabId,
-                data(editor) {
-                    editor.curr_editor_mode = mode
-                    editor.tbl_creation_info.altering_node = node
-                },
+                editorMode: this.EDITOR_MODES.DDL_EDITOR,
             })
             await this.queryAlterTblSuppData()
             await Editor.dispatch('queryTblCreationInfo', node)

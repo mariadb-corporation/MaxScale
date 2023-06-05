@@ -66,10 +66,16 @@ export default {
          * @param {String} param.query_editor_id  - id of the QueryEditor has QueryTab being inserted
          * @param {String} [param.query_tab_id]
          * @param {String} [param.name]
+         * @param {String} [param.editorMode] - EDITOR_MODES values. default is TXT_EDITOR
          */
         insertQueryTab(
-            _,
-            { query_editor_id, query_tab_id = this.vue.$helpers.uuidv1(), name = '' }
+            { rootState },
+            {
+                query_editor_id,
+                query_tab_id = this.vue.$helpers.uuidv1(),
+                name = '',
+                editorMode = rootState.mxsWorkspace.config.EDITOR_MODES.TXT_EDITOR,
+            }
         ) {
             let tabName = 'Query Tab 1',
                 count = 1
@@ -89,7 +95,7 @@ export default {
                     query_editor_id,
                 },
             })
-            Editor.insert({ data: { id: query_tab_id } })
+            Editor.insert({ data: { id: query_tab_id, curr_editor_mode: editorMode } })
             QueryResult.insert({ data: { id: query_tab_id } })
             QueryTabTmp.insert({ data: { id: query_tab_id } })
             QueryEditor.update({
@@ -104,9 +110,9 @@ export default {
          * @param {String} param.query_editor_id - QueryEditor id
          * @param {String} param.name - queryTab name. If not provided, it'll be auto generated
          */
-        async handleAddQueryTab({ dispatch }, { query_editor_id, name = '' }) {
+        async handleAddQueryTab({ dispatch }, { query_editor_id, name = '', editorMode }) {
             const query_tab_id = this.vue.$helpers.uuidv1()
-            dispatch('insertQueryTab', { query_editor_id, query_tab_id, name })
+            dispatch('insertQueryTab', { query_editor_id, query_tab_id, name, editorMode })
             const queryEditorConn = QueryConn.getters('getQueryEditorConn')
             // Clone the QueryEditor conn and bind it to the new queryTab
             if (queryEditorConn.id)

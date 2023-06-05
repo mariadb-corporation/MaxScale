@@ -11,30 +11,23 @@
                 "
             />
         </div>
-        <v-tabs
-            v-if="!isEmptyFormData && activated"
-            v-model="activeSpec"
-            :height="24"
-            class="v-tabs--mariadb"
-        >
+        <v-tabs v-model="activeSpec" :height="24" class="v-tabs--mariadb">
             <v-tab v-for="spec of DDL_ALTER_SPECS" :key="spec" color="primary" :href="`#${spec}`">
                 <span> {{ $mxs_t(spec.toLowerCase()) }}</span>
             </v-tab>
         </v-tabs>
         <div class="px-3 py-2">
             <v-slide-x-transition>
-                <keep-alive>
-                    <alter-cols-opts
-                        v-if="activeSpec === DDL_ALTER_SPECS.COLUMNS"
-                        v-model="colsOptsData"
-                        :charsetCollationMap="charset_collation_map"
-                        :initialData="$typy(initialData, 'cols_opts_data').safeObjectOrEmpty"
-                        :height="tabDim.height"
-                        :boundingWidth="tabDim.width"
-                        :defTblCharset="$typy(tableOptsData, 'table_charset').safeString"
-                        :defTblCollation="$typy(tableOptsData, 'table_collation').safeString"
-                    />
-                </keep-alive>
+                <alter-cols-opts
+                    v-if="activeSpec === DDL_ALTER_SPECS.COLUMNS"
+                    v-model="colsOptsData"
+                    :charsetCollationMap="charset_collation_map"
+                    :initialData="$typy(initialData, 'cols_opts_data').safeObjectOrEmpty"
+                    :height="tabDim.height"
+                    :boundingWidth="tabDim.width"
+                    :defTblCharset="$typy(tableOptsData, 'table_charset').safeString"
+                    :defTblCollation="$typy(tableOptsData, 'table_collation').safeString"
+                />
             </v-slide-x-transition>
         </div>
     </v-form>
@@ -77,7 +70,6 @@ export default {
         return {
             isFormValid: true,
             headerHeight: 0,
-            activated: false,
             activeSpec: '',
         }
     },
@@ -111,26 +103,15 @@ export default {
                 height: this.dim.height - this.headerHeight - 24 - 16,
             }
         },
-        isEmptyFormData() {
-            return this.$typy(this.formData).isEmptyObject
-        },
     },
     watch: {
         isFormValid(v) {
             this.$emit('is-form-valid', v)
         },
-        isEmptyFormData(v) {
-            if (!v) this.setHeaderHeight()
-        },
     },
-    created() {
+    mounted() {
         this.activeSpec = this.DDL_ALTER_SPECS.COLUMNS
-    },
-    activated() {
-        this.activated = true
-    },
-    deactivated() {
-        this.activated = false
+        this.setHeaderHeight()
     },
     methods: {
         setHeaderHeight() {

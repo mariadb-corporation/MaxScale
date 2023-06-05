@@ -1,6 +1,6 @@
 <template>
     <div class="fill-height">
-        <div ref="header" class="pb-2 d-flex align-center flex-1">
+        <div :style="{ height: `${headerHeight}px` }" class="pb-2 d-flex align-center flex-1">
             <v-spacer />
             <mxs-tooltip-btn
                 v-if="selectedItems.length"
@@ -164,12 +164,14 @@ export default {
     data() {
         return {
             selectedItems: [],
-            headerHeight: 0,
             isVertTable: false,
             selectedColSpecs: [],
         }
     },
     computed: {
+        headerHeight() {
+            return 28
+        },
         tableMaxHeight() {
             return this.height - this.headerHeight
         },
@@ -276,39 +278,11 @@ export default {
             })
             return count === 1
         },
-        /**
-         * a unique key of each table being altered.
-         * This key is used to handle show column options in the case when
-         * user alters a table then alter another table in the same QueryEditor
-         */
-        initialDataFirstCellId() {
-            return this.$typy(this.initialData.data, `[0]['${this.idxOfId}']`).safeString
-        },
     },
-    watch: {
-        colsOptsData(v) {
-            if (!this.$typy(v).isEmptyObject) this.setHeaderHeight()
-        },
-    },
-    activated() {
-        this.watch_initialDataFirstCellId()
-        this.watch_width_breakpoint()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_initialDataFirstCellId).safeFunction()
-        this.$typy(this.unwatch_width_breakpoint).safeFunction()
+    mounted() {
+        this.handleShowColSpecs()
     },
     methods: {
-        watch_initialDataFirstCellId() {
-            this.unwatch_initialDataFirstCellId = this.$watch('initialDataFirstCellId', v => {
-                if (v) this.handleShowColSpecs()
-            })
-        },
-        watch_width_breakpoint() {
-            this.unwatch_width_breakpoint = this.$watch('$vuetify.breakpoint.width', () =>
-                this.handleShowColSpecs()
-            )
-        },
         handleShowColSpecs() {
             const colSpecs = this.$helpers.lodash.cloneDeep(this.colSpecs)
             if (this.$vuetify.breakpoint.width >= 1680) this.selectedColSpecs = colSpecs
@@ -319,9 +293,6 @@ export default {
         },
         abbrHeaderSlotName(h) {
             return `header-${h}`
-        },
-        setHeaderHeight() {
-            if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
         deleteSelectedRows(selectedItems) {
             const { xorWith, isEqual } = this.$helpers.lodash

@@ -32,7 +32,7 @@
                                 :queryTab="queryTab"
                                 :dim="editorDim"
                             />
-                            <mxs-ddl-editor v-else :dim="editorDim" />
+                            <alter-table-editor v-else :dim="editorDim" />
                         </template>
                     </keep-alive>
                     <file-dlg-ctr />
@@ -61,6 +61,7 @@ import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
+import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
@@ -69,6 +70,7 @@ import FileDlgCtr from '@wkeComps/QueryEditor/FileDlgCtr.vue'
 export default {
     name: 'query-editor',
     components: {
+        AlterTableEditor,
         SidebarCtr,
         TxtEditorCtr,
         QueryTabNavCtr,

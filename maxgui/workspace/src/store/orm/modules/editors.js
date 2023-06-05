@@ -38,7 +38,7 @@ export default {
             Editor.update({
                 where: activeQueryTabId,
                 data(editor) {
-                    editor.tbl_creation_info.loading_tbl_creation_info = true
+                    editor.tbl_creation_info.is_loading = true
                     editor.tbl_creation_info.altering_node = node
                 },
             })
@@ -46,7 +46,7 @@ export default {
                 Editor.update({
                     where: activeQueryTabId,
                     data(editor) {
-                        editor.tbl_creation_info.loading_tbl_creation_info = false
+                        editor.tbl_creation_info.is_loading = false
                     },
                 })
                 commit(
@@ -133,7 +133,7 @@ export default {
                                 ],
                             },
                         }
-                        editor.tbl_creation_info.loading_tbl_creation_info = false
+                        editor.tbl_creation_info.is_loading = false
                     },
                 })
             }
@@ -152,8 +152,10 @@ export default {
             rootState.mxsWorkspace.config.EDITOR_MODES.DDL_EDITOR,
         // tbl_creation_info getters
         getTblCreationInfo: (state, getters) => getters.getEditor.tbl_creation_info || {},
-        getLoadingTblCreationInfo: (state, getters) =>
-            getters.getTblCreationInfo.loading_tbl_creation_info || true,
+        getLoadingTblCreationInfo: (state, getters) => {
+            const { is_loading = true } = getters.getTblCreationInfo
+            return is_loading
+        },
         getAlteringNode: (state, getters) => getters.getTblCreationInfo.altering_node || {},
     },
 }
