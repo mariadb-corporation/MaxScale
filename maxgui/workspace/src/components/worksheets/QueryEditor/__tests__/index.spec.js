@@ -32,7 +32,7 @@ const mountFactory = opts =>
                     activeQueryTabId: () => dummy_query_tabs[0].id,
                 },
                 stubs: {
-                    'sql-editor': "<div class='stub'></div>",
+                    'mxs-sql-editor': "<div class='stub'></div>",
                     'txt-editor-toolbar-ctr': "<div class='stub'></div>",
                 },
             },
@@ -62,32 +62,6 @@ describe('query-editor', () => {
             expect(split).to.be.equals('vert')
             expect(progress).to.be.equals(true)
             expect(revertRender).to.be.equals(true)
-        })
-
-        it(`Should pass accurate data to execute-sql-dialog via props`, () => {
-            wrapper = mountFactory({ isExecFailed: () => false })
-            const {
-                value,
-                title,
-                smallInfo,
-                hasSavingErr,
-                errMsgObj,
-                sqlTobeExecuted,
-                onSave,
-            } = wrapper.findComponent({
-                name: 'execute-sql-dialog',
-            }).vm.$props
-            expect(value).to.be.equals(wrapper.vm.$data.execSqlDlg.isOpened)
-            expect(title).to.be.equals(
-                wrapper.vm.$mxs_tc('confirmations.exeStatements', wrapper.vm.stmtI18nPluralization)
-            )
-            expect(smallInfo).to.be.equals(
-                wrapper.vm.$mxs_tc('info.exeStatementsInfo', wrapper.vm.stmtI18nPluralization)
-            )
-            expect(hasSavingErr).to.be.equals(wrapper.vm.isExecFailed)
-            expect(errMsgObj).to.be.deep.equals(wrapper.vm.stmtErrMsgObj)
-            expect(sqlTobeExecuted).to.be.equals(wrapper.vm.$data.execSqlDlg.sql)
-            expect(onSave).to.be.equals(wrapper.vm.$data.execSqlDlg.onExec)
         })
 
         const fnEvtMap = {
@@ -128,8 +102,8 @@ describe('query-editor', () => {
                     computed: { isTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
                 })
             })
-            const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-ctr' : 'ddl-editor-ctr'
-            const hiddenCom = mode === 'TXT_EDITOR' ? 'ddl-editor-ctr' : 'txt-editor-ctr'
+            const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-ctr' : 'mxs-ddl-editor'
+            const hiddenCom = mode === 'TXT_EDITOR' ? 'mxs-ddl-editor' : 'txt-editor-ctr'
             it(`Should render ${renCom}`, () => {
                 const editor = wrapper.findAllComponents({ name: renCom }).at(0)
                 expect(editor.exists()).to.be.true
@@ -155,49 +129,6 @@ describe('query-editor', () => {
 
                     expect(wrapper.vm.sidebarPct).to.be.equals(sidebarPct)
                 })
-            })
-
-            it(`Should return accurate value for stmtI18nPluralization`, () => {
-                // when sql is empty or has only a statement
-                wrapper = mountFactory()
-                expect(wrapper.vm.stmtI18nPluralization).to.be.equals(1)
-                // when sql has more than one statement
-                wrapper = mountFactory({
-                    data: () => ({ execSqlDlg: { sql: 'SELET 1; SELLET 2; SELECT 3;' } }),
-                })
-                expect(wrapper.vm.stmtI18nPluralization).to.be.equals(2)
-            })
-
-            const dummy_exe_stmt_result = {
-                stmt_err_msg_obj: {
-                    errno: 1064,
-                    message: 'dummy message',
-                    sqlstate: '42000',
-                },
-            }
-
-            it(`Should return accurate value for stmtErrMsgObj`, () => {
-                // When there is no statement has been executed yet
-                wrapper = mountFactory()
-                expect(wrapper.vm.stmtErrMsgObj).to.be.an('object').and.be.empty
-                // When there is an error message
-                wrapper = mountFactory({
-                    computed: { exeStmtResult: () => dummy_exe_stmt_result },
-                })
-                expect(wrapper.vm.stmtErrMsgObj).to.be.deep.equals(
-                    dummy_exe_stmt_result.stmt_err_msg_obj
-                )
-            })
-
-            it(`Should return accurate value for isExecFailed`, () => {
-                // When there is no statement has been executed yet
-                wrapper = mountFactory()
-                expect(wrapper.vm.isExecFailed).to.be.false
-                // When there is an error message
-                wrapper = mountFactory({
-                    computed: { exeStmtResult: () => dummy_exe_stmt_result },
-                })
-                expect(wrapper.vm.isExecFailed).to.be.true
             })
         })
     })

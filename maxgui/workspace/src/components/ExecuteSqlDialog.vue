@@ -2,21 +2,22 @@
     <mxs-conf-dlg
         v-model="isConfDlgOpened"
         :title="title"
-        :smallInfo="smallInfo"
+        :smallInfo="isExecFailed ? '' : $mxs_tc('info.exeStatementsInfo', stmtI18nPluralization)"
         saveText="execute"
         minBodyWidth="768px"
-        :hasSavingErr="hasSavingErr"
+        :hasSavingErr="isExecFailed"
         :allowEnterToSubmit="false"
-        :onSave="onSave"
-        v-on="$listeners"
+        :onSave="$typy(exec_sql_dlg, 'on_exec').safeFunction"
+        @after-close="$typy(exec_sql_dlg, 'on_after_cancel').safeFunction()"
+        @after-cancel="$typy(exec_sql_dlg, 'on_after_cancel').safeFunction()"
     >
         <template v-slot:body-prepend>
-            <table v-if="hasSavingErr" class="tbl-code pa-4">
+            <table v-if="isExecFailed" class="tbl-code pa-4">
                 <tr>
                     <td><b>sql</b></td>
                     <td>{{ currSql }}</td>
                 </tr>
-                <tr v-for="(v, key) in errMsgObj" :key="key">
+                <tr v-for="(v, key) in getExecErr" :key="key">
                     <td>
                         <b>{{ key }}</b>
                     </td>
@@ -27,7 +28,7 @@
             <div
                 v-else
                 class="mb-4 pt-2 pl-2 mxs-color-helper all-border-table-border"
-                :style="{ height: `${editorHeight}px` }"
+                :style="{ height: `${exec_sql_dlg.editor_height}px` }"
             >
                 <!-- Workaround: assign true to skipRegCompleters props when curr_editor_mode is TXT_EDITOR
                in order to not call regCompleters. In other words, when multiple editors are visible
@@ -45,7 +46,7 @@
                         contextmenu: false,
                         wordWrap: 'on',
                     }"
-                    :skipRegCompleters="skipRegCompleters"
+                    :skipRegCompleters="isTxtEditor"
                 />
             </div>
         </template>
@@ -65,41 +66,56 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
- * Events
- * update:sqlTobeExecuted?: (string)
- */
+import { mapMutations, mapState, mapGetters } from 'vuex'
+import Editor from '@wsModels/Editor'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
+
 export default {
     name: 'execute-sql-dialog',
-    props: {
-        value: { type: Boolean, required: true },
-        title: { type: String, required: true },
-        smallInfo: { type: String, default: '' },
-        hasSavingErr: { type: Boolean, required: true },
-        errMsgObj: { type: Object, required: true },
-        sqlTobeExecuted: { type: String, required: true },
-        editorHeight: { type: Number, default: 250 },
-        completionItems: { type: Array, required: true },
-        skipRegCompleters: { type: Boolean, required: true },
-        onSave: { type: Function, required: true },
-    },
     computed: {
+        ...mapState({
+            exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
+        }),
+        ...mapGetters({
+            isExecFailed: 'mxsWorkspace/isExecFailed',
+            getExecErr: 'mxsWorkspace/getExecErr',
+        }),
+        isTxtEditor() {
+            return Editor.getters('getIsTxtEditor')
+        },
         isConfDlgOpened: {
             get() {
-                return this.value
+                return this.exec_sql_dlg.is_opened
             },
-            set(value) {
-                this.$emit('input', value)
+            set(v) {
+                this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, is_opened: v })
             },
         },
         currSql: {
             get() {
-                return this.sqlTobeExecuted
+                return this.exec_sql_dlg.sql
             },
-            set(value) {
-                this.$emit('update:sqlTobeExecuted', value)
+            set(v) {
+                this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, sql: v })
             },
         },
+        title() {
+            return this.isExecFailed
+                ? this.$mxs_tc('errors.failedToExeStatements', this.stmtI18nPluralization)
+                : this.$mxs_tc('confirmations.exeStatements', this.stmtI18nPluralization)
+        },
+        stmtI18nPluralization() {
+            const statementCounts = (this.currSql.match(/;/g) || []).length
+            return statementCounts > 1 ? 2 : 1
+        },
+        completionItems() {
+            return SchemaSidebar.getters('getSchemaCompletionItems')
+        },
+    },
+    methods: {
+        ...mapMutations({
+            SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG',
+        }),
     },
 }
 </script>

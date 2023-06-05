@@ -24,7 +24,7 @@ const mountFactory = opts =>
                 shallow: false,
                 component: TxtEditorToolbarCtr,
                 stubs: {
-                    'readonly-sql-editor': "<div class='stub'></div>",
+                    'mxs-sql-editor': "<div class='stub'></div>",
                 },
                 propsData: {
                     queryTab: dummy_query_tab,

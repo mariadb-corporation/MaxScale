@@ -27,12 +27,6 @@ export default class QueryEditorTmp extends Extender {
             completion_items: this.attr([]),
             db_tree_of_conn: this.string(''), // Name of the connection using to fetch data
             db_tree: this.attr([]), // Contains schemas array
-            // Fields for QueryEditor
-            /**
-             * @property {object} data - Contains res.data.data.attributes of a query
-             * @property {object} stmt_err_msg_obj
-             */
-            exe_stmt_result: this.attr({}),
         }
     }
 

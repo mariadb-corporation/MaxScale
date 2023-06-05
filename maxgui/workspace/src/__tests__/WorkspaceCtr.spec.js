@@ -31,8 +31,7 @@ const mountFactory = opts =>
                     ctrDim: () => ({ width: 1280, height: 800 }),
                 },
                 stubs: {
-                    'sql-editor': "<div class='stub'></div>",
-                    'readonly-sql-editor': "<div class='stub'></div>",
+                    'mxs-sql-editor': "<div class='stub'></div>",
                 },
             },
             opts

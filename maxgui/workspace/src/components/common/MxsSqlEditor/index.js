@@ -15,7 +15,7 @@ import { languageConfiguration, languageTokens } from './mariadbLang'
 import './customStyle.css'
 import { mapState } from 'vuex'
 export default {
-    name: 'sql-editor',
+    name: 'mxs-sql-editor',
     props: {
         value: { type: String, required: true },
         completionItems: { type: Array, default: () => [] },

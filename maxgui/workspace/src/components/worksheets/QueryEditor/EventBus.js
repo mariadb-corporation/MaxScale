@@ -13,7 +13,7 @@
  */
 
 /**
- * The sql-editor emits individual events for certain shortcut keys but it works
+ * The mxs-sql-editor emits individual events for certain shortcut keys but it works
  * only when the mouse cursor is focused on the editor. So the MxsWorkspace uses
  * v-shortkey to listen on the same shortcut keys then emit "shortkey" event.
  * This event bus will "carry" this `shortkey` event to the components handle corresponding

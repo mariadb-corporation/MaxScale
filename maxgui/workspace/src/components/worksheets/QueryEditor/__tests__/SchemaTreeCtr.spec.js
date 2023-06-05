@@ -185,11 +185,16 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
 describe(`schema-tree-ctr - node tooltip tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
-    it(`Should pass accurate data to v-tooltip via props`, () => {
+    it(`Should pass accurate data to preview-data-tooltip via props`, () => {
         wrapper = mountFactory({ data: () => ({ hoveredNode: dummy_schema_node }) })
-        const { value, disabled, right, nudgeRight, activator } = wrapper.findComponent({
-            name: 'v-tooltip',
-        }).vm.$props
+        const { activator } = wrapper.findComponent('.preview-data-tooltip').vm.$props
+        expect(activator).to.be.equals(`#prvw-btn-tooltip-activator-${dummy_schema_node.key}`)
+    })
+    it(`Should pass accurate data to node-tooltip via props`, () => {
+        wrapper = mountFactory({ data: () => ({ hoveredNode: dummy_schema_node }) })
+        const { value, disabled, right, nudgeRight, activator } = wrapper.findComponent(
+            '.node-tooltip'
+        ).vm.$props
         expect(value).to.be.true // true since hoveredNode has value
         expect(disabled).to.be.equals(wrapper.vm.$data.isDragging)
         expect(right).to.be.true
@@ -350,11 +355,12 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         it(`baseOptsMap should return accurate value for node type ${type} `, () => {
             wrapper = mountFactory()
             const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = NODE_TYPES
-            const { USE, PRVW_DATA, PRVW_DATA_DETAILS } = NODE_CTX_TYPES
+            const { USE, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = NODE_CTX_TYPES
             switch (type) {
                 case SCHEMA:
                     expect(wrapper.vm.baseOptsMap[type]).to.eql([
                         { text: wrapper.vm.$mxs_t('useDb'), type: USE },
+                        { text: wrapper.vm.$mxs_t('genErd'), type: GEN_ERD },
                         ...wrapper.vm.txtOpts,
                     ])
                     break
@@ -364,10 +370,12 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
                         {
                             text: wrapper.vm.$mxs_t('previewData'),
                             type: PRVW_DATA,
+                            disabled: false,
                         },
                         {
                             text: wrapper.vm.$mxs_t('viewDetails'),
                             type: PRVW_DATA_DETAILS,
+                            disabled: false,
                         },
                         { divider: true },
                         ...wrapper.vm.txtOpts,

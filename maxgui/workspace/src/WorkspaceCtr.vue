@@ -39,6 +39,7 @@
                     </keep-alive>
                 </template>
             </template>
+            <execute-sql-dialog />
             <migr-delete-dlg />
             <reconn-dlg-ctr />
             <gen-erd-dlg />
@@ -66,25 +67,28 @@ import Worksheet from '@wsModels/Worksheet'
 import BlankWke from '@wkeComps/BlankWke'
 import DataMigration from '@wkeComps/DataMigration'
 import ErdWke from '@wkeComps/ErdWke'
+import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 import QueryEditor from '@wkeComps/QueryEditor'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
+import ExecuteSqlDialog from '@wsComps/ExecuteSqlDialog.vue'
+import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
-import GenErdDlg from '@wsSrc/components/GenErdDlg.vue'
-import { EventBus } from '@wkeComps/QueryEditor/EventBus'
+
 import '@wsSrc/styles/workspace.scss'
 
 export default {
     name: 'workspace-ctr',
     components: {
-        WkeNavCtr,
         BlankWke,
-        ErdWke,
-        MigrDeleteDlg,
-        QueryEditor,
         DataMigration,
-        ReconnDlgCtr,
+        ErdWke,
+        QueryEditor,
+        MigrDeleteDlg,
+        ExecuteSqlDialog,
         GenErdDlg,
+        ReconnDlgCtr,
+        WkeNavCtr,
     },
     props: {
         disableRunQueries: { type: Boolean, default: false },

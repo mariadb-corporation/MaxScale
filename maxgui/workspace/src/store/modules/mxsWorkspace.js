@@ -15,11 +15,13 @@ import * as config from '@wsSrc/store/config'
 import commonConfig from '@share/config'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
+import queries from '@wsSrc/api/queries'
 
 export default {
     namespaced: true,
@@ -32,6 +34,18 @@ export default {
             preselected_schemas: [],
             connection: null,
             gen_in_new_ws: false, // generate erd in a new worksheet
+        },
+        exec_sql_dlg: {
+            is_opened: false,
+            editor_height: 250,
+            sql: '',
+            /**
+             * @property {object} data - Contains res.data.data.attributes of a query
+             * @property {object} error
+             */
+            result: null,
+            on_exec: () => null,
+            on_after_cancel: () => null,
         },
         etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
@@ -46,6 +60,9 @@ export default {
         },
         SET_GEN_ERD_DLG(state, payload) {
             state.gen_erd_dlg = payload
+        },
+        SET_EXEC_SQL_DLG(state, payload) {
+            state.exec_sql_dlg = payload
         },
         SET_ETL_POLLING_INTERVAL(state, payload) {
             state.etl_polling_interval = payload
@@ -80,6 +97,81 @@ export default {
                 } else if (w.etl_task_id) EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
                 else if (w.erd_task_id) ErdTaskTmp.insert({ data: { id: w.erd_task_id } })
             })
+        },
+        /**
+         * This action is used to execute statement or statements.
+         * Since users are allowed to modify the auto-generated SQL statement,
+         * they can add more SQL statements after or before the auto-generated statement
+         * which may receive error. As a result, the action log still log it as a failed action.
+         * @param {String} payload.sql - sql to be executed
+         * @param {String} payload.action - action name. e.g. DROP TABLE table_name
+         * @param {Boolean} payload.showSnackbar - show successfully snackbar message
+         */
+        async exeStmtAction(
+            { state, rootState, dispatch, commit },
+            { sql, action, showSnackbar = true }
+        ) {
+            const config = Worksheet.getters('getActiveRequestConfig')
+            const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
+                'getActiveQueryTabConn'
+            )
+            const request_sent_time = new Date().valueOf()
+            let error = null
+            const [e, res] = await this.vue.$helpers.to(
+                queries.post({
+                    id,
+                    body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
+                    config,
+                })
+            )
+            if (e) this.vue.$logger.error(e)
+            else {
+                const results = this.vue.$typy(res, 'data.data.attributes.results').safeArray
+                const errMsgs = results.filter(res => this.vue.$typy(res, 'errno').isDefined)
+                // if multi statement mode, it'll still return only an err msg obj
+                if (errMsgs.length) error = errMsgs[0]
+                commit('SET_EXEC_SQL_DLG', {
+                    ...state.exec_sql_dlg,
+                    result: {
+                        data: this.vue.$typy(res, 'data.data.attributes').safeObject,
+                        error,
+                    },
+                })
+                let queryAction
+                if (error) queryAction = this.vue.$mxs_t('errors.failedToExeAction', { action })
+                else {
+                    queryAction = this.vue.$mxs_t('success.exeAction', { action })
+                    if (showSnackbar)
+                        commit(
+                            'mxsApp/SET_SNACK_BAR_MESSAGE',
+                            { text: [queryAction], type: 'success' },
+                            { root: true }
+                        )
+                }
+                dispatch(
+                    'prefAndStorage/pushQueryLog',
+                    {
+                        startTime: request_sent_time,
+                        name: queryAction,
+                        sql,
+                        res,
+                        connection_name,
+                        queryType: state.config.QUERY_LOG_TYPES.ACTION_LOGS,
+                    },
+                    { root: true }
+                )
+            }
+        },
+    },
+    getters: {
+        execSqlDlgResult: state => state.exec_sql_dlg.result,
+        getExecErr: (state, getters) => {
+            const { error } = getters.execSqlDlgResult || {}
+            return error
+        },
+        isExecFailed: (state, getters) => {
+            if (getters.execSqlDlgResult) return Boolean(getters.getExecErr)
+            return false
         },
     },
 }

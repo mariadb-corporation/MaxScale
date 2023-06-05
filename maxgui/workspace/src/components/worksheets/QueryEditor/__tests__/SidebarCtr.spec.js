@@ -20,7 +20,7 @@ const mountFactory = opts =>
         shallow: true,
         component: SidebarCtr,
         stubs: {
-            'sql-editor': "<div class='stub'></div>",
+            'mxs-sql-editor': "<div class='stub'></div>",
         },
         ...opts,
     })

@@ -68,12 +68,14 @@
         <v-tooltip
             v-if="hoveredNode"
             top
+            class="preview-data-tooltip"
             :activator="`#prvw-btn-tooltip-activator-${hoveredNode.key}`"
         >
             {{ $mxs_t('previewData') }}
         </v-tooltip>
         <v-tooltip
             v-if="hoveredNode && nodesHaveCtxMenu.includes(hoveredNode.type)"
+            class="node-tooltip"
             :value="Boolean(hoveredNode)"
             :disabled="isDragging"
             right

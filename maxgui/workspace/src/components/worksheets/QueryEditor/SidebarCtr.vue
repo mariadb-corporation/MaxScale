@@ -80,16 +80,10 @@
  * Public License.
  */
 
-/*
- * Events
- * 2-way data binding to execSqlDlg prop
- * update:execSqlDlg?: (object)
- */
 import { mapState, mapActions, mapMutations } from 'vuex'
 import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
@@ -99,9 +93,6 @@ import WkeSidebar from '@wkeComps/WkeSidebar.vue'
 export default {
     name: 'sidebar-ctr',
     components: { SchemaTreeCtr, WkeSidebar },
-    props: {
-        execSqlDlg: { type: Object, required: true },
-    },
     data() {
         return {
             actionName: '',
@@ -114,6 +105,7 @@ export default {
             DDL_ALTER_SPECS: state => state.mxsWorkspace.config.DDL_ALTER_SPECS,
             EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
+            exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
         isCollapsed: {
             get() {
@@ -160,9 +152,11 @@ export default {
         ...mapMutations({
             SET_IS_SIDEBAR_COLLAPSED: 'prefAndStorage/SET_IS_SIDEBAR_COLLAPSED',
             SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG',
+            SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG',
         }),
         ...mapActions({
             queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
+            exeStmtAction: 'mxsWorkspace/exeStmtAction',
         }),
         async fetchSchemas() {
             await SchemaSidebar.dispatch('fetchSchemas')
@@ -200,25 +194,21 @@ export default {
         },
 
         handleOpenExecSqlDlg(sql) {
-            this.$emit('update:execSqlDlg', {
-                ...this.execSqlDlg,
-                isOpened: true,
-                editorHeight: 200,
+            this.SET_EXEC_SQL_DLG({
+                ...this.exec_sql_dlg,
+                is_opened: true,
+                editor_height: 200,
                 sql,
-                onExec: this.confirmExeStatements,
-                onAfterClose: this.clearExeStatementsResult,
-                onAfterCancel: this.clearExeStatementsResult,
+                on_exec: this.confirmExeStatements,
+                on_after_cancel: this.clearExeStatementsResult,
             })
             this.actionName = sql.slice(0, -1)
         },
         async confirmExeStatements() {
-            await QueryEditor.dispatch('exeStmtAction', {
-                sql: this.execSqlDlg.sql,
-                action: this.actionName,
-            })
+            await this.exeStmtAction({ sql: this.exec_sql_dlg.sql, action: this.actionName })
         },
         clearExeStatementsResult() {
-            QueryEditorTmp.update({ where: this.queryEditorId, data: { exe_stmt_result: {} } })
+            this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null })
         },
         handleShowGenErdDlg(preselectedSchemas) {
             this.SET_GEN_ERD_DLG({

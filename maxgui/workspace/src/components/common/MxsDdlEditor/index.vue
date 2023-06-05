@@ -32,16 +32,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-/*
- * Events
- * 2-way data binding to execSqlDlg prop
- * update:execSqlDlg?: (object)
- */
-
+import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 import Editor from '@wsModels/Editor'
 import QueryEditor from '@wsModels/QueryEditor'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import DdlEditorFormCtr from '@wsSrc/components/common/MxsDdlEditor/DdlEditorFormCtr.vue'
 import DdlEditorToolbar from '@wsSrc/components/common/MxsDdlEditor/DdlEditorToolbar.vue'
 
@@ -53,8 +46,6 @@ export default {
     },
     props: {
         dim: { type: Object, required: true },
-        execSqlDlg: { type: Object, required: true },
-        isExecFailed: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -68,6 +59,8 @@ export default {
         }
     },
     computed: {
+        ...mapState({ exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg }),
+        ...mapGetters({ isExecFailed: 'mxsWorkspace/isExecFailed' }),
         tblCreationInfo() {
             return Editor.getters('getTblCreationInfo')
         },
@@ -124,6 +117,8 @@ export default {
         this.$typy(this.unwatch_initialData).safeFunction()
     },
     methods: {
+        ...mapMutations({ SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG' }),
+        ...mapActions({ exeStmtAction: 'mxsWorkspace/exeStmtAction' }),
         //Watcher to work with multiple worksheets which are kept alive
         watch_initialData() {
             this.unwatch_initialData = this.$watch(
@@ -400,20 +395,19 @@ export default {
                 if (tblOptSql) sql += this.handleAddComma()
                 sql += colsAlterSql
             }
-            this.$emit('update:execSqlDlg', {
-                ...this.execSqlDlg,
-                isOpened: true,
+            this.SET_EXEC_SQL_DLG({
+                ...this.exec_sql_dlg,
+                is_opened: true,
                 sql: formatSQL(`${sql};`),
-                onExec: this.confirmAlter,
-                onAfterClose: this.clearAlterResult,
-                onAfterCancel: this.clearAlterResult,
+                on_exec: this.confirmAlter,
+                on_after_cancel: this.clearAlterResult,
             })
         },
         async confirmAlter() {
             const { quotingIdentifier: quoting } = this.$helpers
             const { dbName, table_name } = this.formData.table_opts_data
-            await QueryEditor.dispatch('exeStmtAction', {
-                sql: this.execSqlDlg.sql,
+            await this.exeStmtAction({
+                sql: this.exec_sql_dlg.sql,
                 action: `Apply changes to ${quoting(dbName)}.${quoting(table_name)}`,
             })
             if (!this.isExecFailed) {
@@ -427,10 +421,7 @@ export default {
             }
         },
         clearAlterResult() {
-            QueryEditorTmp.update({
-                where: QueryEditor.getters('getQueryEditorId'),
-                data: { exe_stmt_result: {} },
-            })
+            this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null })
         },
     },
 }

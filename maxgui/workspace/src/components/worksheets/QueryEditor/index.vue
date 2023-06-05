@@ -14,7 +14,6 @@
         >
             <template slot="pane-left">
                 <sidebar-ctr
-                    :execSqlDlg.sync="execSqlDlg"
                     @place-to-editor="$typy($refs, 'editor[0].placeToEditor').safeFunction($event)"
                     @on-dragging="$typy($refs, 'editor[0].draggingTxt').safeFunction($event)"
                     @on-dragend="$typy($refs, 'editor[0].dropTxtToEditor').safeFunction($event)"
@@ -33,39 +32,13 @@
                                 :queryTab="queryTab"
                                 :dim="editorDim"
                             />
-                            <mxs-ddl-editor
-                                v-else
-                                ref="editor"
-                                :dim="editorDim"
-                                :execSqlDlg.sync="execSqlDlg"
-                                :isExecFailed="isExecFailed"
-                            />
+                            <mxs-ddl-editor v-else :dim="editorDim" />
                         </template>
                     </keep-alive>
                     <file-dlg-ctr />
                 </div>
             </template>
         </mxs-split-pane>
-        <execute-sql-dialog
-            v-model="execSqlDlg.isOpened"
-            :title="
-                isExecFailed
-                    ? $mxs_tc('errors.failedToExeStatements', stmtI18nPluralization)
-                    : $mxs_tc('confirmations.exeStatements', stmtI18nPluralization)
-            "
-            :smallInfo="
-                isExecFailed ? '' : $mxs_tc('info.exeStatementsInfo', stmtI18nPluralization)
-            "
-            :hasSavingErr="isExecFailed"
-            :errMsgObj="stmtErrMsgObj"
-            :sqlTobeExecuted.sync="execSqlDlg.sql"
-            :editorHeight="execSqlDlg.editorHeight"
-            :completionItems="completionItems"
-            :skipRegCompleters="isTxtEditor"
-            :onSave="$typy(execSqlDlg, 'onExec').safeFunction"
-            @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
-            @after-cancel="$typy(execSqlDlg, 'onAfterCancel').safeFunction()"
-        />
     </div>
 </template>
 
@@ -88,11 +61,9 @@ import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
-import ExecuteSqlDialog from '@wkeComps/QueryEditor/ExecuteSqlDialog.vue'
 import FileDlgCtr from '@wkeComps/QueryEditor/FileDlgCtr.vue'
 
 export default {
@@ -101,7 +72,6 @@ export default {
         SidebarCtr,
         TxtEditorCtr,
         QueryTabNavCtr,
-        ExecuteSqlDialog,
         FileDlgCtr,
     },
     props: {
@@ -110,20 +80,13 @@ export default {
     data() {
         return {
             queryTabCtrHeight: 30,
-            execSqlDlg: {
-                isOpened: false,
-                editorHeight: 250,
-                sql: '',
-                onExec: () => null,
-                onAfterClose: () => null,
-                onAfterCancel: () => null,
-            },
         }
     },
     computed: {
         ...mapState({
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             sidebar_pct_width: state => state.prefAndStorage.sidebar_pct_width,
+            exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
         activeQueryTabConn() {
             return QueryConn.getters('getActiveQueryTabConn')
@@ -137,12 +100,6 @@ export default {
         activeQueryTabId() {
             return QueryEditor.getters('getActiveQueryTabId')
         },
-        completionItems() {
-            return SchemaSidebar.getters('getSchemaCompletionItems')
-        },
-        exeStmtResult() {
-            return QueryEditor.getters('getExeStmtResult')
-        },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
         },
@@ -154,17 +111,6 @@ export default {
         },
         defSidebarPct() {
             return this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
-        },
-        stmtI18nPluralization() {
-            const statementCounts = (this.execSqlDlg.sql.match(/;/g) || []).length
-            return statementCounts > 1 ? 2 : 1
-        },
-        stmtErrMsgObj() {
-            return this.$typy(this.exeStmtResult, 'stmt_err_msg_obj').safeObjectOrEmpty
-        },
-        isExecFailed() {
-            if (this.$typy(this.exeStmtResult).isEmptyObject) return false
-            return !this.$typy(this.stmtErrMsgObj).isEmptyObject
         },
         sidebarWidth() {
             return (this.ctrDim.width * this.sidebarPct) / 100
@@ -227,13 +173,6 @@ export default {
         // panes dimension/percentages calculation functions
         handleSetDefSidebarPct() {
             if (!this.sidebarPct) this.sidebarPct = this.defSidebarPct
-        },
-        setEditorDim() {
-            const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty
-            if (editor.$el) {
-                const { width, height } = editor.$el.getBoundingClientRect()
-                if (width !== 0 || height !== 0) this.editorDim = { width, height }
-            }
         },
         onResizing(v) {
             //auto collapse sidebar
