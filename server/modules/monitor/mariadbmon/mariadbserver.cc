@@ -17,6 +17,7 @@
 #include <fstream>
 #include <cinttypes>
 #include <set>
+#include <utility>
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/format.hh>
