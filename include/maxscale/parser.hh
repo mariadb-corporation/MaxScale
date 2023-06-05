@@ -382,6 +382,7 @@ public:
     virtual uint32_t         get_trx_type_mask(const GWBUF& stmt) const = 0;
     uint32_t                 get_trx_type_mask_using(const GWBUF& stmt, ParseTrxUsing use) const;
     virtual uint32_t         get_type_mask(const GWBUF& stmt) const = 0;
+    virtual bool             relates_to_previous(const GWBUF& stmt) const = 0;
 
     virtual bool set_options(uint32_t options) = 0;
     virtual void set_server_version(uint64_t version) = 0;

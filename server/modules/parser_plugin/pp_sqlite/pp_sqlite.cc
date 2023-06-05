@@ -5115,6 +5115,27 @@ public:
         return type_mask;
     }
 
+    bool relates_to_previous(const GWBUF& packet) const override
+    {
+        // TODO: E.g. "SHOW WARNINGS" also relates to previous.
+        bool rv = false;
+
+        const mxs::Parser::FunctionInfo* pInfos = nullptr;
+        size_t nInfos = 0;
+        get_function_info(packet, &pInfos, &nInfos);
+
+        for (size_t i = 0; i < nInfos; ++i)
+        {
+            if (mxb::sv_case_eq(pInfos[i].name, "FOUND_ROWS"))
+            {
+                rv = true;
+                break;
+            }
+        }
+
+        return rv;
+    }
+
     void set_server_version(uint64_t version) override
     {
         uint32_t major = version / 10000;

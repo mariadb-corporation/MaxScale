@@ -513,6 +513,13 @@ public:
         return m_type_mask;
     }
 
+    bool relates_to_previous(const GWBUF& packet) const
+    {
+        // TODO: There is no FOUND_ROWS() function in Postgres that in the MariaDB
+        // TODO: parser triggers true. But is there something else?
+        return false;
+    }
+
 private:
     static string make_canonical(string_view sql)
     {
@@ -682,6 +689,11 @@ public:
     uint32_t get_type_mask(const GWBUF& query) const override
     {
         return get_info(query)->get_type_mask();
+    }
+
+    bool relates_to_previous(const GWBUF& query) const override
+    {
+        return get_info(query)->relates_to_previous(query);
     }
 
     bool set_options(uint32_t options) override

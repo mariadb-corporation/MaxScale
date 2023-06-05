@@ -822,6 +822,12 @@ uint32_t CachingParser::get_type_mask(const GWBUF& stmt) const
     return m_sParser->get_type_mask(stmt);
 }
 
+bool CachingParser::relates_to_previous(const GWBUF& stmt) const
+{
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->relates_to_previous(stmt);
+}
+
 bool CachingParser::set_options(uint32_t options)
 {
     bool rv = m_sParser->set_options(options);
