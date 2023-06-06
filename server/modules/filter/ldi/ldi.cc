@@ -38,6 +38,10 @@ cnf::ParamBool no_verify(
     &ldi::spec, "no_verify", "Skip certificate verification", false, cnf::Param::AT_RUNTIME);
 cnf::ParamBool use_http(
     &ldi::spec, "use_http", "Use unencrypted communication", false, cnf::Param::AT_RUNTIME);
+cnf::ParamString import_user(
+    &ldi::spec, "import_user", "User for Xpand data imports", "", cnf::Param::AT_RUNTIME);
+cnf::ParamPassword import_password(
+    &ldi::spec, "import_password", "Password for import_user", "", cnf::Param::AT_RUNTIME);
 }
 }
 
@@ -74,6 +78,8 @@ LDI::LDI::Config::Config(const std::string& name)
     add_native(&Config::m_v, &Values::port, &ldi::port);
     add_native(&Config::m_v, &Values::no_verify, &ldi::no_verify);
     add_native(&Config::m_v, &Values::use_http, &ldi::use_http);
+    add_native(&Config::m_v, &Values::import_user, &ldi::import_user);
+    add_native(&Config::m_v, &Values::import_password, &ldi::import_password);
 }
 
 bool LDI::LDI::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

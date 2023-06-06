@@ -40,6 +40,8 @@ public:
             int64_t     port;
             bool        no_verify;
             bool        use_http;
+            std::string import_user;
+            std::string import_password;
         };
 
         const Values& values()const

@@ -16,8 +16,10 @@
 #include "ldisession.hh"
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/threadpool.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/service.hh>
 #include <libmarias3/marias3.h>
 
 #include <utility>
@@ -26,6 +28,20 @@ namespace
 {
 void no_delete(LDISession* ignored)
 {
+}
+
+std::string escape_single_quotes(std::string_view str)
+{
+    std::string sql(str);
+    size_t pos = sql.find('\'');
+
+    while (pos != std::string::npos)
+    {
+        sql.replace(pos, 1, "\\'");
+        pos = sql.find('\'', pos + 2);
+    }
+
+    return sql;
 }
 }
 
@@ -40,6 +56,42 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFil
 LDISession* LDISession::create(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter)
 {
     return new LDISession(pSession, pService, pFilter);
+}
+
+SERVER* LDISession::get_xpand_node() const
+{
+    for (const auto& b : m_pSession->service->reachable_servers())
+    {
+        if (b->info().type() == SERVER::VersionInfo::Type::XPAND)
+        {
+            return b;
+        }
+    }
+
+    return nullptr;
+}
+
+std::unique_ptr<ExternalCmd> LDISession::create_import_cmd(SERVER* node, std::string_view ldi_body)
+{
+    // TODO: The import will fail if the table has a fully-qualified name with the database in it.
+    auto mdb = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+    std::string cmd = mxb::cat(
+        "/usr/bin/env xpand_import",
+        " --skip-gui",
+        " --host ", node->address(), ":", std::to_string(node->port()),
+        " --user ", m_config.import_user,
+        " --passwd ", m_config.import_password,
+        " --db ", mdb->current_db,
+        " --error-file /dev/null",
+        " --log-file /dev/null",
+        (node->ssl_config().enabled ? " --ssl" : ""),
+        " --ldi \"'-' ", escape_single_quotes(ldi_body), "\"");
+
+    MXB_INFO("CMD: %s", cmd.c_str());
+
+    return ExternalCmd::create(cmd, 120, [](auto cmd, auto line){
+        MXB_INFO("%s: %s", cmd.c_str(), line.c_str());
+    });
 }
 
 bool LDISession::routeQuery(GWBUF&& buffer)
@@ -63,9 +115,27 @@ bool LDISession::routeQuery(GWBUF&& buffer)
                         auto url = sql.substr(pos + 5, end_pos - pos - 5);
                         std::tie(m_bucket, m_file) = mxb::split(url, "/");
 
-                        const std::string_view NEW_PREFIX = "LOAD DATA LOCAL INFILE 'data.csv' ";
-                        buffer = protocol().make_query(mxb::cat(NEW_PREFIX, sql.substr(end_pos + 1)));
-                        m_state = PREPARE;
+                        if (auto server = get_xpand_node())
+                        {
+                            // We have at least one Xpand node, load the data there
+                            if (auto cmd = create_import_cmd(server, sql.substr(end_pos + 1)); cmd->start())
+                            {
+                                m_state = LOAD;
+                                mxs::thread_pool().execute(
+                                    [dl = std::make_shared<CmdLoader>(this, std::move(cmd))](){
+                                    dl->load_data();
+                                }, "ldi");
+                                return true;
+                            }
+                        }
+                        else
+                        {
+                            // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE
+                            // to stream the data.
+                            const std::string_view NEW_PREFIX = "LOAD DATA LOCAL INFILE 'data.csv' ";
+                            buffer = protocol().make_query(mxb::cat(NEW_PREFIX, sql.substr(end_pos + 1)));
+                            m_state = PREPARE;
+                        }
                     }
                 }
             }
@@ -111,6 +181,14 @@ bool LDISession::route_end(GWBUF&& buffer)
 {
     m_state = IDLE;
     return mxs::FilterSession::routeQuery(std::move(buffer));
+}
+
+bool LDISession::send_ok(int64_t rows)
+{
+    m_state = IDLE;
+    mxs::ReplyRoute down;
+    mxs::Reply reply;
+    return mxs::FilterSession::clientReply(mariadb::create_ok_packet(0, rows), down, reply);
 }
 
 //
@@ -192,7 +270,7 @@ size_t S3Download::read_callback(void* buffer, size_t size, size_t nitems, void*
 
     // Returning something other than the number of bytes that's available for processing will cause
     // libmarias3 (curl behind the scenes) to stop reading data.
-    return static_cast<S3Download*>(userdata)->process(buffer, length) ? length : 0;
+    return static_cast<S3Download*>(userdata)->process((const char*)buffer, length) ? length : 0;
 }
 
 bool S3Download::route_data(GWBUF&& buffer)
@@ -222,11 +300,24 @@ bool S3Download::route_end(GWBUF&& buffer)
     return ok;
 }
 
+bool S3Download::send_ok(int64_t rows)
+{
+    mxb_assert(mxs::RoutingWorker::get_current());
+    bool ok = false;
+
+    if (auto ldi = filter_session())
+    {
+        ok = ldi->send_ok(rows);
+    }
+
+    return ok;
+}
+
 //
 // MariaDBLoader
 //
 
-bool MariaDBLoader::process(void* data, size_t len)
+bool MariaDBLoader::process(const char* data, size_t len)
 {
     bool ok = true;
 
@@ -304,6 +395,43 @@ bool MariaDBLoader::complete()
         session()->worker()->call([&](){
             const uint8_t data[4]{0, 0, 0, m_sequence++};
             ok = route_end(GWBUF(data, 4));
+        });
+    }
+
+    return ok;
+}
+
+//
+// CmdLoader
+//
+
+CmdLoader::CmdLoader(LDISession* ldi, std::unique_ptr<ExternalCmd> cmd)
+    : S3Download(ldi)
+    , m_cmd(std::move(cmd))
+{
+}
+
+bool CmdLoader::process(const char* ptr, size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+    {
+        // TODO: Parse the delimiter. Xpand only allows single-character line terminators so it should be
+        // pretty straightforward.
+        m_rows += ptr[i] == '\n';
+    }
+
+    return m_cmd->write(ptr, len);
+}
+
+bool CmdLoader::complete()
+{
+    bool ok = false;
+    m_cmd->close_output();
+
+    if (m_cmd->wait() == 0)
+    {
+        session()->worker()->call([&](){
+            ok = send_ok(m_rows);
         });
     }
 

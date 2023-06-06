@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
+#include <maxscale/externcmd.hh>
 
 #include <vector>
 
@@ -28,7 +29,7 @@ public:
     virtual ~S3Download();
     void load_data();
 
-    virtual bool process(void* ptr, size_t len) = 0;
+    virtual bool process(const char* ptr, size_t len) = 0;
     virtual bool complete() = 0;
 
 protected:
@@ -45,6 +46,7 @@ protected:
 
     bool route_data(GWBUF&& buffer);
     bool route_end(GWBUF&& buffer);
+    bool send_ok(int64_t rows);
 
 private:
     MXS_SESSION*              m_session;
@@ -63,7 +65,7 @@ class MariaDBLoader final : public S3Download
 {
 public:
     using S3Download::S3Download;
-    bool process(void* ptr, size_t len) override;
+    bool process(const char* ptr, size_t len) override;
     bool complete() override;
 
 private:
@@ -72,6 +74,19 @@ private:
 
     uint8_t m_sequence {2};
     GWBUF   m_payload{4};
+};
+
+// Pipes the data stream into some external command
+class CmdLoader final : public S3Download
+{
+public:
+    CmdLoader(LDISession* ldi, std::unique_ptr<ExternalCmd> cmd);
+    bool process(const char* ptr, size_t len) override;
+    bool complete() override;
+
+private:
+    std::unique_ptr<ExternalCmd> m_cmd;
+    int64_t                      m_rows {0};
 };
 
 class LDISession : public maxscale::FilterSession
@@ -96,6 +111,10 @@ private:
     LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter);
     bool route_data(GWBUF&& buffer);
     bool route_end(GWBUF&& buffer);
+    bool send_ok(int64_t rows_affected);
+
+    SERVER*                      get_xpand_node() const;
+    std::unique_ptr<ExternalCmd> create_import_cmd(SERVER* node, std::string_view ldi_body);
 
     State               m_state {IDLE};
     std::string         m_file;
