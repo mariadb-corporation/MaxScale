@@ -413,6 +413,16 @@ struct this_unit
     mxb_should_log_t           should_log {return_false};
 } this_unit;
 
+inline bool should_level_be_logged(int level)
+{
+    return mxb_log_is_priority_enabled(level) || this_unit.should_log(level);
+}
+
+inline bool is_session_tracing()
+{
+    return this_unit.session_trace && this_unit.in_memory_log;
+}
+
 class MessageRegistry
 {
 public:
@@ -919,13 +929,14 @@ int log_message(message_suppression_t status,
     // Add a final newline into the message
     msg.push_back('\n');
 
-    if (this_unit.session_trace && this_unit.in_memory_log)
+    if (is_session_tracing())
     {
         this_unit.in_memory_log(msg);
     }
 
-    if (mxb_log_is_priority_enabled(level) || this_unit.should_log(level))
+    if (should_level_be_logged(level))
     {
+        // Debug messages are never logged into syslog
         if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
         {
 #ifdef HAVE_SYSTEMD
@@ -939,7 +950,6 @@ int log_message(message_suppression_t status,
                             LOG_FAC(priority) ? "SYSLOG_FACILITY=%d" : nullptr, LOG_FAC(priority),
                             nullptr);
 #else
-            // Debug messages are never logged into syslog
             syslog(priority, "%s", context_text);
 #endif
         }
@@ -1018,11 +1028,14 @@ int mxb_log_message(int priority,
 
                 // If there is redirection and the redirectee handles the message,
                 // the regular logging is bypassed.
-                if (redirect && redirect(level, std::string_view(message, message_len)))
+                bool redirected = false;
+                if (redirect)
                 {
+                    redirected = redirect(level, std::string_view(message, message_len));
                     err = 0;
                 }
-                else
+
+                if ((!redirected && should_level_be_logged(level)) || is_session_tracing())
                 {
                     err = log_message(status, level,
                                       priority, modname, function,
