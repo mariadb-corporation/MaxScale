@@ -712,26 +712,25 @@ AuthSwitchReqContents parse_auth_switch_request(const GWBUF& input)
     return packet_parser::parse_auth_switch_request(data);
 }
 
-GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows)
+GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows)
 {
-    mxb_assert(affected_rows < 0xFB);
-
     /* Basic ok packet is
      * 4 bytes header
      * 1 byte 0
-     * 1 byte affected rows (assuming that value is < 0xFB)
+     * 1 to 9 bytes for affected rows
      * 1 byte insert id = 0
      * 2 bytes server status
      * 2 bytes warning counter
-     * Total 4 + 7
+     * Total 4 + 6 + affected_rows size (1 to 9 bytes)
      */
-
-    const uint32_t pl_size = 7;
+    auto affected_rows_size = leint_prefix_bytes(affected_rows);
+    const uint32_t pl_size = 6 + affected_rows_size;
     const uint32_t total_size = MYSQL_HEADER_LEN + pl_size;
     GWBUF buffer(total_size);
     auto ptr = mariadb::write_header(buffer.data(), pl_size, sequence);
     *ptr++ = 0;
-    *ptr++ = affected_rows;
+    encode_leint(ptr, affected_rows_size, affected_rows);
+    ptr += affected_rows_size;
     *ptr++ = 0;
     ptr += mariadb::set_byte2(ptr, 2);      // autocommit is on
     ptr += mariadb::set_byte2(ptr, 0);      // no warnings
