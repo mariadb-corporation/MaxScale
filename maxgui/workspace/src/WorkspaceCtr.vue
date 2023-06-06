@@ -62,7 +62,6 @@
  * Public License.
  */
 import { mapActions, mapState, mapMutations } from 'vuex'
-import ErdTask from '@wsModels/ErdTask'
 import Worksheet from '@wsModels/Worksheet'
 import BlankWke from '@wkeComps/BlankWke'
 import DataMigration from '@wkeComps/DataMigration'
@@ -159,7 +158,11 @@ export default {
                     title: this.$mxs_t('createAnErd'),
                     icon: '$vuetify.icons.mxs_erd',
                     iconSize: 32,
-                    click: () => ErdTask.dispatch('initErdEntities'),
+                    click: () =>
+                        this.SET_CONN_DLG({
+                            is_opened: true,
+                            type: this.QUERY_CONN_BINDING_TYPES.ERD,
+                        }),
                 },
             ]
         },

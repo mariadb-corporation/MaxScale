@@ -208,6 +208,7 @@
             "reconnFailed": "Reconnection attempt failed.",
             "refreshLater": "Please refresh in a few moments",
             "requiredCatalog": "Catalog must be defined for generic ODBC.",
+            "requiredConn": "No connection found, please create a new one. A connection is required to alter or create table.",
             "requiredDb": "Database must be defined for the chosen driver.",
             "requiredInput": "{inputName} is required",
             "retrieveSchemaObj": "Failed to retrieve schema objects from source.",

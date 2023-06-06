@@ -320,6 +320,7 @@ export default {
                 // clean up previous conn after binding the new one
                 if (activeErdConn.id)
                     await QueryConn.dispatch('cascadeDisconnect', { id: activeErdConn.id })
+                ErdTask.dispatch('initErdEntities')
                 const {
                     QUERY_CONN_BINDING_TYPES: { ERD },
                 } = rootState.mxsWorkspace.config
