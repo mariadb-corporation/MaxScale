@@ -19,11 +19,13 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <thread>
 
 #include <maxbase/assert.hh>
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/pcre2.hh>
 
 using std::string;
@@ -219,6 +221,11 @@ ExternalCmd::~ExternalCmd()
     {
         close(m_read_fd);
     }
+
+    if (m_write_fd != -1)
+    {
+        close(m_write_fd);
+    }
 }
 
 int ExternalCmd::run()
@@ -229,9 +236,17 @@ int ExternalCmd::run()
 bool ExternalCmd::start()
 {
     // Create a pipe where the command can print output
-    int fd[2];
-    if (pipe(fd) == -1)
+    int read_fd[2];
+    int write_fd[2];
+    if (pipe(read_fd) == -1)
     {
+        MXB_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
+        return false;
+    }
+    else if (pipe(write_fd) == -1)
+    {
+        close(read_fd[0]);
+        close(read_fd[1]);
         MXB_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
         return false;
     }
@@ -246,8 +261,10 @@ bool ExternalCmd::start()
     pid_t pid = fork();
     if (pid < 0)
     {
-        close(fd[0]);
-        close(fd[1]);
+        close(read_fd[0]);
+        close(read_fd[1]);
+        close(write_fd[0]);
+        close(write_fd[1]);
         MXB_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
                   m_cmd.c_str(), errno, mxb_strerror(errno));
         return false;
@@ -256,9 +273,13 @@ bool ExternalCmd::start()
     {
         // This is the child process. Close the read end of the pipe and redirect
         // both stdout and stderr to the write end of the pipe
-        close(fd[0]);
-        dup2(fd[1], STDOUT_FILENO);
-        dup2(fd[1], STDERR_FILENO);
+        close(read_fd[0]);
+        dup2(read_fd[1], STDOUT_FILENO);
+        dup2(read_fd[1], STDERR_FILENO);
+
+        // Close the write end of the other pipe and redirect the read end to the stdin of the command.
+        close(write_fd[1]);
+        dup2(write_fd[0], STDIN_FILENO);
 
         // Execute the command
         execvp(argvec[0], argvec);
@@ -282,11 +303,16 @@ bool ExternalCmd::start()
     }
 
     // Close the write end of the pipe and make the read end non-blocking
-    close(fd[1]);
-    fcntl(fd[0], F_SETFL, O_NONBLOCK);
+    close(read_fd[1]);
+    fcntl(read_fd[0], F_SETFL, O_NONBLOCK);
+
+    // Same for the write pipe but close the read end and make the write end non-blocking
+    close(write_fd[0]);
+    fcntl(write_fd[1], F_SETFL, O_NONBLOCK);
 
     m_pid = pid;
-    m_read_fd = fd[0];
+    m_read_fd = read_fd[0];
+    m_write_fd = write_fd[1];
 
     // Free the token array.
     for (int i = 0; i < MAX_ARGS && argvec[i]; i++)
@@ -297,6 +323,69 @@ bool ExternalCmd::start()
     MXB_INFO("Executing command '%s' in process %d", m_cmd.c_str(), pid);
 
     return true;
+}
+
+bool ExternalCmd::write(const void* ptr, int64_t len)
+{
+    mxb_assert(m_write_fd != -1);
+    const uint8_t* p = reinterpret_cast<const uint8_t*>(ptr);
+    auto start = mxb::Clock::now();
+
+    pollfd pfd;
+    pfd.fd = m_write_fd;
+    pfd.events = POLLOUT;
+
+    while (len > 0)
+    {
+        // Always try to read some output before writing.
+        read_output();
+
+        auto rc = ::write(m_write_fd, p, len);
+
+        if (rc == -1)
+        {
+            if (errno == EAGAIN)
+            {
+                if (mxb::Clock::now() - start > std::chrono::seconds(m_timeout))
+                {
+                    MXB_ERROR("Write to pipe timed out");
+                    return false;
+                }
+
+                if (poll(&pfd, 1, 1000) == -1)
+                {
+                    MXB_ERROR("Failed to poll pipe file descriptor: %d, %s", errno, mxb_strerror(errno));
+                    return false;
+                }
+            }
+            else
+            {
+                MXB_ERROR("Failed to write to pipe: %d, %s", errno, mxb_strerror(errno));
+                return false;
+            }
+        }
+        else if (rc > 0)
+        {
+            p += rc;
+            len -= rc;
+        }
+        else
+        {
+            // Zero bytes, the socket is closed
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void ExternalCmd::close_output()
+{
+    if (m_write_fd != -1)
+    {
+        close(m_write_fd);
+        m_write_fd = -1;
+    }
 }
 
 int ExternalCmd::try_wait()

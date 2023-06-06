@@ -181,6 +181,38 @@ int test_externcmd()
     errors += compare(rc, 0);
     errors += compare(result, "hello world");
 
+    cmd = ExternalCmd::create("/usr/bin/cat", 30, handler);
+    cmd->start();
+    std::string msg = "echo";
+    cmd->write(msg.c_str(), msg.size());
+    cmd->close_output();
+    rc = cmd->wait();
+
+    errors += compare(rc, 0);
+    errors += compare(result, "echo");
+
+    std::vector<std::string> results;
+    std::vector<std::string> expected;
+    cmd = ExternalCmd::create("/usr/bin/cat", 30, [&](auto cmd, auto line){
+        results.push_back(line);
+    });
+    cmd->start();
+
+    for (int i = 0; i < 123456; i++)
+    {
+        std::string num = std::to_string(i) + "\n";
+        cmd->write(num.c_str(), num.size());
+        // The output gets trimmed by the ExternalCmd
+        mxb::trim(num);
+        expected.push_back(num);
+    }
+
+    cmd->close_output();
+    rc = cmd->wait();
+
+    errors += compare(rc, 0);
+    errors += compare(mxb::join(results), mxb::join(expected));
+
     return errors;
 }
 }

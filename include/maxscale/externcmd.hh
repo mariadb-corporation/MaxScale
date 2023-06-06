@@ -59,6 +59,25 @@ public:
     bool start();
 
     /**
+     * Write data into the command's stdin
+     *
+     * The timeout defined during command creation is also used as the timeout for writes.
+     *
+     * @param ptr Pointer to data to be written
+     * @param len Length of the data
+     *
+     * @return True if the writing was successful
+     */
+    bool write(const void* ptr, int64_t len);
+
+    /**
+     * Close the write end of the pipe that's connected to the command
+     *
+     * This signals the command that no more data is readable and that it should exit.
+     */
+    void close_output();
+
+    /**
      * Try to wait for the process.
      *
      * @return The process return code if it had already stopped, ERROR if the waiting failed or TIMEOUT if
@@ -100,6 +119,7 @@ private:
     int           m_pid {-1};
     int           m_result {TIMEOUT};
     int           m_read_fd{-1};
+    int           m_write_fd{-1};
     OutputHandler m_handler;
 
     ExternalCmd(const std::string& script, int timeout, OutputHandler handler);
