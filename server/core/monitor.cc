@@ -43,9 +43,9 @@
 #include <maxscale/protocol/mariadb/diskspace.hh>
 #include <maxscale/protocol/mariadb/maxscale.hh>
 #include <maxscale/secrets.hh>
+#include <maxscale/externcmd.hh>
 
 #include "internal/config.hh"
-#include "internal/externcmd.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"

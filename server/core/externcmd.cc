@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include "internal/externcmd.hh"
+#include <maxscale/externcmd.hh>
 
 #include <ctype.h>
 #include <errno.h>
