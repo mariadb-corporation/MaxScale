@@ -109,7 +109,7 @@ export default {
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             }
         },
-        async queryEngines({ commit }) {
+        async queryEngines({ commit, rootState }) {
             const config = Worksheet.getters('getActiveRequestConfig')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
@@ -121,7 +121,16 @@ export default {
                     config,
                 })
             )
-            if (!e) commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
+            if (!e)
+                commit(
+                    'SET_ENGINES',
+                    this.vue.$helpers.lodash.xorWith(
+                        this.vue
+                            .$typy(res, 'data.data.attributes.results[0].data')
+                            .safeArray.flat(),
+                        rootState.mxsWorkspace.config.UNSUPPORTED_TBL_CREATION_ENGINES
+                    )
+                )
         },
         async queryAlterTblSuppData({ state, dispatch }) {
             if (this.vue.$typy(state.engines).isEmptyArray) await dispatch('queryEngines')

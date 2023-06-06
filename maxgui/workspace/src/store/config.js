@@ -129,6 +129,9 @@ export const NODE_CTX_TYPES = Object.freeze({
 export const DDL_ALTER_SPECS = Object.freeze({
     COLUMNS: 'COLUMNS',
 })
+
+export const UNSUPPORTED_TBL_CREATION_ENGINES = ['SEQUENCE', 'PERFORMANCE_SCHEMA']
+
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
     DDL_EDITOR: 'DDL_EDITOR',
