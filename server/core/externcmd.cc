@@ -28,6 +28,74 @@
 
 using std::string;
 
+namespace
+{
+const char* skip_whitespace(const char* ptr)
+{
+    while (*ptr && isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    return ptr;
+}
+
+const char* skip_prefix(const char* str)
+{
+    const char* ptr = strchr(str, ':');
+    mxb_assert(ptr);
+
+    ptr++;
+    return skip_whitespace(ptr);
+}
+
+void log_output(const std::string& cmd, const std::string& str)
+{
+    int err;
+
+    if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]",
+                               str.c_str(),
+                               0,
+                               &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_ALERT("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_ERROR("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_WARNING("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_NOTICE("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_INFO("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else
+    {
+        // No special format, log as notice level message
+        MXB_NOTICE("%s: %s", cmd.c_str(), skip_whitespace(str.c_str()));
+    }
+}
+}
+
 int ExternalCmd::tokenize_args(char* dest[], int dest_size)
 {
     bool quoted = false;
@@ -94,10 +162,10 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
     return i;
 }
 
-std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeout)
+std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeout, OutputHandler handler)
 {
     bool success = false;
-    std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout));
+    std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout, handler));
     char* argvec[1] {};     // Parse just one argument for testing file existence and permissions.
     if (cmd->tokenize_args(argvec, 1) > 0)
     {
@@ -131,76 +199,12 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
     return cmd;
 }
 
-ExternalCmd::ExternalCmd(const std::string& script, int timeout)
+ExternalCmd::ExternalCmd(const std::string& script, int timeout, OutputHandler handler)
     : m_orig_command(script)
     , m_subst_command(script)
     , m_timeout(timeout)
+    , m_handler(handler ? handler : log_output)
 {
-}
-
-static const char* skip_whitespace(const char* ptr)
-{
-    while (*ptr && isspace(*ptr))
-    {
-        ptr++;
-    }
-
-    return ptr;
-}
-
-static const char* skip_prefix(const char* str)
-{
-    const char* ptr = strchr(str, ':');
-    mxb_assert(ptr);
-
-    ptr++;
-    return skip_whitespace(ptr);
-}
-
-static void log_output(const char* cmd, const std::string& str)
-{
-    int err;
-
-    if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]",
-                               str.c_str(),
-                               0,
-                               &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_ALERT("%s: %s", cmd, skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_ERROR("%s: %s", cmd, skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_WARNING("%s: %s", cmd, skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_NOTICE("%s: %s", cmd, skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_INFO("%s: %s", cmd, skip_prefix(str.c_str()));
-    }
-    else
-    {
-        // No special format, log as notice level message
-        MXB_NOTICE("%s: %s", cmd, skip_whitespace(str.c_str()));
-    }
 }
 
 int ExternalCmd::externcmd_execute()
@@ -344,7 +348,7 @@ int ExternalCmd::externcmd_execute()
                     {
                         std::string line = output.substr(0, pos);
                         output.erase(0, pos + 1);
-                        log_output(cmdname, line);
+                        m_handler(cmdname, line);
                     }
                 }
             }
@@ -352,7 +356,7 @@ int ExternalCmd::externcmd_execute()
 
         if (!output.empty())
         {
-            log_output(cmdname, output);
+            m_handler(cmdname, output);
         }
 
         // Close the read end of the pipe and copy the data to the output parameter

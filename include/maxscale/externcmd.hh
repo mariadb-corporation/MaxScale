@@ -21,15 +21,20 @@
 class ExternalCmd
 {
 public:
+    using OutputHandler = std::function<void (const std::string&, const std::string&)>;
+
     /**
      * Create a new external command. The name and parameters are copied so
      * the original memory can be freed.
      *
-     * @param argstr Command to execute with the parameters
+     * @param argstr  Command to execute with the parameters
      * @param timeout Command timeout in seconds
+     * @param handler Output handler to use. By default the output is logged into the MaxScale log.
+     *
      * @return Pointer to new external command struct or NULL if an error occurred
      */
-    static std::unique_ptr<ExternalCmd> create(const std::string& argstr, int timeout);
+    static std::unique_ptr<ExternalCmd> create(const std::string& argstr, int timeout,
+                                               OutputHandler handler = {});
 
     /**
      * Execute a command
@@ -58,11 +63,12 @@ public:
 private:
     static const int MAX_ARGS {256};
 
-    std::string m_orig_command;        /**< Original command */
-    std::string m_subst_command;       /**< Command with substitutions */
-    int         m_timeout;             /**< Command timeout in seconds */
+    std::string   m_orig_command;       /**< Original command */
+    std::string   m_subst_command;      /**< Command with substitutions */
+    int           m_timeout;            /**< Command timeout in seconds */
+    OutputHandler m_handler;
 
-    ExternalCmd(const std::string& script, int timeout);
+    ExternalCmd(const std::string& script, int timeout, OutputHandler handler);
 
     int tokenize_args(char* dest[], int dest_size);
 
@@ -74,4 +80,3 @@ private:
      */
     void substitute_arg(const std::string& match, const std::string& replace);
 };
-

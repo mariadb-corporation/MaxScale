@@ -16,6 +16,7 @@
 #include <maxbase/checksum.hh>
 #include <maxscale/utils.hh>
 #include <maxbase/random.hh>
+#include <maxscale/externcmd.hh>
 #include <string.h>
 #include <iostream>
 
@@ -133,6 +134,26 @@ int test_base64()
 
     return 0;
 }
+
+int test_externcmd()
+{
+    int errors = 0;
+    std::string result;
+
+    auto cmd = ExternalCmd::create("/usr/bin/env echo hello", 5, [&](auto cmd, auto line){
+        result = line;
+    });
+
+    cmd->externcmd_execute();
+
+    if (result != "hello")
+    {
+        std::cout << "Result is '" << result << "' instead of 'hello'\n";
+        ++errors;
+    }
+
+    return errors;
+}
 }
 
 int main(int argc, char* argv[])
@@ -147,6 +168,7 @@ int main(int argc, char* argv[])
     rv += test_checksum_result<mxb::Sha1Sum>("hello world", "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed");
     rv += test_checksum_result<mxb::xxHash>("hello world", "c7b615cc75879ba90049873fe9098ddf");
     rv += test_base64();
+    rv += test_externcmd();
 
     return rv;
 }
