@@ -1888,7 +1888,7 @@ static void paginate_result(const HttpRequest& request, HttpResponse& response)
     }
 }
 
-static bool log_redirect(int level, const std::string& msg)
+static bool log_redirect(int level, std::string_view msg)
 {
     if (level < LOG_WARNING)    // Lower is more severe
     {

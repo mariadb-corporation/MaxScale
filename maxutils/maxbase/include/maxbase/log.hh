@@ -575,7 +575,7 @@ public:
      *
      * @return True if the message was consumed (i.e. it should not be logged)
      */
-    using Func = bool (*)(int level, const std::string& msg);
+    using Func = bool (*)(int level, std::string_view msg);
 
     explicit LogRedirect(Func func);
     ~LogRedirect();

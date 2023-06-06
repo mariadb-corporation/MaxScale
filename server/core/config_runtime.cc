@@ -1422,14 +1422,14 @@ void merge_json(json_t* dest, json_t* src)
 
 }
 
-void config_runtime_add_error(const std::string& error)
+void config_runtime_add_error(std::string_view error)
 {
-    runtime_errmsg.push_back(error);
+    runtime_errmsg.push_back(std::string(error));
 }
 
-void runtime_add_warning(const std::string& warning)
+void runtime_add_warning(std::string_view warning)
 {
-    this_unit.warnings.push_back(warning);
+    this_unit.warnings.push_back(std::string(warning));
 }
 
 std::string runtime_get_warnings()

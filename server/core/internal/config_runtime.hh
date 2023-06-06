@@ -41,7 +41,7 @@ class RoutingWorker;
  *
  * @param error The error to log
  */
-void config_runtime_add_error(const std::string& error);
+void config_runtime_add_error(std::string_view error);
 
 /**
  * This function creates a new "volatile" server. Such servers are not persisted to any config files and are
