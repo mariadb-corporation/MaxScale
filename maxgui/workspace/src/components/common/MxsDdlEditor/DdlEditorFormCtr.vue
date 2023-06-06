@@ -2,12 +2,11 @@
     <v-form v-model="isFormValid">
         <div ref="header">
             <alter-table-opts
-                v-model="tableOptsData"
+                v-model="tblOpts"
                 :engines="engines"
                 :charsetCollationMap="charset_collation_map"
                 :defDbCharset="
-                    $typy(def_db_charset_map, `${$typy(tableOptsData, 'dbName').safeString}`)
-                        .safeString
+                    $typy(def_db_charset_map, `${$typy(tblOpts, 'schema').safeString}`).safeString
                 "
             />
         </div>
@@ -20,13 +19,13 @@
             <v-slide-x-transition>
                 <alter-cols-opts
                     v-if="activeSpec === DDL_ALTER_SPECS.COLUMNS"
-                    v-model="colsOptsData"
+                    v-model="colDefinitions"
                     :charsetCollationMap="charset_collation_map"
-                    :initialData="$typy(initialData, 'cols_opts_data').safeObjectOrEmpty"
+                    :initialData="$typy(initialData, 'definitions').safeObjectOrEmpty"
                     :height="tabDim.height"
                     :boundingWidth="tabDim.width"
-                    :defTblCharset="$typy(tableOptsData, 'table_charset').safeString"
-                    :defTblCollation="$typy(tableOptsData, 'table_collation').safeString"
+                    :defTblCharset="$typy(tblOpts, 'charset').safeString"
+                    :defTblCollation="$typy(tblOpts, 'collation').safeString"
                 />
             </v-slide-x-transition>
         </div>
@@ -80,20 +79,20 @@ export default {
             engines: state => state.editorsMem.engines,
             def_db_charset_map: state => state.editorsMem.def_db_charset_map,
         }),
-        tableOptsData: {
+        tblOpts: {
             get() {
-                return this.$typy(this.formData, 'table_opts_data').safeObjectOrEmpty
+                return this.$typy(this.formData, 'options').safeObjectOrEmpty
             },
             set(v) {
-                this.$emit('input', { ...this.formData, table_opts_data: v })
+                this.$emit('input', { ...this.formData, options: v })
             },
         },
-        colsOptsData: {
+        colDefinitions: {
             get() {
-                return this.$typy(this.formData, 'cols_opts_data').safeObjectOrEmpty
+                return this.$typy(this.formData, 'definitions').safeObjectOrEmpty
             },
             set(v) {
-                this.$emit('input', { ...this.formData, cols_opts_data: v })
+                this.$emit('input', { ...this.formData, definitions: v })
             },
         },
         tabDim() {

@@ -597,6 +597,89 @@ function getIdxNameByColName({ keys, keyType, colName }) {
     }
 }
 
+/**
+ * Transform the parsed output of TableParser into a structure
+ * that is used by mxs-ddl-editor
+ * @param {String} param.schema
+ * @param {Object} param.parsedTable - output of TableParser
+ * @param {Object} [param.charsetCollationMap] - collations mapped by charset
+ * @returns {Object}
+ */
+function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
+    const {
+        name,
+        definitions: { cols, keys },
+        options: { charset = '', comment = '', engine = '' } = {},
+    } = parsedTable
+
+    const collation =
+        typy(parsedTable, 'options.collation').safeString ||
+        typy(charsetCollationMap, `[${charset}].defCollation`).safeString
+
+    const data = cols.map(col => {
+        const keyType = findKeyTypeByColName({
+            keys,
+            colName: col.name,
+        })
+        let uq = ''
+        if (keyType === tokens.uniqueKey) {
+            uq = getIdxNameByColName({
+                keys,
+                keyType,
+                colName: col.name,
+            })
+        }
+        return [
+            uuidv1(),
+            col.name,
+            `${col.data_type}${col.data_type_size ? `(${col.data_type_size})` : ''}`,
+            keyType === tokens.primaryKey ? 'YES' : 'NO',
+            col.is_nn ? 'NOT NULL' : 'NULL',
+            col.is_un ? 'UNSIGNED' : '',
+            uq,
+            col.is_zf ? 'ZEROFILL' : '',
+            col.is_ai ? 'AUTO_INCREMENT' : '',
+            col.generated_type ? col.generated_type : '(none)',
+            col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
+            col.charset,
+            col.collate,
+            typy(col.comment).safeString,
+        ]
+    })
+    return {
+        options: {
+            schema,
+            charset,
+            collation,
+            comment,
+            engine,
+            name,
+        },
+        /**
+         * TODO: Refactor data and fields
+         */
+        definitions: {
+            data,
+            fields: [
+                'id',
+                'column_name',
+                'column_type',
+                'PK',
+                'NN',
+                'UN',
+                'UQ',
+                'ZF',
+                'AI',
+                'generated',
+                'default/expression',
+                'charset',
+                'collation',
+                'comment',
+            ],
+        },
+    }
+}
+
 export default {
     getSchemaName,
     getTblName,
@@ -614,4 +697,5 @@ export default {
     queryAndParseDDL,
     findKeyTypeByColName,
     getIdxNameByColName,
+    tableParserTransformer,
 }

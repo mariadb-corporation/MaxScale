@@ -12,6 +12,7 @@
  */
 import { t } from 'typy'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
+import { unquoteIdentifier } from '@wsSrc/utils/helpers'
 
 const tableOptionsReg = tokenizer.tableOptions
 const colDefReg = tokenizer.colDef
@@ -19,6 +20,7 @@ const nonFksReg = tokenizer.nonFks
 const fksReg = tokenizer.fks
 const indexColNamesReg = tokenizer.indexColNames
 const createTableReg = tokenizer.createTable
+
 /**
  * This parser works when sql_quote_show_create on
  */
@@ -31,9 +33,9 @@ export default class TableParser {
         let match
         let opts = {}
         while ((match = tableOptionsReg.exec(optsStr)) !== null) {
-            const key = match[1]
+            const key = match[1].toLocaleLowerCase()
             const value = match[2]
-            opts[key.toLocaleLowerCase()] = value
+            opts[key] = key === 'comment' ? unquoteIdentifier(value) : value
         }
         return opts
     }
@@ -61,7 +63,7 @@ export default class TableParser {
                 comment,
             } = match.groups
             return {
-                name,
+                name: unquoteIdentifier(name),
                 data_type,
                 data_type_size,
                 is_un: Boolean(un),
@@ -73,7 +75,7 @@ export default class TableParser {
                 generated_type,
                 is_ai: Boolean(ai),
                 default_exp,
-                comment,
+                comment: unquoteIdentifier(comment),
             }
         }
         return def
@@ -88,7 +90,7 @@ export default class TableParser {
         let res = []
         while ((match = indexColNamesReg.exec(index_col_names)) !== null) {
             const { name, length, order } = match.groups
-            res.push({ name, length, order })
+            res.push({ name: unquoteIdentifier(name), length, order })
         }
         return res
     }
@@ -115,12 +117,12 @@ export default class TableParser {
         } = match.groups
         return {
             category,
-            name,
+            name: unquoteIdentifier(name),
             index_cols: this.parseIndexColNames(index_col_names),
             match_option,
             referenced_index_cols: this.parseIndexColNames(referenced_index_col_names),
-            referenced_schema_name,
-            referenced_table_name,
+            referenced_schema_name: unquoteIdentifier(referenced_schema_name),
+            referenced_table_name: unquoteIdentifier(referenced_table_name),
             on_delete,
             on_update,
         }
@@ -152,7 +154,7 @@ export default class TableParser {
         let name, definitions, options
         if (match) {
             const { table_name, table_options, table_definitions } = match.groups
-            name = table_name
+            name = unquoteIdentifier(table_name)
             definitions = this.parseTableDefs(table_definitions)
             options = this.parseTableOpts(table_options)
         }

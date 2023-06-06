@@ -74,21 +74,21 @@ export default {
         },
         isTblOptsChanged() {
             return !this.$helpers.lodash.isEqual(
-                this.$typy(this.data, 'table_opts_data').safeObject,
-                this.$typy(this.stagingData, 'table_opts_data').safeObject
+                this.$typy(this.data, 'options').safeObject,
+                this.$typy(this.stagingData, 'options').safeObject
             )
         },
         isColsOptsChanged() {
             return !this.$helpers.lodash.isEqual(
-                this.$typy(this.data, 'cols_opts_data.data').safeArray,
-                this.$typy(this.stagingData, 'cols_opts_data.data').safeArray
+                this.$typy(this.data, 'definitions.data').safeArray,
+                this.$typy(this.stagingData, 'definitions.data').safeArray
             )
         },
         currColsData() {
-            return this.$typy(this.stagingData, 'cols_opts_data.data').safeArray
+            return this.$typy(this.stagingData, 'definitions.data').safeArray
         },
         initialColsData() {
-            return this.$typy(this.data, 'cols_opts_data.data').safeArray
+            return this.$typy(this.data, 'definitions.data').safeArray
         },
         currPkCols() {
             return this.getPKCols(this.currColsData)
@@ -97,15 +97,12 @@ export default {
             return this.getPKCols(this.initialColsData)
         },
         tableOptsDataDiff() {
-            return this.$helpers.deepDiff(
-                this.data.table_opts_data,
-                this.stagingData.table_opts_data
-            )
+            return this.$helpers.deepDiff(this.data.options, this.stagingData.options)
         },
     },
     methods: {
         getPKCols(colsData) {
-            const headers = this.$typy(this.stagingData, 'cols_opts_data.fields').safeArray
+            const headers = this.$typy(this.stagingData, 'definitions.fields').safeArray
             let cols = []
             const idxOfPk = headers.findIndex(h => h === 'PK')
             const idxOfColumnName = headers.findIndex(h => h === 'column_name')
@@ -125,25 +122,25 @@ export default {
          */
         buildTblOptSql() {
             let sql = ''
-            const { dbName } = this.data.table_opts_data
+            const { schema } = this.data.options
             const { quotingIdentifier: quoting } = this.$helpers
             this.tableOptsDataDiff.forEach((diff, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const key = diff.path[0]
                 switch (key) {
-                    case 'table_name':
-                        sql += `RENAME TO ${quoting(dbName)}.${quoting(diff.rhs)}`
+                    case 'name':
+                        sql += `RENAME TO ${quoting(schema)}.${quoting(diff.rhs)}`
                         break
-                    case 'table_engine':
+                    case 'engine':
                         sql += `ENGINE = ${diff.rhs}`
                         break
-                    case 'table_charset':
+                    case 'charset':
                         sql += `CHARACTER SET = ${diff.rhs}`
                         break
-                    case 'table_collation':
+                    case 'collation':
                         sql += `COLLATE = ${diff.rhs}`
                         break
-                    case 'table_comment':
+                    case 'comment':
                         sql += `COMMENT = '${diff.rhs}'`
                         break
                 }
@@ -316,12 +313,12 @@ export default {
                 lodash: { isEqual },
             } = this.$helpers
             const base = getObjectRows({
-                columns: this.$typy(this.data, 'cols_opts_data.fields').safeArray,
-                rows: this.$typy(this.data, 'cols_opts_data.data').safeArray,
+                columns: this.$typy(this.data, 'definitions.fields').safeArray,
+                rows: this.$typy(this.data, 'definitions.data').safeArray,
             })
             const newData = getObjectRows({
-                columns: this.$typy(this.stagingData, 'cols_opts_data.fields').safeArray,
-                rows: this.$typy(this.stagingData, 'cols_opts_data.data').safeArray,
+                columns: this.$typy(this.stagingData, 'definitions.fields').safeArray,
+                rows: this.$typy(this.stagingData, 'definitions.data').safeArray,
             })
             const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
             const removedCols = diff.get('removed')
@@ -356,8 +353,8 @@ export default {
          */
         buildAlterScript() {
             const { quotingIdentifier: quoting, formatSQL } = this.$helpers
-            const { dbName, table_name } = this.data.table_opts_data
-            let sql = `ALTER TABLE ${quoting(dbName)}.${quoting(table_name)}`
+            const { schema, name } = this.data.options
+            let sql = `ALTER TABLE ${quoting(schema)}.${quoting(name)}`
             let tblOptSql = '',
                 colsAlterSql = ''
             if (this.isTblOptsChanged) tblOptSql = this.buildTblOptSql()

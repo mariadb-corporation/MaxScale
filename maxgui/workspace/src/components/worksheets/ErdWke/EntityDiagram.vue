@@ -47,7 +47,7 @@
                                         class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg px-4"
                                         colspan="3"
                                     >
-                                        {{ $helpers.unquoteIdentifier(node.data.name) }}
+                                        {{ node.data.name }}
                                     </th>
                                 </tr>
                             </thead>
@@ -69,9 +69,7 @@
                                     <td>
                                         <div class="fill-height d-flex align-center">
                                             <mxs-truncate-str
-                                                :tooltipItem="{
-                                                    txt: $helpers.unquoteIdentifier(col.name),
-                                                }"
+                                                :tooltipItem="{ txt: col.name }"
                                                 :maxWidth="tdMaxWidth"
                                             />
                                         </div>

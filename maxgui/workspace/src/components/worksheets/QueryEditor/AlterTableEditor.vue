@@ -85,10 +85,10 @@ export default {
         },
         async confirmAlter() {
             const { quotingIdentifier: quoting } = this.$helpers
-            const { dbName, table_name } = this.data.table_opts_data
+            const { schema, name } = this.data.options
             await this.exeStmtAction({
                 sql: this.exec_sql_dlg.sql,
-                action: `Apply changes to ${quoting(dbName)}.${quoting(table_name)}`,
+                action: `Apply changes to ${quoting(schema)}.${quoting(name)}`,
             })
             if (!this.isExecFailed) {
                 const data = this.$helpers.lodash.cloneDeep(this.stagingData)

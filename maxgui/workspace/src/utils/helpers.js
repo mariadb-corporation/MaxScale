@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { t } from 'typy'
 import { startOfDay, differenceInCalendarDays } from 'date-fns'
 import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
 import sqlFormatter from '@wsSrc/components/common/MxsSqlEditor/formatter'
@@ -37,7 +38,9 @@ export function quotingIdentifier(identifier) {
  * @return {String} Return unquoted identifier name
  */
 export function unquoteIdentifier(identifier) {
-    return identifier.slice(1, -1).replace(/``/g, '`')
+    if (!t(identifier).isString) return identifier
+    const quoteMark = identifier.slice(0, 1)
+    return identifier.slice(1, -1).replace(new RegExp(quoteMark + quoteMark, 'g'), quoteMark)
 }
 
 /**

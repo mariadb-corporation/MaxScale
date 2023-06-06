@@ -23,11 +23,11 @@
                         {{ $mxs_t('name') }}
                     </label>
                     <v-text-field
-                        id="table_name"
-                        v-model="tableOptsData.table_name"
-                        :rules="rules.table_name"
+                        id="table-name"
+                        v-model="tblOpts.name"
+                        :rules="rules.name"
                         required
-                        name="table_name"
+                        name="table-name"
                         :height="28"
                         class="vuetify-input--override error--text__bottom"
                         hide-details="auto"
@@ -40,7 +40,7 @@
                         {{ $mxs_t('comment') }}
                     </label>
                     <v-text-field
-                        v-model="tableOptsData.table_comment"
+                        v-model="tblOpts.comment"
                         class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
                         single-line
                         outlined
@@ -56,9 +56,9 @@
                         {{ $mxs_t('engine') }}
                     </label>
                     <v-select
-                        v-model="tableOptsData.table_engine"
+                        v-model="tblOpts.engine"
                         :items="engines"
-                        name="table_engine"
+                        name="table-engine"
                         outlined
                         class="vuetify-input--override v-select--mariadb error--text__bottom"
                         :menu-props="{
@@ -76,7 +76,7 @@
                         {{ $mxs_t('charset') }}
                     </label>
                     <charset-collate-select
-                        v-model="tableOptsData.table_charset"
+                        v-model="tblOpts.charset"
                         :items="Object.keys(charsetCollationMap)"
                         :defItem="defDbCharset"
                         :height="28"
@@ -88,12 +88,9 @@
                         {{ $mxs_t('collation') }}
                     </label>
                     <charset-collate-select
-                        v-model="tableOptsData.table_collation"
+                        v-model="tblOpts.collation"
                         :items="
-                            $typy(
-                                charsetCollationMap,
-                                `[${tableOptsData.table_charset}].collations`
-                            ).safeArray
+                            $typy(charsetCollationMap, `[${tblOpts.charset}].collations`).safeArray
                         "
                         :defItem="defCollation"
                         :height="28"
@@ -131,7 +128,7 @@ export default {
     data() {
         return {
             rules: {
-                table_name: [
+                name: [
                     val =>
                         !!val ||
                         this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('name') }),
@@ -141,7 +138,7 @@ export default {
         }
     },
     computed: {
-        tableOptsData: {
+        tblOpts: {
             get() {
                 return this.value
             },
@@ -150,16 +147,14 @@ export default {
             },
         },
         defCollation() {
-            return this.$typy(
-                this.charsetCollationMap,
-                `[${this.tableOptsData.table_charset}].defCollation`
-            ).safeString
+            return this.$typy(this.charsetCollationMap, `[${this.tblOpts.charset}].defCollation`)
+                .safeString
         },
     },
     methods: {
         onInputCharset() {
             // Use default collation of selected charset
-            this.tableOptsData.table_collation = this.defCollation
+            this.tblOpts.collation = this.defCollation
         },
     },
 }
