@@ -135,22 +135,51 @@ int test_base64()
     return 0;
 }
 
+template<class Result, class Expected>
+int compare(Result result, Expected expected)
+{
+    int errors = 0;
+
+    if (result != expected)
+    {
+        std::cout << "Result is '" << result << "' instead of '" << expected << "'\n";
+        ++errors;
+    }
+
+    return errors;
+}
+
 int test_externcmd()
 {
     int errors = 0;
     std::string result;
-
-    auto cmd = ExternalCmd::create("/usr/bin/env echo hello", 5, [&](auto cmd, auto line){
+    auto handler = [&](auto cmd, auto line){
         result = line;
-    });
+    };
 
-    cmd->externcmd_execute();
+    auto cmd = ExternalCmd::create("/usr/bin/env echo hello", 5, handler);
 
-    if (result != "hello")
+    cmd->run();
+    errors += compare(result, "hello");
+
+    cmd = ExternalCmd::create("/usr/bin/env echo world", 5, handler);
+    cmd->start();
+    cmd->wait();
+    errors += compare(result, "world");
+
+    cmd = ExternalCmd::create("/usr/bin/sh -c 'sleep 1; echo hello world'", 30, handler);
+    cmd->start();
+
+    int rc = ExternalCmd::ERROR;
+    auto start = mxb::Clock::now();
+
+    while ((rc = cmd->try_wait()) == ExternalCmd::TIMEOUT && start - mxb::Clock::now() < 30s)
     {
-        std::cout << "Result is '" << result << "' instead of 'hello'\n";
-        ++errors;
+        std::this_thread::sleep_for(50ms);
     }
+
+    errors += compare(rc, 0);
+    errors += compare(result, "hello world");
 
     return errors;
 }

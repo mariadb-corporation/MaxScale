@@ -23,6 +23,11 @@ class ExternalCmd
 public:
     using OutputHandler = std::function<void (const std::string&, const std::string&)>;
 
+    static constexpr int ERROR = -1;    // System error that's unrelated to the command being executed
+    static constexpr int TIMEOUT = -2;  // Command hasn't exited yet
+
+    ~ExternalCmd();
+
     /**
      * Create a new external command. The name and parameters are copied so
      * the original memory can be freed.
@@ -37,13 +42,37 @@ public:
                                                OutputHandler handler = {});
 
     /**
-     * Execute a command
+     * Run the command
      *
-     * The output of the command must be freed by the caller by calling MXS_FREE.
+     * Starts the command and waits for it to complete. Any output is redirected into the output
+     * hander. This is the same as running start() and then calling wait().
      *
      * @return The return value of the executed command or -1 on error
      */
-    int externcmd_execute();
+    int run();
+
+    /**
+     * Start the command and return immediately.
+     *
+     * @return True if the command was started successfully.
+     */
+    bool start();
+
+    /**
+     * Try to wait for the process.
+     *
+     * @return The process return code if it had already stopped, ERROR if the waiting failed or TIMEOUT if
+     *         the process had not yet exited. Once the function returns something other than TIMEOUT, all
+     *         calls to try_wait() or wait() will return the result of the operation.
+     */
+    int try_wait();
+
+    /**
+     * Wait for the process to exit.
+     *
+     * @return The process return code if the process had stopped or ERROR if the waiting failed.
+     */
+    int wait();
 
     /**
      * If keyword is found in command script, replace keyword with output of generator function.
@@ -65,12 +94,19 @@ private:
 
     std::string   m_orig_command;       /**< Original command */
     std::string   m_subst_command;      /**< Command with substitutions */
+    std::string   m_cmd;
+    std::string   m_output;
     int           m_timeout;            /**< Command timeout in seconds */
+    int           m_pid {-1};
+    int           m_result {TIMEOUT};
+    int           m_read_fd{-1};
     OutputHandler m_handler;
 
     ExternalCmd(const std::string& script, int timeout, OutputHandler handler);
 
     int tokenize_args(char* dest[], int dest_size);
+
+    void read_output();
 
     /**
      * Substitute all occurrences of @c match with @c replace in the arguments.

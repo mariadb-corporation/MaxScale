@@ -207,22 +207,40 @@ ExternalCmd::ExternalCmd(const std::string& script, int timeout, OutputHandler h
 {
 }
 
-int ExternalCmd::externcmd_execute()
+ExternalCmd::~ExternalCmd()
+{
+    if (m_pid != -1)
+    {
+        wait();
+        mxb_assert(m_pid == -1);
+    }
+
+    if (m_read_fd != -1)
+    {
+        close(m_read_fd);
+    }
+}
+
+int ExternalCmd::run()
+{
+    return start() ? wait() : -1;
+}
+
+bool ExternalCmd::start()
 {
     // Create a pipe where the command can print output
     int fd[2];
     if (pipe(fd) == -1)
     {
         MXB_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
-        return -1;
+        return false;
     }
 
     // "execvp" takes its arguments as an array of tokens where the first element is the command.
     char* argvec[MAX_ARGS + 1] {};
     tokenize_args(argvec, MAX_ARGS);
-    const char* cmdname = argvec[0];
+    std::string m_cmd = argvec[0];
 
-    int rval = 0;
     // The SIGCHLD handler must be disabled before child process is forked,
     // otherwise we'll get an error
     pid_t pid = fork();
@@ -231,8 +249,8 @@ int ExternalCmd::externcmd_execute()
         close(fd[0]);
         close(fd[1]);
         MXB_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
-                  cmdname, errno, mxb_strerror(errno));
-        rval = -1;
+                  m_cmd.c_str(), errno, mxb_strerror(errno));
+        return false;
     }
     else if (pid == 0)
     {
@@ -243,7 +261,7 @@ int ExternalCmd::externcmd_execute()
         dup2(fd[1], STDERR_FILENO);
 
         // Execute the command
-        execvp(cmdname, argvec);
+        execvp(argvec[0], argvec);
 
         // This is only reached if execvp failed to start the command. Print to the standard error stream.
         // The message will be caught by the parent process.
@@ -262,113 +280,132 @@ int ExternalCmd::externcmd_execute()
         // Exit with error. The write end of the pipe should close by itself.
         _exit(1);
     }
-    else
-    {
-        MXB_INFO("Executing command '%s' in process %d", cmdname, pid);
 
-        string output;
-        bool first_warning = true;
-        bool again = true;
-        uint64_t t = 0;
-        uint64_t t_max = m_timeout * 1000;
+    // Close the write end of the pipe and make the read end non-blocking
+    close(fd[1]);
+    fcntl(fd[0], F_SETFL, O_NONBLOCK);
 
-        // Close the write end of the pipe and make the read end non-blocking
-        close(fd[1]);
-        fcntl(fd[0], F_SETFL, O_NONBLOCK);
-
-        while (again)
-        {
-            int exit_status;
-
-            switch (waitpid(pid, &exit_status, WNOHANG))
-            {
-            case -1:
-                MXB_ERROR("Failed to wait for child process: %d, %s", errno, mxb_strerror(errno));
-                again = false;
-                break;
-
-            case 0:
-                if (t++ > t_max)
-                {
-                    // Command timed out
-                    t = 0;
-                    if (first_warning)
-                    {
-                        MXB_WARNING("Soft timeout for command '%s', sending SIGTERM", cmdname);
-                        kill(pid, SIGTERM);
-                        first_warning = false;
-                    }
-                    else
-                    {
-                        MXB_ERROR("Hard timeout for command '%s', sending SIGKILL", cmdname);
-                        kill(pid, SIGKILL);
-                    }
-                }
-                else
-                {
-                    // Sleep and try again
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                }
-                break;
-
-            default:
-                again = false;
-
-                if (WIFEXITED(exit_status))
-                {
-                    rval = WEXITSTATUS(exit_status);
-                }
-                else if (WIFSIGNALED(exit_status))
-                {
-                    rval = WTERMSIG(exit_status);
-                }
-                else
-                {
-                    rval = exit_status;
-                    MXB_ERROR("Command '%s' did not exit normally. Exit status: %d", cmdname, exit_status);
-                }
-                break;
-            }
-
-            int n;
-            char buf[4096];     // This seems like enough space
-
-            while ((n = read(fd[0], buf, sizeof(buf))) > 0)
-            {
-                // Read all available output
-                output.append(buf, n);
-
-                for (size_t pos = output.find("\n"); pos != std::string::npos; pos = output.find("\n"))
-                {
-                    if (pos == 0)
-                    {
-                        output.erase(0, 1);
-                    }
-                    else
-                    {
-                        std::string line = output.substr(0, pos);
-                        output.erase(0, pos + 1);
-                        m_handler(cmdname, line);
-                    }
-                }
-            }
-        }
-
-        if (!output.empty())
-        {
-            m_handler(cmdname, output);
-        }
-
-        // Close the read end of the pipe and copy the data to the output parameter
-        close(fd[0]);
-    }
+    m_pid = pid;
+    m_read_fd = fd[0];
 
     // Free the token array.
     for (int i = 0; i < MAX_ARGS && argvec[i]; i++)
     {
         MXB_FREE(argvec[i]);
     }
-    return rval;
+
+    MXB_INFO("Executing command '%s' in process %d", m_cmd.c_str(), pid);
+
+    return true;
+}
+
+int ExternalCmd::try_wait()
+{
+    if (m_pid != -1)
+    {
+        int exit_status;
+
+        switch (waitpid(m_pid, &exit_status, WNOHANG))
+        {
+        case -1:
+            MXB_ERROR("Failed to wait for child process: %d, %s", errno, mxb_strerror(errno));
+            m_result = ERROR;
+            m_pid = -1;
+            break;
+
+        case 0:
+            m_result = TIMEOUT;
+            break;
+
+        default:
+            m_pid = -1;
+
+            if (WIFEXITED(exit_status))
+            {
+                m_result = WEXITSTATUS(exit_status);
+            }
+            else if (WIFSIGNALED(exit_status))
+            {
+                m_result = WTERMSIG(exit_status);
+            }
+            else
+            {
+                MXB_ERROR("Command '%s' did not exit normally. Exit status: %d", m_cmd.c_str(), exit_status);
+                m_result = exit_status;
+            }
+            break;
+        }
+
+        read_output();
+
+        if (m_result != TIMEOUT && !m_output.empty())
+        {
+            m_handler(m_cmd.c_str(), m_output);
+        }
+    }
+
+    return m_result;
+}
+
+void ExternalCmd::read_output()
+{
+    int n;
+    char buf[4096];             // This seems like enough space
+
+    while ((n = read(m_read_fd, buf, sizeof(buf))) > 0)
+    {
+        // Read all available output
+        m_output.append(buf, n);
+
+        for (size_t pos = m_output.find("\n"); pos != std::string::npos; pos = m_output.find("\n"))
+        {
+            if (pos == 0)
+            {
+                m_output.erase(0, 1);
+            }
+            else
+            {
+                std::string line = m_output.substr(0, pos);
+                m_output.erase(0, pos + 1);
+                m_handler(m_cmd.c_str(), line);
+            }
+        }
+    }
+}
+
+int ExternalCmd::wait()
+{
+    string output;
+    bool first_warning = true;
+    uint64_t t = 0;
+    uint64_t t_max = m_timeout * 1000;
+
+    while (try_wait() == TIMEOUT)
+    {
+        if (t++ > t_max)
+        {
+            // Command timed out
+            t = 0;
+            if (first_warning)
+            {
+                MXB_WARNING("Soft timeout for command '%s', sending SIGTERM", m_cmd.c_str());
+                kill(m_pid, SIGTERM);
+                first_warning = false;
+            }
+            else
+            {
+                MXB_ERROR("Hard timeout for command '%s', sending SIGKILL", m_cmd.c_str());
+                kill(m_pid, SIGKILL);
+            }
+        }
+        else
+        {
+            // Sleep and try again
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+
+    return m_result;
 }
 
 void ExternalCmd::substitute_arg(const std::string& match, const std::string& replace)

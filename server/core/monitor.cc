@@ -1137,7 +1137,7 @@ int Monitor::launch_command(MonitorServer* ptr, const std::string& event_name)
         return gen_serverlist(SERVER_JOINED);
     });
 
-    int rv = m_scriptcmd->externcmd_execute();
+    int rv = m_scriptcmd->run();
 
     string msg_part2 = mxb::string_printf("event '%s' on %s", event_name.c_str(), ptr->server->name());
     string msg_end = mxb::string_printf("Script was: '%s'", m_scriptcmd->substituted());
