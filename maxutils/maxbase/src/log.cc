@@ -764,6 +764,208 @@ bool mxb_log_set_priority_enabled(int level, bool enable)
     return rv;
 }
 
+namespace
+{
+
+int log_message(message_suppression_t status,
+                int level,
+                int priority,
+                const char* zModname,
+                const char* zFunction,
+                std::string_view message)
+{
+    int err = 0;
+
+    char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
+    int context_len = 0;
+
+    if (this_unit.context_provider)
+    {
+        context_len = this_unit.context_provider(context, sizeof(context));
+
+        if (context_len != 0)
+        {
+            context_len += 3;   // The added "() "
+        }
+    }
+
+    int modname_len = zModname ? strlen(zModname) + 3 : 0;    // +3 due to "[...] "
+
+    // If we know the actual object name, add that also
+    auto scope = mxb::LogScope::current_scope();
+    int scope_len = scope ? strlen(scope) + 4 : 0;      // +4 due to "(...); "
+
+    static const char SUPPRESSION[] =
+        " (subsequent similar messages suppressed for %lu milliseconds)";
+    int suppression_len = 0;
+    size_t suppress_ms = this_unit.throttling.suppress_ms;
+
+    if (status == MESSAGE_SUPPRESSED)
+    {
+        suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
+        suppression_len -= 3;                       // Remove the %lu
+        suppression_len += UINTLEN(suppress_ms);
+    }
+
+    LOG_PREFIX prefix = level_to_prefix(level);
+
+    static const char FORMAT_FUNCTION[] = "(%s): ";
+
+    // Other thread might change this_unit.augmentation.
+    int augmentation = this_unit.augmentation;
+    int augmentation_len = 0;
+
+    switch (augmentation)
+    {
+    case MXB_LOG_AUGMENT_WITH_FUNCTION:
+        augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+        augmentation_len -= 2;                          // Remove the %s
+        augmentation_len += strlen(zFunction);
+        break;
+
+    default:
+        break;
+    }
+
+    int message_len = message.length();
+    int buffer_len = 0;
+    buffer_len += prefix.len;
+    buffer_len += context_len;
+    buffer_len += modname_len;
+    buffer_len += scope_len;
+    buffer_len += augmentation_len;
+    buffer_len += message_len;
+    buffer_len += suppression_len;
+
+    if (buffer_len > MAX_LOGSTRLEN)
+    {
+        message_len -= (buffer_len - MAX_LOGSTRLEN);
+        buffer_len = MAX_LOGSTRLEN;
+
+        assert(prefix.len + context_len + modname_len + scope_len
+               + augmentation_len + message_len + suppression_len == buffer_len);
+    }
+
+    char buffer[buffer_len + 1];
+
+    char* prefix_text = buffer;
+    char* context_text = prefix_text + prefix.len;
+    char* modname_text = context_text + context_len;
+    char* scope_text = modname_text + modname_len;
+    char* augmentation_text = scope_text + scope_len;
+    char* message_text = augmentation_text + augmentation_len;
+    char* suppression_text = message_text + message_len;
+
+    strcpy(prefix_text, prefix.text);
+
+    if (context_len)
+    {
+        strcpy(context_text, "(");
+        strcat(context_text, context);
+        strcat(context_text, ") ");
+    }
+
+    if (modname_len)
+    {
+        strcpy(modname_text, "[");
+        strcat(modname_text, zModname);
+        strcat(modname_text, "] ");
+    }
+
+    if (scope_len)
+    {
+        strcpy(scope_text, "(");
+        strcat(scope_text, scope);
+        strcat(scope_text, "); ");
+    }
+
+    if (augmentation_len)
+    {
+        int len = 0;
+
+        switch (augmentation)
+        {
+        case MXB_LOG_AUGMENT_WITH_FUNCTION:
+            len = sprintf(augmentation_text, FORMAT_FUNCTION, zFunction);
+            break;
+
+        default:
+            assert(!true);
+        }
+
+        (void)len;
+        assert(len == augmentation_len);
+    }
+
+    memcpy(message_text, message.data(), message_len);
+    message_text[message_len] = 0;
+
+    if (suppression_len)
+    {
+        sprintf(suppression_text, SUPPRESSION, suppress_ms);
+    }
+
+    std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
+    std::string msg = timestamp;
+    msg += buffer;
+
+    // Remove any user-generated newlines.
+    // This is safe to do as we know the message is not full of newlines
+    while (msg.back() == '\n')
+    {
+        msg.pop_back();
+    }
+
+    // Add a final newline into the message
+    msg.push_back('\n');
+
+    if (this_unit.session_trace && this_unit.in_memory_log)
+    {
+        this_unit.in_memory_log(msg);
+    }
+
+    auto func = mxb::LogRedirect::current_redirect();
+
+    // We only pass the message text to the handler, everything else is extra that's only
+    // needed by the default logging mechanism. If the handler consumes the message, it won't be
+    // logged.
+    if (func && func(level, message_text))
+    {
+        err = 0;
+    }
+    else if (mxb_log_is_priority_enabled(level)
+             || this_unit.should_log(level))
+    {
+        if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
+        {
+#ifdef HAVE_SYSTEMD
+            sd_journal_send("MESSAGE=%s", message_text,
+                            "PRIORITY=%d", LOG_PRI(priority),
+                            "SESSION=%s", context_len ? context : "",
+                            "MODULE=%s", modname_len ? zModname : "",
+                            "OBJECT=%s", scope_len ? scope : "",
+                            "TIMESTAMP=%s", timestamp.c_str(),
+                            "SYSLOG_IDENTIFIER=%s", this_unit.syslog_identifier,
+                            LOG_FAC(priority) ? "SYSLOG_FACILITY=%d" : nullptr, LOG_FAC(priority),
+                            nullptr);
+#else
+            // Debug messages are never logged into syslog
+            syslog(priority, "%s", context_text);
+#endif
+        }
+
+        err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
+    }
+    else
+    {
+        err = 0;
+    }
+
+    return err;
+}
+
+}
+
 int mxb_log_message(int priority,
                     const char* modname,
                     const char* file,
@@ -807,37 +1009,6 @@ int mxb_log_message(int priority,
         {
             va_list valist;
 
-            char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
-            int context_len = 0;
-
-            if (this_unit.context_provider)
-            {
-                context_len = this_unit.context_provider(context, sizeof(context));
-
-                if (context_len != 0)
-                {
-                    context_len += 3;   // The added "() "
-                }
-            }
-
-            int modname_len = modname ? strlen(modname) + 3 : 0;    // +3 due to "[...] "
-
-            // If we know the actual object name, add that also
-            auto scope = mxb::LogScope::current_scope();
-            int scope_len = scope ? strlen(scope) + 4 : 0;      // +4 due to "(...); "
-
-            static const char SUPPRESSION[] =
-                " (subsequent similar messages suppressed for %lu milliseconds)";
-            int suppression_len = 0;
-            size_t suppress_ms = this_unit.throttling.suppress_ms;
-
-            if (status == MESSAGE_SUPPRESSED)
-            {
-                suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
-                suppression_len -= 3;                       // Remove the %lu
-                suppression_len += UINTLEN(suppress_ms);
-            }
-
             /**
              * Find out the length of log string (to be formatted str).
              */
@@ -847,159 +1018,15 @@ int mxb_log_message(int priority,
 
             if (message_len >= 0)
             {
-                LOG_PREFIX prefix = level_to_prefix(level);
-
-                static const char FORMAT_FUNCTION[] = "(%s): ";
-
-                // Other thread might change this_unit.augmentation.
-                int augmentation = this_unit.augmentation;
-                int augmentation_len = 0;
-
-                switch (augmentation)
-                {
-                case MXB_LOG_AUGMENT_WITH_FUNCTION:
-                    augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-                    augmentation_len -= 2;                          // Remove the %s
-                    augmentation_len += strlen(function);
-                    break;
-
-                default:
-                    break;
-                }
-
-                int buffer_len = 0;
-                buffer_len += prefix.len;
-                buffer_len += context_len;
-                buffer_len += modname_len;
-                buffer_len += scope_len;
-                buffer_len += augmentation_len;
-                buffer_len += message_len;
-                buffer_len += suppression_len;
-
-                if (buffer_len > MAX_LOGSTRLEN)
-                {
-                    message_len -= (buffer_len - MAX_LOGSTRLEN);
-                    buffer_len = MAX_LOGSTRLEN;
-
-                    assert(prefix.len + context_len + modname_len + scope_len
-                           + augmentation_len + message_len + suppression_len == buffer_len);
-                }
-
-                char buffer[buffer_len + 1];
-
-                char* prefix_text = buffer;
-                char* context_text = prefix_text + prefix.len;
-                char* modname_text = context_text + context_len;
-                char* scope_text = modname_text + modname_len;
-                char* augmentation_text = scope_text + scope_len;
-                char* message_text = augmentation_text + augmentation_len;
-                char* suppression_text = message_text + message_len;
-
-                strcpy(prefix_text, prefix.text);
-
-                if (context_len)
-                {
-                    strcpy(context_text, "(");
-                    strcat(context_text, context);
-                    strcat(context_text, ") ");
-                }
-
-                if (modname_len)
-                {
-                    strcpy(modname_text, "[");
-                    strcat(modname_text, modname);
-                    strcat(modname_text, "] ");
-                }
-
-                if (scope_len)
-                {
-                    strcpy(scope_text, "(");
-                    strcat(scope_text, scope);
-                    strcat(scope_text, "); ");
-                }
-
-                if (augmentation_len)
-                {
-                    int len = 0;
-
-                    switch (augmentation)
-                    {
-                    case MXB_LOG_AUGMENT_WITH_FUNCTION:
-                        len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
-                        break;
-
-                    default:
-                        assert(!true);
-                    }
-
-                    (void)len;
-                    assert(len == augmentation_len);
-                }
+                char message[message_len + 1];
 
                 va_start(valist, format);
-                vsnprintf(message_text, message_len + 1, format, valist);
+                vsnprintf(message, message_len + 1, format, valist);
                 va_end(valist);
 
-                if (suppression_len)
-                {
-                    sprintf(suppression_text, SUPPRESSION, suppress_ms);
-                }
-
-                std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
-                std::string msg = timestamp;
-                msg += buffer;
-
-                // Remove any user-generated newlines.
-                // This is safe to do as we know the message is not full of newlines
-                while (msg.back() == '\n')
-                {
-                    msg.pop_back();
-                }
-
-                // Add a final newline into the message
-                msg.push_back('\n');
-
-                if (this_unit.session_trace && this_unit.in_memory_log)
-                {
-                    this_unit.in_memory_log(msg);
-                }
-
-                auto func = mxb::LogRedirect::current_redirect();
-
-                // We only pass the message text to the handler, everything else is extra that's only
-                // needed by the default logging mechanism. If the handler consumes the message, it won't be
-                // logged.
-                if (func && func(level, message_text))
-                {
-                    err = 0;
-                }
-                else if (mxb_log_is_priority_enabled(level)
-                         || this_unit.should_log(level))
-                {
-                    if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
-                    {
-#ifdef HAVE_SYSTEMD
-                        sd_journal_send("MESSAGE=%s", message_text,
-                                        "PRIORITY=%d", LOG_PRI(priority),
-                                        "SESSION=%s", context_len ? context : "",
-                                        "MODULE=%s", modname_len ? modname : "",
-                                        "OBJECT=%s", scope_len ? scope : "",
-                                        "TIMESTAMP=%s", timestamp.c_str(),
-                                        "SYSLOG_IDENTIFIER=%s", this_unit.syslog_identifier,
-                                        LOG_FAC(priority) ? "SYSLOG_FACILITY=%d" : nullptr, LOG_FAC(priority),
-                                        nullptr);
-#else
-                        // Debug messages are never logged into syslog
-                        syslog(priority, "%s", context_text);
-#endif
-                    }
-
-                    err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
-                }
-                else
-                {
-                    err = 0;
-                }
+                err = log_message(status, level,
+                                  priority, modname, function,
+                                  std::string_view(message, message_len));
             }
         }
     }
