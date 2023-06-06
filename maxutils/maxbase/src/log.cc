@@ -924,17 +924,7 @@ int log_message(message_suppression_t status,
         this_unit.in_memory_log(msg);
     }
 
-    auto func = mxb::LogRedirect::current_redirect();
-
-    // We only pass the message text to the handler, everything else is extra that's only
-    // needed by the default logging mechanism. If the handler consumes the message, it won't be
-    // logged.
-    if (func && func(level, message_text))
-    {
-        err = 0;
-    }
-    else if (mxb_log_is_priority_enabled(level)
-             || this_unit.should_log(level))
+    if (mxb_log_is_priority_enabled(level) || this_unit.should_log(level))
     {
         if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
         {
@@ -1024,9 +1014,20 @@ int mxb_log_message(int priority,
                 vsnprintf(message, message_len + 1, format, valist);
                 va_end(valist);
 
-                err = log_message(status, level,
-                                  priority, modname, function,
-                                  std::string_view(message, message_len));
+                auto redirect = mxb::LogRedirect::current_redirect();
+
+                // If there is redirection and the redirectee handles the message,
+                // the regular logging is bypassed.
+                if (redirect && redirect(level, std::string_view(message, message_len)))
+                {
+                    err = 0;
+                }
+                else
+                {
+                    err = log_message(status, level,
+                                      priority, modname, function,
+                                      std::string_view(message, message_len));
+                }
             }
         }
     }
