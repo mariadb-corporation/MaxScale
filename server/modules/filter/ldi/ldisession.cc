@@ -45,11 +45,51 @@ std::string escape_single_quotes(std::string_view str)
 }
 }
 
+// static
+char* LDISession::set_key(void* self, const char* key, const char* begin, const char* end)
+{
+    static_cast<LDISession*>(self)->m_config.key.assign(begin, end);
+    return nullptr;
+}
+
+// static
+char* LDISession::set_secret(void* self, const char* key, const char* begin, const char* end)
+{
+    static_cast<LDISession*>(self)->m_config.secret.assign(begin, end);
+    return nullptr;
+}
+
+// static
+char* LDISession::set_region(void* self, const char* key, const char* begin, const char* end)
+{
+    static_cast<LDISession*>(self)->m_config.region.assign(begin, end);
+    return nullptr;
+}
+
+// static
+char* LDISession::set_import_user(void* self, const char* key, const char* begin, const char* end)
+{
+    static_cast<LDISession*>(self)->m_config.import_user.assign(begin, end);
+    return nullptr;
+}
+
+// static
+char* LDISession::set_import_password(void* self, const char* key, const char* begin, const char* end)
+{
+    static_cast<LDISession*>(self)->m_config.import_password.assign(begin, end);
+    return nullptr;
+}
+
 LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter)
     : mxs::FilterSession(pSession, pService)
     , m_config(pFilter->m_config.values())
     , m_self(std::shared_ptr<LDISession>(this, no_delete))
 {
+    pSession->add_variable("@maxscale.s3_key", &LDISession::set_key, this);
+    pSession->add_variable("@maxscale.s3_secret", &LDISession::set_secret, this);
+    pSession->add_variable("@maxscale.s3_region", &LDISession::set_region, this);
+    pSession->add_variable("@maxscale.s3_user", &LDISession::set_import_user, this);
+    pSession->add_variable("@maxscale.s3_password", &LDISession::set_import_password, this);
 }
 
 // static

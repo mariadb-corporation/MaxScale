@@ -116,6 +116,12 @@ private:
     SERVER*                      get_xpand_node() const;
     std::unique_ptr<ExternalCmd> create_import_cmd(SERVER* node, std::string_view ldi_body);
 
+    static char* set_key(void* self, const char* key, const char* begin, const char* end);
+    static char* set_secret(void* self, const char* key, const char* begin, const char* end);
+    static char* set_region(void* self, const char* key, const char* begin, const char* end);
+    static char* set_import_user(void* self, const char* key, const char* begin, const char* end);
+    static char* set_import_password(void* self, const char* key, const char* begin, const char* end);
+
     State               m_state {IDLE};
     std::string         m_file;
     std::string         m_bucket;
