@@ -121,8 +121,6 @@ static struct ThisUnit
 } this_unit;
 }
 
-static const char* maxscale_commit = MAXSCALE_COMMIT;
-
 #ifdef HAVE_GLIBC
 // getopt_long is a GNU extension
 static struct option long_options[] =
@@ -478,7 +476,7 @@ static void sigfatal_handler(int i)
     sprintf(str,
             "MaxScale %s received fatal signal %d. "
             "Commit ID: %s, System name: %s, Release string: %s, Thread: %s",
-            MAXSCALE_VERSION, i, maxscale_commit,
+            MAXSCALE_VERSION, i, maxscale_commit(),
             cnf.sysname.c_str(), cnf.release_string, mxb::get_thread_name().c_str());
 
     cerr << str << "\n" << endl;
@@ -1446,20 +1444,20 @@ int main(int argc, char** argv)
             return EXIT_SUCCESS;
 
         case 'V':
-            printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit);
+            printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit());
 
             // MAXSCALE_SOURCE is two values separated by a space, see CMakeLists.txt
-            if (strcmp(MAXSCALE_SOURCE, " ") != 0)
+            if (strcmp(maxscale_source(), " ") != 0)
             {
-                printf("Source:        %s\n", MAXSCALE_SOURCE);
+                printf("Source:        %s\n", maxscale_source());
             }
-            if (strcmp(MAXSCALE_CMAKE_FLAGS, "") != 0)
+            if (strcmp(maxscale_cmake_flags(), "") != 0)
             {
-                printf("CMake flags:   %s\n", MAXSCALE_CMAKE_FLAGS);
+                printf("CMake flags:   %s\n", maxscale_cmake_flags());
             }
-            if (strcmp(MAXSCALE_JENKINS_BUILD_TAG, "") != 0)
+            if (strcmp(maxscale_jenkins_build_tag(), "") != 0)
             {
-                printf("Jenkins build: %s\n", MAXSCALE_JENKINS_BUILD_TAG);
+                printf("Jenkins build: %s\n", maxscale_jenkins_build_tag());
             }
             return EXIT_SUCCESS;
 
@@ -1892,7 +1890,7 @@ int main(int argc, char** argv)
     MXB_NOTICE("Total main memory: %s (%s usable).",
                mxb::pretty_size(get_total_memory()).c_str(),
                mxb::pretty_size(get_available_memory()).c_str());
-    MXB_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
+    MXB_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, maxscale_commit());
     MXB_NOTICE("MaxScale is running in process %i", getpid());
 
     if (!this_unit.daemon_mode)

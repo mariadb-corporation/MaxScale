@@ -1,0 +1,20 @@
+#pragma once
+
+/**
+ * NOTE: Do not include this header in any file other than `misc.cc`.
+ *
+ * The commit hash and other values that will be different for each build are stored here instead of in the
+ * public MaxScale headers to prevent them from being included in the preprocessed source code. If the literal
+ * values are included, compiler caches like `ccache` and `distcc` that rely on preprocessed sources are
+ * unable to reuse the objects since each of them will be unique due to the commit has being included as a
+ * string literal.
+ *
+ * The MaxScale version number is, however, a compile time constant (in version.hh.in) and it is desirable to
+ * keep it so to make sure that the modules get compiled with the actual version number as a constant. If it
+ * was an external symbol, the check for cross-version usage would be meaningless as the MaxScale core would
+ * provide the symbol and it would always be what is expected.
+ */
+constexpr char MAXSCALE_COMMIT[] = "@MAXSCALE_COMMIT@";
+constexpr char MAXSCALE_SOURCE[] = "@MAXSCALE_SOURCE@";
+constexpr char MAXSCALE_CMAKE_FLAGS[] = "@MAXSCALE_CMAKE_FLAGS@";
+constexpr char MAXSCALE_JENKINS_BUILD_TAG[] = "@MAXSCALE_JENKINS_BUILD_TAG@";

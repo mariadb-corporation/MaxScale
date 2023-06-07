@@ -3645,7 +3645,7 @@ json_t* mxs::Config::maxscale_to_json(const char* host) const
     time_t activated = started + MXS_CLOCK_TO_SEC(promoted_at);
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
-    json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));
+    json_object_set_new(attr, "commit", json_string(maxscale_commit()));
     json_object_set_new(attr, "started_at", json_string(http_to_date(started).c_str()));
     json_object_set_new(attr, "activated_at", json_string(http_to_date(activated).c_str()));
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
