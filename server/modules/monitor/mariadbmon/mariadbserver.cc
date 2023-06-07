@@ -1500,13 +1500,13 @@ bool MariaDBServer::reset_all_slave_conns(mxb::Json& error_out)
 bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, OperationType type,
                             const MariaDBServer* demotion_target)
 {
-    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::FAILOVER
-               || type == OperationType::UNDO_DEMOTION);
+    const bool is_switchover = (type == OperationType::SWITCHOVER || type == OperationType::SWITCHOVER_FORCE);
+    mxb_assert(is_switchover || type == OperationType::FAILOVER || type == OperationType::UNDO_DEMOTION);
     auto& error_out = general.error_out;
 
     StopWatch timer;
     bool stopped = false;
-    if (type == OperationType::SWITCHOVER || type == OperationType::FAILOVER)
+    if (is_switchover || type == OperationType::FAILOVER)
     {
         // In normal circumstances, this should only be called for a master-slave pair.
         auto master_conn = slave_connection_status(demotion_target);
@@ -1521,7 +1521,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         // Step 1: Stop & reset slave connections. If doing a failover, only remove the connection to demotion
         // target. In case of switchover, remove other slave connections as well since the demotion target
         // will take them over.
-        if (type == OperationType::SWITCHOVER)
+        if (is_switchover)
         {
             stopped = remove_slave_conns(general, m_slave_status);
         }
@@ -1581,7 +1581,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         // operation.
         if (!promotion_error)
         {
-            if (type == OperationType::SWITCHOVER)
+            if (is_switchover)
             {
                 // Standard promotion of a previous replica. The slave should have been
                 // properly replicating and has a gtid_slave_pos, so use it when setting up.
@@ -1629,13 +1629,14 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
 bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, OperationType type)
 {
     mxb_assert(demotion.target == this);
-    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::REJOIN);
+    const bool force_switch = (type == OperationType::SWITCHOVER_FORCE);
+    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::REJOIN || force_switch);
     auto& error_out = general.error_out;
     bool success = false;
 
     // Step 1: Stop & reset slave connections. The promotion target will copy them. The connection
     // information has been backed up in the operation object.
-    if (remove_slave_conns(general, m_slave_status))
+    if (remove_slave_conns(general, m_slave_status) || force_switch)
     {
         const bool demoting_master = demotion.target_type == ServerOperation::TargetType::MASTER;
         bool demotion_ok;
@@ -1671,8 +1672,10 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
     mxb_assert(is_master() || m_slave_status.empty());
     auto& time_remaining = general.time_remaining;
     auto& error_out = general.error_out;
-    const bool is_switchover = (type == OperationType::SWITCHOVER);
-
+    // If forcing a switchover, most errors are ignored. The forced switchover is meant to be used in a
+    // situation the master is effectively hanged, but still connectable.
+    const bool force_switch = (type == OperationType::SWITCHOVER_FORCE);
+    const bool is_switchover = (type == OperationType::SWITCHOVER || force_switch);
     // Step 2a: Remove [Master] from this server. This prevents compatible routers (RWS)
     // from routing writes to this server. Writes in flight will go through, at least until
     // read_only is set. Also set draining so that no new connections come from MaxScale.
@@ -1688,7 +1691,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
     StopWatch timer;
     bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, general.time_remaining, error_out);
     time_remaining -= timer.lap();
-    if (ro_enabled)
+    if (ro_enabled || force_switch)
     {
         bool supers_handled = true;
         // In the rejoin-case, just leave read-only on. If super-users are causing problems it's probably
@@ -1719,7 +1722,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
                 PRINT_JSON_ERROR(error_out, "Failed to unlock tables on '%s': %s", name(), error_msg.c_str());
             }
             time_remaining -= timer.lap();
-            supers_handled = lock_ok && kick_ok && unlock_ok;
+            supers_handled = (lock_ok && kick_ok && unlock_ok) || force_switch;
         }
 
         if (supers_handled)
@@ -1730,7 +1733,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
                 // replication.
                 if (!disable_events(BinlogMode::BINLOG_OFF, error_out))
                 {
-                    demotion_ok = false;
+                    demotion_ok = force_switch;
                     PRINT_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
                 }
                 time_remaining -= timer.lap();
@@ -1742,7 +1745,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
             {
                 if (!run_sql_from_file(sql_file, error_out))
                 {
-                    demotion_ok = false;
+                    demotion_ok = force_switch;
                     PRINT_JSON_ERROR(error_out,
                                      "Execution of file '%s' failed during demotion of server '%s'.",
                                      sql_file.c_str(), name());
@@ -1756,7 +1759,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
                 string error_msg;
                 if (!execute_cmd_time_limit("FLUSH LOGS;", time_remaining, &error_msg))
                 {
-                    demotion_ok = false;
+                    demotion_ok = force_switch;
                     PRINT_JSON_ERROR(error_out, "Failed to flush binary logs of '%s' during demotion: %s.",
                                      name(), error_msg.c_str());
                 }
@@ -1766,7 +1769,7 @@ bool MariaDBServer::demote_master(GeneralOpData& general, OperationType type)
             if (demotion_ok && is_switchover)
             {
                 // At this point, the gtid:s should be stable. Check it.
-                demotion_ok = check_gtid_stable(error_out);
+                demotion_ok = check_gtid_stable(error_out) || force_switch;
             }
         }
         else

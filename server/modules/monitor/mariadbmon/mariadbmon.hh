@@ -321,9 +321,10 @@ private:
         ServerOperation promotion;
         ServerOperation demotion;
         GeneralOpData   general;
+        SwitchoverType  type {SwitchoverType::NORMAL};
 
         SwitchoverParams(ServerOperation promotion, ServerOperation demotion,
-                         const GeneralOpData& general);
+                         const GeneralOpData& general, SwitchoverType type);
     };
 
     class FailoverParams

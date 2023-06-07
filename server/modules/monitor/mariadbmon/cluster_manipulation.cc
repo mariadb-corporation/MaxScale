@@ -496,7 +496,8 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                                        const MariaDBServer* demotion_target,
                                        ServerArray* redirected_to_promo, ServerArray* redirected_to_demo)
 {
-    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::FAILOVER);
+    const bool is_switchover = (type == OperationType::SWITCHOVER || type == OperationType::SWITCHOVER_FORCE);
+    mxb_assert(is_switchover || type == OperationType::FAILOVER);
 
     // Slaves of demotion target are redirected to promotion target.
     // Try to redirect even disconnected slaves.
@@ -504,7 +505,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
     // Slaves of promotion target are redirected to demotion target in case of switchover.
     // This list contains elements only when promoting a relay in switchover.
     ServerArray redirect_to_demo_target;
-    if (type == OperationType::SWITCHOVER)
+    if (is_switchover)
     {
         redirect_to_demo_target = get_redirectables(promotion_target, demotion_target);
     }
@@ -530,7 +531,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
     const char redir_fmt[] = "Redirecting %s to replicate from '%s' instead of '%s'.";
     string slave_names_to_promo = monitored_servers_to_string(redirect_to_promo_target);
     string slave_names_to_demo = monitored_servers_to_string(redirect_to_demo_target);
-    mxb_assert(slave_names_to_demo.empty() || type == OperationType::SWITCHOVER);
+    mxb_assert(slave_names_to_demo.empty() || is_switchover);
 
     // Print both name lists if both have items, otherwise just the one with items.
     if (!slave_names_to_promo.empty() && !slave_names_to_demo.empty())
@@ -863,7 +864,8 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
     using std::chrono::seconds;
     using std::chrono::duration_cast;
     mxb_assert(op.demotion.target && op.promotion.target);
-    const OperationType type = OperationType::SWITCHOVER;
+    const OperationType type = (op.type == SwitchoverType::NORMAL) ? OperationType::SWITCHOVER :
+        OperationType::SWITCHOVER_FORCE;
     MariaDBServer* const promotion_target = op.promotion.target;
     MariaDBServer* const demotion_target = op.demotion.target;
 
@@ -884,7 +886,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
     op.general.time_remaining -= timer.lap();
 
     // Step 1: Set read-only to on, flush logs, update gtid:s.
-    if (ok_to_demote && demotion_target->demote(op.general, op.demotion, OperationType::SWITCHOVER))
+    if (ok_to_demote && demotion_target->demote(op.general, op.demotion, type))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
@@ -1807,7 +1809,7 @@ MariaDBMonitor::switchover_prepare(SwitchoverType type, SERVER* promotion_server
         ServerOperation demotion(demotion_target, target_type, promotion_target->m_slave_status,
                                  EventNameSet());
         GeneralOpData general(start, error_out, time_limit);
-        rval = std::make_unique<SwitchoverParams>(promotion, demotion, general);
+        rval = std::make_unique<SwitchoverParams>(promotion, demotion, general, type);
     }
     return rval;
 }
@@ -2079,10 +2081,11 @@ int64_t MariaDBMonitor::guess_gtid_domain(MariaDBServer* demotion_target, const 
 }
 
 MariaDBMonitor::SwitchoverParams::SwitchoverParams(ServerOperation promotion, ServerOperation demotion,
-                                                   const GeneralOpData& general)
+                                                   const GeneralOpData& general, SwitchoverType type)
     : promotion(move(promotion))
     , demotion(move(demotion))
     , general(general)
+    , type(type)
 {
 }
 
