@@ -803,6 +803,9 @@ int log_message(message_suppression_t status,
         message = streamlined_message;
     }
 
+    std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
+    int timestamp_len = timestamp.length();
+
     char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
     int context_len = 0;
 
@@ -856,6 +859,7 @@ int log_message(message_suppression_t status,
 
     int message_len = message.length();
     int buffer_len = 0;
+    buffer_len += timestamp_len;
     buffer_len += prefix.len;
     buffer_len += context_len;
     buffer_len += modname_len;
@@ -869,19 +873,24 @@ int log_message(message_suppression_t status,
         message_len -= (buffer_len - MAX_LOGSTRLEN);
         buffer_len = MAX_LOGSTRLEN;
 
-        assert(prefix.len + context_len + modname_len + scope_len
+        assert(timestamp_len + prefix.len + context_len + modname_len + scope_len
                + augmentation_len + message_len + suppression_len == buffer_len);
     }
 
-    char buffer[buffer_len + 1];
+    ++buffer_len; // The final 0
 
-    char* prefix_text = buffer;
+    char buffer[buffer_len + 1]; // +1 for the '\n' that will be added.
+
+    char* timestamp_text = buffer;
+    char* prefix_text = timestamp_text + timestamp_len;
     char* context_text = prefix_text + prefix.len;
     char* modname_text = context_text + context_len;
     char* scope_text = modname_text + modname_len;
     char* augmentation_text = scope_text + scope_len;
     char* message_text = augmentation_text + augmentation_len;
     char* suppression_text = message_text + message_len;
+
+    strcpy(timestamp_text, timestamp.c_str());
 
     strcpy(prefix_text, prefix.text);
 
@@ -932,23 +941,15 @@ int log_message(message_suppression_t status,
         sprintf(suppression_text, SUPPRESSION, suppress_ms);
     }
 
-    std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
-    std::string msg = timestamp;
-    msg += buffer;
+    // Add a final newline.
+    char* end = buffer + buffer_len;
 
-    // Remove any user-generated newlines.
-    // This is safe to do as we know the message is not full of newlines
-    while (msg.back() == '\n')
-    {
-        msg.pop_back();
-    }
-
-    // Add a final newline into the message
-    msg.push_back('\n');
+    *end = '\n';
+    *(end + 1) = 0;
 
     if (is_session_tracing())
     {
-        this_unit.in_memory_log(msg);
+        this_unit.in_memory_log({buffer, (std::string_view::size_type)buffer_len});
     }
 
     if (should_level_be_logged(level))
@@ -971,7 +972,7 @@ int log_message(message_suppression_t status,
 #endif
         }
 
-        err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
+        err = this_unit.sLogger->write(buffer, buffer_len + 1) ? 0 : -1;
     }
     else
     {
