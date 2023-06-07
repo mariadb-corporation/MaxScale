@@ -1,3 +1,5 @@
+include(${CMAKE_SOURCE_DIR}/cmake/BuildBoost.cmake)
+
 FetchContent_Declare(
   libmarias3
   GIT_REPOSITORY "https://github.com/markus456/libmarias3.git"
@@ -17,6 +19,7 @@ set(MS3 ${CMAKE_CURRENT_BINARY_DIR}/libmarias3/)
 add_library(ldi SHARED
   ldi.cc
   ldisession.cc
+  ldiparser.cc
   ${MS3}/src/assume_role.c
   ${MS3}/src/debug.c
   ${MS3}/src/error.c
@@ -31,3 +34,7 @@ add_library(ldi SHARED
 target_link_libraries(ldi maxscale-common curl)
 set_target_properties(ldi PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
 install_module(ldi core)
+
+if (BUILD_TESTS)
+  add_subdirectory(test)
+endif()
