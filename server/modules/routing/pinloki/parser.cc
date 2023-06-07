@@ -19,16 +19,8 @@
 // This prevents automatic rule name deduction, helps keep the error messages cleaner.
 #define BOOST_SPIRIT_X3_NO_RTTI
 
-#include <boost/fusion/adapted/struct/adapt_struct.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/spirit/home/x3.hpp>
-#include <boost/spirit/home/x3/support/ast/position_tagged.hpp>
-#include <boost/spirit/home/x3/support/ast/variant.hpp>
-#include <boost/spirit/home/x3/support/utility/annotate_on_success.hpp>
-#include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
-
 #include <maxbase/assert.hh>
+#include <maxscale/boost_spirit_utils.hh>
 
 using namespace boost::spirit;
 using CMT = pinloki::ChangeMasterType;
@@ -210,55 +202,8 @@ struct MasterGtidWait
 using Show = x3::variant<ShowType, ShowVariables>;
 
 // The root type that is returned as the result of parsing
-using Command = x3::variant<std::nullptr_t, Select, Set, ChangeMaster, Slave, PurgeLogs, Show, MasterGtidWait>;
-
-// Error handler that the rule types must inherit from, allows pretty-printing of errors
-struct error_handler
-{
-    template<typename Iterator, typename Exception, typename Context>
-    x3::error_handler_result on_error(Iterator& first, Iterator const& last,
-                                      Exception const& x, Context const& context)
-    {
-        auto& error_handler = x3::get<x3::error_handler_tag>(context).get();
-        std::string message;
-
-        if (x.which() == "undefined")
-        {
-            message = "Syntax error.";
-        }
-        else
-        {
-            message = "Error! Expecting `" + x.which() + "`:";
-        }
-
-        error_handler(x.where(), message);
-        return x3::error_handler_result::fail;
-    }
-};
-
-
-/**
- * Declare a rule with an attribute
- *
- * @param id        Rule ID, declared as a variable
- * @param desc      Rule type description
- * @param attr_type Rule attribute (i.e. return value)
- */
-#define DECLARE_ATTR_RULE(id, desc, attr_type) \
-    struct id : public error_handler {}; \
-    const x3::rule<struct id, attr_type> id = desc
-
-/**
- * Declare a rule
- *
- * The rule attribute is deduced using the rule definition.
- *
- * @param id        Rule ID, declared as a variable
- * @param desc      Rule type description
- */
-#define DECLARE_RULE(id, desc) \
-    struct id : public error_handler {}; \
-    const x3::rule<struct id> id = desc
+using Command = x3::variant<std::nullptr_t, Select, Set, ChangeMaster,
+                            Slave, PurgeLogs, Show, MasterGtidWait>;
 
 DECLARE_RULE(eq, "=");
 DECLARE_ATTR_RULE(str, "string", std::string);
@@ -348,8 +293,7 @@ const auto show_all_slaves_def = x3::lit("ALL") > x3::lit("SLAVES")
     > x3::lit("STATUS") > x3::attr(ShowType::ALL_SLAVES_STATUS);
 const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") > x3::attr(ShowType::BINLOGS);
 const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
-const auto show_options_def = (show_master | show_slave | show_all_slaves
-                               | show_binlogs | show_variables);
+const auto show_options_def = (show_master | show_slave | show_all_slaves | show_binlogs | show_variables);
 const auto show_def = x3::lit("SHOW") > show_options;
 const auto end_of_input_def = x3::eoi | x3::lit(";");
 

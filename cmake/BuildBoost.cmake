@@ -23,3 +23,6 @@ endif()
 
 # Make sure we include the custom headers before the system boost headers
 include_directories(BEFORE ${CMAKE_BINARY_DIR}/boost/)
+
+# Also include the MaxScale utility headers
+include_directories(${CMAKE_SOURCE_DIR}/boost/include/)
