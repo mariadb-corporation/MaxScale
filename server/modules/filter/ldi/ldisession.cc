@@ -272,6 +272,7 @@ S3Download::~S3Download()
 
 void S3Download::load_data()
 {
+    MXS_SESSION::Scope scope(session());
     ms3_st* ms3 = ms3_init(m_config.key.c_str(),
                            m_config.secret.c_str(),
                            m_config.region.c_str(),
@@ -401,6 +402,8 @@ bool MariaDBLoader::send_packet()
     bool ok = false;
 
     session()->worker()->call([&](){
+        MXS_SESSION::Scope scope(session());
+
         if (route_data(std::move(buffer)))
         {
             ok = true;
@@ -419,6 +422,7 @@ bool MariaDBLoader::send_packet()
             sleep = std::min(sleep + 100ms, 5000ms);
 
             session()->worker()->call([&](){
+                MXS_SESSION::Scope scope(session());
                 slow_down = going_too_fast();
             });
         }
@@ -452,6 +456,7 @@ bool MariaDBLoader::complete()
     {
         // Write the final empty packet to finalize the LOAD DATA LOCAL INFILE
         session()->worker()->call([&](){
+            MXS_SESSION::Scope scope(session());
             const uint8_t data[4]{0, 0, 0, m_sequence++};
             ok = route_end(GWBUF(data, 4));
         });
@@ -490,6 +495,7 @@ bool CmdLoader::complete()
     if (m_cmd->wait() == 0)
     {
         session()->worker()->call([&](){
+            MXS_SESSION::Scope scope(session());
             ok = send_ok(m_rows);
         });
     }
