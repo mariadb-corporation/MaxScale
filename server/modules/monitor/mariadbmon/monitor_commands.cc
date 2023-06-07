@@ -488,6 +488,7 @@ std::tuple<bool, std::chrono::seconds> get_timeout(const string& timeout_str, js
 
 void register_monitor_commands()
 {
+    /* *uncrustify-off* */
     static const char ARG_MONITOR_DESC[] = "Monitor name";
     static modulecmd_arg_type_t switchover_argv[] =
     {
@@ -671,6 +672,7 @@ void register_monitor_commands()
                                handle_async_restore_from_backup,
                                MXS_ARRAY_NELEMS(restore_backup_argv), restore_backup_argv,
                                "Restore a server from a backup. Does not wait for completion.");
+    /* *uncrustify-on* */
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -1012,8 +1014,10 @@ MariaDBMonitor::CsRestResult MariaDBMonitor::check_cs_rest_result(const mxb::htt
 mon_op::Result
 MariaDBMonitor::manual_cs_add_node(const std::string& node_host, std::chrono::seconds timeout)
 {
+    /* *uncrustify-off* */
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
-                            {"node", mxb::string_printf("\"%s\"", node_host.c_str())}};
+                            {"node"   , mxb::string_printf("\"%s\"", node_host.c_str())}};
+    /* *uncrustify-on* */
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "node", input, timeout);
 
     mon_op::Result rval;
@@ -1034,8 +1038,10 @@ MariaDBMonitor::manual_cs_add_node(const std::string& node_host, std::chrono::se
 mon_op::Result
 MariaDBMonitor::manual_cs_remove_node(const std::string& node_host, std::chrono::seconds timeout)
 {
+    /* *uncrustify-off* */
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
-                            {"node", mxb::string_printf("\"%s\"", node_host.c_str())}};
+                            {"node"   , mxb::string_printf("\"%s\"", node_host.c_str())}};
+    /* *uncrustify-on* */
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::DELETE, "node", input, timeout);
 
     mon_op::Result rval;
@@ -1112,8 +1118,10 @@ mon_op::Result MariaDBMonitor::manual_cs_stop_cluster(std::chrono::seconds timeo
 
 mon_op::Result MariaDBMonitor::manual_cs_set_readonly(std::chrono::seconds timeout)
 {
+    /* *uncrustify-off* */
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
-                            {"mode", "\"readonly\""}};
+                            {"mode"   , "\"readonly\""}};
+    /* *uncrustify-on* */
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "mode-set", input, timeout);
 
     mon_op::Result rval;
@@ -1133,8 +1141,10 @@ mon_op::Result MariaDBMonitor::manual_cs_set_readonly(std::chrono::seconds timeo
 
 mon_op::Result MariaDBMonitor::manual_cs_set_readwrite(std::chrono::seconds timeout)
 {
+    /* *uncrustify-off* */
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
-                            {"mode", "\"readwrite\""}};
+                            {"mode"   , "\"readwrite\""}};
+    /* *uncrustify-on* */
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "mode-set", input, timeout);
 
     mon_op::Result rval;
