@@ -67,6 +67,23 @@ char* LDISession::set_region(void* self, const char* key, const char* begin, con
 }
 
 // static
+char* LDISession::set_host(void* self, const char* key, const char* begin, const char* end)
+{
+    static_cast<LDISession*>(self)->m_config.host.assign(begin, end);
+    return nullptr;
+}
+
+// static
+char* LDISession::set_port(void* self, const char* key, const char* begin, const char* end)
+{
+    if (int port = atoi(std::string(begin, end).c_str()); port > 0)
+    {
+        static_cast<LDISession*>(self)->m_config.port = port;
+    }
+
+    return nullptr;
+}
+// static
 char* LDISession::set_import_user(void* self, const char* key, const char* begin, const char* end)
 {
     static_cast<LDISession*>(self)->m_config.import_user.assign(begin, end);
@@ -88,8 +105,10 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFil
     pSession->add_variable("@maxscale.s3_key", &LDISession::set_key, this);
     pSession->add_variable("@maxscale.s3_secret", &LDISession::set_secret, this);
     pSession->add_variable("@maxscale.s3_region", &LDISession::set_region, this);
-    pSession->add_variable("@maxscale.s3_user", &LDISession::set_import_user, this);
-    pSession->add_variable("@maxscale.s3_password", &LDISession::set_import_password, this);
+    pSession->add_variable("@maxscale.s3_host", &LDISession::set_host, this);
+    pSession->add_variable("@maxscale.s3_port", &LDISession::set_port, this);
+    pSession->add_variable("@maxscale.import_user", &LDISession::set_import_user, this);
+    pSession->add_variable("@maxscale.import_password", &LDISession::set_import_password, this);
 }
 
 // static

@@ -119,6 +119,8 @@ private:
     static char* set_key(void* self, const char* key, const char* begin, const char* end);
     static char* set_secret(void* self, const char* key, const char* begin, const char* end);
     static char* set_region(void* self, const char* key, const char* begin, const char* end);
+    static char* set_host(void* self, const char* key, const char* begin, const char* end);
+    static char* set_port(void* self, const char* key, const char* begin, const char* end);
     static char* set_import_user(void* self, const char* key, const char* begin, const char* end);
     static char* set_import_password(void* self, const char* key, const char* begin, const char* end);
 

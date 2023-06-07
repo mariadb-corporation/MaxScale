@@ -25,13 +25,13 @@ constexpr const uint64_t CAPS = MXS_NO_MODULE_CAPABILITIES;
 
 cnf::Specification spec(MXB_MODULE_NAME, cnf::Specification::FILTER);
 cnf::ParamString key(
-    &ldi::spec, "key", "S3 API key", cnf::Param::AT_RUNTIME);
+    &ldi::spec, "key", "S3 API key", "", cnf::Param::AT_RUNTIME);
 cnf::ParamString secret(
-    &ldi::spec, "secret", "S3 API secret", cnf::Param::AT_RUNTIME);
+    &ldi::spec, "secret", "S3 API secret", "", cnf::Param::AT_RUNTIME);
 cnf::ParamString region(
     &ldi::spec, "region", "S3 region", "us-east-1", cnf::Param::AT_RUNTIME);
 cnf::ParamString host(
-    &ldi::spec, "host", "S3 host", cnf::Param::AT_RUNTIME);
+    &ldi::spec, "host", "S3 host", "", cnf::Param::AT_RUNTIME);
 cnf::ParamCount port(
     &ldi::spec, "port", "S3 port", 0, cnf::Param::AT_RUNTIME);
 cnf::ParamBool no_verify(
