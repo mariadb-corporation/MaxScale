@@ -13,6 +13,7 @@
 import { t } from 'typy'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
+import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
 
 const tableOptionsReg = tokenizer.tableOptions
 const colDefReg = tokenizer.colDef
@@ -115,17 +116,24 @@ export default class TableParser {
             on_delete,
             on_update,
         } = match.groups
-        return {
+
+        let parsed = {
             category,
-            name: unquoteIdentifier(name),
             index_cols: this.parseIndexColNames(index_col_names),
-            match_option,
-            referenced_index_cols: this.parseIndexColNames(referenced_index_col_names),
-            referenced_schema_name: unquoteIdentifier(referenced_schema_name),
-            referenced_table_name: unquoteIdentifier(referenced_table_name),
-            on_delete,
-            on_update,
         }
+        if (category !== tokens.primaryKey) parsed.name = unquoteIdentifier(name)
+        if (category === tokens.foreignKey)
+            parsed = {
+                ...parsed,
+                match_option,
+                referenced_index_cols: this.parseIndexColNames(referenced_index_col_names),
+                referenced_schema_name: unquoteIdentifier(referenced_schema_name),
+                referenced_table_name: unquoteIdentifier(referenced_table_name),
+                on_delete,
+                on_update,
+            }
+
+        return parsed
     }
     /**
      * @param {String} defsStr - table definitions including create, column and constraint definitions
