@@ -20,6 +20,8 @@
 * When changing the service password, the previous password will be retained
   and continue to be used if the new does not work.
 
+* Embedded newlines are removed from logged messages.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the

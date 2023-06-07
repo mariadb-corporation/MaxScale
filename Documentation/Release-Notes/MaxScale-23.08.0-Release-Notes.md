@@ -10,7 +10,12 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
-###
+### [MXS-4385](https://jira.mariadb.org/browse/MXS-4385) No newlines in logged messages
+
+Earlier when the SQL sent by a client was logged due to `log_info` being enabled,
+the SQL was logged verbatim, which would cause the log to contain extra newlines
+in case the SQL did. From 23.08 forward, newlines are replaced with the text `\n`,
+so that a logged line will not contain any extra newlines.
 
 ## Dropped Features
 
