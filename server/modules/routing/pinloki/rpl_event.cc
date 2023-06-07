@@ -556,7 +556,13 @@ std::vector<char> create_start_encryption_event(uint32_t server_id, uint32_t key
     ptr += 4;
 
     // 12 byte nonce
-    RAND_bytes(ptr, 12);
+    int rc = RAND_bytes(ptr, 12);
+
+    if (rc != 1)
+    {
+        MXB_THROW(mxq::EncryptionError, "Failed to create random nonce.");
+    }
+
     ptr += 12;
 
     // Checksum of the whole event

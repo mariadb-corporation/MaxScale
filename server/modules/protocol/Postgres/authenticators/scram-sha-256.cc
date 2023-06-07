@@ -83,8 +83,13 @@ std::string create_nonce()
 {
     // Similar to Pg Server. Ensures that the nonce is composed of printable characters.
     std::array<uint8_t, 18> nonce{};
-    RAND_bytes(nonce.data(), nonce.size());
-    return mxs::to_base64(nonce);
+
+    if (RAND_bytes(nonce.data(), nonce.size()) == 1)
+    {
+        return mxs::to_base64(nonce);
+    }
+
+    return "";
 }
 }
 
@@ -290,6 +295,12 @@ GWBUF ScramClientAuth::sasl_handle_client_first_msg(std::string_view sasl_data, 
                         m_client_first_message_bare = client_first_message_bare;
                         m_client_nonce = nonce.substr(2);
                         m_server_nonce = create_nonce();
+
+                        if (m_server_nonce.empty())
+                        {
+                            MXB_ERROR("Failed to generate random nonce.");
+                            return rval;
+                        }
 
                         auto scram = parse_scram_password(
                             session.auth_data().user_entry.authid_entry.password);
@@ -522,7 +533,16 @@ std::optional<GWBUF> ScramBackendAuth::handle_auth_request(const GWBUF& input)
 
         if (mechanism_found)
         {
-            rval = create_sasl_initial_response();
+            m_client_nonce = create_nonce();
+
+            if (!m_client_nonce.empty())
+            {
+                rval = create_sasl_initial_response();
+            }
+            else
+            {
+                MXB_ERROR("Failed to generate random nonce.");
+            }
         }
         else
         {
@@ -535,7 +555,6 @@ std::optional<GWBUF> ScramBackendAuth::handle_auth_request(const GWBUF& input)
 
 GWBUF ScramBackendAuth::create_sasl_initial_response()
 {
-    m_client_nonce = create_nonce();
     m_client_first_message_bare = mxb::cat("n=,r=", m_client_nonce);
     int client_msg_size = 3 + m_client_first_message_bare.size();
     GWBUF response(pg::HEADER_LEN + MECH.length() + 1 + 4 + client_msg_size);

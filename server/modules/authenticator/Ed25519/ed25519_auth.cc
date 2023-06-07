@@ -379,6 +379,7 @@ GWBUF Ed25519ClientAuthenticator::ed_create_auth_change_packet()
     {
         // Should not really happen unless running on some weird platform.
         MXB_ERROR("OpenSSL RAND_bytes failed when generating scramble.");
+        rval = mariadb::create_error_packet(0, 1105, "HY000", "Unknown error");
     }
     return rval;
 }

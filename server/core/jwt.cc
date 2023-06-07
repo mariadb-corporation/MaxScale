@@ -52,7 +52,12 @@ std::string rand_key(int bits)
 {
     std::string key;
     key.resize(bits / 8);
-    RAND_bytes((uint8_t*)key.data(), key.size());
+
+    if (RAND_bytes((uint8_t*)key.data(), key.size()) != 1)
+    {
+        throw std::runtime_error("Failed to generate random key.");
+    }
+
     return key;
 }
 
