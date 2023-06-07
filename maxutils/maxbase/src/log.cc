@@ -786,6 +786,69 @@ int log_message(message_suppression_t status,
 {
     int err = 0;
 
+    // The log format looks as follows:
+    //
+    // timestamp   prefix : [(context) ][\[module\] ][(scope); ][(augmentation): ]message[suppression]
+    //
+    // where
+    //   timestamp   :  The timestamp when the message was logged.
+    //   prefix      :  debug, info, warning, etc.
+    //   context     :  In practice, the session id if it is known.
+    //   module      :  The module logging; in practice the current value of MXB_MODULE_NAME.
+    //   scope       :  The scope of the message; explicitly set in code using LogScope.
+    //   augmentation:  The function where the message was logged.
+    //   message     :  The actual message.
+    //   suppression :  If this particular message will henceforth be suppressed, a note about that.
+
+    // timestamp
+    std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
+    int timestamp_len = timestamp.length();
+
+    // prefix
+    LOG_PREFIX prefix = level_to_prefix(level);
+
+    // context
+    char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
+    int context_len = 0;
+
+    if (this_unit.context_provider)
+    {
+        context_len = this_unit.context_provider(context, sizeof(context));
+
+        if (context_len != 0)
+        {
+            context_len += 3;   // The added "() "
+        }
+    }
+
+    // module
+    int modname_len = zModname ? strlen(zModname) + 3 : 0;    // +3 due to "[...] "
+
+    // scope
+    // If we know the actual object name, add that also
+    auto scope = mxb::LogScope::current_scope();
+    int scope_len = scope ? strlen(scope) + 4 : 0;      // +4 due to "(...); "
+
+    static const char AUGMENTATION_FORMAT[] = "(%s): ";
+
+    // augmentation
+    // Other thread might change this_unit.augmentation.
+    int augmentation = this_unit.augmentation;
+    int augmentation_len = 0;
+
+    switch (augmentation)
+    {
+    case MXB_LOG_AUGMENT_WITH_FUNCTION:
+        augmentation_len = sizeof(AUGMENTATION_FORMAT) - 1; // Remove trailing 0
+        augmentation_len -= 2;                          // Remove the %s
+        augmentation_len += strlen(zFunction);
+        break;
+
+    default:
+        break;
+    }
+
+    // message
     std::string streamlined_message; // I.e. no newlines.
 
     auto i = message.find('\n');
@@ -803,61 +866,23 @@ int log_message(message_suppression_t status,
         message = streamlined_message;
     }
 
-    std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
-    int timestamp_len = timestamp.length();
+    int message_len = message.length();
 
-    char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
-    int context_len = 0;
-
-    if (this_unit.context_provider)
-    {
-        context_len = this_unit.context_provider(context, sizeof(context));
-
-        if (context_len != 0)
-        {
-            context_len += 3;   // The added "() "
-        }
-    }
-
-    int modname_len = zModname ? strlen(zModname) + 3 : 0;    // +3 due to "[...] "
-
-    // If we know the actual object name, add that also
-    auto scope = mxb::LogScope::current_scope();
-    int scope_len = scope ? strlen(scope) + 4 : 0;      // +4 due to "(...); "
-
-    static const char SUPPRESSION[] =
+    // suppression
+    static const char SUPPRESSION_FORMAT[] =
         " (subsequent similar messages suppressed for %lu milliseconds)";
     int suppression_len = 0;
     size_t suppress_ms = this_unit.throttling.suppress_ms;
 
     if (status == MESSAGE_SUPPRESSED)
     {
-        suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
+        suppression_len += sizeof(SUPPRESSION_FORMAT) - 1; // Remove trailing NULL
         suppression_len -= 3;                       // Remove the %lu
         suppression_len += UINTLEN(suppress_ms);
     }
 
-    LOG_PREFIX prefix = level_to_prefix(level);
+    // All set, now the final message can be constructed.
 
-    static const char FORMAT_FUNCTION[] = "(%s): ";
-
-    // Other thread might change this_unit.augmentation.
-    int augmentation = this_unit.augmentation;
-    int augmentation_len = 0;
-
-    switch (augmentation)
-    {
-    case MXB_LOG_AUGMENT_WITH_FUNCTION:
-        augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-        augmentation_len -= 2;                          // Remove the %s
-        augmentation_len += strlen(zFunction);
-        break;
-
-    default:
-        break;
-    }
-
-    int message_len = message.length();
     int buffer_len = 0;
     buffer_len += timestamp_len;
     buffer_len += prefix.len;
@@ -922,7 +947,7 @@ int log_message(message_suppression_t status,
         switch (augmentation)
         {
         case MXB_LOG_AUGMENT_WITH_FUNCTION:
-            len = sprintf(augmentation_text, FORMAT_FUNCTION, zFunction);
+            len = sprintf(augmentation_text, AUGMENTATION_FORMAT, zFunction);
             break;
 
         default:
@@ -938,7 +963,7 @@ int log_message(message_suppression_t status,
 
     if (suppression_len)
     {
-        sprintf(suppression_text, SUPPRESSION, suppress_ms);
+        sprintf(suppression_text, SUPPRESSION_FORMAT, suppress_ms);
     }
 
     // Add a final newline.
