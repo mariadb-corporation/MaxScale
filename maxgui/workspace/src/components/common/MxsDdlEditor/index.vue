@@ -60,6 +60,7 @@ export default {
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
             tokens: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+            GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
         stagingData: {
             get() {
@@ -119,7 +120,7 @@ export default {
         getPKCols(colsData) {
             let cols = []
             colsData.forEach(row => {
-                if (row[this.idxOfPk] === 'YES') cols.push(row[this.idxOfColumnName])
+                if (row[this.idxOfPk]) cols.push(row[this.idxOfColumnName])
             })
             return cols
         },
@@ -189,7 +190,7 @@ export default {
                 ZF,
                 NN,
                 AI,
-                GENERATED,
+                GENERATED_TYPE,
                 CHARSET,
                 COLLATE,
                 DEF_EXP,
@@ -206,7 +207,7 @@ export default {
                     [ZF]: zf,
                     [NN]: nn,
                     [AI]: ai,
-                    [GENERATED]: generated,
+                    [GENERATED_TYPE]: generatedType,
                     [CHARSET]: charset,
                     [COLLATE]: collate,
                     [DEF_EXP]: defOrExp,
@@ -222,15 +223,17 @@ export default {
 
                 sql += `${quoting(name)}`
                 sql += ` ${type}`
-                if (un) sql += ` ${un}`
-                if (zf) sql += ` ${zf}`
+                if (un) sql += ` ${this.tokens.un}`
+                if (zf) sql += ` ${this.tokens.zf}`
                 if (charset)
                     sql += ` ${this.tokens.charset} ${charset} ${this.tokens.collate} ${collate}`
                 // when column is generated, NN or NULL can not be defined
-                if (nn && generated === '(none)') sql += ` ${nn}`
-                if (ai) sql += ` ${ai}`
-                if (generated === '(none)' && defOrExp) sql += ` ${this.tokens.default} ${defOrExp}`
-                else if (defOrExp) sql += ` AS (${defOrExp}) ${generated}`
+                if (generatedType === this.GENERATED_TYPES.NONE)
+                    sql += ` ${nn ? this.tokens.nn : this.tokens.null}`
+                if (ai) sql += ` ${this.tokens.ai}`
+                if (generatedType === this.GENERATED_TYPES.NONE && defOrExp)
+                    sql += ` ${this.tokens.default} ${defOrExp}`
+                else if (defOrExp) sql += ` ${this.tokens.generated} (${defOrExp}) ${generatedType}`
                 if (comment) sql += ` ${this.tokens.comment} '${comment}'`
             })
             return sql

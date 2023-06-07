@@ -162,6 +162,7 @@ export default {
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+            GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
         headerHeight() {
             return 28
@@ -181,7 +182,7 @@ export default {
             return Object.values(this.COL_ATTRS)
         },
         headers() {
-            const { ID, PK, NN, UN, UQ, ZF, AI, GENERATED } = this.COL_ATTRS
+            const { ID, PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
             return this.colAttrs.map(field => {
                 let h = {
                     text: field,
@@ -199,7 +200,7 @@ export default {
                         h.maxWidth = 50
                         h.resizable = false
                         break
-                    case GENERATED:
+                    case GENERATED_TYPE:
                         h.width = 144
                         h.minWidth = 126
                         break
@@ -221,7 +222,7 @@ export default {
             })
         },
         abbreviatedHeaders() {
-            const { PK, NN, UN, UQ, ZF, AI, GENERATED, CHARSET } = this.COL_ATTRS
+            const { PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
             return {
                 [PK]: 'PK',
                 [NN]: 'NN',
@@ -229,7 +230,7 @@ export default {
                 [UQ]: 'UQ',
                 [ZF]: 'ZF',
                 [AI]: 'AI',
-                [GENERATED]: 'GENERATED',
+                [GENERATED_TYPE]: 'GENERATED',
                 [CHARSET]: 'CHARSET',
             }
         },
@@ -253,8 +254,8 @@ export default {
         idxOfAI() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.AI]
         },
-        idxOfGenerated() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.GENERATED]
+        idxOfGenType() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.GENERATED_TYPE]
         },
         idxOfUN() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UN]
@@ -269,11 +270,7 @@ export default {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.DEF_EXP]
         },
         hasAI() {
-            let count = 0
-            this.rows.forEach(row => {
-                if (row[this.idxOfAI] === this.COL_ATTRS.AI) count++
-            })
-            return count === 1
+            return this.rows.some(row => row[this.idxOfAI])
         },
     },
     mounted() {
@@ -298,17 +295,21 @@ export default {
         },
         addNewCol() {
             let row = []
-            const { ID, PK, NN } = this.COL_ATTRS
+            const { ID, PK, NN, UN, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
             this.headers.forEach(h => {
                 switch (h.text) {
                     case ID:
                         row.push(this.$helpers.uuidv1())
                         break
-                    case NN:
-                        row.push(this.CREATE_TBL_TOKENS.null)
-                        break
                     case PK:
-                        row.push('NO')
+                    case NN:
+                    case UN:
+                    case ZF:
+                    case AI:
+                        row.push(false)
+                        break
+                    case GENERATED_TYPE:
+                        row.push(this.GENERATED_TYPES.NONE)
                         break
                     default:
                         row.push('')
@@ -384,9 +385,9 @@ export default {
                 return this.$helpers.immutableUpdate(colDefinitions, {
                     data: {
                         [item.alterColIdx]: {
-                            [this.idxOfUN]: { $set: '' },
-                            [idxOfZF]: { $set: '' },
-                            [this.idxOfAI]: { $set: '' },
+                            [this.idxOfUN]: { $set: false },
+                            [idxOfZF]: { $set: false },
+                            [this.idxOfAI]: { $set: false },
                         },
                     },
                 })
@@ -423,16 +424,15 @@ export default {
          */
         handleSerialType({ colDefinitions, item }) {
             if (item.value === 'SERIAL') {
-                const { un, nn, ai } = this.CREATE_TBL_TOKENS
                 const colOptInput = this.$refs[
                     `colOptInput-alterColIdx-${item.alterColIdx}-colOptIdx-${this.idxOfUQ}`
                 ][0]
                 return this.$helpers.immutableUpdate(colDefinitions, {
                     data: {
                         [item.alterColIdx]: {
-                            [this.idxOfUN]: { $set: un },
-                            [this.idxOfNN]: { $set: nn },
-                            [this.idxOfAI]: { $set: ai },
+                            [this.idxOfUN]: { $set: true },
+                            [this.idxOfNN]: { $set: true },
+                            [this.idxOfAI]: { $set: true },
                             [this.idxOfUQ]: {
                                 $set: colOptInput.uniqueIdxName,
                             },
@@ -470,43 +470,42 @@ export default {
         uncheckOtherAI({ colDefinitions, alterColIdx }) {
             let idx
             for (const [i, row] of this.rows.entries())
-                if (row[this.idxOfAI] === this.CREATE_TBL_TOKENS.ai && i !== alterColIdx) {
+                if (row[this.idxOfAI] && i !== alterColIdx) {
                     idx = i
                     break
                 }
-
             if (idx >= 0)
-                return (colDefinitions = this.$helpers.immutableUpdate(colDefinitions, {
+                colDefinitions = this.$helpers.immutableUpdate(colDefinitions, {
                     data: {
-                        [idx]: {
-                            [this.idxOfAI]: { $set: '' },
-                        },
+                        [idx]: { [this.idxOfAI]: { $set: false } },
                     },
-                }))
+                })
             return colDefinitions
         },
-
+        /**
+         * @param {number} - index of the column
+         * @returns {string} - initial value of DEF_EXP attr
+         */
+        getInitialDefaultExp(colIdx) {
+            return this.$typy(this.initialData, `data['${colIdx}']['${this.idxOfDefAndExp}']`)
+                .safeString
+        },
         /**
          * This updates NN cell and `default` cell.
          * @param {Object} payload.colDefinitions - current colDefinitions
          * @param {Number} payload.alterColIdx - alterColIdx to be updated
-         * @param {String} payload.valOfNN - value of NN
-         * @param {String} payload.valueOfDefault - value of default cell
+         * @param {boolean} payload.isNN - is NOT NULL
+         * @param {string} payload.valueOfDefault - value of default cell
          * @returns {Object} - returns new colDefinitions
          */
-        notNullSideEffect({ colDefinitions, alterColIdx, valOfNN, valueOfDefault = null }) {
-            let defaultVal = this.$typy(
-                colDefinitions,
-                `data['${alterColIdx}']['${this.idxOfDefAndExp}']`
-            ).safeString
-            if (defaultVal === this.CREATE_TBL_TOKENS.null && valOfNN === this.CREATE_TBL_TOKENS.nn)
-                defaultVal = ''
-            if (valueOfDefault !== null) defaultVal = valueOfDefault
+        notNullSideEffect({ colDefinitions, alterColIdx, isNN }) {
             return this.$helpers.immutableUpdate(colDefinitions, {
                 data: {
                     [alterColIdx]: {
-                        [this.idxOfNN]: { $set: valOfNN },
-                        [this.idxOfDefAndExp]: { $set: defaultVal },
+                        [this.idxOfNN]: { $set: isNN },
+                        [this.idxOfDefAndExp]: {
+                            $set: isNN ? '' : this.getInitialDefaultExp(alterColIdx),
+                        },
                     },
                 },
             })
@@ -526,16 +525,14 @@ export default {
                 data: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
-                        [this.idxOfGenerated]: { $set: '(none)' },
+                        [this.idxOfGenType]: { $set: this.GENERATED_TYPES.NONE },
                     },
                 },
             })
             this.colDefinitions = this.notNullSideEffect({
                 colDefinitions,
                 alterColIdx: item.alterColIdx,
-                valOfNN: this.CREATE_TBL_TOKENS.nn,
-                // set to empty string when AI value is AUTO_INCREMENT
-                valueOfDefault: item.value ? '' : null,
+                isNN: true,
             })
         },
         /**
@@ -543,31 +540,13 @@ export default {
          */
         onInputGenerated(item) {
             let colDefinitions = this.colDefinitions
-            let defaultVal = ''
-            if (item.value === '(none)') {
-                const nnVal = this.$typy(
-                    colDefinitions,
-                    `data['${item.alterColIdx}']['${this.idxOfNN}']`
-                ).safeString
-                if (nnVal === this.CREATE_TBL_TOKENS.null) defaultVal = this.CREATE_TBL_TOKENS.null
-                else if (nnVal === this.CREATE_TBL_TOKENS.nn) defaultVal = ''
-            }
-            // use initial expression value or empty string
-            else {
-                defaultVal = this.$typy(
-                    this.initialData.data,
-                    `['${item.alterColIdx}']['${this.idxOfDefAndExp}']`
-                ).safeString
-            }
-
             // update G and its dependencies cell value
             colDefinitions = this.$helpers.immutableUpdate(colDefinitions, {
                 data: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
-                        [this.idxOfAI]: { $set: '' },
-                        [this.idxOfNN]: { $set: '' },
-                        [this.idxOfDefAndExp]: { $set: defaultVal },
+                        [this.idxOfAI]: { $set: false },
+                        [this.idxOfNN]: { $set: false },
                     },
                 },
             })
@@ -599,7 +578,7 @@ export default {
             this.colDefinitions = this.notNullSideEffect({
                 colDefinitions,
                 alterColIdx: item.alterColIdx,
-                valOfNN: this.CREATE_TBL_TOKENS.nn,
+                isNN: true,
             })
         },
         /**
@@ -609,7 +588,7 @@ export default {
             this.colDefinitions = this.notNullSideEffect({
                 colDefinitions: this.colDefinitions,
                 alterColIdx: item.alterColIdx,
-                valOfNN: item.value,
+                isNN: item.value,
             })
         },
     },

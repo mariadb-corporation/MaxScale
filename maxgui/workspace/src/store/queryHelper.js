@@ -19,6 +19,7 @@ import {
     SYS_SCHEMAS,
     CREATE_TBL_TOKENS as tokens,
     COL_ATTRS,
+    GENERATED_TYPES,
 } from '@wsSrc/store/config'
 import { lodash, to, dynamicColors, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
@@ -638,24 +639,24 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
             UQ,
             ZF,
             AI,
-            GENERATED,
+            GENERATED_TYPE,
             DEF_EXP,
             CHARSET,
             COLLATE,
             COMMENT,
         } = COL_ATTRS
-        //TODO: refactor UI input components to accept boolean
+
         return {
             [ID]: uuidv1(),
             [NAME]: col.name,
             [TYPE]: type,
-            [PK]: keyType === tokens.primaryKey ? 'YES' : 'NO',
-            [NN]: col.is_nn ? tokens.nn : tokens.null,
-            [UN]: col.is_un ? tokens.un : '',
-            [UQ]: uq,
-            [ZF]: col.is_zf ? tokens.zf : '',
-            [AI]: col.is_ai ? tokens.ai : '',
-            [GENERATED]: col.generated_type ? col.generated_type : '(none)',
+            [PK]: keyType === tokens.primaryKey,
+            [NN]: col.is_nn,
+            [UN]: col.is_un,
+            [UQ]: uq, //TODO: refactor uq input to accept boolean
+            [ZF]: col.is_zf,
+            [AI]: col.is_ai,
+            [GENERATED_TYPE]: col.generated_type ? col.generated_type : GENERATED_TYPES.NONE,
             [DEF_EXP]: col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
             [CHARSET]: check_charset_support(col.data_type) ? col.charset || charset : '',
             [COLLATE]: check_charset_support(col.data_type) ? col.collate || collation : '',

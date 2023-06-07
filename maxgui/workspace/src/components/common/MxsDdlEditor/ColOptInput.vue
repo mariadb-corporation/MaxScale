@@ -142,6 +142,7 @@ export default {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+            GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
         hasChanged() {
             return !this.$helpers.lodash.isEqual(this.input, this.data)
@@ -153,18 +154,16 @@ export default {
             return this.$typy(this.input, `rowObj.${this.COL_ATTRS.TYPE}`).safeString
         },
         isPK() {
-            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.PK}`).safeString === 'YES'
+            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.PK}`).safeBoolean
         },
         isGenerated() {
             return (
-                this.$typy(this.input, `rowObj.${this.COL_ATTRS.GENERATED}`).safeString !== '(none)'
+                this.$typy(this.input, `rowObj.${this.COL_ATTRS.GENERATED_TYPE}`).safeString !==
+                this.GENERATED_TYPES.NONE
             )
         },
         isAI() {
-            return (
-                this.$typy(this.input, `rowObj.${this.COL_ATTRS.AI}`).safeString ===
-                'AUTO_INCREMENT'
-            )
+            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.AI}`).safeBoolean
         },
         uniqueIdxName() {
             // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
@@ -174,7 +173,7 @@ export default {
             return `${this.$typy(this.data, `rowObj.${this.COL_ATTRS.NAME}`).safeString}_UNIQUE`
         },
         isDisabled() {
-            const { PK, NN, UN, UQ, ZF, AI, GENERATED, CHARSET, COLLATE } = this.COL_ATTRS
+            const { PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE, CHARSET, COLLATE } = this.COL_ATTRS
             switch (this.$typy(this.input, 'field').safeString) {
                 case CHARSET:
                 case COLLATE:
@@ -194,7 +193,7 @@ export default {
                     return this.isAI || this.isPK || this.isGenerated
                 case UQ:
                     return this.isPK // implies UNIQUE already so UQ must be disabled
-                case GENERATED:
+                case GENERATED_TYPE:
                     //disable if column is PK
                     return this.isPK //https://mariadb.com/kb/en/generated-columns/#index-support
                 default:
@@ -235,46 +234,32 @@ export default {
                 UQ,
                 ZF,
                 AI,
-                GENERATED,
+                GENERATED_TYPE,
                 CHARSET,
                 COLLATE,
             } = this.COL_ATTRS
-            const { nn, un, zf, ai } = this.CREATE_TBL_TOKENS
             switch (input.field) {
                 case NAME:
                     input.type = 'string'
                     break
                 case TYPE:
-                    input.type = 'type'
+                    input.type = input.field
                     input.enum_values = this.dataTypes
                     break
+                case PK:
                 case NN:
-                    input.type = 'bool'
-                    input.value = input.value === nn
-                    break
                 case UN:
-                    input.type = 'bool'
-                    input.value = input.value === un
-                    break
                 case ZF:
-                    input.type = 'bool'
-                    input.value = input.value === zf
-                    break
                 case AI:
                     input.type = 'bool'
-                    input.value = input.value === ai
-                    break
-                case GENERATED:
-                    input.type = 'enum'
-                    input.enum_values = ['(none)', 'VIRTUAL', 'STORED']
-                    break
-                case PK:
-                    input.type = 'bool'
-                    input.value = input.value === 'YES'
                     break
                 case UQ:
                     input.type = 'bool'
                     input.value = Boolean(input.value)
+                    break
+                case GENERATED_TYPE:
+                    input.type = 'enum'
+                    input.enum_values = Object.values(this.GENERATED_TYPES)
                     break
                 case CHARSET:
                 case COLLATE:
@@ -296,8 +281,7 @@ export default {
         onInput() {
             if (this.hasChanged) {
                 let newInput = this.handleRemoveType()
-                const { TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED, CHARSET } = this.COL_ATTRS
-                const { nn, un, zf, ai } = this.CREATE_TBL_TOKENS
+                const { TYPE, PK, NN, UQ, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
                 switch (this.input.type) {
                     case TYPE:
                         this.$emit('on-input-type', newInput)
@@ -306,30 +290,13 @@ export default {
                         this.$emit('on-input-charset', newInput)
                         break
                     case 'enum':
-                        if (newInput.field === GENERATED) this.$emit('on-input-generated', newInput)
+                        if (newInput.field === GENERATED_TYPE)
+                            this.$emit('on-input-generated', newInput)
                         else this.$emit('on-input', newInput)
                         break
                     case 'bool': {
                         const field = newInput.field
-                        switch (field) {
-                            case NN:
-                                newInput.value = newInput.value ? nn : this.CREATE_TBL_TOKENS.null
-                                break
-                            case UN:
-                                newInput.value = newInput.value ? un : ''
-                                break
-                            case ZF:
-                                newInput.value = newInput.value ? zf : ''
-                                break
-                            case AI:
-                                newInput.value = newInput.value ? ai : ''
-                                break
-                            case PK:
-                                newInput.value = newInput.value ? 'YES' : 'NO'
-                                break
-                            case UQ:
-                                newInput.value = newInput.value ? this.uniqueIdxName : ''
-                        }
+                        if (field === UQ) newInput.value = newInput.value ? this.uniqueIdxName : ''
                         if (field === AI) this.$emit('on-input-AI', newInput)
                         else if (field === PK) this.$emit('on-input-PK', newInput)
                         else if (field === NN) this.$emit('on-input-NN', newInput)

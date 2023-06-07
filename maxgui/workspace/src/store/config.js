@@ -182,11 +182,17 @@ export const COL_ATTRS = Object.freeze({
     UQ: CREATE_TBL_TOKENS.uniqueKey,
     ZF: CREATE_TBL_TOKENS.zf,
     AI: CREATE_TBL_TOKENS.ai,
-    GENERATED: CREATE_TBL_TOKENS.generated,
+    GENERATED_TYPE: 'GENERATED TYPE',
     DEF_EXP: 'DEFAULT/EXPRESSION',
     CHARSET: CREATE_TBL_TOKENS.charset,
     COLLATE: CREATE_TBL_TOKENS.collate,
     COMMENT: CREATE_TBL_TOKENS.comment,
+})
+
+export const GENERATED_TYPES = Object.freeze({
+    NONE: '(none)',
+    VIRTUAL: CREATE_TBL_TOKENS.virtual,
+    STORED: CREATE_TBL_TOKENS.stored,
 })
 
 export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
