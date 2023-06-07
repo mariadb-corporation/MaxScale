@@ -786,6 +786,23 @@ int log_message(message_suppression_t status,
 {
     int err = 0;
 
+    std::string streamlined_message; // I.e. no newlines.
+
+    auto i = message.find('\n');
+    if (i != std::string_view::npos)
+    {
+        streamlined_message = message;
+
+        do
+        {
+            streamlined_message.replace(i, 1, "\\n");
+            i = streamlined_message.find('\n', i + 2);
+        }
+        while (i != std::string::npos);
+
+        message = streamlined_message;
+    }
+
     char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
     int context_len = 0;
 
