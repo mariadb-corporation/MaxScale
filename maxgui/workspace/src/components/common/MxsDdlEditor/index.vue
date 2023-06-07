@@ -34,6 +34,7 @@
  * - $emit('on-revert')
  * - $emit('on-apply')
  */
+import { mapState } from 'vuex'
 import DdlEditorFormCtr from '@wsSrc/components/common/MxsDdlEditor/DdlEditorFormCtr.vue'
 import DdlEditorToolbar from '@wsSrc/components/common/MxsDdlEditor/DdlEditorToolbar.vue'
 
@@ -55,6 +56,11 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
+            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
+            tokens: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+        }),
         stagingData: {
             get() {
                 return this.value
@@ -99,15 +105,21 @@ export default {
         tableOptsDataDiff() {
             return this.$helpers.deepDiff(this.data.options, this.stagingData.options)
         },
+        colAttrs() {
+            return Object.values(this.COL_ATTRS)
+        },
+        idxOfPk() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.PK]
+        },
+        idxOfColumnName() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]
+        },
     },
     methods: {
         getPKCols(colsData) {
-            const headers = this.$typy(this.stagingData, 'definitions.fields').safeArray
             let cols = []
-            const idxOfPk = headers.findIndex(h => h === 'PK')
-            const idxOfColumnName = headers.findIndex(h => h === 'column_name')
             colsData.forEach(row => {
-                if (row[idxOfPk] === 'YES') cols.push(row[idxOfColumnName])
+                if (row[this.idxOfPk] === 'YES') cols.push(row[this.idxOfColumnName])
             })
             return cols
         },
@@ -157,7 +169,7 @@ export default {
             const { quotingIdentifier: quoting } = this.$helpers
             removedCols.forEach((row, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
-                sql += `DROP COLUMN ${quoting(row.column_name)}`
+                sql += `DROP COLUMN ${quoting(row[this.COL_ATTRS.NAME])}`
             })
             return sql
         },
@@ -170,38 +182,56 @@ export default {
         buildColsDfnSQL({ cols, isChanging }) {
             let sql = ''
             const { quotingIdentifier: quoting } = this.$helpers
+            const {
+                NAME,
+                TYPE,
+                UN,
+                ZF,
+                NN,
+                AI,
+                GENERATED,
+                CHARSET,
+                COLLATE,
+                DEF_EXP,
+                COMMENT,
+            } = this.COL_ATTRS
+
             cols.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const colObj = isChanging ? this.$typy(col, 'newObj').safeObject : col
                 const {
-                    column_name,
-                    column_type,
-                    UN,
-                    ZF,
-                    NN,
-                    AI,
-                    generated,
-                    charset,
-                    collation,
-                    'default/expression': defOrExp,
-                    comment,
+                    [NAME]: name,
+                    [TYPE]: type,
+                    [UN]: un,
+                    [ZF]: zf,
+                    [NN]: nn,
+                    [AI]: ai,
+                    [GENERATED]: generated,
+                    [CHARSET]: charset,
+                    [COLLATE]: collate,
+                    [DEF_EXP]: defOrExp,
+                    [COMMENT]: comment,
                 } = colObj
-                if (isChanging) {
-                    const old_column_name = this.$typy(col, 'oriObj.column_name').safeString
-                    sql += `CHANGE COLUMN ${quoting(old_column_name)} `
-                } else sql += 'ADD COLUMN '
 
-                sql += `${quoting(column_name)}`
-                sql += ` ${column_type}`
-                if (UN) sql += ` ${UN}`
-                if (ZF) sql += ` ${ZF}`
-                if (charset) sql += ` CHARACTER SET ${charset} COLLATE ${collation}`
+                if (isChanging) {
+                    const old_column_name = this.$typy(col, `oriObj.${NAME}`).safeString
+                    sql += `${this.tokens.change} ${this.tokens.column} ${quoting(
+                        old_column_name
+                    )} `
+                } else sql += `${this.tokens.add} ${this.tokens.column} `
+
+                sql += `${quoting(name)}`
+                sql += ` ${type}`
+                if (un) sql += ` ${un}`
+                if (zf) sql += ` ${zf}`
+                if (charset)
+                    sql += ` ${this.tokens.charset} ${charset} ${this.tokens.collate} ${collate}`
                 // when column is generated, NN or NULL can not be defined
-                if (NN && generated === '(none)') sql += ` ${NN}`
-                if (AI) sql += ` ${AI}`
-                if (generated === '(none)' && defOrExp) sql += ` DEFAULT ${defOrExp}`
+                if (nn && generated === '(none)') sql += ` ${nn}`
+                if (ai) sql += ` ${ai}`
+                if (generated === '(none)' && defOrExp) sql += ` ${this.tokens.default} ${defOrExp}`
                 else if (defOrExp) sql += ` AS (${defOrExp}) ${generated}`
-                if (comment) sql += ` COMMENT '${comment}'`
+                if (comment) sql += ` ${this.tokens.comment} '${comment}'`
             })
             return sql
         },
@@ -214,10 +244,13 @@ export default {
             const { quotingIdentifier: quoting } = this.$helpers
             let sql = ''
             sql += this.buildColsDfnSQL({ cols: addedCols, isChanging: false })
-            addedCols.forEach(({ UQ, column_name }) => {
-                if (UQ) {
+            const { UQ, NAME } = this.COL_ATTRS
+            addedCols.forEach(col => {
+                if (col[UQ]) {
                     sql += this.handleAddComma()
-                    sql += `ADD UNIQUE INDEX ${quoting(UQ)} (${quoting(column_name)})`
+                    sql += `${this.tokens.add} ${this.tokens.uniqueKey} ${quoting(UQ)} (${quoting(
+                        col[NAME]
+                    )})`
                 }
             })
             return sql
@@ -230,34 +263,36 @@ export default {
         buildPKSQL() {
             let sql = ''
             const { quotingIdentifier: quoting } = this.$helpers
-            const dropPKSQL = 'DROP PRIMARY KEY'
+            const dropPKSQL = `${this.tokens.drop} ${this.tokens.primaryKey}`
             const isDroppingPK = this.initialPkCols.length > 0 && this.currPkCols.length === 0
             const isAddingPK = this.currPkCols.length > 0
             if (isDroppingPK) {
                 sql += dropPKSQL
             } else if (isAddingPK) {
                 const keys = this.currPkCols.map(col => quoting(col)).join(', ')
-                const addPKsql = `ADD PRIMARY KEY (${keys})`
+                const addPKsql = `${this.tokens.add} ${this.tokens.primaryKey} (${keys})`
                 if (this.initialPkCols.length > 0) sql += `${dropPKSQL}, ${addPKsql}`
                 else sql += addPKsql
             }
             return sql
         },
         /**
-         * This builds DROP/ADD UNIQUE INDEX SQL
+         * This builds DROP/ADD UNIQUE KEY SQL
          * @param {Array} payload.uqColsChanged - columns have UQ value changed
-         * @returns {String} - returns DROP/ADD UNIQUE INDEX SQL
+         * @returns {String} - returns DROP/ADD UNIQUE KEY SQL
          */
         buildUQSQL({ uqColsChanged }) {
             let sql = ''
             const { quotingIdentifier: quoting } = this.$helpers
             uqColsChanged.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
-                const { column_name } = col.newObj
                 col.diff.forEach(d => {
                     if (!d.lhs)
-                        sql += `ADD UNIQUE INDEX ${quoting(d.rhs)} (${quoting(column_name)})`
-                    else if (!d.rhs) sql += `DROP INDEX ${quoting(d.lhs)}`
+                        sql += `${this.tokens.add} ${this.tokens.uniqueKey} ${quoting(
+                            d.rhs
+                        )} (${quoting(col.newObj[this.COL_ATTRS.NAME])})`
+                    else if (!d.rhs)
+                        sql += `${this.tokens.drop} ${this.tokens.key} ${quoting(d.lhs)}`
                 })
             })
             return sql
@@ -268,6 +303,7 @@ export default {
          * @returns {String} - returns CHANGE COLUMN sql
          */
         buildChangeColSQL({ updatedCols }) {
+            const { PK, UQ } = this.COL_ATTRS
             let sql = '',
                 colDfnSQL = '',
                 uqSQL = ''
@@ -276,13 +312,13 @@ export default {
              * This also filters diff
              */
             const uqColsChanged = updatedCols.reduce((arr, col) => {
-                const uqColDiff = col.diff.filter(d => d.kind === 'E' && d.path[0] === 'UQ')
+                const uqColDiff = col.diff.filter(d => d.kind === 'E' && d.path[0] === UQ)
                 if (uqColDiff.length) arr.push({ ...col, diff: uqColDiff })
                 return arr
             }, [])
             const dfnColsChanged = updatedCols.reduce((arr, col) => {
                 const dfnColDiff = col.diff.filter(
-                    d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ'
+                    d => d.kind === 'E' && d.path[0] !== PK && d.path[0] !== UQ
                 )
                 if (dfnColDiff.length) arr.push({ ...col, diff: dfnColDiff })
                 return arr
@@ -305,6 +341,7 @@ export default {
          * @returns {String} - returns column alter sql
          */
         buildColsAlterSQL() {
+            const { ID } = this.COL_ATTRS
             let sql = '',
                 pkSQL = ''
             const {
@@ -313,14 +350,14 @@ export default {
                 lodash: { isEqual },
             } = this.$helpers
             const base = getObjectRows({
-                columns: this.$typy(this.data, 'definitions.fields').safeArray,
+                columns: this.colAttrs,
                 rows: this.$typy(this.data, 'definitions.data').safeArray,
             })
             const newData = getObjectRows({
-                columns: this.$typy(this.stagingData, 'definitions.fields').safeArray,
+                columns: this.colAttrs,
                 rows: this.$typy(this.stagingData, 'definitions.data').safeArray,
             })
-            const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
+            const diff = arrOfObjsDiff({ base, newArr: newData, idField: ID })
             const removedCols = diff.get('removed')
             const updatedCols = diff.get('updated')
             const addedCols = diff.get('added')

@@ -1,6 +1,6 @@
 <template>
     <v-combobox
-        v-if="input.type === 'column_type'"
+        v-if="input.type === COL_ATTRS.TYPE"
         v-model="input.value"
         class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
         :class="input.type"
@@ -48,14 +48,14 @@
         @change="onInput"
     />
     <charset-collate-select
-        v-else-if="input.type === 'charset' || input.type === 'collation'"
+        v-else-if="input.type === COL_ATTRS.CHARSET || input.type === COL_ATTRS.COLLATE"
         v-model="input.value"
         :items="
-            input.type === 'charset'
+            input.type === COL_ATTRS.CHARSET
                 ? Object.keys(charsetCollationMap)
                 : $typy(charsetCollationMap, `[${columnCharset}].collations`).safeArray
         "
-        :defItem="input.type === 'charset' ? defTblCharset : defTblCollation"
+        :defItem="input.type === COL_ATTRS.CHARSET ? defTblCharset : defTblCollation"
         :disabled="isDisabled"
         :height="height"
         @input="onInput"
@@ -99,11 +99,11 @@
  * }
  * Events
  * Below events are used to handle "coupled case",
- * e.g. When column_type changes its value to a data type
- * that supports charset/collation, `on-input-column_type`
+ * e.g. When type changes its value to a data type
+ * that supports charset/collation, `on-input-type`
  * will be used to update charset/collation input to fill
  * data with default table charset/collation.
- * on-input-column_type: (cell)
+ * on-input-type: (cell)
  * on-input-charset: (cell)
  * on-input-AI: (cell)
  * on-input-PK: (cell)
@@ -112,7 +112,7 @@
  * Event for normal cell
  * on-input: (cell)
  */
-
+import { mapState } from 'vuex'
 import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
 import {
     check_charset_support,
@@ -139,52 +139,62 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
+            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+        }),
         hasChanged() {
             return !this.$helpers.lodash.isEqual(this.input, this.data)
         },
         columnCharset() {
-            return this.$typy(this.input, 'rowObj.charset').safeString
+            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.CHARSET}`).safeString
         },
         columnType() {
-            return this.$typy(this.input, 'rowObj.column_type').safeString
+            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.TYPE}`).safeString
         },
         isPK() {
-            return this.$typy(this.input, 'rowObj.PK').safeString === 'YES'
+            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.PK}`).safeString === 'YES'
         },
         isGenerated() {
-            return this.$typy(this.input, 'rowObj.generated').safeString !== '(none)'
+            return (
+                this.$typy(this.input, `rowObj.${this.COL_ATTRS.GENERATED}`).safeString !== '(none)'
+            )
         },
         isAI() {
-            return this.$typy(this.input, 'rowObj.AI').safeString === 'AUTO_INCREMENT'
+            return (
+                this.$typy(this.input, `rowObj.${this.COL_ATTRS.AI}`).safeString ===
+                'AUTO_INCREMENT'
+            )
         },
         uniqueIdxName() {
             // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
             const uqIdxName = this.$typy(this.initialColOptsData, `['${this.data.colOptIdx}']`)
                 .safeString
             if (uqIdxName) return uqIdxName
-            return `${this.$typy(this.data, 'rowObj.column_name').safeString}_UNIQUE`
+            return `${this.$typy(this.data, `rowObj.${this.COL_ATTRS.NAME}`).safeString}_UNIQUE`
         },
         isDisabled() {
+            const { PK, NN, UN, UQ, ZF, AI, GENERATED, CHARSET, COLLATE } = this.COL_ATTRS
             switch (this.$typy(this.input, 'field').safeString) {
-                case 'charset':
-                case 'collation':
+                case CHARSET:
+                case COLLATE:
                     if (this.columnCharset === 'utf8') return true
                     return !check_charset_support(this.columnType)
-                case 'PK':
+                case PK:
                     //disable if column is generated
                     return this.isGenerated
-                case 'UN':
-                case 'ZF':
+                case UN:
+                case ZF:
                     return !check_UN_ZF_support(this.columnType)
-                case 'AI':
+                case AI:
                     return !check_AI_support(this.columnType)
-                case 'NN':
+                case NN:
                     //isAI or isPK implies NOT NULL so must be disabled
                     // when column is generated, NN or NULL can not be defined
                     return this.isAI || this.isPK || this.isGenerated
-                case 'UQ':
+                case UQ:
                     return this.isPK // implies UNIQUE already so UQ must be disabled
-                case 'generated':
+                case GENERATED:
                     //disable if column is PK
                     return this.isPK //https://mariadb.com/kb/en/generated-columns/#index-support
                 default:
@@ -216,44 +226,58 @@ export default {
          */
         handleAddType(data) {
             const input = this.$helpers.lodash.cloneDeep(data)
+            const {
+                NAME,
+                TYPE,
+                PK,
+                NN,
+                UN,
+                UQ,
+                ZF,
+                AI,
+                GENERATED,
+                CHARSET,
+                COLLATE,
+            } = this.COL_ATTRS
+            const { nn, un, zf, ai } = this.CREATE_TBL_TOKENS
             switch (input.field) {
-                case 'column_name':
+                case NAME:
                     input.type = 'string'
                     break
-                case 'column_type':
-                    input.type = 'column_type'
+                case TYPE:
+                    input.type = 'type'
                     input.enum_values = this.dataTypes
                     break
-                case 'NN':
+                case NN:
                     input.type = 'bool'
-                    input.value = input.value === 'NOT NULL'
+                    input.value = input.value === nn
                     break
-                case 'UN':
+                case UN:
                     input.type = 'bool'
-                    input.value = input.value === 'UNSIGNED'
+                    input.value = input.value === un
                     break
-                case 'ZF':
+                case ZF:
                     input.type = 'bool'
-                    input.value = input.value === 'ZEROFILL'
+                    input.value = input.value === zf
                     break
-                case 'AI':
+                case AI:
                     input.type = 'bool'
-                    input.value = input.value === 'AUTO_INCREMENT'
+                    input.value = input.value === ai
                     break
-                case 'generated':
+                case GENERATED:
                     input.type = 'enum'
                     input.enum_values = ['(none)', 'VIRTUAL', 'STORED']
                     break
-                case 'PK':
+                case PK:
                     input.type = 'bool'
                     input.value = input.value === 'YES'
                     break
-                case 'UQ':
+                case UQ:
                     input.type = 'bool'
                     input.value = Boolean(input.value)
                     break
-                case 'charset':
-                case 'collation':
+                case CHARSET:
+                case COLLATE:
                     input.type = input.field
                     break
             }
@@ -272,42 +296,43 @@ export default {
         onInput() {
             if (this.hasChanged) {
                 let newInput = this.handleRemoveType()
+                const { TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED, CHARSET } = this.COL_ATTRS
+                const { nn, un, zf, ai } = this.CREATE_TBL_TOKENS
                 switch (this.input.type) {
-                    case 'column_type':
-                        this.$emit('on-input-column_type', newInput)
+                    case TYPE:
+                        this.$emit('on-input-type', newInput)
                         break
-                    case 'charset':
+                    case CHARSET:
                         this.$emit('on-input-charset', newInput)
                         break
                     case 'enum':
-                        if (newInput.field === 'generated')
-                            this.$emit('on-input-generated', newInput)
+                        if (newInput.field === GENERATED) this.$emit('on-input-generated', newInput)
                         else this.$emit('on-input', newInput)
                         break
                     case 'bool': {
                         const field = newInput.field
                         switch (field) {
-                            case 'NN':
-                                newInput.value = newInput.value ? 'NOT NULL' : 'NULL'
+                            case NN:
+                                newInput.value = newInput.value ? nn : this.CREATE_TBL_TOKENS.null
                                 break
-                            case 'UN':
-                                newInput.value = newInput.value ? 'UNSIGNED' : ''
+                            case UN:
+                                newInput.value = newInput.value ? un : ''
                                 break
-                            case 'ZF':
-                                newInput.value = newInput.value ? 'ZEROFILL' : ''
+                            case ZF:
+                                newInput.value = newInput.value ? zf : ''
                                 break
-                            case 'AI':
-                                newInput.value = newInput.value ? 'AUTO_INCREMENT' : ''
+                            case AI:
+                                newInput.value = newInput.value ? ai : ''
                                 break
-                            case 'PK':
+                            case PK:
                                 newInput.value = newInput.value ? 'YES' : 'NO'
                                 break
-                            case 'UQ':
+                            case UQ:
                                 newInput.value = newInput.value ? this.uniqueIdxName : ''
                         }
-                        if (field === 'AI') this.$emit('on-input-AI', newInput)
-                        else if (field === 'PK') this.$emit('on-input-PK', newInput)
-                        else if (field === 'NN') this.$emit('on-input-NN', newInput)
+                        if (field === AI) this.$emit('on-input-AI', newInput)
+                        else if (field === PK) this.$emit('on-input-PK', newInput)
+                        else if (field === NN) this.$emit('on-input-NN', newInput)
                         else this.$emit('on-input', newInput)
                         break
                     }

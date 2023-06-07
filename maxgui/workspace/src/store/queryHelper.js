@@ -17,14 +17,16 @@ import {
     NODE_GROUP_CHILD_TYPES,
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
+    CREATE_TBL_TOKENS as tokens,
+    COL_ATTRS,
 } from '@wsSrc/store/config'
 import { lodash, to, dynamicColors, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
-import tokens from '@wsSrc/utils/createTableTokens'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import TableParser from '@wsSrc/utils/TableParser'
+import { check_charset_support } from '@wsSrc/components/common/MxsDdlEditor/utils'
 
 const parser = new TableParser()
 /**
@@ -602,25 +604,22 @@ function getIdxNameByColName({ keys, keyType, colName }) {
  * that is used by mxs-ddl-editor
  * @param {String} param.schema
  * @param {Object} param.parsedTable - output of TableParser
- * @param {Object} [param.charsetCollationMap] - collations mapped by charset
+ * @param {Object} param.charsetCollationMap - collations mapped by charset
  * @returns {Object}
  */
 function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
     const {
-        name,
         definitions: { cols, keys },
-        options: { charset = '', comment = '', engine = '' } = {},
     } = parsedTable
-
+    const charset = parsedTable.options.charset
     const collation =
         typy(parsedTable, 'options.collation').safeString ||
         typy(charsetCollationMap, `[${charset}].defCollation`).safeString
 
-    const data = cols.map(col => {
-        const keyType = findKeyTypeByColName({
-            keys,
-            colName: col.name,
-        })
+    const colsTransformed = cols.map(col => {
+        let type = col.data_type
+        if (col.data_type_size) type += `(${col.data_type_size})`
+        const keyType = findKeyTypeByColName({ keys, colName: col.name })
         let uq = ''
         if (keyType === tokens.uniqueKey) {
             uq = getIdxNameByColName({
@@ -629,53 +628,51 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
                 colName: col.name,
             })
         }
-        return [
-            uuidv1(),
-            col.name,
-            `${col.data_type}${col.data_type_size ? `(${col.data_type_size})` : ''}`,
-            keyType === tokens.primaryKey ? 'YES' : 'NO',
-            col.is_nn ? 'NOT NULL' : 'NULL',
-            col.is_un ? 'UNSIGNED' : '',
-            uq,
-            col.is_zf ? 'ZEROFILL' : '',
-            col.is_ai ? 'AUTO_INCREMENT' : '',
-            col.generated_type ? col.generated_type : '(none)',
-            col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
-            col.charset,
-            col.collate,
-            typy(col.comment).safeString,
-        ]
+        const {
+            ID,
+            NAME,
+            TYPE,
+            PK,
+            NN,
+            UN,
+            UQ,
+            ZF,
+            AI,
+            GENERATED,
+            DEF_EXP,
+            CHARSET,
+            COLLATE,
+            COMMENT,
+        } = COL_ATTRS
+        //TODO: refactor UI input components to accept boolean
+        return {
+            [ID]: uuidv1(),
+            [NAME]: col.name,
+            [TYPE]: type,
+            [PK]: keyType === tokens.primaryKey ? 'YES' : 'NO',
+            [NN]: col.is_nn ? tokens.nn : tokens.null,
+            [UN]: col.is_un ? tokens.un : '',
+            [UQ]: uq,
+            [ZF]: col.is_zf ? tokens.zf : '',
+            [AI]: col.is_ai ? tokens.ai : '',
+            [GENERATED]: col.generated_type ? col.generated_type : '(none)',
+            [DEF_EXP]: col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
+            [CHARSET]: check_charset_support(col.data_type) ? col.charset || charset : '',
+            [COLLATE]: check_charset_support(col.data_type) ? col.collate || collation : '',
+            [COMMENT]: typy(col.comment).safeString,
+        }
     })
+
     return {
         options: {
             schema,
+            ...parsedTable.options,
             charset,
             collation,
-            comment,
-            engine,
-            name,
+            name: parsedTable.name,
         },
-        /**
-         * TODO: Refactor data and fields
-         */
         definitions: {
-            data,
-            fields: [
-                'id',
-                'column_name',
-                'column_type',
-                'PK',
-                'NN',
-                'UN',
-                'UQ',
-                'ZF',
-                'AI',
-                'generated',
-                'default/expression',
-                'charset',
-                'collation',
-                'comment',
-            ],
+            data: colsTransformed.map(col => [...Object.values(col)]),
         },
     }
 }

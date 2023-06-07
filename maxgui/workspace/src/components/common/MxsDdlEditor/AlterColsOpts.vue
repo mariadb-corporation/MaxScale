@@ -85,7 +85,7 @@
                         :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"
                         @on-input="onCellInput"
-                        @on-input-column_type="onInputColumnType"
+                        @on-input-type="onInputColumnType"
                         @on-input-PK="onInputPK"
                         @on-input-NN="onInputNN"
                         @on-input-AI="onInputAI"
@@ -94,21 +94,9 @@
                     />
                 </div>
             </template>
-            <template v-slot:header-column_name="{ data: { maxWidth, activatorID } }">
-                <mxs-truncate-str
-                    :tooltipItem="{ txt: 'Column Name', activatorID }"
-                    :maxWidth="maxWidth"
-                />
-            </template>
-            <template v-slot:header-column_type="{ data: { maxWidth, activatorID } }">
-                <mxs-truncate-str
-                    :tooltipItem="{ txt: 'Column Type', activatorID }"
-                    :maxWidth="maxWidth"
-                />
-            </template>
             <template
                 v-for="(value, key) in abbreviatedHeaders"
-                v-slot:[abbrHeaderSlotName(key)]="{ data: { header, maxWidth } }"
+                v-slot:[`header-${key}`]="{ data: { header, maxWidth } }"
             >
                 <v-tooltip :key="key" top transition="slide-y-transition" :disabled="isVertTable">
                     <template v-slot:activator="{ on }">
@@ -117,10 +105,10 @@
                             :style="{ maxWidth: `${maxWidth}px` }"
                             v-on="on"
                         >
-                            {{ isVertTable ? value : header.text }}
+                            {{ isVertTable ? header.text : value }}
                         </div>
                     </template>
-                    <span>{{ value }}</span>
+                    <span>{{ header.text }}</span>
                 </v-tooltip>
             </template>
         </mxs-virtual-scroll-tbl>
@@ -141,6 +129,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import ColOptInput from '@wsSrc/components/common/MxsDdlEditor/ColOptInput.vue'
 import {
     getColumnTypes,
@@ -169,6 +158,11 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
+            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
+            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+        }),
         headerHeight() {
             return 28
         },
@@ -183,29 +177,33 @@ export default {
                 this.$emit('input', value)
             },
         },
+        colAttrs() {
+            return Object.values(this.COL_ATTRS)
+        },
         headers() {
-            return this.$typy(this.colDefinitions, 'fields').safeArray.map(field => {
+            const { ID, PK, NN, UN, UQ, ZF, AI, GENERATED } = this.COL_ATTRS
+            return this.colAttrs.map(field => {
                 let h = {
                     text: field,
                     sortable: false,
                     capitalize: true,
                 }
                 switch (field) {
-                    case 'PK':
-                    case 'NN':
-                    case 'UN':
-                    case 'UQ':
-                    case 'ZF':
-                    case 'AI':
+                    case PK:
+                    case NN:
+                    case UN:
+                    case UQ:
+                    case ZF:
+                    case AI:
                         h.minWidth = 50
                         h.maxWidth = 50
                         h.resizable = false
                         break
-                    case 'generated':
+                    case GENERATED:
                         h.width = 144
                         h.minWidth = 126
                         break
-                    case 'id':
+                    case ID:
                         h.hidden = true
                         break
                 }
@@ -223,14 +221,16 @@ export default {
             })
         },
         abbreviatedHeaders() {
+            const { PK, NN, UN, UQ, ZF, AI, GENERATED, CHARSET } = this.COL_ATTRS
             return {
-                PK: 'PRIMARY KEY',
-                NN: 'NOT NULL',
-                UN: 'UNSIGNED',
-                UQ: 'UNIQUE INDEX',
-                ZF: 'ZEROFILL',
-                AI: 'AUTO_INCREMENT',
-                generated: 'Generated column',
+                [PK]: 'PK',
+                [NN]: 'NN',
+                [UN]: 'UN',
+                [UQ]: 'UQ',
+                [ZF]: 'ZF',
+                [AI]: 'AI',
+                [GENERATED]: 'GENERATED',
+                [CHARSET]: 'CHARSET',
             }
         },
         rows() {
@@ -244,37 +244,34 @@ export default {
             })
             return items
         },
-        idxOfId() {
-            return this.findColOptIdx('id')
-        },
         idxOfCollation() {
-            return this.findColOptIdx('collation')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.COLLATE]
         },
         idxOfCharset() {
-            return this.findColOptIdx('charset')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.CHARSET]
         },
         idxOfAI() {
-            return this.findColOptIdx('AI')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.AI]
         },
         idxOfGenerated() {
-            return this.findColOptIdx('generated')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.GENERATED]
         },
         idxOfUN() {
-            return this.findColOptIdx('UN')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UN]
         },
         idxOfNN() {
-            return this.findColOptIdx('NN')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NN]
         },
         idxOfUQ() {
-            return this.findColOptIdx('UQ')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UQ]
         },
         idxOfDefAndExp() {
-            return this.findColOptIdx('default/expression')
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.DEF_EXP]
         },
         hasAI() {
             let count = 0
             this.rows.forEach(row => {
-                if (row[this.idxOfAI] === 'AUTO_INCREMENT') count++
+                if (row[this.idxOfAI] === this.COL_ATTRS.AI) count++
             })
             return count === 1
         },
@@ -287,12 +284,10 @@ export default {
             const colSpecs = this.$helpers.lodash.cloneDeep(this.colSpecs)
             if (this.$vuetify.breakpoint.width >= 1680) this.selectedColSpecs = colSpecs
             else {
-                const hiddenSpecs = ['charset', 'collation', 'comment']
+                const { CHARSET, COLLATE, COMMENT } = this.COL_ATTRS
+                const hiddenSpecs = [CHARSET, COLLATE, COMMENT]
                 this.selectedColSpecs = colSpecs.filter(col => !hiddenSpecs.includes(col.text))
             }
-        },
-        abbrHeaderSlotName(h) {
-            return `header-${h}`
         },
         deleteSelectedRows(selectedItems) {
             const { xorWith, isEqual } = this.$helpers.lodash
@@ -303,15 +298,16 @@ export default {
         },
         addNewCol() {
             let row = []
+            const { ID, PK, NN } = this.COL_ATTRS
             this.headers.forEach(h => {
                 switch (h.text) {
-                    case 'id':
+                    case ID:
                         row.push(this.$helpers.uuidv1())
                         break
-                    case 'NN':
-                        row.push('NULL')
+                    case NN:
+                        row.push(this.CREATE_TBL_TOKENS.null)
                         break
-                    case 'PK':
+                    case PK:
                         row.push('NO')
                         break
                     default:
@@ -323,14 +319,11 @@ export default {
         },
         rowDataToObj(rowData) {
             const rows = this.$helpers.getObjectRows({
-                columns: this.$typy(this.colDefinitions, 'fields').safeArray,
+                columns: this.colAttrs,
                 rows: [rowData],
             })
             if (rows.length) return rows[0]
             return []
-        },
-        findColOptIdx(headerName) {
-            return this.headers.findIndex(h => h.text === headerName)
         },
         /**
          * @param {Object} item - cell data
@@ -387,7 +380,7 @@ export default {
          */
         handleUncheck_UN_ZF_AI({ colDefinitions, item }) {
             if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
-                const idxOfZF = this.findColOptIdx('ZF')
+                const idxOfZF = this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ZF]
                 return this.$helpers.immutableUpdate(colDefinitions, {
                     data: {
                         [item.alterColIdx]: {
@@ -430,15 +423,16 @@ export default {
          */
         handleSerialType({ colDefinitions, item }) {
             if (item.value === 'SERIAL') {
+                const { un, nn, ai } = this.CREATE_TBL_TOKENS
                 const colOptInput = this.$refs[
                     `colOptInput-alterColIdx-${item.alterColIdx}-colOptIdx-${this.idxOfUQ}`
                 ][0]
                 return this.$helpers.immutableUpdate(colDefinitions, {
                     data: {
                         [item.alterColIdx]: {
-                            [this.idxOfUN]: { $set: 'UNSIGNED' },
-                            [this.idxOfNN]: { $set: 'NOT NULL' },
-                            [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
+                            [this.idxOfUN]: { $set: un },
+                            [this.idxOfNN]: { $set: nn },
+                            [this.idxOfAI]: { $set: ai },
                             [this.idxOfUQ]: {
                                 $set: colOptInput.uniqueIdxName,
                             },
@@ -449,10 +443,10 @@ export default {
             return colDefinitions
         },
         /**
-         * @param {Object} item - column_type cell data
+         * @param {Object} item - type cell data
          */
         onInputColumnType(item) {
-            // first update column_type cell
+            // first update type cell
             let colDefinitions = this.$helpers.immutableUpdate(this.colDefinitions, {
                 data: {
                     [item.alterColIdx]: {
@@ -476,7 +470,7 @@ export default {
         uncheckOtherAI({ colDefinitions, alterColIdx }) {
             let idx
             for (const [i, row] of this.rows.entries())
-                if (row[this.idxOfAI] === 'AUTO_INCREMENT' && i !== alterColIdx) {
+                if (row[this.idxOfAI] === this.CREATE_TBL_TOKENS.ai && i !== alterColIdx) {
                     idx = i
                     break
                 }
@@ -505,7 +499,8 @@ export default {
                 colDefinitions,
                 `data['${alterColIdx}']['${this.idxOfDefAndExp}']`
             ).safeString
-            if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
+            if (defaultVal === this.CREATE_TBL_TOKENS.null && valOfNN === this.CREATE_TBL_TOKENS.nn)
+                defaultVal = ''
             if (valueOfDefault !== null) defaultVal = valueOfDefault
             return this.$helpers.immutableUpdate(colDefinitions, {
                 data: {
@@ -538,7 +533,7 @@ export default {
             this.colDefinitions = this.notNullSideEffect({
                 colDefinitions,
                 alterColIdx: item.alterColIdx,
-                valOfNN: 'NOT NULL',
+                valOfNN: this.CREATE_TBL_TOKENS.nn,
                 // set to empty string when AI value is AUTO_INCREMENT
                 valueOfDefault: item.value ? '' : null,
             })
@@ -554,8 +549,8 @@ export default {
                     colDefinitions,
                     `data['${item.alterColIdx}']['${this.idxOfNN}']`
                 ).safeString
-                if (nnVal === 'NULL') defaultVal = 'NULL'
-                else if (nnVal === 'NOT NULL') defaultVal = ''
+                if (nnVal === this.CREATE_TBL_TOKENS.null) defaultVal = this.CREATE_TBL_TOKENS.null
+                else if (nnVal === this.CREATE_TBL_TOKENS.nn) defaultVal = ''
             }
             // use initial expression value or empty string
             else {
@@ -604,7 +599,7 @@ export default {
             this.colDefinitions = this.notNullSideEffect({
                 colDefinitions,
                 alterColIdx: item.alterColIdx,
-                valOfNN: 'NOT NULL',
+                valOfNN: this.CREATE_TBL_TOKENS.nn,
             })
         },
         /**

@@ -129,6 +129,7 @@
  * - $emit('on-nodes-coords-update', nodes:[])
  * - $emit('dbl-click-node', { e:Event, node: {} })
  */
+import { mapState } from 'vuex'
 import {
     forceSimulation,
     forceLink,
@@ -144,7 +145,6 @@ import EntityLink from '@wsSrc/components/worksheets/ErdWke/EntityLink'
 import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { getConfig, LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
-import tokens from '@wsSrc/utils/createTableTokens'
 import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
@@ -177,6 +177,7 @@ export default {
         }
     },
     computed: {
+        ...mapState({ CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS }),
         panAndZoomData: {
             get() {
                 return this.panAndZoom
@@ -406,7 +407,7 @@ export default {
             })
             const { color } = this.getHighlightColStyle({ node, colName }) || {}
             switch (keyType) {
-                case tokens.primaryKey:
+                case this.CREATE_TBL_TOKENS.primaryKey:
                     return {
                         icon: 'mdi-key-variant',
                         color: color ? color : 'primary',
@@ -415,13 +416,13 @@ export default {
                         },
                         size: 18,
                     }
-                case tokens.uniqueKey:
+                case this.CREATE_TBL_TOKENS.uniqueKey:
                     return {
                         icon: '$vuetify.icons.mxs_uniqueIndexKey',
                         color: color ? color : 'navigation',
                         size: 16,
                     }
-                case tokens.key:
+                case this.CREATE_TBL_TOKENS.key:
                     return {
                         icon: '$vuetify.icons.mxs_indexKey',
                         color: color ? color : 'navigation',

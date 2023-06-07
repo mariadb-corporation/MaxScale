@@ -132,6 +132,68 @@ export const DDL_ALTER_SPECS = Object.freeze({
 
 export const UNSUPPORTED_TBL_CREATION_ENGINES = ['SEQUENCE', 'PERFORMANCE_SCHEMA']
 
+export const CREATE_TBL_TOKENS = Object.freeze({
+    un: 'UNSIGNED',
+    zf: 'ZEROFILL',
+    null: 'NULL',
+    nn: 'NOT NULL',
+    ai: 'AUTO_INCREMENT',
+    charset: 'CHARACTER SET',
+    collate: 'COLLATE',
+    generated: 'GENERATED ALWAYS AS',
+    virtual: 'VIRTUAL',
+    persistent: 'PERSISTENT',
+    stored: 'STORED',
+    default: 'DEFAULT',
+    comment: 'COMMENT',
+    createTable: 'CREATE TABLE',
+    constraint: 'CONSTRAINT',
+    primaryKey: 'PRIMARY KEY',
+    uniqueKey: 'UNIQUE KEY',
+    foreignKey: 'FOREIGN KEY',
+    fullTextKey: 'FULLTEXT KEY',
+    spatialKey: 'SPATIAL KEY',
+    key: 'KEY', // plain key
+    references: 'REFERENCES',
+    match: 'MATCH',
+    full: 'FULL',
+    partial: 'PARTIAL',
+    simple: 'SIMPLE',
+    on: 'ON',
+    delete: 'DELETE',
+    update: 'UPDATE',
+    restrict: 'RESTRICT',
+    cascade: 'CASCADE',
+    setNull: 'SET NULL',
+    noAction: 'NO ACTION',
+    add: 'ADD',
+    change: 'CHANGE',
+    drop: 'DROP',
+    column: 'COLUMN',
+})
+// Column attribute names for altering/creating table editor
+export const COL_ATTRS = Object.freeze({
+    ID: 'ID',
+    NAME: 'NAME',
+    TYPE: 'TYPE',
+    PK: CREATE_TBL_TOKENS.primaryKey,
+    NN: CREATE_TBL_TOKENS.nn,
+    UN: CREATE_TBL_TOKENS.un,
+    UQ: CREATE_TBL_TOKENS.uniqueKey,
+    ZF: CREATE_TBL_TOKENS.zf,
+    AI: CREATE_TBL_TOKENS.ai,
+    GENERATED: CREATE_TBL_TOKENS.generated,
+    DEF_EXP: 'DEFAULT/EXPRESSION',
+    CHARSET: CREATE_TBL_TOKENS.charset,
+    COLLATE: CREATE_TBL_TOKENS.collate,
+    COMMENT: CREATE_TBL_TOKENS.comment,
+})
+
+export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
+    (map, attr, i) => ((map[attr] = i), map),
+    {}
+)
+
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
     DDL_EDITOR: 'DDL_EDITOR',
