@@ -1066,7 +1066,7 @@ const SlaveStatus* MariaDBServer::sstatus_find_previous_row(const SlaveStatus& s
     return rval;
 }
 
-bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
+bool MariaDBServer::can_be_demoted_switchover(SwitchoverType type, string* reason_out)
 {
     bool demotable = false;
     string reason;
@@ -1080,26 +1080,35 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     {
         reason = not_a_db;
     }
-    else if (!update_replication_settings(&query_error))
+    else if (type == SwitchoverType::NORMAL)
     {
-        reason = string_printf("it could not be queried: %s", query_error.c_str());
-    }
-    else if (!binlog_on())
-    {
-        reason = "its binary log is disabled.";
-    }
-    else if (!is_master() && !m_rpl_settings.log_slave_updates)
-    {
-        // This means that gtid_binlog_pos cannot be trusted.
-        // TODO: reduce dependency on gtid_binlog_pos to get rid of this requirement
-        reason = "it is not the master and log_slave_updates is disabled.";
-    }
-    else if (m_gtid_binlog_pos.empty())
-    {
-        reason = "it does not have a 'gtid_binlog_pos'.";
+        if (!update_replication_settings(&query_error))
+        {
+            reason = string_printf("it could not be queried: %s", query_error.c_str());
+        }
+        else if (!binlog_on())
+        {
+            reason = "its binary log is disabled.";
+        }
+        else if (!is_master() && !m_rpl_settings.log_slave_updates)
+        {
+            // This means that gtid_binlog_pos cannot be trusted.
+            // TODO: reduce dependency on gtid_binlog_pos to get rid of this requirement
+            reason = "it is not the master and log_slave_updates is disabled.";
+        }
+        else if (m_gtid_binlog_pos.empty())
+        {
+            reason = "it does not have a 'gtid_binlog_pos'.";
+        }
+        else
+        {
+            demotable = true;
+        }
     }
     else
     {
+        // Forcing switchover. Update replication settings but don't require success or valid settings.
+        update_replication_settings(&query_error);
         demotable = true;
     }
 
@@ -1142,6 +1151,8 @@ bool MariaDBServer::can_be_demoted_failover(FailoverType failover_mode, string* 
 bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demotion_target,
                                     string* reason_out)
 {
+    mxb_assert(op == OperationType::SWITCHOVER || op == OperationType::SWITCHOVER_FORCE
+               || op == OperationType::FAILOVER);
     bool promotable = false;
     string reason;
     string query_error;
@@ -1159,9 +1170,10 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     {
         reason = not_a_db;
     }
+    // Failover promotion with low disk space is allowed since it's better than nothing. Unsafe switch
+    // also allowed.
     else if (op == OperationType::SWITCHOVER && is_low_on_disk_space())
     {
-        // Failover promotion with low disk space is allowed since it's better than nothing.
         reason = "it is low on disk space.";
     }
     else if (sstatus == nullptr)
@@ -1172,20 +1184,24 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     {
         reason = string_printf("its replica connection to '%s' is not using gtid.", demotion_target->name());
     }
+    // Allow forced switchover with broken replication connection.
     else if (op == OperationType::SWITCHOVER && sstatus->slave_io_running != SlaveStatus::SLAVE_IO_YES)
     {
         reason = string_printf("its replica connection to '%s' is broken.", demotion_target->name());
     }
-    else if (!update_replication_settings(&query_error))
+    // Check operation type condition second so that the function is run even for forced switchover.
+    else if (!update_replication_settings(&query_error)
+             && (op == OperationType::SWITCHOVER || op == OperationType::FAILOVER))
     {
         reason = string_printf("it could not be queried: %s", query_error.c_str());
     }
-    else if (!binlog_on())
+    else if (!binlog_on() && (op == OperationType::SWITCHOVER || op == OperationType::FAILOVER))
     {
         reason = "its binary log is disabled.";
     }
-    // The following will miss cases where seconds_behind_master is undefined (-1).
-    else if (op == OperationType::SWITCHOVER
+    // The following will miss cases where seconds_behind_master is undefined (-1). This condition
+    // applies even to forced switchover as the dba should just wait a little.
+    else if ((op == OperationType::SWITCHOVER || op == OperationType::SWITCHOVER_FORCE)
              && sstatus->seconds_behind_master > m_settings.switchover_timeout.count())
     {
         reason = string_printf("its replication lag (%lis) is greater than switchover_timeout (%lis).",

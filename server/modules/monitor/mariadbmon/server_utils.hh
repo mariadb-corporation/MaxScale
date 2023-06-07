@@ -284,13 +284,15 @@ using EventNameSet = std::unordered_set<std::string>;
 
 enum class OperationType
 {
-    SWITCHOVER,
+    SWITCHOVER,         /**< Normal switchover */
+    SWITCHOVER_FORCE,   /**< Forced switchover. Ignores several errors. */
     FAILOVER,
     REJOIN,
-    UNDO_DEMOTION   // Performed when switchover fails in its first stages.
+    UNDO_DEMOTION       /**< Performed when switchover fails in its first stages. */
 };
 
 enum class OpStart {MANUAL, AUTO};
+enum class SwitchoverType {NORMAL, FORCE};
 
 class GeneralOpData
 {

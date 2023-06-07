@@ -58,7 +58,7 @@ const int socat_timeout_s = 5;      // TODO: configurable?
 const char list_dir_err_fmt[] = "Could not list contents of '%s' on %s. '%s' must exist and "
                                 "be accessible. %s";
 
-bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
+bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -74,13 +74,18 @@ std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_st
 // switchover
 bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
 {
-    return manual_switchover(ExecMode::SYNC, args, error_out);
+    return manual_switchover(ExecMode::SYNC, SwitchoverType::NORMAL, args, error_out);
+}
+
+bool handle_manual_switchover_force(const MODULECMD_ARG* args, json_t** error_out)
+{
+    return manual_switchover(ExecMode::SYNC, SwitchoverType::FORCE, args, error_out);
 }
 
 // async-switchover
 bool handle_async_switchover(const MODULECMD_ARG* args, json_t** error_out)
 {
-    return manual_switchover(ExecMode::ASYNC, args, error_out);
+    return manual_switchover(ExecMode::ASYNC, SwitchoverType::NORMAL, args, error_out);
 }
 
 // failover
@@ -266,7 +271,7 @@ bool handle_async_restore_from_backup(const MODULECMD_ARG* args, json_t** output
  *
  * @return True, if the command was executed/scheduled, false otherwise.
  */
-bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out)
+bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* args, json_t** error_out)
 {
     mxb_assert((args->argc >= 1) && (args->argc <= 3));
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
@@ -288,7 +293,7 @@ bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_
         switch (mode)
         {
         case ExecMode::SYNC:
-            rval = handle->run_manual_switchover(promotion_server, demotion_server, error_out);
+            rval = handle->run_manual_switchover(type, promotion_server, demotion_server, error_out);
             break;
 
         case ExecMode::ASYNC:
@@ -497,13 +502,17 @@ void register_monitor_commands()
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Current primary (optional)"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, switchover_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
                                handle_manual_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
-                               "Perform primary switchover");
+                               "Switch primary server with replica");
+
+    modulecmd_register_command(MXB_MODULE_NAME, "switchover-force", MODULECMD_TYPE_ACTIVE,
+                               handle_manual_switchover_force, MXS_ARRAY_NELEMS(switchover_argv),
+                               switchover_argv, "Switch primary server with replica. Ignores most errors.");
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-switchover", MODULECMD_TYPE_ACTIVE,
                                handle_async_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
-                               "Schedule primary switchover. Does not wait for completion");
+                               "Schedule primary switchover. Does not wait for completion.");
 
     static modulecmd_arg_type_t failover_argv[] =
     {
@@ -675,10 +684,11 @@ void register_monitor_commands()
     /* *uncrustify-on* */
 }
 
-bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
+bool MariaDBMonitor::run_manual_switchover(SwitchoverType type, SERVER* new_master, SERVER* current_master,
+                                           json_t** error_out)
 {
-    auto func = [this, new_master, current_master](){
-        return manual_switchover(new_master, current_master);
+    auto func = [this, type, new_master, current_master](){
+        return manual_switchover(type, new_master, current_master);
     };
     return execute_manual_command(func, switchover_cmd, error_out);
 }
@@ -686,7 +696,7 @@ bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_m
 bool MariaDBMonitor::schedule_async_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
 {
     auto func = [this, new_master, current_master](){
-        return manual_switchover(new_master, current_master);
+        return manual_switchover(SwitchoverType::NORMAL, new_master, current_master);
     };
     return schedule_manual_command(func, switchover_cmd, error_out);
 }

@@ -71,7 +71,8 @@ const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed.";
  * monitor will select the cluster master server. Otherwise must be a valid master server or a relay.
  * @return Result structure
  */
-mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
+mon_op::Result MariaDBMonitor::manual_switchover(SwitchoverType type, SERVER* new_master,
+                                                 SERVER* current_master)
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == m_worker->id());
@@ -86,7 +87,7 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
     }
 
     bool switchover_done = false;
-    auto op = switchover_prepare(new_master, current_master, Log::ON, OpStart::MANUAL, output);
+    auto op = switchover_prepare(type, new_master, current_master, Log::ON, OpStart::MANUAL, output);
     if (op)
     {
         switchover_done = switchover_perform(*op);
@@ -1703,8 +1704,8 @@ MariaDBMonitor::slave_receiving_events(const MariaDBServer* demotion_target, Dur
  * @return Operation object if cluster is suitable and switchover may proceed, or NULL on error
  */
 unique_ptr<MariaDBMonitor::SwitchoverParams>
-MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_server, Log log_mode,
-                                   OpStart start, mxb::Json& error_out)
+MariaDBMonitor::switchover_prepare(SwitchoverType type, SERVER* promotion_server, SERVER* demotion_server,
+                                   Log log_mode, OpStart start, mxb::Json& error_out)
 {
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
@@ -1718,7 +1719,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         {
             PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, demotion_server->name(), name());
         }
-        else if (!demotion_candidate->can_be_demoted_switchover(&demotion_msg))
+        else if (!demotion_candidate->can_be_demoted_switchover(type, &demotion_msg))
         {
             PRINT_ERROR_IF(log_mode, error_out,
                            "'%s' is not a valid demotion target for switchover: %s",
@@ -1732,13 +1733,13 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
     else
     {
         // Autoselect current master as demotion target.
-        if (m_master == nullptr || !m_master->is_master())
+        if (m_master == nullptr || (type == SwitchoverType::NORMAL && !m_master->is_master()))
         {
             const char msg[] = "Can not autoselect a demotion target for switchover: cluster does "
                                "not have a primary.";
             PRINT_ERROR_IF(log_mode, error_out, msg);
         }
-        else if (!m_master->can_be_demoted_switchover(&demotion_msg))
+        else if (!m_master->can_be_demoted_switchover(type, &demotion_msg))
         {
             const char msg[] = "Can not autoselect '%s' as a demotion target for switchover because %s";
             PRINT_ERROR_IF(log_mode, error_out, msg, m_master->name(), demotion_msg.c_str());
@@ -1749,7 +1750,8 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         }
     }
 
-    const auto op_type = OperationType::SWITCHOVER;
+    const auto op_type = (type == SwitchoverType::NORMAL) ? OperationType::SWITCHOVER :
+        OperationType::SWITCHOVER_FORCE;
     MariaDBServer* promotion_target = nullptr;
     if (demotion_target)
     {
@@ -1881,7 +1883,8 @@ void MariaDBMonitor::handle_low_disk_space_master()
         // a likely valid slave to swap to.
         Log log_mode = m_warn_switchover_precond ? Log::ON : Log::OFF;
         mxb::Json dummy(mxb::Json::Type::UNDEFINED);
-        auto op = switchover_prepare(nullptr, m_master->server, log_mode, OpStart::AUTO, dummy);
+        auto op = switchover_prepare(SwitchoverType::NORMAL, nullptr, m_master->server, log_mode,
+                                     OpStart::AUTO, dummy);
         if (op)
         {
             m_warn_switchover_precond = true;

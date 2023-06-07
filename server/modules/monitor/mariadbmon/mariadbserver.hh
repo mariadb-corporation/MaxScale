@@ -308,7 +308,7 @@ public:
      * @param reason_out Output explaining why server cannot be demoted
      * @return True if server can be demoted
      */
-    bool can_be_demoted_switchover(std::string* reason_out);
+    bool can_be_demoted_switchover(SwitchoverType type, std::string* reason_out);
 
     enum class FailoverType
     {

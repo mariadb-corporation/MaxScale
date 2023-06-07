@@ -102,12 +102,14 @@ public:
     /**
      * Perform user-activated switchover.
      *
+     * @param type            Normal or forced
      * @param new_master      The specified new master. If NULL, monitor will autoselect.
      * @param current_master  The specified current master. If NULL, monitor will autoselect.
      * @param error_out       Json error output
      * @return True if switchover was performed
      */
-    bool run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
+    bool run_manual_switchover(SwitchoverType type, SERVER* new_master, SERVER* current_master,
+                               json_t** error_out);
 
     /**
      * Perform user-activated switchover. Does not wait for results, which should be fetched separately.
@@ -553,7 +555,7 @@ private:
     bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 
     // Cluster operation launchers
-    mon_op::Result manual_switchover(SERVER* new_master, SERVER* current_master);
+    mon_op::Result manual_switchover(SwitchoverType type, SERVER* new_master, SERVER* current_master);
     mon_op::Result manual_failover();
     mon_op::Result manual_rejoin(SERVER* rejoin_cand_srv);
     mon_op::Result manual_reset_replication(SERVER* master_server);
@@ -584,8 +586,9 @@ private:
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,
                                                 maxbase::Duration* delay_out) const;
-    std::unique_ptr<SwitchoverParams> switchover_prepare(SERVER* new_master, SERVER* current_master,
-                                                         Log log_mode, OpStart start, mxb::Json& error_out);
+    std::unique_ptr<SwitchoverParams>
+    switchover_prepare(SwitchoverType type, SERVER* new_master, SERVER* current_master,
+                       Log log_mode, OpStart start, mxb::Json& error_out);
     std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, OpStart start, mxb::Json& error_out);
 
     bool switchover_perform(SwitchoverParams& operation);
