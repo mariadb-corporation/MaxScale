@@ -62,7 +62,7 @@ public:
         bool debug = false;
 #endif
         // Order the same as that in the documentation.
-        doc.append(kvp(key::GIT_VERSION, MAXSCALE_COMMIT));
+        doc.append(kvp(key::GIT_VERSION, maxscale_commit()));
         doc.append(kvp(key::VERSION_ARRAY, versionArray.extract()));
         doc.append(kvp(key::VERSION, NOSQL_ZVERSION));
         doc.append(kvp(key::STORAGE_ENGINES, storageEngines.extract()));
@@ -216,7 +216,7 @@ private:
             server_info.append(kvp(key::HOST, config.nodename));
             server_info.append(kvp(key::PORT, 17017)); // TODO: Make the port available.
             server_info.append(kvp(key::VERSION, NOSQL_ZVERSION));
-            server_info.append(kvp(key::GIT_VERSION, MAXSCALE_COMMIT));
+            server_info.append(kvp(key::GIT_VERSION, maxscale_commit()));
 
             doc.append(kvp(key::SERVER_INFO, server_info.extract()));
 

@@ -42,3 +42,8 @@ int maxscale_uptime();
  * @return True if MaxScale is shutting down
  */
 bool maxscale_is_shutting_down();
+
+const char* maxscale_commit();
+const char* maxscale_source();
+const char* maxscale_cmake_flags();
+const char* maxscale_jenkins_build_tag();

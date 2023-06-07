@@ -16,6 +16,7 @@
 
 #include <ctime>
 #include <maxscale/mainworker.hh>
+#include <maxscale/build_details.hh>
 #include "internal/maxscale.hh"
 
 namespace
@@ -65,4 +66,24 @@ bool maxscale_teardown_in_progress()
 void maxscale_start_teardown()
 {
     teardown_in_progress = true;
+}
+
+const char* maxscale_commit()
+{
+    return MAXSCALE_COMMIT;
+}
+
+const char* maxscale_source()
+{
+    return MAXSCALE_SOURCE;
+}
+
+const char* maxscale_cmake_flags()
+{
+    return MAXSCALE_CMAKE_FLAGS;
+}
+
+const char* maxscale_jenkins_build_tag()
+{
+    return MAXSCALE_JENKINS_BUILD_TAG;
 }
