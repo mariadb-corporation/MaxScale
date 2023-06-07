@@ -182,44 +182,48 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
 bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& masked_cmd,
                                            maxbase::Duration time_limit, string* errmsg_out)
 {
+    auto build_cmds = [this, &cmd, &masked_cmd](mxb::Duration time_limit) -> std::tuple<string, string> {
+        string max_stmt_time;
+        if (m_capabilities.max_statement_time)
+        {
+            // The effective statement timeout should be <= connector timeout, but not much greater than
+            // total time limit.
+            int conn_to = -1;
+            MXB_AT_DEBUG(int rv = ) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT, &conn_to);
+            mxb_assert(rv == 0);
+            // Even if time has effectively run out, give an individual query a few seconds to complete.
+            auto time_limit_s = std::max(round_to_seconds(time_limit), 5);
+
+            int eff_stmt_time = -1;
+            if (conn_to <= 0)
+            {
+                eff_stmt_time = time_limit_s;
+            }
+            else if (conn_to <= 4)
+            {
+                // Should not happen with switchover, but perhaps can happen with some other operation.
+                eff_stmt_time = conn_to;
+            }
+            else
+            {
+                // Use a statement timeout a bit smaller than hard connector timeout to ensure it's hit first.
+                eff_stmt_time = std::min(conn_to - 1, time_limit_s);
+            }
+            max_stmt_time = string_printf("SET STATEMENT max_statement_time=%i FOR ", eff_stmt_time);
+        }
+
+        string complete_cmd = max_stmt_time;
+        complete_cmd.append(cmd);
+
+        string complete_masked_cmd;
+        if (!masked_cmd.empty())
+        {
+            complete_masked_cmd.append(max_stmt_time).append(masked_cmd);
+        }
+        return {std::move(complete_cmd), std::move(complete_masked_cmd)};
+    };
+
     StopWatch timer;
-    string max_stmt_time;
-    if (m_capabilities.max_statement_time)
-    {
-        // The effective statement timeout should be <= connector timeout, but not much greater than
-        // total time limit.
-        int conn_to = -1;
-        MXB_AT_DEBUG(int rv = ) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT, &conn_to);
-        mxb_assert(rv == 0);
-        // Even if time has effectively run out, give an individual query a few seconds to complete.
-        auto time_limit_s = std::max(round_to_seconds(time_limit), 5);
-
-        int eff_stmt_time = -1;
-        if (conn_to <= 0)
-        {
-            eff_stmt_time = time_limit_s;
-        }
-        else if (conn_to <= 4)
-        {
-            // Should not happen with switchover, but perhaps can happen with some other operation.
-            eff_stmt_time = conn_to;
-        }
-        else
-        {
-            // Use a statement timeout a bit smaller than hard connector timeout to ensure it's hit first.
-            eff_stmt_time = std::min(conn_to - 1, time_limit_s);
-        }
-        max_stmt_time = string_printf("SET STATEMENT max_statement_time=%i FOR ", eff_stmt_time);
-    }
-
-    string complete_cmd = max_stmt_time;
-    complete_cmd.append(cmd);
-
-    string complete_masked_cmd;
-    if (!masked_cmd.empty())
-    {
-        complete_masked_cmd.append(max_stmt_time).append(masked_cmd);
-    }
 
     // If a query lasts less than 1s, sleep so that at most 1 query/s is sent.
     // This prevents busy-looping when faced with some network errors.
@@ -228,8 +232,10 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
     // Even if time is up, try at least once.
     bool cmd_success = false;
     bool keep_trying = true;
-    while (!cmd_success && keep_trying)
+    do
     {
+        auto time_remaining = time_limit - timer.split();
+        auto [complete_cmd, complete_masked_cmd] = build_cmds(time_remaining);
         StopWatch query_timer;
         string error_msg;
         unsigned int errornum = 0;
@@ -237,11 +243,11 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
         auto query_time = query_timer.lap();
 
         // Check if there is time to retry.
-        Duration time_remaining = time_limit - timer.split();
-        bool non_fatal_connector_err = maxsql::mysql_is_net_error(errornum);
+        time_remaining -= query_time;
+        bool net_error = maxsql::mysql_is_net_error(errornum);
         keep_trying = (time_remaining.count() > 0)
             // Either a connector-c timeout or query was interrupted by max_statement_time.
-            && (non_fatal_connector_err || (!max_stmt_time.empty() && errornum == ER_STATEMENT_TIMEOUT));
+            && (net_error || (m_capabilities.max_statement_time && errornum == ER_STATEMENT_TIMEOUT));
 
         if (!cmd_success)
         {
@@ -249,7 +255,7 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
             {
                 string retrying = string_printf("Retrying with %.1f seconds left.",
                                                 mxb::to_secs(time_remaining));
-                if (non_fatal_connector_err)
+                if (net_error)
                 {
                     MXB_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
                 }
@@ -274,6 +280,7 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
             }
         }
     }
+    while (!cmd_success && keep_trying);
     return cmd_success;
 }
 
