@@ -159,7 +159,7 @@ public:
     void book_server_response(mxs::Target* pTarget, bool final_response) override;
     void book_last_as_complete();
     void reset_server_bookkeeping() override;
-    void append_session_log(const std::string& msg) override;
+    void append_session_log(std::string_view msg) override;
     void dump_session_log() override;
 
     json_t* as_json_resource(const char* host, bool rdns) const;

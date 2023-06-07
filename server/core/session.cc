@@ -1260,9 +1260,9 @@ bool Session::do_restart()
     return ok;
 }
 
-void Session::append_session_log(const std::string& log)
+void Session::append_session_log(std::string_view msg)
 {
-    m_log.push_front(log);
+    m_log.push_front(std::string(msg));
 
     if (m_log.size() >= this_unit.session_trace)
     {

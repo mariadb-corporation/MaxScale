@@ -421,7 +421,7 @@ using mxb_log_context_provider_t = size_t (*)(char* buffer, size_t len);
  *
  * @param message  The message abount to be logged.
  */
-using mxb_in_memory_log_t = void (*)(const std::string& message);
+using mxb_in_memory_log_t = void (*)(std::string_view message);
 
 /**
  * Prototype for conditional logging callback.
