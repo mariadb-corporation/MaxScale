@@ -13,6 +13,7 @@
  */
 
 #include <maxbase/random.hh>
+#include <random>
 
 namespace maxbase
 {
@@ -38,17 +39,5 @@ XorShiftRandom::XorShiftRandom(uint64_t seed)
     {
         s = splitmix(seed);
     }
-}
-
-StdTwisterRandom::StdTwisterRandom(uint64_t seed)
-{
-    std::random_device rdev;
-    m_twister_engine_32.seed(seed ? seed : rdev());
-    m_twister_engine_64.seed(seed ? seed : rdev());
-}
-
-std::mt19937_64& StdTwisterRandom::rnd_engine()
-{
-    return m_twister_engine_64;
 }
 }

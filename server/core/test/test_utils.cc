@@ -94,7 +94,7 @@ int test_checksum_result(std::string_view input, std::string_view expected)
 
 int test_base64()
 {
-    mxb::StdTwisterRandom rnd{123};
+    mxb::XorShiftRandom rnd{123};
     std::vector<uint8_t> data;
 
     std::string hello_world = "Hello world";

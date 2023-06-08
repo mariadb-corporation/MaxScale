@@ -15,7 +15,6 @@
 
 #include <maxbase/ccdefs.hh>
 
-#include <random>
 #include <array>
 
 namespace maxbase
@@ -43,29 +42,6 @@ public:
 private:
     uint64_t rotl(const uint64_t x, int k);
     std::array<uint64_t, 4> m_state;
-};
-
-/**
- * StdTwisterRandom is a class for random number generation using the C++ standard library.
- * Uses the Mersenne Twister algorithms (mt19937 and mt19937_64).
- */
-class StdTwisterRandom
-{
-public:
-    // Non-deterministic if seed == 0
-    explicit StdTwisterRandom(uint64_t seed = 0);
-
-    uint64_t rand();
-    uint32_t rand32();
-    bool     rand_bool();
-    int64_t  b_to_e_co(int64_t b, int64_t e);
-    double   zero_to_one_co();
-
-    // Borrow the mt19937_64 engine for other distributions.
-    std::mt19937_64& rnd_engine();
-private:
-    std::mt19937    m_twister_engine_32;
-    std::mt19937_64 m_twister_engine_64;
 };
 
 // *********************************
@@ -102,7 +78,7 @@ inline uint32_t XorShiftRandom::rand32()
 
 inline bool XorShiftRandom::rand_bool()
 {
-    return std::signbit(int64_t(rand()));
+    return rand() % 2;
 }
 
 inline double XorShiftRandom::zero_to_one_co()
@@ -124,32 +100,5 @@ inline int64_t XorShiftRandom::b_to_e_co(int64_t b, int64_t e)
     // With 64 bits mod bias does not happen in practise (a very, very large e-b would be needed).
     // alternative: return b + int64_t(zero_to_one_exclusive()*(e-b));
     return b + rand() % (e - b);
-}
-
-inline uint64_t StdTwisterRandom::rand()
-{
-    return m_twister_engine_64();
-}
-
-inline uint32_t StdTwisterRandom::rand32()
-{
-    return m_twister_engine_32();
-}
-
-inline bool StdTwisterRandom::rand_bool()
-{
-    return std::signbit(int32_t(rand32()));
-}
-
-inline double StdTwisterRandom::zero_to_one_co()
-{
-    std::uniform_real_distribution<double> zero_to_one {0, 1};
-    return zero_to_one(m_twister_engine_64);
-}
-
-inline int64_t StdTwisterRandom::b_to_e_co(int64_t b, int64_t e)
-{
-    std::uniform_int_distribution<int64_t> dist {b, e - 1};
-    return dist(m_twister_engine_64);
 }
 }
