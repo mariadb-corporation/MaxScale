@@ -198,14 +198,14 @@ export default {
 
             sql += `${quoting(name)}`
             sql += ` ${type}`
-            if (un) sql += ` ${this.tokens.un}`
+            if (un && type !== 'SERIAL') sql += ` ${this.tokens.un}`
             if (zf) sql += ` ${this.tokens.zf}`
             if (charset)
                 sql += ` ${this.tokens.charset} ${charset} ${this.tokens.collate} ${collate}`
             // when column is generated, NN or NULL can not be defined
-            if (generatedType === this.GENERATED_TYPES.NONE)
+            if (generatedType === this.GENERATED_TYPES.NONE && type !== 'SERIAL')
                 sql += ` ${nn ? this.tokens.nn : this.tokens.null}`
-            if (ai) sql += ` ${this.tokens.ai}`
+            if (ai && type !== 'SERIAL') sql += ` ${this.tokens.ai}`
             if (generatedType === this.GENERATED_TYPES.NONE && defOrExp)
                 sql += ` ${this.tokens.default} ${defOrExp}`
             else if (defOrExp) sql += ` ${this.tokens.generated} (${defOrExp}) ${generatedType}`

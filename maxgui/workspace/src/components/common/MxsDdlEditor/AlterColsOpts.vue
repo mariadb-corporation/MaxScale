@@ -455,8 +455,10 @@ export default {
          * @returns {Object} - returns new definitions
          */
         handleSerialType({ definitions, item }) {
+            let defs = definitions
             if (item.value === 'SERIAL') {
-                return this.$helpers.immutableUpdate(definitions, {
+                defs = this.uncheckOtherAI({ definitions: defs, alterColIdx: item.alterColIdx })
+                return this.$helpers.immutableUpdate(defs, {
                     cols: {
                         [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: true },
@@ -467,7 +469,7 @@ export default {
                     },
                 })
             }
-            return definitions
+            return defs
         },
         onChangeType({ definitions, item }) {
             let defs = definitions
