@@ -327,9 +327,9 @@ export default {
                 datasets: [{ data: [], ...this.genDatasetProperties() }],
                 labels: [],
             }
-            const tableData = this.$helpers.getObjectRows({
-                columns: this.$typy(resSet, 'fields').safeArray,
-                rows: this.$typy(resSet, 'data').safeArray,
+            const tableData = this.$helpers.map2dArr({
+                fields: this.$typy(resSet, 'fields').safeArray,
+                arr: this.$typy(resSet, 'data').safeArray,
             })
             if (x && y && axesType.x && axesType.y) {
                 this.sortLinearOrTimeData(tableData)

@@ -80,7 +80,7 @@
                         :items="Object.keys(charsetCollationMap)"
                         :defItem="defDbCharset"
                         :height="28"
-                        @input="onInputCharset"
+                        @input="onSelectCharset"
                     />
                 </v-col>
                 <v-col cols="6" md="4" class="py-0 px-1">
@@ -152,7 +152,7 @@ export default {
         },
     },
     methods: {
-        onInputCharset() {
+        onSelectCharset() {
             // Use default collation of selected charset
             this.tblOpts.collation = this.defCollation
         },

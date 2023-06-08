@@ -55,7 +55,7 @@
 
         <mxs-virtual-scroll-tbl
             :headers="visHeaders"
-            :rows="rows"
+            :rows="cols"
             :itemHeight="40"
             :maxHeight="tableMaxHeight"
             :boundingWidth="boundingWidth"
@@ -71,7 +71,7 @@
                 <div :key="h.text" class="fill-height d-flex align-center">
                     <col-opt-input
                         :ref="`colOptInput-alterColIdx-${alterColIdx}-colOptIdx-${colOptIdx}`"
-                        :initialColOptsData="$typy(initialData, `data['${alterColIdx}']`).safeArray"
+                        :initialColDef="$typy(initialData, `cols['${alterColIdx}']`).safeArray"
                         :data="{
                             field: h.text,
                             value: cell,
@@ -85,12 +85,12 @@
                         :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"
                         @on-input="onCellInput"
-                        @on-input-type="onInputColumnType"
-                        @on-input-PK="onInputPK"
-                        @on-input-NN="onInputNN"
-                        @on-input-AI="onInputAI"
-                        @on-input-generated="onInputGenerated"
-                        @on-input-charset="onInputCharset"
+                        @on-change-type="onChangeType"
+                        @on-toggle-pk="onTogglePk"
+                        @on-toggle-nn="onToggleNn"
+                        @on-toggle-ai="onToggleAi"
+                        @on-select-generated-type="onSelectGeneratedType"
+                        @on-select-charset="onSelectCharset"
                     />
                 </div>
             </template>
@@ -170,7 +170,7 @@ export default {
         tableMaxHeight() {
             return this.height - this.headerHeight
         },
-        colDefinitions: {
+        definitions: {
             get() {
                 return this.value
             },
@@ -234,8 +234,9 @@ export default {
                 [CHARSET]: 'CHARSET',
             }
         },
-        rows() {
-            return this.$typy(this.colDefinitions, 'data').safeArray
+        // column definitions
+        cols() {
+            return this.$typy(this.definitions, 'cols').safeArray
         },
         dataTypes() {
             let items = []
@@ -270,7 +271,7 @@ export default {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.DEF_EXP]
         },
         hasAI() {
-            return this.rows.some(row => row[this.idxOfAI])
+            return this.cols.some(row => row[this.idxOfAI])
         },
     },
     mounted() {
@@ -288,9 +289,9 @@ export default {
         },
         deleteSelectedRows(selectedItems) {
             const { xorWith, isEqual } = this.$helpers.lodash
-            this.colDefinitions = {
-                ...this.colDefinitions,
-                data: xorWith(this.colDefinitions.data, selectedItems, isEqual),
+            this.definitions = {
+                ...this.definitions,
+                cols: xorWith(this.definitions.cols, selectedItems, isEqual),
             }
         },
         addNewCol() {
@@ -316,22 +317,22 @@ export default {
                         break
                 }
             })
-            this.colDefinitions.data.push(row)
+            this.definitions.cols.push(row)
         },
         rowDataToObj(rowData) {
-            const rows = this.$helpers.getObjectRows({
-                columns: this.colAttrs,
-                rows: [rowData],
+            const cols = this.$helpers.map2dArr({
+                fields: this.colAttrs,
+                arr: [rowData],
             })
-            if (rows.length) return rows[0]
+            if (cols.length) return cols[0]
             return []
         },
         /**
          * @param {Object} item - cell data
          */
         onCellInput(item) {
-            this.colDefinitions = this.$helpers.immutableUpdate(this.colDefinitions, {
-                data: {
+            this.definitions = this.$helpers.immutableUpdate(this.definitions, {
+                cols: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
                     },
@@ -340,14 +341,14 @@ export default {
         },
         /**
          * This patches charset and collation at provided alterColIdx
-         * @param {Object} payload.colDefinitions - current colDefinitions
+         * @param {Object} payload.definitions - current definitions
          * @param {Number} payload.alterColIdx - row to be updated
          * @param {String} payload.charset - charset to set.
-         * @returns {Object} - returns new colDefinitions
+         * @returns {Object} - returns new definitions
          */
-        patchCharsetCollation({ colDefinitions, alterColIdx, charset }) {
-            return this.$helpers.immutableUpdate(colDefinitions, {
-                data: {
+        patchCharsetCollation({ definitions, alterColIdx, charset }) {
+            return this.$helpers.immutableUpdate(definitions, {
+                cols: {
                     [alterColIdx]: {
                         [this.idxOfCharset]: { $set: charset },
                         [this.idxOfCollation]: {
@@ -360,30 +361,30 @@ export default {
         },
         /**
          * This handles auto set charset/collation to use utf8
-         * @param {Object} payload.colDefinitions - current colDefinitions
+         * @param {Object} payload.definitions - current definitions
          * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new colDefinitions
+         * @returns {Object} - returns new definitions
          */
-        handleNationalType({ colDefinitions, item }) {
+        handleNationalType({ definitions, item }) {
             if (item.value.includes('NATIONAL'))
                 return this.patchCharsetCollation({
-                    colDefinitions,
+                    definitions,
                     alterColIdx: item.alterColIdx,
                     charset: 'utf8',
                 })
-            return colDefinitions
+            return definitions
         },
         /**
          * This handles auto uncheck UN, ZF, AI checkboxes if chosen type doesn't support
-         * @param {Object} payload.colDefinitions - current colDefinitions
+         * @param {Object} payload.definitions - current definitions
          * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new colDefinitions
+         * @returns {Object} - returns new definitions
          */
-        handleUncheck_UN_ZF_AI({ colDefinitions, item }) {
+        handleUncheck_UN_ZF_AI({ definitions, item }) {
             if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
                 const idxOfZF = this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ZF]
-                return this.$helpers.immutableUpdate(colDefinitions, {
-                    data: {
+                return this.$helpers.immutableUpdate(definitions, {
+                    cols: {
                         [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: false },
                             [idxOfZF]: { $set: false },
@@ -392,23 +393,23 @@ export default {
                     },
                 })
             }
-            return colDefinitions
+            return definitions
         },
         /**
          * This handles set default charset/collation
-         * @param {Object} payload.colDefinitions - current colDefinitions
+         * @param {Object} payload.definitions - current definitions
          * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new colDefinitions
+         * @returns {Object} - returns new definitions
          */
-        handleSetDefCharset({ colDefinitions, item }) {
+        handleSetDefCharset({ definitions, item }) {
             let charset = null,
                 collation = null
             if (check_charset_support(item.value)) {
                 charset = this.defTblCharset
                 collation = this.defTblCollation
             }
-            return this.$helpers.immutableUpdate(colDefinitions, {
-                data: {
+            return this.$helpers.immutableUpdate(definitions, {
+                cols: {
                     [item.alterColIdx]: {
                         [this.idxOfCharset]: { $set: charset },
                         [this.idxOfCollation]: { $set: collation },
@@ -418,17 +419,17 @@ export default {
         },
         /**
          * This handles SERIAL type
-         * @param {Object} payload.colDefinitions - current colDefinitions
+         * @param {Object} payload.definitions - current definitions
          * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new colDefinitions
+         * @returns {Object} - returns new definitions
          */
-        handleSerialType({ colDefinitions, item }) {
+        handleSerialType({ definitions, item }) {
             if (item.value === 'SERIAL') {
                 const colOptInput = this.$refs[
                     `colOptInput-alterColIdx-${item.alterColIdx}-colOptIdx-${this.idxOfUQ}`
                 ][0]
-                return this.$helpers.immutableUpdate(colDefinitions, {
-                    data: {
+                return this.$helpers.immutableUpdate(definitions, {
+                    cols: {
                         [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: true },
                             [this.idxOfNN]: { $set: true },
@@ -440,67 +441,67 @@ export default {
                     },
                 })
             }
-            return colDefinitions
+            return definitions
         },
         /**
          * @param {Object} item - type cell data
          */
-        onInputColumnType(item) {
+        onChangeType(item) {
             // first update type cell
-            let colDefinitions = this.$helpers.immutableUpdate(this.colDefinitions, {
-                data: {
+            let definitions = this.$helpers.immutableUpdate(this.definitions, {
+                cols: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
                     },
                 },
             })
-            colDefinitions = this.handleSetDefCharset({ colDefinitions, item })
-            colDefinitions = this.handleUncheck_UN_ZF_AI({ colDefinitions, item })
-            colDefinitions = this.handleNationalType({ colDefinitions, item })
-            colDefinitions = this.handleSerialType({ colDefinitions, item })
-            this.colDefinitions = colDefinitions
+            definitions = this.handleSetDefCharset({ definitions, item })
+            definitions = this.handleUncheck_UN_ZF_AI({ definitions, item })
+            definitions = this.handleNationalType({ definitions, item })
+            definitions = this.handleSerialType({ definitions, item })
+            this.definitions = definitions
         },
         /**
          * This unchecks the other auto_increment as there
          * can be one table column has this.
-         * @param {Object} payload.colDefinitions - current colDefinitions
+         * @param {Object} payload.definitions - current definitions
          * @param {Number} payload.alterColIdx - alterColIdx to be excluded
-         * @returns {Object} - returns new colDefinitions
+         * @returns {Object} - returns new definitions
          */
-        uncheckOtherAI({ colDefinitions, alterColIdx }) {
+        uncheckOtherAI({ definitions, alterColIdx }) {
             let idx
-            for (const [i, row] of this.rows.entries())
-                if (row[this.idxOfAI] && i !== alterColIdx) {
+            for (const [i, col] of this.cols.entries())
+                if (col[this.idxOfAI] && i !== alterColIdx) {
                     idx = i
                     break
                 }
             if (idx >= 0)
-                colDefinitions = this.$helpers.immutableUpdate(colDefinitions, {
-                    data: {
+                definitions = this.$helpers.immutableUpdate(definitions, {
+                    cols: {
                         [idx]: { [this.idxOfAI]: { $set: false } },
                     },
                 })
-            return colDefinitions
+            return definitions
         },
         /**
          * @param {number} - index of the column
          * @returns {string} - initial value of DEF_EXP attr
          */
         getInitialDefaultExp(colIdx) {
-            return this.$typy(this.initialData, `data['${colIdx}']['${this.idxOfDefAndExp}']`)
+            return this.$typy(this.initialData, `cols['${colIdx}']['${this.idxOfDefAndExp}']`)
                 .safeString
         },
         /**
          * This updates NN cell and `default` cell.
-         * @param {Object} payload.colDefinitions - current colDefinitions
+         * @param {Object} payload.definitions - current definitions
          * @param {Number} payload.alterColIdx - alterColIdx to be updated
          * @param {boolean} payload.isNN - is NOT NULL
          * @param {string} payload.valueOfDefault - value of default cell
-         * @returns {Object} - returns new colDefinitions
+         * @returns {Object} - returns new definitions
          */
-        notNullSideEffect({ colDefinitions, alterColIdx, isNN }) {
-            return this.$helpers.immutableUpdate(colDefinitions, {
-                data: {
+        notNullSideEffect({ definitions, alterColIdx, isNN }) {
+            return this.$helpers.immutableUpdate(definitions, {
+                cols: {
                     [alterColIdx]: {
                         [this.idxOfNN]: { $set: isNN },
                         [this.idxOfDefAndExp]: {
@@ -513,24 +514,24 @@ export default {
         /**
          * @param {Object} item - AI cell data
          */
-        onInputAI(item) {
-            let colDefinitions = this.colDefinitions
+        onToggleAi(item) {
+            let definitions = this.definitions
             if (this.hasAI)
-                colDefinitions = this.uncheckOtherAI({
-                    colDefinitions,
+                definitions = this.uncheckOtherAI({
+                    definitions,
                     alterColIdx: item.alterColIdx,
                 })
             // update AI and generated cells
-            colDefinitions = this.$helpers.immutableUpdate(colDefinitions, {
-                data: {
+            definitions = this.$helpers.immutableUpdate(definitions, {
+                cols: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
                         [this.idxOfGenType]: { $set: this.GENERATED_TYPES.NONE },
                     },
                 },
             })
-            this.colDefinitions = this.notNullSideEffect({
-                colDefinitions,
+            this.definitions = this.notNullSideEffect({
+                definitions,
                 alterColIdx: item.alterColIdx,
                 isNN: true,
             })
@@ -538,11 +539,11 @@ export default {
         /**
          * @param {Object} item - G cell data
          */
-        onInputGenerated(item) {
-            let colDefinitions = this.colDefinitions
+        onSelectGeneratedType(item) {
+            let definitions = this.definitions
             // update G and its dependencies cell value
-            colDefinitions = this.$helpers.immutableUpdate(colDefinitions, {
-                data: {
+            definitions = this.$helpers.immutableUpdate(definitions, {
+                cols: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
                         [this.idxOfAI]: { $set: false },
@@ -550,14 +551,14 @@ export default {
                     },
                 },
             })
-            this.colDefinitions = colDefinitions
+            this.definitions = definitions
         },
         /**
          * @param {Object} item - charset cell data
          */
-        onInputCharset(item) {
-            this.colDefinitions = this.patchCharsetCollation({
-                colDefinitions: this.colDefinitions,
+        onSelectCharset(item) {
+            this.definitions = this.patchCharsetCollation({
+                definitions: this.definitions,
                 alterColIdx: item.alterColIdx,
                 charset: item.value,
             })
@@ -565,18 +566,18 @@ export default {
         /**
          * @param {Object} item - PK cell data
          */
-        onInputPK(item) {
+        onTogglePk(item) {
             // update PK and UQ value
-            let colDefinitions = this.$helpers.immutableUpdate(this.colDefinitions, {
-                data: {
+            let definitions = this.$helpers.immutableUpdate(this.definitions, {
+                cols: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
                         [this.idxOfUQ]: { $set: '' },
                     },
                 },
             })
-            this.colDefinitions = this.notNullSideEffect({
-                colDefinitions,
+            this.definitions = this.notNullSideEffect({
+                definitions,
                 alterColIdx: item.alterColIdx,
                 isNN: true,
             })
@@ -584,9 +585,9 @@ export default {
         /**
          * @param {Object} item - NN cell data
          */
-        onInputNN(item) {
-            this.colDefinitions = this.notNullSideEffect({
-                colDefinitions: this.colDefinitions,
+        onToggleNn(item) {
+            this.definitions = this.notNullSideEffect({
+                definitions: this.definitions,
                 alterColIdx: item.alterColIdx,
                 isNN: item.value,
             })

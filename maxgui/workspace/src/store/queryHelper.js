@@ -19,11 +19,12 @@ import {
     SYS_SCHEMAS,
     CREATE_TBL_TOKENS as tokens,
     COL_ATTRS,
+    COL_ATTR_IDX_MAP,
     GENERATED_TYPES,
 } from '@wsSrc/store/config'
 import { lodash, to, dynamicColors, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { getObjectRows, quotingIdentifier } from '@wsSrc/utils/helpers'
+import { map2dArr, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import TableParser from '@wsSrc/utils/TableParser'
@@ -237,7 +238,7 @@ function genNodeData({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
     const { fields = [], data = [] } = queryResult
     // fields return could be in lowercase if connection is via ODBC.
     const standardizedFields = fields.map(f => f.toUpperCase())
-    const rows = getObjectRows({ columns: standardizedFields, rows: data })
+    const rows = map2dArr({ fields: standardizedFields, arr: data })
     const nameKey = NODE_NAME_KEYS[type]
     return rows.reduce(
         (acc, row) => {
@@ -673,11 +674,19 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
             name: parsedTable.name,
         },
         definitions: {
-            data: colsTransformed.map(col => [...Object.values(col)]),
+            cols: colsTransformed.map(col => [...Object.values(col)]),
+            keys,
         },
     }
 }
 
+function getPKColNames(colsData) {
+    let names = []
+    colsData.forEach(row => {
+        if (row[COL_ATTR_IDX_MAP[COL_ATTRS.PK]]) names.push(row[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]])
+    })
+    return names
+}
 export default {
     getSchemaName,
     getTblName,
@@ -696,4 +705,5 @@ export default {
     findKeyTypeByColName,
     getIdxNameByColName,
     tableParserTransformer,
+    getPKColNames,
 }

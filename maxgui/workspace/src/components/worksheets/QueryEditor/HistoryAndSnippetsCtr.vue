@@ -396,17 +396,17 @@ export default {
             )
             const newMaxtrices = xorWith(this.rows, targetMatrices, isEqual)
             // Convert to array of objects
-            const newData = this.$helpers.getObjectRows({
-                columns: this.headers.map(h => h.text),
-                rows: newMaxtrices,
+            const newData = this.$helpers.map2dArr({
+                fields: this.headers.map(h => h.text),
+                arr: newMaxtrices,
             })
 
             this[`SET_QUERY_${this.activeView}`](newData)
         },
         txtOptHandler({ opt, data }) {
-            let rowData = this.$helpers.getObjectRows({
-                columns: this.headers.map(h => h.text),
-                rows: [data.row.filter((_, i) => i !== 0)], // Remove # col
+            let rowData = this.$helpers.map2dArr({
+                fields: this.headers.map(h => h.text),
+                arr: [data.row.filter((_, i) => i !== 0)], // Remove # col
             })
             let sql, name
             switch (this.activeView) {

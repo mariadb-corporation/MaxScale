@@ -37,6 +37,7 @@
 import { mapState } from 'vuex'
 import DdlEditorFormCtr from '@wsSrc/components/common/MxsDdlEditor/DdlEditorFormCtr.vue'
 import DdlEditorToolbar from '@wsSrc/components/common/MxsDdlEditor/DdlEditorToolbar.vue'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'mxs-ddl-editor',
@@ -58,7 +59,6 @@ export default {
     computed: {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
             tokens: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
@@ -86,22 +86,19 @@ export default {
             )
         },
         isColsOptsChanged() {
-            return !this.$helpers.lodash.isEqual(
-                this.$typy(this.data, 'definitions.data').safeArray,
-                this.$typy(this.stagingData, 'definitions.data').safeArray
-            )
+            return !this.$helpers.lodash.isEqual(this.initialColsData, this.currColsData)
         },
         currColsData() {
-            return this.$typy(this.stagingData, 'definitions.data').safeArray
+            return this.$typy(this.stagingData, 'definitions.cols').safeArray
         },
         initialColsData() {
-            return this.$typy(this.data, 'definitions.data').safeArray
+            return this.$typy(this.data, 'definitions.cols').safeArray
         },
         currPkCols() {
-            return this.getPKCols(this.currColsData)
+            return queryHelper.getPKColNames(this.currColsData)
         },
         initialPkCols() {
-            return this.getPKCols(this.initialColsData)
+            return queryHelper.getPKColNames(this.initialColsData)
         },
         tableOptsDataDiff() {
             return this.$helpers.deepDiff(this.data.options, this.stagingData.options)
@@ -109,21 +106,14 @@ export default {
         colAttrs() {
             return Object.values(this.COL_ATTRS)
         },
-        idxOfPk() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.PK]
+        isDroppingPK() {
+            return this.initialPkCols.length > 0 && this.currPkCols.length === 0
         },
-        idxOfColumnName() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]
+        isAddingPK() {
+            return this.currPkCols.length > 0
         },
     },
     methods: {
-        getPKCols(colsData) {
-            let cols = []
-            colsData.forEach(row => {
-                if (row[this.idxOfPk]) cols.push(row[this.idxOfColumnName])
-            })
-            return cols
-        },
         /**
          * @param {Boolean} payload.ignore - ignore adding comma
          * @returns {String} - return ', ' or ''
@@ -267,11 +257,9 @@ export default {
             let sql = ''
             const { quotingIdentifier: quoting } = this.$helpers
             const dropPKSQL = `${this.tokens.drop} ${this.tokens.primaryKey}`
-            const isDroppingPK = this.initialPkCols.length > 0 && this.currPkCols.length === 0
-            const isAddingPK = this.currPkCols.length > 0
-            if (isDroppingPK) {
+            if (this.isDroppingPK) {
                 sql += dropPKSQL
-            } else if (isAddingPK) {
+            } else if (this.isAddingPK) {
                 const keys = this.currPkCols.map(col => quoting(col)).join(', ')
                 const addPKsql = `${this.tokens.add} ${this.tokens.primaryKey} (${keys})`
                 if (this.initialPkCols.length > 0) sql += `${dropPKSQL}, ${addPKsql}`
@@ -349,16 +337,16 @@ export default {
                 pkSQL = ''
             const {
                 arrOfObjsDiff,
-                getObjectRows,
+                map2dArr,
                 lodash: { isEqual },
             } = this.$helpers
-            const base = getObjectRows({
-                columns: this.colAttrs,
-                rows: this.$typy(this.data, 'definitions.data').safeArray,
+            const base = map2dArr({
+                fields: this.colAttrs,
+                arr: this.initialColsData,
             })
-            const newData = getObjectRows({
-                columns: this.colAttrs,
-                rows: this.$typy(this.stagingData, 'definitions.data').safeArray,
+            const newData = map2dArr({
+                fields: this.colAttrs,
+                arr: this.currColsData,
             })
             const diff = arrOfObjsDiff({ base, newArr: newData, idField: ID })
             const removedCols = diff.get('removed')

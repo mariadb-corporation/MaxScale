@@ -19,7 +19,7 @@
             <v-slide-x-transition>
                 <alter-cols-opts
                     v-if="activeSpec === DDL_ALTER_SPECS.COLUMNS"
-                    v-model="colDefinitions"
+                    v-model="definitions"
                     :charsetCollationMap="charset_collation_map"
                     :initialData="$typy(initialData, 'definitions').safeObjectOrEmpty"
                     :height="tabDim.height"
@@ -87,7 +87,7 @@ export default {
                 this.$emit('input', { ...this.formData, options: v })
             },
         },
-        colDefinitions: {
+        definitions: {
             get() {
                 return this.$typy(this.formData, 'definitions').safeObjectOrEmpty
             },

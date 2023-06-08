@@ -44,15 +44,15 @@ export function unquoteIdentifier(identifier) {
 }
 
 /**
- * @param {Array} payload.columns table fields
- * @param {Array} payload.rows table rows
+ * @param {Array} payload.fields - fields
+ * @param {Array} payload.rows - 2d array
  * @return {Array} Return object rows
  */
-export function getObjectRows({ columns, rows }) {
-    return rows.map(row => {
+export function map2dArr({ fields, arr }) {
+    return arr.map(item => {
         const obj = {}
-        columns.forEach((c, index) => {
-            obj[c] = row[index]
+        fields.forEach((c, index) => {
+            obj[c] = item[index]
         })
         return obj
     })

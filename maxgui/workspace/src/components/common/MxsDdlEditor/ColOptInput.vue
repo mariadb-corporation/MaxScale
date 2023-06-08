@@ -100,15 +100,15 @@
  * Events
  * Below events are used to handle "coupled case",
  * e.g. When type changes its value to a data type
- * that supports charset/collation, `on-input-type`
+ * that supports charset/collation, `on-change-type`
  * will be used to update charset/collation input to fill
  * data with default table charset/collation.
- * on-input-type: (cell)
- * on-input-charset: (cell)
- * on-input-AI: (cell)
- * on-input-PK: (cell)
- * on-input-NN: (cell)
- * on-input-generated: (cell)
+ * on-change-type: (cell)
+ * on-select-charset: (cell)
+ * on-toggle-ai: (cell)
+ * on-toggle-pk: (cell)
+ * on-toggle-nn: (cell)
+ * on-select-generated-type: (cell)
  * Event for normal cell
  * on-input: (cell)
  */
@@ -131,7 +131,7 @@ export default {
         defTblCharset: { type: String, default: '' },
         defTblCollation: { type: String, default: '' },
         dataTypes: { type: Array, default: () => [] },
-        initialColOptsData: { type: Array, required: true },
+        initialColDef: { type: Array, required: true },
     },
     data() {
         return {
@@ -167,7 +167,7 @@ export default {
         },
         uniqueIdxName() {
             // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
-            const uqIdxName = this.$typy(this.initialColOptsData, `['${this.data.colOptIdx}']`)
+            const uqIdxName = this.$typy(this.initialColDef, `['${this.data.colOptIdx}']`)
                 .safeString
             if (uqIdxName) return uqIdxName
             return `${this.$typy(this.data, `rowObj.${this.COL_ATTRS.NAME}`).safeString}_UNIQUE`
@@ -202,6 +202,7 @@ export default {
         },
     },
     watch: {
+        // needed for side-effect changed by the parent component
         data: {
             deep: true,
             handler(v, oV) {
@@ -284,22 +285,22 @@ export default {
                 const { TYPE, PK, NN, UQ, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
                 switch (this.input.type) {
                     case TYPE:
-                        this.$emit('on-input-type', newInput)
+                        this.$emit('on-change-type', newInput)
                         break
                     case CHARSET:
-                        this.$emit('on-input-charset', newInput)
+                        this.$emit('on-select-charset', newInput)
                         break
                     case 'enum':
                         if (newInput.field === GENERATED_TYPE)
-                            this.$emit('on-input-generated', newInput)
+                            this.$emit('on-select-generated-type', newInput)
                         else this.$emit('on-input', newInput)
                         break
                     case 'bool': {
                         const field = newInput.field
                         if (field === UQ) newInput.value = newInput.value ? this.uniqueIdxName : ''
-                        if (field === AI) this.$emit('on-input-AI', newInput)
-                        else if (field === PK) this.$emit('on-input-PK', newInput)
-                        else if (field === NN) this.$emit('on-input-NN', newInput)
+                        if (field === AI) this.$emit('on-toggle-ai', newInput)
+                        else if (field === PK) this.$emit('on-toggle-pk', newInput)
+                        else if (field === NN) this.$emit('on-toggle-nn', newInput)
                         else this.$emit('on-input', newInput)
                         break
                     }
