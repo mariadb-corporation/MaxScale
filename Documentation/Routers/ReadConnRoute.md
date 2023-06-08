@@ -69,12 +69,12 @@ By default `master_accept_reads=true`.
 ### `max_replication_lag`
 
 The maximum acceptable replication lag. The value is in seconds and is specified
-as documented [here](../Getting-Started/Configuration-Guide.md#durations). This
-feature is disabled by default.
+as documented [here](../Getting-Started/Configuration-Guide.md#durations). The
+default value is `0s`, which means that the lag is ignored.
 
 The replication lag of a server must be less than the configured value in order
 for it to be used for routing. To configure the router to not allow any lag, use
-`max_slave_replication_lag=1`.
+the smallest duration larger than 0, that is, `max_replication_lag=1s`.
 
 ## Examples
 
