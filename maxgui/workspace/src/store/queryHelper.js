@@ -592,12 +592,18 @@ function findKeyTypeByColName({ keys, colName }) {
 /**
  * @param {array} keys - parsed keys from DDL of a table
  * @param {string} keyType - type of the key
- * @param {string} colName - column name to be looked up
+ * @param {array} colNames - column names to be looked up
  * @returns {string} constraint name of the key
  */
-function getIdxNameByColName({ keys, keyType, colName }) {
+function getIdxNameByColNames({ keys, keyType, colNames }) {
     for (const key of typy(keys, `[${keyType}]`).safeArray) {
-        if (key.index_cols.some(item => item.name === colName)) return key.name
+        if (
+            lodash.isEqual(
+                key.index_cols.map(col => col.name),
+                colNames
+            )
+        )
+            return key.name
     }
 }
 
@@ -622,13 +628,11 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
         let type = col.data_type
         if (col.data_type_size) type += `(${col.data_type_size})`
         const keyType = findKeyTypeByColName({ keys, colName: col.name })
-        let uq = ''
+        let uq = false
         if (keyType === tokens.uniqueKey) {
-            uq = getIdxNameByColName({
-                keys,
-                keyType,
-                colName: col.name,
-            })
+            uq = Boolean(
+                getIdxNameByColNames({ keys, keyType: tokens.uniqueKey, colNames: [col.name] })
+            )
         }
         const {
             ID,
@@ -650,11 +654,11 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
         return {
             [ID]: uuidv1(),
             [NAME]: col.name,
-            [TYPE]: type,
+            [TYPE]: type.toUpperCase(),
             [PK]: keyType === tokens.primaryKey,
             [NN]: col.is_nn,
             [UN]: col.is_un,
-            [UQ]: uq, //TODO: refactor uq input to accept boolean
+            [UQ]: uq,
             [ZF]: col.is_zf,
             [AI]: col.is_ai,
             [GENERATED_TYPE]: col.generated_type ? col.generated_type : GENERATED_TYPES.NONE,
@@ -687,6 +691,12 @@ function getPKColNames(colsData) {
     })
     return names
 }
+/**
+ * @param {string} colName - column name
+ * @returns {string} unique key name
+ */
+const genUqName = colName => `${colName}_UNIQUE`
+
 export default {
     getSchemaName,
     getTblName,
@@ -703,7 +713,8 @@ export default {
     genErdData,
     queryAndParseDDL,
     findKeyTypeByColName,
-    getIdxNameByColName,
+    getIdxNameByColNames,
     tableParserTransformer,
     getPKColNames,
+    genUqName,
 }

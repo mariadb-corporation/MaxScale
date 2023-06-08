@@ -1,15 +1,15 @@
 <template>
     <v-combobox
-        v-if="input.type === COL_ATTRS.TYPE"
-        v-model="input.value"
+        v-if="data.field === COL_ATTRS.TYPE"
+        v-model="inputValue"
         class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
-        :class="input.type"
+        :class="data.field"
         :menu-props="{
             contentClass: 'v-select--menu-mariadb',
             bottom: true,
             offsetY: true,
         }"
-        :items="input.enum_values"
+        :items="dataTypes"
         item-text="value"
         item-value="value"
         outlined
@@ -17,60 +17,55 @@
         :height="height"
         hide-details="auto"
         :return-object="false"
-        @input="onInput"
     />
     <v-select
-        v-else-if="input.type === 'enum'"
-        v-model="input.value"
+        v-else-if="data.field === COL_ATTRS.GENERATED_TYPE"
+        v-model="inputValue"
         class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
-        :class="input.type"
+        :class="data.field"
         :menu-props="{
             contentClass: 'v-select--menu-mariadb',
             bottom: true,
             offsetY: true,
         }"
-        :items="input.enum_values"
+        :items="Object.values(GENERATED_TYPES)"
         outlined
         dense
         :height="height"
         hide-details="auto"
         :disabled="isDisabled"
-        @input="onInput"
     />
     <v-checkbox
-        v-else-if="input.type === 'bool'"
-        v-model="input.value"
+        v-else-if="$typy(inputValue).isBoolean"
+        v-model="inputValue"
         dense
         class="v-checkbox--mariadb-xs ma-0 pa-0"
         primary
         hide-details
         :disabled="isDisabled"
-        @change="onInput"
     />
     <charset-collate-select
-        v-else-if="input.type === COL_ATTRS.CHARSET || input.type === COL_ATTRS.COLLATE"
-        v-model="input.value"
+        v-else-if="data.field === COL_ATTRS.CHARSET || data.field === COL_ATTRS.COLLATE"
+        v-model="inputValue"
         :items="
-            input.type === COL_ATTRS.CHARSET
+            data.field === COL_ATTRS.CHARSET
                 ? Object.keys(charsetCollationMap)
                 : $typy(charsetCollationMap, `[${columnCharset}].collations`).safeArray
         "
-        :defItem="input.type === COL_ATTRS.CHARSET ? defTblCharset : defTblCollation"
+        :defItem="data.field === COL_ATTRS.CHARSET ? defTblCharset : defTblCollation"
         :disabled="isDisabled"
         :height="height"
-        @input="onInput"
     />
     <v-text-field
         v-else
-        v-model="input.value"
+        v-model="inputValue"
         class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
-        :class="`${input.type}`"
+        :class="`${data.field}`"
         single-line
         outlined
         dense
         :height="height"
         hide-details="auto"
-        @input="onInput"
     />
 </template>
 
@@ -97,20 +92,6 @@
  *  alterColIdx?: number, index of the column being altered
  *  colOptIdx?: number, index of the column option. e.g. index of PK, NN, UN ,...
  * }
- * Events
- * Below events are used to handle "coupled case",
- * e.g. When type changes its value to a data type
- * that supports charset/collation, `on-change-type`
- * will be used to update charset/collation input to fill
- * data with default table charset/collation.
- * on-change-type: (cell)
- * on-select-charset: (cell)
- * on-toggle-ai: (cell)
- * on-toggle-pk: (cell)
- * on-toggle-nn: (cell)
- * on-select-generated-type: (cell)
- * Event for normal cell
- * on-input: (cell)
  */
 import { mapState } from 'vuex'
 import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
@@ -131,12 +112,6 @@ export default {
         defTblCharset: { type: String, default: '' },
         defTblCollation: { type: String, default: '' },
         dataTypes: { type: Array, default: () => [] },
-        initialColDef: { type: Array, required: true },
-    },
-    data() {
-        return {
-            input: {},
-        }
     },
     computed: {
         ...mapState({
@@ -144,37 +119,27 @@ export default {
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
-        hasChanged() {
-            return !this.$helpers.lodash.isEqual(this.input, this.data)
-        },
         columnCharset() {
-            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.CHARSET}`).safeString
+            return this.$typy(this.data, `rowObj.${this.COL_ATTRS.CHARSET}`).safeString
         },
         columnType() {
-            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.TYPE}`).safeString
+            return this.$typy(this.data, `rowObj.${this.COL_ATTRS.TYPE}`).safeString
         },
         isPK() {
-            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.PK}`).safeBoolean
+            return this.$typy(this.data, `rowObj.${this.COL_ATTRS.PK}`).safeBoolean
         },
         isGenerated() {
             return (
-                this.$typy(this.input, `rowObj.${this.COL_ATTRS.GENERATED_TYPE}`).safeString !==
+                this.$typy(this.data, `rowObj.${this.COL_ATTRS.GENERATED_TYPE}`).safeString !==
                 this.GENERATED_TYPES.NONE
             )
         },
         isAI() {
-            return this.$typy(this.input, `rowObj.${this.COL_ATTRS.AI}`).safeBoolean
-        },
-        uniqueIdxName() {
-            // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
-            const uqIdxName = this.$typy(this.initialColDef, `['${this.data.colOptIdx}']`)
-                .safeString
-            if (uqIdxName) return uqIdxName
-            return `${this.$typy(this.data, `rowObj.${this.COL_ATTRS.NAME}`).safeString}_UNIQUE`
+            return this.$typy(this.data, `rowObj.${this.COL_ATTRS.AI}`).safeBoolean
         },
         isDisabled() {
             const { PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE, CHARSET, COLLATE } = this.COL_ATTRS
-            switch (this.$typy(this.input, 'field').safeString) {
+            switch (this.$typy(this.data, 'field').safeString) {
                 case CHARSET:
                 case COLLATE:
                     if (this.columnCharset === 'utf8') return true
@@ -200,115 +165,13 @@ export default {
                     return false
             }
         },
-    },
-    watch: {
-        // needed for side-effect changed by the parent component
-        data: {
-            deep: true,
-            handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.initInputType(v)
+        inputValue: {
+            get() {
+                return this.data.value
             },
-        },
-    },
-    created() {
-        this.initInputType(this.data)
-    },
-    methods: {
-        initInputType(data) {
-            this.input = this.handleAddType(data)
-        },
-        /**
-         * This function handles adding type and necessary attribute to input
-         * base on field name
-         * @param {Object} data - initial input data
-         * @returns {Object} - returns copied of data with necessary properties to render
-         * appropriate input type
-         */
-        handleAddType(data) {
-            const input = this.$helpers.lodash.cloneDeep(data)
-            const {
-                NAME,
-                TYPE,
-                PK,
-                NN,
-                UN,
-                UQ,
-                ZF,
-                AI,
-                GENERATED_TYPE,
-                CHARSET,
-                COLLATE,
-            } = this.COL_ATTRS
-            switch (input.field) {
-                case NAME:
-                    input.type = 'string'
-                    break
-                case TYPE:
-                    input.type = input.field
-                    input.enum_values = this.dataTypes
-                    break
-                case PK:
-                case NN:
-                case UN:
-                case ZF:
-                case AI:
-                    input.type = 'bool'
-                    break
-                case UQ:
-                    input.type = 'bool'
-                    input.value = Boolean(input.value)
-                    break
-                case GENERATED_TYPE:
-                    input.type = 'enum'
-                    input.enum_values = Object.values(this.GENERATED_TYPES)
-                    break
-                case CHARSET:
-                case COLLATE:
-                    input.type = input.field
-                    break
-            }
-            return input
-        },
-        /**
-         * This function basically undo what handleAddType did
-         * @returns {Object} - returns input object with same properties as data props
-         */
-        handleRemoveType() {
-            const newInput = this.$helpers.lodash.cloneDeep(this.input)
-            delete newInput.type
-            delete newInput.enum_values
-            return newInput
-        },
-        onInput() {
-            if (this.hasChanged) {
-                let newInput = this.handleRemoveType()
-                const { TYPE, PK, NN, UQ, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
-                switch (this.input.type) {
-                    case TYPE:
-                        this.$emit('on-change-type', newInput)
-                        break
-                    case CHARSET:
-                        this.$emit('on-select-charset', newInput)
-                        break
-                    case 'enum':
-                        if (newInput.field === GENERATED_TYPE)
-                            this.$emit('on-select-generated-type', newInput)
-                        else this.$emit('on-input', newInput)
-                        break
-                    case 'bool': {
-                        const field = newInput.field
-                        if (field === UQ) newInput.value = newInput.value ? this.uniqueIdxName : ''
-                        if (field === AI) this.$emit('on-toggle-ai', newInput)
-                        else if (field === PK) this.$emit('on-toggle-pk', newInput)
-                        else if (field === NN) this.$emit('on-toggle-nn', newInput)
-                        else this.$emit('on-input', newInput)
-                        break
-                    }
-                    default:
-                        this.$emit('on-input', newInput)
-                        break
-                }
-            }
+            set(v) {
+                this.$emit('on-input', { ...this.data, value: v })
+            },
         },
     },
 }

@@ -70,8 +70,6 @@
             >
                 <div :key="h.text" class="fill-height d-flex align-center">
                     <col-opt-input
-                        :ref="`colOptInput-alterColIdx-${alterColIdx}-colOptIdx-${colOptIdx}`"
-                        :initialColDef="$typy(initialData, `cols['${alterColIdx}']`).safeArray"
                         :data="{
                             field: h.text,
                             value: cell,
@@ -84,13 +82,7 @@
                         :defTblCharset="defTblCharset"
                         :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"
-                        @on-input="onCellInput"
-                        @on-change-type="onChangeType"
-                        @on-toggle-pk="onTogglePk"
-                        @on-toggle-nn="onToggleNn"
-                        @on-toggle-ai="onToggleAi"
-                        @on-select-generated-type="onSelectGeneratedType"
-                        @on-select-charset="onSelectCharset"
+                        @on-input="onChangeInput"
                     />
                 </div>
             </template>
@@ -296,7 +288,7 @@ export default {
         },
         addNewCol() {
             let row = []
-            const { ID, PK, NN, UN, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
+            const { ID, PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
             this.headers.forEach(h => {
                 switch (h.text) {
                     case ID:
@@ -305,6 +297,7 @@ export default {
                     case PK:
                     case NN:
                     case UN:
+                    case UQ:
                     case ZF:
                     case AI:
                         row.push(false)
@@ -330,14 +323,52 @@ export default {
         /**
          * @param {Object} item - cell data
          */
-        onCellInput(item) {
-            this.definitions = this.$helpers.immutableUpdate(this.definitions, {
+        onChangeInput(item) {
+            let definitions = this.$helpers.immutableUpdate(this.definitions, {
                 cols: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
                     },
                 },
             })
+            const { TYPE, PK, NN, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
+            switch (item.field) {
+                case TYPE:
+                    definitions = this.onChangeType({ definitions, item })
+                    break
+                case PK:
+                    definitions = this.onTogglePk({ definitions, item })
+                    //TODO: Add side-effect function to update pk, uq in keys object
+                    break
+                case NN:
+                    definitions = this.notNullSideEffect({
+                        definitions,
+                        alterColIdx: item.alterColIdx,
+                        isNN: item.value,
+                    })
+                    break
+                case AI:
+                    definitions = this.onToggleAi({ definitions, item })
+                    break
+                case GENERATED_TYPE:
+                    definitions = this.$helpers.immutableUpdate(definitions, {
+                        cols: {
+                            [item.alterColIdx]: {
+                                [this.idxOfAI]: { $set: false },
+                                [this.idxOfNN]: { $set: false },
+                            },
+                        },
+                    })
+                    break
+                case CHARSET:
+                    definitions = this.patchCharsetCollation({
+                        definitions,
+                        alterColIdx: item.alterColIdx,
+                        charset: item.value,
+                    })
+                    break
+            }
+            this.definitions = definitions
         },
         /**
          * This patches charset and collation at provided alterColIdx
@@ -425,41 +456,26 @@ export default {
          */
         handleSerialType({ definitions, item }) {
             if (item.value === 'SERIAL') {
-                const colOptInput = this.$refs[
-                    `colOptInput-alterColIdx-${item.alterColIdx}-colOptIdx-${this.idxOfUQ}`
-                ][0]
                 return this.$helpers.immutableUpdate(definitions, {
                     cols: {
                         [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: true },
                             [this.idxOfNN]: { $set: true },
                             [this.idxOfAI]: { $set: true },
-                            [this.idxOfUQ]: {
-                                $set: colOptInput.uniqueIdxName,
-                            },
+                            [this.idxOfUQ]: { $set: true },
                         },
                     },
                 })
             }
             return definitions
         },
-        /**
-         * @param {Object} item - type cell data
-         */
-        onChangeType(item) {
-            // first update type cell
-            let definitions = this.$helpers.immutableUpdate(this.definitions, {
-                cols: {
-                    [item.alterColIdx]: {
-                        [item.colOptIdx]: { $set: item.value },
-                    },
-                },
-            })
-            definitions = this.handleSetDefCharset({ definitions, item })
-            definitions = this.handleUncheck_UN_ZF_AI({ definitions, item })
-            definitions = this.handleNationalType({ definitions, item })
-            definitions = this.handleSerialType({ definitions, item })
-            this.definitions = definitions
+        onChangeType({ definitions, item }) {
+            let defs = definitions
+            defs = this.handleSetDefCharset({ definitions, item })
+            defs = this.handleUncheck_UN_ZF_AI({ definitions, item })
+            defs = this.handleNationalType({ definitions, item })
+            defs = this.handleSerialType({ definitions, item })
+            return defs
         },
         /**
          * This unchecks the other auto_increment as there
@@ -511,86 +527,37 @@ export default {
                 },
             })
         },
-        /**
-         * @param {Object} item - AI cell data
-         */
-        onToggleAi(item) {
-            let definitions = this.definitions
+        onToggleAi({ definitions, item }) {
+            let defs = definitions
             if (this.hasAI)
-                definitions = this.uncheckOtherAI({
-                    definitions,
-                    alterColIdx: item.alterColIdx,
-                })
-            // update AI and generated cells
-            definitions = this.$helpers.immutableUpdate(definitions, {
+                defs = this.uncheckOtherAI({ definitions: defs, alterColIdx: item.alterColIdx })
+            // update generated cells
+            defs = this.$helpers.immutableUpdate(defs, {
                 cols: {
                     [item.alterColIdx]: {
-                        [item.colOptIdx]: { $set: item.value },
                         [this.idxOfGenType]: { $set: this.GENERATED_TYPES.NONE },
                     },
                 },
             })
-            this.definitions = this.notNullSideEffect({
-                definitions,
+
+            return this.notNullSideEffect({
+                definitions: defs,
                 alterColIdx: item.alterColIdx,
                 isNN: true,
             })
         },
-        /**
-         * @param {Object} item - G cell data
-         */
-        onSelectGeneratedType(item) {
-            let definitions = this.definitions
-            // update G and its dependencies cell value
-            definitions = this.$helpers.immutableUpdate(definitions, {
-                cols: {
-                    [item.alterColIdx]: {
-                        [item.colOptIdx]: { $set: item.value },
-                        [this.idxOfAI]: { $set: false },
-                        [this.idxOfNN]: { $set: false },
-                    },
-                },
-            })
-            this.definitions = definitions
-        },
-        /**
-         * @param {Object} item - charset cell data
-         */
-        onSelectCharset(item) {
-            this.definitions = this.patchCharsetCollation({
-                definitions: this.definitions,
-                alterColIdx: item.alterColIdx,
-                charset: item.value,
-            })
-        },
-        /**
-         * @param {Object} item - PK cell data
-         */
-        onTogglePk(item) {
+        onTogglePk({ definitions, item }) {
+            let defs = definitions
             // update PK and UQ value
-            let definitions = this.$helpers.immutableUpdate(this.definitions, {
-                cols: {
-                    [item.alterColIdx]: {
-                        [item.colOptIdx]: { $set: item.value },
-                        [this.idxOfUQ]: { $set: '' },
-                    },
-                },
+            defs = this.$helpers.immutableUpdate(defs, {
+                cols: { [item.alterColIdx]: { [this.idxOfUQ]: { $set: false } } },
             })
-            this.definitions = this.notNullSideEffect({
-                definitions,
+            defs = this.notNullSideEffect({
+                definitions: defs,
                 alterColIdx: item.alterColIdx,
                 isNN: true,
             })
-        },
-        /**
-         * @param {Object} item - NN cell data
-         */
-        onToggleNn(item) {
-            this.definitions = this.notNullSideEffect({
-                definitions: this.definitions,
-                alterColIdx: item.alterColIdx,
-                isNN: item.value,
-            })
+            return defs
         },
     },
 }

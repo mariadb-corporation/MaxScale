@@ -94,10 +94,13 @@ export default {
         initialColsData() {
             return this.$typy(this.data, 'definitions.cols').safeArray
         },
-        currPkCols() {
+        initialKeysData() {
+            return this.$typy(this.data, 'definitions.keys').safeObjectOrEmpty
+        },
+        stagingPkColNames() {
             return queryHelper.getPKColNames(this.currColsData)
         },
-        initialPkCols() {
+        initialPkColNames() {
             return queryHelper.getPKColNames(this.initialColsData)
         },
         tableOptsDataDiff() {
@@ -107,10 +110,10 @@ export default {
             return Object.values(this.COL_ATTRS)
         },
         isDroppingPK() {
-            return this.initialPkCols.length > 0 && this.currPkCols.length === 0
+            return this.initialPkColNames.length > 0 && this.stagingPkColNames.length === 0
         },
         isAddingPK() {
-            return this.currPkCols.length > 0
+            return this.stagingPkColNames.length > 0
         },
     },
     methods: {
@@ -151,230 +154,207 @@ export default {
             return sql
         },
         /**
-         * This builds DROP column SQL
-         * @param {Array} payload.removedCols - columns need to be dropped
-         * @returns {String} - returns DROP COLUMN sql
-         */
-        buildDropColSql({ removedCols }) {
-            let sql = ''
-            const { quotingIdentifier: quoting } = this.$helpers
-            removedCols.forEach((row, i) => {
-                sql += this.handleAddComma({ ignore: i === 0 })
-                sql += `DROP COLUMN ${quoting(row[this.COL_ATTRS.NAME])}`
-            })
-            return sql
-        },
-        /**
-         * This builds column definition SQL. Either CHANGE COLUMN or ADD COLUMN
-         * @param {Array} payload.cols - cols: either diff cols from arrOfObjsDiff or new cols
-         * @param {Boolean} payload.isChanging - is changing column
+         * This builds column definition SQL. CHANGE/ADD COLUMN ...
+         * @param {object} payload.col
+         * @param {boolean} payload.isUpdated
          * @returns {String} - returns column definition SQL
          */
-        buildColsDfnSQL({ cols, isChanging }) {
-            let sql = ''
+        buildColDfnSQL({ col, isUpdated }) {
             const { quotingIdentifier: quoting } = this.$helpers
             const {
                 NAME,
                 TYPE,
+                NN,
                 UN,
                 ZF,
-                NN,
                 AI,
                 GENERATED_TYPE,
+                DEF_EXP,
                 CHARSET,
                 COLLATE,
-                DEF_EXP,
                 COMMENT,
             } = this.COL_ATTRS
-
-            cols.forEach((col, i) => {
-                sql += this.handleAddComma({ ignore: i === 0 })
-                const colObj = isChanging ? this.$typy(col, 'newObj').safeObject : col
-                const {
-                    [NAME]: name,
-                    [TYPE]: type,
-                    [UN]: un,
-                    [ZF]: zf,
-                    [NN]: nn,
-                    [AI]: ai,
-                    [GENERATED_TYPE]: generatedType,
-                    [CHARSET]: charset,
-                    [COLLATE]: collate,
-                    [DEF_EXP]: defOrExp,
-                    [COMMENT]: comment,
-                } = colObj
-
-                if (isChanging) {
-                    const old_column_name = this.$typy(col, `oriObj.${NAME}`).safeString
-                    sql += `${this.tokens.change} ${this.tokens.column} ${quoting(
-                        old_column_name
-                    )} `
-                } else sql += `${this.tokens.add} ${this.tokens.column} `
-
-                sql += `${quoting(name)}`
-                sql += ` ${type}`
-                if (un) sql += ` ${this.tokens.un}`
-                if (zf) sql += ` ${this.tokens.zf}`
-                if (charset)
-                    sql += ` ${this.tokens.charset} ${charset} ${this.tokens.collate} ${collate}`
-                // when column is generated, NN or NULL can not be defined
-                if (generatedType === this.GENERATED_TYPES.NONE)
-                    sql += ` ${nn ? this.tokens.nn : this.tokens.null}`
-                if (ai) sql += ` ${this.tokens.ai}`
-                if (generatedType === this.GENERATED_TYPES.NONE && defOrExp)
-                    sql += ` ${this.tokens.default} ${defOrExp}`
-                else if (defOrExp) sql += ` ${this.tokens.generated} (${defOrExp}) ${generatedType}`
-                if (comment) sql += ` ${this.tokens.comment} '${comment}'`
-            })
-            return sql
-        },
-        /**
-         * This builds ADD COLUMN SQL
-         * @param {Array} payload.addedCols - columns need to be added
-         * @returns {String} - returns ADD COLUMN sql
-         */
-        buildAddColSQL({ addedCols }) {
-            const { quotingIdentifier: quoting } = this.$helpers
             let sql = ''
-            sql += this.buildColsDfnSQL({ cols: addedCols, isChanging: false })
-            const { UQ, NAME } = this.COL_ATTRS
-            addedCols.forEach(col => {
-                if (col[UQ]) {
-                    sql += this.handleAddComma()
-                    sql += `${this.tokens.add} ${this.tokens.uniqueKey} ${quoting(UQ)} (${quoting(
-                        col[NAME]
-                    )})`
-                }
-            })
+            const colObj = isUpdated ? this.$typy(col, 'newObj').safeObjectOrEmpty : col
+
+            const {
+                [NAME]: name,
+                [TYPE]: type,
+                [NN]: nn,
+                [UN]: un,
+                [ZF]: zf,
+                [AI]: ai,
+                [GENERATED_TYPE]: generatedType,
+                [DEF_EXP]: defOrExp,
+                [CHARSET]: charset,
+                [COLLATE]: collate,
+                [COMMENT]: comment,
+            } = colObj
+
+            if (isUpdated) {
+                const oldColName = this.$typy(col, `oriObj.${NAME}`).safeString
+                sql += `${this.tokens.change} ${this.tokens.column} ${quoting(oldColName)} `
+            } else sql += `${this.tokens.add} ${this.tokens.column} `
+
+            sql += `${quoting(name)}`
+            sql += ` ${type}`
+            if (un) sql += ` ${this.tokens.un}`
+            if (zf) sql += ` ${this.tokens.zf}`
+            if (charset)
+                sql += ` ${this.tokens.charset} ${charset} ${this.tokens.collate} ${collate}`
+            // when column is generated, NN or NULL can not be defined
+            if (generatedType === this.GENERATED_TYPES.NONE)
+                sql += ` ${nn ? this.tokens.nn : this.tokens.null}`
+            if (ai) sql += ` ${this.tokens.ai}`
+            if (generatedType === this.GENERATED_TYPES.NONE && defOrExp)
+                sql += ` ${this.tokens.default} ${defOrExp}`
+            else if (defOrExp) sql += ` ${this.tokens.generated} (${defOrExp}) ${generatedType}`
+            if (comment) sql += ` ${this.tokens.comment} '${comment}'`
             return sql
         },
-
         /**
          * This builds DROP/ADD PK SQL
          * @returns {String} - returns DROP/ADD PK SQL
          */
-        buildPKSQL() {
+        buildPkSQL() {
             let sql = ''
             const { quotingIdentifier: quoting } = this.$helpers
             const dropPKSQL = `${this.tokens.drop} ${this.tokens.primaryKey}`
             if (this.isDroppingPK) {
                 sql += dropPKSQL
             } else if (this.isAddingPK) {
-                const keys = this.currPkCols.map(col => quoting(col)).join(', ')
+                const keys = this.stagingPkColNames.map(col => quoting(col)).join(', ')
                 const addPKsql = `${this.tokens.add} ${this.tokens.primaryKey} (${keys})`
-                if (this.initialPkCols.length > 0) sql += `${dropPKSQL}, ${addPKsql}`
+                if (this.initialPkColNames.length > 0) sql += `${dropPKSQL}, ${addPKsql}`
                 else sql += addPKsql
             }
             return sql
         },
         /**
-         * This builds DROP/ADD UNIQUE KEY SQL
-         * @param {Array} payload.uqColsChanged - columns have UQ value changed
+         * @param {object} payload.col
+         * @param {boolean} payload.isUpdated
          * @returns {String} - returns DROP/ADD UNIQUE KEY SQL
          */
-        buildUQSQL({ uqColsChanged }) {
-            let sql = ''
+        buildUqSQL({ col, isUpdated }) {
             const { quotingIdentifier: quoting } = this.$helpers
-            uqColsChanged.forEach((col, i) => {
-                sql += this.handleAddComma({ ignore: i === 0 })
-                col.diff.forEach(d => {
-                    if (!d.lhs)
-                        sql += `${this.tokens.add} ${this.tokens.uniqueKey} ${quoting(
-                            d.rhs
-                        )} (${quoting(col.newObj[this.COL_ATTRS.NAME])})`
-                    else if (!d.rhs)
-                        sql += `${this.tokens.drop} ${this.tokens.key} ${quoting(d.lhs)}`
+            const { NAME, UQ } = this.COL_ATTRS
+            let colObj = col,
+                oldColName
+            if (isUpdated) {
+                colObj = this.$typy(col, 'newObj').safeObjectOrEmpty
+                oldColName = this.$typy(col, `oriObj[${NAME}]`).safeString
+            }
+
+            const { [NAME]: newColName, [UQ]: newUqValue } = colObj
+
+            if (newUqValue) {
+                const uqName = queryHelper.genUqName(newColName)
+                return `${this.tokens.add} ${this.tokens.uniqueKey} ${quoting(uqName)} (${quoting(
+                    newColName
+                )})`
+            }
+            if (oldColName) {
+                const uqName = queryHelper.getIdxNameByColNames({
+                    keys: this.initialKeysData,
+                    keyType: this.tokens.uniqueKey,
+                    colNames: [oldColName],
                 })
-            })
-            return sql
+                return `${this.tokens.drop} ${this.tokens.key} ${quoting(uqName)}`
+            }
         },
         /**
-         * This handles build column definition and column constraints SQL
-         * @param {Array} payload.updatedCols - columns need to be changed
+         * This builds DROP column SQL
+         * @param {Array} cols - columns need to be removed
+         * @returns {String} - returns DROP COLUMN sql
+         */
+        buildRemovedColSQL(cols) {
+            const { quotingIdentifier: quoting } = this.$helpers
+            return cols
+                .map(row => `DROP COLUMN ${quoting(row[this.COL_ATTRS.NAME])}`)
+                .join(this.handleAddComma())
+        },
+        /**
+         * @param {Array} cols - updated columns
          * @returns {String} - returns CHANGE COLUMN sql
          */
-        buildChangeColSQL({ updatedCols }) {
-            const { PK, UQ } = this.COL_ATTRS
-            let sql = '',
-                colDfnSQL = '',
-                uqSQL = ''
+        buildUpdatedColSQL(cols) {
             /**
-             * iterates through all updatedCols and keep cols having column definition, UQ changed
-             * This also filters diff
+             * Get diff of updated columns, updated of PK and UQ are ignored
+             * as they are handled separately.
              */
-            const uqColsChanged = updatedCols.reduce((arr, col) => {
-                const uqColDiff = col.diff.filter(d => d.kind === 'E' && d.path[0] === UQ)
-                if (uqColDiff.length) arr.push({ ...col, diff: uqColDiff })
-                return arr
-            }, [])
-            const dfnColsChanged = updatedCols.reduce((arr, col) => {
+            const dfnColsChanged = cols.reduce((arr, col) => {
                 const dfnColDiff = col.diff.filter(
-                    d => d.kind === 'E' && d.path[0] !== PK && d.path[0] !== UQ
+                    d =>
+                        d.kind === 'E' &&
+                        d.path[0] !== this.COL_ATTRS.PK &&
+                        d.path[0] !== this.COL_ATTRS.UQ
                 )
                 if (dfnColDiff.length) arr.push({ ...col, diff: dfnColDiff })
                 return arr
             }, [])
-            // build sql
             if (dfnColsChanged.length)
-                colDfnSQL = this.buildColsDfnSQL({ cols: dfnColsChanged, isChanging: true })
-            if (uqColsChanged.length) uqSQL = this.buildUQSQL({ uqColsChanged })
-
-            // handle assign sql
-            sql += colDfnSQL
-            if (uqSQL) {
-                if (colDfnSQL) sql += this.handleAddComma()
-                sql += uqSQL
-            }
-            return sql
+                return dfnColsChanged
+                    .map(col => this.buildColDfnSQL({ col, isUpdated: true }))
+                    .join(this.handleAddComma())
+        },
+        buildAddedColSQL(cols) {
+            let colSQL = [],
+                uqSQL = []
+            cols.forEach(col => {
+                colSQL.push(this.buildColDfnSQL({ col, isUpdated: false }))
+                const uqSql = this.buildUqSQL({ col, isUpdated: false })
+                if (uqSql) uqSQL.push(uqSql)
+            })
+            return [...colSQL, ...uqSQL].join(this.handleAddComma())
+        },
+        /**
+         * @param {Array} cols - updated columns
+         * @returns {String} - returns CHANGE COLUMN sql
+         */
+        buildUpdatedUqSQL(cols) {
+            // Get diff of updated columns, updated of PK is ignored
+            const uqColsChanged = cols.reduce((arr, col) => {
+                const dfnColDiff = col.diff.filter(
+                    d => d.kind === 'E' && d.path[0] === this.COL_ATTRS.UQ
+                )
+                if (dfnColDiff.length) arr.push({ ...col, diff: dfnColDiff })
+                return arr
+            }, [])
+            if (uqColsChanged.length)
+                return uqColsChanged
+                    .map(col => this.buildUqSQL({ col, isUpdated: true }))
+                    .join(this.handleAddComma())
         },
         /**
          * This handles build ADD, DROP, CHANGE COLUMN SQL
          * @returns {String} - returns column alter sql
          */
         buildColsAlterSQL() {
-            const { ID } = this.COL_ATTRS
-            let sql = '',
-                pkSQL = ''
             const {
                 arrOfObjsDiff,
                 map2dArr,
                 lodash: { isEqual },
             } = this.$helpers
-            const base = map2dArr({
-                fields: this.colAttrs,
-                arr: this.initialColsData,
-            })
-            const newData = map2dArr({
-                fields: this.colAttrs,
-                arr: this.currColsData,
-            })
-            const diff = arrOfObjsDiff({ base, newArr: newData, idField: ID })
+            const base = map2dArr({ fields: this.colAttrs, arr: this.initialColsData })
+            const newData = map2dArr({ fields: this.colAttrs, arr: this.currColsData })
+            const diff = arrOfObjsDiff({ base, newArr: newData, idField: this.COL_ATTRS.ID })
+
             const removedCols = diff.get('removed')
             const updatedCols = diff.get('updated')
             const addedCols = diff.get('added')
+            let alterSpecs = []
             // Build sql for different diff types
-            let dropColSql = '',
-                changeColSql = '',
-                addedColSql = ''
-            if (removedCols.length) dropColSql = this.buildDropColSql({ removedCols })
-            if (updatedCols.length) changeColSql = this.buildChangeColSQL({ updatedCols })
-            if (addedCols.length) addedColSql = this.buildAddColSQL({ addedCols })
-            if (!isEqual(this.initialPkCols, this.currPkCols)) pkSQL = this.buildPKSQL()
-            sql += dropColSql
-            if (changeColSql) {
-                if (dropColSql) sql += this.handleAddComma()
-                sql += changeColSql
-            }
-            if (addedColSql) {
-                if (dropColSql || changeColSql) sql += this.handleAddComma()
-                sql += addedColSql
-            }
-            if (pkSQL) {
-                if (dropColSql || changeColSql || addedColSql) sql += this.handleAddComma()
-                sql += pkSQL
-            }
-
-            return sql
+            const removedColSQL = this.buildRemovedColSQL(removedCols)
+            const updatedColSQL = this.buildUpdatedColSQL(updatedCols)
+            const addedColSQL = this.buildAddedColSQL(addedCols)
+            const updatedUqSQL = this.buildUpdatedUqSQL(updatedCols)
+            if (removedColSQL) alterSpecs.push(removedColSQL)
+            if (updatedColSQL) alterSpecs.push(updatedColSQL)
+            if (addedColSQL) alterSpecs.push(addedColSQL)
+            if (updatedUqSQL) alterSpecs.push(updatedUqSQL)
+            if (!isEqual(this.initialPkColNames, this.stagingPkColNames))
+                alterSpecs.push(this.buildPkSQL())
+            return alterSpecs.join(this.handleAddComma())
         },
         /**
          * @public
