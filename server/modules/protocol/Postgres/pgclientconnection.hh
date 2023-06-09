@@ -50,7 +50,7 @@ public:
     // mxs::ClientConnection
     bool init_connection() override;
     void finish_connection() override;
-    bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool safe_to_restart() const override;
     void wakeup() override;
     mxs::Parser* parser() override;

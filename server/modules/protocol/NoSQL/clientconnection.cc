@@ -326,7 +326,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     return m_nosql.handle_request(pPacket);
 }
 
-bool ClientConnection::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     int32_t rv = 0;
 

@@ -93,7 +93,7 @@ public:
 
     json_t* diagnostics() const override;
 
-    bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
      * Initialize module-level globals.

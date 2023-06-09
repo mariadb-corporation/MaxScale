@@ -2896,7 +2896,7 @@ bool MariaDBClientConnection::send_mysql_err_packet(int mysql_errno, const char*
 }
 
 bool
-MariaDBClientConnection::clientReply(GWBUF&& buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
+MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_num_responses == 1)
     {

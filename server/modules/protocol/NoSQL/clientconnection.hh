@@ -37,7 +37,7 @@ public:
     ClientDCB* dcb() override;
     const ClientDCB* dcb() const override;
 
-    bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     bool in_routing_state() const override
     {
