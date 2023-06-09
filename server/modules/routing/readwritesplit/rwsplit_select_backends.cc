@@ -13,7 +13,6 @@
  */
 
 #include "rwsplitsession.hh"
-#include <cmath>
 
 using namespace maxscale;
 
@@ -51,43 +50,41 @@ bool gtid_pos_is_ok(mxs::RWBackend* backend, RWSplit::gtid gtid_pos)
     return gtid_pos.sequence == 0 || backend->target()->gtid_pos(gtid_pos.domain) >= gtid_pos.sequence;
 }
 
-RWBackend* best_score(PRWBackends& sBackends, const std::function<double(mxs::Endpoint*)>& server_score)
+template<class Score>
+RWBackend* best_score(PRWBackends& sBackends, Score server_score)
 {
-    const double max_score = std::nexttoward(std::numeric_limits<double>::max(), 0.0);
-    double min {std::numeric_limits<double>::max()};
-    RWBackend* best = nullptr;
-
-    for (auto b : sBackends)
+    if (sBackends.empty())
     {
-        double score = server_score(b->backend());
+        return nullptr;
+    }
+    else if (sBackends.size() == 1)
+    {
+        return sBackends.front();
+    }
 
-        if (score > max_score)
-        {
-            // Cap values to a maximum value. This guarantees that we choose a server from the set of
-            // available candidates.
-            score = max_score;
-        }
+    mxb_assert(sBackends.size() > 1);
+    auto it = sBackends.begin();
+    auto min = server_score(*it);
+    RWBackend* best = *it;
+    ++it;
+
+    do
+    {
+        RWBackend* b = *it++;
+        auto score = server_score(b);
 
         if (min > score)
         {
             min = score;
             best = b;
         }
-        else if (min == score && best)
+        else if (min == score && b->last_write() < best->last_write())
         {
             // In the case of a tie, use the least recently used backend
-            auto now = maxbase::Clock::now(maxbase::NowType::EPollTick);
-            auto left = duration_cast<microseconds>(now - best->last_write()).count();
-            auto right = duration_cast<microseconds>(now - b->last_write()).count();
-
-            if (left < right)
-            {
-                best = b;
-            }
+            best = b;
         }
     }
-
-    mxb_assert_message(best || sBackends.empty(), "A candidate must be chosen if we have candidates");
+    while (it != sBackends.end());
 
     return best;
 }
@@ -95,8 +92,8 @@ RWBackend* best_score(PRWBackends& sBackends, const std::function<double(mxs::En
 /** Compare number of global connections in backend servers */
 RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 {
-    auto server_score = [](mxs::Endpoint* e) {
-        return e->target()->stats().n_current_conns();
+    auto server_score = [](RWBackend* b) {
+        return b->target()->stats().n_current_conns();
     };
 
     return best_score(sBackends, server_score);
@@ -105,8 +102,8 @@ RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 /** Compare replication lag between backend servers */
 RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 {
-    static auto server_score = [](mxs::Endpoint* e) {
-        return e->target()->replication_lag();
+    static auto server_score = [](RWBackend* b) {
+        return b->target()->replication_lag();
     };
 
     return best_score(sBackends, server_score);
@@ -115,8 +112,8 @@ RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 /** Compare number of current operations in backend servers */
 RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
 {
-    auto server_score = [](mxs::Endpoint* e) {
-        return e->target()->stats().n_current_ops();
+    auto server_score = [](RWBackend* b) {
+        return b->target()->stats().n_current_ops();
     };
 
     return best_score(sBackends, server_score);
@@ -140,7 +137,12 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
     {
         return nullptr;
     }
+    else if (pBackends.size() == 1)
+    {
+        return pBackends.front();
+    }
 
+    mxb_assert (pBackends.size() > 1);
     const size_t SZ = pBackends.size();
     double estimated_time[SZ];
 
