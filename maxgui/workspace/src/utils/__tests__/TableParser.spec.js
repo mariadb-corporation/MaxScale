@@ -76,12 +76,8 @@ function stubKeyDef({
     return mockParsedData
 }
 
-function stubIndexColNameDef({ name, length, order }) {
-    return {
-        name,
-        length,
-        order,
-    }
+function stubIndexColNameDef(def) {
+    return lodash.pickBy(def, v => v !== undefined)
 }
 
 const expectedColDefs = {

@@ -11,6 +11,7 @@
  * Public License.
  */
 import { t } from 'typy'
+import { lodash } from '@share/utils/helpers'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
 import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
@@ -91,7 +92,12 @@ export default class TableParser {
         let res = []
         while ((match = indexColNamesReg.exec(index_col_names)) !== null) {
             const { name, length, order } = match.groups
-            res.push({ name: unquoteIdentifier(name), length, order })
+            res.push(
+                lodash.pickBy(
+                    { name: unquoteIdentifier(name), length, order },
+                    v => v !== undefined
+                )
+            )
         }
         return res
     }
