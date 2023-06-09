@@ -102,9 +102,7 @@ export default class TableParser {
      */
     parseKey(def) {
         const match = def.match(nonFksReg) || def.match(fksReg)
-        if (!match) {
-            return def
-        }
+        if (!match) return null
         const {
             category,
             name,
@@ -148,9 +146,11 @@ export default class TableParser {
             if (parsedDef) {
                 if (t(parsedDef).isString) {
                     const parsedKey = this.parseKey(parsedDef)
-                    const category = parsedKey.category
-                    if (!keys[category]) keys[category] = []
-                    keys[category].push(parsedKey)
+                    if (parsedKey) {
+                        const category = parsedKey.category
+                        if (!keys[category]) keys[category] = []
+                        keys[category].push(parsedKey)
+                    }
                 } else cols.push(parsedDef)
             }
         })
