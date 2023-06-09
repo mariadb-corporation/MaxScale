@@ -67,7 +67,8 @@ maxscale::MonitorServer::ConnectResult PgServer::ping_or_connect()
     {
         // TODO: according to documentation, error messages may have linebreaks. Handle it later.
         const char* conn_err = m_conn.error();
-        if (strcasestr(conn_err, "authentication failed") != nullptr)
+        if (strcasestr(conn_err, "authentication failed") != nullptr
+            || strcasestr(conn_err, "no pg_hba.conf entry for host") != nullptr)
         {
             res = ConnectResult::ACCESS_DENIED;
         }
