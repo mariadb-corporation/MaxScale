@@ -894,11 +894,15 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
         // Step 2: Wait for the promotion target to catch up with the demotion target. Disregard the other
         // slaves of the promotion target to avoid needless waiting.
         // The gtid:s of the demotion target were updated at the end of demotion.
+        // If forcing a switch, do not require the catchup to succeed as old master may not be frozen and
+        // could send events continuously.
         m_state = State::WAIT_FOR_TARGET_CATCHUP;
-        if (promotion_target->catchup_to_master(op.general, demotion_target->m_gtid_binlog_pos))
+        if (promotion_target->catchup_to_master(op.general, demotion_target->m_gtid_binlog_pos)
+            || type == OperationType::SWITCHOVER_FORCE)
         {
             MXB_INFO("Switchover: Catchup took %.1f seconds.", mxb::to_secs(timer.lap()));
-            // Step 3: On new master: remove slave connections, set read-only to OFF etc.
+            // Step 3: On new master: remove slave connections, set read-only to OFF etc. This needs to
+            // succeed even in switchover-force, as otherwise the operation makes no sense.
             m_state = State::PROMOTE_TARGET;
             if (promotion_target->promote(op.general, op.promotion, type, demotion_target))
             {

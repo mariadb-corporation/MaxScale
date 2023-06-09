@@ -1648,7 +1648,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
         else
         {
             // If demoting a relay, it's enough to check that gtid is stable.
-            demotion_ok = check_gtid_stable(error_out);
+            demotion_ok = check_gtid_stable(error_out) || force_switch;
         }
 
         if (!demotion_ok && demoting_master)
