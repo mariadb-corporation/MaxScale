@@ -1326,7 +1326,7 @@ bool Session::routeQuery(GWBUF&& buffer)
     return rv;
 }
 
-bool Session::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool Session::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(!m_routing);
     mxb_assert(buffer);

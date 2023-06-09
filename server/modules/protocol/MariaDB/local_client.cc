@@ -66,7 +66,7 @@ bool LocalClient::routeQuery(GWBUF&& buffer)
     return false;
 }
 
-bool LocalClient::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool LocalClient::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_cb)
     {

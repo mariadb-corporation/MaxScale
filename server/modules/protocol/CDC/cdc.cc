@@ -374,7 +374,7 @@ bool CDCClientConnection::write(std::string_view msg)
     return write(std::move(buf));
 }
 
-bool CDCClientConnection::clientReply(GWBUF&& buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
+bool CDCClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return write(std::move(buffer));
 }

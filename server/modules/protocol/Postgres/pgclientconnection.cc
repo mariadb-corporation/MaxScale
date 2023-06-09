@@ -511,7 +511,7 @@ void PgClientConnection::finish_connection()
 }
 
 bool PgClientConnection::clientReply(GWBUF&& buffer,
-                                     mxs::ReplyRoute& down,
+                                     const mxs::ReplyRoute& down,
                                      const mxs::Reply& reply)
 {
     if (reply.is_complete())

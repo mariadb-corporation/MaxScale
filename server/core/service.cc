@@ -1646,7 +1646,7 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     return m_head->routeQuery(std::move(buffer));
 }
 
-bool ServiceEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ServiceEndpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);

@@ -39,7 +39,7 @@ public:
     {
     }
 
-    bool clientReply(GWBUF&& buffer, ReplyRoute& down, const mxs::Reply& reply) override
+    bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
     {
         return true;
     }
@@ -78,7 +78,7 @@ bool Session::Endpoint::routeQuery(GWBUF&& buffer)
     return m_session.routeQuery(std::move(buffer));
 }
 
-bool Session::Endpoint::clientReply(GWBUF&& buffer, ReplyRoute& down, const mxs::Reply& reply)
+bool Session::Endpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return 0;
 }

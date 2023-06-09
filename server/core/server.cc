@@ -1309,12 +1309,12 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
     return rval;
 }
 
-bool ServerEndpoint::clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ServerEndpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
     mxb_assert(buffer);
-    down.push_back(this);
+    const_cast<mxs::ReplyRoute&>(down).push_back(this);
 
     m_query_time.stop();    // always measure
 

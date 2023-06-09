@@ -139,7 +139,7 @@ public:
 
     virtual bool routeQuery(GWBUF&& buffer) = 0;
 
-    virtual bool clientReply(GWBUF&& buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
+    virtual bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
 
     virtual bool handleError(ErrorType type, const std::string& error, Endpoint* down,
                              const mxs::Reply& reply) = 0;
