@@ -177,7 +177,7 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
 {
     using maxbase::operator<<;
 
-    Cluster& cluster = *static_cast<Cluster*>(down.back()->get_userdata());
+    Cluster& cluster = *static_cast<Cluster*>(down.endpoint()->get_userdata());
 
     auto tracker_state_before = cluster.tracker.state();
 

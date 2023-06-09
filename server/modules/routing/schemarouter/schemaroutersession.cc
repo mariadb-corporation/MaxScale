@@ -492,7 +492,7 @@ void SchemaRouterSession::handle_default_db_response()
 
 bool SchemaRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
+    SRBackend* bref = static_cast<SRBackend*>(down.endpoint()->get_userdata());
 
     const auto& error = reply.error();
 

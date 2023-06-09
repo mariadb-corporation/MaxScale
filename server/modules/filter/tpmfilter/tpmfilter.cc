@@ -351,7 +351,7 @@ bool TpmSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const 
                  * latencies of individual statements | sql_statements" */
                 std::ostringstream ss;
                 ss << time(nullptr) << delim
-                   << down.front()->target()->name() << delim
+                   << down.first()->target()->name() << delim
                    << m_pSession->user() << delim
                    << mxb::to_secs(m_trx_watch.lap()) * 1000 << delim
                    << mxb::join(m_latency, m_config.query_delimiter) << delim

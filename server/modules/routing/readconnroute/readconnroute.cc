@@ -404,7 +404,7 @@ bool RCRSession::clientReply(GWBUF&& packet,
 {
     if (reply.is_complete())
     {
-        MXB_INFO("Reply complete from '%s': %s", down.back()->target()->name(), reply.describe().c_str());
+        MXB_INFO("Reply complete from '%s': %s", down.endpoint()->target()->name(), reply.describe().c_str());
     }
 
     auto rc = RouterSession::clientReply(std::move(packet), down, reply);

@@ -1314,7 +1314,6 @@ bool ServerEndpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, co
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
     mxb_assert(buffer);
-    const_cast<mxs::ReplyRoute&>(down).push_back(this);
 
     m_query_time.stop();    // always measure
 
@@ -1327,7 +1326,7 @@ bool ServerEndpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, co
         m_write_distribution.add(m_query_time.duration());
     }
 
-    return m_up->clientReply(std::move(buffer), down, reply);
+    return m_up->clientReply(std::move(buffer), mxs::ReplyRoute {this, &down}, reply);
 }
 
 bool ServerEndpoint::handleError(mxs::ErrorType type, const std::string& error,

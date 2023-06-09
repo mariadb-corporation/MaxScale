@@ -537,7 +537,7 @@ bool RWSplitSession::discard_partial_result(GWBUF& buffer, const mxs::Reply& rep
 
 bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
+    RWBackend* backend = static_cast<RWBackend*>(down.endpoint()->get_userdata());
 
     if (!backend->should_ignore_response() && handle_causal_read_reply(writebuf, reply, backend))
     {

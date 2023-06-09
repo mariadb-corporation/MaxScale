@@ -252,7 +252,7 @@ LuaFilterSession::~LuaFilterSession()
 
 bool LuaFilterSession::clientReply(GWBUF&& buffer, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
-    const char* target = down.empty() ? "" : down.front()->target()->name();
+    const char* target = down.empty() ? "" : down.first()->target()->name();
 
     if (m_context)
     {

@@ -58,7 +58,7 @@ bool CatSession::routeQuery(GWBUF&& packet)
 
 bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    mxb_assert(m_current->backend() == down.back());
+    mxb_assert(m_current->backend() == down.endpoint());
     bool send = false;
 
     if (reply.is_complete())

@@ -824,7 +824,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
         output << curr_sep;
         if (!elems.down.empty())
         {
-            output << elems.down.front()->target()->name();
+            output << elems.down.first()->target()->name();
         }
         curr_sep = real_sep;
     }
