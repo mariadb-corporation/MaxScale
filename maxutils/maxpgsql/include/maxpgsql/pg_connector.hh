@@ -54,7 +54,7 @@ public:
      * @param db Database to connect to
      * @return True on success
      */
-    bool open(const std::string& host, int port, const std::string& db = "");
+    bool open(const std::string& host, int port, const std::string& db);
 
     /**
      * Close connection.

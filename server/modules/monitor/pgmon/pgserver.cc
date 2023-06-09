@@ -56,12 +56,11 @@ maxscale::MonitorServer::ConnectResult PgServer::ping_or_connect()
     conn_settings.ssl = server->ssl_config();
 
     auto res = ConnectResult::REFUSED;
-    if (m_conn.open(server->address(), server->port()))
+    if (m_conn.open(server->address(), server->port(), "postgres"))
     {
         auto info = m_conn.get_version_info();
         server->set_version(SERVER::BaseType::POSTGRESQL, info.version, info.info, 0);
         // TODO: if init commands are ever added to PgSQL, reconnect here similar to MariaDB.
-
         res = ConnectResult::NEWCONN_OK;
     }
     else
