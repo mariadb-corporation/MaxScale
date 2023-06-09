@@ -902,9 +902,7 @@ int log_message(message_suppression_t status,
                + nAugmentation + nMessage + nSuppression == nLog_line);
     }
 
-    ++nLog_line; // The final 0
-
-    char log_line[nLog_line + 1]; // +1 for the '\n' that will be added.
+    char log_line[nLog_line + 2]; // +2 for the '\n' that will be added and the final 0.
 
     // NOTE: All of these point into the same buffer, which will have a single NULL at the end.
     // NOTE: Thus, if printed without the length specified explicitly, not just that particular
