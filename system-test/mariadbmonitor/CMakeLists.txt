@@ -40,6 +40,10 @@ add_test_executable_ex(NAME mysqlmon_failover_manual2_2 SOURCE mysqlmon_failover
 add_test_executable_ex(NAME mysqlmon_switchover SOURCE mysqlmon_switchover.cpp CONFIG mysqlmon_switchover.cnf
         VMS repl_backend LABELS mysqlmon switchover)
 
+add_test_executable_ex(NAME mariadbmon_switchover_force SOURCE mariadbmon_switchover_force.cc
+        CONFIG mariadbmon_switchover_force.cnf
+        VMS repl_backend LABELS mysqlmon switchover)
+
 # MySQL Monitor switchover with bad master
 add_test_executable_ex(NAME mysqlmon_switchover_bad_master SOURCE mysqlmon_switchover_bad_master.cpp
         CONFIG mysqlmon_switchover_bad_master.cnf VMS repl_backend LABELS mysqlmon switchover)
