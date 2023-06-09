@@ -79,7 +79,7 @@ bool HintRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down,
 
     int32_t rc = 0;
 
-    mxs::Target* pTarget = down.back()->target();
+    mxs::Target* pTarget = down.endpoint()->target();
 
     if (m_surplus_replies == 0)
     {

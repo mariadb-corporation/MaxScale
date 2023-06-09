@@ -113,7 +113,7 @@ void MirrorSession::finalize_reply()
 
 bool MirrorSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    auto backend = static_cast<MyBackend*>(down.back()->get_userdata());
+    auto backend = static_cast<MyBackend*>(down.endpoint()->get_userdata());
     backend->process_result(packet, reply);
 
     if (reply.is_complete())

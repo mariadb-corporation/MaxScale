@@ -226,7 +226,7 @@ bool XRouterSession::route_to_one(mxs::Backend* backend, GWBUF&& packet, mxs::Ba
 
 bool XRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    mxs::Backend* backend = static_cast<mxs::Backend*>(down.back()->get_userdata());
+    mxs::Backend* backend = static_cast<mxs::Backend*>(down.endpoint()->get_userdata());
     bool rv = true;
     bool route = backend->is_expected_response();
     bool complete = reply.is_complete();

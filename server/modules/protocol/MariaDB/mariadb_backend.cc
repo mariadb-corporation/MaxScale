@@ -817,8 +817,8 @@ void MariaDBBackendConnection::normal_read()
                 sTmp_for_row_data = std::make_unique<GWBUF>(stmt.shallow_clone());
             }
 
-            thread_local mxs::ReplyRoute route;
-            route.clear();
+            mxs::ReplyRoute route;
+
             bool reply_ok = m_upstream->clientReply(std::move(stmt), route, m_reply);
             m_reply.clear_row_data();
 

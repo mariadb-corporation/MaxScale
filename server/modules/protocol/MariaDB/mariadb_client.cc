@@ -1838,7 +1838,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
                         auto ok_cb = [this, cb, cl = client.get()](
                             GWBUF* buf, const mxs::ReplyRoute& route, const mxs::Reply& reply){
                             MXB_INFO("Reply to KILL from '%s': %s",
-                                     route.empty() ? "<none>" : route.front()->target()->name(),
+                                     route.empty() ? "<none>" : route.first()->target()->name(),
                                      reply.error() ? reply.error().message().c_str() : "OK");
                             kill_complete(cb, cl);
                         };
@@ -2976,7 +2976,7 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
             --m_num_responses;
             mxb_assert(m_num_responses >= 0);
 
-            m_session->book_server_response(down.front()->target(), true);
+            m_session->book_server_response(down.first()->target(), true);
         }
 
         if (reply.is_ok() && m_session->service->config()->session_track_trx_state)

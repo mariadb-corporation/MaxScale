@@ -1499,9 +1499,7 @@ int32_t ServiceEndpoint::upstream_function(Filter* instance,
 
 int32_t ServiceEndpoint::send_upstream(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    mxs::ReplyRoute& d = const_cast<mxs::ReplyRoute&>(down);
-    d.push_back(this);
-    return m_up->clientReply(std::move(buffer), d, reply);
+    return m_up->clientReply(std::move(buffer), mxs::ReplyRoute {this, &down}, reply);
 }
 
 void ServiceEndpoint::set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down)

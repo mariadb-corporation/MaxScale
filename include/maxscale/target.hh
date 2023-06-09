@@ -121,7 +121,52 @@ class Reply;
 class Endpoint;
 
 // The route along which the reply arrived
-using ReplyRoute = std::vector<Endpoint*>;
+class ReplyRoute final
+{
+public:
+    ReplyRoute()
+    {
+    }
+
+    ReplyRoute(Endpoint* endpoint)
+        : m_endpoint(endpoint)
+        , m_first(endpoint)
+    {
+    }
+
+    ReplyRoute(Endpoint* endpoint, const ReplyRoute* next)
+        : m_endpoint(endpoint)
+        , m_first(next->m_first ? next->m_first : endpoint)
+        , m_next(next)
+    {
+    }
+
+    bool empty() const
+    {
+        return m_endpoint == nullptr;
+    }
+
+    Endpoint* endpoint() const
+    {
+        return m_endpoint;
+    }
+
+    const Endpoint* first() const
+    {
+        return m_first;
+    }
+
+    const ReplyRoute* next() const
+    {
+        return m_next;
+    }
+
+private:
+    Endpoint*         m_endpoint { nullptr };
+    const Endpoint*   m_first { nullptr };
+    const ReplyRoute* m_next { nullptr };
+};
+
 using Endpoints = std::vector<mxs::Endpoint*>;
 
 // The type of error that handleError is dealing with
