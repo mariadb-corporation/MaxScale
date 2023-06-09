@@ -1662,15 +1662,21 @@ Msg::Msg(const Packet& packet)
     {
         const uint8_t* p = reinterpret_cast<const uint8_t*>(m_pHeader);
 
-        uint32_t checksum = crc32_func(p, m_pHeader->msg_len - sizeof(uint32_t));
+        uint32_t expected_checksum = crc32_func(p, m_pHeader->msg_len - sizeof(uint32_t));
 
         p += (m_pHeader->msg_len - sizeof(uint32_t));
         const uint32_t* pChecksum = reinterpret_cast<const uint32_t*>(p);
 
-        if (checksum != *pChecksum)
+        // All integers in the MongoDB protocol are little-endian.
+        uint32_t le32;
+        memcpy(&le32, p, 4);
+
+        uint32_t got_checksum = le32toh(le32);
+
+        if (expected_checksum != got_checksum)
         {
             std::ostringstream ss;
-            ss << "Invalid checksum, expected " << checksum << ", got " << *pChecksum << ".";
+            ss << "Invalid checksum, expected " << expected_checksum << ", got " << got_checksum << ".";
             throw std::runtime_error(ss.str());
         }
     }
