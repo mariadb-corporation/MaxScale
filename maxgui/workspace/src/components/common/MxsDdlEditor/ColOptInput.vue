@@ -116,7 +116,6 @@ export default {
     computed: {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
         columnCharset() {

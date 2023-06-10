@@ -593,9 +593,9 @@ function findKeyTypeByColName({ keys, colName }) {
  * @param {array} keys - parsed keys from DDL of a table
  * @param {string} keyType - type of the key
  * @param {array} colNames - column names to be looked up
- * @returns {string} constraint name of the key
+ * @returns {object} index object
  */
-function getIdxNameByColNames({ keys, keyType, colNames }) {
+function getKeyObjByColNames({ keys, keyType, colNames }) {
     for (const key of typy(keys, `[${keyType}]`).safeArray) {
         if (
             lodash.isEqual(
@@ -603,7 +603,7 @@ function getIdxNameByColNames({ keys, keyType, colNames }) {
                 colNames
             )
         )
-            return key.name
+            return key
     }
 }
 
@@ -631,7 +631,7 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
         let uq = false
         if (keyType === tokens.uniqueKey) {
             uq = Boolean(
-                getIdxNameByColNames({ keys, keyType: tokens.uniqueKey, colNames: [col.name] })
+                getKeyObjByColNames({ keys, keyType: tokens.uniqueKey, colNames: [col.name] })
             )
         }
         const {
@@ -684,10 +684,15 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
     }
 }
 
-function getPKColNames(colsData) {
+/**
+ * @param {array} param.cols - 2d array
+ * @param {string} param.attr - name of the attribute (COL_ATTRS)
+ * @returns {array} Array of column names where the provided attribute value is true
+ */
+function getColNamesByAttr({ cols, attr }) {
     let names = []
-    colsData.forEach(row => {
-        if (row[COL_ATTR_IDX_MAP[COL_ATTRS.PK]]) names.push(row[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]])
+    cols.forEach(col => {
+        if (col[COL_ATTR_IDX_MAP[attr]]) names.push(col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]])
     })
     return names
 }
@@ -713,8 +718,8 @@ export default {
     genErdData,
     queryAndParseDDL,
     findKeyTypeByColName,
-    getIdxNameByColNames,
+    getKeyObjByColNames,
     tableParserTransformer,
-    getPKColNames,
+    getColNamesByAttr,
     genUqName,
 }

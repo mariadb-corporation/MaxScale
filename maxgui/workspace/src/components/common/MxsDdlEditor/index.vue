@@ -98,10 +98,16 @@ export default {
             return this.$typy(this.data, 'definitions.keys').safeObjectOrEmpty
         },
         stagingPkColNames() {
-            return queryHelper.getPKColNames(this.currColsData)
+            return queryHelper.getColNamesByAttr({
+                cols: this.currColsData,
+                attr: this.COL_ATTRS.PK,
+            })
         },
         initialPkColNames() {
-            return queryHelper.getPKColNames(this.initialColsData)
+            return queryHelper.getColNamesByAttr({
+                cols: this.initialColsData,
+                attr: this.COL_ATTRS.PK,
+            })
         },
         tableOptsDataDiff() {
             return this.$helpers.deepDiff(this.data.options, this.stagingData.options)
@@ -254,7 +260,7 @@ export default {
                 )})`
             }
             if (oldColName) {
-                const uqName = queryHelper.getIdxNameByColNames({
+                const { name: uqName } = queryHelper.getKeyObjByColNames({
                     keys: this.initialKeysData,
                     keyType: this.tokens.uniqueKey,
                     colNames: [oldColName],

@@ -129,6 +129,7 @@ import {
     check_UN_ZF_support,
     check_AI_support,
 } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'alter-cols-opts',
@@ -265,6 +266,27 @@ export default {
         hasAI() {
             return this.cols.some(row => row[this.idxOfAI])
         },
+        initialKeys() {
+            return this.$typy(this.initialData, 'keys').safeObjectOrEmpty
+        },
+        initialPkColNames() {
+            return queryHelper.getColNamesByAttr({
+                cols: this.$typy(this.initialData, 'cols').safeArray,
+                attr: this.COL_ATTRS.PK,
+            })
+        },
+        initialPkKeys() {
+            return this.$typy(this.initialKeys, `[${this.CREATE_TBL_TOKENS.primaryKey}]`).safeArray
+        },
+        initialUqColNames() {
+            return queryHelper.getColNamesByAttr({
+                cols: this.$typy(this.initialData, 'cols').safeArray,
+                attr: this.COL_ATTRS.UQ,
+            })
+        },
+        initialUqKeys() {
+            return this.$typy(this.initialKeys, `[${this.CREATE_TBL_TOKENS.uniqueKey}]`).safeArray
+        },
     },
     mounted() {
         this.handleShowColSpecs()
@@ -331,14 +353,14 @@ export default {
                     },
                 },
             })
-            const { TYPE, PK, NN, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
+            const { TYPE, PK, NN, UQ, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
             switch (item.field) {
                 case TYPE:
                     definitions = this.onChangeType({ definitions, item })
                     break
                 case PK:
                     definitions = this.onTogglePk({ definitions, item })
-                    //TODO: Add side-effect function to update pk, uq in keys object
+                    definitions = this.keySideEffect({ definitions, category: PK })
                     break
                 case NN:
                     definitions = this.notNullSideEffect({
@@ -346,6 +368,9 @@ export default {
                         alterColIdx: item.alterColIdx,
                         isNN: item.value,
                     })
+                    break
+                case UQ:
+                    definitions = this.keySideEffect({ definitions, category: UQ })
                     break
                 case AI:
                     definitions = this.onToggleAi({ definitions, item })
@@ -458,7 +483,7 @@ export default {
             let defs = definitions
             if (item.value === 'SERIAL') {
                 defs = this.uncheckOtherAI({ definitions: defs, alterColIdx: item.alterColIdx })
-                return this.$helpers.immutableUpdate(defs, {
+                defs = this.$helpers.immutableUpdate(defs, {
                     cols: {
                         [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: true },
@@ -468,6 +493,8 @@ export default {
                         },
                     },
                 })
+                defs = this.keySideEffect({ definitions: defs, category: this.COL_ATTRS.UQ })
+                return defs
             }
             return defs
         },
@@ -550,16 +577,94 @@ export default {
         },
         onTogglePk({ definitions, item }) {
             let defs = definitions
-            // update PK and UQ value
+            // update UQ key value
             defs = this.$helpers.immutableUpdate(defs, {
                 cols: { [item.alterColIdx]: { [this.idxOfUQ]: { $set: false } } },
             })
+            defs = this.keySideEffect({ definitions: defs, category: this.COL_ATTRS.UQ })
             defs = this.notNullSideEffect({
                 definitions: defs,
                 alterColIdx: item.alterColIdx,
                 isNN: true,
             })
             return defs
+        },
+        /**
+         * Update either PK or UQ in `keys` field.
+         * @param {object} param.definitions - column definitions
+         * @param {string} param.category - key category
+         */
+        keySideEffect({ definitions, category }) {
+            const {
+                immutableUpdate,
+                lodash: { isEqual },
+            } = this.$helpers
+
+            const { primaryKey, uniqueKey } = this.CREATE_TBL_TOKENS
+            const { PK, UQ } = this.COL_ATTRS
+            let keyToken, initialKeyColNames, initialKeys
+            switch (category) {
+                case PK:
+                    keyToken = primaryKey
+                    initialKeyColNames = this.initialPkColNames
+                    initialKeys = this.initialPkKeys
+                    break
+                case UQ:
+                    keyToken = uniqueKey
+                    initialKeyColNames = this.initialUqColNames
+                    initialKeys = this.initialUqKeys
+                    break
+            }
+
+            const stagingKeyColNames = queryHelper.getColNamesByAttr({
+                cols: definitions.cols,
+                attr: category,
+            })
+
+            // when all keys in a category key are removed
+            if (!stagingKeyColNames.length)
+                return immutableUpdate(definitions, { keys: { $unset: [keyToken] } })
+            // If there are no changes
+            else if (isEqual(initialKeyColNames, stagingKeyColNames))
+                return immutableUpdate(definitions, {
+                    keys: { $merge: { [keyToken]: initialKeys } },
+                })
+            // If there are changes in quantity of keys
+            switch (category) {
+                case PK:
+                    return immutableUpdate(definitions, {
+                        keys: {
+                            [keyToken]: {
+                                [0]: {
+                                    ['index_cols']: {
+                                        $set: stagingKeyColNames.map(c => ({ name: c })),
+                                    },
+                                },
+                            },
+                        },
+                    })
+                case UQ: {
+                    return immutableUpdate(definitions, {
+                        keys: { $merge: { [keyToken]: this.genUqKeys(stagingKeyColNames) } },
+                    })
+                }
+            }
+        },
+        genUqKeys(colNames) {
+            return colNames.map(name => {
+                const existingKey = queryHelper.getKeyObjByColNames({
+                    keys: this.initialKeys,
+                    keyType: this.CREATE_TBL_TOKENS.uniqueKey,
+                    colNames: [name],
+                })
+                if (existingKey) return existingKey
+                // generate new one
+                return {
+                    category: this.CREATE_TBL_TOKENS.uniqueKey,
+                    index_cols: [{ name }],
+                    name: queryHelper.genUqName(name),
+                }
+            })
         },
     },
 }
