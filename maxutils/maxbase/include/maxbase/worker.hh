@@ -1216,11 +1216,7 @@ private:
 
     static void thread_main(Worker* pThis, mxb::Semaphore* pSem);
 
-    TimePoint deliver_events(uint64_t cycle_start,
-                             TimePoint loop_now,
-                             Pollable* pPollable,
-                             uint32_t events,
-                             Pollable::Context context);
+    void deliver_events(Pollable* pPollable, uint32_t events, Pollable::Context context);
 
     void poll_waitevents();
 
