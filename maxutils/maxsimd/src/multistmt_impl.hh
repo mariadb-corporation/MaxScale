@@ -24,7 +24,7 @@ namespace maxsimd
 {
 namespace generic
 {
-bool is_multi_stmt_impl(const std::string& sql);
+bool is_multi_stmt_impl(std::string_view sql);
 }
 }
 
@@ -32,6 +32,6 @@ namespace maxsimd
 {
 namespace simd256
 {
-bool is_multi_stmt_impl(const std::string& sql, maxsimd::Markers* pMarkers);
+bool is_multi_stmt_impl(std::string_view sql, maxsimd::Markers* pMarkers);
 }
 }

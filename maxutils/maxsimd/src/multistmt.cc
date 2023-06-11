@@ -27,7 +27,7 @@ const maxbase::CpuInfo& cpu_info {maxbase::CpuInfo::instance()};
 }
 
 #if defined (__x86_64__)
-bool is_multi_stmt(const std::string& sql)
+bool is_multi_stmt(std::string_view sql)
 {
     if (cpu_info.has_avx2)
     {
@@ -40,7 +40,7 @@ bool is_multi_stmt(const std::string& sql)
 }
 #else
 
-bool is_multi_stmt(const std::string& sql)
+bool is_multi_stmt(std::string_view sql)
 {
     return generic::is_multi_stmt_impl(sql);
 }

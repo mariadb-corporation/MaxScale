@@ -638,10 +638,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
         bool is_multi = is_query && m_parser.get_operation(*querybuf) == mxs::sql::OP_CALL;
         if (!is_multi && multi_statements_allowed() && is_query)
         {
-            // This is wasteful, the sql is extracted multiple times
-            // it should be in the Context, after first call.
-            const std::string sql { m_parser.helper().get_sql(*querybuf) };
-            is_multi = maxsimd::is_multi_stmt(sql);
+            is_multi = maxsimd::is_multi_stmt(m_parser.helper().get_sql(*querybuf));
         }
 
         if (is_multi)

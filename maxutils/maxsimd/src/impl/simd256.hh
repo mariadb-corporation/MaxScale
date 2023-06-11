@@ -158,7 +158,7 @@ MXS_AVX2_FUNC inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
  *                   for the caller, reused for each call to make_markers()
  * @return Pointers into argument string for every classified character.
  */
-MXS_AVX2_FUNC inline maxsimd::Markers* make_markers(const std::string& str, __m256i ascii_bitmap, maxsimd::Markers* pMarkers)
+MXS_AVX2_FUNC inline maxsimd::Markers* make_markers(std::string_view str, __m256i ascii_bitmap, maxsimd::Markers* pMarkers)
 {
     const char* pBegin = str.data();
     const char* pSource = pBegin;

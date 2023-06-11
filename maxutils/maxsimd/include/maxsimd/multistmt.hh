@@ -14,8 +14,7 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include <string_view>
 
 namespace maxsimd
 {
@@ -24,5 +23,5 @@ namespace maxsimd
  * @param  sql           The sql.
  * @return bool          true if sql contains multiple statements
  */
-bool is_multi_stmt(const std::string& sql);
+bool is_multi_stmt(std::string_view sql);
 }
