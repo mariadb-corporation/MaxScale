@@ -140,7 +140,8 @@ void MXS_SESSION::kill(const std::string& errmsg)
         {
             // Write the error to the client before closing the DCB
             int errnum = 1927;      // This is ER_CONNECTION_KILLED
-            client_connection()->write(protocol()->make_error(errnum, "HY000", errmsg));
+            GWBUF packet = protocol()->make_error(errnum, "HY000", errmsg);
+            client_connection()->clientReply(std::move(packet), mxs::ReplyRoute {}, mxs::Reply {});
         }
 
         ClientDCB::close(client_dcb);

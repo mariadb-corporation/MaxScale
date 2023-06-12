@@ -108,8 +108,6 @@ private:
             mxb_assert(!true);
         }
 
-        bool write(GWBUF&& buffer) override;
-
         json_t* diagnostics() const override
         {
             return nullptr;
@@ -151,6 +149,8 @@ private:
         }
 
     private:
+        bool write(GWBUF&& buffer);
+
         Dcb::Handler* m_pHandler;
         Dcb*          m_dcb {nullptr};
     };

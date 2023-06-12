@@ -209,11 +209,6 @@ private:
             mxb_assert(!true);
         }
 
-        bool write(GWBUF&& buffer) override
-        {
-            return m_owner.write(std::move(buffer));
-        }
-
         json_t* diagnostics() const override
         {
             return nullptr;
@@ -255,6 +250,11 @@ private:
         }
 
     private:
+        bool write(GWBUF&& buffer)
+        {
+            return m_owner.write(std::move(buffer));
+        }
+
         ResultSetDCB& m_owner;
     };
 
@@ -294,7 +294,7 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF&& stateme
         std::unique_ptr<ResultSet> set = ResultSet::create({"a"});
         set->add_row({std::to_string(++m_counter)});
         ResultSetDCB dcb(pSession->session());
-        dcb.protocol()->write(set->as_buffer());
+        dcb.protocol()->clientReply(set->as_buffer(), mxs::ReplyRoute {}, mxs::Reply {});
 
         enqueue_response(pSession, dcb.create_response());
     }

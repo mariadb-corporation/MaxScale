@@ -64,7 +64,6 @@ private:
 
 private:
     // mxs::ProtocolConnection
-    bool    write(GWBUF&& buffer) override;
     json_t* diagnostics() const override;
     void set_dcb(DCB* dcb) override;
     bool is_movable() const override;
@@ -78,6 +77,8 @@ private:
 
     bool ssl_is_ready();
     bool setup_ssl();
+
+    bool write(GWBUF&& buffer);
 
 private:
     nosql::Config  m_config;

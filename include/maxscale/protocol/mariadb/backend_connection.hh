@@ -34,8 +34,6 @@ public:
     void ready_for_reading(DCB* dcb) override;
     void error(DCB* dcb, const char* errmsg) override;
 
-    bool write(GWBUF&& buffer) override;
-
     void     finish_connection() override;
     uint64_t can_reuse(MXS_SESSION* session) const override;
     bool     reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type) override;
@@ -53,6 +51,8 @@ public:
 
     uint64_t        thread_id() const;
     mxs::Component* upstream() const override;
+
+    bool routeQuery(GWBUF&& buffer) override;
 
 private:
     enum class State

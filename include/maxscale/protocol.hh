@@ -45,14 +45,6 @@ public:
     virtual ~ProtocolConnection() = default;
 
     /**
-     * Write data to a network socket
-     *
-     * @param buffer Buffer to write
-     * @return 1 on success, 0 on error
-     */
-    virtual bool    write(GWBUF&& buffer) = 0;
-
-    /**
      * Print connection diagnostics to json.
      *
      * @return JSON representation of the connection

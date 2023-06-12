@@ -123,7 +123,7 @@ void PgBackendConnection::error(DCB* dcb, const char* errmsg)
     m_upstream->handleError(mxs::ErrorType::TRANSIENT, errmsg, nullptr, m_reply);
 }
 
-bool PgBackendConnection::write(GWBUF&& buffer)
+bool PgBackendConnection::routeQuery(GWBUF&& buffer)
 {
     if (m_state != State::ROUTING)
     {
@@ -621,7 +621,7 @@ void PgBackendConnection::send_backlog()
     {
         MXB_INFO("Routing packet from backlog: %s", pg::describe(*it).c_str());
 
-        if (!write(std::move(*it)))
+        if (!routeQuery(std::move(*it)))
         {
             handle_error("Failed to process delayed packets");
             break;

@@ -317,11 +317,6 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
     }
 }
 
-bool CDCClientConnection::write(GWBUF&& buffer)
-{
-    return m_dcb->writeq_append(std::move(buffer));
-}
-
 void CDCClientConnection::error(DCB* event_dcb, const char* errmsg)
 {
     mxb_assert(m_dcb == event_dcb);
@@ -371,12 +366,12 @@ bool CDCClientConnection::write(std::string_view msg)
     GWBUF buf(msg.size() + 1);
     memcpy(buf.data(), msg.data(), msg.size());
     buf.data()[msg.size()] = '\n';
-    return write(std::move(buf));
+    return clientReply(std::move(buf), mxs::ReplyRoute {}, mxs::Reply {});
 }
 
 bool CDCClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return write(std::move(buffer));
+    return m_dcb->writeq_append(std::move(buffer));
 }
 
 bool CDCClientConnection::safe_to_restart() const
