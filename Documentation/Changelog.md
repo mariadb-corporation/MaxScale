@@ -22,6 +22,10 @@
 
 * Embedded newlines are removed from logged messages.
 
+* Schemarouter database map caches can be cleared with `maxctrl call command
+  schemarouter clear <service>` where `<service>` is a service that uses the
+  schemarouter.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the

@@ -159,6 +159,11 @@ public:
     void update_shard(Shard& shard, const std::string& user);
 
     /**
+     * @brief Empties the shard map of its contents
+     */
+    void clear();
+
+    /**
      * Set how many concurrent shard updates are allowed per user
      *
      * By default only one update per user is allowed.

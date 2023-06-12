@@ -22,6 +22,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <maxscale/modulecmd.hh>
 
 #include "schemaroutersession.hh"
 
@@ -50,6 +51,8 @@ public:
     {
         return {MXS_MARIADB_PROTOCOL_NAME};
     }
+
+    static bool clear_shards(const MODULECMD_ARG* argv, json_t** output);
 
 private:
     friend class SchemaRouterSession;

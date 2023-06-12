@@ -274,6 +274,19 @@ following fields.
 * `shard_map_hits`: Cache hits for the shard map cache.
 * `shard_map_misses`: Cache misses for the shard map cache.
 
+## Module commands
+
+Read [Module Commands](../Reference/Module-Commands.md) documentation for
+details about module commands.
+
+The schemarouter supports the following module commands.
+
+### `clear SERVICE`
+
+Clears the database map cache of the given service. This can be used to schedule
+the updates to the database maps to happen at off-peak hours by configuring a
+high value for `refresh_interval` and clearing the cache externally.
+
 ## Limitations
 
 * Cross-database queries (e.g. `SELECT column FROM database1.table UNION select column

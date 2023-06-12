@@ -50,6 +50,18 @@ If a query in a transaction is interrupted and the result was partially
 delivered to the client, readwritesplit will now retry the execution of the
 query and discard the already delivered part of the result.
 
+### [MXS-4215](https://jira.mariadb.org/browse/MXS-4215) Allow manual clearing of schemarouter caches
+
+The schemarouter database map cache can now be manually cleared with a MaxCtrl
+command:
+
+```
+maxctrl call command schemarouter clear <service>
+```
+
+This makes it possible to schedule the clearing of the caches for busy systems
+where the update of the map takes a long time.
+
 ### MaxGUI
 
 

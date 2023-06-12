@@ -195,6 +195,12 @@ void ShardManager::update_shard(Shard& shard, const std::string& user)
     --m_limits[user];
 }
 
+void ShardManager::clear()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_maps.clear();
+}
+
 void ShardManager::set_update_limit(int64_t limit)
 {
     std::lock_guard<std::mutex> guard(m_lock);
