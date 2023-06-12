@@ -8,6 +8,7 @@ if(NOT boost_POPULATED)
   # Extractes the bundled Boost library
   FetchContent_Declare(boost
     URL "${CMAKE_SOURCE_DIR}/boost/boost-1.76.0.tar.gz"
+    DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/boost/
     SOURCE_DIR ${CMAKE_BINARY_DIR}/boost/
     BINARY_DIR ${CMAKE_BINARY_DIR}/boost/
     CONFIGURE_COMMAND ""
