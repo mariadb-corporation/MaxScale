@@ -360,7 +360,7 @@ void AvroSession::process_command(GWBUF&& queue)
     else
     {
         const char err[] = "ERR: Unknown command\n";
-        m_client->write(GWBUF((const uint8_t*)err, sizeof(err)));
+        m_client->clientReply(GWBUF((const uint8_t*)err, sizeof(err)), mxs::ReplyRoute {}, mxs::Reply {});
     }
 }
 
@@ -376,7 +376,7 @@ int AvroSession::send_row(json_t* row)
         uint8_t* data = buf.data();
         memcpy(data, json, len);
         data[len] = '\n';
-        rc = m_client->write(std::move(buf));
+        rc = m_client->clientReply(std::move(buf), mxs::ReplyRoute {}, mxs::Reply {});
     }
     else
     {
@@ -466,7 +466,7 @@ bool AvroSession::stream_binary()
         bytes += m_file_handle->buffer_size;
         if (auto buffer = maxavro_record_read_binary(m_file_handle))
         {
-            rc = m_client->write(std::move(buffer));
+            rc = m_client->clientReply(std::move(buffer), mxs::ReplyRoute {}, mxs::Reply {});
         }
         else
         {
@@ -746,7 +746,7 @@ void AvroSession::client_callback()
 
             if (schema)
             {
-                m_client->write(std::move(schema));
+                m_client->clientReply(std::move(schema), mxs::ReplyRoute {}, mxs::Reply {});
             }
         }
 

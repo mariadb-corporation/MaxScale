@@ -1270,7 +1270,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
         break;
 
     case ConnStatus::CONNECTED:
-        rval = m_conn->write(std::move(buffer));
+        rval = m_conn->routeQuery(std::move(buffer));
         m_server->stats().add_packet();
         break;
 
@@ -1282,7 +1282,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
             {
                 MXB_INFO("Session %lu connection to %s restored from pool.",
                          m_session->id(), m_server->name());
-                rval = m_conn->write(std::move(buffer));
+                rval = m_conn->routeQuery(std::move(buffer));
                 m_server->stats().add_packet();
             }
             else
@@ -1371,7 +1371,7 @@ ServerEndpoint::ContinueRes ServerEndpoint::continue_connecting()
         bool success = true;
         for (auto& packet : m_delayed_packets)
         {
-            if (m_conn->write(std::move(packet)) == 0)
+            if (m_conn->routeQuery(std::move(packet)) == 0)
             {
                 success = false;
                 break;

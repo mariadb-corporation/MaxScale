@@ -81,8 +81,6 @@ public:
     void ready_for_reading(DCB* dcb) override;
     void error(DCB* dcb, const char* errmsg) override;
 
-    bool    write(GWBUF&& buffer) override;
-
     /**
      * Write a string.
      *

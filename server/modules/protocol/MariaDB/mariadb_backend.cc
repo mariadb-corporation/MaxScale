@@ -1036,7 +1036,7 @@ void MariaDBBackendConnection::read_com_ping_response()
     }
 }
 
-bool MariaDBBackendConnection::write(GWBUF&& queue)
+bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
 {
     int rc = 0;
     switch (m_state)
@@ -2701,7 +2701,7 @@ bool MariaDBBackendConnection::send_delayed_packets()
 
     for (auto it = packets.begin(); it != packets.end(); ++it)
     {
-        if (!write(std::move(*it)))
+        if (!routeQuery(std::move(*it)))
         {
             rval = false;
             break;

@@ -44,9 +44,6 @@ public:
     void ready_for_reading(DCB* dcb) override;
     void error(DCB* dcb, const char* errmsg) override;
 
-    // mxs::ProtocolConnection
-    bool write(GWBUF&& buffer) override;
-
     // mxs::ClientConnection
     bool init_connection() override;
     void finish_connection() override;
@@ -70,6 +67,8 @@ private:
 
     using SimpleRequest = std::monostate;
     using HistoryRequest = std::unique_ptr<GWBUF>;
+
+    bool write(GWBUF&& buffer);
 
     State state_init(const GWBUF& gwbuf);
     State state_wait_userdata();

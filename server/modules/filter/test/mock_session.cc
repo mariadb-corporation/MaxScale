@@ -48,11 +48,6 @@ public:
     {
     }
 
-    bool write(GWBUF&& buffer)override
-    {
-        return true;
-    }
-
     void error(DCB* dcb, const char* errmsg) override
     {
     }

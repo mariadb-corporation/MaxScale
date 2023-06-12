@@ -31,7 +31,7 @@ public:
     void ready_for_reading(DCB* dcb) override;
     void error(DCB* dcb, const char* errmsg) override;
 
-    bool write(GWBUF&& buffer) override;
+    bool routeQuery(GWBUF&& buffer) override;
 
     void finish_connection() override;
 

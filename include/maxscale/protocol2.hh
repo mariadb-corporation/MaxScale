@@ -242,8 +242,7 @@ public:
     }
 
     /**
-     * Route reply to client. This should be called from the session to route a query to client instead of
-     * write(), as write() does not update routing status.
+     * Route reply to client.
      *
      * @param buffer Reply buffer
      * @param down Path taken
@@ -415,6 +414,15 @@ public:
     virtual const BackendDCB* dcb() const = 0;
     virtual BackendDCB*       dcb() = 0;
     virtual mxs::Component*   upstream() const = 0;
+
+    /**
+     * To be called in order to send a packet to a backend.
+     *
+     * @param packet A client packet.
+     *
+     * @return True for success, false for error
+     */
+    virtual bool routeQuery(GWBUF&& packet) = 0;
 };
 
 class UserAccountCache;
