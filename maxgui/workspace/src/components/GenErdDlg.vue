@@ -66,6 +66,7 @@ export default {
         ...mapState({
             QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
             gen_erd_dlg: state => state.mxsWorkspace.gen_erd_dlg,
+            charset_collation_map: state => state.editorsMem.charset_collation_map,
         }),
         isOpened: {
             get() {
@@ -152,8 +153,10 @@ export default {
                     data: { graph_height_pct: 100, active_entity_id: '' },
                 })
                 await this.queryDdlEditorSuppData({ connId: conn.id })
-                //TODO: call tableParserTransformer for each table
-                const erdData = queryHelper.genErdData(parsedDdl)
+                const erdData = queryHelper.genErdData({
+                    data: parsedDdl,
+                    charsetCollationMap: this.charset_collation_map,
+                })
                 ErdTask.update({ where: activeWkeId, data: { data: erdData, is_laid_out: false } })
             }
         },

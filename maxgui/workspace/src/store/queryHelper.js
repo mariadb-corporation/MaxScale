@@ -393,15 +393,12 @@ function getDatabase(connection_string) {
 }
 
 /**
- * @param {string} param.schema - schema name
  * @param {object} param.parsedTable - parsed ddl of a table
  *  @param {string} param.highlightColor - highlight color
  */
-function genErdNode({ schema, parsedTable, highlightColor }) {
+function genErdNode({ parsedTable, highlightColor }) {
     return {
         id: `node_${uuidv1()}`,
-        qualifiedName: `${schema}.${parsedTable.name}`, // using for generate links
-        schema,
         data: parsedTable,
         styles: { highlightColor },
         x: 0,
@@ -414,10 +411,12 @@ function genErdNode({ schema, parsedTable, highlightColor }) {
 const getNodeHighlightColor = node => typy(node, 'styles.highlightColor').safeString
 
 const getColDefData = ({ node, colName }) =>
-    node.data.definitions.cols.find(col => col.name === colName)
+    node.data.definitions.cols.find(col => col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]] === colName)
 
 const getOptionality = colData =>
-    colData.is_nn ? RELATIONSHIP_OPTIONALITY.MANDATORY : RELATIONSHIP_OPTIONALITY.OPTIONAL
+    colData[COL_ATTR_IDX_MAP[COL_ATTRS.NN]]
+        ? RELATIONSHIP_OPTIONALITY.MANDATORY
+        : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
 const isIndex = ({ indexDefs, indexCols }) =>
     indexDefs.some(def => lodash.isEqual(def.index_cols, indexCols))
@@ -484,7 +483,7 @@ function handleGenErdLink({ srcNode, fk, nodes }) {
     let links = []
 
     const target = `${referenced_schema_name}.${referenced_table_name}`
-    const targetNode = nodes.find(n => n.qualifiedName === target)
+    const targetNode = nodes.find(n => `${n.data.options.schema}.${n.data.options.name}` === target)
     const invisibleHighlightColor = getNodeHighlightColor(targetNode)
     if (targetNode) {
         const srcCardinality = getCardinality({ node: srcNode, indexCols: index_cols })
@@ -512,17 +511,25 @@ function handleGenErdLink({ srcNode, fk, nodes }) {
     return links
 }
 /**
- * @param {Object} parsedDdl - parsed ddl map of schemas
+ * @param {Object} param.data - parsed ddl map of schemas
+ * @param {Object} param.charsetCollationMap - charset collation map
  */
-function genErdData(parsedDdl) {
+function genErdData({ data, charsetCollationMap }) {
     let nodes = [],
         links = []
 
-    Object.keys(parsedDdl).forEach(schema => {
+    Object.keys(data).forEach(schema => {
         nodes = [
             ...nodes,
-            ...parsedDdl[schema].map((tbl, i) =>
-                genErdNode({ schema, parsedTable: tbl, highlightColor: dynamicColors(i) })
+            ...data[schema].map((tbl, i) =>
+                genErdNode({
+                    parsedTable: tableParserTransformer({
+                        schema,
+                        parsedTable: tbl,
+                        charsetCollationMap,
+                    }),
+                    highlightColor: dynamicColors(i),
+                })
             ),
         ]
     })
@@ -533,7 +540,11 @@ function genErdData(parsedDdl) {
                 ...links,
                 ...handleGenErdLink({
                     srcNode: node,
-                    fk: { ...fk, referenced_schema_name: fk.referenced_schema_name || node.schema },
+                    fk: {
+                        ...fk,
+                        referenced_schema_name:
+                            fk.referenced_schema_name || node.data.options.schema,
+                    },
                     nodes,
                 }),
             ]

@@ -47,29 +47,29 @@
                                         class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg px-4"
                                         colspan="3"
                                     >
-                                        {{ node.data.name }}
+                                        {{ node.data.options.name }}
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
                                     v-for="col in node.data.definitions.cols"
-                                    :key="`key_${node.id}_${col.name}`"
+                                    :key="col[COL_ATTR_IDX_MAP[COL_ATTRS.ID]]"
                                     :style="{
                                         height: `${entitySizeConfig.rowHeight}px`,
-                                        ...getHighlightColStyle({ node, colName: col.name }),
+                                        ...getHighlightColStyle({ node, colName: getColName(col) }),
                                     }"
                                 >
                                     <td>
                                         <erd-key-icon
                                             class="fill-height d-flex align-center"
-                                            :data="getKeyIcon({ node, colName: col.name })"
+                                            :data="getKeyIcon({ node, colName: getColName(col) })"
                                         />
                                     </td>
                                     <td>
                                         <div class="fill-height d-flex align-center">
                                             <mxs-truncate-str
-                                                :tooltipItem="{ txt: col.name }"
+                                                :tooltipItem="{ txt: getColName(col) }"
                                                 :maxWidth="tdMaxWidth"
                                             />
                                         </div>
@@ -81,20 +81,16 @@
                                                 $typy(
                                                     getHighlightColStyle({
                                                         node,
-                                                        colName: col.name,
+                                                        colName: getColName(col),
                                                     }),
                                                     'color'
                                                 ).safeString || '#6c7c7b',
                                         }"
                                     >
-                                        <div class="fill-height d-flex align-center">
+                                        <div class="fill-height d-flex align-center text-lowercase">
                                             <mxs-truncate-str
                                                 :tooltipItem="{
-                                                    txt: `${col.data_type}${
-                                                        $typy(col, 'data_type_size').isDefined
-                                                            ? `(${col.data_type_size})`
-                                                            : ''
-                                                    }`,
+                                                    txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]],
                                                 }"
                                                 :maxWidth="tdMaxWidth"
                                             />
@@ -177,7 +173,11 @@ export default {
         }
     },
     computed: {
-        ...mapState({ CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS }),
+        ...mapState({
+            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
+            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
+        }),
         panAndZoomData: {
             get() {
                 return this.panAndZoom
@@ -429,6 +429,9 @@ export default {
                         size: 16,
                     }
             }
+        },
+        getColName(col) {
+            return col[this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]]
         },
         getHighlightColStyle({ node, colName }) {
             const cols = this.highlightColStyleMap[node.id] || []

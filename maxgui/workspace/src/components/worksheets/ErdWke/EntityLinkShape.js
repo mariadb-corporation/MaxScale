@@ -11,6 +11,7 @@
  * Public License.
  */
 import { LINK_SHAPES, TARGET_POS } from '@wsSrc/components/worksheets/ErdWke/config'
+import { COL_ATTR_IDX_MAP, COL_ATTRS } from '@wsSrc/store/config'
 
 export default class EntityLinkShape {
     constructor(graphConfig) {
@@ -60,7 +61,10 @@ export default class EntityLinkShape {
             entitySizeConfig: { rowHeight, rowOffset, headerHeight },
         } = this.config
         const { isAttrToAttr } = this.linkConfig
-        const colIdx = node.data.definitions.cols.findIndex(c => c.name === attr)
+
+        const colIdx = node.data.definitions.cols.findIndex(
+            c => c[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]] === attr
+        )
         const center = isAttrToAttr
             ? node.y +
               nodeHeight / 2 -
