@@ -587,6 +587,23 @@ private:
  */
 void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffer);
 
+/**
+ * Has a terminating response been set.
+ *
+ * @param session  The session.
+ *
+ * @return True, if a response has been set.
+ */
+bool session_has_response(MXS_SESSION* session);
+
+/**
+ * Release a terminating response.
+ *
+ * @param session  The session.
+ *
+ * @return The response that had been set.
+ */
+GWBUF session_release_response(MXS_SESSION* session);
 
 const char* session_state_to_string(MXS_SESSION::State);
 
