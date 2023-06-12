@@ -647,18 +647,19 @@ bool ReplicationCluster::create_users(int i)
         mxt::MariaDBUserDef mdbmon_user = {"mariadbmon", "%", "mariadbmon"};
         mdbmon_user.grants = {"SUPER, FILE, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.*",
                               "SELECT ON mysql.user"};
-        if (vrs.as_number() >= 10'05'00)
+        auto version_num = vrs.as_number();
+        if (version_num >= 10'05'00)
         {
             mdbmon_user.grants.emplace_back("REPLICATION SLAVE ADMIN ON *.*");
+            mdbmon_user.grants.emplace_back("SELECT ON mysql.global_priv");
+            if (version_num >= 10'11'00)
+            {
+                mdbmon_user.grants.emplace_back("READ ONLY ADMIN ON *.*");
+            }
         }
         else
         {
             mdbmon_user.grants.emplace_back("REPLICATION CLIENT ON *.*");
-        }
-
-        if (vrs.as_number() >= 10'11'00)
-        {
-            mdbmon_user.grants.emplace_back("READ ONLY ADMIN ON *.*");
         }
 
         bool error = false;

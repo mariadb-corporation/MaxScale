@@ -49,6 +49,10 @@ the following additional grants are required:
 GRANT SUPER, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'maxscale'@'maxscalehost';
 GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
 ```
+MariaDB 10.5.2 and later require read access to *mysql.global_priv*:
+```
+GRANT SELECT ON mysql.global_priv TO 'maxscale'@'maxscalehost';
+```
 
 If `replication_user` and `replication_password` are used, the following grants
 must be given to the user defined by them:
