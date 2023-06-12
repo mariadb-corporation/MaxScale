@@ -18,7 +18,11 @@
 #include <unistd.h>
 #include <maxbase/log.hh>
 #include <sstream>
+#include <fstream>
 #include <uuid/uuid.h>
+#include <dirent.h>
+#include <sys/inotify.h>
+#include "pinloki.hh"
 
 namespace
 {
@@ -60,6 +64,93 @@ cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(
 
 namespace pinloki
 {
+namespace
+{
+template<typename T>
+class CallAtScopeEnd
+{
+public:
+    CallAtScopeEnd(T at_destruct)
+        : at_destruct(at_destruct)
+    {
+    }
+    ~CallAtScopeEnd()
+    {
+        at_destruct();
+    }
+private:
+    T at_destruct;
+};
+
+// Can't rely on stat() to sort files. The files can have the
+// same creation/mod time
+long get_file_sequence_number(const std::string& file_name)
+{
+    try
+    {
+        auto num_str = file_name.substr(file_name.find_last_of(".") + 1);
+        long seq_no = 1 + std::stoi(num_str.c_str());
+        return seq_no;
+    }
+    catch (std::exception& ex)
+    {
+        MXB_THROW(BinlogReadError, "Unexpected binlog file name '"
+                  << file_name << "' error " << ex.what());
+    }
+}
+
+std::vector<std::string> read_binlog_file_names(const Config& config)
+{
+    std::map<long, std::string> binlogs;
+    const auto& binlog_dir = config.binlog_dir_path();
+
+    DIR* pdir;
+    struct dirent* pentry;
+
+    if ((pdir = opendir(binlog_dir.c_str())) != nullptr)
+    {
+        auto close_dir_func = [pdir]{
+            closedir(pdir);
+        };
+        CallAtScopeEnd<decltype(close_dir_func)> close_dir{close_dir_func};
+
+        while ((pentry = readdir(pdir)) != nullptr)
+        {
+            if (pentry->d_type != DT_REG)
+            {
+                continue;
+            }
+
+            auto file_path = MAKE_STR(binlog_dir.c_str() << '/' << pentry->d_name);
+
+            decltype(PINLOKI_MAGIC) magic;
+            std::ifstream is{file_path.c_str(), std::ios::binary};
+            if (is)
+            {
+                is.read(magic.data(), PINLOKI_MAGIC.size());
+                if (is && magic == PINLOKI_MAGIC)
+                {
+                    auto seq_no = get_file_sequence_number(file_path);
+                    binlogs.insert({seq_no, file_path});
+                }
+            }
+        }
+    }
+    else
+    {
+        MXB_THROW(BinlogReadError, "Could not open directory " << binlog_dir);
+    }
+
+    std::vector<std::string> file_names;
+    file_names.reserve(binlogs.size());
+    for (const auto& e : binlogs)
+    {
+        file_names.push_back(e.second);
+    }
+
+    return file_names;
+}
+}
 
 // static
 mxs::config::Specification& Config::spec()
