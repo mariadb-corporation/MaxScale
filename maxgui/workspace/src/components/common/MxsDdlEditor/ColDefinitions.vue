@@ -32,7 +32,7 @@
             <mxs-filter-list
                 v-model="selectedColSpecs"
                 returnObject
-                :label="$mxs_t('alterSpecs')"
+                :label="$mxs_t('specs')"
                 :items="colSpecs"
                 :maxHeight="tableMaxHeight - 20"
             />
@@ -132,7 +132,7 @@ import {
 import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
-    name: 'alter-cols-opts',
+    name: 'col-definitions',
     components: { ColOptInput },
     props: {
         value: { type: Object, required: true },

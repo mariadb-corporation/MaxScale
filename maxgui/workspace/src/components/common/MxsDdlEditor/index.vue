@@ -13,6 +13,7 @@
             v-model="stagingData"
             :initialData="data"
             :dim="formDim"
+            :mode="mode"
             @is-form-valid="isFormValid = $event"
         />
     </div>

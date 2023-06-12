@@ -1,13 +1,14 @@
 <template>
     <v-form v-model="isFormValid">
         <div ref="header">
-            <alter-table-opts
+            <table-opts
                 v-model="tblOpts"
                 :engines="engines"
                 :charsetCollationMap="charset_collation_map"
                 :defDbCharset="
                     $typy(def_db_charset_map, `${$typy(tblOpts, 'schema').safeString}`).safeString
                 "
+                :mode="mode"
             />
         </div>
         <v-tabs v-model="activeSpec" :height="24" class="v-tabs--mariadb">
@@ -17,7 +18,7 @@
         </v-tabs>
         <div class="px-3 py-2">
             <v-slide-x-transition>
-                <alter-cols-opts
+                <col-definitions
                     v-if="activeSpec === DDL_ALTER_SPECS.COLUMNS"
                     v-model="definitions"
                     :charsetCollationMap="charset_collation_map"
@@ -47,14 +48,14 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import AlterTableOpts from '@wsSrc/components/common/MxsDdlEditor/AlterTableOpts.vue'
-import AlterColsOpts from '@wsSrc/components/common/MxsDdlEditor/AlterColsOpts.vue'
+import TableOpts from '@wsSrc/components/common/MxsDdlEditor/TableOpts.vue'
+import ColDefinitions from '@wsSrc/components/common/MxsDdlEditor/ColDefinitions.vue'
 
 export default {
     name: 'ddl-editor-form-ctr',
     components: {
-        AlterTableOpts,
-        AlterColsOpts,
+        TableOpts,
+        ColDefinitions,
     },
     model: {
         prop: 'formData',
@@ -64,6 +65,7 @@ export default {
         formData: { type: Object, required: true },
         initialData: { type: Object, required: true },
         dim: { type: Object, required: true },
+        mode: { type: String, required: true },
     },
     data() {
         return {

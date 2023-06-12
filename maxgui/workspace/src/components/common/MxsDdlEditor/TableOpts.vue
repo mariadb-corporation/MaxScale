@@ -3,7 +3,7 @@
         :toggleOnClick="() => (showInputs = !showInputs)"
         :isContentVisible="showInputs"
         wrapperClass="tbl-opts px-1 pt-2"
-        :title="$mxs_t('alterTbl')"
+        :title="title"
     >
         <template v-slot:arrow-toggle="{ toggleOnClick, isContentVisible }">
             <v-btn icon small class="arrow-toggle" @click="toggleOnClick">
@@ -115,15 +115,17 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
 export default {
-    name: 'alter-table-opts',
+    name: 'table-opts',
     components: { CharsetCollateSelect },
     props: {
         value: { type: Object, required: true },
         engines: { type: Array, required: true },
         defDbCharset: { type: String, required: true },
         charsetCollationMap: { type: Object, required: true },
+        mode: { type: String, required: true },
     },
     data() {
         return {
@@ -138,6 +140,13 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES,
+        }),
+        title() {
+            if (this.mode === this.DDL_EDITOR_MODES.ALTER) return this.$mxs_t('alterTbl')
+            return this.$mxs_t('createTbl')
+        },
         tblOpts: {
             get() {
                 return this.value
