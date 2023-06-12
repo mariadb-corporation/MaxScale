@@ -27,6 +27,7 @@
 #include <mariadb_rpl.h>
 #include <errmsg.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <maxbase/threadpool.hh>
 #include <maxscale/buffer.hh>

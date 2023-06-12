@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <iostream>
 #include <set>
+#include <unistd.h>
 #include "cache.hh"
 #include "storagefactory.hh"
 // TODO: Move this to a common place.

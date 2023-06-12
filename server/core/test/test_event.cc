@@ -17,6 +17,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
+#include <unistd.h>
 #include <algorithm>
 #include <fstream>
 #include <iostream>

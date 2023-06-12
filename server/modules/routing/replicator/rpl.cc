@@ -19,6 +19,7 @@
 
 #include <glob.h>
 #include <math.h>
+#include <unistd.h>
 
 #include <maxbase/assert.hh>
 #include <maxsql/mariadb.hh>

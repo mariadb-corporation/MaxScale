@@ -19,6 +19,7 @@
 #include <cstring>
 #include <sys/epoll.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <chrono>
 #include <fstream>

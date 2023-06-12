@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <getopt.h>
 #include <algorithm>
 #include <iostream>
 #include <maxscale/paths.hh>

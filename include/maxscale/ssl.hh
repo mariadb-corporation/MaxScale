@@ -22,7 +22,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <memory>
-#include <openssl/core.h>
+#include <openssl/ossl_typ.h>
 
 #include <maxbase/ssl.hh>
 #include <maxscale/modinfo.hh>

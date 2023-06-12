@@ -15,6 +15,7 @@
 #include "nosqlusermanager.hh"
 #include <sys/stat.h>
 #include <uuid/uuid.h>
+#include <unistd.h>
 #include <map>
 #include <maxsql/mariadb.hh>
 #include <maxscale/paths.hh>

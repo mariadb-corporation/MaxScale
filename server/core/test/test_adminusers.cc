@@ -21,6 +21,7 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/users.hh>

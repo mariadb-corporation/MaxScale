@@ -45,6 +45,7 @@
 #include <curl/curl.h>
 #include <crypt.h>
 #include <sched.h>
+#include <unistd.h>
 #include <fstream>
 
 #include <maxscale/config.hh>

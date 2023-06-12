@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include <maxavro.hh>
 #include <fstream>
 #include <sstream>

@@ -15,6 +15,7 @@
 #include <maxscale/config2.hh>
 
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <maxbase/format.hh>
 #include <maxscale/listener.hh>

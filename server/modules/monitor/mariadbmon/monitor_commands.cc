@@ -17,6 +17,7 @@
 #include <maxbase/http.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/utils.hh>
+#include <unistd.h>
 #include "mariadbmon.hh"
 #include "ssh_utils.hh"
 

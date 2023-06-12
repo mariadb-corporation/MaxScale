@@ -21,6 +21,7 @@
 #include <blr_constants.hh>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <maxbase/ini.hh>
 #include <maxscale/maxscale.hh>

@@ -18,6 +18,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <glob.h>
+#include <unistd.h>
 #include <maxscale/maxscale.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modulecmd.hh>

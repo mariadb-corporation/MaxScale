@@ -13,6 +13,7 @@
  */
 
 #include "xpandmonitor.hh"
+#include <unistd.h>
 #include <algorithm>
 #include <set>
 #include <maxbase/host.hh>

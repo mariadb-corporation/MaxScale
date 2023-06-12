@@ -18,6 +18,7 @@
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.hh>
+#include <unistd.h>
 #include "pgprotocoldata.hh"
 #include "pgusermanager.hh"
 

@@ -18,10 +18,12 @@
 #include <fstream>
 #include <pwd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <openssl/aes.h>
 #include <openssl/err.h>
 #include <openssl/ossl_typ.h>
 #include <openssl/rand.h>
+#include <openssl/evp.h>
 
 #include <maxbase/format.hh>
 #include <maxscale/paths.hh>

@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <iomanip>
 #include <iostream>
+#include <unistd.h>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 

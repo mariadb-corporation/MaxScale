@@ -38,6 +38,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <time.h>
+#include <unistd.h>
 
 #ifdef OPENSSL_1_1
 #include <openssl/x509v3.h>

@@ -26,6 +26,7 @@
 
 #include <strings.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <maxbase/filesystem.hh>
 #include <maxbase/format.hh>

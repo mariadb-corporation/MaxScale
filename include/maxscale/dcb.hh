@@ -19,7 +19,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <openssl/core.h>
+#include <openssl/ossl_typ.h>
 #include <netinet/in.h>
 
 #include <maxbase/json.hh>

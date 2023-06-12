@@ -18,6 +18,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <unistd.h>
 
 using namespace mxs;
 using namespace std;
