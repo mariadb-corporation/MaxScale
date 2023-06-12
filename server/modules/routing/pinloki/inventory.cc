@@ -24,24 +24,6 @@ namespace pinloki
 
 namespace
 {
-std::vector<std::string> read_inventory_file(const Config& config)
-{
-    std::ifstream ifs(config.inventory_file_path());
-    std::vector<std::string> file_names;
-
-    while (ifs.good())
-    {
-        std::string name;
-        ifs >> name;
-        if (ifs.good())
-        {
-            file_names.push_back(name);
-        }
-    }
-
-    return file_names;
-}
-
 maxsql::GtidList read_rpl_state(const Config& config)
 {
     std::string ret;
@@ -88,54 +70,12 @@ void save_gtid(const maxsql::GtidList& gtids, const std::string& filename)
 
 InventoryWriter::InventoryWriter(const Config& config)
     : m_config(config)
-    , m_file_names(read_inventory_file(config))
 {
-}
-
-void InventoryWriter::push_back(const std::string& file_name)
-{
-    std::unique_lock<std::mutex> lock(m_mutex);
-
-    m_file_names.push_back(m_config.path(file_name));
-    persist();
-}
-
-void InventoryWriter::pop_front(const std::string& file_name)
-{
-    std::unique_lock<std::mutex> lock(m_mutex);
-
-    if (file_name != m_file_names.front())
-    {
-        // This can happen if two users issue purge commands at the same time,
-        // in addition there is the timeout based purging as well.
-        // Not a problem so just an info message. Both (or all) purges will
-        // finish succesfully.
-        MXS_SINFO("pop_front " << file_name << "does not match front " << file_name);
-    }
-    else
-    {
-        m_file_names.erase(m_file_names.begin());
-        persist();
-    }
-}
-
-void InventoryWriter::persist()
-{
-    std::string tmp = m_config.inventory_file_path() + ".tmp";
-    std::ofstream ofs(tmp, std::ios_base::trunc);
-
-    for (const auto& file : m_file_names)
-    {
-        ofs << file << '\n';
-    }
-
-    rename(tmp.c_str(), m_config.inventory_file_path().c_str());
 }
 
 std::vector<std::string> InventoryWriter::file_names() const
 {
-    std::unique_lock<std::mutex> lock(m_mutex);
-    return m_file_names;
+    return m_config.binlog_file_names();
 }
 
 void InventoryWriter::save_rpl_state(const maxsql::GtidList& gtids)
@@ -222,11 +162,9 @@ InventoryReader::InventoryReader(const Config& config)
 {
 }
 
-const std::vector<std::string>& InventoryReader::file_names() const
+std::vector<std::string> InventoryReader::file_names() const
 {
-    // file reading can be improved, but the file is small
-    // and this function called seldomly
-    return m_file_names = read_inventory_file(m_config);
+    return m_config.binlog_file_names();
 }
 
 maxsql::GtidList InventoryReader::rpl_state() const

@@ -40,18 +40,6 @@ public:
     InventoryWriter& operator=(const InventoryWriter&) = delete;
 
     /**
-     * @brief push a file name to the end of the list
-     * @param file_name
-     */
-    void push_back(const std::string& file_name);
-
-    /**
-     * @brief pop the first file
-     * @param file_name must match the name of the first file
-     */
-    void pop_front(const std::string& file_name);
-
-    /**
      * @brief file_names
      * @return the file names
      */
@@ -84,19 +72,10 @@ public:
     }
 
 private:
-    // Read or re-read the file
-    void read_file() const;
-
-    // Saves the file list on disk
-    void persist();
-
     // The configuration used to create this inventory
     const Config& m_config;
-
-    mutable std::mutex               m_mutex;
-    mutable std::vector<std::string> m_file_names;
-    std::atomic<int64_t>             m_master_id {0};
-    std::atomic<bool>                m_is_writer_connected {false};
+    std::atomic<int64_t> m_master_id {0};
+    std::atomic<bool> m_is_writer_connected {false};
 };
 
 /**
@@ -107,8 +86,8 @@ class InventoryReader
 {
 public:
     InventoryReader(const Config& config);
-    const std::vector<std::string>& file_names() const;
-    maxsql::GtidList                rpl_state() const;
+    std::vector<std::string> file_names() const;
+    maxsql::GtidList         rpl_state() const;
 
     const Config& config() const
     {

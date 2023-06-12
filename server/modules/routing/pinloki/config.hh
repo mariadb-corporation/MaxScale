@@ -23,14 +23,29 @@
 #include <maxscale/config2.hh>
 
 #include <string>
+#include <thread>
 
 namespace pinloki
 {
 
 std::string gen_uuid();
 
-using namespace std::literals::chrono_literals;
-using namespace std::literals::string_literals;
+class BinglogIndexUpdater final
+{
+public:
+    BinglogIndexUpdater(const std::string& binlog_dir,
+                        const std::string& inventory_file_path);
+    std::vector<std::string> get();
+    void                     stop();
+private:
+    std::string              m_binlog_dir;
+    std::string              m_inventory_file_path;
+    std::vector<std::string> m_file_names;
+    std::mutex               m_file_names_mutex;
+    std::thread              m_update_thread;
+    std::atomic<bool>        m_running{true};
+    void update();
+};
 
 class Config : public mxs::config::Configuration
 {
@@ -38,6 +53,7 @@ public:
     Config(const std::string& name);
 
     Config(Config&&) = default;
+    ~Config();
 
     static mxs::config::Specification& spec();
 
@@ -52,6 +68,7 @@ public:
     std::string requested_gtid_file_path() const;
     std::string master_info_file() const;
     uint32_t    server_id() const;
+    std::vector<std::string> binlog_file_names() const;
 
     // Network timeout
     std::chrono::seconds net_timeout() const;
@@ -64,6 +81,7 @@ public:
     wall_time::Duration expire_log_duration() const;
     wall_time::Duration purge_startup_delay() const;
     wall_time::Duration purge_poll_timeout() const;
+
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
@@ -136,5 +154,7 @@ private:
     wall_time::Duration m_expire_log_duration;
     wall_time::Duration m_purge_startup_delay;
     wall_time::Duration m_purge_poll_timeout;
+
+    std::unique_ptr<BinglogIndexUpdater> m_binlog_files;
 };
 }

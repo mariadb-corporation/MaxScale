@@ -99,10 +99,9 @@ long get_file_sequence_number(const std::string& file_name)
     }
 }
 
-std::vector<std::string> read_binlog_file_names(const Config& config)
+std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
 {
     std::map<long, std::string> binlogs;
-    const auto& binlog_dir = config.binlog_dir_path();
 
     DIR* pdir;
     struct dirent* pentry;
@@ -256,5 +255,80 @@ Config::Config(const std::string& name)
     add_native(&m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&m_purge_poll_timeout, &s_purge_poll_timeout);
+    m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir,
+                                                 inventory_file_path()));
+}
+
+Config::~Config()
+{
+    if (m_binlog_files)
+    {
+        m_binlog_files->stop();
+    }
+}
+
+std::vector<std::string> Config::binlog_file_names() const
+{
+    return m_binlog_files->get();
+}
+
+BinglogIndexUpdater::BinglogIndexUpdater(const std::string& binlog_dir,
+                                         const std::string& inventory_file_path)
+    : m_binlog_dir(binlog_dir)
+    , m_inventory_file_path(inventory_file_path)
+    , m_file_names(read_binlog_file_names(m_binlog_dir))
+    , m_update_thread(&BinglogIndexUpdater::update, this)
+{
+}
+
+std::vector<std::string> BinglogIndexUpdater::get()
+{
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    return m_file_names;
+}
+
+void BinglogIndexUpdater::stop()
+{
+    m_running = false;
+    m_update_thread.join();
+}
+
+void BinglogIndexUpdater::update()
+{
+    const size_t SZ = 1024;
+    char buffer[SZ];
+    int inotify_fd = inotify_init1(IN_NONBLOCK);
+    inotify_add_watch(inotify_fd, m_binlog_dir.c_str(), IN_CREATE | IN_DELETE);
+
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    m_file_names = read_binlog_file_names(m_binlog_dir);
+    lock.unlock();
+
+    while (m_running.load(std::memory_order_relaxed))
+    {
+        auto n = read(inotify_fd, buffer, SZ);
+        if (n <= 0)
+        {
+            std::this_thread::sleep_for(100ms);
+            continue;
+        }
+
+        auto new_names = read_binlog_file_names(m_binlog_dir);
+        if (new_names != m_file_names)
+        {
+            lock.lock();
+            m_file_names = std::move(new_names);
+            std::string tmp = m_inventory_file_path + ".tmp";
+            std::ofstream ofs(tmp, std::ios_base::trunc);
+
+            for (const auto& file : m_file_names)
+            {
+                ofs << file << '\n';
+            }
+
+            rename(tmp.c_str(), m_inventory_file_path.c_str());
+            lock.unlock();
+        }
+    }
 }
 }
