@@ -68,6 +68,12 @@ Stale entries in the schemarouter database map can now be used up to
 `max_staleness` seconds. This reduces the impact that a shard update causes to
 the client applications.
 
+### [MXS-3983](https://jira.mariadb.org/browse/MXS-3983) Add switchover-force command
+
+This version of switchover performs the switch even if the primary server is
+unresponsive i.e. responds to pings but does not perform any commands in a
+reasonable time. May lead to diverging replication on the old primary.
+
 ### MaxGUI
 
 

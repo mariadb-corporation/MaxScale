@@ -31,6 +31,13 @@
   after they have gone stale. This limit can be configured with the
   `max_staleness` parameter.
 
+* Added switchover-force command to MariaDB Monitor. This command performs a
+  switchover even if primary server is unresponsive.
+
+* Switchover now uses a longer command timeout on the old master. This should
+  remove the need for adjusting monitor setting `backend_read_timeout` to get
+  switchover to work.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the

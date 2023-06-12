@@ -364,8 +364,11 @@ see [general monitor documentation](./Monitor-Common.md#script).
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
 modification. The operations implemented are:
+
 - _failover_, which replaces a failed primary with a replica
 - _switchover_, which swaps a running primary with a replica
+- _switchover_force_, which swaps a running primary with a replica, ignoring
+  most errors
 - _async-switchover_, which schedules a switchover and returns
 - _rejoin_, which directs servers to replicate from the primary
 - _reset-replication_ (added in MaxScale 2.3.0), which deletes binary logs and
@@ -380,6 +383,7 @@ privileges:
 - SUPER, to modify replica connections, set globals such as *read\_only* and kill
 connections from other super-users
 - SELECT on mysql.user, to see which users have SUPER
+- SELECT on mysql.global_priv so see to see which users have READ_ONLY ADMIN
 - REPLICATION CLIENT (REPLICATION SLAVE ADMIN in MariaDB Server 10.5), to list
 replica connections
 - RELOAD, to flush binary logs
@@ -447,12 +451,14 @@ following:
 1. Prepare the old primary for demotion:
       1. If `backend_read_timeout` is short, extend it and reconnect.
       2. Stop any external replication.
-      3. Kill connections from super-users since *read\_only* does not affect
-      them.
-      4. Enable the *read\_only*-flag to stop writes.
+      3. Enable the *read\_only*-flag to stop writes from normal users.
+      4. Kill connections from super and read-only admin users since
+         *read\_only* does not affect them. During this step, all writes are
+         blocked with "FLUSH TABLES WITH READ LOCK".
       5. Disable scheduled server events (if event handling is on).
       6. Run the commands in `demotion_sql_file`.
-      7. Flush the binary log (FLUSH LOGS) so that all events are on disk.
+      7. Flush the binary log ("flush logs") so that all events are on disk.
+      8. Wait a moment to check that gtid is stable.
 2. Wait for the new primary to catch up with the old primary.
 3. Promote new primary and redirect replicas as in failover steps 3 and 4. Also
 redirect the demoted old primary.
@@ -460,6 +466,12 @@ redirect the demoted old primary.
 
 Similar to failover, switchover is considered successful if the new primary was
 successfully promoted.
+
+**Switchover-force** performs the same steps as a normal switchover but ignores
+any errors on the old primary. Switchover-force also does not expect the new
+primary to reach the gtid-position of the old, as the old primary
+could be receiving more events constantly. Thus, switchover-force may lose
+events.
 
 **Rejoin** joins a standalone server to the cluster or redirects a replica
 replicating from a server other than the primary. A standalone server is joined
@@ -519,13 +531,14 @@ are unequal, an error is given.
 
 Example commands are below:
 ```
-call command mariadbmon failover MyMonitor
-call command mariadbmon rejoin MyMonitor OldPrimaryServ
-call command mariadbmon reset-replication MyMonitor
-call command mariadbmon reset-replication MyMonitor NewPrimaryServ
-call command mariadbmon switchover MyMonitor
-call command mariadbmon switchover MyMonitor NewPrimaryServ
-call command mariadbmon switchover MyMonitor NewPrimaryServ OldPrimaryServ
+maxctrl call command mariadbmon failover MyMonitor
+maxctrl call command mariadbmon rejoin MyMonitor OldPrimaryServ
+maxctrl call command mariadbmon reset-replication MyMonitor
+maxctrl call command mariadbmon reset-replication MyMonitor NewPrimaryServ
+maxctrl call command mariadbmon switchover MyMonitor
+maxctrl call command mariadbmon switchover MyMonitor NewPrimaryServ
+maxctrl call command mariadbmon switchover MyMonitor NewPrimaryServ OldPrimaryServ
+maxctrl call command mariadbmon switchover-force MyMonitor NewPrimaryServ
 ```
 
 The commands follow the standard module command syntax. All require the monitor
@@ -541,13 +554,12 @@ with manual ones.
 When a cluster modification is initiated via the REST-API, the URL path is of the
 form:
 ```
-/v1/maxscale/modules/mariadbmon/<operation>?<monitor-instance>&<server-param1>&<server-param2>
+/v1/maxscale/modules/mariadbmon/<operation>?<monitor-name>&<server-name1>&<server-name2>
 ```
-- `<operation>` is the name of the command: _failover_, _switchover_, _rejoin_
-or _reset-replication_.
-- `<monitor-instance>` is the monitor section name from the MaxScale
-configuration file.
-- `<server-param1>` and `<server-param2>` are server parameters as described
+- `<operation>` is the name of the command e.g. _failover_, _switchover_,
+  _rejoin_ or _reset-replication_.
+- `<monitor-name>` is the monitor name from the MaxScale configuration file.
+- `<server-name1>` and `<server-name2>` are server names as described
 above for MaxCtrl. Only _switchover_ accepts both, _failover_ doesn't need any
 and both _rejoin_ and _reset-replication_ accept one.
 
@@ -627,10 +639,8 @@ user-designated server must fulfill the same requirements.
 ### Limitations and requirements
 
 Switchover and failover only understand simple topologies. They will not work if
-the cluster has multiple primaries, relay primaries, or if the topology is circular.
-The server cluster is assumed to be well-behaving with no significant
-replication lag and all commands that modify the cluster complete in a few
-seconds (faster than `backend_read_timeout` and `backend_write_timeout`).
+the cluster has multiple primaries, relay primaries, or if the topology is
+circular.
 
 The backends must all use GTID-based replication, and the domain id should not
 change during a switchover or failover. Primary and replicas must have
@@ -655,7 +665,8 @@ replica acknowledgement, it will still commit the prepared transaction as part o
 its crash recovery. Since the replicas may never have seen this transaction, the
 old primary has diverged from the replicas. See
 [Configuring the Primary Wait Point](https://mariadb.com/kb/en/library/semisynchronous-replication/#configuring-the-master-wait-point)
-for more information.
+for more information. In more recent MariaDB Server versions (10.6.2), this
+situation is handled better and the old master can typically rejoin the cluster.
 
 Even a controlled shutdown of the primary may lose events. The server does not by
 default wait for all data to be replicated to the replicas when shutting down and
