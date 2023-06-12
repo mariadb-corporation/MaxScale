@@ -609,6 +609,23 @@ void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffe
     session->response.buffer = std::move(buffer);
 }
 
+bool session_has_response(MXS_SESSION* session)
+{
+    return !session->response.buffer.empty();
+}
+
+GWBUF session_release_response(MXS_SESSION* session)
+{
+    mxb_assert(session_has_response(session));
+
+    GWBUF rv(std::move(session->response.buffer));
+
+    session->response.up = nullptr;
+    session->response.buffer.clear();
+
+    return rv;
+}
+
 void session_set_retain_last_statements(uint32_t n)
 {
     this_unit.retain_last_statements = n;
