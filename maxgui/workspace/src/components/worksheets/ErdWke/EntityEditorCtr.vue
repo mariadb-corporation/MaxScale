@@ -20,12 +20,23 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapActions } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
+import QueryConn from '@wsModels/QueryConn'
 
 export default {
     name: 'entity-editor-ctr',
+    computed: {
+        activeErdConnId() {
+            return this.$typy(QueryConn.getters('getActiveErdConn'), 'id').safeString
+        },
+    },
+    async created() {
+        await this.queryDdlEditorSuppData({ connId: this.activeErdConnId })
+    },
     methods: {
+        ...mapActions({ queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData' }),
         close() {
             ErdTaskTmp.update({
                 where: ErdTask.getters('getActiveErdTaskId'),

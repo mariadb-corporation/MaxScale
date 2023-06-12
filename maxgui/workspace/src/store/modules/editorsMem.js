@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import queries from '@wsSrc/api/queries'
 
@@ -53,9 +52,8 @@ export default {
         },
     },
     actions: {
-        async queryCharsetCollationMap({ commit }) {
+        async queryCharsetCollationMap({ commit }, { connId }) {
             const config = Worksheet.getters('getActiveRequestConfig')
-            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
@@ -84,9 +82,8 @@ export default {
                 commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
             }
         },
-        async queryDefDbCharsetMap({ commit }) {
+        async queryDefDbCharsetMap({ commit }, { connId }) {
             const config = Worksheet.getters('getActiveRequestConfig')
-            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
@@ -109,15 +106,12 @@ export default {
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             }
         },
-        async queryEngines({ commit, rootState }) {
+        async queryEngines({ commit, rootState }, { connId }) {
             const config = Worksheet.getters('getActiveRequestConfig')
-            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
-                    body: {
-                        sql: 'SELECT engine FROM information_schema.ENGINES',
-                    },
+                    body: { sql: 'SELECT engine FROM information_schema.ENGINES' },
                     config,
                 })
             )
@@ -132,12 +126,15 @@ export default {
                     )
                 )
         },
-        async queryAlterTblSuppData({ state, dispatch }) {
-            if (this.vue.$typy(state.engines).isEmptyArray) await dispatch('queryEngines')
-            if (this.vue.$typy(state.charset_collation_map).isEmptyObject)
-                await dispatch('queryCharsetCollationMap')
-            if (this.vue.$typy(state.def_db_charset_map).isEmptyObject)
-                await dispatch('queryDefDbCharsetMap')
+        async queryDdlEditorSuppData({ state, dispatch }, { connId }) {
+            if (connId) {
+                if (this.vue.$typy(state.engines).isEmptyArray)
+                    await dispatch('queryEngines', { connId })
+                if (this.vue.$typy(state.charset_collation_map).isEmptyObject)
+                    await dispatch('queryCharsetCollationMap', { connId })
+                if (this.vue.$typy(state.def_db_charset_map).isEmptyObject)
+                    await dispatch('queryDefDbCharsetMap', { connId })
+            }
         },
     },
 }

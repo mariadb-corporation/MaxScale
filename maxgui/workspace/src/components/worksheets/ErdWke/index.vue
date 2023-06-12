@@ -13,7 +13,7 @@
                 <diagram-ctr :dim="erdDim" />
             </template>
             <template slot="pane-right">
-                <entity-editor-ctr v-show="activeEntityId" />
+                <entity-editor-ctr v-if="activeEntityId" />
             </template>
         </mxs-split-pane>
     </div>

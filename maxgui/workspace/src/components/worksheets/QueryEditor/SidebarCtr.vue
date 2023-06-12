@@ -138,8 +138,11 @@ export default {
         isSidebarDisabled() {
             return QueryConn.getters('getIsActiveQueryTabConnBusy') || this.isLoadingDbTree
         },
+        activeQueryTabConnId() {
+            return this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString
+        },
         hasConn() {
-            return Boolean(this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString)
+            return Boolean(this.activeQueryTabConnId)
         },
         dbTreeData() {
             return SchemaSidebar.getters('getDbTreeData')
@@ -155,7 +158,7 @@ export default {
             SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG',
         }),
         ...mapActions({
-            queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
+            queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData',
             exeStmtAction: 'mxsWorkspace/exeStmtAction',
         }),
         async fetchSchemas() {
@@ -181,7 +184,7 @@ export default {
                 name: `ALTER ${node.name}`,
                 editorMode: this.EDITOR_MODES.DDL_EDITOR,
             })
-            await this.queryAlterTblSuppData()
+            await this.queryDdlEditorSuppData({ connId: this.activeQueryTabConnId })
             await Editor.dispatch('queryTblCreationInfo', node)
         },
 

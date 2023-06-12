@@ -92,11 +92,10 @@ export default {
                 const { id: connId, meta: { name: connection_name } = {} } = QueryConn.getters(
                     'getActiveQueryTabConn'
                 )
-                const hasConnId = Boolean(connId)
                 const isSchemaTreeEmpty = SchemaSidebar.getters('getDbTreeData').length === 0
                 const hasSchemaTreeAlready =
                     SchemaSidebar.getters('getDbTreeOfConn') === connection_name
-                if (hasConnId) {
+                if (connId) {
                     if (isSchemaTreeEmpty || !hasSchemaTreeAlready) {
                         await SchemaSidebar.dispatch('initialFetch')
                         Worksheet.update({
@@ -105,7 +104,11 @@ export default {
                         })
                     }
                     if (Editor.getters('getIsDDLEditor'))
-                        await dispatch('editorsMem/queryAlterTblSuppData', {}, { root: true })
+                        await dispatch(
+                            'editorsMem/queryDdlEditorSuppData',
+                            { connId },
+                            { root: true }
+                        )
                 }
             } catch (e) {
                 this.vue.$logger.error(e)

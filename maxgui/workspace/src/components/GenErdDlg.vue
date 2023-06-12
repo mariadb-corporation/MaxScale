@@ -42,7 +42,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapActions } from 'vuex'
 import ErdTask from '@wsSrc/store/orm/models/ErdTask'
 import ErdTaskTmp from '@wsSrc/store/orm/models/ErdTaskTmp'
 import QueryConn from '@wsSrc/store/orm/models/QueryConn'
@@ -109,6 +109,7 @@ export default {
     },
     methods: {
         ...mapMutations({ SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG' }),
+        ...mapActions({ queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData' }),
         async cloneConn({ conn, config }) {
             const [e, res] = await this.$helpers.to(connection.clone({ id: conn.id, config }))
             if (e) this.errVisualizingMsg = this.$helpers.getErrorsArr(e).join('\n')
@@ -123,14 +124,13 @@ export default {
              * Clone the current connection and request_config data
              */
             if (this.genInNewWs) conn = await this.cloneConn({ conn, config })
-
             if (conn.id) {
                 const [, parsedDdl] = await queryHelper.queryAndParseDDL({
                     connId: conn.id,
                     tableNodes: this.selectedTableNodes,
                     config,
                 })
-                const erdData = queryHelper.genErdData(parsedDdl)
+
                 // Bind connection to a new worksheet
                 if (this.genInNewWs) {
                     Worksheet.dispatch('insertErdWke')
@@ -151,6 +151,9 @@ export default {
                     where: activeWkeId,
                     data: { graph_height_pct: 100, active_entity_id: '' },
                 })
+                await this.queryDdlEditorSuppData({ connId: conn.id })
+                //TODO: call tableParserTransformer for each table
+                const erdData = queryHelper.genErdData(parsedDdl)
                 ErdTask.update({ where: activeWkeId, data: { data: erdData, is_laid_out: false } })
             }
         },
