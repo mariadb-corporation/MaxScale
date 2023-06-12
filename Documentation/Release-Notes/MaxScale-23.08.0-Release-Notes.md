@@ -62,6 +62,12 @@ maxctrl call command schemarouter clear <service>
 This makes it possible to schedule the clearing of the caches for busy systems
 where the update of the map takes a long time.
 
+### [MXS-4216](https://jira.mariadb.org/browse/MXS-4216) Allow stale cache usage in schemarouter
+
+Stale entries in the schemarouter database map can now be used up to
+`max_staleness` seconds. This reduces the impact that a shard update causes to
+the client applications.
+
 ### MaxGUI
 
 

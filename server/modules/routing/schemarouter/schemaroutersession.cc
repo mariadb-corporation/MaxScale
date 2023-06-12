@@ -264,15 +264,23 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
             }
             else
             {
-                // Wait for the other session to finish its update and reuse that result
-                mxb_assert(m_dcid == 0);
-                m_queue.push_back(std::move(packet));
+                // Try and see if we can find an acceptably stale entry. The update is already in progress but
+                // waiting for it is not desirable as it would block all requests by this user.
+                m_shard = m_router->m_shard_manager.get_shard(
+                    m_key, m_config.refresh_interval.count(), m_config.max_staleness.count());
 
-                auto worker = mxs::RoutingWorker::get_current();
-                m_dcid = m_pSession->dcall(1000ms, &SchemaRouterSession::delay_routing, this);
-                MXB_INFO("Waiting for the database mapping to be completed by another session");
+                if (m_shard.empty())
+                {
+                    // Wait for the other session to finish its update and reuse that result
+                    mxb_assert(m_dcid == 0);
+                    m_queue.push_back(std::move(packet));
 
-                return 1;
+                    auto worker = mxs::RoutingWorker::get_current();
+                    m_dcid = m_pSession->dcall(1000ms, &SchemaRouterSession::delay_routing, this);
+                    MXB_INFO("Waiting for the database mapping to be completed by another session");
+
+                    return 1;
+                }
             }
         }
     }

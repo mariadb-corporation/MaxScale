@@ -50,6 +50,11 @@ cfg::ParamSeconds s_refresh_interval(
     &s_spec, "refresh_interval", "How often to refresh the database mapping information",
     std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
 
+cfg::ParamSeconds s_max_staleness(
+    &s_spec, "max_staleness",
+    "Maximum allowed staleness of a database map entry before clients block and wait for an update",
+    std::chrono::seconds(150), cfg::Param::AT_RUNTIME);
+
 cfg::ParamBool s_debug(
     &s_spec, "debug", "Enable debug mode",
     false, cfg::Param::AT_RUNTIME);
@@ -65,6 +70,7 @@ Config::Config(const char* name)
     add_native(&Config::m_v, &Values::ignore_tables_regex, &s_ignore_tables_regex);
     add_native(&Config::m_v, &Values::refresh_databases, &s_refresh_databases);
     add_native(&Config::m_v, &Values::refresh_interval, &s_refresh_interval);
+    add_native(&Config::m_v, &Values::max_staleness, &s_max_staleness);
     add_native(&Config::m_v, &Values::debug, &s_debug);
 }
 

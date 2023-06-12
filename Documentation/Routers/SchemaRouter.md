@@ -239,6 +239,24 @@ versions a value without a unit may be rejected. Note that since the granularity
 of the intervaltimeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
+### `max_staleness`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 150s
+
+The time how long stale database map entries can be used while an update is in
+progress. When a database map entry goes stale, the next connection to be
+created will start an update of the database map. While this update is ongoing,
+other connections can use the stale entry for up to `max_staleness` seconds. If
+this limit is exceeded and the update still hasn't completed, new connections
+will instead block and wait for the update to finish.
+
+This feature was added in MaxScale 23.08.0. Older versions of MaxScale
+always waited for the update to complete when the database map entry
+went stale.
+
 ## Table Family Sharding
 
 This functionality was introduced in 2.3.0.

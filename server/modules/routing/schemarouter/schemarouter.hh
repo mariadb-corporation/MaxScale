@@ -46,6 +46,7 @@ struct Config : public mxs::config::Configuration
     struct Values
     {
         std::chrono::seconds     refresh_interval;
+        std::chrono::seconds     max_staleness;
         bool                     refresh_databases;
         bool                     debug;
         std::vector<std::string> ignore_tables;

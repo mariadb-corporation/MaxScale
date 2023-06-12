@@ -167,7 +167,22 @@ Shard ShardManager::get_shard(std::string user, double max_interval)
     if (iter == m_maps.end() || iter->second.stale(max_interval))
     {
         // No previous shard or a stale shard, construct a new one
+        return Shard();
+    }
 
+    // Found valid shard
+    return iter->second;
+}
+
+Shard ShardManager::get_shard(std::string user, double max_interval, double max_staleness)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    ShardMap::iterator iter = m_maps.find(user);
+
+    if (iter == m_maps.end() || iter->second.stale(max_interval + max_staleness))
+    {
+        // No previous shard or a stale shard, construct a new one
         if (iter != m_maps.end())
         {
             m_maps.erase(iter);

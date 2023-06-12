@@ -148,6 +148,18 @@ public:
     Shard get_shard(std::string user, double max_lifetime);
 
     /**
+     * @brief Retrieve or create a shard
+     *
+     * @param user          User whose shard to retrieve
+     * @param max_lifetime  The maximum lifetime of a shard
+     * @param max_staleness The amount of staleness allowed for the entry. If the limit is exceeded, the entry
+     *                      is removed from the cache.
+     *
+     * @return The latest version of the shard or a newly created shard if no old version is available
+     */
+    Shard get_shard(std::string user, double max_lifetime, double max_staleness);
+
+    /**
      * @brief Update the shard information
      *
      * The shard information is updated if the new shard contains more up to date
