@@ -109,17 +109,15 @@ export default {
          */
         async exeStmtAction(
             { state, rootState, dispatch, commit },
-            { sql, action, showSnackbar = true }
+            { connId, sql, action, showSnackbar = true }
         ) {
             const config = Worksheet.getters('getActiveRequestConfig')
-            const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
-                'getActiveQueryTabConn'
-            )
+            const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
             const request_sent_time = new Date().valueOf()
             let error = null
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
-                    id,
+                    id: connId,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
                     config,
                 })
@@ -161,6 +159,22 @@ export default {
                     { root: true }
                 )
             }
+        },
+        /**
+         *
+         * @param {string} param.connId - connection id
+         * @param {string} param.schema - schema name
+         * @param {string} param.name - table name
+         * @param {function} param.successCb - success callback function
+         */
+        async confirmAlter({ state, dispatch, getters }, { connId, schema, name, successCb }) {
+            const { quotingIdentifier: quoting } = this.vue.$helpers
+            await dispatch('exeStmtAction', {
+                connId,
+                sql: state.exec_sql_dlg.sql,
+                action: `Apply changes to ${quoting(schema)}.${quoting(name)}`,
+            })
+            if (!getters.isExecFailed) await this.vue.$typy(successCb).safeFunction()
         },
     },
     getters: {

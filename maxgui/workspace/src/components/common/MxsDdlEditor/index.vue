@@ -4,8 +4,11 @@
             :height="ddlEditorToolbarHeight"
             :disableRevert="!hasChanged"
             :disableApply="!hasValidChanges"
-            v-on="$listeners"
-        />
+            @on-apply="onApply"
+            @on-revert="onRevert"
+        >
+            <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+        </ddl-editor-toolbar>
         <ddl-editor-form-ctr
             v-model="stagingData"
             :initialData="data"
@@ -29,12 +32,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
- * Emits:
- * - $emit('on-revert')
- * - $emit('on-apply')
- */
-import { mapState } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 import DdlEditorFormCtr from '@wsSrc/components/common/MxsDdlEditor/DdlEditorFormCtr.vue'
 import DdlEditorToolbar from '@wsSrc/components/common/MxsDdlEditor/DdlEditorToolbar.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -49,6 +47,8 @@ export default {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
         data: { type: Object, required: true },
+        mode: { type: String, required: true },
+        onExecute: { type: Function, required: true },
     },
     data() {
         return {
@@ -61,6 +61,8 @@ export default {
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             tokens: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
+            exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
+            DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES,
         }),
         stagingData: {
             get() {
@@ -123,6 +125,7 @@ export default {
         },
     },
     methods: {
+        ...mapMutations({ SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG' }),
         /**
          * @param {Boolean} payload.ignore - ignore adding comma
          * @returns {String} - return ', ' or ''
@@ -362,9 +365,6 @@ export default {
                 alterSpecs.push(this.buildPkSQL())
             return alterSpecs.join(this.handleAddComma())
         },
-        /**
-         * @public
-         */
         buildAlterScript() {
             const { quotingIdentifier: quoting, formatSQL } = this.$helpers
             const { schema, name } = this.data.options
@@ -380,6 +380,26 @@ export default {
             }
             sql = formatSQL(`${sql};`)
             return sql
+        },
+        buildCreateScript() {
+            //TODO: Add create script
+            return ''
+        },
+        onRevert() {
+            this.stagingData = this.$helpers.lodash.cloneDeep(this.data)
+        },
+        onApply() {
+            this.SET_EXEC_SQL_DLG({
+                ...this.exec_sql_dlg,
+                is_opened: true,
+                sql:
+                    this.mode === this.DDL_EDITOR_MODES.ALTER
+                        ? this.buildAlterScript()
+                        : this.buildCreateScript(),
+                on_exec: this.onExecute,
+                on_after_cancel: () =>
+                    this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
+            })
         },
     },
 }

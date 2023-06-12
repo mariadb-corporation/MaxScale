@@ -27,6 +27,7 @@
             </template>
             {{ $mxs_t('applyChanges') }}
         </mxs-tooltip-btn>
+        <slot name="toolbar-append" />
     </div>
 </template>
 

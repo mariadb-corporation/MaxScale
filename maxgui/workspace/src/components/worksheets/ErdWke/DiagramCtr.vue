@@ -36,9 +36,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+ * Emits:
+ * - $emit('on-choose-entity', nodeId:string)
+ */
 import { mapMutations } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
-import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
 import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
@@ -154,10 +157,7 @@ export default {
         },
         onNodeDblClick({ node }) {
             if (this.activeErdConn.id) {
-                ErdTaskTmp.update({
-                    where: this.erdTaskId,
-                    data: { graph_height_pct: 50, active_entity_id: node.id },
-                })
+                this.$emit('on-choose-entity', node.id)
                 // call in the next tick to ensure diagramDim height is up to date
                 this.$nextTick(() => this.zoomIntoNode(node))
             } else

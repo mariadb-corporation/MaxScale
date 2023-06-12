@@ -200,7 +200,11 @@ export default {
             this.actionName = sql.slice(0, -1)
         },
         async confirmExeStatements() {
-            await this.exeStmtAction({ sql: this.exec_sql_dlg.sql, action: this.actionName })
+            await this.exeStmtAction({
+                connId: this.activeQueryTabConnId,
+                sql: this.exec_sql_dlg.sql,
+                action: this.actionName,
+            })
         },
         clearExeStatementsResult() {
             this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null })

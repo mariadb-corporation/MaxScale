@@ -200,6 +200,11 @@ export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
     {}
 )
 
+export const DDL_EDITOR_MODES = Object.freeze({
+    CREATE: 'create',
+    ALTER: 'alter',
+})
+
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
     DDL_EDITOR: 'DDL_EDITOR',

@@ -10,10 +10,10 @@
             :disable="graphHeightPct === 100"
         >
             <template slot="pane-left">
-                <diagram-ctr :dim="erdDim" />
+                <diagram-ctr :dim="erdDim" @on-choose-entity="onChooseEntity" />
             </template>
             <template slot="pane-right">
-                <entity-editor-ctr v-if="activeEntityId" />
+                <entity-editor-ctr v-show="activeEntityId" :dim="editorDim" />
             </template>
         </mxs-split-pane>
     </div>
@@ -57,6 +57,9 @@ export default {
                 containerPx: this.dim.height,
             })
         },
+        editorDim() {
+            return { width: this.ctrDim.width, height: this.dim.height - this.erGraphHeight }
+        },
         minErdPct() {
             return this.$helpers.pxToPct({
                 px: this.activeEntityId ? 42 : 0,
@@ -69,16 +72,26 @@ export default {
         activeEntityId() {
             return ErdTask.getters('getActiveEntityId')
         },
+        activeErdTaskId() {
+            return ErdTask.getters('getActiveErdTaskId')
+        },
         graphHeightPct: {
             get() {
                 return ErdTask.getters('getGraphHeightPct')
             },
             set(v) {
                 ErdTaskTmp.update({
-                    where: ErdTask.getters('getActiveErdTaskId'),
+                    where: this.activeErdTaskId,
                     data: { graph_height_pct: v },
                 })
             },
+        },
+    },
+    methods: {
+        onChooseEntity(active_entity_id) {
+            let data = { active_entity_id }
+            if (this.graphHeightPct === 100) data.graph_height_pct = 50
+            ErdTaskTmp.update({ where: this.activeErdTaskId, data })
         },
     },
 }

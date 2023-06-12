@@ -2,12 +2,11 @@
     <v-card class="alter-table-editor fill-height" :loading="isLoading" tile>
         <mxs-ddl-editor
             v-if="stagingData"
-            ref="editor"
             v-model="stagingData"
             :dim="dim"
             :data="data"
-            @on-revert="revertChanges"
-            @on-apply="applyChanges"
+            :mode="DDL_EDITOR_MODES.ALTER"
+            :onExecute="onExecute"
         />
     </v-card>
 </template>
@@ -25,8 +24,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 import Editor from '@wsModels/Editor'
+import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 
 export default {
@@ -40,13 +40,15 @@ export default {
         }
     },
     computed: {
-        ...mapState({ exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg }),
-        ...mapGetters({ isExecFailed: 'mxsWorkspace/isExecFailed' }),
+        ...mapState({ DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES }),
         isLoading() {
             return Editor.getters('getLoadingTblCreationInfo')
         },
         data() {
             return this.$typy(Editor.getters('getTblCreationInfo'), 'data').safeObjectOrEmpty
+        },
+        activeQueryTabConnId() {
+            return this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString
         },
     },
     activated() {
@@ -56,8 +58,7 @@ export default {
         this.$typy(this.unwatch_isLoading).safeFunction()
     },
     methods: {
-        ...mapMutations({ SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG' }),
-        ...mapActions({ exeStmtAction: 'mxsWorkspace/exeStmtAction' }),
+        ...mapActions({ confirmAlter: 'mxsWorkspace/confirmAlter' }),
         assignData() {
             this.stagingData = this.$helpers.lodash.cloneDeep(this.data)
         },
@@ -71,37 +72,21 @@ export default {
                 { deep: true, immediate: true }
             )
         },
-        revertChanges() {
-            this.assignData()
-        },
-        applyChanges() {
-            this.SET_EXEC_SQL_DLG({
-                ...this.exec_sql_dlg,
-                is_opened: true,
-                sql: this.$refs.editor.buildAlterScript(),
-                on_exec: this.confirmAlter,
-                on_after_cancel: this.clearAlterResult,
+        async onExecute() {
+            await this.confirmAlter({
+                connId: this.activeQueryTabConnId,
+                schema: this.data.options.schema,
+                name: this.data.options.name,
+                successCb: () => {
+                    const data = this.$helpers.lodash.cloneDeep(this.stagingData)
+                    Editor.update({
+                        where: QueryEditor.getters('getActiveQueryTabId'),
+                        data(editor) {
+                            editor.tbl_creation_info.data = data
+                        },
+                    })
+                },
             })
-        },
-        async confirmAlter() {
-            const { quotingIdentifier: quoting } = this.$helpers
-            const { schema, name } = this.data.options
-            await this.exeStmtAction({
-                sql: this.exec_sql_dlg.sql,
-                action: `Apply changes to ${quoting(schema)}.${quoting(name)}`,
-            })
-            if (!this.isExecFailed) {
-                const data = this.$helpers.lodash.cloneDeep(this.stagingData)
-                Editor.update({
-                    where: QueryEditor.getters('getActiveQueryTabId'),
-                    data(editor) {
-                        editor.tbl_creation_info.data = data
-                    },
-                })
-            }
-        },
-        clearAlterResult() {
-            this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null })
         },
     },
 }
