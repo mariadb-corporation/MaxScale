@@ -13,12 +13,12 @@
             :graphDim="graphDim"
             @get-graph-ctr="svgGroup = $event"
         >
-            <template v-slot:append="{ data: { transform } }">
+            <template v-slot:append="{ data: { style } }">
                 <mxs-svg-graph-nodes
                     ref="graphNodes"
                     :nodes="graphData.nodes"
                     :coordMap.sync="graphNodeCoordMap"
-                    :style="{ transform }"
+                    :style="style"
                     :defNodeSize="defNodeSize"
                     :nodeStyle="{ userSelect: 'none' }"
                     draggable

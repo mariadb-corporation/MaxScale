@@ -7,13 +7,13 @@
         :graphDim="dagDim"
         @get-graph-ctr="svgGroup = $event"
     >
-        <template v-slot:append="{ data: { transform } }">
+        <template v-slot:append="{ data: { style } }">
             <mxs-svg-graph-nodes
                 ref="graphNodes"
                 autoWidth
                 :nodes="graphNodes"
                 :coordMap.sync="graphNodeCoordMap"
-                :style="{ transform }"
+                :style="style"
                 :nodeStyle="revertGraphStyle"
                 :defNodeSize="defNodeSize"
                 draggable

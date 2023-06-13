@@ -218,7 +218,7 @@ export default {
             const x = this.diagramDim.width / 2 - ((minX + maxX) / 2) * k
             const y = this.diagramDim.height / 2 - ((minY + maxY) / 2) * k
 
-            this.panAndZoom = { x, y, k }
+            this.panAndZoom = { x, y, k, transition: true }
         },
     },
 }

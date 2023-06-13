@@ -2,9 +2,9 @@
     <div class="mxs-svg-graph-board fill-height">
         <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.mxs_gridBg</v-icon>
         <svg ref="svg" class="mxs-graph" :width="dim.width" height="100%">
-            <g id="graph-ctr" :style="{ transform }" />
+            <g id="graph-ctr" :style="style" />
         </svg>
-        <slot name="append" :data="{ transform }" />
+        <slot name="append" :data="{ style }" />
     </div>
 </template>
 
@@ -44,9 +44,12 @@ export default {
         }
     },
     computed: {
-        transform() {
-            const { x, y, k } = this.panAndZoom
-            return `translate(${x}px, ${y}px) scale(${k})`
+        style() {
+            const { x, y, k, transition } = this.panAndZoom
+            return {
+                transform: `translate(${x}px, ${y}px) scale(${k})`,
+                transition: `all ${transition ? 0.3 : 0}s ease`,
+            }
         },
         panAndZoom: {
             get() {
