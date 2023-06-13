@@ -23,6 +23,7 @@
 #include "../MariaDB/protocol_module.hh"
 #include "clientconnection.hh"
 #include "nosqlcursor.hh"
+#include "../../filter/cache/cachefilter.hh"
 
 using namespace std;
 namespace config = mxs::config;
@@ -33,8 +34,10 @@ ProtocolModule::ProtocolModule(std::string name, SERVICE* pService)
 {
 }
 
-bool ProtocolModule::post_configure()
+bool ProtocolModule::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    bool rv = false;
+
     if (m_config.authentication_shared)
     {
         m_sUm = nosql::UserManagerMariaDB::create(m_config.name(), &m_service, &m_config);
@@ -52,9 +55,35 @@ bool ProtocolModule::post_configure()
         }
 
         nosql::NoSQLCursor::start_purging_idle_cursors(m_config.cursor_timeout);
+        rv = true;
     }
 
-    return m_sUm.get() != nullptr;
+    if (m_config.pInternal_cache)
+    {
+        MXB_NOTICE("Nosqlprotocol configured to use a cache.");
+
+        mxs::ConfigParameters cache_config;
+
+        if (auto it = nested_params.find("cache"); it != nested_params.end())
+        {
+            cache_config = it->second;
+        }
+
+        // Let's use a unique name, even though the filter will not end up
+        // in the general book-keeping.
+        string name("@@Cache-for-");
+        name += m_config.name();
+
+        m_sCache_filter.reset(CacheFilter::create(name.c_str()));
+
+        rv = m_sCache_filter->getConfiguration().configure(cache_config);
+    }
+    else
+    {
+        MXB_INFO("Nosqlprotocol not configured to use a cache.");
+    }
+
+    return rv;
 }
 
 // static

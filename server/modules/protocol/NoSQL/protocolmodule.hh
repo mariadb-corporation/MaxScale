@@ -18,6 +18,7 @@
 #include "configuration.hh"
 #include "nosqlusermanager.hh"
 
+class CacheFilter;
 class SERVICE;
 
 class ProtocolModule : public mxs::ProtocolModule
@@ -52,7 +53,7 @@ public:
 
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
-    bool post_configure();
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
 private:
     ProtocolModule(std::string name, SERVICE* pService);
@@ -61,4 +62,5 @@ private:
     Configuration                       m_config;
     SERVICE&                            m_service;
     std::unique_ptr<nosql::UserManager> m_sUm;
+    std::unique_ptr<CacheFilter>        m_sCache_filter;
 };
