@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
 import queries from '@wsSrc/api/queries'
 
 export default {
@@ -52,8 +51,7 @@ export default {
         },
     },
     actions: {
-        async queryCharsetCollationMap({ commit }, { connId }) {
-            const config = Worksheet.getters('getActiveRequestConfig')
+        async queryCharsetCollationMap({ commit }, { connId, config }) {
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
@@ -82,8 +80,7 @@ export default {
                 commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
             }
         },
-        async queryDefDbCharsetMap({ commit }, { connId }) {
-            const config = Worksheet.getters('getActiveRequestConfig')
+        async queryDefDbCharsetMap({ commit }, { connId, config }) {
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
@@ -106,8 +103,7 @@ export default {
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             }
         },
-        async queryEngines({ commit, rootState }, { connId }) {
-            const config = Worksheet.getters('getActiveRequestConfig')
+        async queryEngines({ commit, rootState }, { connId, config }) {
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
@@ -126,14 +122,18 @@ export default {
                     )
                 )
         },
-        async queryDdlEditorSuppData({ state, dispatch }, { connId }) {
-            if (connId) {
+        /**
+         * @param {string} param.connId - connection id
+         * @param {object} param.config - axios config
+         */
+        async queryDdlEditorSuppData({ state, dispatch }, param) {
+            if (param.connId && param.config) {
                 if (this.vue.$typy(state.engines).isEmptyArray)
-                    await dispatch('queryEngines', { connId })
+                    await dispatch('queryEngines', param)
                 if (this.vue.$typy(state.charset_collation_map).isEmptyObject)
-                    await dispatch('queryCharsetCollationMap', { connId })
+                    await dispatch('queryCharsetCollationMap', param)
                 if (this.vue.$typy(state.def_db_charset_map).isEmptyObject)
-                    await dispatch('queryDefDbCharsetMap', { connId })
+                    await dispatch('queryDefDbCharsetMap', param)
             }
         },
     },

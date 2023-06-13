@@ -38,6 +38,7 @@ import { mapState, mapActions } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsModels/Worksheet'
 
 export default {
     name: 'entity-editor-ctr',
@@ -76,7 +77,10 @@ export default {
         },
     },
     async created() {
-        await this.queryDdlEditorSuppData({ connId: this.activeErdConnId })
+        await this.queryDdlEditorSuppData({
+            connId: this.activeErdConnId,
+            config: Worksheet.getters('getActiveRequestConfig'),
+        })
     },
     activated() {
         this.watch_activeEntityId()

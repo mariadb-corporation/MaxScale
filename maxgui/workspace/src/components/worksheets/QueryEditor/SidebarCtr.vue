@@ -87,6 +87,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
+import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import WkeSidebar from '@wkeComps/WkeSidebar.vue'
 
@@ -179,12 +180,13 @@ export default {
             await SchemaSidebar.dispatch('loadChildNodes', node)
         },
         async onAlterTable(node) {
+            const config = Worksheet.getters('getActiveRequestConfig')
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,
                 editorMode: this.EDITOR_MODES.DDL_EDITOR,
             })
-            await this.queryDdlEditorSuppData({ connId: this.activeQueryTabConnId })
+            await this.queryDdlEditorSuppData({ connId: this.activeQueryTabConnId, config })
             await Editor.dispatch('queryTblCreationInfo', node)
         },
 

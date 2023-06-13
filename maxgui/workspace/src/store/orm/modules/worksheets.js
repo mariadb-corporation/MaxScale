@@ -61,13 +61,6 @@ export default {
             QueryEditor.dispatch('insertQueryEditor', worksheet_id)
         },
         /**
-         * Insert an ERD worksheet
-         */
-        insertErdWke({ dispatch }) {
-            dispatch('insertBlankWke')
-            ErdTask.dispatch('initErdEntities')
-        },
-        /**
          * @param {String} id - worksheet_id
          */
         async handleDeleteWke({ dispatch }, id) {

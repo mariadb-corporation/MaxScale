@@ -131,10 +131,17 @@ export default {
                     tableNodes: this.selectedTableNodes,
                     config,
                 })
-
+                await this.queryDdlEditorSuppData({ connId: conn.id, config })
+                const erdData = queryHelper.genErdData({
+                    data: parsedDdl,
+                    charsetCollationMap: this.charset_collation_map,
+                })
+                const erdTaskData = { data: erdData, is_laid_out: false }
+                const erdTaskTmpData = { graph_height_pct: 100, active_entity_id: '' }
                 // Bind connection to a new worksheet
                 if (this.genInNewWs) {
-                    Worksheet.dispatch('insertErdWke')
+                    Worksheet.dispatch('insertBlankWke')
+                    ErdTask.dispatch('initErdEntities', { erdTaskData, erdTaskTmpData })
                     activeWkeId = Worksheet.getters('getActiveWkeId')
                     QueryConn.insert({
                         data: {
@@ -145,19 +152,13 @@ export default {
                             meta: connMeta,
                         },
                     })
+                } else {
+                    ErdTask.update({ where: activeWkeId, data: erdTaskData })
+                    ErdTaskTmp.update({ where: activeWkeId, data: erdTaskTmpData })
                 }
+
                 WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
                 Worksheet.update({ where: activeWkeId, data: { name: this.name } })
-                ErdTaskTmp.update({
-                    where: activeWkeId,
-                    data: { graph_height_pct: 100, active_entity_id: '' },
-                })
-                await this.queryDdlEditorSuppData({ connId: conn.id })
-                const erdData = queryHelper.genErdData({
-                    data: parsedDdl,
-                    charsetCollationMap: this.charset_collation_map,
-                })
-                ErdTask.update({ where: activeWkeId, data: { data: erdData, is_laid_out: false } })
             }
         },
     },

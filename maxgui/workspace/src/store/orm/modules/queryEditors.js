@@ -89,6 +89,7 @@ export default {
          */
         async handleInitialFetch({ dispatch }) {
             try {
+                const config = Worksheet.getters('getActiveRequestConfig')
                 const { id: connId, meta: { name: connection_name } = {} } = QueryConn.getters(
                     'getActiveQueryTabConn'
                 )
@@ -106,7 +107,7 @@ export default {
                     if (Editor.getters('getIsDDLEditor'))
                         await dispatch(
                             'editorsMem/queryDdlEditorSuppData',
-                            { connId },
+                            { connId, config },
                             { root: true }
                         )
                 }
