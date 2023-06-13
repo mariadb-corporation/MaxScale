@@ -25,6 +25,7 @@
 
 namespace mariadb
 {
+class TrxTracker;
 
 class QueryClassifier
 {
@@ -429,6 +430,16 @@ public:
     const RouteInfo& update_route_info(GWBUF& buffer); // TODO: const correct
 
     /**
+     * @brief Update the RouteInfo using the given TrxTracker
+     *
+     * @param buffer      A request buffer
+     * @param trx_tracker The transaction state tracker to use
+     *
+     * @return A const reference to the current route info.
+     */
+    const RouteInfo& update_route_info(GWBUF& buffer, const TrxTracker& trx_tracker);
+
+    /**
      * Update the RouteInfo state based on the reply from the downstream component
      *
      * Currently this only updates the LOAD DATA state.
@@ -483,14 +494,14 @@ private:
     bool query_type_is_read_only(uint32_t qtype) const;
 
     void     process_routing_hints(const GWBUF::HintVector& hints, uint32_t* target);
-    uint32_t get_route_target(uint32_t qtype);
+    uint32_t get_route_target(uint32_t qtype, const TrxTracker& trx_tracker);
 
     MXS_SESSION* session() const
     {
         return m_pSession;
     }
 
-    void log_transaction_status(GWBUF* querybuf, uint32_t qtype);
+    void log_transaction_status(GWBUF* querybuf, uint32_t qtype, const TrxTracker& trx_tracker);
 
     uint32_t determine_query_type(const GWBUF& packet) const;
 
@@ -530,4 +541,201 @@ private:
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
 };
+
+class TrxTracker
+{
+public:
+
+    bool is_autocommit() const
+    {
+        return m_autocommit;
+    }
+
+    bool is_trx_read_only() const
+    {
+        return m_trx_state & TRX_READ_ONLY;
+    }
+
+    bool is_trx_ending() const
+    {
+        return m_trx_state & TRX_ENDING;
+    }
+
+    bool is_trx_starting() const
+    {
+        return m_trx_state & TRX_STARTING;
+    }
+
+    bool is_trx_active() const
+    {
+        return m_trx_state & TRX_ACTIVE;
+    }
+
+    /**
+     * Track the transaction state
+     *
+     * @tparam ParseType Whether to use the query classifier or the custom parser to track the transaction
+     *                   state. By default tracking is done using the query classifier.
+     *
+     * @param packetbuf A query that is being executed
+     * @param parser    The parser class to use
+     */
+    template<mxs::Parser::ParseTrxUsing ParseType = mxs::Parser::ParseTrxUsing::DEFAULT>
+    void track_transaction_state(const GWBUF& packetbuf, const mxs::Parser& parser);
+
+private:
+    // The QueryClassifier internally uses an internal TrxTracker to query the transaction state if the
+    // caller-provided TrxTracker is not given to QueryClassifier::update_route_info().
+    friend class QueryClassifier;
+
+    enum TrxState : uint8_t
+    {
+        TRX_INACTIVE  = 0,
+        TRX_ACTIVE    = 1 << 0,
+        TRX_READ_ONLY = 1 << 1,
+        TRX_ENDING    = 1 << 2,
+        TRX_STARTING  = 1 << 3,
+    };
+
+    /**
+     * The default mode for transactions. Set with SET SESSION TRANSACTION with the access mode set to either
+     * READ ONLY or READ WRITE. The default is READ WRITE.
+     */
+    uint8_t m_default_trx_mode {0};
+
+    /**
+     * The access mode for the next transaction. Set with SET TRANSACTION and it only affects the next one.
+     * All transactions after it will use the default transaction access mode.
+     */
+    uint8_t m_next_trx_mode {0};
+
+    /**
+     * The transaction state of the session.
+     *
+     * This tells only the state of @e explicitly started transactions.
+     * That is, if @e autocommit is OFF, which means that there is always an
+     * active transaction that is ended with an explicit COMMIT or ROLLBACK,
+     * at which point a new transaction is started, this variable will still
+     * be TRX_INACTIVE, unless a transaction has explicitly been
+     * started with START TRANSACTION.
+     *
+     * Likewise, if @e autocommit is ON, which means that every statement is
+     * executed in a transaction of its own, this will return false, unless a
+     * transaction has explicitly been started with START TRANSACTION.
+     *
+     * The value is valid only if either a router or a filter
+     * has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     */
+    uint8_t m_trx_state {TRX_INACTIVE};
+
+    /**
+     * Tells whether autocommit is ON or not. The value effectively only tells the last value
+     * of the statement "set autocommit=...".
+     *
+     * That is, if the statement "set autocommit=1" has been executed, then even if a transaction has
+     * been started, which implicitly will cause autocommit to be set to 0 for the duration of the
+     * transaction, this value will be true.
+     *
+     * By default autocommit is ON.
+     */
+    bool m_autocommit {true};
+};
+
+//
+// Template implementations
+//
+
+template<mxs::Parser::ParseTrxUsing ParseType>
+void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Parser& parser)
+{
+    const auto trx_starting_active = TRX_ACTIVE | TRX_STARTING;
+
+    mxb_assert((m_trx_state & (TRX_STARTING | TRX_ENDING)) != (TRX_STARTING | TRX_ENDING));
+
+    if (m_trx_state & TRX_ENDING)
+    {
+        if (m_autocommit)
+        {
+            // Transaction ended, go into inactive state
+            m_trx_state = TRX_INACTIVE;
+        }
+        else
+        {
+            // Without autocommit the end of a transaction starts a new one
+            m_trx_state = trx_starting_active | m_next_trx_mode;
+            m_next_trx_mode = m_default_trx_mode;
+        }
+    }
+    else if (m_trx_state & TRX_STARTING)
+    {
+        m_trx_state &= ~TRX_STARTING;
+    }
+    else if (!m_autocommit && m_trx_state == TRX_INACTIVE)
+    {
+        // This state is entered when autocommit was disabled
+        m_trx_state = trx_starting_active | m_next_trx_mode;
+        m_next_trx_mode = m_default_trx_mode;
+    }
+
+    if (parser.is_query(packetbuf))
+    {
+        uint32_t type = parser.get_trx_type_mask_using(packetbuf, ParseType);
+
+        mxb_assert_message(ParseType == mxs::Parser::ParseTrxUsing::CUSTOM
+                           || parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::DEFAULT)
+                           == parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::CUSTOM),
+                           "Parser and query classifier should parse transactions identically: %s",
+                           std::string(parser.get_sql(packetbuf)).c_str());
+
+        if (type & mxs::sql::TYPE_BEGIN_TRX)
+        {
+            if (type & mxs::sql::TYPE_DISABLE_AUTOCOMMIT)
+            {
+                // This disables autocommit and the next statement starts a new transaction
+                m_autocommit = false;
+                m_trx_state = TRX_INACTIVE;
+            }
+            else
+            {
+                auto new_trx_state = trx_starting_active | m_next_trx_mode;
+                m_next_trx_mode = m_default_trx_mode;
+                if (type & mxs::sql::TYPE_READ)
+                {
+                    new_trx_state |= TRX_READ_ONLY;
+                }
+                else if (type & mxs::sql::TYPE_WRITE)
+                {
+                    new_trx_state &= ~TRX_READ_ONLY;
+                }
+                m_trx_state = new_trx_state;
+            }
+        }
+        else if (type & (mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK))
+        {
+            auto new_trx_state = m_trx_state | TRX_ENDING;
+            // A commit never starts a new transaction. This would happen with: SET AUTOCOMMIT=0; COMMIT;
+            new_trx_state &= ~TRX_STARTING;
+            m_trx_state = new_trx_state;
+
+            if (type & mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
+            {
+                m_autocommit = true;
+            }
+        }
+        else if (type & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
+        {
+            // Currently only pp_sqlite should return these types
+            mxb_assert(ParseType == mxs::Parser::ParseTrxUsing::DEFAULT
+                       && parser.get_operation(packetbuf) == mxs::sql::OP_SET_TRANSACTION);
+            uint32_t mode = type & mxs::sql::TYPE_READONLY ? TRX_READ_ONLY : 0;
+            m_next_trx_mode = mode;
+
+            if (!(type & mxs::sql::TYPE_NEXT_TRX))
+            {
+                // All future transactions will use this access mode
+                m_default_trx_mode = mode;
+            }
+        }
+    }
+}
 }

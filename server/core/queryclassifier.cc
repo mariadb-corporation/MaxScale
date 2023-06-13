@@ -407,10 +407,9 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
     }
 }
 
-uint32_t QueryClassifier::get_route_target(uint32_t qtype)
+uint32_t QueryClassifier::get_route_target(uint32_t qtype, const TrxTracker& trx_tracker)
 {
-    auto session_data = m_pSession->protocol_data();
-    bool trx_active = session_data->is_trx_active();
+    bool trx_active = trx_tracker.is_trx_active();
     uint32_t target = TARGET_UNDEFINED;
     bool load_active = (m_route_info.load_data_state() != LOAD_DATA_INACTIVE);
     mxb_assert(!load_active);
@@ -445,7 +444,7 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype)
     {
         target = TARGET_SLAVE;
     }
-    else if (session_data->is_trx_read_only())
+    else if (trx_tracker.is_trx_read_only())
     {
         /* Force TARGET_SLAVE for READ ONLY transaction (active or ending) */
         target = TARGET_SLAVE;
@@ -507,7 +506,7 @@ void QueryClassifier::ps_store_response(uint32_t id, uint16_t param_count)
     }
 }
 
-void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
+void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, const TrxTracker& trx_tracker)
 {
     if (m_route_info.multi_part_packet())
     {
@@ -515,15 +514,10 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
     }
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
     {
-        MXS_SESSION* ses = session();
-        auto pdata = ses->protocol_data();
-        const char* autocommit = pdata->is_autocommit() ? "[enabled]" : "[disabled]";
-        const char* transaction = pdata->is_trx_active() ? "[open]" : "[not open]";
-
         MXB_INFO("> Autocommit: %s, trx is %s, %s",
-                 autocommit,
-                 transaction,
-                 ses->protocol()->describe(*querybuf).c_str());
+                 trx_tracker.is_autocommit() ? "[enabled]" : "[disabled]",
+                 trx_tracker.is_trx_active() ? "[open]" : "[not open]",
+                 session()->protocol()->describe(*querybuf).c_str());
     }
     else
     {
@@ -676,6 +670,36 @@ bool QueryClassifier::query_continues_ps(const GWBUF& buffer)
 
 const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buffer)
 {
+    auto protocol_data = session()->protocol_data();
+    TrxTracker tracker;
+    tracker.m_autocommit = protocol_data->is_autocommit();
+
+    if (protocol_data->is_trx_read_only())
+    {
+        tracker.m_trx_state |= TrxTracker::TrxState::TRX_READ_ONLY;
+    }
+
+    if (protocol_data->is_trx_ending())
+    {
+        tracker.m_trx_state |= TrxTracker::TrxState::TRX_ENDING;
+    }
+
+    if (protocol_data->is_trx_starting())
+    {
+        tracker.m_trx_state |= TrxTracker::TrxState::TRX_STARTING;
+    }
+
+    if (protocol_data->is_trx_active())
+    {
+        tracker.m_trx_state |= TrxTracker::TrxState::TRX_ACTIVE;
+    }
+
+    return update_route_info(buffer, tracker);
+}
+
+const QueryClassifier::RouteInfo&
+QueryClassifier::update_route_info(GWBUF& buffer, const TrxTracker& trx_tracker)
+{
     uint32_t route_target = TARGET_MASTER;
     uint8_t cmd = 0xFF;
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
@@ -699,9 +723,8 @@ const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buff
 
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
-    auto protocol_data = session()->protocol_data();
     bool in_read_only_trx =
-        (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) && protocol_data->is_trx_read_only();
+        (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) && trx_tracker.is_trx_read_only();
 
     if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
@@ -799,7 +822,7 @@ const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buff
                 route_to_last_used = true;
             }
 
-            route_target = get_route_target(type_mask);
+            route_target = get_route_target(type_mask, trx_tracker);
 
             if (route_target == TARGET_SLAVE && route_to_last_used)
             {
@@ -809,12 +832,12 @@ const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buff
 
         process_routing_hints(buffer.hints(), &route_target);
 
-        if (protocol_data->is_trx_ending() || Parser::type_mask_contains(type_mask, mxs::sql::TYPE_BEGIN_TRX))
+        if (trx_tracker.is_trx_ending() || Parser::type_mask_contains(type_mask, mxs::sql::TYPE_BEGIN_TRX))
         {
             // Transaction is ending or starting
             m_route_info.set_trx_still_read_only(true);
         }
-        else if (protocol_data->is_trx_active() && !query_type_is_read_only(type_mask))
+        else if (trx_tracker.is_trx_active() && !query_type_is_read_only(type_mask))
         {
             // Transaction is no longer read-only
             m_route_info.set_trx_still_read_only(false);
@@ -823,7 +846,7 @@ const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buff
 
     if (m_verbose && mxb_log_should_log(LOG_INFO))
     {
-        log_transaction_status(&buffer, type_mask);
+        log_transaction_status(&buffer, type_mask, trx_tracker);
     }
 
     m_route_info.set_target(route_target);
