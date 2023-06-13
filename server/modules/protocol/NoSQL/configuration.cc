@@ -406,7 +406,7 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
 
     if (rv)
     {
-        rv = m_instance.post_configure();
+        rv = m_instance.post_configure(nested_params);
     }
 
     return rv;
