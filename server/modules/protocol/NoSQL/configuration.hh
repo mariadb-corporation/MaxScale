@@ -82,28 +82,6 @@ public:
 
     static mxs::config::Specification& specification();
 
-    // Can only be changed via MaxScale
-    static mxs::config::ParamString                      s_user;
-    static mxs::config::ParamPassword                    s_password;
-    static mxs::config::ParamString                      s_host;
-    static mxs::config::ParamBool                        s_authentication_required;
-    static mxs::config::ParamBool                        s_authentication_shared;
-    static mxs::config::ParamString                      s_authentication_db;
-    static mxs::config::ParamString                      s_authentication_key_id;
-    static mxs::config::ParamString                      s_authentication_user;
-    static mxs::config::ParamPassword                    s_authentication_password;
-    static mxs::config::ParamBool                        s_authorization_enabled;
-    static mxs::config::ParamCount                       s_id_length;
-
-    // Can be changed from the NosQL API.
-    static mxs::config::ParamBool                        s_auto_create_databases;
-    static mxs::config::ParamBool                        s_auto_create_tables;
-    static mxs::config::ParamSeconds                     s_cursor_timeout;
-    static mxs::config::ParamEnumMask<Debug>             s_debug;
-    static mxs::config::ParamBool                        s_log_unknown_command;
-    static mxs::config::ParamEnum<OnUnknownCommand>      s_on_unknown_command;
-    static mxs::config::ParamEnum<OrderedInsertBehavior> s_ordered_insert_behavior;
-
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
 private:
