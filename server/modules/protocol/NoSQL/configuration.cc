@@ -18,9 +18,172 @@
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/key_manager.hh>
+#include "../../filter/cache/cacheconfig.hh"
 #include "protocolmodule.hh"
 
 using namespace std;
+
+namespace
+{
+
+using mxs::config::ConcreteParam;
+
+/*
+ * ParamInternalCache
+ *
+ * This class allows the specification of one module to appear as a nested configuration
+ * of another. This will appear as:
+ *
+ * [NoSQL-Listener]
+ * type=listener
+ * protocol=nosqlprotocol
+ * nosqlprotocol.internal_cache=cache
+ * nosqlprotocol.cache.max_size=1M
+ * ...
+ *
+ * Currently hardwired for the needs of 'nosqlprotocol' but could be generalized if needed.
+ */
+class ParamInternalCache : public ConcreteParam<ParamInternalCache, const mxs::config::Specification*>
+{
+public:
+    ParamInternalCache(mxs::config::Specification* pSpecification,
+                       const char* zName,
+                       const char* zDescription,
+                       const mxs::config::Specification* pInternal_cache)
+        : ConcreteParam<ParamInternalCache, const mxs::config::Specification*>(
+            pSpecification, zName, zDescription, Param::AT_STARTUP, Param::OPTIONAL, nullptr)
+        , m_pInternal_cache(pInternal_cache)
+    {
+    }
+
+    std::string type() const override;
+
+    bool takes_parameters() const override;
+
+    std::string parameter_prefix(const std::string& value) const override;
+
+    bool validate_parameters(const std::string& value,
+                             const mxs::ConfigParameters& params,
+                             mxs::ConfigParameters* pUnrecognized = nullptr) const override;
+
+    bool validate_parameters(const std::string& value,
+                             json_t* pParams,
+                             std::set<std::string>* pUnrecognized = nullptr) const override;
+
+    std::string to_string(value_type value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(value_type value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+private:
+    const mxs::config::Specification* m_pInternal_cache;
+};
+
+
+std::string ParamInternalCache::type() const
+{
+    return "string";
+}
+
+bool ParamInternalCache::takes_parameters() const
+{
+    return true;
+}
+
+std::string ParamInternalCache::parameter_prefix(const std::string& value) const
+{
+    return m_pInternal_cache->module();
+}
+
+bool ParamInternalCache::validate_parameters(const std::string& value,
+                                             const mxs::ConfigParameters& params,
+                                             mxs::ConfigParameters* pUnrecognized) const
+{
+    bool valid = (value == m_pInternal_cache->module());
+
+    if (valid)
+    {
+        valid = m_pInternal_cache->validate(params, pUnrecognized);
+    }
+
+    return valid;
+}
+
+bool ParamInternalCache::validate_parameters(const std::string& value,
+                                             json_t* pParams,
+                                             std::set<std::string>* pUnrecognized) const
+{
+    bool valid = (value == m_pInternal_cache->module());
+
+    if (valid)
+    {
+        valid = m_pInternal_cache->validate(pParams, pUnrecognized);
+    }
+
+    return valid;
+}
+
+std::string ParamInternalCache::to_string(value_type value) const
+{
+    return value ? value->module() : "";
+}
+
+bool ParamInternalCache::from_string(const std::string& value_as_string,
+                                     value_type* pValue,
+                                     std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (value_as_string.empty())
+    {
+        *pValue = nullptr;
+        rv = true;
+    }
+    else if (value_as_string == m_pInternal_cache->module())
+    {
+        *pValue = m_pInternal_cache;
+        rv = true;
+    }
+    else if (pMessage)
+    {
+        *pMessage = "'";
+        *pMessage += value_as_string;
+        *pMessage += "' is not '";
+        *pMessage += m_pInternal_cache->module();
+        *pMessage += "'.";
+    }
+
+    return rv;
+}
+
+json_t* ParamInternalCache::to_json(value_type value) const
+{
+    return value ? json_string(value->module().c_str()) : json_null();
+}
+
+bool ParamInternalCache::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else if (pMessage)
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxb::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+}
 
 namespace
 {
@@ -168,6 +331,12 @@ mxs::config::ParamEnum<Configuration::OrderedInsertBehavior> ordered_insert_beha
         {Configuration::OrderedInsertBehavior::ATOMIC, "atomic"}
     },
     Configuration::OrderedInsertBehavior::DEFAULT);
+
+ParamInternalCache internal_cache(
+    &nosqlprotocol::specification,
+    "internal_cache",
+    "Which, if any, cache the nosql protocol should use. Currently only 'cache' is available.",
+    CacheConfig::specification());
 }
 }
 
@@ -187,6 +356,7 @@ Configuration::Configuration(const std::string& name, ProtocolModule* pInstance)
     add_native(&Configuration::authentication_password, &nosqlprotocol::authentication_password);
     add_native(&Configuration::authorization_enabled, &nosqlprotocol::authorization_enabled);
     add_native(&Configuration::id_length, &nosqlprotocol::id_length);
+    add_native(&Configuration::pInternal_cache, &nosqlprotocol::internal_cache);
 
     add_native(&Configuration::auto_create_databases, &nosqlprotocol::auto_create_databases);
     add_native(&Configuration::auto_create_tables, &nosqlprotocol::auto_create_tables);
