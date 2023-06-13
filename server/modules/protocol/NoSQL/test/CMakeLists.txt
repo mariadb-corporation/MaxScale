@@ -21,6 +21,7 @@ add_executable(nosqltest_path nosqltest_path.cc
 )
 
 target_link_libraries(nosqltest_path maxscale-common
+  cache
   ${MONGO_C_LIBRARIES}
   ${BSON_CXX_LIBRARIES}
   ${BSON_C_LIBRARIES}

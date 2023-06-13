@@ -21,6 +21,8 @@ class ProtocolModule;
 class Configuration final : public mxs::config::Configuration
 {
 public:
+    using Specification = mxs::config::Specification;
+
     Configuration(const std::string& name, ProtocolModule* pInstance);
 
     enum OnUnknownCommand
@@ -68,6 +70,8 @@ public:
     bool                  authorization_enabled;
     int64_t               id_length {ID_LENGTH_DEFAULT};
 
+    const Specification*  pInternal_cache;
+
     std::vector<uint8_t>  encryption_key;
     uint32_t              encryption_key_version;
 
@@ -80,7 +84,7 @@ public:
     OnUnknownCommand      on_unknown_command      {RETURN_ERROR};
     OrderedInsertBehavior ordered_insert_behavior {OrderedInsertBehavior::DEFAULT};
 
-    static mxs::config::Specification& specification();
+    static Specification& specification();
 
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
