@@ -105,10 +105,12 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
 {
     bool rval = false;
 
-    m_qc.update_route_info(buffer);
+    auto prev_trx_state = m_trx_tracker;
+    m_trx_tracker.track_transaction_state(buffer, parser());
+    m_qc.update_route_info(buffer, m_trx_tracker);
     RoutingPlan res = resolve_route(buffer, route_info());
 
-    if (can_route_query(buffer, res))
+    if (can_route_query(buffer, res, prev_trx_state))
     {
         if (need_gtid_probe(res))
         {
@@ -123,6 +125,7 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
     {
         // Roll back the query classifier state to keep it consistent.
         m_qc.revert_update();
+        m_trx_tracker = prev_trx_state;
 
         // Already busy executing a query, put the query in a queue and route it later
         MXB_INFO("Storing query (len: %lu cmd: %0x), expecting %d replies to current command: %s. "
@@ -686,7 +689,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
                 return 1;
             }
         }
-        else if (trx_is_open() && trx_is_ending())
+        else if (trx_is_open() && trx_is_ending() && m_expected_responses == 0)
         {
             finish_transaction(backend);
         }
@@ -815,7 +818,7 @@ bool RWSplitSession::start_trx_replay()
                  */
                 MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query.buffer));
                 mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
-                                   || !protocol_data().is_autocommit(),
+                                   || !m_trx_tracker.is_autocommit(),
                                    "The current query (%s) should start or stop a transaction "
                                    "or autocommit should be disabled",
                                    get_sql_string(m_interrupted_query.buffer).c_str());
@@ -829,7 +832,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(protocol_data().is_autocommit() || trx_is_ending(),
+            mxb_assert_message(m_trx_tracker.is_autocommit() || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }

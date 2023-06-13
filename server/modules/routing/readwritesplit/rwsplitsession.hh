@@ -146,10 +146,25 @@ private:
     void            retry_query(GWBUF&& querybuf, int delay = 1);
 
     // Transaction state helpers
-    bool trx_is_starting() const;
-    bool trx_is_read_only() const;
-    bool trx_is_open() const;
-    bool trx_is_ending() const;
+    bool trx_is_starting() const
+    {
+        return m_trx_tracker.is_trx_starting();
+    }
+
+    bool trx_is_read_only() const
+    {
+        return m_trx_tracker.is_trx_read_only();
+    }
+
+    bool trx_is_open() const
+    {
+        return m_trx_tracker.is_trx_active();
+    }
+
+    bool trx_is_ending() const
+    {
+        return m_trx_tracker.is_trx_ending();
+    }
 
     bool is_valid_for_master(const mxs::RWBackend* master);
     bool should_replace_master(mxs::RWBackend* target);
@@ -323,7 +338,8 @@ private:
         });
     }
 
-    inline bool can_route_query(const GWBUF& buffer, const RoutingPlan& res) const
+    inline bool can_route_query(const GWBUF& buffer, const RoutingPlan& res,
+                                const mariadb::TrxTracker& prev_trx_state) const
     {
         bool can_route = false;
 
@@ -342,9 +358,12 @@ private:
                  && res.target == m_current_master
                 // If transaction replay is configured, we cannot stream the queries as we need to know
                 // what they returned in case the transaction is replayed.
+                // TODO: This can be done as long as we track what requests are in-flight.
                  && (!m_config->transaction_replay || !trx_is_open())
                 // Causal reads can't support multiple ongoing queries
-                 && m_wait_gtid == NONE)
+                 && m_wait_gtid == NONE
+                // Can't pipeline more queries until the current transaction ends
+                 && !prev_trx_state.is_trx_ending())
         {
             mxb_assert(res.type == RoutingPlan::Type::NORMAL);
             mxb_assert(m_current_master->is_waiting_result());
@@ -435,6 +454,7 @@ private:
     uint32_t        m_next_seq;             /**< Next packet's sequence number */
 
     mariadb::QueryClassifier m_qc;      /**< The query classifier. */
+    mariadb::TrxTracker      m_trx_tracker;
 
     int64_t m_retry_duration;       /**< Total time spent retrying queries */
     Stmt    m_current_query;        /**< Current query being executed */

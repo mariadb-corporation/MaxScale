@@ -921,26 +921,6 @@ void RWSplitSession::log_master_routing_failure(bool found,
                 errmsg.c_str());
 }
 
-bool RWSplitSession::trx_is_starting() const
-{
-    return protocol_data().is_trx_starting();
-}
-
-bool RWSplitSession::trx_is_read_only() const
-{
-    return protocol_data().is_trx_read_only();
-}
-
-bool RWSplitSession::trx_is_open() const
-{
-    return protocol_data().is_trx_active();
-}
-
-bool RWSplitSession::trx_is_ending() const
-{
-    return protocol_data().is_trx_ending();
-}
-
 bool RWSplitSession::should_replace_master(RWBackend* target)
 {
     return m_config->master_reconnection
