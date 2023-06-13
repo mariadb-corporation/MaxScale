@@ -178,6 +178,7 @@
         "driver": "Driver",
         "drop": "Drop",
         "dropSelectedCols": "Drop selected columns",
+        "dropTbl": "Drop Table",
         "edit": "Edit",
         "editEntity": "Edit {entityName}",
         "emptySet": "Empty set",

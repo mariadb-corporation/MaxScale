@@ -47,7 +47,6 @@
  * drag({ e, node, diffX, diffY })
  * drag-end(e)
  * node-size-map(obj): size of nodes, keyed by node id
- * dbl-click-node({ e, node })
  */
 export default {
     name: 'mxs-svg-graph-nodes',
@@ -117,9 +116,7 @@ export default {
     },
     methods: {
         handleAddEvents(node) {
-            let events = {
-                dblclick: e => this.$emit('dbl-click-node', { e, node }),
-            }
+            let events = {}
             if (this.draggable)
                 events = {
                     ...events,

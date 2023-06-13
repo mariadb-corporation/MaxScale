@@ -18,7 +18,7 @@
             :activeNodeId="activeEntityId"
             @on-rendered="fitIntoView"
             @on-nodes-coords-update="onNodesCoordsUpdate"
-            @dbl-click-node="onNodeDblClick"
+            @on-choose-node-opt="handleChooseNodeOpt"
         />
     </div>
 </template>
@@ -38,7 +38,7 @@
  */
 /*
  * Emits:
- * - $emit('on-choose-entity', nodeId:string)
+ * - $emit('on-choose-node-opt', { type:string, node:object })
  */
 import { mapMutations } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
@@ -155,11 +155,11 @@ export default {
                 if (!v) this.fitIntoView()
             })
         },
-        onNodeDblClick({ node }) {
+        handleChooseNodeOpt(param) {
             if (this.activeErdConn.id) {
-                this.$emit('on-choose-entity', node.id)
+                this.$emit('on-choose-node-opt', param)
                 // call in the next tick to ensure diagramDim height is up to date
-                this.$nextTick(() => this.zoomIntoNode(node))
+                this.$nextTick(() => this.zoomIntoNode(param.node))
             } else
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.requiredConn')],

@@ -10,7 +10,7 @@
             :disable="graphHeightPct === 100"
         >
             <template slot="pane-left">
-                <diagram-ctr :dim="erdDim" @on-choose-entity="onChooseEntity" />
+                <diagram-ctr :dim="erdDim" @on-choose-node-opt="handleChooseNodeOpt" />
             </template>
             <template slot="pane-right">
                 <entity-editor-ctr v-show="activeEntityId" :dim="editorDim" />
@@ -32,6 +32,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
@@ -44,6 +45,7 @@ export default {
         ctrDim: { type: Object, required: true },
     },
     computed: {
+        ...mapState({ ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES }),
         dim() {
             const { width, height } = this.ctrDim
             return { width: width, height: height }
@@ -88,10 +90,19 @@ export default {
         },
     },
     methods: {
-        onChooseEntity(active_entity_id) {
-            let data = { active_entity_id }
-            if (this.graphHeightPct === 100) data.graph_height_pct = 50
-            ErdTaskTmp.update({ where: this.activeErdTaskId, data })
+        handleChooseNodeOpt({ type, node }) {
+            const { ALTER, DROP } = this.ENTITY_OPT_TYPES
+            switch (type) {
+                case ALTER: {
+                    let data = { active_entity_id: node.id }
+                    if (this.graphHeightPct === 100) data.graph_height_pct = 50
+                    ErdTaskTmp.update({ where: this.activeErdTaskId, data })
+                    break
+                }
+                case DROP:
+                    //TODO: Handle DROP option
+                    break
+            }
         },
     },
 }

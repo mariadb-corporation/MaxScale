@@ -205,6 +205,16 @@ export const DDL_EDITOR_MODES = Object.freeze({
     ALTER: 'alter',
 })
 
+// Entity node option types
+export const ENTITY_OPT_TYPES = Object.freeze({
+    // for existing entities
+    DROP: 'Drop',
+    ALTER: 'Alter',
+    // for new entities
+    EDIT: 'Edit',
+    DELETE: 'Delete',
+})
+
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
     DDL_EDITOR: 'DDL_EDITOR',
