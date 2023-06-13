@@ -20,6 +20,7 @@ using namespace maxscale;
 
 Backend::Backend(mxs::Endpoint* b)
     : m_backend(b)
+    , m_target(b->target())
 {
     m_backend->set_userdata(this);
 }
@@ -73,7 +74,7 @@ bool Backend::write(GWBUF&& buffer, response_type type)
     if (rval && type != NO_RESPONSE)
     {
         m_responses.push_back(type);
-        m_backend->target()->stats().add_current_op();
+        m_target->stats().add_current_op();
     }
 
     return rval;
@@ -83,7 +84,7 @@ void Backend::ack_write()
 {
     mxb_assert(!m_responses.empty());
     m_responses.pop_front();
-    m_backend->target()->stats().remove_current_op();
+    m_target->stats().remove_current_op();
 }
 
 const maxbase::IntervalTimer& Backend::select_timer() const

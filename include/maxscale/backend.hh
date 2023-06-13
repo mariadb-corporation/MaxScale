@@ -77,8 +77,8 @@ public:
      */
     inline mxs::Target* target() const
     {
-        mxb_assert(m_backend);
-        return m_backend->target();
+        mxb_assert(m_target);
+        return m_target;
     }
 
     /**
@@ -88,7 +88,7 @@ public:
      */
     inline bool can_connect() const
     {
-        return !has_failed() && m_backend->target()->is_connectable();
+        return !has_failed() && m_target->is_connectable();
     }
 
     /**
@@ -137,7 +137,7 @@ public:
      */
     inline bool is_active() const
     {
-        return m_backend->target()->active();
+        return m_target->active();
     }
 
     /**
@@ -190,7 +190,7 @@ public:
      */
     inline bool is_master() const
     {
-        return m_backend->target()->is_master();
+        return m_target->is_master();
     }
 
     /**
@@ -200,7 +200,7 @@ public:
      */
     inline bool is_slave() const
     {
-        return m_backend->target()->is_slave();
+        return m_target->is_slave();
     }
 
     /**
@@ -210,7 +210,7 @@ public:
      */
     inline bool is_relay() const
     {
-        return m_backend->target()->is_relay();
+        return m_target->is_relay();
     }
 
     /**
@@ -234,7 +234,7 @@ public:
      */
     inline const char* name() const
     {
-        return m_backend->target()->name();
+        return m_target->name();
     }
 
     virtual void select_started();
@@ -255,6 +255,7 @@ private:
     };
 
     mxs::Endpoint* m_backend {nullptr};     /**< Backend server */
+    mxs::Target*   m_target{nullptr};
     backend_state  m_state {CLOSED};        /**< State of the backend */
 
     maxbase::IntervalTimer m_select_timer;
