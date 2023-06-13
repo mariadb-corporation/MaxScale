@@ -13,6 +13,7 @@
  */
 
 #include "configuration.hh"
+#include "nosqlconfig.hh"
 #include <fstream>
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
@@ -31,74 +32,72 @@ const char* CONFIG_PREFIX = MXB_MODULE_NAME;
 
 mxs::config::Specification specification(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL,
                                          CONFIG_PREFIX);
-}
-}
 
 // Can only be changed via MaxScale
-mxs::config::ParamString Configuration::s_user(
+mxs::config::ParamString user(
     &nosqlprotocol::specification,
     "user",
     "The user to use when connecting to the backend.",
     "");
 
-mxs::config::ParamPassword Configuration::s_password(
+mxs::config::ParamPassword password(
     &nosqlprotocol::specification,
     "password",
     "The password to use when connecting to the backend.",
     "");
 
-mxs::config::ParamString Configuration::s_host(
+mxs::config::ParamString host(
     &nosqlprotocol::specification,
     "host",
     "The host to use when creating new users in the backend.",
     "%");
 
-mxs::config::ParamBool Configuration::s_authentication_required(
+mxs::config::ParamBool authentication_required(
     &nosqlprotocol::specification,
     "authentication_required",
     "Whether nosqlprotocol authentication is required.",
     false);
 
-mxs::config::ParamBool Configuration::s_authentication_shared(
+mxs::config::ParamBool authentication_shared(
     &nosqlprotocol::specification,
     "authentication_shared",
     "Whether NoSQL credentials should be stored in the MariaDB server, thus enabling the "
     "use of several MaxScale instances with the same nosqlprotocol configuration.",
     false);
 
-mxs::config::ParamString Configuration::s_authentication_db(
+mxs::config::ParamString authentication_db(
     &nosqlprotocol::specification,
     "authentication_db",
     "What database shared NoSQL user information should be stored in.",
     "nosqlprotocol");
 
-mxs::config::ParamString Configuration::s_authentication_key_id(
+mxs::config::ParamString authentication_key_id(
     &nosqlprotocol::specification,
     "authentication_key_id",
     "If present and non-empty, and if 'authentication_shared' is enabled, then the sensitive "
     "parts of the NoSQL user data stored in the MariaDB server will be encrypted with this key ID.",
     "");
 
-mxs::config::ParamString Configuration::s_authentication_user(
+mxs::config::ParamString authentication_user(
     &nosqlprotocol::specification,
     "authentication_user",
     "If 'authentication_shared' is enabled, this user should be used when storing the NoSQL "
     "user data to the MariaDB server.",
     "");
 
-mxs::config::ParamPassword Configuration::s_authentication_password(
+mxs::config::ParamPassword authentication_password(
     &nosqlprotocol::specification,
     "authentication_password",
     "The password of the user specified with 'authentication_user'.",
     "");
 
-mxs::config::ParamBool Configuration::s_authorization_enabled(
+mxs::config::ParamBool authorization_enabled(
     &nosqlprotocol::specification,
     "authorization_enabled",
     "Whether nosqlprotocol authorization is enabled.",
     false);
 
-mxs::config::ParamCount Configuration::s_id_length(
+mxs::config::ParamCount id_length(
     &nosqlprotocol::specification,
     "id_length",
     "The VARCHAR length of automatically created tables. A changed value only affects "
@@ -108,7 +107,7 @@ mxs::config::ParamCount Configuration::s_id_length(
     Configuration::ID_LENGTH_MAX);
 
 // Can be changed from the NosQL API.
-mxs::config::ParamBool Configuration::s_auto_create_databases(
+mxs::config::ParamBool auto_create_databases(
     &nosqlprotocol::specification,
     "auto_create_databases",
     "Whether databases should be created automatically. If enabled, whenever a document is "
@@ -116,7 +115,7 @@ mxs::config::ParamBool Configuration::s_auto_create_databases(
     "it does not exist already.",
     true);
 
-mxs::config::ParamBool Configuration::s_auto_create_tables(
+mxs::config::ParamBool auto_create_tables(
     &nosqlprotocol::specification,
     "auto_create_tables",
     "Whether tables should be created automatically. If enabled, whenever a document is "
@@ -124,7 +123,7 @@ mxs::config::ParamBool Configuration::s_auto_create_tables(
     "it does not exist already.",
     true);
 
-mxs::config::ParamEnumMask<Configuration::Debug> Configuration::s_debug(
+mxs::config::ParamEnumMask<Configuration::Debug> debug(
     &nosqlprotocol::specification,
     "debug",
     "To what extent debugging logging should be performed.",
@@ -136,19 +135,19 @@ mxs::config::ParamEnumMask<Configuration::Debug> Configuration::s_debug(
     },
     0);
 
-mxs::config::ParamSeconds Configuration::s_cursor_timeout(
+mxs::config::ParamSeconds cursor_timeout(
     &nosqlprotocol::specification,
     "cursor_timeout",
     "How long can a cursor be idle, that is, not accessed, before it is automatically closed.",
     std::chrono::seconds(Configuration::CURSOR_TIMEOUT_DEFAULT));
 
-mxs::config::ParamBool Configuration::s_log_unknown_command(
+mxs::config::ParamBool log_unknown_command(
     &nosqlprotocol::specification,
     "log_unknown_command",
     "Whether an unknown command should be logged.",
     false);
 
-mxs::config::ParamEnum<Configuration::OnUnknownCommand> Configuration::s_on_unknown_command(
+mxs::config::ParamEnum<Configuration::OnUnknownCommand> on_unknown_command(
     &nosqlprotocol::specification,
     "on_unknown_command",
     "Whether to return an error or an empty document in case an unknown NoSQL "
@@ -159,7 +158,7 @@ mxs::config::ParamEnum<Configuration::OnUnknownCommand> Configuration::s_on_unkn
     },
     Configuration::RETURN_ERROR);
 
-mxs::config::ParamEnum<Configuration::OrderedInsertBehavior> Configuration::s_ordered_insert_behavior(
+mxs::config::ParamEnum<Configuration::OrderedInsertBehavior> ordered_insert_behavior(
     &nosqlprotocol::specification,
     "ordered_insert_behavior",
     "Whether documents will be inserted in a way true to how NoSQL behaves, "
@@ -169,31 +168,33 @@ mxs::config::ParamEnum<Configuration::OrderedInsertBehavior> Configuration::s_or
         {Configuration::OrderedInsertBehavior::ATOMIC, "atomic"}
     },
     Configuration::OrderedInsertBehavior::DEFAULT);
+}
+}
 
 
 Configuration::Configuration(const std::string& name, ProtocolModule* pInstance)
     : mxs::config::Configuration(name, &nosqlprotocol::specification)
     , m_instance(*pInstance)
 {
-    add_native(&Configuration::user, &s_user);
-    add_native(&Configuration::password, &s_password);
-    add_native(&Configuration::host, &s_host);
-    add_native(&Configuration::authentication_required, &s_authentication_required);
-    add_native(&Configuration::authentication_shared, &s_authentication_shared);
-    add_native(&Configuration::authentication_db, &s_authentication_db);
-    add_native(&Configuration::authentication_key_id, &s_authentication_key_id);
-    add_native(&Configuration::authentication_user, &s_authentication_user);
-    add_native(&Configuration::authentication_password, &s_authentication_password);
-    add_native(&Configuration::authorization_enabled, &s_authorization_enabled);
-    add_native(&Configuration::id_length, &s_id_length);
+    add_native(&Configuration::user, &nosqlprotocol::user);
+    add_native(&Configuration::password, &nosqlprotocol::password);
+    add_native(&Configuration::host, &nosqlprotocol::host);
+    add_native(&Configuration::authentication_required, &nosqlprotocol::authentication_required);
+    add_native(&Configuration::authentication_shared, &nosqlprotocol::authentication_shared);
+    add_native(&Configuration::authentication_db, &nosqlprotocol::authentication_db);
+    add_native(&Configuration::authentication_key_id, &nosqlprotocol::authentication_key_id);
+    add_native(&Configuration::authentication_user, &nosqlprotocol::authentication_user);
+    add_native(&Configuration::authentication_password, &nosqlprotocol::authentication_password);
+    add_native(&Configuration::authorization_enabled, &nosqlprotocol::authorization_enabled);
+    add_native(&Configuration::id_length, &nosqlprotocol::id_length);
 
-    add_native(&Configuration::auto_create_databases, &s_auto_create_databases);
-    add_native(&Configuration::auto_create_tables, &s_auto_create_tables);
-    add_native(&Configuration::cursor_timeout, &s_cursor_timeout);
-    add_native(&Configuration::debug, &s_debug);
-    add_native(&Configuration::log_unknown_command, &s_log_unknown_command);
-    add_native(&Configuration::on_unknown_command, &s_on_unknown_command);
-    add_native(&Configuration::ordered_insert_behavior, &s_ordered_insert_behavior);
+    add_native(&Configuration::auto_create_databases, &nosqlprotocol::auto_create_databases);
+    add_native(&Configuration::auto_create_tables, &nosqlprotocol::auto_create_tables);
+    add_native(&Configuration::cursor_timeout, &nosqlprotocol::cursor_timeout);
+    add_native(&Configuration::debug, &nosqlprotocol::debug);
+    add_native(&Configuration::log_unknown_command, &nosqlprotocol::log_unknown_command);
+    add_native(&Configuration::on_unknown_command, &nosqlprotocol::on_unknown_command);
+    add_native(&Configuration::ordered_insert_behavior, &nosqlprotocol::ordered_insert_behavior);
 }
 
 bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
@@ -245,4 +246,131 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
 mxs::config::Specification& Configuration::specification()
 {
     return nosqlprotocol::specification;
+}
+
+namespace
+{
+
+template<class Type>
+bool get_optional(const string& command,
+                  const bsoncxx::document::view& doc,
+                  const string& key,
+                  Type* pElement)
+{
+    bool rv = false;
+
+    auto element = doc[key];
+
+    if (element)
+    {
+        *pElement = nosql::element_as<Type>(command, key.c_str(), element);
+        rv = true;
+    }
+
+    return rv;
+}
+
+}
+
+namespace nosql
+{
+
+void Config::copy_from(const string& command, const bsoncxx::document::view& doc)
+{
+    Config that(*this);
+
+    get_optional(command, doc, nosqlprotocol::auto_create_databases.name(), &that.auto_create_databases);
+    get_optional(command, doc, nosqlprotocol::auto_create_tables.name(), &that.auto_create_tables);
+
+    string s;
+
+    if (get_optional(command, doc, nosqlprotocol::cursor_timeout.name(), &s))
+    {
+        string message;
+        if (!nosqlprotocol::cursor_timeout.from_string(s, &that.cursor_timeout, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
+    if (get_optional(command, doc, nosqlprotocol::debug.name(), &s))
+    {
+        string message;
+        if (!nosqlprotocol::debug.from_string(s, &that.debug, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
+    if (get_optional(command, doc, nosqlprotocol::log_unknown_command.name(), &s))
+    {
+        string message;
+        if (!nosqlprotocol::log_unknown_command.from_string(s, &that.log_unknown_command, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
+    if (get_optional(command, doc, nosqlprotocol::on_unknown_command.name(), &s))
+    {
+        string message;
+        if (!nosqlprotocol::on_unknown_command.from_string(s, &that.on_unknown_command, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
+    if (get_optional(command, doc, nosqlprotocol::ordered_insert_behavior.name(), &s))
+    {
+        string message;
+        if (!nosqlprotocol::ordered_insert_behavior.from_string(s, &that.ordered_insert_behavior, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
+    const auto& specification = nosqlprotocol::specification;
+
+    for (const auto& element : doc)
+    {
+        auto key = static_cast<string>(element.key());
+
+        if (key == nosqlprotocol::user.name()
+            || key == nosqlprotocol::password.name()
+            || key == nosqlprotocol::id_length.name())
+        {
+            ostringstream ss;
+            ss << "Configuration parameter '" << key << "', can only be changed via MaxScale.";
+            throw SoftError(ss.str(), error::NO_SUCH_KEY);
+        }
+
+        if (!specification.find_param(static_cast<string>(element.key())))
+        {
+            ostringstream ss;
+            ss << "Unknown configuration key: '" << element.key() << "'";
+            throw SoftError(ss.str(), error::NO_SUCH_KEY);
+        }
+    }
+
+    copy_from(that);
+}
+
+void Config::copy_to(nosql::DocumentBuilder& doc) const
+{
+    doc.append(kvp(nosqlprotocol::auto_create_databases.name(),
+                   auto_create_databases));
+    doc.append(kvp(nosqlprotocol::auto_create_tables.name(),
+                   auto_create_tables));
+    doc.append(kvp(nosqlprotocol::cursor_timeout.name(),
+                   nosqlprotocol::cursor_timeout.to_string(cursor_timeout)));
+    doc.append(kvp(nosqlprotocol::debug.name(),
+                   nosqlprotocol::debug.to_string(debug)));
+    doc.append(kvp(nosqlprotocol::log_unknown_command.name(),
+                   nosqlprotocol::log_unknown_command.to_string(log_unknown_command)));
+    doc.append(kvp(nosqlprotocol::on_unknown_command.name(),
+                   nosqlprotocol::on_unknown_command.to_string(on_unknown_command)));
+    doc.append(kvp(nosqlprotocol::ordered_insert_behavior.name(),
+                   nosqlprotocol::ordered_insert_behavior.to_string(ordered_insert_behavior)));
+}
+
 }

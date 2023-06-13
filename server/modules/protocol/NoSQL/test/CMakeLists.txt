@@ -7,7 +7,6 @@ add_executable(nosqltest_path nosqltest_path.cc
   ../nosql.cc
   ../nosqlcommand.cc
   ../nosqlcommands.cc
-  ../nosqlconfig.cc
   ../nosqlcontext.cc
   ../nosqlcrypto.cc
   ../nosqlcursor.cc
