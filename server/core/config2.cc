@@ -219,7 +219,7 @@ bool Specification::validate(const Configuration* pConfig,
                 mxs::ConfigParameters unrecognized;
                 bool param_valid = kv.second->validate_parameters(kv.first, my_params, &unrecognized);
 
-                if (param_valid && !unrecognized.empty())
+                if (!unrecognized.empty())
                 {
                     for (const auto& unknown : unrecognized)
                     {
@@ -361,7 +361,7 @@ bool Specification::validate(const Configuration* pConfig,
                 set<string> unrecognized;
                 bool param_valid = kv.second->validate_parameters(kv.first, my_params, &unrecognized);
 
-                if (param_valid && !unrecognized.empty())
+                if (!unrecognized.empty())
                 {
                     for (const auto& s : unrecognized)
                     {
