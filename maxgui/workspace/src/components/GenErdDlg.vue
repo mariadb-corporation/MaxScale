@@ -132,12 +132,18 @@ export default {
                     config,
                 })
                 await this.queryDdlEditorSuppData({ connId: conn.id, config })
-                const erdData = queryHelper.genErdData({
-                    data: parsedDdl,
-                    charsetCollationMap: this.charset_collation_map,
-                })
-                const erdTaskData = { data: erdData, is_laid_out: false }
-                const erdTaskTmpData = { graph_height_pct: 100, active_entity_id: '' }
+                const erdTaskData = {
+                    data: queryHelper.genErdData({
+                        data: parsedDdl,
+                        charsetCollationMap: this.charset_collation_map,
+                    }),
+                    is_laid_out: false,
+                }
+                const erdTaskTmpData = {
+                    graph_height_pct: 100,
+                    active_entity_id: '',
+                    key: this.$helpers.uuidv1(),
+                }
                 // Bind connection to a new worksheet
                 if (this.genInNewWs) {
                     Worksheet.dispatch('insertBlankWke')

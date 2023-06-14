@@ -25,7 +25,7 @@
                     hoverable
                     :boardZoom="panAndZoomData.k"
                     autoWidth
-                    @node-size-map="onNodesRendered"
+                    @node-size-map="updateNodeSizes"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
                     @mouseenter="mouseenterNode"
@@ -189,7 +189,6 @@ import {
     forceX,
     forceY,
 } from 'd3-force'
-import { min as d3Min, max as d3Max } from 'd3-array'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@wsSrc/components/worksheets/ErdWke/EntityLink'
 import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
@@ -287,9 +286,6 @@ export default {
         globalLinkColor() {
             return this.$typy(this.graphConfigData, 'link.color').safeString
         },
-        nodeIds() {
-            return this.$typy(this.data, 'nodes').safeArray.map(n => n.id)
-        },
         // Options for existing entities
         existingEntityOpts() {
             return [
@@ -318,39 +314,34 @@ export default {
         this.init()
         this.graphDim = this.dim
     },
-    activated() {
-        this.watchNodeIds()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_nodeIds).safeFunction()
-    },
     beforeDestroy() {
-        this.$typy(this.unwatch_nodeIds).safeFunction()
         this.$typy(this.unwatch_graphConfigData).safeFunction()
     },
     methods: {
-        watchNodeIds() {
-            this.unwatch_nodeIds = this.$watch(
-                'nodeIds',
-                (v, oV) => {
-                    if (!this.$helpers.lodash.isEqual(v, oV)) this.init()
-                },
-                { deep: true }
-            )
-        },
         /**
-         * Call this function will trigger rerender the graph
-         * D3 mutates data, this method deep clones data leaving the original intact.
+         * @public
+         * Render the graph with a loading progress indicator
          */
         init() {
             if (this.$typy(this.data, 'nodes').safeArray.length) {
                 this.isRendering = true
                 this.assignData()
-                this.handleFilterCompositeKeys(this.isAttrToAttr)
             }
         },
+        /**
+         * D3 mutates data, this method deep clones data leaving the original intact
+         * and call handleFilterCompositeKeys to handle composite keys case.
+         * By assigning `data` to `graphData`,  @node-size-map event will be
+         * emitted from `mxs-svg-graph-nodes` component which triggers the drawing
+         * of the graph if there is a change in the ID of the nodes.
+         */
         assignData() {
-            this.graphData = this.$helpers.lodash.cloneDeep(this.data)
+            const data = this.$helpers.lodash.cloneDeep(this.data)
+            this.graphData = {
+                nodes: this.$typy(data, 'nodes').safeArray,
+                links: this.$typy(data, 'links').safeArray,
+            }
+            this.handleFilterCompositeKeys(this.isAttrToAttr)
         },
         handleFilterCompositeKeys(v) {
             this.graphData.links.forEach(link => {
@@ -358,10 +349,9 @@ export default {
             })
         },
         /**
-         *
          * @param {Object} nodeSizeMap - size of nodes
          */
-        onNodesRendered(nodeSizeMap) {
+        updateNodeSizes(nodeSizeMap) {
             this.graphData.nodes.forEach(node => {
                 node.size = nodeSizeMap[node.id]
             })
@@ -405,9 +395,9 @@ export default {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
             this.drawLinks()
-            this.$emit('on-rendered')
-            this.isRendering = false
             this.onNodesCoordsUpdate()
+            this.isRendering = false
+            this.$emit('on-rendered')
         },
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphData.nodes.reduce((map, n) => {
@@ -556,18 +546,6 @@ export default {
                 'on-nodes-coords-update',
                 this.$helpers.lodash.cloneDeep(this.graphData.nodes)
             )
-        },
-        /**
-         * Function to be used by the parent component to get the correct dimension
-         * of the nodes for controlling the zoom
-         */
-        getGraphExtent() {
-            return {
-                minX: d3Min(this.graphData.nodes, n => n.x - n.size.width / 2),
-                minY: d3Min(this.graphData.nodes, n => n.y - n.size.height / 2),
-                maxX: d3Max(this.graphData.nodes, n => n.x + n.size.width / 2),
-                maxY: d3Max(this.graphData.nodes, n => n.y + n.size.height / 2),
-            }
         },
         onCloseNodeMenu() {
             this.activeNodeMenu = null

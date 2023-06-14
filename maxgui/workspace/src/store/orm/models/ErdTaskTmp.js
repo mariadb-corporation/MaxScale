@@ -12,6 +12,7 @@
  */
 import Extender from '@wsSrc/store/orm/Extender'
 import { ORM_TMP_ENTITIES } from '@wsSrc/store/config'
+import { uuidv1 } from '@share/utils/helpers'
 
 export default class ErdTaskTmp extends Extender {
     static entity = ORM_TMP_ENTITIES.ERD_TASKS_TMP
@@ -23,6 +24,7 @@ export default class ErdTaskTmp extends Extender {
         return {
             graph_height_pct: this.number(100),
             active_entity_id: this.string(''),
+            key: this.string(uuidv1()), // key for rerender purpose
         }
     }
 

@@ -8,7 +8,9 @@
             @set-zoom="setZoom"
         />
         <entity-diagram
+            v-if="diagramKey"
             ref="diagram"
+            :key="diagramKey"
             :panAndZoom.sync="panAndZoom"
             :data="graphData"
             :dim="diagramDim"
@@ -16,7 +18,7 @@
             :graphConfigData="graphConfigData"
             :isLaidOut="isLaidOut"
             :activeNodeId="activeEntityId"
-            @on-rendered="fitIntoView"
+            @on-rendered.once="fitIntoView"
             @on-nodes-coords-update="onNodesCoordsUpdate"
             @on-choose-node-opt="handleChooseNodeOpt"
         />
@@ -47,6 +49,7 @@ import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
 import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
 import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
+import { min as d3Min, max as d3Max } from 'd3-array'
 
 export default {
     name: 'diagram-ctr',
@@ -73,6 +76,7 @@ export default {
             },
             isFitIntoView: false,
             panAndZoom: { x: 0, y: 0, k: 1 },
+            diagramKey: '',
         }
     },
     computed: {
@@ -87,6 +91,9 @@ export default {
         },
         graphData() {
             return this.$typy(this.activeErdTask, 'data').safeObjectOrEmpty
+        },
+        graphNodes() {
+            return this.$typy(this.graphData, 'nodes').safeArray
         },
         activeGraphConfig() {
             return this.$typy(this.activeErdTask, 'graph_config').safeObjectOrEmpty
@@ -105,6 +112,9 @@ export default {
         },
         activeEntityId() {
             return ErdTask.getters('getActiveEntityId')
+        },
+        erdTaskKey() {
+            return this.$typy(ErdTask.getters('getActiveErdTaskTmp'), 'key').safeString
         },
     },
     watch: {
@@ -141,12 +151,15 @@ export default {
     },
     activated() {
         this.watchActiveEntityId()
+        this.watchErdTaskKey()
     },
     deactivated() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
+        this.$typy(this.unwatch_erdTaskKey).safeFunction()
     },
     beforeDestroy() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
+        this.$typy(this.unwatch_erdTaskKey).safeFunction()
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
@@ -154,6 +167,20 @@ export default {
             this.unwatch_activeEntityId = this.$watch('activeEntityId', v => {
                 if (!v) this.fitIntoView()
             })
+        },
+        /**
+         * If the users generate new ERD for existing ERD worksheet
+         * or a blank ERD worksheet, erdTaskKey will be re-generated
+         * so the diagram must be reinitialized
+         */
+        watchErdTaskKey() {
+            this.unwatch_erdTaskKey = this.$watch(
+                'erdTaskKey',
+                v => {
+                    if (v) this.diagramKey = v
+                },
+                { immediate: true }
+            )
         },
         handleChooseNodeOpt(param) {
             if (this.activeErdConn.id) {
@@ -204,6 +231,17 @@ export default {
             })
         },
         /**
+         * Get the correct dimension of the nodes for controlling the zoom
+         */
+        getGraphExtent() {
+            return {
+                minX: d3Min(this.graphNodes, n => n.x - n.size.width / 2),
+                minY: d3Min(this.graphNodes, n => n.y - n.size.height / 2),
+                maxX: d3Max(this.graphNodes, n => n.x + n.size.width / 2),
+                maxY: d3Max(this.graphNodes, n => n.y + n.size.height / 2),
+            }
+        },
+        /**
          * Auto adjust (zoom in or out) the contents of a graph
          * @param {Boolean} [param.isFitIntoView] - if it's true, v param will be ignored
          * @param {Object} [param.customExtent] - custom extent
@@ -211,7 +249,7 @@ export default {
          */
         setZoom({ isFitIntoView = false, customExtent, v, paddingPct = 2 }) {
             this.isFitIntoView = isFitIntoView
-            const extent = customExtent ? customExtent : this.$refs.diagram.getGraphExtent()
+            const extent = customExtent ? customExtent : this.getGraphExtent()
             const { minX, minY, maxX, maxY } = extent
 
             const k = isFitIntoView ? this.calcFitZoom({ extent, paddingPct }) : v
