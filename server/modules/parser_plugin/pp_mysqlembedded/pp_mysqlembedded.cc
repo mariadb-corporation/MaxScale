@@ -69,19 +69,18 @@
 #define json_type mxs_json_type
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
+#include <maxsimd/canonical.hh>
 #include <maxscale/log.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/utils.hh>
 #include <maxscale/modinfo.hh>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 #include <set>
 
 using namespace std;
