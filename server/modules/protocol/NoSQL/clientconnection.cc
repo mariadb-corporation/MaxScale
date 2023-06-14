@@ -177,18 +177,17 @@ void ClientConnection::error(DCB* pDcb, const char* errmsg)
 
 const char* dbg_decode_response(GWBUF* pPacket);
 
-bool ClientConnection::write(GWBUF&& buffer)
+bool ClientConnection::handle_reply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* pMariaDB_response = mxs::gwbuf_to_gwbufptr(std::move(buffer));
     bool rv = true;
 
     if (m_nosql.is_busy())
     {
-        rv = m_nosql.clientReply(mxs::gwbufptr_to_gwbuf(pMariaDB_response), m_pDcb);
+        rv = m_nosql.clientReply(std::move(buffer), down, reply);
     }
     else
     {
-        ComResponse response(pMariaDB_response);
+        ComResponse response(&buffer);
 
         switch (response.type())
         {
@@ -222,10 +221,8 @@ bool ClientConnection::write(GWBUF&& buffer)
 
         default:
             MXB_ERROR("Unexpected %lu bytes received from server when no request was in progress, ignoring.",
-                      pMariaDB_response->length());
+                      buffer.length());
         }
-
-        gwbuf_free(pMariaDB_response);
     }
 
     return rv;
@@ -236,10 +233,12 @@ json_t* ClientConnection::diagnostics() const
     return nullptr;
 }
 
-void ClientConnection::set_dcb(DCB* dcb)
+void ClientConnection::set_dcb(DCB* pDcb)
 {
     mxb_assert(!m_pDcb);
-    m_pDcb = dcb;
+    m_pDcb = pDcb;
+
+    m_nosql.set_dcb(pDcb);
 }
 
 bool ClientConnection::is_movable() const
@@ -332,7 +331,7 @@ bool ClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, 
 
     if (m_nosql.is_busy())
     {
-        rv = write(std::move(buffer));
+        rv = handle_reply(std::move(buffer), down, reply);
     }
     else
     {

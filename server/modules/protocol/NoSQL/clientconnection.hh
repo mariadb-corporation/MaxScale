@@ -78,7 +78,7 @@ private:
     bool ssl_is_ready();
     bool setup_ssl();
 
-    bool write(GWBUF&& buffer);
+    bool handle_reply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     nosql::Config  m_config;

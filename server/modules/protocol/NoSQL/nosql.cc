@@ -2908,8 +2908,9 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
     return state;
 }
 
-bool NoSQL::clientReply(GWBUF&& response, DCB* pDcb)
+bool NoSQL::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    mxb_assert(m_pDcb);
     mxb_assert(m_sDatabase.get());
 
     GWBUF* pProtocol_response = m_sDatabase->translate(std::move(response));
@@ -2920,7 +2921,7 @@ bool NoSQL::clientReply(GWBUF&& response, DCB* pDcb)
 
         if (pProtocol_response)
         {
-            pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pProtocol_response));
+            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pProtocol_response));
         }
 
         if (!m_requests.empty())
@@ -2940,7 +2941,7 @@ bool NoSQL::clientReply(GWBUF&& response, DCB* pDcb)
                 if (pProtocol_response)
                 {
                     // The response could be generated immediately, just send it.
-                    pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pProtocol_response));
+                    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pProtocol_response));
                 }
             }
             while (state == State::READY && !m_requests.empty());
