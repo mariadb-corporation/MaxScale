@@ -221,6 +221,177 @@ void test_mxs4269(TestConnections& test)
     c.query("DROP TABLE test.t1");
 }
 
+class Query
+{
+public:
+    Query(int line, std::string query, std::string expected)
+        : m_line(line)
+        , m_query(query)
+        , m_expected(expected)
+    {
+    }
+
+    Query(int line, std::string query)
+        : m_line(line)
+        , m_query(query)
+    {
+    }
+
+    void send(TestConnections& test, Connection& c)
+    {
+        test.expect(c.send_query(m_query), "Line %d: Failed to send query '%s': %d, %s",
+                    m_line, query(), c.errnum(), c.error());
+    }
+
+    void read(TestConnections& test, Connection& c)
+    {
+        auto res = c.read_query_result_field();
+
+        if (test.expect(res.has_value(), "Line %d: Query '%s' failed: %d, %s",
+                        m_line, query(), c.errnum(), c.error()))
+        {
+            test.expect(res.value() == m_expected, "Line %d: Unexpected result for '%s': %s != %s",
+                        m_line, query(), res.value().c_str(), m_expected.c_str());
+        }
+    }
+
+    const char* query() const
+    {
+        return m_query.c_str();
+    }
+
+private:
+    int         m_line;
+    std::string m_query;
+    std::string m_expected;
+};
+
+#define QUERY(...) Query(__LINE__,  ##__VA_ARGS__)
+
+void test_mxs4419(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    test.expect(c.query("CREATE OR REPLACE TABLE test.t1(id INT)"), "Failed to create table: %s", c.error());
+
+    // The test uses max_slave_connections=1 so we know there's only two possible server IDs that can be
+    // returned
+    std::string master_id = c.field("SELECT @@server_id, @@last_insert_id");
+    std::string slave_id = c.field("SELECT @@server_id");
+    test.expect(!master_id.empty(), "Failed to query master ID: %s", c.error());
+    test.expect(!slave_id.empty(), "Failed to query slave ID: %s", c.error());
+
+    std::vector<Query> rw_trx_queries
+    {
+        // Initial transaction, should be pipelined to the master
+        QUERY("START TRANSACTION"),
+        QUERY("INSERT INTO t1 VALUES (1)"),
+        QUERY("COMMIT"),
+
+        // Should get routed to the master
+        QUERY("SELECT @@server_id, MAX(id), @@last_insert_id FROM test.t1", master_id),
+
+        // The following should get routed to a slave server
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT 2", "2"),
+
+        // The following should get routed the master
+        QUERY("BEGIN"),
+        QUERY("SELECT @@server_id", master_id),
+        QUERY("COMMIT"),
+
+        // The transaction should again be routed to the master
+        QUERY("BEGIN"),
+        QUERY("INSERT INTO t1 VALUES (2)"),
+        QUERY("ROLLBACK"),
+
+        // The rollback should make sure the row isn't added
+        QUERY("SELECT MAX(id), @@last_insert_id FROM test.t1", "1"),
+
+        // Reads should get routed to a slave
+        QUERY("SELECT 1", "1"),
+
+        // Disabling autocommit should route queries to the master until it is disabled again
+        QUERY("SET autocommit=0"),
+        QUERY("SELECT @@server_id", master_id),
+        QUERY("SET autocommit=1"),
+
+        // With autocommit enabled, the read should go to a slave
+        QUERY("SELECT @@server_id", slave_id),
+    };
+
+    for (auto q : rw_trx_queries)
+    {
+        q.send(test, c);
+    }
+
+    for (auto q : rw_trx_queries)
+    {
+        q.read(test, c);
+    }
+
+    std::vector<Query> ro_trx_queries
+    {
+        // Read-only transaction, should be routed in its entirety to the same slave
+        QUERY("START TRANSACTION READ ONLY"),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("SELECT 1", "1"),
+        QUERY("COMMIT"),
+
+        // This should get routed to a master
+        QUERY("INSERT INTO t1 VALUES (IF(@@server_id = " + master_id
+              + ", SLEEP(1) + 2, (SELECT engine FROM information_schema.engines)))"),
+
+        // Should get routed to the slave once the INSERT completes
+        QUERY("START TRANSACTION READ ONLY"),
+        QUERY("SELECT 2", "2"),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("ROLLBACK"),
+
+        // This should only make one transaction read-only
+        QUERY("SET TRANSACTION READ ONLY"),
+        QUERY("BEGIN"),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("COMMIT"),
+        QUERY("BEGIN"),
+        QUERY("SELECT @@server_id", master_id),
+        QUERY("COMMIT"),
+
+        // This makes all transactions read-only
+        QUERY("SET SESSION TRANSACTION READ ONLY"),
+        QUERY("BEGIN"),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("COMMIT"),
+        QUERY("BEGIN"),
+        QUERY("SELECT @@server_id", slave_id),
+        QUERY("COMMIT"),
+        QUERY("SET SESSION TRANSACTION READ WRITE"),
+    };
+
+    for (auto q : ro_trx_queries)
+    {
+        q.send(test, c);
+    }
+
+    for (auto q : ro_trx_queries)
+    {
+        q.read(test, c);
+    }
+
+    c.query("DROP TABLE test.t1");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -254,6 +425,9 @@ int main(int argc, char** argv)
 
     // MXS-4269: UPDATEs with user variable modifications are treated as session commands
     test_mxs4269(test);
+
+    // MXS-4419: Pipelined transactions are not tracked correctly
+    test_mxs4419(test);
 
     return test.global_result;
 }

@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include <maxbase/ccdefs.hh>
 #include <maxbase/string.hh>
@@ -342,6 +343,36 @@ public:
         }
 
         return ok;
+    }
+
+    /**
+     * Reads the result of a previously sent qquery
+     *
+     * @param idx The offset of the column to extract
+     *
+     * @return The field value if the query was successfully executed. If no rows are returned, an empty
+     *         string is returned.
+     */
+    std::optional<std::string> read_query_result_field(int idx = 0)
+    {
+        std::optional<std::string> rval;
+
+        if (mysql_read_query_result(m_conn) == 0)
+        {
+            rval = "";
+
+            if (MYSQL_RES* res = mysql_use_result(m_conn))
+            {
+                if (MYSQL_ROW row = mysql_fetch_row(res); row[idx])
+                {
+                    rval = row[idx];
+                }
+
+                mysql_free_result(res);
+            }
+        }
+
+        return rval;
     }
 
     bool check(std::string q, std::string res)
