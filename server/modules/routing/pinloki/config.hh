@@ -35,15 +35,20 @@ class BinglogIndexUpdater final
 public:
     BinglogIndexUpdater(const std::string& binlog_dir,
                         const std::string& inventory_file_path);
+    void                     set_is_dirty();
     std::vector<std::string> get();
     void                     stop();
 private:
+    int                      m_inotify_fd;
+    int                      m_watch;
+    std::atomic<bool>        m_is_dirty{true};
     std::string              m_binlog_dir;
     std::string              m_inventory_file_path;
     std::vector<std::string> m_file_names;
     std::mutex               m_file_names_mutex;
     std::thread              m_update_thread;
     std::atomic<bool>        m_running{true};
+
     void update();
 };
 
@@ -69,6 +74,7 @@ public:
     std::string master_info_file() const;
     uint32_t    server_id() const;
     std::vector<std::string> binlog_file_names() const;
+    void set_binlogs_dirty() const;
 
     // Network timeout
     std::chrono::seconds net_timeout() const;

@@ -272,33 +272,68 @@ std::vector<std::string> Config::binlog_file_names() const
     return m_binlog_files->get();
 }
 
+void Config::set_binlogs_dirty() const
+{
+    m_binlog_files->set_is_dirty();
+}
+
 BinglogIndexUpdater::BinglogIndexUpdater(const std::string& binlog_dir,
                                          const std::string& inventory_file_path)
-    : m_binlog_dir(binlog_dir)
+    : m_inotify_fd(inotify_init1(0))
+    , m_binlog_dir(binlog_dir)
     , m_inventory_file_path(inventory_file_path)
     , m_file_names(read_binlog_file_names(m_binlog_dir))
-    , m_update_thread(&BinglogIndexUpdater::update, this)
 {
+    if (m_inotify_fd == -1)
+    {
+        MXS_SERROR("inotify_init failed: " << errno << ", " << mxb_strerror(errno));
+    }
+    else
+    {
+       m_watch = inotify_add_watch(m_inotify_fd, m_binlog_dir.c_str(), IN_CREATE | IN_DELETE);
+
+        if (m_watch == -1)
+        {
+            MXS_SERROR("inotify_add_watch for directory " <<
+                       m_binlog_dir.c_str() << "failed: " << errno << ", " << mxb_strerror(errno));
+        }
+        else
+        {
+            m_update_thread = std::thread(&BinglogIndexUpdater::update, this);
+        }
+    }
+}
+
+void BinglogIndexUpdater::set_is_dirty()
+{
+    m_is_dirty.store(true, std::memory_order_relaxed);
 }
 
 std::vector<std::string> BinglogIndexUpdater::get()
 {
     std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    if (m_is_dirty)
+    {
+        m_file_names = read_binlog_file_names(m_binlog_dir);
+        m_is_dirty.store(false, std::memory_order_relaxed);
+    }
     return m_file_names;
 }
 
 void BinglogIndexUpdater::stop()
 {
-    m_running = false;
-    m_update_thread.join();
+    m_running.store(false, std::memory_order_relaxed);
+    if (m_watch != -1)
+    {
+        inotify_rm_watch(m_inotify_fd, m_watch);
+        m_update_thread.join();
+    }
 }
 
 void BinglogIndexUpdater::update()
 {
     const size_t SZ = 1024;
     char buffer[SZ];
-    int inotify_fd = inotify_init1(IN_NONBLOCK);
-    inotify_add_watch(inotify_fd, m_binlog_dir.c_str(), IN_CREATE | IN_DELETE);
 
     std::unique_lock<std::mutex> lock(m_file_names_mutex);
     m_file_names = read_binlog_file_names(m_binlog_dir);
@@ -306,17 +341,16 @@ void BinglogIndexUpdater::update()
 
     while (m_running.load(std::memory_order_relaxed))
     {
-        auto n = read(inotify_fd, buffer, SZ);
+        auto n = ::read(m_inotify_fd, buffer, SZ);
         if (n <= 0)
         {
-            std::this_thread::sleep_for(100ms);
             continue;
         }
 
+        lock.lock();
         auto new_names = read_binlog_file_names(m_binlog_dir);
         if (new_names != m_file_names)
         {
-            lock.lock();
             m_file_names = std::move(new_names);
             std::string tmp = m_inventory_file_path + ".tmp";
             std::ofstream ofs(tmp, std::ios_base::trunc);
@@ -327,8 +361,8 @@ void BinglogIndexUpdater::update()
             }
 
             rename(tmp.c_str(), m_inventory_file_path.c_str());
-            lock.unlock();
         }
+        lock.unlock();
     }
 }
 }

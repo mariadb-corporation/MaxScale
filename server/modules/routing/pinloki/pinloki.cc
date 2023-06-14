@@ -835,6 +835,7 @@ PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to)
             }
 
             remove(ite->c_str());
+            pInventory->config().set_binlogs_dirty();
         }
     }
 
