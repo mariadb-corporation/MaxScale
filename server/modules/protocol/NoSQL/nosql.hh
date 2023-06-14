@@ -1049,7 +1049,13 @@ public:
         return pResponse;
     }
 
-    bool clientReply(GWBUF&& sMariaDB_response, DCB* pDcb);
+    bool clientReply(GWBUF&& sMariaDB_response, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+
+    void set_dcb(DCB* pDcb)
+    {
+        mxb_assert(!m_pDcb);
+        m_pDcb = pDcb;
+    }
 
 private:
     template<class T>
@@ -1077,6 +1083,7 @@ private:
     Config&            m_config;
     std::deque<GWBUF*> m_requests;
     SDatabase          m_sDatabase;
+    DCB*               m_pDcb = nullptr;
 };
 
 /**
