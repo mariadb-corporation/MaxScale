@@ -4,7 +4,7 @@
         v-resize.quiet="setDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
         class="mxs-workspace fill-height"
-        @shortkey="eventBus.$emit('shortkey', $event.srcKey)"
+        @shortkey="eventBus.$emit('query-editor-shortkey', $event.srcKey)"
     >
         <div
             class="fill-height d-flex flex-column"
@@ -66,7 +66,7 @@ import Worksheet from '@wsModels/Worksheet'
 import BlankWke from '@wkeComps/BlankWke'
 import DataMigration from '@wkeComps/DataMigration'
 import ErdWke from '@wkeComps/ErdWke'
-import { EventBus } from '@wkeComps/QueryEditor/EventBus'
+import { EventBus } from '@wkeComps/EventBus'
 import QueryEditor from '@wkeComps/QueryEditor'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import ExecuteSqlDialog from '@wsComps/ExecuteSqlDialog.vue'

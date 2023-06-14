@@ -178,7 +178,7 @@ import Editor from '@wsModels/Editor'
 import QueryResult from '@wsModels/QueryResult'
 import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
-import { EventBus } from '@wkeComps/QueryEditor/EventBus'
+import { EventBus } from '@wkeComps/EventBus'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
@@ -261,10 +261,10 @@ export default {
         },
     },
     activated() {
-        this.eventBus.$on('shortkey', this.shortKeyHandler)
+        this.eventBus.$on('query-editor-shortkey', this.shortKeyHandler)
     },
     deactivated() {
-        this.eventBus.$off('shortkey')
+        this.eventBus.$off('query-editor-shortkey')
     },
     methods: {
         ...mapActions({

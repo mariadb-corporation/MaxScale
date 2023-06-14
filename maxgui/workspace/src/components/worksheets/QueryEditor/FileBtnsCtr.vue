@@ -68,7 +68,7 @@ import { mapState, mapMutations, mapGetters, mapActions } from 'vuex'
 import QueryTab from '@wsModels/QueryTab'
 import Editor from '@wsModels/Editor'
 import { fileOpen } from 'browser-fs-access'
-import { EventBus } from '@wkeComps/QueryEditor/EventBus'
+import { EventBus } from '@wkeComps/EventBus'
 import saveFile from '@wsSrc/mixins/saveFile'
 
 export default {
@@ -100,10 +100,10 @@ export default {
         },
     },
     activated() {
-        this.eventBus.$on('shortkey', this.shortKeyHandler)
+        this.eventBus.$on('query-editor-shortkey', this.shortKeyHandler)
     },
     deactivated() {
-        this.eventBus.$off('shortkey')
+        this.eventBus.$off('query-editor-shortkey')
     },
     methods: {
         ...mapActions({ updateFileHandleDataMap: 'fileSysAccess/updateFileHandleDataMap' }),

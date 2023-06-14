@@ -49,7 +49,7 @@
                                     isKeptAlive
                                     :isTabMoveFocus.sync="isTabMoveFocus"
                                     @on-selection="SET_SELECTED_QUERY_TXT($event)"
-                                    @shortkey="eventBus.$emit('shortkey', $event)"
+                                    @shortkey="eventBus.$emit('query-editor-shortkey', $event)"
                                 />
                             </template>
                             <template slot="pane-right">
@@ -115,7 +115,7 @@ import TxtEditorToolbarCtr from '@wkeComps/QueryEditor/TxtEditorToolbarCtr.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import ChartConfig from '@wkeComps/QueryEditor/ChartConfig'
 import ChartPane from '@wkeComps/QueryEditor/ChartPane'
-import { EventBus } from '@wkeComps/QueryEditor/EventBus'
+import { EventBus } from '@wkeComps/EventBus'
 
 export default {
     name: 'txt-editor-ctr',

@@ -39,6 +39,7 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
+import { EventBus } from '@wkeComps/EventBus'
 
 export default {
     name: 'entity-editor-ctr',
@@ -74,6 +75,9 @@ export default {
         },
         editorMode() {
             return this.DDL_EDITOR_MODES.ALTER
+        },
+        eventBus() {
+            return EventBus
         },
     },
     async created() {
@@ -131,6 +135,7 @@ export default {
                             })
                         },
                     })
+                    this.eventBus.$emit('entity-editor-ctr-successful-exe')
                 },
             })
         },
