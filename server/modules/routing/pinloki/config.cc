@@ -23,6 +23,7 @@
 #include <dirent.h>
 #include <sys/inotify.h>
 #include "pinloki.hh"
+#include "find_gtid.hh"
 
 namespace
 {
@@ -269,12 +270,22 @@ Config::~Config()
 
 std::vector<std::string> Config::binlog_file_names() const
 {
-    return m_binlog_files->get();
+    return m_binlog_files->binlog_file_names();
 }
 
 void Config::set_binlogs_dirty() const
 {
     m_binlog_files->set_is_dirty();
+}
+
+void Config::save_rpl_state(const maxsql::GtidList &gtids) const
+{
+    m_binlog_files->set_rpl_state(gtids);
+}
+
+maxsql::GtidList Config::rpl_state() const
+{
+    return m_binlog_files->rpl_state();
 }
 
 BinglogIndexUpdater::BinglogIndexUpdater(const std::string& binlog_dir,
@@ -309,7 +320,7 @@ void BinglogIndexUpdater::set_is_dirty()
     m_is_dirty.store(true, std::memory_order_relaxed);
 }
 
-std::vector<std::string> BinglogIndexUpdater::get()
+std::vector<std::string> BinglogIndexUpdater::binlog_file_names()
 {
     std::unique_lock<std::mutex> lock(m_file_names_mutex);
     if (m_is_dirty)
@@ -328,6 +339,20 @@ void BinglogIndexUpdater::stop()
         inotify_rm_watch(m_inotify_fd, m_watch);
         m_update_thread.join();
     }
+}
+
+void BinglogIndexUpdater::set_rpl_state(const maxsql::GtidList &gtids)
+{
+    // Using the same mutex for rpl state as for file names. There
+    // is very little action hitting this mutex.
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    m_rpl_state = gtids;
+}
+
+maxsql::GtidList BinglogIndexUpdater::rpl_state()
+{
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    return m_rpl_state;
 }
 
 void BinglogIndexUpdater::update()

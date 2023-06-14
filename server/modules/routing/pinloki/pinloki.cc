@@ -704,7 +704,7 @@ GWBUF* Pinloki::show_slave_status(bool all) const
 void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)
 {
     mxb_assert(m_writer.get() == nullptr);
-    if (m_inventory.rpl_state().is_included(gtid))
+    if (m_inventory.config().rpl_state().is_included(gtid))
     {
         MXB_SERROR("The requested gtid "
                    << gtid
@@ -718,7 +718,7 @@ void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)
 
 mxq::GtidList Pinloki::gtid_io_pos() const
 {
-    auto rval = m_inventory.rpl_state();
+    auto rval = m_inventory.config().rpl_state();
 
     if (rval.gtids().empty())
     {

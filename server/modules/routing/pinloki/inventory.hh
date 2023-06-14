@@ -45,10 +45,6 @@ public:
      */
     std::vector<std::string> file_names() const;
 
-    /** The replication state */
-    void             save_rpl_state(const maxsql::GtidList& gtids);
-    maxsql::GtidList rpl_state() const;
-
     /** Requested replication state (set global gtid_slave_pos='a-b-c') */
     void             save_requested_rpl_state(const maxsql::GtidList& gtids);
     void             clear_requested_rpl_state() const;
@@ -87,7 +83,6 @@ class InventoryReader
 public:
     InventoryReader(const Config& config);
     std::vector<std::string> file_names() const;
-    maxsql::GtidList         rpl_state() const;
 
     const Config& config() const
     {

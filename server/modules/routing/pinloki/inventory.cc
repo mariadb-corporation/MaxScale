@@ -24,16 +24,6 @@ namespace pinloki
 
 namespace
 {
-maxsql::GtidList read_rpl_state(const Config& config)
-{
-    std::string ret;
-    if (auto ifs = std::ifstream(config.gtid_file_path()))
-    {
-        ifs >> ret;
-    }
-
-    return maxsql::GtidList::from_string(ret);
-}
 
 maxsql::GtidList read_requested_rpl_state(const Config& config)
 {
@@ -76,16 +66,6 @@ InventoryWriter::InventoryWriter(const Config& config)
 std::vector<std::string> InventoryWriter::file_names() const
 {
     return m_config.binlog_file_names();
-}
-
-void InventoryWriter::save_rpl_state(const maxsql::GtidList& gtids)
-{
-    save_gtid(gtids, m_config.gtid_file_path());
-}
-
-maxsql::GtidList InventoryWriter::rpl_state() const
-{
-    return read_rpl_state(m_config);
 }
 
 void InventoryWriter::save_requested_rpl_state(const maxsql::GtidList& gtids)
@@ -165,10 +145,5 @@ InventoryReader::InventoryReader(const Config& config)
 std::vector<std::string> InventoryReader::file_names() const
 {
     return m_config.binlog_file_names();
-}
-
-maxsql::GtidList InventoryReader::rpl_state() const
-{
-    return read_rpl_state(m_config);
 }
 }

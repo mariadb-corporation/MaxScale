@@ -51,7 +51,17 @@ Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
 
 void Reader::start()
 {
-    auto gtid_list = m_inventory.rpl_state();
+    /* Reader-as-a-seprate process. This and the other spot with
+     * a comment "Reader-as-a-separate process", should be configurable
+     * to use find_last_gtid_list() instead of config().rpl_state()
+     * in order for the Readers to run without a Writer. Some other
+     * code would need to change as well. See pinloki/test/main.cc.
+     *
+     * Alternatively, the Reader could
+     * simply reply with an error if the requested gtid does not
+     * (yet) exist, like the master does.
+     */
+    auto gtid_list = m_inventory.config().rpl_state();
 
     if (gtid_list.is_included(m_start_gtid_list))
     {
@@ -83,10 +93,12 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
 {
     // This version waits for ever.
     // Is there reason to timeout and send an error message?
+
+    /* Reader-as-a-seprate process. See comment in Reader::start() */
     bool continue_poll = true;
     if (action == mxb::Worker::Call::EXECUTE)
     {
-        auto gtid_list = m_inventory.rpl_state();
+        auto gtid_list = m_inventory.config().rpl_state();
         if (gtid_list.is_included(maxsql::GtidList({m_start_gtid_list})))
         {
             MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");

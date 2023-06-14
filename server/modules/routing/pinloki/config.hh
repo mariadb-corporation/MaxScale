@@ -36,12 +36,18 @@ public:
     BinglogIndexUpdater(const std::string& binlog_dir,
                         const std::string& inventory_file_path);
     void                     set_is_dirty();
-    std::vector<std::string> get();
+    std::vector<std::string> binlog_file_names();
     void                     stop();
+
+    /** The replication state */
+    void             set_rpl_state(const maxsql::GtidList& gtids);
+    maxsql::GtidList rpl_state();
+
 private:
     int                      m_inotify_fd;
     int                      m_watch;
     std::atomic<bool>        m_is_dirty{true};
+    maxsql::GtidList         m_rpl_state;
     std::string              m_binlog_dir;
     std::string              m_inventory_file_path;
     std::vector<std::string> m_file_names;
@@ -75,6 +81,10 @@ public:
     uint32_t    server_id() const;
     std::vector<std::string> binlog_file_names() const;
     void set_binlogs_dirty() const;
+
+    /** The replication state */
+    void             save_rpl_state(const maxsql::GtidList& gtids) const;
+    maxsql::GtidList rpl_state() const;
 
     // Network timeout
     std::chrono::seconds net_timeout() const;
