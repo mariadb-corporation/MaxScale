@@ -926,6 +926,9 @@ add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_ca
 # MXS-4232: Retain and use service password if new does not work
 add_test_executable(mxs4232_retain_service_password.cc mxs4232_retain_service_password mxs4232_retain_service_password LABELS REPL_BACKEND)
 
+# MXS-4420: Pipeline read-only transactions are not handled correctly
+add_test_executable(mxs4420_pipelined_ro_trx.cc mxs4420_pipelined_ro_trx mxs4420_pipelined_ro_trx LABELS REPL_BACKEND readwritesplit)
+
 # MXS-4440: connection_keepalive doesn't work with long queries
 add_test_executable(mxs4440_long_query_keepalive.cc mxs4440_long_query_keepalive mxs4440_long_query_keepalive LABELS REPL_BACKEND readwritesplit)
 
