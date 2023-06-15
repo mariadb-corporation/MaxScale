@@ -327,37 +327,5 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 
 bool ClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    int32_t rv = 0;
-
-    if (m_nosql.is_busy())
-    {
-        rv = handle_reply(std::move(buffer), down, reply);
-    }
-    else
-    {
-        GWBUF* pBuffer = mxs::gwbuf_to_gwbufptr(std::move(buffer));
-
-        // If there is not a pending command, this is likely to be a server hangup
-        // caused e.g. by an authentication error.
-        // TODO: However, currently 'reply' does not contain anything, but the information
-        // TODO: has to be digged out from 'pBuffer'.
-
-        if (mxs_mysql_is_ok_packet(*pBuffer))
-        {
-            MXB_WARNING("Unexpected OK packet received when none was expected.");
-        }
-        else if (mxs_mysql_is_err_packet(*pBuffer))
-        {
-            MXB_ERROR("Error received from backend, session is likely to be closed: %s",
-                      mariadb::extract_error(pBuffer).c_str());
-        }
-        else
-        {
-            MXB_WARNING("Unexpected response received.");
-        }
-
-        gwbuf_free(pBuffer);
-    }
-
-    return rv;
+    return handle_reply(std::move(buffer), down, reply);
 }
