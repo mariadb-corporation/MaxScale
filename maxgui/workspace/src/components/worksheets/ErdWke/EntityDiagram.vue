@@ -340,6 +340,13 @@ export default {
             }
         },
         /**
+         * @public
+         * Call this method to add a new node
+         */
+        addNode(node) {
+            this.graphData.nodes.push(node)
+        },
+        /**
          * D3 mutates data, this method deep clones data leaving the original intact
          * and call handleFilterCompositeKeys to handle composite keys case.
          * By assigning `data` to `graphData`,  @node-size-map event will be
@@ -387,7 +394,7 @@ export default {
             if (this.isLaidOut) {
                 this.simulation.stop()
                 // Adding a loading animation can enhance the smoothness, even if the graph is already laid out.
-                this.$helpers.delay(300).then(this.draw)
+                this.$helpers.delay(this.isRendering ? 300 : 0).then(this.draw)
             } else {
                 this.simulation.alphaMin(0.1).on('end', this.draw)
                 this.handleCollision()

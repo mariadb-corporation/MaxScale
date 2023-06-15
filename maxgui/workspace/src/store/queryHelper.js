@@ -30,7 +30,6 @@ import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/co
 import TableParser from '@wsSrc/utils/TableParser'
 import { check_charset_support } from '@wsSrc/components/common/MxsDdlEditor/utils'
 
-const parser = new TableParser()
 /**
  * @public
  * @param {Object} node
@@ -393,13 +392,13 @@ function getDatabase(connection_string) {
 }
 
 /**
- * @param {object} param.parsedTable - parsed ddl of a table
- *  @param {string} param.highlightColor - highlight color
+ * @param {object} param.nodeData - node data
+ * @param {string} param.highlightColor - highlight color
  */
-function genErdNode({ parsedTable, highlightColor }) {
+function genErdNode({ nodeData, highlightColor }) {
     return {
         id: `node_${uuidv1()}`,
-        data: parsedTable,
+        data: nodeData,
         styles: { highlightColor },
         x: 0,
         y: 0,
@@ -523,7 +522,7 @@ function genErdData({ data, charsetCollationMap }) {
             ...nodes,
             ...data[schema].map((tbl, i) =>
                 genErdNode({
-                    parsedTable: tableParserTransformer({
+                    nodeData: tableParserTransformer({
                         schema,
                         parsedTable: tbl,
                         charsetCollationMap,
@@ -553,6 +552,7 @@ function genErdData({ data, charsetCollationMap }) {
     return { nodes, links }
 }
 
+const tableParser = new TableParser()
 /**
  * @param {string} param.connId - id of connection
  * @param {string[]} param.tableNodes - tables to be queried and parsed
@@ -579,7 +579,7 @@ async function queryAndParseDDL({ connId, tableNodes, config }) {
     const parsedDdl = typy(res, 'data.data.attributes.results').safeArray.reduce((acc, item, i) => {
         const schema = tableNodes[i].parentNameData[NODE_TYPES.SCHEMA]
         if (!acc[schema]) acc[schema] = []
-        const parsed = parser.parse(typy(item, 'data[0][1]').safeString)
+        const parsed = tableParser.parse(typy(item, 'data[0][1]').safeString)
         acc[schema].push(parsed)
         return acc
     }, {})
@@ -733,4 +733,6 @@ export default {
     tableParserTransformer,
     getColNamesByAttr,
     genUqName,
+    tableParser,
+    genErdNode,
 }

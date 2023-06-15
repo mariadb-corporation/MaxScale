@@ -6,6 +6,7 @@
             :zoom="panAndZoom.k"
             :isFitIntoView="isFitIntoView"
             @set-zoom="setZoom"
+            @on-create-table="handleCreateTable"
         />
         <entity-diagram
             v-if="diagramKey"
@@ -42,7 +43,7 @@
  * Emits:
  * - $emit('on-choose-node-opt', { type:string, node:object })
  */
-import { mapMutations } from 'vuex'
+import { mapMutations, mapState } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
@@ -51,6 +52,8 @@ import { EventBus } from '@wkeComps/EventBus'
 import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { min as d3Min, max as d3Max } from 'd3-array'
+import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'diagram-ctr',
@@ -81,6 +84,10 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            charset_collation_map: state => state.editorsMem.charset_collation_map,
+            ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES,
+        }),
         activeErdTask() {
             return ErdTask.getters('getActiveErdTask')
         },
@@ -188,11 +195,12 @@ export default {
                 { immediate: true }
             )
         },
-        handleChooseNodeOpt(param) {
+        handleChooseNodeOpt({ type, node }) {
             if (this.activeErdConn.id) {
-                this.$emit('on-choose-node-opt', param)
-                // call in the next tick to ensure diagramDim height is up to date
-                this.$nextTick(() => this.zoomIntoNode(param.node))
+                this.$emit('on-choose-node-opt', { type, node })
+                if (type === this.ENTITY_OPT_TYPES.ALTER)
+                    // call in the next tick to ensure diagramDim height is up to date
+                    this.$nextTick(() => this.zoomIntoNode(node))
             } else
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.requiredConn')],
@@ -266,6 +274,31 @@ export default {
         },
         updateNode(params) {
             this.$refs.diagram.updateNode(params)
+        },
+        handleCreateTable() {
+            const length = this.graphNodes.length
+            const { tableParserTransformer, tableParser, genErdNode } = queryHelper
+            const nodeData = tableParserTransformer({
+                schema: '', // TODO: Auto pick an existing schema in the ERD
+                parsedTable: tableParser.parse(tableTemplate(`table_${length}`)),
+                charsetCollationMap: this.charset_collation_map,
+            })
+
+            const { x, y, k } = this.panAndZoom
+            const node = {
+                ...genErdNode({ nodeData, highlightColor: this.$helpers.dynamicColors(length) }),
+                // plus extra padding
+                x: (0 - x) / k + 65,
+                y: (0 - y) / k + 42,
+            }
+            const nodes = this.$helpers.immutableUpdate(this.graphNodes, { $push: [node] })
+            ErdTask.update({
+                where: this.erdTaskId,
+                data: { data: { ...this.graphData, nodes } },
+            }).then(() => {
+                this.$refs.diagram.addNode(node)
+                this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.CREATE, node })
+            })
         },
     },
 }

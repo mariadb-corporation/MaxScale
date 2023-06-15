@@ -91,9 +91,10 @@ export default {
     },
     methods: {
         handleChooseNodeOpt({ type, node }) {
-            const { ALTER, DROP } = this.ENTITY_OPT_TYPES
+            const { ALTER, CREATE, DROP } = this.ENTITY_OPT_TYPES
             switch (type) {
-                case ALTER: {
+                case ALTER:
+                case CREATE: {
                     let data = { active_entity_id: node.id }
                     if (this.graphHeightPct === 100) data.graph_height_pct = 50
                     ErdTaskTmp.update({ where: this.activeErdTaskId, data })

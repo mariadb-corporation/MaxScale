@@ -90,6 +90,18 @@
             </template>
             {{ $mxs_t('info.drawFkLinks') }}
         </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            text
+            depressed
+            color="primary"
+            @click="$emit('on-create-table')"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22" color="primary">mdi-table-plus</v-icon>
+            </template>
+            {{ $mxs_t('createTable') }}
+        </mxs-tooltip-btn>
 
         <v-spacer />
         <mxs-tooltip-btn

@@ -143,6 +143,7 @@
         "createNew": "Create New",
         "createObjInDest": "Create object in destination",
         "createQuerySnippet": "Create a query snippet",
+        "createTable": "Create Table",
         "createTbl": "Create Table",
         "csOps": "ColumnStore operations",
         "csStatus": "ColumnStore status",
