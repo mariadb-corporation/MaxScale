@@ -87,7 +87,7 @@ void Backend::ack_write()
     m_target->stats().remove_current_op();
 }
 
-const maxbase::IntervalTimer& Backend::select_timer() const
+const maxbase::EpollIntervalTimer& Backend::select_timer() const
 {
     return m_select_timer;
 }

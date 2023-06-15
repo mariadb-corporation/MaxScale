@@ -192,24 +192,44 @@ private:
  * std::cout << timer.total() << std::endl;
  *
  */
-class IntervalTimer
+template<mxb::NowType Type>
+class BasicIntervalTimer
 {
 public:
     /** Create but do not start the intervaltimer, i.e. starting in paused mode. */
-    IntervalTimer();
+    BasicIntervalTimer() = default;
 
     /** Resume measuring time. Ok to call multiple times without an end_interval(). */
-    void start_interval();
+    void start_interval()
+    {
+        m_last_start = Clock::now(Type);
+    }
 
     /** Pause measuring time. Ok to call without a start_interval. */
-    void end_interval();
+    void end_interval()
+    {
+        // Ignore the function call if m_last_start is defaulted. This avoids extra logic at call sites.
+        if (m_last_start != maxbase::TimePoint())
+        {
+            m_total += Clock::now(Type) - m_last_start;
+            // reset to make it easier to spot usage bugs, like calling end_interval(); end_interval();
+            m_last_start = TimePoint();
+        }
+    }
 
     /** Total duration of intervals (thus far). */
-    Duration total() const;
+    Duration total() const
+    {
+        return m_total;
+    }
+
 private:
     TimePoint m_last_start;
-    Duration  m_total;
+    Duration  m_total{0};
 };
+
+using IntervalTimer = BasicIntervalTimer<mxb::NowType::RealTime>;
+using EpollIntervalTimer = BasicIntervalTimer<mxb::NowType::EPollTick>;
 
 /** Returns the duration as a double and string adjusted to a suffix like ms for milliseconds.
  *  The double and suffix (unit) combination is selected to be easy to read.

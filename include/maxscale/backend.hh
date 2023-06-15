@@ -240,8 +240,8 @@ public:
     virtual void select_started();
     virtual void select_finished();
 
-    int64_t                       num_selects() const;
-    const maxbase::IntervalTimer& select_timer() const;
+    int64_t                            num_selects() const;
+    const maxbase::EpollIntervalTimer& select_timer() const;
 
 private:
     /**
@@ -258,8 +258,8 @@ private:
     mxs::Target*   m_target{nullptr};
     backend_state  m_state {CLOSED};        /**< State of the backend */
 
-    maxbase::IntervalTimer m_select_timer;
-    int64_t                m_num_selects {0};
+    mxb::EpollIntervalTimer m_select_timer;
+    int64_t                 m_num_selects {0};
 
     // Contains the types of responses we're expecting from this backend. Used to detect if multiple commands
     // were sent to the backend but not all of the results should be sent to the client.
