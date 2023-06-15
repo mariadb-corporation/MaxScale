@@ -89,13 +89,13 @@ export default {
             return this.$typy(this.gen_erd_dlg, 'gen_in_new_ws').safeBoolean
         },
         activeRequestConfig() {
-            return Worksheet.getters('getActiveRequestConfig')
+            return Worksheet.getters('activeRequestConfig')
         },
         hasSavingErr() {
             return Boolean(this.errVisualizingMsg) || Boolean(!this.selectedTableNodes.length)
         },
         activeWkeId() {
-            return Worksheet.getters('getActiveWkeId') // activeWkeId is also erd_task_id
+            return Worksheet.getters('activeId') // activeWkeId is also erd_task_id
         },
     },
     watch: {
@@ -149,7 +149,7 @@ export default {
                 if (this.genInNewWs) {
                     Worksheet.dispatch('insertBlankWke')
                     ErdTask.dispatch('initErdEntities', { erdTaskData, erdTaskTmpData })
-                    activeWkeId = Worksheet.getters('getActiveWkeId')
+                    activeWkeId = Worksheet.getters('activeId')
                     QueryConn.insert({
                         data: {
                             id: conn.id,

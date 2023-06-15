@@ -70,31 +70,33 @@ export default {
         },
     },
     getters: {
-        getActiveWkeId: state => state.active_wke_id,
-        getActiveWke: state => Worksheet.find(state.active_wke_id) || {},
-        getWkeByEtlTaskId: () => id =>
-            Worksheet.query()
-                .where('etl_task_id', id)
-                .first() || {},
-        getWkeIdByEtlTaskId: (state, getters) => id => getters.getWkeByEtlTaskId(id).id,
-        getActiveRequestConfig: state => {
+        activeId: state => state.active_wke_id,
+        activeRecord: state => Worksheet.find(state.active_wke_id) || {},
+        findWkeIdByEtlTaskId: () => etl_task_id => {
+            const { id } =
+                Worksheet.query()
+                    .where('etl_task_id', etl_task_id)
+                    .first() || {}
+            return id
+        },
+        activeRequestConfig: state => {
             const { request_config = {} } = WorksheetTmp.find(state.active_wke_id) || {}
             return request_config
         },
-        getRequestConfig: () => wkeId => {
+        findRequestConfig: () => wkeId => {
             const { request_config = {} } = WorksheetTmp.find(wkeId) || {}
             return request_config
         },
-        getRequestConfigByEtlTaskId: (state, getters) => id =>
-            getters.getRequestConfig(getters.getWkeIdByEtlTaskId(id)),
-        getRequestConfigByConnId: (state, getters) => id => {
+        findRequestConfigByEtlTaskId: (state, getters) => id =>
+            getters.findRequestConfig(getters.findWkeIdByEtlTaskId(id)),
+        findRequestConfigByConnId: (state, getters) => id => {
             const { etl_task_id, query_tab_id, query_editor_id } = QueryConn.find(id) || {}
             if (etl_task_id)
-                return getters.getRequestConfig(getters.getWkeIdByEtlTaskId(etl_task_id))
-            else if (query_editor_id) return getters.getRequestConfig(query_editor_id)
+                return getters.findRequestConfig(getters.findWkeIdByEtlTaskId(etl_task_id))
+            else if (query_editor_id) return getters.findRequestConfig(query_editor_id)
             else if (query_tab_id) {
                 const { query_editor_id } = QueryTab.find(query_tab_id) || {}
-                return getters.getRequestConfig(query_editor_id)
+                return getters.findRequestConfig(query_editor_id)
             }
             return {}
         },

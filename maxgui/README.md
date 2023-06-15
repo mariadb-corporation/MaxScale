@@ -113,8 +113,12 @@ describe the use of id.For examples:
 
 ### Getters
 
-Use getters only when data needs to be manipulated, processed before returning.
-Getter should be written with prefix starts with 'get'. e.g. getServersMap
+Use getters only when data needs to be manipulated, and processed before returning.
+Generally, the getters are prefixed with the 'get' keyword, such as `getServersMap`.
+However, Vuex ORM modules that utilize the ES6 static import statement to
+fetch models (e.g., `ErdTask.getters('activeRecord')`),
+the convention of prefixing getters with 'get' is not required because
+the syntax explicitly declares it.
 
 ## Workspace structure
 

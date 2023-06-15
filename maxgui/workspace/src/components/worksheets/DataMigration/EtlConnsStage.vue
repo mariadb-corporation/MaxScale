@@ -96,13 +96,13 @@ export default {
             return this.rc_target_names_map[this.destTargetType] || []
         },
         activeSrcConn() {
-            return QueryConn.getters('getActiveSrcConn')
+            return QueryConn.getters('activeEtlSrcConn')
         },
         activeDestConn() {
-            return QueryConn.getters('getActiveDestConn')
+            return QueryConn.getters('activeEtlDestConn')
         },
         hasActiveConns() {
-            return QueryConn.getters('getActiveEtlConns').length >= 2
+            return QueryConn.getters('activeEtlConns').length >= 2
         },
     },
     async created() {

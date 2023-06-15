@@ -91,16 +91,16 @@ export default {
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
         activeQueryTabConn() {
-            return QueryConn.getters('getActiveQueryTabConn')
+            return QueryConn.getters('activeQueryTabConn')
         },
         isTxtEditor() {
-            return Editor.getters('getIsTxtEditor')
+            return Editor.getters('isTxtEditor')
         },
         allQueryTabs() {
             return QueryTab.all()
         },
         activeQueryTabId() {
-            return QueryEditor.getters('getActiveQueryTabId')
+            return QueryEditor.getters('activeQueryTabId')
         },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })

@@ -79,7 +79,7 @@ export default {
          * Init QueryEditor entities if they don't exist in the active worksheet.
          */
         initQueryEditorEntities({ dispatch }) {
-            const wkeId = Worksheet.getters('getActiveWkeId')
+            const wkeId = Worksheet.getters('activeId')
             if (!QueryEditor.find(wkeId)) dispatch('insertQueryEditor', wkeId)
             Worksheet.update({ where: wkeId, data: { query_editor_id: wkeId } })
         },
@@ -89,22 +89,22 @@ export default {
          */
         async handleInitialFetch({ dispatch }) {
             try {
-                const config = Worksheet.getters('getActiveRequestConfig')
+                const config = Worksheet.getters('activeRequestConfig')
                 const { id: connId, meta: { name: connection_name } = {} } = QueryConn.getters(
-                    'getActiveQueryTabConn'
+                    'activeQueryTabConn'
                 )
-                const isSchemaTreeEmpty = SchemaSidebar.getters('getDbTreeData').length === 0
+                const isSchemaTreeEmpty = SchemaSidebar.getters('dbTreeData').length === 0
                 const hasSchemaTreeAlready =
-                    SchemaSidebar.getters('getDbTreeOfConn') === connection_name
+                    SchemaSidebar.getters('dbTreeOfConn') === connection_name
                 if (connId) {
                     if (isSchemaTreeEmpty || !hasSchemaTreeAlready) {
                         await SchemaSidebar.dispatch('initialFetch')
                         Worksheet.update({
-                            where: Worksheet.getters('getActiveWkeId'),
+                            where: Worksheet.getters('activeId'),
                             data: { name: connection_name },
                         })
                     }
-                    if (Editor.getters('getIsDDLEditor'))
+                    if (Editor.getters('isDdlEditor'))
                         await dispatch(
                             'editorsMem/queryDdlEditorSuppData',
                             { connId, config },
@@ -117,9 +117,9 @@ export default {
         },
     },
     getters: {
-        getQueryEditorId: () => Worksheet.getters('getActiveWkeId'),
-        getQueryEditor: (state, getters) => QueryEditor.find(getters.getQueryEditorId) || {},
-        getActiveQueryTabId: (state, getters) => getters.getQueryEditor.active_query_tab_id,
-        getQueryEditorTmp: (state, getters) => QueryEditorTmp.find(getters.getQueryEditorId) || {},
+        activeId: () => Worksheet.getters('activeId'),
+        activeRecord: (state, getters) => QueryEditor.find(getters.activeId) || {},
+        activeQueryTabId: (state, getters) => getters.activeRecord.active_query_tab_id,
+        activeTmpRecord: (state, getters) => QueryEditorTmp.find(getters.activeId) || {},
     },
 }

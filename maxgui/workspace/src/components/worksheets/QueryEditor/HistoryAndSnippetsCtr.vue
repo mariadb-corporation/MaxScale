@@ -238,7 +238,7 @@ export default {
             query_snippets: state => state.prefAndStorage.query_snippets,
         }),
         activeQueryMode() {
-            return QueryResult.getters('getActiveQueryMode')
+            return QueryResult.getters('queryMode')
         },
         activeView: {
             get() {
@@ -250,7 +250,7 @@ export default {
                     this.activeQueryMode === this.QUERY_MODES.SNIPPETS
                 )
                     QueryResult.update({
-                        where: QueryEditor.getters('getActiveQueryTabId'),
+                        where: QueryEditor.getters('activeQueryTabId'),
                         data: { query_mode: v },
                     })
             },

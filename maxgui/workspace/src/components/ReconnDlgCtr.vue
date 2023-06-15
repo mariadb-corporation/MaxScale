@@ -53,7 +53,7 @@ export default {
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
         activeWke() {
-            return Worksheet.getters('getActiveWke')
+            return Worksheet.getters('activeRecord')
         },
         isActiveQueryEditorWke() {
             return Boolean(this.activeWke.query_editor_id)
@@ -62,15 +62,15 @@ export default {
             return Boolean(this.activeWke.etl_task_id)
         },
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
+            return EtlTask.getters('activeRecord')
         },
         activeQueryEditorConn() {
-            return QueryConn.getters('getQueryEditorConn')
+            return QueryConn.getters('activeQueryEditorConn')
         },
         activeConns() {
             if (this.isActiveQueryEditorWke)
-                return [this.activeQueryEditorConn, QueryConn.getters('getActiveQueryTabConn')]
-            if (this.isActiveEtlWke) return QueryConn.getters('getActiveEtlConns')
+                return [this.activeQueryEditorConn, QueryConn.getters('activeQueryTabConn')]
+            if (this.isActiveEtlWke) return QueryConn.getters('activeEtlConns')
             return []
         },
         lostConns() {

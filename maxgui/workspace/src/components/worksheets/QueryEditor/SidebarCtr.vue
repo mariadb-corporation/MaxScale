@@ -117,39 +117,39 @@ export default {
             },
         },
         queryEditorId() {
-            return QueryEditor.getters('getQueryEditorId')
+            return QueryEditor.getters('activeId')
         },
         activeQueryTabId() {
-            return QueryEditor.getters('getActiveQueryTabId')
+            return QueryEditor.getters('activeQueryTabId')
         },
         filterTxt: {
             get() {
-                return SchemaSidebar.getters('getFilterTxt')
+                return SchemaSidebar.getters('filterTxt')
             },
             set(v) {
                 SchemaSidebar.update({ where: this.queryEditorId, data: { filter_txt: v } })
             },
         },
         isLoadingDbTree() {
-            return SchemaSidebar.getters('getLoadingDbTree')
+            return SchemaSidebar.getters('loadingDbTree')
         },
         disableReload() {
             return !this.hasConn || this.isLoadingDbTree
         },
         isSidebarDisabled() {
-            return QueryConn.getters('getIsActiveQueryTabConnBusy') || this.isLoadingDbTree
+            return QueryConn.getters('isActiveQueryTabConnBusy') || this.isLoadingDbTree
         },
         activeQueryTabConnId() {
-            return this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString
+            return this.$typy(QueryConn.getters('activeQueryTabConn'), 'id').safeString
         },
         hasConn() {
             return Boolean(this.activeQueryTabConnId)
         },
         dbTreeData() {
-            return SchemaSidebar.getters('getDbTreeData')
+            return SchemaSidebar.getters('dbTreeData')
         },
         activeQueryEditorConn() {
-            return QueryConn.getters('getQueryEditorConn')
+            return QueryConn.getters('activeQueryEditorConn')
         },
     },
     methods: {
@@ -180,7 +180,7 @@ export default {
             await SchemaSidebar.dispatch('loadChildNodes', node)
         },
         async onAlterTable(node) {
-            const config = Worksheet.getters('getActiveRequestConfig')
+            const config = Worksheet.getters('activeRequestConfig')
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,

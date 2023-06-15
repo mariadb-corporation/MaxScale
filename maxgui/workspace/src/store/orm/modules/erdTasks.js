@@ -39,7 +39,7 @@ export default {
          * @param {object} param.erdTaskTmpData - predefined data for ErdTaskTmp
          */
         initErdEntities(_, { erdTaskData = {}, erdTaskTmpData = {} } = {}) {
-            const wkeId = Worksheet.getters('getActiveWkeId')
+            const wkeId = Worksheet.getters('activeId')
             const lastErdTask = ErdTask.query().last()
             const count = this.vue.$typy(lastErdTask, 'count').safeNumber + 1
             const erdName = `ERD ${count}`
@@ -52,31 +52,31 @@ export default {
         },
     },
     getters: {
-        getActiveErdTaskId: () => Worksheet.getters('getActiveWkeId'),
-        getActiveErdTask: (_, getters) => ErdTask.find(getters.getActiveErdTaskId) || {},
-        getActiveGraphData: (_, getters) => {
-            const { data = {} } = getters.getActiveErdTask
+        activeRecordId: () => Worksheet.getters('activeId'),
+        activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
+        graphData: (_, getters) => {
+            const { data = {} } = getters.activeRecord
             return data
         },
         initialNodes: (_, getters) => {
-            const { nodes = [] } = getters.getActiveGraphData
+            const { nodes = [] } = getters.graphData
             return nodes
         },
         // Temp states getters
-        getActiveErdTaskTmp: (_, getters) => ErdTaskTmp.find(getters.getActiveErdTaskId) || {},
-        getActiveStagingGraphData(_, getters) {
-            const { staging_data = {} } = getters.getActiveErdTaskTmp
+        activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
+        stagingGraphData(_, getters) {
+            const { staging_data = {} } = getters.activeTmpRecord
             return staging_data
         },
         stagingNodes: (_, getters) => {
-            const { nodes = [] } = getters.getActiveStagingGraphData
+            const { nodes = [] } = getters.stagingGraphData
             return nodes
         },
-        getGraphHeightPct: (_, getters) => getters.getActiveErdTaskTmp.graph_height_pct || 100,
-        getActiveEntityId: (_, getters) => getters.getActiveErdTaskTmp.active_entity_id,
+        graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
+        activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
         // Other getters
         isNewEntity: (_, getters) => {
-            return !getters.initialNodes.some(item => item.id === getters.getActiveEntityId)
+            return !getters.initialNodes.some(item => item.id === getters.activeEntityId)
         },
     },
 }

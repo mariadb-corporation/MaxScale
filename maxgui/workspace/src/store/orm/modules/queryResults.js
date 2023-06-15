@@ -27,11 +27,11 @@ export default {
          * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
          */
         async fetchPrvw({ rootState, dispatch }, { qualified_name, query_mode }) {
-            const config = Worksheet.getters('getActiveRequestConfig')
+            const config = Worksheet.getters('activeRequestConfig')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
-                'getActiveQueryTabConn'
+                'activeQueryTabConn'
             )
-            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
+            const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
             const request_sent_time = new Date().valueOf()
             let field, sql, queryName
             switch (query_mode) {
@@ -97,12 +97,12 @@ export default {
          * @param {String} sql - SQL string
          */
         async fetchUserQuery({ commit, dispatch, getters, rootState }, sql) {
-            const config = Worksheet.getters('getActiveRequestConfig')
+            const config = Worksheet.getters('activeRequestConfig')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
-                'getActiveQueryTabConn'
+                'activeQueryTabConn'
             )
             const request_sent_time = new Date().valueOf()
-            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
+            const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
             const abortController = new AbortController()
             commit(
                 'queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP',
@@ -136,7 +136,7 @@ export default {
             if (!e && res && sql.match(/(use|drop database)\s/i))
                 await QueryConn.dispatch('updateActiveDb')
 
-            if (getters.getHasKillFlag(activeQueryTabId)) {
+            if (getters.findHasKillFlag(activeQueryTabId)) {
                 // If the KILL command was sent for the query is being run, the query request is aborted
                 QueryTabTmp.update({ where: activeQueryTabId, data: { has_kill_flag: false } })
                 /**
@@ -176,10 +176,10 @@ export default {
          * KILL QUERY thread_id
          */
         async stopUserQuery({ commit, rootGetters }) {
-            const config = Worksheet.getters('getActiveRequestConfig')
-            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
-            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
-            const queryEditorConn = QueryConn.getters('getQueryEditorConn')
+            const config = Worksheet.getters('activeRequestConfig')
+            const activeQueryTabConn = QueryConn.getters('activeQueryTabConn')
+            const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+            const queryEditorConn = QueryConn.getters('activeQueryEditorConn')
 
             // abort the query first then send kill flag
             const abort_controller = rootGetters['queryResultsMem/getAbortController'](
@@ -223,7 +223,7 @@ export default {
          */
         clearDataPreview() {
             QueryTabTmp.update({
-                where: QueryEditor.getters('getActiveQueryTabId'),
+                where: QueryEditor.getters('activeQueryTabId'),
                 data(obj) {
                     obj.prvw_data = {}
                     obj.prvw_data_details = {}
@@ -232,32 +232,32 @@ export default {
         },
     },
     getters: {
-        getActiveQueryMode: () => {
+        queryMode: () => {
             const { query_mode = '' } =
-                QueryResult.find(QueryEditor.getters('getActiveQueryTabId')) || {}
+                QueryResult.find(QueryEditor.getters('activeQueryTabId')) || {}
             return query_mode
         },
         // Getters for accessing query data stored in memory
-        getActiveUserQueryRes: () => QueryTab.getters('getActiveQueryTabTmp').query_results || {},
-        getActivePrvwData: (state, getters, rootState) => mode => {
+        userQueryRes: () => QueryTab.getters('activeTmpRecord').query_results || {},
+        findPrvwDataRes: (state, getters, rootState) => mode => {
             const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.mxsWorkspace.config.QUERY_MODES
             switch (mode) {
                 case PRVW_DATA:
-                    return QueryTab.getters('getActiveQueryTabTmp').prvw_data || {}
+                    return QueryTab.getters('activeTmpRecord').prvw_data || {}
                 case PRVW_DATA_DETAILS:
-                    return QueryTab.getters('getActiveQueryTabTmp').prvw_data_details || {}
+                    return QueryTab.getters('activeTmpRecord').prvw_data_details || {}
                 default:
                     return {}
             }
         },
         // Getters by query_tab_id
-        getIsLoading: () => query_tab_id => {
+        findIsLoading: () => query_tab_id => {
             const { query_results: { is_loading = false } = {} } =
                 QueryTabTmp.find(query_tab_id) || {}
 
             return is_loading
         },
-        getHasKillFlag: () => query_tab_id =>
-            QueryTab.getters('getQueryTabTmp')(query_tab_id).has_kill_flag,
+        findHasKillFlag: () => query_tab_id =>
+            QueryTab.getters('findTmpRecord')(query_tab_id).has_kill_flag,
     },
 }

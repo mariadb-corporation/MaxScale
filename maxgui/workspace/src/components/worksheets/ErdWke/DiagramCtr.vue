@@ -85,29 +85,29 @@ export default {
             charset_collation_map: state => state.editorsMem.charset_collation_map,
             ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES,
         }),
-        activeErdTask() {
-            return ErdTask.getters('getActiveErdTask')
+        activeRecord() {
+            return ErdTask.getters('activeRecord')
         },
-        erdTaskId() {
-            return ErdTask.getters('getActiveErdTaskId')
+        activeTaskId() {
+            return ErdTask.getters('activeRecordId')
         },
         activeErdConn() {
-            return QueryConn.getters('getActiveErdConn')
+            return QueryConn.getters('activeErdConn')
         },
         graphData() {
-            return this.$typy(this.activeErdTask, 'data').safeObjectOrEmpty
+            return this.$typy(this.activeRecord, 'data').safeObjectOrEmpty
         },
         stagingGraphData() {
-            return ErdTask.getters('getActiveStagingGraphData')
+            return ErdTask.getters('stagingGraphData')
         },
         stagingNodes() {
             return this.$typy(this.stagingGraphData, 'nodes').safeArray
         },
         activeGraphConfig() {
-            return this.$typy(this.activeErdTask, 'graph_config').safeObjectOrEmpty
+            return this.$typy(this.activeRecord, 'graph_config').safeObjectOrEmpty
         },
         isLaidOut() {
-            return this.$typy(this.activeErdTask, 'is_laid_out').safeBoolean
+            return this.$typy(this.activeRecord, 'is_laid_out').safeBoolean
         },
         toolbarHeight() {
             return 40
@@ -119,10 +119,10 @@ export default {
             return [0.25, 2]
         },
         activeEntityId() {
-            return ErdTask.getters('getActiveEntityId')
+            return ErdTask.getters('activeEntityId')
         },
         erdTaskKey() {
-            return this.$typy(ErdTask.getters('getActiveErdTaskTmp'), 'key').safeString
+            return this.$typy(ErdTask.getters('activeTmpRecord'), 'key').safeString
         },
         eventBus() {
             return EventBus
@@ -133,7 +133,7 @@ export default {
             deep: true,
             handler(v) {
                 ErdTask.update({
-                    where: this.erdTaskId,
+                    where: this.activeTaskId,
                     data: {
                         graph_config: this.$helpers.immutableUpdate(this.activeGraphConfig, {
                             link: {
@@ -202,8 +202,8 @@ export default {
                     case ALTER:
                     case CREATE: {
                         let data = { active_entity_id: node.id }
-                        if (ErdTask.getters('getGraphHeightPct') === 100) data.graph_height_pct = 50
-                        ErdTaskTmp.update({ where: this.erdTaskId, data })
+                        if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 50
+                        ErdTaskTmp.update({ where: this.activeTaskId, data })
                         break
                     }
                     case DROP:
@@ -223,7 +223,7 @@ export default {
             const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
             // persist node coords
             ErdTask.update({
-                where: this.erdTaskId,
+                where: this.activeTaskId,
                 data: {
                     data: {
                         ...this.graphData,
@@ -243,7 +243,7 @@ export default {
             })
             // Also update the staging data
             ErdTaskTmp.update({
-                where: this.erdTaskId,
+                where: this.activeTaskId,
                 data: {
                     staging_data: { ...this.stagingGraphData, nodes: v },
                 },
@@ -326,7 +326,7 @@ export default {
             }
             const nodes = this.$helpers.immutableUpdate(this.stagingNodes, { $push: [node] })
             ErdTaskTmp.update({
-                where: this.erdTaskId,
+                where: this.activeTaskId,
                 data: { staging_data: { ...this.stagingGraphData, nodes } },
             }).then(() => {
                 this.$refs.diagram.addNode(node)

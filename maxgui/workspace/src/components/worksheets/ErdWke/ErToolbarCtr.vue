@@ -170,7 +170,7 @@ export default {
             return Object.values(LINK_SHAPES)
         },
         activeErdConn() {
-            return QueryConn.getters('getActiveErdConn')
+            return QueryConn.getters('activeErdConn')
         },
         buttonHeight() {
             return 28

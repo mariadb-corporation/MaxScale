@@ -60,16 +60,16 @@ export default {
             return this.DDL_EDITOR_MODES.ALTER
         },
         activeErdConnId() {
-            return this.$typy(QueryConn.getters('getActiveErdConn'), 'id').safeString
+            return this.$typy(QueryConn.getters('activeErdConn'), 'id').safeString
         },
-        activeErdTaskId() {
-            return ErdTask.getters('getActiveErdTaskId')
+        activeTaskId() {
+            return ErdTask.getters('activeRecordId')
         },
         stagingEntities() {
             return ErdTask.getters('stagingNodes')
         },
         activeEntityId() {
-            return ErdTask.getters('getActiveEntityId')
+            return ErdTask.getters('activeEntityId')
         },
         activeEntity() {
             return this.stagingEntities.find(item => item.id === this.activeEntityId)
@@ -84,7 +84,7 @@ export default {
     async created() {
         await this.queryDdlEditorSuppData({
             connId: this.activeErdConnId,
-            config: Worksheet.getters('getActiveRequestConfig'),
+            config: Worksheet.getters('activeRequestConfig'),
         })
     },
     activated() {
@@ -111,7 +111,7 @@ export default {
         },
         close() {
             ErdTaskTmp.update({
-                where: this.activeErdTaskId,
+                where: this.activeTaskId,
                 data: { graph_height_pct: 100, active_entity_id: '' },
             })
         },
@@ -128,7 +128,7 @@ export default {
                     const activeEntityId = this.activeEntityId
                     const data = cloneDeep(this.stagingData)
                     ErdTask.update({
-                        where: this.activeErdTaskId,
+                        where: this.activeTaskId,
                         data(task) {
                             const idx = task.data.nodes.findIndex(n => n.id === activeEntityId)
                             task.data.nodes = immutableUpdate(task.data.nodes, {

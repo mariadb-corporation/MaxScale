@@ -21,9 +21,9 @@ export default {
     namespaced: true,
     actions: {
         async queryTblCreationInfo({ commit, rootState }, node) {
-            const config = Worksheet.getters('getActiveRequestConfig')
-            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
-            const activeQueryTabId = QueryEditor.getters('getActiveQueryTabId')
+            const config = Worksheet.getters('activeRequestConfig')
+            const { id: connId } = QueryConn.getters('activeQueryTabConn')
+            const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
             const {
                 $helpers: { getErrorsArr },
                 $typy,
@@ -72,22 +72,22 @@ export default {
         },
     },
     getters: {
-        getEditor: () => Editor.find(QueryEditor.getters('getActiveQueryTabId')) || {},
-        getQueryTxt: (state, getters) => getters.getEditor.query_txt || '',
-        getIsVisSidebarShown: (state, getters) => getters.getEditor.is_vis_sidebar_shown || false,
+        activeRecord: () => Editor.find(QueryEditor.getters('activeQueryTabId')) || {},
+        queryTxt: (state, getters) => getters.activeRecord.query_txt || '',
+        isVisSidebarShown: (state, getters) => getters.activeRecord.is_vis_sidebar_shown || false,
         //editor mode getter
-        getIsTxtEditor: (state, getters, rootState) =>
-            getters.getEditor.curr_editor_mode ===
+        isTxtEditor: (state, getters, rootState) =>
+            getters.activeRecord.curr_editor_mode ===
             rootState.mxsWorkspace.config.EDITOR_MODES.TXT_EDITOR,
-        getIsDDLEditor: (state, getters, rootState) =>
-            getters.getEditor.curr_editor_mode ===
+        isDdlEditor: (state, getters, rootState) =>
+            getters.activeRecord.curr_editor_mode ===
             rootState.mxsWorkspace.config.EDITOR_MODES.DDL_EDITOR,
         // tbl_creation_info getters
-        getTblCreationInfo: (state, getters) => getters.getEditor.tbl_creation_info || {},
-        getLoadingTblCreationInfo: (state, getters) => {
-            const { is_loading = true } = getters.getTblCreationInfo
+        tblCreationInfo: (state, getters) => getters.activeRecord.tbl_creation_info || {},
+        isLoadingTblCreationInfo: (state, getters) => {
+            const { is_loading = true } = getters.tblCreationInfo
             return is_loading
         },
-        getAlteringNode: (state, getters) => getters.getTblCreationInfo.altering_node || {},
+        alteringNode: (state, getters) => getters.tblCreationInfo.altering_node || {},
     },
 }

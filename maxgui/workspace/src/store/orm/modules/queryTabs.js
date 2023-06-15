@@ -113,14 +113,14 @@ export default {
         async handleAddQueryTab({ dispatch }, { query_editor_id, name = '', editorMode }) {
             const query_tab_id = this.vue.$helpers.uuidv1()
             dispatch('insertQueryTab', { query_editor_id, query_tab_id, name, editorMode })
-            const queryEditorConn = QueryConn.getters('getQueryEditorConn')
+            const queryEditorConn = QueryConn.getters('activeQueryEditorConn')
             // Clone the QueryEditor conn and bind it to the new queryTab
             if (queryEditorConn.id)
                 await QueryConn.dispatch('openQueryTabConn', { queryEditorConn, query_tab_id })
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
-            const config = Worksheet.getters('getActiveRequestConfig')
-            const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
+            const config = Worksheet.getters('activeRequestConfig')
+            const { id } = QueryConn.getters('findQueryTabConnByQueryTabId')(query_tab_id)
             if (id) await this.vue.$helpers.to(connection.delete({ id, config }))
             dispatch('cascadeDelete', query_tab_id)
         },
@@ -135,13 +135,12 @@ export default {
         },
     },
     getters: {
-        getActiveQueryTab: () => QueryTab.find(QueryEditor.getters('getActiveQueryTabId')) || {},
-        getActiveQueryTabs: () =>
+        activeRecord: () => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {},
+        queryTabsOfActiveWke: () =>
             QueryTab.query()
-                .where(t => t.query_editor_id === QueryEditor.getters('getQueryEditorId'))
+                .where(t => t.query_editor_id === QueryEditor.getters('activeId'))
                 .get(),
-        getActiveQueryTabTmp: () =>
-            QueryTabTmp.find(QueryEditor.getters('getActiveQueryTabId')) || {},
-        getQueryTabTmp: () => query_tab_id => QueryTabTmp.find(query_tab_id) || {},
+        activeTmpRecord: (_, getters) => QueryTabTmp.find(getters.activeRecord.id) || {},
+        findTmpRecord: () => query_tab_id => QueryTabTmp.find(query_tab_id) || {},
     },
 }

@@ -222,10 +222,10 @@ export default {
             return EventBus
         },
         isVisSidebarShown() {
-            return Editor.getters('getIsVisSidebarShown')
+            return Editor.getters('isVisSidebarShown')
         },
         queryTxt() {
-            return Editor.getters('getQueryTxt')
+            return Editor.getters('queryTxt')
         },
         isRowLimitValid: {
             get() {
@@ -236,27 +236,26 @@ export default {
             },
         },
         isExecuting() {
-            return QueryResult.getters('getIsLoading')(this.queryTab.id)
+            return QueryResult.getters('findIsLoading')(this.queryTab.id)
         },
         hasKillFlag() {
-            return QueryResult.getters('getHasKillFlag')(this.queryTab.id)
+            return QueryResult.getters('findHasKillFlag')(this.queryTab.id)
         },
         isRunBtnDisabled() {
-            const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(this.queryTab.id)
+            const queryTabConn = QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
             const { query_txt } = Editor.find(this.queryTab.id) || {}
             return (
                 !query_txt ||
                 !queryTabConn.id ||
-                QueryConn.getters('getIsQueryTabConnBusyByQueryTabId')(this.queryTab.id) ||
+                QueryConn.getters('isConnBusyByQueryTabId')(this.queryTab.id) ||
                 this.isExecuting
             )
         },
         isVisBtnDisabled() {
-            const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(this.queryTab.id)
+            const queryTabConn = QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
             return (
                 !queryTabConn.id ||
-                (QueryConn.getters('getIsQueryTabConnBusyByQueryTabId')(this.queryTab.id) &&
-                    this.isExecuting)
+                (QueryConn.getters('isConnBusyByQueryTabId')(this.queryTab.id) && this.isExecuting)
             )
         },
     },

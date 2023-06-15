@@ -145,10 +145,10 @@ export default {
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
         }),
         srcSchemaTree() {
-            return EtlTask.getters('getSrcSchemaTree')(this.task.id)
+            return EtlTask.getters('findSrcSchemaTree')(this.task.id)
         },
         createMode() {
-            return EtlTask.getters('getCreateMode')(this.task.id)
+            return EtlTask.getters('findCreateMode')(this.task.id)
         },
         parsedObjs() {
             return this.selectedObjs.reduce(
@@ -260,7 +260,7 @@ export default {
             })
             await EtlTask.dispatch('handleEtlCall', {
                 id: this.task.id,
-                tables: EtlTask.getters('getMigrationObjs')(this.task.id),
+                tables: EtlTask.getters('findMigrationObjs')(this.task.id),
             })
         },
     },

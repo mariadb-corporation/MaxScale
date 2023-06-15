@@ -163,25 +163,25 @@ export default {
             NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
         }),
         queryEditorId() {
-            return QueryEditor.getters('getQueryEditorId')
+            return QueryEditor.getters('activeId')
         },
         activeQueryTabConn() {
-            return QueryConn.getters('getActiveQueryTabConn')
+            return QueryConn.getters('activeQueryTabConn')
         },
         activeQueryTabId() {
-            return QueryEditor.getters('getActiveQueryTabId')
+            return QueryEditor.getters('activeQueryTabId')
         },
         filterTxt() {
-            return SchemaSidebar.getters('getFilterTxt')
+            return SchemaSidebar.getters('filterTxt')
         },
         dbTreeData() {
-            return SchemaSidebar.getters('getDbTreeData')
+            return SchemaSidebar.getters('dbTreeData')
         },
         previewingNode() {
-            return SchemaSidebar.getters('getPreviewingNode')
+            return SchemaSidebar.getters('previewingNode')
         },
         alteringNode() {
-            return Editor.getters('getAlteringNode')
+            return Editor.getters('alteringNode')
         },
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
@@ -271,7 +271,7 @@ export default {
         },
     },
     activated() {
-        this.expandedNodes = SchemaSidebar.getters('getExpandedNodes')
+        this.expandedNodes = SchemaSidebar.getters('expandedNodes')
         this.watch_expandedNodes()
     },
     deactivated() {

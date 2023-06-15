@@ -117,10 +117,10 @@ export default {
                 .get()
         },
         activeWkeId() {
-            return Worksheet.getters('getActiveWkeId')
+            return Worksheet.getters('activeId')
         },
         activeWke() {
-            return Worksheet.getters('getActiveWke')
+            return Worksheet.getters('activeRecord')
         },
         wkeNavCtrHeight() {
             return this.hidden_comp.includes('wke-nav-ctr') ? 0 : 32

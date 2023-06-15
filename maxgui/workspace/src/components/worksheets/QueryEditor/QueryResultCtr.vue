@@ -117,7 +117,7 @@ export default {
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
         }),
         isConnBusy() {
-            return QueryConn.getters('getIsActiveQueryTabConnBusy')
+            return QueryConn.getters('isActiveQueryTabConnBusy')
         },
         componentDynDim() {
             /*
@@ -127,7 +127,7 @@ export default {
             return { width: this.dynDim.width - 40, height: this.dynDim.height - 24 - 8 }
         },
         activeQueryMode() {
-            return QueryResult.getters('getActiveQueryMode')
+            return QueryResult.getters('queryMode')
         },
         activeTab: {
             get() {
@@ -144,7 +144,7 @@ export default {
             },
             set(v) {
                 QueryResult.update({
-                    where: QueryEditor.getters('getActiveQueryTabId'),
+                    where: QueryEditor.getters('activeQueryTabId'),
                     data: { query_mode: v },
                 })
             },
@@ -156,10 +156,10 @@ export default {
             const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
             switch (this.activeQueryMode) {
                 case QUERY_VIEW:
-                    return QueryResult.getters('getActiveUserQueryRes')
+                    return QueryResult.getters('userQueryRes')
                 case PRVW_DATA:
                 case PRVW_DATA_DETAILS:
-                    return QueryResult.getters('getActivePrvwData')(this.activeQueryMode)
+                    return QueryResult.getters('findPrvwDataRes')(this.activeQueryMode)
                 default:
                     return {}
             }
@@ -178,7 +178,7 @@ export default {
             return this.$typy(this.queryData, 'total_duration').safeNumber
         },
         previewingNodeQualifiedName() {
-            return SchemaSidebar.getters('getPreviewingNodeQualifiedName')
+            return SchemaSidebar.getters('previewingNodeQualifiedName')
         },
     },
 }

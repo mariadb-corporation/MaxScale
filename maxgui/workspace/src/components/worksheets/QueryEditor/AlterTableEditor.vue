@@ -42,13 +42,13 @@ export default {
     computed: {
         ...mapState({ DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES }),
         isLoading() {
-            return Editor.getters('getLoadingTblCreationInfo')
+            return Editor.getters('isLoadingTblCreationInfo')
         },
         data() {
-            return this.$typy(Editor.getters('getTblCreationInfo'), 'data').safeObjectOrEmpty
+            return this.$typy(Editor.getters('tblCreationInfo'), 'data').safeObjectOrEmpty
         },
         activeQueryTabConnId() {
-            return this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString
+            return this.$typy(QueryConn.getters('activeQueryTabConn'), 'id').safeString
         },
     },
     activated() {
@@ -80,7 +80,7 @@ export default {
                 successCb: () => {
                     const data = this.$helpers.lodash.cloneDeep(this.stagingData)
                     Editor.update({
-                        where: QueryEditor.getters('getActiveQueryTabId'),
+                        where: QueryEditor.getters('activeQueryTabId'),
                         data(editor) {
                             editor.tbl_creation_info.data = data
                         },

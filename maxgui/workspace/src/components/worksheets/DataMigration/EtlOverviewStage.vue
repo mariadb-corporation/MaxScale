@@ -79,7 +79,7 @@ export default {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
             const { status } = this.task
             return (
-                QueryConn.getters('getAreActiveEtlConnsAlive') ||
+                QueryConn.getters('areActiveEtlConnsAlive') ||
                 status === COMPLETE ||
                 status === RUNNING
             )

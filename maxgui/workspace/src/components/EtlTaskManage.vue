@@ -67,7 +67,7 @@ export default {
             }, {})
         },
         hasNoConn() {
-            return QueryConn.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+            return QueryConn.getters('findEtlConnsByTaskId')(this.task.id).length === 0
         },
         isRunning() {
             return this.task.status === this.ETL_STATUS.RUNNING

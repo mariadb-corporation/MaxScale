@@ -166,7 +166,7 @@ export default {
             return EventBus
         },
         isVisSidebarShown() {
-            return Editor.getters('getIsVisSidebarShown')
+            return Editor.getters('isVisSidebarShown')
         },
         isTabMoveFocus: {
             get() {
@@ -180,8 +180,7 @@ export default {
             let resSets = []
             // user query result data
             const userQueryResults = this.$helpers.stringifyClone(
-                this.$typy(QueryResult.getters('getActiveUserQueryRes'), 'data.attributes.results')
-                    .safeArray
+                this.$typy(QueryResult.getters('userQueryRes'), 'data.attributes.results').safeArray
             )
             let resSetCount = 0
             for (const res of userQueryResults) {
@@ -193,11 +192,11 @@ export default {
             // preview data
             const { PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
-            const previewingNode = SchemaSidebar.getters('getPreviewingNode')
+            const previewingNode = SchemaSidebar.getters('previewingNode')
             for (const mode of prvwModes) {
                 const data = this.$helpers.stringifyClone(
                     this.$typy(
-                        QueryResult.getters('getActivePrvwData')(mode),
+                        QueryResult.getters('findPrvwDataRes')(mode),
                         'data.attributes.results[0]'
                     ).safeObjectOrEmpty
                 )
@@ -228,7 +227,7 @@ export default {
             }))
         },
         completionItems() {
-            return [...SchemaSidebar.getters('getSchemaCompletionItems'), ...this.snippetList]
+            return [...SchemaSidebar.getters('completionItems'), ...this.snippetList]
         },
         showVisChart() {
             const labels = this.$typy(this.chartOpt, 'chartData.labels').safeArray
@@ -274,11 +273,11 @@ export default {
         },
         allQueryTxt: {
             get() {
-                return Editor.getters('getQueryTxt')
+                return Editor.getters('queryTxt')
             },
             set(value) {
                 Editor.update({
-                    where: QueryEditor.getters('getActiveQueryTabId'),
+                    where: QueryEditor.getters('activeQueryTabId'),
                     data: {
                         query_txt: value,
                     },

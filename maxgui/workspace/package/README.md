@@ -379,11 +379,11 @@ export default {
          * @param {String} params.meta.name - connection name.
          */
         async openConn(params) {
-            this.setRequestConfig(models.Worksheet.getters('getActiveWkeId'))
+            this.setRequestConfig(models.Worksheet.getters('activeId'))
             await models.QueryConn.dispatch('handleOpenConn', params)
         },
         createEtlTask(name) {
-            this.setRequestConfig(models.Worksheet.getters('getActiveWkeId'))
+            this.setRequestConfig(models.Worksheet.getters('activeId'))
             models.EtlTask.dispatch('createEtlTask', name)
         },
     },

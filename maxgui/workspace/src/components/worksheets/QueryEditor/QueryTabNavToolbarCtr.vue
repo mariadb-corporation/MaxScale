@@ -53,13 +53,13 @@ export default {
             QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
         }),
         queryEditorId() {
-            return QueryEditor.getters('getQueryEditorId')
+            return QueryEditor.getters('activeId')
         },
         activeQueryTabConn() {
-            return QueryConn.getters('getActiveQueryTabConn')
+            return QueryConn.getters('activeQueryTabConn')
         },
         activeQueryEditorConn() {
-            return QueryConn.getters('getQueryEditorConn')
+            return QueryConn.getters('activeQueryEditorConn')
         },
         connectedServerName() {
             return this.$typy(this.activeQueryEditorConn, 'meta.name').safeString

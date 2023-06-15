@@ -70,18 +70,18 @@ export default {
             return 100 - this.minErdPct
         },
         activeEntityId() {
-            return ErdTask.getters('getActiveEntityId')
+            return ErdTask.getters('activeEntityId')
         },
-        activeErdTaskId() {
-            return ErdTask.getters('getActiveErdTaskId')
+        activeTaskId() {
+            return ErdTask.getters('activeRecordId')
         },
         graphHeightPct: {
             get() {
-                return ErdTask.getters('getGraphHeightPct')
+                return ErdTask.getters('graphHeightPct')
             },
             set(v) {
                 ErdTaskTmp.update({
-                    where: this.activeErdTaskId,
+                    where: this.activeTaskId,
                     data: { graph_height_pct: v },
                 })
             },
@@ -89,9 +89,9 @@ export default {
     },
     created() {
         ErdTaskTmp.update({
-            where: this.activeErdTaskId,
+            where: this.activeTaskId,
             data: {
-                staging_data: ErdTask.getters('getActiveGraphData'),
+                staging_data: ErdTask.getters('graphData'),
             },
         })
     },

@@ -49,7 +49,7 @@ export default {
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
         }),
         activeQueryMode() {
-            return QueryResult.getters('getActiveQueryMode')
+            return QueryResult.getters('queryMode')
         },
         activeView: {
             get() {
@@ -61,7 +61,7 @@ export default {
                     this.activeQueryMode === this.QUERY_MODES.PRVW_DATA_DETAILS
                 )
                     QueryResult.update({
-                        where: QueryEditor.getters('getActiveQueryTabId'),
+                        where: QueryEditor.getters('activeQueryTabId'),
                         data: { query_mode: v },
                     })
             },
@@ -86,7 +86,7 @@ export default {
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
                         await QueryResult.dispatch('fetchPrvw', {
-                            qualified_name: SchemaSidebar.getters('getPreviewingNodeQualifiedName'),
+                            qualified_name: SchemaSidebar.getters('previewingNodeQualifiedName'),
                             query_mode,
                         })
                     }

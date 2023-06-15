@@ -66,7 +66,7 @@ export default {
         }),
         createMode: {
             get() {
-                return EtlTask.getters('getCreateMode')(this.taskId)
+                return EtlTask.getters('findCreateMode')(this.taskId)
             },
             set(v) {
                 EtlTaskTmp.update({ where: this.taskId, data: { create_mode: v } })

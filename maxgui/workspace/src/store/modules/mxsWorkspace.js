@@ -111,7 +111,7 @@ export default {
             { state, rootState, dispatch, commit },
             { connId, sql, action, showSnackbar = true }
         ) {
-            const config = Worksheet.getters('getActiveRequestConfig')
+            const config = Worksheet.getters('activeRequestConfig')
             const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
             const request_sent_time = new Date().valueOf()
             let error = null

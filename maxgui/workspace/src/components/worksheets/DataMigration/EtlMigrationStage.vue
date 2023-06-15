@@ -186,13 +186,13 @@ export default {
             return this.task.id
         },
         etlRes() {
-            return EtlTask.getters('getTmpRes')(this.taskId)
+            return EtlTask.getters('findEtlRes')(this.taskId)
         },
         etlResTable() {
-            return EtlTask.getters('getResTbl')(this.taskId)
+            return EtlTask.getters('findResTables')(this.taskId)
         },
         migrationStage() {
-            return EtlTask.getters('getResStage')(this.taskId)
+            return EtlTask.getters('findResStage')(this.taskId)
         },
         tableHeaders() {
             return this.isPrepareEtl
@@ -250,7 +250,7 @@ export default {
                      * stages are also cached, `this.isActive` is used for preventing
                      * this watcher from being triggered when component is activated
                      */
-                    if (v && QueryConn.getters('getIsActiveEtlSrcAlive') && this.isActive)
+                    if (v && QueryConn.getters('isActiveEtlSrcConnAlive') && this.isActive)
                         await EtlTask.dispatch('getEtlCallRes', this.task.id)
                 },
                 { immediate: true }

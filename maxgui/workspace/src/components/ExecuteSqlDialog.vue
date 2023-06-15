@@ -81,7 +81,7 @@ export default {
             getExecErr: 'mxsWorkspace/getExecErr',
         }),
         isTxtEditor() {
-            return Editor.getters('getIsTxtEditor')
+            return Editor.getters('isTxtEditor')
         },
         isConfDlgOpened: {
             get() {
@@ -109,7 +109,7 @@ export default {
             return statementCounts > 1 ? 2 : 1
         },
         completionItems() {
-            return SchemaSidebar.getters('getSchemaCompletionItems')
+            return SchemaSidebar.getters('completionItems')
         },
     },
     methods: {

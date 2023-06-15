@@ -54,7 +54,7 @@ export default {
     computed: {
         activeWkeID: {
             get() {
-                return Worksheet.getters('getActiveWkeId')
+                return Worksheet.getters('activeId')
             },
             set(v) {
                 if (v) Worksheet.commit(state => (state.active_wke_id = v))

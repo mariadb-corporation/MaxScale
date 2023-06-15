@@ -58,18 +58,18 @@ export default {
     computed: {
         activeQueryTabId: {
             get() {
-                return QueryEditor.getters('getActiveQueryTabId')
+                return QueryEditor.getters('activeQueryTabId')
             },
             set(v) {
                 if (v)
                     QueryEditor.update({
-                        where: QueryEditor.getters('getQueryEditorId'),
+                        where: QueryEditor.getters('activeId'),
                         data: { active_query_tab_id: v },
                     })
             },
         },
         queryTabsOfActiveWke() {
-            return QueryTab.getters('getActiveQueryTabs')
+            return QueryTab.getters('queryTabsOfActiveWke')
         },
     },
 }

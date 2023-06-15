@@ -32,14 +32,14 @@ export default {
          * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
          */
         async loadChildNodes({ getters }, nodeGroup) {
-            const config = Worksheet.getters('getActiveRequestConfig')
-            const queryEditorId = QueryEditor.getters('getQueryEditorId')
-            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
+            const config = Worksheet.getters('activeRequestConfig')
+            const queryEditorId = QueryEditor.getters('activeId')
+            const { id: connId } = QueryConn.getters('activeQueryTabConn')
             const { data, completionItems } = await queryHelper.getNewTreeData({
                 connId,
                 nodeGroup,
-                data: getters.getDbTreeData,
-                completionItems: getters.getSchemaCompletionItems,
+                data: getters.dbTreeData,
+                completionItems: getters.completionItems,
                 config,
             })
             QueryEditorTmp.update({
@@ -51,10 +51,10 @@ export default {
             })
         },
         async fetchSchemas({ getters, rootState }) {
-            const config = Worksheet.getters('getActiveRequestConfig')
-            const queryEditorId = QueryEditor.getters('getQueryEditorId')
+            const config = Worksheet.getters('activeRequestConfig')
+            const queryEditorId = QueryEditor.getters('activeId')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
-                'getActiveQueryTabConn'
+                'activeQueryTabConn'
             )
             QueryEditorTmp.update({
                 where: queryEditorId,
@@ -62,7 +62,7 @@ export default {
             })
 
             const [e, res] = await this.vue.$helpers.to(
-                queries.post({ id, body: { sql: getters.getDbSql }, config })
+                queries.post({ id, body: { sql: getters.schemaSql }, config })
             )
             if (e)
                 QueryEditorTmp.update({
@@ -79,7 +79,7 @@ export default {
 
                     const groupNodes = Object.values(rootState.mxsWorkspace.config.NODE_GROUP_TYPES)
                     // fetch expanded_nodes
-                    for (const nodeGroup of getters.getExpandedNodes) {
+                    for (const nodeGroup of getters.expandedNodes) {
                         if (groupNodes.includes(nodeGroup.type)) {
                             const {
                                 data: newData,
@@ -109,7 +109,7 @@ export default {
     },
     getters: {
         // sidebar getters
-        getDbSql: (state, getters, rootState) => {
+        schemaSql: (state, getters, rootState) => {
             const { SYS_SCHEMAS, NODE_NAME_KEYS, NODE_TYPES } = rootState.mxsWorkspace.config
             const schema = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
             let sql = 'SELECT * FROM information_schema.SCHEMATA'
@@ -118,17 +118,17 @@ export default {
             sql += ` ORDER BY ${schema};`
             return sql
         },
-        getSchemaSidebar: () => SchemaSidebar.find(QueryEditor.getters('getQueryEditorId')) || {},
-        getExpandedNodes: (state, getters) => getters.getSchemaSidebar.expanded_nodes || [],
-        getFilterTxt: (state, getters) => getters.getSchemaSidebar.filter_txt || '',
+        activeRecord: () => SchemaSidebar.find(QueryEditor.getters('activeId')) || {},
+        expandedNodes: (state, getters) => getters.activeRecord.expanded_nodes || [],
+        filterTxt: (state, getters) => getters.activeRecord.filter_txt || '',
         // Getters for mem states
-        getLoadingDbTree: () => QueryEditor.getters('getQueryEditorTmp').loading_db_tree || false,
-        getSchemaCompletionItems: () =>
-            lodash.uniqBy(QueryEditor.getters('getQueryEditorTmp').completion_items || [], 'label'),
-        getDbTreeOfConn: () => QueryEditor.getters('getQueryEditorTmp').db_tree_of_conn || '',
-        getDbTreeData: () => QueryEditor.getters('getQueryEditorTmp').db_tree || {},
-        getPreviewingNode: () => QueryTab.getters('getActiveQueryTabTmp').previewing_node || {},
-        getPreviewingNodeQualifiedName: (state, getters) =>
-            getters.getPreviewingNode.qualified_name || '',
+        loadingDbTree: () => QueryEditor.getters('activeTmpRecord').loading_db_tree || false,
+        completionItems: () =>
+            lodash.uniqBy(QueryEditor.getters('activeTmpRecord').completion_items || [], 'label'),
+        dbTreeOfConn: () => QueryEditor.getters('activeTmpRecord').db_tree_of_conn || '',
+        dbTreeData: () => QueryEditor.getters('activeTmpRecord').db_tree || {},
+        previewingNode: () => QueryTab.getters('activeTmpRecord').previewing_node || {},
+        previewingNodeQualifiedName: (state, getters) =>
+            getters.previewingNode.qualified_name || '',
     },
 }

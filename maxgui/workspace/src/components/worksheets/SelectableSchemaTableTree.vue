@@ -74,7 +74,7 @@ export default {
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
         }),
         activeRequestConfig() {
-            return Worksheet.getters('getActiveRequestConfig')
+            return Worksheet.getters('activeRequestConfig')
         },
         parsedObjs() {
             return this.selectedObjs.reduce(
@@ -140,7 +140,7 @@ export default {
             const [e, res] = await this.$helpers.to(
                 queries.post({
                     id: this.connId,
-                    body: { sql: SchemaSidebar.getters('getDbSql') },
+                    body: { sql: SchemaSidebar.getters('schemaSql') },
                     config: this.activeRequestConfig,
                 })
             )

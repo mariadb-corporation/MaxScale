@@ -90,7 +90,7 @@ export default {
          */
         async chooseQueryEditorWke({ commit, rootState }, { type, conn_name }) {
             const { $typy } = this.vue
-            const queryEditorConns = QueryConn.getters('getQueryEditorConns')
+            const queryEditorConns = QueryConn.getters('queryEditorConns')
             // Find connection
             const queryEditorConn = queryEditorConns.find(
                 c => $typy(c, 'meta.name').safeString === conn_name
