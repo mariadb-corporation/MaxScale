@@ -39,10 +39,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
- * Emits:
- * - $emit('on-choose-node-opt', { type:string, node:object })
- */
 import { mapMutations, mapState } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
@@ -201,8 +197,20 @@ export default {
         },
         handleChooseNodeOpt({ type, node }) {
             if (this.activeErdConn.id) {
-                this.$emit('on-choose-node-opt', { type, node })
-                if (type === this.ENTITY_OPT_TYPES.ALTER)
+                const { ALTER, CREATE, DROP } = this.ENTITY_OPT_TYPES
+                switch (type) {
+                    case ALTER:
+                    case CREATE: {
+                        let data = { active_entity_id: node.id }
+                        if (ErdTask.getters('getGraphHeightPct') === 100) data.graph_height_pct = 50
+                        ErdTaskTmp.update({ where: this.erdTaskId, data })
+                        break
+                    }
+                    case DROP:
+                        //TODO: Handle DROP option
+                        break
+                }
+                if (type === ALTER)
                     // call in the next tick to ensure diagramDim height is up to date
                     this.$nextTick(() => this.zoomIntoNode(node))
             } else

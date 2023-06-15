@@ -55,26 +55,27 @@ export default {
         ...mapState({
             DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES,
         }),
+        editorMode() {
+            if (ErdTask.getters('isNewEntity')) return this.DDL_EDITOR_MODES.CREATE
+            return this.DDL_EDITOR_MODES.ALTER
+        },
         activeErdConnId() {
             return this.$typy(QueryConn.getters('getActiveErdConn'), 'id').safeString
         },
         activeErdTaskId() {
             return ErdTask.getters('getActiveErdTaskId')
         },
-        entities() {
-            return this.$typy(ErdTask.getters('getActiveStagingGraphData'), 'nodes').safeArray
+        stagingEntities() {
+            return ErdTask.getters('stagingNodes')
         },
         activeEntityId() {
             return ErdTask.getters('getActiveEntityId')
         },
         activeEntity() {
-            return this.entities.find(item => item.id === this.activeEntityId)
+            return this.stagingEntities.find(item => item.id === this.activeEntityId)
         },
         data() {
             return this.$typy(this.activeEntity, 'data').safeObjectOrEmpty
-        },
-        editorMode() {
-            return this.DDL_EDITOR_MODES.ALTER
         },
         eventBus() {
             return EventBus

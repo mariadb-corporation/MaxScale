@@ -19,9 +19,9 @@
  * shortcut keys and emit "query-editor-shortkey" event. This event bus will "carry"
  * that event to the components handle the event.
  *
- * This event bus currently emits the following events:
- * @query-editor-shortkey: v:string. shortcut keys defined in app_config.QUERY_SHORTCUT_KEYS
- * @entity-editor-ctr-successful-exe. Emits after successfully executed queries in `entity-editor-ctr`
+ * This event bus currently carries the following events:
+ * query-editor-shortkey: v:string. shortcut keys defined in app_config.QUERY_SHORTCUT_KEYS
+ * entity-editor-ctr-successful-exe. Emits after successfully executed queries in `entity-editor-ctr`
  * component.
  */
 import Vue from 'vue'

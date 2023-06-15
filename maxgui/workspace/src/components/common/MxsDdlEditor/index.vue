@@ -4,6 +4,7 @@
             :height="ddlEditorToolbarHeight"
             :disableRevert="!hasChanged"
             :disableApply="!hasValidChanges"
+            :mode="mode"
             @on-apply="onApply"
             @on-revert="onRevert"
         >
