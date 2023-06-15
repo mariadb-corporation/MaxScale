@@ -30,14 +30,170 @@
 using namespace std;
 using namespace nosql;
 
+/*
+ * ClientConnection::CacheAsComponent
+ *
+ * The downstream of a client connection is a mxs::Component. However, a filter is not a
+ * mxs::Component but an mxs::Routable, although both of them have identical routeQuery()
+ * and clientReply() member functions.
+ *
+ * When nosqlprotocol has an internal cache, the mxs::Component::routeQuery() calls that
+ * are made when no cache is used, needs to be mxs::Routable::routeQuery() calls.
+ * The purpose of CacheAsComponent is to wrap the cache and expose an mxs::Component interface
+ * that can be used in place of the original mxs::Component, provided when the client connection
+ * was created.
+ *
+ * Normally a particular mxs::Routable or mxs::Component is before or after another routable
+ * or component. But here CacheAsComponent and ClientConnectionAsRoutable (further below)
+ * are "around" the cache.
+ *
+ */
+class ClientConnection::CacheAsComponent final : public mxs::Component
+{
+public:
+    /*
+     * ClientConnectionAsRoutable
+     *
+     * The cache is an mxs::Routable and hence expects its downstream and upstream
+     * to be mxs::Routables as well, something which ClientConnection is not.
+     * The purpose of this class, is provide something to use as the down and upstream
+     * of the cache.
+     */
+    class ClientConnectionAsRoutable final : public mxs::Routable
+    {
+    public:
+        ClientConnectionAsRoutable(const ClientConnectionAsRoutable&) = delete;
+        ClientConnectionAsRoutable& operator=(const ClientConnectionAsRoutable&) = delete;
+
+        ClientConnectionAsRoutable(ClientConnection* pClient_connection, mxs::Component* pDownstream)
+            : m_client_connection(*pClient_connection)
+            , m_downstream(*pDownstream)
+        {
+        }
+
+        bool routeQuery(GWBUF&& packet) override
+        {
+            // This is called by the cache and the packet must now be sent to the
+            // actual downstream. In the call stack, we are below the routeQuery()
+            // call to the cache in CacheAsComponent::routeQuery().
+
+            return m_downstream.routeQuery(std::move(packet));
+        }
+
+        bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
+        {
+            // This is called by the cache and the packet must now be sent to ClientConnection
+            // for normal processing. But to handle_reply() and not clientReply(), which would
+            // again send it to the cache.
+
+            return m_client_connection.handle_reply(std::move(packet), down, reply);
+        }
+
+    private:
+        ClientConnection& m_client_connection;
+        mxs::Component&   m_downstream; // The downstream provided when the client connection was created.
+    };
+
+    CacheAsComponent(const CacheAsComponent&) = delete;
+    CacheAsComponent& operator=(const CacheAsComponent&) = delete;
+
+    CacheAsComponent(ClientConnection* pClient_connection, Cache* pCache, mxs::Component* pDownstream)
+        : m_client_connection(*pClient_connection)
+        , m_cache(*pCache)
+        , m_client_connection_as_routable(pClient_connection, pDownstream)
+    {
+        // The cache filter session cannot be created here, because when a filter is
+        // created it is assumed that the client connection has been fully created,
+        // and this instance is created in the constructor of ClientConnection.
+    }
+
+    void create_cache()
+    {
+        mxb_assert(!m_sCache_filter_session);
+
+        auto sSession_cache = SessionCache::create(&m_cache);
+        auto* pCache_filter_session = CacheFilterSession::create(std::move(sSession_cache),
+                                                                 &m_client_connection.m_session,
+                                                                 m_client_connection.m_session.service);
+
+        m_sCache_filter_session.reset(pCache_filter_session);
+
+        m_sCache_filter_session->setDownstream(&m_client_connection_as_routable);
+        m_sCache_filter_session->setUpstream(&m_client_connection_as_routable);
+    }
+
+    bool routeQuery(GWBUF&& packet) override
+    {
+        // This is called when nosqlprotocol wants to send a packet further down
+        // the request chain. Here, the packet is provided to the internal cache.
+
+        bool rv = m_sCache_filter_session->routeQuery(std::move(packet));
+
+        if (rv)
+        {
+            if (session_has_response(&m_client_connection.m_session))
+            {
+                // Ok, so the cache could provide the response immediately.
+                // Now it needs to be delivered directly to ClientConnection,
+                // but using an lcall() so as not to break assumptions.
+
+                mxb::Worker::get_current()->lcall([this]() {
+                        GWBUF response = session_release_response(&m_client_connection.m_session);
+                        mxs::ReplyRoute down;
+                        mxs::Reply reply;
+
+                        // handle_reply() and not clientReply() as the latter would cause the
+                        // packet to first be delivered to the cache's clientReply() function
+                        // and it is not expecting anything at this point (it could provide the
+                        // response immediately).
+                        m_client_connection.handle_reply(std::move(response), down, reply);
+                    });
+            }
+
+            // If the cache could not provide the response immediately, then the server
+            // response will be delivered to ClientConnection::clientReply(), bypassing the
+            // cache as the system is not aware of it.
+        }
+
+        return rv;
+    }
+
+    bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
+    {
+        // This is called from ClientConnection::clientReply(). The packet must now be delivered
+        // to the cache, which eventually will call ClientConnectionAsRoutable::clientReply().
+        return m_sCache_filter_session->clientReply(std::move(packet), down, reply);
+    }
+
+    bool handleError(mxs::ErrorType type, const std::string& error, mxs::Endpoint* down,
+                     const mxs::Reply& reply) override
+    {
+        mxb_assert(!true);
+        return true;
+    }
+
+private:
+    ClientConnection&                   m_client_connection;
+    Cache&                              m_cache;
+    ClientConnectionAsRoutable          m_client_connection_as_routable;
+    std::unique_ptr<CacheFilterSession> m_sCache_filter_session;
+};
+
+
+/*
+ * ClientConnection
+ */
 ClientConnection::ClientConnection(const Configuration& config,
                                    nosql::UserManager* pUm,
                                    MXS_SESSION* pSession,
-                                   mxs::Component* pDownstream)
+                                   mxs::Component* pDownstream,
+                                   Cache* pCache)
     : m_config(config)
     , m_session(*pSession)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
-    , m_nosql(pSession, this, pDownstream, &m_config, pUm)
+    , m_sDownstream(pCache ? create_downstream(pDownstream, pCache) : nullptr)
+    , m_pCache(pCache)
+    , m_nosql(pSession, this, pCache ? m_sDownstream.get() : pDownstream, &m_config, pUm)
     , m_ssl_required(m_session.listener_data()->m_ssl.config().enabled)
 {
     prepare_session(m_config.user, m_config.password);
@@ -49,7 +205,11 @@ ClientConnection::~ClientConnection()
 
 bool ClientConnection::init_connection()
 {
-    // Nothing need to be done.
+    if (m_sDownstream)
+    {
+        m_sDownstream->create_cache();
+    }
+
     return true;
 }
 
@@ -327,5 +487,36 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 
 bool ClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return handle_reply(std::move(buffer), down, reply);
+    bool rv = true;
+
+    if (m_sDownstream)
+    {
+        // Ok, so we have a cache. The response must now be routed via the cache,
+        // so that it can cache the response if appropriate. And it must be routed
+        // via the cache as otherwise it will think it is missing a response.
+        //
+        // The cache will eventually call ClientConnectionAsRoutable::clientReply(),
+        // which will call ClientConnection::handle_reply(). I.e. compared to the
+        // direct call to handle_reply() below, we make a detour via the cache.
+        rv = m_sDownstream->clientReply(std::move(buffer), down, reply);
+    }
+    else
+    {
+        rv = handle_reply(std::move(buffer), down, reply);
+    }
+
+    return rv;
+}
+
+ClientConnection::SComponent ClientConnection::create_downstream(mxs::Component* pDownstream,
+                                                                 Cache* pCache)
+{
+    SComponent sComponent;
+
+    if (pCache)
+    {
+        sComponent.reset(new CacheAsComponent(this, pCache, pDownstream));
+    }
+
+    return sComponent;
 }

@@ -1665,7 +1665,6 @@ Msg::Msg(const Packet& packet)
         uint32_t expected_checksum = crc32_func(p, m_pHeader->msg_len - sizeof(uint32_t));
 
         p += (m_pHeader->msg_len - sizeof(uint32_t));
-        const uint32_t* pChecksum = reinterpret_cast<const uint32_t*>(p);
 
         // All integers in the MongoDB protocol are little-endian.
         uint32_t le32;
