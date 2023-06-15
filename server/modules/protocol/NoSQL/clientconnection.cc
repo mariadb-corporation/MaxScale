@@ -112,9 +112,21 @@ public:
         mxb_assert(!m_sCache_filter_session);
 
         auto sSession_cache = SessionCache::create(&m_cache);
+
+        auto* pClient_connection = &m_client_connection;
+        auto generate_key = [pClient_connection](const std::string& user,
+                                                 const std::string& host,
+                                                 const char* zDefault_db,
+                                                 const GWBUF* pQuery,
+                                                 CacheKey* pKey)
+            {
+                return pClient_connection->get_key(user, host, zDefault_db, pQuery, pKey);
+            };
+
         auto* pCache_filter_session = CacheFilterSession::create(std::move(sSession_cache),
                                                                  &m_client_connection.m_session,
-                                                                 m_client_connection.m_session.service);
+                                                                 m_client_connection.m_session.service,
+                                                                 std::move(generate_key));
 
         m_sCache_filter_session.reset(pCache_filter_session);
 
@@ -299,7 +311,10 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
             m_pDcb->trigger_read_event();
         }
 
+        m_pCurrent_nosql_request = pPacket;
         GWBUF* pResponse = handle_one_packet(pPacket);
+        m_pCurrent_nosql_request = nullptr;
+
         if (pResponse)
         {
             m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pResponse));
@@ -519,4 +534,17 @@ ClientConnection::SComponent ClientConnection::create_downstream(mxs::Component*
     }
 
     return sComponent;
+}
+
+cache_result_t ClientConnection::get_key(const std::string& user,
+                                         const std::string& host,
+                                         const char* zDefault_db,
+                                         const GWBUF* pQuery,
+                                         CacheKey* pKey)
+{
+    mxb_assert(m_pCurrent_nosql_request);
+
+    // The key is generated from the original NoSQL request. Thus, it will be possible
+    // to lookup data without first converting the NoSQL to MariaDB SQL.
+    return Cache::get_default_key(user, host, zDefault_db, m_pCurrent_nosql_request, pKey);
 }
