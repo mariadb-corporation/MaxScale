@@ -248,6 +248,11 @@ maxsql::GtidList find_last_gtid_list(const InventoryWriter &inv)
             break;
         }
 
+        if (rpl.event_type() == STOP_EVENT || rpl.event_type() == ROTATE_EVENT)
+        {
+            break;
+        }
+
         if (rpl.event_type() != GTID_LIST_EVENT && rpl.event_type() != GTID_EVENT)
         {
             file_pos = rpl.next_event_pos();
