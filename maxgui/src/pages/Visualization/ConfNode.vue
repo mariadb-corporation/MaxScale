@@ -229,7 +229,7 @@ export default {
         },
         handleVisFilters() {
             this.isVisualizingFilters = !this.isVisualizingFilters
-            this.onNodeResized(this.node)
+            this.onNodeResized(this.node.id)
         },
     },
 }

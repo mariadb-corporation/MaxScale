@@ -47,6 +47,7 @@ import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
 import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
+import { EventBus } from '@wkeComps/EventBus'
 import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { min as d3Min, max as d3Max } from 'd3-array'
@@ -116,6 +117,9 @@ export default {
         erdTaskKey() {
             return this.$typy(ErdTask.getters('getActiveErdTaskTmp'), 'key').safeString
         },
+        eventBus() {
+            return EventBus
+        },
     },
     watch: {
         graphConfigData: {
@@ -152,10 +156,12 @@ export default {
     activated() {
         this.watchActiveEntityId()
         this.watchErdTaskKey()
+        this.eventBus.$on('entity-editor-ctr-successful-exe', this.updateNode)
     },
     deactivated() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
         this.$typy(this.unwatch_erdTaskKey).safeFunction()
+        this.eventBus.$off('entity-editor-ctr-successful-exe')
     },
     beforeDestroy() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
@@ -257,6 +263,9 @@ export default {
             const y = this.diagramDim.height / 2 - ((minY + maxY) / 2) * k
 
             this.panAndZoom = { x, y, k, transition: true }
+        },
+        updateNode(params) {
+            this.$refs.diagram.updateNode(params)
         },
     },
 }

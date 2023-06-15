@@ -137,13 +137,23 @@ export default {
             const graphNode = this.$typy(this.$refs, 'graphNode').safeArray
             let nodeSizeMap = {}
             graphNode.forEach(node => {
-                const { width, height } = node.getBoundingClientRect()
+                const { width, height } = this.getNodeEleSize(node)
                 nodeSizeMap[node.getAttribute('node_id')] = { width, height }
             })
             this.nodeSizeMap = nodeSizeMap
         },
         getNodeSize(id) {
             return this.nodeSizeMap[id] || this.defNodeSize
+        },
+        /**
+         * Calculates the size of an HTML element
+         * The returned dimensions represent the value when the zoom ratio is 1.
+         * @param {HTMLElement} node
+         * @returns {{ width: number, height: number }}
+         */
+        getNodeEleSize(node) {
+            const { width, height } = node.getBoundingClientRect()
+            return { width: width / this.boardZoom, height: height / this.boardZoom }
         },
         getPosStyle(id) {
             const { x = 0, y = 0 } = this.nodeCoordMap[id] || {}
@@ -163,17 +173,17 @@ export default {
         },
         /**
          * Handles the event when a node is resized.
-         * @param {Object} node - The node object that was resized.
+         * @param {string} nodeId - Id of the node that was resized.
          */
-        onNodeResized(node) {
+        onNodeResized(nodeId) {
             // Run with doubleRAF to make sure getBoundingClientRect return accurate dim
             this.$helpers.doubleRAF(() => {
                 const nodeEle = this.$typy(this.$refs, 'graphNode').safeArray.find(
-                    n => n.getAttribute('node_id') === node.id
+                    n => n.getAttribute('node_id') === nodeId
                 )
                 if (nodeEle) {
-                    const { width, height } = nodeEle.getBoundingClientRect()
-                    this.$set(this.nodeSizeMap, node.id, { width, height })
+                    const { width, height } = this.getNodeEleSize(nodeEle)
+                    this.$set(this.nodeSizeMap, nodeId, { width, height })
                 }
             })
         },

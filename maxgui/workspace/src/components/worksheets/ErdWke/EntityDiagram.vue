@@ -319,13 +319,24 @@ export default {
     },
     methods: {
         /**
-         * @public
          * Render the graph with a loading progress indicator
          */
         init() {
             if (this.$typy(this.data, 'nodes').safeArray.length) {
                 this.isRendering = true
                 this.assignData()
+            }
+        },
+        /**
+         * @public
+         * Call this method to update the data of a node
+         */
+        updateNode({ id, data }) {
+            const index = this.graphData.nodes.findIndex(node => node.id === id)
+            if (index >= 0) {
+                this.$set(this.graphData.nodes[index], 'data', data)
+                // Re-calculate the size
+                this.$refs.graphNodes.onNodeResized(id)
             }
         },
         /**

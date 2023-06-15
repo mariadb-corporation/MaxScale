@@ -135,7 +135,10 @@ export default {
                             })
                         },
                     })
-                    this.eventBus.$emit('entity-editor-ctr-successful-exe')
+                    this.eventBus.$emit('entity-editor-ctr-successful-exe', {
+                        id: activeEntityId,
+                        data,
+                    })
                 },
             })
         },
