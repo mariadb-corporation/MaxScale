@@ -89,6 +89,14 @@ export default {
             },
         },
     },
+    created() {
+        ErdTaskTmp.update({
+            where: this.activeErdTaskId,
+            data: {
+                staging_data: ErdTask.getters('getActiveGraphData'),
+            },
+        })
+    },
     methods: {
         handleChooseNodeOpt({ type, node }) {
             const { ALTER, CREATE, DROP } = this.ENTITY_OPT_TYPES

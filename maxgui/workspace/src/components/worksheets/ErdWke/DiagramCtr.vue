@@ -13,7 +13,7 @@
             ref="diagram"
             :key="diagramKey"
             :panAndZoom.sync="panAndZoom"
-            :data="graphData"
+            :data="stagingGraphData"
             :dim="diagramDim"
             :scaleExtent="scaleExtent"
             :graphConfigData="graphConfigData"
@@ -45,6 +45,7 @@
  */
 import { mapMutations, mapState } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
 import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
@@ -92,7 +93,7 @@ export default {
             return ErdTask.getters('getActiveErdTask')
         },
         erdTaskId() {
-            return this.activeErdTask.id
+            return ErdTask.getters('getActiveErdTaskId')
         },
         activeErdConn() {
             return QueryConn.getters('getActiveErdConn')
@@ -100,8 +101,11 @@ export default {
         graphData() {
             return this.$typy(this.activeErdTask, 'data').safeObjectOrEmpty
         },
-        graphNodes() {
-            return this.$typy(this.graphData, 'nodes').safeArray
+        stagingGraphData() {
+            return ErdTask.getters('getActiveStagingGraphData')
+        },
+        stagingNodes() {
+            return this.$typy(this.stagingGraphData, 'nodes').safeArray
         },
         activeGraphConfig() {
             return this.$typy(this.activeErdTask, 'graph_config').safeObjectOrEmpty
@@ -208,11 +212,32 @@ export default {
                 })
         },
         onNodesCoordsUpdate(v) {
+            const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
+            // persist node coords
             ErdTask.update({
                 where: this.erdTaskId,
                 data: {
-                    data: { ...this.graphData, nodes: v },
+                    data: {
+                        ...this.graphData,
+                        nodes: this.graphData.nodes.map(n => {
+                            const { x, y, vx, vy } = nodeMap[n.id]
+                            return {
+                                ...n,
+                                x,
+                                y,
+                                vx,
+                                vy,
+                            }
+                        }),
+                    },
                     is_laid_out: true,
+                },
+            })
+            // Also update the staging data
+            ErdTaskTmp.update({
+                where: this.erdTaskId,
+                data: {
+                    staging_data: { ...this.stagingGraphData, nodes: v },
                 },
             })
         },
@@ -249,10 +274,10 @@ export default {
          */
         getGraphExtent() {
             return {
-                minX: d3Min(this.graphNodes, n => n.x - n.size.width / 2),
-                minY: d3Min(this.graphNodes, n => n.y - n.size.height / 2),
-                maxX: d3Max(this.graphNodes, n => n.x + n.size.width / 2),
-                maxY: d3Max(this.graphNodes, n => n.y + n.size.height / 2),
+                minX: d3Min(this.stagingNodes, n => n.x - n.size.width / 2),
+                minY: d3Min(this.stagingNodes, n => n.y - n.size.height / 2),
+                maxX: d3Max(this.stagingNodes, n => n.x + n.size.width / 2),
+                maxY: d3Max(this.stagingNodes, n => n.y + n.size.height / 2),
             }
         },
         /**
@@ -276,7 +301,7 @@ export default {
             this.$refs.diagram.updateNode(params)
         },
         handleCreateTable() {
-            const length = this.graphNodes.length
+            const length = this.stagingNodes.length
             const { tableParserTransformer, tableParser, genErdNode } = queryHelper
             const nodeData = tableParserTransformer({
                 schema: '', // TODO: Auto pick an existing schema in the ERD
@@ -291,10 +316,10 @@ export default {
                 x: (0 - x) / k + 65,
                 y: (0 - y) / k + 42,
             }
-            const nodes = this.$helpers.immutableUpdate(this.graphNodes, { $push: [node] })
-            ErdTask.update({
+            const nodes = this.$helpers.immutableUpdate(this.stagingNodes, { $push: [node] })
+            ErdTaskTmp.update({
                 where: this.erdTaskId,
-                data: { data: { ...this.graphData, nodes } },
+                data: { staging_data: { ...this.stagingGraphData, nodes } },
             }).then(() => {
                 this.$refs.diagram.addNode(node)
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.CREATE, node })

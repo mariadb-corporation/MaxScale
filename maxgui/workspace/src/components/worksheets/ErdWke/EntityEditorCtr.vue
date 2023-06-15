@@ -62,7 +62,7 @@ export default {
             return ErdTask.getters('getActiveErdTaskId')
         },
         entities() {
-            return this.$typy(ErdTask.getters('getActiveErdTask'), 'data.nodes').safeArray
+            return this.$typy(ErdTask.getters('getActiveStagingGraphData'), 'nodes').safeArray
         },
         activeEntityId() {
             return ErdTask.getters('getActiveEntityId')

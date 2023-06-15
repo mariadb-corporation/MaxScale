@@ -54,7 +54,16 @@ export default {
     getters: {
         getActiveErdTaskId: () => Worksheet.getters('getActiveWkeId'),
         getActiveErdTask: (_, getters) => ErdTask.find(getters.getActiveErdTaskId) || {},
+        getActiveGraphData(_, getters) {
+            const { data = {} } = getters.getActiveErdTask
+            return data
+        },
+        // Temp states getters
         getActiveErdTaskTmp: (_, getters) => ErdTaskTmp.find(getters.getActiveErdTaskId) || {},
+        getActiveStagingGraphData(_, getters) {
+            const { staging_data = {} } = getters.getActiveErdTaskTmp
+            return staging_data
+        },
         getGraphHeightPct: (_, getters) => getters.getActiveErdTaskTmp.graph_height_pct || 100,
         getActiveEntityId: (_, getters) => getters.getActiveErdTaskTmp.active_entity_id,
     },
