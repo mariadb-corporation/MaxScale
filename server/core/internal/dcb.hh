@@ -24,10 +24,3 @@
  *         a DCB or if the calling thread is not a polling/worker thread.
  */
 DCB* dcb_get_current();
-
-/**
- * Set the current DBC being handled
- *
- * @param dcb The DCB that is being handled
- */
-void dcb_set_current(DCB* dcb);

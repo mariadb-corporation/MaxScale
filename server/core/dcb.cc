@@ -2211,11 +2211,6 @@ DCB* dcb_get_current()
     return this_thread.current_dcb;
 }
 
-void dcb_set_current(DCB* dcb)
-{
-    this_thread.current_dcb = dcb;
-}
-
 void mxs::ClientConnectionBase::set_dcb(DCB* dcb)
 {
     m_dcb = static_cast<ClientDCB*>(dcb);
