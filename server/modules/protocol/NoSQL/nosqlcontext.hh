@@ -15,6 +15,8 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/session.hh>
+#include "../../filter/cache/cacheconfig.hh"
+#include "../../filter/cache/cachefiltersession.hh"
 #include "nosqlbase.hh"
 #include "nosqlsasl.hh"
 
@@ -22,6 +24,7 @@ class ClientConnection;
 
 namespace nosql
 {
+class NoSQL;
 class UserManager;
 
 class Context
@@ -145,6 +148,7 @@ public:
 
 private:
     using Roles = std::unordered_map<std::string, uint32_t>;
+    using SCacheFilterSession = std::unique_ptr<CacheFilterSession>;
 
     UserManager&               m_um;
     MXS_SESSION&               m_session;

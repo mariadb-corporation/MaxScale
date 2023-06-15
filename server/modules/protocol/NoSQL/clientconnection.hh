@@ -19,6 +19,7 @@
 #include "nosqlconfig.hh"
 #include "nosqlusermanager.hh"
 
+class Cache;
 class MYSQL_session;
 
 class ClientConnection : public mxs::ClientConnection
@@ -27,7 +28,8 @@ public:
     ClientConnection(const Configuration& config,
                      nosql::UserManager* pUm,
                      MXS_SESSION* pSession,
-                     mxs::Component* pComponent);
+                     mxs::Component* pDownstream,
+                     Cache* pCache);
     ~ClientConnection();
 
     bool init_connection() override;
@@ -80,11 +82,19 @@ private:
 
     bool handle_reply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
+
+    class CacheAsComponent;
+    using SComponent = std::unique_ptr<CacheAsComponent>;
+
+    SComponent create_downstream(mxs::Component* pDownstream, Cache* pCache);
+
 private:
     nosql::Config  m_config;
     MXS_SESSION&   m_session;
     MYSQL_session& m_session_data;
-    DCB*           m_pDcb = nullptr;
+    SComponent     m_sDownstream;
+    Cache*         m_pCache;
     nosql::NoSQL   m_nosql;
     bool           m_ssl_required;
+    DCB*           m_pDcb = nullptr;
 };

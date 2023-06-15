@@ -104,10 +104,13 @@ ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pC
     sSession_data->set_client_protocol_capabilities(RCAP_TYPE_RESULTSET_OUTPUT);
     pSession->set_protocol_data(std::move(sSession_data));
 
+    Cache* pCache = m_sCache_filter ? &m_sCache_filter->cache() : nullptr;
+
     return unique_ptr<mxs::ClientConnection>(new ClientConnection(m_config,
                                                                   m_sUm.get(),
                                                                   pSession,
-                                                                  pComponent));
+                                                                  pComponent,
+                                                                  pCache));
 }
 
 unique_ptr<mxs::BackendConnection>

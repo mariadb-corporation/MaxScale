@@ -14,6 +14,8 @@
 
 #include "nosqlcontext.hh"
 #include "nosqlkeys.hh"
+#include "nosql.hh"
+#include "../../filter/cache/cachemt.hh"
 
 std::atomic<int64_t> nosql::Context::s_connection_id;
 
