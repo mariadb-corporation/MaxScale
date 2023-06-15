@@ -299,11 +299,24 @@ details about module commands.
 
 The schemarouter supports the following module commands.
 
+### `invalidate SERVICE`
+
+Invalidates the database map cache of the given service. This can be used to schedule
+the updates to the database maps to happen at off-peak hours by configuring a
+high value for `refresh_interval` and invalidating the cache externally.
+
 ### `clear SERVICE`
 
-Clears the database map cache of the given service. This can be used to schedule
-the updates to the database maps to happen at off-peak hours by configuring a
-high value for `refresh_interval` and clearing the cache externally.
+Clears the database map cache of the given service. This forces new connections
+to use a freshly retrieved entry.
+
+If the set of databases and tables in each shard is very large, the update can
+take some time. If there are stale cache entries and `max_staleness` is
+configured to be higher than the time it takes to update the database map, the
+invalidation will only slow down one client connection that ends up doing the
+update. When the cache is cleared completely, all clients will have to wait for
+the update to complete. In general, cache invalidation should be preferred over
+cache clearing.
 
 ## Limitations
 

@@ -130,6 +130,11 @@ bool Shard::stale(double max_interval) const
     return difftime(now, m_last_updated) > max_interval;
 }
 
+void Shard::invalidate()
+{
+    m_last_updated = 0;
+}
+
 bool Shard::empty() const
 {
     return m_map->size() == 0;
@@ -214,6 +219,16 @@ void ShardManager::clear()
 {
     std::lock_guard<std::mutex> guard(m_lock);
     m_maps.clear();
+}
+
+void ShardManager::invalidate()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    for (auto& [_, shard] : m_maps)
+    {
+        shard.invalidate();
+    }
 }
 
 void ShardManager::set_update_limit(int64_t limit)

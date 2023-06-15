@@ -89,6 +89,11 @@ public:
     bool stale(double max_interval) const;
 
     /**
+     * Make the shard invalid, thus making stale always return true.
+     */
+    void invalidate();
+
+    /**
      * @brief Check if shard is empty
      *
      * @return True if shard contains no locations
@@ -174,6 +179,11 @@ public:
      * @brief Empties the shard map of its contents
      */
     void clear();
+
+    /**
+     * @brief Invalidates all cached shards
+     */
+    void invalidate();
 
     /**
      * Set how many concurrent shard updates are allowed per user

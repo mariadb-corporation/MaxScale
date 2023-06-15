@@ -53,6 +53,7 @@ public:
     }
 
     static bool clear_shards(const MODULECMD_ARG* argv, json_t** output);
+    static bool invalidate_shards(const MODULECMD_ARG* argv, json_t** output);
 
 private:
     friend class SchemaRouterSession;

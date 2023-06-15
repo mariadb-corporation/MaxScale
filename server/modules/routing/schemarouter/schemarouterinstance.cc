@@ -234,6 +234,14 @@ bool SchemaRouter::clear_shards(const MODULECMD_ARG* argv, json_t** output)
     router->m_shard_manager.clear();
     return true;
 }
+
+// static
+bool SchemaRouter::invalidate_shards(const MODULECMD_ARG* argv, json_t** output)
+{
+    SchemaRouter* router = static_cast<SchemaRouter*>(argv->argv[0].value.service->router());
+    router->m_shard_manager.invalidate();
+    return true;
+}
 }
 
 /**
@@ -249,14 +257,18 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static auto desc = "A database sharding router for simple sharding";
     auto* api_ptr = &mxs::RouterApi<schemarouter::SchemaRouter>::s_api;
 
-    static modulecmd_arg_type_t clear_args[] =
+    static modulecmd_arg_type_t cmd_args[] =
     {
         {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "The schemarouter service"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "clear", MODULECMD_TYPE_ACTIVE,
-                               schemarouter::SchemaRouter::clear_shards, 1, clear_args,
+                               schemarouter::SchemaRouter::clear_shards, 1, cmd_args,
                                "Clear schemarouter shard map cache");
+
+    modulecmd_register_command(MXB_MODULE_NAME, "invalidate", MODULECMD_TYPE_ACTIVE,
+                               schemarouter::SchemaRouter::invalidate_shards, 1, cmd_args,
+                               "Invalidate schemarouter shard map cache");
 
     static MXS_MODULE info =
     {
