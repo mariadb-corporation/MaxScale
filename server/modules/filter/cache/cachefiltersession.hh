@@ -52,9 +52,16 @@ public:
      *
      * @return A new instance or NULL if memory allocation fails.
      */
+    using GenerateKey = std::function<cache_result_t(const std::string& user,
+                                                     const std::string& host,
+                                                     const char* zDefault_db,
+                                                     const GWBUF* pQuery,
+                                                     CacheKey* pKey)>;
+
     static CacheFilterSession* create(std::unique_ptr<SessionCache> sCache,
                                       MXS_SESSION* pSession,
-                                      SERVICE* pService);
+                                      SERVICE* pService,
+                                      GenerateKey generate_key = nullptr);
 
     /**
      * A request on its way to a backend is delivered to this function.
@@ -170,6 +177,7 @@ private:
     CacheFilterSession(MXS_SESSION* pSession,
                        SERVICE* pService,
                        std::unique_ptr<SessionCache> sCache,
+                       GenerateKey generate_key,
                        char* zDefaultDb);
 
 private:
@@ -179,6 +187,7 @@ private:
     SCacheFilterSession     m_sThis;          /**< Shared pointer to this. */
     cache_session_state_t   m_state;          /**< What state is the session in, what data is expected. */
     SSessionCache           m_sCache;         /**< The cache instance the session is associated with. */
+    GenerateKey             m_generate_key;   /**< Optional function for key-generation. */
     GWBUF*                  m_res;            /**< The response buffer. */
     GWBUF*                  m_next_response;  /**< The next response routed to the client. */
     CacheKey                m_key;            /**< Key storage. */
