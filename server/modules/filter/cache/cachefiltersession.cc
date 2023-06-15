@@ -246,12 +246,14 @@ StatementType get_statement_type(std::string_view sql)
 CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
                                        SERVICE* pService,
                                        std::unique_ptr<SessionCache> sCache,
+                                       GenerateKey generate_key,
                                        char* zDefaultDb)
     : maxscale::FilterSession(pSession, pService)
     , m_sThis(SCacheFilterSession(this, [](auto ptr) {
                                   }))
     , m_state(CACHE_EXPECTING_NOTHING)
     , m_sCache(std::move(sCache))
+    , m_generate_key(std::move(generate_key))
     , m_next_response(nullptr)
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
@@ -314,7 +316,8 @@ CacheFilterSession::~CacheFilterSession()
 // static
 CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCache,
                                                MXS_SESSION* pSession,
-                                               SERVICE* pService)
+                                               SERVICE* pService,
+                                               GenerateKey generate_key)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
     auto db = static_cast<MYSQL_session*>(pSession->protocol_data())->current_db;
@@ -330,6 +333,7 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
         pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession,
                                                                    pService,
                                                                    std::move(sCache),
+                                                                   std::move(generate_key),
                                                                    zDefaultDb);
 
         if (!pCacheFilterSession)
@@ -1126,7 +1130,16 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
             const std::string& user = m_user_specific ? m_pSession->user() : empty;
             const std::string& host = m_user_specific ? m_pSession->client_remote() : empty;
 
-            cache_result_t result = m_sCache->get_key(user, host, m_zDefaultDb, pPacket, &m_key);
+            cache_result_t result;
+
+            if (m_generate_key)
+            {
+                result = m_generate_key(user, host, m_zDefaultDb, pPacket, &m_key);
+            }
+            else
+            {
+                result = m_sCache->get_key(user, host, m_zDefaultDb, pPacket, &m_key);
+            }
 
             if (CACHE_RESULT_IS_OK(result))
             {
