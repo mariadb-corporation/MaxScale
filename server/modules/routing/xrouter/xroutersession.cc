@@ -553,19 +553,36 @@ bool XRouterSession::is_multi_node(GWBUF& buffer) const
     {
         switch (parser().get_operation(buffer))
         {
-        // TODO: Update with the parser changes when merging
-        case OP_CREATE:
-        case OP_CREATE_TABLE:
-        case OP_DROP:
-        case OP_DROP_TABLE:
-        case OP_ALTER:
         case OP_ALTER_TABLE:
+        case OP_ALTER:
+        case OP_CREATE_ROLE:
+        case OP_CREATE_TABLE:
+        case OP_CREATE_USER:
+        case OP_CREATE:
+        case OP_DROP_TABLE:
+        case OP_DROP:
         case OP_GRANT:
         case OP_REVOKE:
             is_multi = true;
             break;
 
-        default:
+        case OP_CALL:
+        case OP_CHANGE_DB:
+        case OP_DELETE:
+        case OP_EXECUTE:
+        case OP_EXPLAIN:
+        case OP_INSERT:
+        case OP_KILL:
+        case OP_LOAD_LOCAL:
+        case OP_LOAD:
+        case OP_SELECT:
+        case OP_SET_TRANSACTION:
+        case OP_SET:
+        case OP_SHOW_DATABASES:
+        case OP_SHOW:
+        case OP_TRUNCATE:
+        case OP_UNDEFINED:
+        case OP_UPDATE:
             break;
         }
     }
