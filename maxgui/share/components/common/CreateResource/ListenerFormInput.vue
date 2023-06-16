@@ -59,9 +59,9 @@ export default {
 
     methods: {
         getValues() {
-            const { parameters } = this.$refs.moduleInputs.getModuleInputValues()
+            const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()
             return {
-                parameters: parameters,
+                parameters: { ...parameters, protocol: moduleId },
                 relationships: {
                     services: { data: this.$refs.servicesRelationship.getSelectedItems() },
                 },

@@ -114,7 +114,7 @@ describe('ListenerFormInput.vue', () => {
         await itemSelectMock(resourceRelationships, serviceList[0])
 
         const expectedValue = {
-            parameters: { [listenParameter.name]: newValue },
+            parameters: { [listenParameter.name]: newValue, protocol: mockupResourceModules[0].id },
             relationships: {
                 services: { data: [getServiceListStub[0]] },
             },

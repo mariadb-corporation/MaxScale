@@ -256,6 +256,40 @@ bool call_getgrgid_r(gid_t group_id, string& name_out)
     }
     return rval;
 }
+
+std::string attr_to_str(const std::vector<uint8_t>& data)
+{
+    const uint8_t* ptr = data.data();
+    const uint64_t len = mxq::leint_consume((uint8_t**)&ptr);
+    const uint8_t* end = ptr + len;
+    std::string values;
+
+    while (ptr < end)
+    {
+        size_t key_size;
+        const char* key = mxq::lestr_consume_safe(&ptr, end, &key_size);
+
+        if (!key)
+        {
+            break;
+        }
+
+        size_t value_size;
+        const char* value = mxq::lestr_consume_safe(&ptr, end, &value_size);
+
+        if (!value)
+        {
+            break;
+        }
+
+        values.append(key, key_size);
+        values.append("=");
+        values.append(value, value_size);
+        values.append(" ");
+    }
+
+    return values;
+}
 }
 
 // Servers and queries to execute on them
@@ -1980,6 +2014,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(const GWBUF& buffe
                 if (parse_res.success && data_size == 1)
                 {
                     auth_data.attributes = move(parse_res.attr_res.attr_data);
+                    MXB_INFO("Connection attributes: %s", attr_to_str(auth_data.attributes).c_str());
                 }
                 else
                 {
@@ -2203,8 +2238,9 @@ bool MariaDBClientConnection::start_change_user(GWBUF&& buffer)
                 auth_data.attributes = move(parse_res.attr_res.attr_data);
 
                 rval = true;
-                MXB_INFO("Client %s is attempting a COM_CHANGE_USER to '%s'.",
-                         m_session_data->user_and_host().c_str(), auth_data.user.c_str());
+                MXB_INFO("Client %s is attempting a COM_CHANGE_USER to '%s'. Connection attributes: %s",
+                         m_session_data->user_and_host().c_str(), auth_data.user.c_str(),
+                         attr_to_str(auth_data.attributes).c_str());
             }
         }
         else if (parse_res.token_res.old_protocol)
