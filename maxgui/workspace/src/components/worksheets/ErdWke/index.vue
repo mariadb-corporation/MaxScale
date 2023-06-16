@@ -91,7 +91,7 @@ export default {
         ErdTaskTmp.update({
             where: this.activeTaskId,
             data: {
-                staging_data: ErdTask.getters('graphData'),
+                data: ErdTask.getters('graphData'),
             },
         })
     },

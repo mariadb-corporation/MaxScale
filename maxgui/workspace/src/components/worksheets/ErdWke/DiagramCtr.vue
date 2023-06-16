@@ -101,7 +101,7 @@ export default {
             return ErdTask.getters('stagingGraphData')
         },
         stagingNodes() {
-            return this.$typy(this.stagingGraphData, 'nodes').safeArray
+            return ErdTask.getters('stagingNodes')
         },
         activeGraphConfig() {
             return this.$typy(this.activeRecord, 'graph_config').safeObjectOrEmpty
@@ -163,12 +163,12 @@ export default {
     activated() {
         this.watchActiveEntityId()
         this.watchErdTaskKey()
-        this.eventBus.$on('entity-editor-ctr-successful-exe', this.updateNode)
+        this.eventBus.$on('entity-editor-ctr-update-node-data', this.updateNode)
     },
     deactivated() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
         this.$typy(this.unwatch_erdTaskKey).safeFunction()
-        this.eventBus.$off('entity-editor-ctr-successful-exe')
+        this.eventBus.$off('entity-editor-ctr-update-node-data')
     },
     beforeDestroy() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
@@ -245,7 +245,7 @@ export default {
             ErdTaskTmp.update({
                 where: this.activeTaskId,
                 data: {
-                    staging_data: { ...this.stagingGraphData, nodes: v },
+                    data: { ...this.stagingGraphData, nodes: v },
                 },
             })
         },
@@ -327,7 +327,7 @@ export default {
             const nodes = this.$helpers.immutableUpdate(this.stagingNodes, { $push: [node] })
             ErdTaskTmp.update({
                 where: this.activeTaskId,
-                data: { staging_data: { ...this.stagingGraphData, nodes } },
+                data: { data: { ...this.stagingGraphData, nodes } },
             }).then(() => {
                 this.$refs.diagram.addNode(node)
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.CREATE, node })

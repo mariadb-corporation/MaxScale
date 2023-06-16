@@ -24,7 +24,7 @@ export default class ErdTaskTmp extends Extender {
         return {
             graph_height_pct: this.number(100),
             active_entity_id: this.string(''),
-            staging_data: this.attr({ nodes: [], links: [] }),
+            data: this.attr({ nodes: [], links: [] }),
             key: this.string(uuidv1()), // key for rerender purpose
         }
     }

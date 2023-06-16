@@ -142,7 +142,7 @@ export default {
                 const erdTaskTmpData = {
                     graph_height_pct: 100,
                     active_entity_id: '',
-                    staging_data: erdTaskData.data,
+                    data: erdTaskData.data,
                     key: this.$helpers.uuidv1(),
                 }
                 // Bind connection to a new worksheet

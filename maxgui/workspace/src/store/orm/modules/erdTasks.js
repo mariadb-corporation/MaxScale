@@ -65,8 +65,8 @@ export default {
         // Temp states getters
         activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
         stagingGraphData(_, getters) {
-            const { staging_data = {} } = getters.activeTmpRecord
-            return staging_data
+            const { data = {} } = getters.activeTmpRecord
+            return data
         },
         stagingNodes: (_, getters) => {
             const { nodes = [] } = getters.stagingGraphData

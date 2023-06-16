@@ -8,14 +8,31 @@
             :mode="editorMode"
             :onExecute="onExecute"
         >
-            <template v-slot:toolbar-append>
-                <!-- TODO: Add save changes button -->
+            <template v-slot:apply-btn-prepend="{ isFormValid }">
+                <mxs-tooltip-btn
+                    btnClass="toolbar-square-btn"
+                    text
+                    color="primary"
+                    :disabled="!(isFormValid && hasChanges)"
+                    @click="saveStagingData"
+                >
+                    <template v-slot:btn-content>
+                        <v-icon size="20">mdi-content-save-outline</v-icon>
+                    </template>
+                    {{ $mxs_t('saveChanges') }}
+                </mxs-tooltip-btn>
+            </template>
+            <template v-slot:toolbar-append="{ isFormValid }">
                 <v-spacer />
+                <!-- TODO: If isFormValid && hasChanges, it should show a dialog to prevent the
+                user from accidentally discard the changes without saving or apply the changes-->
                 <mxs-tooltip-btn btnClass="toolbar-square-btn" text color="error" @click="close">
                     <template v-slot:btn-content>
                         <v-icon size="12" color="error"> $vuetify.icons.mxs_close</v-icon>
                     </template>
-                    {{ $mxs_t('close') }}
+                    {{
+                        isFormValid && hasChanges ? $mxs_t('info.closeDdlEditor') : $mxs_t('close')
+                    }}
                 </mxs-tooltip-btn>
             </template>
         </mxs-ddl-editor>
@@ -66,17 +83,31 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
+        initialEntities() {
+            return ErdTask.getters('initialNodes')
+        },
         stagingEntities() {
             return ErdTask.getters('stagingNodes')
         },
         activeEntityId() {
             return ErdTask.getters('activeEntityId')
         },
-        activeEntity() {
+        initialActiveEntity() {
+            return this.initialEntities.find(item => item.id === this.activeEntityId)
+        },
+        stagingActiveEntity() {
             return this.stagingEntities.find(item => item.id === this.activeEntityId)
         },
+        // persisted data
         initialData() {
-            return this.$typy(this.activeEntity, 'data').safeObjectOrEmpty
+            return this.$typy(this.initialActiveEntity, 'data').safeObjectOrEmpty
+        },
+        // initial staging data
+        stagingInitialData() {
+            return this.$typy(this.stagingActiveEntity, 'data').safeObjectOrEmpty
+        },
+        hasChanges() {
+            return !this.$helpers.lodash.isEqual(this.stagingInitialData, this.stagingData)
         },
         eventBus() {
             return EventBus
@@ -104,8 +135,9 @@ export default {
             this.unwatch_activeEntityId = this.$watch(
                 'activeEntityId',
                 (v, oV) => {
-                    if ((v && this.$typy(this.stagingData).isNull) || (v && oV))
-                        this.stagingData = this.$helpers.lodash.cloneDeep(this.initialData)
+                    if ((v && this.$typy(this.stagingData).isNull) || (v && oV)) {
+                        this.stagingData = this.$helpers.lodash.cloneDeep(this.stagingInitialData)
+                    }
                 },
                 { immediate: true }
             )
@@ -116,33 +148,39 @@ export default {
                 data: { graph_height_pct: 100, active_entity_id: '' },
             })
         },
+        /**
+         * @param {object} model - Either ErdTask or ErdTaskTmp model
+         */
+        save({ model }) {
+            const {
+                immutableUpdate,
+                lodash: { cloneDeep },
+            } = this.$helpers
+            const activeEntityId = this.activeEntityId
+            const data = cloneDeep(this.stagingData)
+            model.update({
+                where: this.activeTaskId,
+                data(task) {
+                    const idx = task.data.nodes.findIndex(n => n.id === activeEntityId)
+                    task.data.nodes = immutableUpdate(task.data.nodes, {
+                        [idx]: { data: { $set: data } },
+                    })
+                },
+            })
+            this.eventBus.$emit('entity-editor-ctr-update-node-data', { id: activeEntityId, data })
+        },
         async onExecute() {
             await this.confirmAlter({
                 connId: this.activeErdConnId,
                 schema: this.initialData.options.schema,
                 name: this.initialData.options.name,
                 successCb: () => {
-                    const {
-                        immutableUpdate,
-                        lodash: { cloneDeep },
-                    } = this.$helpers
-                    const activeEntityId = this.activeEntityId
-                    const data = cloneDeep(this.stagingData)
-                    ErdTask.update({
-                        where: this.activeTaskId,
-                        data(task) {
-                            const idx = task.data.nodes.findIndex(n => n.id === activeEntityId)
-                            task.data.nodes = immutableUpdate(task.data.nodes, {
-                                [idx]: { data: { $set: data } },
-                            })
-                        },
-                    })
-                    this.eventBus.$emit('entity-editor-ctr-successful-exe', {
-                        id: activeEntityId,
-                        data,
-                    })
+                    this.save({ model: ErdTask })
                 },
             })
+        },
+        saveStagingData() {
+            this.save({ model: ErdTaskTmp })
         },
     },
 }
