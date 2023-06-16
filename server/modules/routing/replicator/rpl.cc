@@ -1700,7 +1700,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
     SRowEventHandler& conv = m_handler;
     int npresent = 0;
     long ncolumns = create.columns.size();
-    const uint8_t* metadata = &create.column_metadata[0];
+    const uint8_t* metadata = create.column_metadata.empty() ? nullptr : &create.column_metadata[0];
     size_t metadata_offset = 0;
 
     /** BIT type values use the extra bits in the row event header */
