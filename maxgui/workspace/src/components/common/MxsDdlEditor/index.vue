@@ -17,7 +17,8 @@
                 :defDbCharset="
                     $typy(def_db_charset_map, `${$typy(tblOpts, 'schema').safeString}`).safeString
                 "
-                :mode="mode"
+                :isCreating="isCreating"
+                :schemas="schemas"
             />
         </div>
         <v-tabs v-model="activeSpec" :height="24" class="v-tabs--mariadb">
@@ -75,7 +76,8 @@ export default {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
         initialData: { type: Object, required: true },
-        mode: { type: String, required: true },
+        isCreating: { type: Boolean, default: false }, // set true to output CREATE TABLE script
+        schemas: { type: Array, default: () => [] }, // list of schema names
         onExecute: { type: Function, required: true },
     },
     data() {

@@ -72,6 +72,9 @@ export default {
             const { nodes = [] } = getters.stagingGraphData
             return nodes
         },
+        stagingSchemas: (_, getters) => [
+            ...new Set(getters.stagingNodes.map(n => n.data.options.schema)),
+        ],
         graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
         activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
         // Other getters

@@ -5,7 +5,6 @@
             v-model="stagingData"
             :dim="dim"
             :initialData="initialData"
-            :mode="DDL_EDITOR_MODES.ALTER"
             :onExecute="onExecute"
         />
     </v-card>
@@ -24,7 +23,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapActions } from 'vuex'
 import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
@@ -40,7 +39,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({ DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES }),
         isLoading() {
             return Editor.getters('isLoadingTblCreationInfo')
         },

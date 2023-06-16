@@ -200,11 +200,6 @@ export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
     {}
 )
 
-export const DDL_EDITOR_MODES = Object.freeze({
-    CREATE: 'create',
-    ALTER: 'alter',
-})
-
 // Entity node option types
 export const ENTITY_OPT_TYPES = Object.freeze({
     // for existing entities

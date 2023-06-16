@@ -415,7 +415,7 @@ export default {
             const length = this.stagingNodes.length
             const { tableParserTransformer, tableParser, genErdNode } = queryHelper
             const nodeData = tableParserTransformer({
-                schema: '', // TODO: Auto pick an existing schema in the ERD
+                schema: this.$typy(ErdTask.getters('stagingSchemas'), '[0]').safeString,
                 parsedTable: tableParser.parse(tableTemplate(`table_${length}`)),
                 charsetCollationMap: this.charset_collation_map,
             })

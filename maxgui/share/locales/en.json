@@ -420,7 +420,7 @@
         "saveChanges": "Save changes",
         "saveScript": "Save Script",
         "saveScriptAs": "Save Script As",
-        "schemas": "Schemas",
+        "schemas": "Schema | Schemas",
         "search": "Search",
         "seconds": "{value} second | {value} seconds",
         "select": "Select a {entityName} | Select {entityName}",

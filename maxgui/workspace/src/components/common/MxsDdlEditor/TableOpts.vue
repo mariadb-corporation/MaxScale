@@ -18,14 +18,14 @@
         </template>
         <v-container fluid class="py-0 px-1 pb-3">
             <v-row class="ma-0">
-                <v-col cols="12" md="6" class="py-0 px-1">
+                <v-col cols="12" :md="isCreating ? 4 : 6" class="py-0 px-1">
                     <label class="field__label mxs-color-helper text-small-text label-required">
                         {{ $mxs_t('name') }}
                     </label>
                     <v-text-field
                         id="table-name"
                         v-model="tblOpts.name"
-                        :rules="rules.name"
+                        :rules="requiredRule($mxs_t('name'))"
                         required
                         name="table-name"
                         :height="28"
@@ -35,7 +35,31 @@
                         outlined
                     />
                 </v-col>
-                <v-col cols="12" md="6" class="py-0 px-1">
+                <v-col v-if="isCreating" cols="12" md="4" class="py-0 px-1">
+                    <label class="field__label mxs-color-helper text-small-text label-required">
+                        {{ $mxs_tc('schemas', 1) }}
+                    </label>
+                    <v-combobox
+                        v-model="tblOpts.schema"
+                        :items="schemas"
+                        outlined
+                        dense
+                        :height="28"
+                        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
+                        :menu-props="{
+                            contentClass: 'v-select--menu-mariadb',
+                            bottom: true,
+                            offsetY: true,
+                        }"
+                        hide-details="auto"
+                        :rules="requiredRule($mxs_tc('schemas', 1))"
+                    >
+                        <template v-slot:prepend-inner>
+                            <slot name="prepend-inner" />
+                        </template>
+                    </v-combobox>
+                </v-col>
+                <v-col cols="12" :md="isCreating ? 4 : 6" class="py-0 px-1">
                     <label class="field__label mxs-color-helper text-small-text">
                         {{ $mxs_t('comment') }}
                     </label>
@@ -80,6 +104,7 @@
                         :items="Object.keys(charsetCollationMap)"
                         :defItem="defDbCharset"
                         :height="28"
+                        :rules="requiredRule($mxs_t('charset'))"
                         @input="onSelectCharset"
                     />
                 </v-col>
@@ -94,6 +119,7 @@
                         "
                         :defItem="defCollation"
                         :height="28"
+                        :rules="requiredRule($mxs_t('collation'))"
                     />
                 </v-col>
             </v-row>
@@ -115,7 +141,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
 export default {
     name: 'table-opts',
@@ -125,27 +150,18 @@ export default {
         engines: { type: Array, required: true },
         defDbCharset: { type: String, required: true },
         charsetCollationMap: { type: Object, required: true },
-        mode: { type: String, required: true },
+        schemas: { type: Array, default: () => [] },
+        isCreating: { type: Boolean, required: true },
     },
     data() {
         return {
-            rules: {
-                name: [
-                    val =>
-                        !!val ||
-                        this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('name') }),
-                ],
-            },
             showInputs: true,
         }
     },
     computed: {
-        ...mapState({
-            DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES,
-        }),
         title() {
-            if (this.mode === this.DDL_EDITOR_MODES.ALTER) return this.$mxs_t('alterTbl')
-            return this.$mxs_t('createTbl')
+            if (this.isCreating) return this.$mxs_t('createTbl')
+            return this.$mxs_t('alterTbl')
         },
         tblOpts: {
             get() {
@@ -164,6 +180,9 @@ export default {
         onSelectCharset() {
             // Use default collation of selected charset
             this.tblOpts.collation = this.defCollation
+        },
+        requiredRule(inputName) {
+            return [val => !!val || this.$mxs_t('errors.requiredInput', { inputName })]
         },
     },
 }

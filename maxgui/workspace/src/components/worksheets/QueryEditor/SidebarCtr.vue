@@ -1,7 +1,7 @@
 <template>
     <wke-sidebar
         v-model="isCollapsed"
-        :title="$mxs_t('schemas')"
+        :title="$mxs_tc('schemas', 2)"
         :class="{ 'not-allowed': isSidebarDisabled }"
     >
         <template v-slot:collapse-btn-prepend>

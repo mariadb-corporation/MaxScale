@@ -5,7 +5,8 @@
             v-model="stagingData"
             :dim="dim"
             :initialData="initialData"
-            :mode="editorMode"
+            :isCreating="isCreating"
+            :schemas="stagingSchemas"
             :onExecute="onExecute"
         >
             <template v-slot:apply-btn-prepend="{ isFormValid }">
@@ -52,7 +53,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapActions } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
@@ -70,12 +71,8 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            DDL_EDITOR_MODES: state => state.mxsWorkspace.config.DDL_EDITOR_MODES,
-        }),
-        editorMode() {
-            if (ErdTask.getters('isNewEntity')) return this.DDL_EDITOR_MODES.CREATE
-            return this.DDL_EDITOR_MODES.ALTER
+        isCreating() {
+            return ErdTask.getters('isNewEntity')
         },
         activeErdConnId() {
             return this.$typy(QueryConn.getters('activeErdConn'), 'id').safeString
@@ -108,6 +105,9 @@ export default {
         },
         hasChanges() {
             return !this.$helpers.lodash.isEqual(this.stagingInitialData, this.stagingData)
+        },
+        stagingSchemas() {
+            return ErdTask.getters('stagingSchemas')
         },
         eventBus() {
             return EventBus
