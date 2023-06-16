@@ -4,11 +4,12 @@
             v-if="stagingData"
             v-model="stagingData"
             :dim="dim"
-            :data="data"
+            :initialData="initialData"
             :mode="editorMode"
             :onExecute="onExecute"
         >
             <template v-slot:toolbar-append>
+                <!-- TODO: Add save changes button -->
                 <v-spacer />
                 <mxs-tooltip-btn btnClass="toolbar-square-btn" text color="error" @click="close">
                     <template v-slot:btn-content>
@@ -74,7 +75,7 @@ export default {
         activeEntity() {
             return this.stagingEntities.find(item => item.id === this.activeEntityId)
         },
-        data() {
+        initialData() {
             return this.$typy(this.activeEntity, 'data').safeObjectOrEmpty
         },
         eventBus() {
@@ -104,7 +105,7 @@ export default {
                 'activeEntityId',
                 (v, oV) => {
                     if ((v && this.$typy(this.stagingData).isNull) || (v && oV))
-                        this.stagingData = this.$helpers.lodash.cloneDeep(this.data)
+                        this.stagingData = this.$helpers.lodash.cloneDeep(this.initialData)
                 },
                 { immediate: true }
             )
@@ -118,8 +119,8 @@ export default {
         async onExecute() {
             await this.confirmAlter({
                 connId: this.activeErdConnId,
-                schema: this.data.options.schema,
-                name: this.data.options.name,
+                schema: this.initialData.options.schema,
+                name: this.initialData.options.name,
                 successCb: () => {
                     const {
                         immutableUpdate,

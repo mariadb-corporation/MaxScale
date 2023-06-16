@@ -4,7 +4,7 @@
             v-if="stagingData"
             v-model="stagingData"
             :dim="dim"
-            :data="data"
+            :initialData="initialData"
             :mode="DDL_EDITOR_MODES.ALTER"
             :onExecute="onExecute"
         />
@@ -44,7 +44,7 @@ export default {
         isLoading() {
             return Editor.getters('isLoadingTblCreationInfo')
         },
-        data() {
+        initialData() {
             return this.$typy(Editor.getters('tblCreationInfo'), 'data').safeObjectOrEmpty
         },
         activeQueryTabConnId() {
@@ -60,7 +60,7 @@ export default {
     methods: {
         ...mapActions({ confirmAlter: 'mxsWorkspace/confirmAlter' }),
         assignData() {
-            this.stagingData = this.$helpers.lodash.cloneDeep(this.data)
+            this.stagingData = this.$helpers.lodash.cloneDeep(this.initialData)
         },
         //Watcher to work with multiple worksheets which are kept alive
         watch_isLoading() {
@@ -75,8 +75,8 @@ export default {
         async onExecute() {
             await this.confirmAlter({
                 connId: this.activeQueryTabConnId,
-                schema: this.data.options.schema,
-                name: this.data.options.name,
+                schema: this.initialData.options.schema,
+                name: this.initialData.options.name,
                 successCb: () => {
                     const data = this.$helpers.lodash.cloneDeep(this.stagingData)
                     Editor.update({
