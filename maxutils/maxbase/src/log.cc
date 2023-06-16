@@ -1063,6 +1063,14 @@ int mxb_log_message(int priority,
 
             if (nMessage >= 0)
             {
+                if (nMessage > MAX_LOGSTRLEN)
+                {
+                    // MAX_LOGSTRLEN is the maximum that will be logged, so no point
+                    // in generating more than that. Further, a large 16MB insert would
+                    // cause a stack overflow.
+                    nMessage = MAX_LOGSTRLEN;
+                }
+
                 char message[nMessage + 1];
 
                 va_start(valist, format);
