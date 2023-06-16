@@ -88,28 +88,17 @@ void presalt_password(const char* start, const char* ptr, const char* end,
  */
 void handle_create_user(const mxs::ProtocolModule& protocol, const mxs::Parser& parser, GWBUF& packet)
 {
-    if (parser.get_operation(packet) == mxs::sql::OP_CREATE)
+    const auto op = parser.get_operation(packet);
+
+    if (op == mxs::sql::OP_CREATE_ROLE || op == mxs::sql::OP_CREATE_USER)
     {
         std::string_view sql = protocol.get_sql(packet);
-        std::string_view TOK_ROLE = "ROLE";
-        std::string_view TOK_USER = "USER";
         std::string_view TOK_PASSWORD = "PASSWORD";
-        size_t role = mxb::sv_strcasestr(sql, TOK_USER);
 
-        if (role != std::string_view::npos)
+        if (auto pw = mxb::sv_strcasestr(sql, TOK_PASSWORD); pw != std::string_view::npos)
         {
-            role = mxb::sv_strcasestr(sql, TOK_ROLE);
-        }
-
-        if (role != std::string_view::npos)
-        {
-            auto pw = mxb::sv_strcasestr(sql.substr(role), TOK_PASSWORD);
-
-            if (pw != std::string_view::npos)
-            {
-                pw += TOK_PASSWORD.size();
-                presalt_password(sql.data(), sql.data() + pw, sql.data() + sql.size(), protocol, packet);
-            }
+            pw += TOK_PASSWORD.size();
+            presalt_password(sql.data(), sql.data() + pw, sql.data() + sql.size(), protocol, packet);
         }
     }
 }
