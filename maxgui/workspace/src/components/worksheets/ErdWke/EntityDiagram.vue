@@ -40,36 +40,19 @@
                         <table
                             class="entity-table"
                             :style="{ borderColor: node.styles.highlightColor }"
-                            @dblclick.stop="
-                                $emit('on-choose-node-opt', { type: ENTITY_OPT_TYPES.ALTER, node })
-                            "
+                            @dblclick.stop="$emit('dblclick', node)"
                         >
                             <thead>
                                 <tr :style="{ height: `${entitySizeConfig.headerHeight}px` }">
                                     <th
-                                        class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg px-4"
+                                        class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg pl-4 pr-1"
                                         colspan="3"
                                     >
                                         <div class="d-flex flex-row align-center justify-center">
                                             <div class="flex-grow-1">
                                                 {{ node.data.options.name }}
                                             </div>
-                                            <v-btn
-                                                :id="`setting-btn-${node.id}`"
-                                                x-small
-                                                class="setting-btn"
-                                                :class="{
-                                                    'setting-btn--visible':
-                                                        activeNodeMenuId === node.id,
-                                                }"
-                                                icon
-                                                color="primary"
-                                                @click.stop="activeNodeMenu = node"
-                                            >
-                                                <v-icon size="14">
-                                                    $vuetify.icons.mxs_settings
-                                                </v-icon>
-                                            </v-btn>
+                                            <slot name="entity-setting-btn" :node="node" />
                                         </div>
                                     </th>
                                 </tr>
@@ -126,37 +109,6 @@
                 </mxs-svg-graph-nodes>
             </template>
         </mxs-svg-graph-board>
-        <v-menu
-            v-if="activeNodeMenuId"
-            :key="`#setting-btn-${activeNodeMenuId}`"
-            :value="activeNodeMenuId"
-            transition="slide-y-transition"
-            offset-y
-            left
-            content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
-            :activator="`#setting-btn-${activeNodeMenuId}`"
-            @input="onCloseNodeMenu"
-        >
-            <v-list>
-                <v-list-item
-                    v-for="(opt, i) in existingEntityOpts"
-                    :key="i"
-                    dense
-                    link
-                    class="px-2"
-                    @click="handleChooseOpt(opt)"
-                >
-                    <v-list-item-title class="mxs-color-helper text-text">
-                        <div class="d-inline-block text-center mr-2" style="width:22px">
-                            <v-icon v-if="opt.icon" :color="opt.color" :size="opt.iconSize">
-                                {{ opt.icon }}
-                            </v-icon>
-                        </div>
-                        {{ opt.text }}
-                    </v-list-item-title>
-                </v-list-item>
-            </v-list>
-        </v-menu>
     </div>
 </template>
 
@@ -177,7 +129,7 @@
  * Emits:
  * - $emit('on-rendered')
  * - $emit('on-nodes-coords-update', nodes:[])
- * - $emit('on-choose-node-opt', { type:string, node:object })
+ * - $emit('dblclick', node:object)
  */
 import { mapState } from 'vuex'
 import {
@@ -223,7 +175,6 @@ export default {
             graphConfig: null,
             isDraggingNode: false,
             graphDim: {},
-            activeNodeMenu: null,
         }
     },
     computed: {
@@ -231,7 +182,6 @@ export default {
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
-            ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES,
         }),
         panAndZoomData: {
             get() {
@@ -285,28 +235,6 @@ export default {
         },
         globalLinkColor() {
             return this.$typy(this.graphConfigData, 'link.color').safeString
-        },
-        // Options for existing entities
-        existingEntityOpts() {
-            return [
-                {
-                    text: this.$mxs_t('alterTbl'),
-                    type: this.ENTITY_OPT_TYPES.ALTER,
-                    icon: '$vuetify.icons.mxs_edit',
-                    iconSize: 16,
-                    color: 'primary',
-                },
-                {
-                    text: this.$mxs_t('dropTbl'),
-                    type: this.ENTITY_OPT_TYPES.DROP,
-                    icon: '$vuetify.icons.mxs_delete',
-                    iconSize: 16,
-                    color: 'error',
-                },
-            ]
-        },
-        activeNodeMenuId() {
-            return this.$typy(this.activeNodeMenu, 'id').safeString
         },
     },
     created() {
@@ -565,13 +493,6 @@ export default {
                 this.$helpers.lodash.cloneDeep(this.graphData.nodes)
             )
         },
-        onCloseNodeMenu() {
-            this.activeNodeMenu = null
-        },
-        handleChooseOpt(opt) {
-            this.$emit('on-choose-node-opt', { type: opt.type, node: this.activeNodeMenu })
-            this.onCloseNodeMenu()
-        },
     },
 }
 </script>
@@ -593,12 +514,6 @@ export default {
             border-bottom: 1px solid;
             border-left: 1px solid;
             border-color: inherit;
-            .setting-btn {
-                visibility: hidden;
-                &--visible {
-                    visibility: visible;
-                }
-            }
         }
     }
     tbody {
@@ -634,13 +549,6 @@ export default {
                         border-bottom-right-radius: 8px !important;
                     }
                 }
-            }
-        }
-    }
-    &:hover {
-        thead th {
-            .setting-btn {
-                visibility: visible;
             }
         }
     }

@@ -19,10 +19,60 @@
             :graphConfigData="graphConfigData"
             :isLaidOut="isLaidOut"
             :activeNodeId="activeEntityId"
+            class="entity-diagram"
             @on-rendered.once="fitIntoView"
             @on-nodes-coords-update="onNodesCoordsUpdate"
-            @on-choose-node-opt="handleChooseNodeOpt"
-        />
+            @dblclick="handleDblClickNode"
+        >
+            <template v-slot:entity-setting-btn="{ node }">
+                <v-btn
+                    :id="`setting-btn-${node.id}`"
+                    x-small
+                    class="setting-btn"
+                    :class="{
+                        'setting-btn--visible': activeNodeMenuId === node.id,
+                    }"
+                    icon
+                    color="primary"
+                    @click.stop="activeNodeMenu = node"
+                >
+                    <v-icon size="14">
+                        $vuetify.icons.mxs_settings
+                    </v-icon>
+                </v-btn>
+            </template>
+        </entity-diagram>
+        <v-menu
+            v-if="activeNodeMenuId"
+            :key="`#setting-btn-${activeNodeMenuId}`"
+            :value="activeNodeMenuId"
+            transition="slide-y-transition"
+            offset-y
+            left
+            content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
+            :activator="`#setting-btn-${activeNodeMenuId}`"
+            @input="onCloseNodeMenu"
+        >
+            <v-list>
+                <v-list-item
+                    v-for="(opt, i) in entityOpts"
+                    :key="i"
+                    dense
+                    link
+                    class="px-2"
+                    @click="handleChooseNodeOpt({ type: opt.type, node: activeNodeMenu })"
+                >
+                    <v-list-item-title class="mxs-color-helper text-text">
+                        <div class="d-inline-block text-center mr-2" style="width:22px">
+                            <v-icon v-if="opt.icon" :color="opt.color" :size="opt.iconSize">
+                                {{ opt.icon }}
+                            </v-icon>
+                        </div>
+                        {{ opt.text }}
+                    </v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-menu>
     </div>
 </template>
 
@@ -78,6 +128,7 @@ export default {
             isFitIntoView: false,
             panAndZoom: { x: 0, y: 0, k: 1 },
             diagramKey: '',
+            activeNodeMenu: null,
         }
     },
     computed: {
@@ -99,6 +150,9 @@ export default {
         },
         stagingGraphData() {
             return ErdTask.getters('stagingGraphData')
+        },
+        initialNodes() {
+            return ErdTask.getters('initialNodes')
         },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
@@ -123,6 +177,41 @@ export default {
         },
         erdTaskKey() {
             return this.$typy(ErdTask.getters('activeTmpRecord'), 'key').safeString
+        },
+        entityOpts() {
+            const isNew = this.isNewEntity(this.activeNodeMenuId)
+            const { ALTER, EDIT, DROP, DELETE } = this.ENTITY_OPT_TYPES
+            let opts = [
+                {
+                    text: this.$mxs_t(isNew ? 'edit' : 'alter'),
+                    type: isNew ? EDIT : ALTER,
+                    icon: isNew ? '$vuetify.icons.mxs_edit' : 'mdi-table-edit',
+                    iconSize: isNew ? 16 : 20,
+                    color: 'primary',
+                },
+            ]
+            opts.push(
+                isNew
+                    ? {
+                          text: this.$mxs_t('delete'),
+                          type: DELETE,
+                          icon: '$vuetify.icons.mxs_delete',
+                          iconSize: 16,
+                          color: 'error',
+                      }
+                    : {
+                          text: this.$mxs_t('drop'),
+                          type: DROP,
+                          icon: 'mdi-table-remove',
+                          iconSize: 20,
+                          color: 'error',
+                      }
+            )
+
+            return opts
+        },
+        activeNodeMenuId() {
+            return this.$typy(this.activeNodeMenu, 'id').safeString
         },
         eventBus() {
             return EventBus
@@ -195,12 +284,22 @@ export default {
                 { immediate: true }
             )
         },
+        handleDblClickNode(node) {
+            const { EDIT, ALTER } = this.ENTITY_OPT_TYPES
+            this.handleChooseNodeOpt({ type: this.isNewEntity(node.id) ? EDIT : ALTER, node })
+        },
+        onCloseNodeMenu() {
+            this.activeNodeMenu = null
+        },
+        isNewEntity(id) {
+            return !this.initialNodes.some(n => n.id === id)
+        },
         handleChooseNodeOpt({ type, node }) {
             if (this.activeErdConn.id) {
-                const { ALTER, CREATE, DROP } = this.ENTITY_OPT_TYPES
+                const { ALTER, EDIT, DROP, DELETE } = this.ENTITY_OPT_TYPES
                 switch (type) {
                     case ALTER:
-                    case CREATE: {
+                    case EDIT: {
                         let data = { active_entity_id: node.id }
                         if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 50
                         ErdTaskTmp.update({ where: this.activeTaskId, data })
@@ -209,10 +308,14 @@ export default {
                     case DROP:
                         //TODO: Handle DROP option
                         break
+                    case DELETE:
+                        //TODO: Handle DELETE option
+                        break
                 }
                 if (type === ALTER)
                     // call in the next tick to ensure diagramDim height is up to date
                     this.$nextTick(() => this.zoomIntoNode(node))
+                this.onCloseNodeMenu()
             } else
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.requiredConn')],
@@ -330,9 +433,26 @@ export default {
                 data: { data: { ...this.stagingGraphData, nodes } },
             }).then(() => {
                 this.$refs.diagram.addNode(node)
-                this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.CREATE, node })
+                this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node })
             })
         },
     },
 }
 </script>
+<style lang="scss" scoped>
+.entity-diagram {
+    .setting-btn {
+        visibility: hidden;
+        &--visible {
+            visibility: visible;
+        }
+    }
+    .entity-table {
+        &:hover {
+            .setting-btn {
+                visibility: visible;
+            }
+        }
+    }
+}
+</style>

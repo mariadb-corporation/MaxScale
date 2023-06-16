@@ -211,7 +211,7 @@ export const ENTITY_OPT_TYPES = Object.freeze({
     DROP: 'Drop',
     ALTER: 'Alter',
     // for new entities
-    CREATE: 'CREATE',
+    EDIT: 'Edit',
     DELETE: 'Delete',
 })
 
