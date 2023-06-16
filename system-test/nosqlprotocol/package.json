@@ -5,7 +5,7 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --exit"
   },
   "keywords": [],
   "author": "",
