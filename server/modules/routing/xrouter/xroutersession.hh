@@ -14,6 +14,7 @@
 
 #include "xrouter.hh"
 #include <maxscale/backend.hh>
+#include <maxscale/queryclassifier.hh>
 #include <list>
 
 using SBackends = std::vector<std::unique_ptr<mxs::Backend>>;
@@ -127,6 +128,8 @@ private:
 
     // The response to the multi-node command that will be returned to the client
     GWBUF m_response;
+
+    mariadb::TrxTracker m_trx_tracker;
 
     // The router configuration that was active when this session was started.
     XRouter::Config::ValueRef m_config;

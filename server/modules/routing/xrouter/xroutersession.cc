@@ -82,6 +82,7 @@ bool XRouterSession::routeQuery(GWBUF&& packet)
     switch (m_state)
     {
     case State::IDLE:
+        m_trx_tracker.track_transaction_state(packet, parser());
         preprocess(packet);
 
         if (!check_node_status())
