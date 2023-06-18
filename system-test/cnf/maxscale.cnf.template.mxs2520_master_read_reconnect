@@ -20,6 +20,7 @@ user=maxskysql
 password=skysql
 delayed_retry_timeout=45s
 transaction_replay=true
+transaction_replay_safe_commit=false
 
 [RW-Split-Listener]
 type=listener

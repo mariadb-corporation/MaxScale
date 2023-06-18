@@ -19,6 +19,7 @@ master_reconnection=true
 master_failure_mode=fail_on_write
 delayed_retry=true
 transaction_replay=true
+transaction_replay_safe_commit=false
 prune_sescmd_history=true
 use_sql_variables_in=master
 

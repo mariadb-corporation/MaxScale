@@ -19,6 +19,7 @@ cluster=MariaDB-Monitor
 user=maxskysql
 password=skysql
 transaction_replay=true
+transaction_replay_safe_commit=false
 delayed_retry_timeout=120s
 
 [RW-Split-Listener]

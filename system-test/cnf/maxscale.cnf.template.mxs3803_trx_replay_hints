@@ -27,6 +27,7 @@ servers=server1,server2
 user=maxskysql
 password=skysql
 transaction_replay=true
+transaction_replay_safe_commit=false
 filters=NamedServerFilter
 
 [RW-Split-Listener]

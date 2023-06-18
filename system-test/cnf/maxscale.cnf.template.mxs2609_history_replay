@@ -19,6 +19,7 @@ servers=###server_line###
 user=maxskysql
 password=skysql
 transaction_replay=true
+transaction_replay_safe_commit=false
 master_accept_reads=true
 
 [RW-Split-Listener]
