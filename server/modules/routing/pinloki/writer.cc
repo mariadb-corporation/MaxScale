@@ -47,7 +47,7 @@ Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWrite
     m_inventory.set_is_writer_connected(false);
 
     m_current_gtid_list = find_last_gtid_list(m_inventory);
-    m_inventory.save_rpl_state(m_current_gtid_list);
+    m_inventory.config().save_rpl_state(m_current_gtid_list);
 
     std::vector<maxsql::Gtid> gtids;
     auto req_state = m_inventory.requested_rpl_state();
@@ -284,7 +284,7 @@ void Writer::save_gtid_list(FileWriter& file_writer)
     if (m_current_gtid_list.is_valid())
     {
         file_writer.commit_txn();
-        m_inventory.save_rpl_state(m_current_gtid_list);
+        m_inventory.config().save_rpl_state(m_current_gtid_list);
     }
 }
 }
