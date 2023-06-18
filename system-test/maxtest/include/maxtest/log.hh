@@ -30,6 +30,7 @@ public:
     void        add_failure_v(const char* format, va_list args);
     void        expect_v(bool result, const char* format, va_list args);
     std::string all_errors_to_string();
+    std::string latest_error();
 
     void log_msgf(const char* format, ...) __attribute__ ((format(printf, 2, 3)));
     void log_msg(const char* format, va_list args);

@@ -477,6 +477,7 @@ void TestConnections::add_result(bool result, const char* format, ...)
         va_start(argp, format);
         logger().add_failure_v(format, argp);
         va_end(argp);
+        write_in_log(logger().latest_error());
     }
 }
 
@@ -486,6 +487,12 @@ bool TestConnections::expect(bool result, const char* format, ...)
     va_start(argp, format);
     logger().expect_v(result, format, argp);
     va_end(argp);
+
+    if (!result)
+    {
+        write_in_log(logger().latest_error());
+    }
+
     return result;
 }
 
@@ -494,6 +501,7 @@ void TestConnections::add_failure(const char* format, ...)
     va_list argp;
     va_start(argp, format);
     logger().add_failure_v(format, argp);
+    write_in_log(logger().latest_error());
     va_end(argp);
 }
 
@@ -1252,6 +1260,12 @@ void TestConnections::log_printf(const char* format, ...)
     va_end(argp);
 
     tprintf("%s", buf);
+    write_in_log(buf);
+}
+
+void TestConnections::write_in_log(std::string str)
+{
+    char* buf = &str[0];
 
     while (char* c = strchr(buf, '\''))
     {

@@ -69,6 +69,12 @@ std::string TestLogger::all_errors_to_string()
     return rval;
 }
 
+std::string TestLogger::latest_error()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_fails.back();
+}
+
 void TestLogger::log_msgf(const char* format, ...)
 {
     va_list valist;
