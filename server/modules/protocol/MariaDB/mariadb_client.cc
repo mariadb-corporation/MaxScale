@@ -46,6 +46,7 @@
 #include <maxbase/format.hh>
 #include <maxscale/event.hh>
 #include <maxscale/version.hh>
+#include <maxsql/mariadb.hh>
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
