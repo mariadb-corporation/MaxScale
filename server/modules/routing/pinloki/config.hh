@@ -24,20 +24,47 @@
 #include <maxscale/key_manager.hh>
 
 #include <string>
+#include <thread>
 
 namespace pinloki
 {
 
 std::string gen_uuid();
 
-using namespace std::literals::chrono_literals;
-using namespace std::literals::string_literals;
+class BinglogIndexUpdater final
+{
+public:
+    BinglogIndexUpdater(const std::string& binlog_dir,
+                        const std::string& inventory_file_path);
+    void                     set_is_dirty();
+    std::vector<std::string> binlog_file_names();
+    void                     stop();
+
+    /** The replication state */
+    void             set_rpl_state(const maxsql::GtidList& gtids);
+    maxsql::GtidList rpl_state();
+
+private:
+    int                      m_inotify_fd;
+    int                      m_watch;
+    std::atomic<bool>        m_is_dirty{true};
+    maxsql::GtidList         m_rpl_state;
+    std::string              m_binlog_dir;
+    std::string              m_inventory_file_path;
+    std::vector<std::string> m_file_names;
+    std::mutex               m_file_names_mutex;
+    std::thread              m_update_thread;
+    std::atomic<bool>        m_running{true};
+
+    void update();
+};
 
 class Config : public mxs::config::Configuration
 {
 public:
     Config(const std::string& name, std::function<bool()> callback);
     Config(Config&&) = default;
+    ~Config();
 
     static const mxs::config::Specification* spec();
 
@@ -51,6 +78,12 @@ public:
     std::string requested_gtid_file_path() const;
     std::string master_info_file() const;
     uint32_t    server_id() const;
+    std::vector<std::string> binlog_file_names() const;
+    void set_binlogs_dirty() const;
+
+    /** The replication state */
+    void             save_rpl_state(const maxsql::GtidList& gtids) const;
+    maxsql::GtidList rpl_state() const;
 
     // Network timeout
     std::chrono::seconds net_timeout() const;
@@ -121,5 +154,7 @@ private:
     wall_time::Duration m_purge_poll_timeout;
 
     std::function<bool()> m_cb;
+
+    std::unique_ptr<BinglogIndexUpdater> m_binlog_files;
 };
 }
