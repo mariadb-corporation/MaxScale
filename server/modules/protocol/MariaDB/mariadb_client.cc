@@ -45,6 +45,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/version.hh>
+#include <maxsql/mariadb.hh>
 
 #include "detect_special_query.hh"
 #include "packet_parser.hh"
