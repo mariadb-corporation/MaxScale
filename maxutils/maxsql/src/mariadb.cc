@@ -235,6 +235,7 @@ void set_proxy_header(MYSQL* conn)
     // we have to use a static one anyways as we don't know the IP or the port we're connecting from.
     static const char fake_header[] = "PROXY UNKNOWN\r\n";
     mysql_optionsv(conn, MARIADB_OPT_PROXY_HEADER, fake_header, sizeof(fake_header) - 1);
+}
 
 const char* lestr_consume_safe(const uint8_t** c, const uint8_t* end, size_t* size)
 {
