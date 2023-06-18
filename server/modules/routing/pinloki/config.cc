@@ -18,7 +18,12 @@
 #include <unistd.h>
 #include <maxbase/log.hh>
 #include <sstream>
+#include <fstream>
 #include <uuid/uuid.h>
+#include <dirent.h>
+#include <sys/inotify.h>
+#include "pinloki.hh"
+#include "find_gtid.hh"
 
 #include "pinloki.hh"
 
@@ -62,6 +67,92 @@ cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(
 
 namespace pinloki
 {
+namespace
+{
+template<typename T>
+class CallAtScopeEnd
+{
+public:
+    CallAtScopeEnd(T at_destruct)
+        : at_destruct(at_destruct)
+    {
+    }
+    ~CallAtScopeEnd()
+    {
+        at_destruct();
+    }
+private:
+    T at_destruct;
+};
+
+// Can't rely on stat() to sort files. The files can have the
+// same creation/mod time
+long get_file_sequence_number(const std::string& file_name)
+{
+    try
+    {
+        auto num_str = file_name.substr(file_name.find_last_of(".") + 1);
+        long seq_no = 1 + std::stoi(num_str.c_str());
+        return seq_no;
+    }
+    catch (std::exception& ex)
+    {
+        MXB_THROW(BinlogReadError, "Unexpected binlog file name '"
+                  << file_name << "' error " << ex.what());
+    }
+}
+
+std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
+{
+    std::map<long, std::string> binlogs;
+
+    DIR* pdir;
+    struct dirent* pentry;
+
+    if ((pdir = opendir(binlog_dir.c_str())) != nullptr)
+    {
+        auto close_dir_func = [pdir]{
+            closedir(pdir);
+        };
+        CallAtScopeEnd<decltype(close_dir_func)> close_dir{close_dir_func};
+
+        while ((pentry = readdir(pdir)) != nullptr)
+        {
+            if (pentry->d_type != DT_REG)
+            {
+                continue;
+            }
+
+            auto file_path = MAKE_STR(binlog_dir.c_str() << '/' << pentry->d_name);
+
+            decltype(PINLOKI_MAGIC) magic;
+            std::ifstream is{file_path.c_str(), std::ios::binary};
+            if (is)
+            {
+                is.read(magic.data(), PINLOKI_MAGIC.size());
+                if (is && magic == PINLOKI_MAGIC)
+                {
+                    auto seq_no = get_file_sequence_number(file_path);
+                    binlogs.insert({seq_no, file_path});
+                }
+            }
+        }
+    }
+    else
+    {
+        MXB_THROW(BinlogReadError, "Could not open directory " << binlog_dir);
+    }
+
+    std::vector<std::string> file_names;
+    file_names.reserve(binlogs.size());
+    for (const auto& e : binlogs)
+    {
+        file_names.push_back(e.second);
+    }
+
+    return file_names;
+}
+}
 
 // static
 const mxs::config::Specification* Config::spec()
@@ -181,5 +272,138 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&Config::m_purge_poll_timeout, &s_purge_poll_timeout);
+    m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir,
+                                                 inventory_file_path()));
+}
+
+Config::~Config()
+{
+    if (m_binlog_files)
+    {
+        m_binlog_files->stop();
+    }
+}
+
+std::vector<std::string> Config::binlog_file_names() const
+{
+    return m_binlog_files->binlog_file_names();
+}
+
+void Config::set_binlogs_dirty() const
+{
+    m_binlog_files->set_is_dirty();
+}
+
+void Config::save_rpl_state(const maxsql::GtidList &gtids) const
+{
+    m_binlog_files->set_rpl_state(gtids);
+}
+
+maxsql::GtidList Config::rpl_state() const
+{
+    return m_binlog_files->rpl_state();
+}
+
+BinglogIndexUpdater::BinglogIndexUpdater(const std::string& binlog_dir,
+                                         const std::string& inventory_file_path)
+    : m_inotify_fd(inotify_init1(0))
+    , m_binlog_dir(binlog_dir)
+    , m_inventory_file_path(inventory_file_path)
+    , m_file_names(read_binlog_file_names(m_binlog_dir))
+{
+    if (m_inotify_fd == -1)
+    {
+        MXS_SERROR("inotify_init failed: " << errno << ", " << mxb_strerror(errno));
+    }
+    else
+    {
+       m_watch = inotify_add_watch(m_inotify_fd, m_binlog_dir.c_str(), IN_CREATE | IN_DELETE);
+
+        if (m_watch == -1)
+        {
+            MXS_SERROR("inotify_add_watch for directory " <<
+                       m_binlog_dir.c_str() << "failed: " << errno << ", " << mxb_strerror(errno));
+        }
+        else
+        {
+            m_update_thread = std::thread(&BinglogIndexUpdater::update, this);
+        }
+    }
+}
+
+void BinglogIndexUpdater::set_is_dirty()
+{
+    m_is_dirty.store(true, std::memory_order_relaxed);
+}
+
+std::vector<std::string> BinglogIndexUpdater::binlog_file_names()
+{
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    if (m_is_dirty)
+    {
+        m_file_names = read_binlog_file_names(m_binlog_dir);
+        m_is_dirty.store(false, std::memory_order_relaxed);
+    }
+    return m_file_names;
+}
+
+void BinglogIndexUpdater::stop()
+{
+    m_running.store(false, std::memory_order_relaxed);
+    if (m_watch != -1)
+    {
+        inotify_rm_watch(m_inotify_fd, m_watch);
+        m_update_thread.join();
+    }
+}
+
+void BinglogIndexUpdater::set_rpl_state(const maxsql::GtidList &gtids)
+{
+    // Using the same mutex for rpl state as for file names. There
+    // is very little action hitting this mutex.
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    m_rpl_state = gtids;
+}
+
+maxsql::GtidList BinglogIndexUpdater::rpl_state()
+{
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    return m_rpl_state;
+}
+
+void BinglogIndexUpdater::update()
+{
+    const size_t SZ = 1024;
+    char buffer[SZ];
+
+    std::unique_lock<std::mutex> lock(m_file_names_mutex);
+    m_file_names = read_binlog_file_names(m_binlog_dir);
+    lock.unlock();
+
+    while (m_running.load(std::memory_order_relaxed))
+    {
+        auto n = ::read(m_inotify_fd, buffer, SZ);
+        if (n <= 0)
+        {
+            continue;
+        }
+
+        lock.lock();
+        auto new_names = read_binlog_file_names(m_binlog_dir);
+        if (new_names != m_file_names)
+        {
+            m_file_names = std::move(new_names);
+            std::string tmp = m_inventory_file_path + ".tmp";
+            std::ofstream ofs(tmp, std::ios_base::trunc);
+
+            for (const auto& file : m_file_names)
+            {
+                ofs << file << '\n';
+            }
+
+            rename(tmp.c_str(), m_inventory_file_path.c_str());
+        }
+        lock.unlock();
+    }
 }
 }

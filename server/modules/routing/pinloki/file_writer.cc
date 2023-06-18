@@ -191,7 +191,7 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
     m_current_pos.write_pos = PINLOKI_MAGIC.size();
     m_current_pos.file.flush();
 
-    m_inventory.push_back(m_current_pos.name);
+    m_inventory.config().set_binlogs_dirty();
 
     if (previous_pos.file.is_open())
     {
