@@ -28,6 +28,7 @@ using Table = x3::variant<std::tuple<std::string, std::string>, std::string>;
 
 struct LoadData
 {
+    bool        local {false};
     S3URL       s3;
     Table       table;
     std::string unparsed_sql;
@@ -63,8 +64,11 @@ const auto quoted_url_def = single_quoted_url | double_quoted_url;
 DECLARE_ATTR_RULE(unparsed_sql, "Unparsed SQL", std::string);
 const auto unparsed_sql_def = lexeme[*char_];
 
+DECLARE_ATTR_RULE(maybe_local, "Optional LOCAL keyword", bool);
+const auto maybe_local_def = -lexeme[lit("LOCAL") >> x3::attr(true)];
+
 DECLARE_ATTR_RULE(load_data_infile, "LOAD DATA INFILE", LoadData);
-const auto load_data_infile_def = lit("LOAD") > lit("DATA") > lit("INFILE")
+const auto load_data_infile_def = lit("LOAD") > lit("DATA") > maybe_local > lit("INFILE")
     > quoted_url > lit("INTO") > lit("TABLE") > table_identifier > unparsed_sql > x3::eoi;
 
 // Boost magic that combines the rules to their definitions
@@ -79,11 +83,12 @@ BOOST_SPIRIT_DEFINE(
     double_quoted_url,
     quoted_url,
     unparsed_sql,
+    maybe_local,
     load_data_infile
     );
 
 BOOST_FUSION_ADAPT_STRUCT(S3URL, bucket, filename);
-BOOST_FUSION_ADAPT_STRUCT(LoadData, s3, table, unparsed_sql);
+BOOST_FUSION_ADAPT_STRUCT(LoadData, local, s3, table, unparsed_sql);
 
 std::variant<LoadDataResult, ParseError> parse_ldi(std::string_view sql)
 {
@@ -124,6 +129,7 @@ std::variant<LoadDataResult, ParseError> parse_ldi(std::string_view sql)
             rval.remaining_sql = res.unparsed_sql;
             rval.db = visitor.db;
             rval.table = visitor.table;
+            rval.local = res.local;
             return rval;
         }
     }

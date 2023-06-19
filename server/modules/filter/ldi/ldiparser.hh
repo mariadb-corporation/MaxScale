@@ -23,6 +23,7 @@ struct S3URL
 
 struct LoadDataResult
 {
+    bool        local;
     S3URL       s3;
     std::string db;
     std::string table;

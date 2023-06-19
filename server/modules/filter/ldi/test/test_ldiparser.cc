@@ -16,7 +16,8 @@
 
 int check(std::string_view sql, bool expected,
           std::string bucket = "", std::string file = "",
-          std::string db = "", std::string table = "")
+          std::string db = "", std::string table = "",
+          bool local = false)
 {
     auto parsed = parse_ldi(sql);
     auto* res = std::get_if<LoadDataResult>(&parsed);
@@ -59,6 +60,12 @@ int check(std::string_view sql, bool expected,
             std::cout << "Table mismatch: " << res->table << " != " << table << std::endl;
             ++errors;
         }
+
+        if (res->local != local)
+        {
+            std::cout << "LOCAL mismatch: " << std::boolalpha << res->local << " != " << local << std::endl;
+            ++errors;
+        }
     }
 
     return errors;
@@ -69,27 +76,29 @@ int main(int argc, char** argv)
     int rc = 0;
 
     rc += check("SELECT 1", false);
-    rc += check("LOAD DATA LOCAL INFILE 's3://bucket/file.csv' INTO TABLE t1", false);
     rc += check("LOAD INTO TABLE t1", false);
     rc += check("LOAD INTO TABLE test.t1", false);
     rc += check("LOAD DATA INFILE '/tmp/data.csv' INTO TABLE t1 ", false);
     rc += check("LOAD DATA INFILE 'http://tmp/data.csv' INTO TABLE t1 ", false);
     rc += check("LOAD DATA INFILE 'ftp://tmp/data.csv' INTO TABLE t1 ", false);
 
-    rc += check("LOAD DATA INFILE 'S3://bucket/file' INTO TABLE t1",
-                true, "bucket", "file", "", "t1");
+    for (std::string local : {"", " LOCAL "})
+    {
+        rc += check("LOAD DATA " + local + " INFILE 'S3://bucket/file' INTO TABLE t1",
+                    true, "bucket", "file", "", "t1", !local.empty());
 
-    rc += check("load data infile 's3://bucket/file' into table t1",
-                true, "bucket", "file", "", "t1");
+        rc += check("load data " + local + " infile 's3://bucket/file' into table t1",
+                    true, "bucket", "file", "", "t1", !local.empty());
 
-    rc += check("LOAD DATA INFILE 'gs://bucket/file' INTO TABLE t1",
-                true, "bucket", "file", "", "t1");
+        rc += check("LOAD DATA " + local + " INFILE 'gs://bucket/file' INTO TABLE t1",
+                    true, "bucket", "file", "", "t1", !local.empty());
 
-    rc += check("LOAD DATA INFILE 's3://bucket/file' INTO TABLE test.t1",
-                true, "bucket", "file", "test", "t1");
+        rc += check("LOAD DATA " + local + " INFILE 's3://bucket/file' INTO TABLE test.t1",
+                    true, "bucket", "file", "test", "t1", !local.empty());
 
-    rc += check("LOAD DATA INFILE 's3://bucket/file/with/path.csv' INTO TABLE test.t1",
-                true, "bucket", "file/with/path.csv", "test", "t1");
+        rc += check("LOAD DATA " + local + " INFILE 's3://bucket/file/with/path.csv' INTO TABLE test.t1",
+                    true, "bucket", "file/with/path.csv", "test", "t1", !local.empty());
+    }
 
     return rc;
 }
