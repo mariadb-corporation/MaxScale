@@ -134,10 +134,9 @@ export default {
         watch_activeEntityId() {
             this.unwatch_activeEntityId = this.$watch(
                 'activeEntityId',
-                (v, oV) => {
-                    if ((v && this.$typy(this.stagingData).isNull) || (v && oV)) {
+                v => {
+                    if (v)
                         this.stagingData = this.$helpers.lodash.cloneDeep(this.stagingInitialData)
-                    }
                 },
                 { immediate: true }
             )
