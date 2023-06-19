@@ -93,18 +93,15 @@ public:
         }
         else
         {
+#if defined(MAXSCALE_DEVELOP)
             if (result.error)
             {
-#if defined(SS_DEBUG)
-                int priority = LOG_WARNING;
-#else
-                int priority = LOG_INFO;
-#endif
-                MXB_LOG_MESSAGE(priority, "Parse error: '%s', SQL: %.*s",
-                                result.error->message, (int)sql.length(), sql.data());
+                MXB_WARNING("Parse error: '%s', SQL: %.*s",
+                            result.error->message, (int)sql.length(), sql.data());
 
                 pg_query_free_error(result.error);
             }
+#endif
         }
         free(result.stderr_buffer);
 
