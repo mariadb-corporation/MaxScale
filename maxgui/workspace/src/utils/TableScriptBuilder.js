@@ -28,17 +28,21 @@ import queryHelper from '@wsSrc/store/queryHelper'
  * which is a data structure representing the parsed information of a table.
  */
 export default class TableScriptBuilder {
-    constructor({ initialData, stagingData }) {
+    constructor({ initialData, stagingData, isCreateTable }) {
+        // initialData is an empty object if `isCreateTable` is true
         this.colAttrs = Object.values(COL_ATTRS)
         this.initialData = initialData
-        this.initialSchemaName = initialData.options.schema
-        this.initialTableName = initialData.options.name
+        this.initialSchemaName = typy(initialData, 'options.schema').safeString
+        this.initialTableName = typy(initialData, 'options.name').safeString
         this.initialColsData = typy(initialData, 'definitions.cols').safeArray
 
         this.stagingData = stagingData
         this.stagingColsData = typy(stagingData, 'definitions.cols').safeArray
 
-        this.optionDiffs = deepDiff(initialData.options, stagingData.options)
+        this.optionDiffs = deepDiff(
+            typy(initialData, 'options').safeObjectOrEmpty,
+            stagingData.options
+        )
         this.isColsOptsChanged = !lodash.isEqual(this.initialColsData, this.stagingColsData)
 
         // Keys
@@ -53,6 +57,9 @@ export default class TableScriptBuilder {
         })
         this.isDroppingPK = this.initialPkColNames.length > 0 && this.stagingPkColNames.length === 0
         this.isAddingPK = this.stagingPkColNames.length > 0
+
+        // mode
+        this.isCreateTable = isCreateTable
     }
 
     /**
@@ -65,15 +72,17 @@ export default class TableScriptBuilder {
 
     /**
      * This builds table_options SQL
-     * @returns {String} - returns alter table_options sql
+     * @returns {String} - returns table_options sql
      */
-    buildAlterTblOptSql() {
+    buildTblOptsSql() {
         let sql = ''
         this.optionDiffs.forEach((diff, i) => {
-            sql += this.handleAddComma({ ignore: i === 0 })
+            if (this.isCreateTable) sql += ' '
+            else sql += this.handleAddComma({ ignore: i === 0 })
             const key = diff.path[0]
             switch (key) {
                 case 'name':
+                    if (this.isCreateTable) break
                     sql += `RENAME TO ${quoting(this.initialSchemaName)}.${quoting(diff.rhs)}`
                     break
                 case 'engine':
@@ -94,7 +103,9 @@ export default class TableScriptBuilder {
     }
 
     /**
-     * This builds column definition SQL. CHANGE/ADD COLUMN ...
+     * This builds column definition SQL.
+     * If altering an existing table, it returns CHANGE/ADD COLUMN definition.
+     * Otherwise, it returns just column definition.
      * @param {object} payload.col
      * @param {boolean} payload.isUpdated
      * @returns {String} - returns column definition SQL
@@ -130,10 +141,11 @@ export default class TableScriptBuilder {
             [COMMENT]: comment,
         } = colObj
 
-        if (isUpdated) {
-            const oldColName = typy(col, `oriObj.${NAME}`).safeString
-            sql += `${tokens.change} ${tokens.column} ${quoting(oldColName)} `
-        } else sql += `${tokens.add} ${tokens.column} `
+        if (!this.isCreateTable)
+            if (isUpdated) {
+                const oldColName = typy(col, `oriObj.${NAME}`).safeString
+                sql += `${tokens.change} ${tokens.column} ${quoting(oldColName)} `
+            } else sql += `${tokens.add} ${tokens.column} `
 
         sql += `${quoting(name)}`
         sql += ` ${type}`
@@ -152,8 +164,9 @@ export default class TableScriptBuilder {
     }
 
     /**
-     * This builds DROP/ADD PK SQL
-     * @returns {String} - returns DROP/ADD PK SQL
+     * If altering an existing table, it returns DROP/ADD PK SQL.
+     * Otherwise, it returns just PK definition.
+     * @returns {String} - returns PK SQL
      */
     buildPkSQL() {
         let sql = ''
@@ -162,7 +175,11 @@ export default class TableScriptBuilder {
             sql += dropSQL
         } else if (this.isAddingPK) {
             const keys = this.stagingPkColNames.map(col => quoting(col)).join(', ')
-            const addSQL = `${tokens.add} ${tokens.primaryKey} (${keys})`
+            const keyDef = `${tokens.primaryKey} (${keys})`
+
+            if (this.isCreateTable) return keyDef
+
+            const addSQL = `${tokens.add} ${keyDef}`
             if (this.initialPkColNames.length > 0) sql += `${dropSQL}, ${addSQL}`
             else sql += addSQL
         }
@@ -170,9 +187,11 @@ export default class TableScriptBuilder {
     }
 
     /**
+     * If altering an existing table, it returns DROP/ADD UNIQUE KEY SQL.
+     * Otherwise, it returns just UQ key definition.
      * @param {object} payload.col
      * @param {boolean} payload.isUpdated
-     * @returns {String} - returns DROP/ADD UNIQUE KEY SQL
+     * @returns {String} - returns UNIQUE KEY SQL
      */
     buildUqSQL({ col, isUpdated }) {
         const { NAME, UQ } = COL_ATTRS
@@ -187,7 +206,9 @@ export default class TableScriptBuilder {
 
         if (newUqValue) {
             const uqName = queryHelper.genUqName(newColName)
-            return `${tokens.add} ${tokens.uniqueKey} ${quoting(uqName)} (${quoting(newColName)})`
+            const keyDef = `${tokens.uniqueKey} ${quoting(uqName)} (${quoting(newColName)})`
+            if (this.isCreateTable) return keyDef
+            return `${tokens.add} ${keyDef}`
         }
         if (oldColName) {
             const { name: uqName } = queryHelper.getKeyObjByColNames({
@@ -260,7 +281,7 @@ export default class TableScriptBuilder {
     }
 
     /**
-     * This handles build ADD, DROP, CHANGE COLUMN SQL
+     * Build SQL for altering columns and keys
      * @returns {String} - returns column alter sql
      */
     buildAlterColsSql() {
@@ -286,18 +307,43 @@ export default class TableScriptBuilder {
         return alterSpecs.join(this.handleAddComma())
     }
 
-    build() {
-        let sql = `ALTER TABLE ${quoting(this.initialSchemaName)}.${quoting(this.initialTableName)}`
-        let tblOptSql = '',
-            colsAlterSql = ''
-        if (this.optionDiffs && this.optionDiffs.length) tblOptSql = this.buildAlterTblOptSql()
-        if (this.isColsOptsChanged) colsAlterSql = this.buildAlterColsSql()
-        sql += tblOptSql
-        if (colsAlterSql) {
-            if (tblOptSql) sql += this.handleAddComma()
-            sql += colsAlterSql
-        }
+    /**
+     * Build SQL for creating columns and keys
+     * @returns {String} - returns column definition
+     */
+    buildCreateColsSql() {
+        const data = map2dArr({ fields: this.colAttrs, arr: this.stagingColsData })
+        let specs = []
+        const addedColSQL = this.buildAddedColSQL(data)
+        specs.push(addedColSQL)
+        if (this.stagingPkColNames.length) specs.push(this.buildPkSQL())
+        return specs.join(this.handleAddComma())
+    }
+
+    buildAlterScript() {
+        let sql = `${tokens.alterTable} ${quoting(this.initialSchemaName)}.${quoting(
+            this.initialTableName
+        )}`
+        let parts = [] // part of script which will be separated by commas
+        if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
+        if (this.isColsOptsChanged) parts.push(this.buildAlterColsSql())
+        sql += parts.join(this.handleAddComma())
         sql = formatSQL(`${sql};`)
         return sql
+    }
+
+    buildCreateScript() {
+        const { schema, name } = this.stagingData.options
+        let sql = `CREATE SCHEMA IF NOT EXISTS ${quoting(schema)};`
+        sql += `${tokens.createTable} ${quoting(schema)}.${quoting(name)} (`
+        sql += `${this.buildCreateColsSql()})`
+        sql += this.buildTblOptsSql()
+        sql = formatSQL(`${sql};`)
+        return sql
+    }
+
+    build() {
+        if (this.isCreateTable) return this.buildCreateScript()
+        return this.buildAlterScript()
     }
 }

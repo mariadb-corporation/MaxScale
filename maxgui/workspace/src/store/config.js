@@ -147,6 +147,7 @@ export const CREATE_TBL_TOKENS = Object.freeze({
     default: 'DEFAULT',
     comment: 'COMMENT',
     createTable: 'CREATE TABLE',
+    alterTable: 'ALTER TABLE',
     constraint: 'CONSTRAINT',
     primaryKey: 'PRIMARY KEY',
     uniqueKey: 'UNIQUE KEY',
