@@ -18,7 +18,12 @@ endif()
 
 # Set default values for cache entries and set the MaxScale version
 include(cmake/defaults.cmake)
+
 include(VERSION.cmake)
+if (MAXSCALE_MATURITY EQUAL "Develop")
+  add_definitions(-DMAXSCALE_DEVELOP=1)
+endif()
+
 include(ExternalProject)
 include(FetchContent)
 
