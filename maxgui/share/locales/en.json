@@ -278,7 +278,7 @@
             },
             "etlDocLinkText": "Read more on our documentation for instruction.",
             "etlOverviewInfo": "MaxScale uses ODBC for extracting and loading from the data source to a server in MaxScale. Make sure you preconfigure the necessary drivers for your data source.",
-            "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
+            "exeStatementsInfo": "This action is irreversible, so please review the above statement. | This action is irreversible, so please review the above statements.",
             "migrationScriptInfo": "Scripts generated for each table will be executed in parallel. Before migrating, you can make changes to the script.",
             "nextRefresh": "Click to change next refresh",
             "noBackslashEscapes": "Disables using the backslash character as an escape character within strings, making it equivalent to an ordinary character.",
