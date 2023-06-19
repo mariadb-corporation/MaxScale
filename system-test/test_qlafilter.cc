@@ -14,9 +14,6 @@ void query(TestConnections& test, const std::vector<std::string>& queries)
 
 std::vector<std::vector<std::string>> parse_log(TestConnections& test, const std::string& log)
 {
-    // This should make sure that the file is flushed to disk by GCUpdated if the unified file is used.
-    std::this_thread::sleep_for(500ms);
-
     std::vector<std::vector<std::string>> rval;
     test.maxscale->copy_from_node(log.c_str(), "./log.txt");
     std::ifstream infile("log.txt");
