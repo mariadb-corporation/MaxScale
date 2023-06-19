@@ -294,7 +294,7 @@ export default {
         isNewEntity(id) {
             return !this.initialNodes.some(n => n.id === id)
         },
-        handleChooseNodeOpt({ type, node }) {
+        handleChooseNodeOpt({ type, node, skipZoom = false }) {
             if (this.activeErdConn.id) {
                 const { ALTER, EDIT, DROP, DELETE } = this.ENTITY_OPT_TYPES
                 switch (type) {
@@ -303,18 +303,26 @@ export default {
                         let data = { active_entity_id: node.id }
                         if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 50
                         ErdTaskTmp.update({ where: this.activeTaskId, data })
+                        if (!skipZoom)
+                            // call in the next tick to ensure diagramDim height is up to date
+                            this.$nextTick(() => this.zoomIntoNode(node))
                         break
                     }
                     case DROP:
                         //TODO: Handle DROP option
                         break
                     case DELETE:
-                        //TODO: Handle DELETE option
+                        // Remove node from staging data and diagram
+                        ErdTaskTmp.update({
+                            where: this.activeTaskId,
+                            data(task) {
+                                const idx = task.data.nodes.findIndex(n => n.id === node.id)
+                                task.data.nodes.splice(idx, 1)
+                            },
+                        })
+                        this.$refs.diagram.removeNode(node.id)
                         break
                 }
-                if (type === ALTER)
-                    // call in the next tick to ensure diagramDim height is up to date
-                    this.$nextTick(() => this.zoomIntoNode(node))
                 this.onCloseNodeMenu()
             } else
                 this.SET_SNACK_BAR_MESSAGE({
@@ -416,7 +424,7 @@ export default {
             const { tableParserTransformer, tableParser, genErdNode } = queryHelper
             const nodeData = tableParserTransformer({
                 schema: this.$typy(ErdTask.getters('stagingSchemas'), '[0]').safeString,
-                parsedTable: tableParser.parse(tableTemplate(`table_${length}`)),
+                parsedTable: tableParser.parse(tableTemplate(`table_${length + 1}`)),
                 charsetCollationMap: this.charset_collation_map,
             })
 
@@ -433,7 +441,7 @@ export default {
                 data: { data: { ...this.stagingGraphData, nodes } },
             }).then(() => {
                 this.$refs.diagram.addNode(node)
-                this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node })
+                this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
         },
     },

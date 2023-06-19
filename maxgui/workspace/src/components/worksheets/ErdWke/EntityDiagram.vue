@@ -255,12 +255,15 @@ export default {
                 this.assignData()
             }
         },
+        getNodeIdx(id) {
+            return this.graphData.nodes.findIndex(n => n.id === id)
+        },
         /**
          * @public
          * Call this method to update the data of a node
          */
         updateNode({ id, data }) {
-            const index = this.graphData.nodes.findIndex(node => node.id === id)
+            const index = this.getNodeIdx(id)
             if (index >= 0) {
                 this.$set(this.graphData.nodes[index], 'data', data)
                 // Re-calculate the size
@@ -273,6 +276,14 @@ export default {
          */
         addNode(node) {
             this.graphData.nodes.push(node)
+        },
+        /**
+         * @public
+         * Call this method to add a new node
+         */
+        removeNode(id) {
+            const index = this.getNodeIdx(id)
+            if (!index >= 0) this.graphData.nodes.splice(index, 1)
         },
         /**
          * D3 mutates data, this method deep clones data leaving the original intact
