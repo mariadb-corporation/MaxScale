@@ -4,7 +4,7 @@
             class="d-flex align-center mxs-color-helper border-bottom-table-border"
             :style="{ height: `${toolbarHeight}px` }"
         >
-            <revert-btn :disabled="!hasChanged" @click="onRevert" />
+            <revert-btn :disabled="!hasChanged || isCreating" @click="onRevert" />
             <slot name="apply-btn-prepend" :isFormValid="isFormValid" />
             <apply-btn :disabled="!hasValidChanges" @click="onApply" />
             <slot name="toolbar-append" :isFormValid="isFormValid" />
@@ -161,6 +161,7 @@ export default {
             const builder = new TableScriptBuilder({
                 initialData: this.initialData,
                 stagingData: this.stagingData,
+                isCreateTable: this.isCreating,
             })
             this.SET_EXEC_SQL_DLG({
                 ...this.exec_sql_dlg,

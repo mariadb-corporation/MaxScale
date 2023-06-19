@@ -80,28 +80,28 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
-        initialEntities() {
+        initialNodes() {
             return ErdTask.getters('initialNodes')
         },
-        stagingEntities() {
+        stagingNodes() {
             return ErdTask.getters('stagingNodes')
         },
         activeEntityId() {
             return ErdTask.getters('activeEntityId')
         },
-        initialActiveEntity() {
-            return this.initialEntities.find(item => item.id === this.activeEntityId)
+        initialActiveNode() {
+            return this.initialNodes.find(item => item.id === this.activeEntityId)
         },
-        stagingActiveEntity() {
-            return this.stagingEntities.find(item => item.id === this.activeEntityId)
+        stagingActiveNode() {
+            return this.stagingNodes.find(item => item.id === this.activeEntityId)
         },
         // persisted data
         initialData() {
-            return this.$typy(this.initialActiveEntity, 'data').safeObjectOrEmpty
+            return this.$typy(this.initialActiveNode, 'data').safeObjectOrEmpty
         },
         // initial staging data
         stagingInitialData() {
-            return this.$typy(this.stagingActiveEntity, 'data').safeObjectOrEmpty
+            return this.$typy(this.stagingActiveNode, 'data').safeObjectOrEmpty
         },
         hasChanges() {
             return !this.$helpers.lodash.isEqual(this.stagingInitialData, this.stagingData)
@@ -128,7 +128,7 @@ export default {
     methods: {
         ...mapActions({
             queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData',
-            confirmAlter: 'mxsWorkspace/confirmAlter',
+            exeDdlScript: 'mxsWorkspace/exeDdlScript',
         }),
         //Watcher to work with multiple worksheets which are kept alive
         watch_activeEntityId() {
@@ -149,34 +149,41 @@ export default {
             })
         },
         /**
-         * @param {object} model - Either ErdTask or ErdTaskTmp model
+         * @param {object} param.model - Either ErdTask or ErdTaskTmp model
+         * @param {boolean} [param.isAdding] - is adding a new node
          */
-        save({ model }) {
+        save({ model, isAdding = false }) {
             const {
                 immutableUpdate,
                 lodash: { cloneDeep },
             } = this.$helpers
             const activeEntityId = this.activeEntityId
             const data = cloneDeep(this.stagingData)
+            const scope = this
             model.update({
                 where: this.activeTaskId,
                 data(task) {
-                    const idx = task.data.nodes.findIndex(n => n.id === activeEntityId)
-                    task.data.nodes = immutableUpdate(task.data.nodes, {
-                        [idx]: { data: { $set: data } },
-                    })
+                    if (isAdding) {
+                        const newNode = { ...scope.stagingActiveNode, data }
+                        task.data.nodes.push(newNode)
+                    } else {
+                        const idx = task.data.nodes.findIndex(n => n.id === activeEntityId)
+                        task.data.nodes = immutableUpdate(task.data.nodes, {
+                            [idx]: { data: { $set: data } },
+                        })
+                    }
                 },
             })
             this.eventBus.$emit('entity-editor-ctr-update-node-data', { id: activeEntityId, data })
         },
         async onExecute() {
-            await this.confirmAlter({
+            const { options } = this.isCreating ? this.stagingData : this.initialData
+            const { schema, name } = options
+            await this.exeDdlScript({
                 connId: this.activeErdConnId,
-                schema: this.initialData.options.schema,
-                name: this.initialData.options.name,
-                successCb: () => {
-                    this.save({ model: ErdTask })
-                },
+                schema,
+                name,
+                successCb: () => this.save({ model: ErdTask, isAdding: this.isCreating }),
             })
         },
         saveStagingData() {

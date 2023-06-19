@@ -163,17 +163,20 @@ export default {
         /**
          *
          * @param {string} param.connId - connection id
+         * @param {boolean} [param.isCreating] - is creating a new table
          * @param {string} param.schema - schema name
          * @param {string} param.name - table name
          * @param {function} param.successCb - success callback function
          */
-        async confirmAlter({ state, dispatch, getters }, { connId, schema, name, successCb }) {
+        async exeDdlScript(
+            { state, dispatch, getters },
+            { connId, isCreating = false, schema, name, successCb }
+        ) {
             const { quotingIdentifier: quoting } = this.vue.$helpers
-            await dispatch('exeStmtAction', {
-                connId,
-                sql: state.exec_sql_dlg.sql,
-                action: `Apply changes to ${quoting(schema)}.${quoting(name)}`,
-            })
+            const targetObj = `${quoting(schema)}.${quoting(name)}`
+            let action = `Apply changes to ${targetObj}`
+            if (isCreating) action = `Create ${targetObj}`
+            await dispatch('exeStmtAction', { connId, sql: state.exec_sql_dlg.sql, action })
             if (!getters.isExecFailed) await this.vue.$typy(successCb).safeFunction()
         },
     },

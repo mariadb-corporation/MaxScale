@@ -56,7 +56,7 @@ export default {
         this.$typy(this.unwatch_isLoading).safeFunction()
     },
     methods: {
-        ...mapActions({ confirmAlter: 'mxsWorkspace/confirmAlter' }),
+        ...mapActions({ exeDdlScript: 'mxsWorkspace/exeDdlScript' }),
         assignData() {
             this.stagingData = this.$helpers.lodash.cloneDeep(this.initialData)
         },
@@ -71,7 +71,7 @@ export default {
             )
         },
         async onExecute() {
-            await this.confirmAlter({
+            await this.exeDdlScript({
                 connId: this.activeQueryTabConnId,
                 schema: this.initialData.options.schema,
                 name: this.initialData.options.name,
