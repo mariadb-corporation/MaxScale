@@ -33,6 +33,7 @@
 #include <mysqld_error.h>
 #include <errmsg.h>
 
+#include <maxbase/externcmd.hh>
 #include <maxbase/format.hh>
 #include <maxbase/json.hh>
 #include <maxscale/diskspace.hh>
@@ -43,7 +44,6 @@
 #include <maxscale/protocol/mariadb/diskspace.hh>
 #include <maxscale/protocol/mariadb/maxscale.hh>
 #include <maxscale/secrets.hh>
-#include <maxscale/externcmd.hh>
 
 #include "internal/config.hh"
 #include "internal/modules.hh"
@@ -76,6 +76,7 @@ const char CN_SCRIPT_TIMEOUT[] = "script_timeout";
 
 namespace
 {
+void log_output(const std::string& cmd, const std::string& str);
 
 namespace cfg = mxs::config;
 using namespace std::chrono_literals;
@@ -298,7 +299,7 @@ bool MonitorSpec::do_post_validate(const cfg::Configuration* config, Params& par
     {
         auto script_timeout = s_script_timeout.get(params);
 
-        unique_ptr<ExternalCmd> cmd = ExternalCmd::create(script, script_timeout.count());
+        unique_ptr<ExternalCmd> cmd = ExternalCmd::create(script, script_timeout.count(), log_output);
 
         if (!cmd)
         {
@@ -408,6 +409,71 @@ private:
         m_monitor.post_run();
     }
 };
+
+const char* skip_whitespace(const char* ptr)
+{
+    while (*ptr && isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    return ptr;
+}
+
+const char* skip_prefix(const char* str)
+{
+    const char* ptr = strchr(str, ':');
+    mxb_assert(ptr);
+
+    ptr++;
+    return skip_whitespace(ptr);
+}
+
+void log_output(const std::string& cmd, const std::string& str)
+{
+    int err;
+
+    if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]",
+                               str.c_str(),
+                               0,
+                               &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_ALERT("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_ERROR("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_WARNING("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_NOTICE("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
+    {
+        MXB_INFO("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
+    }
+    else
+    {
+        // No special format, log as notice level message
+        MXB_NOTICE("%s: %s", cmd.c_str(), skip_whitespace(str.c_str()));
+    }
+}
 }
 
 namespace maxscale
@@ -478,7 +544,7 @@ bool Monitor::post_configure()
     }
     else
     {
-        m_scriptcmd = ExternalCmd::create(m_settings.script, m_settings.script_timeout.count());
+        m_scriptcmd = ExternalCmd::create(m_settings.script, m_settings.script_timeout.count(), log_output);
         if (!m_scriptcmd)
         {
             MXB_ERROR("Failed to initialize script '%s'.", m_settings.script.c_str());

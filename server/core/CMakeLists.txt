@@ -14,7 +14,6 @@ add_library(maxscale-common SHARED
   configmanager.cc
   dcb.cc
   event.cc
-  externcmd.cc
   filter.cc
   hint.cc
   history.cc

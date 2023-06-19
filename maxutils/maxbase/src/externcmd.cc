@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/externcmd.hh>
+#include <maxbase/externcmd.hh>
 
 #include <ctype.h>
 #include <errno.h>
@@ -26,76 +26,11 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
-#include <maxscale/pcre2.hh>
 
 using std::string;
 
 namespace
 {
-const char* skip_whitespace(const char* ptr)
-{
-    while (*ptr && isspace(*ptr))
-    {
-        ptr++;
-    }
-
-    return ptr;
-}
-
-const char* skip_prefix(const char* str)
-{
-    const char* ptr = strchr(str, ':');
-    mxb_assert(ptr);
-
-    ptr++;
-    return skip_whitespace(ptr);
-}
-
-void log_output(const std::string& cmd, const std::string& str)
-{
-    int err;
-
-    if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]",
-                               str.c_str(),
-                               0,
-                               &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_ALERT("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_ERROR("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_WARNING("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_NOTICE("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
-    }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
-    {
-        MXB_INFO("%s: %s", cmd.c_str(), skip_prefix(str.c_str()));
-    }
-    else
-    {
-        // No special format, log as notice level message
-        MXB_NOTICE("%s: %s", cmd.c_str(), skip_whitespace(str.c_str()));
-    }
-}
 }
 
 int ExternalCmd::tokenize_args(char* dest[], int dest_size)
@@ -205,7 +140,7 @@ ExternalCmd::ExternalCmd(const std::string& script, int timeout, OutputHandler h
     : m_orig_command(script)
     , m_subst_command(script)
     , m_timeout(timeout)
-    , m_handler(handler ? handler : log_output)
+    , m_handler(handler)
 {
 }
 

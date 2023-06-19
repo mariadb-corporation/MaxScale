@@ -18,7 +18,6 @@
 #include <maxbase/format.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/externcmd.hh>
 
 #include "internal/config.hh"
 #include "internal/monitormanager.hh"

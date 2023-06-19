@@ -14,9 +14,9 @@
 
 #include <maxbase/assert.hh>
 #include <maxbase/checksum.hh>
+#include <maxbase/externcmd.hh>
 #include <maxscale/utils.hh>
 #include <maxbase/random.hh>
-#include <maxscale/externcmd.hh>
 #include <string.h>
 #include <iostream>
 

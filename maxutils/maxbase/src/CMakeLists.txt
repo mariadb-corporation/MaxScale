@@ -8,6 +8,7 @@ add_library(maxbase STATIC
   atomic.cc
   average.cc
   eventcount.cc
+  externcmd.cc
   filesystem.cc
   format.cc
   hexdump.cc

@@ -13,8 +13,8 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <maxbase/externcmd.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/externcmd.hh>
 #include <maxbase/stopwatch.hh>
 
 #include <vector>

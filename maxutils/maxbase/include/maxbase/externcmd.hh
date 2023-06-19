@@ -13,7 +13,7 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 #include <functional>
 #include <memory>
 #include <unistd.h>
@@ -39,7 +39,7 @@ public:
      * @return Pointer to new external command struct or NULL if an error occurred
      */
     static std::unique_ptr<ExternalCmd> create(const std::string& argstr, int timeout,
-                                               OutputHandler handler = {});
+                                               OutputHandler handler);
 
     /**
      * Run the command
