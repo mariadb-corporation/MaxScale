@@ -311,9 +311,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
             m_pDcb->trigger_read_event();
         }
 
-        m_pCurrent_nosql_request = pPacket;
         GWBUF* pResponse = handle_one_packet(pPacket);
-        m_pCurrent_nosql_request = nullptr;
 
         if (pResponse)
         {
@@ -542,6 +540,7 @@ cache_result_t ClientConnection::get_key(const std::string& user,
                                          const GWBUF* pQuery,
                                          CacheKey* pKey)
 {
+    auto* m_pCurrent_nosql_request = m_nosql.current_request();
     mxb_assert(m_pCurrent_nosql_request);
 
     // The key is generated from the original NoSQL request. Thus, it will be possible
