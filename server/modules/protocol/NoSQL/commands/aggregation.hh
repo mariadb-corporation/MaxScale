@@ -66,7 +66,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -107,7 +107,7 @@ public:
         doc.append(kvp(key::N, n));
         doc.append(kvp(key::OK, ok));
 
-        *ppResponse = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 
@@ -208,7 +208,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         uint8_t* pBuffer = mariadb_response.data();
 
@@ -317,7 +317,7 @@ public:
 
         auto doc = bsoncxx::from_json(json.str());
 
-        *ppResponse = create_response(doc);
+        pNoSQL_response->reset(create_response(doc));
         return State::READY;
     }
 };

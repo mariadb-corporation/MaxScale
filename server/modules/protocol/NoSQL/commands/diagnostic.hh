@@ -114,7 +114,7 @@ public:
         ALL_PLANS_EXECUTION,
     };
 
-    State execute(GWBUF** ppNoSQL_response) override final
+    State execute(Response* pNoSQL_response) override final
     {
         string s;
         if (optional(key::VERBOSITY, &s))
@@ -157,14 +157,14 @@ public:
             throw SoftError("Explain failed due to unknown command: ", error::COMMAND_NOT_FOUND);
         }
 
-        return m_sSub_command->execute(ppNoSQL_response);
+        return m_sSub_command->execute(pNoSQL_response);
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
     {
         mxb_assert(m_sSub_command.get());
 
-        return m_sSub_command->translate(std::move(mariadb_response), ppNoSQL_response);
+        return m_sSub_command->translate(std::move(mariadb_response), pNoSQL_response);
     }
 
     void diagnose(DocumentBuilder& doc) override final
@@ -191,8 +191,8 @@ private:
         {
         }
 
-        virtual State execute(GWBUF** ppNoSQL_response) = 0;
-        virtual State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
+        virtual State execute(Response* pNoSQL_response) = 0;
+        virtual State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) = 0;
 
     protected:
         void add_execution_stats(DocumentBuilder& doc)
@@ -256,7 +256,7 @@ private:
             return new DefaultSubCommand(pSuper, collection, doc);
         }
 
-        State execute(GWBUF** ppResponse) override final
+        State execute(Response* pResponse) override final
         {
             DocumentBuilder doc;
 
@@ -269,11 +269,11 @@ private:
 
             add_server_info(doc, 1);
 
-            *ppResponse = m_super.create_response(doc.extract());
+            pResponse->reset(m_super.create_response(doc.extract()));
             return State::READY;
         }
 
-        State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+        State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
         {
             mxb_assert(!true);
             return State::READY;
@@ -292,7 +292,7 @@ private:
             return new FindSubCommand(pSuper, collection, doc);
         }
 
-        State execute(GWBUF** ppResponse) override final
+        State execute(Response* pResponse) override final
         {
             auto filter = m_doc[key::FILTER];
 
@@ -320,16 +320,16 @@ private:
                                       m_arguments,
                                       &m_find_stats));
 
-            return m_sCommand->execute(ppResponse);
+            return m_sCommand->execute(pResponse);
         }
 
-        State translate(GWBUF&& response, GWBUF** ppResponse) override final
+        State translate(GWBUF&& response, Response* pNoSQL_response) override final
         {
             mxb_assert(m_sCommand.get());
 
-            GWBUF* pResponse = nullptr;
-            m_sCommand->translate(std::move(response), &pResponse);
-            gwbuf_free(pResponse);
+            Command::Response tmp;
+            m_sCommand->translate(std::move(response), &tmp);
+            gwbuf_free(tmp.pData);
 
             DocumentBuilder doc;
             doc.append(kvp(key::QUERY_PLANNER, m_query_planner.extract()));
@@ -345,7 +345,7 @@ private:
 
             add_server_info(doc, 1);
 
-            *ppResponse = m_super.create_response(doc.extract());
+            pNoSQL_response->reset(m_super.create_response(doc.extract()));
 
             return State::READY;
         }
@@ -629,7 +629,7 @@ public:
         return ss.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -696,7 +696,7 @@ public:
         doc.append(kvp(key::MISSING_INDEX_ENTRIES, empty_array.extract()));
         doc.append(kvp(key::OK, ok));
 
-        *ppResponse = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 

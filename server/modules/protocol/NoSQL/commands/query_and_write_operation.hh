@@ -187,7 +187,7 @@ public:
         BUSY
     };
 
-    State execute(GWBUF** ppNoSQL_response) override final
+    State execute(Response* pNoSQL_response) override final
     {
         auto query = generate_sql();
 
@@ -197,7 +197,7 @@ public:
 
         execute_one_statement();
 
-        *ppNoSQL_response = nullptr;
+        pNoSQL_response->reset(nullptr);
         return State::BUSY;
     }
 
@@ -740,7 +740,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
@@ -798,7 +798,7 @@ public:
             }
         }
 
-        *ppResponse = pResponse;
+        pNoSQL_response->reset(pResponse);
         return State::READY;
     }
 
@@ -856,12 +856,13 @@ public:
     {
     }
 
-    State execute(GWBUF** ppNoSQL_response) override final
+    State execute(Response* pNoSQL_response) override final
     {
         Query query = generate_sql();
 
         send_downstream(query.statements().front());
 
+        pNoSQL_response->reset(nullptr);
         return State::BUSY;
     }
 
