@@ -38,6 +38,7 @@ public:
             std::string region;
             std::string host;
             int64_t     port;
+            int64_t     protocol_version;
             bool        no_verify;
             bool        use_http;
             std::string import_user;

@@ -83,6 +83,19 @@ char* LDISession::set_port(void* self, const char* key, const char* begin, const
 
     return nullptr;
 }
+
+// static
+char* LDISession::set_protocol_version(void* self, const char* key, const char* begin, const char* end)
+{
+    if (int protocol_version = atoi(std::string(begin, end).c_str());
+        protocol_version >= 0 && protocol_version <= 2)
+    {
+        static_cast<LDISession*>(self)->m_config.protocol_version = protocol_version;
+    }
+
+    return nullptr;
+}
+
 // static
 char* LDISession::set_import_user(void* self, const char* key, const char* begin, const char* end)
 {
@@ -107,6 +120,7 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFil
     pSession->add_variable("@maxscale.s3_region", &LDISession::set_region, this);
     pSession->add_variable("@maxscale.s3_host", &LDISession::set_host, this);
     pSession->add_variable("@maxscale.s3_port", &LDISession::set_port, this);
+    pSession->add_variable("@maxscale.s3_protocol_version", &LDISession::set_protocol_version, this);
     pSession->add_variable("@maxscale.import_user", &LDISession::set_import_user, this);
     pSession->add_variable("@maxscale.import_password", &LDISession::set_import_password, this);
 }
@@ -297,6 +311,11 @@ void S3Download::load_data()
     if (int port = m_config.port)
     {
         ms3_set_option(ms3, MS3_OPT_PORT_NUMBER, (void*)&port);
+    }
+
+    if (int protocol_version = m_config.protocol_version)
+    {
+        ms3_set_option(ms3, MS3_OPT_FORCE_PROTOCOL_VERSION, (void*)&protocol_version);
     }
 
     size_t buffer_size = 0xfffff0;

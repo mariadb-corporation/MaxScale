@@ -38,6 +38,10 @@ cnf::ParamBool no_verify(
     &ldi::spec, "no_verify", "Skip certificate verification", false, cnf::Param::AT_RUNTIME);
 cnf::ParamBool use_http(
     &ldi::spec, "use_http", "Use unencrypted communication", false, cnf::Param::AT_RUNTIME);
+cnf::ParamCount protocol_version(
+    &ldi::spec, "protocol_version",
+    "S3 protocol version. Use 0 for default, 1 for path-style (legacy S3 API) and 2 for virtual-hosted-style.",
+    0, cnf::Param::AT_RUNTIME);
 cnf::ParamString import_user(
     &ldi::spec, "import_user", "User for Xpand data imports", "", cnf::Param::AT_RUNTIME);
 cnf::ParamPassword import_password(
@@ -76,6 +80,7 @@ LDI::LDI::Config::Config(const std::string& name)
     add_native(&Config::m_v, &Values::region, &ldi::region);
     add_native(&Config::m_v, &Values::host, &ldi::host);
     add_native(&Config::m_v, &Values::port, &ldi::port);
+    add_native(&Config::m_v, &Values::protocol_version, &ldi::protocol_version);
     add_native(&Config::m_v, &Values::no_verify, &ldi::no_verify);
     add_native(&Config::m_v, &Values::use_http, &ldi::use_http);
     add_native(&Config::m_v, &Values::import_user, &ldi::import_user);
