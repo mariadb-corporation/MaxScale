@@ -4,7 +4,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    test.repl->connect();
+    test.repl->connect("mysql");
     auto expected = test.repl->get_all_server_ids_str();
 
     auto c = test.maxscale->get_connection(4006);

@@ -401,6 +401,11 @@ void GCUpdater<SD>::run()
 
             if (m_local_queue.empty())
             {
+                // The GCUpdater is either shutting down or the non-blocking read_clients() call consumed all
+                // the events. The wait_for_updates() call can "spuriously" wake up due to events being
+                // consumed before the notifications are read. If wait_for_updates() was called before each
+                // read_clients() call (currently it isn't), we could assert at this point that the GCUpdater
+                // is shutting down if the local queue is empty.
                 continue;
             }
         }
