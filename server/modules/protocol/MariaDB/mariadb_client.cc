@@ -266,6 +266,11 @@ bool call_getgrgid_r(gid_t group_id, string& name_out)
 
 std::string attr_to_str(const std::vector<uint8_t>& data)
 {
+    if (data.empty())
+    {
+        return "no attributes";
+    }
+
     const uint8_t* ptr = data.data();
     const uint64_t len = mxq::leint_consume((uint8_t**)&ptr);
     const uint8_t* end = ptr + len;

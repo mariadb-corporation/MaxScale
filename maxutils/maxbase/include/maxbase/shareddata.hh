@@ -299,23 +299,25 @@ bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
     std::unique_lock<std::mutex> guard(m_update_mutex);
 
     bool ret_got_data = false;
-    if (m_queue.empty())
-    {
-        *m_pData_rdy = false;
-        auto pred = [this]() {
-                return *m_pData_rdy;
-            };
+    auto pred = [this]() {
+        return *m_pData_rdy;
+    };
 
-        if (timeout.count() != 0)
-        {
-            ret_got_data = m_pUpdater_wakeup->wait_for(guard, timeout, pred);
-        }
-        else
-        {
-            m_pUpdater_wakeup->wait(guard, pred);
-            ret_got_data = true;
-        }
+    if (timeout.count() != 0)
+    {
+        ret_got_data = m_pUpdater_wakeup->wait_for(guard, timeout, pred);
     }
+    else
+    {
+        m_pUpdater_wakeup->wait(guard, pred);
+        ret_got_data = true;
+    }
+
+    mxb_assert(*m_pData_rdy || !ret_got_data);
+
+    // Since this flag is used as the predicate for the condition variable, it must be set to false only after
+    // the condition variable has been waited on.
+    *m_pData_rdy = false;
 
     return ret_got_data;
 }
