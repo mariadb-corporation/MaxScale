@@ -109,10 +109,17 @@ private:
         LOAD,
     };
 
+    enum class ServerType
+    {
+        MARIADB,
+        XPAND,
+    };
+
     LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter);
     bool route_data(GWBUF&& buffer);
     bool route_end(GWBUF&& buffer);
     bool send_ok(int64_t rows_affected);
+    bool missing_required_params(ServerType type);
 
     SERVER*                      get_xpand_node() const;
     std::unique_ptr<ExternalCmd> create_import_cmd(SERVER* node, LoadDataResult* parsed);

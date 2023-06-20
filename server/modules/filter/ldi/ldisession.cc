@@ -26,6 +26,15 @@
 
 namespace
 {
+const char* CN_S3_KEY = "@maxscale.s3_key";
+const char* CN_S3_SECRET = "@maxscale.s3_secret";
+const char* CN_S3_REGION = "@maxscale.s3_region";
+const char* CN_S3_HOST = "@maxscale.s3_host";
+const char* CN_S3_PORT = "@maxscale.s3_port";
+const char* CN_S3_PROTOCOL_VERSION = "@maxscale.s3_protocol_version";
+const char* CN_IMPORT_USER = "@maxscale.import_user";
+const char* CN_IMPORT_PASSWORD = "@maxscale.import_password";
+
 void no_delete(LDISession* ignored)
 {
 }
@@ -115,14 +124,14 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFil
     , m_config(pFilter->m_config.values())
     , m_self(std::shared_ptr<LDISession>(this, no_delete))
 {
-    pSession->add_variable("@maxscale.s3_key", &LDISession::set_key, this);
-    pSession->add_variable("@maxscale.s3_secret", &LDISession::set_secret, this);
-    pSession->add_variable("@maxscale.s3_region", &LDISession::set_region, this);
-    pSession->add_variable("@maxscale.s3_host", &LDISession::set_host, this);
-    pSession->add_variable("@maxscale.s3_port", &LDISession::set_port, this);
-    pSession->add_variable("@maxscale.s3_protocol_version", &LDISession::set_protocol_version, this);
-    pSession->add_variable("@maxscale.import_user", &LDISession::set_import_user, this);
-    pSession->add_variable("@maxscale.import_password", &LDISession::set_import_password, this);
+    pSession->add_variable(CN_S3_KEY, &LDISession::set_key, this);
+    pSession->add_variable(CN_S3_SECRET, &LDISession::set_secret, this);
+    pSession->add_variable(CN_S3_REGION, &LDISession::set_region, this);
+    pSession->add_variable(CN_S3_HOST, &LDISession::set_host, this);
+    pSession->add_variable(CN_S3_PORT, &LDISession::set_port, this);
+    pSession->add_variable(CN_S3_PROTOCOL_VERSION, &LDISession::set_protocol_version, this);
+    pSession->add_variable(CN_IMPORT_USER, &LDISession::set_import_user, this);
+    pSession->add_variable(CN_IMPORT_PASSWORD, &LDISession::set_import_password, this);
 }
 
 // static
@@ -180,6 +189,11 @@ bool LDISession::routeQuery(GWBUF&& buffer)
 
             if (auto server = get_xpand_node())
             {
+                if (missing_required_params(ServerType::XPAND))
+                {
+                    return true;
+                }
+
                 // We have at least one Xpand node, load the data there
                 if (auto cmd = create_import_cmd(server, parsed); cmd->start())
                 {
@@ -193,6 +207,11 @@ bool LDISession::routeQuery(GWBUF&& buffer)
             }
             else
             {
+                if (missing_required_params(ServerType::MARIADB))
+                {
+                    return true;
+                }
+
                 // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE to stream the data.
                 auto maybe_db = !parsed->db.empty() ? mxb::cat("`", parsed->db, "` ") : ""s;
                 auto new_sql = mxb::cat("LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE ",
@@ -268,6 +287,29 @@ bool LDISession::send_ok(int64_t rows)
     mxs::ReplyRoute down;
     mxs::Reply reply;
     return mxs::FilterSession::clientReply(mariadb::create_ok_packet(0, rows), down, reply);
+}
+
+bool LDISession::missing_required_params(ServerType type)
+{
+    auto check_value = [&](std::string_view name, std::string_view value){
+        if (value.empty())
+        {
+            int errnum = 1230;      // ER_NO_DEFAULT
+            set_response(protocol().make_error(
+                errnum, "42000", mxb::cat("Variable '", name, "' doesn't have a default value")));
+        }
+
+        return !value.empty();
+    };
+
+    bool ok = check_value(CN_S3_KEY, m_config.key)
+        && check_value(CN_S3_SECRET, m_config.secret)
+        && check_value(CN_S3_HOST, m_config.host)
+        && (type == ServerType::MARIADB
+            || (check_value(CN_IMPORT_USER, m_config.import_user)
+                && check_value(CN_IMPORT_PASSWORD, m_config.import_password)));
+
+    return !ok;
 }
 
 //
