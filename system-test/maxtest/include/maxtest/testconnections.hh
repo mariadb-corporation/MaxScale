@@ -329,6 +329,13 @@ public:
         tprintf("\n%s", maxctrl(cmd, sudo).output.c_str());
     }
 
+    /**
+     * Writes the string into the first MaxScale's log
+     *
+     * @param str String to add to the log. Single quotes in the string are replaced with carets.
+     */
+    void write_in_log(std::string str);
+
     void check_current_operations(int value);
     void check_current_connections(int value);
 
