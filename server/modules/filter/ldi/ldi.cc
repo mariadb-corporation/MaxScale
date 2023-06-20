@@ -31,7 +31,7 @@ cnf::ParamString secret(
 cnf::ParamString region(
     &ldi::spec, "region", "S3 region", "us-east-1", cnf::Param::AT_RUNTIME);
 cnf::ParamString host(
-    &ldi::spec, "host", "S3 host", "", cnf::Param::AT_RUNTIME);
+    &ldi::spec, "host", "S3 host", "s3.amazonaws.com", cnf::Param::AT_RUNTIME);
 cnf::ParamCount port(
     &ldi::spec, "port", "S3 port", 0, cnf::Param::AT_RUNTIME);
 cnf::ParamBool no_verify(
