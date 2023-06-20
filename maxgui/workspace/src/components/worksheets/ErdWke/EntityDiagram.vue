@@ -141,6 +141,7 @@ import {
     forceX,
     forceY,
 } from 'd3-force'
+import { min as d3Min, max as d3Max } from 'd3-array'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@wsSrc/components/worksheets/ErdWke/EntityLink'
 import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
@@ -288,6 +289,18 @@ export default {
                 links: this.graphData.links,
                 node,
             })
+        },
+        /**
+         * @public
+         * Get the correct dimension of the nodes for controlling the zoom
+         */
+        getGraphExtent() {
+            return {
+                minX: d3Min(this.graphData.nodes, n => n.x - n.size.width / 2),
+                minY: d3Min(this.graphData.nodes, n => n.y - n.size.height / 2),
+                maxX: d3Max(this.graphData.nodes, n => n.x + n.size.width / 2),
+                maxY: d3Max(this.graphData.nodes, n => n.y + n.size.height / 2),
+            }
         },
         /**
          * D3 mutates data, this method deep clones data leaving the original intact

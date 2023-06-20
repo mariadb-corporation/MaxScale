@@ -15,6 +15,7 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
+import { t } from 'typy'
 
 export default {
     namespaced: true,
@@ -54,32 +55,21 @@ export default {
     getters: {
         activeRecordId: () => Worksheet.getters('activeId'),
         activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
-        graphData: (_, getters) => {
-            const { data = {} } = getters.activeRecord
-            return data
-        },
-        initialNodes: (_, getters) => {
-            const { nodes = [] } = getters.graphData
-            return nodes
-        },
+        graphData: (_, getters) => t(getters.activeRecord, 'data').safeObjectOrEmpty,
+        initialNodes: (_, getters) => t(getters.graphData, 'nodes').safeArray,
+        initialLinks: (_, getters) => t(getters.graphData, 'links').safeArray,
         // Temp states getters
         activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
-        stagingGraphData(_, getters) {
-            const { data = {} } = getters.activeTmpRecord
-            return data
-        },
-        stagingNodes: (_, getters) => {
-            const { nodes = [] } = getters.stagingGraphData
-            return nodes
-        },
+        stagingGraphData: (_, getters) => t(getters.activeTmpRecord, 'data').safeObjectOrEmpty,
+        stagingNodes: (_, getters) => t(getters.stagingGraphData, 'nodes').safeArray,
+        stagingLinks: (_, getters) => t(getters.stagingGraphData, 'links').safeArray,
         stagingSchemas: (_, getters) => [
             ...new Set(getters.stagingNodes.map(n => n.data.options.schema)),
         ],
         graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
         activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
         // Other getters
-        isNewEntity: (_, getters) => {
-            return !getters.initialNodes.some(item => item.id === getters.activeEntityId)
-        },
+        isNewEntity: (_, getters) =>
+            !getters.initialNodes.some(item => item.id === getters.activeEntityId),
     },
 }

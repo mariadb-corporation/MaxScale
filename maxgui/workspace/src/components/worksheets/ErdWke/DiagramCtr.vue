@@ -99,7 +99,6 @@ import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue
 import { EventBus } from '@wkeComps/EventBus'
 import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
-import { min as d3Min, max as d3Max } from 'd3-array'
 import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
 import queryHelper from '@wsSrc/store/queryHelper'
 
@@ -294,25 +293,27 @@ export default {
                             this.$nextTick(() => this.zoomIntoNode(node))
                         break
                     }
-                    case DELETE:
+                    case DELETE: {
                         // Remove node from staging data and diagram
                         ErdTaskTmp.update({
                             where: this.activeTaskId,
-                            data(task) {
+                            data: {
                                 // close editor
-                                task.active_entity_id = ''
-                                task.graph_height_pct = 100
+                                active_entity_id: '',
+                                graph_height_pct: 100,
                                 // remove the node and its links
-                                const idx = task.data.nodes.findIndex(n => n.id === node.id)
-                                task.data.nodes.splice(idx, 1)
-                                task.data.links = queryHelper.getExcludedLinks({
-                                    links: task.data.links,
-                                    node,
-                                })
+                                data: {
+                                    nodes: this.stagingNodes.filter(n => n.id !== node.id),
+                                    links: queryHelper.getExcludedLinks({
+                                        links: this.stagingGraphData.links,
+                                        node,
+                                    }),
+                                },
                             },
                         })
                         this.$refs.diagram.removeNode(node)
                         break
+                    }
                 }
             } else
                 this.SET_SNACK_BAR_MESSAGE({
@@ -320,26 +321,30 @@ export default {
                     type: 'error',
                 })
         },
+        assignCoord({ nodeMap, nodes }) {
+            return nodes.map(n => {
+                if (!nodeMap[n.id]) return n
+                const { x, y, vx, vy } = nodeMap[n.id]
+                return {
+                    ...n,
+                    x,
+                    y,
+                    vx,
+                    vy,
+                }
+            })
+        },
+        /**
+         * @param {array} v - diagram staging nodes with new coordinate values
+         */
         onNodesCoordsUpdate(v) {
             const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
-            // persist node coords
+            const nodes = this.assignCoord({ nodeMap, nodes: this.initialNodes })
+            const stagingNodes = this.assignCoord({ nodeMap, nodes: this.stagingNodes })
             ErdTask.update({
                 where: this.activeTaskId,
                 data: {
-                    data: {
-                        ...this.graphData,
-                        nodes: this.graphData.nodes.map(n => {
-                            if (!nodeMap[n.id]) return n
-                            const { x, y, vx, vy } = nodeMap[n.id]
-                            return {
-                                ...n,
-                                x,
-                                y,
-                                vx,
-                                vy,
-                            }
-                        }),
-                    },
+                    data: { links: this.graphData.links, nodes },
                     is_laid_out: true,
                 },
             })
@@ -347,7 +352,7 @@ export default {
             ErdTaskTmp.update({
                 where: this.activeTaskId,
                 data: {
-                    data: { ...this.stagingGraphData, nodes: v },
+                    data: { links: this.stagingGraphData.links, nodes: stagingNodes },
                 },
             })
         },
@@ -380,17 +385,6 @@ export default {
             })
         },
         /**
-         * Get the correct dimension of the nodes for controlling the zoom
-         */
-        getGraphExtent() {
-            return {
-                minX: d3Min(this.stagingNodes, n => n.x - n.size.width / 2),
-                minY: d3Min(this.stagingNodes, n => n.y - n.size.height / 2),
-                maxX: d3Max(this.stagingNodes, n => n.x + n.size.width / 2),
-                maxY: d3Max(this.stagingNodes, n => n.y + n.size.height / 2),
-            }
-        },
-        /**
          * Auto adjust (zoom in or out) the contents of a graph
          * @param {Boolean} [param.isFitIntoView] - if it's true, v param will be ignored
          * @param {Object} [param.customExtent] - custom extent
@@ -398,7 +392,7 @@ export default {
          */
         setZoom({ isFitIntoView = false, customExtent, v, paddingPct = 2 }) {
             this.isFitIntoView = isFitIntoView
-            const extent = customExtent ? customExtent : this.getGraphExtent()
+            const extent = customExtent ? customExtent : this.$refs.diagram.getGraphExtent()
             const { minX, minY, maxX, maxY } = extent
 
             const k = isFitIntoView ? this.calcFitZoom({ extent, paddingPct }) : v
