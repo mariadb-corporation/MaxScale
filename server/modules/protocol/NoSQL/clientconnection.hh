@@ -103,5 +103,4 @@ private:
     nosql::NoSQL   m_nosql;
     bool           m_ssl_required;
     DCB*           m_pDcb = nullptr;
-    GWBUF*         m_pCurrent_nosql_request = nullptr;
 };

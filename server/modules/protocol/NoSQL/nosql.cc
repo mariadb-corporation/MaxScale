@@ -2834,6 +2834,8 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
 
     if (!m_sDatabase)
     {
+        m_pCurrent_request = pRequest;
+
         try
         {
             // If no database operation is in progress, we proceed.
@@ -2894,6 +2896,8 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
             MXB_ERROR("Closing client connection: %s", x.what());
             kill_client();
         }
+
+        m_pCurrent_request = nullptr;
 
         gwbuf_free(pRequest);
     }

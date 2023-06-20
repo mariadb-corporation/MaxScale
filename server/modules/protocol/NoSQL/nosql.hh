@@ -1039,6 +1039,11 @@ public:
         return m_config;
     }
 
+    GWBUF* current_request() const
+    {
+        return m_pCurrent_request;
+    }
+
     State handle_request(GWBUF* pRequest, GWBUF** ppResponse);
 
     GWBUF* handle_request(GWBUF* pRequest)
@@ -1084,6 +1089,7 @@ private:
     std::deque<GWBUF*> m_requests;
     SDatabase          m_sDatabase;
     DCB*               m_pDcb = nullptr;
+    GWBUF*             m_pCurrent_request = nullptr;
 };
 
 /**
