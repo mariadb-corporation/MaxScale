@@ -181,8 +181,8 @@ export default {
         },
         entityOpts() {
             const isNew = this.isNewEntity(this.activeNodeMenuId)
-            const { ALTER, EDIT, DROP, DELETE } = this.ENTITY_OPT_TYPES
-            let opts = [
+            const { ALTER, EDIT, DELETE } = this.ENTITY_OPT_TYPES
+            return [
                 {
                     text: this.$mxs_t(isNew ? 'edit' : 'alter'),
                     type: isNew ? EDIT : ALTER,
@@ -190,26 +190,14 @@ export default {
                     iconSize: isNew ? 16 : 20,
                     color: 'primary',
                 },
+                {
+                    text: this.$mxs_t('delete'),
+                    type: DELETE,
+                    icon: '$vuetify.icons.mxs_delete',
+                    iconSize: 16,
+                    color: 'error',
+                },
             ]
-            opts.push(
-                isNew
-                    ? {
-                          text: this.$mxs_t('delete'),
-                          type: DELETE,
-                          icon: '$vuetify.icons.mxs_delete',
-                          iconSize: 16,
-                          color: 'error',
-                      }
-                    : {
-                          text: this.$mxs_t('drop'),
-                          type: DROP,
-                          icon: 'mdi-table-remove',
-                          iconSize: 20,
-                          color: 'error',
-                      }
-            )
-
-            return opts
         },
         activeNodeMenuId() {
             return this.$typy(this.activeNodeMenu, 'id').safeString
@@ -294,7 +282,7 @@ export default {
         },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
             if (this.activeErdConn.id) {
-                const { ALTER, EDIT, DROP, DELETE } = this.ENTITY_OPT_TYPES
+                const { ALTER, EDIT, DELETE } = this.ENTITY_OPT_TYPES
                 switch (type) {
                     case ALTER:
                     case EDIT: {
@@ -306,19 +294,24 @@ export default {
                             this.$nextTick(() => this.zoomIntoNode(node))
                         break
                     }
-                    case DROP:
-                        //TODO: Handle DROP option
-                        break
                     case DELETE:
                         // Remove node from staging data and diagram
                         ErdTaskTmp.update({
                             where: this.activeTaskId,
                             data(task) {
+                                // close editor
+                                task.active_entity_id = ''
+                                task.graph_height_pct = 100
+                                // remove the node and its links
                                 const idx = task.data.nodes.findIndex(n => n.id === node.id)
                                 task.data.nodes.splice(idx, 1)
+                                task.data.links = queryHelper.getExcludedLinks({
+                                    links: task.data.links,
+                                    node,
+                                })
                             },
                         })
-                        this.$refs.diagram.removeNode(node.id)
+                        this.$refs.diagram.removeNode(node)
                         break
                 }
             } else
@@ -336,6 +329,7 @@ export default {
                     data: {
                         ...this.graphData,
                         nodes: this.graphData.nodes.map(n => {
+                            if (!nodeMap[n.id]) return n
                             const { x, y, vx, vy } = nodeMap[n.id]
                             return {
                                 ...n,

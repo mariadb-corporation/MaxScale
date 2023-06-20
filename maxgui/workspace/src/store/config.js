@@ -203,12 +203,9 @@ export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
 
 // Entity node option types
 export const ENTITY_OPT_TYPES = Object.freeze({
-    // for existing entities
-    DROP: 'Drop',
-    ALTER: 'Alter',
-    // for new entities
-    EDIT: 'Edit',
-    DELETE: 'Delete',
+    DELETE: 'Delete', // delete node and its links from staging data
+    ALTER: 'Alter', // alter existing entities
+    EDIT: 'Edit', // edit new entities
 })
 
 export const EDITOR_MODES = Object.freeze({

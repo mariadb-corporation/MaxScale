@@ -281,9 +281,13 @@ export default {
          * @public
          * Call this method to add a new node
          */
-        removeNode(id) {
-            const index = this.getNodeIdx(id)
+        removeNode(node) {
+            const index = this.getNodeIdx(node.id)
             if (!index >= 0) this.graphData.nodes.splice(index, 1)
+            this.graphData.links = queryHelper.getExcludedLinks({
+                links: this.graphData.links,
+                node,
+            })
         },
         /**
          * D3 mutates data, this method deep clones data leaving the original intact
@@ -383,9 +387,7 @@ export default {
             )
         },
         setChosenLinks(node) {
-            this.chosenLinks = this.getLinks().filter(
-                d => d.source.id === node.id || d.target.id === node.id
-            )
+            this.chosenLinks = queryHelper.getNodeLinks({ links: this.getLinks(), node })
         },
         setEventLinkStyles(eventType) {
             this.entityLink.setEventStyles({
