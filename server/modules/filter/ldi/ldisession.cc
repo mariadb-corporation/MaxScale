@@ -20,6 +20,7 @@
 #include <maxscale/threadpool.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
+#include <maxscale/secrets.hh>
 #include <libmarias3/marias3.h>
 
 #include <utility>
@@ -115,7 +116,8 @@ char* LDISession::set_import_user(void* self, const char* key, const char* begin
 // static
 char* LDISession::set_import_password(void* self, const char* key, const char* begin, const char* end)
 {
-    static_cast<LDISession*>(self)->m_config.import_password.assign(begin, end);
+    auto pw = mxs::decrypt_password(std::string(begin, end));
+    static_cast<LDISession*>(self)->m_config.import_password = std::move(pw);
     return nullptr;
 }
 
