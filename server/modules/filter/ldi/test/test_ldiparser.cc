@@ -81,6 +81,8 @@ int main(int argc, char** argv)
     rc += check("LOAD DATA INFILE '/tmp/data.csv' INTO TABLE t1 ", false);
     rc += check("LOAD DATA INFILE 'http://tmp/data.csv' INTO TABLE t1 ", false);
     rc += check("LOAD DATA INFILE 'ftp://tmp/data.csv' INTO TABLE t1 ", false);
+    rc += check("LOAD DATA INFILE 's3://tmp/data!csv' INTO TABLE t1 ", false);
+    rc += check("LOAD DATA INFILE 's3://tmp/data$csv' INTO TABLE t1 ", false);
 
     for (std::string local : {"", " LOCAL "})
     {
@@ -98,6 +100,12 @@ int main(int argc, char** argv)
 
         rc += check("LOAD DATA " + local + " INFILE 's3://bucket/file/with/path.csv' INTO TABLE test.t1",
                     true, "bucket", "file/with/path.csv", "test", "t1", !local.empty());
+
+        rc += check("LOAD DATA " + local + " INFILE 's3://bucket-with-dash/file.csv' INTO TABLE test.t1",
+                    true, "bucket-with-dash", "file.csv", "test", "t1", !local.empty());
+
+        rc += check("LOAD DATA " + local + " INFILE 's3://bucket/file-with-dash.csv' INTO TABLE test.t1",
+                    true, "bucket", "file-with-dash.csv", "test", "t1", !local.empty());
     }
 
     return rc;

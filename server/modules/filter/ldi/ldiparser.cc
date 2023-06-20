@@ -47,7 +47,7 @@ DECLARE_ATTR_RULE(bucket, "Bucket name", std::string);
 const auto bucket_def = +(alnum | char_(".-"));
 
 DECLARE_ATTR_RULE(file, "File name", std::string);
-const auto file_def = +(alnum | char_(".-/"));
+const auto file_def = +(alnum | char_("./-"));
 
 DECLARE_ATTR_RULE(s3_url, "S3 URL", S3URL);
 const auto s3_url_def = s3_prefix > bucket > lit("/") > file;
