@@ -47,6 +47,8 @@
  * drag({ e, node, diffX, diffY })
  * drag-end(e)
  * node-size-map(obj): size of nodes, keyed by node id
+ * dblclick(node)
+ * contextmenu(node)
  */
 export default {
     name: 'mxs-svg-graph-nodes',
@@ -68,6 +70,8 @@ export default {
         revertDrag: { type: Boolean, default: false },
         boardZoom: { type: Number, required: true },
         hoverable: { type: Boolean, default: false },
+        dblclick: { type: Boolean, default: false },
+        contextmenu: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -117,16 +121,20 @@ export default {
     methods: {
         handleAddEvents(node) {
             let events = {}
-            if (this.draggable)
-                events = {
-                    ...events,
-                    mousedown: e => this.dragStart({ e, node }),
+            if (this.draggable) events.mousedown = e => this.dragStart({ e, node })
+            if (this.hoverable && !this.draggingStates.isDragging) {
+                events.mouseenter = e => this.$emit('mouseenter', { e, node })
+                events.mouseleave = e => this.$emit('mouseleave', { e, node })
+            }
+            if (this.dblclick)
+                events.dblclick = e => {
+                    e.stopPropagation()
+                    this.$emit('dblclick', node)
                 }
-            if (this.hoverable && !this.draggingStates.isDragging)
-                events = {
-                    ...events,
-                    mouseenter: e => this.$emit('mouseenter', { e, node }),
-                    mouseleave: e => this.$emit('mouseleave', { e, node }),
+            if (this.contextmenu)
+                events.contextmenu = e => {
+                    e.preventDefault()
+                    this.$emit('contextmenu', node)
                 }
             return events
         },
@@ -188,11 +196,17 @@ export default {
             })
         },
         addDragEvents(node) {
-            document.addEventListener('mousemove', e => this.drag({ e, node }))
+            /**
+             * The handler for mousemove event is an arrow function which can't
+             * be removed as it isn't attached to any variable.
+             * This stores it to dragEvent so it can be later removed.
+             */
+            this.dragEvent = e => this.drag({ e, node })
+            document.addEventListener('mousemove', this.dragEvent)
             document.addEventListener('mouseup', this.dragEnd)
         },
         rmDragEvents() {
-            document.removeEventListener('mousemove', this.drag)
+            document.removeEventListener('mousemove', this.dragEvent)
             document.removeEventListener('mouseup', this.dragEnd)
         },
         dragStart({ e, node }) {

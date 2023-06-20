@@ -25,6 +25,8 @@
                     hoverable
                     :boardZoom="panAndZoomData.k"
                     autoWidth
+                    dblclick
+                    contextmenu
                     @node-size-map="updateNodeSizes"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
@@ -40,7 +42,6 @@
                         <table
                             class="entity-table"
                             :style="{ borderColor: node.styles.highlightColor }"
-                            @dblclick.stop="$emit('dblclick', node)"
                         >
                             <thead>
                                 <tr :style="{ height: `${entitySizeConfig.headerHeight}px` }">
@@ -129,7 +130,6 @@
  * Emits:
  * - $emit('on-rendered')
  * - $emit('on-nodes-coords-update', nodes:[])
- * - $emit('dblclick', node:object)
  */
 import { mapState } from 'vuex'
 import {
@@ -570,5 +570,6 @@ export default {
     left: -6px;
     top: -6px;
     border: 4px solid $primary;
+    z-index: -1;
 }
 </style>

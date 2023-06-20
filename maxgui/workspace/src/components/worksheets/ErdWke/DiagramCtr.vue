@@ -23,6 +23,7 @@
             @on-rendered.once="fitIntoView"
             @on-nodes-coords-update="onNodesCoordsUpdate"
             @dblclick="handleDblClickNode"
+            @contextmenu="activeNodeMenu = $event"
         >
             <template v-slot:entity-setting-btn="{ node }">
                 <v-btn
@@ -51,7 +52,7 @@
             left
             content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
             :activator="`#setting-btn-${activeNodeMenuId}`"
-            @input="onCloseNodeMenu"
+            @input="activeNodeMenu = null"
         >
             <v-list>
                 <v-list-item
@@ -288,9 +289,6 @@ export default {
             const { EDIT, ALTER } = this.ENTITY_OPT_TYPES
             this.handleChooseNodeOpt({ type: this.isNewEntity(node.id) ? EDIT : ALTER, node })
         },
-        onCloseNodeMenu() {
-            this.activeNodeMenu = null
-        },
         isNewEntity(id) {
             return !this.initialNodes.some(n => n.id === id)
         },
@@ -323,7 +321,6 @@ export default {
                         this.$refs.diagram.removeNode(node.id)
                         break
                 }
-                this.onCloseNodeMenu()
             } else
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.requiredConn')],
