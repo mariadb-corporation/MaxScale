@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     if (get_my_ip(mxs->ip4(), my_ip) == 0)
     {
         test.tprintf("Test machine IP (got via network request) %s\n", my_ip);
-
+        string my_real_ip = my_ip;
         char* first_dot = strstr(my_ip, ".");
         strcpy(first_dot, ".%.%.%");
         test.tprintf("Test machine IP with %% %s\n", my_ip);
@@ -124,6 +124,21 @@ int main(int argc, char* argv[])
             test.add_result(execute_query(admin_conn, drop_db_fmt, grant_db), drop_db_failed);
             test.add_result(execute_query(admin_conn, drop_db_fmt, fail_db1), drop_db_failed);
             test.add_result(execute_query(admin_conn, drop_db_fmt, fail_db2), drop_db_failed);
+        }
+
+        if (test.ok())
+        {
+            // MXS-1827 Test a more complicated netmask.
+            // Hardly a good test, just here to have a netmask that is not just 255 or 0.
+            string userhost2_str = mxb::string_printf("'netmask'@'%s/%s'", my_real_ip.c_str(),
+                                                      my_real_ip.c_str());
+            auto userhost2 = userhost2_str.c_str();
+            test.tprintf("Testing host pattern with netmask by logging in to user account %s.", userhost2);
+            test.add_result(execute_query(admin_conn, "CREATE USER %s identified by '%s';", userhost2, pw),
+                            "Failed to create user");
+            auto conn = mxs->try_open_rwsplit_connection("netmask", pw, "");
+            test.expect(conn->is_open(), "Connection failed: %s", conn->error());
+            test.add_result(execute_query(admin_conn, "DROP USER %s;", userhost2), "Failed to delete user");
         }
 
         test.add_result(execute_query(admin_conn, "DROP USER %s;", userhostc), "Drop user failed");
