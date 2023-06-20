@@ -209,13 +209,14 @@ private:
         return rv;
     }
 
-    void consume_value(const char** ppEnd = NULL)
+    void consume_value(const char** ppBegin, const char** ppEnd)
     {
-        // Consumes everything until a ',' outside of a commented string, or eol is
+        // Consumes everything until a ',' outside of a SQL string, or eol is
         // encountered.
         bool rv = false;
         bool consumed = false;
-        const char* pEnd = NULL;
+        const char* pBegin = m_pI;
+        const char* pEnd = m_pI;
 
         while ((m_pI < m_pEnd) && (*m_pI != ',') && (*m_pI != ';'))
         {
@@ -226,27 +227,52 @@ private:
             case '`':
                 {
                     char quote = *m_pI;
+                    pBegin = m_pI;
                     ++m_pI;
-                    while ((m_pI < m_pEnd) && (*m_pI != quote))
+                    bool done = false;
+
+                    while (m_pI < m_pEnd && !done)
                     {
+                        if (*m_pI == '\\')
+                        {
+                            ++m_pI;             // Backslash escape, skip the next character
+                        }
+                        else if (*m_pI == quote)
+                        {
+                            if (m_pI + 1 < m_pEnd && m_pI[1] == quote)
+                            {
+                                ++m_pI;         // Doubled quote character, skip both characters
+                            }
+                            else
+                            {
+                                // Found matching quote, stop parsing
+                                break;
+                            }
+                        }
+
                         ++m_pI;
+                    }
+
+
+                    if (m_pI < m_pEnd)
+                    {
+                        mxb_assert(*m_pI == quote);
+                        ++m_pI;
+                        pEnd = m_pI;
                     }
                 }
                 break;
 
             default:
                 ++m_pI;
+                pEnd = m_pI;
             }
-
-            pEnd = m_pI;
 
             bypass_whitespace();
         }
 
-        if (ppEnd)
-        {
-            *ppEnd = pEnd;
-        }
+        *ppBegin = pBegin;
+        *ppEnd = pEnd;
     }
 
     status_t parse(Result* pResult)
@@ -319,10 +345,10 @@ private:
 
                         bypass_whitespace();
 
-                        const char* pValue_begin = m_pI;
+                        const char* pValue_begin;
                         const char* pValue_end;
 
-                        consume_value(&pValue_end);
+                        consume_value(&pValue_begin, &pValue_end);
 
                         pResult->add_value(pValue_begin, pValue_end);
 
@@ -349,10 +375,10 @@ private:
 
                             bypass_whitespace();
 
-                            const char* pValue_begin = m_pI;
+                            const char* pValue_begin;
                             const char* pValue_end;
 
-                            consume_value(&pValue_end);
+                            consume_value(&pValue_begin, &pValue_end);
 
                             pResult->add_value(pValue_begin, pValue_end);
 
@@ -387,7 +413,9 @@ private:
                         if (peek_current_char(&c) && (c == '='))
                         {
                             ++m_pI;
-                            consume_value();
+                            const char* ignored1;
+                            const char* ignored2;
+                            consume_value(&ignored1, &ignored2);
                         }
                     }
                     else

@@ -199,6 +199,10 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
+            {
+                "SQL_MODE",
+                "'A,B, ORACLE'"
+            },
             {NULL, NULL}
         }
     },
@@ -337,6 +341,25 @@ struct TEST_CASE
             {
                 "@maxscale.cache.enabled",
                 "FALSE"
+            },
+            {NULL, NULL}
+        }
+    },
+    {
+        "SET @maxscale.doubled_quote = 'doubled''quote', @maxscale.backslash_escape = 'backslash\\'escape', @maxscale.both='''''\\'''\\\\'",
+        P::IS_SET_MAXSCALE,
+        {
+            {
+                "@maxscale.doubled_quote",
+                "'doubled''quote'"
+            },
+            {
+                "@maxscale.backslash_escape",
+                "'backslash\\'escape'"
+            },
+            {
+                "@maxscale.both",
+                "'''''\\'''\\\\'"
             },
             {NULL, NULL}
         }
