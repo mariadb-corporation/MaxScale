@@ -85,9 +85,32 @@ public:
     {
     }
 
-    virtual State execute(GWBUF** ppNoSQL_response) = 0;
+    struct Response
+    {
+        Response(GWBUF* pData = nullptr, bool cacheable = false)
+            : pData(pData)
+            , cacheable(cacheable)
+        {
+        }
 
-    virtual State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
+        explicit operator bool() const
+        {
+            return this->pData != 0;
+        }
+
+        void reset(GWBUF* pData, bool cacheable = false)
+        {
+            this->pData = pData;
+            this->cacheable = cacheable;
+        }
+
+        GWBUF* pData     { nullptr };
+        bool   cacheable { false };
+    };
+
+    virtual State execute(Response* pNoSQL_response) = 0;
+
+    virtual State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) = 0;
 
     enum class IsError
     {

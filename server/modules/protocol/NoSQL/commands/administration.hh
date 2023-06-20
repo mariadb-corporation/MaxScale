@@ -42,7 +42,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         State state = State::READY;
         GWBUF* pResponse = nullptr;
@@ -64,7 +64,7 @@ public:
             break;
         }
 
-        *ppResponse = pResponse;
+        pNoSQL_response->reset(pResponse);
 
         return state;
     }
@@ -354,7 +354,7 @@ public:
         return m_statement;
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         State state = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -370,7 +370,7 @@ public:
             break;
         }
 
-        *ppResponse = pResponse;
+        pNoSQL_response->reset(pResponse);
         return state;
     }
 
@@ -755,7 +755,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -794,7 +794,7 @@ public:
         doc.append(kvp(key::NS, table(Quoted::NO)));
         doc.append(kvp(key::N_INDEXES_WAS, 1)); // TODO: Report real value.
 
-        *ppResponse = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 };
@@ -818,7 +818,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -855,7 +855,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        *ppResponse = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 };
@@ -1097,7 +1097,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -1185,7 +1185,7 @@ public:
             }
         }
 
-        *ppResponse = pResponse;
+        pNoSQL_response->reset(pResponse);
         return State::READY;
     }
 
@@ -1248,7 +1248,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -1343,7 +1343,7 @@ public:
             }
         }
 
-        *ppResponse = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 
@@ -1458,7 +1458,7 @@ public:
         return sql;
     };
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         uint8_t* pData = mariadb_response.data();
 
@@ -1523,7 +1523,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        *ppResponse = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 

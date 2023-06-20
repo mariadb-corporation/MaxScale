@@ -126,17 +126,17 @@ State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppRespons
     return state;
 }
 
-GWBUF* Database::translate(GWBUF&& mariadb_response)
+Command::Response Database::translate(GWBUF&& mariadb_response)
 {
     mxb_assert(is_busy());
     mxb_assert(m_sCommand.get());
 
     State state = State::READY;
-    GWBUF* pResponse = nullptr;
+    Command::Response response;
 
     try
     {
-        state = m_sCommand->translate(std::move(mariadb_response), &pResponse);
+        state = m_sCommand->translate(std::move(mariadb_response), &response);
     }
     catch (const Exception& x)
     {
@@ -144,7 +144,7 @@ GWBUF* Database::translate(GWBUF&& mariadb_response)
 
         if (!m_sCommand->is_silent())
         {
-            pResponse = x.create_response(*m_sCommand.get());
+            response.reset(x.create_response(*m_sCommand.get()));
         }
     }
     catch (const std::exception& x)
@@ -156,7 +156,7 @@ GWBUF* Database::translate(GWBUF&& mariadb_response)
 
         if (!m_sCommand->is_silent())
         {
-            pResponse = error.create_response(*m_sCommand);
+            response.reset(error.create_response(*m_sCommand));
         }
     }
 
@@ -166,13 +166,13 @@ GWBUF* Database::translate(GWBUF&& mariadb_response)
         set_ready();
     }
 
-    return pResponse;
+    return response;
 }
 
 State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppResponse)
 {
     State state = State::READY;
-    GWBUF* pResponse = nullptr;
+    Command::Response response;
 
     bool ready = true;
 
@@ -215,7 +215,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
                 m_sCommand->authorize(m_context.role_mask_of(m_name));
             }
 
-            state = m_sCommand->execute(&pResponse);
+            state = m_sCommand->execute(&response);
         }
         catch (const Exception& x)
         {
@@ -232,7 +232,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
 
             if (!m_sCommand->is_silent())
             {
-                pResponse = x.create_response(*m_sCommand.get());
+                response.reset(x.create_response(*m_sCommand.get()));
             }
         }
         catch (const bsoncxx::exception& x)
@@ -244,7 +244,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
 
             if (!m_sCommand->is_silent())
             {
-                pResponse = error.create_response(*m_sCommand);
+                response.reset(error.create_response(*m_sCommand));
             }
         }
         catch (const std::exception& x)
@@ -256,7 +256,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
 
             if (!m_sCommand->is_silent())
             {
-                pResponse = error.create_response(*m_sCommand);
+                response.reset(error.create_response(*m_sCommand));
             }
         }
     }
@@ -267,7 +267,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
         set_ready();
     }
 
-    *ppResponse = pResponse;
+    *ppResponse = response.pData;
     return state;
 }
 

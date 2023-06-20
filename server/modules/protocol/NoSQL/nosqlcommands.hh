@@ -81,19 +81,21 @@ class TableCreating : public T
 public:
     using T::T;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override final
+    State translate(GWBUF&& mariadb_response, Command::Response* pNoSQL_response) override final
     {
         State state;
+        GWBUF* pResponse = nullptr;
 
         if (m_creating_table)
         {
-            state = translate_create_table(std::move(mariadb_response), ppResponse);
+            state = translate_create_table(std::move(mariadb_response), &pResponse);
         }
         else
         {
-            state = translate2(std::move(mariadb_response), ppResponse);
+            state = translate2(std::move(mariadb_response), &pResponse);
         }
 
+        pNoSQL_response->reset(pResponse);
         return state;
     }
 
@@ -215,9 +217,9 @@ public:
 
     std::string description() const override;
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(Response* pNoSQL_response) override final;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final;
 };
 
 //
@@ -236,7 +238,7 @@ public:
 
     std::string description() const override;
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(Response* pNoSQL_response) override final;
 
     State translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -267,7 +269,7 @@ public:
 
     std::string description() const override;
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(Response* pNoSQL_response) override final;
 
     State translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -312,9 +314,9 @@ public:
 
     std::string description() const override;
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(Response* pNoSQL_response) override final;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final;
 
 private:
     void send_query(const bsoncxx::document::view& query,
@@ -350,9 +352,9 @@ public:
 
     std::string description() const override;
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(Response* pNoSQL_response) override final;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final;
 };
 
 //
@@ -370,9 +372,9 @@ public:
 
     std::string description() const override;
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(Response* ppNoSQL_response) override final;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, Response* ppNoSQL_response) override final;
 };
 
 //
@@ -618,9 +620,9 @@ public:
         return false;
     }
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(Response* pNoSQL_response) override final;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate(GWBUF&& mariadb_response, Response* ppNoSQL_response) override final;
 
     void diagnose(DocumentBuilder& doc) override;
 
@@ -639,8 +641,8 @@ class SingleCommand : public OpMsgCommand
 public:
     using OpMsgCommand::OpMsgCommand;
 
-    State execute(GWBUF** ppNoSQL_response) override;
-    virtual State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override = 0;
+    State execute(Response* pNoSQL_response) override;
+    virtual State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override = 0;
 
     void diagnose(DocumentBuilder& doc) override;
 

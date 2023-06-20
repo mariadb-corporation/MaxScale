@@ -200,7 +200,7 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
         ComResponse response(mariadb_response.data());
 
@@ -239,7 +239,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        *ppResponse = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
 
         return State::READY;
     }

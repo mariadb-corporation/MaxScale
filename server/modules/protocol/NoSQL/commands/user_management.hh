@@ -255,18 +255,18 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
     {
         State state = State::READY;
 
         switch (m_action)
         {
         case Action::CREATE:
-            state = translate_create(std::move(mariadb_response), ppNoSQL_response);
+            state = translate_create(std::move(mariadb_response), pNoSQL_response);
             break;
 
         case Action::DROP:
-            state = translate_drop(std::move(mariadb_response), ppNoSQL_response);
+            state = translate_drop(std::move(mariadb_response), pNoSQL_response);
             break;
         }
 
@@ -380,7 +380,7 @@ private:
         return success;
     }
 
-    State translate_create(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_create(GWBUF&& mariadb_response, Response* pNoSQL_response)
     {
         State state = State::READY;
 
@@ -431,7 +431,7 @@ private:
                 throw SoftError(message, error::INTERNAL_ERROR);
             }
 
-            *ppNoSQL_response = create_response(doc.extract());
+            pNoSQL_response->reset(create_response(doc.extract()));
             state = State::READY;
         }
         else
@@ -452,7 +452,7 @@ private:
         return state;
     }
 
-    State translate_drop(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_drop(GWBUF&& mariadb_response, Response* pNoSQL_response)
     {
         ComResponse response(mariadb_response.data());
 
@@ -520,7 +520,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State execute(GWBUF** ppNoSQL_response) override final
+    State execute(Response* pNoSQL_response) override final
     {
         State state = State::READY;
 
@@ -535,17 +535,17 @@ public:
             doc.append(kvp(key::N, n));
             doc.append(kvp(key::OK, 1));
 
-            *ppNoSQL_response = create_response(doc.extract());
+            pNoSQL_response->reset(create_response(doc.extract()));
         }
         else
         {
-            state = SingleCommand::execute(ppNoSQL_response);
+            state = SingleCommand::execute(pNoSQL_response);
         }
 
         return state;
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
     {
         State state = State::READY;
 
@@ -640,7 +640,7 @@ public:
         doc.append(kvp(key::N, n));
         doc.append(kvp(key::OK, 1));
 
-        *ppNoSQL_response = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 
@@ -672,7 +672,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
     {
         ComResponse response(mariadb_response.data());
 
@@ -736,7 +736,7 @@ public:
             throw_unexpected_packet();
         }
 
-        *ppNoSQL_response = create_response(doc.extract());
+        pNoSQL_response->reset(create_response(doc.extract()));
         return State::READY;
     }
 
@@ -785,7 +785,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
     {
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
@@ -878,7 +878,7 @@ public:
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
 
-                *ppNoSQL_response = create_response(doc.extract());
+                pNoSQL_response->reset(create_response(doc.extract()));
             }
             else
             {
@@ -987,7 +987,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
     {
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
@@ -1082,7 +1082,7 @@ public:
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
 
-                *ppNoSQL_response = create_response(doc.extract());
+                pNoSQL_response->reset(create_response(doc.extract()));
             }
             else
             {
@@ -1193,7 +1193,7 @@ public:
     using Base = UserAdminAuthorize<SingleCommand>;
     using Base::Base;
 
-    State execute(GWBUF** ppNoSQL_response) override
+    State execute(Response* pNoSQL_response) override
     {
         State state;
 
@@ -1215,7 +1215,7 @@ public:
         if ((m_what & ~(UserManager::Update::CUSTOM_DATA | UserManager::Update::MECHANISMS)) != 0)
         {
             // Something else but the mechanisms and/or custom_data is updated.
-            state = SingleCommand::execute(ppNoSQL_response);
+            state = SingleCommand::execute(pNoSQL_response);
         }
         else
         {
@@ -1224,7 +1224,7 @@ public:
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
 
-                *ppNoSQL_response = create_response(doc.extract());
+                pNoSQL_response->reset(create_response(doc.extract()));
                 state = State::READY;
             }
             else
@@ -1236,18 +1236,18 @@ public:
         return state;
     }
 
-    State translate(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override final
     {
         State state = State::READY;
 
         switch (m_action)
         {
         case Action::UPDATE_PASSWORD:
-            state = translate_update_pwd(std::move(mariadb_response), ppNoSQL_response);
+            state = translate_update_pwd(std::move(mariadb_response), pNoSQL_response);
             break;
 
         case Action::UPDATE_GRANTS:
-            state = translate_update_grants(std::move(mariadb_response), ppNoSQL_response);
+            state = translate_update_grants(std::move(mariadb_response), pNoSQL_response);
             break;
         }
 
@@ -1326,7 +1326,7 @@ private:
         return mxb::join(m_statements, ";");
     }
 
-    State translate_update_pwd(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_update_pwd(GWBUF&& mariadb_response, Response* pNoSQL_response)
     {
         State state = State::READY;
 
@@ -1371,7 +1371,7 @@ private:
                         DocumentBuilder doc;
                         doc.append(kvp(key::OK, 1));
 
-                        *ppNoSQL_response = create_response(doc.extract());
+                        pNoSQL_response->reset(create_response(doc.extract()));
                         state = State::READY;
                     }
                 }
@@ -1422,7 +1422,7 @@ private:
         return state;
     }
 
-    State translate_update_grants(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
+    State translate_update_grants(GWBUF&& mariadb_response, Response* pNoSQL_response)
     {
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
@@ -1450,7 +1450,7 @@ private:
             DocumentBuilder doc;
             doc.append(kvp(key::OK, 1));
 
-            *ppNoSQL_response = create_response(doc.extract());
+            pNoSQL_response->reset(create_response(doc.extract()));
         }
         else
         {
