@@ -72,8 +72,6 @@ public:
      */
     Cipher(const EVP_CIPHER* cipher);
 
-    ~Cipher();
-
     /**
      * Get cipher block size
      *
@@ -179,9 +177,8 @@ private:
                             const uint8_t* input, int input_len,
                             uint8_t* output, int* output_len);
 
-    void set_aad(const uint8_t* ptr, size_t len);
+    void set_aad(EVP_CIPHER_CTX* ctx, const uint8_t* ptr, size_t len);
 
-    EVP_CIPHER_CTX*   m_ctx;
     const EVP_CIPHER* m_cipher;
 };
 }
