@@ -266,7 +266,6 @@
         "inDays": "in days",
         "info": {
             "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
-            "closeDdlEditor": "Discard changes and close the Editor",
             "deleteEtlTask": "This would also delete the worksheet used to launch this migration task.",
             "disconnectAll": "There are open database connections from Workspace. Uncheck the box to keep these connections open.",
             "drawFkLinks": "Draw foreign key links to associated columns",
@@ -417,7 +416,6 @@
         "runQueries": "Run Queries",
         "runStatements": "Run {quantity} statements",
         "save": "Save",
-        "saveChanges": "Save changes",
         "saveScript": "Save Script",
         "saveScriptAs": "Save Script As",
         "schemas": "Schema | Schemas",

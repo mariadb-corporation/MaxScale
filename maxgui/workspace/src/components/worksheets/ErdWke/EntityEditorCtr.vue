@@ -9,31 +9,13 @@
             :schemas="stagingSchemas"
             :onExecute="onExecute"
         >
-            <template v-slot:apply-btn-prepend="{ isFormValid }">
-                <mxs-tooltip-btn
-                    btnClass="toolbar-square-btn"
-                    text
-                    color="primary"
-                    :disabled="!(isFormValid && hasChanges)"
-                    @click="saveStagingData"
-                >
-                    <template v-slot:btn-content>
-                        <v-icon size="20">mdi-content-save-outline</v-icon>
-                    </template>
-                    {{ $mxs_t('saveChanges') }}
-                </mxs-tooltip-btn>
-            </template>
-            <template v-slot:toolbar-append="{ isFormValid }">
+            <template v-slot:toolbar-append>
                 <v-spacer />
-                <!-- TODO: If isFormValid && hasChanges, it should show a dialog to prevent the
-                user from accidentally discard the changes without saving or apply the changes-->
                 <mxs-tooltip-btn btnClass="toolbar-square-btn" text color="error" @click="close">
                     <template v-slot:btn-content>
                         <v-icon size="12" color="error"> $vuetify.icons.mxs_close</v-icon>
                     </template>
-                    {{
-                        isFormValid && hasChanges ? $mxs_t('info.closeDdlEditor') : $mxs_t('close')
-                    }}
+                    {{ $mxs_t('close') }}
                 </mxs-tooltip-btn>
             </template>
         </mxs-ddl-editor>
@@ -83,8 +65,14 @@ export default {
         initialNodes() {
             return ErdTask.getters('initialNodes')
         },
+        initialLinks() {
+            return ErdTask.getters('initialLinks')
+        },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
+        },
+        stagingLinks() {
+            return ErdTask.getters('stagingLinks')
         },
         activeEntityId() {
             return ErdTask.getters('activeEntityId')
@@ -99,12 +87,8 @@ export default {
         initialData() {
             return this.$typy(this.initialActiveNode, 'data').safeObjectOrEmpty
         },
-        // initial staging data
         stagingInitialData() {
             return this.$typy(this.stagingActiveNode, 'data').safeObjectOrEmpty
-        },
-        hasChanges() {
-            return !this.$helpers.lodash.isEqual(this.stagingInitialData, this.stagingData)
         },
         stagingSchemas() {
             return ErdTask.getters('stagingSchemas')
@@ -124,6 +108,7 @@ export default {
     },
     deactivated() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
+        this.$typy(this.unwatch_stagingData).safeFunction()
     },
     methods: {
         ...mapActions({
@@ -135,10 +120,34 @@ export default {
             this.unwatch_activeEntityId = this.$watch(
                 'activeEntityId',
                 v => {
-                    if (v)
+                    if (v) {
                         this.stagingData = this.$helpers.lodash.cloneDeep(this.stagingInitialData)
+                        this.watch_stagingData()
+                    }
                 },
                 { immediate: true }
+            )
+        },
+        watch_stagingData() {
+            this.unwatch_stagingData = this.$watch(
+                'stagingData',
+                data => {
+                    const { immutableUpdate } = this.$helpers
+                    const id = this.activeEntityId
+
+                    let nodes = this.stagingNodes,
+                        links = this.stagingLinks
+
+                    const idx = nodes.findIndex(n => n.id === id)
+                    nodes = immutableUpdate(nodes, { [idx]: { data: { $set: data } } })
+
+                    ErdTaskTmp.update({
+                        where: this.activeTaskId,
+                        data: { data: { links, nodes } },
+                    })
+                    this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
+                },
+                { deep: true }
             )
         },
         close() {
@@ -147,34 +156,6 @@ export default {
                 data: { graph_height_pct: 100, active_entity_id: '' },
             })
         },
-        /**
-         * @param {object} param.model - Either ErdTask or ErdTaskTmp model
-         * @param {boolean} [param.isAdding] - is adding a new node
-         */
-        save({ model, isAdding = false }) {
-            const {
-                immutableUpdate,
-                lodash: { cloneDeep },
-            } = this.$helpers
-            const activeEntityId = this.activeEntityId
-            const data = cloneDeep(this.stagingData)
-            const scope = this
-            model.update({
-                where: this.activeTaskId,
-                data(task) {
-                    if (isAdding) {
-                        const newNode = { ...scope.stagingActiveNode, data }
-                        task.data.nodes.push(newNode)
-                    } else {
-                        const idx = task.data.nodes.findIndex(n => n.id === activeEntityId)
-                        task.data.nodes = immutableUpdate(task.data.nodes, {
-                            [idx]: { data: { $set: data } },
-                        })
-                    }
-                },
-            })
-            this.eventBus.$emit('entity-editor-ctr-update-node-data', { id: activeEntityId, data })
-        },
         async onExecute() {
             const { options } = this.isCreating ? this.stagingData : this.initialData
             const { schema, name } = options
@@ -182,11 +163,17 @@ export default {
                 connId: this.activeErdConnId,
                 schema,
                 name,
-                successCb: () => this.save({ model: ErdTask, isAdding: this.isCreating }),
+                successCb: async () => {
+                    ErdTask.update({
+                        where: this.activeTaskId,
+                        data: { data: { links: this.stagingLinks, nodes: this.stagingNodes } },
+                    })
+                    this.eventBus.$emit('entity-editor-ctr-update-node-data', {
+                        id: this.activeEntityId,
+                        data: this.stagingData,
+                    })
+                },
             })
-        },
-        saveStagingData() {
-            this.save({ model: ErdTaskTmp })
         },
     },
 }

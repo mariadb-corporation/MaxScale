@@ -5,7 +5,6 @@
             :style="{ height: `${toolbarHeight}px` }"
         >
             <revert-btn :disabled="!hasChanged || isCreating" @click="onRevert" />
-            <slot name="apply-btn-prepend" :isFormValid="isFormValid" />
             <apply-btn :disabled="!hasValidChanges" @click="onApply" />
             <slot name="toolbar-append" :isFormValid="isFormValid" />
         </div>
