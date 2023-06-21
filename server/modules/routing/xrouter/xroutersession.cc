@@ -553,7 +553,9 @@ bool XRouterSession::is_multi_node(GWBUF& buffer) const
 
     if (!mxs::Parser::type_mask_contains(parser().get_type_mask(buffer), TYPE_CREATE_TMP_TABLE))
     {
-        switch (parser().get_operation(buffer))
+        auto op = parser().get_operation(buffer);
+
+        switch (op)
         {
         case OP_ALTER_TABLE:
         case OP_ALTER:
@@ -565,6 +567,7 @@ bool XRouterSession::is_multi_node(GWBUF& buffer) const
         case OP_DROP:
         case OP_GRANT:
         case OP_REVOKE:
+            MXB_INFO("Multi-node command: %s", mxs::sql::to_string(op));
             is_multi = true;
             break;
 
@@ -585,6 +588,7 @@ bool XRouterSession::is_multi_node(GWBUF& buffer) const
         case OP_TRUNCATE:
         case OP_UNDEFINED:
         case OP_UPDATE:
+            MXB_INFO("Single-node command: %s", mxs::sql::to_string(op));
             break;
         }
     }

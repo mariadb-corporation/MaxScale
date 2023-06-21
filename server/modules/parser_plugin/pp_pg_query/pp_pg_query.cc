@@ -265,6 +265,14 @@ public:
             m_op = sql::OP_CREATE;
             break;
 
+        case T_GrantStmt:
+            analyze(pgu::cast<const GrantStmt&>(x));
+            break;
+
+        case T_GrantRoleStmt:
+            analyze(pgu::cast<const GrantRoleStmt&>(x));
+            break;
+
         default:
             nhy_assert();
         }
@@ -368,6 +376,18 @@ public:
     {
         m_type_mask |= sql::TYPE_READ;
         m_op = sql::OP_SELECT;
+    }
+
+    void analyze(const GrantStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+        m_op = x.is_grant ? sql::OP_GRANT : sql::OP_REVOKE;
+    }
+
+    void analyze(const GrantRoleStmt& x)
+    {
+        m_type_mask |= sql::TYPE_WRITE;
+        m_op = x.is_grant ? sql::OP_GRANT : sql::OP_REVOKE;
     }
 
     uint32_t get_transaction_type(const TransactionStmt& x)
