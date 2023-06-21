@@ -61,7 +61,7 @@ public:
         return m_pCurrent_request;
     }
 
-    void handle_request(GWBUF* pRequest);
+    State handle_request(GWBUF* pRequest);
 
     bool clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
@@ -72,8 +72,6 @@ public:
     }
 
 private:
-    State handle_request(GWBUF* pRequest, Command::Response* pResponse);
-
     template<class T>
     void log_in(const char* zContext, const T& req)
     {
@@ -94,6 +92,8 @@ private:
     State handle_get_more(GWBUF* pRequest, packet::GetMore&& req, Command::Response* pResponse);
     State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Command::Response* pResponse);
     State handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* pResponse);
+
+    void flush_response(Command::Response& response);
 
     Context            m_context;
     Config&            m_config;
