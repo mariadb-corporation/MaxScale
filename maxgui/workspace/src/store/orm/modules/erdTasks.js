@@ -51,16 +51,16 @@ export default {
             }
             Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name: erdName } })
         },
-        updateGraphDataHistory({ getters, dispatch }, graphData) {
-            const currentHistory = getters.graphDataHistory
+        updateNodesHistory({ getters, dispatch }, nodes) {
+            const currentHistory = getters.nodesHistory
 
-            let newHistory = [graphData]
+            let newHistory = [nodes]
             // only push new data if the current index is the last item, otherwise, override the history
             if (getters.activeHistoryIdx === currentHistory.length - 1)
-                newHistory = [...getters.graphDataHistory, graphData]
+                newHistory = [...getters.nodesHistory, nodes]
             ErdTaskTmp.update({
                 where: getters.activeRecordId,
-                data: { graph_data_history: newHistory },
+                data: { nodes_history: newHistory },
             })
             dispatch('updateActiveHistoryIdx', newHistory.length - 1)
         },
@@ -74,16 +74,11 @@ export default {
     getters: {
         activeRecordId: () => Worksheet.getters('activeId'),
         activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
-        graphData: (_, getters) => t(getters.activeRecord, 'data').safeObjectOrEmpty,
-        initialNodes: (_, getters) => t(getters.graphData, 'nodes').safeArray,
-        initialLinks: (_, getters) => t(getters.graphData, 'links').safeArray,
+        initialNodes: (_, getters) => t(getters.activeRecord, 'nodes').safeArray,
         // Temp states getters
         activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
-        stagingGraphData: (_, getters) => t(getters.activeTmpRecord, 'data').safeObjectOrEmpty,
-        stagingNodes: (_, getters) => t(getters.stagingGraphData, 'nodes').safeArray,
-        stagingLinks: (_, getters) => t(getters.stagingGraphData, 'links').safeArray,
-        graphDataHistory: (_, getters) =>
-            t(getters.activeTmpRecord, 'graph_data_history').safeArray,
+        stagingNodes: (_, getters) => t(getters.activeTmpRecord, 'nodes').safeArray,
+        nodesHistory: (_, getters) => t(getters.activeTmpRecord, 'nodes_history').safeArray,
         activeHistoryIdx: (_, getters) =>
             t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
         stagingSchemas: (_, getters) => [

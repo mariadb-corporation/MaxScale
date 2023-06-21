@@ -95,7 +95,7 @@
             text
             depressed
             color="primary"
-            :disabled="activeHistoryIdx === graphDataHistory.length - 1"
+            :disabled="activeHistoryIdx === nodesHistory.length - 1"
             @click="$emit('on-redo')"
         >
             <template v-slot:btn-content>
@@ -210,8 +210,8 @@ export default {
                 if (v) this.$emit('set-zoom', { v: v / 100 })
             },
         },
-        graphDataHistory() {
-            return ErdTask.getters('graphDataHistory')
+        nodesHistory() {
+            return ErdTask.getters('nodesHistory')
         },
         activeHistoryIdx() {
             return ErdTask.getters('activeHistoryIdx')

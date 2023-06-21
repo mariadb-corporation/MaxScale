@@ -133,7 +133,7 @@ export default {
                 })
                 await this.queryDdlEditorSuppData({ connId: conn.id, config })
                 const erdTaskData = {
-                    data: queryHelper.genErdData({
+                    nodes: queryHelper.genErdNodes({
                         data: parsedDdl,
                         charsetCollationMap: this.charset_collation_map,
                     }),
@@ -142,9 +142,9 @@ export default {
                 const erdTaskTmpData = {
                     graph_height_pct: 100,
                     active_entity_id: '',
-                    data: erdTaskData.data,
+                    nodes: erdTaskData.nodes,
                     key: this.$helpers.uuidv1(),
-                    graph_data_history: [],
+                    nodes_history: [],
                     active_history_idx: 0,
                 }
                 // Bind connection to a new worksheet

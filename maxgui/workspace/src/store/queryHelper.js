@@ -476,8 +476,15 @@ function genErdLink({
     if (isPartOfCompositeKey) link.isPartOfCompositeKey = isPartOfCompositeKey
     return link
 }
-
-function handleGenErdLink({ srcNode, fk, nodes }) {
+/**
+ *
+ * @param {object} param.srcNode - source node
+ * @param {object} param.fk - foreign key object
+ * @param {array} param.nodes - all nodes of the ERD
+ * @param {boolean} param.isAttrToAttr - isAttrToAttr: FK is drawn to associated column
+ * @returns
+ */
+function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
     const { index_cols, referenced_schema_name, referenced_table_name, referenced_index_cols } = fk
     let links = []
 
@@ -503,6 +510,7 @@ function handleGenErdLink({ srcNode, fk, nodes }) {
                 srcCardinality,
                 targetCardinality,
             })
+            if (linkObj.isPartOfCompositeKey) linkObj.hidden = !isAttrToAttr
             linkObj.styles = { invisibleHighlightColor }
             links.push(linkObj)
         }
@@ -510,13 +518,12 @@ function handleGenErdLink({ srcNode, fk, nodes }) {
     return links
 }
 /**
- * @param {Object} param.data - parsed ddl map of schemas
- * @param {Object} param.charsetCollationMap - charset collation map
+ * @param {object} param.data - parsed ddl map of schemas
+ * @param {object} param.charsetCollationMap - charset collation map
+ * @returns {array} nodes
  */
-function genErdData({ data, charsetCollationMap }) {
-    let nodes = [],
-        links = []
-
+function genErdNodes({ data, charsetCollationMap }) {
+    let nodes = []
     Object.keys(data).forEach(schema => {
         nodes = [
             ...nodes,
@@ -532,24 +539,8 @@ function genErdData({ data, charsetCollationMap }) {
             ),
         ]
     })
-    nodes.forEach(node => {
-        const fks = typy(node.data.definitions.keys[tokens.foreignKey]).safeArray
-        fks.forEach(fk => {
-            links = [
-                ...links,
-                ...handleGenErdLink({
-                    srcNode: node,
-                    fk: {
-                        ...fk,
-                        referenced_schema_name:
-                            fk.referenced_schema_name || node.data.options.schema,
-                    },
-                    nodes,
-                }),
-            ]
-        })
-    })
-    return { nodes, links }
+
+    return nodes
 }
 
 const tableParser = new TableParser()
@@ -754,7 +745,8 @@ export default {
     categorizeConns,
     genConnStr,
     getDatabase,
-    genErdData,
+    genErdNodes,
+    handleGenErdLink,
     queryAndParseDDL,
     findKeyTypeByColName,
     getKeyObjByColNames,

@@ -15,7 +15,7 @@
             ref="diagram"
             :key="diagramKey"
             :panAndZoom.sync="panAndZoom"
-            :data="stagingGraphData"
+            :nodes="stagingNodes"
             :dim="diagramDim"
             :scaleExtent="scaleExtent"
             :graphConfigData="graphConfigData"
@@ -147,12 +147,6 @@ export default {
         activeErdConn() {
             return QueryConn.getters('activeErdConn')
         },
-        graphData() {
-            return this.$typy(this.activeRecord, 'data').safeObjectOrEmpty
-        },
-        stagingGraphData() {
-            return ErdTask.getters('stagingGraphData')
-        },
         initialNodes() {
             return ErdTask.getters('initialNodes')
         },
@@ -206,8 +200,8 @@ export default {
         eventBus() {
             return EventBus
         },
-        graphDataHistory() {
-            return ErdTask.getters('graphDataHistory')
+        nodesHistory() {
+            return ErdTask.getters('nodesHistory')
         },
         activeHistoryIdx() {
             return ErdTask.getters('activeHistoryIdx')
@@ -280,8 +274,8 @@ export default {
                 { immediate: true }
             )
         },
-        onRendered(graphData) {
-            this.onNodesCoordsUpdate(graphData.nodes)
+        onRendered(diagram) {
+            this.onNodesCoordsUpdate(diagram.nodes)
             this.fitIntoView()
         },
         handleDblClickNode(node) {
@@ -313,18 +307,11 @@ export default {
                                 // close editor
                                 active_entity_id: '',
                                 graph_height_pct: 100,
-                                // remove the node and its links
-                                data: {
-                                    nodes: this.stagingNodes.filter(n => n.id !== node.id),
-                                    links: queryHelper.getExcludedLinks({
-                                        links: this.stagingGraphData.links,
-                                        node,
-                                    }),
-                                },
+                                nodes: this.stagingNodes.filter(n => n.id !== node.id),
                             },
                         })
                         this.$refs.diagram.removeNode(node)
-                        ErdTask.dispatch('updateGraphDataHistory', this.stagingGraphData)
+                        ErdTask.dispatch('updateNodesHistory', this.stagingNodes)
                         break
                     }
                 }
@@ -356,19 +343,10 @@ export default {
             const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
             const nodes = this.assignCoord({ nodeMap, nodes: this.initialNodes, ignoreSize: true })
             const stagingNodes = this.assignCoord({ nodeMap, nodes: this.stagingNodes })
-            ErdTask.update({
-                where: this.activeTaskId,
-                data: { data: { links: this.graphData.links, nodes }, is_laid_out: true },
-            })
+            ErdTask.update({ where: this.activeTaskId, data: { nodes, is_laid_out: true } })
             // Also update the staging data
-            const stagingGraphData = { links: this.stagingGraphData.links, nodes: stagingNodes }
-            ErdTaskTmp.update({
-                where: this.activeTaskId,
-                data: {
-                    data: stagingGraphData,
-                },
-            })
-            ErdTask.dispatch('updateGraphDataHistory', stagingGraphData)
+            ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
+            ErdTask.dispatch('updateNodesHistory', stagingNodes)
         },
         /**
          * @param {object} node - node with new coordinates
@@ -443,9 +421,9 @@ export default {
             const nodes = this.$helpers.immutableUpdate(this.stagingNodes, { $push: [node] })
             ErdTaskTmp.update({
                 where: this.activeTaskId,
-                data: { data: { ...this.stagingGraphData, nodes } },
+                data: { nodes },
             }).then(() => {
-                ErdTask.dispatch('updateGraphDataHistory', this.stagingGraphData)
+                ErdTask.dispatch('updateNodesHistory', this.stagingNodes)
                 this.$refs.diagram.addNode(node)
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
@@ -457,15 +435,19 @@ export default {
                     // close editor
                     active_entity_id: '',
                     graph_height_pct: 100,
-                    data: this.graphDataHistory[this.activeHistoryIdx],
+                    nodes: this.nodesHistory[this.activeHistoryIdx],
                 },
             })
-            // update nodes in ErdTask model as well
-            const nodeMap = this.$helpers.lodash.keyBy(this.stagingNodes, 'id')
-            const nodes = this.assignCoord({ nodeMap, nodes: this.initialNodes, ignoreSize: true })
+            // update coord of nodes in ErdTask model as well
             ErdTask.update({
                 where: this.activeTaskId,
-                data: { data: { links: this.graphData.links, nodes } },
+                data: {
+                    nodes: this.assignCoord({
+                        nodeMap: this.$helpers.lodash.keyBy(this.stagingNodes, 'id'),
+                        nodes: this.initialNodes,
+                        ignoreSize: true,
+                    }),
+                },
             })
             this.$nextTick(() => {
                 this.$refs.diagram.assignData()

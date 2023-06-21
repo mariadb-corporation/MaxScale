@@ -16,7 +16,7 @@
             <template v-slot:append="{ data: { style } }">
                 <mxs-svg-graph-nodes
                     ref="graphNodes"
-                    :nodes="graphData.nodes"
+                    :nodes="graphNodes"
                     :coordMap.sync="graphNodeCoordMap"
                     :style="style"
                     :defNodeSize="defNodeSize"
@@ -128,7 +128,7 @@
  */
 /*
  * Emits:
- * - $emit('on-rendered', graphData)
+ * - $emit('on-rendered', { nodes, links })
  * - $emit('on-node-drag-end', node)
  */
 import { mapState } from 'vuex'
@@ -158,7 +158,7 @@ export default {
         dim: { type: Object, required: true },
         panAndZoom: { type: Object, required: true }, // sync
         scaleExtent: { type: Array, required: true },
-        data: { type: Object, required: true },
+        nodes: { type: Array, required: true },
         graphConfigData: { type: Object, required: true },
         isLaidOut: { type: Boolean, default: false },
         activeNodeId: { type: String, default: '' },
@@ -168,7 +168,8 @@ export default {
             isRendering: false,
             svgGroup: null,
             graphNodeCoordMap: {},
-            graphData: { nodes: [], links: [] },
+            graphNodes: [],
+            graphLinks: [],
             simulation: null,
             defNodeSize: { width: 250, height: 100 },
             chosenLinks: [],
@@ -197,7 +198,7 @@ export default {
             return 320 / 2 - 27
         },
         entityKeyMap() {
-            return this.graphData.nodes.reduce((map, node) => {
+            return this.graphNodes.reduce((map, node) => {
                 map[node.id] = node.data.definitions.keys
                 return map
             }, {})
@@ -240,7 +241,11 @@ export default {
     },
     created() {
         this.initGraphConfig()
-        this.init()
+        // Render the diagram with a loading progress indicator
+        if (this.nodes.length) {
+            this.isRendering = true
+            this.assignData()
+        }
         this.graphDim = this.dim
     },
     beforeDestroy() {
@@ -248,36 +253,43 @@ export default {
     },
     methods: {
         /**
-         * Render the graph with a loading progress indicator
-         */
-        init() {
-            if (this.$typy(this.data, 'nodes').safeArray.length) {
-                this.isRendering = true
-                this.assignData()
-            }
-        },
-        /**
-         * D3 mutates data, this method deep clones data leaving the original intact
-         * and call handleFilterCompositeKeys to handle composite keys case.
-         * By assigning `data` to `graphData`,  @node-size-map event will be
+         * @public
+         * D3 mutates nodes which breaks reactivity, so to prevent that,
+         * nodes must be cloned.
+         * By assigning `nodes` to `graphNodes`,  @node-size-map event will be
          * emitted from `mxs-svg-graph-nodes` component which triggers the drawing
          * of the graph if there is a change in the ID of the nodes.
          */
         assignData() {
-            const data = this.$helpers.lodash.cloneDeep(this.data)
-            this.graphData = {
-                nodes: this.$typy(data, 'nodes').safeArray,
-                links: this.$typy(data, 'links').safeArray,
-            }
-            this.handleFilterCompositeKeys(this.isAttrToAttr)
+            const nodes = this.$helpers.lodash.cloneDeep(this.nodes)
+            this.graphNodes = nodes
+            this.genLinks(nodes)
         },
-        handleFilterCompositeKeys(v) {
-            this.graphData.links.forEach(link => {
-                if (link.isPartOfCompositeKey) link.hidden = !v
-            })
+        genLinks(nodes) {
+            this.graphLinks = nodes.reduce((links, node) => {
+                const fks = this.$typy(
+                    node.data.definitions.keys[this.CREATE_TBL_TOKENS.foreignKey]
+                ).safeArray
+                fks.forEach(fk => {
+                    links = [
+                        ...links,
+                        ...queryHelper.handleGenErdLink({
+                            srcNode: node,
+                            fk: {
+                                ...fk,
+                                referenced_schema_name:
+                                    fk.referenced_schema_name || node.data.options.schema,
+                            },
+                            nodes,
+                            isAttrToAttr: this.isAttrToAttr,
+                        }),
+                    ]
+                })
+                return links
+            }, [])
         },
         getNodeIdx(id) {
-            return this.graphData.nodes.findIndex(n => n.id === id)
+            return this.graphNodes.findIndex(n => n.id === id)
         },
         /**
          * @public
@@ -286,9 +298,10 @@ export default {
         updateNode({ id, data }) {
             const index = this.getNodeIdx(id)
             if (index >= 0) {
-                this.$set(this.graphData.nodes[index], 'data', data)
+                this.$set(this.graphNodes[index], 'data', data)
                 // Re-calculate the size
                 this.$refs.graphNodes.onNodeResized(id)
+                this.genLinks(this.graphNodes)
             }
         },
         /**
@@ -296,7 +309,8 @@ export default {
          * Call this method to add a new node
          */
         addNode(node) {
-            this.graphData.nodes.push(node)
+            this.graphNodes.push(node)
+            this.genLinks(this.graphNodes)
         },
         /**
          * @public
@@ -304,9 +318,9 @@ export default {
          */
         removeNode(node) {
             const index = this.getNodeIdx(node.id)
-            if (!index >= 0) this.graphData.nodes.splice(index, 1)
-            this.graphData.links = queryHelper.getExcludedLinks({
-                links: this.graphData.links,
+            if (!index >= 0) this.graphNodes.splice(index, 1)
+            this.graphLinks = queryHelper.getExcludedLinks({
+                links: this.graphLinks,
                 node,
             })
         },
@@ -316,26 +330,26 @@ export default {
          */
         getGraphExtent() {
             return {
-                minX: d3Min(this.graphData.nodes, n => n.x - n.size.width / 2),
-                minY: d3Min(this.graphData.nodes, n => n.y - n.size.height / 2),
-                maxX: d3Max(this.graphData.nodes, n => n.x + n.size.width / 2),
-                maxY: d3Max(this.graphData.nodes, n => n.y + n.size.height / 2),
+                minX: d3Min(this.graphNodes, n => n.x - n.size.width / 2),
+                minY: d3Min(this.graphNodes, n => n.y - n.size.height / 2),
+                maxX: d3Max(this.graphNodes, n => n.x + n.size.width / 2),
+                maxY: d3Max(this.graphNodes, n => n.y + n.size.height / 2),
             }
         },
         /**
          * @param {Object} nodeSizeMap - size of nodes
          */
         updateNodeSizes(nodeSizeMap) {
-            this.graphData.nodes.forEach(node => {
+            this.graphNodes.forEach(node => {
                 node.size = nodeSizeMap[node.id]
             })
             if (Object.keys(nodeSizeMap).length) this.runSimulation()
         },
         runSimulation() {
-            this.simulation = forceSimulation(this.graphData.nodes)
+            this.simulation = forceSimulation(this.graphNodes)
                 .force(
                     'link',
-                    forceLink(this.graphData.links).id(d => d.id)
+                    forceLink(this.graphLinks).id(d => d.id)
                 )
                 .force(
                     'charge',
@@ -370,10 +384,10 @@ export default {
             this.initLinkInstance()
             this.drawLinks()
             this.isRendering = false
-            this.$emit('on-rendered', this.graphData)
+            this.$emit('on-rendered', { nodes: this.graphNodes, links: this.graphLinks })
         },
         setGraphNodeCoordMap() {
-            this.graphNodeCoordMap = this.graphData.nodes.reduce((map, n) => {
+            this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {
                 const { x, y, id } = n
                 if (id) map[id] = { x, y }
                 return map
@@ -410,7 +424,7 @@ export default {
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
-            const nodeData = this.graphData.nodes.find(n => n.id === node.id)
+            const nodeData = this.graphNodes.find(n => n.id === node.id)
             nodeData.x = nodeData.x + diffX
             nodeData.y = nodeData.y + diffY
             this.setChosenLinks(node)
@@ -506,8 +520,10 @@ export default {
          * @param {boolean} v
          */
         handleIsAttrToAttrMode(v) {
-            this.handleFilterCompositeKeys(v)
-            this.simulation.force('link').links(this.graphData.links)
+            this.graphLinks.forEach(link => {
+                if (link.isPartOfCompositeKey) link.hidden = !v
+            })
+            this.simulation.force('link').links(this.graphLinks)
         },
     },
 }

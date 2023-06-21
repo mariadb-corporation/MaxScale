@@ -65,14 +65,8 @@ export default {
         initialNodes() {
             return ErdTask.getters('initialNodes')
         },
-        initialLinks() {
-            return ErdTask.getters('initialLinks')
-        },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
-        },
-        stagingLinks() {
-            return ErdTask.getters('stagingLinks')
         },
         activeEntityId() {
             return ErdTask.getters('activeEntityId')
@@ -135,16 +129,12 @@ export default {
                     const { immutableUpdate } = this.$helpers
                     const id = this.activeEntityId
 
-                    let nodes = this.stagingNodes,
-                        links = this.stagingLinks
+                    let nodes = this.stagingNodes
 
                     const idx = nodes.findIndex(n => n.id === id)
                     nodes = immutableUpdate(nodes, { [idx]: { data: { $set: data } } })
 
-                    ErdTaskTmp.update({
-                        where: this.activeTaskId,
-                        data: { data: { links, nodes } },
-                    })
+                    ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes } })
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
                 },
                 { deep: true }
@@ -164,10 +154,7 @@ export default {
                 schema,
                 name,
                 successCb: async () => {
-                    ErdTask.update({
-                        where: this.activeTaskId,
-                        data: { data: { links: this.stagingLinks, nodes: this.stagingNodes } },
-                    })
+                    ErdTask.update({ where: this.activeTaskId, data: { nodes: this.stagingNodes } })
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', {
                         id: this.activeEntityId,
                         data: this.stagingData,
