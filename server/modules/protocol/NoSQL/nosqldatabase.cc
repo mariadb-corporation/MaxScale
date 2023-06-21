@@ -267,7 +267,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
         set_ready();
     }
 
-    *ppResponse = response.pData;
+    *ppResponse = response.release();
     return state;
 }
 

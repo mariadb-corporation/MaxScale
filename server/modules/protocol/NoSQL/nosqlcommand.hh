@@ -85,27 +85,59 @@ public:
     {
     }
 
-    struct Response
+    class Response
     {
+    public:
+        Response(const Response&) = delete;
+        Response& operator=(const Response&) = delete;
+
         Response(GWBUF* pData = nullptr, bool cacheable = false)
-            : pData(pData)
-            , cacheable(cacheable)
+            : m_pData(pData)
+            , m_cacheable(cacheable)
         {
+        }
+
+        Response(Response&& rhs)
+            : m_pData(std::exchange(rhs.m_pData, nullptr))
+            , m_cacheable(std::exchange(rhs.m_cacheable, false))
+        {
+        }
+
+
+        ~Response()
+        {
+            mxb_assert(!m_pData);
         }
 
         explicit operator bool() const
         {
-            return this->pData != 0;
+            return m_pData != 0;
+        }
+
+        bool cacheable() const
+        {
+            return m_cacheable;
         }
 
         void reset(GWBUF* pData, bool cacheable = false)
         {
-            this->pData = pData;
-            this->cacheable = cacheable;
+            mxb_assert(!m_pData);
+
+            m_pData = pData;
+            m_cacheable = cacheable;
         }
 
-        GWBUF* pData     { nullptr };
-        bool   cacheable { false };
+        GWBUF* release()
+        {
+            GWBUF* pData = std::exchange(m_pData, nullptr);
+            m_cacheable = false;
+
+            return pData;
+        }
+
+    private:
+        GWBUF* m_pData     { nullptr };
+        bool   m_cacheable { false };
     };
 
     virtual State execute(Response* pNoSQL_response) = 0;
