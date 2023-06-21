@@ -313,6 +313,23 @@ CacheFilterSession::~CacheFilterSession()
     MXB_FREE(m_zDefaultDb);
 }
 
+namespace
+{
+
+const std::string empty_string;
+
+}
+
+const std::string& CacheFilterSession::user() const
+{
+    return m_user_specific ? m_pSession->user() : empty_string;
+}
+
+const std::string& CacheFilterSession::host() const
+{
+    return m_user_specific ? m_pSession->client_remote() : empty_string;
+}
+
 // static
 CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCache,
                                                MXS_SESSION* pSession,
@@ -1125,20 +1142,18 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
         if (sRules)
         {
-            static const std::string empty;
-
-            const std::string& user = m_user_specific ? m_pSession->user() : empty;
-            const std::string& host = m_user_specific ? m_pSession->client_remote() : empty;
+            const std::string& u = user();
+            const std::string& h = host();
 
             cache_result_t result;
 
             if (m_generate_key)
             {
-                result = m_generate_key(user, host, m_zDefaultDb, pPacket, &m_key);
+                result = m_generate_key(u, h, m_zDefaultDb, pPacket, &m_key);
             }
             else
             {
-                result = m_sCache->get_key(user, host, m_zDefaultDb, pPacket, &m_key);
+                result = m_sCache->get_key(u, h, m_zDefaultDb, pPacket, &m_key);
             }
 
             if (CACHE_RESULT_IS_OK(result))

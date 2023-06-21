@@ -41,6 +41,24 @@ public:
     ~CacheFilterSession();
 
     /**
+     * @return The current user if user specific cache or empty string if not.
+     */
+    const std::string& user() const;
+
+    /**
+     * @return The current host if user specific cache or empty string if not.
+     */
+    const std::string& host() const;
+
+    /**
+     * @return Current db or NULL if there is not one.
+     */
+    const char* default_db() const
+    {
+        return m_zDefaultDb;
+    }
+
+    /**
      * Creates a CacheFilterSession instance.
      *
      * @param pCache     Pointer to the cache instance to which this session cache
