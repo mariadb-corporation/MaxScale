@@ -56,19 +56,18 @@ NoSQL::~NoSQL()
 
 void NoSQL::handle_request(GWBUF* pRequest)
 {
-    GWBUF* pResponse = nullptr;
-    handle_request(pRequest, &pResponse);
+    Command::Response response;
+    handle_request(pRequest, &response);
 
-    if (pResponse)
+    if (response)
     {
-        m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pResponse));
+        m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
     }
 }
 
-State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
+State NoSQL::handle_request(GWBUF* pRequest, Command::Response* pResponse)
 {
     State state = State::READY;
-    GWBUF* pResponse = nullptr;
 
     if (!m_sDatabase)
     {
@@ -93,31 +92,31 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
                 break;
 
             case MONGOC_OPCODE_GET_MORE:
-                state = handle_get_more(pRequest, packet::GetMore(req), &pResponse);
+                state = handle_get_more(pRequest, packet::GetMore(req), pResponse);
                 break;
 
             case MONGOC_OPCODE_KILL_CURSORS:
-                state = handle_kill_cursors(pRequest, packet::KillCursors(req), &pResponse);
+                state = handle_kill_cursors(pRequest, packet::KillCursors(req), pResponse);
                 break;
 
             case MONGOC_OPCODE_DELETE:
-                state = handle_delete(pRequest, packet::Delete(req), &pResponse);
+                state = handle_delete(pRequest, packet::Delete(req), pResponse);
                 break;
 
             case MONGOC_OPCODE_INSERT:
-                state = handle_insert(pRequest, packet::Insert(req), &pResponse);
+                state = handle_insert(pRequest, packet::Insert(req), pResponse);
                 break;
 
             case MONGOC_OPCODE_MSG:
-                state = handle_msg(pRequest, packet::Msg(req), &pResponse);
+                state = handle_msg(pRequest, packet::Msg(req), pResponse);
                 break;
 
             case MONGOC_OPCODE_QUERY:
-                state = handle_query(pRequest, packet::Query(req), &pResponse);
+                state = handle_query(pRequest, packet::Query(req), pResponse);
                 break;
 
             case MONGOC_OPCODE_UPDATE:
-                state = handle_update(pRequest, packet::Update(req), &pResponse);
+                state = handle_update(pRequest, packet::Update(req), pResponse);
                 break;
 
             default:
@@ -145,24 +144,23 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
         m_requests.push_back(pRequest);
     }
 
-    *ppResponse = pResponse;
     return state;
 }
 
-bool NoSQL::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(m_pDcb);
     mxb_assert(m_sDatabase.get());
 
-    Command::Response protocol_response = m_sDatabase->translate(std::move(response));
+    Command::Response response = m_sDatabase->translate(std::move(mariadb_response));
 
     if (m_sDatabase->is_ready())
     {
         m_sDatabase.reset();
 
-        if (protocol_response)
+        if (response)
         {
-            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(protocol_response.release()));
+            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
         }
 
         if (!m_requests.empty())
@@ -177,15 +175,12 @@ bool NoSQL::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs
                 GWBUF* pRequest = m_requests.front();
                 m_requests.pop_front();
 
-                GWBUF* pData = nullptr;
-                state = handle_request(pRequest, &pData);
+                state = handle_request(pRequest, &response);
 
-                protocol_response.reset(pData);
-
-                if (protocol_response)
+                if (response)
                 {
                     // The response could be generated immediately, just send it.
-                    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(protocol_response.release()));
+                    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
                 }
             }
             while (state == State::READY && !m_requests.empty());
@@ -194,7 +189,7 @@ bool NoSQL::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs
     else
     {
         // If the database is not ready, there cannot be a response.
-        mxb_assert(!protocol_response);
+        mxb_assert(!response);
     }
 
     return true;
@@ -205,16 +200,14 @@ void NoSQL::kill_client()
     m_context.client_connection().dcb()->session()->kill();
 }
 
-State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse)
+State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, Command::Response* pResponse)
 {
     log_in("Request(Delete)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
-    Command::Response response;
-    State state = m_sDatabase->handle_delete(pRequest, std::move(req), &response);
-    *ppResponse = response.release();
+    State state = m_sDatabase->handle_delete(pRequest, std::move(req), pResponse);
 
     if (state == State::READY)
     {
@@ -224,16 +217,14 @@ State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResp
     return state;
 }
 
-State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse)
+State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, Command::Response* pResponse)
 {
     log_in("Request(Insert)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
-    Command::Response response;
-    State state = m_sDatabase->handle_insert(pRequest, std::move(req), &response);
-    *ppResponse = response.release();
+    State state = m_sDatabase->handle_insert(pRequest, std::move(req), pResponse);
 
     if (state == State::READY)
     {
@@ -243,16 +234,14 @@ State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResp
     return state;
 }
 
-State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse)
+State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, Command::Response* pResponse)
 {
     log_in("Request(Update)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
-    Command::Response response;
-    State state = m_sDatabase->handle_update(pRequest, std::move(req), &response);
-    *ppResponse = response.release();
+    State state = m_sDatabase->handle_update(pRequest, std::move(req), pResponse);
 
     if (state == State::READY)
     {
@@ -262,16 +251,14 @@ State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResp
     return state;
 }
 
-State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse)
+State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, Command::Response* pResponse)
 {
     log_in("Request(Query)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
-    Command::Response response;
-    State state = m_sDatabase->handle_query(pRequest, std::move(req), &response);
-    *ppResponse = response.release();
+    State state = m_sDatabase->handle_query(pRequest, std::move(req), pResponse);
 
     if (state == State::READY)
     {
@@ -281,16 +268,14 @@ State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppRespon
     return state;
 }
 
-State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse)
+State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, Command::Response* pResponse)
 {
     log_in("Request(GetMore)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
-    Command::Response response;
-    State state = m_sDatabase->handle_get_more(pRequest, std::move(req), &response);
-    *ppResponse = response.release();
+    State state = m_sDatabase->handle_get_more(pRequest, std::move(req), pResponse);
 
     if (state == State::READY)
     {
@@ -300,16 +285,14 @@ State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppR
     return state;
 }
 
-State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse)
+State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Command::Response* pResponse)
 {
     log_in("Request(KillCursors)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = Database::create("admin", &m_context, &m_config);
 
-    Command::Response response;
-    State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), &response);
-    *ppResponse = response.release();
+    State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), pResponse);
 
     if (state == State::READY)
     {
@@ -319,7 +302,7 @@ State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWB
     return state;
 }
 
-State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
+State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* pResponse)
 {
     log_in("Request(Msg)", req);
 
@@ -340,9 +323,7 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
             mxb_assert(!m_sDatabase.get());
             m_sDatabase = Database::create(name, &m_context, &m_config);
 
-            Command::Response response;
-            state = m_sDatabase->handle_msg(pRequest, std::move(req), &response);
-            *ppResponse = response.release();
+            state = m_sDatabase->handle_msg(pRequest, std::move(req), pResponse);
 
             if (state == State::READY)
             {
