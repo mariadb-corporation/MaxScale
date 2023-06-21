@@ -41,66 +41,66 @@ unique_ptr<Database> Database::create(const std::string& name, Context* pContext
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }
 
-State Database::handle_delete(GWBUF* pRequest, packet::Delete&& packet, GWBUF** ppResponse)
+State Database::handle_delete(GWBUF* pRequest, packet::Delete&& packet, Command::Response* pResponse)
 {
     mxb_assert(is_ready());
 
     unique_ptr<Command> sCommand(new OpDeleteCommand(this, pRequest, std::move(packet)));
 
-    return execute_command(std::move(sCommand), ppResponse);
+    return execute_command(std::move(sCommand), pResponse);
 }
 
-State Database::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse)
+State Database::handle_insert(GWBUF* pRequest, packet::Insert&& req, Command::Response* pResponse)
 {
     mxb_assert(is_ready());
 
     unique_ptr<Command> sCommand(new OpInsertCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand), ppResponse);
+    return execute_command(std::move(sCommand), pResponse);
 }
 
-State Database::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse)
+State Database::handle_query(GWBUF* pRequest, packet::Query&& req, Command::Response* pResponse)
 {
     mxb_assert(is_ready());
 
     unique_ptr<Command> sCommand(new OpQueryCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand), ppResponse);
+    return execute_command(std::move(sCommand), pResponse);
 }
 
-State Database::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse)
+State Database::handle_update(GWBUF* pRequest, packet::Update&& req, Command::Response* pResponse)
 {
     mxb_assert(is_ready());
 
     unique_ptr<Command> sCommand(new OpUpdateCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand), ppResponse);
+    return execute_command(std::move(sCommand), pResponse);
 }
 
-State Database::handle_get_more(GWBUF* pRequest, packet::GetMore&& packet, GWBUF** ppResponse)
+State Database::handle_get_more(GWBUF* pRequest, packet::GetMore&& packet, Command::Response* pResponse)
 {
     mxb_assert(is_ready());
 
     unique_ptr<Command> sCommand(new OpGetMoreCommand(this, pRequest, std::move(packet)));
 
-    return execute_command(std::move(sCommand), ppResponse);
+    return execute_command(std::move(sCommand), pResponse);
 }
 
-State Database::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse)
+State Database::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Command::Response* pResponse)
 {
     mxb_assert(is_ready());
 
     unique_ptr<Command> sCommand(new OpKillCursorsCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand), ppResponse);
+    return execute_command(std::move(sCommand), pResponse);
 }
 
-State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
+State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* pResponse)
 {
     mxb_assert(is_ready());
 
     State state = State::READY;
-    GWBUF* pResponse = nullptr;
+    Command::Response response;
 
     auto sCommand = OpMsgCommand::get(this, pRequest, std::move(req));
 
@@ -110,19 +110,19 @@ State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppRespons
                         error::UNAUTHORIZED);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*sCommand.get());
+        response.reset(error.create_response(*sCommand.get()));
     }
     else if (!sCommand->is_get_last_error())
     {
         m_context.reset_error();
     }
 
-    if (!pResponse)
+    if (!response)
     {
-        state = execute_command(std::move(sCommand), &pResponse);
+        state = execute_command(std::move(sCommand), &response);
     }
 
-    *ppResponse = pResponse;
+    *pResponse = std::move(response);
     return state;
 }
 
@@ -169,7 +169,7 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
     return response;
 }
 
-State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppResponse)
+State Database::execute_command(std::unique_ptr<Command> sCommand, Command::Response* pResponse)
 {
     State state = State::READY;
     Command::Response response;
@@ -267,7 +267,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
         set_ready();
     }
 
-    *ppResponse = response.release();
+    *pResponse = std::move(response);
     return state;
 }
 

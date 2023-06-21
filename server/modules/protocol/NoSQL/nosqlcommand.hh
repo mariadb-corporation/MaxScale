@@ -85,7 +85,7 @@ public:
     {
     }
 
-    class Response
+    class Response final
     {
     public:
         Response(const Response&) = delete;
@@ -103,6 +103,16 @@ public:
         {
         }
 
+        Response& operator=(Response&& rhs)
+        {
+            if (this != &rhs)
+            {
+                m_pData = std::exchange(rhs.m_pData, nullptr);
+                m_cacheable = std::exchange(rhs.m_cacheable, false);
+            }
+
+            return *this;
+        }
 
         ~Response()
         {

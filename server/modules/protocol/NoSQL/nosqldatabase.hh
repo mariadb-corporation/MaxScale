@@ -79,13 +79,13 @@ public:
                                             Context* pContext,
                                             Config* pConfig);
 
-    State handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse);
-    State handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse);
-    State handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse);
-    State handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse);
-    State handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse);
-    State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse);
-    State handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse);
+    State handle_delete(GWBUF* pRequest, packet::Delete&& req, Command::Response* pResponse);
+    State handle_insert(GWBUF* pRequest, packet::Insert&& req, Command::Response* pResponse);
+    State handle_query(GWBUF* pRequest, packet::Query&& req, Command::Response* pResponse);
+    State handle_update(GWBUF* pRequest, packet::Update&& req, Command::Response* pResponse);
+    State handle_get_more(GWBUF* pRequest, packet::GetMore&& req, Command::Response* pResponse);
+    State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Command::Response* pResponse);
+    State handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* pResponse);
 
     /**
      * Convert a MariaDB response to a NoSQL response. Must only be called
@@ -126,7 +126,7 @@ private:
         m_state = State::READY;
     }
 
-    State execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppResponse);
+    State execute_command(std::unique_ptr<Command> sCommand, Command::Response* pResponse);
 
     using SCommand = std::unique_ptr<Command>;
 
