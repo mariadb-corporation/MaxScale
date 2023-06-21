@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include "nosql.hh"
+#include "nosqlcommon.hh"
 #include <lzma.h>
 #include <sstream>
 #include <set>

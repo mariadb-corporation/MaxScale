@@ -15,7 +15,7 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/protocol2.hh>
-#include "nosql.hh"
+#include "nosqlcommon.hh"
 #include "nosqlconfig.hh"
 #include "nosqlusermanager.hh"
 
