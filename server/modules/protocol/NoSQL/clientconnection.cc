@@ -311,12 +311,8 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
             m_pDcb->trigger_read_event();
         }
 
-        GWBUF* pResponse = handle_one_packet(pPacket);
-
-        if (pResponse)
-        {
-            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pResponse));
-        }
+        mxb_assert(pPacket->length() >= protocol::HEADER_LEN);
+        m_nosql.handle_request(pPacket);
     }
     else
     {
@@ -489,13 +485,6 @@ void ClientConnection::prepare_session(const string& user, const vector<uint8_t>
     m_session_data.history().add(move(stmt), true);
 
     setup_session(user, password);
-}
-
-GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
-{
-    mxb_assert(pPacket->length() >= protocol::HEADER_LEN);
-
-    return m_nosql.handle_request(pPacket);
 }
 
 bool ClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
