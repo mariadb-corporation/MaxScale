@@ -51,6 +51,25 @@ export default {
             }
             Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name: erdName } })
         },
+        updateGraphDataHistory({ getters, dispatch }, graphData) {
+            const currentHistory = getters.graphDataHistory
+
+            let newHistory = [graphData]
+            // only push new data if the current index is the last item, otherwise, override the history
+            if (getters.activeHistoryIdx === currentHistory.length - 1)
+                newHistory = [...getters.graphDataHistory, graphData]
+            ErdTaskTmp.update({
+                where: getters.activeRecordId,
+                data: { graph_data_history: newHistory },
+            })
+            dispatch('updateActiveHistoryIdx', newHistory.length - 1)
+        },
+        updateActiveHistoryIdx({ getters }, idx) {
+            ErdTaskTmp.update({
+                where: getters.activeRecordId,
+                data: { active_history_idx: idx },
+            })
+        },
     },
     getters: {
         activeRecordId: () => Worksheet.getters('activeId'),
@@ -63,6 +82,10 @@ export default {
         stagingGraphData: (_, getters) => t(getters.activeTmpRecord, 'data').safeObjectOrEmpty,
         stagingNodes: (_, getters) => t(getters.stagingGraphData, 'nodes').safeArray,
         stagingLinks: (_, getters) => t(getters.stagingGraphData, 'links').safeArray,
+        graphDataHistory: (_, getters) =>
+            t(getters.activeTmpRecord, 'graph_data_history').safeArray,
+        activeHistoryIdx: (_, getters) =>
+            t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
         stagingSchemas: (_, getters) => [
             ...new Set(getters.stagingNodes.map(n => n.data.options.schema)),
         ],

@@ -45,7 +45,7 @@
  * Events
  * drag-start({ e, node })
  * drag({ e, node, diffX, diffY })
- * drag-end(e)
+ * drag-end({ e, node })
  * node-size-map(obj): size of nodes, keyed by node id
  * dblclick(node)
  * contextmenu(node)
@@ -197,17 +197,18 @@ export default {
         },
         addDragEvents(node) {
             /**
-             * The handler for mousemove event is an arrow function which can't
-             * be removed as it isn't attached to any variable.
-             * This stores it to dragEvent so it can be later removed.
+             * The handlers for mousemove and mouseup events are arrow functions which can't
+             * be removed as they aren't attached to any variables.
+             * This stores them to dragEvent and dragEndEvent so they can be later removed.
              */
             this.dragEvent = e => this.drag({ e, node })
+            this.dragEndEvent = e => this.dragEnd({ e, node })
             document.addEventListener('mousemove', this.dragEvent)
-            document.addEventListener('mouseup', this.dragEnd)
+            document.addEventListener('mouseup', this.dragEndEvent)
         },
         rmDragEvents() {
             document.removeEventListener('mousemove', this.dragEvent)
-            document.removeEventListener('mouseup', this.dragEnd)
+            document.removeEventListener('mouseup', this.dragEndEvent)
         },
         dragStart({ e, node }) {
             this.draggingStates = {

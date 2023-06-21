@@ -144,6 +144,8 @@ export default {
                     active_entity_id: '',
                     data: erdTaskData.data,
                     key: this.$helpers.uuidv1(),
+                    graph_data_history: [],
+                    active_history_idx: 0,
                 }
                 // Bind connection to a new worksheet
                 if (this.genInNewWs) {

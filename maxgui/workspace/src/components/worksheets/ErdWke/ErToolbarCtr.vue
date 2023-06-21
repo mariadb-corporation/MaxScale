@@ -77,7 +77,33 @@
         </v-tooltip>
 
         <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
-
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            text
+            depressed
+            color="primary"
+            :disabled="activeHistoryIdx === 0"
+            @click="$emit('on-undo')"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22" color="primary">mdi-undo</v-icon>
+            </template>
+            {{ $mxs_t('undo') }}
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            text
+            depressed
+            color="primary"
+            :disabled="activeHistoryIdx === graphDataHistory.length - 1"
+            @click="$emit('on-redo')"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22" color="primary">mdi-redo</v-icon>
+            </template>
+            {{ $mxs_t('redo') }}
+        </mxs-tooltip-btn>
+        <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
             :text="!config.link.isAttrToAttr"
@@ -139,6 +165,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
 import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
@@ -182,6 +209,12 @@ export default {
             set(v) {
                 if (v) this.$emit('set-zoom', { v: v / 100 })
             },
+        },
+        graphDataHistory() {
+            return ErdTask.getters('graphDataHistory')
+        },
+        activeHistoryIdx() {
+            return ErdTask.getters('activeHistoryIdx')
         },
     },
     methods: {

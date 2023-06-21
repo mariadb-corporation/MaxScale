@@ -128,8 +128,8 @@
  */
 /*
  * Emits:
- * - $emit('on-rendered')
- * - $emit('on-nodes-coords-update', nodes:[])
+ * - $emit('on-rendered', graphData)
+ * - $emit('on-node-drag-end', node)
  */
 import { mapState } from 'vuex'
 import {
@@ -256,6 +256,26 @@ export default {
                 this.assignData()
             }
         },
+        /**
+         * D3 mutates data, this method deep clones data leaving the original intact
+         * and call handleFilterCompositeKeys to handle composite keys case.
+         * By assigning `data` to `graphData`,  @node-size-map event will be
+         * emitted from `mxs-svg-graph-nodes` component which triggers the drawing
+         * of the graph if there is a change in the ID of the nodes.
+         */
+        assignData() {
+            const data = this.$helpers.lodash.cloneDeep(this.data)
+            this.graphData = {
+                nodes: this.$typy(data, 'nodes').safeArray,
+                links: this.$typy(data, 'links').safeArray,
+            }
+            this.handleFilterCompositeKeys(this.isAttrToAttr)
+        },
+        handleFilterCompositeKeys(v) {
+            this.graphData.links.forEach(link => {
+                if (link.isPartOfCompositeKey) link.hidden = !v
+            })
+        },
         getNodeIdx(id) {
             return this.graphData.nodes.findIndex(n => n.id === id)
         },
@@ -301,26 +321,6 @@ export default {
                 maxX: d3Max(this.graphData.nodes, n => n.x + n.size.width / 2),
                 maxY: d3Max(this.graphData.nodes, n => n.y + n.size.height / 2),
             }
-        },
-        /**
-         * D3 mutates data, this method deep clones data leaving the original intact
-         * and call handleFilterCompositeKeys to handle composite keys case.
-         * By assigning `data` to `graphData`,  @node-size-map event will be
-         * emitted from `mxs-svg-graph-nodes` component which triggers the drawing
-         * of the graph if there is a change in the ID of the nodes.
-         */
-        assignData() {
-            const data = this.$helpers.lodash.cloneDeep(this.data)
-            this.graphData = {
-                nodes: this.$typy(data, 'nodes').safeArray,
-                links: this.$typy(data, 'links').safeArray,
-            }
-            this.handleFilterCompositeKeys(this.isAttrToAttr)
-        },
-        handleFilterCompositeKeys(v) {
-            this.graphData.links.forEach(link => {
-                if (link.isPartOfCompositeKey) link.hidden = !v
-            })
         },
         /**
          * @param {Object} nodeSizeMap - size of nodes
@@ -369,9 +369,8 @@ export default {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
             this.drawLinks()
-            this.onNodesCoordsUpdate()
             this.isRendering = false
-            this.$emit('on-rendered')
+            this.$emit('on-rendered', this.graphData)
         },
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphData.nodes.reduce((map, n) => {
@@ -424,12 +423,12 @@ export default {
              */
             this.drawLinks()
         },
-        onNodeDragEnd() {
+        onNodeDragEnd({ node }) {
             if (this.isDraggingNode) {
                 this.setEventLinkStyles(EVENT_TYPES.NONE)
                 this.isDraggingNode = false
                 this.chosenLinks = []
-                this.onNodesCoordsUpdate()
+                this.$emit('on-node-drag-end', node)
             }
         },
         mouseenterNode({ node }) {
@@ -509,15 +508,6 @@ export default {
         handleIsAttrToAttrMode(v) {
             this.handleFilterCompositeKeys(v)
             this.simulation.force('link').links(this.graphData.links)
-        },
-        /**
-         * Call this function when node coordinates are updated.
-         */
-        onNodesCoordsUpdate() {
-            this.$emit(
-                'on-nodes-coords-update',
-                this.$helpers.lodash.cloneDeep(this.graphData.nodes)
-            )
         },
     },
 }

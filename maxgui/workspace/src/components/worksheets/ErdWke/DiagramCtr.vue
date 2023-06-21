@@ -7,6 +7,8 @@
             :isFitIntoView="isFitIntoView"
             @set-zoom="setZoom"
             @on-create-table="handleCreateTable"
+            @on-undo="navHistory(activeHistoryIdx - 1)"
+            @on-redo="navHistory(activeHistoryIdx + 1)"
         />
         <entity-diagram
             v-if="diagramKey"
@@ -20,8 +22,8 @@
             :isLaidOut="isLaidOut"
             :activeNodeId="activeEntityId"
             class="entity-diagram"
-            @on-rendered.once="fitIntoView"
-            @on-nodes-coords-update="onNodesCoordsUpdate"
+            @on-rendered.once="onRendered"
+            @on-node-drag-end="onNodeDragEnd"
             @dblclick="handleDblClickNode"
             @contextmenu="activeNodeMenu = $event"
         >
@@ -204,6 +206,12 @@ export default {
         eventBus() {
             return EventBus
         },
+        graphDataHistory() {
+            return ErdTask.getters('graphDataHistory')
+        },
+        activeHistoryIdx() {
+            return ErdTask.getters('activeHistoryIdx')
+        },
     },
     watch: {
         graphConfigData: {
@@ -272,6 +280,10 @@ export default {
                 { immediate: true }
             )
         },
+        onRendered(graphData) {
+            this.onNodesCoordsUpdate(graphData.nodes)
+            this.fitIntoView()
+        },
         handleDblClickNode(node) {
             const { EDIT, ALTER } = this.ENTITY_OPT_TYPES
             this.handleChooseNodeOpt({ type: this.isNewEntity(node.id) ? EDIT : ALTER, node })
@@ -312,6 +324,7 @@ export default {
                             },
                         })
                         this.$refs.diagram.removeNode(node)
+                        ErdTask.dispatch('updateGraphDataHistory', this.stagingGraphData)
                         break
                     }
                 }
@@ -321,17 +334,19 @@ export default {
                     type: 'error',
                 })
         },
-        assignCoord({ nodeMap, nodes }) {
+        assignCoord({ nodeMap, nodes, ignoreSize = false }) {
             return nodes.map(n => {
                 if (!nodeMap[n.id]) return n
-                const { x, y, vx, vy } = nodeMap[n.id]
-                return {
+                const { x, y, vx, vy, size } = nodeMap[n.id]
+                let res = {
                     ...n,
                     x,
                     y,
                     vx,
                     vy,
                 }
+                if (!ignoreSize) res.size = size
+                return res
             })
         },
         /**
@@ -339,22 +354,27 @@ export default {
          */
         onNodesCoordsUpdate(v) {
             const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
-            const nodes = this.assignCoord({ nodeMap, nodes: this.initialNodes })
+            const nodes = this.assignCoord({ nodeMap, nodes: this.initialNodes, ignoreSize: true })
             const stagingNodes = this.assignCoord({ nodeMap, nodes: this.stagingNodes })
             ErdTask.update({
                 where: this.activeTaskId,
-                data: {
-                    data: { links: this.graphData.links, nodes },
-                    is_laid_out: true,
-                },
+                data: { data: { links: this.graphData.links, nodes }, is_laid_out: true },
             })
             // Also update the staging data
+            const stagingGraphData = { links: this.stagingGraphData.links, nodes: stagingNodes }
             ErdTaskTmp.update({
                 where: this.activeTaskId,
                 data: {
-                    data: { links: this.stagingGraphData.links, nodes: stagingNodes },
+                    data: stagingGraphData,
                 },
             })
+            ErdTask.dispatch('updateGraphDataHistory', stagingGraphData)
+        },
+        /**
+         * @param {object} node - node with new coordinates
+         */
+        onNodeDragEnd(node) {
+            this.onNodesCoordsUpdate([node])
         },
         fitIntoView() {
             this.setZoom({ isFitIntoView: true })
@@ -425,9 +445,36 @@ export default {
                 where: this.activeTaskId,
                 data: { data: { ...this.stagingGraphData, nodes } },
             }).then(() => {
+                ErdTask.dispatch('updateGraphDataHistory', this.stagingGraphData)
                 this.$refs.diagram.addNode(node)
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
+        },
+        redrawnDiagram() {
+            ErdTaskTmp.update({
+                where: this.activeTaskId,
+                data: {
+                    // close editor
+                    active_entity_id: '',
+                    graph_height_pct: 100,
+                    data: this.graphDataHistory[this.activeHistoryIdx],
+                },
+            })
+            // update nodes in ErdTask model as well
+            const nodeMap = this.$helpers.lodash.keyBy(this.stagingNodes, 'id')
+            const nodes = this.assignCoord({ nodeMap, nodes: this.initialNodes, ignoreSize: true })
+            ErdTask.update({
+                where: this.activeTaskId,
+                data: { data: { links: this.graphData.links, nodes } },
+            })
+            this.$nextTick(() => {
+                this.$refs.diagram.assignData()
+                this.$refs.diagram.runSimulation()
+            })
+        },
+        navHistory(idx) {
+            ErdTask.dispatch('updateActiveHistoryIdx', idx)
+            this.redrawnDiagram()
         },
     },
 }
