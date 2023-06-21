@@ -685,7 +685,8 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                     }
                     else
                     {
-                        MXB_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session_data->user_and_host().c_str());
+                        MXB_WARNING(MariaDBUserManager::RECENTLY_UPDATED_FMT,
+                                    m_session_data->user_and_host().c_str());
                         // If plugin exists, start exchange. Authentication will surely fail.
                         m_auth_state = (user_entry_type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
                             AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;

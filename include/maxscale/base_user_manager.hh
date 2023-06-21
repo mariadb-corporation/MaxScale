@@ -25,6 +25,8 @@ class BaseUserManager : public mxs::UserAccountManager
 public:
     ~BaseUserManager() override = default;
 
+    static constexpr const char* RECENTLY_UPDATED_FMT = "User accounts have been recently updated, "
+                                                        "cannot update again for %s.";
     bool   can_update_immediately() const;
     time_t last_update() const override;
     void   update_user_accounts() override;

@@ -291,7 +291,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
             }
             else
             {
-                MXB_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session->user_and_host().c_str());
+                MXB_WARNING(MariaDBUserManager::RECENTLY_UPDATED_FMT, m_session->user_and_host().c_str());
             }
         }
         // If user cache does not exist, do nothing.

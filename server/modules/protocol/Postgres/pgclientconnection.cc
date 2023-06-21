@@ -212,6 +212,16 @@ void PgClientConnection::ready_for_reading(DCB* dcb)
                 m_state = state_route(std::move(gwbuf));
                 break;
 
+            case State::WAIT_USERDATA:
+                // Should not get client data (or read events) before users have actually been updated.
+                // Perhaps this can happen with buggy clients?
+                MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
+                          m_session.user_and_host().c_str());
+                send_error("08P01", "Unexpected client event");     // 08P01 = protocol violation
+                m_session.service->unmark_for_wakeup(this);
+                m_state = State::ERROR;
+                // Pass to error below.
+
             case State::ERROR:
                 // pass, handled below
                 break;
@@ -268,50 +278,64 @@ PgClientConnection::State PgClientConnection::state_init(const GWBUF& gwbuf)
     }
     else if (parse_startup_message(gwbuf))
     {
-        update_user_account_entry();
-        if (m_authenticator)
+        if (update_user_account_entry())
         {
-            auto pw_request_packet = m_authenticator->authentication_request();
-            if (pw_request_packet.empty())
+            next_state = prepare_auth();
+        }
+        else
+        {
+            // User data may be outdated, send update message through the service.
+            // The current session will stall until userdata has been updated.
+            m_session.service->request_user_account_update();
+            m_session.service->mark_for_wakeup(this);
+            next_state = State::WAIT_USERDATA;
+        }
+    }
+
+    return next_state;
+}
+
+PgClientConnection::State PgClientConnection::prepare_auth()
+{
+    State next_state = State::ERROR;
+    if (m_authenticator)
+    {
+        auto pw_request_packet = m_authenticator->authentication_request();
+        if (pw_request_packet.empty())
+        {
+            // The user is trusted, no authentication necessary.
+            auto entry_type = m_protocol_data->auth_data().user_entry.type;
+            if (entry_type == UserEntryType::USER_ACCOUNT_OK)
             {
-                // The user is trusted, no authentication necessary.
-                if (m_protocol_data->auth_data().user_entry.type == UserEntryType::USER_ACCOUNT_OK)
+                if (check_allow_login())
                 {
-                    if (check_allow_login())
-                    {
-                        next_state = start_session() ? State::ROUTE : State::ERROR;
-                    }
-                }
-                else
-                {
-                    send_error(invalid_auth, mxb::string_printf("role \"%s\" does not exist",
-                                                                m_session.user().c_str()));
+                    next_state = start_session() ? State::ROUTE : State::ERROR;
                 }
             }
             else
             {
-                m_dcb->writeq_append(std::move(pw_request_packet));
-                next_state = State::AUTH;
+                mxb_assert(entry_type == UserEntryType::NO_AUTH_ID_ENTRY);
+                send_error(invalid_auth, mxb::string_printf("role \"%s\" does not exist",
+                                                            m_session.user().c_str()));
             }
         }
         else
         {
-            // Either user account did not match or auth method is not enabled.
-            const char* enc = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED) ? "SSL encryption" :
-                "no encryption";
-            string msg = mxb::string_printf(
-                "no pg_hba.conf entry for host \"%s\", user \"%s\", database \"%s\", %s",
-                m_session.client_remote().c_str(), m_session.user().c_str(),
-                m_protocol_data->default_db().c_str(), enc);
-            send_error(invalid_auth, msg);
-            // TODO: Wait for update like MariaDBProtocol.
-            if (user_account_cache()->can_update_immediately())
-            {
-                m_session.service->request_user_account_update();
-            }
+            m_dcb->writeq_append(std::move(pw_request_packet));
+            next_state = State::AUTH;
         }
     }
-
+    else
+    {
+        // Either user account did not match or auth method is not enabled.
+        const char* enc = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED) ? "SSL encryption" :
+            "no encryption";
+        string msg = mxb::string_printf(
+            "no pg_hba.conf entry for host \"%s\", user \"%s\", database \"%s\", %s",
+            m_session.client_remote().c_str(), m_session.user().c_str(),
+            m_protocol_data->default_db().c_str(), enc);
+        send_error(invalid_auth, msg);
+    }
     return next_state;
 }
 
@@ -447,6 +471,13 @@ bool PgClientConnection::start_session()
     return rval;
 }
 
+PgClientConnection::State PgClientConnection::state_wait_userdata()
+{
+    MXB_AT_DEBUG(bool ret = ) update_user_account_entry();
+    mxb_assert(ret);
+    return prepare_auth();
+}
+
 PgClientConnection::State PgClientConnection::state_route(GWBUF&& gwbuf)
 {
     uint8_t cmd = gwbuf[0];
@@ -506,7 +537,10 @@ bool PgClientConnection::init_connection()
 
 void PgClientConnection::finish_connection()
 {
-    // TODO: Do something?
+    if (m_state == State::WAIT_USERDATA)
+    {
+        m_session.service->unmark_for_wakeup(this);
+    }
 }
 
 bool PgClientConnection::clientReply(GWBUF&& buffer,
@@ -630,7 +664,11 @@ bool PgClientConnection::parse_startup_message(const GWBUF& buf)
     return rval;
 }
 
-void PgClientConnection::update_user_account_entry()
+/**
+ * @return True if client connection should continue with authentication. False, if it should wait for
+ * user account update.
+ */
+bool PgClientConnection::update_user_account_entry()
 {
     auto match_host = m_user_auth_settings.match_host_pattern ? PgUserCache::MatchHost::YES :
         PgUserCache::MatchHost::NO;
@@ -662,6 +700,7 @@ void PgClientConnection::update_user_account_entry()
         }
     }
     m_protocol_data->set_user_entry(entry);
+    return true;
 }
 
 PgAuthenticatorModule* PgClientConnection::find_auth_module(const string& auth_method)
@@ -850,4 +889,14 @@ MXS_SESSION* PgClientConnection::find_matching_session(uint32_t id, uint32_t sec
     }
 
     return rv;
+}
+
+void PgClientConnection::wakeup()
+{
+    mxb_assert(m_state == State::WAIT_USERDATA);
+    m_state = state_wait_userdata();
+    if (m_state == State::ERROR)
+    {
+        m_session.kill();
+    }
 }

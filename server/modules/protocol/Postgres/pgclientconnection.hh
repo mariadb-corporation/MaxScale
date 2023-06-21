@@ -52,6 +52,7 @@ public:
     void finish_connection() override;
     bool clientReply(GWBUF&& buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool safe_to_restart() const override;
+    void wakeup() override;
     mxs::Parser* parser() override;
 
     // mxs::ClientConnectionBase
@@ -61,6 +62,7 @@ private:
     enum class State
     {
         INIT,          // Expecting either SSL request or Startup msg
+        WAIT_USERDATA, // Waiting for UserAccountManager to update
         AUTH,          // Authentication (not entered if method is trust)
         ROUTE,         // Entered after Startup msg reply has been sent
         ERROR
@@ -70,6 +72,8 @@ private:
     using HistoryRequest = std::unique_ptr<GWBUF>;
 
     State state_init(const GWBUF& gwbuf);
+    State state_wait_userdata();
+    State prepare_auth();
     State state_auth(GWBUF&& packet);
     State state_route(GWBUF&& gwbuf);
 
@@ -77,7 +81,7 @@ private:
     bool setup_ssl();
     bool parse_startup_message(const GWBUF& buf);
     bool start_session();
-    void update_user_account_entry();
+    bool update_user_account_entry();
     bool check_allow_login();
     void send_error(std::string_view sqlstate, std::string_view msg);
     bool record_for_history(GWBUF& buffer);
