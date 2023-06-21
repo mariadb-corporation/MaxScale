@@ -86,12 +86,6 @@ private:
 
     SComponent create_downstream(mxs::Component* pDownstream, Cache* pCache);
 
-    cache_result_t get_key(const std::string& user,
-                           const std::string& host,
-                           const char* zDefault_db,
-                           const GWBUF* pQuery,
-                           CacheKey* pKey);
-
 private:
     nosql::Config  m_config;
     MXS_SESSION&   m_session;

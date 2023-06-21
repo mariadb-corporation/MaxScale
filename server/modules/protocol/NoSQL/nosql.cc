@@ -13,6 +13,7 @@
  */
 
 #include "nosql.hh"
+#include <lzma.h>
 #include <sstream>
 #include <set>
 #include <map>
@@ -20,6 +21,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include "../../filter/cache/cache_storage_api.hh"
 #include "../../filter/masking/mysql.hh"
 #include "clientconnection.hh"
 #include "nosqldatabase.hh"
@@ -1363,6 +1365,29 @@ string get_user_name(std::string db, std::string user)
 
 namespace nosql
 {
+
+//
+// nosql::cache
+//
+
+cache_result_t cache::get_key(ValueKind value_kind,
+                              const std::string& user,
+                              const std::string& host,
+                              const char* zDefault_db,
+                              const GWBUF* pRequest,
+                              CacheKey* pKey)
+{
+    cache_result_t rv = Cache::get_default_key(user, host, zDefault_db, pRequest, pKey);
+
+    if (CACHE_RESULT_IS_OK(rv) && value_kind == ValueKind::NOSQL_RESPONSE)
+    {
+        static const uint8_t NOSQL_RESPONSE_TAG[] = "NoSQL Response";
+
+        pKey->full_hash = lzma_crc64(NOSQL_RESPONSE_TAG, sizeof(NOSQL_RESPONSE_TAG) - 1, pKey->full_hash);
+    }
+
+    return rv;
+}
 
 //
 // nosql::protocol
