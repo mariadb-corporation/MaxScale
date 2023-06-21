@@ -11,6 +11,7 @@ add_executable(nosqltest_path nosqltest_path.cc
   ../nosqlcrypto.cc
   ../nosqlcursor.cc
   ../nosqldatabase.cc
+  ../nosqlnosql.cc
   ../nosqlprotocol.cc
   ../nosqlscram.cc
   ../nosqlupdateoperator.cc

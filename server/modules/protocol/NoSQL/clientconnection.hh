@@ -17,6 +17,7 @@
 #include <maxscale/protocol2.hh>
 #include "nosqlcommon.hh"
 #include "nosqlconfig.hh"
+#include "nosqlnosql.hh"
 #include "nosqlusermanager.hh"
 
 class Cache;
