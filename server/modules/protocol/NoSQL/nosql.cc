@@ -2960,7 +2960,7 @@ bool NoSQL::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs
 
         if (protocol_response)
         {
-            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(protocol_response.pData));
+            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(protocol_response.release()));
         }
 
         if (!m_requests.empty())
@@ -2975,12 +2975,15 @@ bool NoSQL::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs
                 GWBUF* pRequest = m_requests.front();
                 m_requests.pop_front();
 
-                state = handle_request(pRequest, &protocol_response.pData);
+                GWBUF* pData = nullptr;
+                state = handle_request(pRequest, &pData);
 
-                if (protocol_response.pData)
+                protocol_response.reset(pData);
+
+                if (protocol_response)
                 {
                     // The response could be generated immediately, just send it.
-                    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(protocol_response.pData));
+                    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(protocol_response.release()));
                 }
             }
             while (state == State::READY && !m_requests.empty());
@@ -2989,7 +2992,7 @@ bool NoSQL::clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs
     else
     {
         // If the database is not ready, there cannot be a response.
-        mxb_assert(protocol_response.pData == nullptr);
+        mxb_assert(!protocol_response);
     }
 
     return true;
