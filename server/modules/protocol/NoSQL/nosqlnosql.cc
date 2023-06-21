@@ -147,8 +147,11 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
 
     Command::Response response = m_sDatabase->translate(std::move(mariadb_response));
 
-    if (m_sDatabase->is_ready())
+    if (response)
     {
+        // We can't have a response unless the database is ready.
+        mxb_assert(m_sDatabase->is_ready());
+
         m_sDatabase.reset();
 
         flush_response(response);
@@ -172,8 +175,8 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
     }
     else
     {
-        // If the database is not ready, there cannot be a response.
-        mxb_assert(!response);
+        // If we do not have a response, the database cannot be ready.
+        mxb_assert(!m_sDatabase->is_ready());
     }
 
     return true;
