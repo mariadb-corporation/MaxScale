@@ -93,6 +93,24 @@ inline std::ostream& operator << (std::ostream& out, mariadb::Op op)
 namespace nosql
 {
 
+namespace cache
+{
+
+enum class ValueKind
+{
+    MARIADB_RESPONSE,
+    NOSQL_RESPONSE
+};
+
+cache_result_t get_key(ValueKind value_kind,
+                       const std::string& user,
+                       const std::string& host,
+                       const char* zDefault_db,
+                       const GWBUF* pQuery,
+                       CacheKey* pKey);
+
+}
+
 namespace protocol
 {
 
