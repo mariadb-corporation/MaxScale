@@ -22,7 +22,7 @@
 #include <maxscale/buffer.hh>
 #include "../../filter/masking/mysql.hh"
 #include "nosqldatabase.hh"
-#include "nosql.hh"
+#include "nosqlcommon.hh"
 
 namespace nosql
 {

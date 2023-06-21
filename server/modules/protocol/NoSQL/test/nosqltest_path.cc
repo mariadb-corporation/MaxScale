@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include "nosql.hh"
+#include "nosqlcommon.hh"
 
 using namespace nosql;
 using namespace std;

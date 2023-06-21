@@ -16,7 +16,7 @@
 #include "nosqlprotocol.hh"
 #include <memory>
 #include <maxscale/target.hh>
-#include "nosql.hh"
+#include "nosqlcommon.hh"
 #include "nosqlcommand.hh"
 
 class Config;

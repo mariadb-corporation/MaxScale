@@ -14,7 +14,7 @@
 
 #include "nosqlprotocol.hh"
 #include <bsoncxx/builder/stream/document.hpp>
-#include "nosql.hh"
+#include "nosqlcommon.hh"
 #include "nosqlconfig.hh"
 #include "protocolmodule.hh"
 

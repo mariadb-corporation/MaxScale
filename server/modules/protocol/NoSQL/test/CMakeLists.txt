@@ -4,7 +4,7 @@ add_executable(nosqltest_path nosqltest_path.cc
   ../clientconnection.cc
   ../configuration.cc
   ../nosqlbase.cc
-  ../nosql.cc
+  ../nosqlcommon.cc
   ../nosqlcommand.cc
   ../nosqlcommands.cc
   ../nosqlcontext.cc

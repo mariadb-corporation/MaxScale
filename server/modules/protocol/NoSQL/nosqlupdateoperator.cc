@@ -14,7 +14,7 @@
 
 #include "nosqlupdateoperator.hh"
 #include "nosqlbase.hh"
-#include "nosql.hh"
+#include "nosqlcommon.hh"
 
 using namespace std;
 
