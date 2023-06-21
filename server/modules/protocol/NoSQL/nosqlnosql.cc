@@ -54,18 +54,7 @@ NoSQL::~NoSQL()
 {
 }
 
-void NoSQL::handle_request(GWBUF* pRequest)
-{
-    Command::Response response;
-    handle_request(pRequest, &response);
-
-    if (response)
-    {
-        m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
-    }
-}
-
-State NoSQL::handle_request(GWBUF* pRequest, Command::Response* pResponse)
+State NoSQL::handle_request(GWBUF* pRequest)
 {
     State state = State::READY;
 
@@ -80,6 +69,8 @@ State NoSQL::handle_request(GWBUF* pRequest, Command::Response* pResponse)
 
             mxb_assert(req.msg_len() == (int)pRequest->length());
 
+            Command::Response response;
+
             switch (req.opcode())
             {
             case MONGOC_OPCODE_COMPRESSED:
@@ -92,31 +83,31 @@ State NoSQL::handle_request(GWBUF* pRequest, Command::Response* pResponse)
                 break;
 
             case MONGOC_OPCODE_GET_MORE:
-                state = handle_get_more(pRequest, packet::GetMore(req), pResponse);
+                state = handle_get_more(pRequest, packet::GetMore(req), &response);
                 break;
 
             case MONGOC_OPCODE_KILL_CURSORS:
-                state = handle_kill_cursors(pRequest, packet::KillCursors(req), pResponse);
+                state = handle_kill_cursors(pRequest, packet::KillCursors(req), &response);
                 break;
 
             case MONGOC_OPCODE_DELETE:
-                state = handle_delete(pRequest, packet::Delete(req), pResponse);
+                state = handle_delete(pRequest, packet::Delete(req), &response);
                 break;
 
             case MONGOC_OPCODE_INSERT:
-                state = handle_insert(pRequest, packet::Insert(req), pResponse);
+                state = handle_insert(pRequest, packet::Insert(req), &response);
                 break;
 
             case MONGOC_OPCODE_MSG:
-                state = handle_msg(pRequest, packet::Msg(req), pResponse);
+                state = handle_msg(pRequest, packet::Msg(req), &response);
                 break;
 
             case MONGOC_OPCODE_QUERY:
-                state = handle_query(pRequest, packet::Query(req), pResponse);
+                state = handle_query(pRequest, packet::Query(req), &response);
                 break;
 
             case MONGOC_OPCODE_UPDATE:
-                state = handle_update(pRequest, packet::Update(req), pResponse);
+                state = handle_update(pRequest, packet::Update(req), &response);
                 break;
 
             default:
@@ -127,6 +118,8 @@ State NoSQL::handle_request(GWBUF* pRequest, Command::Response* pResponse)
                     throw std::runtime_error(ss.str());
                 }
             }
+
+            flush_response(response);
         }
         catch (const std::exception& x)
         {
@@ -158,10 +151,7 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
     {
         m_sDatabase.reset();
 
-        if (response)
-        {
-            m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
-        }
+        flush_response(response);
 
         if (!m_requests.empty())
         {
@@ -175,13 +165,7 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
                 GWBUF* pRequest = m_requests.front();
                 m_requests.pop_front();
 
-                state = handle_request(pRequest, &response);
-
-                if (response)
-                {
-                    // The response could be generated immediately, just send it.
-                    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
-                }
+                state = handle_request(pRequest);
             }
             while (state == State::READY && !m_requests.empty());
         }
@@ -345,6 +329,14 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* p
     }
 
     return state;
+}
+
+void NoSQL::flush_response(Command::Response& response)
+{
+    if (response)
+    {
+        m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
+    }
 }
 
 }
