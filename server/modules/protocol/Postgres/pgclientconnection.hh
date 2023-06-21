@@ -103,6 +103,7 @@ private:
     bool            m_ssl_required;
     mxs::Component* m_down;
     PgProtocolData* m_protocol_data {nullptr};
+    int             m_orig_userdb_version {-1}; /**< Userdb version during first user account search */
 
     // The "secret" key used when the connection is killed
     uint32_t m_secret {0};

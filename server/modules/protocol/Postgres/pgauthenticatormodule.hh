@@ -20,6 +20,7 @@ class PgAuthenticatorModule;
 
 enum class UserEntryType
 {
+    UNKNOWN,
     NO_HBA_ENTRY,
     NO_AUTH_ID_ENTRY,
     METHOD_NOT_SUPPORTED,
@@ -39,7 +40,7 @@ struct AuthIdEntry
 
 struct UserEntryResult
 {
-    UserEntryType type {UserEntryType::NO_HBA_ENTRY};
+    UserEntryType type {UserEntryType::UNKNOWN};
     uint32_t      line_no {0};
     std::string   auth_method;
     AuthIdEntry   authid_entry;

@@ -499,6 +499,10 @@ PgUserCache::find_user(const std::string& user, const std::string& host, const s
             res.type = UserEntryType::NO_AUTH_ID_ENTRY;
         }
     }
+    else
+    {
+        res.type = UserEntryType::NO_HBA_ENTRY;
+    }
 
     return res;
 }

@@ -670,25 +670,24 @@ bool PgClientConnection::parse_startup_message(const GWBUF& buf)
  */
 bool PgClientConnection::update_user_account_entry()
 {
+    auto& auth_data = m_protocol_data->auth_data();
+    const bool first_try = auth_data.user_entry.type == UserEntryType::UNKNOWN;
+    auto& ses = m_session;
     auto match_host = m_user_auth_settings.match_host_pattern ? PgUserCache::MatchHost::YES :
         PgUserCache::MatchHost::NO;
-    auto& ses = m_session;
-    auto entry = user_account_cache()->find_user(ses.user(), ses.client_remote(),
-                                                 m_protocol_data->default_db(), match_host);
 
-    // Postgres stops authentication if a user entry is not found, so a dummy entry is not required like
-    // with MariaDB.
-    if (entry.type == UserEntryType::USER_ACCOUNT_OK || entry.type == UserEntryType::NO_AUTH_ID_ENTRY)
-    {
-        PgAuthenticatorModule* selected_module = find_auth_module(entry.auth_method);
-        if (selected_module)
+    auto set_authenticator = [&](PgAuthenticatorModule* auth_module) {
+        auto& entry = auth_data.user_entry;
+        mxb_assert(entry.type == UserEntryType::USER_ACCOUNT_OK
+                   || entry.type == UserEntryType::NO_AUTH_ID_ENTRY);
+        if (auth_module)
         {
             // Correct plugin is loaded, generate session-specific data.
-            MXB_INFO("Client %s matched pg_hba.conf entry at line %i.", m_session.user_and_host().c_str(),
+            MXB_INFO("Client %s matched pg_hba.conf entry at line %i.", ses.user_and_host().c_str(),
                      entry.line_no);
-            m_authenticator = selected_module->create_client_authenticator();
-            m_protocol_data->auth_data().auth_module = selected_module;
-            m_protocol_data->auth_data().user = m_session.user();
+            m_authenticator = auth_module->create_client_authenticator();
+            auth_data.auth_module = auth_module;
+            auth_data.user = ses.user();
         }
         else
         {
@@ -696,11 +695,81 @@ bool PgClientConnection::update_user_account_entry()
             entry.type = UserEntryType::METHOD_NOT_SUPPORTED;
             MXB_INFO("Client %s matched pg_hba.conf entry at line %i. Entry uses unsupported authentication "
                      "method '%s'. Cannot authenticate user.",
-                     m_session.user_and_host().c_str(), entry.line_no, entry.auth_method.c_str());
+                     ses.user_and_host().c_str(), entry.line_no, entry.auth_method.c_str());
+        }
+    };
+
+    auto hba_entry_found = [](UserEntryType type) {
+        return type == UserEntryType::USER_ACCOUNT_OK || type == UserEntryType::NO_AUTH_ID_ENTRY;
+    };
+    bool proceed = false;
+
+    if (first_try)
+    {
+        // On the first try, find the user entry and see if it's perfect (no clear reason for failed auth).
+        // If the entry is not ideal, try to reload users if possible.
+        auto* user_cache = user_account_cache();
+        m_protocol_data->set_user_entry(user_cache->find_user(
+            ses.user(), ses.client_remote(), m_protocol_data->default_db(), match_host));
+        m_orig_userdb_version = user_cache->version();
+
+        PgAuthenticatorModule* auth_module = nullptr;
+        bool auth_module_search = false;
+        const auto& entry = auth_data.user_entry;
+
+        if (entry.type == UserEntryType::USER_ACCOUNT_OK && entry.authid_entry.can_login)
+        {
+            auth_module = find_auth_module(entry.auth_method);
+            auth_module_search = true;
+            if (auth_module)
+            {
+                // Looks good, lock in the current userdata, don't try to reload.
+                set_authenticator(auth_module);
+                proceed = true;
+            }
+        }
+
+        if (!proceed)
+        {
+            if (user_cache->can_update_immediately())
+            {
+                // Return false, wait for user data update.
+            }
+            else
+            {
+                MXB_WARNING(PgUserManager::RECENTLY_UPDATED_FMT, m_session.user_and_host().c_str());
+                // Can't update, have to make do with what we have. Authentication will fail, although the
+                // client may not find out just yet.
+                if (hba_entry_found(entry.type))
+                {
+                    if (!auth_module_search)
+                    {
+                        auth_module = find_auth_module(entry.auth_method);
+                    }
+                    set_authenticator(auth_module);
+                }
+                proceed = true;
+            }
         }
     }
-    m_protocol_data->set_user_entry(entry);
-    return true;
+    else
+    {
+        // Second try. If data changed, search again. Otherwise, use previous data. A search can be
+        // expensive if there are many entries or DNS is involved.
+        if (user_account_cache()->version() > m_orig_userdb_version)
+        {
+            m_protocol_data->set_user_entry(user_account_cache()->find_user(
+                ses.user(), ses.client_remote(), m_protocol_data->default_db(), match_host));
+        }
+
+        mxb_assert(auth_data.user_entry.type != UserEntryType::UNKNOWN);
+        if (hba_entry_found(auth_data.user_entry.type))
+        {
+            set_authenticator(find_auth_module(auth_data.user_entry.auth_method));
+        }
+        proceed = true;
+    }
+    return proceed;
 }
 
 PgAuthenticatorModule* PgClientConnection::find_auth_module(const string& auth_method)
