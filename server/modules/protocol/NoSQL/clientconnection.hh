@@ -73,8 +73,6 @@ private:
     size_t sizeof_buffers() const override;
 
 private:
-    GWBUF* handle_one_packet(GWBUF* pPacket);
-
     void prepare_session(const std::string& user, const std::vector<uint8_t>& password);
 
     bool ssl_is_ready();

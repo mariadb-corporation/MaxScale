@@ -2827,6 +2827,17 @@ NoSQL::~NoSQL()
 {
 }
 
+void NoSQL::handle_request(GWBUF* pRequest)
+{
+    GWBUF* pResponse = nullptr;
+    handle_request(pRequest, &pResponse);
+
+    if (pResponse)
+    {
+        m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(pResponse));
+    }
+}
+
 State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
 {
     State state = State::READY;

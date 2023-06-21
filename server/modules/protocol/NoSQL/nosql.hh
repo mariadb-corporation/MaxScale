@@ -1044,15 +1044,7 @@ public:
         return m_pCurrent_request;
     }
 
-    State handle_request(GWBUF* pRequest, GWBUF** ppResponse);
-
-    GWBUF* handle_request(GWBUF* pRequest)
-    {
-        GWBUF* pResponse = nullptr;
-        handle_request(pRequest, &pResponse);
-
-        return pResponse;
-    }
+    void handle_request(GWBUF* pRequest);
 
     bool clientReply(GWBUF&& sMariaDB_response, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
@@ -1063,6 +1055,8 @@ public:
     }
 
 private:
+    State handle_request(GWBUF* pRequest, GWBUF** ppResponse);
+
     template<class T>
     void log_in(const char* zContext, const T& req)
     {
