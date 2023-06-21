@@ -14,7 +14,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
-#include "nosqlcommon.hh"
+#include "nosqlcommand.hh"
 
 
 namespace nosql
@@ -63,7 +63,7 @@ public:
 
     void handle_request(GWBUF* pRequest);
 
-    bool clientReply(GWBUF&& sMariaDB_response, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     void set_dcb(DCB* pDcb)
     {
@@ -72,7 +72,7 @@ public:
     }
 
 private:
-    State handle_request(GWBUF* pRequest, GWBUF** ppResponse);
+    State handle_request(GWBUF* pRequest, Command::Response* pResponse);
 
     template<class T>
     void log_in(const char* zContext, const T& req)
@@ -87,13 +87,13 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
-    State handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse);
-    State handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse);
-    State handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse);
-    State handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse);
-    State handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse);
-    State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse);
-    State handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse);
+    State handle_delete(GWBUF* pRequest, packet::Delete&& req, Command::Response* pResponse);
+    State handle_insert(GWBUF* pRequest, packet::Insert&& req, Command::Response* pResponse);
+    State handle_update(GWBUF* pRequest, packet::Update&& req, Command::Response* pResponse);
+    State handle_query(GWBUF* pRequest, packet::Query&& req, Command::Response* pResponse);
+    State handle_get_more(GWBUF* pRequest, packet::GetMore&& req, Command::Response* pResponse);
+    State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Command::Response* pResponse);
+    State handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* pResponse);
 
     Context            m_context;
     Config&            m_config;
