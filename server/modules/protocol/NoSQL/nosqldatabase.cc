@@ -162,7 +162,7 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
 
     if (state == State::READY)
     {
-        m_sCommand.reset();
+        response.set_command(std::move(m_sCommand));
         set_ready();
     }
 
@@ -263,7 +263,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, Command::Resp
 
     if (state == State::READY)
     {
-        m_sCommand.reset();
+        response.set_command(std::move(m_sCommand));
         set_ready();
     }
 

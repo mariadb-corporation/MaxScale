@@ -129,6 +129,17 @@ public:
             return m_cacheable;
         }
 
+        Command* command() const
+        {
+            return m_sCommand.get();
+        }
+
+        void set_command(std::unique_ptr<Command> sCommand)
+        {
+            mxb_assert(!m_sCommand);
+            m_sCommand = std::move(sCommand);
+        }
+
         void reset(GWBUF* pData, bool cacheable = false)
         {
             mxb_assert(!m_pData);
@@ -146,8 +157,9 @@ public:
         }
 
     private:
-        GWBUF* m_pData     { nullptr };
-        bool   m_cacheable { false };
+        GWBUF*                   m_pData     { nullptr };
+        bool                     m_cacheable { false };
+        std::unique_ptr<Command> m_sCommand;
     };
 
     virtual State execute(Response* pNoSQL_response) = 0;
