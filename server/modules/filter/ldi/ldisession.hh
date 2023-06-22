@@ -93,7 +93,7 @@ private:
 class LDISession : public maxscale::FilterSession
 {
 public:
-    static LDISession* create(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter);
+    static LDISession* create(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter);
 
     bool routeQuery(GWBUF&& buffer) override;
 
@@ -115,7 +115,7 @@ private:
         XPAND,
     };
 
-    LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter);
+    LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter);
     bool route_data(GWBUF&& buffer);
     bool route_end(GWBUF&& buffer);
     bool send_ok(int64_t rows_affected);
@@ -137,6 +137,7 @@ private:
     std::string         m_file;
     std::string         m_bucket;
     LDI::Config::Values m_config;
+    LDI&                m_filter;
 
     // This is a non-deleting reference to the same LDISession. We need this to know whether the filter
     // session is still alive. The S3Download has a reference on the session which guarantees that the

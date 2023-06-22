@@ -75,10 +75,20 @@ public:
         return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
+    bool have_xpand_import() const
+    {
+        return m_have_xpand_import;
+    }
+
+    void warn_about_missing_xpand_import(SERVICE* svc);
+
 private:
     friend class LDISession;
     LDI(const std::string& name);
+    bool find_xpand_import() const;
 
 private:
     Config m_config;
+    bool   m_have_xpand_import;
+    bool   m_warned {false};
 };

@@ -121,9 +121,10 @@ char* LDISession::set_import_password(void* self, const char* key, const char* b
     return nullptr;
 }
 
-LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter)
+LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
     : mxs::FilterSession(pSession, pService)
     , m_config(pFilter->m_config.values())
+    , m_filter(*pFilter)
     , m_self(std::shared_ptr<LDISession>(this, no_delete))
 {
     pSession->add_variable(CN_S3_KEY, &LDISession::set_key, this);
@@ -137,7 +138,7 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFil
 }
 
 // static
-LDISession* LDISession::create(MXS_SESSION* pSession, SERVICE* pService, const LDI* pFilter)
+LDISession* LDISession::create(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
 {
     return new LDISession(pSession, pService, pFilter);
 }
@@ -188,8 +189,9 @@ bool LDISession::routeQuery(GWBUF&& buffer)
         {
             m_bucket = parsed->s3.bucket;
             m_file = parsed->s3.filename;
+            auto server = get_xpand_node();
 
-            if (auto server = get_xpand_node())
+            if (server && m_filter.have_xpand_import())
             {
                 if (missing_required_params(ServerType::XPAND))
                 {
@@ -212,6 +214,12 @@ bool LDISession::routeQuery(GWBUF&& buffer)
                 if (missing_required_params(ServerType::MARIADB))
                 {
                     return true;
+                }
+
+                if (server)
+                {
+                    mxb_assert(!m_filter.have_xpand_import());
+                    m_filter.warn_about_missing_xpand_import(m_pService);
                 }
 
                 // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE to stream the data.

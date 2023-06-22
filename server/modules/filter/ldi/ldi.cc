@@ -15,6 +15,8 @@
 #include "ldi.hh"
 #include "ldisession.hh"
 
+#include <maxscale/service.hh>
+
 namespace cnf = mxs::config;
 
 namespace
@@ -95,6 +97,7 @@ bool LDI::LDI::Config::post_configure(const std::map<std::string, mxs::ConfigPar
 
 LDI::LDI(const std::string& name)
     : m_config(name)
+    , m_have_xpand_import(find_xpand_import())
 {
 }
 
@@ -118,4 +121,30 @@ json_t* LDI::diagnostics() const
 uint64_t LDI::getCapabilities() const
 {
     return ldi::CAPS;
+}
+
+bool LDI::find_xpand_import() const
+{
+    FILE* file = popen("command -v xpand_import", "r");
+    char buf[64];
+
+    while (fread(buf, 1, sizeof(buf), file) > 0)
+    {
+        // Discard the input. If it's not consumed, the process seems to exit with a SIGPIPE instead of
+        // exiting cleanly.
+    }
+
+    int rc = pclose(file);
+    return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
+}
+
+void LDI::warn_about_missing_xpand_import(SERVICE* svc)
+{
+    if (!m_warned)
+    {
+        m_warned = true;
+        MXB_WARNING("Service '%s' uses Xpand but 'xpand_import' is not installed. Data loading will "
+                    "use the native LOAD DATA LOCAL INFILE command which can perform slower.",
+                    svc->name());
+    }
 }
