@@ -43,10 +43,6 @@ public:
 
     struct ConnectionInitSql
     {
-        ConnectionInitSql() = default;
-        ConnectionInitSql(const ConnectionInitSql& rhs) = delete;
-        ConnectionInitSql(ConnectionInitSql&& rhs) noexcept;
-
         std::vector<std::string> queries;
         GWBUF                    buffer_contents;
     };
@@ -65,7 +61,8 @@ public:
     };
     using SMappingInfo = std::unique_ptr<const MappingInfo>;
 
-    ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode, SERVICE* service,
+    ListenerData() = default;
+    ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode,
                  SProtocol protocol_module, const std::string& listener_name,
                  std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql,
                  SMappingInfo mapping, mxb::proxy_protocol::SubnetArray&& proxy_networks,
@@ -73,10 +70,12 @@ public:
 
     ListenerData(const ListenerData&) = delete;
     ListenerData& operator=(const ListenerData&) = delete;
+    ListenerData(ListenerData&&) = default;
+    ListenerData& operator=(ListenerData&&) = default;
 
-    const SSLContext           m_ssl;                   /**< SSL settings */
-    const mxs::Parser::SqlMode m_default_sql_mode;      /**< Default sql mode for the listener */
-    SERVICE&                   m_service;               /**< The service the listener feeds */
+    const SSLContext m_ssl;                     /**< SSL settings */
+    // Default sql mode for the listener
+    const mxs::Parser::SqlMode m_default_sql_mode{mxs::Parser::SqlMode::DEFAULT};
     const SProtocol            m_proto_module;          /**< Protocol module */
     const std::string          m_listener_name;         /**< Name of the owning listener */
 
@@ -523,7 +522,8 @@ private:
     Type                  m_type;           /**< The type of the listener */
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
     int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
-    SData                 m_shared_data;    /**< Data shared with sessions */
+
+    mxs::WorkerGlobal<mxs::ListenerData> m_shared_data;     /**< Data shared with sessions */
 
     static Manager s_manager;   /**< Manager of all listener instances */
 };

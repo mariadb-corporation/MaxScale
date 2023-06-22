@@ -229,22 +229,21 @@ public:
     }
 
     /**
-     * Assign a value
+     * Assign a value from an existing reference
      *
      * Sets the master value and triggers an update on all routing workers.
      * The value will be updated on all routing worker threads once the
      * function returns.
      *
-     * @note: This function must only be called from the MainWorker.
+     * @note: This function cannot be called from a RoutingWorker
      *
      * @param t The new value to assign
      */
-    void assign(Stored& t)
+    void assign(std::shared_ptr<Stored> new_val)
     {
         mxb_assert_message(mxs::RoutingWorker::get_current() == nullptr,
                            "this method cannot be called from a RoutingWorker thread");
 
-        auto new_val = std::make_shared<Stored>(t);
         // Update the value of the master copy
         std::unique_lock<std::mutex> guard(this->m_lock);
         this->m_value = std::move(new_val);
@@ -259,6 +258,22 @@ public:
             [this]() {
             update_local_value();
         });
+    }
+
+    /**
+     * Assign a value
+     *
+     * Sets the master value and triggers an update on all routing workers.
+     * The value will be updated on all routing worker threads once the
+     * function returns.
+     *
+     * @note: This function cannot be called from a RoutingWorker
+     *
+     * @param t The new value to assign
+     */
+    void assign(Stored& t)
+    {
+        assign(std::make_shared<Stored>(t));
     }
 
 private:

@@ -42,7 +42,7 @@ public:
      * @param pClient  The client of the session. Must remain valid for
      *                 the lifetime of the Session.
      */
-    Session(Client* pClient, SListenerData listener_data);
+    Session(Client* pClient, SERVICE* service, SListenerData listener_data);
     ~Session();
 
     Client& client() const;

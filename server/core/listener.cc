@@ -268,7 +268,7 @@ namespace maxscale
 /**
  * ListenerData
  */
-ListenerData::ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode, SERVICE* service,
+ListenerData::ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode,
                            std::unique_ptr<mxs::ProtocolModule> protocol_module,
                            const std::string& listener_name,
                            std::vector<SAuthenticator>&& authenticators,
@@ -277,7 +277,6 @@ ListenerData::ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode
                            std::map<std::string, std::string>&& connection_metadata)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
-    , m_service(*service)
     , m_proto_module(move(protocol_module))
     , m_listener_name(listener_name)
     , m_connection_metadata(std::move(connection_metadata))
@@ -1033,7 +1032,7 @@ static ClientConn accept_one_connection(int fd)
 
 ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
 {
-    auto* session = new(std::nothrow) Session(m_shared_data, host);
+    auto* session = new(std::nothrow) Session(m_shared_data.get_ref(), m_config.service, host);
     if (!session)
     {
         MXB_OOM();
@@ -1407,8 +1406,8 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
                     connection_metadata.emplace(key, value);
                 }
 
-                rval = std::make_shared<mxs::ListenerData>(
-                    move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
+                rval = std::make_shared<const mxs::ListenerData>(
+                    move(ssl), m_config.sql_mode, move(protocol_module),
                     m_name, move(authenticators), move(init_sql), move(mapping_info),
                     std::move(proxy_networks), std::move(connection_metadata));
             }
@@ -1467,7 +1466,7 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
                 stop();
             }
 
-            m_shared_data = data;
+            m_shared_data.assign(std::move(data));
             rval = true;
 
             if (start_state == STARTED)
@@ -1661,11 +1660,5 @@ bool Listener::read_proxy_networks(maxbase::proxy_protocol::SubnetArray& output)
         mxb_assert(!true);      // Validation should catch faulty setting.
     }
     return rval;
-}
-
-ListenerData::ConnectionInitSql::ConnectionInitSql(ListenerData::ConnectionInitSql&& rhs) noexcept
-    : queries(std::move(rhs.queries))
-    , buffer_contents(std::move(rhs.buffer_contents))
-{
 }
 }

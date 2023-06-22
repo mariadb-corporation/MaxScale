@@ -128,7 +128,7 @@ public:
 
     using FilterList = std::vector<SessionFilter>;
 
-    Session(std::shared_ptr<const mxs::ListenerData> listener_data,
+    Session(std::shared_ptr<const mxs::ListenerData> listener_data, SERVICE* service,
             const std::string& host);
     ~Session();
 

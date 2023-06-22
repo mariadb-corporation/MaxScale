@@ -722,10 +722,9 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(std::shared_ptr<const ListenerData> listener_data,
-                 const std::string& host)
-    : MXS_SESSION(host, &listener_data->m_service)
-    , m_down(static_cast<Service&>(listener_data->m_service).get_connection(this, this))
+Session::Session(std::shared_ptr<const ListenerData> listener_data, SERVICE* service, const std::string& host)
+    : MXS_SESSION(host, service)
+    , m_down(static_cast<Service&>(*service).get_connection(this, this))
     , m_routable(this)
     , m_head(&m_routable)
     , m_tail(&m_routable)
@@ -1248,7 +1247,7 @@ bool Session::do_restart()
     // responses from the backends.
     cancel_dcalls();
 
-    auto down = static_cast<Service&>(m_listener_data->m_service).get_connection(this, this);
+    auto down = static_cast<Service&>(*this->service).get_connection(this, this);
 
     if (down->connect())
     {

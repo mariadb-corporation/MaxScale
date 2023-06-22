@@ -305,7 +305,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 
     pWorker->call([&]() {
             mock::Client client("bob", "127.0.0.1");
-            mock::Session session(&client, listener_data);
+            mock::Session session(&client, service, listener_data);
             mock::ResultSetBackend backend;
             mock::RouterSession router_session(&backend, &session);
 

@@ -29,6 +29,8 @@
 #include "../internal/service.hh"
 #include "../internal/session.hh"
 
+mxs::Listener::SData listener_data;
+
 /**
  * test1    Allocate a service and do lots of other things
  *
@@ -36,14 +38,7 @@
 
 static void test1(Service* service)
 {
-    mxs::ConfigParameters listener_params;
-    listener_params.set(CN_ADDRESS, "0.0.0.0");
-    listener_params.set(CN_PORT, "3306");
-    listener_params.set(CN_PROTOCOL, "mariadb");
-    listener_params.set(CN_SERVICE, service->name());
-
-    auto listener_data = mxs::Listener::create_test_data(listener_params);
-    auto session = new Session(listener_data, "127.0.0.1");
+    auto session = new Session(listener_data, service, "127.0.0.1");
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
 
@@ -83,12 +78,22 @@ int main(int argc, char** argv)
             parameters.set(CN_ROUTER, "readconnroute");
             auto service = Service::create("service", parameters);
 
+            mxs::ConfigParameters listener_params;
+            listener_params.set(CN_ADDRESS, "0.0.0.0");
+            listener_params.set(CN_PORT, "3306");
+            listener_params.set(CN_PROTOCOL, "mariadb");
+            listener_params.set(CN_SERVICE, service->name());
+
+            listener_data = mxs::Listener::create_test_data(listener_params);
+
             mxs::RoutingWorker* pWorker = mxs::RoutingWorker::get_by_index(0);
             mxb_assert(pWorker);
 
             pWorker->call([service]() {
                     test1(service);
                 });
+
+            listener_data.reset();
         });
     return 0;
 }
