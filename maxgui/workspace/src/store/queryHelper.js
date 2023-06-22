@@ -700,10 +700,11 @@ function getColNamesByAttr({ cols, attr }) {
     return names
 }
 /**
- * @param {string} colName - column name
- * @returns {string} unique key name
+ * @param {string} param.colName - column name
+ * @param {string} param.category - key category
+ * @returns {string} key name
  */
-const genUqName = colName => `${colName}_UNIQUE`
+const genKeyName = ({ colName, category }) => `${colName}_${category.replace(/\s/, '_')}`
 
 /**
  *
@@ -753,7 +754,7 @@ export default {
     getKeyObjByColNames,
     tableParserTransformer,
     getColNamesByAttr,
-    genUqName,
+    genKeyName,
     tableParser,
     genErdNode,
     getNodeLinks,

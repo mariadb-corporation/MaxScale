@@ -43,6 +43,7 @@ export const lodash = {
     groupBy: require('lodash/groupBy'),
     flatMap: require('lodash/flatMap'),
     update: require('lodash/update'),
+    sortBy: require('lodash/sortBy'),
 }
 
 export function delay(t, v) {

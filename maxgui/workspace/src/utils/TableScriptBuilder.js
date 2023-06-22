@@ -205,7 +205,10 @@ export default class TableScriptBuilder {
         const { [NAME]: newColName, [UQ]: newUqValue } = colObj
 
         if (newUqValue) {
-            const uqName = queryHelper.genUqName(newColName)
+            const uqName = queryHelper.genKeyName({
+                colName: newColName,
+                category: tokens.uniqueKey,
+            })
             const keyDef = `${tokens.uniqueKey} ${quoting(uqName)} (${quoting(newColName)})`
             if (this.isCreateTable) return keyDef
             return `${tokens.add} ${keyDef}`
