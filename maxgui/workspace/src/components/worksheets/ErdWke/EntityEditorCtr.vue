@@ -115,6 +115,7 @@ export default {
                 'activeEntityId',
                 v => {
                     if (v) {
+                        this.$typy(this.unwatch_stagingData).safeFunction()
                         this.stagingData = this.$helpers.lodash.cloneDeep(this.stagingInitialData)
                         this.watch_stagingData()
                     }

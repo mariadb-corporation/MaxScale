@@ -459,8 +459,16 @@ export default {
                 colName,
             })
             const { color } = this.getHighlightColStyle({ node, colName }) || {}
+            const {
+                primaryKey,
+                uniqueKey,
+                key,
+                fullTextKey,
+                spatialKey,
+                foreignKey,
+            } = this.CREATE_TBL_TOKENS
             switch (keyType) {
-                case this.CREATE_TBL_TOKENS.primaryKey:
+                case primaryKey:
                     return {
                         icon: 'mdi-key-variant',
                         color: color ? color : 'primary',
@@ -469,13 +477,16 @@ export default {
                         },
                         size: 18,
                     }
-                case this.CREATE_TBL_TOKENS.uniqueKey:
+                case uniqueKey:
                     return {
                         icon: '$vuetify.icons.mxs_uniqueIndexKey',
                         color: color ? color : 'navigation',
                         size: 16,
                     }
-                case this.CREATE_TBL_TOKENS.key:
+                case key:
+                case fullTextKey:
+                case spatialKey:
+                case foreignKey:
                     return {
                         icon: '$vuetify.icons.mxs_indexKey',
                         color: color ? color : 'navigation',

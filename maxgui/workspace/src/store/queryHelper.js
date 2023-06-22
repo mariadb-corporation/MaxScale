@@ -583,7 +583,8 @@ async function queryAndParseDDL({ connId, tableNodes, config }) {
  * @returns {string} type of the key
  */
 function findKeyTypeByColName({ keys, colName }) {
-    const keyTypes = [tokens.primaryKey, tokens.uniqueKey, tokens.key]
+    const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = tokens
+    const keyTypes = [primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey]
     return keyTypes.find(type =>
         typy(keys, `[${type}]`).safeArray.some(key =>
             key.index_cols.some(item => item.name === colName)
