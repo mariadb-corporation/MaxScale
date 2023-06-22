@@ -454,7 +454,7 @@ export default {
             this.chosenLinks = []
         },
         getKeyIcon({ node, colName }) {
-            const keyType = queryHelper.findKeyTypeByColName({
+            const keyTypes = queryHelper.findKeyTypesByColName({
                 keys: this.entityKeyMap[node.id],
                 colName,
             })
@@ -467,32 +467,28 @@ export default {
                 spatialKey,
                 foreignKey,
             } = this.CREATE_TBL_TOKENS
-            switch (keyType) {
-                case primaryKey:
-                    return {
-                        icon: 'mdi-key-variant',
-                        color: color ? color : 'primary',
-                        style: {
-                            transform: 'rotate(180deg) scale(1, -1)',
-                        },
-                        size: 18,
-                    }
-                case uniqueKey:
-                    return {
-                        icon: '$vuetify.icons.mxs_uniqueIndexKey',
-                        color: color ? color : 'navigation',
-                        size: 16,
-                    }
-                case key:
-                case fullTextKey:
-                case spatialKey:
-                case foreignKey:
-                    return {
-                        icon: '$vuetify.icons.mxs_indexKey',
-                        color: color ? color : 'navigation',
-                        size: 16,
-                    }
-            }
+
+            if (keyTypes.includes(primaryKey))
+                return {
+                    icon: 'mdi-key-variant',
+                    color: color ? color : 'primary',
+                    style: {
+                        transform: 'rotate(180deg) scale(1, -1)',
+                    },
+                    size: 18,
+                }
+            else if (keyTypes.includes(uniqueKey))
+                return {
+                    icon: '$vuetify.icons.mxs_uniqueIndexKey',
+                    color: color ? color : 'navigation',
+                    size: 16,
+                }
+            else if ([key, fullTextKey, spatialKey, foreignKey].some(k => keyTypes.includes(k)))
+                return {
+                    icon: '$vuetify.icons.mxs_indexKey',
+                    color: color ? color : 'navigation',
+                    size: 16,
+                }
         },
         getColName(col) {
             return col[this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]]

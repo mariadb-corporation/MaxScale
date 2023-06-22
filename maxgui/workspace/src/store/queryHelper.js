@@ -582,10 +582,10 @@ async function queryAndParseDDL({ connId, tableNodes, config }) {
  * @param {string} colName - column name to be looked up
  * @returns {string} type of the key
  */
-function findKeyTypeByColName({ keys, colName }) {
+function findKeyTypesByColName({ keys, colName }) {
     const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = tokens
     const keyTypes = [primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey]
-    return keyTypes.find(type =>
+    return keyTypes.filter(type =>
         typy(keys, `[${type}]`).safeArray.some(key =>
             key.index_cols.some(item => item.name === colName)
         )
@@ -630,9 +630,9 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
     const colsTransformed = cols.map(col => {
         let type = col.data_type
         if (col.data_type_size) type += `(${col.data_type_size})`
-        const keyType = findKeyTypeByColName({ keys, colName: col.name })
+        const keyTypes = findKeyTypesByColName({ keys, colName: col.name })
         let uq = false
-        if (keyType === tokens.uniqueKey) {
+        if (keyTypes.includes(tokens.uniqueKey)) {
             uq = Boolean(
                 getKeyObjByColNames({ keys, keyType: tokens.uniqueKey, colNames: [col.name] })
             )
@@ -658,7 +658,7 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
             [ID]: uuidv1(),
             [NAME]: col.name,
             [TYPE]: type.toUpperCase(),
-            [PK]: keyType === tokens.primaryKey,
+            [PK]: keyTypes.includes(tokens.primaryKey),
             [NN]: col.is_nn,
             [UN]: col.is_un,
             [UQ]: uq,
@@ -749,7 +749,7 @@ export default {
     genErdNodes,
     handleGenErdLink,
     queryAndParseDDL,
-    findKeyTypeByColName,
+    findKeyTypesByColName,
     getKeyObjByColNames,
     tableParserTransformer,
     getColNamesByAttr,
