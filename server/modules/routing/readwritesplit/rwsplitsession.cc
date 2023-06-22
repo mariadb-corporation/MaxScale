@@ -977,7 +977,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             errmsg += " A transaction is active and cannot be replayed.";
         }
 
-        if (route_info().have_tmp_tables())
+        if (m_qc.have_tmp_tables())
         {
             if (m_config->strict_tmp_tables)
             {

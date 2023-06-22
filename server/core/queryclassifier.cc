@@ -288,8 +288,6 @@ QueryClassifier::QueryClassifier(mxs::Parser& parser,
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_multi_statements_allowed(pSession->protocol_data()->are_multi_statements_allowed())
     , m_sPs_manager(new PSManager(parser, log))
-    , m_route_info(&parser)
-    , m_prev_route_info(&parser)
 {
 }
 
@@ -410,7 +408,7 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype, const TrxTracker& trx
 {
     bool trx_active = trx_tracker.is_trx_active();
     uint32_t target = TARGET_UNDEFINED;
-    bool load_active = (m_route_info.load_data_state() != LOAD_DATA_INACTIVE);
+    bool load_active = m_route_info.load_data_active();
     mxb_assert(!load_active);
 
     /**
@@ -521,7 +519,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, co
     {
         MXB_INFO("> Processing large request with more than 2^24 bytes of data");
     }
-    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
+    else if (!m_route_info.load_data_active())
     {
         MXB_INFO("> Autocommit: %s, trx is %s, %s",
                  trx_tracker.is_autocommit() ? "[enabled]" : "[disabled]",
@@ -577,7 +575,7 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
         MXB_INFO("Added temporary table %s", table.c_str());
 
         /** Add the table to the set of temporary tables */
-        m_route_info.add_tmp_table(table);
+        add_tmp_table(table);
     }
 }
 
@@ -649,7 +647,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     /**
      * Check if the query has anything to do with temporary tables.
      */
-    if (m_route_info.have_tmp_tables() && is_query)
+    if (have_tmp_tables() && is_query)
     {
 
         check_drop_tmp_table(querybuf);
@@ -687,8 +685,8 @@ QueryClassifier::update_route_info(GWBUF& buffer)
 
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
+    m_delta.clear();
 
-    trx_tracker.track_transaction_state(buffer, m_parser);
     m_route_info.set_multi_part_packet(m_parser.is_multi_part_packet(buffer));
 
     if (m_route_info.multi_part_packet())
@@ -696,6 +694,8 @@ QueryClassifier::update_route_info(GWBUF& buffer)
         // Trailing part of a multi-packet query, ignore it
         return m_route_info;
     }
+
+    trx_tracker.track_transaction_state(buffer, m_parser);
 
     // Reset for every classification
     m_route_info.set_ps_continuation(false);
@@ -705,7 +705,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
     bool in_read_only_trx =
         (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) && trx_tracker.is_trx_read_only();
 
-    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+    if (m_route_info.load_data_active())
     {
         // A LOAD DATA LOCAL INFILE is ongoing
     }
@@ -838,8 +838,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
 
 void QueryClassifier::update_from_reply(const mxs::Reply& reply)
 {
-    m_route_info.set_load_data_state(reply.state() == mxs::ReplyState::LOAD_DATA ?
-                                     LOAD_DATA_ACTIVE : LOAD_DATA_INACTIVE);
+    m_route_info.set_load_data_active(reply.state() == mxs::ReplyState::LOAD_DATA);
 
     if (reply.is_complete())
     {
@@ -850,7 +849,7 @@ void QueryClassifier::update_from_reply(const mxs::Reply& reply)
 // static
 bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
 {
-    if (qc.m_route_info.is_tmp_table(table))
+    if (qc.is_tmp_table(table))
     {
         MXB_INFO("Query targets a temporary table: %s", table.c_str());
         return false;
@@ -862,7 +861,27 @@ bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
 // static
 bool QueryClassifier::delete_table(QueryClassifier& qc, const std::string& table)
 {
-    qc.m_route_info.remove_tmp_table(table);
+    qc.remove_tmp_table(table);
     return true;
+}
+
+void QueryClassifier::revert_update()
+{
+    m_route_info = m_prev_route_info;
+
+    for (const auto& [op, table] : m_delta)
+    {
+        if (op == ADD)
+        {
+            m_tmp_tables.erase(table);
+        }
+        else
+        {
+            mxb_assert(op == REMOVE);
+            m_tmp_tables.emplace(std::move(table));
+        }
+    }
+
+    m_delta.clear();
 }
 }

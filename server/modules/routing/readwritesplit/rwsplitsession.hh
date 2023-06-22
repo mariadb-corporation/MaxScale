@@ -344,7 +344,7 @@ private:
         bool can_route = false;
 
         if (m_expected_responses == 0
-            || route_info().load_data_state() != mariadb::QueryClassifier::LOAD_DATA_INACTIVE
+            || route_info().load_data_active()
             || route_info().multi_part_packet())
         {
             // Not currently doing anything or we're processing a multi-packet query
