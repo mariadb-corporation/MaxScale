@@ -951,9 +951,14 @@ public:
     Msg(const Msg& rhs) = default;
     Msg(Msg&& rhs) = default;
 
+    static bool checksum_present(uint32_t flags)
+    {
+        return (flags & CHECKSUM_PRESENT) ? true : false;
+    }
+
     bool checksum_present() const
     {
-        return (m_flags & CHECKSUM_PRESENT) ? true : false;
+        return checksum_present(m_flags);
     }
 
     bool exhaust_allowed() const

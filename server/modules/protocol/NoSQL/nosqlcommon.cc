@@ -1365,7 +1365,33 @@ cache_result_t cache::get_key(ValueKind value_kind,
                               const GWBUF* pRequest,
                               CacheKey* pKey)
 {
-    cache_result_t rv = Cache::get_default_key(user, host, zDefault_db, pRequest, pKey);
+    const uint8_t* pData = pRequest->data();
+    size_t nData = pRequest->length();
+
+    mxb_assert(nData >= sizeof(protocol::HEADER));
+
+    const protocol::HEADER* pHeader = reinterpret_cast<const protocol::HEADER*>(pData);
+
+    size_t offset = 3 * sizeof(int32_t); // msg_len, request_id, and response_to.
+    pData += offset;
+    nData -= offset;
+
+    if (pHeader->opcode == MONGOC_OPCODE_MSG)
+    {
+        mxb_assert(nData >= sizeof(uint32_t));
+
+        uint32_t flags;
+        protocol::get_byte4(pData, &flags);
+
+        // The checksum covers everything but the checksum itself, so we must exclude
+        // it, as the request_id and thus the checksum will be different each time.
+        if (packet::Msg::checksum_present(flags))
+        {
+            nData -= sizeof(uint32_t);
+        }
+    }
+
+    cache_result_t rv = Cache::get_default_key(user, host, zDefault_db, pData, nData, pKey);
 
     if (CACHE_RESULT_IS_OK(rv) && value_kind == ValueKind::NOSQL_RESPONSE)
     {
