@@ -155,6 +155,13 @@ public:
     static cache_result_t get_default_key(const std::string& user,
                                           const std::string& host,
                                           const char* zDefault_db,
+                                          const uint8_t* pData,
+                                          size_t nData,
+                                          CacheKey* pKey);
+
+    static cache_result_t get_default_key(const std::string& user,
+                                          const std::string& host,
+                                          const char* zDefault_db,
                                           const GWBUF* pQuery,
                                           CacheKey* pKey);
 
