@@ -74,28 +74,20 @@ cache_result_t Cache::get_key(const std::string& user,
 cache_result_t Cache::get_default_key(const std::string& user,
                                       const std::string& host,
                                       const char* zDefault_db,
-                                      const GWBUF* pQuery,
+                                      const uint8_t* pData,
+                                      size_t nData,
                                       CacheKey* pKey)
 {
     mxb_assert((user.empty() && host.empty()) || (!user.empty() && !host.empty()));
 
-    std::string_view sql = mariadb::get_sql(*pQuery);
-    const char* pSql = sql.data();
-    int length = sql.length();
-
     uint64_t crc = 0;
-
-    const uint8_t* pData;
 
     if (zDefault_db)
     {
-        pData = reinterpret_cast<const uint8_t*>(zDefault_db);
-        crc = lzma_crc64(pData, strlen(zDefault_db), crc);
+        crc = lzma_crc64(reinterpret_cast<const uint8_t*>(zDefault_db), strlen(zDefault_db), crc);
     }
 
-    pData = reinterpret_cast<const uint8_t*>(pSql);
-
-    crc = lzma_crc64(pData, length, crc);
+    crc = lzma_crc64(pData, nData, crc);
 
     pKey->data_hash = crc;
 
@@ -116,6 +108,22 @@ cache_result_t Cache::get_default_key(const std::string& user,
     pKey->full_hash = crc;
 
     return CACHE_RESULT_OK;
+}
+
+// static
+cache_result_t Cache::get_default_key(const std::string& user,
+                                      const std::string& host,
+                                      const char* zDefault_db,
+                                      const GWBUF* pQuery,
+                                      CacheKey* pKey)
+{
+    // TODO: This needs to change as this is MariaDB specific.
+    std::string_view sql = mariadb::get_sql(*pQuery);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(sql.data());
+    size_t nData = sql.length();
+
+    return get_default_key(user, host, zDefault_db, pData, nData, pKey);
 }
 
 std::shared_ptr<CacheRules> Cache::should_store(const mxs::Parser& parser,
