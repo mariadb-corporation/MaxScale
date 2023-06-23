@@ -820,6 +820,12 @@ bool CachingParser::relates_to_previous(const GWBUF& stmt) const
     return m_sParser->relates_to_previous(stmt);
 }
 
+bool CachingParser::is_multi_stmt(const GWBUF& stmt) const
+{
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
+    return m_sParser->is_multi_stmt(stmt);
+}
+
 bool CachingParser::set_options(uint32_t options)
 {
     bool rv = m_sParser->set_options(options);

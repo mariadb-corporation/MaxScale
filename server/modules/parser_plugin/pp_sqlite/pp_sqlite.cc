@@ -28,6 +28,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/modinfo.hh>
 #include <maxsimd/canonical.hh>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
@@ -3329,6 +3330,7 @@ public:
         , m_type_mask(mxs::sql::TYPE_UNKNOWN)
         , m_operation(mxs::sql::OP_UNDEFINED)
         , m_pPreparable_stmt(NULL)
+        , m_multi_stmt(false)
     {
     }
 
@@ -3565,6 +3567,7 @@ public:
                                                                  // of the statement. Data referred to from
                                                                  // m_function_infos
     vector<vector<char>>              m_scratch_buffers;         // Buffers if string not found from canonical.
+    bool                              m_multi_stmt;
 };
 
 extern "C"
@@ -3824,6 +3827,10 @@ static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, u
 
                 pInfo->m_canonical = helper.get_sql(query);
                 maxsimd::get_canonical(&pInfo->m_canonical);
+
+                // Checking whether the statement consists of multiple statements is faster if done
+                // from the canonical query form as it is shorter than the original query.
+                pInfo->m_multi_stmt = maxsimd::is_multi_stmt(pInfo->m_canonical);
 
                 if (is_prepare)
                 {
@@ -5126,6 +5133,18 @@ public:
                 rv = true;
                 break;
             }
+        }
+
+        return rv;
+    }
+
+    bool is_multi_stmt(const GWBUF& stmt) const override
+    {
+        bool rv = false;
+
+        if (PpSqliteInfo* pInfo = get_info(stmt))
+        {
+            rv = pInfo->m_multi_stmt;
         }
 
         return rv;

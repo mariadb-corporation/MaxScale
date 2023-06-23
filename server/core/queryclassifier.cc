@@ -16,7 +16,6 @@
 #include <unordered_map>
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
-#include <maxsimd/multistmt.hh>
 
 using mariadb::QueryClassifier;
 using mxs::Parser;
@@ -638,7 +637,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
         bool is_multi = is_query && m_parser.get_operation(*querybuf) == mxs::sql::OP_CALL;
         if (!is_multi && multi_statements_allowed() && is_query)
         {
-            is_multi = maxsimd::is_multi_stmt(m_parser.helper().get_sql(*querybuf));
+            is_multi = m_parser.is_multi_stmt(*querybuf);
         }
 
         if (is_multi)

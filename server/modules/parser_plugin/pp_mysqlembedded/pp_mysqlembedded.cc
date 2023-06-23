@@ -70,6 +70,7 @@
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 #include <maxsimd/canonical.hh>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/log.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
@@ -4167,6 +4168,11 @@ public:
         }
 
         return rv;
+    }
+
+    bool is_multi_stmt(const GWBUF& stmt) const override
+    {
+        return maxsimd::is_multi_stmt(helper().get_sql(stmt));
     }
 
     void set_sql_mode(Parser::SqlMode sql_mode) override

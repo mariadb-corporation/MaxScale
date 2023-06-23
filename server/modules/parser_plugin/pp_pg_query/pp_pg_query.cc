@@ -13,6 +13,7 @@
 
 #include "pp_pg_query.hh"
 #include <maxsimd/canonical.hh>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/parser.hh>
@@ -48,6 +49,7 @@ class PgQueryInfo : public GWBUF::ProtocolInfo
 public:
     PgQueryInfo(string_view sql)
         : m_canonical(make_canonical(sql))
+        , m_multi_stmt(maxsimd::is_multi_stmt(m_canonical))
     {
     }
 
@@ -537,6 +539,11 @@ public:
         return false;
     }
 
+    bool is_multi_stmt(const GWBUF& packet) const
+    {
+        return m_multi_stmt;
+    }
+
 private:
     static string make_canonical(string_view sql)
     {
@@ -598,11 +605,12 @@ private:
     }
 
     string         m_canonical;
-    Parser::Result m_result    {Parser::Result::INVALID};
-    uint32_t       m_type_mask {0};
-    sql::OpCode    m_op        {sql::OP_UNDEFINED};
-    int32_t        m_collected {0};
-    int32_t        m_collect   {0};
+    Parser::Result m_result     {Parser::Result::INVALID};
+    uint32_t       m_type_mask  {0};
+    sql::OpCode    m_op         {sql::OP_UNDEFINED};
+    int32_t        m_collected  {0};
+    int32_t        m_collect    {0};
+    bool           m_multi_stmt {false};
 };
 
 /*
@@ -700,6 +708,11 @@ public:
     bool relates_to_previous(const GWBUF& query) const override
     {
         return get_info(query)->relates_to_previous(query);
+    }
+
+    bool is_multi_stmt(const GWBUF& query) const override
+    {
+        return get_info(query)->is_multi_stmt(query);
     }
 
     bool set_options(uint32_t options) override
