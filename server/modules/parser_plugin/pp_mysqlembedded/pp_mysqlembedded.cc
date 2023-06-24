@@ -730,6 +730,11 @@ static bool parse_query(const Parser::Helper& helper, const GWBUF* querybuf)
         pi->result = Parser::Result::PARSED;
     }
 
+    if (pi && pi->type_mask & (mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT))
+    {
+        pi->set_cacheable(false);
+    }
+
     /** Add complete parsing info struct to the query buffer */
     const_cast<GWBUF*>(querybuf)->set_protocol_info(std::move(pi));
 

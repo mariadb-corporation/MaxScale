@@ -291,7 +291,7 @@ private:
 
     int64_t entry_size(const GWBUF::ProtocolInfo* pInfo)
     {
-        const int64_t map_entry_overhead = 4 * sizeof(void *);
+        const int64_t map_entry_overhead = 4 * sizeof(void*);
         const int64_t constant_overhead = sizeof(std::string_view) + sizeof(Entry) + map_entry_overhead;
 
         return constant_overhead + pInfo->size();
@@ -367,7 +367,7 @@ private:
     CachingParser::Stats m_stats;
     std::random_device   m_rdev;
     std::mt19937         m_reng;
-    int32_t              m_refs { 0 };
+    int32_t              m_refs {0};
 };
 
 /**
@@ -392,10 +392,14 @@ public:
         : m_parser(*pParser)
         , m_stmt(*pStmt)
     {
-        auto pInfo = m_stmt.get_protocol_info().get();
-        m_info_size_before = pInfo ? pInfo->size() : 0;
-
-        if (use_cached_result() && has_not_been_parsed(m_stmt))
+        if (const auto& sCached = m_stmt.get_protocol_info())
+        {
+            // The buffer already has the info. This means this is not the first time that a query
+            // classification function is called. Record the current size of the value so that we'll be able
+            // to detect in the destructor if it has grown.
+            m_info_size_before = sCached->size();
+        }
+        else if (use_cached_result())
         {
             // We generate the canonical explicitly, because now we want the key that
             // allows us to look up whether the parsing info already exists. Besides,
@@ -414,41 +418,36 @@ public:
                                                                                       this_thread.canonical);
             if (sInfo)
             {
+                // Cache hit, copy the reference into the GWBUF
                 m_info_size_before = sInfo->size();
                 const_cast<GWBUF&>(m_stmt).set_protocol_info(std::move(sInfo));
             }
-            else
+            else if (!this_thread.canonical.empty())
             {
-                // Cached information was not found. By assigning the canonical string to m_canonical, it will
-                // be known in the destructor that the result should be inserted into the cache.
-                m_canonical = this_thread.canonical;
+                // Cache miss, try to insert it into the cache in the destructor
+                m_info_size_before = ADD_TO_CACHE;
             }
         }
     }
 
     ~QCInfoCacheScope()
     {
-        bool exclude = exclude_from_cache();
+        const auto& sInfo = m_stmt.get_protocol_info();
 
-        if (!m_canonical.empty() && !exclude)
-        {   // Cache for the first time
-            auto sInfo = m_stmt.get_protocol_info();
-            mxb_assert(sInfo);
-
-            // Now from QC and this will have the trailing ":P" in case the GWBUF
-            // contained a COM_STMT_PREPARE.
-            std::string_view canonical = m_parser.plugin().get_canonical(sInfo.get());
-            mxb_assert(m_canonical == canonical);
-
-            this_thread.pInfo_cache->insert(&m_parser, canonical, std::move(sInfo));
-        }
-        else if (!exclude)
-        {   // The size might have changed
-            auto pInfo = m_stmt.get_protocol_info().get();
-            auto info_size_after = pInfo ? pInfo->size() : 0;
-
-            if (m_info_size_before != info_size_after)
+        if (sInfo && sInfo->cacheable())
+        {
+            if (m_info_size_before == ADD_TO_CACHE)
             {
+                // Now from QC and this will have the trailing ":P" in case the GWBUF
+                // contained a COM_STMT_PREPARE.
+                std::string_view canonical = m_parser.plugin().get_canonical(sInfo.get());
+                mxb_assert(this_thread.canonical == canonical);
+
+                this_thread.pInfo_cache->insert(&m_parser, canonical, sInfo);
+            }
+            else if (auto info_size_after = sInfo->size(); m_info_size_before != info_size_after)
+            {
+                // The size has changed
                 mxb_assert(m_info_size_before < info_size_after);
                 this_thread.pInfo_cache->update_total_size(info_size_after - m_info_size_before);
             }
@@ -456,20 +455,13 @@ public:
     }
 
 private:
+    // The constant that's stored in m_info_size_before when the entry should be inserted into the cache.
+    static constexpr size_t ADD_TO_CACHE = std::numeric_limits<size_t>::max();
+
     mxs::Parser& m_parser;
     const GWBUF& m_stmt;
-    std::string  m_canonical;
-    size_t       m_info_size_before;
-
-    bool exclude_from_cache() const
-    {
-        constexpr const int is_autocommit =
-            mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
-        uint32_t type_mask = m_parser.get_type_mask(m_stmt);
-        return (type_mask & is_autocommit) != 0;
-    }
+    size_t       m_info_size_before {0};
 };
-
 }
 
 namespace maxscale
@@ -481,7 +473,7 @@ CachingParser::CachingParser(std::unique_ptr<Parser> sParser)
 {
 }
 
-//static
+// static
 void CachingParser::thread_init()
 {
     if (!this_thread.pInfo_cache)
@@ -492,7 +484,7 @@ void CachingParser::thread_init()
     this_thread.pInfo_cache->inc_ref();
 }
 
-//static
+// static
 void CachingParser::thread_finish()
 {
     mxb_assert(this_thread.pInfo_cache);
@@ -504,7 +496,7 @@ void CachingParser::thread_finish()
     }
 }
 
-//static
+// static
 bool CachingParser::set_properties(const Properties& properties)
 {
     bool rv = false;
@@ -528,7 +520,7 @@ bool CachingParser::set_properties(const Properties& properties)
     return rv;
 }
 
-//static
+// static
 void CachingParser::get_properties(Properties* pProperties)
 {
     pProperties->max_size = this_unit.cache_max_size();
@@ -556,7 +548,7 @@ json_t* get_params(json_t* pJson)
 }
 }
 
-//static
+// static
 bool CachingParser::set_properties(json_t* pJson)
 {
     bool rv = false;
@@ -590,7 +582,7 @@ bool CachingParser::set_properties(json_t* pJson)
     return rv;
 }
 
-//static
+// static
 std::unique_ptr<json_t> CachingParser::get_properties_as_resource(const char* zHost)
 {
     Properties properties;
@@ -650,8 +642,8 @@ std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost)
     // parallel and then coalesced here.
 
     mxs::RoutingWorker::execute_serially([&state]() {
-                                             CachingParser::get_thread_cache_state(state);
-                                         });
+        CachingParser::get_thread_cache_state(state);
+    });
 
     json_t* pData = json_array();
 
@@ -668,7 +660,7 @@ std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost)
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pData));
 }
 
-//static
+// static
 int64_t CachingParser::clear_thread_cache()
 {
     int64_t rv = 0;
@@ -682,7 +674,7 @@ int64_t CachingParser::clear_thread_cache()
     return rv;
 }
 
-//static
+// static
 void CachingParser::get_thread_cache_state(std::map<std::string, Entry>& state)
 {
     QCInfoCache* pCache = this_thread.pInfo_cache;
@@ -693,7 +685,7 @@ void CachingParser::get_thread_cache_state(std::map<std::string, Entry>& state)
     }
 }
 
-//static
+// static
 bool CachingParser::get_thread_cache_stats(Stats* pStats)
 {
     bool rv = false;
@@ -709,13 +701,13 @@ bool CachingParser::get_thread_cache_stats(Stats* pStats)
     return rv;
 }
 
-//static
+// static
 std::unique_ptr<json_t> CachingParser::get_thread_cache_stats_as_json()
 {
     Stats stats;
     get_thread_cache_stats(&stats);
 
-    std::unique_ptr<json_t> sStats { json_object() };
+    std::unique_ptr<json_t> sStats {json_object()};
     json_object_set_new(sStats.get(), "size", json_integer(stats.size));
     json_object_set_new(sStats.get(), "inserts", json_integer(stats.inserts));
     json_object_set_new(sStats.get(), "hits", json_integer(stats.hits));
@@ -725,7 +717,7 @@ std::unique_ptr<json_t> CachingParser::get_thread_cache_stats_as_json()
     return sStats;
 }
 
-//static
+// static
 void CachingParser::set_thread_cache_enabled(bool enabled)
 {
     this_thread.use_cache = enabled;
@@ -855,5 +847,4 @@ void CachingParser::set_server_version(uint64_t version)
 {
     m_sParser->set_server_version(version);
 }
-
 }

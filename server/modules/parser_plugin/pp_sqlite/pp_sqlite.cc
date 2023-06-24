@@ -3862,6 +3862,11 @@ static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, u
                 pInfo->m_type_mask |= mxs::sql::TYPE_PREPARE_STMT;
             }
 
+            if (pInfo->m_type_mask & (mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT))
+            {
+                pInfo->set_cacheable(false);
+            }
+
             pInfo->m_collected = pInfo->m_collect;
 
             pInfo->calculate_size();

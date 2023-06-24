@@ -602,6 +602,11 @@ private:
         }
 
         pInfo->analyze(sql, collect);
+
+        if (pInfo->m_type_mask & (mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT))
+        {
+            pInfo->set_cacheable(false);
+        }
     }
 
     string         m_canonical;

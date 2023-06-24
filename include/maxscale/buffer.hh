@@ -68,6 +68,21 @@ public:
     public:
         virtual ~ProtocolInfo() = default;
         virtual size_t size() const = 0;
+
+        // If true, the ProtocolInfo can be cached and reused based on the canonical form of the query. If
+        // false, the result should not be cached and should always be created again.
+        bool cacheable() const
+        {
+            return m_cacheable;
+        }
+
+        void set_cacheable(bool value)
+        {
+            m_cacheable = value;
+        }
+
+    private:
+        bool m_cacheable {true};
     };
 
     enum Type : uint32_t
