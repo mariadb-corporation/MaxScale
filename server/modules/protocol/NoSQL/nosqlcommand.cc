@@ -78,6 +78,23 @@ string Command::to_json() const
     return "";
 }
 
+void Command::patch_response(GWBUF& response, int32_t request_id, int32_t response_to)
+{
+    uint8_t* pData = response.data();
+    protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(pData);
+
+    pHeader->request_id = request_id;
+    pHeader->response_to = response_to;
+
+    size_t nData = response.length() - sizeof(uint32_t);
+
+    uint32_t checksum = crc32_func(pData, nData);
+
+    pData += nData;
+
+    protocol::set_byte4(pData, checksum);
+}
+
 void Command::free_request()
 {
     m_request.clear();
