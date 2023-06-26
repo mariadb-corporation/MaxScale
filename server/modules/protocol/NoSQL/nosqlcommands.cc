@@ -111,48 +111,6 @@ unique_ptr<OpMsgCommand> create_diagnose_command(const string& name,
     return sCommand;
 }
 
-using CreateDefaultFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
-                                                           Database* pDatabase,
-                                                           GWBUF* pRequest,
-                                                           packet::Msg&& msg);
-
-using CreateDiagnoseFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
-                                                            Database* pDatabase,
-                                                            GWBUF* pRequest,
-                                                            packet::Msg&& msg,
-                                                            const bsoncxx::document::view& doc,
-                                                            const OpMsgCommand::DocumentArguments& arguments);
-
-struct OpMsgCommandInfo
-{
-    OpMsgCommandInfo()
-        : zKey(nullptr)
-        , zHelp(nullptr)
-        , create_default(nullptr)
-        , create_diagnose(nullptr)
-        , is_admin(false)
-    {
-    }
-
-    OpMsgCommandInfo(const char* zKey, const char* zHelp,
-                CreateDefaultFunction create_default,
-                CreateDiagnoseFunction create_diagnose,
-                bool is_admin)
-        : zKey(zKey)
-        , zHelp(zHelp)
-        , create_default(create_default)
-        , create_diagnose(create_diagnose)
-        , is_admin(is_admin)
-    {
-    }
-
-    const char*           zKey;
-    const char*           zHelp;
-    CreateDefaultFunction create_default;
-    CreateDiagnoseFunction  create_diagnose;
-    bool                  is_admin;
-};
-
 template<class ConcreteCommand>
 OpMsgCommandInfo create_info()
 {
@@ -1029,10 +987,8 @@ OpMsgCommand::~OpMsgCommand()
 {
 }
 
-namespace
-{
-
-pair<string, OpMsgCommandInfo> get_info(const bsoncxx::document::view& doc)
+//static
+pair<string, OpMsgCommandInfo> OpMsgCommand::get_info(const bsoncxx::document::view& doc)
 {
     string name;
     OpMsgCommandInfo info;
@@ -1060,8 +1016,6 @@ pair<string, OpMsgCommandInfo> get_info(const bsoncxx::document::view& doc)
     }
 
     return make_pair(name, info);
-}
-
 }
 
 //static
