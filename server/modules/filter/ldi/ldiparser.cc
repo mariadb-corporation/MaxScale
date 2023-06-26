@@ -29,16 +29,14 @@ using Table = x3::variant<std::tuple<std::string, std::string>, std::string>;
 struct LoadData
 {
     bool        local {false};
-    S3URL       s3;
+    std::string filename;
     Table       table;
     std::string unparsed_sql;
 };
 
-DECLARE_ATTR_RULE(identifier, "SQL identifier", std::string);
-const auto identifier_def = lexeme[lit('`') > +(char_ - '`') > lit('`')] | lexeme[+(alnum | char_("_@$"))];
-
-DECLARE_ATTR_RULE(table_identifier, "Table identifier", Table);
-const auto table_identifier_def = (identifier >> lit('.') >> identifier) | identifier;
+//
+// Parser for S3 URLs
+//
 
 DECLARE_RULE(s3_prefix, "S3:// or gs:// prefix");
 const auto s3_prefix_def = lit("S3://") | lit("gs://");
@@ -50,16 +48,26 @@ DECLARE_ATTR_RULE(file, "File name", std::string);
 const auto file_def = +(alnum | char_("./-"));
 
 DECLARE_ATTR_RULE(s3_url, "S3 URL", S3URL);
-const auto s3_url_def = s3_prefix > bucket > lit("/") > file;
+const auto s3_url_def = s3_prefix > bucket > lit("/") > file > x3::eoi;
 
-DECLARE_ATTR_RULE(single_quoted_url, "Single-quoted URL string", S3URL);
-const auto single_quoted_url_def = lit('\'') > s3_url > lit('\'');
+//
+// Parser for LOAD DATA [LOCAL] INFILE commands
+//
 
-DECLARE_ATTR_RULE(double_quoted_url, "Double-quoted URL string", S3URL);
-const auto double_quoted_url_def = lit('"') > s3_url > lit('"');
+DECLARE_ATTR_RULE(identifier, "SQL identifier", std::string);
+const auto identifier_def = lexeme[lit('`') > +(char_ - '`') > lit('`')] | lexeme[+(alnum | char_("_@$"))];
 
-DECLARE_ATTR_RULE(quoted_url, "Quoted URL string", S3URL);
-const auto quoted_url_def = single_quoted_url | double_quoted_url;
+DECLARE_ATTR_RULE(table_identifier, "Table identifier", Table);
+const auto table_identifier_def = (identifier >> lit('.') >> identifier) | identifier;
+
+DECLARE_ATTR_RULE(single_quoted_str, "Single-quoted string", std::string);
+const auto single_quoted_str_def = lexeme[lit('\'') > +(char_ - char_('\'')) > lit('\'')];
+
+DECLARE_ATTR_RULE(double_quoted_str, "Double-quoted string", std::string);
+const auto double_quoted_str_def = lexeme[lit('"') > +(char_ - char_('"')) > lit('"')];
+
+DECLARE_ATTR_RULE(quoted_str, "Quoted URL string", std::string);
+const auto quoted_str_def = single_quoted_str | double_quoted_str;
 
 DECLARE_ATTR_RULE(unparsed_sql, "Unparsed SQL", std::string);
 const auto unparsed_sql_def = lexeme[*char_];
@@ -69,7 +77,7 @@ const auto maybe_local_def = -lexeme[lit("LOCAL") >> x3::attr(true)];
 
 DECLARE_ATTR_RULE(load_data_infile, "LOAD DATA INFILE", LoadData);
 const auto load_data_infile_def = lit("LOAD") > lit("DATA") > maybe_local > lit("INFILE")
-    > quoted_url > lit("INTO") > lit("TABLE") > table_identifier > unparsed_sql > x3::eoi;
+    > quoted_str > lit("INTO") > lit("TABLE") > table_identifier > unparsed_sql > x3::eoi;
 
 // Boost magic that combines the rules to their definitions
 BOOST_SPIRIT_DEFINE(
@@ -79,18 +87,18 @@ BOOST_SPIRIT_DEFINE(
     bucket,
     file,
     s3_url,
-    single_quoted_url,
-    double_quoted_url,
-    quoted_url,
+    single_quoted_str,
+    double_quoted_str,
+    quoted_str,
     unparsed_sql,
     maybe_local,
     load_data_infile
     );
 
 BOOST_FUSION_ADAPT_STRUCT(S3URL, bucket, filename);
-BOOST_FUSION_ADAPT_STRUCT(LoadData, local, s3, table, unparsed_sql);
+BOOST_FUSION_ADAPT_STRUCT(LoadData, local, filename, table, unparsed_sql);
 
-std::variant<LoadDataResult, ParseError> parse_ldi(std::string_view sql)
+std::variant<LoadDataInfile, ParseError> parse_ldi(std::string_view sql)
 {
     LoadData res;
     auto start = sql.begin();
@@ -124,13 +132,39 @@ std::variant<LoadDataResult, ParseError> parse_ldi(std::string_view sql)
 
             boost::apply_visitor(visitor, res.table);
 
-            LoadDataResult rval;
-            rval.s3 = res.s3;
+            LoadDataInfile rval;
+            rval.filename = res.filename;
             rval.remaining_sql = res.unparsed_sql;
             rval.db = visitor.db;
             rval.table = visitor.table;
             rval.local = res.local;
             return rval;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        err << e.what();
+    }
+
+    return ParseError{err.str()};
+}
+
+std::variant<S3URL, ParseError> parse_s3_url(std::string_view sql)
+{
+    S3URL res;
+    auto start = sql.begin();
+    auto end = sql.end();
+    std::ostringstream err;
+
+    // The x3::with applies the error handler to the grammar, required to enable error printing
+    auto err_handler = x3::error_handler<decltype(start)>(start, end, err);
+    auto parser = x3::with<x3::error_handler_tag>(std::ref(err_handler))[x3::no_case[s3_url]];
+
+    try
+    {
+        if (x3::phrase_parse(start, end, parser, x3::ascii::space, res))
+        {
+            return res;
         }
     }
     catch (const std::exception& e)

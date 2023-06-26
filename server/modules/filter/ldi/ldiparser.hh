@@ -21,10 +21,10 @@ struct S3URL
     std::string filename;
 };
 
-struct LoadDataResult
+struct LoadDataInfile
 {
     bool        local;
-    S3URL       s3;
+    std::string filename;
     std::string db;
     std::string table;
     std::string remaining_sql;
@@ -35,4 +35,5 @@ struct ParseError
     std::string message;
 };
 
-std::variant<LoadDataResult, ParseError> parse_ldi(std::string_view);
+std::variant<LoadDataInfile, ParseError> parse_ldi(std::string_view str);
+std::variant<S3URL, ParseError>          parse_s3_url(std::string_view str);

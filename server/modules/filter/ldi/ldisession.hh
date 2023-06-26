@@ -122,7 +122,7 @@ private:
     bool missing_required_params(ServerType type);
 
     SERVER*                      get_xpand_node() const;
-    std::unique_ptr<ExternalCmd> create_import_cmd(SERVER* node, LoadDataResult* parsed);
+    std::unique_ptr<ExternalCmd> create_import_cmd(SERVER* node, LoadDataInfile* parsed);
 
     static char* set_key(void* self, const char* key, const char* begin, const char* end);
     static char* set_secret(void* self, const char* key, const char* begin, const char* end);

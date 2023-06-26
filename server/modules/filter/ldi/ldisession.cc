@@ -156,7 +156,7 @@ SERVER* LDISession::get_xpand_node() const
     return nullptr;
 }
 
-std::unique_ptr<ExternalCmd> LDISession::create_import_cmd(SERVER* node, LoadDataResult* parsed)
+std::unique_ptr<ExternalCmd> LDISession::create_import_cmd(SERVER* node, LoadDataInfile* parsed)
 {
     // TODO: The import will fail if the table has a fully-qualified name with the database in it.
     auto mdb = static_cast<MYSQL_session*>(m_pSession->protocol_data());
@@ -185,50 +185,75 @@ bool LDISession::routeQuery(GWBUF&& buffer)
     {
         auto res = parse_ldi(parser().get_sql(buffer));
 
-        if (auto parsed = std::get_if<LoadDataResult>(&res))
+        if (auto parsed = std::get_if<LoadDataInfile>(&res))
         {
-            m_bucket = parsed->s3.bucket;
-            m_file = parsed->s3.filename;
-            auto server = get_xpand_node();
+            // This is a LOAD DATA INFILE command. See if the filename is a S3 URL.
+            auto url_res = parse_s3_url(parsed->filename);
 
-            if (server && m_filter.have_xpand_import())
+            if (auto parsed_url = std::get_if<S3URL>(&url_res))
             {
-                if (missing_required_params(ServerType::XPAND))
-                {
-                    return true;
-                }
+                m_bucket = parsed_url->bucket;
+                m_file = parsed_url->filename;
 
-                // We have at least one Xpand node, load the data there
-                if (auto cmd = create_import_cmd(server, parsed); cmd->start())
+                auto server = get_xpand_node();
+
+                if (server && m_filter.have_xpand_import())
                 {
-                    m_state = LOAD;
-                    mxs::thread_pool().execute(
-                        [dl = std::make_shared<CmdLoader>(this, std::move(cmd))](){
-                        dl->load_data();
-                    }, "ldi");
-                    return true;
+                    if (missing_required_params(ServerType::XPAND))
+                    {
+                        return true;
+                    }
+
+                    // We have at least one Xpand node, load the data there
+                    if (auto cmd = create_import_cmd(server, parsed); cmd->start())
+                    {
+                        m_state = LOAD;
+                        mxs::thread_pool().execute(
+                            [dl = std::make_shared<CmdLoader>(this, std::move(cmd))](){
+                            dl->load_data();
+                        }, "ldi");
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (missing_required_params(ServerType::MARIADB))
+                    {
+                        return true;
+                    }
+
+                    if (server)
+                    {
+                        mxb_assert(!m_filter.have_xpand_import());
+                        m_filter.warn_about_missing_xpand_import(m_pService);
+                    }
+
+                    // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE to
+                    // stream the data.
+                    auto maybe_db = !parsed->db.empty() ? mxb::cat("`", parsed->db, "` ") : ""s;
+                    auto new_sql = mxb::cat("LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE ",
+                                            maybe_db, "`", parsed->table, "` ",
+                                            parsed->remaining_sql);
+                    buffer = protocol().make_query(new_sql);
+                    m_state = PREPARE;
+                }
+            }
+            else if (auto err = std::get_if<ParseError>(&url_res))
+            {
+                if (mxb_log_should_log(LOG_INFO))
+                {
+                    MXB_INFO("Not a S3 URL.");
+
+                    for (auto line : mxb::strtok(err->message, "\n"))
+                    {
+                        MXB_INFO("%s", line.c_str());
+                    }
                 }
             }
             else
             {
-                if (missing_required_params(ServerType::MARIADB))
-                {
-                    return true;
-                }
-
-                if (server)
-                {
-                    mxb_assert(!m_filter.have_xpand_import());
-                    m_filter.warn_about_missing_xpand_import(m_pService);
-                }
-
-                // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE to stream the data.
-                auto maybe_db = !parsed->db.empty() ? mxb::cat("`", parsed->db, "` ") : ""s;
-                auto new_sql = mxb::cat("LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE ",
-                                        maybe_db, "`", parsed->table, "` ",
-                                        parsed->remaining_sql);
-                buffer = protocol().make_query(new_sql);
-                m_state = PREPARE;
+                mxb_assert_message(!true, "Valueless variant, things are really broken.");
+                return false;
             }
         }
         else if (auto err = std::get_if<ParseError>(&res))
