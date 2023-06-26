@@ -59,6 +59,28 @@ public:
     }
 
     /**
+     * @see Cache::get_value
+     */
+    cache_result_t get_value(const CacheKey& key,
+                             uint32_t flags,
+                             GWBUF** ppValue,
+                             const std::function<void (cache_result_t, GWBUF*)>& cb) const
+    {
+        return m_sCache->get_value(key, flags, m_soft_ttl, m_hard_ttl, ppValue, cb);
+    }
+
+    /**
+     * @see Cache::put_value
+     */
+    cache_result_t put_value(const CacheKey& key,
+                             const std::vector<std::string>& invalidation_words,
+                             const GWBUF* pValue,
+                             const std::function<void (cache_result_t)>& cb) const
+    {
+        return m_sCache->put_value(key, invalidation_words, pValue, cb);
+    }
+
+    /**
      * Creates a CacheFilterSession instance.
      *
      * @param pCache     Pointer to the cache instance to which this session cache
