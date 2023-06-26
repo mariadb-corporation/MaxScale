@@ -786,17 +786,17 @@ void CacheFilterSession::reset_response_state()
 void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(m_res);
-    std::vector<std::string> invalidation_words;
+    m_invalidation_words.clear();
 
     if (m_invalidate)
     {
-        std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+        std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(m_invalidation_words));
         m_tables.clear();
     }
 
     std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-    cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
+    cache_result_t result = m_sCache->put_value(m_key, m_invalidation_words, m_res,
                                                 [sWeak, down, reply](cache_result_t result) {
                                                     auto sThis = sWeak.lock();
 
