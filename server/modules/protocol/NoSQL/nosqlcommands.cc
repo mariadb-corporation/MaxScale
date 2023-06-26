@@ -116,9 +116,10 @@ OpMsgCommandInfo create_info()
 {
     return OpMsgCommandInfo(ConcreteCommand::KEY,
                             ConcreteCommand::HELP,
+                            ConcreteCommand::IS_CACHEABLE,
+                            command::IsAdmin<ConcreteCommand>::is_admin,
                             &create_default_command<ConcreteCommand>,
-                            &create_diagnose_command<ConcreteCommand>,
-                            command::IsAdmin<ConcreteCommand>::is_admin);
+                            &create_diagnose_command<ConcreteCommand>);
 }
 
 using InfosByName = const map<string, OpMsgCommandInfo>;

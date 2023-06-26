@@ -44,6 +44,8 @@ public:
     static const int32_t MAX_PAYLOAD_LEN = 0xffffff;
     static const int32_t MAX_PACKET_LEN = MYSQL_HEADER_LEN + MAX_PAYLOAD_LEN;
 
+    static const bool IS_CACHEABLE = false;
+
     virtual ~Command();
 
     Database& database() const

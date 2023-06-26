@@ -626,29 +626,34 @@ struct OpMsgCommandInfo
     OpMsgCommandInfo()
         : zKey(nullptr)
         , zHelp(nullptr)
+        , is_cacheable(false)
+        , is_admin(false)
         , create_default(nullptr)
         , create_diagnose(nullptr)
-        , is_admin(false)
     {
     }
 
-    OpMsgCommandInfo(const char* zKey, const char* zHelp,
-                CreateDefaultFunction create_default,
-                CreateDiagnoseFunction create_diagnose,
-                bool is_admin)
+    OpMsgCommandInfo(const char* zKey,
+                     const char* zHelp,
+                     bool is_cacheable,
+                     bool is_admin,
+                     CreateDefaultFunction create_default,
+                     CreateDiagnoseFunction create_diagnose)
         : zKey(zKey)
         , zHelp(zHelp)
+        , is_cacheable(is_cacheable)
+        , is_admin(is_admin)
         , create_default(create_default)
         , create_diagnose(create_diagnose)
-        , is_admin(is_admin)
     {
     }
 
     const char*            zKey;
     const char*            zHelp;
+    bool                   is_cacheable;
+    bool                   is_admin;
     CreateDefaultFunction  create_default;
     CreateDiagnoseFunction create_diagnose;
-    bool                   is_admin;
 };
 
 /**
