@@ -77,7 +77,8 @@ public:
      */
     static std::unique_ptr<Database> create(const std::string& name,
                                             Context* pContext,
-                                            Config* pConfig);
+                                            Config* pConfig,
+                                            CacheFilterSession* pCache_filter_session);
 
     State handle_delete(GWBUF* pRequest, packet::Delete&& req, Command::Response* pResponse);
     State handle_insert(GWBUF* pRequest, packet::Insert&& req, Command::Response* pResponse);
@@ -109,7 +110,8 @@ public:
 private:
     Database(const std::string& name,
              Context* pContext,
-             Config* pConfig);
+             Config* pConfig,
+             CacheFilterSession* pCache_filter_session);
 
     bool is_busy() const
     {
@@ -126,14 +128,17 @@ private:
         m_state = State::READY;
     }
 
+    Command::Response get_cached_response(GWBUF* pRequest, const packet::Msg& req);
+
     State execute_command(std::unique_ptr<Command> sCommand, Command::Response* pResponse);
 
     using SCommand = std::unique_ptr<Command>;
 
-    State             m_state { State::READY };
-    const std::string m_name;
-    Context&          m_context;
-    Config&           m_config;
-    SCommand          m_sCommand;
+    State               m_state { State::READY };
+    const std::string   m_name;
+    Context&            m_context;
+    Config&             m_config;
+    SCommand            m_sCommand;
+    CacheFilterSession* m_pCache_filter_session;
 };
 }

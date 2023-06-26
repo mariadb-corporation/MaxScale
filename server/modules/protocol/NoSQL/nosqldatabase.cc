@@ -24,10 +24,14 @@ using namespace std;
 namespace nosql
 {
 
-Database::Database(const std::string& name, Context* pContext, Config* pConfig)
+Database::Database(const std::string& name,
+                   Context* pContext,
+                   Config* pConfig,
+                   CacheFilterSession* pCache_filter_session)
     : m_name(name)
     , m_context(*pContext)
     , m_config(*pConfig)
+    , m_pCache_filter_session(pCache_filter_session)
 {
 }
 
@@ -36,9 +40,12 @@ Database::~Database()
 }
 
 //static
-unique_ptr<Database> Database::create(const std::string& name, Context* pContext, Config* pConfig)
+unique_ptr<Database> Database::create(const std::string& name,
+                                      Context* pContext,
+                                      Config* pConfig,
+                                      CacheFilterSession* pCache_filter_session)
 {
-    return unique_ptr<Database>(new Database(name, pContext, pConfig));
+    return unique_ptr<Database>(new Database(name, pContext, pConfig, pCache_filter_session));
 }
 
 State Database::handle_delete(GWBUF* pRequest, packet::Delete&& packet, Command::Response* pResponse)
@@ -102,24 +109,39 @@ State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response
     State state = State::READY;
     Command::Response response;
 
-    auto sCommand = OpMsgCommand::get(this, pRequest, std::move(req));
+    auto name_and_command = OpMsgCommand::get_info(req.document());
 
-    if (sCommand->is_admin() && m_name != "admin")
+    const auto& name = name_and_command.first;
+    const auto& command = name_and_command.second;
+
+    if (command.is_admin && m_name != "admin")
     {
-        SoftError error(sCommand->name() + " may only be run against the admin database.",
-                        error::UNAUTHORIZED);
+        SoftError error(name + " may only be run against the admin database.", error::UNAUTHORIZED);
         m_context.set_last_error(error.create_last_error());
 
+        // TODO: It ought to be possible to create the reponse from the command info
+        // TODO: without instantiating the command, but for later.
+        auto sCommand = command.create_default(name, this, pRequest, std::move(req));
         response.reset(error.create_response(*sCommand.get()));
     }
-    else if (!sCommand->is_get_last_error())
+    else
     {
-        m_context.reset_error();
-    }
+        if (command.is_cacheable && m_pCache_filter_session)
+        {
+            response = get_cached_response(pRequest, req);
+        }
 
-    if (!response)
-    {
-        state = execute_command(std::move(sCommand), &response);
+        if (!response)
+        {
+            auto sCommand = command.create_default(name, this, pRequest, std::move(req));
+
+            if (!sCommand->is_get_last_error())
+            {
+                m_context.reset_error();
+            }
+
+            state = execute_command(std::move(sCommand), &response);
+        }
     }
 
     *pResponse = std::move(response);
@@ -164,6 +186,45 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
     {
         response.set_command(std::move(m_sCommand));
         set_ready();
+    }
+
+    return response;
+}
+
+Command::Response Database::get_cached_response(GWBUF* pRequest, const packet::Msg& req)
+{
+    mxb_assert(m_pCache_filter_session);
+
+    Command::Response response;
+
+    auto& user = m_pCache_filter_session->user();
+    auto& host = m_pCache_filter_session->user();
+    auto* zDefault_db = m_pCache_filter_session->default_db();
+
+    CacheKey key;
+    auto rv = nosql::cache::get_key(nosql::cache::ValueKind::NOSQL_RESPONSE,
+                                    user, host, zDefault_db, pRequest,
+                                    &key);
+    mxb_assert(CACHE_RESULT_IS_OK(rv));
+
+    GWBUF* pValue = nullptr;
+    rv = m_pCache_filter_session->get_value(key, 0, &pValue, nullptr);
+    mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
+
+    if (CACHE_RESULT_IS_OK(rv))
+    {
+#if defined(SS_DEBUG)
+        MXB_INFO("NOSQL response found.");
+#endif
+        Command::patch_response(*pValue, m_context.next_request_id(), req.request_id());
+
+        response.reset(pValue);
+    }
+    else
+    {
+#if defined(SS_DEBUG)
+        MXB_INFO("NOSQL response not found.");
+#endif
     }
 
     return response;

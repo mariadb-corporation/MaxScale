@@ -189,7 +189,8 @@ State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, Command::Respo
     log_in("Request(Delete)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
+    m_sDatabase = Database::create(extract_database(req.collection()),
+                                   &m_context, &m_config, m_pCache_filter_session);
 
     State state = m_sDatabase->handle_delete(pRequest, std::move(req), pResponse);
 
@@ -206,7 +207,8 @@ State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, Command::Respo
     log_in("Request(Insert)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
+    m_sDatabase = Database::create(extract_database(req.collection()),
+                                   &m_context, &m_config, m_pCache_filter_session);
 
     State state = m_sDatabase->handle_insert(pRequest, std::move(req), pResponse);
 
@@ -223,7 +225,8 @@ State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, Command::Respo
     log_in("Request(Update)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
+    m_sDatabase = Database::create(extract_database(req.collection()),
+                                   &m_context, &m_config, m_pCache_filter_session);
 
     State state = m_sDatabase->handle_update(pRequest, std::move(req), pResponse);
 
@@ -240,7 +243,8 @@ State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, Command::Respons
     log_in("Request(Query)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
+    m_sDatabase = Database::create(extract_database(req.collection()),
+                                   &m_context, &m_config, m_pCache_filter_session);
 
     State state = m_sDatabase->handle_query(pRequest, std::move(req), pResponse);
 
@@ -257,7 +261,8 @@ State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, Command::Re
     log_in("Request(GetMore)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
+    m_sDatabase = Database::create(extract_database(req.collection()),
+                                   &m_context, &m_config, m_pCache_filter_session);
 
     State state = m_sDatabase->handle_get_more(pRequest, std::move(req), pResponse);
 
@@ -274,7 +279,7 @@ State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Com
     log_in("Request(KillCursors)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = Database::create("admin", &m_context, &m_config);
+    m_sDatabase = Database::create("admin", &m_context, &m_config, m_pCache_filter_session);
 
     State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), pResponse);
 
@@ -305,7 +310,7 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* p
             string name(utf8.value.data(), utf8.value.size());
 
             mxb_assert(!m_sDatabase.get());
-            m_sDatabase = Database::create(name, &m_context, &m_config);
+            m_sDatabase = Database::create(name, &m_context, &m_config, m_pCache_filter_session);
 
             state = m_sDatabase->handle_msg(pRequest, std::move(req), pResponse);
 
@@ -335,6 +340,32 @@ void NoSQL::flush_response(Command::Response& response)
 {
     if (response)
     {
+        if (m_pCache_filter_session && response.cacheable())
+        {
+            Command* pCommand = response.command();
+            mxb_assert(pCommand);
+
+            auto& user = m_pCache_filter_session->user();
+            auto& host = m_pCache_filter_session->host();
+            auto* zDefault_db = m_pCache_filter_session->default_db();
+
+            CacheKey key;
+            auto rv = nosql::cache::get_key(nosql::cache::ValueKind::NOSQL_RESPONSE,
+                                            user, host, zDefault_db, &pCommand->request(),
+                                            &key);
+            mxb_assert(CACHE_RESULT_IS_OK(rv));
+
+            std::vector<std::string> invalidation_words; // TODO
+
+#if defined(SS_DEBUG)
+            MXB_INFO("Storing NoSQL response.");
+#endif
+            rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
+
+            mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
+            mxb_assert(CACHE_RESULT_IS_OK(rv));
+        }
+
         m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
     }
 }
