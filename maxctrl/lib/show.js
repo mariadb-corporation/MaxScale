@@ -966,13 +966,17 @@ exports.builder = function (yargs) {
       "Show all loaded modules",
       function (yargs) {
         return yargs
+          .option("load-all", {
+            describe: "Load all included modules before showing them",
+            type: "boolean",
+          })
           .epilog("Displays detailed information about all modules." + fieldDescriptions(module_fields))
           .wrap(null)
           .usage("Usage: show modules");
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getCollectionAsResource(host, "maxscale/modules/", module_fields);
+          return getCollectionAsResource(host, "maxscale/modules/" + (argv["load-all"] ? "?load=all" : ""), module_fields);
         });
       }
     )

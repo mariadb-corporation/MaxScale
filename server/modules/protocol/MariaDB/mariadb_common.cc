@@ -402,11 +402,16 @@ uint32_t mxs_mysql_extract_ps_id(const GWBUF* buffer)
     uint32_t rval = 0;
     uint8_t id[MYSQL_PS_ID_SIZE];
     size_t sz = buffer->copy_data(MYSQL_PS_ID_OFFSET, sizeof(id), id);
-    mxb_assert(sz == sizeof(id));
 
     if (sz == sizeof(id))
     {
         rval = mariadb::get_byte4(id);
+    }
+    else
+    {
+        MXB_WARNING("Malformed binary protocol packet.");
+        gwbuf_hexdump_pretty(const_cast<GWBUF*>(buffer), LOG_WARNING);
+        mxb_assert(false);
     }
 
     return rval;
