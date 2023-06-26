@@ -20,6 +20,7 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
 #include <maxbase/format.hh>
+#include <maxbase/hexdump.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
@@ -387,11 +388,16 @@ uint32_t mxs_mysql_extract_ps_id(const GWBUF& buffer)
     uint32_t rval = 0;
     uint8_t id[MYSQL_PS_ID_SIZE];
     size_t sz = buffer.copy_data(MYSQL_PS_ID_OFFSET, sizeof(id), id);
-    mxb_assert(sz == sizeof(id));
 
     if (sz == sizeof(id))
     {
         rval = mariadb::get_byte4(id);
+    }
+    else
+    {
+        MXB_WARNING("Malformed binary protocol packet: %s",
+                    mxb::hexdump(buffer.data(), buffer.length()).c_str());
+        mxb_assert(false);
     }
 
     return rval;
@@ -883,7 +889,7 @@ std::string_view get_sql(const GWBUF& packet)
         const char* pSql = reinterpret_cast<const char*>(packet.data() + nHeader);
         size_t nSql = packet.length() - nHeader;
 
-        rv = std::string_view { pSql, nSql };
+        rv = std::string_view {pSql, nSql};
     }
 
     return rv;
@@ -1002,7 +1008,6 @@ const char format_str[] = "COM_UNKNOWN(%02hhx)";
 
 // The message always fits inside the buffer
 thread_local char unknown_type[sizeof(format_str)] = "";
-
 }
 
 const char* cmd_to_string(int cmd)
@@ -1183,5 +1188,4 @@ bool trim_quotes(char* s)
 
     return dequoted;
 }
-
 }
