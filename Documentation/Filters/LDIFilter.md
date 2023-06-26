@@ -39,7 +39,7 @@ The next step is to connect to MaxScale and prepare the session for an upload by
 providing the service account access and secret keys.
 
 ```sql
-SET @maxscale.s3_key='<my-access-key>', @maxscale.s3_secret='<my-secret-key>';
+SET @maxscale.ldi.s3_key='<my-access-key>', @maxscale.ldi.s3_secret='<my-secret-key>';
 ```
 
 Once the credentials are configured, the data loading can be started:
@@ -54,12 +54,12 @@ For MariaDB Xpand server, the upload is done using `xpand_import`. In this case,
 `xpand_import` must be installed locally on the MaxScale server and must be in
 the executable path of the `maxscale` user.
 
-In addition, the `@maxscale.import_user` and `@maxscale.import_password`
+In addition, the `@maxscale.ldi.import_user` and `@maxscale.ldi.import_password`
 variables must be set to the username and password that are used to load data
 into the Xpand cluster.
 
 ```sql
-SET @maxscale.import_user='<user>', @maxscale.import_password='<password>';
+SET @maxscale.ldi.import_user='<user>', @maxscale.ldi.import_password='<password>';
 ```
 
 ## Common Problems With Data Loading
@@ -90,7 +90,7 @@ does support it, the filter must be configured with `protocol_version=2`.
 The S3 access key used to perform all requests to it.
 
 This must be either configured in the MaxScale configuration file or set with
-`SET @maxscale.s3_key='<key>'` before starting the data load.
+`SET @maxscale.ldi.s3_key='<key>'` before starting the data load.
 
 ### `key`
 
@@ -101,7 +101,7 @@ This must be either configured in the MaxScale configuration file or set with
 The S3 secret key used to perform all requests to it.
 
 This must be either configured in the MaxScale configuration file or set with
-`SET @maxscale.s3_secret='<secret>'` before starting the data load.
+`SET @maxscale.ldi.s3_secret='<secret>'` before starting the data load.
 
 ### `region`
 
@@ -112,8 +112,8 @@ This must be either configured in the MaxScale configuration file or set with
 
 The S3 region where the data is located.
 
-The value can be overridden with `SET @maxscale.s3_region='<region>'`
-before starting the data load.
+The value can be overridden with `SET @maxscale.ldi.s3_region='<region>'` before
+starting the data load.
 
 ### `host`
 
@@ -126,7 +126,7 @@ The location of the S3 object storage. By default the original AWS S3 host is
 used. The corresponding value for Google Cloud Storage is
 `storage.googleapis.com`.
 
-The value can be overridden with `SET @maxscale.s3_host='<host>'` before
+The value can be overridden with `SET @maxscale.ldi.s3_host='<host>'` before
 starting the data load.
 
 ### `port`
@@ -139,9 +139,9 @@ starting the data load.
 The port on which the S3 object storage is listening. If unset or set to the
 value of 0, the default S3 port is used.
 
-The value can be overridden with `SET @maxscale.s3_port=<port>` before starting
-the data load. Note that unlike the other values, the value for this variable
-must be an SQL integer and not an SQL string.
+The value can be overridden with `SET @maxscale.ldi.s3_port=<port>` before
+starting the data load. Note that unlike the other values, the value for this
+variable must be an SQL integer and not an SQL string.
 
 ### `no_verify`
 
@@ -189,7 +189,7 @@ the cloud.
 The Xpand user that will be used to import the data. This parameter must be
 defined if the data is being uploaded to an Xpand cluster.
 
-The value can be overridden with `SET @maxscale.import_user='<user>'` before
+The value can be overridden with `SET @maxscale.ldi.import_user='<user>'` before
 starting the data load.
 
 ### `import_password`
@@ -202,5 +202,5 @@ The password for the Xpand user that will be used to import the data. This
 parameter must be defined if the data is being uploaded to an Xpand cluster. The
 password can be encrypted with `maxpasswd` before use.
 
-The value can be overridden with `SET @maxscale.import_password='<password>'`
-before starting the data load.
+The value can be overridden with `SET
+@maxscale.ldi.import_password='<password>'` before starting the data load.

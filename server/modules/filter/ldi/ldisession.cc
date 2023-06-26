@@ -27,14 +27,14 @@
 
 namespace
 {
-const char* CN_S3_KEY = "@maxscale.s3_key";
-const char* CN_S3_SECRET = "@maxscale.s3_secret";
-const char* CN_S3_REGION = "@maxscale.s3_region";
-const char* CN_S3_HOST = "@maxscale.s3_host";
-const char* CN_S3_PORT = "@maxscale.s3_port";
-const char* CN_S3_PROTOCOL_VERSION = "@maxscale.s3_protocol_version";
-const char* CN_IMPORT_USER = "@maxscale.import_user";
-const char* CN_IMPORT_PASSWORD = "@maxscale.import_password";
+const char* CN_S3_KEY = "@maxscale.ldi.s3_key";
+const char* CN_S3_SECRET = "@maxscale.ldi.s3_secret";
+const char* CN_S3_REGION = "@maxscale.ldi.s3_region";
+const char* CN_S3_HOST = "@maxscale.ldi.s3_host";
+const char* CN_S3_PORT = "@maxscale.ldi.s3_port";
+const char* CN_S3_PROTOCOL_VERSION = "@maxscale.ldi.s3_protocol_version";
+const char* CN_IMPORT_USER = "@maxscale.ldi.import_user";
+const char* CN_IMPORT_PASSWORD = "@maxscale.ldi.import_password";
 
 void no_delete(LDISession* ignored)
 {
