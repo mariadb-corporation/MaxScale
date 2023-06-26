@@ -1014,6 +1014,7 @@ pair<string, OpMsgCommandInfo> OpMsgCommand::get_info(const bsoncxx::document::v
         info.create_default = &create_default_command<Unknown>;
         info.create_diagnose = &create_diagnose_command<Unknown>;
         info.is_admin = false;
+        info.is_cacheable = false;
     }
 
     return make_pair(name, info);

@@ -211,6 +211,8 @@ public:
         return m_response_kind;
     }
 
+    static void patch_response(GWBUF& response, int32_t request_id, int32_t response_to);
+
 protected:
     Command(Database* pDatabase,
             GWBUF* pRequest,
@@ -222,8 +224,6 @@ protected:
         , m_response_kind(response_kind)
     {
     }
-
-    static void patch_response(GWBUF& response, int32_t request_id, int32_t response_to);
 
     void free_request();
 
