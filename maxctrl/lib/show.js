@@ -847,7 +847,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getCollectionAsResource(host, "maxscale/modules/" + argv["load-all"] ? "?load=all" : "", module_fields);
+          return getCollectionAsResource(host, "maxscale/modules/" + (argv["load-all"] ? "?load=all" : ""), module_fields);
         });
       }
     )
