@@ -37,6 +37,7 @@ var tests = [
   "show commands readwritesplit",
   "show qc_cache",
   "show dbusers RW-Split-Router",
+  "show modules --load-all"
 ];
 
 var rdns_tests = ["list sessions", "show sessions"];
