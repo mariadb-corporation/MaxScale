@@ -71,6 +71,17 @@ public:
         m_pDcb = pDcb;
     }
 
+    CacheFilterSession* cache_filter_session() const
+    {
+        return m_pCache_filter_session;
+    }
+
+    void set_cache_filter_session(CacheFilterSession* pCache_filter_session)
+    {
+        mxb_assert(!m_pCache_filter_session);
+        m_pCache_filter_session = pCache_filter_session;
+    }
+
 private:
     template<class T>
     void log_in(const char* zContext, const T& req)
@@ -95,12 +106,13 @@ private:
 
     void flush_response(Command::Response& response);
 
-    Context            m_context;
-    Config&            m_config;
-    std::deque<GWBUF*> m_requests;
-    SDatabase          m_sDatabase;
-    DCB*               m_pDcb = nullptr;
-    GWBUF*             m_pCurrent_request = nullptr;
+    Context             m_context;
+    Config&             m_config;
+    std::deque<GWBUF*>  m_requests;
+    SDatabase           m_sDatabase;
+    DCB*                m_pDcb { nullptr };
+    GWBUF*              m_pCurrent_request { nullptr };
+    CacheFilterSession* m_pCache_filter_session { nullptr };
 };
 
 }

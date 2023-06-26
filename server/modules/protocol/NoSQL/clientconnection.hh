@@ -58,6 +58,11 @@ public:
     void setup_session(const std::string& user, const std::vector<uint8_t>& password);
     bool start_session();
 
+    nosql::NoSQL& nosql()
+    {
+        return m_nosql;
+    }
+
 private:
     void ready_for_reading(GWBUF* pBuffer);
 
