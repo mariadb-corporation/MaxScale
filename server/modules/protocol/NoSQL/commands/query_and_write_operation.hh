@@ -634,6 +634,7 @@ class Find final : public SingleCommand
 public:
     static constexpr const char* const KEY = "find";
     static constexpr const char* const HELP = "";
+    static constexpr const bool IS_CACHEABLE = true;
 
     class Stats
     {
@@ -746,6 +747,7 @@ public:
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
+        bool cacheable = false;
 
         switch (response.type())
         {
@@ -795,10 +797,17 @@ public:
                 {
                     NoSQLCursor::put(std::move(sCursor));
                 }
+                else
+                {
+                    // If the cursor is exhausted, i.e., either the number of returned items
+                    // was small enough or 'singleBatch=true' was specified, the result is
+                    // cacheable. Otherwise things get complicated and no caching is performed.
+                    cacheable = true;
+                }
             }
         }
 
-        pNoSQL_response->reset(pResponse);
+        pNoSQL_response->reset(pResponse, cacheable);
         return State::READY;
     }
 
