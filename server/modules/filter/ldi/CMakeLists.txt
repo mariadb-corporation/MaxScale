@@ -1,9 +1,11 @@
 include(${CMAKE_SOURCE_DIR}/cmake/BuildBoost.cmake)
 
+set(LIBMARIAS3_REPO "https://github.com/mariadb-corporation/libmarias3.git" CACHE STRING "libmarias3 git repository")
+
 FetchContent_Declare(
   libmarias3
-  GIT_REPOSITORY "https://github.com/markus456/libmarias3.git"
-  GIT_TAG        "master"
+  GIT_REPOSITORY ${LIBMARIAS3_REPO}
+  GIT_TAG "master"
   SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/libmarias3
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
