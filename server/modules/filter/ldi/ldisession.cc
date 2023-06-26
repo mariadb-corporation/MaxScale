@@ -190,14 +190,15 @@ bool LDISession::routeQuery(GWBUF&& buffer)
             // This is a LOAD DATA INFILE command. See if the filename is a S3 URL.
             auto url_res = parse_s3_url(parsed->filename);
 
+            auto server = get_xpand_node();
+            bool use_xpand_import = server && m_filter.have_xpand_import();
+
             if (auto parsed_url = std::get_if<S3URL>(&url_res))
             {
                 m_bucket = parsed_url->bucket;
                 m_file = parsed_url->filename;
 
-                auto server = get_xpand_node();
-
-                if (server && m_filter.have_xpand_import())
+                if (use_xpand_import)
                 {
                     if (missing_required_params(ServerType::XPAND))
                     {
@@ -249,6 +250,24 @@ bool LDISession::routeQuery(GWBUF&& buffer)
                         MXB_INFO("%s", line.c_str());
                     }
                 }
+
+                // Normal LOAD DATA LOCAL INFILE. If this is an Xpand cluster and xpand_import is installed
+                // locally, stream the data using it instead of the LOAD DATA LOCAL INFILE command. The
+                // xpand_import will be faster than LOAD DATA LOCAL INFILE as it can insert data into multiple
+                // nodes in parallel.
+                if (parsed->local && use_xpand_import)
+                {
+                    if (missing_required_params(ServerType::XPAND_INTERCEPT))
+                    {
+                        return true;
+                    }
+
+                    if (auto cmd = create_import_cmd(server, parsed); cmd->start())
+                    {
+                        m_cmd = std::move(cmd);
+                        m_state = PREPARE_INTERCEPT;
+                    }
+                }
             }
             else
             {
@@ -272,6 +291,31 @@ bool LDISession::routeQuery(GWBUF&& buffer)
         {
             mxb_assert_message(!true, "Valueless variant, things are really broken.");
             return false;
+        }
+    }
+    else if (m_state == INTERCEPT)
+    {
+        bool multipart = std::exchange(m_multipart, parser().helper().is_multi_part_packet(buffer));
+
+        if (buffer.length() > MYSQL_HEADER_LEN)
+        {
+            // Plain data, pipe the packet contents into the command.
+            // TODO: This needs to be offloaded to some other thread. As it stands, this will cause a watchdog
+            // timeout to occur if the writing is slow enough.
+            m_cmd->write(buffer.data() + MYSQL_HEADER_LEN, buffer.length() - MYSQL_HEADER_LEN);
+            return true;
+        }
+        else if (multipart)
+        {
+            // The previous packet was exactly 0xFFFFFF bytes long and this packet signals that there's no
+            // more data left that's a part of it.
+            return true;
+        }
+        else
+        {
+            // This is the final empty packet of the data stream packet
+            mxb_assert(buffer.length() == MYSQL_HEADER_LEN);
+            m_cmd->close_output();
         }
     }
     else if (m_state == LOAD)
@@ -301,6 +345,25 @@ bool LDISession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const 
             m_state = IDLE;
         }
     }
+    else if (m_state == PREPARE_INTERCEPT)
+    {
+        if (reply.state() == mxs::ReplyState::LOAD_DATA)
+        {
+            MXB_INFO("Starting LOAD DATA LOCAL INFILE streaming into xpand_import.");
+            m_state = INTERCEPT;
+        }
+        else
+        {
+            m_state = IDLE;
+            m_cmd.reset();
+        }
+    }
+    else if (m_state == INTERCEPT)
+    {
+        MXB_INFO("Data streaming complete: %s", reply.describe().c_str());
+        m_state = IDLE;
+        m_cmd.reset();
+    }
 
     return mxs::FilterSession::clientReply(std::move(buffer), down, reply);
 }
@@ -326,25 +389,44 @@ bool LDISession::send_ok(int64_t rows)
 
 bool LDISession::missing_required_params(ServerType type)
 {
+    std::vector<std::string> errors;
+
     auto check_value = [&](std::string_view name, std::string_view value){
         if (value.empty())
         {
-            int errnum = 1230;      // ER_NO_DEFAULT
-            set_response(protocol().make_error(
-                errnum, "42000", mxb::cat("Variable '", name, "' doesn't have a default value")));
+            errors.push_back(mxb::cat("Variable '", name, "' doesn't have a default value."));
         }
-
-        return !value.empty();
     };
 
-    bool ok = check_value(CN_S3_KEY, m_config.key)
-        && check_value(CN_S3_SECRET, m_config.secret)
-        && check_value(CN_S3_HOST, m_config.host)
-        && (type == ServerType::MARIADB
-            || (check_value(CN_IMPORT_USER, m_config.import_user)
-                && check_value(CN_IMPORT_PASSWORD, m_config.import_password)));
+    switch (type)
+    {
+    case ServerType::XPAND:
+        check_value(CN_IMPORT_USER, m_config.import_user);
+        check_value(CN_IMPORT_PASSWORD, m_config.import_password);
+        check_value(CN_S3_KEY, m_config.key);
+        check_value(CN_S3_SECRET, m_config.secret);
+        check_value(CN_S3_HOST, m_config.host);
+        break;
 
-    return !ok;
+    case ServerType::MARIADB:
+        check_value(CN_S3_KEY, m_config.key);
+        check_value(CN_S3_SECRET, m_config.secret);
+        check_value(CN_S3_HOST, m_config.host);
+        break;
+
+    case ServerType::XPAND_INTERCEPT:
+        check_value(CN_IMPORT_USER, m_config.import_user);
+        check_value(CN_IMPORT_PASSWORD, m_config.import_password);
+        break;
+    }
+
+    if (!errors.empty())
+    {
+        int errnum = 1230;      // ER_NO_DEFAULT
+        set_response(protocol().make_error(errnum, "42000", mxb::join(errors, " ")));
+    }
+
+    return !errors.empty();
 }
 
 //

@@ -104,15 +104,18 @@ private:
 
     enum State
     {
-        IDLE,
-        PREPARE,
-        LOAD,
+        IDLE,               // Normal state
+        PREPARE,            // Waiting for fake LDLI response
+        LOAD,               // Fake LDLI being processed
+        PREPARE_INTERCEPT,  // Waiting for real LDLI response for interception
+        INTERCEPT,          // Intercepting data from real LDLI
     };
 
     enum class ServerType
     {
         MARIADB,
         XPAND,
+        XPAND_INTERCEPT,
     };
 
     LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter);
@@ -138,6 +141,12 @@ private:
     std::string         m_bucket;
     LDI::Config::Values m_config;
     LDI&                m_filter;
+
+    // The ExternalCmd that's used to convert normal LOAD DATA LOCAL INFILE commands into xpand_import calls.
+    std::unique_ptr<ExternalCmd> m_cmd;
+
+    // Boolean that's used to track multi-part packets
+    bool m_multipart {false};
 
     // This is a non-deleting reference to the same LDISession. We need this to know whether the filter
     // session is still alive. The S3Download has a reference on the session which guarantees that the
