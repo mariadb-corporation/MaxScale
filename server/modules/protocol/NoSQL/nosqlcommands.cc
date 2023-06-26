@@ -123,9 +123,9 @@ using CreateDiagnoseFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
                                                             const bsoncxx::document::view& doc,
                                                             const OpMsgCommand::DocumentArguments& arguments);
 
-struct CommandInfo
+struct OpMsgCommandInfo
 {
-    CommandInfo()
+    OpMsgCommandInfo()
         : zKey(nullptr)
         , zHelp(nullptr)
         , create_default(nullptr)
@@ -134,7 +134,7 @@ struct CommandInfo
     {
     }
 
-    CommandInfo(const char* zKey, const char* zHelp,
+    OpMsgCommandInfo(const char* zKey, const char* zHelp,
                 CreateDefaultFunction create_default,
                 CreateDiagnoseFunction create_diagnose,
                 bool is_admin)
@@ -154,16 +154,16 @@ struct CommandInfo
 };
 
 template<class ConcreteCommand>
-CommandInfo create_info()
+OpMsgCommandInfo create_info()
 {
-    return CommandInfo(ConcreteCommand::KEY,
-                       ConcreteCommand::HELP,
-                       &create_default_command<ConcreteCommand>,
-                       &create_diagnose_command<ConcreteCommand>,
-                       command::IsAdmin<ConcreteCommand>::is_admin);
+    return OpMsgCommandInfo(ConcreteCommand::KEY,
+                            ConcreteCommand::HELP,
+                            &create_default_command<ConcreteCommand>,
+                            &create_diagnose_command<ConcreteCommand>,
+                            command::IsAdmin<ConcreteCommand>::is_admin);
 }
 
-using InfosByName = const map<string, CommandInfo>;
+using InfosByName = const map<string, OpMsgCommandInfo>;
 
 struct ThisUnit
 {
@@ -1032,10 +1032,10 @@ OpMsgCommand::~OpMsgCommand()
 namespace
 {
 
-pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
+pair<string, OpMsgCommandInfo> get_info(const bsoncxx::document::view& doc)
 {
     string name;
-    CommandInfo info;
+    OpMsgCommandInfo info;
 
     if (!doc.empty())
     {
@@ -1128,7 +1128,7 @@ void OpMsgCommand::list_commands(DocumentBuilder& commands)
     for (const auto& kv : this_unit.infos_by_name)
     {
         const string& name = kv.first;
-        const CommandInfo& info = kv.second;
+        const OpMsgCommandInfo& info = kv.second;
 
         const char* zHelp = info.zHelp;
         if (!*zHelp)
