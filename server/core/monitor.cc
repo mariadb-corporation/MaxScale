@@ -299,7 +299,7 @@ bool MonitorSpec::do_post_validate(const cfg::Configuration* config, Params& par
     {
         auto script_timeout = s_script_timeout.get(params);
 
-        unique_ptr<ExternalCmd> cmd = ExternalCmd::create(script, script_timeout.count(), log_output);
+        auto cmd = mxb::ExternalCmd::create(script, script_timeout.count(), log_output);
 
         if (!cmd)
         {
@@ -544,7 +544,8 @@ bool Monitor::post_configure()
     }
     else
     {
-        m_scriptcmd = ExternalCmd::create(m_settings.script, m_settings.script_timeout.count(), log_output);
+        m_scriptcmd = mxb::ExternalCmd::create(m_settings.script, m_settings.script_timeout.count(),
+                                               log_output);
         if (!m_scriptcmd)
         {
             MXB_ERROR("Failed to initialize script '%s'.", m_settings.script.c_str());

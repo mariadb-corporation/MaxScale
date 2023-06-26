@@ -86,13 +86,13 @@ private:
 class CmdLoader final : public S3Download
 {
 public:
-    CmdLoader(LDISession* ldi, std::unique_ptr<ExternalCmd> cmd);
+    CmdLoader(LDISession* ldi, std::unique_ptr<mxb::ExternalCmd> cmd);
     bool process(const char* ptr, size_t len) override;
     bool complete() override;
 
 private:
-    std::unique_ptr<ExternalCmd> m_cmd;
-    int64_t                      m_rows {0};
+    std::unique_ptr<mxb::ExternalCmd> m_cmd;
+    int64_t                           m_rows {0};
 };
 
 class LDISession : public maxscale::FilterSession
@@ -129,8 +129,8 @@ private:
     bool send_ok(int64_t rows_affected);
     bool missing_required_params(ServerType type);
 
-    SERVER*                      get_xpand_node() const;
-    std::unique_ptr<ExternalCmd> create_import_cmd(SERVER* node, LoadDataInfile* parsed);
+    SERVER*                           get_xpand_node() const;
+    std::unique_ptr<mxb::ExternalCmd> create_import_cmd(SERVER* node, LoadDataInfile* parsed);
 
     static char* set_key(void* self, const char* key, const char* begin, const char* end);
     static char* set_secret(void* self, const char* key, const char* begin, const char* end);
@@ -148,7 +148,7 @@ private:
     LDI&                m_filter;
 
     // The ExternalCmd that's used to convert normal LOAD DATA LOCAL INFILE commands into xpand_import calls.
-    std::unique_ptr<ExternalCmd> m_cmd;
+    std::unique_ptr<mxb::ExternalCmd> m_cmd;
 
     // Boolean that's used to track multi-part packets
     bool m_multipart {false};

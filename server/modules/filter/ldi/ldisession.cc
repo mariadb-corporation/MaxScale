@@ -169,7 +169,7 @@ SERVER* LDISession::get_xpand_node() const
     return nullptr;
 }
 
-std::unique_ptr<ExternalCmd> LDISession::create_import_cmd(SERVER* node, LoadDataInfile* parsed)
+std::unique_ptr<mxb::ExternalCmd> LDISession::create_import_cmd(SERVER* node, LoadDataInfile* parsed)
 {
     // TODO: The import will fail if the table has a fully-qualified name with the database in it.
     auto mdb = static_cast<MYSQL_session*>(m_pSession->protocol_data());
@@ -187,7 +187,7 @@ std::unique_ptr<ExternalCmd> LDISession::create_import_cmd(SERVER* node, LoadDat
 
     MXB_INFO("CMD: %s", cmd.c_str());
 
-    return ExternalCmd::create(cmd, 120, [](auto cmd, auto line){
+    return mxb::ExternalCmd::create(cmd, 120, [](auto cmd, auto line){
         MXB_INFO("%s: %s", cmd.c_str(), line.c_str());
     });
 }
@@ -703,7 +703,7 @@ bool MariaDBLoader::complete()
 // CmdLoader
 //
 
-CmdLoader::CmdLoader(LDISession* ldi, std::unique_ptr<ExternalCmd> cmd)
+CmdLoader::CmdLoader(LDISession* ldi, std::unique_ptr<mxb::ExternalCmd> cmd)
     : S3Download(ldi)
     , m_cmd(std::move(cmd))
 {

@@ -29,10 +29,8 @@
 
 using std::string;
 
-namespace
+namespace maxbase
 {
-}
-
 int ExternalCmd::tokenize_args(char* dest[], int dest_size)
 {
     bool quoted = false;
@@ -467,4 +465,5 @@ void ExternalCmd::reset_substituted()
 const char* ExternalCmd::substituted() const
 {
     return m_subst_command.c_str();
+}
 }

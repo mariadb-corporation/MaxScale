@@ -18,6 +18,8 @@
 #include <memory>
 #include <unistd.h>
 
+namespace maxbase
+{
 class ExternalCmd
 {
 public:
@@ -136,3 +138,4 @@ private:
      */
     void substitute_arg(const std::string& match, const std::string& replace);
 };
+}

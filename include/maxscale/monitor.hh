@@ -35,11 +35,11 @@ class Monitor;
 }
 namespace maxbase
 {
+class ExternalCmd;
 class QueryResult;
 }
 class DCB;
 struct json_t;
-class ExternalCmd;
 typedef struct st_mysql MYSQL;
 
 struct MXS_MONITOR_API
@@ -869,7 +869,7 @@ private:
     time_t m_journal_updated {0};               /**< When was journal last updated? */
     time_t m_journal_max_save_interval {5 * 60};/**< How often to update journal at minimum */
 
-    std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
+    std::unique_ptr<mxb::ExternalCmd> m_scriptcmd;      /**< Monitor script command */
 
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
