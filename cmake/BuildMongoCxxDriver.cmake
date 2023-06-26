@@ -14,7 +14,8 @@ set(MONGO_CXX_DRIVER_VERSION "3.6.0")
 
 message(STATUS "Using mongo-cxx-driver version ${MONGO_CXX_DRIVER_VERSION}")
 
-set(MONGO_CXX_DRIVER_URL "https://github.com/mongodb/mongo-cxx-driver/releases/download/r${MONGO_CXX_DRIVER_VERSION}/mongo-cxx-driver-r${MONGO_CXX_DRIVER_VERSION}.tar.gz")
+set(MONGO_CXX_DRIVER_URL "https://github.com/mongodb/mongo-cxx-driver/releases/download/r${MONGO_CXX_DRIVER_VERSION}/mongo-cxx-driver-r${MONGO_CXX_DRIVER_VERSION}.tar.gz"
+  CACHE STRING "mongo-cxx-driver sources")
 
 set(MONGO_CXX_DRIVER "${CMAKE_BINARY_DIR}/mongo-cxx-driver")
 
