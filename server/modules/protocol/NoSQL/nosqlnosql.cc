@@ -23,6 +23,8 @@ using namespace std;
 namespace
 {
 
+static const vector<string> no_invalidation_words;
+
 string extract_database(const string& collection)
 {
     auto i = collection.find('.');
@@ -119,7 +121,12 @@ State NoSQL::handle_request(GWBUF* pRequest)
                 }
             }
 
-            flush_response(response);
+            if (response)
+            {
+                // If we got the response immediately, it can not have been a SELECT
+                // that was sent to the backend; hence there cannot be invalidation words.
+                flush_response(response, no_invalidation_words);
+            }
         }
         catch (const std::exception& x)
         {
@@ -151,7 +158,14 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
     {
         m_sDatabase.reset();
 
-        flush_response(response);
+        if (m_pCache_filter_session)
+        {
+            flush_response(response, m_pCache_filter_session->invalidation_words());
+        }
+        else
+        {
+            flush_response(response, no_invalidation_words);
+        }
 
         if (!m_requests.empty())
         {
@@ -336,38 +350,35 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* p
     return state;
 }
 
-void NoSQL::flush_response(Command::Response& response)
+void NoSQL::flush_response(Command::Response& response, const vector<string>& invalidation_words)
 {
-    if (response)
+    mxb_assert(response);
+
+    if (m_pCache_filter_session && response.cacheable())
     {
-        if (m_pCache_filter_session && response.cacheable())
-        {
-            Command* pCommand = response.command();
-            mxb_assert(pCommand);
+        Command* pCommand = response.command();
+        mxb_assert(pCommand);
 
-            auto& user = m_pCache_filter_session->user();
-            auto& host = m_pCache_filter_session->host();
-            auto* zDefault_db = m_pCache_filter_session->default_db();
+        auto& user = m_pCache_filter_session->user();
+        auto& host = m_pCache_filter_session->host();
+        auto* zDefault_db = m_pCache_filter_session->default_db();
 
-            CacheKey key;
-            auto rv = nosql::cache::get_key(nosql::cache::ValueKind::NOSQL_RESPONSE,
-                                            user, host, zDefault_db, &pCommand->request(),
-                                            &key);
-            mxb_assert(CACHE_RESULT_IS_OK(rv));
-
-            std::vector<std::string> invalidation_words; // TODO
+        CacheKey key;
+        auto rv = nosql::cache::get_key(nosql::cache::ValueKind::NOSQL_RESPONSE,
+                                        user, host, zDefault_db, &pCommand->request(),
+                                        &key);
+        mxb_assert(CACHE_RESULT_IS_OK(rv));
 
 #if defined(SS_DEBUG)
-            MXB_INFO("Storing NoSQL response.");
+        MXB_INFO("Storing NoSQL response.");
 #endif
-            rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
+        rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
 
-            mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
-            mxb_assert(CACHE_RESULT_IS_OK(rv));
-        }
-
-        m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
+        mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
+        mxb_assert(CACHE_RESULT_IS_OK(rv));
     }
+
+    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
 }
 
 }
