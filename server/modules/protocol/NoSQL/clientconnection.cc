@@ -141,6 +141,11 @@ public:
         m_sCache_filter_session->setUpstream(&m_client_connection_as_routable);
     }
 
+    CacheFilterSession* cache_filter_session() const
+    {
+        return m_sCache_filter_session.get();
+    }
+
     bool routeQuery(GWBUF&& packet) override
     {
         // This is called when nosqlprotocol wants to send a packet further down
@@ -227,6 +232,8 @@ bool ClientConnection::init_connection()
     if (m_sDownstream)
     {
         m_sDownstream->create_cache();
+
+        m_nosql.set_cache_filter_session(m_sDownstream->cache_filter_session());
     }
 
     return true;

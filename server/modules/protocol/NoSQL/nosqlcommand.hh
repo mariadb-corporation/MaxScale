@@ -51,6 +51,11 @@ public:
         return m_database;
     }
 
+    const GWBUF& request() const
+    {
+        return m_request;
+    }
+
     virtual bool is_admin() const;
 
     virtual bool is_silent() const
@@ -146,6 +151,11 @@ public:
 
             m_pData = pData;
             m_cacheable = cacheable;
+        }
+
+        GWBUF* get() const
+        {
+            return m_pData;
         }
 
         GWBUF* release()
