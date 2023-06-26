@@ -221,6 +221,8 @@ protected:
     {
     }
 
+    static void patch_response(GWBUF& response, int32_t request_id, int32_t response_to);
+
     void free_request();
 
     void send_downstream(const std::string& sql);
