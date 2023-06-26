@@ -211,12 +211,6 @@ ExternalCmd::ExternalCmd(const std::string& script, int timeout, OutputHandler h
 
 ExternalCmd::~ExternalCmd()
 {
-    if (m_pid != -1)
-    {
-        wait();
-        mxb_assert(m_pid == -1);
-    }
-
     if (m_read_fd != -1)
     {
         close(m_read_fd);
@@ -225,6 +219,12 @@ ExternalCmd::~ExternalCmd()
     if (m_write_fd != -1)
     {
         close(m_write_fd);
+    }
+
+    if (m_pid != -1)
+    {
+        wait();
+        mxb_assert(m_pid == -1);
     }
 }
 
