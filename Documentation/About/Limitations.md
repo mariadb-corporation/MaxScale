@@ -137,11 +137,6 @@ MariaDB MaxScale is unable to determine which password it should use to connect
 to the backend database. This results in failed connections and unusable
 usernames in MariaDB MaxScale.
 
-* Only a subset of netmasks are supported for the *Host*-column in the
-*mysql.user*-table (and related tables). Specifically, if the *Host* is of the
-form `base_ip/netmask`, then the netmask must only contain the numbers 0 or 255.
-For example, a netmask of 255.255.255.0 is fine while 255.255.255.192 is not.
-
 ## Filter limitations
 
 ### Tee filter limitations (tee)
