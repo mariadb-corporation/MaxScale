@@ -380,6 +380,8 @@ public:
 //
 // OpMsgCommand
 //
+class OpMsgCommandInfo;
+
 class OpMsgCommand : public Command
 {
 public:
@@ -411,6 +413,8 @@ public:
         , m_arguments(arguments)
     {
     }
+
+    static std::pair<std::string, OpMsgCommandInfo> get_info(const bsoncxx::document::view& doc);
 
     static std::unique_ptr<OpMsgCommand> get(Database* pDatabase,
                                              GWBUF* pRequest,
@@ -603,6 +607,48 @@ private:
 
     mutable std::string m_quoted_table;
     mutable std::string m_unquoted_table;
+};
+
+using CreateDefaultFunction = std::unique_ptr<OpMsgCommand> (*)(const std::string& name,
+                                                                Database* pDatabase,
+                                                                GWBUF* pRequest,
+                                                                packet::Msg&& msg);
+
+using CreateDiagnoseFunction = std::unique_ptr<OpMsgCommand> (*)(const std::string& name,
+                                                                 Database* pDatabase,
+                                                                 GWBUF* pRequest,
+                                                                 packet::Msg&& msg,
+                                                                 const bsoncxx::document::view& doc,
+                                                                 const OpMsgCommand::DocumentArguments& args);
+
+struct OpMsgCommandInfo
+{
+    OpMsgCommandInfo()
+        : zKey(nullptr)
+        , zHelp(nullptr)
+        , create_default(nullptr)
+        , create_diagnose(nullptr)
+        , is_admin(false)
+    {
+    }
+
+    OpMsgCommandInfo(const char* zKey, const char* zHelp,
+                CreateDefaultFunction create_default,
+                CreateDiagnoseFunction create_diagnose,
+                bool is_admin)
+        : zKey(zKey)
+        , zHelp(zHelp)
+        , create_default(create_default)
+        , create_diagnose(create_diagnose)
+        , is_admin(is_admin)
+    {
+    }
+
+    const char*            zKey;
+    const char*            zHelp;
+    CreateDefaultFunction  create_default;
+    CreateDiagnoseFunction create_diagnose;
+    bool                   is_admin;
 };
 
 /**
