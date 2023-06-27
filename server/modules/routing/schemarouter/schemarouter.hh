@@ -80,8 +80,6 @@ struct Stats
     int n_hist_exceeded;    /*< Number of sessions that exceeded session
                              * command history limit */
     int    sessions;        /*< Number of sessions */
-    int    shmap_cache_hit; /*< Shard map was found from the cache */
-    int    shmap_cache_miss;/*< No shard map found from the cache */
     double ses_longest;     /*< Longest session */
     double ses_shortest;    /*< Shortest session */
     double ses_average;     /*< Average session length */
@@ -92,8 +90,6 @@ struct Stats
         , longest_sescmd(0)
         , n_hist_exceeded(0)
         , sessions(0)
-        , shmap_cache_hit(0)
-        , shmap_cache_miss(0)
         , ses_longest(0.0)
         , ses_shortest(std::numeric_limits<double>::max())
         , ses_average(0.0)

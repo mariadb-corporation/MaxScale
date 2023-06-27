@@ -266,7 +266,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
             {
                 // Try and see if we can find an acceptably stale entry. The update is already in progress but
                 // waiting for it is not desirable as it would block all requests by this user.
-                m_shard = m_router->m_shard_manager.get_shard(
+                m_shard = m_router->m_shard_manager.get_stale_shard(
                     m_key, m_config.refresh_interval.count(), m_config.max_staleness.count());
 
                 if (m_shard.empty())
@@ -608,7 +608,6 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
  */
 void SchemaRouterSession::synchronize_shards()
 {
-    m_router->m_stats.shmap_cache_miss++;
     m_router->m_shard_manager.update_shard(m_shard, m_key);
 }
 

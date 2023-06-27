@@ -176,10 +176,11 @@ Shard ShardManager::get_shard(std::string user, double max_interval)
     }
 
     // Found valid shard
+    ++m_stats.hits;
     return iter->second;
 }
 
-Shard ShardManager::get_shard(std::string user, double max_interval, double max_staleness)
+Shard ShardManager::get_stale_shard(std::string user, double max_interval, double max_staleness)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -193,10 +194,12 @@ Shard ShardManager::get_shard(std::string user, double max_interval, double max_
             m_maps.erase(iter);
         }
 
+        ++m_stats.misses;
         return Shard();
     }
 
     // Found valid shard
+    ++m_stats.stale;
     return iter->second;
 }
 
@@ -207,6 +210,7 @@ void ShardManager::update_shard(Shard& shard, const std::string& user)
 
     if (iter == m_maps.end() || shard.newer_than(iter->second))
     {
+        ++m_stats.updates;
         MXB_INFO("Updated shard map for user '%s'", user.c_str());
         m_maps[user] = shard;
     }

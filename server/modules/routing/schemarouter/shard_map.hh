@@ -141,6 +141,20 @@ public:
     ShardManager();
     ~ShardManager();
 
+    struct Stats
+    {
+        uint64_t updates{0};
+        uint64_t hits{0};
+        uint64_t misses{0};
+        uint64_t stale{0};
+    };
+
+    Stats stats() const
+    {
+        std::lock_guard<std::mutex> guard(m_lock);
+        return m_stats;
+    }
+
     /**
      * @brief Retrieve or create a shard
      *
@@ -162,7 +176,7 @@ public:
      *
      * @return The latest version of the shard or a newly created shard if no old version is available
      */
-    Shard get_shard(std::string user, double max_lifetime, double max_staleness);
+    Shard get_stale_shard(std::string user, double max_lifetime, double max_staleness);
 
     /**
      * @brief Update the shard information
@@ -218,6 +232,7 @@ private:
     mutable std::mutex m_lock;
     ShardMap           m_maps;
     MapLimits          m_limits;
+    Stats              m_stats;
     int64_t            m_update_limit {1};
 };
 

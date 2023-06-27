@@ -212,8 +212,11 @@ json_t* SchemaRouter::diagnostics() const
         json_object_set_new(rval, "average_session", json_real(m_stats.ses_average));
     }
 
-    json_object_set_new(rval, "shard_map_hits", json_integer(m_stats.shmap_cache_hit));
-    json_object_set_new(rval, "shard_map_misses", json_integer(m_stats.shmap_cache_miss));
+    auto stats = m_shard_manager.stats();
+    json_object_set_new(rval, "shard_map_hits", json_integer(stats.hits));
+    json_object_set_new(rval, "shard_map_misses", json_integer(stats.misses));
+    json_object_set_new(rval, "shard_map_updates", json_integer(stats.updates));
+    json_object_set_new(rval, "shard_map_stale", json_integer(stats.stale));
 
     return rval;
 }
