@@ -95,7 +95,7 @@ public:
             state = translate2(std::move(mariadb_response), &pResponse);
         }
 
-        pNoSQL_response->reset(pResponse);
+        pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
         return state;
     }
 

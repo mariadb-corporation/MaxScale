@@ -197,7 +197,6 @@ public:
 
         execute_one_statement();
 
-        pNoSQL_response->reset(nullptr);
         return State::BUSY;
     }
 
@@ -747,7 +746,7 @@ public:
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
-        bool cacheable = false;
+        Response::Cacheability cacheability = Response::NOT_CACHEABLE;
 
         switch (response.type())
         {
@@ -802,12 +801,12 @@ public:
                     // If the cursor is exhausted, i.e., either the number of returned items
                     // was small enough or 'singleBatch=true' was specified, the result is
                     // cacheable. Otherwise things get complicated and no caching is performed.
-                    cacheable = true;
+                    cacheability = Response::CACHEABLE;
                 }
             }
         }
 
-        pNoSQL_response->reset(pResponse, cacheable);
+        pNoSQL_response->reset(pResponse, cacheability);
         return State::READY;
     }
 
@@ -871,7 +870,6 @@ public:
 
         send_downstream(query.statements().front());
 
-        pNoSQL_response->reset(nullptr);
         return State::BUSY;
     }
 

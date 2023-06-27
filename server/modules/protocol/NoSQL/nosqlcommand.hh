@@ -95,18 +95,28 @@ public:
     class Response final
     {
     public:
+        enum Cacheability
+        {
+            CACHEABLE,
+            NOT_CACHEABLE
+        };
+
         Response(const Response&) = delete;
         Response& operator=(const Response&) = delete;
 
-        Response(GWBUF* pData = nullptr, bool cacheable = false)
+        Response()
+        {
+        }
+
+        Response(GWBUF* pData, Cacheability cacheability)
             : m_pData(pData)
-            , m_cacheable(cacheable)
+            , m_cacheability(cacheability)
         {
         }
 
         Response(Response&& rhs)
             : m_pData(std::exchange(rhs.m_pData, nullptr))
-            , m_cacheable(std::exchange(rhs.m_cacheable, false))
+            , m_cacheability(std::exchange(rhs.m_cacheability, NOT_CACHEABLE))
         {
         }
 
@@ -115,7 +125,7 @@ public:
             if (this != &rhs)
             {
                 m_pData = std::exchange(rhs.m_pData, nullptr);
-                m_cacheable = std::exchange(rhs.m_cacheable, false);
+                m_cacheability = std::exchange(rhs.m_cacheability, NOT_CACHEABLE);
             }
 
             return *this;
@@ -133,7 +143,7 @@ public:
 
         bool cacheable() const
         {
-            return m_cacheable;
+            return m_cacheability == CACHEABLE;
         }
 
         Command* command() const
@@ -147,12 +157,12 @@ public:
             m_sCommand = std::move(sCommand);
         }
 
-        void reset(GWBUF* pData, bool cacheable = false)
+        void reset(GWBUF* pData, Cacheability cacheability)
         {
             mxb_assert(!m_pData);
 
             m_pData = pData;
-            m_cacheable = cacheable;
+            m_cacheability = cacheability;
         }
 
         GWBUF* get() const
@@ -163,14 +173,14 @@ public:
         GWBUF* release()
         {
             GWBUF* pData = std::exchange(m_pData, nullptr);
-            m_cacheable = false;
+            m_cacheability = NOT_CACHEABLE;
 
             return pData;
         }
 
     private:
-        GWBUF*                   m_pData     { nullptr };
-        bool                     m_cacheable { false };
+        GWBUF*                   m_pData { nullptr };
+        Cacheability             m_cacheability { NOT_CACHEABLE };
         std::unique_ptr<Command> m_sCommand;
     };
 

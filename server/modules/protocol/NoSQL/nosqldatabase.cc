@@ -122,7 +122,7 @@ State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response
         // TODO: It ought to be possible to create the reponse from the command info
         // TODO: without instantiating the command, but for later.
         auto sCommand = command.create_default(name, this, pRequest, std::move(req));
-        response.reset(error.create_response(*sCommand.get()));
+        response.reset(error.create_response(*sCommand.get()), Command::Response::NOT_CACHEABLE);
     }
     else
     {
@@ -166,7 +166,7 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
 
         if (!m_sCommand->is_silent())
         {
-            response.reset(x.create_response(*m_sCommand.get()));
+            response.reset(x.create_response(*m_sCommand.get()), Command::Response::NOT_CACHEABLE);
         }
     }
     catch (const std::exception& x)
@@ -178,7 +178,7 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
 
         if (!m_sCommand->is_silent())
         {
-            response.reset(error.create_response(*m_sCommand));
+            response.reset(error.create_response(*m_sCommand), Command::Response::NOT_CACHEABLE);
         }
     }
 
@@ -218,7 +218,7 @@ Command::Response Database::get_cached_response(GWBUF* pRequest, const packet::M
 #endif
         Command::patch_response(*pValue, m_context.next_request_id(), req.request_id());
 
-        response.reset(pValue);
+        response.reset(pValue, Command::Response::NOT_CACHEABLE);
     }
     else
     {
@@ -293,7 +293,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, Command::Resp
 
             if (!m_sCommand->is_silent())
             {
-                response.reset(x.create_response(*m_sCommand.get()));
+                response.reset(x.create_response(*m_sCommand.get()), Command::Response::NOT_CACHEABLE);
             }
         }
         catch (const bsoncxx::exception& x)
@@ -305,7 +305,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, Command::Resp
 
             if (!m_sCommand->is_silent())
             {
-                response.reset(error.create_response(*m_sCommand));
+                response.reset(error.create_response(*m_sCommand), Command::Response::NOT_CACHEABLE);
             }
         }
         catch (const std::exception& x)
@@ -317,7 +317,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, Command::Resp
 
             if (!m_sCommand->is_silent())
             {
-                response.reset(error.create_response(*m_sCommand));
+                response.reset(error.create_response(*m_sCommand), Command::Response::NOT_CACHEABLE);
             }
         }
     }
