@@ -16,7 +16,8 @@ set(MONGO_C_DRIVER_VERSION "1.17.0")
 
 message(STATUS "Using mongo-c-driver version ${MONGO_C_DRIVER_VERSION}")
 
-set(MONGO_C_DRIVER_URL "https://github.com/mongodb/mongo-c-driver/releases/download/${MONGO_C_DRIVER_VERSION}/mongo-c-driver-${MONGO_C_DRIVER_VERSION}.tar.gz")
+set(MONGO_C_DRIVER_URL "https://github.com/mongodb/mongo-c-driver/releases/download/${MONGO_C_DRIVER_VERSION}/mongo-c-driver-${MONGO_C_DRIVER_VERSION}.tar.gz"
+  CACHE STRING "mongo-c-driver sources")
 
 set(MONGO_C_DRIVER "${CMAKE_BINARY_DIR}/mongo-c-driver")
 

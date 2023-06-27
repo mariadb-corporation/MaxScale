@@ -66,6 +66,7 @@ of their use.
  - [Cat](Routers/Cat.md)
  - [HintRouter](Routers/HintRouter.md)
  - [KafkaCDC](Routers/KafkaCDC.md)
+ - [KafkaImporter](Routers/KafkaImporter.md)
  - [MirrorRouter](Routers/Mirror.md)
  - [Read Connection Router](Routers/ReadConnRoute.md)
  - [Read Write Split](Routers/ReadWriteSplit.md)

@@ -14,7 +14,8 @@ set(LIBMEMCACHED_VERSION "1.0.18")
 
 message(STATUS "Using libmemcached version ${LIBMEMCACHED_VERSION}")
 
-set(LIBMEMCACHED_URL "https://launchpad.net/libmemcached/1.0/${LIBMEMCACHED_VERSION}/+download/libmemcached-${LIBMEMCACHED_VERSION}.tar.gz")
+set(LIBMEMCACHED_URL "https://launchpad.net/libmemcached/1.0/${LIBMEMCACHED_VERSION}/+download/libmemcached-${LIBMEMCACHED_VERSION}.tar.gz"
+  CACHE STRING "libmemcached sources")
 
 set(LIBMEMCACHED_BASE "${CMAKE_BINARY_DIR}/libmemcached")
 
