@@ -128,7 +128,7 @@ State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response
     {
         if (command.is_cacheable && m_pCache_filter_session)
         {
-            response = get_cached_response(pRequest, req);
+            response = get_cached_response(name, pRequest, req);
         }
 
         if (!response)
@@ -191,7 +191,9 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
     return response;
 }
 
-Command::Response Database::get_cached_response(GWBUF* pRequest, const packet::Msg& req)
+Command::Response Database::get_cached_response(const std::string& name,
+                                                GWBUF* pRequest,
+                                                const packet::Msg& req)
 {
     mxb_assert(m_pCache_filter_session);
 
@@ -211,20 +213,25 @@ Command::Response Database::get_cached_response(GWBUF* pRequest, const packet::M
     rv = m_pCache_filter_session->get_value(key, 0, &pValue, nullptr);
     mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
 
+    auto debug = m_pCache_filter_session->debug();
+
     if (CACHE_RESULT_IS_OK(rv))
     {
-#if defined(SS_DEBUG)
-        MXB_INFO("NOSQL response found.");
-#endif
+        if (debug & CACHE_DEBUG_DECISIONS)
+        {
+            MXB_NOTICE("Response to NoSQL command '%s' was FOUND in cache.", name.c_str());
+        }
+
         Command::patch_response(*pValue, m_context.next_request_id(), req.request_id());
 
         response.reset(pValue, Command::Response::NOT_CACHEABLE);
     }
     else
     {
-#if defined(SS_DEBUG)
-        MXB_INFO("NOSQL response not found.");
-#endif
+        if (debug & CACHE_DEBUG_DECISIONS)
+        {
+            MXB_NOTICE("Response to NoSQL command '%s' was NOT found in cache.", name.c_str());
+        }
     }
 
     return response;

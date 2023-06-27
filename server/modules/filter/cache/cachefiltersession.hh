@@ -43,6 +43,14 @@ public:
     ~CacheFilterSession();
 
     /**
+     * @return Debug bits.
+     */
+    int64_t debug() const
+    {
+        return m_sCache->config().debug;
+    }
+
+    /**
      * @return The current user if user specific cache or empty string if not.
      */
     const std::string& user() const;
