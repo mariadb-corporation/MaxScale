@@ -64,7 +64,7 @@ public:
             break;
         }
 
-        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(pResponse, CACHEABILITY);
 
         return state;
     }
@@ -370,7 +370,7 @@ public:
             break;
         }
 
-        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(pResponse, CACHEABILITY);
         return state;
     }
 
@@ -727,13 +727,15 @@ public:
         return IsAdmin<CurrentOp>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         ArrayBuilder inprog;
         // TODO: Add something.
 
         doc.append(kvp(key::INPROG, inprog.extract()));
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -794,7 +796,7 @@ public:
         doc.append(kvp(key::NS, table(Quoted::NO)));
         doc.append(kvp(key::N_INDEXES_WAS, 1)); // TODO: Report real value.
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
         return State::READY;
     }
 };
@@ -855,7 +857,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
         return State::READY;
     }
 };
@@ -952,12 +954,14 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp(key::ERRMSG, "fsync not supported by MaxScale:nosqlprotocol"));
         doc.append(kvp(key::CODE, (int)error::COMMAND_NOT_SUPPORTED));
         doc.append(kvp(key::CODE_NAME, nosql::error::name(error::COMMAND_NOT_SUPPORTED)));
         doc.append(kvp(key::OK, 0));
+
+        return CACHEABILITY;
     }
 };
 
@@ -976,7 +980,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto argument = m_doc[m_name];
 
@@ -1051,6 +1055,8 @@ public:
         doc.append(kvp(key::CURSORS_ALIVE, cursorsAlive.extract()));
         doc.append(kvp(key::CURSORS_UNKNOWN, cursorsUnknown.extract()));
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -1185,7 +1191,7 @@ public:
             }
         }
 
-        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(pResponse, CACHEABILITY);
         return State::READY;
     }
 
@@ -1343,7 +1349,7 @@ public:
             }
         }
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
         return State::READY;
     }
 
@@ -1523,7 +1529,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
         return State::READY;
     }
 
@@ -1571,7 +1577,7 @@ public:
         return IsAdmin<SetParameter>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         // TODO: Should be assigned to the session so that getParamter
         // TODO: would return the set value.
@@ -1580,6 +1586,8 @@ public:
 
         doc.append(kvp(key::WAS, was.extract()));
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 

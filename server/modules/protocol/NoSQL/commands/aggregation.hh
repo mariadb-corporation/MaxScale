@@ -33,6 +33,7 @@ class Count final : public SingleCommand
 public:
     static constexpr const char* const KEY = "count";
     static constexpr const char* const HELP = "";
+    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
 
     using SingleCommand::SingleCommand;
 
@@ -107,7 +108,7 @@ public:
         doc.append(kvp(key::N, n));
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
         return State::READY;
     }
 
@@ -145,6 +146,7 @@ class Distinct final : public SingleCommand
 public:
     static constexpr const char* const KEY = "distinct";
     static constexpr const char* const HELP = "";
+    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
 
     using SingleCommand::SingleCommand;
 
@@ -317,7 +319,7 @@ public:
 
         auto doc = bsoncxx::from_json(json.str());
 
-        pNoSQL_response->reset(create_response(doc), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc), CACHEABILITY);
         return State::READY;
     }
 };

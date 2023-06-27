@@ -32,7 +32,7 @@ public:
     using Base = UserAdminAuthorize<ImmediateCommand>;
     using Base::Base;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto& um = m_database.context().um();
 
@@ -59,6 +59,8 @@ public:
 
             throw SoftError(ss.str(), error::INTERNAL_ERROR);
         }
+
+        return CACHEABILITY;
     }
 
     static void parse(const string& command,
@@ -239,7 +241,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
 
         return State::READY;
     }
@@ -256,7 +258,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto command = value_as<bsoncxx::document::view>();
 
@@ -290,6 +292,8 @@ public:
         }
 
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -315,9 +319,11 @@ public:
         return IsAdmin<MxsGetConfig>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         populate_response(doc, m_database.config());
+
+        return CACHEABILITY;
     }
 
     static void populate_response(DocumentBuilder& doc, const Config& c)
@@ -339,7 +345,7 @@ public:
     using Base = UserAdminAuthorize<ImmediateCommand>;
     using Base::Base;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto& um = m_database.context().um();
 
@@ -363,6 +369,8 @@ public:
         }
 
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -387,13 +395,15 @@ public:
         return IsAdmin<MxsSetConfig>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto& config = m_database.config();
 
         config.copy_from(KEY, value_as<bsoncxx::document::view>());
 
         MxsGetConfig::populate_response(doc, config);
+
+        return CACHEABILITY;
     }
 };
 
@@ -409,7 +419,7 @@ public:
     using UserInfo = nosql::UserManager::UserInfo;
     using Update = nosql::UserManager::Update;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto& um = m_database.context().um();
         string db = m_database.name();
@@ -429,6 +439,8 @@ public:
 
             throw SoftError(ss.str(), error::INTERNAL_ERROR);
         }
+
+        return CACHEABILITY;
     }
 
     static uint32_t parse(const string& command,

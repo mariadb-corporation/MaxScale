@@ -40,10 +40,11 @@ class BuildInfo final : public ImmediateCommand
 public:
     static constexpr const char* const KEY = "buildInfo";
     static constexpr const char* const HELP = "";
+    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         ArrayBuilder versionArray;
         versionArray.append(NOSQL_VERSION_MAJOR);
@@ -76,6 +77,8 @@ public:
         doc.append(kvp(key::OK, 1));
 
         doc.append(kvp(key::MAXSCALE, MAXSCALE_VERSION));
+
+        return CACHEABILITY;
     }
 };
 
@@ -269,7 +272,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pResponse->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
+            pResponse->reset(m_super.create_response(doc.extract()), CACHEABILITY);
             return State::READY;
         }
 
@@ -345,7 +348,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pNoSQL_response->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
+            pNoSQL_response->reset(m_super.create_response(doc.extract()), CACHEABILITY);
 
             return State::READY;
         }
@@ -402,7 +405,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto& config = mxs::Config::get();
 
@@ -417,6 +420,8 @@ public:
         doc.append(kvp(key::ARGV, argv.extract()));
         doc.append(kvp(key::PARSED, parsed.extract()));
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -442,7 +447,7 @@ public:
         return IsAdmin<GetLog>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         auto value = value_as<string>();
 
@@ -472,6 +477,8 @@ public:
             doc.append(kvp(key::OK, 0));
             doc.append(kvp(key::ERRMSG, value));
         }
+
+        return CACHEABILITY;
     }
 };
 
@@ -498,7 +505,7 @@ public:
         return IsAdmin<HostInfo>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         long memory = get_total_memory();
 
@@ -528,6 +535,8 @@ public:
         doc.append(kvp(key::EXTRA, extra.extract()));
 
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -539,10 +548,11 @@ class ListCommands final : public ImmediateCommand
 public:
     static constexpr const char* const KEY = "listCommands";
     static constexpr const char* const HELP = "";
+    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         DocumentBuilder commands;
 
@@ -550,6 +560,8 @@ public:
 
         doc.append(kvp(key::COMMANDS, commands.extract()));
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -566,9 +578,11 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -583,7 +597,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         DocumentBuilder asserts;
         DocumentBuilder connections; // TODO: Populate this.
@@ -606,6 +620,8 @@ public:
         doc.append(kvp(key::UPTIME_ESTIMATE, uptime_seconds));
         doc.append(kvp(key::UPTIME_MILLIS, uptime_seconds * 1000));
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
@@ -696,7 +712,7 @@ public:
         doc.append(kvp(key::MISSING_INDEX_ENTRIES, empty_array.extract()));
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
         return State::READY;
     }
 
@@ -737,7 +753,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         ClientDCB* pDcb = m_database.context().client_connection().dcb();
 
@@ -746,6 +762,8 @@ public:
 
         doc.append(kvp(key::YOU, you.str()));
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 
