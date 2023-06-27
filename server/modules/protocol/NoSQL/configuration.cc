@@ -106,7 +106,21 @@ bool ParamInternalCache::validate_parameters(const std::string& value,
 
     if (valid)
     {
-        valid = m_pInternal_cache->validate(params, pUnrecognized);
+        string storage = params.get_string("storage");
+        const string_view STORAGE_INMEMORY = "storage_inmemory";
+
+        if (storage.empty() || storage == STORAGE_INMEMORY)
+        {
+            valid = m_pInternal_cache->validate(params, pUnrecognized);
+        }
+        else
+        {
+            MXB_ERROR("'%s' specified as storage of the internal cache of nosqlprotocol, "
+                      "but only '%.*s' can be used.",
+                      storage.c_str(),
+                      (int)STORAGE_INMEMORY.length(), STORAGE_INMEMORY.data());
+            valid = false;
+        }
     }
 
     return valid;

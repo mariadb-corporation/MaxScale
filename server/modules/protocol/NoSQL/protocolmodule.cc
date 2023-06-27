@@ -58,29 +58,32 @@ bool ProtocolModule::post_configure(const std::map<std::string, mxs::ConfigParam
         rv = true;
     }
 
-    if (m_config.pInternal_cache)
+    if (rv)
     {
-        MXB_NOTICE("Nosqlprotocol configured to use a cache.");
-
-        mxs::ConfigParameters cache_config;
-
-        if (auto it = nested_params.find("cache"); it != nested_params.end())
+        if (m_config.pInternal_cache)
         {
-            cache_config = it->second;
+            MXB_NOTICE("Nosqlprotocol configured to use a cache.");
+
+            mxs::ConfigParameters cache_config;
+
+            if (auto it = nested_params.find("cache"); it != nested_params.end())
+            {
+                cache_config = it->second;
+            }
+
+            // Let's use a unique name, even though the filter will not end up
+            // in the general book-keeping.
+            string name("@@Cache-for-");
+            name += m_config.name();
+
+            m_sCache_filter.reset(CacheFilter::create(name.c_str()));
+
+            rv = m_sCache_filter->getConfiguration().configure(cache_config);
         }
-
-        // Let's use a unique name, even though the filter will not end up
-        // in the general book-keeping.
-        string name("@@Cache-for-");
-        name += m_config.name();
-
-        m_sCache_filter.reset(CacheFilter::create(name.c_str()));
-
-        rv = m_sCache_filter->getConfiguration().configure(cache_config);
-    }
-    else
-    {
-        MXB_INFO("Nosqlprotocol not configured to use a cache.");
+        else
+        {
+            MXB_INFO("Nosqlprotocol not configured to use a cache.");
+        }
     }
 
     return rv;
