@@ -1,6 +1,8 @@
 # Downloads jwt-cpp: https://github.com/Thalhammer/jwt-cpp
+set(JWT_CPP_REPO "https://github.com/Thalhammer/jwt-cpp.git" CACHE STRING "jwt-cpp git repo")
+
 ExternalProject_Add(jwt-cpp
-  GIT_REPOSITORY "https://github.com/Thalhammer/jwt-cpp.git"
+  GIT_REPOSITORY ${JWT_CPP_REPO}
   GIT_TAG "v0.6.0"
   GIT_SHALLOW TRUE
   CONFIGURE_COMMAND ""

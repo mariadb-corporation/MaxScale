@@ -11,7 +11,8 @@ set(LIBMICROHTTPD_FILE "libmicrohttpd/libmicrohttpd-${LIBMICROHTTPD_VERSION}.tar
 set(LIBMICROHTTPD_URLS
   "http://ftpmirror.gnu.org/${LIBMICROHTTPD_FILE}"
   "http://ftp.funet.fi/pub/gnu/prep/${LIBMICROHTTPD_FILE}"
-  "http://mirrors.kernel.org/gnu/${LIBMICROHTTPD_FILE}")
+  "http://mirrors.kernel.org/gnu/${LIBMICROHTTPD_FILE}"
+  CACHE STRING "libmicrohttpd sources")
 
 ExternalProject_Add(libmicrohttpd
   URL ${LIBMICROHTTPD_URLS}
