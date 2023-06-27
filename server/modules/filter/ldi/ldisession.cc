@@ -53,33 +53,45 @@ std::string escape_single_quotes(std::string_view str)
 
     return sql;
 }
+
+std::string_view unquote(const char* begin, const char* end)
+{
+    std::string_view str(begin, std::distance(begin, end));
+
+    if ((str.front() == '"' || str.front() == '\'') && str.front() == str.back())
+    {
+        str = str.substr(1, str.length() - 2);
+    }
+
+    return str;
+}
 }
 
 // static
 char* LDISession::set_key(void* self, const char* key, const char* begin, const char* end)
 {
-    static_cast<LDISession*>(self)->m_config.key.assign(begin, end);
+    static_cast<LDISession*>(self)->m_config.key.assign(unquote(begin, end));
     return nullptr;
 }
 
 // static
 char* LDISession::set_secret(void* self, const char* key, const char* begin, const char* end)
 {
-    static_cast<LDISession*>(self)->m_config.secret.assign(begin, end);
+    static_cast<LDISession*>(self)->m_config.secret.assign(unquote(begin, end));
     return nullptr;
 }
 
 // static
 char* LDISession::set_region(void* self, const char* key, const char* begin, const char* end)
 {
-    static_cast<LDISession*>(self)->m_config.region.assign(begin, end);
+    static_cast<LDISession*>(self)->m_config.region.assign(unquote(begin, end));
     return nullptr;
 }
 
 // static
 char* LDISession::set_host(void* self, const char* key, const char* begin, const char* end)
 {
-    static_cast<LDISession*>(self)->m_config.host.assign(begin, end);
+    static_cast<LDISession*>(self)->m_config.host.assign(unquote(begin, end));
     return nullptr;
 }
 
@@ -109,14 +121,14 @@ char* LDISession::set_protocol_version(void* self, const char* key, const char* 
 // static
 char* LDISession::set_import_user(void* self, const char* key, const char* begin, const char* end)
 {
-    static_cast<LDISession*>(self)->m_config.import_user.assign(begin, end);
+    static_cast<LDISession*>(self)->m_config.import_user.assign(unquote(begin, end));
     return nullptr;
 }
 
 // static
 char* LDISession::set_import_password(void* self, const char* key, const char* begin, const char* end)
 {
-    auto pw = mxs::decrypt_password(std::string(begin, end));
+    auto pw = mxs::decrypt_password(std::string(unquote(begin, end)));
     static_cast<LDISession*>(self)->m_config.import_password = std::move(pw);
     return nullptr;
 }
