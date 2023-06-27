@@ -56,7 +56,7 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
             {
                 escaped = true;
             }
-            else if (quoted && !escaped && *ptr == qc)      /** End of quoted string */
+            else if (quoted && *ptr == qc)      /** End of quoted string */
             {
                 *ptr = '\0';
                 dest[i++] = MXB_STRDUP(start);
@@ -100,7 +100,7 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
 std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeout, OutputHandler handler)
 {
     bool success = false;
-    std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout, handler));
+    std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout, std::move(handler)));
     char* argvec[1] {};     // Parse just one argument for testing file existence and permissions.
     if (cmd->tokenize_args(argvec, 1) > 0)
     {
@@ -138,7 +138,7 @@ ExternalCmd::ExternalCmd(const std::string& script, int timeout, OutputHandler h
     : m_orig_command(script)
     , m_subst_command(script)
     , m_timeout(timeout)
-    , m_handler(handler)
+    , m_handler(std::move(handler))
 {
 }
 
@@ -187,7 +187,7 @@ bool ExternalCmd::start()
     // "execvp" takes its arguments as an array of tokens where the first element is the command.
     char* argvec[MAX_ARGS + 1] {};
     tokenize_args(argvec, MAX_ARGS);
-    std::string m_cmd = argvec[0];
+    m_cmd = argvec[0];
 
     // The SIGCHLD handler must be disabled before child process is forked,
     // otherwise we'll get an error
@@ -362,7 +362,7 @@ int ExternalCmd::try_wait()
 
         if (m_result != TIMEOUT && !m_output.empty())
         {
-            m_handler(m_cmd.c_str(), m_output);
+            m_handler(m_cmd, m_output);
         }
     }
 
@@ -379,7 +379,7 @@ void ExternalCmd::read_output()
         // Read all available output
         m_output.append(buf, n);
 
-        for (size_t pos = m_output.find("\n"); pos != std::string::npos; pos = m_output.find("\n"))
+        for (size_t pos = m_output.find('\n'); pos != std::string::npos; pos = m_output.find('\n'))
         {
             if (pos == 0)
             {
@@ -389,7 +389,7 @@ void ExternalCmd::read_output()
             {
                 std::string line = m_output.substr(0, pos);
                 m_output.erase(0, pos + 1);
-                m_handler(m_cmd.c_str(), line);
+                m_handler(m_cmd, line);
             }
         }
     }
