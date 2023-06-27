@@ -1738,9 +1738,11 @@ public:
         return true;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         m_database.context().get_last_error(doc);
+
+        return CACHEABILITY;
     }
 };
 
@@ -1753,7 +1755,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         int64_t id = value_as<int64_t>();
         string collection = m_database.name() + "." + required<string>(key::COLLECTION);
@@ -1776,6 +1778,8 @@ public:
         {
             NoSQLCursor::put(std::move(sCursor));
         }
+
+        return CACHEABILITY;
     }
 };
 
@@ -2291,10 +2295,12 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         // No action needed, the error is reset on each command but for getLastError.
         doc.append(kvp(key::OK, 1));
+
+        return CACHEABILITY;
     }
 };
 

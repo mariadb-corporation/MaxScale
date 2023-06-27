@@ -2410,10 +2410,14 @@ data from the cache, the less valuable result will be evicted first.
 
 ## Cached Commands
 
-The following commands are cached.
+The responses of the following commands are cached.
 
-   * `Find`, provided all found documents can be returned in one response,
+   * [buildInfo](#buildinfo)
+   * [count](#count)
+   * [distinct](#distinct)
+   * [find](#find), provided all found documents can be returned in one response,
      i.e., if `singleBatch` is `true` or `batchSize` is large enough.
+   * [listCommands](#listcommands)
 
 # Compatibility
 

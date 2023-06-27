@@ -41,9 +41,11 @@ public:
         return false;
     }
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         populate_response(m_database, m_doc, doc);
+
+        return CACHEABILITY;
     }
 
     static void populate_response(Database& database,
@@ -134,9 +136,11 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    Response::Cacheability populate_response(DocumentBuilder& doc) override
     {
         throw SoftError("not running with --replSet", error::NO_REPLICATION_ENABLED);
+
+        return CACHEABILITY;
     }
 };
 

@@ -50,7 +50,7 @@ class Unknown : public nosql::ImmediateCommand
 public:
     using nosql::ImmediateCommand::ImmediateCommand;
 
-    void populate_response(nosql::DocumentBuilder& doc) override
+    Response::Cacheability populate_response(nosql::DocumentBuilder& doc) override
     {
         if (m_database.config().log_unknown_command)
         {
@@ -78,6 +78,8 @@ public:
         case Configuration::RETURN_EMPTY:
             break;
         }
+
+        return CACHEABILITY;
     }
 };
 
@@ -1261,10 +1263,9 @@ void OpMsgCommand::interpret_error(bsoncxx::builder::basic::document& error, con
 State ImmediateCommand::execute(Response* pNoSQL_response)
 {
     DocumentBuilder doc;
-    populate_response(doc);
+    auto cacheability = populate_response(doc);
 
-    // TODO: Most immediate commands are cacheable.
-    pNoSQL_response->reset(create_response(doc.extract()), Command::Response::NOT_CACHEABLE);
+    pNoSQL_response->reset(create_response(doc.extract()), cacheability);
     return State::READY;
 }
 

@@ -678,7 +678,7 @@ public:
     void diagnose(DocumentBuilder& doc) override;
 
 protected:
-    virtual void populate_response(DocumentBuilder& doc) = 0;
+    virtual Response::Cacheability populate_response(DocumentBuilder& doc) = 0;
 };
 
 /**
