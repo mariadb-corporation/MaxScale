@@ -1,6 +1,8 @@
 # Builds Avro C library from source.
+set(AVRO_C_URL "https://github.com/apache/avro/archive/release-1.10.0.tar.gz" CACHE STRING "Avro-C sources")
+
 ExternalProject_Add(avro-c
-  URL "https://github.com/apache/avro/archive/release-1.10.0.tar.gz"
+  URL ${AVRO_C_URL}
   SOURCE_DIR ${CMAKE_BINARY_DIR}/avro-c/
   PATCH_COMMAND sed -i "s/find_package(Snappy)//" lang/c/CMakeLists.txt
   SOURCE_SUBDIR lang/c/
