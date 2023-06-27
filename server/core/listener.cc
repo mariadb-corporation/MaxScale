@@ -143,6 +143,11 @@ cfg::ParamString s_proxy_networks(
     &s_spec, CN_PROXY_PROTOCOL_NETWORKS, "Allowed (sub)networks for proxy protocol connections. Should be "
                                          "a comma-separated list of IPv4 or IPv6 addresses.", "", RUNTIME);
 
+cfg::ParamStringList s_connection_metadata(
+    &s_spec, "connection_metadata",
+    "Metadata that's sent to all connecting clients.",
+    ",", {}, RUNTIME);
+
 template<class Params>
 bool ListenerSpecification::do_post_validate(Params& params) const
 {
@@ -160,6 +165,19 @@ bool ListenerSpecification::do_post_validate(Params& params) const
         {
             MXB_ERROR("The 'ssl_cert' parameter must be defined when a listener is configured with SSL.");
             ok = false;
+        }
+    }
+
+    if (auto values = s_connection_metadata.get(params); !values.empty())
+    {
+        for (const auto& val : values)
+        {
+            if (val.find("=") == std::string::npos)
+            {
+                MXB_ERROR("Invalid key-value list for '%s': %s",
+                          s_connection_metadata.name().c_str(), val.c_str());
+                ok = false;
+            }
         }
     }
 
@@ -255,12 +273,14 @@ ListenerData::ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode
                            const std::string& listener_name,
                            std::vector<SAuthenticator>&& authenticators,
                            ListenerData::ConnectionInitSql&& init_sql, SMappingInfo mapping,
-                           mxb::proxy_protocol::SubnetArray&& proxy_networks)
+                           mxb::proxy_protocol::SubnetArray&& proxy_networks,
+                           std::map<std::string, std::string>&& connection_metadata)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
     , m_proto_module(move(protocol_module))
     , m_listener_name(listener_name)
+    , m_connection_metadata(std::move(connection_metadata))
     , m_authenticators(move(authenticators))
     , m_conn_init_sql(std::move(init_sql))
     , m_mapping_info(move(mapping))
@@ -481,6 +501,7 @@ Listener::Config::Config(const std::string& name, Listener* listener)
     add_native(&Listener::Config::connection_init_sql_file, &s_connection_init_sql_file);
     add_native(&Listener::Config::user_mapping_file, &s_user_mapping_file);
     add_native(&Listener::Config::proxy_networks, &s_proxy_networks);
+    add_native(&Listener::Config::connection_metadata, &s_connection_metadata);
 }
 
 bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
@@ -1376,10 +1397,20 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
 
             if (auth_modules_ok)
             {
+                MXB_DEBUG("Metadata set to: %s", mxb::join(m_config.connection_metadata).c_str());
+                std::map<std::string, std::string> connection_metadata;
+
+                for (const auto& val : m_config.connection_metadata)
+                {
+                    const auto& [key, value] = mxb::split(val, "=");
+                    mxb_assert(!key.empty() && !value.empty());
+                    connection_metadata.emplace(key, value);
+                }
+
                 rval = std::make_shared<mxs::ListenerData>(
                     move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
                     m_name, move(authenticators), move(init_sql), move(mapping_info),
-                    std::move(proxy_networks));
+                    std::move(proxy_networks), std::move(connection_metadata));
             }
         }
     }

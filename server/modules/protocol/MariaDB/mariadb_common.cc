@@ -27,6 +27,8 @@
 #include <maxscale/utils.hh>
 #include "packet_parser.hh"
 
+#include <mysql.h>
+
 using std::string;
 using std::move;
 using mxs::ReplyState;
@@ -718,7 +720,58 @@ AuthSwitchReqContents parse_auth_switch_request(const GWBUF& input)
     return packet_parser::parse_auth_switch_request(data);
 }
 
-GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows)
+uint32_t total_sysvar_bytes(const std::map<std::string, std::string>& attrs)
+{
+    size_t total = 0;
+
+    for (const auto& [key, value] : attrs)
+    {
+        // Each system variable is encoded as:
+        // int<1>         Change type (0)
+        // int<lenenc>    Total length
+        // string<lenenc> Variable name
+        // string<lenenc> Variable value
+        size_t payload_bytes = leint_prefix_bytes(key.size()) + key.size()
+            + leint_prefix_bytes(value.size()) + value.size();
+        size_t payload_prefix_bytes = leint_prefix_bytes(payload_bytes);
+        total += 1 + payload_prefix_bytes + payload_bytes;
+    }
+
+    return total;
+}
+
+uint8_t* encode_sysvar(uint8_t* ptr, std::string_view key, std::string_view value)
+{
+    size_t key_prefix_bytes = leint_prefix_bytes(key.size());
+    size_t value_prefix_bytes = leint_prefix_bytes(value.size());
+    size_t payload_bytes = key_prefix_bytes + key.size() + value_prefix_bytes + value.size();
+    size_t payload_prefix_bytes = leint_prefix_bytes(payload_bytes);
+
+    // The state change type, SESSION_TRACK_SYSTEM_VARIABLES
+    // See: https://mariadb.com/kb/en/ok_packet/#session-state-info
+    *ptr++ = 0;
+
+    // The total length of the payload
+    encode_leint(ptr, payload_prefix_bytes, payload_bytes);
+    ptr += payload_prefix_bytes;
+
+    // The variable name
+    encode_leint(ptr, key_prefix_bytes, key.size());
+    ptr += key_prefix_bytes;
+    memcpy(ptr, key.data(), key.size());
+    ptr += key.size();
+
+    // The variable value
+    encode_leint(ptr, value_prefix_bytes, value.size());
+    ptr += value_prefix_bytes;
+    memcpy(ptr, value.data(), value.size());
+    ptr += value.size();
+
+    return ptr;
+}
+
+GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows,
+                       const std::map<std::string, std::string>& attrs)
 {
     /* Basic ok packet is
      * 4 bytes header
@@ -727,10 +780,26 @@ GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows)
      * 1 byte insert id = 0
      * 2 bytes server status
      * 2 bytes warning counter
-     * Total 4 + 6 + affected_rows size (1 to 9 bytes)
+     * 1 byte info (empty length-encoded string)
+     * Total 4 + 7 + affected_rows size (1 to 9 bytes)
+     *
+     * If the session state change attributes are not empty, they take up some extra space.
      */
     auto affected_rows_size = leint_prefix_bytes(affected_rows);
-    const uint32_t pl_size = 6 + affected_rows_size;
+    uint32_t attr_size = 0;
+    uint32_t attr_prefix_size = 0;
+    uint32_t attr_total_size = 0;
+    uint16_t server_status = SERVER_STATUS_AUTOCOMMIT;
+
+    if (!attrs.empty())
+    {
+        attr_size = total_sysvar_bytes(attrs);
+        attr_prefix_size = leint_prefix_bytes(attr_size);
+        attr_total_size = attr_size + attr_prefix_size;
+        server_status |= SERVER_SESSION_STATE_CHANGED;
+    }
+
+    const uint32_t pl_size = 6 + affected_rows_size + 1 + attr_total_size;
     const uint32_t total_size = MYSQL_HEADER_LEN + pl_size;
     GWBUF buffer(total_size);
     auto ptr = mariadb::write_header(buffer.data(), pl_size, sequence);
@@ -738,8 +807,21 @@ GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows)
     encode_leint(ptr, affected_rows_size, affected_rows);
     ptr += affected_rows_size;
     *ptr++ = 0;
-    ptr += mariadb::set_byte2(ptr, 2);      // autocommit is on
-    ptr += mariadb::set_byte2(ptr, 0);      // no warnings
+    ptr += mariadb::set_byte2(ptr, server_status);  // Server status
+    ptr += mariadb::set_byte2(ptr, 0);              // No warnings
+    *ptr++ = 0;                                     // No info
+
+    if (attr_total_size)
+    {
+        encode_leint(ptr, attr_prefix_size, attr_size);
+        ptr += attr_prefix_size;
+
+        for (const auto& [key, value] : attrs)
+        {
+            ptr = encode_sysvar(ptr, key, value);
+        }
+    }
+
     mxb_assert(ptr - buffer.data() == total_size);
     return buffer;
 }

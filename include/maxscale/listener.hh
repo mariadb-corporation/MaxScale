@@ -68,7 +68,8 @@ public:
     ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode, SERVICE* service,
                  SProtocol protocol_module, const std::string& listener_name,
                  std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql,
-                 SMappingInfo mapping, mxb::proxy_protocol::SubnetArray&& proxy_networks);
+                 SMappingInfo mapping, mxb::proxy_protocol::SubnetArray&& proxy_networks,
+                 std::map<std::string, std::string>&& connection_metadata);
 
     ListenerData(const ListenerData&) = delete;
     ListenerData& operator=(const ListenerData&) = delete;
@@ -78,6 +79,8 @@ public:
     SERVICE&                   m_service;               /**< The service the listener feeds */
     const SProtocol            m_proto_module;          /**< Protocol module */
     const std::string          m_listener_name;         /**< Name of the owning listener */
+
+    const std::map<std::string, std::string> m_connection_metadata;
 
     /**
      * Authenticator modules used by the sessions created from the listener. The session will select
@@ -115,18 +118,19 @@ public:
     {
         Config(const std::string& name, Listener* listener);
 
-        std::string          type;
-        const MXS_MODULE*    protocol;
-        std::string          authenticator;
-        std::string          authenticator_options;
-        std::string          address;
-        std::string          socket;
-        int64_t              port;
-        SERVICE*             service;
-        mxs::Parser::SqlMode sql_mode;
-        std::string          connection_init_sql_file;
-        std::string          user_mapping_file;
-        std::string          proxy_networks;
+        std::string              type;
+        const MXS_MODULE*        protocol;
+        std::string              authenticator;
+        std::string              authenticator_options;
+        std::string              address;
+        std::string              socket;
+        int64_t                  port;
+        SERVICE*                 service;
+        mxs::Parser::SqlMode     sql_mode;
+        std::string              connection_init_sql_file;
+        std::string              user_mapping_file;
+        std::string              proxy_networks;
+        std::vector<std::string> connection_metadata;
 
         // TLS configuration parameters
         bool        ssl;

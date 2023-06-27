@@ -2858,9 +2858,35 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
     return success;
 }
 
+std::map<std::string, std::string> MariaDBClientConnection::get_sysvar_values()
+{
+    std::map<std::string, std::string> rval;
+
+    for (const auto& [key, value] : m_session->listener_data()->m_connection_metadata)
+    {
+        rval.emplace(key, value);
+    }
+
+    rval.emplace("threads_connected", std::to_string(m_session->service->stats().n_client_conns()));
+
+    MXB_DEBUG("Sending metadata: %s", mxb::transform_join(rval, [](const auto& val){
+        return mxb::cat(val.first, "=", val.second);
+    }, " ").c_str());
+
+    return rval;
+}
+
+
 void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_rows)
 {
-    write(mariadb::create_ok_packet(sequence, affected_rows));
+    if (m_session_data->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
+    {
+        write(mariadb::create_ok_packet(sequence, affected_rows, get_sysvar_values()));
+    }
+    else
+    {
+        write(mariadb::create_ok_packet(sequence, affected_rows));
+    }
 }
 
 bool MariaDBClientConnection::send_mysql_err_packet(int mysql_errno, const char* sqlstate_msg,

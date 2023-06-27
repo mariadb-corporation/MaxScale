@@ -197,6 +197,8 @@ private:
     GWBUF* create_standard_error(int sequence, int error_number, const char* msg);
     void   write_ok_packet(int sequence, uint8_t affected_rows = 0);
 
+    std::map<std::string, std::string> get_sysvar_values();
+
     /**
      * Send an error packet to the client.
      *
