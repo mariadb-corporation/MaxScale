@@ -372,9 +372,13 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
                                         &key);
         mxb_assert(CACHE_RESULT_IS_OK(rv));
 
-#if defined(SS_DEBUG)
-        MXB_INFO("Storing NoSQL response.");
-#endif
+        auto debug = m_pCache_filter_session->debug();
+
+        if (debug & CACHE_DEBUG_DECISIONS)
+        {
+            MXB_NOTICE("Storing NoSQL response.");
+        }
+
         rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
 
         mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
