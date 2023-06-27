@@ -633,7 +633,7 @@ class Find final : public SingleCommand
 public:
     static constexpr const char* const KEY = "find";
     static constexpr const char* const HELP = "";
-    static constexpr const bool IS_CACHEABLE = true;
+    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
 
     class Stats
     {

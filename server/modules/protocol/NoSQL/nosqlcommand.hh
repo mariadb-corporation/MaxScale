@@ -44,54 +44,6 @@ public:
     static const int32_t MAX_PAYLOAD_LEN = 0xffffff;
     static const int32_t MAX_PACKET_LEN = MYSQL_HEADER_LEN + MAX_PAYLOAD_LEN;
 
-    static const bool IS_CACHEABLE = false;
-
-    virtual ~Command();
-
-    Database& database() const
-    {
-        return m_database;
-    }
-
-    const GWBUF& request() const
-    {
-        return m_request;
-    }
-
-    virtual bool is_admin() const;
-
-    virtual bool is_silent() const
-    {
-        return m_response_kind == ResponseKind::NONE;
-    }
-
-    virtual bool is_get_last_error() const
-    {
-        return false;
-    }
-
-    virtual bool session_must_be_ready() const
-    {
-        return true;
-    }
-
-    virtual std::string description() const = 0;
-
-    virtual std::string to_json() const;
-
-    const std::string& last_statement() const
-    {
-        return m_last_statement;
-    }
-
-    virtual void authenticate()
-    {
-    }
-
-    virtual void authorize(uint32_t role_mask)
-    {
-    }
-
     class Response final
     {
     public:
@@ -183,6 +135,55 @@ public:
         Cacheability             m_cacheability { NOT_CACHEABLE };
         std::unique_ptr<Command> m_sCommand;
     };
+
+    // To be "statically" overriden in derived classes.
+    static const Response::Cacheability CACHEABILITY = Response::NOT_CACHEABLE;
+
+    virtual ~Command();
+
+    Database& database() const
+    {
+        return m_database;
+    }
+
+    const GWBUF& request() const
+    {
+        return m_request;
+    }
+
+    virtual bool is_admin() const;
+
+    virtual bool is_silent() const
+    {
+        return m_response_kind == ResponseKind::NONE;
+    }
+
+    virtual bool is_get_last_error() const
+    {
+        return false;
+    }
+
+    virtual bool session_must_be_ready() const
+    {
+        return true;
+    }
+
+    virtual std::string description() const = 0;
+
+    virtual std::string to_json() const;
+
+    const std::string& last_statement() const
+    {
+        return m_last_statement;
+    }
+
+    virtual void authenticate()
+    {
+    }
+
+    virtual void authorize(uint32_t role_mask)
+    {
+    }
 
     virtual State execute(Response* pNoSQL_response) = 0;
 
