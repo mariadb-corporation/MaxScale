@@ -269,7 +269,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pResponse->reset(m_super.create_response(doc.extract()));
+            pResponse->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
             return State::READY;
         }
 
@@ -345,7 +345,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pNoSQL_response->reset(m_super.create_response(doc.extract()));
+            pNoSQL_response->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
 
             return State::READY;
         }
@@ -696,7 +696,7 @@ public:
         doc.append(kvp(key::MISSING_INDEX_ENTRIES, empty_array.extract()));
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()));
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 

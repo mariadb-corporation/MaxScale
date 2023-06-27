@@ -219,7 +219,6 @@ State OpDeleteCommand::execute(Response* pNoSQL_response)
 
     send_downstream(statement);
 
-    pNoSQL_response->reset(nullptr);
     return State::BUSY;
 }
 
@@ -256,7 +255,6 @@ State OpDeleteCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_resp
         throw_unexpected_packet();
     }
 
-    pNoSQL_response->reset(nullptr);
     return State::READY;
 };
 
@@ -289,7 +287,6 @@ State OpInsertCommand::execute(Response* pNoSQL_response)
 
     send_downstream(m_statement);
 
-    pNoSQL_response->reset(nullptr);
     return State::BUSY;
 }
 
@@ -410,7 +407,6 @@ State OpUpdateCommand::execute(Response* pNoSQL_response)
 
     update_document(ss.str(), Send::DIRECTLY);
 
-    pNoSQL_response->reset(nullptr);
     return State::BUSY;
 }
 
@@ -743,7 +739,7 @@ State OpQueryCommand::execute(Response* pNoSQL_response)
         break;
     }
 
-    pNoSQL_response->reset(pResponse);
+    pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
     return state;
 }
 
@@ -832,7 +828,7 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
         }
     }
 
-    pNoSQL_response->reset(pResponse);
+    pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
     return State::READY;
 }
 
@@ -947,14 +943,13 @@ State OpGetMoreCommand::execute(Response* pNoSQL_response)
         NoSQLCursor::put(std::move(sCursor));
     }
 
-    pNoSQL_response->reset(pResponse);
+    pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
     return State::READY;
 }
 
 State OpGetMoreCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_response)
 {
     mxb_assert(!true);
-    pNoSQL_response->reset(nullptr);
     return State::READY;
 }
 
@@ -970,14 +965,12 @@ State OpKillCursorsCommand::execute(Response* pNoSQL_response)
 {
     NoSQLCursor::kill(m_req.cursor_ids());
 
-    pNoSQL_response->reset(nullptr);
     return State::READY;
 }
 
 State OpKillCursorsCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_response)
 {
     mxb_assert(!true);
-    pNoSQL_response->reset(nullptr);
     return State::READY;
 }
 
@@ -1270,7 +1263,8 @@ State ImmediateCommand::execute(Response* pNoSQL_response)
     DocumentBuilder doc;
     populate_response(doc);
 
-    pNoSQL_response->reset(create_response(doc.extract()));
+    // TODO: Most immediate commands are cacheable.
+    pNoSQL_response->reset(create_response(doc.extract()), Command::Response::NOT_CACHEABLE);
     return State::READY;
 }
 
@@ -1302,7 +1296,6 @@ State SingleCommand::execute(Response* pNoSQL_response)
 
     send_downstream(m_statement);
 
-    pNoSQL_response->reset(nullptr);
     return State::BUSY;
 }
 

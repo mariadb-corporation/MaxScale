@@ -431,7 +431,7 @@ private:
                 throw SoftError(message, error::INTERNAL_ERROR);
             }
 
-            pNoSQL_response->reset(create_response(doc.extract()));
+            pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
             state = State::READY;
         }
         else
@@ -535,7 +535,7 @@ public:
             doc.append(kvp(key::N, n));
             doc.append(kvp(key::OK, 1));
 
-            pNoSQL_response->reset(create_response(doc.extract()));
+            pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         }
         else
         {
@@ -640,7 +640,7 @@ public:
         doc.append(kvp(key::N, n));
         doc.append(kvp(key::OK, 1));
 
-        pNoSQL_response->reset(create_response(doc.extract()));
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -736,7 +736,7 @@ public:
             throw_unexpected_packet();
         }
 
-        pNoSQL_response->reset(create_response(doc.extract()));
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -878,7 +878,7 @@ public:
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
 
-                pNoSQL_response->reset(create_response(doc.extract()));
+                pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
             }
             else
             {
@@ -1082,7 +1082,7 @@ public:
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
 
-                pNoSQL_response->reset(create_response(doc.extract()));
+                pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
             }
             else
             {
@@ -1224,7 +1224,7 @@ public:
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
 
-                pNoSQL_response->reset(create_response(doc.extract()));
+                pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
                 state = State::READY;
             }
             else
@@ -1371,7 +1371,7 @@ private:
                         DocumentBuilder doc;
                         doc.append(kvp(key::OK, 1));
 
-                        pNoSQL_response->reset(create_response(doc.extract()));
+                        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
                         state = State::READY;
                     }
                 }
@@ -1450,7 +1450,7 @@ private:
             DocumentBuilder doc;
             doc.append(kvp(key::OK, 1));
 
-            pNoSQL_response->reset(create_response(doc.extract()));
+            pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         }
         else
         {

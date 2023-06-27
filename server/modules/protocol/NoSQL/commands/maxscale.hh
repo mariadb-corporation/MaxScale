@@ -239,7 +239,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()));
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
 
         return State::READY;
     }
