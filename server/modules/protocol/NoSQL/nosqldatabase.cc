@@ -184,6 +184,28 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
 
     if (state == State::READY)
     {
+        if (m_pCache_filter_session && response.invalidated())
+        {
+            const auto& config = m_pCache_filter_session->config();
+
+            if (config.invalidate == CACHE_INVALIDATE_CURRENT)
+            {
+                std::string table = m_sCommand->table(Command::Quoted::NO);
+                mxb_assert(!table.empty());
+
+                if (config.debug & CACHE_DEBUG_DECISIONS)
+                {
+                    MXB_NOTICE("Invalidating NoSQL responses related to table '%s'.", table.c_str());
+                }
+
+                std::vector<std::string> invalidation_words { table };
+
+                MXB_AT_DEBUG(cache_result_t rv =) m_pCache_filter_session->invalidate(invalidation_words,
+                                                                                      nullptr);
+                mxb_assert(CACHE_RESULT_IS_OK(rv));
+            }
+        }
+
         response.set_command(std::move(m_sCommand));
         set_ready();
     }

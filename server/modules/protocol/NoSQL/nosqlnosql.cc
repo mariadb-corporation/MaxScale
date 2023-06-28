@@ -160,7 +160,10 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
 
         if (m_pCache_filter_session)
         {
-            flush_response(response, m_pCache_filter_session->invalidation_words());
+            auto table = response.command()->table(Command::Quoted::NO);
+            vector<string> invalidation_words { table };
+
+            flush_response(response, invalidation_words);
         }
         else
         {
@@ -367,11 +370,12 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
         auto rv = nosql::cache::get_key(user, host, zDefault_db, &pCommand->request(), &key);
         mxb_assert(CACHE_RESULT_IS_OK(rv));
 
-        auto debug = m_pCache_filter_session->config().debug;
+        const auto& config = m_pCache_filter_session->config();
 
-        if (debug & CACHE_DEBUG_DECISIONS)
+        if (config.debug & CACHE_DEBUG_DECISIONS)
         {
-            MXB_NOTICE("Storing NoSQL response.");
+            MXB_NOTICE("Storing NoSQL response, invalidated by changes in: '%s'",
+                       mxb::join(invalidation_words).c_str());
         }
 
         rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
