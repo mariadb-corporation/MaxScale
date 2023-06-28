@@ -70,3 +70,8 @@ add_test_executable_ex(NAME mxs4470_use_db SOURCE mxs4470_use_db.cc
 # https://jira.mariadb.org/browse/MXS-4471
 add_test_executable_ex(NAME mxs4471_bad_target SOURCE mxs4471_bad_target.cc
         CONFIG sharding.cnf VMS repl_backend LABELS schemarouter)
+
+# MXS-4216: Allow stale cache entries to be used
+# https://jira.mariadb.org/browse/MXS-4216
+add_test_executable_ex(NAME mxs4216_stale_cache SOURCE mxs4216_stale_cache.cc
+        CONFIG mxs4216_stale_cache.cnf VMS repl_backend LABELS schemarouter)
