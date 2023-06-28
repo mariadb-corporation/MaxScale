@@ -211,7 +211,7 @@ Command::Response Database::get_cached_response(const std::string& name,
     rv = m_pCache_filter_session->get_value(key, 0, &pValue, nullptr);
     mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
 
-    auto debug = m_pCache_filter_session->debug();
+    auto debug = m_pCache_filter_session->config().debug;
 
     if (CACHE_RESULT_IS_OK(rv))
     {

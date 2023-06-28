@@ -367,7 +367,7 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
         auto rv = nosql::cache::get_key(user, host, zDefault_db, &pCommand->request(), &key);
         mxb_assert(CACHE_RESULT_IS_OK(rv));
 
-        auto debug = m_pCache_filter_session->debug();
+        auto debug = m_pCache_filter_session->config().debug;
 
         if (debug & CACHE_DEBUG_DECISIONS)
         {

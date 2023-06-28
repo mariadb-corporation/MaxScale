@@ -43,11 +43,11 @@ public:
     ~CacheFilterSession();
 
     /**
-     * @return Debug bits.
+     * @return The cache config.
      */
-    int64_t debug() const
+    const CacheConfig& config() const
     {
-        return m_sCache->config().debug;
+        return m_sCache->config();
     }
 
     /**
@@ -98,6 +98,15 @@ public:
                              const std::function<void (cache_result_t)>& cb) const
     {
         return m_sCache->put_value(key, invalidation_words, pValue, cb);
+    }
+
+    /**
+     * @see Cache::invalidate
+     */
+    cache_result_t invalidate(const std::vector<std::string>& words,
+                              const std::function<void (cache_result_t)>& cb)
+    {
+        return m_sCache->invalidate(words, cb);
     }
 
     /**
