@@ -388,6 +388,11 @@ module.exports = function () {
               JSON.stringify(err.response.body, null, 4)
           );
         } else if (err.statusCode) {
+          let extra = "."
+          if (err.statusCode == 404) {
+            extra = ". " + os.EOL + "Check that the object exists and that it is of the correct type.";
+          }
+
           return error(
             "Server at " +
               err.response.request.uri.host +
@@ -397,7 +402,8 @@ module.exports = function () {
               err.response.request.method +
               " " +
               resource +
-              "`"
+              "`" +
+              extra
           );
         } else if (err.error) {
           if (err.error.code == "ECONNREFUSED") {
