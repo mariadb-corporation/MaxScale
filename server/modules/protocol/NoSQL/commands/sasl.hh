@@ -98,7 +98,7 @@ public:
                      string_view(reinterpret_cast<const char*>(payload.bytes), payload.size),
                      doc);
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 
 private:
@@ -250,7 +250,7 @@ public:
 
         authenticate(*sSasl.get(), payload, doc);
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 
 private:

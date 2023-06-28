@@ -45,7 +45,7 @@ public:
     {
         populate_response(m_database, m_doc, doc);
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 
     static void populate_response(Database& database,
@@ -140,7 +140,7 @@ public:
     {
         throw SoftError("not running with --replSet", error::NO_REPLICATION_ENABLED);
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 

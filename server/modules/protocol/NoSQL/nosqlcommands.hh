@@ -623,13 +623,13 @@ struct OpMsgCommandInfo
 
     OpMsgCommandInfo(const char* zKey,
                      const char* zHelp,
-                     Command::Response::Cacheability cacheability,
+                     bool is_cacheable,
                      bool is_admin,
                      CreateDefaultFunction create_default,
                      CreateDiagnoseFunction create_diagnose)
         : zKey(zKey)
         , zHelp(zHelp)
-        , is_cacheable(cacheability == Command::Response::CACHEABLE)
+        , is_cacheable(is_cacheable)
         , is_admin(is_admin)
         , create_default(create_default)
         , create_diagnose(create_diagnose)

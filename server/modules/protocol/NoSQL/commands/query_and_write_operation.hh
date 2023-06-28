@@ -633,7 +633,7 @@ class Find final : public SingleCommand
 public:
     static constexpr const char* const KEY = "find";
     static constexpr const char* const HELP = "";
-    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
+    static constexpr bool IS_CACHEABLE = true;
 
     class Stats
     {
@@ -1742,7 +1742,7 @@ public:
     {
         m_database.context().get_last_error(doc);
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -1779,7 +1779,7 @@ public:
             NoSQLCursor::put(std::move(sCursor));
         }
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -2300,7 +2300,7 @@ public:
         // No action needed, the error is reset on each command but for getLastError.
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 

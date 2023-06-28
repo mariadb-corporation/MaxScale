@@ -64,7 +64,7 @@ public:
             break;
         }
 
-        pNoSQL_response->reset(pResponse, CACHEABILITY);
+        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
 
         return state;
     }
@@ -370,7 +370,7 @@ public:
             break;
         }
 
-        pNoSQL_response->reset(pResponse, CACHEABILITY);
+        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
         return state;
     }
 
@@ -735,7 +735,7 @@ public:
         doc.append(kvp(key::INPROG, inprog.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -796,7 +796,7 @@ public:
         doc.append(kvp(key::NS, table(Quoted::NO)));
         doc.append(kvp(key::N_INDEXES_WAS, 1)); // TODO: Report real value.
 
-        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 };
@@ -857,7 +857,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 };
@@ -961,7 +961,7 @@ public:
         doc.append(kvp(key::CODE_NAME, nosql::error::name(error::COMMAND_NOT_SUPPORTED)));
         doc.append(kvp(key::OK, 0));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -1056,7 +1056,7 @@ public:
         doc.append(kvp(key::CURSORS_UNKNOWN, cursorsUnknown.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -1191,7 +1191,7 @@ public:
             }
         }
 
-        pNoSQL_response->reset(pResponse, CACHEABILITY);
+        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -1349,7 +1349,7 @@ public:
             }
         }
 
-        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -1529,7 +1529,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -1587,7 +1587,7 @@ public:
         doc.append(kvp(key::WAS, was.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 

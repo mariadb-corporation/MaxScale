@@ -51,7 +51,7 @@ public:
 
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 
     static void logout(Database& database, Approach approach)

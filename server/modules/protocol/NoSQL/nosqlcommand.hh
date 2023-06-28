@@ -141,7 +141,7 @@ public:
     };
 
     // To be "statically" overriden in derived classes.
-    static const Response::Cacheability CACHEABILITY = Response::NOT_CACHEABLE;
+    static const bool IS_CACHEABLE = false;
 
     virtual ~Command();
 

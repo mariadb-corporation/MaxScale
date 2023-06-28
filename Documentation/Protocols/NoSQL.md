@@ -2412,12 +2412,10 @@ data from the cache, the less valuable result will be evicted first.
 
 The responses of the following commands are cached.
 
-   * [buildInfo](#buildinfo)
    * [count](#count)
    * [distinct](#distinct)
    * [find](#find), provided all found documents can be returned in one response,
      i.e., if `singleBatch` is `true` or `batchSize` is large enough.
-   * [listCommands](#listcommands)
 
 # Compatibility
 

@@ -40,7 +40,6 @@ class BuildInfo final : public ImmediateCommand
 public:
     static constexpr const char* const KEY = "buildInfo";
     static constexpr const char* const HELP = "";
-    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
 
     using ImmediateCommand::ImmediateCommand;
 
@@ -78,7 +77,7 @@ public:
 
         doc.append(kvp(key::MAXSCALE, MAXSCALE_VERSION));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -272,7 +271,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pResponse->reset(m_super.create_response(doc.extract()), CACHEABILITY);
+            pResponse->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
             return State::READY;
         }
 
@@ -348,7 +347,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pNoSQL_response->reset(m_super.create_response(doc.extract()), CACHEABILITY);
+            pNoSQL_response->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
 
             return State::READY;
         }
@@ -421,7 +420,7 @@ public:
         doc.append(kvp(key::PARSED, parsed.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -478,7 +477,7 @@ public:
             doc.append(kvp(key::ERRMSG, value));
         }
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -536,7 +535,7 @@ public:
 
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -548,7 +547,6 @@ class ListCommands final : public ImmediateCommand
 public:
     static constexpr const char* const KEY = "listCommands";
     static constexpr const char* const HELP = "";
-    static constexpr const Response::Cacheability CACHEABILITY = Response::CACHEABLE;
 
     using ImmediateCommand::ImmediateCommand;
 
@@ -561,7 +559,7 @@ public:
         doc.append(kvp(key::COMMANDS, commands.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -582,7 +580,7 @@ public:
     {
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -621,7 +619,7 @@ public:
         doc.append(kvp(key::UPTIME_MILLIS, uptime_seconds * 1000));
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -712,7 +710,7 @@ public:
         doc.append(kvp(key::MISSING_INDEX_ENTRIES, empty_array.extract()));
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -763,7 +761,7 @@ public:
         doc.append(kvp(key::YOU, you.str()));
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 

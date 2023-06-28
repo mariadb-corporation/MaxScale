@@ -60,7 +60,7 @@ public:
             throw SoftError(ss.str(), error::INTERNAL_ERROR);
         }
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 
     static void parse(const string& command,
@@ -241,7 +241,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), CACHEABILITY);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
 
         return State::READY;
     }
@@ -293,7 +293,7 @@ public:
 
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -323,7 +323,7 @@ public:
     {
         populate_response(doc, m_database.config());
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 
     static void populate_response(DocumentBuilder& doc, const Config& c)
@@ -370,7 +370,7 @@ public:
 
         doc.append(kvp(key::OK, 1));
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -403,7 +403,7 @@ public:
 
         MxsGetConfig::populate_response(doc, config);
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 };
 
@@ -440,7 +440,7 @@ public:
             throw SoftError(ss.str(), error::INTERNAL_ERROR);
         }
 
-        return CACHEABILITY;
+        return Response::NOT_CACHEABLE;
     }
 
     static uint32_t parse(const string& command,
