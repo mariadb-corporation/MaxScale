@@ -69,6 +69,7 @@ public:
         Response(Response&& rhs)
             : m_pData(std::exchange(rhs.m_pData, nullptr))
             , m_cacheability(std::exchange(rhs.m_cacheability, NOT_CACHEABLE))
+            , m_sCommand(std::move(rhs.m_sCommand))
         {
         }
 
@@ -78,6 +79,7 @@ public:
             {
                 m_pData = std::exchange(rhs.m_pData, nullptr);
                 m_cacheability = std::exchange(rhs.m_cacheability, NOT_CACHEABLE);
+                m_sCommand = std::move(rhs.m_sCommand);
             }
 
             return *this;
@@ -115,6 +117,7 @@ public:
 
             m_pData = pData;
             m_cacheability = cacheability;
+            m_sCommand.reset();
         }
 
         GWBUF* get() const
@@ -126,6 +129,7 @@ public:
         {
             GWBUF* pData = std::exchange(m_pData, nullptr);
             m_cacheability = NOT_CACHEABLE;
+            m_sCommand.reset();
 
             return pData;
         }
