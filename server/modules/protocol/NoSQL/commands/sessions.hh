@@ -38,11 +38,11 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 

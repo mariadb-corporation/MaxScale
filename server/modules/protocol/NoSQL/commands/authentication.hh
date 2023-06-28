@@ -45,13 +45,13 @@ public:
         CONDITIONAL    // Only if current database is the authentication database.
     };
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         logout(m_database, Approach::CONDITIONAL);
 
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 
     static void logout(Database& database, Approach approach)

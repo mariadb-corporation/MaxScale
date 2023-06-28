@@ -64,7 +64,7 @@ public:
             break;
         }
 
-        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
 
         return state;
     }
@@ -370,7 +370,7 @@ public:
             break;
         }
 
-        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
         return state;
     }
 
@@ -727,7 +727,7 @@ public:
         return IsAdmin<CurrentOp>::is_admin;
     }
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         ArrayBuilder inprog;
         // TODO: Add something.
@@ -735,7 +735,7 @@ public:
         doc.append(kvp(key::INPROG, inprog.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -796,7 +796,7 @@ public:
         doc.append(kvp(key::NS, table(Quoted::NO)));
         doc.append(kvp(key::N_INDEXES_WAS, 1)); // TODO: Report real value.
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 };
@@ -857,7 +857,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 };
@@ -954,14 +954,14 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp(key::ERRMSG, "fsync not supported by MaxScale:nosqlprotocol"));
         doc.append(kvp(key::CODE, (int)error::COMMAND_NOT_SUPPORTED));
         doc.append(kvp(key::CODE_NAME, nosql::error::name(error::COMMAND_NOT_SUPPORTED)));
         doc.append(kvp(key::OK, 0));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -980,7 +980,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         auto argument = m_doc[m_name];
 
@@ -1056,7 +1056,7 @@ public:
         doc.append(kvp(key::CURSORS_UNKNOWN, cursorsUnknown.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -1191,7 +1191,7 @@ public:
             }
         }
 
-        pNoSQL_response->reset(pResponse, Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -1349,7 +1349,7 @@ public:
             }
         }
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -1529,7 +1529,7 @@ public:
 
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -1577,7 +1577,7 @@ public:
         return IsAdmin<SetParameter>::is_admin;
     }
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         // TODO: Should be assigned to the session so that getParamter
         // TODO: would return the set value.
@@ -1587,7 +1587,7 @@ public:
         doc.append(kvp(key::WAS, was.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 

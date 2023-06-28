@@ -746,7 +746,7 @@ public:
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
-        Response::Cacheability cacheability = Response::NOT_CACHEABLE;
+        Response::Status status = Response::Status::NOT_CACHEABLE;
 
         switch (response.type())
         {
@@ -801,12 +801,12 @@ public:
                     // If the cursor is exhausted, i.e., either the number of returned items
                     // was small enough or 'singleBatch=true' was specified, the result is
                     // cacheable. Otherwise things get complicated and no caching is performed.
-                    cacheability = Response::CACHEABLE;
+                    status = Response::Status::CACHEABLE;
                 }
             }
         }
 
-        pNoSQL_response->reset(pResponse, cacheability);
+        pNoSQL_response->reset(pResponse, status);
         return State::READY;
     }
 
@@ -1738,11 +1738,11 @@ public:
         return true;
     }
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         m_database.context().get_last_error(doc);
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -1755,7 +1755,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         int64_t id = value_as<int64_t>();
         string collection = m_database.name() + "." + required<string>(key::COLLECTION);
@@ -1779,7 +1779,7 @@ public:
             NoSQLCursor::put(std::move(sCursor));
         }
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -2295,12 +2295,12 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         // No action needed, the error is reset on each command but for getLastError.
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 

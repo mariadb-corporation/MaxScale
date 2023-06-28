@@ -47,10 +47,11 @@ public:
     class Response final
     {
     public:
-        enum Cacheability
+        enum class Status
         {
             CACHEABLE,
-            NOT_CACHEABLE
+            NOT_CACHEABLE,
+            INVALIDATED
         };
 
         Response(const Response&) = delete;
@@ -60,15 +61,15 @@ public:
         {
         }
 
-        Response(GWBUF* pData, Cacheability cacheability)
+        Response(GWBUF* pData, Status status)
             : m_pData(pData)
-            , m_cacheability(cacheability)
+            , m_status(status)
         {
         }
 
         Response(Response&& rhs)
             : m_pData(std::exchange(rhs.m_pData, nullptr))
-            , m_cacheability(std::exchange(rhs.m_cacheability, NOT_CACHEABLE))
+            , m_status(std::exchange(rhs.m_status, Status::NOT_CACHEABLE))
             , m_sCommand(std::move(rhs.m_sCommand))
         {
         }
@@ -78,7 +79,7 @@ public:
             if (this != &rhs)
             {
                 m_pData = std::exchange(rhs.m_pData, nullptr);
-                m_cacheability = std::exchange(rhs.m_cacheability, NOT_CACHEABLE);
+                m_status = std::exchange(rhs.m_status, Status::NOT_CACHEABLE);
                 m_sCommand = std::move(rhs.m_sCommand);
             }
 
@@ -95,9 +96,14 @@ public:
             return m_pData != 0;
         }
 
-        bool cacheable() const
+        bool is_cacheable() const
         {
-            return m_cacheability == CACHEABLE;
+            return m_status == Status::CACHEABLE;
+        }
+
+        bool invalidated() const
+        {
+            return m_status == Status::INVALIDATED;
         }
 
         Command* command() const
@@ -111,12 +117,12 @@ public:
             m_sCommand = std::move(sCommand);
         }
 
-        void reset(GWBUF* pData, Cacheability cacheability)
+        void reset(GWBUF* pData, Status status)
         {
             mxb_assert(!m_pData);
 
             m_pData = pData;
-            m_cacheability = cacheability;
+            m_status = status;
             m_sCommand.reset();
         }
 
@@ -128,7 +134,7 @@ public:
         GWBUF* release()
         {
             GWBUF* pData = std::exchange(m_pData, nullptr);
-            m_cacheability = NOT_CACHEABLE;
+            m_status = Status::NOT_CACHEABLE;
             m_sCommand.reset();
 
             return pData;
@@ -136,7 +142,7 @@ public:
 
     private:
         GWBUF*                   m_pData { nullptr };
-        Cacheability             m_cacheability { NOT_CACHEABLE };
+        Status                   m_status { Status::NOT_CACHEABLE };
         std::unique_ptr<Command> m_sCommand;
     };
 

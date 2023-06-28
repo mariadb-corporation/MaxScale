@@ -47,12 +47,12 @@ public:
         return IsAdmin<GetFreeMonitoringStatus>::is_admin;
     }
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp(key::STATE, value::UNDECIDED));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 

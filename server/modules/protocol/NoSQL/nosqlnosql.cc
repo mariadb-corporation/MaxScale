@@ -354,7 +354,7 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
 {
     mxb_assert(response);
 
-    if (m_pCache_filter_session && response.cacheable())
+    if (m_pCache_filter_session && response.is_cacheable())
     {
         Command* pCommand = response.command();
         mxb_assert(pCommand);

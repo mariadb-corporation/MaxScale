@@ -79,6 +79,7 @@ public:
     {
         State state;
         GWBUF* pResponse = nullptr;
+        Command::Response::Status status = Command::Response::Status::NOT_CACHEABLE;
 
         if (m_creating_table)
         {
@@ -89,7 +90,12 @@ public:
             state = translate2(std::move(mariadb_response), &pResponse);
         }
 
-        pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
+        if (state == State::READY)
+        {
+            status = Command::Response::Status::INVALIDATED;
+        }
+
+        pNoSQL_response->reset(pResponse, status);
         return state;
     }
 
@@ -666,7 +672,7 @@ public:
     void diagnose(DocumentBuilder& doc) override;
 
 protected:
-    virtual Response::Cacheability populate_response(DocumentBuilder& doc) = 0;
+    virtual Response::Status populate_response(DocumentBuilder& doc) = 0;
 };
 
 /**

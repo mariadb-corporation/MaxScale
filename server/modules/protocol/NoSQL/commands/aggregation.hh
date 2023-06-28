@@ -108,7 +108,7 @@ public:
         doc.append(kvp(key::N, n));
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::Status::CACHEABLE);
         return State::READY;
     }
 
@@ -319,7 +319,7 @@ public:
 
         auto doc = bsoncxx::from_json(json.str());
 
-        pNoSQL_response->reset(create_response(doc), Response::CACHEABLE);
+        pNoSQL_response->reset(create_response(doc), Response::Status::CACHEABLE);
         return State::READY;
     }
 };

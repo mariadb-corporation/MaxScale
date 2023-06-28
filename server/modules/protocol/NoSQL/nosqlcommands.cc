@@ -50,7 +50,7 @@ class Unknown : public nosql::ImmediateCommand
 public:
     using nosql::ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(nosql::DocumentBuilder& doc) override
+    Response::Status populate_response(nosql::DocumentBuilder& doc) override
     {
         if (m_database.config().log_unknown_command)
         {
@@ -79,7 +79,7 @@ public:
             break;
         }
 
-        return Response::Cacheability::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -741,7 +741,7 @@ State OpQueryCommand::execute(Response* pNoSQL_response)
         break;
     }
 
-    pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
+    pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
     return state;
 }
 
@@ -830,7 +830,7 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
         }
     }
 
-    pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
+    pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
     return State::READY;
 }
 
@@ -945,7 +945,7 @@ State OpGetMoreCommand::execute(Response* pNoSQL_response)
         NoSQLCursor::put(std::move(sCursor));
     }
 
-    pNoSQL_response->reset(pResponse, Command::Response::NOT_CACHEABLE);
+    pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
     return State::READY;
 }
 
@@ -1263,9 +1263,9 @@ void OpMsgCommand::interpret_error(bsoncxx::builder::basic::document& error, con
 State ImmediateCommand::execute(Response* pNoSQL_response)
 {
     DocumentBuilder doc;
-    auto cacheability = populate_response(doc);
+    auto status = populate_response(doc);
 
-    pNoSQL_response->reset(create_response(doc.extract()), cacheability);
+    pNoSQL_response->reset(create_response(doc.extract()), status);
     return State::READY;
 }
 

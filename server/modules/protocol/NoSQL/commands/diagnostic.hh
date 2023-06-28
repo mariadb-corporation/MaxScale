@@ -43,7 +43,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         ArrayBuilder versionArray;
         versionArray.append(NOSQL_VERSION_MAJOR);
@@ -77,7 +77,7 @@ public:
 
         doc.append(kvp(key::MAXSCALE, MAXSCALE_VERSION));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -271,7 +271,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pResponse->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
+            pResponse->reset(m_super.create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
             return State::READY;
         }
 
@@ -347,7 +347,7 @@ private:
 
             add_server_info(doc, 1);
 
-            pNoSQL_response->reset(m_super.create_response(doc.extract()), Response::NOT_CACHEABLE);
+            pNoSQL_response->reset(m_super.create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
 
             return State::READY;
         }
@@ -404,7 +404,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         auto& config = mxs::Config::get();
 
@@ -420,7 +420,7 @@ public:
         doc.append(kvp(key::PARSED, parsed.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -446,7 +446,7 @@ public:
         return IsAdmin<GetLog>::is_admin;
     }
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         auto value = value_as<string>();
 
@@ -477,7 +477,7 @@ public:
             doc.append(kvp(key::ERRMSG, value));
         }
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -504,7 +504,7 @@ public:
         return IsAdmin<HostInfo>::is_admin;
     }
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         long memory = get_total_memory();
 
@@ -535,7 +535,7 @@ public:
 
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -550,7 +550,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         DocumentBuilder commands;
 
@@ -559,7 +559,7 @@ public:
         doc.append(kvp(key::COMMANDS, commands.extract()));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -576,11 +576,11 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -595,7 +595,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         DocumentBuilder asserts;
         DocumentBuilder connections; // TODO: Populate this.
@@ -619,7 +619,7 @@ public:
         doc.append(kvp(key::UPTIME_MILLIS, uptime_seconds * 1000));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 
@@ -710,7 +710,7 @@ public:
         doc.append(kvp(key::MISSING_INDEX_ENTRIES, empty_array.extract()));
         doc.append(kvp(key::OK, ok));
 
-        pNoSQL_response->reset(create_response(doc.extract()), Response::NOT_CACHEABLE);
+        pNoSQL_response->reset(create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 
@@ -751,7 +751,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         ClientDCB* pDcb = m_database.context().client_connection().dcb();
 
@@ -761,7 +761,7 @@ public:
         doc.append(kvp(key::YOU, you.str()));
         doc.append(kvp(key::OK, 1));
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 };
 

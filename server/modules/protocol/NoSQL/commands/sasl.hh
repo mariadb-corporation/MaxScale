@@ -78,7 +78,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         auto mechanism_name = required<string_view>(key::MECHANISM);
         scram::Mechanism mechanism;
@@ -98,7 +98,7 @@ public:
                      string_view(reinterpret_cast<const char*>(payload.bytes), payload.size),
                      doc);
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 
 private:
@@ -225,7 +225,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    Response::Cacheability populate_response(DocumentBuilder& doc) override
+    Response::Status populate_response(DocumentBuilder& doc) override
     {
         unique_ptr<Sasl> sSasl = m_database.context().get_sasl();
 
@@ -250,7 +250,7 @@ public:
 
         authenticate(*sSasl.get(), payload, doc);
 
-        return Response::NOT_CACHEABLE;
+        return Response::Status::NOT_CACHEABLE;
     }
 
 private:
