@@ -169,9 +169,16 @@ Shard ShardManager::get_shard(std::string user, double max_interval)
 
     ShardMap::iterator iter = m_maps.find(user);
 
-    if (iter == m_maps.end() || iter->second.stale(max_interval))
+    if (iter == m_maps.end())
     {
-        // No previous shard or a stale shard, construct a new one
+        // No previous shard
+        ++m_stats.misses;
+        return Shard();
+    }
+    else if (iter->second.stale(max_interval))
+    {
+        // Stale shard
+        ++m_stats.stale;
         return Shard();
     }
 
@@ -188,18 +195,16 @@ Shard ShardManager::get_stale_shard(std::string user, double max_interval, doubl
 
     if (iter == m_maps.end() || iter->second.stale(max_interval + max_staleness))
     {
-        // No previous shard or a stale shard, construct a new one
+        // No previous shard or a completely stale shard
         if (iter != m_maps.end())
         {
             m_maps.erase(iter);
         }
 
-        ++m_stats.misses;
         return Shard();
     }
 
     // Found valid shard
-    ++m_stats.stale;
     return iter->second;
 }
 

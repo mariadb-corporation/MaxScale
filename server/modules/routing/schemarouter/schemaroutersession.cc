@@ -45,7 +45,6 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_config(*router->m_config.values())
     , m_router(router)
     , m_key(get_cache_key())
-    , m_shard(m_router->m_shard_manager.get_shard(m_key, m_config.refresh_interval.count()))
     , m_state(0)
     , m_load_target(NULL)
 {
