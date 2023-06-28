@@ -953,6 +953,9 @@ add_test_executable(mxs4549_splice_results.cc mxs4549_splice_results mxs4549_spl
 # MXS-4615: Partially executed multistatements aren't treated as partial results
 add_test_executable(mxs4615_partial_multistmt.cc mxs4615_partial_multistmt mxs4615_partial_multistmt LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4635: Connection metadata
+add_test_executable(mxs4635_custom_sysvars.cc mxs4635_custom_sysvars replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

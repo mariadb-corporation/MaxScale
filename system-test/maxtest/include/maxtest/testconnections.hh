@@ -31,6 +31,15 @@
                              __LINE__)) {throw std::runtime_error(#a); \
             }} while (false)
 
+/**
+ * @brief The same as MXT_EXPECT except with a printf-style format string
+ */
+#define MXT_EXPECT_F(a, format, ...) \
+        do{ \
+            if (!std::invoke(&TestConnections::expect, test, a, format, ##__VA_ARGS__)) { \
+                throw std::runtime_error(#a); \
+            }} while (false)
+
 typedef std::set<std::string> StringSet;
 
 namespace maxtest
