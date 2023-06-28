@@ -192,7 +192,7 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
 }
 
 Command::Response Database::get_cached_response(const std::string& name,
-                                                GWBUF* pRequest,
+                                                GWBUF* pNoSQL_request,
                                                 const packet::Msg& req)
 {
     mxb_assert(m_pCache_filter_session);
@@ -204,9 +204,7 @@ Command::Response Database::get_cached_response(const std::string& name,
     auto* zDefault_db = m_pCache_filter_session->default_db();
 
     CacheKey key;
-    auto rv = nosql::cache::get_key(nosql::cache::ValueKind::NOSQL_RESPONSE,
-                                    user, host, zDefault_db, pRequest,
-                                    &key);
+    auto rv = nosql::cache::get_key(user, host, zDefault_db, pNoSQL_request, &key);
     mxb_assert(CACHE_RESULT_IS_OK(rv));
 
     GWBUF* pValue = nullptr;

@@ -1358,15 +1358,14 @@ namespace nosql
 // nosql::cache
 //
 
-cache_result_t cache::get_key(ValueKind value_kind,
-                              const std::string& user,
+cache_result_t cache::get_key(const std::string& user,
                               const std::string& host,
                               const char* zDefault_db,
-                              const GWBUF* pRequest,
+                              const GWBUF* pNoSQL_request,
                               CacheKey* pKey)
 {
-    const uint8_t* pData = pRequest->data();
-    size_t nData = pRequest->length();
+    const uint8_t* pData = pNoSQL_request->data();
+    size_t nData = pNoSQL_request->length();
 
     mxb_assert(nData >= sizeof(protocol::HEADER));
 
@@ -1391,16 +1390,7 @@ cache_result_t cache::get_key(ValueKind value_kind,
         }
     }
 
-    cache_result_t rv = Cache::get_default_key(user, host, zDefault_db, pData, nData, pKey);
-
-    if (CACHE_RESULT_IS_OK(rv) && value_kind == ValueKind::NOSQL_RESPONSE)
-    {
-        static const uint8_t NOSQL_RESPONSE_TAG[] = "NoSQL Response";
-
-        pKey->full_hash = lzma_crc64(NOSQL_RESPONSE_TAG, sizeof(NOSQL_RESPONSE_TAG) - 1, pKey->full_hash);
-    }
-
-    return rv;
+    return Cache::get_default_key(user, host, zDefault_db, pData, nData, pKey);
 }
 
 //

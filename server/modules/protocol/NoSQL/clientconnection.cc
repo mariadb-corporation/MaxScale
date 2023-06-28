@@ -113,27 +113,9 @@ public:
 
         auto sSession_cache = SessionCache::create(&m_cache);
 
-        auto* pNosql = &m_client_connection.m_nosql;
-        auto generate_key = [pNosql](const std::string& user,
-                                     const std::string& host,
-                                     const char* zDefault_db,
-                                     const GWBUF* pRequest,
-                                     CacheKey* pKey)
-            {
-                // The key is generated from the original NoSQL request. Thus, it will be possible
-                // to lookup data without first converting the NoSQL to MariaDB SQL.
-
-                auto* pCurrent_nosql_request = pNosql->current_request();
-                mxb_assert(pCurrent_nosql_request);
-
-                return nosql::cache::get_key(nosql::cache::ValueKind::MARIADB_RESPONSE,
-                                             user, host, zDefault_db, pCurrent_nosql_request, pKey);
-            };
-
         auto* pCache_filter_session = CacheFilterSession::create(std::move(sSession_cache),
                                                                  &m_client_connection.m_session,
-                                                                 m_client_connection.m_session.service,
-                                                                 std::move(generate_key));
+                                                                 m_client_connection.m_session.service);
 
         m_sCache_filter_session.reset(pCache_filter_session);
 

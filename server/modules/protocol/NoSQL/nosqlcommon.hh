@@ -96,17 +96,10 @@ namespace nosql
 namespace cache
 {
 
-enum class ValueKind
-{
-    MARIADB_RESPONSE,
-    NOSQL_RESPONSE
-};
-
-cache_result_t get_key(ValueKind value_kind,
-                       const std::string& user,
+cache_result_t get_key(const std::string& user,
                        const std::string& host,
                        const char* zDefault_db,
-                       const GWBUF* pQuery,
+                       const GWBUF* pNoSQL_request,
                        CacheKey* pKey);
 
 }
