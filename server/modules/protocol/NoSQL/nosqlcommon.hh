@@ -898,6 +898,11 @@ public:
     KillCursors(const KillCursors& that) = default;
     KillCursors(KillCursors&& that) = default;
 
+    std::string collection() const
+    {
+        return "";
+    }
+
     const std::vector<int64_t> cursor_ids() const
     {
         return m_cursor_ids;

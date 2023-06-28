@@ -44,13 +44,7 @@ protected:
     }
 
 protected:
-    enum Quoted
-    {
-        NO,
-        YES
-    };
-
-    std::string table(Quoted quoted = Quoted::YES) const
+    std::string table(Quoted quoted = Quoted::YES) const override final
     {
         if (quoted == Quoted::YES)
         {
@@ -461,12 +455,6 @@ public:
 
     static void check_write_batch_size(int size);
 
-    enum Quoted
-    {
-        NO,
-        YES
-    };
-
     /**
      * Returns the table name of the command. Meaningful only if the value of
      * the command key, is the targeted collection/table.
@@ -474,7 +462,7 @@ public:
      * @returns The table name, with or without quotes.
      * @throws SoftError, if the value of the command key is not a string.
      */
-    const std::string& table(Quoted quoted = Quoted::YES) const;
+    std::string table(Quoted quoted = Quoted::YES) const override final;
 
     static void list_commands(DocumentBuilder& commands);
 

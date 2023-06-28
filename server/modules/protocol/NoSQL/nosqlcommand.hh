@@ -150,6 +150,14 @@ public:
         return m_database;
     }
 
+    enum Quoted
+    {
+        NO,
+        YES
+    };
+
+    virtual std::string table(Quoted quoted = Quoted::YES) const = 0;
+
     const GWBUF& request() const
     {
         return m_request;

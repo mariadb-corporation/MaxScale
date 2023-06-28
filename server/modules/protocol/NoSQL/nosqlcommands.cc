@@ -1183,7 +1183,7 @@ string OpMsgCommand::convert_skip_and_limit(AcceptAsLimit accept_as_limit) const
     return rv;
 }
 
-const string& OpMsgCommand::table(Quoted quoted) const
+string OpMsgCommand::table(Quoted quoted) const
 {
     if (m_quoted_table.empty())
     {
