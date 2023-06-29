@@ -15,12 +15,16 @@
 
 #include <maxbase/ccdefs.hh>
 #include <string>
+#include <optional>
+#include <vector>
 
 namespace maxbase
 {
 namespace pam
 {
 extern const std::string EXP_PW_QUERY;      /* Expected normal password query */
+
+constexpr uint8_t SBOX_CONV = 'C';
 
 struct AuthResult
 {
@@ -131,5 +135,22 @@ AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, cons
  * @return True on match
  */
 bool match_prompt(const char* prompt, const std::string& expected_start);
+
+/**
+ * Read a length-encoded string from pipe, blocking to wait until data can be read. Should be only used on
+ * blocking pipes, typically by a subprocess.
+ *
+ * @param fd File descriptor
+ * @return String contents on success.
+ */
+std::optional<std::string> read_string_blocking(int fd);
+
+/**
+ * Prepare a string to be written to a pipe. Prepends the string length, then appends the string.
+ *
+ * @param str The string to write
+ * @param out Output vector
+ */
+void add_string(std::string_view str, std::vector<uint8_t>* out);
 }
 }

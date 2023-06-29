@@ -14,13 +14,14 @@
 
 #include <maxbase/pam_utils.hh>
 
+#include <cstring>
 #include <security/pam_appl.h>
 #include <maxbase/alloc.hh>
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
-#include <strings.h>
 
 using std::string;
+using std::string_view;
 
 namespace
 {
@@ -47,8 +48,29 @@ struct ConversationData
 int conversation_func(int num_msg, const struct pam_message** messages, struct pam_response** responses_out,
                       void* appdata_ptr);
 
+// String length type. Real max value is 10k.
+using LengthType = int16_t;
+const size_t length_size = sizeof(LengthType);
+
+struct ConvDataFd
+{
+    ConvDataFd(int read_fd, int write_fd)
+        : read_fd(read_fd)
+        , write_fd(write_fd)
+    {
+    }
+
+    int read_fd {-1};
+    int write_fd {-1};
+
+    // Contains all pam messages gathered so far, waiting to be sent to the main process.
+    // Must be stored outside the conv function to preserve its value between calls.
+    std::string message_buffer;
+};
+
 int conversation_func_fd(int n_msg, const pam_message** messages, pam_response** responses_out,
                          void* appdata_ptr);
+std::optional<string> roundtrip(int fd_in, int fd_out, string_view message);
 
 mxb::pam::AuthResult
 authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pam::AuthSettings& sett);
@@ -80,13 +102,44 @@ AuthResult authenticate(const string& user, const string& password, const string
 
 AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, const AuthSettings& sett)
 {
-    pam_conv conv_struct = {conversation_func_fd, nullptr};
+    ConvDataFd appdata(read_fd, write_fd);
+    pam_conv conv_struct = {conversation_func_fd, &appdata};
     return ::authenticate(&conv_struct, user, sett);
 }
 
 bool match_prompt(const char* prompt, const std::string& expected_start)
 {
     return strncasecmp(prompt, expected_start.c_str(), expected_start.length()) == 0;
+}
+
+void add_string(std::string_view str, std::vector<uint8_t>* out)
+{
+    LengthType len = str.length();
+    uint8_t len_bytes[length_size];
+    memcpy(len_bytes, &len, length_size);
+    out->insert(out->end(), len_bytes, len_bytes + length_size);
+    auto str_ptr = reinterpret_cast<const uint8_t*>(str.data());
+    out->insert(out->end(), str_ptr, str_ptr + len);
+}
+
+std::optional<string> read_string_blocking(int fd)
+{
+    // All strings read by this function should be short enough so that they are read in one go.
+    std::optional<string> rval;
+    LengthType len = -1;
+    if (read(fd, &len, length_size) == length_size)
+    {
+        if (len >= 0)
+        {
+            string message;
+            message.resize(len);
+            if (read(fd, message.data(), len) == len)
+            {
+                rval = std::move(message);
+            }
+        }
+    }
+    return rval;
 }
 }
 }
@@ -357,6 +410,123 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
 int conversation_func_fd(int n_msg, const pam_message** messages, pam_response** responses_out,
                          void* appdata_ptr)
 {
-    return PAM_CONV_ERR;
+    auto* responses = static_cast<pam_response*>(MXB_CALLOC(sizeof(pam_response), n_msg));
+    if (!responses)
+    {
+        return PAM_BUF_ERR;
+    }
+
+    auto* data = static_cast<ConvDataFd*>(appdata_ptr);
+    string& message_buf = data->message_buffer;
+    bool conv_error = false;
+
+    for (int i = 0; i < n_msg && !conv_error; i++)
+    {
+        // Go through the messages, append them to the buffer. On reaching a prompt-type message, send
+        // it to the main process and wait for reply.
+        const pam_message* msg_info = messages[i];
+        if (const char* msg = msg_info->msg; msg)
+        {
+            if (int msg_len = strlen(msg); msg_len > 0)
+            {
+                // MariaDB Server limits the total message length to ~10k bytes, do the same. Very long
+                // messages would not fit into the pipe anyhow. Such messages should not happen normally.
+                // The first byte of the total message is the style byte.
+                const int max_buf_size = 10240;
+                int max_msg_len = message_buf.empty() ? max_buf_size - 2 :
+                    max_buf_size - message_buf.length() - 1;
+                int writable = std::min(max_msg_len, msg_len);
+                if (writable > 0)
+                {
+                    if (message_buf.empty())
+                    {
+                        message_buf.reserve(writable + 2);
+                        message_buf.push_back(0);
+                    }
+                    message_buf.append(msg, writable).push_back('\n');
+                }
+            }
+        }
+
+        auto style = msg_info->msg_style;
+        if (style == PAM_PROMPT_ECHO_ON || style == PAM_PROMPT_ECHO_OFF)
+        {
+            /* Our data ultimately goes to the dialog plugin in the client. The plugin interprets the first
+             * byte of the message as the magic number:
+             * 2 = echo enabled
+             * 4 = echo disabled (like password input)
+             */
+            uint8_t message_type = (style == PAM_PROMPT_ECHO_ON) ? 2 : 4;
+            if (message_buf.empty())
+            {
+                message_buf.resize(1);
+            }
+            message_buf[0] = message_type;
+
+            MXB_DEBUG("PAM conv func: sending msg type %i: '%*s'", message_type,
+                      (int)message_buf.length() - 1, message_buf.c_str() + 1);
+
+            auto reply = roundtrip(data->read_fd, data->write_fd, message_buf);
+            message_buf.clear();
+
+            if (reply)
+            {
+                MXB_DEBUG("PAM conv func: client replied with '%s'.", reply->c_str());
+                // Copy the reply to the response array.
+                auto copy = strndup(reply->c_str(), reply->length());
+                if (copy)
+                {
+                    responses[i].resp = copy;
+                }
+                else
+                {
+                    conv_error = true;
+                }
+            }
+            else
+            {
+                conv_error = true;
+            }
+        }
+    }
+
+    if (conv_error)
+    {
+        // On error, the response output should not be set.
+        for (int i = 0; i < n_msg; i++)
+        {
+            MXB_FREE(responses[i].resp);
+        }
+        MXB_FREE(responses);
+        return PAM_CONV_ERR;
+    }
+    else
+    {
+        *responses_out = responses;
+        return PAM_SUCCESS;
+    }
+}
+
+std::optional<string> roundtrip(int fd_in, int fd_out, string_view message)
+{
+    using namespace mxb::pam;
+    /**
+     * Format for pam conversation messages:
+     * 1 byte - AP_CONV
+     * 4 bytes - string length
+     * N bytes - string data (message type + contents)
+     */
+    std::vector<uint8_t> write_buf;
+    write_buf.reserve(5 + message.length());
+    write_buf.push_back(SBOX_CONV);
+    add_string(message, &write_buf);
+
+    std::optional<string> rval;
+    if (write(fd_out, write_buf.data(), write_buf.size()) == (int64_t)write_buf.size())
+    {
+        // Main process should reply with answer from client. This may take a while.
+        rval = read_string_blocking(fd_in);
+    }
+    return rval;
 }
 }
