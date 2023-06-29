@@ -373,7 +373,7 @@ void NoSQL::flush_response(Command::Response& response)
         auto rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
 
         mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
-        mxb_assert(CACHE_RESULT_IS_OK(rv));
+        mxb_assert(CACHE_RESULT_IS_OK(rv) || CACHE_RESULT_IS_OUT_OF_RESOURCES(rv));
     }
 
     m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));

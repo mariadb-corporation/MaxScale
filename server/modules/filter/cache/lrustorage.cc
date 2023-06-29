@@ -971,7 +971,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
             {
                 mxb_assert(!true);
                 // If we could not vacant nodes, we are hosed.
-                result = CACHE_RESULT_ERROR;
+                result = CACHE_RESULT_OUT_OF_RESOURCES;
             }
         }
         else
@@ -1031,7 +1031,7 @@ cache_result_t LRUStorage::get_new_node(const CacheKey& key,
     }
     else
     {
-        result = CACHE_RESULT_ERROR;
+        result = CACHE_RESULT_OUT_OF_RESOURCES;
     }
 
     if (CACHE_RESULT_IS_OK(result))
