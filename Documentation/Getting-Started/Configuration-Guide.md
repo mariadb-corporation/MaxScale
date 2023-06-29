@@ -1624,10 +1624,12 @@ setting is ignored in the main configuration file (usually maxscale.cnf).
 - **Default**: No default value
 - **Dynamic**: Yes
 
-This parameter controls which cluster is used to synchronize configuration
-changes between MaxScale instances. By default configuration synchronization is
-not enabled and it must be explicitly enabled by defining a monitor name for
-`config_sync_cluster`.
+This parameter controls which cluster (i.e. monitor) is used to synchronize
+configuration changes between MaxScale instances. The first server labeled
+`Master` will be used for the synchronization.
+
+By default configuration synchronization is not enabled and it must be
+explicitly enabled by defining a monitor name for `config_sync_cluster`.
 
 When `config_sync_cluster` is defined, `config_sync_user` and
 `config_sync_password` must also be defined.
@@ -1656,12 +1658,13 @@ grants must be adjusted to target that database instead.
 
 ### `config_sync_password`
 
-- **Type**: string
+- **Type**: password
 - **Default**: No default value
 - **Dynamic**: Yes
 
 The password for `config_sync_user`. Both this parameter and `config_sync_user`
-are required if `config_sync_cluster` is configured.
+are required if `config_sync_cluster` is configured. This password can
+optionally be encrypted using `maxpasswd`.
 
 ### `config_sync_db`
 
