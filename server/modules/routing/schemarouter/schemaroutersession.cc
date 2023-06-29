@@ -819,7 +819,7 @@ bool SchemaRouterSession::handle_default_db()
 {
     bool rval = false;
 
-    for (auto target : m_shard.get_all_locations(m_connect_db))
+    for (auto target : m_shard.get_all_locations(m_connect_db, ""))
     {
         /* Send a COM_INIT_DB packet to the server with the right database
          * and set it as the client's active database */
@@ -1023,7 +1023,7 @@ bool SchemaRouterSession::change_current_db(const GWBUF& buf, uint8_t cmd)
 
     if (ok)
     {
-        auto targets = m_shard.get_all_locations(db);
+        auto targets = m_shard.get_all_locations(db, "");
         m_sescmd_replier = nullptr;
 
         for (const auto& b : m_backends)
@@ -1274,7 +1274,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t
          * If the target name has not been found and the session has an
          * active database, set is as the target
          */
-        rval = get_location(m_current_db);
+        rval = get_location(m_current_db, "");
 
         if (rval)
         {
@@ -1384,36 +1384,37 @@ mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
 {
     std::vector<Parser::TableName> table_names = parser().get_table_names(const_cast<GWBUF&>(buffer));
 
-    // We get Parser::TableNames, but as we need qualified names we need to
-    // copy them over to a vector<string>.
-    std::vector<std::string> tables;
-    tables.reserve(table_names.size());
-
-    for (const auto& tn : table_names)
+    for (auto& tn : table_names)
     {
-        std::string table = !tn.db.empty() ? std::string(tn.db) : m_current_db;
-        table += ".";
-        table += tn.table;
-
-        tables.emplace_back(table);
+        if (tn.db.empty())
+        {
+            // Use the current default db as the database of any query that does not explicitly define one.
+            tn.db = m_current_db;
+        }
     }
 
-    mxs::Target* rval = NULL;
+    mxs::Target* rval = get_location(table_names);
 
-    std::vector<std::string_view> table_views;
-    for (const auto& t : tables)
-    {
-        // Then we need to copy the modified strings back to our vector<string_view>.
-        table_views.emplace_back(std::string_view(t));
-    }
-
-    if ((rval = get_location(table_views)))
+    if (rval)
     {
         MXB_INFO("Query targets table on server '%s'", rval->name());
     }
-    else if ((rval = get_location(parser().get_database_names(const_cast<GWBUF&>(buffer)))))
+    else
     {
-        MXB_INFO("Query targets database on server '%s'", rval->name());
+        // No matching table found. Try to match based on the database name.
+        table_names.clear();
+
+        for (const auto& db : parser().get_database_names(buffer))
+        {
+            table_names.emplace_back(db, "");
+        }
+
+        rval = get_location(table_names);
+
+        if (rval)
+        {
+            MXB_INFO("Query targets database on server '%s'", rval->name());
+        }
     }
 
     return rval;

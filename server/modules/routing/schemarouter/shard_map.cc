@@ -45,26 +45,6 @@ void Shard::add_statement(uint32_t id, mxs::Target* target)
     m_binary_map[id] = target;
 }
 
-std::set<mxs::Target*> Shard::get_all_locations(std::string_view table)
-{
-    std::set<mxs::Target*> rval;
-    std::string db;
-    std::string tbl;
-    auto pos = table.find(".");
-
-    if (pos == std::string::npos)
-    {
-        db = table;
-    }
-    else
-    {
-        db = table.substr(0, pos);
-        tbl = table.substr(pos + 1);
-    }
-
-    return get_all_locations(db, tbl);
-}
-
 std::set<mxs::Target*> Shard::get_all_locations(mxs::Parser::TableName name)
 {
     return get_all_locations(std::string(name.db), std::string(name.table));
@@ -89,6 +69,28 @@ std::set<mxs::Target*> Shard::get_all_locations(std::string db, std::string tbl)
     }
 
     return rval;
+}
+
+std::set<mxs::Target*> Shard::get_all_locations(const std::vector<mxs::Parser::TableName>& tables)
+{
+    if (tables.empty())
+    {
+        return {};
+    }
+
+    auto it = tables.begin();
+    std::set<mxs::Target*> targets = get_all_locations(*it++);
+
+    for (; it != tables.end(); ++it)
+    {
+        std::set<mxs::Target*> right = get_all_locations(*it);
+        std::set<mxs::Target*> left;
+        left.swap(targets);
+        std::set_intersection(right.begin(), right.end(), left.begin(), left.end(),
+                              std::inserter(targets, targets.end()));
+    }
+
+    return targets;
 }
 
 mxs::Target* Shard::get_statement(std::string stmt)

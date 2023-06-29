@@ -173,6 +173,33 @@ int main(int argc, char* argv[])
     test.log_excludes("Unable to parse query");
     test.log_excludes("query string allocation failed");
 
+    test.log_printf("MXS-4527: Database names with dots in them cause problems");
+    test.check_maxctrl("call command schemarouter clear Sharding-router");
+    test.repl->connect();
+    test.try_query(test.repl->nodes[0],
+                   "CREATE DATABASE `a.b.c`;"
+                   "CREATE TABLE `a.b.c`.`d.e.f`(id int);"
+                   "INSERT INTO `a.b.c`.`d.e.f` VALUES (@@server_id)");
+
+    // Default database
+    auto rws = test.maxscale->rwsplit();
+    rws.set_database("a.b.c");
+    test.expect(rws.connect(), "Failed to connect: %s", rws.error());
+    test.expect(rws.query("SELECT * FROM `a.b.c`.`d.e.f`"), "Failed to query: %s", rws.error());
+    test.expect(rws.query("SELECT * FROM `d.e.f`"), "Failed to query: %s", rws.error());
+    rws.disconnect();
+
+    // USE database
+    rws.set_database("");
+    test.expect(rws.connect(), "Failed to connect: %s", rws.error());
+    test.expect(rws.query("SELECT * FROM `a.b.c`.`d.e.f`"), "Failed to query: %s", rws.error());
+    test.expect(rws.query("USE `a.b.c`"), "Failed to query: %s", rws.error());
+    test.expect(rws.query("SELECT * FROM `a.b.c`.`d.e.f`"), "Failed to query: %s", rws.error());
+    test.expect(rws.query("SELECT * FROM `d.e.f`"), "Failed to query: %s", rws.error());
+
+    test.try_query(test.repl->nodes[0], "DROP DATABASE `a.b.c`;");
+    test.repl->disconnect();
+
     test.repl->connect();
     /** Cleanup */
     for (int i = 0; i < N; i++)

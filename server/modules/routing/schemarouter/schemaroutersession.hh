@@ -128,21 +128,23 @@ private:
     bool                 change_current_db(const GWBUF& buf, uint8_t cmd);
     mxs::Target*         get_valid_target(const std::set<mxs::Target*>& candidates);
 
-    template<class T>
-    mxs::Target* get_location(const std::vector<T>& dbs)
+    mxs::Target* get_location(const std::vector<mxs::Parser::TableName>& dbs)
     {
         return get_valid_target(m_shard.get_all_locations(dbs));
     }
 
-    template<class T>
-    mxs::Target* get_location(const T& db)
+    mxs::Target* get_location(const mxs::Parser::TableName& db)
     {
         return get_valid_target(m_shard.get_all_locations(db));
     }
 
+    mxs::Target* get_location(const std::string& db, const std::string& tbl)
+    {
+        return get_valid_target(m_shard.get_all_locations(db, tbl));
+    }
 
     /** Member variables */
-    MariaDBClientConnection* m_client {nullptr};/**< Client connection */
+    MariaDBClientConnection* m_client {nullptr};    /**< Client connection */
 
     MYSQL_session*    m_mysql_session;  /**< Session client data (username, password, SHA1). */
     SRBackendList     m_backends;       /**< Backend references */
