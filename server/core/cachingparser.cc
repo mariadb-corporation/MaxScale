@@ -66,9 +66,10 @@ class QCInfoCache;
 
 thread_local struct
 {
-    QCInfoCache*             pInfo_cache { nullptr };
-    uint32_t                 options { 0 };
-    bool                     use_cache { true };
+    QCInfoCache* pInfo_cache {nullptr};
+    uint32_t     options {0};
+    bool         use_cache {true};
+    std::string  canonical;
 } this_thread;
 
 
@@ -396,25 +397,31 @@ public:
 
         if (use_cached_result() && has_not_been_parsed(m_stmt))
         {
-            // We generate m_canonical explicitly, because now we want the key that
+            // We generate the canonical explicitly, because now we want the key that
             // allows us to look up whether the parsing info already exists. Besides,
             // calling m_parser.get_canonical(m_stmt) would cause an infinite recursion.
-            m_canonical = m_parser.get_sql(m_stmt);
-            maxsimd::get_canonical(&m_canonical);
+            this_thread.canonical = m_parser.get_sql(m_stmt);
+            maxsimd::get_canonical(&this_thread.canonical);
 
             if (m_parser.is_prepare(m_stmt))
             {
                 // P as in prepare, and appended so as not to cause a
                 // need for copying the data.
-                m_canonical += ":P";
+                this_thread.canonical += ":P";
             }
 
-            std::shared_ptr<GWBUF::ProtocolInfo> sInfo = this_thread.pInfo_cache->get(&m_parser, m_canonical);
+            std::shared_ptr<GWBUF::ProtocolInfo> sInfo = this_thread.pInfo_cache->get(&m_parser,
+                                                                                      this_thread.canonical);
             if (sInfo)
             {
                 m_info_size_before = sInfo->size();
                 const_cast<GWBUF&>(m_stmt).set_protocol_info(std::move(sInfo));
-                m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
+            }
+            else
+            {
+                // Cached information was not found. By assigning the canonical string to m_canonical, it will
+                // be known in the destructor that the result should be inserted into the cache.
+                m_canonical = this_thread.canonical;
             }
         }
     }
