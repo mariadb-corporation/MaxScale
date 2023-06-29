@@ -104,8 +104,7 @@ private:
     State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Command::Response* pResponse);
     State handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* pResponse);
 
-    void flush_response(Command::Response& response,
-                        const std::vector<std::string>& invalidation_words);
+    void flush_response(Command::Response& response);
 
     Context             m_context;
     Config&             m_config;

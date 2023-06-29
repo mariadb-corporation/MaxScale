@@ -23,8 +23,6 @@ using namespace std;
 namespace
 {
 
-static const vector<string> no_invalidation_words;
-
 string extract_database(const string& collection)
 {
     auto i = collection.find('.');
@@ -125,7 +123,7 @@ State NoSQL::handle_request(GWBUF* pRequest)
             {
                 // If we got the response immediately, it can not have been a SELECT
                 // that was sent to the backend; hence there cannot be invalidation words.
-                flush_response(response, no_invalidation_words);
+                flush_response(response);
             }
         }
         catch (const std::exception& x)
@@ -158,17 +156,7 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
     {
         m_sDatabase.reset();
 
-        if (m_pCache_filter_session)
-        {
-            auto table = response.command()->table(Command::Quoted::NO);
-            vector<string> invalidation_words { table };
-
-            flush_response(response, invalidation_words);
-        }
-        else
-        {
-            flush_response(response, no_invalidation_words);
-        }
+        flush_response(response);
 
         if (!m_requests.empty())
         {
@@ -353,7 +341,7 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* p
     return state;
 }
 
-void NoSQL::flush_response(Command::Response& response, const vector<string>& invalidation_words)
+void NoSQL::flush_response(Command::Response& response)
 {
     mxb_assert(response);
 
@@ -361,6 +349,9 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
     {
         Command* pCommand = response.command();
         mxb_assert(pCommand);
+
+        auto table = response.command()->table(Command::Quoted::NO);
+        vector<string> invalidation_words { table };
 
         auto& user = m_pCache_filter_session->user();
         auto& host = m_pCache_filter_session->host();
@@ -373,8 +364,7 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
 
         if (config.debug & CACHE_DEBUG_DECISIONS)
         {
-            MXB_NOTICE("Storing NoSQL response, invalidated by changes in: '%s'",
-                       mxb::join(invalidation_words).c_str());
+            MXB_NOTICE("Storing NoSQL response, invalidated by changes in: '%s'", table.c_str());
         }
 
         auto rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
