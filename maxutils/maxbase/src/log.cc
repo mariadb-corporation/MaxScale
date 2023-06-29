@@ -849,10 +849,12 @@ int log_message(message_suppression_t status,
     }
 
     // message
-    std::string streamlined_message; // I.e. no newlines.
+    std::string streamlined_message;    // I.e. no newlines.
+    bool not_debug = true;
+    MXB_AT_DEBUG(not_debug = LOG_PRI(priority) != LOG_DEBUG);
 
     auto i = message.find('\n');
-    if (i != std::string_view::npos)
+    if (i != std::string_view::npos && not_debug)
     {
         streamlined_message = message;
 
