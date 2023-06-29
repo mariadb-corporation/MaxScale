@@ -694,7 +694,7 @@ private:
 
     GWBUF* report_success(bool created)
     {
-        MXB_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
+        MXB_INFO("Unsupported command '%s' used, claiming success.", name().c_str());
 
         DocumentBuilder doc;
         doc.append(kvp(key::CREATED_COLLECTION_AUTOMATICALLY, created));
@@ -921,7 +921,7 @@ private:
             }
         }
 
-        MXB_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
+        MXB_INFO("Unsupported command '%s' used, claiming success.", name().c_str());
 
         DocumentBuilder doc;
         doc.append(kvp("nIndexesWas", nIndexes_was));
