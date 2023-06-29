@@ -70,6 +70,16 @@ function(install_executable target component)
 
 endfunction()
 
+function(install_executable_setuid target component)
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
+    install(TARGETS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}" PERMISSIONS
+            OWNER_READ OWNER_WRITE OWNER_EXECUTE SETUID GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  endif()
+
+endfunction()
+
 # Installation function for modules
 #
 # @param Name of the CMake target
