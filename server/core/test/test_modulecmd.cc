@@ -25,6 +25,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/session.hh>
 
+#include "test_utils.hh"
 #include "../internal/monitormanager.hh"
 
 #define TEST(a, b) do {if (!(a)) {printf("%s:%d " b "\n", __FILE__, __LINE__); return 1;}} while (false)
@@ -420,22 +421,15 @@ int main(int argc, char** argv)
 {
     int rc = 0;
 
-    mxs::Config::init(argc, argv);
-    mxs_log_init(NULL, NULL, MXB_LOG_TARGET_STDOUT);
-    maxbase::init();
+    run_unit_test([&]() {
+        rc += test_arguments();
+        rc += test_optional_arguments();
+        rc += test_module_errors();
+        rc += test_pointers();
+        rc += test_domain_matching("mariadbmon", "mariadbmon", "test_domain_matching1");
+        rc += test_domain_matching("mariadbmon", "mysqlmon", "test_domain_matching2");
+        rc += test_output();
+    });
 
-    mxb::WatchdogNotifier wn(0);
-    mxs::MainWorker mw(&wn);
-
-    rc += test_arguments();
-    rc += test_optional_arguments();
-    rc += test_module_errors();
-    rc += test_pointers();
-    rc += test_domain_matching("mariadbmon", "mariadbmon", "test_domain_matching1");
-    rc += test_domain_matching("mariadbmon", "mysqlmon", "test_domain_matching2");
-    rc += test_output();
-
-    maxbase::finish();
-    mxs_log_finish();
     return rc;
 }

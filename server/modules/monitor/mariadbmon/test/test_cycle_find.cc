@@ -23,6 +23,7 @@
 #include <maxbase/maxbase.hh>
 #include <maxscale/mainworker.hh>
 #include "../../../../core/internal/server.hh"
+#include "../../../../core/test/test_utils.hh"
 
 using std::string;
 using std::cout;
@@ -77,19 +78,18 @@ private:
 
 int main(int argc, char** argv)
 {
-    mxs::Config::init(argc, argv);
-    maxbase::init();
-    maxbase::Log log;
-    mxb::WatchdogNotifier notifier(0);
-    mxs::MainWorker mw(&notifier);
+    int rval = 0;
 
-    bool use_hostnames = true;
-    MariaDBMonitor::Test tester1(use_hostnames);
-    int rval = tester1.run_tests();
+    run_unit_test([&](){
+        bool use_hostnames = true;
+        MariaDBMonitor::Test tester1(use_hostnames);
+        rval = tester1.run_tests();
 
-    use_hostnames = false;
-    MariaDBMonitor::Test tester2(use_hostnames);
-    rval += tester2.run_tests();
+        use_hostnames = false;
+        MariaDBMonitor::Test tester2(use_hostnames);
+        rval += tester2.run_tests();
+    });
+
     return rval;
 }
 
