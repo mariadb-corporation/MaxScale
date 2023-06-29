@@ -21,6 +21,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
 #include <maxscale/secrets.hh>
+#include <maxbase/pretty_print.hh>
 #include <libmarias3/marias3.h>
 
 #include <utility>
@@ -221,6 +222,10 @@ bool LDISession::routeQuery(GWBUF&& buffer)
                     if (auto cmd = create_import_cmd(server, parsed); cmd->start())
                     {
                         m_state = LOAD;
+                        MXB_INFO("Starting Xpand S3 data import from '%s/%s' into table '%s' "
+                                 "using xpand_import.",
+                                 m_bucket.c_str(), m_file.c_str(), parsed->table.c_str());
+
                         mxs::thread_pool().execute(
                             [dl = std::make_shared<CmdLoader>(this, std::move(cmd))](){
                             dl->load_data();
@@ -242,6 +247,10 @@ bool LDISession::routeQuery(GWBUF&& buffer)
                     }
 
                     // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE to
+                    MXB_INFO("Starting S3 data import from '%s/%s' into table '%s' "
+                             "using LOAD DATA LOCAL INFILE.",
+                             m_bucket.c_str(), m_file.c_str(), parsed->table.c_str());
+
                     // stream the data.
                     auto maybe_db = !parsed->db.empty() ? mxb::cat("`", parsed->db, "` ") : ""s;
                     auto new_sql = mxb::cat("LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE ",
@@ -277,6 +286,7 @@ bool LDISession::routeQuery(GWBUF&& buffer)
                     if (auto cmd = create_import_cmd(server, parsed); cmd->start())
                     {
                         m_cmd = std::move(cmd);
+                        MXB_INFO("Converting LOAD DATA LOCAL INFILE into a xpand_import call.");
                         m_state = PREPARE_INTERCEPT;
                     }
                 }
@@ -451,6 +461,7 @@ S3Download::S3Download(LDISession* ldi)
     , m_config(ldi->m_config)
     , m_file(ldi->m_file)
     , m_bucket(ldi->m_bucket)
+    , m_start(mxb::Clock::now())
 {
 }
 
@@ -523,10 +534,37 @@ void S3Download::load_data()
 size_t S3Download::read_callback(void* buffer, size_t size, size_t nitems, void* userdata)
 {
     size_t length = size * nitems;
+    return static_cast<S3Download*>(userdata)->handle_read(buffer, length);
+}
+
+size_t S3Download::handle_read(void* buffer, size_t length)
+{
+    m_bytes += length;
+
+    if (mxb_log_should_log(LOG_INFO))
+    {
+        log_upload_speed();
+    }
 
     // Returning something other than the number of bytes that's available for processing will cause
     // libmarias3 (curl behind the scenes) to stop reading data.
-    return static_cast<S3Download*>(userdata)->process((const char*)buffer, length) ? length : 0;
+    return process((const char*)buffer, length) ? length : 0;
+}
+
+void S3Download::log_upload_speed()
+{
+    auto now = mxb::Clock::now();
+
+    if (now - m_start > 1s)
+    {
+        // Cap the upload speed at the actual number bytes per second if it would otherwise be faster.
+        size_t clamped_bytes = m_bytes / std::max(1.0, mxb::to_secs(now - m_start));
+
+        MXB_INFO("%s processed (%s/s).", mxb::pretty_size(m_bytes).c_str(),
+                 mxb::pretty_size(clamped_bytes).c_str());
+
+        m_start = now;
+    }
 }
 
 bool S3Download::route_data(GWBUF&& buffer)

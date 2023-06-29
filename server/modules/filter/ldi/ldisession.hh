@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/externcmd.hh>
+#include <maxbase/stopwatch.hh>
 
 #include <vector>
 
@@ -52,13 +53,17 @@ protected:
 private:
     MXS_SESSION*              m_session;
     std::weak_ptr<LDISession> m_ldi;
-
-    LDI::Config::Values m_config;
-    std::string         m_file;
-    std::string         m_bucket;
+    LDI::Config::Values       m_config;
+    std::string               m_file;
+    std::string               m_bucket;
+    mxb::Clock::time_point    m_start;
+    size_t                    m_bytes {0};
 
 private:
     static size_t read_callback(void* buffer, size_t size, size_t nitems, void* userdata);
+
+    size_t handle_read(void* buffer, size_t length);
+    void   log_upload_speed();
 };
 
 // Converts the data stream into a LOAD DATA LOCAL INFILE
