@@ -26,8 +26,6 @@ class CacheFilterSession : public maxscale::FilterSession
     CacheFilterSession& operator=(const CacheFilterSession&);
 
 public:
-    using StringVector = std::vector<std::string>;
-
     enum cache_session_state_t
     {
         CACHE_EXPECTING_RESPONSE,       // A select has been sent, and we are waiting for the response.
@@ -66,16 +64,6 @@ public:
     const char* default_db() const
     {
         return m_zDefaultDb;
-    }
-
-    /**
-     * The invalidation words of the previous SELECT.
-     *
-     * @return The invalidation words of the previous SELECT.
-     */
-    const StringVector& invalidation_words() const
-    {
-        return m_invalidation_words;
     }
 
     /**
@@ -267,5 +255,4 @@ private:
     std::deque<GWBUF>       m_queued_packets; /**< Queued statements, waiting for current to finish. */
     bool                    m_processing;     /**< Is query processing on-going. */
     bool                    m_load_active {false};
-    StringVector            m_invalidation_words;
 };
