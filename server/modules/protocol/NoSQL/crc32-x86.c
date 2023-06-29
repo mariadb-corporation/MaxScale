@@ -1,5 +1,5 @@
 /*-
- * Public Domain 2014-2019 MongoDB, Inc.
+ * Public Domain 2014-present MongoDB, Inc.
  * Public Domain 2008-2014 WiredTiger, Inc.
  *
  * This is free and unencumbered software released into the public domain.
@@ -48,8 +48,8 @@ __wt_checksum_hw(const void *chunk, size_t len)
 
     crc = 0xffffffff;
 
-    /* Checksum one byte at a time to the first 4B boundary. */
-    for (p = chunk; ((uintptr_t)p & (sizeof(uint32_t) - 1)) != 0 && len > 0; ++p, --len) {
+    /* Checksum one byte at a time to the first 8B boundary. */
+    for (p = chunk; ((uintptr_t)p & (sizeof(uint64_t) - 1)) != 0 && len > 0; ++p, --len) {
         __asm__ __volatile__(".byte 0xF2, 0x0F, 0x38, 0xF0, 0xF1" : "=S"(crc) : "0"(crc), "c"(*p));
     }
 
@@ -123,16 +123,28 @@ extern uint32_t (*wiredtiger_crc32c_func(void))(const void *, size_t);
  */
 uint32_t (*wiredtiger_crc32c_func(void))(const void *, size_t)
 {
+    static uint32_t (*crc32c_func)(const void *, size_t);
 #if !defined(HAVE_NO_CRC32_HARDWARE)
 #if (defined(__amd64) || defined(__x86_64))
     unsigned int eax, ebx, ecx, edx;
+#endif
+#endif
 
+    /*
+     * This function calls slow hardware functions; if the application doesn't realize that, they
+     * may call it repeatedly rather than caching the result.
+     */
+    if (crc32c_func != NULL)
+        return (crc32c_func);
+
+#if !defined(HAVE_NO_CRC32_HARDWARE)
+#if (defined(__amd64) || defined(__x86_64))
     __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(1));
 
 #define CPUID_ECX_HAS_SSE42 (1 << 20)
     if (ecx & CPUID_ECX_HAS_SSE42)
-        return (__wt_checksum_hw);
-    return (__wt_checksum_sw);
+        return (crc32c_func = __wt_checksum_hw);
+    return (crc32c_func = __wt_checksum_sw);
 
 #elif defined(_M_AMD64)
     int cpuInfo[4];
@@ -141,12 +153,12 @@ uint32_t (*wiredtiger_crc32c_func(void))(const void *, size_t)
 
 #define CPUID_ECX_HAS_SSE42 (1 << 20)
     if (cpuInfo[2] & CPUID_ECX_HAS_SSE42)
-        return (__wt_checksum_hw);
-    return (__wt_checksum_sw);
+        return (crc32c_func = __wt_checksum_hw);
+    return (crc32c_func = __wt_checksum_sw);
 #else
-    return (__wt_checksum_sw);
+    return (crc32c_func = __wt_checksum_sw);
 #endif
 #else
-    return (__wt_checksum_sw);
+    return (crc32c_func = __wt_checksum_sw);
 #endif
 }
