@@ -110,6 +110,19 @@ authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const Aut
              const ExpectedMsgs& exp_msgs);
 
 /**
+ * Authenticate user into the given PAM service. This function will block until the
+ * operation completes. The function will write pam prompts and messages and read
+ * responses to/from the given file descriptors. Typically called via subprocess.
+ *
+ * @param read_fd Fd for reading input
+ * @param write_fd Fd for writing output
+ * @param user Username & remote host
+ * @param sett Pam service and other settings
+ * @return Result structure
+ */
+AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, const AuthSettings& sett);
+
+/**
  * Does pam prompt match the expected message? The prompt matches if the prompt begins with the expected
  * message, compared case insensitively.
  *
