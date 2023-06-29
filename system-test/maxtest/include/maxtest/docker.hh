@@ -15,6 +15,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <string_view>
+#include <iostream>
 
 namespace maxtest
 {
@@ -35,14 +36,15 @@ public:
      * @param name      The container name
      * @param ports     List of ports that are forwarded to the host
      * @param env       List of KEY:VALUE environment variables set for the image
-     * @param check_cmd Optional command that's used to check when the container is ready for use
+     * @param args      The arguments given to the container (optional)
+     * @param check_cmd Command that's used to check when the container is ready for use (optional)
      *
      * @throws std::runtime_error if the container startup fails or if the check command
      *         fails for over 30 seconds.
      */
     Docker(TestConnections& test, std::string_view image, std::string_view name,
            std::initializer_list<int> ports, std::initializer_list<std::string_view> env,
-           std::string_view check_cmd = "")
+           std::string_view args = "", std::string_view check_cmd = "")
         : m_test(test)
         , m_name(name)
     {
@@ -62,7 +64,7 @@ public:
             cmd << "-e " << e << " ";
         }
 
-        cmd << image;
+        cmd << image << " " << args;
 
         auto res = m_test.maxscale->ssh_output(cmd.str());
 
@@ -98,6 +100,18 @@ public:
         {
             throw problem("Failed to start image '", image, "': ", res.rc, ", ", res.output);
         }
+    }
+
+    /**
+     * Executes a command inside the container
+     *
+     * @param cmd Command to execute
+     *
+     * @return The exit code of the command
+     */
+    int execute(std::string_view cmd)
+    {
+        return m_test.maxscale->ssh_node(mxb::cat("docker exec -u root ", m_name, " ", cmd), true);
     }
 
     ~Docker()

@@ -292,6 +292,7 @@ void test_main(TestConnections& test)
 {
     mxt::Docker docker(test, "postgres:14", "pg", {5432},
                        {"POSTGRES_USER=maxskysql", "POSTGRES_PASSWORD=skysql"},
+                       "",
                        "psql -U maxskysql -c \"SELECT 1\"");
     EtlTest etl(test);
     std::string dsn = "DRIVER=psqlodbcw.so;"
