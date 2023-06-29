@@ -128,33 +128,34 @@ bool Cipher::encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
     bool ok = false;
     int mode = EVP_CIPHER_mode(cipher);
     bool is_gcm = mode == EVP_CIPH_GCM_MODE;
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
 
-    if (EVP_CipherInit_ex(m_ctx, cipher, nullptr, key, iv, enc) == 1)
+    if (EVP_CipherInit_ex(ctx, cipher, nullptr, key, iv, enc) == 1)
     {
         if (is_gcm)
         {
             // Use the last 4 bytes of the IV as the Additional Authenticated Data
-            set_aad(iv + GCM_AAD_OFFSET, GCM_AAD_SIZE);
+            set_aad(ctx, iv + GCM_AAD_OFFSET, GCM_AAD_SIZE);
             mxb_assert(EVP_CIPHER_iv_length(cipher) == 12);
         }
 
         if (is_gcm && enc == DECRYPTING)
         {
-            EVP_CIPHER_CTX_ctrl(m_ctx, EVP_CTRL_GCM_SET_TAG, 16, (void*)(input + input_len - 16));
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, (void*)(input + input_len - 16));
             input_len -= 16;
         }
 
         int output_written = 0;
-        if (EVP_CipherUpdate(m_ctx, output, &output_written, input, input_len) == 1)
+        if (EVP_CipherUpdate(ctx, output, &output_written, input, input_len) == 1)
         {
             int total_output_len = output_written;
-            if (EVP_CipherFinal_ex(m_ctx, output + total_output_len, &output_written) == 1)
+            if (EVP_CipherFinal_ex(ctx, output + total_output_len, &output_written) == 1)
             {
                 total_output_len += output_written;
 
                 if (is_gcm && enc == ENCRYPTING)
                 {
-                    EVP_CIPHER_CTX_ctrl(m_ctx, EVP_CTRL_GCM_GET_TAG, 16, output + total_output_len);
+                    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, output + total_output_len);
                     total_output_len += 16;
                 }
 
@@ -164,13 +165,15 @@ bool Cipher::encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
         }
     }
 
+    EVP_CIPHER_CTX_free(ctx);
+
     return ok;
 }
 
-void Cipher::set_aad(const uint8_t* ptr, size_t len)
+void Cipher::set_aad(EVP_CIPHER_CTX* ctx, const uint8_t* ptr, size_t len)
 {
     int dummy;
-    EVP_CipherUpdate(m_ctx, nullptr, &dummy, ptr, len);
+    EVP_CipherUpdate(ctx, nullptr, &dummy, ptr, len);
 }
 
 bool Cipher::encrypt(const uint8_t* key, const uint8_t* iv,
@@ -205,14 +208,8 @@ Cipher::Cipher(AesMode mode, size_t bits)
 }
 
 Cipher::Cipher(const EVP_CIPHER* cipher)
-    : m_ctx(EVP_CIPHER_CTX_new())
-    , m_cipher(cipher)
+    : m_cipher(cipher)
 {
-}
-
-Cipher::~Cipher()
-{
-    EVP_CIPHER_CTX_free(m_ctx);
 }
 
 std::vector<uint8_t> Cipher::new_key() const
