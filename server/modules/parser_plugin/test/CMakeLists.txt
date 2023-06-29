@@ -1,5 +1,5 @@
 add_executable(compare compare.cc testreader.cc)
-target_link_libraries(compare postgresprotocol maxscale-common)
+target_link_libraries(compare maxscale-common)
 
 add_executable(pp_concurrency pp_concurrency.cc)
 target_link_libraries(pp_concurrency maxscale-common)
@@ -87,7 +87,10 @@ if (BUILD_PP_MYSQLEMBEDDED)
   add_test(test_pp_oracle-type_variables    compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/variables.test)
 endif()
 
-if (BUILD_PP_PG_QUERY)
+if (BUILD_POSTGRES)
+  target_link_libraries(compare postgresprotocol)
+  target_compile_definitions(compare -DBUILD_POSTGRES=1)
+
   file(GLOB POSTGRES_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.sql)
 
   # From all files in the directory, pick statements that match the regex "^ALTER TABLE "

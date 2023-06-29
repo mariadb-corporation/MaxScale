@@ -30,7 +30,9 @@
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
+#ifdef BUILD_POSTGRES
 #include "../../protocol/Postgres/pgparser.hh"
+#endif
 #include "../../../core/internal/modules.hh"
 #include "setsqlmodeparser.hh"
 #include "testreader.hh"
@@ -1579,7 +1581,12 @@ int main(int argc, char* argv[])
             }
             else if(strcmp(optarg, "postgres") == 0)
             {
+#ifdef BUILD_POSTGRES
                 pHelper = &PgParser::Helper::get();
+#else
+                cerr << "error: not compiling with postgres." << endl;
+                rc = EXIT_FAILURE;
+#endif
             }
             else
             {

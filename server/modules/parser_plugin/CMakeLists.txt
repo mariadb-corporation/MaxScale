@@ -4,7 +4,7 @@ if(BUILD_PP_MYSQLEMBEDDED)
   add_subdirectory(pp_mysqlembedded)
 endif()
 
-if(BUILD_PP_PG_QUERY)
+if(BUILD_POSTGRES)
   add_subdirectory(pp_pg_query)
 endif()
 
