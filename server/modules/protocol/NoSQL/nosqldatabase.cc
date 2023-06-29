@@ -126,14 +126,20 @@ State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response
     }
     else
     {
+        CacheKey cache_key;
         if (command.is_cacheable && m_pCache_filter_session)
         {
-            response = get_cached_response(name, pRequest, req);
+            response = get_cached_response(name, pRequest, req, &cache_key);
         }
 
         if (!response)
         {
             auto sCommand = command.create_default(name, this, pRequest, std::move(req));
+
+            if (cache_key)
+            {
+                sCommand->set_cache_key(std::move(cache_key));
+            }
 
             if (!sCommand->is_get_last_error())
             {
@@ -215,7 +221,8 @@ Command::Response Database::translate(GWBUF&& mariadb_response)
 
 Command::Response Database::get_cached_response(const std::string& name,
                                                 GWBUF* pNoSQL_request,
-                                                const packet::Msg& req)
+                                                const packet::Msg& req,
+                                                CacheKey* pKey)
 {
     mxb_assert(m_pCache_filter_session);
 
@@ -225,12 +232,10 @@ Command::Response Database::get_cached_response(const std::string& name,
     auto& host = m_pCache_filter_session->user();
     auto* zDefault_db = m_pCache_filter_session->default_db();
 
-    CacheKey key;
-    auto rv = nosql::cache::get_key(user, host, zDefault_db, pNoSQL_request, &key);
-    mxb_assert(CACHE_RESULT_IS_OK(rv));
+    *pKey = nosql::cache::get_key(user, host, zDefault_db, req.document());
 
     GWBUF* pValue = nullptr;
-    rv = m_pCache_filter_session->get_value(key, 0, &pValue, nullptr);
+    auto rv = m_pCache_filter_session->get_value(*pKey, 0, &pValue, nullptr);
     mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
 
     auto debug = m_pCache_filter_session->config().debug;

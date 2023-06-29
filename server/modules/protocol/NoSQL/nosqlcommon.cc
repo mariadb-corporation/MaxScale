@@ -1358,39 +1358,81 @@ namespace nosql
 // nosql::cache
 //
 
-cache_result_t cache::get_key(const std::string& user,
-                              const std::string& host,
-                              const char* zDefault_db,
-                              const GWBUF* pNoSQL_request,
-                              CacheKey* pKey)
+CacheKey cache::get_key(const std::string& user,
+                        const std::string& host,
+                        const char* zDefault_db,
+                        const bsoncxx::document::view& doc)
 {
-    const uint8_t* pData = pNoSQL_request->data();
-    size_t nData = pNoSQL_request->length();
+    CacheKey key;
 
-    mxb_assert(nData >= sizeof(protocol::HEADER));
+    mxb_assert((user.empty() && host.empty()) || (!user.empty() && !host.empty()));
 
-    const protocol::HEADER* pHeader = reinterpret_cast<const protocol::HEADER*>(pData);
+    uint64_t crc = 0;
 
-    size_t offset = 3 * sizeof(int32_t); // msg_len, request_id, and response_to.
-    pData += offset;
-    nData -= offset;
-
-    if (pHeader->opcode == MONGOC_OPCODE_MSG)
+    if (zDefault_db)
     {
-        mxb_assert(nData >= sizeof(uint32_t));
+        crc = lzma_crc64(reinterpret_cast<const uint8_t*>(zDefault_db), strlen(zDefault_db), crc);
+    }
 
-        uint32_t flags;
-        protocol::get_byte4(pData, &flags);
+    if (!doc.empty())
+    {
+        // Useful links if this needs to be tuned:
+        // - https://bsonspec.org/spec.html
+        // - http://mongocxx.org/api/current/classbsoncxx_1_1document_1_1view.html
 
-        // The checksum covers everything but the checksum itself, so we must exclude
-        // it, as the request_id and thus the checksum will be different each time.
-        if (packet::Msg::checksum_present(flags))
+        const uint8_t* begin = doc.data();
+        const uint8_t* end = begin + doc.length();
+
+        auto it = std::find_if(doc.begin(), doc.end(), [](const auto& element) {
+                return element.key() == "lsid";
+            });
+
+        if (it != doc.end())
         {
-            nData -= sizeof(uint32_t);
+            // There was an 'lsid' element, so calculate the crc up until that element.
+            auto lsid = *it;
+            crc = lzma_crc64(begin, lsid.offset(), crc);
+
+            ++it;
+
+            if (it != doc.end())
+            {
+                // Not at the end, set begin to point at next element.
+                auto next = *it;
+
+                begin += next.offset();
+            }
+            else
+            {
+                begin = end;
+            }
+        }
+
+        if (begin != end)
+        {
+            crc = lzma_crc64(begin, end - begin, crc);
         }
     }
 
-    return Cache::get_default_key(user, host, zDefault_db, pData, nData, pKey);
+    key.data_hash = crc;
+
+    if (!user.empty())
+    {
+        crc = lzma_crc64(reinterpret_cast<const uint8_t*>(user.data()), user.length(), crc);
+    }
+
+    key.user = user;
+
+    if (!host.empty())
+    {
+        crc = lzma_crc64(reinterpret_cast<const uint8_t*>(host.data()), host.length(), crc);
+    }
+
+    key.host = host;
+
+    key.full_hash = crc;
+
+    return key;
 }
 
 //

@@ -366,9 +366,8 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
         auto& host = m_pCache_filter_session->host();
         auto* zDefault_db = m_pCache_filter_session->default_db();
 
-        CacheKey key;
-        auto rv = nosql::cache::get_key(user, host, zDefault_db, &pCommand->request(), &key);
-        mxb_assert(CACHE_RESULT_IS_OK(rv));
+        const CacheKey& key = pCommand->cache_key();
+        mxb_assert(key);
 
         const auto& config = m_pCache_filter_session->config();
 
@@ -378,7 +377,7 @@ void NoSQL::flush_response(Command::Response& response, const vector<string>& in
                        mxb::join(invalidation_words).c_str());
         }
 
-        rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
+        auto rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
 
         mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
         mxb_assert(CACHE_RESULT_IS_OK(rv));

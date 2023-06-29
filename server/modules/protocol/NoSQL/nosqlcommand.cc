@@ -68,6 +68,18 @@ Command::~Command()
     free_request();
 }
 
+namespace
+{
+
+static CacheKey empty_key;
+
+}
+
+const CacheKey& Command::cache_key() const
+{
+    return empty_key;
+}
+
 bool Command::is_admin() const
 {
     return false;

@@ -96,11 +96,10 @@ namespace nosql
 namespace cache
 {
 
-cache_result_t get_key(const std::string& user,
-                       const std::string& host,
-                       const char* zDefault_db,
-                       const GWBUF* pNoSQL_request,
-                       CacheKey* pKey);
+CacheKey get_key(const std::string& user,
+                 const std::string& host,
+                 const char* zDefault_db,
+                 const bsoncxx::document::view& doc);
 
 }
 

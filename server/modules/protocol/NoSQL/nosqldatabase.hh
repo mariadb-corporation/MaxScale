@@ -128,7 +128,10 @@ private:
         m_state = State::READY;
     }
 
-    Command::Response get_cached_response(const std::string& name, GWBUF* pRequest, const packet::Msg& req);
+    Command::Response get_cached_response(const std::string& name,
+                                          GWBUF* pRequest,
+                                          const packet::Msg& req,
+                                          CacheKey* pKey);
 
     State execute_command(std::unique_ptr<Command> sCommand, Command::Response* pResponse);
 

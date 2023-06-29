@@ -428,6 +428,16 @@ public:
 
     ~OpMsgCommand() override;
 
+    const CacheKey& cache_key() const override
+    {
+        return m_cache_key;
+    }
+
+    void set_cache_key(CacheKey&& cache_key)
+    {
+        m_cache_key = std::move(cache_key);
+    }
+
     const std::string& name() const
     {
         return m_name;
@@ -592,6 +602,7 @@ protected:
     const packet::Msg              m_req;
     const bsoncxx::document::view& m_doc;
     const DocumentArguments&       m_arguments;
+    CacheKey                       m_cache_key;
 
 private:
     ResponseKind response_kind(const packet::Msg& req)

@@ -164,6 +164,8 @@ public:
 
     virtual std::string table(Quoted quoted = Quoted::YES) const = 0;
 
+    virtual const CacheKey& cache_key() const;
+
     const GWBUF& request() const
     {
         return m_request;

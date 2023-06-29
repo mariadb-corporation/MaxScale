@@ -93,6 +93,32 @@ public:
     {}
 
     /**
+     * @return True, if the key is not empty.
+     */
+    explicit operator bool() const
+    {
+        return !empty();
+    }
+
+    /**
+     * @return True, if the key has not been set.
+     */
+    bool empty() const
+    {
+        // It is assumed that different data used for the key will not hash
+        // to the same value. Assuming that no data will hash to exactly 0,
+        // is an assumption of the same magnitude.
+        bool is_empty = this->data_hash == 0 && this->full_hash == 0;
+#ifdef SS_DEBUG
+        if (is_empty)
+        {
+            mxb_assert(this->user.empty() && this->host.empty());
+        }
+#endif
+        return is_empty;
+    }
+
+    /**
      * @param that  A CacheKey to compare equality with.
      *
      * @return True, if @c this is equal to @c that.
