@@ -156,7 +156,10 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
     {
         m_sDatabase.reset();
 
-        flush_response(response);
+        if (response)
+        {
+            flush_response(response);
+        }
 
         if (!m_requests.empty())
         {
