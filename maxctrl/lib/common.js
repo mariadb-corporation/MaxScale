@@ -414,6 +414,8 @@ async function doRequest(host, resource, obj) {
       var extra = "";
       if (err.response.data) {
         extra = os.EOL + JSON.stringify(err.response.data, null, 4);
+      } else if (err.response.status == 404) {
+        extra = ". " + os.EOL + "Check that the object exists and that it is of the correct type.";
       }
 
       let host = err.config.url.replace(resource, "").replace("/v1/", "");

@@ -26,7 +26,7 @@ $maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale.cnf &>> $maxscaledi
 # Wait for MaxScale to start
 for ((i=0;i<150;i++))
 do
-    $maxscaledir/bin/maxctrl list servers >& /dev/null && exit 0
+    curl -s -f -u admin:mariadb 127.0.0.1:8989/v1/servers >& /dev/null && exit 0
     sleep 0.1
 done
 
