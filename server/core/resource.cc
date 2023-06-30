@@ -1282,7 +1282,9 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    return HttpResponse(MHD_HTTP_NOT_FOUND,
+                        mxs_json_error("Module '%s' has no command named '%s'.",
+                                       module.c_str(), identifier.c_str()));
 }
 
 HttpResponse cb_send_ok(const HttpRequest& request)
