@@ -28,6 +28,14 @@ so that a logged line will not contain any extra newlines.
 
 ## New Features
 
+### [MXS-3664](https://jira.mariadb.org/browse/MXS-3664) Built-in caching in nosqlprotocol
+
+The NoSQL protocol module now supports internal caching. Since this
+cache uses keys created from NoSQL protocol requests and stores NoSQL
+protocol responses, it is more efficient than the regular cache filter.
+More information about this functionality can be found
+[here](../Protocols/NoSQL.md#caching).
+
 ### [MXS-4232](https://jira.mariadb.org/browse/MXS-4232) Remember old service password
 
 When the service password is changed, MaxScale will remember and use the previous

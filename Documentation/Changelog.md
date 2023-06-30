@@ -44,6 +44,8 @@
   remove the need for adjusting monitor setting `backend_read_timeout` to get
   switchover to work.
 
+* The NoSQL protocol now provides internal caching.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
