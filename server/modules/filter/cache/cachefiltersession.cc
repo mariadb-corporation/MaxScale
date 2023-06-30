@@ -364,7 +364,16 @@ bool CacheFilterSession::routeQuery(GWBUF&& packet)
 
     if (m_processing)
     {
-        m_queued_packets.push_back(std::move(packet));
+        if (MYSQL_GET_PACKET_NO(packet.data()) == 0)
+        {
+            // A new protocol command, queue it.
+            m_queued_packets.push_back(std::move(packet));
+        }
+        else
+        {
+            // A subsequent packet of a multi-packet protocol command, just send forward.
+            return FilterSession::routeQuery(std::move(packet));
+        }
     }
     else
     {
