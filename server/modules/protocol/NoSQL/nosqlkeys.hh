@@ -75,6 +75,7 @@ const char FIELDS[]                          = "fields";
 const char FILTER[]                          = "filter";
 const char FIRST_BATCH[]                     = "firstBatch";
 const char FLOW_CONTROL[]                    = "flowControl";
+const char FREE_MONITORING[]                 = "freeMonitoring";
 const char GIT_VERSION[]                     = "gitVersion";
 const char HELP[]                            = "help";
 const char HOST[]                            = "host";
