@@ -5,8 +5,9 @@ The luafilter is a filter that calls a set of functions in a Lua script.
 Read the [Lua language documentation](https://www.lua.org/docs.html) for
 information on how to write Lua scripts.
 
-*Note:* This module is a part of the experimental module package,
- `maxscale-experimental`.
+*Note:* This module is experimental and must be built from source. The
+ module is deprecated in MaxScale 23.08 and might be removed in a future
+ release.
 
 [TOC]
 

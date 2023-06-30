@@ -66,18 +66,4 @@ cd ..
 cp _build/*.rpm .
 cp _build/*.gz .
 
-if [ "$build_experimental" == "yes" ]
-then
-    for component in experimental
-    do
-        cd _build
-        rm CMakeCache.txt
-        cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
-        sudo make -j${NCPU} package
-        cd ..
-        cp _build/*.rpm .
-	    cp _build/*.gz .
-    done
-fi
-
 sudo rpm -i maxscale*.rpm
