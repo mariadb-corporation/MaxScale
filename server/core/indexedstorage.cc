@@ -14,8 +14,24 @@
 
 #include <maxscale/indexedstorage.hh>
 
+namespace
+{
+// It's important that this variable is defined only once and that access to it is not inlined. Previously
+// when it was stored as a function scope static variable, a module linked with -fvisibility=hidden would end
+// up having its own version of this variable. This would cause multiple WorkerLocal instances to use the same
+// key which in turn caused two different types to share the same storage and the objects themselves would
+// appear corrupted.
+std::atomic<uint64_t> id_generator {0};
+}
+
 namespace maxscale
 {
+
+// static
+uint64_t IndexedStorage::create_key()
+{
+    return id_generator.fetch_add(1, std::memory_order_relaxed);
+}
 
 size_t IndexedStorage::clear()
 {

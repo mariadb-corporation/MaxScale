@@ -76,11 +76,7 @@ public:
      *
      * @return The data identifier usable for indexed local data storage
      */
-    static uint64_t create_key()
-    {
-        static std::atomic<uint64_t> id_generator {0};
-        return id_generator.fetch_add(1, std::memory_order_relaxed);
-    }
+    static uint64_t create_key();
 
     /**
      * Set local data
