@@ -12,6 +12,12 @@
 * Readwritesplit will now retry queries with partially returned results if they
   are done inside a transaction and `transaction_replay` is enabled.
 
+* `prune_sescmd_history` now also performs history simplification by removing
+  redundant executions of the same statement. This will reduce memory usage in
+  the case when history repeats a small cycle of commands. One example of this
+  is connection pools that prepare the connection with a small set of commands
+  like `SET NAMES` and `SET SQL_MODE`.
+
 * Added the new [XRouter](./Routers/XRouter.md) module.
 
 * Common configuration settings can now be specified in a separate section,
