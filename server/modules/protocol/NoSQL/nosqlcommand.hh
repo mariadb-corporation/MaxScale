@@ -17,6 +17,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <utility>
 #include <maxscale/buffer.hh>
 #include "nosqlcommon.hh"
 
