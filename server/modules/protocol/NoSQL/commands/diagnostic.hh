@@ -457,7 +457,7 @@ public:
         else if (value == "global" || value == "startupWarnings")
         {
             ArrayBuilder log;
-            log.append("No news is good news."); // TODO: The MaxScale log could be returned.
+            //TODO: log.append(...); Possibly something from the MaxScale log.
 
             doc.append(kvp(key::TOTAL_LINES_WRITTEN, 1));
             doc.append(kvp(key::LOG, log.extract()));
@@ -589,6 +589,8 @@ public:
         DocumentBuilder election_metrics;
         DocumentBuilder extra_info;
         DocumentBuilder flow_control;
+        DocumentBuilder free_monitoring;
+        free_monitoring.append(kvp(key::STATE, value::DISABLED));
         DocumentBuilder storage_engine;
         storage_engine.append(kvp(key::NAME, key::MARIADB));
         int uptime_seconds = maxscale_uptime();
@@ -598,6 +600,7 @@ public:
         doc.append(kvp(key::ELECTION_METRICS, election_metrics.extract()));
         doc.append(kvp(key::EXTRA_INFO, election_metrics.extract()));
         doc.append(kvp(key::FLOW_CONTROL, flow_control.extract()));
+        doc.append(kvp(key::FREE_MONITORING, free_monitoring.extract()));
         doc.append(kvp(key::LOCAL_TIME, bsoncxx::types::b_date(std::chrono::system_clock::now())));
         doc.append(kvp(key::PID, getpid()));
         doc.append(kvp(key::STORAGE_ENGINE, storage_engine.extract()));

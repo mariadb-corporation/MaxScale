@@ -49,7 +49,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        doc.append(kvp(key::STATE, value::UNDECIDED));
+        doc.append(kvp(key::STATE, value::DISABLED));
         doc.append(kvp(key::OK, 1));
     }
 };
