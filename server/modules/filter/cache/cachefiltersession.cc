@@ -376,8 +376,17 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 {
     if (m_processing)
     {
-        m_queued_packets.push_back(pPacket);
-        return 1;
+        if (MYSQL_GET_PACKET_NO(GWBUF_DATA(pPacket)) == 0)
+        {
+            // A new protocol command, queue it.
+            m_queued_packets.push_back(pPacket);
+            return 1;
+        }
+        else
+        {
+            // A subsequent packet of a multi-packet protocol command, just send forward.
+            return FilterSession::routeQuery(pPacket);
+        }
     }
     else
     {
