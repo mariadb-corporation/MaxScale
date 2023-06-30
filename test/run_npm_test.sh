@@ -78,6 +78,7 @@ cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DBUILD_GSSAPI=N \
       -DBUILD_TOOLS=N \
       -DBUILD_NOSQL=N \
+      -DBUILD_MAXCTRL=N \
       -DBUILD_CDC=N || exit 1
 
 make -j $(grep -c processor /proc/cpuinfo) install || exit 1
