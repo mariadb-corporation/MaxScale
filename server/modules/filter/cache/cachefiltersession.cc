@@ -372,7 +372,7 @@ bool CacheFilterSession::routeQuery(GWBUF&& packet)
         else
         {
             // A subsequent packet of a multi-packet protocol command, just send forward.
-            return FilterSession::routeQuery(std::move(packet));
+            rv = FilterSession::routeQuery(std::move(packet));
         }
     }
     else

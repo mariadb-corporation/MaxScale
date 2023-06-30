@@ -49,7 +49,7 @@ public:
 
     Response::Status populate_response(DocumentBuilder& doc) override
     {
-        doc.append(kvp(key::STATE, value::UNDECIDED));
+        doc.append(kvp(key::STATE, value::DISABLED));
         doc.append(kvp(key::OK, 1));
 
         return Response::Status::NOT_CACHEABLE;

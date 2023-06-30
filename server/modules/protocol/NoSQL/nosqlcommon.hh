@@ -308,6 +308,7 @@ namespace value
 {
 
 const char COLLECTION[] = "collection";
+const char DISABLED[]   = "disabled";
 const char IMMEDIATE[]  = "immediate";
 const char MOZJS[]      = "mozjs";
 const char MULTI[]      = "multi";
