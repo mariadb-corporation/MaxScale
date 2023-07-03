@@ -82,6 +82,12 @@ This version of switchover performs the switch even if the primary server is
 unresponsive i.e. responds to pings but does not perform any commands in a
 reasonable time. May lead to diverging replication on the old primary.
 
+### [MXS-4635](https://jira.mariadb.org/browse/MXS-4635) Send metadata in connection handshake
+
+The new `connection_metadata` listener parameter controls the set of metadata
+variables that is sent to the client during connection creation. By default the
+current number of connections (`threads_connected`) is sent.
+
 ### MaxGUI
 
 

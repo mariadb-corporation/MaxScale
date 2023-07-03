@@ -46,6 +46,11 @@
 
 * The NoSQL protocol now provides internal caching.
 
+* Additional metadata is sent in the connection handshake. For more information,
+  refer to the
+  [parameter](Getting-Started/Configuration-Guide.md#connection_metadata)
+  documentation.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
