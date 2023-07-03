@@ -98,6 +98,9 @@ public:
         char m_version_str[MAX_VERSION_LEN + 1] {'\0'};     /**< Server version string */
     };
 
+    using Variables = std::map<std::string, std::string, std::less<>>;
+    using TrackedVariables = std::set<std::string, std::less<>>;
+
     /**
      * Find a server with the specified name.
      *
@@ -283,7 +286,7 @@ public:
      * @return @c True, if the variable was added to the variables to be
      *         tracked, @c false if it was already present.
      */
-    virtual bool track_variable(std::string variable) = 0;
+    virtual bool track_variable(std::string_view variable) = 0;
 
     /**
      * Stop tracking the value of server variable.
@@ -294,16 +297,15 @@ public:
      * @return   @c True, if the variable was really removed, @c false if it
      *           was not present.
      */
-    virtual bool untrack_variable(std::string variable) = 0;
+    virtual bool untrack_variable(std::string_view variable) = 0;
 
     /**
      * Tracked variables.
      *
      * @return  The currently tracked variables.
      */
-    virtual std::set<std::string> tracked_variables() const = 0;
+    virtual TrackedVariables tracked_variables() const = 0;
 
-    using Variables = std::map<std::string, std::string>;
     /**
      * Returns a map of server variables and their values. The content
      * of the map depends upon which variables the relevant monitor was
@@ -322,7 +324,7 @@ public:
      *
      * @return  The variable's value. Empty string if it has not been fethced.
      */
-    virtual std::string get_variable_value(const std::string& variable) const = 0;
+    virtual std::string get_variable_value(std::string_view variable) const = 0;
 
     /**
      * Set the variables as fetched from the MariaDB server. Should

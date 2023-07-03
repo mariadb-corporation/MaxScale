@@ -276,15 +276,15 @@ public:
 
     mxb::SSLConfig ssl_config() const override;
 
-    void                  set_uptime(int64_t uptime) override;
-    int64_t               get_uptime() const override;
-    bool                  track_variable(std::string variable) override;
-    bool                  untrack_variable(std::string variable) override;
-    std::set<std::string> tracked_variables() const override;
-    Variables             get_variables() const override;
-    std::string           get_variable_value(const std::string& variable) const override;
-    void                  set_variables(Variables&& variables) override;
-    void                  set_maintenance() override;
+    void             set_uptime(int64_t uptime) override;
+    int64_t          get_uptime() const override;
+    bool             track_variable(std::string_view variable) override;
+    bool             untrack_variable(std::string_view variable) override;
+    TrackedVariables tracked_variables() const override;
+    Variables        get_variables() const override;
+    std::string      get_variable_value(std::string_view variable) const override;
+    void             set_variables(Variables&& variables) override;
+    void             set_maintenance() override;
 
     uint64_t gtid_pos(uint32_t domain) const override;
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
@@ -427,7 +427,7 @@ private:
     // Uptime in seconds, updated by monitors
     std::atomic<int64_t> m_uptime {0};
     // The variables to track.
-    std::set<std::string> m_tracked_variables;
+    TrackedVariables m_tracked_variables;
     // Additional server variables
     Variables m_variables;
     // Lock that protects m_variables

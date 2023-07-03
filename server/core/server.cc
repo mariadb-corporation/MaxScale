@@ -626,20 +626,28 @@ int64_t Server::get_uptime() const
     return m_uptime.load(std::memory_order_relaxed);
 }
 
-bool Server::track_variable(std::string variable)
+bool Server::track_variable(std::string_view variable)
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
-    auto p = m_tracked_variables.emplace(std::move(variable));
+    auto p = m_tracked_variables.emplace(variable);
     return p.second;
 }
 
-bool Server::untrack_variable(std::string variable)
+bool Server::untrack_variable(std::string_view variable)
 {
+    bool found = false;
     std::lock_guard<std::mutex> guard(m_var_lock);
-    return m_tracked_variables.erase(variable) != 0;
+
+    if (auto it = m_tracked_variables.find(variable); it != m_tracked_variables.end())
+    {
+        m_tracked_variables.erase(it);
+        found = true;
+    }
+
+    return found;
 }
 
-std::set<std::string> Server::tracked_variables() const
+Server::TrackedVariables Server::tracked_variables() const
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
     return m_tracked_variables;
@@ -651,7 +659,7 @@ Server::Variables Server::get_variables() const
     return m_variables;
 }
 
-std::string Server::get_variable_value(const std::string& variable) const
+std::string Server::get_variable_value(std::string_view variable) const
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
 
