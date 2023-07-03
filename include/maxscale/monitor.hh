@@ -316,9 +316,8 @@ protected:
 
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
 
-    std::string    m_latest_error;                  /**< Latest connection error */
-    mxb::TimePoint m_last_variables_update;
-    bool           m_ok_to_check_disk_space {true}; /**< Set to false if check fails */
+    std::string m_latest_error;                 /**< Latest connection error */
+    bool        m_ok_to_check_disk_space {true};/**< Set to false if check fails */
 
 private:
     std::atomic_int m_status_request {NO_CHANGE};   /**< Status change request from admin */

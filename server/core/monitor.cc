@@ -190,9 +190,6 @@ cfg::ParamEnumMask<mxs_monitor_event_t> s_events(
 class ThisUnit
 {
 public:
-    // TODO: Consider dropping this altogether and simply fetch the variables at each monitor tick.
-    static constexpr seconds variables_update_interval = 10s;
-
     /**
      * Mark a monitor as the monitor of the server. A server may only be monitored by one monitor.
      *
@@ -1381,10 +1378,8 @@ ConnectResult MariaServer::ping_or_connect()
 
 bool MonitorServer::should_fetch_variables()
 {
-    bool rval = false;
     // Only fetch variables from real servers.
-    return is_database()
-           && (mxb::Clock::now() - m_last_variables_update) > this_unit.variables_update_interval;
+    return is_database();
 }
 
 /**
@@ -1405,8 +1400,6 @@ bool MariaServer::fetch_variables()
         unsigned int err;
         if (auto r = mxs::execute_query(con, query, &err_msg, &err))
         {
-            m_last_variables_update = mxb::Clock::now();
-
             Server::Variables variable_values;
             while (r->next_row())
             {
@@ -1432,8 +1425,7 @@ bool MariaServer::fetch_variables()
                         return kv.first + " = " + kv.second;
                     }, ", ", "'");
 
-                    MXB_INFO("Variables have changed on '%s', next check in %ld seconds: %s",
-                             server->name(), this_unit.variables_update_interval.count(), str.c_str());
+                    MXB_INFO("Variables have changed on '%s': %s", server->name(), str.c_str());
                 }
             }
 
@@ -2345,8 +2337,6 @@ MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
     : server(server)
     , m_shared(shared)
 {
-    // Initialize 'm_last_session_track_update' so that an update is performed 1s after monitor start.
-    m_last_variables_update = mxb::Clock::now() - this_unit.variables_update_interval + 1s;
 }
 
 void MonitorServer::apply_status_requests()

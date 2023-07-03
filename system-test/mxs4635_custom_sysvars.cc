@@ -95,6 +95,19 @@ void test_connection_counts(TestConnections& test)
     }
 }
 
+
+std::map<std::string, std::string> update_and_get_variables(TestConnections& test, std::string value)
+{
+    test.check_maxctrl("alter listener RW-Split-Listener connection_metadata=" + value);
+    // The "show threads" should help avoid the unlikely case where a worker hasn't received the new
+    // version of the config when it accepts this client. By pinging all workers, we make sure prior
+    // messages have been processed.
+    test.check_maxctrl("show threads");
+    // Waiting two monitor intervals makes sure the variables get updated
+    test.maxscale->wait_for_monitor(2);
+    return get_system_variables(test);
+}
+
 void test_custom_metadata(TestConnections& test)
 {
     auto vars = get_system_variables(test);
@@ -105,12 +118,7 @@ void test_custom_metadata(TestConnections& test)
     };
 
     auto update_value = [&](std::string value){
-        test.check_maxctrl("alter listener RW-Split-Listener connection_metadata=" + value);
-        // The "show threads" should help avoid the unlikely case where a worker hasn't received the new
-        // version of the config when it accepts this client. By pinging all workers, we make sure prior
-        // messages have been processed.
-        test.check_maxctrl("show threads");
-        vars = get_system_variables(test);
+        vars = update_and_get_variables(test, value);
     };
 
     // Baseline. Don't check "threads_connected" since it's not guaranteed to be 1 if the connections from the
@@ -179,6 +187,31 @@ void test_custom_metadata(TestConnections& test)
     }
 }
 
+void test_auto_metadata(TestConnections& test)
+{
+
+    // One "auto" value
+    auto vars = update_and_get_variables(test, "max_connections=auto");
+    auto c = test.maxscale->rwsplit();
+    MXT_EXPECT(c.connect());
+    int expected_max_cons = atoi(c.field("SELECT @@max_connections").c_str());
+    MXT_EXPECT(expected_max_cons > 0);
+    int max_conns = atoi(vars["max_connections"].c_str());
+    MXT_EXPECT_F(max_conns == expected_max_cons,
+                 "Expected 'max_connections' to be %d, not %d",
+                 expected_max_cons, max_conns);
+
+    // Two "auto" values and one custom one
+    vars = update_and_get_variables(test, "max_allowed_packet=auto,hello=world,max_connections=auto");
+    int expected_max_allowed_packet = atoi(c.field("SELECT @@max_allowed_packet").c_str());
+    MXT_EXPECT(expected_max_allowed_packet > 0);
+    int max_allowed_packet = atoi(vars["max_allowed_packet"].c_str());
+    MXT_EXPECT_F(max_allowed_packet == expected_max_allowed_packet,
+                 "Expected 'max_allowed_packet' to be %d, not %d",
+                 expected_max_allowed_packet, max_allowed_packet);
+    MXT_EXPECT(vars["hello"] == "world");
+}
+
 void test_main(TestConnections& test)
 {
     test.tprintf("Testing connection counts");
@@ -186,6 +219,9 @@ void test_main(TestConnections& test)
 
     test.tprintf("Testing custom metadata");
     test_custom_metadata(test);
+
+    test.tprintf("Testing automatic metadata");
+    test_auto_metadata(test);
 }
 
 int main(int argc, char** argv)
