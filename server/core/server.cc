@@ -610,10 +610,12 @@ void Server::set_charset(uint8_t charset)
     m_charset = charset;
 }
 
-void Server::set_variables(Variables&& variables)
+bool Server::set_variables(Variables&& variables)
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
+    bool changed = m_variables != variables;
     m_variables = std::move(variables);
+    return changed;
 }
 
 void Server::set_uptime(int64_t uptime)

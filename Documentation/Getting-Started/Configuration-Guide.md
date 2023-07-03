@@ -3067,12 +3067,14 @@ Metadata that's sent to all connecting clients. The value must be a
 comma-separated list of key-value arguments. The keys or values cannot contain
 commas in them.
 
-```
-connection_metadata=redirect_url=localhost:3306,service_name=my-service,some_key=some_value
-```
-
-The example above has three variables, `redirect_url`, `service_name` and
-`some_key` that have the values `localhost:3306`, `my-service` and `some_value`.
+Any values that are set to `auto` will be substituted with the value of the
+corresponding MariaDB system variable. Any system variables that do not not
+exist or have empty or null values will not be sent to the client. The system
+variable values are read from the first `Master` server that's reachable from
+the listener's service. If no `Master` server is reachable, the value is read
+from the first `Slave` server and if no `Slave` servers are available, from the
+first `Running` server. If no running servers are available, the system
+variables are not sent.
 
 MaxScale will always send a metadata value for `threads_connected` that contains
 the current number of connections to the service that the listener points
@@ -3089,6 +3091,19 @@ this is the MariaDB Connector/C that implements it with the
 and
 [mysql_session_track_get_next](https://github.com/mariadb-corporation/mariadb-connector-c/wiki/mysql_session_track_get_next)
 functions.
+
+The following example demonstrates the use of `connection_metadata`:
+
+```
+connection_metadata=redirect_url=localhost:3306,service_name=my-service,max_allowed_packet=auto
+```
+
+The configuration has three variables, `redirect_url`, `service_name` and
+`max_allowed_packet` that have the values `localhost:3306`, `my-service` and
+`auto`. The `auto` value is special and gets replaced with the
+`max_allowed_packet` value from the MariaDB server. This means that the final
+metadata that is sent to the client would be `redirect_url=localhost:3306`,
+`service_name=my-service` and `max_allowed_packet=16777216`.
 
 ## Include
 

@@ -331,8 +331,10 @@ public:
      * be called only by the monitor.
      *
      * @param variables  The fetched variables and their values.
+     *
+     * @return True if the variable values changed.
      */
-    virtual void set_variables(Variables&& variables) = 0;
+    virtual bool set_variables(Variables&& variables) = 0;
 
     /**
      * Set server uptime

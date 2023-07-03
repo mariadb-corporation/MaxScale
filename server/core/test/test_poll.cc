@@ -38,7 +38,7 @@ mxs::Listener::SData listener_data;
 
 static void test1(Service* service)
 {
-    auto session = new Session(listener_data, service, "127.0.0.1");
+    auto session = new Session(listener_data, {}, service, "127.0.0.1");
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
 

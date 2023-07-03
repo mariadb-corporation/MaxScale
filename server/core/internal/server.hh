@@ -283,7 +283,7 @@ public:
     TrackedVariables tracked_variables() const override;
     Variables        get_variables() const override;
     std::string      get_variable_value(std::string_view variable) const override;
-    void             set_variables(Variables&& variables) override;
+    bool             set_variables(Variables&& variables) override;
     void             set_maintenance() override;
 
     uint64_t gtid_pos(uint32_t domain) const override;

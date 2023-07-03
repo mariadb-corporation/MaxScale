@@ -217,6 +217,7 @@ public:
     };
 
     using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
+    using ConnectionMetadata = std::map<std::string, std::string>;
 
     // RAII class for managing the currently active session
     class Scope
@@ -531,6 +532,8 @@ public:
     {
         return static_size() + varying_size();
     }
+
+    virtual const ConnectionMetadata& connection_metadata() const = 0;
 
 protected:
     State                    m_state;   /**< Current descriptor state */

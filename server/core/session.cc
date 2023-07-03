@@ -740,13 +740,16 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(std::shared_ptr<const ListenerData> listener_data, SERVICE* service, const std::string& host)
+Session::Session(std::shared_ptr<const ListenerData> listener_data,
+                 std::shared_ptr<const ConnectionMetadata> metadata,
+                 SERVICE* service, const std::string& host)
     : MXS_SESSION(host, service)
     , m_down(static_cast<Service&>(*service).get_connection(this, this))
     , m_routable(this)
     , m_head(&m_routable)
     , m_tail(&m_routable)
     , m_listener_data(std::move(listener_data))
+    , m_metadata(std::move(metadata))
 {
     const auto& svc_config = *service->config();
     if (svc_config.retain_last_statements != -1)        // Explicitly set for the service

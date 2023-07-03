@@ -39,6 +39,7 @@
 #include <maxscale/diskspace.hh>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/diskspace.hh>
@@ -1436,12 +1437,16 @@ bool MariaServer::fetch_variables()
                 }
             }
 
-            server->set_variables(std::move(variable_values));
+            bool changed = server->set_variables(std::move(variable_values));
+
+            if (changed)
+            {
+                Listener::server_variables_changed(server);
+            }
 
             if (!variables.empty())
             {
                 MXB_INFO("Variable(s) %s were not found.", mxb::join(variables, ", ", "'").c_str());
-                mxb_assert(!true);      // Suggests typo in variable name.
             }
         }
         else

@@ -87,7 +87,7 @@ bool Session::Endpoint::handleError(mxs::ErrorType type,
 }
 
 Session::Session(Client* pClient, SERVICE* service, SListenerData listener_data)
-    : ::Session(std::move(listener_data), service, pClient->host())
+    : ::Session(std::move(listener_data), {}, service, pClient->host())
     , m_client(*pClient)
     , m_client_dcb(this, pClient->host(), pClient)
     , m_sClient_connection(std::make_unique<MockClientConnection>(&m_client_dcb))

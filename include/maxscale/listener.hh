@@ -65,8 +65,7 @@ public:
     ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode,
                  SProtocol protocol_module, const std::string& listener_name,
                  std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql,
-                 SMappingInfo mapping, mxb::proxy_protocol::SubnetArray&& proxy_networks,
-                 std::map<std::string, std::string>&& connection_metadata);
+                 SMappingInfo mapping, mxb::proxy_protocol::SubnetArray&& proxy_networks);
 
     ListenerData(const ListenerData&) = delete;
     ListenerData& operator=(const ListenerData&) = delete;
@@ -78,8 +77,6 @@ public:
     const mxs::Parser::SqlMode m_default_sql_mode{mxs::Parser::SqlMode::DEFAULT};
     const SProtocol            m_proto_module;          /**< Protocol module */
     const std::string          m_listener_name;         /**< Name of the owning listener */
-
-    const std::map<std::string, std::string> m_connection_metadata;
 
     /**
      * Authenticator modules used by the sessions created from the listener. The session will select
@@ -105,6 +102,7 @@ class Listener : public mxb::Pollable
 {
 public:
     using SData = std::shared_ptr<const mxs::ListenerData>;
+    using SMetadata = std::shared_ptr<const MXS_SESSION::ConnectionMetadata>;
 
     enum class Type
     {
@@ -229,6 +227,11 @@ public:
      * @param remote The address where the connection originated
      */
     static void mark_auth_as_failed(const std::string& remote);
+
+    /**
+     * Called whenever a change in server variables was detected
+     */
+    static void server_variables_changed(SERVER* server);
 
     /**
      * Get listener config
@@ -390,6 +393,12 @@ public:
 private:
     class Manager;
 
+    struct SharedData
+    {
+        SData     listener_data;
+        SMetadata metadata;
+    };
+
     enum State
     {
         CREATED,
@@ -468,13 +477,15 @@ private:
     /**
      * Accept a single client connection
      *
-     * @param fd The opened file descriptor to which the client is connected to
-     * @param addr The network information
-     * @param host The host where the client is connecting from
+     * @param fd          The opened file descriptor to which the client is connected to
+     * @param addr        The network information
+     * @param host        The host where the client is connecting from
+     * @param shared_data The shared data of this listener
      *
      * @return The new DCB or nullptr on error
      */
-    ClientDCB* accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host);
+    ClientDCB* accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host,
+                              const SharedData& shared_data);
 
     /**
      * Accept all available client connections
@@ -509,6 +520,7 @@ private:
     bool           read_user_mapping(mxs::ListenerData::SMappingInfo& output) const;
     bool           read_proxy_networks(mxb::proxy_protocol::SubnetArray& output);
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
+    SMetadata      create_connection_metadata();
     mxb::SSLConfig create_ssl_config() const;
     void           set_type();
     json_t*        json_parameters() const;
@@ -523,7 +535,7 @@ private:
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
     int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
 
-    mxs::WorkerGlobal<mxs::ListenerData> m_shared_data;     /**< Data shared with sessions */
+    mxs::WorkerGlobal<SharedData> m_shared_data;    /**< Data shared with sessions */
 
     static Manager s_manager;   /**< Manager of all listener instances */
 };

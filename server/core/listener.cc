@@ -250,6 +250,39 @@ private:
 };
 
 thread_local RateLimit rate_limit;
+
+// Helper function for extracting the best candidate server from a set of servers based on a set of status
+// bits. The status bits given as template parameters are in increasing priority, that is, the worst candidate
+// type is first and the best one is the last.
+template<uint64_t ... Bits>
+SERVER* best_server(const std::vector<SERVER*>& container)
+{
+    constexpr std::array<int, sizeof...(Bits)> bit_array{Bits ...};
+    SERVER* rval = nullptr;
+    int best = -1;
+
+    for (SERVER* t : container)
+    {
+        int status = t->status();
+        int rank = -1;
+
+        for (int i = 0; i < (int)bit_array.size(); i++)
+        {
+            if (status & bit_array[i])
+            {
+                rank = i;
+            }
+        }
+
+        if (rank > best)
+        {
+            rval = t;
+            best = rank;
+        }
+    }
+
+    return rval;
+}
 }
 
 bool is_all_iface(const std::string& iface)
@@ -273,13 +306,11 @@ ListenerData::ListenerData(SSLContext ssl, mxs::Parser::SqlMode default_sql_mode
                            const std::string& listener_name,
                            std::vector<SAuthenticator>&& authenticators,
                            ListenerData::ConnectionInitSql&& init_sql, SMappingInfo mapping,
-                           mxb::proxy_protocol::SubnetArray&& proxy_networks,
-                           std::map<std::string, std::string>&& connection_metadata)
+                           mxb::proxy_protocol::SubnetArray&& proxy_networks)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_proto_module(move(protocol_module))
     , m_listener_name(listener_name)
-    , m_connection_metadata(std::move(connection_metadata))
     , m_authenticators(move(authenticators))
     , m_conn_init_sql(std::move(init_sql))
     , m_mapping_info(move(mapping))
@@ -305,6 +336,7 @@ public:
     void                   stop_all();
     bool                   reload_tls();
     std::vector<SListener> get_started_listeners();
+    void                   server_variables_changed(SERVER* server);
 
 private:
     std::list<SListener> m_listeners;
@@ -423,6 +455,22 @@ vector<SListener> Listener::Manager::get_started_listeners()
     }
 
     return started_listeners;
+}
+
+void Listener::Manager::server_variables_changed(SERVER* server)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    for (const auto& a : m_listeners)
+    {
+        auto servers = a->service()->reachable_servers();
+
+        if (std::find(servers.begin(), servers.end(), server) != servers.end())
+        {
+            auto listener_data = a->m_shared_data->listener_data;
+            a->m_shared_data.assign(SharedData {std::move(listener_data), a->create_connection_metadata()});
+        }
+    }
 }
 
 SListener Listener::Manager::find(const std::string& name)
@@ -680,6 +728,14 @@ void Listener::mark_auth_as_failed(const std::string& remote)
     }
 }
 
+// static
+void Listener::server_variables_changed(SERVER* server)
+{
+    mxs::MainWorker::get()->execute([server](){
+        s_manager.server_variables_changed(server);
+    }, mxb::Worker::EXECUTE_AUTO);
+}
+
 // Helper function that executes a function on all workers and checks the result
 static bool execute_and_check(const std::function<bool ()>& func)
 {
@@ -778,14 +834,14 @@ std::vector<SListener> Listener::find_by_service(const SERVICE* service)
 std::ostream& Listener::persist(std::ostream& os) const
 {
     m_config.persist(os, {s_type.name()});
-    m_shared_data->m_proto_module->getConfiguration().persist_append(os);
+    m_shared_data->listener_data->m_proto_module->getConfiguration().persist_append(os);
     return os;
 }
 
 json_t* Listener::json_parameters() const
 {
     json_t* params = m_config.to_json();
-    json_t* tmp = m_shared_data->m_proto_module->getConfiguration().to_json();
+    json_t* tmp = m_shared_data->listener_data->m_proto_module->getConfiguration().to_json();
     json_object_update(params, tmp);
     json_decref(tmp);
 
@@ -800,7 +856,7 @@ json_t* Listener::to_json(const char* host) const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(name()));
 
-    auto& protocol_module = m_shared_data->m_proto_module;
+    auto& protocol_module = m_shared_data->listener_data->m_proto_module;
 
     json_object_set_new(attr, CN_PARAMETERS, json_parameters());
 
@@ -1030,9 +1086,11 @@ static ClientConn accept_one_connection(int fd)
 }
 }
 
-ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
+ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host,
+                                    const SharedData& shared_data)
 {
-    auto* session = new(std::nothrow) Session(m_shared_data.get_ref(), m_config.service, host);
+    const auto& sdata = shared_data.listener_data;
+    auto* session = new(std::nothrow) Session(sdata, shared_data.metadata, m_config.service, host);
     if (!session)
     {
         MXB_OOM();
@@ -1040,7 +1098,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return NULL;
     }
 
-    auto client_protocol = m_shared_data->m_proto_module->create_client_protocol(session, session);
+    auto client_protocol = sdata->m_proto_module->create_client_protocol(session, session);
     if (!client_protocol)
     {
         delete session;
@@ -1313,7 +1371,9 @@ void Listener::reject_connection(int fd, const char* host)
     std::string message = mxb::cat("Host '", host, "' is temporarily blocked due ",
                                    "to too many authentication failures.");
     int errnum = 1129;      // This is ER_HOST_IS_BLOCKED
-    if (GWBUF buf = m_shared_data->m_proto_module->make_error(errnum, "HY000", message); !buf.empty())
+    const auto& sdata = m_shared_data->listener_data;
+
+    if (GWBUF buf = sdata->m_proto_module->make_error(errnum, "HY000", message); !buf.empty())
     {
         write(fd, buf.data(), buf.length());
     }
@@ -1324,6 +1384,7 @@ void Listener::reject_connection(int fd, const char* host)
 void Listener::accept_connections()
 {
     mxb::LogScope scope(name());
+    const auto& shared_data = *m_shared_data;
 
     for (ClientConn conn = accept_one_connection(fd()); conn.fd != -1; conn = accept_one_connection(fd()))
     {
@@ -1333,7 +1394,7 @@ void Listener::accept_connections()
         }
         else if (type() == Type::UNIQUE_TCP)
         {
-            if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
+            if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host, shared_data))
             {
                 if (!dcb->protocol()->init_connection())
                 {
@@ -1345,7 +1406,7 @@ void Listener::accept_connections()
         {
             auto worker = mxs::RoutingWorker::pick_worker();
             worker->execute([this, conn]() {
-                if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
+                if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host, *m_shared_data))
                 {
                     if (!dcb->protocol()->init_connection())
                     {
@@ -1396,20 +1457,10 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
 
             if (auth_modules_ok)
             {
-                MXB_DEBUG("Metadata set to: %s", mxb::join(m_config.connection_metadata).c_str());
-                std::map<std::string, std::string> connection_metadata;
-
-                for (const auto& val : m_config.connection_metadata)
-                {
-                    const auto& [key, value] = mxb::split(val, "=");
-                    mxb_assert(!key.empty() && !value.empty());
-                    connection_metadata.emplace(key, value);
-                }
-
                 rval = std::make_shared<const mxs::ListenerData>(
                     move(ssl), m_config.sql_mode, move(protocol_module),
                     m_name, move(authenticators), move(init_sql), move(mapping_info),
-                    std::move(proxy_networks), std::move(connection_metadata));
+                    std::move(proxy_networks));
             }
         }
     }
@@ -1420,6 +1471,37 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
     }
 
     return rval;
+}
+
+Listener::SMetadata Listener::create_connection_metadata()
+{
+    std::map<std::string, std::string> metadata;
+    SERVER* srv = best_server<SERVER_RUNNING, SERVER_SLAVE, SERVER_MASTER>(
+        m_config.service->reachable_servers());
+
+    for (const auto& val : m_config.connection_metadata)
+    {
+        if (auto [key, value] = mxb::split(val, "="); value == "auto")
+        {
+            if (srv)
+            {
+                if (std::string var = srv->get_variable_value(key); !var.empty())
+                {
+                    metadata.emplace(key, var);
+                }
+            }
+        }
+        else
+        {
+            metadata.emplace(key, value);
+        }
+    }
+
+    MXB_DEBUG("Metadata set to: %s", mxb::transform_join(metadata, [](const auto& kv){
+        return mxb::cat(kv.first, "=", kv.second);
+    }).c_str());
+
+    return std::make_shared<MXS_SESSION::ConnectionMetadata>(std::move(metadata));
 }
 
 mxb::SSLConfig Listener::create_ssl_config() const
@@ -1444,6 +1526,23 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
 {
     bool rval = false;
 
+    auto servers = m_config.service->reachable_servers();
+
+    for (const auto& val : m_config.connection_metadata)
+    {
+        // Track all variables that have the value set to "auto", this way they'll get updated automatically
+        // whenever they're changed on the source server.
+        if (auto [key, value] = mxb::split(val, "="); value == "auto")
+        {
+            for (auto srv : servers)
+            {
+                // TODO: Currently the set of variables is append-only. The superset of trackable variables
+                // should be recalculated after every reconfiguration.
+                srv->track_variable(key);
+            }
+        }
+    }
+
     if (auto data = create_shared_data(protocol_params))
     {
         bool uam_ok = true;
@@ -1466,7 +1565,7 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
                 stop();
             }
 
-            m_shared_data.assign(std::move(data));
+            m_shared_data.assign(SharedData {std::move(data), create_connection_metadata()});
             rval = true;
 
             if (start_state == STARTED)

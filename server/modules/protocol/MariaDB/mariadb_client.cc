@@ -2860,12 +2860,7 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
 
 std::map<std::string, std::string> MariaDBClientConnection::get_sysvar_values()
 {
-    std::map<std::string, std::string> rval;
-
-    for (const auto& [key, value] : m_session->listener_data()->m_connection_metadata)
-    {
-        rval.emplace(key, value);
-    }
+    std::map<std::string, std::string> rval = m_session->connection_metadata();
 
     rval.emplace("threads_connected", std::to_string(m_session->service->stats().n_client_conns()));
 
