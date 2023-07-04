@@ -20,13 +20,11 @@
 namespace maxbase
 {
 
-static inline void default_stacktrace_handler(const char* symbol, const char* command)
+static inline void default_stacktrace_handler(const char* line)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
-    write(STDOUT_FILENO, symbol, strlen(symbol));
-    write(STDOUT_FILENO, ": ", 2);
-    write(STDOUT_FILENO, command, strlen(command));
+    write(STDOUT_FILENO, line, strlen(line));
     write(STDOUT_FILENO, "\n", 1);
 #pragma GCC diagnostic pop
 }
@@ -52,7 +50,7 @@ void emergency_stacktrace();
  * @param handler A handler that is called once per stack frame with the function name and auxiliary
  *                information (file and line). By default the stacktrace is dumped to stdout.
  */
-void dump_stacktrace(void (* handler)(const char* symbol, const char* command) = default_stacktrace_handler);
+void dump_stacktrace(void (* handler)(const char* output) = default_stacktrace_handler);
 
 /**
  * Dump a better stacktrace using GDB

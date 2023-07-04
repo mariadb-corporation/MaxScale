@@ -58,8 +58,8 @@ static void sigfatal_handler(int i)
 {
     set_signal(i, SIG_DFL);
     mxb::dump_stacktrace(
-        [](const char* symbol, const char* cmd) {
-            MXB_ALERT("  %s: %s", symbol, cmd);
+        [](const char* cmd) {
+            MXB_ALERT("  %s", cmd);
         });
     raise(i);
 }

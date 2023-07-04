@@ -527,19 +527,19 @@ static void sigfatal_handler(int i)
     {
         mxb::dump_gdb_stacktrace(
             [](const char* line) {
-                msg += line;
-            });
+            msg += line;
+        });
     }
     else
     {
         MXB_NOTICE("For a more detailed stacktrace, install GDB and "
                    "add 'debug=gdb-stacktrace' under the [maxscale] section.");
 
-        auto cb = [](const char* symbol, const char* cmd) {
-                char buf[512];
-                snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
-                msg += buf;
-            };
+        auto cb = [](const char* cmd) {
+            char buf[512];
+            snprintf(buf, sizeof(buf), "  %s\n", cmd);
+            msg += buf;
+        };
 
         mxb::dump_stacktrace(cb);
     }

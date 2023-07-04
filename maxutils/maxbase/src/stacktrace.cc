@@ -29,6 +29,8 @@
 namespace
 {
 
+static char cmd[PATH_MAX + 1024] = "";
+
 static void get_command_output(char* output, size_t size, const char* format, ...)
 {
     va_list valist;
@@ -182,7 +184,7 @@ namespace maxbase
 {
 
 #ifdef HAVE_GLIBC
-void dump_stacktrace(std::function<void(const char*, const char*)> handler)
+void dump_stacktrace(std::function<void(const char*)> handler)
 {
     void* addrs[128];
     int count = backtrace(addrs, 128);
@@ -196,14 +198,20 @@ void dump_stacktrace(std::function<void(const char*, const char*)> handler)
         // Skip first five frames, they are inside the stacktrace printing function and signal handlers
         for (int n = 4; n < count; n++)
         {
-            char cmd[PATH_MAX + 1024] = "<binutils not installed>";
+            strcpy(cmd, symbols[n]);
+            strcat(cmd, ": ");
 
             if (do_extract)
             {
-                extract_file_and_line(symbols[n], cmd, sizeof(cmd));
+                int len = strlen(cmd);
+                extract_file_and_line(symbols[n], cmd + len, sizeof(cmd) - len);
+            }
+            else
+            {
+                strcat(cmd, "<binutils not installed>");
             }
 
-            handler(symbols[n], cmd);
+            handler(cmd);
         }
         free(symbols);
     }
@@ -216,21 +224,21 @@ void emergency_stacktrace()
     backtrace_symbols_fd(addrs, count, STDOUT_FILENO);
 }
 
-void dump_stacktrace(void (* handler)(const char* symbol, const char* command))
+void dump_stacktrace(void (* handler)(const char* line))
 {
-    dump_stacktrace([&](const char* symbol, const char* command) {
-                        handler(symbol, command);
-                    });
+    dump_stacktrace([&](const char* line) {
+        handler(line);
+    });
 }
 
 #else
 
-void dump_stacktrace(void (* handler)(const char*, const char*))
+void dump_stacktrace(void (* handler)(const char*))
 {
     // We can't dump stacktraces on non-GLIBC systems
 }
 
-void emergency_stacktrace(void (* handler)(const char*, const char*))
+void emergency_stacktrace(void (* handler)(const char*))
 {
     // We can't dump stacktraces on non-GLIBC systems
 }
