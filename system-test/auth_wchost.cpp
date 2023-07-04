@@ -136,6 +136,7 @@ int main(int argc, char* argv[])
             test.tprintf("Testing host pattern with netmask by logging in to user account %s.", userhost2);
             test.add_result(execute_query(admin_conn, "CREATE USER %s identified by '%s';", userhost2, pw),
                             "Failed to create user");
+            test.check_maxctrl("reload service RW-Split-Router");
             auto conn = mxs->try_open_rwsplit_connection("netmask", pw, "");
             test.expect(conn->is_open(), "Connection failed: %s", conn->error());
             test.add_result(execute_query(admin_conn, "DROP USER %s;", userhost2), "Failed to delete user");
