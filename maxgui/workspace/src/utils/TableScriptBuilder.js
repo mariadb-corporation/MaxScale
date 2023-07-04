@@ -194,12 +194,12 @@ export default class TableScriptBuilder {
      * @returns {String} - returns UNIQUE KEY SQL
      */
     buildUqSQL({ col, isUpdated }) {
-        const { NAME, UQ } = COL_ATTRS
+        const { ID, NAME, UQ } = COL_ATTRS
         let colObj = col,
-            oldColName
+            colId
         if (isUpdated) {
             colObj = typy(col, 'newObj').safeObjectOrEmpty
-            oldColName = typy(col, `oriObj[${NAME}]`).safeString
+            colId = typy(col, `oriObj[${ID}]`).safeString
         }
 
         const { [NAME]: newColName, [UQ]: newUqValue } = colObj
@@ -213,11 +213,11 @@ export default class TableScriptBuilder {
             if (this.isCreateTable) return keyDef
             return `${tokens.add} ${keyDef}`
         }
-        if (oldColName) {
-            const { name: uqName } = queryHelper.getKeyObjByColNames({
+        if (colId) {
+            const { name: uqName } = queryHelper.getKeyObjByColIds({
                 keys: this.initialKeysData,
                 keyType: tokens.uniqueKey,
-                colNames: [oldColName],
+                colIds: [colId],
             })
             return `${tokens.drop} ${tokens.key} ${quoting(uqName)}`
         }

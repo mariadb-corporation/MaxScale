@@ -51,19 +51,19 @@ export default class EntityLinkShape {
      * Return the y position of a node based on its dynamic height and
      * the provided attribute name
      * @param {Object} param.node - The node to reposition.
-     * @param {String} param.attr - The name of the relational attribute
+     * @param {String} param.attrId - The id of the relational column attribute
      * @param {Number} param.nodeHeight - Height of the node
      * @returns {Object} An object containing the y positions (top, center, bottom) of the node at
      * the provided relational attribute
      */
-    getColYPos({ node, attr, nodeHeight }) {
+    getColYPos({ node, attrId, nodeHeight }) {
         const {
             entitySizeConfig: { rowHeight, rowOffset, headerHeight },
         } = this.config
         const { isAttrToAttr } = this.linkConfig
 
         const colIdx = node.data.definitions.cols.findIndex(
-            c => c[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]] === attr
+            c => c[COL_ATTR_IDX_MAP[COL_ATTRS.ID]] === attrId
         )
         const center = isAttrToAttr
             ? node.y +
@@ -89,17 +89,17 @@ export default class EntityLinkShape {
      * @returns {Object} An object containing the new y positions of the source and target nodes.
      */
     getYPositions() {
-        const { source_attr, target_attr } = this.relationshipData
+        const { src_attr_id, target_attr_id } = this.relationshipData
         const { srcHeight, targetHeight } = this
         return {
             srcYPos: this.getColYPos({
                 node: this.source,
-                attr: source_attr,
+                attrId: src_attr_id,
                 nodeHeight: srcHeight,
             }),
             targetYPos: this.getColYPos({
                 node: this.target,
-                attr: target_attr,
+                attrId: target_attr_id,
                 nodeHeight: targetHeight,
             }),
         }

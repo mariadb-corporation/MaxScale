@@ -39,7 +39,7 @@ export const getLinkConfig = () => ({
          * false: Link drawn from source node center to target node center.
          * true: Link drawn from source node attribute to target node attribute. Each
          * link must contain relationshipData.
-         * e.g.  relationshipData: { source_attr: 'id', target_attr: 'id' }
+         * e.g.  relationshipData: { src_attr_id: uid, target_attr_id: uid }
          */
         isAttrToAttr: false,
     },

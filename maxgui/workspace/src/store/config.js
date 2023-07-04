@@ -201,6 +201,9 @@ export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
     {}
 )
 
+const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKENS
+export const ALL_TABLE_KEY_TYPES = [primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey]
+
 // Entity node option types
 export const ENTITY_OPT_TYPES = Object.freeze({
     DELETE: 'Delete', // delete node and its links from staging data

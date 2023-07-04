@@ -61,22 +61,24 @@
                             <tbody>
                                 <tr
                                     v-for="col in node.data.definitions.cols"
-                                    :key="col[COL_ATTR_IDX_MAP[COL_ATTRS.ID]]"
+                                    :key="getColId(col)"
                                     :style="{
                                         height: `${entitySizeConfig.rowHeight}px`,
-                                        ...getHighlightColStyle({ node, colName: getColName(col) }),
+                                        ...getHighlightColStyle({ node, colId: getColId(col) }),
                                     }"
                                 >
                                     <td>
                                         <erd-key-icon
                                             class="fill-height d-flex align-center"
-                                            :data="getKeyIcon({ node, colName: getColName(col) })"
+                                            :data="getKeyIcon({ node, colId: getColId(col) })"
                                         />
                                     </td>
                                     <td>
                                         <div class="fill-height d-flex align-center">
                                             <mxs-truncate-str
-                                                :tooltipItem="{ txt: getColName(col) }"
+                                                :tooltipItem="{
+                                                    txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]],
+                                                }"
                                                 :maxWidth="tdMaxWidth"
                                             />
                                         </div>
@@ -88,7 +90,7 @@
                                                 $typy(
                                                     getHighlightColStyle({
                                                         node,
-                                                        colName: getColName(col),
+                                                        colId: getColId(col),
                                                     }),
                                                     'color'
                                                 ).safeString || '#6c7c7b',
@@ -211,7 +213,7 @@ export default {
                 const {
                     source,
                     target,
-                    relationshipData: { source_attr, target_attr },
+                    relationshipData: { src_attr_id, target_attr_id },
                     styles: { invisibleHighlightColor },
                 } = link
 
@@ -221,8 +223,8 @@ export default {
                     backgroundColor: invisibleHighlightColor,
                     color: 'white',
                 }
-                map[source.id].push({ col: source_attr, ...style })
-                map[target.id].push({ col: target_attr, ...style })
+                map[source.id].push({ col: src_attr_id, ...style })
+                map[target.id].push({ col: target_attr_id, ...style })
                 return map
             }, {})
         },
@@ -275,11 +277,7 @@ export default {
                         ...links,
                         ...queryHelper.handleGenErdLink({
                             srcNode: node,
-                            fk: {
-                                ...fk,
-                                referenced_schema_name:
-                                    fk.referenced_schema_name || node.data.options.schema,
-                            },
+                            fk,
                             nodes,
                             isAttrToAttr: this.isAttrToAttr,
                         }),
@@ -453,12 +451,12 @@ export default {
             this.setEventLinkStyles(EVENT_TYPES.NONE)
             this.chosenLinks = []
         },
-        getKeyIcon({ node, colName }) {
-            const keyTypes = queryHelper.findKeyTypesByColName({
+        getKeyIcon({ node, colId }) {
+            const keyTypes = queryHelper.findKeyTypesByColId({
                 keys: this.entityKeyMap[node.id],
-                colName,
+                colId,
             })
-            const { color } = this.getHighlightColStyle({ node, colName }) || {}
+            const { color } = this.getHighlightColStyle({ node, colId }) || {}
             const {
                 primaryKey,
                 uniqueKey,
@@ -490,12 +488,12 @@ export default {
                     size: 16,
                 }
         },
-        getColName(col) {
-            return col[this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]]
+        getColId(col) {
+            return col[this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]]
         },
-        getHighlightColStyle({ node, colName }) {
+        getHighlightColStyle({ node, colId }) {
             const cols = this.highlightColStyleMap[node.id] || []
-            return cols.find(item => item.col === colName)
+            return cols.find(item => item.col === colId)
         },
         watchConfig() {
             this.unwatch_graphConfigData = this.$watch(

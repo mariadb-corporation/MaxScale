@@ -239,6 +239,9 @@ export default {
             })
             return items
         },
+        idxOfColId() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
+        },
         idxOfColName() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]
         },
@@ -302,8 +305,15 @@ export default {
                     $set: xorWith(this.definitions.cols, selectedItems, isEqual),
                 },
             })
+            // All associated keys of the column also need to be removed
             selectedItems.forEach(col => {
-                definitions = this.handleKeysSideEffect({ definitions, col, mode: 'delete' })
+                const keyTypes = queryHelper.findKeyTypesByColId({
+                    keys: definitions.keys,
+                    colId: col[this.idxOfColId],
+                })
+                keyTypes.forEach(category => {
+                    definitions = this.keySideEffect({ definitions, category, col, mode: 'delete' })
+                })
             })
             this.definitions = definitions
         },
@@ -353,14 +363,11 @@ export default {
                     },
                 },
             })
-            const { NAME, TYPE, PK, NN, UQ, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
+            const { TYPE, PK, NN, UQ, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
 
             const col = Object.values(item.rowObj)
 
             switch (item.field) {
-                case NAME:
-                    definitions = this.handleKeysSideEffect({ definitions, col, mode: 'change' })
-                    break
                 case TYPE:
                     definitions = this.onChangeType({ definitions, item })
                     break
@@ -612,11 +619,10 @@ export default {
         },
         /**
          * @param {object} param.definitions - parsed definitions
-         * @param {string} param.targetColName - name of the changing column
-         * @param {string} param.newColName - new name of the changing column
+         * @param {string} param.colId - col id
          * @returns {object} new definitions object
          */
-        updatePk({ definitions, targetColName, newColName, mode }) {
+        updatePk({ definitions, colId, mode }) {
             const { primaryKey } = this.CREATE_TBL_TOKENS
             const {
                 immutableUpdate,
@@ -630,19 +636,17 @@ export default {
             } else pkObj = { category: primaryKey, index_cols: [] }
 
             switch (mode) {
-                case 'change':
                 case 'delete': {
-                    const targetIndex = pkObj.index_cols.findIndex(c => c.name === targetColName)
-                    if (mode === 'delete') pkObj.index_cols.splice(targetIndex, 1)
-                    else if (newColName) pkObj.index_cols[targetIndex] = { name: newColName }
+                    const targetIndex = pkObj.index_cols.findIndex(c => c.id === colId)
+                    if (targetIndex >= 0) pkObj.index_cols.splice(targetIndex, 1)
                     break
                 }
                 case 'add':
-                    if (newColName) pkObj.index_cols.push({ name: newColName })
+                    pkObj.index_cols.push({ id: colId })
                     break
             }
 
-            if (isEqual(sortBy(pkObj.index_cols, ['name']), sortBy(this.initialPkCols, ['name'])))
+            if (isEqual(sortBy(pkObj.index_cols, ['id']), sortBy(this.initialPkCols, ['id'])))
                 pkObj.index_cols = this.initialPkCols
 
             return immutableUpdate(definitions, {
@@ -651,64 +655,41 @@ export default {
                     : { $unset: [primaryKey] },
             })
         },
-        genKey({ category, newColName }) {
-            const existingKey = queryHelper.getKeyObjByColNames({
+        genKey({ definitions, category, colId }) {
+            const existingKey = queryHelper.getKeyObjByColIds({
                 keys: this.initialKeys,
                 keyType: category,
-                colNames: [newColName],
+                colIds: [colId],
             })
             if (existingKey) return existingKey
+            const col = definitions.cols.find(c => c[this.idxOfColId] === colId)
+            const colName = col[this.idxOfColName]
             return {
                 category,
-                index_cols: [{ name: newColName }],
-                name: queryHelper.genKeyName({ colName: newColName, category }),
+                index_cols: [{ id: colId }],
+                name: queryHelper.genKeyName({ colName, category }),
             }
         },
         /**
          * @param {object} param.definitions - parsed definitions
          * @param {string} param.category - uniqueKey, fullTextKey, spatialKey, key or foreignKey
-         * @param {string} param.targetColName - name of the changing column
-         * @param {string} param.newColName - new name of the changing column
+         * @param {string} param.colId - col id
          * @returns {object} new definitions object
          */
-        updateKey({ definitions, category, targetColName, newColName, mode }) {
+        updateKey({ definitions, category, colId, mode }) {
             const {
                 immutableUpdate,
                 lodash: { cloneDeep, sortBy, isEqual },
             } = this.$helpers
             let keys = cloneDeep(definitions.keys[category]) || []
             switch (mode) {
-                case 'change':
-                case 'delete': {
-                    keys = keys.reduce((res, keyObj) => {
-                        const targetIndex = keyObj.index_cols.findIndex(
-                            c => c.name === targetColName
-                        )
-                        if (targetIndex >= 0) {
-                            if (mode === 'delete') keyObj.index_cols.splice(targetIndex, 1)
-                            else if (newColName) {
-                                // set new column name
-                                keyObj = immutableUpdate(keyObj, {
-                                    index_cols: { [targetIndex]: { $merge: { name: newColName } } },
-                                    name: {
-                                        $set: queryHelper.genKeyName({
-                                            colName: newColName,
-                                            category,
-                                        }),
-                                    },
-                                })
-                            }
-                        }
-                        if (keyObj.index_cols.length) res.push(keyObj)
-                        return res
-                    }, [])
+                case 'delete':
+                    keys = keys.filter(keyObj => !keyObj.index_cols.every(c => c.id === colId))
                     break
-                }
                 case 'add':
-                    if (newColName) keys.push(this.genKey({ category, newColName }))
+                    keys.push(this.genKey({ definitions, category, colId }))
                     break
             }
-
             /**
              * Check the order of the keys, if it equals to initial keys, use that
              */
@@ -723,17 +704,10 @@ export default {
          * @param {object} param.definitions - column definitions
          * @param {string} param.category - key category
          * @param {array} param.col - column data before updating
-         * @param {string} param.mode - add|delete|change
+         * @param {string} param.mode - add|delete
          */
         keySideEffect({ definitions, category, col, mode }) {
-            const { ID } = this.COL_ATTRS
-            const colIdIndex = this.COL_ATTR_IDX_MAP[ID]
-            const colId = col[colIdIndex]
-            const currentCol = definitions.cols.find(c => c[colIdIndex] === colId) || {}
-            // current col name
-            const targetColName = col[this.idxOfColName]
-            // new column name
-            const newColName = currentCol[this.idxOfColName] || null
+            const colId = col[this.idxOfColId]
             const {
                 primaryKey,
                 uniqueKey,
@@ -743,45 +717,17 @@ export default {
                 foreignKey,
             } = this.CREATE_TBL_TOKENS
             switch (category) {
-                case primaryKey: {
-                    return this.updatePk({
-                        definitions,
-                        targetColName,
-                        newColName,
-                        mode,
-                    })
-                }
+                case primaryKey:
+                    return this.updatePk({ definitions, colId, mode })
                 case uniqueKey:
                 case fullTextKey:
                 case spatialKey:
                 case key:
-                case foreignKey: {
-                    return this.updateKey({
-                        definitions,
-                        category,
-                        targetColName,
-                        newColName,
-                        mode,
-                    })
-                }
+                case foreignKey:
+                    return this.updateKey({ definitions, category, colId, mode })
                 default:
                     return definitions
             }
-        },
-        /**
-         * When deleting a key column or changing its name. The keys object
-         * needs to be adjusted with new changes.
-         */
-        handleKeysSideEffect({ definitions, col, mode }) {
-            let defs = definitions
-            const keyTypes = queryHelper.findKeyTypesByColName({
-                keys: definitions.keys,
-                colName: col[this.idxOfColName],
-            })
-            keyTypes.forEach(category => {
-                defs = this.keySideEffect({ definitions: defs, category, col, mode })
-            })
-            return defs
         },
     },
 }

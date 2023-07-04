@@ -18,11 +18,12 @@ import {
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
     CREATE_TBL_TOKENS as tokens,
+    ALL_TABLE_KEY_TYPES,
     COL_ATTRS,
     COL_ATTR_IDX_MAP,
     GENERATED_TYPES,
 } from '@wsSrc/store/config'
-import { lodash, to, dynamicColors, uuidv1 } from '@share/utils/helpers'
+import { lodash, to, dynamicColors, uuidv1, immutableUpdate } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { map2dArr, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
@@ -392,6 +393,140 @@ function getDatabase(connection_string) {
 }
 
 /**
+ * @param {object} param
+ * @param {object} param.keys - parsed keys from DDL of a table
+ * @param {string} param.colName - column name to be looked up
+ * @returns {array} types of the key
+ */
+function findKeyTypesByColName({ keys, colName }) {
+    return ALL_TABLE_KEY_TYPES.filter(type =>
+        typy(keys, `[${type}]`).safeArray.some(key =>
+            key.index_cols.every(item => item.name === colName)
+        )
+    )
+}
+
+/**
+ * @param {object} param
+ * @param {object} param.keys - transformed keys
+ * @param {string} param.colId - column id to be looked up
+ * @returns {array} types of the key
+ */
+function findKeyTypesByColId({ keys, colId }) {
+    return ALL_TABLE_KEY_TYPES.filter(type =>
+        typy(keys, `[${type}]`).safeArray.some(key =>
+            key.index_cols.every(item => item.id === colId)
+        )
+    )
+}
+/**
+ * @param {Object} param
+ * @param {object} param.keys - parsed keys from DDL of a table
+ * @param {string} param.keyType - type of the key
+ * @param {array.<string>} param.colIds - column names to be looked up
+ * @returns {object} index object
+ */
+function getKeyObjByColIds({ keys, keyType, colIds }) {
+    for (const key of typy(keys, `[${keyType}]`).safeArray) {
+        if (
+            lodash.isEqual(
+                key.index_cols.map(col => col.id),
+                colIds
+            )
+        )
+            return key
+    }
+}
+
+/**
+ * Transform the parsed output of TableParser into a structure
+ * that is used by mxs-ddl-editor.
+ * FKs are not fully transformed as it requires parsed data of the referenced table. So
+ * referenced_index_cols, referenced_schema_name, referenced_table_name remain unchanged.
+ * @param {String} param.schema
+ * @param {Object} param.parsedTable - output of TableParser
+ * @param {Object} param.charsetCollationMap - collations mapped by charset
+ * @returns {Object}
+ */
+function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
+    const {
+        definitions: { cols, keys },
+    } = parsedTable
+    const charset = parsedTable.options.charset
+    const collation =
+        typy(parsedTable, 'options.collation').safeString ||
+        typy(charsetCollationMap, `[${charset}].defCollation`).safeString
+    const {
+        ID,
+        NAME,
+        TYPE,
+        PK,
+        NN,
+        UN,
+        UQ,
+        ZF,
+        AI,
+        GENERATED_TYPE,
+        DEF_EXP,
+        CHARSET,
+        COLLATE,
+        COMMENT,
+    } = COL_ATTRS
+
+    const transformedCols = cols.map(col => {
+        let type = col.data_type
+        if (col.data_type_size) type += `(${col.data_type_size})`
+        const keyTypes = findKeyTypesByColName({ keys, colName: col.name })
+        let uq = false
+        if (keyTypes.includes(tokens.uniqueKey)) {
+            uq = typy(keys, `[${tokens.uniqueKey}]`).safeArray.some(key =>
+                lodash.isEqual(
+                    key.index_cols.map(col => col.name),
+                    [col.name]
+                )
+            )
+        }
+
+        return {
+            [ID]: uuidv1(),
+            [NAME]: col.name,
+            [TYPE]: type.toUpperCase(),
+            [PK]: keyTypes.includes(tokens.primaryKey),
+            [NN]: col.is_nn,
+            [UN]: col.is_un,
+            [UQ]: uq,
+            [ZF]: col.is_zf,
+            [AI]: col.is_ai,
+            [GENERATED_TYPE]: col.generated_type ? col.generated_type : GENERATED_TYPES.NONE,
+            [DEF_EXP]: col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
+            [CHARSET]: check_charset_support(col.data_type) ? col.charset || charset : '',
+            [COLLATE]: check_charset_support(col.data_type) ? col.collate || collation : '',
+            [COMMENT]: typy(col.comment).safeString,
+        }
+    })
+    let nodeData = {
+        options: {
+            schema,
+            ...parsedTable.options,
+            charset,
+            collation,
+            name: parsedTable.name,
+        },
+        definitions: {
+            cols: transformedCols.map(col => [...Object.values(col)]),
+            keys,
+        },
+    }
+    nodeData.definitions.keys = immutableUpdate(nodeData.definitions.keys, {
+        $merge: transformKeys({
+            keyTypes: ALL_TABLE_KEY_TYPES,
+            nodeData,
+        }),
+    })
+    return nodeData
+}
+
+/**
  * @param {object} param.nodeData - node data
  * @param {string} param.highlightColor - highlight color
  */
@@ -409,23 +544,23 @@ function genErdNode({ nodeData, highlightColor }) {
 
 const getNodeHighlightColor = node => typy(node, 'styles.highlightColor').safeString
 
-const getColDefData = ({ node, colName }) =>
-    node.data.definitions.cols.find(col => col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]] === colName)
+const getColDefData = ({ node, colId }) =>
+    node.data.definitions.cols.find(col => col[COL_ATTR_IDX_MAP[COL_ATTRS.ID]] === colId)
 
 const getOptionality = colData =>
     colData[COL_ATTR_IDX_MAP[COL_ATTRS.NN]]
         ? RELATIONSHIP_OPTIONALITY.MANDATORY
         : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
-const isIndex = ({ indexDefs, indexCols }) =>
-    indexDefs.some(def => lodash.isEqual(def.index_cols, indexCols))
+const isIndex = ({ indexDefs, index_cols }) =>
+    indexDefs.some(def => lodash.isEqual(def.index_cols, index_cols))
 
-function isUniqueCol({ node, indexCols }) {
+function isUniqueCol({ node, index_cols }) {
     const keys = node.data.definitions.keys
     const pks = keys[tokens.primaryKey] || []
     const uniqueKeys = keys[tokens.uniqueKey] || []
     if (!pks.length && !uniqueKeys.length) return false
-    return isIndex({ indexDefs: pks, indexCols }) || isIndex({ indexDefs: uniqueKeys, indexCols })
+    return isIndex({ indexDefs: pks, index_cols }) || isIndex({ indexDefs: uniqueKeys, index_cols })
 }
 function getCardinality(params) {
     return isUniqueCol(params) ? '1' : 'N'
@@ -445,16 +580,17 @@ function genErdLink({
     srcNode,
     targetNode,
     fk,
-    indexColName,
-    referencedIndexColName,
+    indexColId,
+    referencedIndexColId,
     isPartOfCompositeKey,
     srcCardinality,
     targetCardinality,
 }) {
     const { name, on_delete, on_update } = fk
 
-    const colData = getColDefData({ node: srcNode, colName: indexColName })
-    const referencedColData = getColDefData({ node: targetNode, colName: referencedIndexColName })
+    const colData = getColDefData({ node: srcNode, colId: indexColId })
+    const referencedColData = getColDefData({ node: targetNode, colId: referencedIndexColId })
+    if (!colData || !referencedColData) return null
 
     const srcOptionality = getOptionality(colData)
     const targetOptionality = getOptionality(referencedColData)
@@ -469,8 +605,8 @@ function genErdLink({
             name,
             on_delete,
             on_update,
-            source_attr: indexColName,
-            target_attr: referencedIndexColName,
+            src_attr_id: indexColId,
+            target_attr_id: referencedIndexColId,
         },
     }
     if (isPartOfCompositeKey) link.isPartOfCompositeKey = isPartOfCompositeKey
@@ -485,34 +621,37 @@ function genErdLink({
  * @returns
  */
 function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
-    const { index_cols, referenced_schema_name, referenced_table_name, referenced_index_cols } = fk
+    const { index_cols, referenced_node_id, referenced_index_cols } = fk
     let links = []
 
-    const target = `${referenced_schema_name}.${referenced_table_name}`
-    const targetNode = nodes.find(n => `${n.data.options.schema}.${n.data.options.name}` === target)
+    const target = referenced_node_id
+    const targetNode = nodes.find(n => n.id === target)
     const invisibleHighlightColor = getNodeHighlightColor(targetNode)
+
     if (targetNode) {
-        const srcCardinality = getCardinality({ node: srcNode, indexCols: index_cols })
+        const srcCardinality = getCardinality({ node: srcNode, index_cols })
         const targetCardinality = getCardinality({
             node: targetNode,
-            indexCols: referenced_index_cols,
+            index_cols: referenced_index_cols,
         })
         for (const [i, item] of index_cols.entries()) {
-            const indexColName = item.name
-            const referencedIndexColName = referenced_index_cols[i].name
+            const indexColId = item.id
+            const referencedIndexColId = referenced_index_cols[i].id
             let linkObj = genErdLink({
                 srcNode,
                 targetNode,
                 fk,
-                indexColName,
-                referencedIndexColName,
+                indexColId,
+                referencedIndexColId,
                 isPartOfCompositeKey: i >= 1,
                 srcCardinality,
                 targetCardinality,
             })
-            if (linkObj.isPartOfCompositeKey) linkObj.hidden = !isAttrToAttr
-            linkObj.styles = { invisibleHighlightColor }
-            links.push(linkObj)
+            if (linkObj) {
+                if (linkObj.isPartOfCompositeKey) linkObj.hidden = !isAttrToAttr
+                linkObj.styles = { invisibleHighlightColor }
+                links.push(linkObj)
+            }
         }
     }
     return links
@@ -539,8 +678,92 @@ function genErdNodes({ data, charsetCollationMap }) {
             ),
         ]
     })
+    // transform FKs
+    return nodes.map(node =>
+        immutableUpdate(node, {
+            data: {
+                definitions: {
+                    keys: {
+                        $merge: transformKeys({
+                            keyTypes: [tokens.foreignKey],
+                            nodeData: node.data,
+                            nodes,
+                        }),
+                    },
+                },
+            },
+        })
+    )
+}
+/**
+ * @param {object} param
+ * @param {Array.<object>} param.index_cols - parsed index columns to be transformed
+ * @param {Array.<Array>} param.cols - columns to be looked up
+ * @returns {Array.<object} transformed index_cols where the `name` property is replaced with `id`
+ */
+function transformIndexCols({ index_cols, cols }) {
+    const { ID, NAME } = COL_ATTRS
+    const idxOfColId = COL_ATTR_IDX_MAP[ID]
+    const idxOfColName = COL_ATTR_IDX_MAP[NAME]
 
-    return nodes
+    return index_cols.map(item => {
+        const { name, ...rest } = item
+        if (!name) return item
+        const col = cols.find(c => c[idxOfColName] === name)
+        return {
+            id: col[idxOfColId],
+            ...rest,
+        }
+    })
+}
+
+/**
+ * Transform parsed keys of the provided node into a structure using
+ * by the DDL editor.
+ * @param {object} param.keyTypes - types of key to be transformed
+ * @param {object} param.nodeData - the node to have its keys transformed
+ * @param {array} [param.nodes] - all nodes in the ERD. Required if keys to be transformed are FKs
+ * @returns {object} - transformed keys
+ */
+function transformKeys({ keyTypes, nodeData, nodes = [] }) {
+    const { keys, cols } = nodeData.definitions
+    let transformedKeys = {}
+    keyTypes.forEach(type => {
+        if (keys[type]) {
+            transformedKeys[type] = keys[type].map(key => {
+                let transformedKey = {
+                    ...key,
+                    // transform referencing index_cols
+                    index_cols: transformIndexCols({ index_cols: key.index_cols, cols }),
+                }
+                if (key.referenced_table_name) {
+                    let referencedNode
+                    // Find referenced node
+                    nodes.forEach(n => {
+                        if (
+                            n.data.options.name === key.referenced_table_name &&
+                            (n.data.options.schema === key.referenced_schema_name ||
+                                n.data.options.schema === nodeData.options.schema)
+                        )
+                            referencedNode = n
+                    })
+                    if (referencedNode) {
+                        transformedKey.referenced_node_id = referencedNode.id
+                        // Remove properties that are no longer needed.
+                        delete transformedKey.referenced_table_name
+                        delete transformedKey.referenced_schema_name
+                        // transform referenced_index_cols
+                        transformedKey.referenced_index_cols = transformIndexCols({
+                            index_cols: key.referenced_index_cols,
+                            cols: referencedNode.data.definitions.cols,
+                        })
+                    }
+                }
+                return transformedKey
+            })
+        }
+    })
+    return transformedKeys
 }
 
 const tableParser = new TableParser()
@@ -575,116 +798,6 @@ async function queryAndParseDDL({ connId, tableNodes, config }) {
         return acc
     }, {})
     return [errors, parsedDdl]
-}
-
-/**
- * @param {array} keys - parsed keys from DDL of a table
- * @param {string} colName - column name to be looked up
- * @returns {string} type of the key
- */
-function findKeyTypesByColName({ keys, colName }) {
-    const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = tokens
-    const keyTypes = [primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey]
-    return keyTypes.filter(type =>
-        typy(keys, `[${type}]`).safeArray.some(key =>
-            key.index_cols.some(item => item.name === colName)
-        )
-    )
-}
-
-/**
- * @param {array} keys - parsed keys from DDL of a table
- * @param {string} keyType - type of the key
- * @param {array} colNames - column names to be looked up
- * @returns {object} index object
- */
-function getKeyObjByColNames({ keys, keyType, colNames }) {
-    for (const key of typy(keys, `[${keyType}]`).safeArray) {
-        if (
-            lodash.isEqual(
-                key.index_cols.map(col => col.name),
-                colNames
-            )
-        )
-            return key
-    }
-}
-
-/**
- * Transform the parsed output of TableParser into a structure
- * that is used by mxs-ddl-editor
- * @param {String} param.schema
- * @param {Object} param.parsedTable - output of TableParser
- * @param {Object} param.charsetCollationMap - collations mapped by charset
- * @returns {Object}
- */
-function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
-    const {
-        definitions: { cols, keys },
-    } = parsedTable
-    const charset = parsedTable.options.charset
-    const collation =
-        typy(parsedTable, 'options.collation').safeString ||
-        typy(charsetCollationMap, `[${charset}].defCollation`).safeString
-
-    const colsTransformed = cols.map(col => {
-        let type = col.data_type
-        if (col.data_type_size) type += `(${col.data_type_size})`
-        const keyTypes = findKeyTypesByColName({ keys, colName: col.name })
-        let uq = false
-        if (keyTypes.includes(tokens.uniqueKey)) {
-            uq = Boolean(
-                getKeyObjByColNames({ keys, keyType: tokens.uniqueKey, colNames: [col.name] })
-            )
-        }
-        const {
-            ID,
-            NAME,
-            TYPE,
-            PK,
-            NN,
-            UN,
-            UQ,
-            ZF,
-            AI,
-            GENERATED_TYPE,
-            DEF_EXP,
-            CHARSET,
-            COLLATE,
-            COMMENT,
-        } = COL_ATTRS
-
-        return {
-            [ID]: uuidv1(),
-            [NAME]: col.name,
-            [TYPE]: type.toUpperCase(),
-            [PK]: keyTypes.includes(tokens.primaryKey),
-            [NN]: col.is_nn,
-            [UN]: col.is_un,
-            [UQ]: uq,
-            [ZF]: col.is_zf,
-            [AI]: col.is_ai,
-            [GENERATED_TYPE]: col.generated_type ? col.generated_type : GENERATED_TYPES.NONE,
-            [DEF_EXP]: col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
-            [CHARSET]: check_charset_support(col.data_type) ? col.charset || charset : '',
-            [COLLATE]: check_charset_support(col.data_type) ? col.collate || collation : '',
-            [COMMENT]: typy(col.comment).safeString,
-        }
-    })
-
-    return {
-        options: {
-            schema,
-            ...parsedTable.options,
-            charset,
-            collation,
-            name: parsedTable.name,
-        },
-        definitions: {
-            cols: colsTransformed.map(col => [...Object.values(col)]),
-            keys,
-        },
-    }
 }
 
 /**
@@ -750,8 +863,8 @@ export default {
     genErdNodes,
     handleGenErdLink,
     queryAndParseDDL,
-    findKeyTypesByColName,
-    getKeyObjByColNames,
+    findKeyTypesByColId,
+    getKeyObjByColIds,
     tableParserTransformer,
     getColNamesByAttr,
     genKeyName,
