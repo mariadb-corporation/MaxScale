@@ -198,16 +198,16 @@ priority=2
 type=server
 address=192.168.122.104
 port=3306
-priority=0
+priority=-1
 ```
 
 In this example `node-1` is always used as the master if available. If `node-1`
 is not available, then the next node with the highest priority rank is used. In
 this case it would be `node-3`. If both `node-1` and `node-3` were down, then
-`node-2` would be used. Because `node-4` has a value of 0 in _priority_, it will
-never be the master. Nodes without _priority_ parameter are considered as
-having the lowest priority rank and will be used only if all nodes
-with _priority_ parameter are not available.
+`node-2` would be used. Because `node-4` has a value of -1 in _priority_, it
+will never be the master. Nodes without _priority_ parameter are considered as
+having a priority of 0 and will be used only if all nodes with a positive
+_priority_ value are not available.
 
 With priority ranks you can control the order in which MaxScale chooses the
 master node. This will allow for a controlled failure and replacement of nodes.
