@@ -33,6 +33,21 @@ namespace
 static char cmd[PATH_MAX + 1024];
 static char tmp[PATH_MAX + 1024];
 
+using Rename = std::tuple<const char*, const char*>;
+
+// Some name replacements for common templated types. This makes the stacktraces easier to read as they'll
+// correspond with what's actually used in the code.
+static std::array simplify_names = {
+    Rename{
+        "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >",
+        "std::string"
+    },
+    Rename{
+        "std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >",
+        "std::chrono::steady_clock::time_point"
+    },
+};
+
 static void get_command_output(char* output, size_t size, const char* format, ...)
 {
     va_list valist;
@@ -110,11 +125,24 @@ static void extract_file_and_line(void* symbol, char* cmd, size_t size)
         }
 
         // addr2line outputs the function name and the file and line information on separate lines
-        get_command_output(tmp, sizeof(tmp), "addr2line -f -e %s 0x%x", info.dli_fname, offset);
+        get_command_output(tmp, sizeof(tmp), "addr2line -C -f -e %s 0x%x", info.dli_fname, offset);
         char* func_start = tmp;
         char* func_end = strchr(func_start, '\n');
         *func_end = '\0';
         char* file_start = func_end + 1;
+
+        // Simplify some names
+        for (auto [name, replace] : simplify_names)
+        {
+            int namelen = strlen(name);
+            int replacelen = strlen(replace);
+
+            while (char* ptr = strstr(func_start, name))
+            {
+                memcpy(ptr, replace, replacelen);
+                memmove(ptr + replacelen, ptr + namelen, (func_end + 1) - (ptr + namelen));
+            }
+        }
 
         const char prefix[] = "MaxScale/";
 
