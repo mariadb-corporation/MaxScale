@@ -350,6 +350,21 @@ public:
         return static_size() + varying_size();
     }
 
+    /**
+     * Minimize the object memory footprint
+     *
+     * This function should be called whenever the buffer is stored for a longer time. Only the raw data is
+     * stored and everything else that can be derived from it is freed. The ID, type and hints that aren't
+     * derived from it stay the same.
+     */
+    void minimize()
+    {
+        m_sql.clear();
+        m_canonical.clear();
+        GWBUF tmp = deep_clone();
+        std::swap(*this, tmp);
+    }
+
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
 

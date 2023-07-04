@@ -55,7 +55,7 @@ public:
         mxb_assert_message(buf, "Trx::add_stmt: Buffer must not be empty");
         mxb_assert(target);
 
-        m_size += gwbuf_length(buf);
+        m_size += buf->runtime_size();
         m_log.emplace_back(buf);
 
         mxb_assert_message(target == m_target, "Target should be '%s', not '%s'",

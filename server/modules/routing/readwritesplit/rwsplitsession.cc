@@ -350,7 +350,8 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
             && m_wait_gtid != READING_GTID
             && m_wait_gtid != GTID_READ_DONE)
         {
-            int64_t size = m_trx.size() + m_current_query.length();
+            m_current_query.get()->minimize();
+            int64_t size = m_trx.size() + m_current_query.runtime_size();
 
             // A transaction is open and it is eligible for replaying
             if (size < m_config.trx_max_size)
