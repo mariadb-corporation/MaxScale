@@ -21,6 +21,7 @@
 #include <climits>
 
 #include <sys/prctl.h>
+#include <sys/wait.h>
 #include <dlfcn.h>
 
 #ifdef HAVE_GLIBC
@@ -48,34 +49,55 @@ static std::array simplify_names = {
     },
 };
 
-static void get_command_output(char* output, size_t size, const char* format, ...)
+static void run_addr2line(char* output, size_t size, const char* filename, intptr_t offset)
 {
-    va_list valist;
-    va_start(valist, format);
-    int cmd_len = vsnprintf(NULL, 0, format, valist);
-    va_end(valist);
-
-    va_start(valist, format);
-    char cmd[cmd_len + 1];
-    vsnprintf(cmd, cmd_len + 1, format, valist);
-    va_end(valist);
-
     *output = '\0';
-    FILE* file = popen(cmd, "r");
+    int fd[2];
 
-    if (file)
+    if (pipe(fd) == -1)
     {
-        size_t nread = fread(output, 1, size, file);
-        nread = nread < size ? nread : size - 1;
-        output[nread--] = '\0';
+        return;
+    }
 
-        // Trim trailing newlines
-        while (output + nread > output && output[nread] == '\n')
+    pid_t pid = fork();
+
+    if (pid == 0)
+    {
+        close(fd[0]);
+        dup2(fd[1], STDOUT_FILENO);
+        close(STDERR_FILENO);
+
+        char hex_offset[20];
+        sprintf(hex_offset, "0x%lx", offset);
+        execlp("addr2line", "addr2line", "-C", "-f", "-e", filename, hex_offset, nullptr);
+        _exit(1);   // exec failed if we get here
+    }
+    else
+    {
+        close(fd[1]);
+
+        if (pid > 0)
         {
-            output[nread--] = '\0';
+            close(fd[1]);
+            ssize_t nread = read(fd[0], output, size);
+
+            if (nread > 0)
+            {
+                nread = nread < (ssize_t)size ? nread : size - 1;
+                output[nread--] = '\0';
+
+                // Trim trailing newlines
+                while (output + nread > output && output[nread] == '\n')
+                {
+                    output[nread--] = '\0';
+                }
+            }
+
+            int status;
+            waitpid(pid, &status, 0);
         }
 
-        pclose(file);
+        close(fd[0]);
     }
 }
 
@@ -125,9 +147,15 @@ static void extract_file_and_line(void* symbol, char* cmd, size_t size)
         }
 
         // addr2line outputs the function name and the file and line information on separate lines
-        get_command_output(tmp, sizeof(tmp), "addr2line -C -f -e %s 0x%x", info.dli_fname, offset);
+        run_addr2line(tmp, sizeof(tmp), info.dli_fname, offset);
         char* func_start = tmp;
         char* func_end = strchr(func_start, '\n');
+
+        if (!func_end)
+        {
+            return;
+        }
+
         *func_end = '\0';
         char* file_start = func_end + 1;
 
