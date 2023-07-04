@@ -21,6 +21,7 @@
 #include <climits>
 
 #include <sys/prctl.h>
+#include <dlfcn.h>
 
 #ifdef HAVE_GLIBC
 #include <execinfo.h>
@@ -29,7 +30,8 @@
 namespace
 {
 
-static char cmd[PATH_MAX + 1024] = "";
+static char cmd[PATH_MAX + 1024];
+static char tmp[PATH_MAX + 1024];
 
 static void get_command_output(char* output, size_t size, const char* format, ...)
 {
@@ -88,94 +90,45 @@ static void get_command_output_cb(void (* cb)(const char*), const char* format, 
     }
 }
 
-static void extract_file_and_line(char* symbols, char* cmd, size_t size)
+static void extract_file_and_line(void* symbol, char* cmd, size_t size)
 {
-    const char* filename_end = strchr(symbols, '(');
-    const char* symname_end = strchr(symbols, ')');
+    Dl_info info;
 
-    if (filename_end && symname_end)
+    if (dladdr(symbol, &info))
     {
-        // This appears to be a symbol in a library
-        char filename[PATH_MAX + 1];
-        char symname[512];
-        char offset[512];
-        snprintf(filename, sizeof(filename), "%.*s", (int)(filename_end - symbols), symbols);
+        intptr_t base = (intptr_t)info.dli_fbase;
+        intptr_t relocated = (intptr_t)symbol;
+        intptr_t offset = relocated;
 
-        const char* symname_start = filename_end + 1;
-
-        if (*symname_start != '+' && symname_start != symname_end)
+        if (base != 0x400000)
         {
-            // We have a string form symbol name and an offset, we need to
-            // extract the symbol address
-
-            const char* addr_offset = symname_start;
-
-            while (addr_offset < symname_end && *addr_offset != '+')
-            {
-                addr_offset++;
-            }
-
-            snprintf(symname, sizeof(symname), "%.*s", (int)(addr_offset - symname_start), symname_start);
-
-            if (addr_offset < symname_end && *addr_offset == '+')
-            {
-                addr_offset++;
-            }
-
-            snprintf(offset, sizeof(offset), "%.*s", (int)(symname_end - addr_offset), addr_offset);
-
-            // Get the hexadecimal address of the symbol
-            get_command_output(cmd,
-                               size,
-                               "nm %s |grep ' %s$'|sed -e 's/ .*//' -e 's/^/0x/'",
-                               filename,
-                               symname);
-            long long symaddr = strtoll(cmd, NULL, 16);
-            long long offsetaddr = strtoll(offset, NULL, 16);
-
-            // Calculate the file and line now that we have the raw offset into
-            // the library
-            get_command_output(cmd,
-                               size,
-                               "addr2line -e %s 0x%x",
-                               filename,
-                               symaddr + offsetaddr);
+            // Non-PIE executables load at the address 0x400000 on 64-bit systems. This means the symbol
+            // address can be used as-is since symbols in the files use absolute addresses. For relocatable
+            // code, we need to subtract the base address from the symbol value to get the offset into the ELF
+            // file.
+            offset -= base;
         }
-        else
-        {
-            if (symname_start == symname_end)
-            {
-                // Symbol is of the format `./executable [0xdeadbeef]`
-                if (!(symname_start = strchr(symname_start, '['))
-                    || !(symname_end = strchr(symname_start, ']')))
-                {
-                    snprintf(cmd, size, "Unexpected symbol format");
-                    return;
-                }
-            }
 
-            // Raw offset into library
-            symname_start++;
-            snprintf(symname, sizeof(symname), "%.*s", (int)(symname_end - symname_start), symname_start);
-            get_command_output(cmd, size, "addr2line -e %s %s", filename, symname);
-        }
+        // addr2line outputs the function name and the file and line information on separate lines
+        get_command_output(tmp, sizeof(tmp), "addr2line -f -e %s 0x%x", info.dli_fname, offset);
+        char* func_start = tmp;
+        char* func_end = strchr(func_start, '\n');
+        *func_end = '\0';
+        char* file_start = func_end + 1;
 
         const char prefix[] = "MaxScale/";
 
         // Remove common source prefix
-        if (char* str = strstr(cmd, prefix))
+        if (char* str = strstr(file_start, prefix))
         {
-            str += sizeof(prefix) - 1;
-            memmove(cmd, str, strlen(cmd) - (str - cmd) + 1);
+            file_start = str + sizeof(prefix) - 1;
         }
 
-        // Remove the address where the symbol is in memory (i.e. the [0xdeadbeef] that follows the
-        // (main+0xa1) part), we're only interested where it is in the library.
-        if (char* str = strchr(symbols, '['))
-        {
-            str--;
-            *str = '\0';
-        }
+        snprintf(cmd, size, "%s (%s): %s", info.dli_fname, tmp, file_start);
+    }
+    else
+    {
+        snprintf(cmd, size, "Unknown symbol: %p", symbol);
     }
 }
 }
@@ -188,31 +141,30 @@ void dump_stacktrace(std::function<void(const char*)> handler)
 {
     void* addrs[128];
     int count = backtrace(addrs, 128);
-    char** symbols = backtrace_symbols(addrs, count);
 
-    int rc = system("command -v nm > /dev/null && command -v addr2line > /dev/null");
+    int rc = system("command -v addr2line > /dev/null");
     bool do_extract = WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 
-    if (symbols)
+    // Skip first five frames, they are inside the stacktrace printing function and signal handlers
+    int n = 4;
+
+    if (do_extract)
     {
-        // Skip first five frames, they are inside the stacktrace printing function and signal handlers
-        for (int n = 4; n < count; n++)
+        for (; n < count; n++)
         {
-            strcpy(cmd, symbols[n]);
-            strcat(cmd, ": ");
-
-            if (do_extract)
-            {
-                int len = strlen(cmd);
-                extract_file_and_line(symbols[n], cmd + len, sizeof(cmd) - len);
-            }
-            else
-            {
-                strcat(cmd, "<binutils not installed>");
-            }
-
+            extract_file_and_line(addrs[n], cmd, sizeof(cmd));
             handler(cmd);
         }
+    }
+    else if (char** symbols = backtrace_symbols(addrs, count))
+    {
+        for (; n < count; n++)
+        {
+            strcpy(cmd, symbols[n]);
+            strcat(cmd, ": <binutils not installed>");
+            handler(cmd);
+        }
+
         free(symbols);
     }
 }
