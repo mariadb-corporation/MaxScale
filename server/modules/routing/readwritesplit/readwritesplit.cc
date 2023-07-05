@@ -38,6 +38,19 @@
 
 using namespace maxscale;
 
+namespace
+{
+void warn_and_disable(const std::string& name, bool& val)
+{
+    if (val)
+    {
+        MXB_WARNING("Disabling '%s' because it is incompatible with 'session_track_trx_state'.",
+                    name.c_str());
+        val = false;
+    }
+}
+}
+
 /**
  * The entry points for the read/write query splitting router module.
  *
@@ -330,6 +343,13 @@ std::pair<bool, RWSConfig> RWSConfig::create(const mxs::ConfigParameters& params
 RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
 {
     auto cnf = RWSConfig::create(*params);
+
+    if (service->config()->session_track_trx_state)
+    {
+        warn_and_disable(s_transaction_replay.name(), cnf.second.transaction_replay);
+        warn_and_disable(s_optimistic_trx.name(), cnf.second.optimistic_trx);
+    }
+
     return cnf.first ? new RWSplit(service, cnf.second) : nullptr;
 }
 
