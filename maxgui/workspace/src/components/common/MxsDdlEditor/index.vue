@@ -18,6 +18,8 @@
                 "
                 :isCreating="isCreating"
                 :schemas="schemas"
+                @after-expand="setHeaderHeight"
+                @after-collapse="setHeaderHeight"
             />
         </div>
         <v-tabs v-model="activeSpec" :height="24" class="v-tabs--mariadb">
