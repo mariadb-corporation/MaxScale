@@ -292,7 +292,7 @@ export default {
                     case ALTER:
                     case EDIT: {
                         let data = { active_entity_id: node.id }
-                        if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 50
+                        if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
                         ErdTaskTmp.update({ where: this.activeTaskId, data })
                         if (!skipZoom)
                             // call in the next tick to ensure diagramDim height is up to date

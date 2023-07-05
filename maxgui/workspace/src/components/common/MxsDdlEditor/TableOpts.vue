@@ -1,130 +1,148 @@
 <template>
-    <mxs-collapse
-        :toggleOnClick="() => (showInputs = !showInputs)"
-        :isContentVisible="showInputs"
-        wrapperClass="tbl-opts px-1 pt-2"
-        :title="title"
-    >
-        <template v-slot:arrow-toggle="{ toggleOnClick, isContentVisible }">
-            <v-btn icon small class="arrow-toggle" @click="toggleOnClick">
+    <div class="tbl-opts px-1 py-1">
+        <div class="d-flex flex-row align-end">
+            <v-container fluid class="pa-0">
+                <v-row class="ma-0">
+                    <v-col cols="6" class="py-0 px-1">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
+                            {{ title }}
+                        </label>
+                        <v-text-field
+                            id="table-name"
+                            v-model="tblOpts.name"
+                            :rules="requiredRule($mxs_t('name'))"
+                            required
+                            name="table-name"
+                            :height="28"
+                            class="vuetify-input--override error--text__bottom"
+                            hide-details="auto"
+                            dense
+                            outlined
+                        />
+                    </v-col>
+                    <v-col cols="6" class="py-0 px-1">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
+                            {{ $mxs_tc('schemas', 1) }}
+                        </label>
+                        <v-combobox
+                            v-model="tblOpts.schema"
+                            :items="schemas"
+                            outlined
+                            dense
+                            :height="28"
+                            class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
+                            :menu-props="{
+                                contentClass: 'v-select--menu-mariadb',
+                                bottom: true,
+                                offsetY: true,
+                            }"
+                            :disabled="!isCreating"
+                            hide-details="auto"
+                            :rules="requiredRule($mxs_tc('schemas', 1))"
+                        >
+                            <template v-slot:prepend-inner>
+                                <slot name="prepend-inner" />
+                            </template>
+                        </v-combobox>
+                    </v-col>
+                </v-row>
+            </v-container>
+            <v-btn icon small class="arrow-toggle" @click="isExtraInputShown = !isExtraInputShown">
                 <v-icon
-                    :class="[isContentVisible ? 'rotate-down' : 'rotate-right']"
+                    :class="[isExtraInputShown ? 'rotate-up' : 'rotate-down']"
                     size="28"
                     color="navigation"
                 >
                     mdi-chevron-down
                 </v-icon>
             </v-btn>
-        </template>
-        <v-container fluid class="py-0 px-1 pb-3">
-            <v-row class="ma-0">
-                <v-col cols="12" :md="isCreating ? 4 : 6" class="py-0 px-1">
-                    <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $mxs_t('name') }}
-                    </label>
-                    <v-text-field
-                        id="table-name"
-                        v-model="tblOpts.name"
-                        :rules="requiredRule($mxs_t('name'))"
-                        required
-                        name="table-name"
-                        :height="28"
-                        class="vuetify-input--override error--text__bottom"
-                        hide-details="auto"
-                        dense
-                        outlined
-                    />
-                </v-col>
-                <v-col v-if="isCreating" cols="12" md="4" class="py-0 px-1">
-                    <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $mxs_tc('schemas', 1) }}
-                    </label>
-                    <v-combobox
-                        v-model="tblOpts.schema"
-                        :items="schemas"
-                        outlined
-                        dense
-                        :height="28"
-                        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
-                        :menu-props="{
-                            contentClass: 'v-select--menu-mariadb',
-                            bottom: true,
-                            offsetY: true,
-                        }"
-                        hide-details="auto"
-                        :rules="requiredRule($mxs_tc('schemas', 1))"
-                    >
-                        <template v-slot:prepend-inner>
-                            <slot name="prepend-inner" />
-                        </template>
-                    </v-combobox>
-                </v-col>
-                <v-col cols="12" :md="isCreating ? 4 : 6" class="py-0 px-1">
-                    <label class="field__label mxs-color-helper text-small-text">
-                        {{ $mxs_t('comment') }}
-                    </label>
-                    <v-text-field
-                        v-model="tblOpts.comment"
-                        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
-                        single-line
-                        outlined
-                        dense
-                        :height="28"
-                        hide-details="auto"
-                    />
-                </v-col>
-            </v-row>
-            <v-row class="ma-0">
-                <v-col cols="6" md="4" class="py-0 px-1">
-                    <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $mxs_t('engine') }}
-                    </label>
-                    <v-select
-                        v-model="tblOpts.engine"
-                        :items="engines"
-                        name="table-engine"
-                        outlined
-                        class="vuetify-input--override v-select--mariadb error--text__bottom"
-                        :menu-props="{
-                            contentClass: 'v-select--menu-mariadb',
-                            bottom: true,
-                            offsetY: true,
-                        }"
-                        dense
-                        :height="28"
-                        hide-details="auto"
-                    />
-                </v-col>
-                <v-col cols="6" md="4" class="py-0 px-1">
-                    <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $mxs_t('charset') }}
-                    </label>
-                    <charset-collate-select
-                        v-model="tblOpts.charset"
-                        :items="Object.keys(charsetCollationMap)"
-                        :defItem="defDbCharset"
-                        :height="28"
-                        :rules="requiredRule($mxs_t('charset'))"
-                        @input="onSelectCharset"
-                    />
-                </v-col>
-                <v-col cols="6" md="4" class="py-0 px-1">
-                    <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $mxs_t('collation') }}
-                    </label>
-                    <charset-collate-select
-                        v-model="tblOpts.collation"
-                        :items="
-                            $typy(charsetCollationMap, `[${tblOpts.charset}].collations`).safeArray
-                        "
-                        :defItem="defCollation"
-                        :height="28"
-                        :rules="requiredRule($mxs_t('collation'))"
-                    />
-                </v-col>
-            </v-row>
-        </v-container>
-    </mxs-collapse>
+        </div>
+        <transition
+            enter-active-class="enter-active"
+            leave-active-class="leave-active"
+            @before-enter="beforeEnter"
+            @enter="enter"
+            @after-enter="afterEnter"
+            @before-leave="beforeLeave"
+            @leave="leave"
+            @after-leave="afterLeave"
+        >
+            <div v-show="isExtraInputShown" class="mxs-collapse-content">
+                <v-container fluid class="ma-0 pa-0" :style="{ width: 'calc(100% - 28px)' }">
+                    <v-row class="ma-0">
+                        <v-col cols="6" md="2" class="py-0 px-1">
+                            <label
+                                class="field__label mxs-color-helper text-small-text label-required"
+                            >
+                                {{ $mxs_t('engine') }}
+                            </label>
+                            <v-select
+                                v-model="tblOpts.engine"
+                                :items="engines"
+                                name="table-engine"
+                                outlined
+                                class="vuetify-input--override v-select--mariadb error--text__bottom"
+                                :menu-props="{
+                                    contentClass: 'v-select--menu-mariadb',
+                                    bottom: true,
+                                    offsetY: true,
+                                }"
+                                dense
+                                :height="28"
+                                hide-details="auto"
+                            />
+                        </v-col>
+                        <v-col cols="6" md="2" class="py-0 px-1">
+                            <label
+                                class="field__label mxs-color-helper text-small-text label-required"
+                            >
+                                {{ $mxs_t('charset') }}
+                            </label>
+                            <charset-collate-select
+                                v-model="tblOpts.charset"
+                                :items="Object.keys(charsetCollationMap)"
+                                :defItem="defDbCharset"
+                                :height="28"
+                                :rules="requiredRule($mxs_t('charset'))"
+                                @input="onSelectCharset"
+                            />
+                        </v-col>
+                        <v-col cols="6" md="2" class="py-0 px-1">
+                            <label
+                                class="field__label mxs-color-helper text-small-text label-required"
+                            >
+                                {{ $mxs_t('collation') }}
+                            </label>
+                            <charset-collate-select
+                                v-model="tblOpts.collation"
+                                :items="
+                                    $typy(charsetCollationMap, `[${tblOpts.charset}].collations`)
+                                        .safeArray
+                                "
+                                :defItem="defCollation"
+                                :height="28"
+                                :rules="requiredRule($mxs_t('collation'))"
+                            />
+                        </v-col>
+                        <v-col cols="12" md="6" class="py-0 px-1">
+                            <label class="field__label mxs-color-helper text-small-text">
+                                {{ $mxs_t('comment') }}
+                            </label>
+                            <v-text-field
+                                v-model="tblOpts.comment"
+                                class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
+                                single-line
+                                outlined
+                                dense
+                                :height="28"
+                                hide-details="auto"
+                            />
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </div>
+        </transition>
+    </div>
 </template>
 
 <script>
@@ -155,7 +173,8 @@ export default {
     },
     data() {
         return {
-            showInputs: true,
+            isExtraInputShown: true,
+            containerHeight: 0,
         }
     },
     computed: {
@@ -184,14 +203,39 @@ export default {
         requiredRule(inputName) {
             return [val => !!val || this.$mxs_t('errors.requiredInput', { inputName })]
         },
+        beforeEnter(el) {
+            requestAnimationFrame(() => {
+                if (!el.style.height) el.style.height = '0px'
+                el.style.display = null
+            })
+        },
+        enter(el) {
+            this.$helpers.doubleRAF(() => (el.style.height = `${el.scrollHeight}px`))
+        },
+        afterEnter(el) {
+            el.style.height = null
+            this.$emit('after-expand')
+        },
+        beforeLeave(el) {
+            requestAnimationFrame(() => {
+                if (!el.style.height) el.style.height = `${el.offsetHeight}px`
+            })
+        },
+        leave(el) {
+            this.$helpers.doubleRAF(() => (el.style.height = '0px'))
+        },
+        afterLeave(el) {
+            el.style.height = null
+            this.$emit('after-collapse')
+        },
     },
 }
 </script>
 
-<style lang="scss">
-.tbl-opts {
-    .mxs-collapse-title {
-        font-size: 0.75rem !important;
-    }
+<style lang="scss" scoped>
+.enter-active,
+.leave-active {
+    overflow: hidden;
+    transition: height 0.2s ease-out;
 }
 </style>

@@ -56,7 +56,7 @@
         <mxs-virtual-scroll-tbl
             :headers="visHeaders"
             :rows="cols"
-            :itemHeight="40"
+            :itemHeight="32"
             :maxHeight="tableMaxHeight"
             :boundingWidth="boundingWidth"
             showSelect
