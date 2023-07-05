@@ -103,7 +103,6 @@ export default {
         ...mapState({
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            DDL_ALTER_SPECS: state => state.mxsWorkspace.config.DDL_ALTER_SPECS,
             EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,

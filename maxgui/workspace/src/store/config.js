@@ -126,8 +126,9 @@ export const NODE_CTX_TYPES = Object.freeze({
     GEN_ERD: 'Generate ERD',
 })
 
-export const DDL_ALTER_SPECS = Object.freeze({
-    COLUMNS: 'COLUMNS',
+export const DDL_EDITOR_SPECS = Object.freeze({
+    COLUMNS: 'columns',
+    FK: 'foreignKeys',
 })
 
 export const UNSUPPORTED_TBL_CREATION_ENGINES = ['SEQUENCE', 'PERFORMANCE_SCHEMA']

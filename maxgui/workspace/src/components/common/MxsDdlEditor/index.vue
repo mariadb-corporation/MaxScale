@@ -21,22 +21,25 @@
             />
         </div>
         <v-tabs v-model="activeSpec" :height="24" class="v-tabs--mariadb">
-            <v-tab v-for="spec of DDL_ALTER_SPECS" :key="spec" color="primary" :href="`#${spec}`">
-                <span> {{ $mxs_t(spec.toLowerCase()) }}</span>
+            <v-tab v-for="spec of DDL_EDITOR_SPECS" :key="spec" color="primary" :href="`#${spec}`">
+                <span> {{ $mxs_t(spec) }}</span>
             </v-tab>
         </v-tabs>
         <div class="px-3 py-2">
             <v-slide-x-transition>
-                <col-definitions
-                    v-if="activeSpec === DDL_ALTER_SPECS.COLUMNS"
-                    v-model="definitions"
-                    :charsetCollationMap="charset_collation_map"
-                    :initialData="$typy(initialData, 'definitions').safeObjectOrEmpty"
-                    :height="tabDim.height"
-                    :boundingWidth="tabDim.width"
-                    :defTblCharset="$typy(tblOpts, 'charset').safeString"
-                    :defTblCollation="$typy(tblOpts, 'collation').safeString"
-                />
+                <keep-alive>
+                    <col-definitions
+                        v-if="activeSpec === DDL_EDITOR_SPECS.COLUMNS"
+                        v-model="definitions"
+                        :charsetCollationMap="charset_collation_map"
+                        :initialData="$typy(initialData, 'definitions').safeObjectOrEmpty"
+                        :height="tabDim.height"
+                        :boundingWidth="tabDim.width"
+                        :defTblCharset="$typy(tblOpts, 'charset').safeString"
+                        :defTblCollation="$typy(tblOpts, 'collation').safeString"
+                    />
+                    <fk-definitions v-else-if="activeSpec === DDL_EDITOR_SPECS.FK" />
+                </keep-alive>
             </v-slide-x-transition>
         </div>
     </v-form>
@@ -59,6 +62,7 @@
 import { mapState, mapMutations } from 'vuex'
 import TableOpts from '@wsSrc/components/common/MxsDdlEditor/TableOpts.vue'
 import ColDefinitions from '@wsSrc/components/common/MxsDdlEditor/ColDefinitions.vue'
+import FkDefinitions from '@wsSrc/components/common/MxsDdlEditor/FkDefinitions.vue'
 import RevertBtn from '@wsSrc/components/common/MxsDdlEditor/RevertBtn.vue'
 import ApplyBtn from '@wsSrc/components/common/MxsDdlEditor/ApplyBtn.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
@@ -70,6 +74,7 @@ export default {
         ApplyBtn,
         TableOpts,
         ColDefinitions,
+        FkDefinitions,
     },
     props: {
         value: { type: Object, required: true },
@@ -88,7 +93,7 @@ export default {
     },
     computed: {
         ...mapState({
-            DDL_ALTER_SPECS: state => state.mxsWorkspace.config.DDL_ALTER_SPECS,
+            DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
             charset_collation_map: state => state.editorsMem.charset_collation_map,
             engines: state => state.editorsMem.engines,
             def_db_charset_map: state => state.editorsMem.def_db_charset_map,
@@ -144,7 +149,7 @@ export default {
         },
     },
     mounted() {
-        this.activeSpec = this.DDL_ALTER_SPECS.COLUMNS
+        this.activeSpec = this.DDL_EDITOR_SPECS.COLUMNS
         this.setHeaderHeight()
     },
     methods: {

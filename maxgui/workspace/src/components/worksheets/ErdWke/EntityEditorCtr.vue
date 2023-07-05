@@ -1,25 +1,24 @@
 <template>
-    <div class="fill-height mxs-color-helper border-top-table-border er-editor-ctr">
-        <mxs-ddl-editor
-            v-if="stagingData"
-            v-model="stagingData"
-            :dim="dim"
-            :initialData="initialData"
-            :isCreating="isCreating"
-            :schemas="stagingSchemas"
-            :onExecute="onExecute"
-        >
-            <template v-slot:toolbar-append>
-                <v-spacer />
-                <mxs-tooltip-btn btnClass="toolbar-square-btn" text color="error" @click="close">
-                    <template v-slot:btn-content>
-                        <v-icon size="12" color="error"> $vuetify.icons.mxs_close</v-icon>
-                    </template>
-                    {{ $mxs_t('close') }}
-                </mxs-tooltip-btn>
-            </template>
-        </mxs-ddl-editor>
-    </div>
+    <mxs-ddl-editor
+        v-if="stagingData"
+        v-model="stagingData"
+        class="fill-height mxs-color-helper border-top-table-border er-editor-ctr"
+        :dim="dim"
+        :initialData="initialData"
+        :isCreating="isCreating"
+        :schemas="stagingSchemas"
+        :onExecute="onExecute"
+    >
+        <template v-slot:toolbar-append>
+            <v-spacer />
+            <mxs-tooltip-btn btnClass="toolbar-square-btn" text color="error" @click="close">
+                <template v-slot:btn-content>
+                    <v-icon size="12" color="error"> $vuetify.icons.mxs_close</v-icon>
+                </template>
+                {{ $mxs_t('close') }}
+            </mxs-tooltip-btn>
+        </template>
+    </mxs-ddl-editor>
 </template>
 
 <script>

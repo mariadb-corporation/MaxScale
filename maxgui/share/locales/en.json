@@ -248,6 +248,7 @@
         "filterSchemaObjects": "Filter schema objects",
         "fit": "Fit",
         "forceClosing": "Force closing",
+        "foreignKeys": "Foreign Keys",
         "forgotPassword": "Forgot Password",
         "genErd": "Generate ERD",
         "graph": "Graph",
