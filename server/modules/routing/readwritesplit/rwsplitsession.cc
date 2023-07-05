@@ -493,7 +493,7 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     // m_trx.target() can be null if the client sends two COMMIT statements in a row. Although unlikely to
     // appear on purpose, we cannot assert this until the transaction state is tracked at the component level
     // in the routing chain.
-    MXB_INFO("Transaction complete on '%s', %s bytes.",
+    MXB_INFO("Transaction complete on '%s', %s of SQL.",
              m_trx.target() ? m_trx.target()->name() : "<no target>",
              mxb::pretty_size(m_trx.size()).c_str());
     m_trx.close();
