@@ -296,12 +296,12 @@ describe('TableParser', () => {
         })
     })
     describe('parse', () => {
-        tables.forEach((sql, i) => {
+        tables.forEach((ddl, i) => {
             it('should parse a CREATE TABLE statement', () => {
-                expect(parser.parse(sql)).to.be.eql({
+                expect(parser.parse({ ddl, schema: 'test' })).to.be.eql({
                     name: unquoteIdentifier(tblNames[i]),
                     definitions: expectedTableDefs,
-                    options: expectTableOpts,
+                    options: { ...expectTableOpts, schema: 'test' },
                 })
             })
         })

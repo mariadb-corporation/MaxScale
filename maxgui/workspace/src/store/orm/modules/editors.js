@@ -29,7 +29,7 @@ export default {
                 $typy,
             } = this.vue
 
-            const [errors, parsedDdl] = await queryHelper.queryAndParseDDL({
+            const [errors, parsedTables] = await queryHelper.queryAndParseDDL({
                 connId,
                 tableNodes: [node],
                 config,
@@ -54,14 +54,11 @@ export default {
                     { root: true }
                 )
             } else {
-                const schema = $typy(Object.keys(parsedDdl), '[0]').safeString
-                const parsedTable = $typy(parsedDdl[schema], '[0]').safeObjectOrEmpty
-
+                const parsedTable = $typy(parsedTables, '[0]').safeObjectOrEmpty
                 Editor.update({
                     where: activeQueryTabId,
                     data(editor) {
                         editor.tbl_creation_info.data = queryHelper.tableParserTransformer({
-                            schema,
                             parsedTable,
                             charsetCollationMap: rootState.editorsMem.charset_collation_map,
                         })

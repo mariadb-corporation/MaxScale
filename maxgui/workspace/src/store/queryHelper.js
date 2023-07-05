@@ -23,7 +23,7 @@ import {
     COL_ATTR_IDX_MAP,
     GENERATED_TYPES,
 } from '@wsSrc/store/config'
-import { lodash, to, dynamicColors, uuidv1, immutableUpdate } from '@share/utils/helpers'
+import { lodash, to, uuidv1, immutableUpdate } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { map2dArr, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
@@ -439,16 +439,78 @@ function getKeyObjByColIds({ keys, keyType, colIds }) {
 }
 
 /**
+ * @param {object} param
+ * @param {Array.<object>} param.index_cols - parsed index columns to be transformed
+ * @param {Array.<Array>} param.cols - parsed columns to be looked up
+ * @returns {Array.<object} transformed index_cols where the `name` property is replaced with `id`
+ */
+function transformIndexCols({ index_cols, cols }) {
+    return index_cols.map(item => {
+        const { name, ...rest } = item
+        if (!name) return item
+        const col = cols.find(c => c.name === name)
+        return { id: col.id, ...rest }
+    })
+}
+
+/**
+ * Transform parsed keys of the provided node into a structure using
+ * by the DDL editor.
+ * @param {object} param.parsedTable - the node to have its keys transformed
+ * @param {array} [param.parsedTables] - all parsed tables in the ERD. Required when parsing FK
+ * @returns {object} - transformed keys
+ */
+function transformKeys({ parsedTable, parsedTables = [] }) {
+    const { keys, cols } = parsedTable.definitions
+    let transformedKeys = {}
+    ALL_TABLE_KEY_TYPES.forEach(type => {
+        if (keys[type]) {
+            transformedKeys[type] = keys[type].map(key => {
+                let transformedKey = {
+                    ...key,
+                    // transform referencing index_cols
+                    index_cols: transformIndexCols({ index_cols: key.index_cols, cols }),
+                }
+                if (key.referenced_table_name) {
+                    let referencedTbl
+                    // Find referenced node
+                    parsedTables.forEach(tbl => {
+                        if (
+                            tbl.name === key.referenced_table_name &&
+                            (tbl.options.schema === key.referenced_schema_name ||
+                                tbl.options.schema === parsedTable.options.schema)
+                        )
+                            referencedTbl = tbl
+                    })
+                    if (referencedTbl) {
+                        transformedKey.referenced_tbl_id = referencedTbl.id
+                        // Remove properties that are no longer needed.
+                        delete transformedKey.referenced_table_name
+                        delete transformedKey.referenced_schema_name
+                        // transform referenced_index_cols
+                        transformedKey.referenced_index_cols = transformIndexCols({
+                            index_cols: key.referenced_index_cols,
+                            cols: referencedTbl.definitions.cols,
+                        })
+                    }
+                }
+                return transformedKey
+            })
+        }
+    })
+    return transformedKeys
+}
+
+/**
  * Transform the parsed output of TableParser into a structure
  * that is used by mxs-ddl-editor.
- * FKs are not fully transformed as it requires parsed data of the referenced table. So
- * referenced_index_cols, referenced_schema_name, referenced_table_name remain unchanged.
- * @param {String} param.schema
- * @param {Object} param.parsedTable - output of TableParser
- * @param {Object} param.charsetCollationMap - collations mapped by charset
- * @returns {Object}
+ * @param {object} param
+ * @param {object} param.parsedTable - output of TableParser
+ * @param {array} param.parsedTables - parsed tables. Use for transforming FKs
+ * @param {object} param.charsetCollationMap - collations mapped by charset
+ * @returns {object}
  */
-function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
+function tableParserTransformer({ parsedTable, parsedTables = [], charsetCollationMap }) {
     const {
         definitions: { cols, keys },
     } = parsedTable
@@ -486,9 +548,8 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
                 )
             )
         }
-
         return {
-            [ID]: uuidv1(),
+            [ID]: col.id,
             [NAME]: col.name,
             [TYPE]: type.toUpperCase(),
             [PK]: keyTypes.includes(tokens.primaryKey),
@@ -504,9 +565,9 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
             [COMMENT]: typy(col.comment).safeString,
         }
     })
-    let nodeData = {
+    return {
+        id: parsedTable.id,
         options: {
-            schema,
             ...parsedTable.options,
             charset,
             collation,
@@ -514,16 +575,11 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
         },
         definitions: {
             cols: transformedCols.map(col => [...Object.values(col)]),
-            keys,
+            keys: immutableUpdate(keys, {
+                $set: transformKeys({ parsedTable, parsedTables }),
+            }),
         },
     }
-    nodeData.definitions.keys = immutableUpdate(nodeData.definitions.keys, {
-        $merge: transformKeys({
-            keyTypes: ALL_TABLE_KEY_TYPES,
-            nodeData,
-        }),
-    })
-    return nodeData
 }
 
 /**
@@ -532,7 +588,7 @@ function tableParserTransformer({ schema, parsedTable, charsetCollationMap }) {
  */
 function genErdNode({ nodeData, highlightColor }) {
     return {
-        id: `node_${uuidv1()}`,
+        id: nodeData.id,
         data: nodeData,
         styles: { highlightColor },
         x: 0,
@@ -621,10 +677,10 @@ function genErdLink({
  * @returns
  */
 function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
-    const { index_cols, referenced_node_id, referenced_index_cols } = fk
+    const { index_cols, referenced_tbl_id, referenced_index_cols } = fk
     let links = []
 
-    const target = referenced_node_id
+    const target = referenced_tbl_id
     const targetNode = nodes.find(n => n.id === target)
     const invisibleHighlightColor = getNodeHighlightColor(targetNode)
 
@@ -656,122 +712,13 @@ function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
     }
     return links
 }
-/**
- * @param {object} param.data - parsed ddl map of schemas
- * @param {object} param.charsetCollationMap - charset collation map
- * @returns {array} nodes
- */
-function genErdNodes({ data, charsetCollationMap }) {
-    let nodes = []
-    Object.keys(data).forEach(schema => {
-        nodes = [
-            ...nodes,
-            ...data[schema].map((tbl, i) =>
-                genErdNode({
-                    nodeData: tableParserTransformer({
-                        schema,
-                        parsedTable: tbl,
-                        charsetCollationMap,
-                    }),
-                    highlightColor: dynamicColors(i),
-                })
-            ),
-        ]
-    })
-    // transform FKs
-    return nodes.map(node =>
-        immutableUpdate(node, {
-            data: {
-                definitions: {
-                    keys: {
-                        $merge: transformKeys({
-                            keyTypes: [tokens.foreignKey],
-                            nodeData: node.data,
-                            nodes,
-                        }),
-                    },
-                },
-            },
-        })
-    )
-}
-/**
- * @param {object} param
- * @param {Array.<object>} param.index_cols - parsed index columns to be transformed
- * @param {Array.<Array>} param.cols - columns to be looked up
- * @returns {Array.<object} transformed index_cols where the `name` property is replaced with `id`
- */
-function transformIndexCols({ index_cols, cols }) {
-    const { ID, NAME } = COL_ATTRS
-    const idxOfColId = COL_ATTR_IDX_MAP[ID]
-    const idxOfColName = COL_ATTR_IDX_MAP[NAME]
-
-    return index_cols.map(item => {
-        const { name, ...rest } = item
-        if (!name) return item
-        const col = cols.find(c => c[idxOfColName] === name)
-        return {
-            id: col[idxOfColId],
-            ...rest,
-        }
-    })
-}
-
-/**
- * Transform parsed keys of the provided node into a structure using
- * by the DDL editor.
- * @param {object} param.keyTypes - types of key to be transformed
- * @param {object} param.nodeData - the node to have its keys transformed
- * @param {array} [param.nodes] - all nodes in the ERD. Required if keys to be transformed are FKs
- * @returns {object} - transformed keys
- */
-function transformKeys({ keyTypes, nodeData, nodes = [] }) {
-    const { keys, cols } = nodeData.definitions
-    let transformedKeys = {}
-    keyTypes.forEach(type => {
-        if (keys[type]) {
-            transformedKeys[type] = keys[type].map(key => {
-                let transformedKey = {
-                    ...key,
-                    // transform referencing index_cols
-                    index_cols: transformIndexCols({ index_cols: key.index_cols, cols }),
-                }
-                if (key.referenced_table_name) {
-                    let referencedNode
-                    // Find referenced node
-                    nodes.forEach(n => {
-                        if (
-                            n.data.options.name === key.referenced_table_name &&
-                            (n.data.options.schema === key.referenced_schema_name ||
-                                n.data.options.schema === nodeData.options.schema)
-                        )
-                            referencedNode = n
-                    })
-                    if (referencedNode) {
-                        transformedKey.referenced_node_id = referencedNode.id
-                        // Remove properties that are no longer needed.
-                        delete transformedKey.referenced_table_name
-                        delete transformedKey.referenced_schema_name
-                        // transform referenced_index_cols
-                        transformedKey.referenced_index_cols = transformIndexCols({
-                            index_cols: key.referenced_index_cols,
-                            cols: referencedNode.data.definitions.cols,
-                        })
-                    }
-                }
-                return transformedKey
-            })
-        }
-    })
-    return transformedKeys
-}
 
 const tableParser = new TableParser()
 /**
  * @param {string} param.connId - id of connection
  * @param {string[]} param.tableNodes - tables to be queried and parsed
  * @param {Object} param.config - axios config
- * @returns {Object} key is the schema name, value is the parsed data of tables
+ * @returns {array} parsed tables
  */
 async function queryAndParseDDL({ connId, tableNodes, config }) {
     let errors = []
@@ -790,14 +737,16 @@ async function queryAndParseDDL({ connId, tableNodes, config }) {
     )
     if (setVariableErr) errors.push(setVariableErr)
     if (getScriptErr) errors.push(getScriptErr)
-    const parsedDdl = typy(res, 'data.data.attributes.results').safeArray.reduce((acc, item, i) => {
-        const schema = tableNodes[i].parentNameData[NODE_TYPES.SCHEMA]
-        if (!acc[schema]) acc[schema] = []
-        const parsed = tableParser.parse(typy(item, 'data[0][1]').safeString)
-        acc[schema].push(parsed)
-        return acc
-    }, {})
-    return [errors, parsedDdl]
+    return [
+        errors,
+        typy(res, 'data.data.attributes.results').safeArray.map((item, i) =>
+            tableParser.parse({
+                ddl: typy(item, 'data[0][1]').safeString,
+                schema: tableNodes[i].parentNameData[NODE_TYPES.SCHEMA],
+                autoGenId: true,
+            })
+        ),
+    ]
 }
 
 /**
@@ -860,7 +809,6 @@ export default {
     categorizeConns,
     genConnStr,
     getDatabase,
-    genErdNodes,
     handleGenErdLink,
     queryAndParseDDL,
     findKeyTypesByColId,

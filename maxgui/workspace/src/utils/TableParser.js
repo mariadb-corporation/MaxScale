@@ -11,7 +11,7 @@
  * Public License.
  */
 import { t } from 'typy'
-import { lodash } from '@share/utils/helpers'
+import { lodash, uuidv1 } from '@share/utils/helpers'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
 import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
@@ -64,7 +64,7 @@ export default class TableParser {
                 default_exp,
                 comment,
             } = match.groups
-            return {
+            let parsedDef = {
                 name: unquoteIdentifier(name),
                 data_type,
                 data_type_size,
@@ -79,6 +79,8 @@ export default class TableParser {
                 default_exp,
                 comment: unquoteIdentifier(comment),
             }
+            if (this.autoGenId) parsedDef.id = uuidv1()
+            return parsedDef
         }
         return def
     }
@@ -162,20 +164,26 @@ export default class TableParser {
         })
         return { cols, keys }
     }
-    // Parse the result of SHOW CREATE TABLE
-    parse(sql) {
-        const match = sql.match(createTableReg)
+    /** Parse the result of SHOW CREATE TABLE
+     * @param {object} param
+     * @param {string} param.ddl - result of SHOW CREATE TABLE
+     * @param {string} [param.schema] - name of the schema
+     * @param {boolean} [param.autoGenId] - if true, id will be generated for the table and its columns
+     * @returns {object} parsed ddl
+     */
+    parse({ ddl, schema = '', autoGenId = false }) {
+        this.autoGenId = autoGenId
+        const match = ddl.match(createTableReg)
         let name, definitions, options
         if (match) {
             const { table_name, table_options, table_definitions } = match.groups
             name = unquoteIdentifier(table_name)
             definitions = this.parseTableDefs(table_definitions)
             options = this.parseTableOpts(table_options)
+            options.schema = schema
         }
-        return {
-            name,
-            definitions,
-            options,
-        }
+        let parsed = { name, definitions, options }
+        if (this.autoGenId) parsed.id = uuidv1()
+        return parsed
     }
 }

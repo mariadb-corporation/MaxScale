@@ -126,17 +126,24 @@ export default {
              */
             if (this.genInNewWs) conn = await this.cloneConn({ conn, config })
             if (conn.id) {
-                const [, parsedDdl] = await queryHelper.queryAndParseDDL({
+                const [, parsedTables] = await queryHelper.queryAndParseDDL({
                     connId: conn.id,
                     tableNodes: this.selectedTableNodes,
                     config,
                 })
                 await this.queryDdlEditorSuppData({ connId: conn.id, config })
+
                 const erdTaskData = {
-                    nodes: queryHelper.genErdNodes({
-                        data: parsedDdl,
-                        charsetCollationMap: this.charset_collation_map,
-                    }),
+                    nodes: parsedTables.map((parsedTable, i) =>
+                        queryHelper.genErdNode({
+                            nodeData: queryHelper.tableParserTransformer({
+                                parsedTable,
+                                parsedTables,
+                                charsetCollationMap: this.charset_collation_map,
+                            }),
+                            highlightColor: this.$helpers.dynamicColors(i),
+                        })
+                    ),
                     is_laid_out: false,
                 }
                 const erdTaskTmpData = {
