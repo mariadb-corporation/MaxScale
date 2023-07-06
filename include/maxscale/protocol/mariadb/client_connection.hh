@@ -41,7 +41,7 @@ public:
     void ready_for_reading(DCB* dcb) override;
     void error(DCB* dcb, const char* errmsg) override;
 
-    bool    write(GWBUF&& buffer);
+    bool write(GWBUF&& buffer);
 
     bool    init_connection() override;
     void    finish_connection() override;
@@ -271,10 +271,10 @@ private:
 
     enum class ChangingState
     {
-        NONE,  /**< No state change in process */
-        DB,    /**< Client is changing database, waiting server response */
-        ROLE,  /**< Client is changing role, waiting server response */
-        USER,  /**< Session is changing user, waiting server response */
+        NONE,   /**< No state change in process */
+        DB,     /**< Client is changing database, waiting server response */
+        ROLE,   /**< Client is changing role, waiting server response */
+        USER,   /**< Session is changing user, waiting server response */
     };
 
     /** Data required during COM_CHANGE_USER. */
@@ -302,25 +302,25 @@ private:
     SSLState ssl_authenticate_check_status();
     int      ssl_authenticate_client();
 
-    State         m_state {State::HANDSHAKING};                  /**< Overall state */
-    HSState       m_handshake_state {HSState::INIT};             /**< Handshake state */
-    AuthState     m_auth_state {AuthState::FIND_ENTRY};          /**< Authentication state */
-    RoutingState  m_routing_state {RoutingState::PACKET_START};  /**< Routing state */
-    ChangingState m_changing_state {ChangingState::NONE};        /**< Changing state */
+    State         m_state {State::HANDSHAKING};                 /**< Overall state */
+    HSState       m_handshake_state {HSState::INIT};            /**< Handshake state */
+    AuthState     m_auth_state {AuthState::FIND_ENTRY};         /**< Authentication state */
+    RoutingState  m_routing_state {RoutingState::PACKET_START}; /**< Routing state */
+    ChangingState m_changing_state {ChangingState::NONE};       /**< Changing state */
 
     mariadb::SClientAuth m_authenticator;   /**< Client authentication data */
     ChangeUserFields     m_change_user;     /**< User account to change to */
 
     std::string m_pending_value;        /**< Role or db client is changing to */
 
-    mxs::Component*       m_downstream {nullptr}; /**< Downstream component, the session */
-    MXS_SESSION*          m_session {nullptr};    /**< Generic session */
-    MYSQL_session*        m_session_data {nullptr};
-    mxs::Parser::SqlMode  m_sql_mode {mxs::Parser::SqlMode::DEFAULT};   /**< SQL-mode setting */
-    uint8_t               m_sequence {0};                     /**< Latest sequence number from client */
-    uint8_t               m_next_sequence {0};                /**< Next sequence to send to client */
-    uint8_t               m_command {0};
-    uint64_t              m_version {0};                  /**< Numeric server version */
+    mxs::Component*      m_downstream {nullptr};    /**< Downstream component, the session */
+    MXS_SESSION*         m_session {nullptr};       /**< Generic session */
+    MYSQL_session*       m_session_data {nullptr};
+    mxs::Parser::SqlMode m_sql_mode {mxs::Parser::SqlMode::DEFAULT};/**< SQL-mode setting */
+    uint8_t              m_sequence {0};                            /**< Latest sequence number from client */
+    uint8_t              m_next_sequence {0};                       /**< Next sequence to send to client */
+    uint8_t              m_command {0};
+    uint64_t             m_version {0};                     /**< Numeric server version */
 
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
