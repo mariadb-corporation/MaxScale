@@ -407,24 +407,6 @@ function findKeyTypesByColId({ keys, colId }) {
         )
     )
 }
-/**
- * @param {Object} param
- * @param {object} param.keys - parsed keys from DDL of a table
- * @param {string} param.keyType - type of the key
- * @param {array.<string>} param.colIds - column names to be looked up
- * @returns {object} index object
- */
-function getKeyObjByColIds({ keys, keyType, colIds }) {
-    for (const key of typy(keys, `[${keyType}]`).safeArray) {
-        if (
-            lodash.isEqual(
-                key.index_cols.map(col => col.id),
-                colIds
-            )
-        )
-            return key
-    }
-}
 
 /**
  * @param {object} param
@@ -807,7 +789,6 @@ export default {
     handleGenErdLink,
     queryAndParseDDL,
     findKeyTypesByColId,
-    getKeyObjByColIds,
     tableParserTransformer,
     getColNamesByAttr,
     genKeyName,

@@ -636,12 +636,13 @@ export default {
                 immutableUpdate,
                 lodash: { cloneDeep, sortBy, isEqual },
             } = this.$helpers
+            const category = primaryKey
             // Get PK object.
             let pkObj
             if (definitions.keys[primaryKey]) {
                 // PK category always has one object if a table has PK,
                 pkObj = cloneDeep(definitions.keys[primaryKey][0])
-            } else pkObj = { category: primaryKey, index_cols: [] }
+            } else pkObj = { category, index_cols: [] }
 
             switch (mode) {
                 case 'drop': {
@@ -657,22 +658,44 @@ export default {
             if (isEqual(sortBy(pkObj.index_cols, ['id']), sortBy(this.initialPkCols, ['id'])))
                 pkObj.index_cols = this.initialPkCols
 
+            if (!pkObj.id) {
+                const existingKey = this.getKeyObjByColId({
+                    keys: this.initialKeys,
+                    category,
+                    colId,
+                    isCompositeKey: true,
+                })
+                pkObj.id = existingKey ? existingKey.id : this.$helpers.uuidv1()
+            }
+
             return immutableUpdate(definitions, {
                 keys: pkObj.index_cols.length
                     ? { $merge: { [primaryKey]: [pkObj] } }
                     : { $unset: [primaryKey] },
             })
         },
-        genKey({ definitions, category, colId }) {
-            const existingKey = queryHelper.getKeyObjByColIds({
-                keys: this.initialKeys,
-                keyType: category,
-                colIds: [colId],
+        /**
+         * @param {Object} param
+         * @param {object} param.keys - parsed keys from DDL of a table
+         * @param {string} param.category - category of the key
+         * @param {string} param.colId - column id to be looked up
+         * @param {boolean} param.isCompositeKey - return the key object if at least one col in
+         * index_cols matches with the provided column id.
+         * @returns {object} index object
+         */
+        getKeyObjByColId({ keys, category, colId, isCompositeKey }) {
+            return this.$typy(keys, `[${category}]`).safeArray.find(key => {
+                if (isCompositeKey) return key.index_cols.some(col => col.id === colId)
+                return key.index_cols.every(col => col.id === colId)
             })
+        },
+        genKey({ definitions, category, colId }) {
+            const existingKey = this.getKeyObjByColId({ keys: this.initialKeys, category, colId })
             if (existingKey) return existingKey
             const col = definitions.cols.find(c => c[this.idxOfColId] === colId)
             const colName = col[this.idxOfColName]
             return {
+                id: this.$helpers.uuidv1(),
                 category,
                 index_cols: [{ id: colId }],
                 name: queryHelper.genKeyName({ colName, category }),

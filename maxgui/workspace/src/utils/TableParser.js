@@ -127,6 +127,7 @@ export default class TableParser {
             category,
             index_cols: this.parseIndexColNames(index_col_names),
         }
+        if (this.autoGenId) parsed.id = uuidv1()
         if (category !== tokens.primaryKey) parsed.name = unquoteIdentifier(name)
         if (category === tokens.foreignKey)
             parsed = {
