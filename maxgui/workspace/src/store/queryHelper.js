@@ -454,8 +454,10 @@ function transformIndexCols({ index_cols, cols }) {
 }
 
 /**
- * Transform parsed keys of the provided node into a structure using
- * by the DDL editor.
+ * Transform parsed keys of the provided parsed table into a data structure used
+ * by the DDL editor. i.e. the referenced names will be replaced with corresponding
+ * target ids found in parsedTables. This is done to ensure the relationships between tables
+ * are intact when changing the target names.
  * @param {object} param.parsedTable - the node to have its keys transformed
  * @param {array} [param.parsedTables] - all parsed tables in the ERD. Required when parsing FK
  * @returns {object} - transformed keys
@@ -477,11 +479,11 @@ function transformKeys({ parsedTable, parsedTables = [] }) {
                     parsedTables.forEach(tbl => {
                         if (
                             tbl.name === key.referenced_table_name &&
-                            (tbl.options.schema === key.referenced_schema_name ||
-                                tbl.options.schema === parsedTable.options.schema)
+                            tbl.options.schema === parsedTable.options.schema
                         )
                             referencedTbl = tbl
                     })
+                    // If referencedTbl is not found, it's not in parsedTables, the fk shouldn't be transformed
                     if (referencedTbl) {
                         transformedKey.referenced_tbl_id = referencedTbl.id
                         // Remove properties that are no longer needed.

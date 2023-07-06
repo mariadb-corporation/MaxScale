@@ -34,13 +34,17 @@
                         v-if="activeSpec === DDL_EDITOR_SPECS.COLUMNS"
                         v-model="definitions"
                         :charsetCollationMap="charset_collation_map"
-                        :initialData="$typy(initialData, 'definitions').safeObjectOrEmpty"
-                        :height="tabDim.height"
-                        :boundingWidth="tabDim.width"
+                        :initialData="initialDefinitions"
+                        :dim="tabDim"
                         :defTblCharset="$typy(tblOpts, 'charset').safeString"
                         :defTblCollation="$typy(tblOpts, 'collation').safeString"
                     />
-                    <fk-definitions v-else-if="activeSpec === DDL_EDITOR_SPECS.FK" />
+                    <fk-definitions
+                        v-else-if="activeSpec === DDL_EDITOR_SPECS.FK"
+                        v-model="fks"
+                        :initialData="initialFks"
+                        :dim="tabDim"
+                    />
                 </keep-alive>
             </v-slide-x-transition>
         </div>
@@ -96,6 +100,7 @@ export default {
     computed: {
         ...mapState({
             DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
+            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             charset_collation_map: state => state.editorsMem.charset_collation_map,
             engines: state => state.editorsMem.engines,
             def_db_charset_map: state => state.editorsMem.def_db_charset_map,
@@ -114,7 +119,9 @@ export default {
                 return this.$typy(this.stagingData, 'options').safeObjectOrEmpty
             },
             set(v) {
-                this.$emit('input', { ...this.stagingData, options: v })
+                this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
+                    options: { $set: v },
+                })
             },
         },
         definitions: {
@@ -122,8 +129,34 @@ export default {
                 return this.$typy(this.stagingData, 'definitions').safeObjectOrEmpty
             },
             set(v) {
-                this.$emit('input', { ...this.stagingData, definitions: v })
+                this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
+                    definitions: { $set: v },
+                })
             },
+        },
+        initialDefinitions() {
+            return this.$typy(this.initialData, 'definitions').safeObjectOrEmpty
+        },
+        fks: {
+            get() {
+                return this.$typy(this.definitions, `keys[${this.CREATE_TBL_TOKENS.foreignKey}]`)
+                    .safeArray
+            },
+            set(v) {
+                this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
+                    definitions: {
+                        keys: {
+                            $merge: {
+                                [this.CREATE_TBL_TOKENS.foreignKey]: v,
+                            },
+                        },
+                    },
+                })
+            },
+        },
+        initialFks() {
+            return this.$typy(this.initialDefinitions, `keys[${this.CREATE_TBL_TOKENS.foreignKey}]`)
+                .safeArray
         },
         toolbarHeight() {
             return 28

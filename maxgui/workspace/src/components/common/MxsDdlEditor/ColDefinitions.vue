@@ -58,7 +58,7 @@
             :rows="cols"
             :itemHeight="32"
             :maxHeight="tableMaxHeight"
-            :boundingWidth="boundingWidth"
+            :boundingWidth="dim.width"
             showSelect
             :isVertTable="isVertTable"
             v-on="$listeners"
@@ -137,8 +137,7 @@ export default {
     props: {
         value: { type: Object, required: true },
         initialData: { type: Object, required: true },
-        height: { type: Number, required: true },
-        boundingWidth: { type: Number, required: true },
+        dim: { type: Object, required: true },
         defTblCharset: { type: String, required: true },
         defTblCollation: { type: String, required: true },
         charsetCollationMap: { type: Object, required: true },
@@ -161,7 +160,7 @@ export default {
             return 28
         },
         tableMaxHeight() {
-            return this.height - this.headerHeight
+            return this.dim.height - this.headerHeight
         },
         definitions: {
             get() {
