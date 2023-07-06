@@ -146,7 +146,17 @@ cfg::ParamString s_proxy_networks(
 cfg::ParamStringList s_connection_metadata(
     &s_spec, "connection_metadata",
     "Metadata that's sent to all connecting clients.",
-    ",", {}, RUNTIME);
+    ",",
+    {
+        "character_set_client=auto",
+        "character_set_connection=auto",
+        "character_set_results=auto",
+        "max_allowed_packet=auto",
+        "system_time_zone=auto",
+        "time_zone=auto",
+        "tx_isolation=auto",
+    },
+    RUNTIME);
 
 template<class Params>
 bool ListenerSpecification::do_post_validate(Params& params) const

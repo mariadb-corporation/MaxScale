@@ -3072,7 +3072,7 @@ An example mapping file is below.
 ### `connection_metadata`
 
 - **Type**: stringlist
-- **Default**: None
+- **Default**: `character_set_client=auto,character_set_connection=auto,character_set_results=auto,max_allowed_packet=auto,system_time_zone=auto,time_zone=auto,tx_isolation=auto`
 - **Dynamic**: Yes
 - **Mandatory**: No
 
@@ -3090,9 +3090,10 @@ first `Running` server. If no running servers are available, the system
 variables are not sent.
 
 MaxScale will always send a metadata value for `threads_connected` that contains
-the current number of connections to the service that the listener points
-to. This can be prevented by setting the value of `threads_connected` to some
-other value, for example, `connection_metadata=threads_connected=0`.
+the current number of connections to the service that the listener points to and
+for `connection_id` that contains the 64-bit connection ID value. The values can
+be overridden by defining them with some value, for example,
+`connection_metadata=threads_connected=0,connection_id=0`.
 
 The metadata is implemented using
 [the session state information](https://mariadb.com/kb/en/ok_packet/#session-state-info)
