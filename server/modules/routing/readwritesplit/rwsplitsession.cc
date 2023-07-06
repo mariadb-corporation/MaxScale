@@ -619,6 +619,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             m_expected_responses--;
             mxb_assert(m_expected_responses >= 0);
 
+            m_trx_tracker.fix_trx_state(reply);
             track_tx_isolation(reply);
 
             if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())

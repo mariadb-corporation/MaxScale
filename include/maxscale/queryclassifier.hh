@@ -546,6 +546,15 @@ class TrxTracker
 {
 public:
 
+    enum TrxState : uint8_t
+    {
+        TRX_INACTIVE  = 0,
+        TRX_ACTIVE    = 1 << 0,
+        TRX_READ_ONLY = 1 << 1,
+        TRX_ENDING    = 1 << 2,
+        TRX_STARTING  = 1 << 3,
+    };
+
     bool is_autocommit() const
     {
         return m_autocommit;
@@ -583,19 +592,35 @@ public:
     template<mxs::Parser::ParseTrxUsing ParseType = mxs::Parser::ParseTrxUsing::DEFAULT>
     void track_transaction_state(const GWBUF& packetbuf, const mxs::Parser& parser);
 
+    /**
+     * Use reply to fix the transaction state
+     *
+     * If the state reported by the server does not match the expected one, the internal state is fixed to
+     * match the server state. The only case when this happens is when something hidden (e.g. a stored
+     * procedure call) opens a transaction that's not seen by the parsing done by MaxScale.
+     *
+     * Currently this only supports fixing the transaction state based on the reply server status bits that
+     * are specific to MariaDB protocol. All other protocols should emulate it by setting the corresponding
+     * bits there.
+     *
+     * @param reply The reply from the server
+     */
+    void fix_trx_state(const mxs::Reply& reply);
+
+    void set_autocommit(bool value)
+    {
+        m_autocommit = value;
+    }
+
+    void set_state(uint8_t state)
+    {
+        m_trx_state = state;
+    }
+
 private:
     // The QueryClassifier internally uses an internal TrxTracker to query the transaction state if the
     // caller-provided TrxTracker is not given to QueryClassifier::update_route_info().
     friend class QueryClassifier;
-
-    enum TrxState : uint8_t
-    {
-        TRX_INACTIVE  = 0,
-        TRX_ACTIVE    = 1 << 0,
-        TRX_READ_ONLY = 1 << 1,
-        TRX_ENDING    = 1 << 2,
-        TRX_STARTING  = 1 << 3,
-    };
 
     /**
      * The default mode for transactions. Set with SET SESSION TRANSACTION with the access mode set to either
@@ -642,7 +667,7 @@ private:
 };
 
 //
-// Template implementations
+// Template and inline implementations
 //
 
 template<mxs::Parser::ParseTrxUsing ParseType>
@@ -737,5 +762,65 @@ void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Pars
             }
         }
     }
+}
+
+inline void TrxTracker::fix_trx_state(const mxs::Reply& reply)
+{
+    // These are defined somewhere in the connector-c headers but including the header directly doesn't work.
+    // For the sake of simplicity, just declare them here.
+    constexpr uint16_t STATUS_IN_TRX = 1;
+    constexpr uint16_t STATUS_AUTOCOMMIT = 2;
+    constexpr uint16_t STATUS_IN_RO_TRX = 8192;
+
+    uint16_t status = reply.server_status();
+    bool is_autocommit = status & STATUS_AUTOCOMMIT;
+    m_autocommit = is_autocommit;
+
+    bool in_trx = status & (STATUS_IN_TRX | STATUS_IN_RO_TRX);
+
+    if (!is_trx_active() && in_trx)
+    {
+        m_trx_state = TrxState::TRX_ACTIVE | TrxState::TRX_STARTING;
+
+        if (status & STATUS_IN_RO_TRX)
+        {
+            m_trx_state |= TrxState::TRX_READ_ONLY;
+        }
+    }
+    else if (is_trx_active() && !is_trx_ending() && !in_trx)
+    {
+        m_trx_state |= TrxState::TRX_ENDING;
+    }
+
+#ifdef SS_DEBUG
+    if (auto autocommit = reply.get_variable("autocommit"); !autocommit.empty())
+    {
+        mxb_assert(is_autocommit == mxb::sv_case_eq(autocommit, "ON"));
+    }
+
+    if (auto trx_state = reply.get_variable("trx_state"); !trx_state.empty())
+    {
+        if (trx_state.find_first_of("TI") != std::string_view::npos)
+        {
+            mxb_assert(in_trx);
+        }
+        else if (trx_state.find_first_of("rRwWsSL") == std::string_view::npos)
+        {
+            mxb_assert(!in_trx);
+        }
+    }
+
+    if (auto trx_characteristics = reply.get_variable("trx_characteristics"); !trx_characteristics.empty())
+    {
+        if (trx_characteristics == "START TRANSACTION READ ONLY;")
+        {
+            mxb_assert(status & STATUS_IN_RO_TRX);
+        }
+        else if (trx_characteristics == "START TRANSACTION READ WRITE;")
+        {
+            mxb_assert((status & STATUS_IN_RO_TRX) == 0);
+        }
+    }
+#endif
 }
 }

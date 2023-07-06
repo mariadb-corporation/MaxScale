@@ -169,8 +169,6 @@ private:
     void execute_kill(std::shared_ptr<KillInfo> info, std::function<void()> cb);
     void send_ok_for_kill();
 
-    void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
-
     bool large_query_continues(const GWBUF& buffer) const;
     bool require_ssl() const;
     bool read_proxy_hdr_ssl_safe(GWBUF& buffer);
@@ -209,7 +207,6 @@ private:
      */
     bool send_mysql_err_packet(int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
 
-    void parse_and_set_trx_state(const mxs::Reply& reply);
     void start_change_role(std::string&& role);
     void start_change_db(std::string&& db);
 

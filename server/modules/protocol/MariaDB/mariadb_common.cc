@@ -447,31 +447,6 @@ bool MYSQL_session::can_recover_state() const
     return m_history.can_recover_state();
 }
 
-bool MYSQL_session::is_trx_read_only() const
-{
-    return trx_state & TrxState::TRX_READ_ONLY;
-}
-
-bool MYSQL_session::is_trx_ending() const
-{
-    return trx_state & TrxState::TRX_ENDING;
-}
-
-bool MYSQL_session::is_trx_starting() const
-{
-    return trx_state & TrxState::TRX_STARTING;
-}
-
-bool MYSQL_session::is_trx_active() const
-{
-    return trx_state & TrxState::TRX_ACTIVE;
-}
-
-bool MYSQL_session::is_autocommit() const
-{
-    return m_autocommit;
-}
-
 bool MYSQL_session::are_multi_statements_allowed() const
 {
     return (this->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS) != 0;

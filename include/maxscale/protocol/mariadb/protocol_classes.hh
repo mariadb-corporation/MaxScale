@@ -19,6 +19,7 @@
 #include <maxscale/history.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
+#include <maxscale/queryclassifier.hh>
 
 #include <deque>
 
@@ -135,48 +136,6 @@ public:
         return m_history;
     }
 
-    enum TrxState : uint32_t
-    {
-        TRX_INACTIVE  = 0,
-        TRX_ACTIVE    = 1 << 0,
-        TRX_READ_ONLY = 1 << 1,
-        TRX_ENDING    = 1 << 2,
-        TRX_STARTING  = 1 << 3,
-    };
-
-    /**
-     * The default mode for transactions. Set with SET SESSION TRANSACTION with the access mode set to either
-     * READ ONLY or READ WRITE. The default is READ WRITE.
-     */
-    uint32_t default_trx_mode {0};
-
-    /**
-     * The access mode for the next transaction. Set with SET TRANSACTION and it only affects the next one.
-     * All transactions after it will use the default transaction access mode.
-     */
-    uint32_t next_trx_mode {0};
-
-    /**
-     * The transaction state of the session.
-     *
-     * This tells only the state of @e explicitly started transactions.
-     * That is, if @e autocommit is OFF, which means that there is always an
-     * active transaction that is ended with an explicit COMMIT or ROLLBACK,
-     * at which point a new transaction is started, this variable will still
-     * be TRX_INACTIVE, unless a transaction has explicitly been
-     * started with START TRANSACTION.
-     *
-     * Likewise, if @e autocommit is ON, which means that every statement is
-     * executed in a transaction of its own, this will return false, unless a
-     * transaction has explicitly been started with START TRANSACTION.
-     *
-     * The value is valid only if either a router or a filter
-     * has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     *
-     * Only the client protocol object should write this.
-     */
-    uint32_t trx_state {TRX_INACTIVE};
-
     bool will_respond(const GWBUF& buffer) const override;
 
     bool can_recover_state() const override;
@@ -189,7 +148,10 @@ public:
      *
      * @return True if a new transaction is currently starting
      */
-    bool is_trx_starting() const override;
+    bool is_trx_starting() const override
+    {
+        return m_trx_tracker.is_trx_starting();
+    }
 
     /**
      * Tells whether a transaction is active.
@@ -201,7 +163,10 @@ public:
      *
      * @return True if a transaction is active, false otherwise.
      */
-    bool is_trx_active() const override;
+    bool is_trx_active() const override
+    {
+        return m_trx_tracker.is_trx_active();
+    }
 
     /**
      * Tells whether an explicit READ ONLY transaction is active.
@@ -214,7 +179,10 @@ public:
      * @return True if an explicit READ ONLY transaction is active,
      *         false otherwise.
      */
-    bool is_trx_read_only() const override;
+    bool is_trx_read_only() const override
+    {
+        return m_trx_tracker.is_trx_read_only();
+    }
 
     /**
      * Tells whether a transaction is ending.
@@ -226,13 +194,19 @@ public:
      *
      * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
      */
-    bool is_trx_ending() const override;
+    bool is_trx_ending() const override
+    {
+        return m_trx_tracker.is_trx_ending();
+    }
 
-    bool is_autocommit() const override;
+    bool is_autocommit() const override
+    {
+        return m_trx_tracker.is_autocommit();
+    }
 
     void set_autocommit(bool value)
     {
-        m_autocommit = value;
+        m_trx_tracker.set_autocommit(value);
     }
 
     bool are_multi_statements_allowed() const override;
@@ -264,6 +238,11 @@ public:
         return m_client_protocol_capabilities;
     }
 
+    mariadb::TrxTracker& trx_tracker()
+    {
+        return m_trx_tracker;
+    }
+
 private:
     size_t get_size(size_t* sescmd_history_size, size_t* exec_metadata_size) const;
 
@@ -272,17 +251,6 @@ private:
     // The session command history
     mxs::History m_history;
 
-    /**
-     * Tells whether autocommit is ON or not. The value effectively only tells the last value
-     * of the statement "set autocommit=...".
-     *
-     * That is, if the statement "set autocommit=1" has been executed, then even if a transaction has
-     * been started, which implicitly will cause autocommit to be set to 0 for the duration of the
-     * transaction, this value will be true.
-     *
-     * By default autocommit is ON. Only the client protocol connection should modify this.
-     *
-     * @see get_trx_state
-     */
-    bool m_autocommit {false};
+    // Transaction state tracker
+    mariadb::TrxTracker m_trx_tracker;
 };

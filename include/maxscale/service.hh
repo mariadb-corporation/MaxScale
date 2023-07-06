@@ -92,7 +92,6 @@ public:
             bool        enable_root;                /**< Allow root user  access */
             bool        users_from_all;             /**< Load users from all servers */
             bool        log_auth_warnings;          /**< Log authentication failures and warnings */
-            bool        session_track_trx_state;    /**< Get transaction state via session track mechanism */
             bool        session_trace;
 
             std::chrono::seconds conn_idle_timeout;     /**< Session timeout in seconds */

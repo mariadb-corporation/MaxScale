@@ -2108,6 +2108,11 @@ max_connections=100
 - **Default**: false
 - **Dynamic**: Yes
 
+**Note:* This parameter has been deprecated in MaxScale 23.08 as the feature is
+  now used automatically if needed. In addition, the session tracking no longer
+  needs to be enabled in MariaDB for the transaction state tracking to work
+  correctly.
+
 Enable transaction state tracking by offloading it to the backend servers.
 Getting the transaction state from the server will be more accurate for stored
 procedures or multi-statement SQL that modifies the transaction state

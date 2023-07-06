@@ -58,7 +58,7 @@ namespace
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using ExcRes = mariadb::ClientAuthenticator::ExchRes;
 using UserEntryType = mariadb::UserEntryType;
-using TrxState = MYSQL_session::TrxState;
+using TrxState = mariadb::TrxTracker::TrxState;
 using std::move;
 using std::string;
 
@@ -911,108 +911,6 @@ string MariaDBClientConnection::handle_variables(GWBUF& buffer)
     return message;
 }
 
-void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
-{
-    auto& ses_trx_state = m_session_data->trx_state;
-    const auto trx_starting_active = TrxState::TRX_ACTIVE | TrxState::TRX_STARTING;
-
-    mxb_assert((ses_trx_state & (TrxState::TRX_STARTING | TrxState::TRX_ENDING))
-               != (TrxState::TRX_STARTING | TrxState::TRX_ENDING));
-
-
-    if (ses_trx_state & TrxState::TRX_ENDING)
-    {
-        if (m_session_data->is_autocommit())
-        {
-            // Transaction ended, go into inactive state
-            ses_trx_state = TrxState::TRX_INACTIVE;
-        }
-        else
-        {
-            // Without autocommit the end of a transaction starts a new one
-            ses_trx_state = trx_starting_active | m_session_data->next_trx_mode;
-            m_session_data->next_trx_mode = m_session_data->default_trx_mode;
-        }
-    }
-    else if (ses_trx_state & TrxState::TRX_STARTING)
-    {
-        ses_trx_state &= ~TrxState::TRX_STARTING;
-    }
-    else if (!m_session_data->is_autocommit() && ses_trx_state == TrxState::TRX_INACTIVE)
-    {
-        // This state is entered when autocommit was disabled
-        ses_trx_state = trx_starting_active | m_session_data->next_trx_mode;
-        m_session_data->next_trx_mode = m_session_data->default_trx_mode;
-    }
-
-    if (mxs_mysql_get_command(*packetbuf) == MXS_COM_QUERY)
-    {
-        bool use_parser = rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION);
-        const auto parser_type = use_parser ?
-            mxs::Parser::ParseTrxUsing::DEFAULT : mxs::Parser::ParseTrxUsing::CUSTOM;
-
-        uint32_t type = parser()->get_trx_type_mask_using(*packetbuf, parser_type);
-
-        MXB_AT_DEBUG(auto sql = parser()->get_sql(*packetbuf));
-        mxb_assert_message(!rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION)
-                           || parser()->get_trx_type_mask_using(*packetbuf,
-                                                                mxs::Parser::ParseTrxUsing::DEFAULT)
-                           == parser()->get_trx_type_mask_using(*packetbuf,
-                                                                mxs::Parser::ParseTrxUsing::CUSTOM),
-                           "Parser and query classifier should parse transactions identically: %.*s",
-                           (int)sql.length(), sql.data());
-
-        if (type & mxs::sql::TYPE_BEGIN_TRX)
-        {
-            if (type & mxs::sql::TYPE_DISABLE_AUTOCOMMIT)
-            {
-                // This disables autocommit and the next statement starts a new transaction
-                m_session_data->set_autocommit(false);
-                ses_trx_state = TrxState::TRX_INACTIVE;
-            }
-            else
-            {
-                auto new_trx_state = trx_starting_active | m_session_data->next_trx_mode;
-                m_session_data->next_trx_mode = m_session_data->default_trx_mode;
-                if (type & mxs::sql::TYPE_READ)
-                {
-                    new_trx_state |= TrxState::TRX_READ_ONLY;
-                }
-                else if (type & mxs::sql::TYPE_WRITE)
-                {
-                    new_trx_state &= ~TrxState::TRX_READ_ONLY;
-                }
-                ses_trx_state = new_trx_state;
-            }
-        }
-        else if (type & (mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK))
-        {
-            auto new_trx_state = ses_trx_state | TrxState::TRX_ENDING;
-            // A commit never starts a new transaction. This would happen with: SET AUTOCOMMIT=0; COMMIT;
-            new_trx_state &= ~TrxState::TRX_STARTING;
-            ses_trx_state = new_trx_state;
-
-            if (type & mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
-            {
-                m_session_data->set_autocommit(true);
-            }
-        }
-        else if (type & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
-        {
-            // Currently only pp_sqlite should return these types
-            mxb_assert(use_parser && parser()->get_operation(*packetbuf) == mxs::sql::OP_SET_TRANSACTION);
-            uint32_t mode = type & mxs::sql::TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
-            m_session_data->next_trx_mode = mode;
-
-            if ((type & mxs::sql::TYPE_NEXT_TRX) == 0)
-            {
-                // All future transactions will use this access mode
-                m_session_data->default_trx_mode = mode;
-            }
-        }
-    }
-}
-
 void MariaDBClientConnection::handle_query_kill(const SpecialQueryDesc& kill_contents)
 {
     auto kt = kill_contents.kill_options;
@@ -1317,10 +1215,19 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
     auto service = m_session->service;
     auto capabilities = m_session->capabilities();
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-        && !service->config()->session_track_trx_state)
+    if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING))
     {
-        track_transaction_state(m_session, &buffer);
+        auto& tracker = m_session_data->trx_tracker();
+
+        if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+        {
+            tracker.track_transaction_state(buffer, MariaDBParser::get());
+        }
+        else
+        {
+            constexpr auto CUSTOM = mxs::Parser::ParseTrxUsing::CUSTOM;
+            tracker.track_transaction_state<CUSTOM>(buffer, MariaDBParser::get());
+        }
     }
 
     // TODO: The response count and state is currently modified before we route the query to allow routers to
@@ -3001,9 +2908,9 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
             m_session->book_server_response(down.first()->target(), true);
         }
 
-        if (reply.is_ok() && m_session->service->config()->session_track_trx_state)
+        if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_TRANSACTION_TRACKING) && reply.is_ok())
         {
-            parse_and_set_trx_state(reply);
+            m_session_data->trx_tracker().fix_trx_state(reply);
         }
 
         if (m_track_pooling_status && !m_pooling_permanent_disable)
@@ -3028,63 +2935,6 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
     }
 
     return write(std::move(buffer));
-}
-
-// Use SESSION_TRACK_STATE_CHANGE, SESSION_TRACK_TRANSACTION_TYPE and
-// SESSION_TRACK_TRANSACTION_CHARACTERISTICS to track transaction state.
-void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
-{
-    auto& ses_trx_state = m_session_data->trx_state;
-
-    // These are defined somewhere in the connector-c headers but including the header directly doesn't work.
-    // For the sake of simplicity, just declare them here.
-    const uint16_t STATUS_IN_TRX = 1;
-    const uint16_t STATUS_AUTOCOMMIT = 2;
-    const uint16_t STATUS_IN_RO_TRX = 8192;
-
-    uint16_t status = reply.server_status();
-    bool in_trx = status & (STATUS_IN_TRX | STATUS_IN_RO_TRX);
-    m_session_data->set_autocommit(status & STATUS_AUTOCOMMIT);
-    ses_trx_state = TrxState::TRX_INACTIVE;
-
-    if (!m_session_data->is_autocommit() || in_trx)
-    {
-        ses_trx_state = TrxState::TRX_ACTIVE;
-
-        if (status & STATUS_IN_RO_TRX)
-        {
-            ses_trx_state |= TrxState::TRX_READ_ONLY;
-        }
-    }
-
-    if (auto autocommit = reply.get_variable("autocommit"); !autocommit.empty())
-    {
-        m_session_data->set_autocommit(mxb::sv_case_eq(autocommit, "ON"));
-    }
-
-    if (auto trx_state = reply.get_variable("trx_state"); !trx_state.empty())
-    {
-        if (trx_state.find_first_of("TI") != std::string_view::npos)
-        {
-            ses_trx_state = TrxState::TRX_ACTIVE;
-        }
-        else if (trx_state.find_first_of("rRwWsSL") == std::string_view::npos)
-        {
-            ses_trx_state = TrxState::TRX_INACTIVE;
-        }
-    }
-
-    if (auto trx_characteristics = reply.get_variable("trx_characteristics"); !trx_characteristics.empty())
-    {
-        if (trx_characteristics == "START TRANSACTION READ ONLY;")
-        {
-            ses_trx_state = TrxState::TRX_ACTIVE | TrxState::TRX_READ_ONLY;
-        }
-        else if (trx_characteristics == "START TRANSACTION READ WRITE;")
-        {
-            ses_trx_state = TrxState::TRX_ACTIVE;
-        }
-    }
 }
 
 void MariaDBClientConnection::add_local_client(LocalClient* client)

@@ -37,7 +37,7 @@ struct SETTINGS
     true,   // stop_at_first_error
 };
 
-using TrxState = MYSQL_session::TrxState;
+using TrxState = mariadb::TrxTracker::TrxState;
 const auto trx_inactive = TrxState::TRX_INACTIVE;
 const auto trx_active = TrxState::TRX_ACTIVE;
 const auto trx_ro = TrxState::TRX_ACTIVE | TrxState::TRX_READ_ONLY;
@@ -152,8 +152,8 @@ int test(mock::Session& session,
     mxb_assert(router_session.idle());
 
     auto mariases = static_cast<MYSQL_session*>(session.protocol_data());
-    mariases->trx_state = tc.trx_state;
-    mariases->set_autocommit(tc.trx_state == MYSQL_session::TRX_INACTIVE);
+    mariases->trx_tracker().set_state(tc.trx_state);
+    mariases->set_autocommit(tc.trx_state == TrxState::TRX_INACTIVE);
 
     string select(create_unique_select());
 
@@ -250,7 +250,7 @@ int test(mock::Session& session,
         // original select. So, let's do a select with no transaction.
 
         cout << "Setting transaction state to SESSION_TRX_INACTIVE" << endl;
-        mariases->trx_state = MYSQL_session::TRX_INACTIVE;
+        mariases->trx_tracker().set_state(TrxState::TRX_INACTIVE);
         mariases->set_autocommit(true);
 
         cout << "Performing select: \"" << select << "\"" << flush;

@@ -185,7 +185,7 @@ cfg::ParamBool s_log_auth_warnings(
     &s_spec, "log_auth_warnings", "Log a warning when client authentication fails",
     true, cfg::Param::AT_RUNTIME);
 
-cfg::ParamBool s_session_track_trx_state(
+cfg::ParamDeprecated<cfg::ParamBool> s_session_track_trx_state(
     &s_spec, "session_track_trx_state", "Track session state using server responses",
     false, cfg::Param::AT_RUNTIME);
 
@@ -576,7 +576,6 @@ Service::Config::Config(SERVICE* service)
     add_native(&Config::m_v, &Values::localhost_match_wildcard_host, &s_localhost_match_wildcard_host);
     add_native(&Config::m_v, &Values::version_string, &s_version_string);
     add_native(&Config::m_v, &Values::log_auth_warnings, &s_log_auth_warnings);
-    add_native(&Config::m_v, &Values::session_track_trx_state, &s_session_track_trx_state);
     add_native(&Config::m_v, &Values::retain_last_statements, &s_retain_last_statements);
     add_native(&Config::m_v, &Values::session_trace, &s_session_trace);
     add_native(&Config::m_v, &Values::rank, &s_rank);
