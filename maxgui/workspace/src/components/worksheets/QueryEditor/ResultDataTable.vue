@@ -14,7 +14,7 @@
             />
             <mxs-filter-list
                 v-model="filterHeaderIdxs"
-                selectAllOnActivated
+                selectAllOnCreated
                 :label="$mxs_t('filterBy')"
                 :items="tableHeaders"
                 :maxHeight="tableHeight - 20"
@@ -54,7 +54,7 @@
             />
             <mxs-filter-list
                 v-model="visHeaderIdxs"
-                selectAllOnActivated
+                selectAllOnCreated
                 :label="$mxs_t('columns')"
                 :items="tableHeaders"
                 :maxHeight="tableHeight - 20"

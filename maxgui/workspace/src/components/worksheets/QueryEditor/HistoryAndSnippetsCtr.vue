@@ -126,7 +126,7 @@
                         <div class="ml-2">
                             <mxs-filter-list
                                 v-model="selectedLogTypes"
-                                selectAllOnActivated
+                                selectAllOnCreated
                                 :label="$mxs_t('logTypes')"
                                 :items="queryLogTypes"
                                 returnObject

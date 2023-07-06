@@ -118,7 +118,7 @@ export default {
         },
         maxHeight: { type: Number, required: true },
         returnObject: { type: Boolean, default: false },
-        selectAllOnActivated: { type: Boolean, default: false },
+        selectAllOnCreated: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -170,8 +170,8 @@ export default {
             return this.selectedItems.length === this.items.length
         },
     },
-    activated() {
-        if (this.selectAllOnActivated) this.selectAll()
+    created() {
+        if (this.selectAllOnCreated) this.selectAll()
     },
     methods: {
         toggleAll(v) {

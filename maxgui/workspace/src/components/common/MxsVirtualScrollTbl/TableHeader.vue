@@ -202,12 +202,13 @@ export default {
     watch: {
         tableHeaders: {
             deep: true,
+            immediate: true,
             handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.recalculateWidth()
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.getComputedWidth()
             },
         },
         boundingWidth() {
-            this.recalculateWidth()
+            this.getComputedWidth()
         },
         headerWidthMap: {
             deep: true,
@@ -275,7 +276,7 @@ export default {
             }
             this.headerWidthMap = headerWidthMap
         },
-        recalculateWidth() {
+        getComputedWidth() {
             this.resetHeaderWidth()
             this.$nextTick(() => this.assignHeaderWidthMap())
         },
