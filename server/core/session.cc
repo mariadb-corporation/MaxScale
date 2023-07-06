@@ -118,7 +118,7 @@ void MXS_SESSION::kill(const std::string& errmsg)
         close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
 
         // Call the protocol kill function before changing the session state
-        client_connection()->kill();
+        client_connection()->kill(errmsg);
 
         if (m_state == State::STARTED)
         {
@@ -134,14 +134,6 @@ void MXS_SESSION::kill(const std::string& errmsg)
             // This signals the rest of the system that the session has started the shutdown procedure.
             // Currently it mainly affects debug assertions inside the protocol code.
             m_state = State::STOPPING;
-        }
-
-        if (!errmsg.empty())
-        {
-            // Write the error to the client before closing the DCB
-            int errnum = 1927;      // This is ER_CONNECTION_KILLED
-            GWBUF packet = protocol()->make_error(errnum, "HY000", errmsg);
-            client_connection()->clientReply(std::move(packet), mxs::ReplyRoute {}, mxs::Reply {});
         }
 
         ClientDCB::close(client_dcb);

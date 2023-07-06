@@ -286,8 +286,11 @@ public:
      * started. At this stage the session is still valid and routing works normally.
      *
      * The default implementation does nothing.
+     *
+     * @param errmsg The error message that was generated. If no message was given, the string will be empty
+     *               and no error should be sent.
      */
-    virtual void kill()
+    virtual void kill(std::string_view errmsg)
     {
     }
 

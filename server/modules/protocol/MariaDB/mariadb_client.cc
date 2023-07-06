@@ -2987,9 +2987,15 @@ bool MariaDBClientConnection::have_local_clients()
     return std::any_of(m_local_clients.begin(), m_local_clients.end(), std::mem_fn(&LocalClient::is_open));
 }
 
-void MariaDBClientConnection::kill()
+void MariaDBClientConnection::kill(std::string_view errmsg)
 {
     m_local_clients.clear();
+
+    if (!errmsg.empty())
+    {
+        int errnum = 1927;          // This is ER_CONNECTION_KILLED
+        write(mariadb::create_error_packet(0, errnum, "HY000", errmsg));
+    }
 }
 
 mxs::Parser* MariaDBClientConnection::parser()

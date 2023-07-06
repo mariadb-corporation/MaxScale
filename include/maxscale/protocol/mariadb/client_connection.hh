@@ -51,7 +51,7 @@ public:
     bool    is_idle() const override;
     size_t  sizeof_buffers() const override;
     bool    safe_to_restart() const override;
-    void    kill() override;
+    void    kill(std::string_view errmsg) override;
 
     using mxs::ClientConnection::parser;
     mxs::Parser* parser() override;
