@@ -300,7 +300,9 @@ export default class TableScriptBuilder {
         const removedColSQL = this.buildRemovedColSQL(removedCols)
         const updatedColSQL = this.buildUpdatedColSQL(updatedCols)
         const addedColSQL = this.buildAddedColSQL(addedCols)
+        //TODO: Build UQ sql based on staging UQ keys to handle also composite UQ keys
         const updatedUqSQL = this.buildUpdatedUqSQL(updatedCols)
+
         if (removedColSQL) alterSpecs.push(removedColSQL)
         if (updatedColSQL) alterSpecs.push(updatedColSQL)
         if (addedColSQL) alterSpecs.push(addedColSQL)

@@ -304,14 +304,23 @@ export default {
                     $set: xorWith(this.definitions.cols, selectedItems, isEqual),
                 },
             })
-            // All associated keys of the column also need to be removed
+            /* All associated columns in keys also need to be deleted.
+             * When a column is deleted, the composite key
+             * (except PK) needs to be altered. i.e. removing the column from index_cols.
+             * The key is dropped if index_cols is empty.
+             */
             selectedItems.forEach(col => {
                 const keyTypes = queryHelper.findKeyTypesByColId({
                     keys: definitions.keys,
                     colId: col[this.idxOfColId],
                 })
                 keyTypes.forEach(category => {
-                    definitions = this.keySideEffect({ definitions, category, col, mode: 'delete' })
+                    definitions = this.keySideEffect({
+                        definitions,
+                        category,
+                        col,
+                        mode: 'delete',
+                    })
                 })
             })
             this.definitions = definitions
@@ -377,7 +386,7 @@ export default {
                         definitions,
                         category: item.field,
                         col,
-                        mode: item.value ? 'add' : 'delete',
+                        mode: item.value ? 'add' : 'drop',
                     })
                     break
                 case NN:
@@ -607,7 +616,7 @@ export default {
                 definitions: defs,
                 col: Object.values(item.rowObj),
                 category: this.CREATE_TBL_TOKENS.uniqueKey,
-                mode: 'delete',
+                mode: 'drop',
             })
             defs = this.notNullSideEffect({
                 definitions: defs,
@@ -635,7 +644,7 @@ export default {
             } else pkObj = { category: primaryKey, index_cols: [] }
 
             switch (mode) {
-                case 'delete': {
+                case 'drop': {
                     const targetIndex = pkObj.index_cols.findIndex(c => c.id === colId)
                     if (targetIndex >= 0) pkObj.index_cols.splice(targetIndex, 1)
                     break
@@ -682,9 +691,18 @@ export default {
             } = this.$helpers
             let keys = cloneDeep(definitions.keys[category]) || []
             switch (mode) {
-                case 'delete':
+                case 'drop':
                     keys = keys.filter(keyObj => !keyObj.index_cols.every(c => c.id === colId))
                     break
+                case 'delete': {
+                    keys = keys.reduce((acc, key) => {
+                        const targetIndex = key.index_cols.findIndex(c => c.id === colId)
+                        if (targetIndex >= 0) key.index_cols.splice(targetIndex, 1)
+                        if (key.index_cols.length) acc.push(key)
+                        return acc
+                    }, [])
+                    break
+                }
                 case 'add':
                     keys.push(this.genKey({ definitions, category, colId }))
                     break
@@ -703,7 +721,9 @@ export default {
          * @param {object} param.definitions - column definitions
          * @param {string} param.category - key category
          * @param {array} param.col - column data before updating
-         * @param {string} param.mode - add|delete
+         * @param {string} param.mode - add|drop|delete. delete mode should be used
+         * only after dropping a column as it's reserved for handling composite keys.
+         * The column in the composite key objects will be deleted.
          */
         keySideEffect({ definitions, category, col, mode }) {
             const colId = col[this.idxOfColId]
@@ -723,7 +743,12 @@ export default {
                 case spatialKey:
                 case key:
                 case foreignKey:
-                    return this.updateKey({ definitions, category, colId, mode })
+                    return this.updateKey({
+                        definitions,
+                        category,
+                        colId,
+                        mode,
+                    })
                 default:
                     return definitions
             }

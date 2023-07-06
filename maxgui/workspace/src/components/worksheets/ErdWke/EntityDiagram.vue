@@ -452,11 +452,6 @@ export default {
             this.chosenLinks = []
         },
         getKeyIcon({ node, colId }) {
-            const keyTypes = queryHelper.findKeyTypesByColId({
-                keys: this.entityKeyMap[node.id],
-                colId,
-            })
-            const { color } = this.getHighlightColStyle({ node, colId }) || {}
             const {
                 primaryKey,
                 uniqueKey,
@@ -465,6 +460,14 @@ export default {
                 spatialKey,
                 foreignKey,
             } = this.CREATE_TBL_TOKENS
+            const { color } = this.getHighlightColStyle({ node, colId }) || {}
+
+            const nodeKeys = this.entityKeyMap[node.id]
+            const keyTypes = queryHelper.findKeyTypesByColId({ keys: nodeKeys, colId })
+
+            let isUQ = false
+            if (keyTypes.includes(uniqueKey))
+                isUQ = queryHelper.isSingleUQ({ keys: nodeKeys, colId })
 
             if (keyTypes.includes(primaryKey))
                 return {
@@ -475,7 +478,7 @@ export default {
                     },
                     size: 18,
                 }
-            else if (keyTypes.includes(uniqueKey))
+            else if (isUQ)
                 return {
                     icon: '$vuetify.icons.mxs_uniqueIndexKey',
                     color: color ? color : 'navigation',

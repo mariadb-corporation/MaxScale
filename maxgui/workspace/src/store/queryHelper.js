@@ -393,20 +393,8 @@ function getDatabase(connection_string) {
 }
 
 /**
- * @param {object} param
- * @param {object} param.keys - parsed keys from DDL of a table
- * @param {string} param.colName - column name to be looked up
- * @returns {array} types of the key
- */
-function findKeyTypesByColName({ keys, colName }) {
-    return ALL_TABLE_KEY_TYPES.filter(type =>
-        typy(keys, `[${type}]`).safeArray.some(key =>
-            key.index_cols.every(item => item.name === colName)
-        )
-    )
-}
-
-/**
+ * This function returns the type even if the provided column is
+ * part of a composite key.
  * @param {object} param
  * @param {object} param.keys - transformed keys
  * @param {string} param.colId - column id to be looked up
@@ -415,7 +403,7 @@ function findKeyTypesByColName({ keys, colName }) {
 function findKeyTypesByColId({ keys, colId }) {
     return ALL_TABLE_KEY_TYPES.filter(type =>
         typy(keys, `[${type}]`).safeArray.some(key =>
-            key.index_cols.every(item => item.id === colId)
+            key.index_cols.some(item => item.id === colId)
         )
     )
 }
@@ -502,6 +490,11 @@ function transformKeys({ parsedTable, parsedTables = [] }) {
     })
     return transformedKeys
 }
+function isSingleUQ({ keys, colId }) {
+    return typy(keys, `[${tokens.uniqueKey}]`).safeArray.some(key =>
+        key.index_cols.every(c => c.id === colId)
+    )
+}
 
 /**
  * Transform the parsed output of TableParser into a structure
@@ -516,6 +509,9 @@ function tableParserTransformer({ parsedTable, parsedTables = [], charsetCollati
     const {
         definitions: { cols, keys },
     } = parsedTable
+    const transformedKeys = immutableUpdate(keys, {
+        $set: transformKeys({ parsedTable, parsedTables }),
+    })
     const charset = parsedTable.options.charset
     const collation =
         typy(parsedTable, 'options.collation').safeString ||
@@ -540,15 +536,14 @@ function tableParserTransformer({ parsedTable, parsedTables = [], charsetCollati
     const transformedCols = cols.map(col => {
         let type = col.data_type
         if (col.data_type_size) type += `(${col.data_type_size})`
-        const keyTypes = findKeyTypesByColName({ keys, colName: col.name })
+        const keyTypes = findKeyTypesByColId({ keys: transformedKeys, colId: col.id })
         let uq = false
         if (keyTypes.includes(tokens.uniqueKey)) {
-            uq = typy(keys, `[${tokens.uniqueKey}]`).safeArray.some(key =>
-                lodash.isEqual(
-                    key.index_cols.map(col => col.name),
-                    [col.name]
-                )
-            )
+            /**
+             * UQ input is a checkbox for a column, so it can't handle composite unique
+             * key. Thus ignoring composite unique key.
+             */
+            uq = isSingleUQ({ keys: transformedKeys, colId: col.id })
         }
         return {
             [ID]: col.id,
@@ -577,9 +572,7 @@ function tableParserTransformer({ parsedTable, parsedTables = [], charsetCollati
         },
         definitions: {
             cols: transformedCols.map(col => [...Object.values(col)]),
-            keys: immutableUpdate(keys, {
-                $set: transformKeys({ parsedTable, parsedTables }),
-            }),
+            keys: transformedKeys,
         },
     }
 }
@@ -822,4 +815,5 @@ export default {
     genErdNode,
     getNodeLinks,
     getExcludedLinks,
+    isSingleUQ,
 }
