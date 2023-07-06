@@ -467,6 +467,7 @@ static void sigfatal_handler(int i)
         // Fatal error when processing a fatal error.
         // TODO: This should be overhauled to proper signal handling (MXS-599).
         signal_set(i, SIG_DFL);
+        mxb::emergency_stacktrace();
         raise(i);
     }
 
