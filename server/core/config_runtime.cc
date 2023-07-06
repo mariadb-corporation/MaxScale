@@ -667,7 +667,7 @@ bool runtime_create_listener(Service* service,
             std::ostringstream ss;
             listener->persist(ss);
 
-            if (runtime_save_config(listener->name(), ss.str()) && listener->listen())
+            if (listener->listen() && runtime_save_config(listener->name(), ss.str()))
             {
                 MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
                            name, listener->address(), listener->port(), service->name());
@@ -676,7 +676,6 @@ bool runtime_create_listener(Service* service,
             }
             else
             {
-                MXS_ERROR("Listener '%s' was created but failed to start it.", name);
                 Listener::destroy(listener);
                 mxb_assert(!listener_find(name));
             }
