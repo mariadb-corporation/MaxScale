@@ -34,6 +34,7 @@ export default {
     name: 'fk-definitions',
     props: {
         value: { type: Array, required: true },
+        stagingColNameMap: { type: Object, required: true },
         initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
     },

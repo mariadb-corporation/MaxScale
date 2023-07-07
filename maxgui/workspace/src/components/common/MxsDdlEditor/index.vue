@@ -43,6 +43,7 @@
                         v-else-if="activeSpec === DDL_EDITOR_SPECS.FK"
                         v-model="fks"
                         :initialData="initialFks"
+                        :stagingColNameMap="stagingColNameMap"
                         :dim="tabDim"
                     />
                 </keep-alive>
@@ -72,6 +73,7 @@ import FkDefinitions from '@wsSrc/components/common/MxsDdlEditor/FkDefinitions.v
 import RevertBtn from '@wsSrc/components/common/MxsDdlEditor/RevertBtn.vue'
 import ApplyBtn from '@wsSrc/components/common/MxsDdlEditor/ApplyBtn.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'mxs-ddl-editor',
@@ -177,6 +179,9 @@ export default {
         hasValidChanges() {
             return this.isFormValid && this.hasChanged
         },
+        stagingColNameMap() {
+            return queryHelper.createColNameMap(this.$typy(this.definitions, 'cols').safeArray)
+        },
     },
     watch: {
         isFormValid(v) {
@@ -200,6 +205,7 @@ export default {
             const builder = new TableScriptBuilder({
                 initialData: this.initialData,
                 stagingData: this.stagingData,
+                stagingColNameMap: this.stagingColNameMap,
                 isCreateTable: this.isCreating,
             })
             this.SET_EXEC_SQL_DLG({

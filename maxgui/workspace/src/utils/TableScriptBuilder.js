@@ -17,12 +17,7 @@ import {
     arrOfObjsDiff,
     map2dArr,
 } from '@wsSrc/utils/helpers'
-import {
-    CREATE_TBL_TOKENS as tokens,
-    COL_ATTRS,
-    COL_ATTR_IDX_MAP,
-    GENERATED_TYPES,
-} from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, COL_ATTRS, GENERATED_TYPES } from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 
@@ -32,7 +27,15 @@ import { t as typy } from 'typy'
  * which is a data structure representing the parsed information of a table.
  */
 export default class TableScriptBuilder {
-    constructor({ initialData, stagingData, isCreateTable }) {
+    /**
+     * @constructor
+     * @param {object}
+     * @param {object} param.initialData
+     * @param {object} param.stagingData
+     * @param {object} param.stagingColNameMap - hash map where column id is the key and value is the name
+     * @param {boolean} param.isCreateTable - if true, this class outputs CREATE TABLE script
+     */
+    constructor({ initialData, stagingData, stagingColNameMap, isCreateTable }) {
         // initialData is an empty object if `isCreateTable` is true
         this.colAttrs = Object.values(COL_ATTRS)
         this.initialData = initialData
@@ -40,19 +43,14 @@ export default class TableScriptBuilder {
         this.initialTableName = typy(initialData, 'options.name').safeString
         this.initialColsData = typy(initialData, 'definitions.cols').safeArray
 
-        this.stagingData = stagingData
-        this.stagingColsData = typy(stagingData, 'definitions.cols').safeArray
+        this.stagingDataOptions = stagingData.options
+        this.stagingColNameMap = stagingColNameMap
 
-        // create a hash map where column id is the key and value is the name
-        const idxOfId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
-        const idxOfName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
-        this.stagingColNameMap = lodash.fromPairs(
-            this.stagingColsData.map(arr => [arr[idxOfId], arr[idxOfName]])
-        )
+        this.stagingColsData = typy(stagingData, 'definitions.cols').safeArray
 
         this.optionDiffs = deepDiff(
             typy(initialData, 'options').safeObjectOrEmpty,
-            stagingData.options
+            this.stagingDataOptions
         )
         this.isColsOptsChanged = !lodash.isEqual(this.initialColsData, this.stagingColsData)
 
@@ -362,7 +360,7 @@ export default class TableScriptBuilder {
     }
 
     buildCreateScript() {
-        const { schema, name } = this.stagingData.options
+        const { schema, name } = this.stagingDataOptions
         let sql = `CREATE SCHEMA IF NOT EXISTS ${quoting(schema)};`
         sql += `${tokens.createTable} ${quoting(schema)}.${quoting(name)} (`
         sql += `${this.buildCreateColsSql()})`

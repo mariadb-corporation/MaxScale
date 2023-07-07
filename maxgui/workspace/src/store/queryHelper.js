@@ -760,6 +760,18 @@ function getNodeLinks({ links, node }) {
 function getExcludedLinks({ links, node }) {
     return links.filter(link => !getNodeLinks({ links, node }).includes(link))
 }
+/**
+ * @param {Array.<Array>} cols - 2d array
+ * @returns {object} col name mapped by col id
+ */
+function createColNameMap(cols) {
+    return lodash.fromPairs(
+        cols.map(arr => [
+            arr[COL_ATTR_IDX_MAP[COL_ATTRS.ID]],
+            arr[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]],
+        ])
+    )
+}
 
 export default {
     getSchemaName,
@@ -784,4 +796,5 @@ export default {
     getNodeLinks,
     getExcludedLinks,
     isSingleUQ,
+    createColNameMap,
 }
