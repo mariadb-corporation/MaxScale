@@ -1,7 +1,9 @@
 <template>
     <div class="fill-height">
         <!-- TODO: add toolbar to add/drop key -->
+        <v-progress-linear v-if="isLoading" indeterminate />
         <mxs-virtual-scroll-tbl
+            v-else
             :headers="headers"
             :rows="rows"
             :itemHeight="32"
@@ -12,6 +14,7 @@
             v-on="$listeners"
             @selected-rows="selectedItems = $event"
         >
+            <!-- TODO: Render inputs -->
         </mxs-virtual-scroll-tbl>
     </div>
 </template>
@@ -29,6 +32,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'fk-definitions',
@@ -37,11 +41,18 @@ export default {
         stagingColNameMap: { type: Object, required: true },
         initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
+        schema: { type: String, required: true },
+        // existing parsed tables
+        lookupTables: { type: Object, required: true },
     },
     data() {
         return {
             selectedItems: [],
             isVertTable: false,
+            isLoading: true,
+            // existing lookupTables and new referenced tables that are not found in lookupTables
+            allLookupTables: {},
+            rows: [],
         }
     },
     computed: {
@@ -67,11 +78,81 @@ export default {
                 this.$emit('input', v)
             },
         },
-        rows() {
-            //TODO: generate rows from keys
-            return []
+        /**
+         * nested hash. e.g
+         * { "tbl_123": { "col_123": "id", "col_234": "name" } }
+         */
+        allTableColNameMap() {
+            return Object.keys(this.allLookupTables).reduce((res, key) => {
+                res[key] = queryHelper.createColNameMap(
+                    this.$typy(this.allLookupTables[key], 'definitions.cols').safeArray
+                )
+                return res
+            }, {})
         },
     },
-    methods: {},
+    async created() {
+        await this.fetchReferencedTablesData()
+        this.isLoading = false
+    },
+    methods: {
+        addNameToCols({ cols, map }) {
+            return cols.map(({ id }) => ({ id, name: map[id] }))
+        },
+        async fetchReferencedTablesData() {
+            const quote = this.$helpers.quotingIdentifier
+            const targets = this.keys.reduce(
+                (res, { referenced_table_name, referenced_schema_name }) => {
+                    if (referenced_table_name) {
+                        /**
+                         * If referenced_schema_name is not defined, the target table is in the
+                         * same schema as the one being altered/created
+                         */
+                        const schema = quote(
+                            referenced_schema_name ? referenced_schema_name : this.schema
+                        )
+                        const table = quote(referenced_table_name)
+                        res.push(`${schema}.${table}`)
+                    }
+                    return res
+                },
+                []
+            )
+            let newLookupTables = {}
+            if (targets.length) {
+                //TODO: Fetch and parsed targets tables
+            }
+            this.allLookupTables = this.$helpers.lodash.merge(this.lookupTables, newLookupTables)
+            this.rows = this.keys.map(
+                ({
+                    id,
+                    name,
+                    index_cols,
+                    referenced_tbl_id,
+                    referenced_index_cols,
+                    match_option,
+                    on_update,
+                    on_delete,
+                }) => {
+                    const referencedTbl = this.allLookupTables[referenced_tbl_id]
+                    let row = [
+                        id,
+                        name,
+                        this.addNameToCols({ cols: index_cols, map: this.stagingColNameMap }),
+                        referencedTbl.options.schema,
+                        referencedTbl.options.name,
+                        this.addNameToCols({
+                            cols: referenced_index_cols,
+                            map: this.allTableColNameMap[referencedTbl.id],
+                        }),
+                        match_option,
+                        on_update,
+                        on_delete,
+                    ]
+                    return row
+                }
+            )
+        },
+    },
 }
 </script>

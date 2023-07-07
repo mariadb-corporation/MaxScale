@@ -42,7 +42,9 @@
                     <fk-definitions
                         v-else-if="activeSpec === DDL_EDITOR_SPECS.FK"
                         v-model="fks"
+                        :schema="tblOpts.schema"
                         :initialData="initialFks"
+                        :lookupTables="lookupTables"
                         :stagingColNameMap="stagingColNameMap"
                         :dim="tabDim"
                     />
@@ -91,6 +93,8 @@ export default {
         isCreating: { type: Boolean, default: false }, // set true to output CREATE TABLE script
         schemas: { type: Array, default: () => [] }, // list of schema names
         onExecute: { type: Function, required: true },
+        // parsed tables to be looked up in fk-definitions
+        lookupTables: { type: Object, default: () => ({}) },
     },
     data() {
         return {

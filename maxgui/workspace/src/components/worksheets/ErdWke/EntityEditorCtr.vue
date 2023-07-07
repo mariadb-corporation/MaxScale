@@ -7,6 +7,7 @@
         :initialData="initialData"
         :isCreating="isCreating"
         :schemas="stagingSchemas"
+        :lookupTables="$helpers.lodash.fromPairs(stagingNodes.map(n => [n.id, n.data]))"
         :onExecute="onExecute"
     >
         <template v-slot:toolbar-append>
