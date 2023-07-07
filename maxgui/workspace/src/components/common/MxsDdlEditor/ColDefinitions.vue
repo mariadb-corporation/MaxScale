@@ -331,7 +331,7 @@ export default {
             this.headers.forEach(h => {
                 switch (h.text) {
                     case ID:
-                        row.push(this.$helpers.uuidv1())
+                        row.push(`col_${this.$helpers.uuidv1()}`)
                         break
                     case PK:
                     case NN:
@@ -665,7 +665,7 @@ export default {
                     colId,
                     isCompositeKey: true,
                 })
-                pkObj.id = existingKey ? existingKey.id : this.$helpers.uuidv1()
+                pkObj.id = existingKey ? existingKey.id : `key_${this.$helpers.uuidv1()}`
             }
 
             return immutableUpdate(definitions, {
@@ -695,7 +695,7 @@ export default {
             const col = definitions.cols.find(c => c[this.idxOfColId] === colId)
             const colName = col[this.idxOfColName]
             return {
-                id: this.$helpers.uuidv1(),
+                id: `key_${this.$helpers.uuidv1()}`,
                 category,
                 index_cols: [{ id: colId }],
                 name: queryHelper.genKeyName({ colName, category }),

@@ -79,7 +79,7 @@ export default class TableParser {
                 default_exp,
                 comment: unquoteIdentifier(comment),
             }
-            if (this.autoGenId) parsedDef.id = uuidv1()
+            if (this.autoGenId) parsedDef.id = `col_${uuidv1()}`
             return parsedDef
         }
         return def
@@ -127,7 +127,7 @@ export default class TableParser {
             category,
             index_cols: this.parseIndexColNames(index_col_names),
         }
-        if (this.autoGenId) parsed.id = uuidv1()
+        if (this.autoGenId) parsed.id = `key_${uuidv1()}`
         if (category !== tokens.primaryKey) parsed.name = unquoteIdentifier(name)
         if (category === tokens.foreignKey)
             parsed = {
@@ -184,7 +184,7 @@ export default class TableParser {
             options.schema = schema
         }
         let parsed = { name, definitions, options }
-        if (this.autoGenId) parsed.id = uuidv1()
+        if (this.autoGenId) parsed.id = `tbl_${uuidv1()}`
         return parsed
     }
 }
