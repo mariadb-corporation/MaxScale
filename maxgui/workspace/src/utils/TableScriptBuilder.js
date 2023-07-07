@@ -17,10 +17,14 @@ import {
     arrOfObjsDiff,
     map2dArr,
 } from '@wsSrc/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens, COL_ATTRS, GENERATED_TYPES } from '@wsSrc/store/config'
+import {
+    CREATE_TBL_TOKENS as tokens,
+    COL_ATTRS,
+    COL_ATTR_IDX_MAP,
+    GENERATED_TYPES,
+} from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import queryHelper from '@wsSrc/store/queryHelper'
 
 /**
  * Table script builder.
@@ -39,6 +43,13 @@ export default class TableScriptBuilder {
         this.stagingData = stagingData
         this.stagingColsData = typy(stagingData, 'definitions.cols').safeArray
 
+        // create a hash map where column id is the key and value is the name
+        const idxOfId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
+        const idxOfName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
+        this.stagingColNameMap = lodash.fromPairs(
+            this.stagingColsData.map(arr => [arr[idxOfId], arr[idxOfName]])
+        )
+
         this.optionDiffs = deepDiff(
             typy(initialData, 'options').safeObjectOrEmpty,
             stagingData.options
@@ -46,20 +57,46 @@ export default class TableScriptBuilder {
         this.isColsOptsChanged = !lodash.isEqual(this.initialColsData, this.stagingColsData)
 
         // Keys
-        this.initialKeysData = typy(initialData, 'definitions.keys').safeObjectOrEmpty
-        this.initialPkColNames = queryHelper.getColNamesByAttr({
-            cols: this.initialColsData,
-            attr: COL_ATTRS.PK,
+        this.initialKeys = typy(initialData, 'definitions.keys').safeObjectOrEmpty
+        this.stagingKeys = typy(stagingData, 'definitions.keys').safeObjectOrEmpty
+
+        // Get the diff of pk, uq keys
+        this.pkKeyDiffs = this.getKeysDiffs({
+            initialKeys: this.initialKeys,
+            stagingKeys: this.stagingKeys,
+            category: tokens.primaryKey,
         })
-        this.stagingPkColNames = queryHelper.getColNamesByAttr({
-            cols: this.stagingColsData,
-            attr: COL_ATTRS.PK,
+        this.uqKeyDiffs = this.getKeysDiffs({
+            initialKeys: this.initialKeys,
+            stagingKeys: this.stagingKeys,
+            category: tokens.uniqueKey,
         })
-        this.isDroppingPK = this.initialPkColNames.length > 0 && this.stagingPkColNames.length === 0
-        this.isAddingPK = this.stagingPkColNames.length > 0
 
         // mode
         this.isCreateTable = isCreateTable
+    }
+
+    /**
+     * @param {object} param
+     * @param {object} param.keys - all keys
+     * @param {string}  param.category - key category
+     * @returns {Array.<object} keys
+     */
+    filterKeys({ keys, category }) {
+        return typy(keys, `${category}`).safeArray
+    }
+
+    /**
+     * @param {object} param
+     * @param {object} param.initialKeys - all initial keys
+     * @param {object} param.stagingKeys - all staging keys
+     * @param {string}  param.category - key category
+     * @returns {object}
+     */
+    getKeysDiffs({ initialKeys, stagingKeys, category }) {
+        const initial = this.filterKeys({ keys: initialKeys, category })
+        const staging = this.filterKeys({ keys: stagingKeys, category })
+        return arrOfObjsDiff({ base: initial, newArr: staging, idField: 'id' })
     }
 
     /**
@@ -163,66 +200,6 @@ export default class TableScriptBuilder {
         return sql
     }
 
-    /**
-     * If altering an existing table, it returns DROP/ADD PK SQL.
-     * Otherwise, it returns just PK definition.
-     * @returns {String} - returns PK SQL
-     */
-    buildPkSQL() {
-        let sql = ''
-        const dropSQL = `${tokens.drop} ${tokens.primaryKey}`
-        if (this.isDroppingPK) {
-            sql += dropSQL
-        } else if (this.isAddingPK) {
-            const keys = this.stagingPkColNames.map(col => quoting(col)).join(', ')
-            const keyDef = `${tokens.primaryKey} (${keys})`
-
-            if (this.isCreateTable) return keyDef
-
-            const addSQL = `${tokens.add} ${keyDef}`
-            if (this.initialPkColNames.length > 0) sql += `${dropSQL}, ${addSQL}`
-            else sql += addSQL
-        }
-        return sql
-    }
-
-    /**
-     * If altering an existing table, it returns DROP/ADD UNIQUE KEY SQL.
-     * Otherwise, it returns just UQ key definition.
-     * @param {object} payload.col
-     * @param {boolean} payload.isUpdated
-     * @returns {String} - returns UNIQUE KEY SQL
-     */
-    buildUqSQL({ col, isUpdated }) {
-        const { ID, NAME, UQ } = COL_ATTRS
-        let colObj = col,
-            colId
-        if (isUpdated) {
-            colObj = typy(col, 'newObj').safeObjectOrEmpty
-            colId = typy(col, `oriObj[${ID}]`).safeString
-        }
-
-        const { [NAME]: newColName, [UQ]: newUqValue } = colObj
-
-        if (newUqValue) {
-            const uqName = queryHelper.genKeyName({
-                colName: newColName,
-                category: tokens.uniqueKey,
-            })
-            const keyDef = `${tokens.uniqueKey} ${quoting(uqName)} (${quoting(newColName)})`
-            if (this.isCreateTable) return keyDef
-            return `${tokens.add} ${keyDef}`
-        }
-        if (colId) {
-            const { name: uqName } = queryHelper.getKeyObjByColIds({
-                keys: this.initialKeysData,
-                keyType: tokens.uniqueKey,
-                colIds: [colId],
-            })
-            return `${tokens.drop} ${tokens.key} ${quoting(uqName)}`
-        }
-    }
-
     /* This builds DROP column SQL
      * @param {Array} cols - columns need to be removed
      * @returns {String} - returns DROP COLUMN sql
@@ -256,31 +233,73 @@ export default class TableScriptBuilder {
     }
 
     buildAddedColSQL(cols) {
-        let colSQL = [],
-            uqSQL = []
-        cols.forEach(col => {
-            colSQL.push(this.buildColDfnSQL({ col, isUpdated: false }))
-            const uqSql = this.buildUqSQL({ col, isUpdated: false })
-            if (uqSql) uqSQL.push(uqSql)
-        })
-        return [...colSQL, ...uqSQL].join(this.handleAddComma())
+        return cols
+            .map(col => this.buildColDfnSQL({ col, isUpdated: false }))
+            .join(this.handleAddComma())
     }
 
     /**
-     * @param {Array} cols - updated columns
-     * @returns {String} - returns CHANGE COLUMN sql
+     * If altering an existing table, it returns DROP/ADD PK SQL.
+     * Otherwise, it returns just PK definition.
+     * @returns {String} - returns PK SQL
      */
-    buildUpdatedUqSQL(cols) {
-        // Get diff of updated columns, updated of PK is ignored
-        const uqColsChanged = cols.reduce((arr, col) => {
-            const dfnColDiff = col.diff.filter(d => d.kind === 'E' && d.path[0] === COL_ATTRS.UQ)
-            if (dfnColDiff.length) arr.push({ ...col, diff: dfnColDiff })
-            return arr
-        }, [])
-        if (uqColsChanged.length)
-            return uqColsChanged
-                .map(col => this.buildUqSQL({ col, isUpdated: true }))
-                .join(this.handleAddComma())
+    buildPkSQL() {
+        const removedKey = typy(this.pkKeyDiffs.get('removed'), '[0]').safeObject
+        const updatedKey = typy(this.pkKeyDiffs.get('updated'), '[0]').safeObject
+        const addedKey = typy(this.pkKeyDiffs.get('added'), '[0]').safeObject
+        const dropSQL = `${tokens.drop} ${tokens.primaryKey}`
+        let parts = []
+        if (removedKey) parts.push(dropSQL)
+        if (addedKey || updatedKey) {
+            if (updatedKey) parts.push(dropSQL)
+            const indexCols = updatedKey ? updatedKey.newObj.index_cols : addedKey.index_cols
+            const colNames = indexCols.map(({ id }) => quoting(this.stagingColNameMap[id]))
+            let keyDef = `${tokens.primaryKey} (${colNames.join(this.handleAddComma())})`
+            if (!this.isCreateTable) keyDef = `${tokens.add} ${keyDef}`
+            parts.push(keyDef)
+        }
+        return parts.join(this.handleAddComma())
+    }
+    /**
+     * @returns {String} - returns UQ SQL
+     */
+    buildUniqueKeySQL() {
+        const removedKeys = this.uqKeyDiffs.get('removed')
+        const updatedKeys = this.uqKeyDiffs.get('updated')
+        const addedKeys = this.uqKeyDiffs.get('added')
+        let parts = []
+        parts = removedKeys.map(({ name }) => `${tokens.drop} ${tokens.key} ${quoting(name)}`)
+        addedKeys.forEach(({ name, index_cols }) => {
+            const indexColNames = index_cols.map(({ id }) => quoting(this.stagingColNameMap[id]))
+            const keyDef = `${tokens.uniqueKey} ${quoting(name)}(${indexColNames.join(
+                this.handleAddComma()
+            )})`
+            if (this.isCreateTable) parts.push(keyDef)
+            else parts.push(`${tokens.add} ${keyDef}`)
+        })
+        updatedKeys.forEach(({ diff: keyDiff, oriObj, newObj }) => {
+            keyDiff.forEach(diff => {
+                // handle build new composite key when a column is removed from the key
+                if (
+                    diff.kind === 'A' &&
+                    typy(diff, 'item.kind').safeString === 'D' &&
+                    typy(diff, 'path[0]').safeString === 'index_cols'
+                ) {
+                    // drop the composite key
+                    parts.push(`${tokens.drop} ${tokens.key} ${quoting(oriObj.name)}`)
+                    // build new composite key with the remaining columns
+                    const indexColNames = newObj.index_cols.map(({ id }) =>
+                        quoting(this.stagingColNameMap[id])
+                    )
+                    parts.push(
+                        `${tokens.add} ${tokens.uniqueKey} ${quoting(
+                            newObj.name
+                        )}(${indexColNames.join(this.handleAddComma())})`
+                    )
+                }
+            })
+        })
+        return parts.join(this.handleAddComma())
     }
 
     /**
@@ -300,15 +319,16 @@ export default class TableScriptBuilder {
         const removedColSQL = this.buildRemovedColSQL(removedCols)
         const updatedColSQL = this.buildUpdatedColSQL(updatedCols)
         const addedColSQL = this.buildAddedColSQL(addedCols)
-        //TODO: Build UQ sql based on staging UQ keys to handle also composite UQ keys
-        const updatedUqSQL = this.buildUpdatedUqSQL(updatedCols)
+
+        const pkSQL = this.buildPkSQL()
+        const uqSQL = this.buildUniqueKeySQL()
 
         if (removedColSQL) alterSpecs.push(removedColSQL)
         if (updatedColSQL) alterSpecs.push(updatedColSQL)
         if (addedColSQL) alterSpecs.push(addedColSQL)
-        if (updatedUqSQL) alterSpecs.push(updatedUqSQL)
-        if (!lodash.isEqual(this.initialPkColNames, this.stagingPkColNames))
-            alterSpecs.push(this.buildPkSQL())
+        if (pkSQL) alterSpecs.push(pkSQL)
+        if (uqSQL) alterSpecs.push(uqSQL)
+
         return alterSpecs.join(this.handleAddComma())
     }
 
@@ -321,7 +341,11 @@ export default class TableScriptBuilder {
         let specs = []
         const addedColSQL = this.buildAddedColSQL(data)
         specs.push(addedColSQL)
-        if (this.stagingPkColNames.length) specs.push(this.buildPkSQL())
+        const pkSQL = this.buildPkSQL()
+        const uqSql = this.buildUniqueKeySQL()
+        if (pkSQL) specs.push(pkSQL)
+        if (uqSql) specs.push(uqSql)
+
         return specs.join(this.handleAddComma())
     }
 

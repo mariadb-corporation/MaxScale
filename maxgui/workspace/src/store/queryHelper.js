@@ -727,18 +727,6 @@ async function queryAndParseDDL({ connId, tableNodes, config }) {
 }
 
 /**
- * @param {array} param.cols - 2d array
- * @param {string} param.attr - name of the attribute (COL_ATTRS)
- * @returns {array} Array of column names where the provided attribute value is true
- */
-function getColNamesByAttr({ cols, attr }) {
-    let names = []
-    cols.forEach(col => {
-        if (col[COL_ATTR_IDX_MAP[attr]]) names.push(col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]])
-    })
-    return names
-}
-/**
  * @param {string} param.colName - column name
  * @param {string} param.category - key category
  * @returns {string} key name
@@ -790,7 +778,6 @@ export default {
     queryAndParseDDL,
     findKeyTypesByColId,
     tableParserTransformer,
-    getColNamesByAttr,
     genKeyName,
     tableParser,
     genErdNode,
