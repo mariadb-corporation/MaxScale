@@ -126,6 +126,7 @@ export default {
              */
             if (this.genInNewWs) conn = await this.cloneConn({ conn, config })
             if (conn.id) {
+                await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId: conn.id, config })
                 const [, parsedTables] = await queryHelper.queryAndParseDDL({
                     connId: conn.id,
                     tableNodes: this.selectedTableNodes,

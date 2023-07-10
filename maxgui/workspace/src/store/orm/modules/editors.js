@@ -29,7 +29,8 @@ export default {
                 $typy,
             } = this.vue
 
-            const [errors, parsedTables] = await queryHelper.queryAndParseDDL({
+            await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId, config })
+            const [e, parsedTables] = await queryHelper.queryAndParseDDL({
                 connId,
                 tableNodes: [node],
                 config,
@@ -41,7 +42,7 @@ export default {
                     editor.tbl_creation_info.altering_node = node
                 },
             })
-            if (errors.length) {
+            if (e) {
                 Editor.update({
                     where: activeQueryTabId,
                     data(editor) {
@@ -50,7 +51,7 @@ export default {
                 })
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
-                    { text: errors.map(e => getErrorsArr(e)), type: 'error' },
+                    { text: getErrorsArr(e), type: 'error' },
                     { root: true }
                 )
             } else {

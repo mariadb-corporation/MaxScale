@@ -694,15 +694,11 @@ const tableParser = new TableParser()
 /**
  * @param {string} param.connId - id of connection
  * @param {string[]} param.tableNodes - tables to be queried and parsed
- * @param {Object} param.config - axios config
- * @returns {array} parsed tables
+ * @param {object} param.config - axios config
+ * @returns {Promise<array>} parsed tables
  */
 async function queryAndParseDDL({ connId, tableNodes, config }) {
-    let errors = []
-    const [setVariableErr] = await to(
-        queries.post({ id: connId, body: { sql: 'SET SESSION sql_quote_show_create = 1' }, config })
-    )
-    const [getScriptErr, res] = await to(
+    const [e, res] = await to(
         queries.post({
             id: connId,
             body: {
@@ -712,10 +708,8 @@ async function queryAndParseDDL({ connId, tableNodes, config }) {
             config,
         })
     )
-    if (setVariableErr) errors.push(setVariableErr)
-    if (getScriptErr) errors.push(getScriptErr)
     return [
-        errors,
+        e,
         typy(res, 'data.data.attributes.results').safeArray.map((item, i) =>
             tableParser.parse({
                 ddl: typy(item, 'data[0][1]').safeString,

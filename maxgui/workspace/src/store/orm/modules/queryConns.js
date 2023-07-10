@@ -450,6 +450,26 @@ export default {
                 )
             }
         },
+        async enableSqlQuoteShowCreate({ commit }, { connId, config }) {
+            const [, res] = await this.vue.$helpers.to(
+                queries.post({
+                    id: connId,
+                    body: { sql: 'SET SESSION sql_quote_show_create = 1' },
+                    config,
+                })
+            )
+            const errObj = this.vue.$typy(res, 'data.data.attributes.results[0]').safeObjectOrEmpty
+            if (errObj.errno) {
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
+                        type: 'error',
+                    },
+                    { root: true }
+                )
+            }
+        },
     },
     getters: {
         // QueryTab connection getters
