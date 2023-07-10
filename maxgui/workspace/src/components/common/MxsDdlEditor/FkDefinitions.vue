@@ -32,18 +32,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'fk-definitions',
     props: {
         value: { type: Array, required: true },
+        stagingCols: { type: Array, required: true },
         stagingColNameMap: { type: Object, required: true },
         initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
-        schema: { type: String, required: true },
         // existing parsed tables
         lookupTables: { type: Object, required: true },
+        connData: { type: Object, required: true },
+        charsetCollationMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -53,9 +56,13 @@ export default {
             // existing lookupTables and new referenced tables that are not found in lookupTables
             allLookupTables: {},
             rows: [],
+            stagingKeys: {},
         }
     },
     computed: {
+        ...mapState({
+            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+        }),
         headers() {
             let header = { sortable: false }
             return [
@@ -90,40 +97,65 @@ export default {
                 return res
             }, {})
         },
+        unknownTargets() {
+            const { quotingIdentifier: quote } = this.$helpers
+            const targets = this.keys.reduce(
+                (res, { referenced_table_name, referenced_schema_name }) => {
+                    if (referenced_table_name) {
+                        res.push({
+                            qualified_name: `${quote(referenced_schema_name)}.${quote(
+                                referenced_table_name
+                            )}`,
+                            parentNameData: {
+                                [this.NODE_TYPES.SCHEMA]: referenced_schema_name,
+                            },
+                        })
+                    }
+                    return res
+                },
+                []
+            )
+            return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
+        },
     },
     async created() {
-        await this.fetchReferencedTablesData()
+        this.allLookupTables = this.lookupTables
+        this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
+        await this.fetchReferencedTablesData(this.unknownTargets)
+        this.genRows()
         this.isLoading = false
     },
     methods: {
         addNameToCols({ cols, map }) {
             return cols.map(({ id }) => ({ id, name: map[id] }))
         },
-        async fetchReferencedTablesData() {
-            const quote = this.$helpers.quotingIdentifier
-            const targets = this.keys.reduce(
-                (res, { referenced_table_name, referenced_schema_name }) => {
-                    if (referenced_table_name) {
-                        /**
-                         * If referenced_schema_name is not defined, the target table is in the
-                         * same schema as the one being altered/created
-                         */
-                        const schema = quote(
-                            referenced_schema_name ? referenced_schema_name : this.schema
-                        )
-                        const table = quote(referenced_table_name)
-                        res.push(`${schema}.${table}`)
-                    }
-                    return res
-                },
-                []
-            )
-            let newLookupTables = {}
+        async fetchReferencedTablesData(targets) {
             if (targets.length) {
-                //TODO: Fetch and parsed targets tables
+                const [, parsedTables] = await queryHelper.queryAndParseDDL({
+                    connId: this.connData.id,
+                    tableNodes: targets,
+                    config: this.connData.config,
+                })
+                this.stagingKeys = queryHelper.transformKeys({
+                    keys: this.stagingKeys,
+                    cols: this.stagingCols,
+                    parsedTables,
+                })
+                const newLookupTables = parsedTables.reduce((map, tbl) => {
+                    map[tbl.id] = queryHelper.tableParserTransformer({
+                        parsedTable: tbl,
+                        charsetCollationMap: this.charsetCollationMap,
+                    })
+                    return map
+                }, {})
+                this.allLookupTables = this.$helpers.lodash.merge(
+                    this.allLookupTables,
+                    newLookupTables
+                )
             }
-            this.allLookupTables = this.$helpers.lodash.merge(this.lookupTables, newLookupTables)
-            this.rows = this.keys.map(
+        },
+        genRows() {
+            this.rows = this.stagingKeys.map(
                 ({
                     id,
                     name,
@@ -135,7 +167,7 @@ export default {
                     on_delete,
                 }) => {
                     const referencedTbl = this.allLookupTables[referenced_tbl_id]
-                    let row = [
+                    return [
                         id,
                         name,
                         this.addNameToCols({ cols: index_cols, map: this.stagingColNameMap }),
@@ -149,7 +181,6 @@ export default {
                         on_update,
                         on_delete,
                     ]
-                    return row
                 }
             )
         },

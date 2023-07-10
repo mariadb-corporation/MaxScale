@@ -42,11 +42,13 @@
                     <fk-definitions
                         v-else-if="activeSpec === DDL_EDITOR_SPECS.FK"
                         v-model="fks"
-                        :schema="tblOpts.schema"
+                        :stagingCols="definitions.cols"
                         :initialData="initialFks"
                         :lookupTables="lookupTables"
                         :stagingColNameMap="stagingColNameMap"
                         :dim="tabDim"
+                        :connData="connData"
+                        :charsetCollationMap="charset_collation_map"
                     />
                 </keep-alive>
             </v-slide-x-transition>
@@ -95,6 +97,7 @@ export default {
         onExecute: { type: Function, required: true },
         // parsed tables to be looked up in fk-definitions
         lookupTables: { type: Object, default: () => ({}) },
+        connData: { type: Object, required: true },
     },
     data() {
         return {

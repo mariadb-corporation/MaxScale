@@ -424,54 +424,50 @@ function transformIndexCols({ index_cols, cols }) {
 }
 
 /**
- * Transform parsed keys of the provided parsed table into a data structure used
+ * Transform parsed keys of a table into a data structure used
  * by the DDL editor. i.e. the referenced names will be replaced with corresponding
  * target ids found in parsedTables. This is done to ensure the relationships between tables
  * are intact when changing the target names.
- * @param {object} param.parsedTable - the node to have its keys transformed
+ * @param {object} param
+ *  * @param {array} param.keys - keys to be transformed
+ * @param {array} param.cols - all columns of a table
  * @param {array} [param.parsedTables] - all parsed tables in the ERD. Required when parsing FK
- * @returns {object} - transformed keys
+ * @returns {array} - transformed keys
  */
-function transformKeys({ parsedTable, parsedTables = [] }) {
-    const { keys, cols } = parsedTable.definitions
-    let transformedKeys = {}
-    ALL_TABLE_KEY_TYPES.forEach(type => {
-        if (keys[type]) {
-            transformedKeys[type] = keys[type].map(key => {
-                let transformedKey = {
-                    ...key,
-                    // transform referencing index_cols
-                    index_cols: transformIndexCols({ index_cols: key.index_cols, cols }),
-                }
-                if (key.referenced_table_name) {
-                    let referencedTbl
-                    // Find referenced node
-                    parsedTables.forEach(tbl => {
-                        if (
-                            tbl.name === key.referenced_table_name &&
-                            tbl.options.schema === parsedTable.options.schema
-                        )
-                            referencedTbl = tbl
-                    })
-                    // If referencedTbl is not found, it's not in parsedTables, the fk shouldn't be transformed
-                    if (referencedTbl) {
-                        transformedKey.referenced_tbl_id = referencedTbl.id
-                        // Remove properties that are no longer needed.
-                        delete transformedKey.referenced_table_name
-                        delete transformedKey.referenced_schema_name
-                        // transform referenced_index_cols
-                        transformedKey.referenced_index_cols = transformIndexCols({
-                            index_cols: key.referenced_index_cols,
-                            cols: referencedTbl.definitions.cols,
-                        })
-                    }
-                }
-                return transformedKey
-            })
+function transformKeys({ keys, cols, parsedTables }) {
+    return keys.map(key => {
+        let transformedKey = {
+            ...key,
+            // transform referencing index_cols
+            index_cols: transformIndexCols({ index_cols: key.index_cols, cols }),
         }
+        if (key.referenced_table_name) {
+            let referencedTbl
+            // Find referenced node
+            parsedTables.forEach(tbl => {
+                if (
+                    tbl.name === key.referenced_table_name &&
+                    tbl.options.schema === key.referenced_schema_name
+                )
+                    referencedTbl = tbl
+            })
+            // If referencedTbl is not found, it's not in parsedTables, the fk shouldn't be transformed
+            if (referencedTbl) {
+                transformedKey.referenced_tbl_id = referencedTbl.id
+                // Remove properties that are no longer needed.
+                delete transformedKey.referenced_table_name
+                delete transformedKey.referenced_schema_name
+                // transform referenced_index_cols
+                transformedKey.referenced_index_cols = transformIndexCols({
+                    index_cols: key.referenced_index_cols,
+                    cols: referencedTbl.definitions.cols,
+                })
+            }
+        }
+        return transformedKey
     })
-    return transformedKeys
 }
+
 function isSingleUQ({ keys, colId }) {
     return typy(keys, `[${tokens.uniqueKey}]`).safeArray.some(key =>
         key.index_cols.every(c => c.id === colId)
@@ -492,7 +488,10 @@ function tableParserTransformer({ parsedTable, parsedTables = [], charsetCollati
         definitions: { cols, keys },
     } = parsedTable
     const transformedKeys = immutableUpdate(keys, {
-        $set: transformKeys({ parsedTable, parsedTables }),
+        $set: ALL_TABLE_KEY_TYPES.reduce((res, type) => {
+            if (keys[type]) res[type] = transformKeys({ keys: keys[type], cols, parsedTables })
+            return res
+        }, {}),
     })
     const charset = parsedTable.options.charset
     const collation =
@@ -791,4 +790,5 @@ export default {
     getExcludedLinks,
     isSingleUQ,
     createColNameMap,
+    transformKeys,
 }

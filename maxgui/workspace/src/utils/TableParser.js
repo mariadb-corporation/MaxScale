@@ -134,12 +134,17 @@ export default class TableParser {
                 ...parsed,
                 match_option,
                 referenced_index_cols: this.parseIndexColNames(referenced_index_col_names),
-                referenced_schema_name: unquoteIdentifier(referenced_schema_name),
+                /**
+                 * If referenced_schema_name is not defined, the referenced table is in the
+                 * same schema as the table being parsed.
+                 */
+                referenced_schema_name: referenced_schema_name
+                    ? unquoteIdentifier(referenced_schema_name)
+                    : this.schema,
                 referenced_table_name: unquoteIdentifier(referenced_table_name),
                 on_delete,
                 on_update,
             }
-
         return parsed
     }
     /**
@@ -168,12 +173,13 @@ export default class TableParser {
     /** Parse the result of SHOW CREATE TABLE
      * @param {object} param
      * @param {string} param.ddl - result of SHOW CREATE TABLE
-     * @param {string} [param.schema] - name of the schema
+     * @param {string} param.schema - name of the schema
      * @param {boolean} [param.autoGenId] - if true, id will be generated for the table and its columns
      * @returns {object} parsed ddl
      */
-    parse({ ddl, schema = '', autoGenId = false }) {
+    parse({ ddl, schema, autoGenId = false }) {
         this.autoGenId = autoGenId
+        this.schema = schema
         const match = ddl.match(createTableReg)
         let name, definitions, options
         if (match) {

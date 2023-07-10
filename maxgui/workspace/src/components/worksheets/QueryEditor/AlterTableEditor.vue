@@ -5,6 +5,7 @@
             v-model="stagingData"
             :dim="dim"
             :initialData="initialData"
+            :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
             :onExecute="onExecute"
         />
     </v-card>
@@ -27,6 +28,7 @@ import { mapActions } from 'vuex'
 import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
+import Worksheet from '@wsModels/Worksheet'
 
 export default {
     name: 'alter-table-editor',
@@ -47,6 +49,9 @@ export default {
         },
         activeQueryTabConnId() {
             return this.$typy(QueryConn.getters('activeQueryTabConn'), 'id').safeString
+        },
+        activeRequestConfig() {
+            return Worksheet.getters('activeRequestConfig')
         },
     },
     activated() {

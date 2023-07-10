@@ -197,48 +197,54 @@ const expectedKeyDefs = {
             stubIndexColNameDef({ name: 'first_name' }),
         ],
     }),
-    'CONSTRAINT `songs_album_id` FOREIGN KEY (`album_id`) REFERENCES `albums` (`id`)': stubKeyDef({
+    ['CONSTRAINT `songs_album_id` FOREIGN KEY (`album_id`) REFERENCES ' +
+    '`test`.`albums` (`id`)']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: 'songs_album_id',
         index_cols: [stubIndexColNameDef({ name: 'album_id' })],
         referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
+        referenced_schema_name: 'test',
         referenced_table_name: 'albums',
     }),
-    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES `customers` (`id`) " +
-    'ON DELETE CASCADE']: stubKeyDef({
+    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES " +
+    '`test`.`customers` (`id`) ON DELETE CASCADE']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: 'orders_ibfk_1',
         index_cols: [stubIndexColNameDef({ name: "customer's id" })],
         referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
+        referenced_schema_name: 'test',
         referenced_table_name: 'customers',
         on_delete: 'CASCADE',
     }),
-    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES `customers` (`id`) " +
-    'ON UPDATE SET NULL']: stubKeyDef({
+    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES " +
+    '`test`.`customers` (`id`) ON UPDATE SET NULL']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: 'orders_ibfk_1',
         index_cols: [stubIndexColNameDef({ name: "customer's id" })],
         referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
+        referenced_schema_name: 'test',
         referenced_table_name: 'customers',
         on_update: 'SET NULL',
     }),
-    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES `customers` (`id`) " +
-    'ON DELETE CASCADE ON UPDATE NO ACTION']: stubKeyDef({
+    ["CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer's id`) REFERENCES " +
+    '`test`.`customers` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: 'orders_ibfk_1',
         index_cols: [stubIndexColNameDef({ name: "customer's id" })],
         referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
+        referenced_schema_name: 'test',
         referenced_table_name: 'customers',
         on_delete: 'CASCADE',
         on_update: 'NO ACTION',
     }),
     ['CONSTRAINT `orders_ibfk_1` ' +
-    'FOREIGN KEY (`customer_id`) REFERENCES `db1`.`customers` (`customer_id`)']: stubKeyDef({
+    'FOREIGN KEY (`customer_id`) REFERENCES ' +
+    '`test`.`customers` (`customer_id`)']: stubKeyDef({
         category: 'FOREIGN KEY',
         name: 'orders_ibfk_1',
         index_cols: [stubIndexColNameDef({ name: 'customer_id' })],
         referenced_index_cols: [stubIndexColNameDef({ name: 'customer_id' })],
-        referenced_schema_name: 'db1',
+        referenced_schema_name: 'test',
         referenced_table_name: 'customers',
     }),
 }

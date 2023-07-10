@@ -8,6 +8,7 @@
         :isCreating="isCreating"
         :schemas="stagingSchemas"
         :lookupTables="$helpers.lodash.fromPairs(stagingNodes.map(n => [n.id, n.data]))"
+        :connData="{ id: activeErdConnId, config: activeRequestConfig }"
         :onExecute="onExecute"
     >
         <template v-slot:toolbar-append>
@@ -90,11 +91,14 @@ export default {
         eventBus() {
             return EventBus
         },
+        activeRequestConfig() {
+            return Worksheet.getters('activeRequestConfig')
+        },
     },
     async created() {
         await this.queryDdlEditorSuppData({
             connId: this.activeErdConnId,
-            config: Worksheet.getters('activeRequestConfig'),
+            config: this.activeRequestConfig,
         })
     },
     activated() {
