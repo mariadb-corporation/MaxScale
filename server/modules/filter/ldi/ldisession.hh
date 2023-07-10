@@ -24,6 +24,18 @@
 
 class LDISession;
 
+class UploadTracker
+{
+public:
+    UploadTracker();
+    void bytes_uploaded(size_t bytes);
+
+private:
+    size_t                 m_bytes {0};
+    size_t                 m_chunk {0};
+    mxb::Clock::time_point m_start;
+};
+
 class S3Download
 {
 public:
@@ -56,8 +68,7 @@ private:
     LDI::Config::Values       m_config;
     std::string               m_file;
     std::string               m_bucket;
-    mxb::Clock::time_point    m_start;
-    size_t                    m_bytes {0};
+    UploadTracker             m_tracker;
 
 private:
     static size_t read_callback(void* buffer, size_t size, size_t nitems, void* userdata);
@@ -93,6 +104,24 @@ public:
 private:
     std::unique_ptr<mxb::ExternalCmd> m_cmd;
     int64_t                           m_rows {0};
+};
+
+class LDLIConversion : public std::enable_shared_from_this<LDLIConversion>
+{
+public:
+    LDLIConversion(MXS_SESSION* session, std::unique_ptr<mxb::ExternalCmd> cmd);
+    ~LDLIConversion();
+    void enqueue(GWBUF&& data);
+    void stop();
+
+private:
+    void drain_queue();
+
+    MXS_SESSION*                      m_session;
+    std::unique_ptr<mxb::ExternalCmd> m_cmd;
+    std::vector<GWBUF>                m_queue;
+    std::mutex                        m_lock;
+    UploadTracker                     m_tracker;
 };
 
 class LDISession : public maxscale::FilterSession
@@ -147,8 +176,8 @@ private:
     LDI::Config::Values m_config;
     LDI&                m_filter;
 
-    // The ExternalCmd that's used to convert normal LOAD DATA LOCAL INFILE commands into xpand_import calls.
-    std::unique_ptr<mxb::ExternalCmd> m_cmd;
+    // The class that's used to convert normal LOAD DATA LOCAL INFILE commands into xpand_import calls.
+    std::shared_ptr<LDLIConversion> m_converter;
 
     // Boolean that's used to track multi-part packets
     bool m_multipart {false};

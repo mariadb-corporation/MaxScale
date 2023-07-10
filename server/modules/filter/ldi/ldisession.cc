@@ -285,7 +285,7 @@ bool LDISession::routeQuery(GWBUF&& buffer)
 
                     if (auto cmd = create_import_cmd(server, parsed); cmd->start())
                     {
-                        m_cmd = std::move(cmd);
+                        m_converter = std::make_shared<LDLIConversion>(m_pSession, std::move(cmd));
                         MXB_INFO("Converting LOAD DATA LOCAL INFILE into a xpand_import call.");
                         m_state = PREPARE_INTERCEPT;
                     }
@@ -321,10 +321,8 @@ bool LDISession::routeQuery(GWBUF&& buffer)
 
         if (buffer.length() > MYSQL_HEADER_LEN)
         {
-            // Plain data, pipe the packet contents into the command.
-            // TODO: This needs to be offloaded to some other thread. As it stands, this will cause a watchdog
-            // timeout to occur if the writing is slow enough.
-            m_cmd->write(buffer.data() + MYSQL_HEADER_LEN, buffer.length() - MYSQL_HEADER_LEN);
+            // Plain data, put the packet into the execution queue.
+            m_converter->enqueue(std::move(buffer));
             return true;
         }
         else if (multipart)
@@ -337,7 +335,7 @@ bool LDISession::routeQuery(GWBUF&& buffer)
         {
             // This is the final empty packet of the data stream packet
             mxb_assert(buffer.length() == MYSQL_HEADER_LEN);
-            m_cmd->close_output();
+            m_converter->stop();
         }
     }
     else if (m_state == LOAD)
@@ -377,14 +375,14 @@ bool LDISession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const 
         else
         {
             m_state = IDLE;
-            m_cmd.reset();
+            m_converter.reset();
         }
     }
     else if (m_state == INTERCEPT)
     {
         MXB_INFO("Data streaming complete: %s", reply.describe().c_str());
         m_state = IDLE;
-        m_cmd.reset();
+        m_converter.reset();
     }
 
     return mxs::FilterSession::clientReply(std::move(buffer), down, reply);
@@ -452,6 +450,38 @@ bool LDISession::missing_required_params(ServerType type)
 }
 
 //
+// UploadTracker
+//
+
+UploadTracker::UploadTracker()
+    : m_start(mxb::Clock::now())
+{
+}
+
+void UploadTracker::bytes_uploaded(size_t bytes)
+{
+    m_bytes += bytes;
+    m_chunk += bytes;
+
+    if (mxb_log_should_log(LOG_INFO))
+    {
+        auto now = mxb::Clock::now();
+
+        if (now - m_start > 5s)
+        {
+            // Cap the upload speed at the actual number bytes per second if it would otherwise be faster.
+            size_t clamped_bytes = m_chunk / std::max(1.0, mxb::to_secs(now - m_start));
+
+            MXB_INFO("%s processed (%s/s).", mxb::pretty_size(m_bytes).c_str(),
+                     mxb::pretty_size(clamped_bytes).c_str());
+
+            m_start = now;
+            m_chunk = 0;
+        }
+    }
+}
+
+//
 // S3Download
 //
 
@@ -461,7 +491,6 @@ S3Download::S3Download(LDISession* ldi)
     , m_config(ldi->m_config)
     , m_file(ldi->m_file)
     , m_bucket(ldi->m_bucket)
-    , m_start(mxb::Clock::now())
 {
 }
 
@@ -539,32 +568,11 @@ size_t S3Download::read_callback(void* buffer, size_t size, size_t nitems, void*
 
 size_t S3Download::handle_read(void* buffer, size_t length)
 {
-    m_bytes += length;
-
-    if (mxb_log_should_log(LOG_INFO))
-    {
-        log_upload_speed();
-    }
+    m_tracker.bytes_uploaded(length);
 
     // Returning something other than the number of bytes that's available for processing will cause
     // libmarias3 (curl behind the scenes) to stop reading data.
     return process((const char*)buffer, length) ? length : 0;
-}
-
-void S3Download::log_upload_speed()
-{
-    auto now = mxb::Clock::now();
-
-    if (now - m_start > 1s)
-    {
-        // Cap the upload speed at the actual number bytes per second if it would otherwise be faster.
-        size_t clamped_bytes = m_bytes / std::max(1.0, mxb::to_secs(now - m_start));
-
-        MXB_INFO("%s processed (%s/s).", mxb::pretty_size(m_bytes).c_str(),
-                 mxb::pretty_size(clamped_bytes).c_str());
-
-        m_start = now;
-    }
 }
 
 bool S3Download::route_data(GWBUF&& buffer)
@@ -735,4 +743,82 @@ bool CmdLoader::complete()
     }
 
     return ok;
+}
+
+//
+// LDLIConversion
+//
+
+LDLIConversion::LDLIConversion(MXS_SESSION* session, std::unique_ptr<mxb::ExternalCmd> cmd)
+    : m_session(session_get_ref(session))
+    , m_cmd(std::move(cmd))
+{
+}
+
+LDLIConversion::~LDLIConversion()
+{
+    m_session->worker()->execute([session = m_session](){
+        session_put_ref(session);
+    }, mxb::Worker::EXECUTE_AUTO);
+}
+
+void LDLIConversion::enqueue(GWBUF&& data)
+{
+    std::unique_lock guard(m_lock);
+    m_queue.emplace_back(std::move(data));
+
+    // Disable read events on the client DCB to throttle the amount of data that's read. This makes sure that
+    // data is read only as fast as the database can process it.
+    m_session->client_dcb->set_reads_enabled(false);
+
+    mxs::thread_pool().execute([this, ref = shared_from_this()](){
+        std::unique_lock guard(m_lock);
+        drain_queue();
+
+        // If the session is still alive, enable reads on it now that the queue has been emptied. This must be
+        // done on the RoutingWorker thread which means the execution has to be moved there and for that,
+        // another reference to the session is needed. This is to ensure the session isn't deleted while the
+        // message is in transit.
+        m_session->worker()->execute([ses = session_get_ref(m_session)](){
+            if (ses->state() == MXS_SESSION::State::STARTED)
+            {
+                ses->client_dcb->set_reads_enabled(true);
+            }
+
+            session_put_ref(ses);
+        }, mxb::Worker::EXECUTE_AUTO);
+    }, "ldi");
+}
+
+void LDLIConversion::stop()
+{
+    mxs::thread_pool().execute([this, ref = shared_from_this()](){
+        // Draining the queue before closing the command output makes sure that all the pending data has been
+        // written. The thread pool can end up executing the stop() event before all the events queued by
+        // enqueue() have been handled.
+        std::unique_lock guard(m_lock);
+        drain_queue();
+        m_cmd->close_output();
+        m_cmd->wait();
+    }, "ldi");
+}
+
+void LDLIConversion::drain_queue()
+{
+    mxb_assert_message(!mxs::RoutingWorker::get_current(), "This should not be done on a RoutingWorker.");
+    size_t total = 0;
+
+    for (const GWBUF& buffer : m_queue)
+    {
+        size_t len = buffer.length() - MYSQL_HEADER_LEN;
+        total += len;
+        m_cmd->write(buffer.data() + MYSQL_HEADER_LEN, len);
+    }
+
+    if (total)
+    {
+        m_tracker.bytes_uploaded(total);
+    }
+
+    m_queue.clear();
 }
