@@ -1,21 +1,28 @@
 <template>
     <div class="fill-height">
-        <!-- TODO: add toolbar to add/drop key -->
         <v-progress-linear v-if="isLoading" indeterminate />
-        <mxs-virtual-scroll-tbl
-            v-else
-            :headers="headers"
-            :rows="rows"
-            :itemHeight="32"
-            :maxHeight="dim.height"
-            :boundingWidth="dim.width"
-            showSelect
-            :isVertTable="isVertTable"
-            v-on="$listeners"
-            @selected-rows="selectedItems = $event"
-        >
-            <!-- TODO: Render inputs -->
-        </mxs-virtual-scroll-tbl>
+        <template v-else>
+            <tbl-toolbar
+                :selectedItems="selectedItems"
+                :isVertTable.sync="isVertTable"
+                @get-computed-height="headerHeight = $event"
+                @on-delete-selected-items="deleteSelectedKeys"
+                @on-add="addNewKey"
+            />
+            <mxs-virtual-scroll-tbl
+                :headers="headers"
+                :rows="rows"
+                :itemHeight="32"
+                :maxHeight="dim.height - headerHeight"
+                :boundingWidth="dim.width"
+                showSelect
+                :isVertTable="isVertTable"
+                v-on="$listeners"
+                @selected-rows="selectedItems = $event"
+            >
+                <!-- TODO: Render inputs -->
+            </mxs-virtual-scroll-tbl>
+        </template>
     </div>
 </template>
 
@@ -33,10 +40,12 @@
  * Public License.
  */
 import { mapState } from 'vuex'
+import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'fk-definitions',
+    components: { TblToolbar },
     props: {
         value: { type: Array, required: true },
         stagingCols: { type: Array, required: true },
@@ -50,6 +59,7 @@ export default {
     },
     data() {
         return {
+            headerHeight: 0,
             selectedItems: [],
             isVertTable: false,
             isLoading: true,
@@ -162,9 +172,9 @@ export default {
                     index_cols,
                     referenced_tbl_id,
                     referenced_index_cols,
-                    match_option,
-                    on_update,
-                    on_delete,
+                    match_option = '',
+                    on_update = '',
+                    on_delete = '',
                 }) => {
                     const referencedTbl = this.allLookupTables[referenced_tbl_id]
                     return [
@@ -184,6 +194,13 @@ export default {
                 }
             )
         },
+        deleteSelectedKeys(selectedItems) {
+            const { xorWith, isEqual } = this.$helpers.lodash
+            this.rows = xorWith(this.rows, selectedItems, isEqual)
+            //TODO: drop keys
+        },
+        //TODO: add key
+        addNewKey() {},
     },
 }
 </script>

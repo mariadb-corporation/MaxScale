@@ -1,58 +1,23 @@
 <template>
     <div class="fill-height">
-        <div :style="{ height: `${headerHeight}px` }" class="pb-2 d-flex align-center flex-1">
-            <v-spacer />
-            <mxs-tooltip-btn
-                v-if="selectedItems.length"
-                btnClass="mr-2 pa-1 text-capitalize"
-                x-small
-                outlined
-                depressed
-                color="error"
-                @click="deleteSelectedRows(selectedItems)"
-            >
-                <template v-slot:btn-content>
-                    {{ $mxs_t('drop') }} ({{ selectedItems.length }}
-                </template>
-                {{ $mxs_t('dropSelectedCols') }}
-            </mxs-tooltip-btn>
-            <mxs-tooltip-btn
-                btnClass="mr-2 pa-1 text-capitalize"
-                x-small
-                outlined
-                depressed
-                color="primary"
-                @click="addNewCol"
-            >
-                <template v-slot:btn-content>
-                    {{ $mxs_t('add') }}
-                </template>
-                {{ $mxs_t('addNewCol') }}
-            </mxs-tooltip-btn>
-            <mxs-filter-list
-                v-model="selectedColSpecs"
-                returnObject
-                :label="$mxs_t('specs')"
-                :items="colSpecs"
-                :maxHeight="tableMaxHeight - 20"
-            />
-            <mxs-tooltip-btn
-                btnClass="ml-2 pa-1"
-                x-small
-                outlined
-                depressed
-                color="primary"
-                @click="isVertTable = !isVertTable"
-            >
-                <template v-slot:btn-content>
-                    <v-icon size="14" :class="{ 'rotate-left': !isVertTable }">
-                        mdi-format-rotate-90
-                    </v-icon>
-                </template>
-                {{ $mxs_t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}
-            </mxs-tooltip-btn>
-        </div>
-
+        <tbl-toolbar
+            :selectedItems="selectedItems"
+            :isVertTable.sync="isVertTable"
+            @get-computed-height="headerHeight = $event"
+            @on-delete-selected-items="deleteSelectedRows"
+            @on-add="addNewCol"
+        >
+            <template v-slot:append>
+                <mxs-filter-list
+                    v-model="selectedColSpecs"
+                    activatorClass="ml-2"
+                    returnObject
+                    :label="$mxs_t('specs')"
+                    :items="colSpecs"
+                    :maxHeight="tableMaxHeight - 20"
+                />
+            </template>
+        </tbl-toolbar>
         <mxs-virtual-scroll-tbl
             :headers="visHeaders"
             :rows="cols"
@@ -123,6 +88,7 @@
  */
 import { mapState } from 'vuex'
 import ColOptInput from '@wsSrc/components/common/MxsDdlEditor/ColOptInput.vue'
+import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import {
     getColumnTypes,
     check_charset_support,
@@ -133,7 +99,7 @@ import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'col-definitions',
-    components: { ColOptInput },
+    components: { ColOptInput, TblToolbar },
     props: {
         value: { type: Object, required: true },
         initialData: { type: Object, required: true },
@@ -147,6 +113,7 @@ export default {
             selectedItems: [],
             isVertTable: false,
             selectedColSpecs: [],
+            headerHeight: 0,
         }
     },
     computed: {
@@ -156,9 +123,6 @@ export default {
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
-        headerHeight() {
-            return 28
-        },
         tableMaxHeight() {
             return this.dim.height - this.headerHeight
         },

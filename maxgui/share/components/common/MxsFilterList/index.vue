@@ -11,7 +11,7 @@
             <slot name="activator" :data="{ on, attrs, value, label }">
                 <v-btn
                     x-small
-                    class="text-capitalize font-weight-medium"
+                    :class="`text-capitalize font-weight-medium ${activatorClass}`"
                     outlined
                     depressed
                     color="primary"
@@ -119,6 +119,7 @@ export default {
         maxHeight: { type: Number, required: true },
         returnObject: { type: Boolean, default: false },
         selectAllOnCreated: { type: Boolean, default: false },
+        activatorClass: { type: String, default: '' },
     },
     data() {
         return {
