@@ -275,6 +275,16 @@ public:
     }
 
     /**
+     * Return the individual parts of the request URI
+     *
+     * @return std::deque<std::string>
+     */
+    const std::deque<std::string>& uri_parts() const
+    {
+        return m_resource_parts;
+    }
+
+    /**
      * @brief Get URI part
      *
      * @param idx Zero indexed part number in URI

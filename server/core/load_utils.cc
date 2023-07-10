@@ -136,6 +136,54 @@ NAME_MAPPING name_mappings[] =
     {ModuleType::PROTOCOL,      "postgresql",    pgproto,       true },
     {ModuleType::AUTHENTICATOR, "mysqlauth",     "mariadbauth", false},
 };
+
+const MXS_MODULE* get_module_impl(const std::string& name, mxs::ModuleType type, bool log_errors)
+{
+    MXS_MODULE* rval = nullptr;
+    string eff_name = module_get_effective_name(name);
+    LOADED_MODULE* module = find_module(eff_name);
+    if (module)
+    {
+        // If the module is already loaded, then it has been validated during loading. Only type needs to
+        // be checked.
+        auto mod_info = module->info;
+        if (type == mxs::ModuleType::UNKNOWN || mod_info->modapi == type)
+        {
+            rval = mod_info;
+        }
+        else if (log_errors)
+        {
+            auto expected_type_str = module_type_to_string(type);
+            auto found_type_str = module_type_to_string(mod_info->modapi);
+            MXB_ERROR(wrong_mod_type, name.c_str(), found_type_str, expected_type_str);
+        }
+    }
+    else
+    {
+        // No such module loaded, try to load.
+        string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
+        auto res = load_module(fname, type, name);
+
+        if (res.result == LoadResult::OK)
+        {
+            if ((module = find_module(eff_name)))
+            {
+                rval = module->info;
+            }
+            else if (log_errors)
+            {
+                MXB_ERROR("Module '%s' was not found after being loaded successfully: "
+                          "library name and module name are different.", fname.c_str());
+            }
+        }
+        // In some cases the error message has already been printed.
+        else if (!res.error.empty() && log_errors)
+        {
+            MXB_ERROR("%s", res.error.c_str());
+        }
+    }
+    return rval;
+}
 }
 
 static bool api_version_match(const MXS_MODULE* mod_info, const string& filepath)
@@ -628,50 +676,12 @@ json_t* module_list_to_json(const char* host)
 
 const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
 {
-    MXS_MODULE* rval = nullptr;
-    string eff_name = module_get_effective_name(name);
-    LOADED_MODULE* module = find_module(eff_name);
-    if (module)
-    {
-        // If the module is already loaded, then it has been validated during loading. Only type needs to
-        // be checked.
-        auto mod_info = module->info;
-        if (type == mxs::ModuleType::UNKNOWN || mod_info->modapi == type)
-        {
-            rval = mod_info;
-        }
-        else
-        {
-            auto expected_type_str = module_type_to_string(type);
-            auto found_type_str = module_type_to_string(mod_info->modapi);
-            MXB_ERROR(wrong_mod_type, name.c_str(), found_type_str, expected_type_str);
-        }
-    }
-    else
-    {
-        // No such module loaded, try to load.
-        string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
-        auto res = load_module(fname, type, name);
+    return get_module_impl(name, type, true);
+}
 
-        if (res.result == LoadResult::OK)
-        {
-            if ((module = find_module(eff_name)))
-            {
-                rval = module->info;
-            }
-            else
-            {
-                MXB_ERROR("Module '%s' was not found after being loaded successfully: "
-                          "library name and module name are different.", fname.c_str());
-            }
-        }
-        // In some cases the error message has already been printed.
-        else if (!res.error.empty())
-        {
-            MXB_ERROR("%s", res.error.c_str());
-        }
-    }
-    return rval;
+bool is_mxs_module(const std::string& name)
+{
+    return get_module_impl(name, mxs::ModuleType::UNKNOWN, false);
 }
 
 string module_get_effective_name(const string& name)

@@ -133,6 +133,18 @@ bool Resource::match(const HttpRequest& request) const
     return rval;
 }
 
+bool Resource::part_matches(const std::string& part, size_t depth) const
+{
+    bool rval = false;
+
+    if (m_path.size() > depth)
+    {
+        rval = m_path[depth] == part || matching_variable_path(m_path[depth], part);
+    }
+
+    return rval;
+}
+
 static void remove_null_parameters(json_t* json)
 {
     if (json_t* parameters = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
@@ -168,7 +180,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
             || (path == ":module" && (target == mxs::Config::get().specification().module()
                                       || target == Server::specification().module()
-                                      || get_module(target, mxs::ModuleType::UNKNOWN)))
+                                      || is_mxs_module(target)))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()) != mxs::USER_ACCOUNT_UNKNOWN)
             || (path == ":listener" && Listener::find(target.c_str()))
             || (path == ":connection_id" && HttpSql::is_connection(target))
@@ -1641,19 +1653,89 @@ public:
         /** SQL connection destruction */
         m_delete.emplace_back(cb_sql_disconnect, "sql", ":connection_id");
         m_delete.emplace_back(cb_sql_erase_query_result, "sql", ":connection_id", "queries", ":query_id");
+
+        std::sort(m_get.begin(), m_get.end());
+        std::sort(m_put.begin(), m_put.end());
+        std::sort(m_post.begin(), m_post.end());
+        std::sort(m_delete.begin(), m_delete.end());
+        std::sort(m_patch.begin(), m_patch.end());
     }
 
     ~RootResource()
     {
     }
 
+    template<class ResIter, class PathIter>
+    const std::pair<ResIter, ResIter> find_matching_resources(ResIter rbeg, ResIter rend,
+                                                              PathIter pbeg, PathIter pend,
+                                                              size_t depth) const
+    {
+        auto it = rbeg;
+
+        if (it == rend || pbeg == pend)
+        {
+            // No match or we ran out of path parts
+            return {it, rend};
+        }
+
+        while (it != rend && !it->part_matches(*pbeg, depth))
+        {
+            ++it;
+        }
+
+        if (it == rend)
+        {
+            // Nothing matches, return the whole range that matched in the previous search step
+            return {rbeg, rend};
+        }
+
+        auto it_start = it;
+
+        while (it != rend && it->part_matches(*pbeg, depth))
+        {
+            ++it;
+        }
+
+        return find_matching_resources(it_start, it, pbeg + 1, pend, depth + 1);
+    }
+
     const Resource* find_resource(const ResourceList& list, const HttpRequest& request) const
     {
-        for (const auto& res : list)
+        const auto& parts = request.uri_parts();
+        auto [start, end] = find_matching_resources(list.begin(), list.end(), parts.begin(), parts.end(), 0);
+
+        for (auto it = start; it != end; ++it)
         {
-            if (res.match(request))
+            if (it->match(request))
             {
-                return &res;
+                return &(*it);
+            }
+        }
+
+        if (start != list.begin() || end != list.end())
+        {
+            // Some part of the path matched some resources. Try to figure out if any of them is a name of an
+            // object and report it as a name mismatch. The error messages will be redirected to the REST-API
+            // clients.
+            for (auto it = start; it != end; ++it)
+            {
+                const auto& path = it->path();
+
+                if (path.size() == parts.size())
+                {
+                    for (size_t i = 0; i < path.size(); i++)
+                    {
+                        if (!it->part_matches(parts[i], i))
+                        {
+                            if (path[i][0] == ':')
+                            {
+                                MXB_ERROR("%s is not a %s", parts[i].c_str(), path[i].c_str() + 1);
+                            }
+
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -1722,7 +1804,7 @@ public:
 
     HttpResponse process_request(const HttpRequest& request, const Resource* resource)
     {
-        HttpResponse response(MHD_HTTP_NOT_FOUND);
+        HttpResponse response(MHD_HTTP_NOT_FOUND, runtime_get_json_error());
 
         if (resource)
         {

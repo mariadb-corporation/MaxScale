@@ -67,6 +67,16 @@ public:
     bool match(const HttpRequest& request) const;
 
     /**
+     * @brief Check if the given part of the path matches the given value
+     *
+     * @param part  Part to match against
+     * @param depth The index number of the path part to compare to
+     *
+     * @return True if the part matches
+     */
+    bool part_matches(const std::string& part, size_t depth) const;
+
+    /**
      * @brief Handle a HTTP request
      *
      * @param request Request to handle
@@ -95,6 +105,24 @@ public:
      * @return True if resource requires synchronization
      */
     bool requires_sync() const;
+
+    /**
+     * The components of the path
+     *
+     * @return The components of the broken down path.
+     */
+    const std::vector<std::string>& path() const
+    {
+        return m_path;
+    }
+
+    /**
+     * Comparison operator, used to sort the resources
+     */
+    bool operator<(const Resource& other) const
+    {
+        return m_path < other.m_path;
+    }
 
 private:
 

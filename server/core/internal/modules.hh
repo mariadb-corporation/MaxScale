@@ -60,6 +60,15 @@ bool load_all_modules();
 const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type);
 
 /**
+ * @brief Check if a module with the given name exists
+ *
+ * @param name Name of the module
+ *
+ * @return True if the module exists and is a valid module for this version of MaxScale
+ */
+bool is_mxs_module(const std::string& name);
+
+/**
  * @brief Unload all modules
  *
  * Remove all the modules from the system, called during shutdown
