@@ -45,6 +45,7 @@ export const lodash = {
     update: require('lodash/update'),
     sortBy: require('lodash/sortBy'),
     fromPairs: require('lodash/fromPairs'),
+    map: require('lodash/map'),
 }
 
 export function delay(t, v) {

@@ -289,3 +289,20 @@ export const MIGR_DLG_TYPES = Object.freeze({
 export const ETL_DEF_POLLING_INTERVAL = 250
 
 export const ERD_ZOOM_OPTS = [25, 50, 100, 125, 150, 200]
+
+export const FK_EDITOR_ATTRS = Object.freeze({
+    ID: 'id',
+    NAME: 'name',
+    REFERENCING_COL: 'referencingCols',
+    REFERENCED_TARGET: 'referencedTarget',
+    REFERENCED_COL: 'referencedCols',
+    ON_UPDATE: 'onUpdate',
+    ON_DELETE: 'onDelete',
+})
+
+export const REFERENCE_OPTIONS = Object.freeze({
+    RESTRICT: CREATE_TBL_TOKENS.restrict,
+    CASCADE: CREATE_TBL_TOKENS.cascade,
+    SET_NULL: CREATE_TBL_TOKENS.setNull,
+    NO_ACTION: CREATE_TBL_TOKENS.noAction,
+})

@@ -14,7 +14,7 @@ import { t } from 'typy'
 import { lodash, uuidv1 } from '@share/utils/helpers'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, REFERENCE_OPTIONS } from '@wsSrc/store/config'
 
 const tableOptionsReg = tokenizer.tableOptions
 const colDefReg = tokenizer.colDef
@@ -118,8 +118,8 @@ export default class TableParser {
             referenced_index_col_names,
             referenced_schema_name,
             referenced_table_name,
-            on_delete,
-            on_update,
+            on_delete = REFERENCE_OPTIONS.NO_ACTION,
+            on_update = REFERENCE_OPTIONS.NO_ACTION,
         } = match.groups
 
         let parsed = {

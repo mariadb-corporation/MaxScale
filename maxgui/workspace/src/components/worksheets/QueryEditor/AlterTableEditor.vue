@@ -7,6 +7,7 @@
             :initialData="initialData"
             :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
             :onExecute="onExecute"
+            :lookupTables="{ [stagingData.id]: stagingData }"
         />
     </v-card>
 </template>

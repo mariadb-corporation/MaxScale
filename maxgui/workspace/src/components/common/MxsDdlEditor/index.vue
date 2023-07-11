@@ -44,7 +44,7 @@
                         v-model="fks"
                         :initialData="initialFks"
                         :lookupTables="lookupTables"
-                        :stagingColNameMap="stagingColNameMap"
+                        :tableId="stagingData.id"
                         :dim="tabDim"
                         :connData="connData"
                         :charsetCollationMap="charset_collation_map"

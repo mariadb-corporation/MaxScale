@@ -20,7 +20,35 @@
                 v-on="$listeners"
                 @selected-rows="selectedItems = $event"
             >
-                <!-- TODO: Render inputs -->
+                <template
+                    v-for="(h, key) in headers"
+                    v-slot:[`header-${h.text}`]="{ data: { header } }"
+                >
+                    <span :key="key">{{ $mxs_t(header.text) }} </span>
+                </template>
+                <template
+                    v-for="h in headers"
+                    v-slot:[h.text]="{ data: { cell, rowIdx, rowData } }"
+                >
+                    <fk-definition-col
+                        :key="h.text"
+                        :data="{
+                            field: h.text,
+                            value: cell,
+                            rowIdx,
+                        }"
+                        :height="28"
+                        :referencingColOptions="referencingColOptions"
+                        :referencedTargets="referencedTargets"
+                        :referencedColOptions="
+                            getColOptions({
+                                map: allTableColNameMap,
+                                tableId: $typy(fkReferencedTableMap[rowData[0]], 'id').safeString,
+                            })
+                        "
+                        @on-input="onChangeInput"
+                    />
+                </template>
             </mxs-virtual-scroll-tbl>
         </template>
     </div>
@@ -41,14 +69,15 @@
  */
 import { mapState } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
+import FkDefinitionCol from '@wsSrc/components/common/MxsDdlEditor/FkDefinitionCol.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'fk-definitions',
-    components: { TblToolbar },
+    components: { TblToolbar, FkDefinitionCol },
     props: {
         value: { type: Array, required: true },
-        stagingColNameMap: { type: Object, required: true },
+        tableId: { type: String, required: true },
         initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
         // existing parsed tables, keyed by table id
@@ -62,7 +91,7 @@ export default {
             selectedItems: [],
             isVertTable: false,
             isLoading: false,
-            // new referenced tables that are not found in lookupTables keyed by genNewLookupTableKey
+            // new referenced tables keyed by genTableKey
             newLookupTables: {},
             stagingKeys: {},
         }
@@ -70,18 +99,29 @@ export default {
     computed: {
         ...mapState({
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+            FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
+            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
+            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
         }),
         headers() {
             let header = { sortable: false }
+            const {
+                ID,
+                NAME,
+                REFERENCING_COL,
+                REFERENCED_TARGET,
+                REFERENCED_COL,
+                ON_UPDATE,
+                ON_DELETE,
+            } = this.FK_EDITOR_ATTRS
             return [
-                { text: 'id', hidden: true },
-                { text: this.$mxs_t('name'), ...header },
-                { text: this.$mxs_t('referencingCols'), minWidth: 146, ...header },
-                { text: this.$mxs_t('referencedSchema'), width: 150, minWidth: 136, ...header },
-                { text: this.$mxs_t('referencedTbl'), width: 150, minWidth: 124, ...header },
-                { text: this.$mxs_t('referencedCols'), minWidth: 142, ...header },
-                { text: this.$mxs_t('onUpdate'), width: 120, minWidth: 86, ...header },
-                { text: this.$mxs_t('onDelete'), width: 120, minWidth: 86, ...header },
+                { text: ID, hidden: true },
+                { text: NAME, ...header },
+                { text: REFERENCING_COL, minWidth: 146, ...header },
+                { text: REFERENCED_TARGET, minWidth: 146, ...header },
+                { text: REFERENCED_COL, minWidth: 142, ...header },
+                { text: ON_UPDATE, width: 166, minWidth: 86, ...header },
+                { text: ON_DELETE, width: 166, minWidth: 86, ...header },
             ]
         },
         keys: {
@@ -92,33 +132,55 @@ export default {
                 this.$emit('input', v)
             },
         },
+        // mapped by FK id
+        fkReferencedTableMap() {
+            return this.stagingKeys.reduce(
+                (
+                    map,
+                    {
+                        id,
+                        referenced_schema_name = '',
+                        referenced_table_name = '',
+                        referenced_tbl_id,
+                    }
+                ) => {
+                    map[id] = this.getReferencedTable({
+                        id: referenced_tbl_id,
+                        key: this.genTableKey({
+                            schemaName: referenced_schema_name,
+                            tableName: referenced_table_name,
+                        }),
+                    })
+                    return map
+                },
+                {}
+            )
+        },
+        idxOfColId() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
+        },
+        idxOfColName() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]
+        },
         rows() {
             return this.stagingKeys.map(
-                ({
-                    id,
-                    name,
-                    index_cols,
-                    referenced_schema_name,
-                    referenced_table_name,
-                    referenced_tbl_id,
-                    referenced_index_cols,
-                    on_update = '',
-                    on_delete = '',
-                }) => {
-                    const key = this.genNewLookupTableKey({
-                        schemaName: referenced_schema_name,
-                        tableName: referenced_table_name,
+                ({ id, name, index_cols, referenced_index_cols, on_update, on_delete }) => {
+                    const referencedTbl = this.fkReferencedTableMap[id]
+                    const referencedColNames = referenced_index_cols.map(c => {
+                        if (c.name) return c.name
+                        else return this.allTableColNameMap[referencedTbl.id][c.id]
                     })
-                    const referencedTbl = this.getReferencedTable({ id: referenced_tbl_id, key })
+                    const referencedColIds = referencedTbl.definitions.cols.reduce((res, c) => {
+                        if (referencedColNames.includes(c[this.idxOfColName]))
+                            res.push(c[this.idxOfColId])
+                        return res
+                    }, [])
                     return [
                         id,
                         name,
-                        index_cols.map(({ id }) => ({
-                            name: this.$typy(this.stagingColNameMap, `${id}`).safeString,
-                        })),
-                        this.$typy(referencedTbl, 'options.schema').safeString,
-                        this.$typy(referencedTbl, 'options.name').safeString,
-                        referenced_index_cols,
+                        index_cols.map(c => c.id),
+                        referencedTbl.id,
+                        referencedColIds,
                         on_update,
                         on_delete,
                     ]
@@ -144,6 +206,36 @@ export default {
                 []
             )
             return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
+        },
+        // Keyed by table id
+        allTableMap() {
+            const { lodash } = this.$helpers
+            // convert newLookupTables to key by id
+            const newLookupTables = lodash.keyBy(Object.values(this.newLookupTables), 'id')
+            return lodash.merge(this.lookupTables, newLookupTables)
+        },
+        /**
+         * @returns nested hash. e.g. { "tbl_123": { "col_123": "id", "col_234": "name" } }
+         */
+        allTableColNameMap() {
+            return Object.keys(this.allTableMap).reduce((res, id) => {
+                res[id] = queryHelper.createColNameMap(
+                    this.$typy(this.allTableMap[id], 'definitions.cols').safeArray
+                )
+                return res
+            }, {})
+        },
+        referencingColOptions() {
+            return this.getColOptions({ map: this.allTableColNameMap, tableId: this.tableId })
+        },
+        referencedTargets() {
+            return this.$helpers.lodash.map(this.allTableMap, (tbl, id) => ({
+                id,
+                text: this.genTableKey({
+                    schemaName: tbl.options.schema,
+                    tableName: tbl.options.name,
+                }),
+            }))
         },
     },
     watch: {
@@ -181,12 +273,17 @@ export default {
          * @param {object} param
          * @param {string} param.schemaName - schema name
          * @param {string} param.tableName - table name
+         * @return {string} qualifier name
          */
-        genNewLookupTableKey({ schemaName, tableName }) {
-            return `${schemaName}.${tableName}`
+        genTableKey({ schemaName, tableName }) {
+            const { quotingIdentifier: quote } = this.$helpers
+            return `${quote(schemaName)}.${quote(tableName)}`
         },
         getReferencedTable({ id, key }) {
             return this.lookupTables[id] || this.newLookupTables[key] || {}
+        },
+        getColOptions({ map, tableId }) {
+            return this.$helpers.lodash.map(map[tableId], (text, id) => ({ id, text }))
         },
         async fetchReferencedTablesData(targets) {
             this.isLoading = true
@@ -196,7 +293,7 @@ export default {
                 config: this.connData.config,
             })
             this.newLookupTables = parsedTables.reduce((map, tbl) => {
-                const key = this.genNewLookupTableKey({
+                const key = this.genTableKey({
                     schemaName: tbl.options.schema,
                     tableName: tbl.name,
                 })
@@ -214,6 +311,8 @@ export default {
         },
         //TODO: add key
         addNewKey() {},
+        //TODO: handle input change
+        onChangeInput() {},
     },
 }
 </script>

@@ -13,7 +13,7 @@
 import { lodash } from '@share/utils/helpers'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
 import TableParser from '@wsSrc/utils/TableParser'
-import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, REFERENCE_OPTIONS } from '@wsSrc/store/config'
 
 function stubColDef({
     name,
@@ -54,8 +54,8 @@ function stubKeyDef({
     referenced_index_cols,
     referenced_schema_name,
     referenced_table_name,
-    on_delete,
-    on_update,
+    on_delete = REFERENCE_OPTIONS.NO_ACTION,
+    on_update = REFERENCE_OPTIONS.NO_ACTION,
 }) {
     let mockParsedData = { index_cols }
     if (category !== tokens.primaryKey) mockParsedData.name = name
