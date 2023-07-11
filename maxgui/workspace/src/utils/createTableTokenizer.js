@@ -235,16 +235,6 @@ const REFERENCED_TARGET = createGroup({
 })
 const REFERENCED_COL_NAMES = createIdxColNamesReg('referenced_index_col_names')
 
-const MATCH_OPTION = createGroup({
-    token:
-        `${tokens.match}${WHITESPACE_REQ}` +
-        createGroup({
-            token: [tokens.full, tokens.partial, tokens.simple].join('|'),
-            name: 'match_option',
-        }),
-    optional: true,
-})
-
 const ON_DELETE = createOnActionToken('delete')
 const ON_UPDATE = createOnActionToken('update')
 
@@ -299,7 +289,7 @@ export default {
                     REFERENCED_COL_NAMES,
                 ].join(WHITESPACE_REQ) +
                 WHITESPACE_OPT +
-                [MATCH_OPTION, ON_DELETE, ON_UPDATE].join(WHITESPACE_OPT),
+                [ON_DELETE, ON_UPDATE].join(WHITESPACE_OPT),
         }),
         'i'
     ),

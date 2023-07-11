@@ -80,7 +80,6 @@ export default {
                 { text: this.$mxs_t('referencedSchema'), width: 150, minWidth: 136, ...header },
                 { text: this.$mxs_t('referencedTbl'), width: 150, minWidth: 124, ...header },
                 { text: this.$mxs_t('referencedCols'), minWidth: 142, ...header },
-                { text: this.$mxs_t('match'), width: 90, resizable: false, ...header },
                 { text: this.$mxs_t('onUpdate'), width: 120, minWidth: 86, ...header },
                 { text: this.$mxs_t('onDelete'), width: 120, minWidth: 86, ...header },
             ]
@@ -103,7 +102,6 @@ export default {
                     referenced_table_name,
                     referenced_tbl_id,
                     referenced_index_cols,
-                    match_option = '',
                     on_update = '',
                     on_delete = '',
                 }) => {
@@ -121,7 +119,6 @@ export default {
                         this.$typy(referencedTbl, 'options.schema').safeString,
                         this.$typy(referencedTbl, 'options.name').safeString,
                         referenced_index_cols,
-                        match_option,
                         on_update,
                         on_delete,
                     ]

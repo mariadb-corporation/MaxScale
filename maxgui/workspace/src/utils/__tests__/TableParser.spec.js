@@ -51,7 +51,6 @@ function stubKeyDef({
     category,
     name,
     index_cols,
-    match_option,
     referenced_index_cols,
     referenced_schema_name,
     referenced_table_name,
@@ -63,7 +62,6 @@ function stubKeyDef({
     if (category === tokens.foreignKey)
         mockParsedData = {
             ...mockParsedData,
-            match_option,
             referenced_index_cols,
             referenced_schema_name,
             referenced_table_name,

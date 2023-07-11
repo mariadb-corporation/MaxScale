@@ -115,7 +115,6 @@ export default class TableParser {
             category,
             name,
             index_col_names,
-            match_option,
             referenced_index_col_names,
             referenced_schema_name,
             referenced_table_name,
@@ -131,7 +130,6 @@ export default class TableParser {
         if (category === tokens.foreignKey)
             parsed = {
                 ...parsed,
-                match_option,
                 referenced_index_cols: this.parseIndexColNames(referenced_index_col_names),
                 /**
                  * If referenced_schema_name is not defined, the referenced table is in the
