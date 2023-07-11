@@ -220,7 +220,25 @@ private:
 };
 
 thread_local RateLimit rate_limit;
+thread_local std::vector<std::string> listen_errors;
+
 static ListenerManager this_unit;
+
+static bool redirect_listener_errors(int level, const std::string& msg)
+{
+    // Lower is more severe. Include warnings as they bring context to the automatic re-bind to IPv4 that is
+    // done if the IPv6 binding fails.
+    if (level < LOG_NOTICE)
+    {
+        // The suppression message should not be included in the actual message. This would look really odd if
+        // shown to the client. If it's not found, the substr() call ends up just copying the whole string.
+        auto pos = msg.find(" (subsequent similar messages");
+        listen_errors.push_back(msg.substr(0, pos));
+        return true;
+    }
+
+    return false;
+}
 }
 
 bool is_all_iface(const std::string& iface)
@@ -520,9 +538,9 @@ void Listener::close_all_fds()
     {
         mxs::RoutingWorker::execute_concurrently(
             [this]() {
-                close(*m_local_fd);
-                *m_local_fd = -1;
-            });
+            close(*m_local_fd);
+            *m_local_fd = -1;
+        });
     }
     else
     {
@@ -560,11 +578,11 @@ static bool execute_and_check(const std::function<bool ()>& func)
 {
     std::atomic<size_t> n_ok {0};
     auto wrapper = [func, &n_ok]() {
-            if (func())
-            {
-                ++n_ok;
-            }
-        };
+        if (func())
+        {
+            ++n_ok;
+        }
+    };
 
     size_t n_executed = mxs::RoutingWorker::execute_concurrently(wrapper);
     return n_executed == n_ok;
@@ -580,10 +598,10 @@ bool Listener::stop()
         if (m_type == Type::UNIQUE_TCP)
         {
             if (execute_and_check([this]() {
-                                      mxb_assert(*m_local_fd != -1);
-                                      auto worker = mxs::RoutingWorker::get_current();
-                                      return worker->remove_pollable(this);
-                                  }))
+                mxb_assert(*m_local_fd != -1);
+                auto worker = mxs::RoutingWorker::get_current();
+                return worker->remove_pollable(this);
+            }))
             {
                 m_state = STOPPED;
                 rval = true;
@@ -612,10 +630,10 @@ bool Listener::start()
         if (m_type == Type::UNIQUE_TCP)
         {
             if (execute_and_check([this]() {
-                                      mxb_assert(*m_local_fd != -1);
-                                      auto worker = mxs::RoutingWorker::get_current();
-                                      return worker->add_pollable(EPOLLIN, this);
-                                  }))
+                mxb_assert(*m_local_fd != -1);
+                auto worker = mxs::RoutingWorker::get_current();
+                return worker->add_pollable(EPOLLIN, this);
+            }))
             {
                 m_state = STARTED;
                 rval = true;
@@ -983,35 +1001,60 @@ bool Listener::listen_shared()
 
 bool Listener::listen_unique()
 {
-    auto open_socket = [this]() {
-            mxb::LogScope scope(name());
-            bool rval = false;
-            int fd = start_listening(address(), port());
+    std::mutex lock;
+    std::vector<std::string> errors;
 
-            if (fd != -1)
+    auto open_socket = [&]() {
+        mxb::LogRedirect redirect(redirect_listener_errors);
+        mxb::LogScope scope(name());
+        bool rval = false;
+        int fd = start_listening(address(), port());
+
+        if (fd != -1)
+        {
+            // Set the worker-local fd to the unique value
+            *m_local_fd = fd;
+            if (mxs::RoutingWorker::get_current()->add_pollable(EPOLLIN, this))
             {
-                // Set the worker-local fd to the unique value
-                *m_local_fd = fd;
-                if (mxs::RoutingWorker::get_current()->add_pollable(EPOLLIN, this))
+                rval = true;
+            }
+            else
+            {
+                *m_local_fd = -1;
+                close(fd);
+            }
+        }
+
+        if (!rval)
+        {
+            std::lock_guard<std::mutex> guard(lock);
+
+            for (auto&& msg : listen_errors)
+            {
+                if (std::find(errors.begin(), errors.end(), msg) == errors.end())
                 {
-                    rval = true;
-                }
-                else
-                {
-                    *m_local_fd = -1;
-                    close(fd);
+                    errors.emplace_back(std::move(msg));
                 }
             }
 
-            return rval;
-        };
+            listen_errors.clear();
+        }
+
+        return rval;
+    };
 
     bool rval = execute_and_check(open_socket);
 
     if (!rval)
     {
         close_all_fds();
-        MXB_ERROR("One or more workers failed to listen on '[%s]:%u'.", address(), port());
+        std::lock_guard<std::mutex> guard(lock);
+        mxb_assert_message(!errors.empty(), "Failure to listen should cause an error to be logged");
+
+        for (const auto& msg : errors)
+        {
+            MXB_ERROR("%s", msg.c_str());
+        }
     }
 
     return rval;
@@ -1094,14 +1137,14 @@ void Listener::accept_connections()
         {
             auto worker = mxs::RoutingWorker::pick_worker();
             worker->execute([this, conn]() {
-                                if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
-                                {
-                                    if (!dcb->protocol()->init_connection())
-                                    {
-                                        ClientDCB::close(dcb);
-                                    }
-                                }
-                            }, mxs::RoutingWorker::EXECUTE_AUTO);
+                if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
+                {
+                    if (!dcb->protocol()->init_connection())
+                    {
+                        ClientDCB::close(dcb);
+                    }
+                }
+            }, mxs::RoutingWorker::EXECUTE_AUTO);
         }
     }
 }
@@ -1322,34 +1365,34 @@ bool Listener::read_user_mapping(mxs::ListenerData::SMappingInfo& output)
             using StringMap = std::unordered_map<std::string, std::string>;
 
             Json::ElemFailHandler elem_fail = [&](int ind, const char* arr_name, const char* msg) {
-                    MXB_ERROR(malformed_entry, ind + 1, arr_name, filepathc, msg);
-                };
+                MXB_ERROR(malformed_entry, ind + 1, arr_name, filepathc, msg);
+            };
 
             auto parse_struct_arr = [&](const char* arr_key, const char* key1, const char* key2,
                                         StringMap& out) {
-                    bool success = true;
-                    if (all.contains(arr_key))
-                    {
-                        const char strings_fmt[] = "{s:s, s:s}";
-                        const char* val1 = nullptr;
-                        const char* val2 = nullptr;
-                        Json::ElemOkHandler elem_ok = [&](int ind, const char* arr_name) {
-                                auto ret = out.emplace(val1, val2);
-                                if (!ret.second)
-                                {
-                                    MXB_WARNING(duplicate_key, val1, arr_name, filepathc);
-                                }
-                            };
-
-                        if (!all.unpack_arr(arr_key, elem_ok, elem_fail, strings_fmt, key1, &val1, key2,
-                                            &val2))
+                bool success = true;
+                if (all.contains(arr_key))
+                {
+                    const char strings_fmt[] = "{s:s, s:s}";
+                    const char* val1 = nullptr;
+                    const char* val2 = nullptr;
+                    Json::ElemOkHandler elem_ok = [&](int ind, const char* arr_name) {
+                        auto ret = out.emplace(val1, val2);
+                        if (!ret.second)
                         {
-                            MXB_ERROR(wrong_type, arr_key, all.error_msg().c_str());
-                            success = false;
+                            MXB_WARNING(duplicate_key, val1, arr_name, filepathc);
                         }
+                    };
+
+                    if (!all.unpack_arr(arr_key, elem_ok, elem_fail, strings_fmt, key1, &val1, key2,
+                                        &val2))
+                    {
+                        MXB_ERROR(wrong_type, arr_key, all.error_msg().c_str());
+                        success = false;
                     }
-                    return success;
-                };
+                }
+                return success;
+            };
 
             if (!parse_struct_arr("user_map", "original_user", "mapped_user", result->user_map)
                 || !parse_struct_arr("group_map", "original_group", "mapped_user", result->group_map))
@@ -1366,20 +1409,20 @@ bool Listener::read_user_mapping(mxs::ListenerData::SMappingInfo& output)
                 const char* val_pw = nullptr;
                 const char* val_plugin = nullptr;
                 Json::ElemOkHandler elem_ok = [&](int ind, const char* arr_name) {
-                        ListenerData::UserCreds dest;
-                        dest.password = mxs::decrypt_password(val_pw);
-                        // "plugin" is an optional field and is left null when not set.
-                        if (val_plugin)
-                        {
-                            dest.plugin = val_plugin;
-                            val_plugin = nullptr;
-                        }
-                        auto ret = result->credentials.emplace(val_mapped, move(dest));
-                        if (!ret.second)
-                        {
-                            MXB_WARNING(duplicate_key, val_mapped, arr_name, filepathc);
-                        }
-                    };
+                    ListenerData::UserCreds dest;
+                    dest.password = mxs::decrypt_password(val_pw);
+                    // "plugin" is an optional field and is left null when not set.
+                    if (val_plugin)
+                    {
+                        dest.plugin = val_plugin;
+                        val_plugin = nullptr;
+                    }
+                    auto ret = result->credentials.emplace(val_mapped, move(dest));
+                    if (!ret.second)
+                    {
+                        MXB_WARNING(duplicate_key, val_mapped, arr_name, filepathc);
+                    }
+                };
 
                 if (!all.unpack_arr(arr_creds, elem_ok, elem_fail, fmt, "mapped_user", &val_mapped,
                                     "plugin", &val_plugin, "password", &val_pw))

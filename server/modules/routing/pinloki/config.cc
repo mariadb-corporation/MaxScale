@@ -154,7 +154,8 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
     }
     else
     {
-        MXB_THROW(BinlogReadError, "Could not open directory " << binlog_dir);
+        // This is expected if the binlog directory does not yet exist.
+        MXB_SINFO("Could not open directory " << binlog_dir);
     }
 
     std::vector<std::string> file_names;
