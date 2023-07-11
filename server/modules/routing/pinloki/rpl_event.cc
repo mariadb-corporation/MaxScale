@@ -46,7 +46,7 @@ std::string get_rotate_name(const char* ptr, size_t len)
     // Deducing whether checksums are enabled by calculating it and comparing it to the stored checksum works
     // in most cases but we can't be sure whether there are edge cases where the valid checksum of the start
     // of the event results in a checksum that matches the last four bytes of it.
-    uint32_t orig_checksum = *(const uint32_t*)(ptr + len - 4);
+    uint32_t orig_checksum = mariadb::get_byte4((const uint8_t*)ptr + len - 4);
     uint32_t checksum = crc32(0, (const uint8_t*)ptr, len - 4);
 
     if (orig_checksum == checksum)
@@ -282,19 +282,19 @@ std::ostream& operator<<(std::ostream& os, const Rotate& rot)
 
 GtidEvent RplEvent::gtid_event() const
 {
-    auto dptr = pBody();
+    const uint8_t* dptr = (const uint8_t*)pBody();
 
-    auto sequence_nr = *((uint64_t*) dptr);
+    auto sequence_nr = mariadb::get_byte8(dptr);
     dptr += 8;
-    auto domain_id = *((uint32_t*) dptr);
+    auto domain_id = mariadb::get_byte4(dptr);
     dptr += 4;
-    auto flags = *((uint8_t*) dptr);
+    uint8_t flags = *dptr;
     dptr += 1;
 
     uint64_t commit_id = 0;
     if (flags & FL_GROUP_COMMIT_ID)
     {
-        commit_id = *((uint64_t*) dptr);
+        commit_id = mariadb::get_byte8(dptr);
     }
 
     return GtidEvent({domain_id, m_server_id, sequence_nr}, flags, commit_id);
@@ -308,18 +308,18 @@ std::ostream& operator<<(std::ostream& os, const GtidEvent& ev)
 
 GtidListEvent RplEvent::gtid_list() const
 {
-    auto dptr = pBody();
+    auto dptr = (const uint8_t*)pBody();
 
     std::vector<Gtid> gtids;
-    uint32_t count = *((uint32_t*) dptr);
+    uint32_t count = mariadb::get_byte4(dptr);
     dptr += 4;
     for (uint32_t i = 0; i < count; ++i)
     {
-        auto domain_id = *((uint32_t*) dptr);
+        auto domain_id = mariadb::get_byte4(dptr);
         dptr += 4;
-        auto server_id = *((uint32_t*) dptr);
+        auto server_id = mariadb::get_byte4(dptr);
         dptr += 4;
-        auto sequence_nr = *((uint64_t*) dptr);
+        auto sequence_nr = mariadb::get_byte8(dptr);
         dptr += 8;
         gtids.push_back({domain_id, server_id, sequence_nr});
     }
