@@ -324,7 +324,8 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
             && m_wait_gtid != READING_GTID
             && m_wait_gtid != GTID_READ_DONE)
         {
-            int64_t size = m_trx.size() + m_current_query.buffer.length();
+            m_current_query.buffer.minimize();
+            int64_t size = m_trx.size() + m_current_query.buffer.runtime_size();
 
             // A transaction is open and it is eligible for replaying
             if (size < m_config->trx_max_size)
@@ -478,7 +479,7 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     // m_trx.target() can be null if the client sends two COMMIT statements in a row. Although unlikely to
     // appear on purpose, we cannot assert this until the transaction state is tracked at the component level
     // in the routing chain.
-    MXB_INFO("Transaction complete on '%s', %s bytes.",
+    MXB_INFO("Transaction complete on '%s', %s of SQL.",
              m_trx.target() ? m_trx.target()->name() : "<no target>",
              mxb::pretty_size(m_trx.size()).c_str());
     m_trx.close();

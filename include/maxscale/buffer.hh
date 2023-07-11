@@ -358,6 +358,20 @@ public:
      */
     size_t runtime_size() const;
 
+    /**
+     * Minimize the object memory footprint
+     *
+     * This function should be called whenever the buffer is stored for a longer time. Only the raw data is
+     * stored and everything else that can be derived from it is freed. The ID, type and hints that aren't
+     * derived from it stay the same.
+     */
+    void minimize()
+    {
+        m_protocol_info.reset();
+        GWBUF tmp = deep_clone();
+        *this = std::move(tmp);
+    }
+
 private:
     std::shared_ptr<SHARED_BUF>   m_sbuf;           /**< The shared buffer with the real data */
     std::shared_ptr<ProtocolInfo> m_protocol_info;  /**< Protocol info */

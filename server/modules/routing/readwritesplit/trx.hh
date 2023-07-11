@@ -117,7 +117,7 @@ public:
         mxb_assert_message(buf, "Trx::add_stmt: Buffer must not be empty");
         mxb_assert(target);
 
-        m_size += buf.length();
+        m_size += buf.runtime_size();
         m_log.emplace_back(std::move(buf));
 
         mxb_assert_message(target == m_target, "Target should be '%s', not '%s'",
