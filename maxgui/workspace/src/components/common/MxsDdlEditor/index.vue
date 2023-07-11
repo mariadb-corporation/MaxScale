@@ -42,7 +42,6 @@
                     <fk-definitions
                         v-else-if="activeSpec === DDL_EDITOR_SPECS.FK"
                         v-model="fks"
-                        :stagingCols="definitions.cols"
                         :initialData="initialFks"
                         :lookupTables="lookupTables"
                         :stagingColNameMap="stagingColNameMap"

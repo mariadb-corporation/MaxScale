@@ -48,11 +48,10 @@ export default {
     components: { TblToolbar },
     props: {
         value: { type: Array, required: true },
-        stagingCols: { type: Array, required: true },
         stagingColNameMap: { type: Object, required: true },
         initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
-        // existing parsed tables
+        // existing parsed tables, keyed by table id
         lookupTables: { type: Object, required: true },
         connData: { type: Object, required: true },
         charsetCollationMap: { type: Object, required: true },
@@ -62,10 +61,9 @@ export default {
             headerHeight: 0,
             selectedItems: [],
             isVertTable: false,
-            isLoading: true,
-            // existing lookupTables and new referenced tables that are not found in lookupTables
-            allLookupTables: {},
-            rows: [],
+            isLoading: false,
+            // new referenced tables that are not found in lookupTables keyed by genNewLookupTableKey
+            newLookupTables: {},
             stagingKeys: {},
         }
     },
@@ -95,17 +93,40 @@ export default {
                 this.$emit('input', v)
             },
         },
-        /**
-         * nested hash. e.g
-         * { "tbl_123": { "col_123": "id", "col_234": "name" } }
-         */
-        allTableColNameMap() {
-            return Object.keys(this.allLookupTables).reduce((res, key) => {
-                res[key] = queryHelper.createColNameMap(
-                    this.$typy(this.allLookupTables[key], 'definitions.cols').safeArray
-                )
-                return res
-            }, {})
+        rows() {
+            return this.stagingKeys.map(
+                ({
+                    id,
+                    name,
+                    index_cols,
+                    referenced_schema_name,
+                    referenced_table_name,
+                    referenced_tbl_id,
+                    referenced_index_cols,
+                    match_option = '',
+                    on_update = '',
+                    on_delete = '',
+                }) => {
+                    const key = this.genNewLookupTableKey({
+                        schemaName: referenced_schema_name,
+                        tableName: referenced_table_name,
+                    })
+                    const referencedTbl = this.getReferencedTable({ id: referenced_tbl_id, key })
+                    return [
+                        id,
+                        name,
+                        index_cols.map(({ id }) => ({
+                            name: this.$typy(this.stagingColNameMap, `${id}`).safeString,
+                        })),
+                        this.$typy(referencedTbl, 'options.schema').safeString,
+                        this.$typy(referencedTbl, 'options.name').safeString,
+                        referenced_index_cols,
+                        match_option,
+                        on_update,
+                        on_delete,
+                    ]
+                }
+            )
         },
         unknownTargets() {
             const { quotingIdentifier: quote } = this.$helpers
@@ -128,76 +149,71 @@ export default {
             return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
         },
     },
+    watch: {
+        keys: {
+            deep: true,
+            handler(v) {
+                if (!this.$helpers.lodash.isEqual(v, this.stagingKeys)) this.assignData()
+            },
+        },
+        stagingKeys: {
+            deep: true,
+            handler(v) {
+                if (!this.$helpers.lodash.isEqual(this.keys, v)) this.keys = v
+            },
+        },
+    },
     async created() {
-        this.allLookupTables = this.lookupTables
-        this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
-        await this.fetchReferencedTablesData(this.unknownTargets)
-        this.genRows()
-        this.isLoading = false
+        await this.init()
     },
     methods: {
-        addNameToCols({ cols, map }) {
-            return cols.map(({ id }) => ({ id, name: map[id] }))
+        async init() {
+            this.assignData()
+            if (this.unknownTargets.length)
+                await this.fetchReferencedTablesData(this.unknownTargets)
+        },
+        assignData() {
+            this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
+        },
+        /**
+         * Generate a key for newLookupTables using schema name and table name.
+         * Tables in newLookupTables won't have names or its col names changed,
+         * so it's safe to use schema name and table name as id. By doing this,
+         * the table being altered doesn't need to call transformKeys to replace
+         * referenced target names with ids.
+         * @param {object} param
+         * @param {string} param.schemaName - schema name
+         * @param {string} param.tableName - table name
+         */
+        genNewLookupTableKey({ schemaName, tableName }) {
+            return `${schemaName}.${tableName}`
+        },
+        getReferencedTable({ id, key }) {
+            return this.lookupTables[id] || this.newLookupTables[key] || {}
         },
         async fetchReferencedTablesData(targets) {
-            if (targets.length) {
-                const [, parsedTables] = await queryHelper.queryAndParseDDL({
-                    connId: this.connData.id,
-                    tableNodes: targets,
-                    config: this.connData.config,
+            this.isLoading = true
+            const [, parsedTables] = await queryHelper.queryAndParseDDL({
+                connId: this.connData.id,
+                tableNodes: targets,
+                config: this.connData.config,
+            })
+            this.newLookupTables = parsedTables.reduce((map, tbl) => {
+                const key = this.genNewLookupTableKey({
+                    schemaName: tbl.options.schema,
+                    tableName: tbl.name,
                 })
-                this.stagingKeys = queryHelper.transformKeys({
-                    keys: this.stagingKeys,
-                    cols: this.stagingCols,
-                    parsedTables,
+                map[key] = queryHelper.tableParserTransformer({
+                    parsedTable: tbl,
+                    charsetCollationMap: this.charsetCollationMap,
                 })
-                const newLookupTables = parsedTables.reduce((map, tbl) => {
-                    map[tbl.id] = queryHelper.tableParserTransformer({
-                        parsedTable: tbl,
-                        charsetCollationMap: this.charsetCollationMap,
-                    })
-                    return map
-                }, {})
-                this.allLookupTables = this.$helpers.lodash.merge(
-                    this.allLookupTables,
-                    newLookupTables
-                )
-            }
-        },
-        genRows() {
-            this.rows = this.stagingKeys.map(
-                ({
-                    id,
-                    name,
-                    index_cols,
-                    referenced_tbl_id,
-                    referenced_index_cols,
-                    match_option = '',
-                    on_update = '',
-                    on_delete = '',
-                }) => {
-                    const referencedTbl = this.allLookupTables[referenced_tbl_id]
-                    return [
-                        id,
-                        name,
-                        this.addNameToCols({ cols: index_cols, map: this.stagingColNameMap }),
-                        referencedTbl.options.schema,
-                        referencedTbl.options.name,
-                        this.addNameToCols({
-                            cols: referenced_index_cols,
-                            map: this.allTableColNameMap[referencedTbl.id],
-                        }),
-                        match_option,
-                        on_update,
-                        on_delete,
-                    ]
-                }
-            )
+                return map
+            }, {})
+            this.isLoading = false
         },
         deleteSelectedKeys(selectedItems) {
-            const { xorWith, isEqual } = this.$helpers.lodash
-            this.rows = xorWith(this.rows, selectedItems, isEqual)
-            //TODO: drop keys
+            const ids = selectedItems.map(([id]) => id)
+            this.stagingKeys = this.stagingKeys.filter(k => !ids.includes(k.id))
         },
         //TODO: add key
         addNewKey() {},
