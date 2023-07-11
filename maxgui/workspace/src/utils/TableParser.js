@@ -106,7 +106,7 @@ export default class TableParser {
     /**
      * Parses a string to extract its key
      * @param {String} def - A string containing key definition.
-     * @returns {object|string}
+     * @returns {object}
      */
     parseKey(def) {
         const match = def.match(nonFksReg) || def.match(fksReg)
@@ -124,7 +124,6 @@ export default class TableParser {
         } = match.groups
 
         let parsed = {
-            category,
             index_cols: this.parseIndexColNames(index_col_names),
         }
         if (this.autoGenId) parsed.id = `key_${uuidv1()}`
@@ -145,7 +144,7 @@ export default class TableParser {
                 on_delete,
                 on_update,
             }
-        return parsed
+        return { value: parsed, category }
     }
     /**
      * @param {String} defsStr - table definitions including create, column and constraint definitions
@@ -159,11 +158,10 @@ export default class TableParser {
             const parsedDef = this.parseColDef(def.trim().replace(/,\s*$/, ''))
             if (parsedDef) {
                 if (t(parsedDef).isString) {
-                    const parsedKey = this.parseKey(parsedDef)
-                    if (parsedKey) {
-                        const category = parsedKey.category
+                    const { category, value } = this.parseKey(parsedDef) || {}
+                    if (category) {
                         if (!keys[category]) keys[category] = []
-                        keys[category].push(parsedKey)
+                        keys[category].push(value)
                     }
                 } else cols.push(parsedDef)
             }

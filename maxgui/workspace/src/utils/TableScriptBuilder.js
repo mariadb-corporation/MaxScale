@@ -80,7 +80,7 @@ export default class TableScriptBuilder {
      * @param {string}  param.category - key category
      * @returns {Array.<object} keys
      */
-    filterKeys({ keys, category }) {
+    getKeys({ keys, category }) {
         return typy(keys, `${category}`).safeArray
     }
 
@@ -92,8 +92,8 @@ export default class TableScriptBuilder {
      * @returns {object}
      */
     getKeysDiffs({ initialKeys, stagingKeys, category }) {
-        const initial = this.filterKeys({ keys: initialKeys, category })
-        const staging = this.filterKeys({ keys: stagingKeys, category })
+        const initial = this.getKeys({ keys: initialKeys, category })
+        const staging = this.getKeys({ keys: stagingKeys, category })
         return arrOfObjsDiff({ base: initial, newArr: staging, idField: 'id' })
     }
 

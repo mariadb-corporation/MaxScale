@@ -606,7 +606,7 @@ export default {
             if (definitions.keys[primaryKey]) {
                 // PK category always has one object if a table has PK,
                 pkObj = cloneDeep(definitions.keys[primaryKey][0])
-            } else pkObj = { category, index_cols: [] }
+            } else pkObj = { index_cols: [] }
 
             switch (mode) {
                 case 'drop': {
@@ -660,7 +660,6 @@ export default {
             const colName = col[this.idxOfColName]
             return {
                 id: `key_${this.$helpers.uuidv1()}`,
-                category,
                 index_cols: [{ id: colId }],
                 name: queryHelper.genKeyName({ colName, category }),
             }
