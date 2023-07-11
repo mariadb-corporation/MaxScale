@@ -250,6 +250,23 @@ private:
 };
 
 thread_local RateLimit rate_limit;
+thread_local std::vector<std::string> listen_errors;
+
+static bool redirect_listener_errors(int level, std::string_view msg)
+{
+    // Lower is more severe. Include warnings as they bring context to the automatic re-bind to IPv4 that is
+    // done if the IPv6 binding fails.
+    if (level < LOG_NOTICE)
+    {
+        // The suppression message should not be included in the actual message. This would look really odd if
+        // shown to the client. If it's not found, the substr() call ends up just copying the whole string.
+        auto pos = msg.find(" (subsequent similar messages");
+        listen_errors.emplace_back(msg.substr(0, pos));
+        return true;
+    }
+
+    return false;
+}
 
 // Helper function for extracting the best candidate server from a set of servers based on a set of status
 // bits. The status bits given as template parameters are in increasing priority, that is, the worst candidate
@@ -1188,8 +1205,10 @@ bool Listener::unlisten_shared(mxs::RoutingWorker& worker)
     return false;
 }
 
-bool Listener::open_unique_listener(mxs::RoutingWorker& worker)
+bool Listener::open_unique_listener(mxs::RoutingWorker& worker, std::mutex& lock, std::vector<std::string>& errors)
 {
+    mxb::LogRedirect redirect(redirect_listener_errors);
+    mxb::LogScope scope(name());
     bool rval = false;
     int fd = start_listening(address(), port());
 
@@ -1206,14 +1225,31 @@ bool Listener::open_unique_listener(mxs::RoutingWorker& worker)
         }
     }
 
+    if (!rval)
+    {
+        std::lock_guard<std::mutex> guard(lock);
+
+        for (auto&& msg : listen_errors)
+        {
+            if (std::find(errors.begin(), errors.end(), msg) == errors.end())
+            {
+                errors.emplace_back(std::move(msg));
+            }
+        }
+
+        listen_errors.clear();
+    }
+
     return rval;
 }
 
 bool Listener::listen_unique()
 {
-    auto open_socket = [this]() {
+    std::mutex lock;
+    std::vector<std::string> errors;
+    auto open_socket = [&]() {
         mxb::LogScope scope(name());
-        return open_unique_listener(*mxs::RoutingWorker::get_current());
+        return open_unique_listener(*mxs::RoutingWorker::get_current(), lock, errors);
     };
 
     bool rval = execute_and_check(open_socket);
@@ -1221,7 +1257,13 @@ bool Listener::listen_unique()
     if (!rval)
     {
         close_all_fds();
-        MXB_ERROR("One or more workers failed to listen on '[%s]:%u'.", address(), port());
+        std::lock_guard<std::mutex> guard(lock);
+        mxb_assert_message(!errors.empty(), "Failure to listen should cause an error to be logged");
+
+        for (const auto& msg : errors)
+        {
+            MXB_ERROR("%s", msg.c_str());
+        }
     }
 
     return rval;
@@ -1233,18 +1275,31 @@ bool Listener::listen_unique(mxs::RoutingWorker& worker)
 
     if (m_state == STARTED)
     {
+        std::mutex lock;
+        std::vector<std::string> errors;
         rval = false;
 
-        auto open_socket = [this, &worker, &rval]() {
+        auto open_socket = [&]() {
             mxb_assert(*m_local_fd == -1);
             mxb::LogScope scope(name());
-            rval = open_unique_listener(worker);
+            rval = open_unique_listener(worker, lock, errors);
         };
 
         if (!worker.call(open_socket))
         {
             MXB_ERROR("Could not call worker thread; it will not start listening "
                       "on listener socket.");
+        }
+        
+        if (!rval)
+        {
+            std::lock_guard<std::mutex> guard(lock);
+            mxb_assert_message(!errors.empty(), "Failure to listen should cause an error to be logged");
+
+            for (const auto& msg : errors)
+            {
+                MXB_ERROR("%s", msg.c_str());
+            }
         }
     }
 

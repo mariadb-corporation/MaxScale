@@ -525,7 +525,8 @@ private:
     void           set_type();
     json_t*        json_parameters() const;
     bool           force_config_reload();
-    bool           open_unique_listener(mxs::RoutingWorker& worker);
+    bool           open_unique_listener(mxs::RoutingWorker& worker, std::mutex& lock,
+                                        std::vector<std::string>& errors);
 
     Config                m_config;         /**< The listener configuration */
     std::string           m_name;           /**< Name of the listener */
