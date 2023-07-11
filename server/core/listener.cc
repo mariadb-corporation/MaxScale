@@ -220,7 +220,25 @@ private:
 };
 
 thread_local RateLimit rate_limit;
+thread_local std::vector<std::string> listen_errors;
+
 static ListenerManager this_unit;
+
+static bool redirect_listener_errors(int level, const std::string& msg)
+{
+    // Lower is more severe. Include warnings as they bring context to the automatic re-bind to IPv4 that is
+    // done if the IPv6 binding fails.
+    if (level < LOG_NOTICE)
+    {
+        // The suppression message should not be included in the actual message. This would look really odd if
+        // shown to the client. If it's not found, the substr() call ends up just copying the whole string.
+        auto pos = msg.find(" (subsequent similar messages");
+        listen_errors.push_back(msg.substr(0, pos));
+        return true;
+    }
+
+    return false;
+}
 }
 
 bool is_all_iface(const std::string& iface)
@@ -945,33 +963,58 @@ bool Listener::listen_shared()
 
 bool Listener::listen_unique()
 {
-    auto open_socket = [this]() {
-            bool rval = false;
-            int fd = start_listening(address(), port());
+    std::mutex lock;
+    std::vector<std::string> errors;
 
-            if (fd != -1)
+    auto open_socket = [&]() {
+        mxb::LogRedirect redirect(redirect_listener_errors);
+        bool rval = false;
+        int fd = start_listening(address(), port());
+
+        if (fd != -1)
+        {
+            if (mxs::RoutingWorker::get_current()->add_fd(fd, EPOLLIN, this))
             {
-                if (mxs::RoutingWorker::get_current()->add_fd(fd, EPOLLIN, this))
+                // Set the worker-local fd to the unique value
+                *m_local_fd = fd;
+                rval = true;
+            }
+            else
+            {
+                close(fd);
+            }
+        }
+
+        if (!rval)
+        {
+            std::lock_guard<std::mutex> guard(lock);
+
+            for (auto&& msg : listen_errors)
+            {
+                if (std::find(errors.begin(), errors.end(), msg) == errors.end())
                 {
-                    // Set the worker-local fd to the unique value
-                    *m_local_fd = fd;
-                    rval = true;
-                }
-                else
-                {
-                    close(fd);
+                    errors.emplace_back(std::move(msg));
                 }
             }
 
-            return rval;
-        };
+            listen_errors.clear();
+        }
+
+        return rval;
+    };
 
     bool rval = execute_and_check(open_socket);
 
     if (!rval)
     {
         close_all_fds();
-        MXS_ERROR("One or more workers failed to listen on '[%s]:%u'.", address(), port());
+        std::lock_guard<std::mutex> guard(lock);
+        mxb_assert_message(!errors.empty(), "Failure to listen should cause an error to be logged");
+
+        for (const auto& msg : errors)
+        {
+            MXB_ERROR("%s", msg.c_str());
+        }
     }
 
     return rval;

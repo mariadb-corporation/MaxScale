@@ -2295,7 +2295,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
 
             if (auto listener = Listener::create(name, params))
             {
-                if (save_config(listener) && listener->listen())
+                if (listener->listen() && save_config(listener))
                 {
                     MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
                                name, listener->address(), listener->port(), service->name());
@@ -2304,7 +2304,6 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
                 }
                 else
                 {
-                    MXS_ERROR("Listener '%s' was created but failed to start it.", name);
                     Listener::destroy(listener);
                     mxb_assert(!listener_find(name));
                 }
