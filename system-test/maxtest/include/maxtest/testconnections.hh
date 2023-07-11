@@ -342,10 +342,10 @@ public:
     bool verbose() const;
     void write_node_env_vars();
     int  n_maxscales() const;
+    bool log_matches(const char* pattern);
 
 private:
     bool read_test_info();
-    bool log_matches(const char* pattern);
 
     mxt::SharedData m_shared;   /**< Data shared with other objects */
 
