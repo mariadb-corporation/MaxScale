@@ -1,5 +1,9 @@
 # Transaction Performance Monitoring Filter
 
+*Note:* This module is experimental and must be built from source. The
+ module is deprecated in MaxScale 23.08 and might be removed in a future
+ release.
+
 [TOC]
 
 ## Overview

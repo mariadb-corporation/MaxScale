@@ -169,6 +169,7 @@ void test_main(TestConnections& test)
                 auto userhost2 = userhost2_str.c_str();
                 test.tprintf("Testing host pattern with netmask by logging in to user account %s.", userhost2);
                 admin_conn->cmd_f("CREATE USER %s identified by '%s';", userhost2, pw);
+                test.check_maxctrl("reload service RW-Split-Router");
                 auto conn = mxs.try_open_rwsplit_connection("netmask", pw, "");
                 test.expect(conn->is_open(), "Connection failed: %s", conn->error());
                 admin_conn->cmd_f("DROP USER %s;", userhost2);
