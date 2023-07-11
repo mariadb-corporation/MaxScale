@@ -18,7 +18,6 @@ import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
-import queryHelper from '@wsSrc/store/queryHelper'
 import connection from '@wsSrc/api/connection'
 
 export default {
@@ -30,7 +29,7 @@ export default {
          * @param {String|Function} payload - either a queryTab id or a callback function that return Boolean (filter)
          */
         cascadeDelete({ dispatch }, payload) {
-            const entityIds = queryHelper.filterEntity(QueryTab, payload).map(entity => entity.id)
+            const entityIds = QueryTab.filterEntity(QueryTab, payload).map(entity => entity.id)
             entityIds.forEach(id => {
                 QueryTab.delete(id) // delete itself
                 // delete record in its the relational tables
@@ -46,13 +45,14 @@ export default {
          * @param {String|Function} payload - either a QueryTab id or a callback function that return Boolean (filter)
          */
         cascadeRefresh(_, payload) {
-            const entityIds = queryHelper.filterEntity(QueryTab, payload).map(entity => entity.id)
+            const entityIds = QueryTab.filterEntity(QueryTab, payload).map(entity => entity.id)
             entityIds.forEach(id => {
                 const target = QueryTab.query()
                     .with('editor') // get editor relational field
                     .whereId(id)
                     .first()
                 if (target) {
+                    QueryTab.refreshName(id)
                     // refresh its relations
                     QueryTabTmp.refresh(id)
                     // keep query_txt data even after refresh all fields

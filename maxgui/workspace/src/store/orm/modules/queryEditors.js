@@ -17,7 +17,6 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
-import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     namespaced: true,
@@ -29,9 +28,9 @@ export default {
          * @param {String|Function} payload
          */
         async cascadeDelete(_, payload) {
-            const entityIds = queryHelper
-                .filterEntity(QueryEditor, payload)
-                .map(entity => entity.id)
+            const entityIds = QueryEditor.filterEntity(QueryEditor, payload).map(
+                entity => entity.id
+            )
 
             for (const id of entityIds) {
                 const { id: connId } =
@@ -52,9 +51,9 @@ export default {
          * @param {String|Function} payload -
          */
         cascadeRefresh(_, payload) {
-            const entityIds = queryHelper
-                .filterEntity(QueryEditor, payload)
-                .map(entity => entity.id)
+            const entityIds = QueryEditor.filterEntity(QueryEditor, payload).map(
+                entity => entity.id
+            )
             entityIds.forEach(id => {
                 // refresh its relations
                 QueryEditorTmp.refresh(id)

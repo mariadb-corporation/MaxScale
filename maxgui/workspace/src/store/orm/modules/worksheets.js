@@ -17,7 +17,6 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
-import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     namespaced: true,
@@ -31,7 +30,7 @@ export default {
          * @param {String|Function} payload - either a worksheet id or a callback function that return Boolean (filter)
          */
         async cascadeDelete(_, payload) {
-            const entityIds = queryHelper.filterEntity(Worksheet, payload).map(entity => entity.id)
+            const entityIds = Worksheet.filterEntity(Worksheet, payload).map(entity => entity.id)
             for (const id of entityIds) {
                 const { erd_task_id, query_editor_id } = Worksheet.find(id) || {}
                 if (erd_task_id) await ErdTask.dispatch('cascadeDelete', erd_task_id)

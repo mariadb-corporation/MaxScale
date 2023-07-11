@@ -28,7 +28,7 @@ export default {
          * @param {String|Function} payload - either an ETL task id or a callback function that return Boolean (filter)
          */
         cascadeDelete(_, payload) {
-            const entityIds = queryHelper.filterEntity(EtlTask, payload).map(entity => entity.id)
+            const entityIds = EtlTask.filterEntity(EtlTask, payload).map(entity => entity.id)
             entityIds.forEach(id => {
                 EtlTask.delete(id) // delete itself
                 // delete record in its the relational tables

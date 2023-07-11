@@ -30,7 +30,7 @@ export default {
          * @param {String|Function} payload - either a QueryConn id or a callback function that return Boolean (filter)
          */
         cascadeRefreshOnDelete(_, payload) {
-            const entities = queryHelper.filterEntity(QueryConn, payload)
+            const entities = QueryConn.filterEntity(QueryConn, payload)
             entities.forEach(entity => {
                 /**
                  * refresh its relations, when a connection bound to the QueryEditor is deleted,

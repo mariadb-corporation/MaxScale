@@ -14,14 +14,13 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
-import queryHelper from '@wsSrc/store/queryHelper'
 import { t } from 'typy'
 
 export default {
     namespaced: true,
     actions: {
         async cascadeDelete(_, payload) {
-            const entityIds = queryHelper.filterEntity(ErdTask, payload).map(entity => entity.id)
+            const entityIds = ErdTask.filterEntity(ErdTask, payload).map(entity => entity.id)
             for (const id of entityIds) {
                 const { id: connId } =
                     QueryConn.query()

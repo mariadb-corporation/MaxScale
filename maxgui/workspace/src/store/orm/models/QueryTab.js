@@ -25,6 +25,22 @@ export default class QueryTab extends Extender {
         return { name: this.string('Query Tab 1'), count: this.number(1) }
     }
 
+    /**
+     * This function refreshes the name field to its default name
+     * @param {String|Function} payload - either an id or a callback function that return Boolean (filter)
+     */
+    static refreshName(payload) {
+        const models = this.filterEntity(this, payload)
+        models.forEach(model => {
+            const target = this.query()
+                .withAll()
+                .whereId(model.id)
+                .first()
+            if (target)
+                this.update({ where: model.id, data: { name: `Query Tab ${target.count}` } })
+        })
+    }
+
     static fields() {
         return {
             id: this.uid(() => uuidv1()),

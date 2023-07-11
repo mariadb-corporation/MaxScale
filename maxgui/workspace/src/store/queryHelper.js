@@ -328,17 +328,6 @@ function minimizeNode({ id, parentNameData, qualified_name, name, type, level })
 }
 
 /**
- * @public
- * @param {Object} entity - ORM entity object
- * @param {String|Function} payload - either an entity id or a callback function that return Boolean (filter)
- * @returns {Array} returns entities
- */
-function filterEntity(entity, payload) {
-    if (typeof payload === 'function') return entity.all().filter(payload)
-    if (entity.find(payload)) return [entity.find(payload)]
-    return []
-}
-/**
  *
  * @param {Object} apiConnMap - connections from API mapped by id
  * @param {Array} persistentConns - current persistent connections
@@ -775,7 +764,6 @@ export default {
     getNewTreeData,
     deepReplaceNode,
     minimizeNode,
-    filterEntity,
     categorizeConns,
     genConnStr,
     getDatabase,
