@@ -7,7 +7,7 @@
         :initialData="initialData"
         :isCreating="isCreating"
         :schemas="stagingSchemas"
-        :lookupTables="$helpers.lodash.fromPairs(stagingNodes.map(n => [n.id, n.data]))"
+        :lookupTables="stagingNodes.reduce((map, n) => ((map[n.id] = n.data), map), {})"
         :connData="{ id: activeErdConnId, config: activeRequestConfig }"
         :onExecute="onExecute"
     >

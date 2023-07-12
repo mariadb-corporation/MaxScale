@@ -747,12 +747,12 @@ function getExcludedLinks({ links, node }) {
  * @returns {object} col name mapped by col id
  */
 function createColNameMap(cols) {
-    return lodash.fromPairs(
-        cols.map(arr => [
-            arr[COL_ATTR_IDX_MAP[COL_ATTRS.ID]],
-            arr[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]],
-        ])
-    )
+    const idxOfId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
+    const idxOfName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
+    return cols.reduce((map, arr) => {
+        map[arr[idxOfId]] = arr[idxOfName]
+        return map
+    }, {})
 }
 
 export default {

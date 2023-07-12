@@ -80,7 +80,6 @@ export default {
         tableId: { type: String, required: true },
         initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
-        // existing parsed tables, keyed by table id
         lookupTables: { type: Object, required: true },
         connData: { type: Object, required: true },
         charsetCollationMap: { type: Object, required: true },
@@ -91,7 +90,7 @@ export default {
             selectedItems: [],
             isVertTable: false,
             isLoading: false,
-            // new referenced tables keyed by genTableKey
+            // new referenced tables keyed by id
             newLookupTables: {},
             stagingKeys: {},
         }
@@ -134,27 +133,16 @@ export default {
         },
         // mapped by FK id
         fkReferencedTableMap() {
-            return this.stagingKeys.reduce(
-                (
-                    map,
-                    {
-                        id,
-                        referenced_schema_name = '',
-                        referenced_table_name = '',
-                        referenced_tbl_id,
-                    }
-                ) => {
-                    map[id] = this.getReferencedTable({
-                        id: referenced_tbl_id,
-                        key: this.genTableKey({
-                            schemaName: referenced_schema_name,
-                            tableName: referenced_table_name,
-                        }),
-                    })
-                    return map
-                },
-                {}
-            )
+            return this.stagingKeys.reduce((map, key) => {
+                map[key.id] =
+                    this.allTables.find(
+                        t =>
+                            t.id === key.referenced_tbl_id ||
+                            (t.options.schema === key.referenced_schema_name &&
+                                t.options.name === key.referenced_table_name)
+                    ) || {}
+                return map
+            }, {})
         },
         idxOfColId() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
@@ -209,10 +197,10 @@ export default {
         },
         // Keyed by table id
         allTableMap() {
-            const { lodash } = this.$helpers
-            // convert newLookupTables to key by id
-            const newLookupTables = lodash.keyBy(Object.values(this.newLookupTables), 'id')
-            return lodash.merge(this.lookupTables, newLookupTables)
+            return { ...this.lookupTables, ...this.newLookupTables }
+        },
+        allTables() {
+            return Object.values(this.allTableMap)
         },
         /**
          * @returns nested hash. e.g. { "tbl_123": { "col_123": "id", "col_234": "name" } }
@@ -229,12 +217,10 @@ export default {
             return this.getColOptions({ map: this.allTableColNameMap, tableId: this.tableId })
         },
         referencedTargets() {
-            return this.$helpers.lodash.map(this.allTableMap, (tbl, id) => ({
+            const { quotingIdentifier: quote, lodash } = this.$helpers
+            return lodash.map(this.allTableMap, (tbl, id) => ({
                 id,
-                text: this.genTableKey({
-                    schemaName: tbl.options.schema,
-                    tableName: tbl.options.name,
-                }),
+                text: `${quote(tbl.options.schema)}.${quote(tbl.options.name)}`,
             }))
         },
     },
@@ -264,24 +250,6 @@ export default {
         assignData() {
             this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
         },
-        /**
-         * Generate a key for newLookupTables using schema name and table name.
-         * Tables in newLookupTables won't have names or its col names changed,
-         * so it's safe to use schema name and table name as id. By doing this,
-         * the table being altered doesn't need to call transformKeys to replace
-         * referenced target names with ids.
-         * @param {object} param
-         * @param {string} param.schemaName - schema name
-         * @param {string} param.tableName - table name
-         * @return {string} qualifier name
-         */
-        genTableKey({ schemaName, tableName }) {
-            const { quotingIdentifier: quote } = this.$helpers
-            return `${quote(schemaName)}.${quote(tableName)}`
-        },
-        getReferencedTable({ id, key }) {
-            return this.lookupTables[id] || this.newLookupTables[key] || {}
-        },
         getColOptions({ map, tableId }) {
             return this.$helpers.lodash.map(map[tableId], (text, id) => ({ id, text }))
         },
@@ -293,11 +261,7 @@ export default {
                 config: this.connData.config,
             })
             this.newLookupTables = parsedTables.reduce((map, tbl) => {
-                const key = this.genTableKey({
-                    schemaName: tbl.options.schema,
-                    tableName: tbl.name,
-                })
-                map[key] = queryHelper.tableParserTransformer({
+                map[tbl.id] = queryHelper.tableParserTransformer({
                     parsedTable: tbl,
                     charsetCollationMap: this.charsetCollationMap,
                 })
@@ -311,8 +275,95 @@ export default {
         },
         //TODO: add key
         addNewKey() {},
-        //TODO: handle input change
-        onChangeInput() {},
+        updateStagingKeys(rowIdx, keyField, value) {
+            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
+                [rowIdx]: { [keyField]: { $set: value } },
+            })
+        },
+        /**
+         * Checks whether the referenced target table can be found in the lookupTables
+         * @param {string} id - table id
+         */
+        isReferencedTblPersisted(id) {
+            return Boolean(this.lookupTables[id])
+        },
+        onChangeInput(item) {
+            const {
+                NAME,
+                REFERENCING_COL,
+                REFERENCED_TARGET,
+                REFERENCED_COL,
+                ON_UPDATE,
+                ON_DELETE,
+            } = this.FK_EDITOR_ATTRS
+            switch (item.field) {
+                case NAME:
+                    this.updateStagingKeys(item.rowIdx, 'name', item.value)
+                    break
+                case ON_UPDATE:
+                    this.updateStagingKeys(item.rowIdx, 'on_update', item.value)
+                    break
+                case ON_DELETE:
+                    this.updateStagingKeys(item.rowIdx, 'on_delete', item.value)
+                    break
+                case REFERENCING_COL:
+                    this.updateStagingKeys(
+                        item.rowIdx,
+                        'index_cols',
+                        item.value.map(id => ({ id }))
+                    )
+                    break
+                /**
+                 * For REFERENCED_TARGET and REFERENCED_COL,
+                 * if the referenced table is in lookupTables, the data will be assigned with
+                 * ids; otherwise, names will be assigned. This is an intention to
+                 * keep new referenced tables data in memory (newLookupTables) and because of the
+                 * following reasons:
+                 * In alter-table-editor component, lookupTables always has 1 table which is itself.
+                 * Using referenced names for referenced targets data as newLookupTables is kept in
+                 * memory.
+                 * In entity-editor-ctr component, lookupTables has all tables in the ERD, ids are
+                 * used for reference targets because the names can be altered.
+                 */
+                case REFERENCED_TARGET: {
+                    if (this.isReferencedTblPersisted(item.value)) {
+                        this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
+                            [item.rowIdx]: {
+                                $unset: ['referenced_schema_name', 'referenced_table_name'],
+                                referenced_index_cols: { $set: [] },
+                                referenced_tbl_id: { $set: item.value },
+                            },
+                        })
+                    } else {
+                        const newReferencedTbl = this.newLookupTables[item.value]
+                        this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
+                            [item.rowIdx]: {
+                                referenced_index_cols: { $set: [] },
+                                $unset: ['referenced_tbl_id'],
+                                referenced_schema_name: { $set: newReferencedTbl.options.schema },
+                                referenced_table_name: { $set: newReferencedTbl.options.name },
+                            },
+                        })
+                    }
+                    break
+                }
+                case REFERENCED_COL: {
+                    let values = []
+                    if (item.value.length) {
+                        const keyId = this.stagingKeys[item.rowIdx].id
+                        const referencedTblId = this.fkReferencedTableMap[keyId].id
+                        if (this.isReferencedTblPersisted(referencedTblId))
+                            values = item.value.map(id => ({ id }))
+                        else
+                            values = item.value.map(id => ({
+                                name: this.allTableColNameMap[referencedTblId][id],
+                            }))
+                    }
+                    this.updateStagingKeys(item.rowIdx, 'referenced_index_cols', values)
+                    break
+                }
+            }
+        },
     },
 }
 </script>
