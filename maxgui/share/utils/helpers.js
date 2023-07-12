@@ -44,7 +44,6 @@ export const lodash = {
     flatMap: require('lodash/flatMap'),
     update: require('lodash/update'),
     sortBy: require('lodash/sortBy'),
-    map: require('lodash/map'),
 }
 
 export function delay(t, v) {

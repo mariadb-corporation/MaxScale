@@ -27,11 +27,23 @@
         dense
         :height="height"
         hide-details="auto"
-        :multiple="
-            data.field === FK_EDITOR_ATTRS.REFERENCING_COL ||
-                data.field === FK_EDITOR_ATTRS.REFERENCED_COL
-        "
-    />
+        :multiple="isColumnField"
+    >
+        <template v-if="isColumnField" v-slot:item="{ item }">
+            <v-icon class="mr-3">
+                {{
+                    inputValue.includes(item.id)
+                        ? 'mdi-checkbox-marked'
+                        : 'mdi-checkbox-blank-outline'
+                }}
+            </v-icon>
+            {{ item.text }}
+            <v-spacer />
+            <span class="ma-0 ml-auto field__label mxs-color-helper text-small-text">
+                {{ item.type }}
+            </span>
+        </template>
+    </v-select>
     <!-- TODO: Add an option for REFERENCED_TARGET input to manually type in new target -->
 </template>
 
@@ -78,6 +90,12 @@ export default {
             set(v) {
                 this.$emit('on-input', { ...this.data, value: v })
             },
+        },
+        isColumnField() {
+            return (
+                this.data.field === this.FK_EDITOR_ATTRS.REFERENCING_COL ||
+                this.data.field === this.FK_EDITOR_ATTRS.REFERENCED_COL
+            )
         },
         enumValues() {
             const {

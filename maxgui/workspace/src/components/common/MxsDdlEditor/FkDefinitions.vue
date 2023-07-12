@@ -41,10 +41,7 @@
                         :referencingColOptions="referencingColOptions"
                         :referencedTargets="referencedTargets"
                         :referencedColOptions="
-                            getColOptions({
-                                map: allTableColNameMap,
-                                tableId: $typy(fkReferencedTableMap[rowData[0]], 'id').safeString,
-                            })
+                            getColOptions($typy(fkReferencedTableMap[rowData[0]], 'id').safeString)
                         "
                         @on-input="onChangeInput"
                     />
@@ -150,13 +147,16 @@ export default {
         idxOfColName() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]
         },
+        idxOfColType() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.TYPE]
+        },
         rows() {
             return this.stagingKeys.map(
                 ({ id, name, index_cols, referenced_index_cols, on_update, on_delete }) => {
                     const referencedTbl = this.fkReferencedTableMap[id]
                     const referencedColNames = referenced_index_cols.map(c => {
                         if (c.name) return c.name
-                        else return this.allTableColNameMap[referencedTbl.id][c.id]
+                        return this.allTableColNameMap[referencedTbl.id][c.id]
                     })
                     const referencedColIds = referencedTbl.definitions.cols.reduce((res, c) => {
                         if (referencedColNames.includes(c[this.idxOfColName]))
@@ -195,31 +195,36 @@ export default {
             )
             return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
         },
-        // Keyed by table id
-        allTableMap() {
-            return { ...this.lookupTables, ...this.newLookupTables }
-        },
         allTables() {
-            return Object.values(this.allTableMap)
+            return Object.values({ ...this.lookupTables, ...this.newLookupTables })
         },
         /**
-         * @returns nested hash. e.g. { "tbl_123": { "col_123": "id", "col_234": "name" } }
+         * @returns {Object.<string, Object.<string, string>>} e.g. { "tbl_1": { "col_1": "id", "col_2": "name" } }
          */
         allTableColNameMap() {
-            return Object.keys(this.allTableMap).reduce((res, id) => {
-                res[id] = queryHelper.createColNameMap(
-                    this.$typy(this.allTableMap[id], 'definitions.cols').safeArray
+            return this.allTables.reduce((res, tbl) => {
+                res[tbl.id] = queryHelper.createColNameMap(
+                    this.$typy(tbl, 'definitions.cols').safeArray
                 )
                 return res
             }, {})
         },
+        /**
+         * @returns {Object.<string, Array.<Array>>}  e.g. { "tbl_123": [][] }
+         */
+        allTableColMap() {
+            return this.allTables.reduce((res, tbl) => {
+                res[tbl.id] = this.$typy(tbl, 'definitions.cols').safeArray
+                return res
+            }, {})
+        },
         referencingColOptions() {
-            return this.getColOptions({ map: this.allTableColNameMap, tableId: this.tableId })
+            return this.getColOptions(this.tableId)
         },
         referencedTargets() {
-            const { quotingIdentifier: quote, lodash } = this.$helpers
-            return lodash.map(this.allTableMap, (tbl, id) => ({
-                id,
+            const { quotingIdentifier: quote } = this.$helpers
+            return this.allTables.map(tbl => ({
+                id: tbl.id,
                 text: `${quote(tbl.options.schema)}.${quote(tbl.options.name)}`,
             }))
         },
@@ -250,8 +255,12 @@ export default {
         assignData() {
             this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
         },
-        getColOptions({ map, tableId }) {
-            return this.$helpers.lodash.map(map[tableId], (text, id) => ({ id, text }))
+        getColOptions(tableId) {
+            return this.allTableColMap[tableId].map(c => ({
+                id: c[this.idxOfColId],
+                text: c[this.idxOfColName],
+                type: c[this.idxOfColType],
+            }))
         },
         async fetchReferencedTablesData(targets) {
             this.isLoading = true
