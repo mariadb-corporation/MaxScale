@@ -208,7 +208,11 @@ mxs::Buffer PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_
     {
         buffer.data()[MYSQL_HEADER_LEN] = 0;
     }
-    memcpy(buffer.data() + MYSQL_HEADER_LEN + prefix, ptr, size);
+
+    if (size)
+    {
+        memcpy(buffer.data() + MYSQL_HEADER_LEN + prefix, ptr, size);
+    }
 
     return buffer;
 }
