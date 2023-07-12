@@ -159,6 +159,12 @@ mxs::config::Specification& Config::spec()
     return s_spec;
 }
 
+bool Config::post_configure()
+{
+    m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir, inventory_file_path()));
+    return true;
+}
+
 std::string Config::path(const std::string& name) const
 {
     if (name.find_first_of('/') == std::string::npos)
@@ -257,16 +263,6 @@ Config::Config(const std::string& name)
     add_native(&m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&m_purge_poll_timeout, &s_purge_poll_timeout);
-    m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir,
-                                                 inventory_file_path()));
-}
-
-Config::~Config()
-{
-    if (m_binlog_files)
-    {
-        m_binlog_files->stop();
-    }
 }
 
 std::vector<std::string> Config::binlog_file_names() const
@@ -332,7 +328,7 @@ std::vector<std::string> BinglogIndexUpdater::binlog_file_names()
     return m_file_names;
 }
 
-void BinglogIndexUpdater::stop()
+BinglogIndexUpdater::~BinglogIndexUpdater()
 {
     m_running.store(false, std::memory_order_relaxed);
     if (m_watch != -1)

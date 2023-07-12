@@ -35,9 +35,9 @@ class BinglogIndexUpdater final
 public:
     BinglogIndexUpdater(const std::string& binlog_dir,
                         const std::string& inventory_file_path);
+    ~BinglogIndexUpdater();
     void                     set_is_dirty();
     std::vector<std::string> binlog_file_names();
-    void                     stop();
 
     /** The replication state */
     void             set_rpl_state(const maxsql::GtidList& gtids);
@@ -64,7 +64,6 @@ public:
     Config(const std::string& name);
 
     Config(Config&&) = default;
-    ~Config();
 
     static mxs::config::Specification& spec();
 
@@ -99,6 +98,8 @@ public:
     wall_time::Duration purge_poll_timeout() const;
 
 private:
+    bool post_configure() override;
+
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
     /** Name of gtid file */
