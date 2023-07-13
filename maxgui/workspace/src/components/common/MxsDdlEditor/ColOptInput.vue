@@ -96,9 +96,9 @@
 import { mapState } from 'vuex'
 import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
 import {
-    check_charset_support,
-    check_UN_ZF_support,
-    check_AI_support,
+    checkCharsetSupport,
+    checkUniqueZeroFillSupport,
+    checkAutoIncrementSupport,
 } from '@wsSrc/components/common/MxsDdlEditor/utils'
 export default {
     name: 'col-opt-input',
@@ -142,15 +142,15 @@ export default {
                 case CHARSET:
                 case COLLATE:
                     if (this.columnCharset === 'utf8') return true
-                    return !check_charset_support(this.columnType)
+                    return !checkCharsetSupport(this.columnType)
                 case PK:
                     //disable if column is generated
                     return this.isGenerated
                 case UN:
                 case ZF:
-                    return !check_UN_ZF_support(this.columnType)
+                    return !checkUniqueZeroFillSupport(this.columnType)
                 case AI:
-                    return !check_AI_support(this.columnType)
+                    return !checkAutoIncrementSupport(this.columnType)
                 case NN:
                     //isAI or isPK implies NOT NULL so must be disabled
                     // when column is generated, NN or NULL can not be defined

@@ -68,6 +68,7 @@ import { mapState } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import FkDefinitionCol from '@wsSrc/components/common/MxsDdlEditor/FkDefinitionCol.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
+import { checkFkSupport } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 
 export default {
     name: 'fk-definitions',
@@ -261,11 +262,16 @@ export default {
         },
         getColOptions(tableId) {
             if (!this.allTableColMap[tableId]) return []
-            return this.allTableColMap[tableId].map(c => ({
-                id: c[this.idxOfColId],
-                text: c[this.idxOfColName],
-                type: c[this.idxOfColType],
-            }))
+            return this.allTableColMap[tableId].reduce((options, c) => {
+                const type = c[this.idxOfColType]
+                options.push({
+                    id: c[this.idxOfColId],
+                    text: c[this.idxOfColName],
+                    type,
+                    disabled: !checkFkSupport(type),
+                })
+                return options
+            }, [])
         },
         async fetchReferencedTablesData(targets) {
             this.isLoading = true

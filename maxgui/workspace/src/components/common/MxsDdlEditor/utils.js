@@ -140,7 +140,7 @@ const checkOptSupport = ({ datatype, supportedTypes }) =>
  * @param {String} datatype - column data type to be checked
  * @returns {Boolean} - returns true if provided data type supports charset/collation
  */
-const check_charset_support = datatype =>
+const checkCharsetSupport = datatype =>
     checkOptSupport({ datatype, supportedTypes: typesSupportCharset })
 
 /**
@@ -148,7 +148,7 @@ const check_charset_support = datatype =>
  * @param {String} datatype - column data type to be checked
  * @returns {Boolean} - returns true if provided data type supports UNSIGNED|SIGNED and ZEROFILL
  */
-const check_UN_ZF_support = datatype =>
+const checkUniqueZeroFillSupport = datatype =>
     checkOptSupport({ datatype, supportedTypes: typesSupport_UN_ZF })
 
 /**
@@ -156,6 +156,17 @@ const check_UN_ZF_support = datatype =>
  * @param {String} datatype - column data type to be checked
  * @returns {Boolean} - returns true if provided data type supports AUTO_INCREMENT
  */
-const check_AI_support = datatype => checkOptSupport({ datatype, supportedTypes: typesSupport_AI })
+const checkAutoIncrementSupport = datatype =>
+    checkOptSupport({ datatype, supportedTypes: typesSupport_AI })
 
-export { getColumnTypes, check_AI_support, check_UN_ZF_support, check_charset_support }
+const checkFkSupport = datatype => {
+    const str = datatype.toUpperCase()
+    return !str.includes('TEXT') && !str.includes('BLOB')
+}
+export {
+    getColumnTypes,
+    checkAutoIncrementSupport,
+    checkUniqueZeroFillSupport,
+    checkCharsetSupport,
+    checkFkSupport,
+}

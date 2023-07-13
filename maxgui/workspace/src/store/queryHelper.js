@@ -29,7 +29,7 @@ import { map2dArr, quotingIdentifier } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import TableParser from '@wsSrc/utils/TableParser'
-import { check_charset_support } from '@wsSrc/components/common/MxsDdlEditor/utils'
+import { checkCharsetSupport } from '@wsSrc/components/common/MxsDdlEditor/utils'
 
 /**
  * @public
@@ -527,8 +527,8 @@ function tableParserTransformer({ parsedTable, parsedTables = [], charsetCollati
             [AI]: col.is_ai,
             [GENERATED_TYPE]: col.generated_type ? col.generated_type : GENERATED_TYPES.NONE,
             [DEF_EXP]: col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
-            [CHARSET]: check_charset_support(col.data_type) ? col.charset || charset : '',
-            [COLLATE]: check_charset_support(col.data_type) ? col.collate || collation : '',
+            [CHARSET]: checkCharsetSupport(col.data_type) ? col.charset || charset : '',
+            [COLLATE]: checkCharsetSupport(col.data_type) ? col.collate || collation : '',
             [COMMENT]: typy(col.comment).safeString,
         }
     })

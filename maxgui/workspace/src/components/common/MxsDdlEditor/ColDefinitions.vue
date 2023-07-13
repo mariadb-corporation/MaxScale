@@ -91,9 +91,9 @@ import ColOptInput from '@wsSrc/components/common/MxsDdlEditor/ColOptInput.vue'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import {
     getColumnTypes,
-    check_charset_support,
-    check_UN_ZF_support,
-    check_AI_support,
+    checkCharsetSupport,
+    checkUniqueZeroFillSupport,
+    checkAutoIncrementSupport,
 } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 import queryHelper from '@wsSrc/store/queryHelper'
 
@@ -425,7 +425,7 @@ export default {
          * @returns {Object} - returns new definitions
          */
         handleUncheck_UN_ZF_AI({ definitions, item }) {
-            if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
+            if (!checkUniqueZeroFillSupport(item.value) || !checkAutoIncrementSupport(item.value)) {
                 const idxOfZF = this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ZF]
                 return this.$helpers.immutableUpdate(definitions, {
                     cols: {
@@ -448,7 +448,7 @@ export default {
         handleSetDefCharset({ definitions, item }) {
             let charset = null,
                 collation = null
-            if (check_charset_support(item.value)) {
+            if (checkCharsetSupport(item.value)) {
                 charset = this.defTblCharset
                 collation = this.defTblCollation
             }
