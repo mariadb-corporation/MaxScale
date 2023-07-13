@@ -279,6 +279,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     // This is a workaround to the fact that the datadir is not created if the default value is used.
     if (mxs_mkdir_all(m_binlog_dir.c_str(), S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP))
     {
+        m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir, inventory_file_path()));
         ok = m_cb();
     }
 
@@ -302,14 +303,6 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_purge_poll_timeout, &s_purge_poll_timeout);
     m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir,
                                                  inventory_file_path()));
-}
-
-Config::~Config()
-{
-    if (m_binlog_files)
-    {
-        m_binlog_files->stop();
-    }
 }
 
 std::vector<std::string> Config::binlog_file_names() const
@@ -375,7 +368,7 @@ std::vector<std::string> BinglogIndexUpdater::binlog_file_names()
     return m_file_names;
 }
 
-void BinglogIndexUpdater::stop()
+BinglogIndexUpdater::~BinglogIndexUpdater()
 {
     m_running.store(false, std::memory_order_relaxed);
     if (m_watch != -1)

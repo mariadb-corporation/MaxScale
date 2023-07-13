@@ -45,7 +45,8 @@ int main(int argc, char* argv[])
     test.reset_timeout();
 
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
-    test.expect(conn.query("CREATE OR REPLACE TABLE test.t2(id INT) ENGINE=MyISAM"), "CREATE failed: %s", conn.error());
+    test.expect(conn.query("CREATE OR REPLACE TABLE test.t2(id INT) ENGINE=MyISAM"),
+                "CREATE failed: %s", conn.error());
 
     std::ostringstream ss;
     ss << "INSERT INTO test.t2 VALUES (0) ";
@@ -66,10 +67,16 @@ int main(int argc, char* argv[])
 
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
 
-    // This is pretty much guaranteed to never complete on any of the servers except the one where the truncated the table
-    auto response = conn.field("SELECT @@server_id, a.id + b.id FROM test.t2 AS a JOIN test.t2 AS b WHERE a.id <= b.id", 0);
+    // This is pretty much guaranteed to never complete on any of the servers except the one where the
+    // table was truncated.
+    auto response = conn.field("SELECT @@server_id, a.id + b.id FROM test.t2 AS a "
+                               "JOIN test.t2 AS b WHERE a.id <= b.id", 0);
 
-    test.expect(response == ids[2],
+    // Because of the way the KILL command handling works, DCBs that haven't connected might end up being
+    // disconnected instead of just being killed. This means that the SELECT might fail if one of the DCBs
+    // ends up being closed because the smartrouter does not have any error handling and the error gets
+    // propagated up to the client.
+    test.expect(response == ids[2] || test.log_matches("Forcefully closing DCB"),
                 "@@server_id mismatch: %s (response) != %s (server3) [%s]",
                 response.c_str(), ids[2].c_str(), conn.error());
 

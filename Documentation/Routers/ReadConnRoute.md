@@ -20,6 +20,14 @@ connection between MaxScale and the server breaks, the connection can not
 be re-established and the session will be closed. The fact that the server
 is fixed when the client connects also means that routing hints are ignored.
 
+**Warning:** `readconnroute` will not prevent writes from being done even if you
+  define `router_options=slave`. The client application is responsible for
+  making sure that it only performs read-only queries in such
+  cases. `readconnroute` is simple by design: it selects a server for each
+  client connection and routes all queries there. If something more complex is
+  required, the [readwritesplit](ReadWriteSplit.md) router is usually the right
+  choice.
+
 ## Configuration
 
 For more details about the standard service parameters, refer to the
