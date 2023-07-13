@@ -35,9 +35,9 @@ class BinglogIndexUpdater final
 public:
     BinglogIndexUpdater(const std::string& binlog_dir,
                         const std::string& inventory_file_path);
+    ~BinglogIndexUpdater();
     void                     set_is_dirty();
     std::vector<std::string> binlog_file_names();
-    void                     stop();
 
     /** The replication state */
     void             set_rpl_state(const maxsql::GtidList& gtids);
@@ -63,7 +63,6 @@ class Config : public mxs::config::Configuration
 public:
     Config(const std::string& name, std::function<bool()> callback);
     Config(Config&&) = default;
-    ~Config();
 
     static const mxs::config::Specification* spec();
 

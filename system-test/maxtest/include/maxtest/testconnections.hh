@@ -356,10 +356,10 @@ public:
     bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
 
     mxt::CmdResult run_shell_cmd_output(const std::string& cmd, const std::string& errmsg = "");
+    bool log_matches(const char* pattern);
 
 private:
     bool read_test_info();
-    bool log_matches(const char* pattern);
 
     mxt::SharedData m_shared;   /**< Data shared with other objects */
 
