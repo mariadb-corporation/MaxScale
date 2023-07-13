@@ -60,6 +60,7 @@ export default {
         connId: { type: String, required: true },
         preselectedSchemas: { type: Array, default: () => [] },
         triggerDataFetch: { type: Boolean, required: true },
+        excludeNonFkSupportedTbl: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -72,6 +73,7 @@ export default {
         ...mapState({
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+            FK_SUPPORTED_ENGINE: state => state.mxsWorkspace.config.FK_SUPPORTED_ENGINE,
         }),
         activeRequestConfig() {
             return Worksheet.getters('activeRequestConfig')
@@ -181,12 +183,13 @@ export default {
                     type: this.NODE_GROUP_TYPES.TBL_G,
                 }),
                 nodeAttrs: {
-                    onlyName: true,
                     isLeaf: true,
                 },
                 config: this.activeRequestConfig,
             })
-            node.children = nodes
+            if (this.excludeNonFkSupportedTbl)
+                node.children = nodes.filter(n => n.data.ENGINE === this.FK_SUPPORTED_ENGINE)
+            else node.children = nodes
         },
     },
 }

@@ -39,16 +39,21 @@
                         :defTblCharset="$typy(tblOpts, 'charset').safeString"
                         :defTblCollation="$typy(tblOpts, 'collation').safeString"
                     />
-                    <fk-definitions
-                        v-else-if="activeSpec === DDL_EDITOR_SPECS.FK"
-                        v-model="fks"
-                        :initialData="initialFks"
-                        :lookupTables="lookupTables"
-                        :tableId="stagingData.id"
-                        :dim="tabDim"
-                        :connData="connData"
-                        :charsetCollationMap="charset_collation_map"
-                    />
+                    <template v-else-if="activeSpec === DDL_EDITOR_SPECS.FK">
+                        <fk-definitions
+                            v-if="$typy(tblOpts, 'engine').safeString === FK_SUPPORTED_ENGINE"
+                            v-model="fks"
+                            :initialData="initialFks"
+                            :lookupTables="lookupTables"
+                            :tableId="stagingData.id"
+                            :dim="tabDim"
+                            :connData="connData"
+                            :charsetCollationMap="charset_collation_map"
+                        />
+                        <span v-else class="grayed-out-info mxs-color-helper text-small-text">
+                            {{ $mxs_t('info.fkEngineSupport') }}
+                        </span>
+                    </template>
                 </keep-alive>
             </v-slide-x-transition>
         </div>
@@ -109,6 +114,7 @@ export default {
         ...mapState({
             DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+            FK_SUPPORTED_ENGINE: state => state.mxsWorkspace.config.FK_SUPPORTED_ENGINE,
             charset_collation_map: state => state.editorsMem.charset_collation_map,
             engines: state => state.editorsMem.engines,
             def_db_charset_map: state => state.editorsMem.def_db_charset_map,

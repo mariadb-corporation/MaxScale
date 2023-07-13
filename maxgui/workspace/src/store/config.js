@@ -306,3 +306,5 @@ export const REFERENCE_OPTIONS = Object.freeze({
     SET_NULL: CREATE_TBL_TOKENS.setNull,
     NO_ACTION: CREATE_TBL_TOKENS.noAction,
 })
+
+export const FK_SUPPORTED_ENGINE = 'InnoDB'

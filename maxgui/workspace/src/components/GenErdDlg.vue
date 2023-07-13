@@ -19,9 +19,13 @@
                 :connId="connId"
                 :preselectedSchemas="preselectedSchemas"
                 :triggerDataFetch="isOpened"
+                excludeNonFkSupportedTbl
                 @selected-tables="selectedTableNodes = $event"
             />
             <div class="err-visualizing-message-ctr mt-3">
+                <p class="mxs-color-helper text-small-text mb-1">
+                    {{ $mxs_t('info.erdTableSupport') }}
+                </p>
                 <p v-if="errVisualizingMsg" class="v-messages__message error--text">
                     {{ errVisualizingMsg }}
                 </p>

@@ -269,6 +269,7 @@
             "deleteEtlTask": "This would also delete the worksheet used to launch this migration task.",
             "disconnectAll": "There are open database connections from Workspace. Uncheck the box to keep these connections open.",
             "drawFkLinks": "Draw foreign key links to associated columns",
+            "erdTableSupport": "ERD is generated based on the definitions of foreign keys. Therefore, only tables using InnoDB storage engines will be displayed since others lack support for foreign keys.",
             "etlConfirm": "If the destination server already has the same objects they will be overwritten and existing data will be lost.",
             "etlCreateMode": {
                 "ignore": "CREATE TABLE IF NOT EXIST",
@@ -278,6 +279,7 @@
             "etlDocLinkText": "Read more on our documentation for instruction.",
             "etlOverviewInfo": "MaxScale uses ODBC for extracting and loading from the data source to a server in MaxScale. Make sure you preconfigure the necessary drivers for your data source.",
             "exeStatementsInfo": "This action is irreversible, so please review the above statement. | This action is irreversible, so please review the above statements.",
+            "fkEngineSupport": "Foreign Keys can only be defined for InnoDB tables.",
             "migrationScriptInfo": "Scripts generated for each table will be executed in parallel. Before migrating, you can make changes to the script.",
             "nextRefresh": "Click to change next refresh",
             "noBackslashEscapes": "Disables using the backslash character as an escape character within strings, making it equivalent to an ordinary character.",
