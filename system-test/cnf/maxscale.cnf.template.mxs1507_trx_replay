@@ -20,7 +20,7 @@ user=maxskysql
 password=skysql
 transaction_replay=true
 transaction_replay_safe_commit=false
-transaction_replay_max_size=200
+transaction_replay_max_size=1000
 
 [RW-Split-Listener]
 type=listener

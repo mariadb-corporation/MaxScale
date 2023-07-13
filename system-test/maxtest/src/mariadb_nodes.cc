@@ -836,36 +836,15 @@ bool MariaDBCluster::reset_server(int i)
                     "chmod a+r -R /etc/my.cnf.d/*");
 
     bool reset_ok = false;
-    const char vrs_cmd[] = "/usr/sbin/mysqld --version";
-    auto res_version = vm.run_cmd_output(vrs_cmd);
-
-    if (res_version.rc == 0)
+    const char reset_db_cmd[] = "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql";
+    logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
+    if (vm.run_cmd_sudo(reset_db_cmd) == 0)
     {
-        string version_digits = extract_version_from_string(res_version.output);
-        if (version_digits.compare(0, 3, "10.") == 0)
-        {
-            const char reset_db_cmd[] = "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql";
-            logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
-            if (vm.run_cmd_sudo(reset_db_cmd) == 0)
-            {
-                reset_ok = true;
-            }
-            else
-            {
-                logger().add_failure("'%s' failed on '%s'.", reset_db_cmd, namec);
-            }
-        }
-        else
-        {
-            logger().add_failure("'%s' on '%s' returned '%s'. Detected server version '%s' is not "
-                                 "supported by the test system.",
-                                 vrs_cmd, vm.m_name.c_str(), res_version.output.c_str(),
-                                 version_digits.c_str());
-        }
+        reset_ok = true;
     }
     else
     {
-        logger().add_failure("'%s' failed on '%s'.", vrs_cmd, vm.m_name.c_str());
+        logger().add_failure("'%s' failed on '%s'.", reset_db_cmd, namec);
     }
 
     bool started = srv->start_database();
