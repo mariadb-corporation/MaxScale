@@ -125,14 +125,6 @@ static cfg::ParamEnum<failure_mode> s_master_failure_mode(
 static cfg::ParamEnum<CausalReads> s_causal_reads(
     &s_spec, "causal_reads", "Causal reads mode",
 {
-    // Legacy values for causal_reads
-    {CausalReads::NONE, "false"},
-    {CausalReads::NONE, "off"},
-    {CausalReads::NONE, "0"},
-    {CausalReads::LOCAL, "true"},
-    {CausalReads::LOCAL, "on"},
-    {CausalReads::LOCAL, "1"},
-
     {CausalReads::NONE, "none"},
     {CausalReads::LOCAL, "local"},
     {CausalReads::GLOBAL, "global"},
@@ -140,6 +132,14 @@ static cfg::ParamEnum<CausalReads> s_causal_reads(
     {CausalReads::FAST, "fast"},
     {CausalReads::UNIVERSAL, "universal"},
     {CausalReads::FAST_UNIVERSAL, "fast_universal"},
+
+    // Legacy values for causal_reads
+    {CausalReads::NONE, "false"},
+    {CausalReads::NONE, "off"},
+    {CausalReads::NONE, "0"},
+    {CausalReads::LOCAL, "true"},
+    {CausalReads::LOCAL, "on"},
+    {CausalReads::LOCAL, "1"},
 }, CausalReads::NONE, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_max_slave_replication_lag(
