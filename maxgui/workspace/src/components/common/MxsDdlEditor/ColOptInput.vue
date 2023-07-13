@@ -169,7 +169,9 @@ export default {
                 return this.data.value
             },
             set(v) {
-                this.$emit('on-input', { ...this.data, value: v })
+                let value = v
+                if (this.data.field === this.COL_ATTRS.TYPE && this.$typy(value).isNull) value = ''
+                this.$emit('on-input', { ...this.data, value })
             },
         },
     },
