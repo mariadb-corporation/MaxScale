@@ -44,7 +44,7 @@
             </span>
         </template>
     </v-select>
-    <!-- TODO: Add an option for REFERENCED_TARGET input to manually type in new target -->
+    <!-- TODO: Add an option for REF_TARGET input to manually type in new target -->
 </template>
 
 <script>
@@ -75,13 +75,13 @@ export default {
         data: { type: Object, required: true },
         height: { type: Number, required: true },
         referencingColOptions: { type: Array, required: true },
-        referencedTargets: { type: Array, required: true },
-        referencedColOptions: { type: Array, required: true },
+        refTargets: { type: Array, required: true },
+        refColOpts: { type: Array, required: true },
     },
     computed: {
         ...mapState({
             FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
-            REFERENCE_OPTIONS: state => state.mxsWorkspace.config.REFERENCE_OPTIONS,
+            REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
         }),
         inputValue: {
             get() {
@@ -93,28 +93,22 @@ export default {
         },
         isColumnField() {
             return (
-                this.data.field === this.FK_EDITOR_ATTRS.REFERENCING_COL ||
-                this.data.field === this.FK_EDITOR_ATTRS.REFERENCED_COL
+                this.data.field === this.FK_EDITOR_ATTRS.COLS ||
+                this.data.field === this.FK_EDITOR_ATTRS.REF_COLS
             )
         },
         enumValues() {
-            const {
-                REFERENCING_COL,
-                REFERENCED_TARGET,
-                REFERENCED_COL,
-                ON_UPDATE,
-                ON_DELETE,
-            } = this.FK_EDITOR_ATTRS
+            const { COLS, REF_TARGET, REF_COLS, ON_UPDATE, ON_DELETE } = this.FK_EDITOR_ATTRS
             switch (this.data.field) {
-                case REFERENCING_COL:
+                case COLS:
                     return this.referencingColOptions
-                case REFERENCED_TARGET:
-                    return this.referencedTargets
-                case REFERENCED_COL:
-                    return this.referencedColOptions
+                case REF_TARGET:
+                    return this.refTargets
+                case REF_COLS:
+                    return this.refColOpts
                 case ON_UPDATE:
                 case ON_DELETE:
-                    return Object.values(this.REFERENCE_OPTIONS)
+                    return Object.values(this.REF_OPTS)
                 default:
                     return []
             }

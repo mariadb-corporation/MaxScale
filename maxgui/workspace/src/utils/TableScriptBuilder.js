@@ -250,7 +250,7 @@ export default class TableScriptBuilder {
         if (removedKey) parts.push(dropSQL)
         if (addedKey || updatedKey) {
             if (updatedKey) parts.push(dropSQL)
-            const indexCols = updatedKey ? updatedKey.newObj.index_cols : addedKey.index_cols
+            const indexCols = updatedKey ? updatedKey.newObj.cols : addedKey.cols
             const colNames = indexCols.map(({ id }) => quoting(this.stagingColNameMap[id]))
             let keyDef = `${tokens.primaryKey} (${colNames.join(this.handleAddComma())})`
             if (!this.isCreateTable) keyDef = `${tokens.add} ${keyDef}`
@@ -267,8 +267,8 @@ export default class TableScriptBuilder {
         const addedKeys = this.uqKeyDiffs.get('added')
         let parts = []
         parts = removedKeys.map(({ name }) => `${tokens.drop} ${tokens.key} ${quoting(name)}`)
-        addedKeys.forEach(({ name, index_cols }) => {
-            const indexColNames = index_cols.map(({ id }) => quoting(this.stagingColNameMap[id]))
+        addedKeys.forEach(({ name, cols }) => {
+            const indexColNames = cols.map(({ id }) => quoting(this.stagingColNameMap[id]))
             const keyDef = `${tokens.uniqueKey} ${quoting(name)}(${indexColNames.join(
                 this.handleAddComma()
             )})`
@@ -281,12 +281,12 @@ export default class TableScriptBuilder {
                 if (
                     diff.kind === 'A' &&
                     typy(diff, 'item.kind').safeString === 'D' &&
-                    typy(diff, 'path[0]').safeString === 'index_cols'
+                    typy(diff, 'path[0]').safeString === 'cols'
                 ) {
                     // drop the composite key
                     parts.push(`${tokens.drop} ${tokens.key} ${quoting(oriObj.name)}`)
                     // build new composite key with the remaining columns
-                    const indexColNames = newObj.index_cols.map(({ id }) =>
+                    const indexColNames = newObj.cols.map(({ id }) =>
                         quoting(this.stagingColNameMap[id])
                     )
                     parts.push(

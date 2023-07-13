@@ -391,23 +391,21 @@ function getDatabase(connection_string) {
  */
 function findKeyTypesByColId({ keys, colId }) {
     return ALL_TABLE_KEY_TYPES.filter(type =>
-        typy(keys, `[${type}]`).safeArray.some(key =>
-            key.index_cols.some(item => item.id === colId)
-        )
+        typy(keys, `[${type}]`).safeArray.some(key => key.cols.some(item => item.id === colId))
     )
 }
 
 /**
  * @param {object} param
- * @param {Array.<object>} param.index_cols - parsed index columns to be transformed
- * @param {Array.<Array>} param.cols - parsed columns to be looked up
- * @returns {Array.<object} transformed index_cols where the `name` property is replaced with `id`
+ * @param {Array.<object>} param.cols - parsed index columns to be transformed
+ * @param {Array.<Array>} param.lookupCols - parsed columns to be looked up
+ * @returns {Array.<object} transformed cols where the `name` property is replaced with `id`
  */
-function transformIndexCols({ index_cols, cols }) {
-    return index_cols.map(item => {
+function transformIndexCols({ cols, lookupCols }) {
+    return cols.map(item => {
         const { name, ...rest } = item
         if (!name) return item
-        const col = cols.find(c => c.name === name)
+        const col = lookupCols.find(c => c.name === name)
         return { id: col.id, ...rest }
     })
 }
@@ -427,29 +425,26 @@ function transformKeys({ keys, cols, parsedTables }) {
     return keys.map(key => {
         let transformedKey = {
             ...key,
-            // transform referencing index_cols
-            index_cols: transformIndexCols({ index_cols: key.index_cols, cols }),
+            // transform referencing cols
+            cols: transformIndexCols({ cols: key.cols, lookupCols: cols }),
         }
-        if (key.referenced_table_name) {
-            let referencedTbl
+        if (key.ref_tbl_name) {
+            let refTbl
             // Find referenced node
             parsedTables.forEach(tbl => {
-                if (
-                    tbl.name === key.referenced_table_name &&
-                    tbl.options.schema === key.referenced_schema_name
-                )
-                    referencedTbl = tbl
+                if (tbl.name === key.ref_tbl_name && tbl.options.schema === key.ref_schema_name)
+                    refTbl = tbl
             })
-            // If referencedTbl is not found, it's not in parsedTables, the fk shouldn't be transformed
-            if (referencedTbl) {
-                transformedKey.referenced_tbl_id = referencedTbl.id
+            // If refTbl is not found, it's not in parsedTables, the fk shouldn't be transformed
+            if (refTbl) {
+                transformedKey.ref_tbl_id = refTbl.id
                 // Remove properties that are no longer needed.
-                delete transformedKey.referenced_table_name
-                delete transformedKey.referenced_schema_name
-                // transform referenced_index_cols
-                transformedKey.referenced_index_cols = transformIndexCols({
-                    index_cols: key.referenced_index_cols,
-                    cols: referencedTbl.definitions.cols,
+                delete transformedKey.ref_tbl_name
+                delete transformedKey.ref_schema_name
+                // transform ref_cols
+                transformedKey.ref_cols = transformIndexCols({
+                    cols: key.ref_cols,
+                    lookupCols: refTbl.definitions.cols,
                 })
             }
         }
@@ -459,7 +454,7 @@ function transformKeys({ keys, cols, parsedTables }) {
 
 function isSingleUQ({ keys, colId }) {
     return typy(keys, `[${tokens.uniqueKey}]`).safeArray.some(key =>
-        key.index_cols.every(c => c.id === colId)
+        key.cols.every(c => c.id === colId)
     )
 }
 
@@ -573,15 +568,14 @@ const getOptionality = colData =>
         ? RELATIONSHIP_OPTIONALITY.MANDATORY
         : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
-const isIndex = ({ indexDefs, index_cols }) =>
-    indexDefs.some(def => lodash.isEqual(def.index_cols, index_cols))
+const isIndex = ({ indexDefs, cols }) => indexDefs.some(def => lodash.isEqual(def.cols, cols))
 
-function isUniqueCol({ node, index_cols }) {
+function isUniqueCol({ node, cols }) {
     const keys = node.data.definitions.keys
     const pks = keys[tokens.primaryKey] || []
     const uniqueKeys = keys[tokens.uniqueKey] || []
     if (!pks.length && !uniqueKeys.length) return false
-    return isIndex({ indexDefs: pks, index_cols }) || isIndex({ indexDefs: uniqueKeys, index_cols })
+    return isIndex({ indexDefs: pks, cols }) || isIndex({ indexDefs: uniqueKeys, cols })
 }
 function getCardinality(params) {
     return isUniqueCol(params) ? '1' : 'N'
@@ -602,7 +596,7 @@ function genErdLink({
     targetNode,
     fk,
     indexColId,
-    referencedIndexColId,
+    refColId,
     isPartOfCompositeKey,
     srcCardinality,
     targetCardinality,
@@ -610,7 +604,7 @@ function genErdLink({
     const { name, on_delete, on_update } = fk
 
     const colData = getColDefData({ node: srcNode, colId: indexColId })
-    const referencedColData = getColDefData({ node: targetNode, colId: referencedIndexColId })
+    const referencedColData = getColDefData({ node: targetNode, colId: refColId })
     if (!colData || !referencedColData) return null
 
     const srcOptionality = getOptionality(colData)
@@ -627,7 +621,7 @@ function genErdLink({
             on_delete,
             on_update,
             src_attr_id: indexColId,
-            target_attr_id: referencedIndexColId,
+            target_attr_id: refColId,
         },
     }
     if (isPartOfCompositeKey) link.isPartOfCompositeKey = isPartOfCompositeKey
@@ -642,28 +636,28 @@ function genErdLink({
  * @returns
  */
 function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
-    const { index_cols, referenced_tbl_id, referenced_index_cols } = fk
+    const { cols, ref_tbl_id, ref_cols } = fk
     let links = []
 
-    const target = referenced_tbl_id
+    const target = ref_tbl_id
     const targetNode = nodes.find(n => n.id === target)
     const invisibleHighlightColor = getNodeHighlightColor(targetNode)
 
     if (targetNode) {
-        const srcCardinality = getCardinality({ node: srcNode, index_cols })
+        const srcCardinality = getCardinality({ node: srcNode, cols })
         const targetCardinality = getCardinality({
             node: targetNode,
-            index_cols: referenced_index_cols,
+            cols: ref_cols,
         })
-        for (const [i, item] of index_cols.entries()) {
+        for (const [i, item] of cols.entries()) {
             const indexColId = item.id
-            const referencedIndexColId = referenced_index_cols[i].id
+            const refColId = typy(ref_cols, `[${i}].id`).safeString
             let linkObj = genErdLink({
                 srcNode,
                 targetNode,
                 fk,
                 indexColId,
-                referencedIndexColId,
+                refColId,
                 isPartOfCompositeKey: i >= 1,
                 srcCardinality,
                 targetCardinality,

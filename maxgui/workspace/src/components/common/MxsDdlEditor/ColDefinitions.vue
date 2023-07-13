@@ -242,10 +242,8 @@ export default {
             return this.$typy(this.initialData, 'cols').safeArray
         },
         initialPkCols() {
-            return this.$typy(
-                this.initialKeys,
-                `[${this.CREATE_TBL_TOKENS.primaryKey}][0].index_cols`
-            ).safeArray
+            return this.$typy(this.initialKeys, `[${this.CREATE_TBL_TOKENS.primaryKey}][0].cols`)
+                .safeArray
         },
     },
     mounted() {
@@ -270,8 +268,8 @@ export default {
             })
             /* All associated columns in keys also need to be deleted.
              * When a column is deleted, the composite key
-             * (except PK) needs to be altered. i.e. removing the column from index_cols.
-             * The key is dropped if index_cols is empty.
+             * (except PK) needs to be altered. i.e. removing the column from cols.
+             * The key is dropped if cols is empty.
              */
             selectedItems.forEach(col => {
                 const keyTypes = queryHelper.findKeyTypesByColId({
@@ -606,21 +604,21 @@ export default {
             if (definitions.keys[primaryKey]) {
                 // PK category always has one object if a table has PK,
                 pkObj = cloneDeep(definitions.keys[primaryKey][0])
-            } else pkObj = { index_cols: [] }
+            } else pkObj = { cols: [] }
 
             switch (mode) {
                 case 'drop': {
-                    const targetIndex = pkObj.index_cols.findIndex(c => c.id === colId)
-                    if (targetIndex >= 0) pkObj.index_cols.splice(targetIndex, 1)
+                    const targetIndex = pkObj.cols.findIndex(c => c.id === colId)
+                    if (targetIndex >= 0) pkObj.cols.splice(targetIndex, 1)
                     break
                 }
                 case 'add':
-                    pkObj.index_cols.push({ id: colId })
+                    pkObj.cols.push({ id: colId })
                     break
             }
 
-            if (isEqual(sortBy(pkObj.index_cols, ['id']), sortBy(this.initialPkCols, ['id'])))
-                pkObj.index_cols = this.initialPkCols
+            if (isEqual(sortBy(pkObj.cols, ['id']), sortBy(this.initialPkCols, ['id'])))
+                pkObj.cols = this.initialPkCols
 
             if (!pkObj.id) {
                 const existingKey = this.getKeyObjByColId({
@@ -633,7 +631,7 @@ export default {
             }
 
             return immutableUpdate(definitions, {
-                keys: pkObj.index_cols.length
+                keys: pkObj.cols.length
                     ? { $merge: { [primaryKey]: [pkObj] } }
                     : { $unset: [primaryKey] },
             })
@@ -644,13 +642,13 @@ export default {
          * @param {string} param.category - category of the key
          * @param {string} param.colId - column id to be looked up
          * @param {boolean} param.isCompositeKey - return the key object if at least one col in
-         * index_cols matches with the provided column id.
+         * cols matches with the provided column id.
          * @returns {object} index object
          */
         getKeyObjByColId({ keys, category, colId, isCompositeKey }) {
             return this.$typy(keys, `[${category}]`).safeArray.find(key => {
-                if (isCompositeKey) return key.index_cols.some(col => col.id === colId)
-                return key.index_cols.every(col => col.id === colId)
+                if (isCompositeKey) return key.cols.some(col => col.id === colId)
+                return key.cols.every(col => col.id === colId)
             })
         },
         genKey({ definitions, category, colId }) {
@@ -660,7 +658,7 @@ export default {
             const colName = col[this.idxOfColName]
             return {
                 id: `key_${this.$helpers.uuidv1()}`,
-                index_cols: [{ id: colId }],
+                cols: [{ id: colId }],
                 name: queryHelper.genKeyName({ colName, category }),
             }
         },
@@ -678,13 +676,13 @@ export default {
             let keys = cloneDeep(definitions.keys[category]) || []
             switch (mode) {
                 case 'drop':
-                    keys = keys.filter(keyObj => !keyObj.index_cols.every(c => c.id === colId))
+                    keys = keys.filter(keyObj => !keyObj.cols.every(c => c.id === colId))
                     break
                 case 'delete': {
                     keys = keys.reduce((acc, key) => {
-                        const targetIndex = key.index_cols.findIndex(c => c.id === colId)
-                        if (targetIndex >= 0) key.index_cols.splice(targetIndex, 1)
-                        if (key.index_cols.length) acc.push(key)
+                        const targetIndex = key.cols.findIndex(c => c.id === colId)
+                        if (targetIndex >= 0) key.cols.splice(targetIndex, 1)
+                        if (key.cols.length) acc.push(key)
                         return acc
                     }, [])
                     break

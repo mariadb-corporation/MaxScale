@@ -221,19 +221,19 @@ const NON_FKS_CATEGORY = createGroup({
     optional: true,
 })
 const FK_CATEGORY = createGroup({ token: tokens.foreignKey, name: 'category' })
-const INDEX_COL_NAMES = createIdxColNamesReg('index_col_names')
+const COL_NAMES = createIdxColNamesReg('col_names')
 
 // === Reference definitions groups ===
-const REFERENCED_TARGET = createGroup({
+const REF_TARGET = createGroup({
     token:
         createGroup({
-            token: createEscapeStrGroup('referenced_schema_name') + '.',
+            token: createEscapeStrGroup('ref_schema_name') + '.',
             optional: true,
             ignore: true,
-        }) + createEscapeStrGroup('referenced_table_name'),
+        }) + createEscapeStrGroup('ref_tbl_name'),
     ignore: true,
 })
-const REFERENCED_COL_NAMES = createIdxColNamesReg('referenced_index_col_names')
+const REF_COL_NAMES = createIdxColNamesReg('ref_col_names')
 
 const ON_DELETE = createOnActionToken('delete')
 const ON_UPDATE = createOnActionToken('update')
@@ -272,7 +272,7 @@ export default {
             // index_name (optional as PK doesn't have name)
             createGroup({ token: INDEX_NAME, optional: true }),
             // index_col_name group
-            INDEX_COL_NAMES,
+            COL_NAMES,
         ].join(WHITESPACE_OPT),
         'i'
     ),
@@ -283,10 +283,10 @@ export default {
                     tokens.constraint,
                     INDEX_NAME,
                     FK_CATEGORY,
-                    INDEX_COL_NAMES,
+                    COL_NAMES,
                     tokens.references,
-                    REFERENCED_TARGET,
-                    REFERENCED_COL_NAMES,
+                    REF_TARGET,
+                    REF_COL_NAMES,
                 ].join(WHITESPACE_REQ) +
                 WHITESPACE_OPT +
                 [ON_DELETE, ON_UPDATE].join(WHITESPACE_OPT),

@@ -14,7 +14,7 @@ import { t } from 'typy'
 import { lodash, uuidv1 } from '@share/utils/helpers'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens, REFERENCE_OPTIONS } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/store/config'
 
 const tableOptionsReg = tokenizer.tableOptions
 const colDefReg = tokenizer.colDef
@@ -85,14 +85,14 @@ export default class TableParser {
         return def
     }
     /**
-     * @param {string} index_col_names .e.g. `last_name`(30) ASC,`first_name`
+     * @param {string} col_names .e.g. `last_name`(30) ASC,`first_name`
      * @returns {object[]}
      */
-    parseIndexColNames(index_col_names) {
-        if (!index_col_names) return undefined
+    parseKeyColNames(col_names) {
+        if (!col_names) return undefined
         let match
         let res = []
-        while ((match = indexColNamesReg.exec(index_col_names)) !== null) {
+        while ((match = indexColNamesReg.exec(col_names)) !== null) {
             const { name, length, order } = match.groups
             res.push(
                 lodash.pickBy(
@@ -114,31 +114,29 @@ export default class TableParser {
         const {
             category,
             name,
-            index_col_names,
-            referenced_index_col_names,
-            referenced_schema_name,
-            referenced_table_name,
-            on_delete = REFERENCE_OPTIONS.NO_ACTION,
-            on_update = REFERENCE_OPTIONS.NO_ACTION,
+            col_names,
+            ref_col_names,
+            ref_schema_name,
+            ref_tbl_name,
+            on_delete = REF_OPTS.NO_ACTION,
+            on_update = REF_OPTS.NO_ACTION,
         } = match.groups
 
         let parsed = {
-            index_cols: this.parseIndexColNames(index_col_names),
+            cols: this.parseKeyColNames(col_names),
         }
         if (this.autoGenId) parsed.id = `key_${uuidv1()}`
         if (category !== tokens.primaryKey) parsed.name = unquoteIdentifier(name)
         if (category === tokens.foreignKey)
             parsed = {
                 ...parsed,
-                referenced_index_cols: this.parseIndexColNames(referenced_index_col_names),
+                ref_cols: this.parseKeyColNames(ref_col_names),
                 /**
-                 * If referenced_schema_name is not defined, the referenced table is in the
+                 * If ref_schema_name is not defined, the referenced table is in the
                  * same schema as the table being parsed.
                  */
-                referenced_schema_name: referenced_schema_name
-                    ? unquoteIdentifier(referenced_schema_name)
-                    : this.schema,
-                referenced_table_name: unquoteIdentifier(referenced_table_name),
+                ref_schema_name: ref_schema_name ? unquoteIdentifier(ref_schema_name) : this.schema,
+                ref_tbl_name: unquoteIdentifier(ref_tbl_name),
                 on_delete,
                 on_update,
             }

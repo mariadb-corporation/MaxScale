@@ -293,14 +293,14 @@ export const ERD_ZOOM_OPTS = [25, 50, 100, 125, 150, 200]
 export const FK_EDITOR_ATTRS = Object.freeze({
     ID: 'id',
     NAME: 'name',
-    REFERENCING_COL: 'referencingCols',
-    REFERENCED_TARGET: 'referencedTarget',
-    REFERENCED_COL: 'referencedCols',
+    COLS: 'columns',
+    REF_TARGET: 'refTarget',
+    REF_COLS: 'refCols',
     ON_UPDATE: 'onUpdate',
     ON_DELETE: 'onDelete',
 })
 
-export const REFERENCE_OPTIONS = Object.freeze({
+export const REF_OPTS = Object.freeze({
     RESTRICT: CREATE_TBL_TOKENS.restrict,
     CASCADE: CREATE_TBL_TOKENS.cascade,
     SET_NULL: CREATE_TBL_TOKENS.setNull,

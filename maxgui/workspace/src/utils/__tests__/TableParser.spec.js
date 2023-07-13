@@ -13,7 +13,7 @@
 import { lodash } from '@share/utils/helpers'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
 import TableParser from '@wsSrc/utils/TableParser'
-import { CREATE_TBL_TOKENS as tokens, REFERENCE_OPTIONS } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/store/config'
 
 function stubColDef({
     name,
@@ -50,21 +50,21 @@ function stubColDef({
 function stubKeyDef({
     category,
     name,
-    index_cols,
-    referenced_index_cols,
-    referenced_schema_name,
-    referenced_table_name,
-    on_delete = REFERENCE_OPTIONS.NO_ACTION,
-    on_update = REFERENCE_OPTIONS.NO_ACTION,
+    cols,
+    ref_cols,
+    ref_schema_name,
+    ref_tbl_name,
+    on_delete = REF_OPTS.NO_ACTION,
+    on_update = REF_OPTS.NO_ACTION,
 }) {
-    let mockParsedData = { index_cols }
+    let mockParsedData = { cols }
     if (category !== tokens.primaryKey) mockParsedData.name = name
     if (category === tokens.foreignKey)
         mockParsedData = {
             ...mockParsedData,
-            referenced_index_cols,
-            referenced_schema_name,
-            referenced_table_name,
+            ref_cols,
+            ref_schema_name,
+            ref_tbl_name,
             on_delete,
             on_update,
         }
@@ -173,19 +173,19 @@ const expectedParsedKeys = {
     [tokens.primaryKey]: [
         stubKeyDef({
             category: tokens.primaryKey,
-            index_cols: [stubIndexColNameDef({ name: 'col_int' })],
+            cols: [stubIndexColNameDef({ name: 'col_int' })],
         }),
     ],
     [tokens.uniqueKey]: [
         stubKeyDef({
             category: tokens.uniqueKey,
             name: 'col_invisible_UNIQUE',
-            index_cols: [stubIndexColNameDef({ name: 'col_invisible' })],
+            cols: [stubIndexColNameDef({ name: 'col_invisible' })],
         }),
         stubKeyDef({
             category: tokens.uniqueKey,
             name: 'col_invisible_col_string_UNIQUE',
-            index_cols: [
+            cols: [
                 stubIndexColNameDef({ name: 'col_invisible' }),
                 stubIndexColNameDef({ name: 'col_string' }),
             ],
@@ -195,12 +195,12 @@ const expectedParsedKeys = {
         stubKeyDef({
             category: tokens.key,
             name: 'col_a_PLAIN',
-            index_cols: [stubIndexColNameDef({ name: 'col_a' })],
+            cols: [stubIndexColNameDef({ name: 'col_a' })],
         }),
         stubKeyDef({
             category: tokens.key,
             name: 'name_idx',
-            index_cols: [
+            cols: [
                 stubIndexColNameDef({ name: 'last_name', length: '30', order: 'DESC' }),
                 stubIndexColNameDef({ name: 'first_name', length: '30' }),
             ],
@@ -210,46 +210,46 @@ const expectedParsedKeys = {
         stubKeyDef({
             category: tokens.foreignKey,
             name: 'songs_album_id',
-            index_cols: [stubIndexColNameDef({ name: 'album_id' })],
-            referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
-            referenced_schema_name: 'test',
-            referenced_table_name: 'albums',
+            cols: [stubIndexColNameDef({ name: 'album_id' })],
+            ref_cols: [stubIndexColNameDef({ name: 'id' })],
+            ref_schema_name: 'test',
+            ref_tbl_name: 'albums',
         }),
         stubKeyDef({
             category: tokens.foreignKey,
             name: 'orders_ibfk_1',
-            index_cols: [stubIndexColNameDef({ name: "customer's id" })],
-            referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
-            referenced_schema_name: 'test',
-            referenced_table_name: 'customers',
+            cols: [stubIndexColNameDef({ name: "customer's id" })],
+            ref_cols: [stubIndexColNameDef({ name: 'id' })],
+            ref_schema_name: 'test',
+            ref_tbl_name: 'customers',
             on_delete: 'CASCADE',
         }),
         stubKeyDef({
             category: tokens.foreignKey,
             name: 'orders_ibfk_2',
-            index_cols: [stubIndexColNameDef({ name: "customer's id" })],
-            referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
-            referenced_schema_name: 'test',
-            referenced_table_name: 'customers',
+            cols: [stubIndexColNameDef({ name: "customer's id" })],
+            ref_cols: [stubIndexColNameDef({ name: 'id' })],
+            ref_schema_name: 'test',
+            ref_tbl_name: 'customers',
             on_update: 'SET NULL',
         }),
         stubKeyDef({
             category: tokens.foreignKey,
             name: 'orders_ibfk_3',
-            index_cols: [stubIndexColNameDef({ name: "customer's id" })],
-            referenced_index_cols: [stubIndexColNameDef({ name: 'id' })],
-            referenced_schema_name: 'test',
-            referenced_table_name: 'customers',
+            cols: [stubIndexColNameDef({ name: "customer's id" })],
+            ref_cols: [stubIndexColNameDef({ name: 'id' })],
+            ref_schema_name: 'test',
+            ref_tbl_name: 'customers',
             on_delete: 'CASCADE',
             on_update: 'NO ACTION',
         }),
         stubKeyDef({
             category: tokens.foreignKey,
             name: 'orders_ibfk_4',
-            index_cols: [stubIndexColNameDef({ name: 'customer_id' })],
-            referenced_index_cols: [stubIndexColNameDef({ name: 'customer_id' })],
-            referenced_schema_name: 'test',
-            referenced_table_name: 'customers',
+            cols: [stubIndexColNameDef({ name: 'customer_id' })],
+            ref_cols: [stubIndexColNameDef({ name: 'customer_id' })],
+            ref_schema_name: 'test',
+            ref_tbl_name: 'customers',
         }),
     ],
 }
@@ -288,10 +288,10 @@ describe('TableParser', () => {
             })
         })
     })
-    describe('parseIndexColNames', () => {
+    describe('parseKeyColNames', () => {
         Object.keys(expectedColIndexNameDefs).forEach(str => {
             it(`Should parse: ${str}`, () => {
-                expect(parser.parseIndexColNames(str)).to.be.eql(expectedColIndexNameDefs[str])
+                expect(parser.parseKeyColNames(str)).to.be.eql(expectedColIndexNameDefs[str])
             })
         })
     })
