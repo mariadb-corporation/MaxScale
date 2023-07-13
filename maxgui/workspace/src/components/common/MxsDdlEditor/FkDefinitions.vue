@@ -98,6 +98,7 @@ export default {
             FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
+            REFERENCE_OPTIONS: state => state.mxsWorkspace.config.REFERENCE_OPTIONS,
         }),
         headers() {
             let header = { sortable: false }
@@ -131,13 +132,12 @@ export default {
         // mapped by FK id
         fkReferencedTableMap() {
             return this.stagingKeys.reduce((map, key) => {
-                map[key.id] =
-                    this.allTables.find(
-                        t =>
-                            t.id === key.referenced_tbl_id ||
-                            (t.options.schema === key.referenced_schema_name &&
-                                t.options.name === key.referenced_table_name)
-                    ) || {}
+                map[key.id] = this.allTables.find(
+                    t =>
+                        t.id === key.referenced_tbl_id ||
+                        (t.options.schema === key.referenced_schema_name &&
+                            t.options.name === key.referenced_table_name)
+                )
                 return map
             }, {})
         },
@@ -154,20 +154,24 @@ export default {
             return this.stagingKeys.map(
                 ({ id, name, index_cols, referenced_index_cols, on_update, on_delete }) => {
                     const referencedTbl = this.fkReferencedTableMap[id]
-                    const referencedColNames = referenced_index_cols.map(c => {
-                        if (c.name) return c.name
-                        return this.allTableColNameMap[referencedTbl.id][c.id]
-                    })
-                    const referencedColIds = referencedTbl.definitions.cols.reduce((res, c) => {
-                        if (referencedColNames.includes(c[this.idxOfColName]))
-                            res.push(c[this.idxOfColId])
-                        return res
-                    }, [])
+                    let referencedColNames = [],
+                        referencedColIds = []
+                    if (referencedTbl) {
+                        referencedColNames = referenced_index_cols.map(c => {
+                            if (c.name) return c.name
+                            return this.allTableColNameMap[referencedTbl.id][c.id]
+                        })
+                        referencedColIds = referencedTbl.definitions.cols.reduce((res, c) => {
+                            if (referencedColNames.includes(c[this.idxOfColName]))
+                                res.push(c[this.idxOfColId])
+                            return res
+                        }, [])
+                    }
                     return [
                         id,
                         name,
                         index_cols.map(c => c.id),
-                        referencedTbl.id,
+                        this.$typy(referencedTbl, 'id').safeString,
                         referencedColIds,
                         on_update,
                         on_delete,
@@ -256,6 +260,7 @@ export default {
             this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
         },
         getColOptions(tableId) {
+            if (!this.allTableColMap[tableId]) return []
             return this.allTableColMap[tableId].map(c => ({
                 id: c[this.idxOfColId],
                 text: c[this.idxOfColName],
@@ -282,8 +287,19 @@ export default {
             const ids = selectedItems.map(([id]) => id)
             this.stagingKeys = this.stagingKeys.filter(k => !ids.includes(k.id))
         },
-        //TODO: add key
-        addNewKey() {},
+        addNewKey() {
+            const tableName = this.$typy(this.lookupTables[this.tableId], 'options.name').safeString
+            this.stagingKeys.push({
+                id: `key_${this.$helpers.uuidv1()}`,
+                index_cols: [],
+                name: `${tableName}_ibfk_${this.stagingKeys.length}`,
+                on_delete: this.REFERENCE_OPTIONS.NO_ACTION,
+                on_update: this.REFERENCE_OPTIONS.NO_ACTION,
+                referenced_index_cols: [],
+                referenced_schema_name: '',
+                referenced_table_name: '',
+            })
+        },
         updateStagingKeys(rowIdx, keyField, value) {
             this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
                 [rowIdx]: { [keyField]: { $set: value } },
