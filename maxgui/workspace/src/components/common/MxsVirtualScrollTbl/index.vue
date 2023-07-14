@@ -96,8 +96,8 @@
             </template>
         </v-virtual-scroll>
         <div v-else class="tr" :style="{ lineHeight, height: `${maxTbodyHeight}px` }">
-            <div class="td px-3 d-flex justify-center flex-grow-1">
-                {{ $mxs_t('$vuetify.noDataText') }}
+            <div class="td px-3 no-data-text d-flex justify-center flex-grow-1">
+                {{ noDataText ? noDataText : $mxs_t('$vuetify.noDataText') }}
             </div>
         </div>
         <div v-if="isResizing" class="dragging-mask" />
@@ -158,6 +158,7 @@ export default {
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
         search: { type: String, default: '' }, // Text input used to highlight cell
+        noDataText: { type: String, default: '' },
     },
     data() {
         return {
@@ -463,6 +464,9 @@ export default {
                 }
             }
         }
+    }
+    .no-data-text {
+        font-size: 0.875rem;
     }
 }
 </style>

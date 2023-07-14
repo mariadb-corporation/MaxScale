@@ -17,6 +17,7 @@
                 :boundingWidth="dim.width"
                 showSelect
                 :isVertTable="isVertTable"
+                :noDataText="$mxs_t('noEntity', { entityName: $mxs_t('foreignKeys') })"
                 v-on="$listeners"
                 @selected-rows="selectedItems = $event"
             >

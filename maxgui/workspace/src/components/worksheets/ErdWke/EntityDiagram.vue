@@ -52,6 +52,7 @@
                                         <div class="d-flex flex-row align-center justify-center">
                                             <div class="flex-grow-1">
                                                 {{ node.data.options.name }}
+                                                <slot name="entity-name-append" :node="node" />
                                             </div>
                                             <slot name="entity-setting-btn" :node="node" />
                                         </div>
@@ -600,5 +601,6 @@ export default {
     top: -6px;
     border: 4px solid $primary;
     z-index: -1;
+    opacity: 0.5;
 }
 </style>

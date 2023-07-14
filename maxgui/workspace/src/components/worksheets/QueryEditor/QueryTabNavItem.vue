@@ -5,7 +5,7 @@
                 :tooltipItem="{ txt: `${queryTab.name}`, nudgeLeft: 36 }"
                 :maxWidth="112"
             />
-            <span v-if="isQueryTabUnsaved" class="unsaved-changes-indicator" />
+            <span v-if="isQueryTabUnsaved" class="changes-indicator" />
             <v-progress-circular
                 v-if="isLoadingQueryResult"
                 class="ml-2"
@@ -99,14 +99,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.unsaved-changes-indicator::after {
-    content: ' *';
-    color: $primary;
-    padding-left: 4px;
-    font-size: 0.875rem;
-    position: relative;
-    font-weight: 500;
-    font-family: $heading-font-family;
-}
-</style>

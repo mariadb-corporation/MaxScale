@@ -256,3 +256,13 @@ tooltip needs to be disabled.
     background-color: $primary;
     color: white;
 }
+
+.changes-indicator::after {
+    content: ' *';
+    color: $primary;
+    padding-left: 4px;
+    font-size: 0.875rem;
+    position: relative;
+    font-weight: 500;
+    font-family: $heading-font-family;
+}

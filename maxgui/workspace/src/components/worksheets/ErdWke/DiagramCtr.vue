@@ -27,6 +27,15 @@
             @dblclick="handleDblClickNode"
             @contextmenu="activeNodeMenu = $event"
         >
+            <template v-slot:entity-name-append="{ node }">
+                <span v-if="$typy(updatedNodeMap[node.id]).isObject" class="changes-indicator" />
+                <span
+                    v-if="$typy(newNodeMap[node.id]).isObject"
+                    class="d-inline-flex align-center rounded text-uppercase new-tbl-indicator"
+                >
+                    {{ $mxs_t('new') }}
+                </span>
+            </template>
             <template v-slot:entity-setting-btn="{ node }">
                 <v-btn
                     :id="`setting-btn-${node.id}`"
@@ -150,8 +159,30 @@ export default {
         initialNodes() {
             return ErdTask.getters('initialNodes')
         },
+        initialNodesData() {
+            return this.initialNodes.map(n => n.data)
+        },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
+        },
+        stagingNodesData() {
+            return this.stagingNodes.map(n => n.data)
+        },
+        nodeDataDiffs() {
+            return this.$helpers.arrOfObjsDiff({
+                base: this.initialNodesData,
+                newArr: this.stagingNodesData,
+                idField: 'id',
+            })
+        },
+        newNodeMap() {
+            return this.$helpers.lodash.keyBy(this.nodeDataDiffs.get('added'), 'id')
+        },
+        updatedNodeMap() {
+            return this.$helpers.lodash.keyBy(
+                this.nodeDataDiffs.get('updated').map(n => n.newObj),
+                'id'
+            )
         },
         activeGraphConfig() {
             return this.$typy(this.activeRecord, 'graph_config').safeObjectOrEmpty
@@ -477,6 +508,14 @@ export default {
             .setting-btn {
                 visibility: visible;
             }
+        }
+        .new-tbl-indicator {
+            background: $primary;
+            padding: 0 2px;
+            position: relative;
+            color: white;
+            font-size: 0.5rem;
+            bottom: 8px;
         }
     }
 }
