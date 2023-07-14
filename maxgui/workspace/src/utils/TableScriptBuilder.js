@@ -32,10 +32,11 @@ export default class TableScriptBuilder {
      * @param {object}
      * @param {object} param.initialData
      * @param {object} param.stagingData
-     * @param {object} param.stagingColNameMap - hash map where column id is the key and value is the name
      * @param {boolean} param.isCreateTable - if true, this class outputs CREATE TABLE script
+     * @param {object} param.refTargetMap - reference target. e.g { tbl_id: { id, text }}. text is table qualified name
+     * @param {Object.<string, Object.<string, string>>} param.tablesColNameMap { "tbl_id": { "col_id": "id",... } }
      */
-    constructor({ initialData, stagingData, stagingColNameMap, isCreateTable }) {
+    constructor({ initialData, stagingData, isCreateTable, refTargetMap, tablesColNameMap }) {
         // initialData is an empty object if `isCreateTable` is true
         this.colAttrs = Object.values(COL_ATTRS)
         this.initialData = initialData
@@ -44,7 +45,6 @@ export default class TableScriptBuilder {
         this.initialColsData = typy(initialData, 'definitions.cols').safeArray
 
         this.stagingDataOptions = stagingData.options
-        this.stagingColNameMap = stagingColNameMap
 
         this.stagingColsData = typy(stagingData, 'definitions.cols').safeArray
 
@@ -69,7 +69,14 @@ export default class TableScriptBuilder {
             stagingKeys: this.stagingKeys,
             category: tokens.uniqueKey,
         })
-
+        this.foreignKeyDiffs = this.getKeysDiffs({
+            initialKeys: this.initialKeys,
+            stagingKeys: this.stagingKeys,
+            category: tokens.foreignKey,
+        })
+        this.refTargetMap = refTargetMap
+        this.tablesColNameMap = tablesColNameMap
+        this.stagingColNameMap = this.getTblColNameMap(stagingData.id)
         // mode
         this.isCreateTable = isCreateTable
     }
@@ -97,6 +104,12 @@ export default class TableScriptBuilder {
         return arrOfObjsDiff({ base: initial, newArr: staging, idField: 'id' })
     }
 
+    getTblColNameMap(tblId) {
+        return typy(this.tablesColNameMap, `[${tblId}]`).safeObjectOrEmpty
+    }
+    getColName({ tblId, colId }) {
+        return this.getTblColNameMap(tblId)[colId]
+    }
     /**
      * @param {Boolean} payload.ignore - ignore adding comma
      * @returns {String} - return ', ' or ''
@@ -301,6 +314,73 @@ export default class TableScriptBuilder {
     }
 
     /**
+     * @returns {String} - returns FK SQL
+     */
+    buildForeignKeySQL() {
+        const removedKeys = this.foreignKeyDiffs.get('removed')
+        const updatedKeys = this.foreignKeyDiffs.get('updated')
+        const addedKeys = this.foreignKeyDiffs.get('added')
+        let parts = []
+        parts = removedKeys.map(
+            ({ name }) => `${tokens.drop} ${tokens.foreignKey} ${quoting(name)}`
+        )
+        const newAndUpdatedKeys = [...updatedKeys, ...addedKeys]
+
+        newAndUpdatedKeys.forEach(item => {
+            // updatedKeys has `oriObj` and `newObj` fields while addedKeys doesn't
+            const {
+                name,
+                cols,
+                ref_tbl_id,
+                ref_schema_name = '',
+                ref_tbl_name = '',
+                ref_cols,
+                on_delete,
+                on_update,
+            } = item.newObj ? item.newObj : item
+
+            if (item.newObj)
+                parts.push(`${tokens.drop} ${tokens.foreignKey} ${quoting(item.oriObj.name)}`)
+
+            const constraintName = quoting(name)
+
+            const colNames = cols
+                .map(({ id }) => quoting(this.stagingColNameMap[id]))
+                .join(this.handleAddComma())
+
+            const refTarget = ref_tbl_id
+                ? this.refTargetMap[ref_tbl_id].text
+                : `${quoting(ref_schema_name)}.${quoting(ref_tbl_name)}`
+
+            const refColNames = ref_cols
+                .map(({ id, name }) =>
+                    id ? quoting(this.getColName({ tblId: ref_tbl_id, colId: id })) : quoting(name)
+                )
+                .join(this.handleAddComma())
+
+            let keyTokens = [
+                tokens.add,
+                tokens.constraint,
+                constraintName,
+                tokens.foreignKey,
+                `(${colNames})`,
+                tokens.references,
+                refTarget,
+                `(${refColNames})`,
+                tokens.on,
+                tokens.delete,
+                on_delete,
+                tokens.on,
+                tokens.update,
+                on_update,
+            ]
+            if (this.isCreateTable) keyTokens.shift()
+            parts.push(keyTokens.join(' '))
+        })
+        return parts.join(this.handleAddComma())
+    }
+
+    /**
      * Build SQL for altering columns and keys
      * @returns {String} - returns column alter sql
      */
@@ -340,10 +420,11 @@ export default class TableScriptBuilder {
         const addedColSQL = this.buildAddedColSQL(data)
         specs.push(addedColSQL)
         const pkSQL = this.buildPkSQL()
-        const uqSql = this.buildUniqueKeySQL()
+        const uqSQL = this.buildUniqueKeySQL()
+        const fkSQL = this.buildForeignKeySQL()
         if (pkSQL) specs.push(pkSQL)
-        if (uqSql) specs.push(uqSql)
-
+        if (uqSQL) specs.push(uqSQL)
+        if (fkSQL) specs.push(fkSQL)
         return specs.join(this.handleAddComma())
     }
 
@@ -354,6 +435,8 @@ export default class TableScriptBuilder {
         let parts = [] // part of script which will be separated by commas
         if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
         if (this.isColsOptsChanged) parts.push(this.buildAlterColsSql())
+        const fkSQL = this.buildForeignKeySQL()
+        if (fkSQL) parts.push(fkSQL)
         sql += parts.join(this.handleAddComma())
         sql = formatSQL(`${sql};`)
         return sql

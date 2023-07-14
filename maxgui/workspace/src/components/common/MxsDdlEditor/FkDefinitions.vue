@@ -77,6 +77,10 @@ export default {
         initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
         lookupTables: { type: Object, required: true },
+        newLookupTables: { type: Object, required: true }, // sync
+        allLookupTables: { type: Array, required: true },
+        refTargets: { type: Array, required: true },
+        tablesColNameMap: { type: Object, required: true },
         connData: { type: Object, required: true },
         charsetCollationMap: { type: Object, required: true },
     },
@@ -86,8 +90,6 @@ export default {
             selectedItems: [],
             isVertTable: false,
             isLoading: false,
-            // new referenced tables keyed by id
-            newLookupTables: {},
             stagingKeys: {},
         }
     },
@@ -120,6 +122,15 @@ export default {
                 { text: ON_DELETE, width: 166, minWidth: 86, ...header },
             ]
         },
+        // new referenced tables keyed by id
+        tmpLookupTables: {
+            get() {
+                return this.newLookupTables
+            },
+            set(v) {
+                this.$emit('update:newLookupTables', v)
+            },
+        },
         keys: {
             get() {
                 return this.value
@@ -131,7 +142,7 @@ export default {
         // mapped by FK id
         fkRefTblMap() {
             return this.stagingKeys.reduce((map, key) => {
-                map[key.id] = this.allTables.find(
+                map[key.id] = this.allLookupTables.find(
                     t =>
                         t.id === key.ref_tbl_id ||
                         (t.options.schema === key.ref_schema_name &&
@@ -157,7 +168,7 @@ export default {
                 if (refTbl) {
                     referencedColNames = ref_cols.map(c => {
                         if (c.name) return c.name
-                        return this.allTableColNameMap[refTbl.id][c.id]
+                        return this.tablesColNameMap[refTbl.id][c.id]
                     })
                     referencedColIds = refTbl.definitions.cols.reduce((res, c) => {
                         if (referencedColNames.includes(c[this.idxOfColName]))
@@ -191,38 +202,17 @@ export default {
             }, [])
             return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
         },
-        allTables() {
-            return Object.values({ ...this.lookupTables, ...this.newLookupTables })
-        },
-        /**
-         * @returns {Object.<string, Object.<string, string>>} e.g. { "tbl_1": { "col_1": "id", "col_2": "name" } }
-         */
-        allTableColNameMap() {
-            return this.allTables.reduce((res, tbl) => {
-                res[tbl.id] = queryHelper.createColNameMap(
-                    this.$typy(tbl, 'definitions.cols').safeArray
-                )
-                return res
-            }, {})
-        },
         /**
          * @returns {Object.<string, Array.<Array>>}  e.g. { "tbl_123": [][] }
          */
         allTableColMap() {
-            return this.allTables.reduce((res, tbl) => {
+            return this.allLookupTables.reduce((res, tbl) => {
                 res[tbl.id] = this.$typy(tbl, 'definitions.cols').safeArray
                 return res
             }, {})
         },
         referencingColOptions() {
             return this.getColOptions(this.tableId)
-        },
-        refTargets() {
-            const { quotingIdentifier: quote } = this.$helpers
-            return this.allTables.map(tbl => ({
-                id: tbl.id,
-                text: `${quote(tbl.options.schema)}.${quote(tbl.options.name)}`,
-            }))
         },
     },
     watch: {
@@ -271,7 +261,7 @@ export default {
                 tableNodes: targets,
                 config: this.connData.config,
             })
-            this.newLookupTables = parsedTables.reduce((map, tbl) => {
+            this.tmpLookupTables = parsedTables.reduce((map, tbl) => {
                 map[tbl.id] = queryHelper.tableParserTransformer({
                     parsedTable: tbl,
                     charsetCollationMap: this.charsetCollationMap,
@@ -332,10 +322,10 @@ export default {
                  * For REF_TARGET and REF_COLS,
                  * if the referenced table is in lookupTables, the data will be assigned with
                  * ids; otherwise, names will be assigned. This is an intention to
-                 * keep new referenced tables data in memory (newLookupTables) and because of the
+                 * keep new referenced tables data in memory (tmpLookupTables) and because of the
                  * following reasons:
                  * In alter-table-editor component, lookupTables always has 1 table which is itself.
-                 * Using referenced names for referenced targets data as newLookupTables is kept in
+                 * Using referenced names for referenced targets data as tmpLookupTables is kept in
                  * memory.
                  * In entity-editor-ctr component, lookupTables has all tables in the ERD, ids are
                  * used for reference targets because the names can be altered.
@@ -350,7 +340,7 @@ export default {
                             },
                         })
                     } else {
-                        const newReferencedTbl = this.newLookupTables[item.value]
+                        const newReferencedTbl = this.tmpLookupTables[item.value]
                         this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
                             [item.rowIdx]: {
                                 ref_cols: { $set: [] },
@@ -371,7 +361,7 @@ export default {
                             values = item.value.map(id => ({ id }))
                         else
                             values = item.value.map(id => ({
-                                name: this.allTableColNameMap[referencedTblId][id],
+                                name: this.tablesColNameMap[referencedTblId][id],
                             }))
                     }
                     this.updateStagingKeys(item.rowIdx, 'ref_cols', values)

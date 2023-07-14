@@ -45,6 +45,10 @@
                             v-model="fks"
                             :initialData="initialFks"
                             :lookupTables="lookupTables"
+                            :newLookupTables.sync="newLookupTables"
+                            :allLookupTables="allLookupTables"
+                            :refTargets="refTargets"
+                            :tablesColNameMap="tablesColNameMap"
                             :tableId="stagingData.id"
                             :dim="tabDim"
                             :connData="connData"
@@ -108,6 +112,7 @@ export default {
             isFormValid: true,
             headerHeight: 0,
             activeSpec: '',
+            newLookupTables: {},
         }
     },
     computed: {
@@ -191,8 +196,26 @@ export default {
         hasValidChanges() {
             return this.isFormValid && this.hasChanged
         },
-        stagingColNameMap() {
-            return queryHelper.createColNameMap(this.$typy(this.definitions, 'cols').safeArray)
+        allLookupTables() {
+            return Object.values({ ...this.lookupTables, ...this.newLookupTables })
+        },
+        refTargets() {
+            const { quotingIdentifier: quote } = this.$helpers
+            return this.allLookupTables.map(tbl => ({
+                id: tbl.id,
+                text: `${quote(tbl.options.schema)}.${quote(tbl.options.name)}`,
+            }))
+        },
+        /**
+         * @returns {Object.<string, Object.<string, string>>} e.g. { "tbl_1": { "col_1": "id", "col_2": "name" } }
+         */
+        tablesColNameMap() {
+            return this.allLookupTables.reduce((res, tbl) => {
+                res[tbl.id] = queryHelper.createColNameMap(
+                    this.$typy(tbl, 'definitions.cols').safeArray
+                )
+                return res
+            }, {})
         },
     },
     watch: {
@@ -214,11 +237,14 @@ export default {
             this.stagingData = this.$helpers.lodash.cloneDeep(this.initialData)
         },
         onApply() {
+            const { lodash } = this.$helpers
+            const refTargetMap = lodash.keyBy(this.refTargets, 'id')
             const builder = new TableScriptBuilder({
                 initialData: this.initialData,
                 stagingData: this.stagingData,
-                stagingColNameMap: this.stagingColNameMap,
                 isCreateTable: this.isCreating,
+                refTargetMap,
+                tablesColNameMap: this.tablesColNameMap,
             })
             this.SET_EXEC_SQL_DLG({
                 ...this.exec_sql_dlg,
