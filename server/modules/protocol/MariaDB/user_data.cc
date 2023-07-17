@@ -1603,6 +1603,7 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
     }
     else if (patterntype == PatternType::MASK)
     {
+        // Mask-type patterns only match ipv4 or ipv4-mapped clients.
         string effective_addr;
         if (addrtype == AddrType::IPV4)
         {
@@ -1616,23 +1617,25 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
         if (!effective_addr.empty())
         {
             // The pattern is of type "base_ip/mask". The client ip should be accepted if
-            // client_ip & mask == base_ip. To test this, all three parts need to be converted
+            // client_ip & mask == base_ip. All three parts need to be converted
             // to numbers.
-            auto ip_to_integer = [](const string& ip) {
-                    sockaddr_in sa {};
-                    inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
-                    return (uint32_t)sa.sin_addr.s_addr;
+            auto ip_to_addr = [](const string& ip, in_addr* out) -> bool {
+                    return (inet_pton(AF_INET, ip.c_str(), out) == 1);
                 };
 
             auto div_loc = host_pattern.find('/');
             string base_ip_str = host_pattern.substr(0, div_loc);
             string netmask_str = host_pattern.substr(div_loc + 1);
-            auto address = ip_to_integer(effective_addr);
-            auto base_ip = ip_to_integer(base_ip_str);
-            auto mask = ip_to_integer(netmask_str);
-            if ((address & mask) == base_ip)
+            in_addr address;
+            in_addr base_ip;
+            in_addr mask;
+            if (ip_to_addr(effective_addr, &address) && ip_to_addr(base_ip_str, &base_ip)
+                && ip_to_addr(netmask_str, &mask))
             {
-                matched = true;
+                if ((address.s_addr & mask.s_addr) == base_ip.s_addr)
+                {
+                    matched = true;
+                }
             }
         }
     }
