@@ -156,15 +156,14 @@ export default {
             const { schema, name } = options
             await this.exeDdlScript({
                 connId: this.activeErdConnId,
+                isCreating: this.isCreating,
                 schema,
                 name,
-                successCb: async () => {
-                    ErdTask.update({ where: this.activeTaskId, data: { nodes: this.stagingNodes } })
-                    this.eventBus.$emit('entity-editor-ctr-update-node-data', {
-                        id: this.activeEntityId,
-                        data: this.stagingData,
-                    })
-                },
+                successCb: () =>
+                    ErdTask.update({
+                        where: this.activeTaskId,
+                        data: { nodes: this.stagingNodes },
+                    }),
             })
         },
     },

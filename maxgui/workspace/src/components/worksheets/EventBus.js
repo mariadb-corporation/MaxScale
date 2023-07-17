@@ -16,11 +16,11 @@
  * Reason for using EventBus: mxs-sql-editor component emits individual events for
  * certain shortcut keys but it works only when the mouse cursor is focused on the
  * editor. So `workspace-ctr` component uses v-shortkey to listen on the same
- * shortcut keys and emit "query-editor-shortkey" event. This event bus will "carry"
+ * shortcut keys and emit "workspace-shortkey" event. This event bus will "carry"
  * that event to the components handle the event.
  *
  * This event bus currently carries the following events:
- * query-editor-shortkey: v:string. shortcut keys defined in app_config.QUERY_SHORTCUT_KEYS
+ * workspace-shortkey: v:string. shortcut keys defined in app_config.QUERY_SHORTCUT_KEYS
  * entity-editor-ctr-update-node-data. Emits after successfully executed queries in `entity-editor-ctr`
  * component.
  */

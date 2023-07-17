@@ -89,6 +89,8 @@
                 <v-icon size="22" color="primary">mdi-undo</v-icon>
             </template>
             {{ $mxs_t('undo') }}
+            <br />
+            {{ OS_KEY }} + Z
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
@@ -102,6 +104,8 @@
                 <v-icon size="22" color="primary">mdi-redo</v-icon>
             </template>
             {{ $mxs_t('redo') }}
+            <br />
+            {{ OS_KEY }} + SHIFT + Z
         </mxs-tooltip-btn>
         <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
         <mxs-tooltip-btn
@@ -129,7 +133,6 @@
             </template>
             {{ $mxs_t('createTable') }}
         </mxs-tooltip-btn>
-
         <v-spacer />
         <mxs-tooltip-btn
             btnClass="er-toolbar__btn toolbar-square-btn"
@@ -186,6 +189,7 @@ export default {
         ...mapState({
             QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
             ERD_ZOOM_OPTS: state => state.mxsWorkspace.config.ERD_ZOOM_OPTS,
+            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
         }),
         config: {
             get() {
@@ -232,10 +236,13 @@ export default {
         },
     },
     activated() {
-        this.eventBus.$on('query-editor-shortkey', this.shortKeyHandler)
+        this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
     },
     deactivated() {
-        this.eventBus.$off('query-editor-shortkey')
+        this.eventBus.$off('workspace-shortkey')
+    },
+    beforeDestroy() {
+        this.eventBus.$off('workspace-shortkey')
     },
     methods: {
         ...mapMutations({

@@ -260,10 +260,13 @@ export default {
         },
     },
     activated() {
-        this.eventBus.$on('query-editor-shortkey', this.shortKeyHandler)
+        this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
     },
     deactivated() {
-        this.eventBus.$off('query-editor-shortkey')
+        this.eventBus.$off('workspace-shortkey')
+    },
+    beforeDestroy() {
+        this.eventBus.$off('workspace-shortkey')
     },
     methods: {
         ...mapActions({

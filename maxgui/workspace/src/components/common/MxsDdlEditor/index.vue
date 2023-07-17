@@ -87,6 +87,7 @@ import RevertBtn from '@wsSrc/components/common/MxsDdlEditor/RevertBtn.vue'
 import ApplyBtn from '@wsSrc/components/common/MxsDdlEditor/ApplyBtn.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
 import queryHelper from '@wsSrc/store/queryHelper'
+import { EventBus } from '@wkeComps/EventBus'
 
 export default {
     name: 'mxs-ddl-editor',
@@ -218,11 +219,26 @@ export default {
                 return res
             }, {})
         },
+        eventBus() {
+            return EventBus
+        },
     },
     watch: {
         isFormValid(v) {
             this.$emit('is-form-valid', v)
         },
+    },
+    created() {
+        this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
+    },
+    activated() {
+        this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
+    },
+    deactivated() {
+        this.eventBus.$off('workspace-shortkey')
+    },
+    beforeDestroy() {
+        this.eventBus.$off('workspace-shortkey')
     },
     mounted() {
         this.activeSpec = this.DDL_EDITOR_SPECS.COLUMNS
@@ -255,6 +271,10 @@ export default {
                 on_after_cancel: () =>
                     this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
             })
+        },
+        shortKeyHandler(key) {
+            if (this.hasValidChanges && (key === 'ctrl-enter' || key === 'mac-cmd-enter'))
+                this.onApply()
         },
     },
 }

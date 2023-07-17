@@ -283,6 +283,7 @@ export default {
     beforeDestroy() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
         this.$typy(this.unwatch_erdTaskKey).safeFunction()
+        this.eventBus.$off('entity-editor-ctr-update-node-data')
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),

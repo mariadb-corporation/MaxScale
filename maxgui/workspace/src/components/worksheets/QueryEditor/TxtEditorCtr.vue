@@ -49,7 +49,7 @@
                                     isKeptAlive
                                     :isTabMoveFocus.sync="isTabMoveFocus"
                                     @on-selection="SET_SELECTED_QUERY_TXT($event)"
-                                    @shortkey="eventBus.$emit('query-editor-shortkey', $event)"
+                                    @shortkey="eventBus.$emit('workspace-shortkey', $event)"
                                 />
                             </template>
                             <template slot="pane-right">

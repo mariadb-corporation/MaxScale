@@ -4,7 +4,7 @@
         v-resize.quiet="setDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
         class="mxs-workspace fill-height"
-        @shortkey="eventBus.$emit('query-editor-shortkey', $event.srcKey)"
+        @shortkey="eventBus.$emit('workspace-shortkey', $event.srcKey)"
     >
         <div
             class="fill-height d-flex flex-column"
