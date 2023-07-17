@@ -48,8 +48,6 @@ const external = [
     'lodash',
     'date-fns',
     'sql-formatter',
-    'sql-formatter/lib/core/Formatter',
-    'sql-formatter/lib/core/Tokenizer',
     'uuid',
     'vue',
     'vue-chartjs',

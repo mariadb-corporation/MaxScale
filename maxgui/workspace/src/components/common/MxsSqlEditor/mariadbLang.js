@@ -11,11 +11,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mariadb } from 'sql-formatter'
 
-import reservedWords from './reservedWords.js'
-import builtinFunctions from './builtinFunctions.js'
-
-const keywords = reservedWords
+const {
+    reservedKeywords: keywords,
+    reservedFunctionNames: builtinFunctions,
+} = mariadb.tokenizerOptions
 
 export const languageConfiguration = {
     comments: {
@@ -51,8 +52,8 @@ export const languageTokens = {
         { open: '[', close: ']', token: 'delimiter.square' },
         { open: '(', close: ')', token: 'delimiter.parenthesis' },
     ],
-    keywords: keywords,
-    builtinFunctions: builtinFunctions,
+    keywords,
+    builtinFunctions,
     tokenizer: {
         root: [
             { include: '@comments' },

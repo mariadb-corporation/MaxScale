@@ -5,7 +5,22 @@ This package only supports webpack 4 and Vue.js 2.
 ## Installation
 
 ```bash
-npm i mxs-workspace
+npm i mxs-workspace && npm i babel-plugin-transform-class-properties --save-dev
+```
+
+```js
+// babel.config.js
+module.exports = {
+    presets: ['@vue/cli-plugin-babel/preset'],
+    plugins: ['@babel/plugin-proposal-class-properties'],
+}
+```
+
+```js
+// vue.config.js
+module.exports = {
+    transpileDependencies: ['sql-formatter'],
+}
 ```
 
 MaxScale Workspace peerDependencies
@@ -26,7 +41,7 @@ MaxScale Workspace peerDependencies
 | lodash                       | 4.17.x  |
 | monaco-editor                | 0.33.x  |
 | monaco-editor-webpack-plugin |  7.0.x  |
-| sql-formatter                |  4.0.x  |
+| sql-formatter                | 12.2.x  |
 | stacktrace-parser            |  0.1.x  |
 | typy                         |  3.3.x  |
 | uuid                         |  8.3.x  |

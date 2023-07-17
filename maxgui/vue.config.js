@@ -111,7 +111,7 @@ module.exports = {
             .use(require('monaco-editor-webpack-plugin'), [monacoConfig])
     },
 
-    transpileDependencies: ['vuetify', 'vuex-persist'],
+    transpileDependencies: ['vuetify', 'vuex-persist', 'sql-formatter'],
 
     outputDir: `${process.env.buildPath}/gui`,
 

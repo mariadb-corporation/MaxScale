@@ -14,16 +14,12 @@
 import { t } from 'typy'
 import { startOfDay, differenceInCalendarDays } from 'date-fns'
 import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
-import sqlFormatter from '@wsSrc/components/common/MxsSqlEditor/formatter'
+import { formatDialect, mariadb } from 'sql-formatter'
 
 export const deepDiff = require('deep-diff')
 
 export function formatSQL(v) {
-    return sqlFormatter(v, {
-        indent: '   ',
-        uppercase: true,
-        linesBetweenQueries: 2,
-    })
+    return formatDialect(v, { dialect: mariadb, tabWidth: 2, keywordCase: 'upper' })
 }
 /**
  * @param {String} identifier  identifier name
