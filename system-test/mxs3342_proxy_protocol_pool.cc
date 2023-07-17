@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     connections.clear();
     sleep(5);
 
-    auto res = test.repl->ssh_output("mysql -u bob -pbob -h " + ip + " -P 4006 -e \"SELECT 1\"");
+    auto res = test.repl->ssh_output("mariadb -u bob -pbob -h " + ip + " -P 4006 -e \"SELECT 1\"");
     test.expect(res.rc == 0, "Query from another IP should work: %d, %s", res.rc, res.output.c_str());
 
     test.repl->execute_query_all_nodes("SET GLOBAL proxy_protocol_networks=''");

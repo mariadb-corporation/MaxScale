@@ -57,7 +57,7 @@ bool GaleraCluster::start_replication()
         ssh_node(i, "cp cluster_address.cnf /etc/mysql/my.cnf.d/", true);
 
         ssh_node(i, "rm -rf /var/lib/mysql/*", true);
-        ssh_node(i, "mysql_install_db --user=mysql", true);
+        ssh_node(i, "mariadb-install-db --user=mysql", true);
 
         ssh_node_f(i,
                    true,
@@ -179,7 +179,7 @@ bool GaleraCluster::reset_server(int i)
 
     bool rval = false;
 
-    const char reset_db_cmd[] = "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql";
+    const char reset_db_cmd[] = "mariadb-install-db; sudo chown -R mysql:mysql /var/lib/mysql";
     logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
     if (vm.run_cmd_sudo(reset_db_cmd) == 0)
     {

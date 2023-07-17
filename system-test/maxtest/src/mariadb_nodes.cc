@@ -812,7 +812,7 @@ bool MariaDBCluster::reset_server(int i)
                     "chmod a+r -R /etc/my.cnf.d/*");
 
     bool reset_ok = false;
-    const char reset_db_cmd[] = "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql";
+    const char reset_db_cmd[] = "mariadb-install-db; sudo chown -R mysql:mysql /var/lib/mysql";
     logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
     if (vm.run_cmd_sudo(reset_db_cmd) == 0)
     {
