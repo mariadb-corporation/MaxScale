@@ -609,6 +609,8 @@ enum class ReplyState
 class Reply
 {
 public:
+    static constexpr uint32_t NO_SERVER_STATUS = std::numeric_limits<uint32_t>::max();
+
     /**
      * Get a short human readable description of the reply
      */
@@ -681,7 +683,7 @@ public:
     /**
      * The latest status of the server, read from OK and EOF packets
      */
-    uint16_t server_status() const;
+    uint32_t server_status() const;
 
     /**
      * Number of bytes received
@@ -781,7 +783,7 @@ private:
     uint32_t              m_generated_id {0};
     uint16_t              m_param_count {0};
     uint16_t              m_num_warnings {0};
-    uint16_t              m_server_status {0};
+    uint32_t              m_server_status {NO_SERVER_STATUS};
     bool                  m_is_ok {false};
     bool                  m_multiresult {false};
     std::vector<uint64_t> m_field_counts;

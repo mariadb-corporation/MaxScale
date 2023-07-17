@@ -448,7 +448,7 @@ uint16_t Reply::num_warnings() const
     return m_num_warnings;
 }
 
-uint16_t Reply::server_status() const
+uint32_t Reply::server_status() const
 {
     return m_server_status;
 }
@@ -581,6 +581,7 @@ void Reply::clear()
     m_upload_size = 0;
     m_generated_id = 0;
     m_param_count = 0;
+    m_server_status = NO_SERVER_STATUS;
     m_is_ok = false;
     m_multiresult = false;
     m_field_counts.clear();

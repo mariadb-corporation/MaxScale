@@ -2024,6 +2024,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
     case ReplyState::PREPARE:
         if (use_deprecate_eof() || cmd == MYSQL_REPLY_EOF)
         {
+            // TODO: Extract the server status from the EOF packets
             if (--m_ps_packets == 0)
             {
                 set_reply_state(ReplyState::DONE);

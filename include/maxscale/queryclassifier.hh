@@ -772,7 +772,15 @@ inline void TrxTracker::fix_trx_state(const mxs::Reply& reply)
     constexpr uint16_t STATUS_AUTOCOMMIT = 2;
     constexpr uint16_t STATUS_IN_RO_TRX = 8192;
 
-    uint16_t status = reply.server_status();
+    uint32_t status = reply.server_status();
+
+    if (status == mxs::Reply::NO_SERVER_STATUS)
+    {
+        // The response from the server did not contain the status bits. A handful of response types, for
+        // example the one to COM_STMT_PREPARE, will not contain the server status bits.
+        return;
+    }
+
     bool is_autocommit = status & STATUS_AUTOCOMMIT;
     m_autocommit = is_autocommit;
 
@@ -787,7 +795,7 @@ inline void TrxTracker::fix_trx_state(const mxs::Reply& reply)
             m_trx_state |= TrxState::TRX_READ_ONLY;
         }
     }
-    else if (is_trx_active() && !is_trx_ending() && !in_trx)
+    else if (is_trx_active() && !is_trx_ending() && !is_trx_starting() && !in_trx)
     {
         m_trx_state |= TrxState::TRX_ENDING;
     }
