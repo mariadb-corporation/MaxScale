@@ -114,6 +114,8 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
     {
         if (need_gtid_probe(res))
         {
+            m_qc.revert_update();
+            m_trx_tracker = prev_trx_state;
             m_query_queue.push_front(std::move(buffer));
             std::tie(buffer, res) = start_gtid_probe();
         }
@@ -619,7 +621,11 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             m_expected_responses--;
             mxb_assert(m_expected_responses >= 0);
 
-            m_trx_tracker.fix_trx_state(reply);
+            if (m_wait_gtid != GTID_READ_DONE)
+            {
+                m_trx_tracker.fix_trx_state(reply);
+            }
+
             track_tx_isolation(reply);
 
             if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())

@@ -262,7 +262,6 @@ std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
     buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
     buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
 
-    m_qc.revert_update();
     m_qc.update_route_info(buffer);
     plan = resolve_route(buffer, route_info());
 
