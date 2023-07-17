@@ -52,11 +52,11 @@ export default {
         },
         updateNodesHistory({ getters, dispatch }, nodes) {
             const currentHistory = getters.nodesHistory
-
             let newHistory = [nodes]
             // only push new data if the current index is the last item, otherwise, override the history
             if (getters.activeHistoryIdx === currentHistory.length - 1)
                 newHistory = [...getters.nodesHistory, nodes]
+            if (newHistory.length > 10) newHistory = newHistory.slice(1)
             ErdTaskTmp.update({
                 where: getters.activeRecordId,
                 data: { nodes_history: newHistory },

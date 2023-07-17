@@ -42,6 +42,7 @@
                     <template v-else-if="activeSpec === DDL_EDITOR_SPECS.FK">
                         <fk-definitions
                             v-if="$typy(tblOpts, 'engine').safeString === FK_SUPPORTED_ENGINE"
+                            :key="stagingData.id"
                             v-model="fks"
                             :initialData="initialFks"
                             :lookupTables="lookupTables"

@@ -57,6 +57,10 @@ export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'mac-cmd-shift-s': ['meta', 'shift', 's'],
     'ctrl-shift-c': ['ctrl', 'shift', 'c'],
     'mac-cmd-shift-c': ['meta', 'shift', 'c'],
+    'ctrl-z': ['ctrl', 'z'],
+    'mac-cmd-z': ['meta', 'z'],
+    'ctrl-shift-z': ['ctrl', 'shift', 'z'],
+    'mac-cmd-shift.z': ['meta', 'shift', 'z'],
 })
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
 

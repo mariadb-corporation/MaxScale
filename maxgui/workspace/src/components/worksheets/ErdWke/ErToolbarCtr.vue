@@ -82,7 +82,7 @@
             text
             depressed
             color="primary"
-            :disabled="activeHistoryIdx === 0"
+            :disabled="isUndoDisabled"
             @click="$emit('on-undo')"
         >
             <template v-slot:btn-content>
@@ -95,7 +95,7 @@
             text
             depressed
             color="primary"
-            :disabled="activeHistoryIdx === nodesHistory.length - 1"
+            :disabled="isRedoDisabled"
             @click="$emit('on-redo')"
         >
             <template v-slot:btn-content>
@@ -121,6 +121,7 @@
             text
             depressed
             color="primary"
+            :disabled="!hasConnId"
             @click="$emit('on-create-table')"
         >
             <template v-slot:btn-content>
@@ -133,7 +134,7 @@
         <mxs-tooltip-btn
             btnClass="er-toolbar__btn toolbar-square-btn"
             text
-            :disabled="!Boolean(activeErdConn.id)"
+            :disabled="!hasConnId"
             :color="activeErdConn ? 'primary' : ''"
             @click="genErd"
         >
@@ -169,6 +170,7 @@ import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
 import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
+import { EventBus } from '@wkeComps/EventBus'
 import { mapMutations, mapState } from 'vuex'
 
 export default {
@@ -216,6 +218,24 @@ export default {
         activeHistoryIdx() {
             return ErdTask.getters('activeHistoryIdx')
         },
+        hasConnId() {
+            return Boolean(this.activeErdConn.id)
+        },
+        isUndoDisabled() {
+            return this.activeHistoryIdx === 0
+        },
+        isRedoDisabled() {
+            return this.activeHistoryIdx === this.nodesHistory.length - 1
+        },
+        eventBus() {
+            return EventBus
+        },
+    },
+    activated() {
+        this.eventBus.$on('query-editor-shortkey', this.shortKeyHandler)
+    },
+    deactivated() {
+        this.eventBus.$off('query-editor-shortkey')
     },
     methods: {
         ...mapMutations({
@@ -247,6 +267,18 @@ export default {
         },
         handleShowSelection() {
             return `${this.isFitIntoView ? this.$mxs_t('fit') : `${this.zoomValue}%`}`
+        },
+        shortKeyHandler(key) {
+            switch (key) {
+                case 'ctrl-z':
+                case 'mac-cmd-z':
+                    if (!this.isUndoDisabled) this.$emit('on-undo')
+                    break
+                case 'ctrl-shift-z':
+                case 'mac-cmd-shift-z':
+                    if (!this.isRedoDisabled) this.$emit('on-redo')
+                    break
+            }
         },
     },
 }
