@@ -202,6 +202,7 @@ private:
                                      mxs::RWBackend::close_type failure_type);
     void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
+    bool ignore_response(mxs::RWBackend* backend, const mxs::Reply& reply);
 
     bool discard_partial_result(GWBUF& buffer, const mxs::Reply& reply);
     void checksum_mismatch();

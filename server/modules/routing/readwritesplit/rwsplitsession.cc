@@ -21,6 +21,19 @@ using namespace maxscale;
 using namespace std::chrono;
 using mariadb::QueryClassifier;
 
+namespace
+{
+void log_unexpected_response(MXS_SESSION* session, mxs::RWBackend* backend, const mxs::Reply& reply)
+{
+    MXB_ERROR("Unexpected response from '%s', closing session: %s",
+              backend->name(), reply.describe().c_str());
+    session->dump_statements();
+    session->dump_session_log();
+    session->kill();
+    mxb_assert(!true);
+}
+}
+
 std::vector<RWBackend*> sptr_vec_to_ptr_vec(std::vector<RWBackend>& sVec)
 {
     std::vector<RWBackend*> pVec;
@@ -319,12 +332,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
     }
     else if (m_config->transaction_replay && m_can_replay_trx && trx_is_open())
     {
-        // Never add something we should ignore into the transaction. The checksum is calculated from the
-        // response that is sent upstream via clientReply and this is implied by `should_ignore_response()`
-        // being false.
-        if (!backend->should_ignore_response()
-            && m_wait_gtid != READING_GTID
-            && m_wait_gtid != GTID_READ_DONE)
+        if (m_wait_gtid != READING_GTID && m_wait_gtid != GTID_READ_DONE)
         {
             m_current_query.buffer.minimize();
             int64_t size = m_trx.size() + m_current_query.buffer.runtime_size();
@@ -372,7 +380,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
     {
         // We're retrying the query on the master and we need to keep the current query
     }
-    else if (!backend->should_ignore_response())
+    else
     {
         /** Normal response, reset the currently active query. This is done before
          * the whole response is complete to prevent it from being retried
@@ -415,12 +423,6 @@ bool is_wsrep_error(const mxs::Error& error)
 
 bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
 {
-    if (backend->should_ignore_response())
-    {
-        // Never bypass errors for session commands. TODO: Check whether it would make sense to do so.
-        return false;
-    }
-
     mxb_assert(trx_is_open() || can_retry_query());
     mxb_assert(m_expected_responses >= 1);
 
@@ -542,7 +544,12 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
 {
     RWBackend* backend = static_cast<RWBackend*>(down.endpoint()->get_userdata());
 
-    if (!backend->should_ignore_response() && handle_causal_read_reply(writebuf, reply, backend))
+    if (backend->should_ignore_response())
+    {
+        return ignore_response(backend, reply);
+    }
+
+    if (handle_causal_read_reply(writebuf, reply, backend))
     {
         return 1;   // Nothing to route, return
     }
@@ -584,7 +591,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
     // assigns the prepared statement IDs.
     if (m_config->reuse_ps && reply.command() == MXS_COM_STMT_PREPARE)
     {
-        if (m_current_query && !backend->should_ignore_response())
+        if (m_current_query)
         {
             const auto& current_sql = get_sql_string(m_current_query.buffer);
             m_ps_cache[current_sql].append(writebuf.shallow_clone());
@@ -598,56 +605,41 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
     {
         if (backend->is_idle())
         {
-            MXB_ERROR("Unexpected response from '%s', closing session: %s",
-                      backend->name(), reply.describe().c_str());
-            m_pSession->dump_statements();
-            m_pSession->dump_session_log();
-            m_pSession->kill();
-            mxb_assert(!true);
+            log_unexpected_response(m_pSession, backend, reply);
             return false;
         }
 
-        bool ignore_response = backend->should_ignore_response();
+        MXB_INFO("Reply complete from '%s' (%s)", backend->name(), reply.describe().c_str());
+        /** Got a complete reply, decrement expected response count */
+        m_expected_responses--;
+        mxb_assert(m_expected_responses >= 0);
 
-        if (ignore_response)
+        if (m_wait_gtid != GTID_READ_DONE)
         {
-            MXB_INFO("Reply complete from '%s', discarding it.", backend->name());
-            writebuf.clear();
+            m_trx_tracker.fix_trx_state(reply);
         }
-        else
+
+        track_tx_isolation(reply);
+
+        if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())
         {
-            MXB_INFO("Reply complete from '%s' (%s)", backend->name(), reply.describe().c_str());
-            /** Got a complete reply, decrement expected response count */
-            m_expected_responses--;
-            mxb_assert(m_expected_responses >= 0);
+            m_qc.ps_store_response(reply.generated_id(), reply.param_count());
+        }
 
-            if (m_wait_gtid != GTID_READ_DONE)
-            {
-                m_trx_tracker.fix_trx_state(reply);
-            }
-
-            track_tx_isolation(reply);
-
-            if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())
-            {
-                m_qc.ps_store_response(reply.generated_id(), reply.param_count());
-            }
-
-            if (m_state == OTRX_ROLLBACK)
-            {
-                // Transaction rolled back, start replaying it on the master
-                m_state = ROUTING;
-                start_trx_replay();
-                m_pSession->reset_server_bookkeeping();
-                return 1;
-            }
+        if (m_state == OTRX_ROLLBACK)
+        {
+            // Transaction rolled back, start replaying it on the master
+            m_state = ROUTING;
+            start_trx_replay();
+            m_pSession->reset_server_bookkeeping();
+            return 1;
         }
 
         backend->ack_write();
         backend->select_finished();
         mxb_assert(m_expected_responses >= 0);
 
-        if (!ignore_response && continue_causal_read())
+        if (continue_causal_read())
         {
             // GTID sync part of causal reads is complete, continue with the actual reading part. This must be
             // done after the ack_write() call to make sure things are correctly marked as done. It must also
@@ -656,61 +648,50 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             return 1;
         }
     }
-    else if (backend->should_ignore_response())
-    {
-        MXB_INFO("Reply not yet complete from '%s', discarding partial result.", backend->name());
-        writebuf.clear();
-    }
     else
     {
         MXB_INFO("Reply not yet complete. Waiting for %d replies, got one from %s",
                  m_expected_responses, backend->name());
     }
 
-    if (writebuf)
+    mxb_assert(writebuf);
+
+    if (m_state == TRX_REPLAY)
     {
-        if (m_state == TRX_REPLAY)
+        mxb_assert(m_config->transaction_replay);
+
+        if (m_expected_responses == 0)
         {
-            mxb_assert(m_config->transaction_replay);
-
-            if (m_expected_responses == 0)
-            {
-                // Current statement is complete, continue with the next one
-                trx_replay_next_stmt();
-            }
-
-            /**
-             * If the start of the transaction was interrupted, we need to return
-             * the result to the client.
-             *
-             * This retrying of START TRANSACTION is done with the transaction replay
-             * mechanism instead of the normal query retry mechanism because the safeguards
-             * in the routing logic prevent retrying of individual queries inside transactions.
-             *
-             * If the transaction was not empty and some results have already been
-             * sent to the client, we must discard all responses that the client already has.
-             */
-
-            if (!m_replayed_trx.empty())
-            {
-                // Client already has this response, discard it
-                return 1;
-            }
+            // Current statement is complete, continue with the next one
+            trx_replay_next_stmt();
         }
-        else if (trx_is_open() && trx_is_ending() && m_expected_responses == 0)
+
+        /**
+         * If the start of the transaction was interrupted, we need to return
+         * the result to the client.
+         *
+         * This retrying of START TRANSACTION is done with the transaction replay
+         * mechanism instead of the normal query retry mechanism because the safeguards
+         * in the routing logic prevent retrying of individual queries inside transactions.
+         *
+         * If the transaction was not empty and some results have already been
+         * sent to the client, we must discard all responses that the client already has.
+         */
+
+        if (!m_replayed_trx.empty())
         {
-            finish_transaction(backend);
+            // Client already has this response, discard it
+            return 1;
         }
     }
-
-    int32_t rc = 1;
-
-    if (writebuf)
+    else if (trx_is_open() && trx_is_ending() && m_expected_responses == 0)
     {
-        mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
-        /** Write reply to client DCB */
-        rc = RouterSession::clientReply(std::move(writebuf), down, reply);
+        finish_transaction(backend);
     }
+
+    mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
+    /** Write reply to client DCB */
+    auto rc = RouterSession::clientReply(std::move(writebuf), down, reply);
 
     if (reply.is_complete() && m_expected_responses == 0 && m_state != TRX_REPLAY)
     {
@@ -727,6 +708,30 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
     }
 
     return rc;
+}
+
+bool RWSplitSession::ignore_response(mxs::RWBackend* backend, const mxs::Reply& reply)
+{
+    if (reply.is_complete())
+    {
+        if (backend->is_idle())
+        {
+            log_unexpected_response(m_pSession, backend, reply);
+            return false;
+        }
+
+        backend->ack_write();
+        backend->select_finished();
+        mxb_assert(m_expected_responses >= 0);
+
+        MXB_INFO("Reply complete from '%s', discarding it.", backend->name());
+    }
+    else
+    {
+        MXB_INFO("Reply not yet complete from '%s', discarding partial result.", backend->name());
+    }
+
+    return true;
 }
 
 bool RWSplitSession::can_start_trx_replay() const
