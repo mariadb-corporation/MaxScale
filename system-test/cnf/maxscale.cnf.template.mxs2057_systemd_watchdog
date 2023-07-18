@@ -15,7 +15,7 @@ router = readwritesplit
 servers = server1
 user = maxskysql
 password = skysql
-filters = lua
+filters = DoubleDotStartIsVeryBad
 
 [RW-Split-Listener]
 type = listener
@@ -23,10 +23,19 @@ service = RW-Split-Router
 protocol = mariadbclient
 port = 4006
 
-[lua]
-type = filter
-module = luafilter
-session_script=/###access_homedir###/infinite_loop.lua
+[DoubleDotStartIsVeryBad]
+type=filter
+module=namedserverfilter
+match01=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
+match02=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
+match03=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
+match04=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
+match05=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
+target01=server1
+target02=server1
+target03=server1
+target04=server1
+target05=server1
 
 [server1]
 type = server
