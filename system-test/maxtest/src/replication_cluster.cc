@@ -661,6 +661,19 @@ bool ReplicationCluster::create_users(int i)
             mdbmon_user.grants.emplace_back("READ ONLY ADMIN ON *.*");
         }
 
+        if (vrs.as_number() >= 11'00'00)
+        {
+            // MariaDB 11.0 no longer gives the following grants with SUPER (MDEV-29668)
+            for (std::string grant : {
+                    "SET USER", "FEDERATED ADMIN", "CONNECTION ADMIN", "REPLICATION SLAVE ADMIN",
+                    "BINLOG ADMIN", "BINLOG REPLAY", "REPLICA MONITOR", "BINLOG MONITOR",
+                    "REPLICATION MASTER ADMIN", "READ_ONLY ADMIN",
+                })
+            {
+                mdbmon_user.grants.emplace_back(grant + " ON *.*");
+            }
+        }
+
         bool error = false;
         auto ssl = ssl_mode();
         bool sr = supports_require();
