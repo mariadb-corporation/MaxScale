@@ -431,7 +431,7 @@ mxt::CmdResult VMNode::run_cmd_output_sudo(const string& cmd)
 
 mxt::CmdResult VMNode::run_sql_query(const std::string& sql)
 {
-    string cmd = mxb::string_printf("mysql -N -s -e \"%s\"", sql.c_str());
+    string cmd = mxb::string_printf("mariadb -N -s -e \"%s\"", sql.c_str());
     return run_cmd_output_sudo(cmd);
 }
 

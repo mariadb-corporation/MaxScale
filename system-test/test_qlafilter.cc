@@ -93,7 +93,7 @@ void test_user_matching(TestConnections& test)
 void test_source_matching(TestConnections& test)
 {
     auto run_query = [&](int node, int value){
-        test.repl->ssh_node_f(node, true, "mysql -u maxskysql -pskysql -h %s -P 4006 -e \"SELECT %d\"",
+        test.repl->ssh_node_f(node, true, "mariadb -u maxskysql -pskysql -h %s -P 4006 -e \"SELECT %d\"",
                               test.maxscale->ip(), value);
     };
 

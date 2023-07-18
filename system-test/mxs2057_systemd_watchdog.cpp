@@ -47,8 +47,26 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
 
     test.reset_timeout();
 
+    /**
+     * This query will cause catastrophic backtracing with the following pattern:
+     *
+     *    SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
+     *
+     * The worst-case complexity for PCRE2 is exponential and with about 100k characters the time it takes to
+     * fail the match is about a minute. This should be long enough to cause the systemd watchdog to kick in
+     * when it's repeated five times.
+     */
+    std::string query = "SELECT id FROM t1 where id = '";
+
+    for (int i = 0; i < 100000; i++)
+    {
+        query += "x";
+    }
+
+    query += "'";
+
     // Make one thread in maxscale hang
-    mysql_query(test.maxscale->conn_rwsplit, "select LUA_INFINITE_LOOP");
+    mysql_query(test.maxscale->conn_rwsplit, query.c_str());
 
     // maxscale should get killed by systemd in less than duration(interval - epsilon).
     bool maxscale_alive = staying_alive(test, mxb::from_secs(1.2 * mxb::to_secs(watchdog_interval)));
@@ -79,19 +97,8 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-    TestConnections::skip_maxscale_start(true);
     TestConnections test {argc, argv};
     test.maxscale->leak_check(false);
-
-    std::string lua_file("/infinite_loop.lua");
-    std::string from = mxt::SOURCE_DIR + lua_file;
-    std::string to = test.maxscale->access_homedir() + lua_file;
-
-    test.maxscale->copy_to_node(from.c_str(), to.c_str());
-    test.maxscale->ssh_node((std::string("chmod a+r ") + to).c_str(), true);
-    test.maxscale->start();
-    sleep(2);
-    test.maxscale->wait_for_monitor();
     test.maxscale->connect_rwsplit();
 
     if (!test.global_result)
