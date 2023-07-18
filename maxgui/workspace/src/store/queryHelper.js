@@ -736,19 +736,39 @@ function getNodeLinks({ links, node }) {
 function getExcludedLinks({ links, node }) {
     return links.filter(link => !getNodeLinks({ links, node }).includes(link))
 }
+
 /**
- * @param {Array.<Array>} cols - 2d array
- * @returns {object} col name mapped by col id
+ *
+ * @param {Array} tables - parsed tables
+ * @returns {Object.<string, Object.<string, string>>} e.g. { "tbl_1": { "col_1": "id", "col_2": "name" } }
  */
-function createColNameMap(cols) {
+function createTablesColNameMap(tables) {
     const idxOfId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
     const idxOfName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
-    return cols.reduce((map, arr) => {
-        map[arr[idxOfId]] = arr[idxOfName]
-        return map
+    return tables.reduce((res, tbl) => {
+        res[tbl.id] = typy(tbl, 'definitions.cols').safeArray.reduce((map, arr) => {
+            map[arr[idxOfId]] = arr[idxOfName]
+            return map
+        }, {})
+        return res
     }, {})
 }
 
+/**
+ *
+ * @param {Array} tables - parsed tables
+ * @returns {Array}
+ */
+function genRefTargets(tables) {
+    return tables.map(tbl => {
+        const schema = typy(tbl, 'options.schema').safeString
+        const name = typy(tbl, 'options.name').safeString
+        return {
+            id: tbl.id,
+            text: `${quotingIdentifier(schema)}.${quotingIdentifier(name)}`,
+        }
+    })
+}
 export default {
     getSchemaName,
     getTblName,
@@ -771,5 +791,6 @@ export default {
     getNodeLinks,
     getExcludedLinks,
     isSingleUQ,
-    createColNameMap,
+    createTablesColNameMap,
+    genRefTargets,
 }

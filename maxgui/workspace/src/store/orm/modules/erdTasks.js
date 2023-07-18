@@ -74,6 +74,9 @@ export default {
         activeRecordId: () => Worksheet.getters('activeId'),
         activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
         initialNodes: (_, getters) => t(getters.activeRecord, 'nodes').safeArray,
+        initialSchemas: (_, getters) => [
+            ...new Set(getters.initialNodes.map(n => n.data.options.schema)),
+        ],
         // Temp states getters
         activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
         stagingNodes: (_, getters) => t(getters.activeTmpRecord, 'nodes').safeArray,

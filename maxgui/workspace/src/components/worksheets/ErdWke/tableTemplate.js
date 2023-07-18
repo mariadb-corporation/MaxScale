@@ -15,3 +15,24 @@ export default name => `CREATE TABLE \`${name}\` (
     \`Id\` INT NOT NULL,
     PRIMARY KEY (\`Id\`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+
+export const employees = () => `CREATE TABLE \`employees\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`first_name\` varchar(50) NOT NULL,
+    \`last_name\` varchar(50) NOT NULL,
+    \`department_id\` int(11) DEFAULT NULL,
+    PRIMARY KEY (\`id\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+
+export const departments = () => `CREATE TABLE \`departments\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(100) NOT NULL,
+    PRIMARY KEY (\`id\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+
+export const projects = () => `CREATE TABLE \`projects\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(100) NOT NULL,
+    \`department_id\` int(11) DEFAULT NULL,
+    PRIMARY KEY (\`id\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`

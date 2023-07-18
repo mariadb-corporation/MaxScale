@@ -164,18 +164,24 @@ export default {
          *
          * @param {string} param.connId - connection id
          * @param {boolean} [param.isCreating] - is creating a new table
-         * @param {string} param.schema - schema name
-         * @param {string} param.name - table name
+         * @param {string} [param.schema] - schema name
+         * @param {string} [param.name] - table name
+         * @param {string} [param.actionName] - action name
          * @param {function} param.successCb - success callback function
          */
         async exeDdlScript(
             { state, dispatch, getters },
-            { connId, isCreating = false, schema, name, successCb }
+            { connId, isCreating = false, schema, name, successCb, actionName = '' }
         ) {
             const { quotingIdentifier: quoting } = this.vue.$helpers
-            const targetObj = `${quoting(schema)}.${quoting(name)}`
-            let action = `Apply changes to ${targetObj}`
-            if (isCreating) action = `Create ${targetObj}`
+            let action
+            if (actionName) action = actionName
+            else {
+                const targetObj = `${quoting(schema)}.${quoting(name)}`
+                action = `Apply changes to ${targetObj}`
+                if (isCreating) action = `Create ${targetObj}`
+            }
+
             await dispatch('exeStmtAction', { connId, sql: state.exec_sql_dlg.sql, action })
             if (!getters.isExecFailed) await this.vue.$typy(successCb).safeFunction()
         },

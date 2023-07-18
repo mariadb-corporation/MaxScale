@@ -202,22 +202,10 @@ export default {
             return Object.values({ ...this.lookupTables, ...this.newLookupTables })
         },
         refTargets() {
-            const { quotingIdentifier: quote } = this.$helpers
-            return this.allLookupTables.map(tbl => ({
-                id: tbl.id,
-                text: `${quote(tbl.options.schema)}.${quote(tbl.options.name)}`,
-            }))
+            return queryHelper.genRefTargets(this.allLookupTables)
         },
-        /**
-         * @returns {Object.<string, Object.<string, string>>} e.g. { "tbl_1": { "col_1": "id", "col_2": "name" } }
-         */
         tablesColNameMap() {
-            return this.allLookupTables.reduce((res, tbl) => {
-                res[tbl.id] = queryHelper.createColNameMap(
-                    this.$typy(tbl, 'definitions.cols').safeArray
-                )
-                return res
-            }, {})
+            return queryHelper.createTablesColNameMap(this.allLookupTables)
         },
         eventBus() {
             return EventBus
@@ -259,9 +247,9 @@ export default {
             const builder = new TableScriptBuilder({
                 initialData: this.initialData,
                 stagingData: this.stagingData,
-                isCreateTable: this.isCreating,
                 refTargetMap,
                 tablesColNameMap: this.tablesColNameMap,
+                options: { isCreating: this.isCreating },
             })
             this.SET_EXEC_SQL_DLG({
                 ...this.exec_sql_dlg,

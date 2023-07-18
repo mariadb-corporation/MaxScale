@@ -5,10 +5,12 @@
             :height="toolbarHeight"
             :zoom="panAndZoom.k"
             :isFitIntoView="isFitIntoView"
+            :hasChanged="hasChanged"
             @set-zoom="setZoom"
             @on-create-table="handleCreateTable"
             @on-undo="navHistory(activeHistoryIdx - 1)"
             @on-redo="navHistory(activeHistoryIdx + 1)"
+            v-on="$listeners"
         />
         <entity-diagram
             v-if="diagramKey"
@@ -104,7 +106,6 @@
 import { mapMutations, mapState } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
-import QueryConn from '@wsModels/QueryConn'
 import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
 import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
 import { EventBus } from '@wkeComps/EventBus'
@@ -118,6 +119,10 @@ export default {
     components: { ErToolbarCtr, EntityDiagram },
     props: {
         dim: { type: Object, required: true },
+        hasChanged: { type: Boolean, required: true },
+        connId: { type: String, required: true },
+        newNodeMap: { type: Object, required: true },
+        updatedNodeMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -153,36 +158,11 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
-        activeErdConn() {
-            return QueryConn.getters('activeErdConn')
-        },
         initialNodes() {
             return ErdTask.getters('initialNodes')
         },
-        initialNodesData() {
-            return this.initialNodes.map(n => n.data)
-        },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
-        },
-        stagingNodesData() {
-            return this.stagingNodes.map(n => n.data)
-        },
-        nodeDataDiffs() {
-            return this.$helpers.arrOfObjsDiff({
-                base: this.initialNodesData,
-                newArr: this.stagingNodesData,
-                idField: 'id',
-            })
-        },
-        newNodeMap() {
-            return this.$helpers.lodash.keyBy(this.nodeDataDiffs.get('added'), 'id')
-        },
-        updatedNodeMap() {
-            return this.$helpers.lodash.keyBy(
-                this.nodeDataDiffs.get('updated').map(n => n.newObj),
-                'id'
-            )
         },
         activeGraphConfig() {
             return this.$typy(this.activeRecord, 'graph_config').safeObjectOrEmpty
@@ -318,7 +298,7 @@ export default {
             return !this.initialNodes.some(n => n.id === id)
         },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
-            if (this.activeErdConn.id) {
+            if (this.connId) {
                 const { ALTER, EDIT, DELETE } = this.ENTITY_OPT_TYPES
                 switch (type) {
                     case ALTER:

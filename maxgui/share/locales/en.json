@@ -81,6 +81,7 @@
         "alter": "Alter",
         "alterTbl": "Alter Table",
         "apply": "Apply",
+        "applyScript": "Apply script",
         "cancel": "Cancel",
         "canceled": "Canceled",
         "catalog": "Catalog",

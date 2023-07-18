@@ -133,6 +133,20 @@
             </template>
             {{ $mxs_t('createTable') }}
         </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            text
+            color="primary"
+            :disabled="!hasChanged"
+            @click="$emit('on-apply-script')"
+        >
+            <template v-slot:btn-content>
+                <v-icon :size="18">$vuetify.icons.mxs_running</v-icon>
+            </template>
+            {{ $mxs_t('applyScript') }}
+            <br />
+            {{ OS_KEY }} + SHIFT + ENTER
+        </mxs-tooltip-btn>
         <v-spacer />
         <mxs-tooltip-btn
             btnClass="er-toolbar__btn toolbar-square-btn"
@@ -184,6 +198,7 @@ export default {
         height: { type: Number, required: true },
         zoom: { type: Number, required: true },
         isFitIntoView: { type: Boolean, required: true },
+        hasChanged: { type: Boolean, required: true },
     },
     computed: {
         ...mapState({
@@ -284,6 +299,10 @@ export default {
                 case 'ctrl-shift-z':
                 case 'mac-cmd-shift-z':
                     if (!this.isRedoDisabled) this.$emit('on-redo')
+                    break
+                case 'ctrl-shift-enter':
+                case 'mac-cmd-shift-enter':
+                    if (this.hasChanged) this.$emit('on-apply-script')
                     break
             }
         },

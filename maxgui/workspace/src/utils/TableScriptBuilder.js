@@ -25,6 +25,7 @@ import { t as typy } from 'typy'
  * Table script builder.
  * This is designed to work with the output of queryHelper.tableParserTransformer,
  * which is a data structure representing the parsed information of a table.
+ * @typedef {Object} TableScriptBuilder
  */
 export default class TableScriptBuilder {
     /**
@@ -32,12 +33,21 @@ export default class TableScriptBuilder {
      * @param {object}
      * @param {object} param.initialData
      * @param {object} param.stagingData
-     * @param {boolean} param.isCreateTable - if true, this class outputs CREATE TABLE script
      * @param {object} param.refTargetMap - reference target. e.g { tbl_id: { id, text }}. text is table qualified name
      * @param {Object.<string, Object.<string, string>>} param.tablesColNameMap { "tbl_id": { "col_id": "id",... } }
+     * @param {boolean} param.options.isCreating - if true, this class outputs CREATE TABLE script
+     * @param {boolean} param.options.skipSchemaCreation - if true, this class won't output schema creation for new
+     * table
+     * @param {boolean} param.options.skipFkCreation - if true, build method will skip FKs creation
      */
-    constructor({ initialData, stagingData, isCreateTable, refTargetMap, tablesColNameMap }) {
-        // initialData is an empty object if `isCreateTable` is true
+    constructor({
+        initialData,
+        stagingData,
+        refTargetMap,
+        tablesColNameMap,
+        options: { isCreating = false, skipSchemaCreation = false, skipFkCreation = false } = {},
+    }) {
+        // initialData is an empty object if `isCreating` is true
         this.colAttrs = Object.values(COL_ATTRS)
         this.initialData = initialData
         this.initialSchemaName = typy(initialData, 'options.schema').safeString
@@ -77,8 +87,10 @@ export default class TableScriptBuilder {
         this.refTargetMap = refTargetMap
         this.tablesColNameMap = tablesColNameMap
         this.stagingColNameMap = this.getTblColNameMap(stagingData.id)
-        // mode
-        this.isCreateTable = isCreateTable
+        // options
+        this.isCreating = isCreating
+        this.skipSchemaCreation = skipSchemaCreation
+        this.skipFkCreation = skipFkCreation
     }
 
     /**
@@ -125,12 +137,12 @@ export default class TableScriptBuilder {
     buildTblOptsSql() {
         let sql = ''
         this.optionDiffs.forEach((diff, i) => {
-            if (this.isCreateTable) sql += ' '
+            if (this.isCreating) sql += ' '
             else sql += this.handleAddComma({ ignore: i === 0 })
             const key = diff.path[0]
             switch (key) {
                 case 'name':
-                    if (this.isCreateTable) break
+                    if (this.isCreating) break
                     sql += `RENAME TO ${quoting(this.initialSchemaName)}.${quoting(diff.rhs)}`
                     break
                 case 'engine':
@@ -189,7 +201,7 @@ export default class TableScriptBuilder {
             [COMMENT]: comment,
         } = colObj
 
-        if (!this.isCreateTable)
+        if (!this.isCreating)
             if (isUpdated) {
                 const oldColName = typy(col, `oriObj.${NAME}`).safeString
                 sql += `${tokens.change} ${tokens.column} ${quoting(oldColName)} `
@@ -266,7 +278,7 @@ export default class TableScriptBuilder {
             const indexCols = updatedKey ? updatedKey.newObj.cols : addedKey.cols
             const colNames = indexCols.map(({ id }) => quoting(this.stagingColNameMap[id]))
             let keyDef = `${tokens.primaryKey} (${colNames.join(this.handleAddComma())})`
-            if (!this.isCreateTable) keyDef = `${tokens.add} ${keyDef}`
+            if (!this.isCreating) keyDef = `${tokens.add} ${keyDef}`
             parts.push(keyDef)
         }
         return parts.join(this.handleAddComma())
@@ -285,7 +297,7 @@ export default class TableScriptBuilder {
             const keyDef = `${tokens.uniqueKey} ${quoting(name)}(${indexColNames.join(
                 this.handleAddComma()
             )})`
-            if (this.isCreateTable) parts.push(keyDef)
+            if (this.isCreating) parts.push(keyDef)
             else parts.push(`${tokens.add} ${keyDef}`)
         })
         updatedKeys.forEach(({ diff: keyDiff, oriObj, newObj }) => {
@@ -374,7 +386,7 @@ export default class TableScriptBuilder {
                 tokens.update,
                 on_update,
             ]
-            if (this.isCreateTable) keyTokens.shift()
+            if (this.isCreating) keyTokens.shift()
             parts.push(keyTokens.join(' '))
         })
         return parts.join(this.handleAddComma())
@@ -421,7 +433,7 @@ export default class TableScriptBuilder {
         specs.push(addedColSQL)
         const pkSQL = this.buildPkSQL()
         const uqSQL = this.buildUniqueKeySQL()
-        const fkSQL = this.buildForeignKeySQL()
+        const fkSQL = this.skipFkCreation ? '' : this.buildForeignKeySQL()
         if (pkSQL) specs.push(pkSQL)
         if (uqSQL) specs.push(uqSQL)
         if (fkSQL) specs.push(fkSQL)
@@ -435,7 +447,7 @@ export default class TableScriptBuilder {
         let parts = [] // part of script which will be separated by commas
         if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
         if (this.isColsOptsChanged) parts.push(this.buildAlterColsSql())
-        const fkSQL = this.buildForeignKeySQL()
+        const fkSQL = this.skipFkCreation ? '' : this.buildForeignKeySQL()
         if (fkSQL) parts.push(fkSQL)
         sql += parts.join(this.handleAddComma())
         sql = formatSQL(`${sql};`)
@@ -444,7 +456,8 @@ export default class TableScriptBuilder {
 
     buildCreateScript() {
         const { schema, name } = this.stagingDataOptions
-        let sql = `CREATE SCHEMA IF NOT EXISTS ${quoting(schema)};`
+        let sql = ''
+        if (!this.skipSchemaCreation) sql += `CREATE SCHEMA IF NOT EXISTS ${quoting(schema)};`
         sql += `${tokens.createTable} ${quoting(schema)}.${quoting(name)} (`
         sql += `${this.buildCreateColsSql()})`
         sql += this.buildTblOptsSql()
@@ -453,7 +466,7 @@ export default class TableScriptBuilder {
     }
 
     build() {
-        if (this.isCreateTable) return this.buildCreateScript()
+        if (this.isCreating) return this.buildCreateScript()
         return this.buildAlterScript()
     }
 }
