@@ -91,7 +91,7 @@ void test_main(TestConnections& test)
                     // support gssapi.
                     const char expected_res[] = "12345";
                     string mysql_cmd = mxb::string_printf(
-                        "mysql --host=%s --port=%i --user=%s -N -s -e \"select %s;\"",
+                        "mariadb --host=%s --port=%i --user=%s -N -s -e \"select %s;\"",
                         mxs->ip(), mxs->rwsplit_port, username, expected_res);
                     if (expected)
                     {

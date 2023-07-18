@@ -194,7 +194,7 @@ void test_main(TestConnections& test)
         // root user can give it.
         test.try_query(conn, create_pam_user_fmt, "", pam_config_name);
         test.repl->ssh_node_f(0, true, "echo \"GRANT PROXY ON '%s'@'%%' TO ''@'%%'; FLUSH PRIVILEGES;\" | "
-                                       "mysql --user=root",
+                                       "mariadb --user=root",
                               dummy_user);
         test.repl->sync_slaves();
         update_users();
