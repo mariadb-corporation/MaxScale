@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include <security/pam_appl.h>
+#include <unistd.h>
 #include <maxbase/alloc.hh>
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
