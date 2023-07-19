@@ -11,6 +11,7 @@
         >
             <template slot="pane-left">
                 <diagram-ctr
+                    ref="diagramCtr"
                     :dim="erdDim"
                     :hasChanged="hasChanged"
                     :connId="connId"
@@ -313,8 +314,10 @@ export default {
             a.click()
             URL.revokeObjectURL(url)
         },
-        //TODO: export diagram as jpeg
-        exportAsJpeg() {},
+        async exportAsJpeg() {
+            const canvas = await this.$refs.diagramCtr.$refs.diagram.getCanvas()
+            this.$helpers.exportToJpeg({ canvas, fileName: this.taskName })
+        },
     },
 }
 </script>

@@ -153,3 +153,32 @@ export function maskQueryPwd(query) {
             .replace(IDENTIFIED_PLUGIN_PATTERN, `$1'***'`)
     return query
 }
+
+function createCanvasFrame(canvas) {
+    // create new canvas with white background
+    let desCanvas = document.createElement('canvas')
+    desCanvas.width = canvas.width
+    desCanvas.height = canvas.height
+    let destCtx = desCanvas.getContext('2d')
+    destCtx.fillStyle = '#FFFFFF'
+    destCtx.fillRect(0, 0, desCanvas.width, desCanvas.height)
+    //draw the original canvas onto the destination canvas
+    destCtx.drawImage(canvas, 0, 0)
+    destCtx.scale(2, 2)
+    return desCanvas
+}
+/**
+ * @param {object} param
+ * @param {HTMLElement} param.canvas - canvas element
+ * @param {string} param.fileName
+ */
+export function exportToJpeg({ canvas, fileName }) {
+    const desCanvas = createCanvasFrame(canvas)
+    const imageUrl = desCanvas.toDataURL('image/jpeg', 1.0)
+    let a = document.createElement('a')
+    a.href = imageUrl
+    a.download = `${fileName}.jpeg`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+}

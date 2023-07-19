@@ -151,6 +151,7 @@ import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { getConfig, LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import queryHelper from '@wsSrc/store/queryHelper'
+import html2canvas from 'html2canvas'
 
 export default {
     name: 'entity-diagram',
@@ -334,6 +335,13 @@ export default {
                 maxX: d3Max(this.graphNodes, n => n.x + n.size.width / 2),
                 maxY: d3Max(this.graphNodes, n => n.y + n.size.height / 2),
             }
+        },
+        /**
+         * @public
+         * @returns {Promise<Canvas>}
+         */
+        async getCanvas() {
+            return await html2canvas(this.$el, { logging: false })
         },
         /**
          * @param {Object} nodeSizeMap - size of nodes

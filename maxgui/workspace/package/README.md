@@ -36,6 +36,7 @@ MaxScale Workspace peerDependencies
 | chartjs-plugin-trendline     |  2.0.x  |
 | date-fns                     | 2.29.x  |
 | deep-diff                    |  1.0.x  |
+| html2canvas                  |  1.4.x  |
 | immutability-helper          |  3.1.x  |
 | localforage                  | 1.10.x  |
 | lodash                       | 4.17.x  |

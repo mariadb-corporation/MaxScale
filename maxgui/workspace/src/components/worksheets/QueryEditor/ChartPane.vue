@@ -2,7 +2,7 @@
     <div class="chart-pane fill-height">
         <div ref="chartTool" class="d-flex pt-2 pr-3">
             <v-spacer />
-            <mxs-tooltip-btn small icon depressed color="primary" @click="exportToJpeg">
+            <mxs-tooltip-btn small icon depressed color="primary" @click="exportChart">
                 <template v-slot:btn-content>
                     <v-icon size="16"> mdi-download </v-icon>
                 </template>
@@ -302,15 +302,10 @@ export default {
             destCtx.scale(2, 2)
             return desCanvas
         },
-        exportToJpeg() {
-            const desCanvas = this.createCanvasFrame()
-            const imageUrl = desCanvas.toDataURL('image/jpeg', 1.0)
-            let a = document.createElement('a')
-            a.href = imageUrl
-            a.download = `${this.getDefFileName()}.jpeg`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
+        exportChart() {
+            const chart = this.$refs.chart.$el
+            const canvas = chart.getElementsByTagName('canvas')[0]
+            this.$helpers.exportToJpeg({ canvas, fileName: this.getDefFileName() })
         },
     },
 }
