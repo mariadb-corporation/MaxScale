@@ -133,15 +133,50 @@
             </template>
             {{ $mxs_t('createTable') }}
         </mxs-tooltip-btn>
+        <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
+        <v-menu
+            offset-y
+            bottom
+            content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
+        >
+            <template v-slot:activator="{ on: menu, attrs }">
+                <v-tooltip top transition="slide-y-transition">
+                    <template v-slot:activator="{ on: tooltip }">
+                        <v-btn
+                            text
+                            color="primary"
+                            class="toolbar-square-btn"
+                            v-bind="attrs"
+                            v-on="{ ...tooltip, ...menu }"
+                        >
+                            <v-icon size="20">mdi-download</v-icon>
+                        </v-btn>
+                    </template>
+                    {{ $mxs_t('export') }}
+                </v-tooltip>
+            </template>
+            <v-list>
+                <v-list-item
+                    v-for="opt in exportOptions"
+                    :key="opt.name"
+                    :disabled="opt.disabled"
+                    @click="opt.action"
+                >
+                    <v-list-item-title class="mxs-color-helper text-text">
+                        {{ opt.name }}
+                    </v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-menu>
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
             text
             color="primary"
-            :disabled="!hasChanged"
+            :disabled="!hasChanged || !hasConnId"
             @click="$emit('on-apply-script')"
         >
             <template v-slot:btn-content>
-                <v-icon :size="18">$vuetify.icons.mxs_running</v-icon>
+                <v-icon size="20">$vuetify.icons.mxs_running</v-icon>
             </template>
             {{ $mxs_t('applyScript') }}
             <br />
@@ -182,6 +217,17 @@
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
+ */
+/**
+ * Emits
+ * set-zoom: { isFitIntoView: boolean }
+ * on-undo: void
+ * on-redo: void
+ * on-create-table: void
+ * on-export-script: void
+ * on-export-as-jpeg: void
+ * on-apply-script: void
+ * input: Object. v-model
  */
 import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
@@ -248,6 +294,20 @@ export default {
         },
         eventBus() {
             return EventBus
+        },
+        exportOptions() {
+            return [
+                {
+                    name: this.$mxs_t('exportScript'),
+                    action: () => this.$emit('on-export-script'),
+                    disabled: !this.hasChanged,
+                },
+                {
+                    name: this.$mxs_t('exportAsJpeg'),
+                    action: () => this.$emit('on-export-as-jpeg'),
+                    disabled: false,
+                },
+            ]
         },
     },
     activated() {

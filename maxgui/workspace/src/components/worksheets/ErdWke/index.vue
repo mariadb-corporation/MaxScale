@@ -17,6 +17,8 @@
                     :newNodeMap="newNodeMap"
                     :updatedNodeMap="updatedNodeMap"
                     @on-apply-script="applyScript"
+                    @on-export-script="exportScript"
+                    @on-export-as-jpeg="exportAsJpeg"
                 />
             </template>
             <template slot="pane-right">
@@ -43,6 +45,7 @@ import { mapMutations, mapState, mapActions } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsSrc/store/orm/models/Worksheet'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
@@ -94,6 +97,9 @@ export default {
         },
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
+        },
+        taskName() {
+            return this.$typy(Worksheet.getters('activeRecord'), 'name').safeString
         },
         graphHeightPct: {
             get() {
@@ -213,7 +219,7 @@ export default {
             if (isNewTable && constraints) return `${alterFkSQL} ${constraints}`
             return constraints
         },
-        applyScript() {
+        genScript() {
             this.scriptGeneratedTime = this.$helpers.dateFormat({ value: new Date() })
             const { formatSQL, quotingIdentifier: quoting } = this.$helpers
             let parts = [],
@@ -271,11 +277,13 @@ export default {
 
             let sql = formatSQL(parts.join('\n'))
             sql = `${this.scriptTrademark}\n\n${sql}`
-
+            return sql
+        },
+        applyScript() {
             this.SET_EXEC_SQL_DLG({
                 ...this.exec_sql_dlg,
                 is_opened: true,
-                sql,
+                sql: this.genScript(),
                 on_exec: this.onExecuteScript,
                 on_after_cancel: () =>
                     this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
@@ -292,6 +300,21 @@ export default {
                     }),
             })
         },
+        exportScript() {
+            const blob = new Blob([this.genScript()], { type: 'text/sql' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            const time = this.$helpers.dateFormat({
+                value: this.scriptGeneratedTime,
+                formatType: 'EEE_dd_MMM_yyyy',
+            })
+            a.download = `${this.taskName}_${time}.sql`
+            a.click()
+            URL.revokeObjectURL(url)
+        },
+        //TODO: export diagram as jpeg
+        exportAsJpeg() {},
     },
 }
 </script>
