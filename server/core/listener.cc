@@ -1215,7 +1215,8 @@ bool Listener::unlisten_shared(mxs::RoutingWorker& worker)
     return false;
 }
 
-bool Listener::open_unique_listener(mxs::RoutingWorker& worker, std::mutex& lock, std::vector<std::string>& errors)
+bool Listener::open_unique_listener(mxs::RoutingWorker& worker, std::mutex& lock,
+                                    std::vector<std::string>& errors)
 {
     mxb::LogRedirect redirect(redirect_listener_errors);
     mxb::LogScope scope(name());
@@ -1300,7 +1301,7 @@ bool Listener::listen_unique(mxs::RoutingWorker& worker)
             MXB_ERROR("Could not call worker thread; it will not start listening "
                       "on listener socket.");
         }
-        
+
         if (!rval)
         {
             std::lock_guard<std::mutex> guard(lock);
