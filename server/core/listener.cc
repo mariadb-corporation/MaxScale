@@ -58,6 +58,9 @@ namespace
 const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
 const char CN_PROXY_PROTOCOL_NETWORKS[] = "proxy_protocol_networks";
 
+constexpr std::string_view TX_ISOLATION = "tx_isolation";
+constexpr std::string_view TRANSACTION_ISOLATION = "transaction_isolation";
+
 namespace cfg = mxs::config;
 
 const auto RUNTIME = cfg::Param::Modifiable::AT_RUNTIME;
@@ -1553,6 +1556,11 @@ Listener::SMetadata Listener::create_connection_metadata()
             {
                 if (std::string var = srv->get_variable_value(key); !var.empty())
                 {
+                    if (key == TX_ISOLATION && srv->info().version_num().major > 10)
+                    {
+                        key = TRANSACTION_ISOLATION;
+                    }
+
                     metadata.emplace(key, var);
                 }
             }
@@ -1605,6 +1613,11 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
                 // TODO: Currently the set of variables is append-only. The superset of trackable variables
                 // should be recalculated after every reconfiguration.
                 srv->track_variable(key);
+
+                if (key == TX_ISOLATION && srv->info().version_num().major > 10)
+                {
+                    srv->track_variable(TRANSACTION_ISOLATION);
+                }
             }
         }
     }

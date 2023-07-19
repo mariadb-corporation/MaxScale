@@ -3119,6 +3119,14 @@ The configuration has three variables, `redirect_url`, `service_name` and
 metadata that is sent to the client would be `redirect_url=localhost:3306`,
 `service_name=my-service` and `max_allowed_packet=16777216`.
 
+### Version-specific Behavior
+
+If the `connection_metadata` variable list contains the `tx_isolation` variable
+and the backend MariaDB server from which the variable is retrieved is MariaDB
+11 or newer, the value is renamed to `transaction_isolation`. The `tx_isolation`
+parameter was deprecated in favor of `transaction_isolation` in MariaDB 11
+(MDEV-21921).
+
 ## Include
 
 An _include_ section defined common parameters used in other configuration
