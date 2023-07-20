@@ -80,11 +80,11 @@
                 >
                     <p v-if="item.parentNodeId" class="d-block mt-2 ">
                         <span class="font-weight-bold"> {{ keyifyChangedParams(item) }}</span>
-                        <span v-if="item.type !== 'password string'"> : {{ item.value }} </span>
+                        <span v-if="item.type !== 'password'"> : {{ item.value }} </span>
                     </p>
                     <p v-else class="d-block mt-2 ">
                         <span class="font-weight-bold">{{ item.id }}</span>
-                        <span v-if="item.type !== 'password string'"> : {{ item.value }} </span>
+                        <span v-if="item.type !== 'password'"> : {{ item.value }} </span>
                     </p>
                 </div>
             </template>
