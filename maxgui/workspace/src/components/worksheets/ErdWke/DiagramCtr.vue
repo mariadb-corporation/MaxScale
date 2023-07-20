@@ -5,7 +5,7 @@
             :height="toolbarHeight"
             :zoom="panAndZoom.k"
             :isFitIntoView="isFitIntoView"
-            :hasChanged="hasChanged"
+            :hasValidChanges="hasValidChanges"
             @set-zoom="setZoom"
             @on-create-table="handleCreateTable"
             @on-undo="navHistory(activeHistoryIdx - 1)"
@@ -119,7 +119,7 @@ export default {
     components: { ErToolbarCtr, EntityDiagram },
     props: {
         dim: { type: Object, required: true },
-        hasChanged: { type: Boolean, required: true },
+        hasValidChanges: { type: Boolean, required: true },
         connId: { type: String, required: true },
         newNodeMap: { type: Object, required: true },
         updatedNodeMap: { type: Object, required: true },

@@ -10,6 +10,7 @@
         :lookupTables="stagingNodes.reduce((map, n) => ((map[n.id] = n.data), map), {})"
         :connData="{ id: activeErdConnId, config: activeRequestConfig }"
         :onExecute="onExecute"
+        v-on="$listeners"
     >
         <template v-slot:toolbar-append>
             <v-spacer />

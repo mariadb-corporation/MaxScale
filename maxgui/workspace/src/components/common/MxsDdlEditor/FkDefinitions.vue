@@ -25,7 +25,12 @@
                     v-for="(h, key) in headers"
                     v-slot:[`header-${h.text}`]="{ data: { header } }"
                 >
-                    <span :key="key">{{ $mxs_t(header.text) }} </span>
+                    <span
+                        :key="key"
+                        :class="{ 'label-required': requiredHeaders.includes(h.text) }"
+                    >
+                        {{ $mxs_t(header.text) }}
+                    </span>
                 </template>
                 <template
                     v-for="h in headers"
@@ -122,6 +127,10 @@ export default {
                 { text: ON_UPDATE, width: 166, minWidth: 86, ...header },
                 { text: ON_DELETE, width: 166, minWidth: 86, ...header },
             ]
+        },
+        requiredHeaders() {
+            const { NAME, COLS, REF_TARGET, REF_COLS } = this.FK_EDITOR_ATTRS
+            return [NAME, COLS, REF_TARGET, REF_COLS]
         },
         // new referenced tables keyed by id
         tmpLookupTables: {

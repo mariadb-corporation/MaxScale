@@ -172,7 +172,7 @@
             btnClass="toolbar-square-btn"
             text
             color="primary"
-            :disabled="!hasChanged || !hasConnId"
+            :disabled="!hasValidChanges || !hasConnId"
             @click="$emit('on-apply-script')"
         >
             <template v-slot:btn-content>
@@ -244,7 +244,7 @@ export default {
         height: { type: Number, required: true },
         zoom: { type: Number, required: true },
         isFitIntoView: { type: Boolean, required: true },
-        hasChanged: { type: Boolean, required: true },
+        hasValidChanges: { type: Boolean, required: true },
     },
     computed: {
         ...mapState({
@@ -300,7 +300,7 @@ export default {
                 {
                     name: this.$mxs_t('exportScript'),
                     action: () => this.$emit('on-export-script'),
-                    disabled: !this.hasChanged,
+                    disabled: !this.hasValidChanges,
                 },
                 {
                     name: this.$mxs_t('exportAsJpeg'),
@@ -362,7 +362,7 @@ export default {
                     break
                 case 'ctrl-shift-enter':
                 case 'mac-cmd-shift-enter':
-                    if (this.hasChanged) this.$emit('on-apply-script')
+                    if (this.hasValidChanges) this.$emit('on-apply-script')
                     break
             }
         },

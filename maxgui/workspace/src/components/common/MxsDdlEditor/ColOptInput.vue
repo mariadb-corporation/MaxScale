@@ -15,7 +15,9 @@
         outlined
         dense
         :height="height"
-        hide-details="auto"
+        hide-details
+        required
+        :rules="[v => !!v]"
         :return-object="false"
     />
     <v-select
@@ -65,7 +67,9 @@
         outlined
         dense
         :height="height"
-        hide-details="auto"
+        hide-details
+        :required="isNameInput"
+        :rules="[v => (isNameInput ? !!v : true)]"
     />
 </template>
 
@@ -132,6 +136,9 @@ export default {
                 this.$typy(this.data, `rowObj.${this.COL_ATTRS.GENERATED_TYPE}`).safeString !==
                 this.GENERATED_TYPES.NONE
             )
+        },
+        isNameInput() {
+            return this.data.field === this.COL_ATTRS.NAME
         },
         isAI() {
             return this.$typy(this.data, `rowObj.${this.COL_ATTRS.AI}`).safeBoolean

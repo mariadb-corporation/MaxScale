@@ -8,7 +8,9 @@
         outlined
         dense
         :height="height"
-        hide-details="auto"
+        hide-details
+        required
+        :rules="[v => !!v]"
     />
     <v-select
         v-else
@@ -26,8 +28,10 @@
         outlined
         dense
         :height="height"
-        hide-details="auto"
         :multiple="isColumnField"
+        hide-details
+        required
+        :rules="[v => (isColumnField ? Boolean(v.length) : !!v)]"
     >
         <template v-if="isColumnField" v-slot:item="{ item }">
             <v-icon class="mr-3">

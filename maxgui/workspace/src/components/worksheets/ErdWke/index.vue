@@ -13,7 +13,7 @@
                 <diagram-ctr
                     ref="diagramCtr"
                     :dim="erdDim"
-                    :hasChanged="hasChanged"
+                    :hasValidChanges="hasValidChanges"
                     :connId="connId"
                     :newNodeMap="newNodeMap"
                     :updatedNodeMap="updatedNodeMap"
@@ -23,7 +23,11 @@
                 />
             </template>
             <template slot="pane-right">
-                <entity-editor-ctr v-show="activeEntityId" :dim="editorDim" />
+                <entity-editor-ctr
+                    v-show="activeEntityId"
+                    :dim="editorDim"
+                    @is-form-valid="isFormValid = $event"
+                />
             </template>
         </mxs-split-pane>
     </div>
@@ -61,6 +65,7 @@ export default {
     data() {
         return {
             scriptGeneratedTime: null,
+            isFormValid: true,
         }
     },
     computed: {
@@ -152,6 +157,9 @@ export default {
                 !this.$typy(this.updatedNodeMap).isEmptyObject ||
                 !this.$typy(this.newNodeMap).isEmptyObject
             )
+        },
+        hasValidChanges() {
+            return this.isFormValid && this.hasChanged
         },
         blockCmt() {
             return '# ============================================================================='

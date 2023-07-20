@@ -29,6 +29,26 @@
             v-on="$listeners"
             @selected-rows="selectedItems = $event"
         >
+            <template v-for="name in requiredHeaders" v-slot:[`header-${name}`]>
+                <span :key="name" class="label-required">{{ name }}</span>
+            </template>
+            <template
+                v-for="(value, key) in abbreviatedHeaders"
+                v-slot:[`header-${key}`]="{ data: { header, maxWidth } }"
+            >
+                <v-tooltip :key="key" top transition="slide-y-transition" :disabled="isVertTable">
+                    <template v-slot:activator="{ on }">
+                        <div
+                            class="d-inline-block text-truncate"
+                            :style="{ maxWidth: `${maxWidth}px` }"
+                            v-on="on"
+                        >
+                            {{ isVertTable ? header.text : value }}
+                        </div>
+                    </template>
+                    <span>{{ header.text }}</span>
+                </v-tooltip>
+            </template>
             <template
                 v-for="(h, colOptIdx) in visHeaders"
                 v-slot:[h.text]="{ data: { rowData, cell, rowIdx: alterColIdx } }"
@@ -50,23 +70,6 @@
                         @on-input="onChangeInput"
                     />
                 </div>
-            </template>
-            <template
-                v-for="(value, key) in abbreviatedHeaders"
-                v-slot:[`header-${key}`]="{ data: { header, maxWidth } }"
-            >
-                <v-tooltip :key="key" top transition="slide-y-transition" :disabled="isVertTable">
-                    <template v-slot:activator="{ on }">
-                        <div
-                            class="d-inline-block text-truncate"
-                            :style="{ maxWidth: `${maxWidth}px` }"
-                            v-on="on"
-                        >
-                            {{ isVertTable ? header.text : value }}
-                        </div>
-                    </template>
-                    <span>{{ header.text }}</span>
-                </v-tooltip>
             </template>
         </mxs-virtual-scroll-tbl>
     </div>
@@ -166,6 +169,10 @@ export default {
                 }
                 return h
             })
+        },
+        requiredHeaders() {
+            const { NAME, TYPE } = this.COL_ATTRS
+            return [NAME, TYPE]
         },
         colSpecs() {
             return this.headers.filter(h => !h.hidden)
