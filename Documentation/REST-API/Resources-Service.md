@@ -95,7 +95,7 @@ Get a single service.
                 "queries": 0,
                 "server_query_statistics": []
             },
-            "started": "Wed Mar 16 09:21:18 2022",
+            "started": "Thu Jul 20 07:28:42 2023",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -310,7 +310,7 @@ Get all services.
                     "queries": 0,
                     "server_query_statistics": []
                 },
-                "started": "Wed Mar 16 09:21:18 2022",
+                "started": "Thu Jul 20 07:28:42 2023",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -517,7 +517,7 @@ Get all services.
                     "targets": null,
                     "transaction_replay": false,
                     "transaction_replay_attempts": 5,
-                    "transaction_replay_max_size": "1073741824",
+                    "transaction_replay_max_size": "1048576",
                     "transaction_replay_retry_on_deadlock": false,
                     "use_sql_variables_in": "all",
                     "user": "maxuser",
@@ -551,7 +551,7 @@ Get all services.
                         }
                     ]
                 },
-                "started": "Wed Mar 16 09:21:18 2022",
+                "started": "Thu Jul 20 07:28:42 2023",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,

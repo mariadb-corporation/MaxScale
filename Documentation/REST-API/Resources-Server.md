@@ -72,8 +72,8 @@ Get a single server.
                 "routed_packets": 0,
                 "total_connections": 1
             },
-            "triggered_at": "Wed, 16 Mar 2022 09:21:23 GMT",
-            "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
+            "triggered_at": "Thu, 20 Jul 2023 07:28:41 GMT",
+            "version_string": "10.5.19-MariaDB-1:10.5.19+maria~ubu2004-log"
         },
         "id": "server1",
         "links": {
@@ -182,8 +182,8 @@ Response contains a resource collection with all servers.
                     "routed_packets": 0,
                     "total_connections": 1
                 },
-                "triggered_at": "Wed, 16 Mar 2022 09:21:23 GMT",
-                "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
+                "triggered_at": "Thu, 20 Jul 2023 07:28:41 GMT",
+                "version_string": "10.5.19-MariaDB-1:10.5.19+maria~ubu2004-log"
             },
             "id": "server1",
             "links": {
@@ -284,8 +284,8 @@ Response contains a resource collection with all servers.
                     "routed_packets": 2,
                     "total_connections": 1
                 },
-                "triggered_at": "Wed, 16 Mar 2022 09:21:23 GMT",
-                "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
+                "triggered_at": "Thu, 20 Jul 2023 07:28:41 GMT",
+                "version_string": "10.5.19-MariaDB-1:10.5.19+maria~ubu2004-log"
             },
             "id": "server2",
             "links": {
@@ -435,18 +435,11 @@ server.
 
 ### Modifiable Fields
 
-The following standard server parameters can be modified.
-
-- [address](../Getting-Started/Configuration-Guide.md#address)
-- [port](../Getting-Started/Configuration-Guide.md#port)
-- [monitoruser](../Getting-Started/Configuration-Guide.md#monitoruser)
-- [monitorpw](../Getting-Started/Configuration-Guide.md#monitorpw)
-
-Refer to the documentation on these parameters for valid values.
-
-In addition to standard parameters, the _services_ and _monitors_ fields of the
-_relationships_ object can be modified. Removal, addition and modification of
-the links will change which service and monitors use this server.
+In addition to the server
+[parameters](../Getting-Started/Configuration-Guide.md#server-1), the _services_
+and _monitors_ fields of the _relationships_ object can be modified. Removal,
+addition and modification of the links will change which service and monitors
+use this server.
 
 For example, removing the first value in the _services_ list in the
 _relationships_ object from the following JSON document will remove the

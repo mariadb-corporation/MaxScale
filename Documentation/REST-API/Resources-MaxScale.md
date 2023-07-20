@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Tue, 17 May 2022 03:19:15 GMT",
-            "commit": "3b3ad559a989f36a0597aa73a26275abf5ebfbb4",
+            "activated_at": "Thu, 20 Jul 2023 07:28:41 GMT",
+            "commit": "6ae04a23eb1ef4004b3bc8344c2bb65f2e77658c",
             "parameters": {
                 "admin_auth": true,
                 "admin_enabled": true,
@@ -92,9 +92,9 @@ file locations, configuration options and version information.
                 "writeq_low_water": 8192
             },
             "process_datadir": "/var/lib/maxscale/data19",
-            "started_at": "Tue, 17 May 2022 03:19:15 GMT",
+            "started_at": "Thu, 20 Jul 2023 07:28:41 GMT",
             "uptime": 10,
-            "version": "2.5.20"
+            "version": "2.5.26"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -765,7 +765,7 @@ parameters it accepts as a module.
                     "type": "count"
                 },
                 {
-                    "default_value": 1073741824,
+                    "default_value": 1048576,
                     "mandatory": false,
                     "name": "transaction_replay_max_size",
                     "type": "size"
@@ -1269,7 +1269,7 @@ one to see the parameters of a module before the object is created.
                         "default_value": false,
                         "description": "Do not resolve client IP addresses to hostnames during authentication",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "skip_name_resolve",
                         "type": "bool"
                     },
@@ -1344,7 +1344,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "2.5.20"
+                "version": "2.5.26"
             },
             "id": "maxscale",
             "links": {
@@ -1393,7 +1393,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "monitorpw",
-                        "type": "string"
+                        "type": "password"
                     },
                     {
                         "description": "Monitor user",
@@ -1433,7 +1433,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "priority",
-                        "type": "count"
+                        "type": "int"
                     },
                     {
                         "description": "Server protocol (deprecated)",
@@ -1553,7 +1553,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "2.5.20"
+                "version": "2.5.26"
             },
             "id": "servers",
             "links": {
@@ -2225,7 +2225,7 @@ one to see the parameters of a module before the object is created.
                         "type": "count"
                     },
                     {
-                        "default_value": 1073741824,
+                        "default_value": 1048576,
                         "mandatory": false,
                         "name": "transaction_replay_max_size",
                         "type": "size"

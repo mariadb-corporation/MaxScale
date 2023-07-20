@@ -32,7 +32,7 @@ an external server, the operation may be expensive.
             "client": {
                 "cipher": ""
             },
-            "connected": "Wed Mar 16 09:21:28 2022",
+            "connected": "Thu Jul 20 07:28:51 2023",
             "connections": [
                 {
                     "cipher": "",
@@ -99,7 +99,7 @@ Get all sessions.
                 "client": {
                     "cipher": ""
                 },
-                "connected": "Wed Mar 16 09:21:28 2022",
+                "connected": "Thu Jul 20 07:28:51 2023",
                 "connections": [
                     {
                         "cipher": "",
