@@ -262,6 +262,25 @@ std::tuple<bool, bool> process_sbox_messages(std::string&& data, mxb::AsyncProce
             }
             break;
 
+        case mxb::pam::SBOX_AUTHENTICATED_AS:
+            {
+                auto [bytes, message] = mxb::pam::extract_string(&data[1], data.data() + data.size());
+                if (bytes > 0)
+                {
+                    if (!message.empty())
+                    {
+                        MXB_NOTICE("Username mapped to '%s'.", message.c_str());
+                        processed_bytes = 1 + bytes;
+                        io_ok = true;
+                    }
+                }
+                else if (bytes == 0)
+                {
+                    io_ok = true;
+                }
+            }
+            break;
+
         case mxb::pam::SBOX_EOF:
             auth_success = true;
             io_ok = true;

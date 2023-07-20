@@ -70,11 +70,31 @@ int main(int argc, char* argv[])
         auto res = authenticate_fd(in_fd, out_fd, user_data, sett);
         if (res.type == AuthResult::Result::SUCCESS)
         {
-            MXB_DEBUG("PAM sandbox: authentication succeeded, sending EOF.");
-            uint8_t ok = SBOX_EOF;
-            if (write(out_fd, &ok, sizeof(ok)) == sizeof(ok))
+            bool send_eof = true;
+            if (mapping_on && !res.mapped_user.empty())
             {
-                rc = 0;
+                if (res.mapped_user != uname)
+                {
+                    MXB_DEBUG("PAM sandbox: sending authenticated_as field.");
+                    std::vector<uint8_t> auth_as_msg;
+                    auth_as_msg.reserve(100);
+                    auth_as_msg.push_back(SBOX_AUTHENTICATED_AS);
+                    mxb::pam::add_string(res.mapped_user, &auth_as_msg);
+                    if (write(out_fd, auth_as_msg.data(), auth_as_msg.size()) != (ssize_t)auth_as_msg.size())
+                    {
+                        send_eof = false;
+                    }
+                }
+            }
+
+            if (send_eof)
+            {
+                MXB_DEBUG("PAM sandbox: authentication succeeded, sending EOF.");
+                uint8_t ok = SBOX_EOF;
+                if (write(out_fd, &ok, sizeof(ok)) == sizeof(ok))
+                {
+                    rc = 0;
+                }
             }
         }
         else
@@ -109,7 +129,7 @@ bool read_settings(int fd, bool* mapping_out, string* uname_out, string* pam_ser
             if (pam_service)
             {
                 MXB_DEBUG("PAM sandbox: pam service is '%s'.", pam_service->c_str());
-                *mapping_out = mapping_out;
+                *mapping_out = mapping;
                 *uname_out = std::move(*uname);
                 *pam_service_out = std::move(*pam_service);
                 success = true;

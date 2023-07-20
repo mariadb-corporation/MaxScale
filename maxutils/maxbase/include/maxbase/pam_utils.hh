@@ -26,6 +26,7 @@ namespace pam
 extern const std::string EXP_PW_QUERY;      /* Expected normal password query */
 
 constexpr uint8_t SBOX_CONV = 'C';
+constexpr uint8_t SBOX_AUTHENTICATED_AS = 'A';
 constexpr uint8_t SBOX_EOF = 'E';
 constexpr uint8_t SBOX_CFG_MAP = (1 << 0);
 
