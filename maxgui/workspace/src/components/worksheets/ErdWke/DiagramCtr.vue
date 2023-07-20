@@ -30,13 +30,18 @@
             @contextmenu="activeNodeMenu = $event"
         >
             <template v-slot:entity-name-append="{ node }">
-                <span v-if="$typy(updatedNodeMap[node.id]).isObject" class="changes-indicator" />
-                <span
-                    v-if="$typy(newNodeMap[node.id]).isObject"
-                    class="d-inline-flex align-center rounded text-uppercase new-tbl-indicator"
-                >
-                    {{ $mxs_t('new') }}
-                </span>
+                <div class="d-inline-flex entity-name-append">
+                    <span
+                        v-if="$typy(updatedNodeMap[node.id]).isObject"
+                        class="changes-indicator"
+                    />
+                    <span
+                        v-if="$typy(newNodeMap[node.id]).isObject"
+                        class="d-inline-flex align-center rounded text-uppercase new-tbl-indicator"
+                    >
+                        {{ $mxs_t('new') }}
+                    </span>
+                </div>
             </template>
             <template v-slot:entity-setting-btn="{ node }">
                 <v-btn
@@ -492,13 +497,16 @@ export default {
                 visibility: visible;
             }
         }
-        .new-tbl-indicator {
-            background: $primary;
-            padding: 0 2px;
-            position: relative;
-            color: white;
-            font-size: 0.5rem;
-            bottom: 8px;
+        .entity-name-append {
+            width: 24px;
+            .new-tbl-indicator {
+                background: $primary;
+                padding: 0 2px;
+                position: relative;
+                color: white;
+                font-size: 0.5rem;
+                bottom: 8px;
+            }
         }
     }
 }
