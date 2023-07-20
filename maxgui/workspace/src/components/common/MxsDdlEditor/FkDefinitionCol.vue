@@ -43,8 +43,16 @@
             </v-icon>
             {{ item.text }}
             <v-spacer />
-            <span class="ma-0 ml-auto field__label mxs-color-helper text-small-text">
+            <span class="ma-0 ml-auto pl-2 field__label mxs-color-helper text-small-text">
                 {{ item.type }}
+            </span>
+        </template>
+        <template v-if="isColumnField" v-slot:selection="{ item, index }">
+            <span class="v-select__selection v-select__selection--comma">
+                <template v-if="index === 0"> {{ item.text }}</template>
+                <template v-else-if="index === 1">
+                    (+{{ inputValue.length - 1 }} {{ $mxs_t('others') }})
+                </template>
             </span>
         </template>
     </v-select>
