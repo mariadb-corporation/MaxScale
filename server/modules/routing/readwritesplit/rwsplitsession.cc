@@ -593,7 +593,8 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             constexpr const char* LEVEL = "SERIALIZABLE";
 
             if (reply.get_variable("trx_characteristics").find(LEVEL) != std::string::npos
-                || reply.get_variable("tx_isolation").find(LEVEL) != std::string::npos)
+                || reply.get_variable("tx_isolation").find(LEVEL) != std::string::npos
+                || reply.get_variable("transaction_isolation").find(LEVEL) != std::string::npos)
             {
                 MXB_INFO("Transaction isolation level set to %s, locking session to master", LEVEL);
                 m_locked_to_master = true;

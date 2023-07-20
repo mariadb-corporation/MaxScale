@@ -119,7 +119,7 @@ Get a single service.
                 "file": "/etc/maxscale.cnf",
                 "type": "static"
             },
-            "started": "Mon Oct 17 17:36:00 2022",
+            "started": "Thu Jul 20 15:29:02 2023",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -182,7 +182,7 @@ Get a single service.
                     "user": "root"
                 }
             ],
-            "users_last_update": "Mon Oct 17 17:36:01 2022"
+            "users_last_update": "Thu Jul 20 15:29:03 2023"
         },
         "id": "Read-Connection-Router",
         "links": {
@@ -355,7 +355,7 @@ Get all services.
                     "transaction_replay": false,
                     "transaction_replay_attempts": 5,
                     "transaction_replay_checksum": "full",
-                    "transaction_replay_max_size": 1073741824,
+                    "transaction_replay_max_size": 1048576,
                     "transaction_replay_retry_on_deadlock": false,
                     "transaction_replay_retry_on_mismatch": false,
                     "transaction_replay_timeout": "0ms",
@@ -400,7 +400,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Mon Oct 17 17:36:00 2022",
+                "started": "Thu Jul 20 15:29:02 2023",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -463,7 +463,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Mon Oct 17 17:36:01 2022"
+                "users_last_update": "Thu Jul 20 15:29:03 2023"
             },
             "id": "RW-Split-Router",
             "links": {
@@ -593,7 +593,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Mon Oct 17 17:36:00 2022",
+                "started": "Thu Jul 20 15:29:02 2023",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -656,7 +656,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Mon Oct 17 17:36:01 2022"
+                "users_last_update": "Thu Jul 20 15:29:03 2023"
             },
             "id": "Read-Connection-Router",
             "links": {

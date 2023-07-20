@@ -32,37 +32,36 @@ an external server, the operation may be expensive.
             "client": {
                 "cipher": ""
             },
-            "connected": "Mon Oct 17 17:36:15 2022",
+            "connected": "Thu Jul 20 15:29:12 2023",
             "connections": [
                 {
                     "cipher": "",
-                    "connection_id": 13,
+                    "connection_id": 169,
                     "server": "server1"
                 },
                 {
                     "cipher": "",
-                    "connection_id": 12,
+                    "connection_id": 90,
                     "server": "server2"
                 }
             ],
             "idle": 0.10000000000000001,
             "log": [],
             "memory": {
-                "connection_buffers": 68022,
+                "connection_buffers": 67982,
                 "exec_metadata": 0,
                 "last_queries": 0,
-                "sescmd_history": 377,
-                "total": 68399,
+                "sescmd_history": 369,
+                "total": 68351,
                 "variables": 0
             },
             "parameters": {
-                "log_debug": false,
                 "log_error": false,
                 "log_info": false,
                 "log_notice": false,
                 "log_warning": false
             },
-            "port": 55698,
+            "port": 45558,
             "queries": [],
             "remote": "::ffff:127.0.0.1",
             "state": "Session started",
@@ -114,37 +113,36 @@ Get all sessions.
                 "client": {
                     "cipher": ""
                 },
-                "connected": "Mon Oct 17 17:36:15 2022",
+                "connected": "Thu Jul 20 15:29:12 2023",
                 "connections": [
                     {
                         "cipher": "",
-                        "connection_id": 13,
+                        "connection_id": 169,
                         "server": "server1"
                     },
                     {
                         "cipher": "",
-                        "connection_id": 12,
+                        "connection_id": 90,
                         "server": "server2"
                     }
                 ],
                 "idle": 0.10000000000000001,
                 "log": [],
                 "memory": {
-                    "connection_buffers": 68022,
+                    "connection_buffers": 67982,
                     "exec_metadata": 0,
                     "last_queries": 0,
-                    "sescmd_history": 377,
-                    "total": 68399,
+                    "sescmd_history": 369,
+                    "total": 68351,
                     "variables": 0
                 },
                 "parameters": {
-                    "log_debug": false,
                     "log_error": false,
                     "log_info": false,
                     "log_notice": false,
                     "log_warning": false
                 },
-                "port": 55698,
+                "port": 45558,
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",
                 "state": "Session started",

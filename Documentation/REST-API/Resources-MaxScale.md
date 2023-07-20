@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Mon, 17 Oct 2022 17:36:00 GMT",
-            "commit": "d6662b78821027046876bedd0d2b687908fef091",
+            "activated_at": "Thu, 20 Jul 2023 15:29:02 GMT",
+            "commit": "d6acc9ed4310d328677803c4dc96e82b2a7afe14",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -51,8 +51,9 @@ file locations, configuration options and version information.
                 "auto_tune": [],
                 "cachedir": "/var/cache/maxscale",
                 "config_sync_cluster": null,
+                "config_sync_db": "mysql",
                 "config_sync_interval": "5000ms",
-                "config_sync_password": "*****",
+                "config_sync_password": null,
                 "config_sync_timeout": "10000ms",
                 "config_sync_user": null,
                 "connector_plugindir": "/usr/lib64/maxscale/plugin",
@@ -87,7 +88,7 @@ file locations, configuration options and version information.
                 "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
-                "query_classifier_cache_size": 5004690432,
+                "query_classifier_cache_size": 5001955123,
                 "query_retries": 1,
                 "query_retry_timeout": "5000ms",
                 "rebalance_period": "0ms",
@@ -102,33 +103,33 @@ file locations, configuration options and version information.
                 "threads": 3,
                 "users_refresh_interval": "0ms",
                 "users_refresh_time": "0ms",
-                "writeq_high_water": 16777216,
-                "writeq_low_water": 8192
+                "writeq_high_water": 65536,
+                "writeq_low_water": 1024
             },
-            "process_datadir": "/var/lib/maxscale/data21",
-            "started_at": "Mon, 17 Oct 2022 17:36:00 GMT",
+            "process_datadir": "/var/lib/maxscale/data19",
+            "started_at": "Thu, 20 Jul 2023 15:29:02 GMT",
             "system": {
                 "machine": {
                     "cores_available": 8,
                     "cores_physical": 8,
                     "cores_virtual": 8.0,
-                    "memory_available": 33364602880,
-                    "memory_physical": 33364602880
+                    "memory_available": 33346367488,
+                    "memory_physical": 33346367488
                 },
                 "maxscale": {
-                    "query_classifier_cache_size": 5004690432,
+                    "query_classifier_cache_size": 5001955123,
                     "threads": 3
                 },
                 "os": {
                     "machine": "x86_64",
                     "nodename": "monolith",
-                    "release": "5.19.14-200.fc36.x86_64",
+                    "release": "6.3.12-100.fc37.x86_64",
                     "sysname": "Linux",
-                    "version": "#1 SMP PREEMPT_DYNAMIC Wed Oct 5 21:31:17 UTC 2022"
+                    "version": "#1 SMP PREEMPT_DYNAMIC Wed Jul  5 20:09:58 UTC 2023"
                 }
             },
-            "uptime": 15,
-            "version": "22.08.2"
+            "uptime": 10,
+            "version": "22.08.6"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -488,19 +489,19 @@ This endpoint supports the following parameters:
                     "id": "37",
                     "message": "Service 'Read-Connection-Router' started (2/2)",
                     "priority": "notice",
-                    "timestamp": "2022-10-17 17:36:00"
+                    "timestamp": "2023-07-20 15:29:02"
                 },
                 {
                     "id": "38",
                     "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-10-17 17:36:01"
+                    "timestamp": "2023-07-20 15:29:03"
                 },
                 {
                     "id": "39",
                     "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-10-17 17:36:01"
+                    "timestamp": "2023-07-20 15:29:03"
                 }
             ],
             "log_source": "maxlog"
@@ -509,9 +510,9 @@ This endpoint supports the following parameters:
         "type": "log_data"
     },
     "links": {
-        "last": "http://localhost:8989/v1/maxscale/logs/data/?page[size]=3",
-        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=34&page[size]=3",
-        "self": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=40&page[size]=3"
+        "last": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bsize%5D=3",
+        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=34&page%5Bsize%5D=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=40&page%5Bsize%5D=3"
     }
 }
 ```
@@ -872,7 +873,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "type": "enum"
                 },
                 {
-                    "default_value": 1073741824,
+                    "default_value": 1048576,
                     "description": "Maximum size of transaction to retry",
                     "mandatory": false,
                     "modifiable": true,
@@ -1385,6 +1386,14 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
+                        "default_value": "mysql",
+                        "description": "Database where the 'maxscale_config' table is created.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "config_sync_db",
+                        "type": "string"
+                    },
+                    {
                         "default_value": "5000ms",
                         "description": "How often to synchronize the configuration.",
                         "mandatory": false,
@@ -1394,7 +1403,6 @@ one to see the parameters of a module before the object is created.
                         "unit": "ms"
                     },
                     {
-                        "default_value": "*****",
                         "description": "Password for the user used for configuration synchronization.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1582,7 +1590,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
-                        "default_value": 5004690432,
+                        "default_value": 5001955123,
                         "description": "Maximum amount of memory used by query classifier cache.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1651,7 +1659,7 @@ one to see the parameters of a module before the object is created.
                         "default_value": false,
                         "description": "Do not resolve client IP addresses to hostnames during authentication",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "skip_name_resolve",
                         "type": "bool"
                     },
@@ -1710,7 +1718,7 @@ one to see the parameters of a module before the object is created.
                         "unit": "ms"
                     },
                     {
-                        "default_value": 16777216,
+                        "default_value": 65536,
                         "description": "High water mark of dcb write queue.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1718,7 +1726,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     },
                     {
-                        "default_value": 8192,
+                        "default_value": 1024,
                         "description": "Low water mark of dcb write queue.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1726,7 +1734,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "22.08.2"
+                "version": "22.08.6"
             },
             "id": "maxscale",
             "links": {
@@ -1783,7 +1791,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "monitorpw",
-                        "type": "string"
+                        "type": "password"
                     },
                     {
                         "description": "Monitor user",
@@ -1951,7 +1959,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "22.08.2"
+                "version": "22.08.6"
             },
             "id": "servers",
             "links": {
@@ -2682,7 +2690,6 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "default_value": "*****",
                         "description": "Password for the user that is used for replication",
                         "mandatory": false,
                         "modifiable": true,
@@ -3799,7 +3806,7 @@ one to see the parameters of a module before the object is created.
                         "type": "enum"
                     },
                     {
-                        "default_value": 1073741824,
+                        "default_value": 1048576,
                         "description": "Maximum size of transaction to retry",
                         "mandatory": false,
                         "modifiable": true,

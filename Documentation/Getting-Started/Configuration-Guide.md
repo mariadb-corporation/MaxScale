@@ -3282,10 +3282,10 @@ servers must be the same in every configuration.
 
 Whenever the MaxScale configuration is modified at runtime, the latest
 configuration is stored in the database cluster in the `mysql.maxscale_config`
-table. A local copy of the configuration is stored in the data directory to
-allow MaxScale to function even if a connection to the cluster cannot be
-made. By default this file is stored at
-`/var/lib/maxscale/maxscale-config.json`.
+table. The table is created when the first modification to the configuration is
+done. A local copy of the configuration is stored in the data directory to allow
+MaxScale to function even if a connection to the cluster cannot be made. By
+default this file is stored at `/var/lib/maxscale/maxscale-config.json`.
 
 Whenever MaxScale starts up, it checks if a local version of this configuration
 exists. If it does and it is a valid cached configuration, the static
