@@ -29,7 +29,7 @@ using std::cout;
 
 namespace
 {
-std::tuple<bool, bool> process_sbox_message(std::string& data, mxb::AsyncProcess& proc);
+std::tuple<bool, bool> process_sbox_messages(std::string&& data, mxb::AsyncProcess& proc);
 string                 read_password();
 }
 
@@ -159,13 +159,12 @@ int main(int argc, char* argv[])
                             // It's a bit unclear if partial messages are possible. It may happen with long
                             // (> 4kB) messages, since the subprocess writes blocking but main process reads
                             // non-blocking.
-                            while (!data.empty() && keep_running)
+                            if (keep_running)
                             {
                                 bool io_ok = false;
-                                std::tie(io_ok, auth_ok) = process_sbox_message(data, *ext_proc);
+                                std::tie(io_ok, auth_ok) = process_sbox_messages(std::move(data), *ext_proc);
                                 if (!io_ok || auth_ok)
                                 {
-                                    mxb_assert(!auth_ok || data.empty());
                                     keep_running = false;
                                 }
                             }
@@ -198,82 +197,101 @@ int main(int argc, char* argv[])
 
 namespace
 {
-std::tuple<bool, bool> process_sbox_message(std::string& data, mxb::AsyncProcess& proc)
+std::tuple<bool, bool> process_sbox_messages(std::string&& data, mxb::AsyncProcess& proc)
 {
-    bool io_ok = true;
+    bool io_ok = false;
     bool auth_success = false;
-    int processed_bytes = 0;
+    mxb_assert(!data.empty());
 
-    uint8_t msg_type = data[0];
-    switch (msg_type)
+    while (!data.empty())
     {
-    case mxb::pam::SBOX_CONV:
-        {
-            auto [bytes, message] = mxb::pam::extract_string(&data[1], data.data() + data.size());
-            if (!message.empty())
-            {
-                uint8_t conv_type = message[0];
-                if (conv_type == 2 || conv_type == 4)
-                {
-                    // Message without contents is allowed.
-                    if (message.length() > 1)
-                    {
-                        std::string_view msg(&message[1], message.length() - 1);
-                        cout << msg;
-                    }
-                    else
-                    {
-                        cout << "<empty message, expecting input>\n";
-                    }
-
-                    string answer;
-                    if (conv_type == 2)
-                    {
-                        std::getline(cin, answer);
-                    }
-                    else
-                    {
-                        // Echo off.
-                        answer = read_password();
-                    }
-
-                    std::vector<uint8_t> answer_msg;
-                    mxb::pam::add_string(answer, &answer_msg);
-                    if (proc.write(answer_msg.data(), answer_msg.size()))
-                    {
-                        processed_bytes = 1 + bytes;
-                    }
-                    else
-                    {
-                        io_ok = false;
-                    }
-                }
-                else
-                {
-                    io_ok = false;
-                }
-            }
-            else if (bytes < 0)
-            {
-                io_ok = false;
-            }
-            // else: incomplete message
-        }
-        break;
-
-    case mxb::pam::SBOX_EOF:
-        auth_success = true;
-        processed_bytes = 1;
-        break;
-
-    default:
+        int processed_bytes = 0;
         io_ok = false;
-        break;
-    }
+        uint8_t msg_type = data[0];
 
-    if (io_ok)
-    {
-        data.erase(0, processed_bytes);
+        switch (msg_type)
+        {
+        case mxb::pam::SBOX_CONV:
+            {
+                auto [bytes, message] = mxb::pam::extract_string(&data[1], data.data() + data.size());
+                if (bytes > 0)
+                {
+                    // The CONV-message should have at least style byte.
+                    if (!message.empty())
+                    {
+                        uint8_t conv_type = message[0];
+                        if (conv_type == 2 || conv_type == 4)
+                        {
+                            // Message without contents is allowed.
+                            if (message.length() > 1)
+                            {
+                                std::string_view msg(&message[1], message.length() - 1);
+                                cout << msg;
+                            }
+                            else
+                            {
+                                cout << "<empty message, expecting input>\n";
+                            }
+
+                            string answer;
+                            if (conv_type == 2)
+                            {
+                                std::getline(cin, answer);
+                            }
+                            else
+                            {
+                                // Echo off.
+                                answer = read_password();
+                            }
+
+                            std::vector<uint8_t> answer_msg;
+                            mxb::pam::add_string(answer, &answer_msg);
+                            if (proc.write(answer_msg.data(), answer_msg.size()))
+                            {
+                                io_ok = true;
+                                processed_bytes = 1 + bytes;
+                            }
+                        }
+                    }
+                }
+                else if (bytes == 0)
+                {
+                    // Incomplete message.
+                    io_ok = true;
+                }
+            }
+            break;
+
+        case mxb::pam::SBOX_EOF:
+            auth_success = true;
+            io_ok = true;
+            processed_bytes = 1;
+            // This should be the last message.
+            mxb_assert(data.length() == 1);
+            break;
+
+        default:
+            break;
+        }
+
+        if (io_ok)
+        {
+            if (processed_bytes > 0)
+            {
+                // Loop again in case another message is ready.
+                data.erase(0, processed_bytes);
+            }
+            else
+            {
+                // Possibly an incomplete message, unread it.
+                proc.unread(std::move(data));
+                break;
+            }
+        }
+        else
+        {
+            break;
+        }
     }
     return {io_ok, auth_success};
 }
