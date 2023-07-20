@@ -142,6 +142,38 @@ std::optional<string> read_string_blocking(int fd)
     }
     return rval;
 }
+
+std::tuple<int, string> extract_string(const char* ptr, const char* end)
+{
+    int bytes_read = 0;
+    string message;
+
+    LengthType len = -1;
+    auto len_size = sizeof(len);
+    if (end - ptr >= (ssize_t)len_size)
+    {
+        memcpy(&len, ptr, len_size);
+        if (len == 0)
+        {
+            bytes_read = len_size;
+        }
+        else if (len > 0)
+        {
+            ptr += len_size;
+            if (end - ptr >= len)
+            {
+                message.resize(len);
+                memcpy(message.data(), ptr, len);
+                bytes_read = len_size + len;
+            }
+        }
+        else
+        {
+            bytes_read = -1;
+        }
+    }
+    return {bytes_read, message};
+}
 }
 }
 
