@@ -26,7 +26,7 @@
             class="entity-diagram"
             @on-rendered.once="onRendered"
             @on-node-drag-end="onNodeDragEnd"
-            @dblclick="handleDblClickNode"
+            @dblclick="isFormValid ? handleDblClickNode($event) : null"
             @contextmenu="activeNodeMenu = $event"
         >
             <template v-slot:entity-name-append="{ node }">
@@ -48,6 +48,7 @@
                     }"
                     icon
                     color="primary"
+                    :disabled="!isFormValid"
                     @click.stop="activeNodeMenu = node"
                 >
                     <v-icon size="14">
@@ -123,6 +124,7 @@ export default {
         connId: { type: String, required: true },
         newNodeMap: { type: Object, required: true },
         updatedNodeMap: { type: Object, required: true },
+        isFormValid: { type: Boolean, required: true },
     },
     data() {
         return {

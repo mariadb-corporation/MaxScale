@@ -17,6 +17,7 @@
                     :connId="connId"
                     :newNodeMap="newNodeMap"
                     :updatedNodeMap="updatedNodeMap"
+                    :isFormValid="isFormValid"
                     @on-apply-script="applyScript"
                     @on-export-script="exportScript"
                     @on-export-as-jpeg="exportAsJpeg"

@@ -12,9 +12,14 @@
         :onExecute="onExecute"
         v-on="$listeners"
     >
-        <template v-slot:toolbar-append>
+        <template v-slot:toolbar-append="{ isFormValid }">
             <v-spacer />
-            <mxs-tooltip-btn btnClass="toolbar-square-btn" text color="error" @click="close">
+            <mxs-tooltip-btn
+                btnClass="toolbar-square-btn"
+                text
+                color="error"
+                @click="close(isFormValid)"
+            >
                 <template v-slot:btn-content>
                     <v-icon size="12" color="error"> $vuetify.icons.mxs_close</v-icon>
                 </template>
@@ -37,7 +42,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions } from 'vuex'
+import { mapActions, mapMutations } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
@@ -110,6 +115,7 @@ export default {
         this.$typy(this.unwatch_stagingData).safeFunction()
     },
     methods: {
+        ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
         ...mapActions({
             queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData',
             exeDdlScript: 'mxsWorkspace/exeDdlScript',
@@ -146,11 +152,17 @@ export default {
                 { deep: true }
             )
         },
-        close() {
-            ErdTaskTmp.update({
-                where: this.activeTaskId,
-                data: { graph_height_pct: 100, active_entity_id: '' },
-            })
+        close(isFormValid) {
+            if (isFormValid)
+                ErdTaskTmp.update({
+                    where: this.activeTaskId,
+                    data: { graph_height_pct: 100, active_entity_id: '' },
+                })
+            else
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: [this.$mxs_t('errors.requiredInputs')],
+                    type: 'error',
+                })
         },
         async onExecute() {
             const { options } = this.isCreating ? this.stagingData : this.initialData
