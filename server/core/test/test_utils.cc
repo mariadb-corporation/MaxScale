@@ -25,6 +25,7 @@
 using std::cout;
 using std::endl;
 using mxb::ExternalCmd;
+using mxb::Process;
 
 namespace
 {
@@ -171,10 +172,10 @@ int test_externcmd()
     cmd = ExternalCmd::create("/usr/bin/sh -c 'sleep 1; echo hello world'", 30, handler);
     cmd->start();
 
-    int rc = ExternalCmd::ERROR;
+    int rc = Process::ERROR;
     auto start = mxb::Clock::now();
 
-    while ((rc = cmd->try_wait()) == ExternalCmd::TIMEOUT && start - mxb::Clock::now() < 30s)
+    while ((rc = cmd->try_wait()) == Process::TIMEOUT && start - mxb::Clock::now() < 30s)
     {
         std::this_thread::sleep_for(50ms);
     }

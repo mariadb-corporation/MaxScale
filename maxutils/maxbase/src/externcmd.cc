@@ -17,10 +17,11 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <poll.h>
 #include <thread>
+#include <utility>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <poll.h>
 
 #include <maxbase/assert.hh>
 #include <maxbase/alloc.hh>
@@ -29,17 +30,19 @@
 
 using std::string;
 
-namespace maxbase
+namespace
 {
-int ExternalCmd::tokenize_args(char* dest[], int dest_size)
+bool check_executable(const std::string& cmd);
+
+int tokenize_args(const string& args_str, char* dest[], int dest_size)
 {
     bool quoted = false;
     bool read = false;
     bool escaped = false;
     char qc = 0;
 
-    char args[m_subst_command.length() + 1];
-    strcpy(args, m_subst_command.c_str());
+    char args[args_str.length() + 1];
+    strcpy(args, args_str.c_str());
     char* start = args;
     char* ptr = start;
     int i = 0;
@@ -97,12 +100,11 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
     return i;
 }
 
-std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeout, OutputHandler handler)
+bool check_executable(const string& cmd)
 {
     bool success = false;
-    std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout, std::move(handler)));
     char* argvec[1] {};     // Parse just one argument for testing file existence and permissions.
-    if (cmd->tokenize_args(argvec, 1) > 0)
+    if (tokenize_args(cmd, argvec, 1) > 0)
     {
         const char* cmdname = argvec[0];
         if (access(cmdname, X_OK) != 0)
@@ -124,40 +126,44 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
     }
     else
     {
-        MXB_ERROR("Failed to parse argument string '%s' for external command.", argstr.c_str());
+        MXB_ERROR("Failed to parse argument string '%s' for external command.", cmd.c_str());
     }
+    return success;
+}
+}
 
-    if (!success)
-    {
-        cmd.reset();
-    }
-    return cmd;
+namespace maxbase
+{
+std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeout, OutputHandler handler)
+{
+    return ::check_executable(argstr) ?
+           std::unique_ptr<ExternalCmd>(new ExternalCmd(argstr, timeout, std::move(handler))) : nullptr;
 }
 
 ExternalCmd::ExternalCmd(const std::string& script, int timeout, OutputHandler handler)
-    : m_orig_command(script)
+    : Process(Info(), 1000 * timeout)
+    , m_orig_command(script)
     , m_subst_command(script)
-    , m_timeout(timeout)
     , m_handler(std::move(handler))
 {
 }
 
-ExternalCmd::~ExternalCmd()
+Process::~Process()
 {
-    if (m_read_fd != -1)
+    if (m_proc_info.read_fd != -1)
     {
-        close(m_read_fd);
+        close(m_proc_info.read_fd);
     }
 
-    if (m_write_fd != -1)
+    if (m_proc_info.write_fd != -1)
     {
-        close(m_write_fd);
+        close(m_proc_info.write_fd);
     }
 
-    if (m_pid != -1)
+    if (m_proc_info.pid != -1)
     {
         wait();
-        mxb_assert(m_pid == -1);
+        mxb_assert(m_proc_info.pid == -1);
     }
 }
 
@@ -166,7 +172,8 @@ int ExternalCmd::run()
     return start() ? wait() : -1;
 }
 
-bool ExternalCmd::start()
+std::optional<Process::Info>
+Process::start_external_cmd(const string& cmd, RedirStdErr redirect)
 {
     // Create a pipe where the command can print output
     int read_fd[2];
@@ -174,20 +181,21 @@ bool ExternalCmd::start()
     if (pipe(read_fd) == -1)
     {
         MXB_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
-        return false;
+        return {};
     }
     else if (pipe(write_fd) == -1)
     {
         close(read_fd[0]);
         close(read_fd[1]);
         MXB_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
-        return false;
+        return {};
     }
 
     // "execvp" takes its arguments as an array of tokens where the first element is the command.
-    char* argvec[MAX_ARGS + 1] {};
-    tokenize_args(argvec, MAX_ARGS);
-    m_cmd = argvec[0];
+    const int MAX_ARGS{256};
+    char* argvec[MAX_ARGS + 1]{};
+    ::tokenize_args(cmd, argvec, MAX_ARGS);
+    const char* exec_name = argvec[0];
 
     // The SIGCHLD handler must be disabled before child process is forked,
     // otherwise we'll get an error
@@ -199,8 +207,8 @@ bool ExternalCmd::start()
         close(write_fd[0]);
         close(write_fd[1]);
         MXB_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
-                  m_cmd.c_str(), errno, mxb_strerror(errno));
-        return false;
+                  exec_name, errno, mxb_strerror(errno));
+        return {};
     }
     else if (pid == 0)
     {
@@ -208,14 +216,17 @@ bool ExternalCmd::start()
         // both stdout and stderr to the write end of the pipe
         close(read_fd[0]);
         dup2(read_fd[1], STDOUT_FILENO);
-        dup2(read_fd[1], STDERR_FILENO);
+        if (redirect == RedirStdErr::YES)
+        {
+            dup2(read_fd[1], STDERR_FILENO);
+        }
 
         // Close the write end of the other pipe and redirect the read end to the stdin of the command.
         close(write_fd[1]);
         dup2(write_fd[0], STDIN_FILENO);
 
         // Execute the command
-        execvp(argvec[0], argvec);
+        execvp(exec_name, argvec);
 
         // This is only reached if execvp failed to start the command. Print to the standard error stream.
         // The message will be caught by the parent process.
@@ -243,9 +254,8 @@ bool ExternalCmd::start()
     close(write_fd[0]);
     fcntl(write_fd[1], F_SETFL, O_NONBLOCK);
 
-    m_pid = pid;
-    m_read_fd = read_fd[0];
-    m_write_fd = write_fd[1];
+    MXB_INFO("Executing command '%s' in process %d", exec_name, pid);
+    auto rval = std::optional<Info>({pid, read_fd[0], write_fd[1], exec_name});
 
     // Free the token array.
     for (int i = 0; i < MAX_ARGS && argvec[i]; i++)
@@ -253,19 +263,23 @@ bool ExternalCmd::start()
         MXB_FREE(argvec[i]);
     }
 
-    MXB_INFO("Executing command '%s' in process %d", m_cmd.c_str(), pid);
+    return rval;
+}
 
-    return true;
+bool ExternalCmd::start()
+{
+    return start_set_external_cmd(m_subst_command, RedirStdErr::YES);
 }
 
 bool ExternalCmd::write(const void* ptr, int64_t len)
 {
-    mxb_assert(m_write_fd != -1);
+    auto write_fd = proc_info().write_fd;
+    mxb_assert(write_fd != -1);
     const uint8_t* p = reinterpret_cast<const uint8_t*>(ptr);
     auto start = mxb::Clock::now();
 
     pollfd pfd;
-    pfd.fd = m_write_fd;
+    pfd.fd = write_fd;
     pfd.events = POLLOUT;
 
     while (len > 0)
@@ -273,13 +287,13 @@ bool ExternalCmd::write(const void* ptr, int64_t len)
         // Always try to read some output before writing.
         read_output();
 
-        auto rc = ::write(m_write_fd, p, len);
+        auto rc = ::write(write_fd, p, len);
 
         if (rc == -1)
         {
             if (errno == EAGAIN)
             {
-                if (mxb::Clock::now() - start > std::chrono::seconds(m_timeout))
+                if (mxb::Clock::now() - start > std::chrono::seconds(timeout_ms() / 1000))
                 {
                     MXB_ERROR("Write to pipe timed out");
                     return false;
@@ -312,27 +326,28 @@ bool ExternalCmd::write(const void* ptr, int64_t len)
     return true;
 }
 
-void ExternalCmd::close_output()
+void Process::close_output()
 {
-    if (m_write_fd != -1)
+    auto& fd = m_proc_info.write_fd;
+    if (fd != -1)
     {
-        close(m_write_fd);
-        m_write_fd = -1;
+        close(fd);
+        fd = -1;
     }
 }
 
-int ExternalCmd::try_wait()
+int Process::try_wait()
 {
-    if (m_pid != -1)
+    if (m_proc_info.pid != -1)
     {
         int exit_status;
 
-        switch (waitpid(m_pid, &exit_status, WNOHANG))
+        switch (waitpid(m_proc_info.pid, &exit_status, WNOHANG))
         {
         case -1:
             MXB_ERROR("Failed to wait for child process: %d, %s", errno, mxb_strerror(errno));
             m_result = ERROR;
-            m_pid = -1;
+            m_proc_info.pid = -1;
             break;
 
         case 0:
@@ -340,7 +355,7 @@ int ExternalCmd::try_wait()
             break;
 
         default:
-            m_pid = -1;
+            m_proc_info.pid = -1;
 
             if (WIFEXITED(exit_status))
             {
@@ -352,29 +367,40 @@ int ExternalCmd::try_wait()
             }
             else
             {
-                MXB_ERROR("Command '%s' did not exit normally. Exit status: %d", m_cmd.c_str(), exit_status);
+                MXB_ERROR("Command '%s' did not exit normally. Exit status: %d",
+                          m_proc_info.exec_name.c_str(), exit_status);
                 m_result = exit_status;
             }
             break;
         }
+    }
+    return m_result;
+}
 
+int ExternalCmd::try_wait()
+{
+    bool was_running = proc_info().pid != -1;
+    auto result = Process::try_wait();
+
+    if (was_running)
+    {
         read_output();
 
-        if (m_result != TIMEOUT && !m_output.empty())
+        if (result != TIMEOUT && !m_output.empty())
         {
-            m_handler(m_cmd, m_output);
+            m_handler(proc_info().exec_name, m_output);
         }
     }
-
-    return m_result;
+    return result;
 }
 
 void ExternalCmd::read_output()
 {
     int n;
     char buf[4096];             // This seems like enough space
+    auto read_fd = proc_info().read_fd;
 
-    while ((n = read(m_read_fd, buf, sizeof(buf))) > 0)
+    while ((n = read(read_fd, buf, sizeof(buf))) > 0)
     {
         // Read all available output
         m_output.append(buf, n);
@@ -389,35 +415,33 @@ void ExternalCmd::read_output()
             {
                 std::string line = m_output.substr(0, pos);
                 m_output.erase(0, pos + 1);
-                m_handler(m_cmd, line);
+                m_handler(proc_info().exec_name, line);
             }
         }
     }
 }
 
-int ExternalCmd::wait()
+int Process::wait()
 {
-    string output;
     bool first_warning = true;
-    uint64_t t = 0;
-    uint64_t t_max = m_timeout * 1000;
+    int t = 0;
 
     while (try_wait() == TIMEOUT)
     {
-        if (t++ > t_max)
+        if (t++ > m_timeout_ms)
         {
             // Command timed out
             t = 0;
             if (first_warning)
             {
-                MXB_WARNING("Soft timeout for command '%s', sending SIGTERM", m_cmd.c_str());
-                kill(m_pid, SIGTERM);
+                MXB_WARNING("Soft timeout for command '%s', sending SIGTERM", m_proc_info.exec_name.c_str());
+                kill(m_proc_info.pid, SIGTERM);
                 first_warning = false;
             }
             else
             {
-                MXB_ERROR("Hard timeout for command '%s', sending SIGKILL", m_cmd.c_str());
-                kill(m_pid, SIGKILL);
+                MXB_ERROR("Hard timeout for command '%s', sending SIGKILL", m_proc_info.exec_name.c_str());
+                kill(m_proc_info.pid, SIGKILL);
             }
         }
         else
@@ -426,7 +450,6 @@ int ExternalCmd::wait()
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
-
     return m_result;
 }
 
@@ -465,5 +488,131 @@ void ExternalCmd::reset_substituted()
 const char* ExternalCmd::substituted() const
 {
     return m_subst_command.c_str();
+}
+
+Process::Process(Info info, int timeout_ms)
+    : m_proc_info(std::move(info))
+    , m_timeout_ms(timeout_ms)
+{
+}
+
+const Process::Info& Process::proc_info() const
+{
+    return m_proc_info;
+}
+
+int Process::timeout_ms() const
+{
+    return m_timeout_ms;
+}
+
+bool Process::start_set_external_cmd(const string& cmd, RedirStdErr redirect)
+{
+    bool rval = false;
+    auto res = start_external_cmd(cmd, redirect);
+    if (res)
+    {
+        m_proc_info = std::move(*res);
+        rval = true;
+    }
+    return rval;
+}
+
+std::unique_ptr<AsyncCmd> AsyncCmd::create(const string& cmd, int timeout_ms)
+{
+    return ::check_executable(cmd) ?
+           std::unique_ptr<AsyncCmd>(new AsyncCmd(cmd, timeout_ms)) : nullptr;
+}
+
+AsyncCmd::AsyncCmd(const string& cmd, int timeout_ms)
+    : m_cmd(cmd)
+    , m_timeout_ms(timeout_ms)
+{
+}
+
+std::unique_ptr<AsyncProcess> AsyncCmd::start()
+{
+    std::unique_ptr<AsyncProcess> rval;
+    auto res = Process::start_external_cmd(m_cmd, Process::RedirStdErr::NO);
+    if (res)
+    {
+        rval.reset(new AsyncProcess(std::move(*res), m_timeout_ms));
+    }
+    return rval;
+}
+
+AsyncProcess::AsyncProcess(Info info, int timeout_ms)
+    : Process(std::move(info), timeout_ms)
+{
+}
+
+std::tuple<bool, std::string> AsyncProcess::read_output()
+{
+    const ssize_t buflen = 4096;
+    char buf[buflen];
+    ssize_t n;
+    auto read_fd = proc_info().read_fd;
+
+    while ((n = ::read(read_fd, buf, buflen)) > 0)
+    {
+        // Read all available output. No need to check for EINTR as the read is non-blocking.
+        m_output.append(buf, n);
+        if (n < buflen)
+        {
+            // Nothing more to read.
+            break;
+        }
+    }
+
+    std::tuple<bool, std::string> rval = {(n > 0 || (n == -1 && errno == EAGAIN)),
+                                          std::move(m_output)};
+    m_output.clear();
+    return rval;
+}
+
+bool AsyncProcess::write(const uint8_t* ptr, size_t len)
+{
+    auto write_fd = proc_info().write_fd;
+    mxb_assert(write_fd != -1);
+    bool rval = false;
+    if (len > 0)
+    {
+        auto rc = ::write(write_fd, ptr, len);
+        if (rc == (ssize_t)len)
+        {
+            rval = true;
+        }
+        else if (rc >= 0 || (rc == -1 && errno == EAGAIN))
+        {
+            // TODO: add write buffering if amount of data increases to this point.
+            MXB_ERROR("Failed to write all data to pipe.");
+            mxb_assert(!true);
+        }
+        else
+        {
+            MXB_ERROR("Failed to write to pipe: %d, %s", errno, mxb_strerror(errno));
+        }
+    }
+    else
+    {
+        rval = true;
+    }
+    return rval;
+}
+
+int AsyncProcess::try_wait()
+{
+    return Process::try_wait();
+}
+
+void AsyncProcess::unread(std::string&& data)
+{
+    mxb_assert(m_output.empty());
+    m_output = std::move(data);
+}
+
+int AsyncProcess::read_fd() const
+{
+    return proc_info().read_fd;
 }
 }

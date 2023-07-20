@@ -16,19 +16,86 @@
 #include <maxbase/ccdefs.hh>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <unistd.h>
 
 namespace maxbase
 {
-class ExternalCmd
+class Process
 {
 public:
-    using OutputHandler = std::function<void (const std::string&, const std::string&)>;
-
     static constexpr int ERROR = -1;    // System error that's unrelated to the command being executed
     static constexpr int TIMEOUT = -2;  // Command hasn't exited yet
 
-    ~ExternalCmd();
+    enum class RedirStdErr {YES, NO};
+
+    ~Process();
+
+    /**
+     * Try to wait for the process.
+     *
+     * @return The process return code if it had already stopped, ERROR if the waiting failed or TIMEOUT if
+     *         the process had not yet exited. Once the function returns something other than TIMEOUT, all
+     *         calls to try_wait() or wait() will return the result of the operation.
+     */
+    virtual int try_wait();
+
+    /**
+     * Wait for the process to exit.
+     *
+     * @return The process return code if the process had stopped or ERROR if the waiting failed.
+     */
+    int wait();
+
+    /**
+     * Close the write end of the pipe that's connected to the command
+     *
+     * This signals the command that no more data is readable and that it should exit.
+     */
+    void close_output();
+
+    struct Info
+    {
+        pid_t       pid {-1};
+        int         read_fd {-1};
+        int         write_fd {-1};
+        std::string exec_name;
+    };
+
+    /**
+     * Start external process and return process information.
+     *
+     * @param cmd Command string
+     * @param redirect Redirect stderror of subprocess
+     * @return Process information
+     */
+    static std::optional<Info> start_external_cmd(const std::string& cmd, RedirStdErr redirect);
+
+protected:
+    Process(Info info, int timeout_ms);
+
+    /**
+     * Start external process and save process info to current object.
+     *
+     * @param cmd Command string
+     * @param redirect Redirect stderror of subprocess
+     * @return True if process was launched
+     */
+    bool start_set_external_cmd(const std::string& cmd, RedirStdErr redirect);
+
+    const Info& proc_info() const;
+    int         timeout_ms() const;
+
+private:
+    Info m_proc_info;
+    int  m_timeout_ms {-1};
+    int  m_result {TIMEOUT};
+};
+
+class ExternalCmd final : public Process
+{
+public:
+    using OutputHandler = std::function<void (const std::string&, const std::string&)>;
 
     /**
      * Create a new external command. The name and parameters are copied so
@@ -73,27 +140,9 @@ public:
     bool write(const void* ptr, int64_t len);
 
     /**
-     * Close the write end of the pipe that's connected to the command
-     *
-     * This signals the command that no more data is readable and that it should exit.
+     * Runs base class version + reads output.
      */
-    void close_output();
-
-    /**
-     * Try to wait for the process.
-     *
-     * @return The process return code if it had already stopped, ERROR if the waiting failed or TIMEOUT if
-     *         the process had not yet exited. Once the function returns something other than TIMEOUT, all
-     *         calls to try_wait() or wait() will return the result of the operation.
-     */
-    int try_wait();
-
-    /**
-     * Wait for the process to exit.
-     *
-     * @return The process return code if the process had stopped or ERROR if the waiting failed.
-     */
-    int wait();
+    int try_wait() override;
 
     /**
      * If keyword is found in command script, replace keyword with output of generator function.
@@ -111,22 +160,12 @@ public:
     const char* substituted() const;
 
 private:
-    static const int MAX_ARGS {256};
-
     std::string   m_orig_command;       /**< Original command */
     std::string   m_subst_command;      /**< Command with substitutions */
-    std::string   m_cmd;
     std::string   m_output;
-    int           m_timeout;            /**< Command timeout in seconds */
-    int           m_pid {-1};
-    int           m_result {TIMEOUT};
-    int           m_read_fd{-1};
-    int           m_write_fd{-1};
     OutputHandler m_handler;
 
     ExternalCmd(const std::string& script, int timeout, OutputHandler handler);
-
-    int tokenize_args(char* dest[], int dest_size);
 
     void read_output();
 
@@ -137,5 +176,51 @@ private:
      * @param replace Replacement string
      */
     void substitute_arg(const std::string& match, const std::string& replace);
+};
+
+class AsyncProcess final : public Process
+{
+public:
+    AsyncProcess(Info info, int timeout_ms);
+
+    /**
+     * Read from external process.
+     *
+     * @return True if pipe is still readable. Second element contains all read data.
+     */
+    std::tuple<bool, std::string> read_output();
+
+    void unread(std::string&& data);
+
+    int read_fd() const;
+
+    /**
+     * Write data into the command's stdin.
+     *
+     * @param ptr Pointer to data to be written
+     * @param len Length of the data
+     *
+     * @return True if the writing was successful. The write must succeed without blocking, so only
+     * small amounts of data should be written.
+     */
+    bool write(const uint8_t* ptr, size_t len);
+
+    int try_wait() override;
+
+private:
+    std::string m_output;
+};
+
+class AsyncCmd
+{
+public:
+    static std::unique_ptr<AsyncCmd> create(const std::string& cmd, int timeout_ms);
+    std::unique_ptr<AsyncProcess>    start();
+
+private:
+    AsyncCmd(const std::string& cmd, int timeout_ms);
+
+    std::string m_cmd;
+    int         m_timeout_ms {-1};
 };
 }
