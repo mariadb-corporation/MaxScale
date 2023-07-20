@@ -54,6 +54,8 @@ export default class TableScriptBuilder {
         this.initialTableName = typy(initialData, 'options.name').safeString
         this.initialColsData = typy(initialData, 'definitions.cols').safeArray
 
+        this.stagingSchemaName = typy(stagingData, 'options.schema').safeString
+        this.stagingTableName = typy(stagingData, 'options.name').safeString
         this.stagingDataOptions = stagingData.options
 
         this.stagingColsData = typy(stagingData, 'definitions.cols').safeArray
@@ -87,6 +89,7 @@ export default class TableScriptBuilder {
         this.refTargetMap = refTargetMap
         this.tablesColNameMap = tablesColNameMap
         this.stagingColNameMap = this.getTblColNameMap(stagingData.id)
+
         // options
         this.isCreating = isCreating
         this.skipSchemaCreation = skipSchemaCreation
@@ -326,16 +329,19 @@ export default class TableScriptBuilder {
     }
 
     /**
+     * @param {object} param
+     * @param {boolean} param.isCreating - if true, it returns `CONSTRAINT ...` instead
+     * of `ADD CONSTRAINT ...`
      * @returns {String} - returns FK SQL
      */
-    buildForeignKeySQL() {
+    buildForeignKeySQL({ isCreating = false } = {}) {
         const removedKeys = this.foreignKeyDiffs.get('removed')
         const updatedKeys = this.foreignKeyDiffs.get('updated')
         const addedKeys = this.foreignKeyDiffs.get('added')
-        let parts = []
-        parts = removedKeys.map(
+        let droppedKeys = removedKeys.map(
             ({ name }) => `${tokens.drop} ${tokens.foreignKey} ${quoting(name)}`
         )
+        let parts = []
         const newAndUpdatedKeys = [...updatedKeys, ...addedKeys]
 
         newAndUpdatedKeys.forEach(item => {
@@ -352,7 +358,7 @@ export default class TableScriptBuilder {
             } = item.newObj ? item.newObj : item
 
             if (item.newObj)
-                parts.push(`${tokens.drop} ${tokens.foreignKey} ${quoting(item.oriObj.name)}`)
+                droppedKeys.push(`${tokens.drop} ${tokens.foreignKey} ${quoting(item.oriObj.name)}`)
 
             const constraintName = quoting(name)
 
@@ -386,10 +392,29 @@ export default class TableScriptBuilder {
                 tokens.update,
                 on_update,
             ]
-            if (this.isCreating) keyTokens.shift()
+            if (isCreating) keyTokens.shift()
             parts.push(keyTokens.join(' '))
         })
-        return parts.join(this.handleAddComma())
+        let sql = ''
+        const alterTableLine = `${tokens.alterTable} ${quoting(this.stagingSchemaName)}.${quoting(
+            this.stagingTableName
+        )}`
+        /**
+         * When altering existing keys, the keys needed to be dropped first
+         * so that modified keys with existing name can be executed.
+         * i.e. Duplicate key on write or update
+         */
+        if (droppedKeys.length) {
+            sql += alterTableLine
+            sql += droppedKeys.join(this.handleAddComma())
+            sql += ';'
+        }
+        if (parts.length) {
+            if (!isCreating) sql += alterTableLine
+            sql += parts.join(this.handleAddComma())
+            if (!isCreating) sql += ';'
+        }
+        return sql
     }
 
     /**
@@ -433,25 +458,28 @@ export default class TableScriptBuilder {
         specs.push(addedColSQL)
         const pkSQL = this.buildPkSQL()
         const uqSQL = this.buildUniqueKeySQL()
-        const fkSQL = this.skipFkCreation ? '' : this.buildForeignKeySQL()
+        const fkSQL = this.skipFkCreation ? '' : this.buildForeignKeySQL({ isCreating: true })
         if (pkSQL) specs.push(pkSQL)
         if (uqSQL) specs.push(uqSQL)
         if (fkSQL) specs.push(fkSQL)
         return specs.join(this.handleAddComma())
     }
-
     buildAlterScript() {
-        let sql = `${tokens.alterTable} ${quoting(this.initialSchemaName)}.${quoting(
-            this.initialTableName
-        )}`
+        let sql = ''
         let parts = [] // part of script which will be separated by commas
         if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
         if (this.isColsOptsChanged) parts.push(this.buildAlterColsSql())
+        if (parts.length) {
+            sql += `${tokens.alterTable} ${quoting(this.initialSchemaName)}.${quoting(
+                this.initialTableName
+            )}`
+            sql += parts.join(this.handleAddComma())
+            sql += ';'
+        }
+
         const fkSQL = this.skipFkCreation ? '' : this.buildForeignKeySQL()
-        if (fkSQL) parts.push(fkSQL)
-        sql += parts.join(this.handleAddComma())
-        sql = formatSQL(`${sql};`)
-        return sql
+        if (fkSQL) sql += fkSQL
+        return formatSQL(sql)
     }
 
     buildCreateScript() {

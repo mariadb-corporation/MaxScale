@@ -211,30 +211,24 @@ export default {
         createSectionCmt(name) {
             return `# ${name}\n${this.halfBlockCmt}`
         },
-        /**
-         * @param {object} param
-         * @param {TableScriptBuilder} param.builder
-         * @param {object} param.tbl
-         * @param {boolean} param.isNewTable
-         * @returns {string} alter FKs SQL
-         */
-        buildAlterFkSQL({ builder, tbl, isNewTable = false }) {
-            const { schema, name } = tbl.options
-            const { quotingIdentifier: quoting } = this.$helpers
-            const tokens = this.CREATE_TBL_TOKENS
-            const alterFkSQL = `${tokens.alterTable} ${quoting(schema)}.${quoting(name)} ${
-                tokens.add
-            }`
-            const constraints = builder.buildForeignKeySQL()
-            if (isNewTable && constraints) return `${alterFkSQL} ${constraints}`
-            return constraints
-        },
         genScript() {
             this.scriptGeneratedTime = this.$helpers.dateFormat({ value: new Date() })
             const { formatSQL, quotingIdentifier: quoting } = this.$helpers
             let parts = [],
-                alteredFks = [],
-                newFks = []
+                newTablesFks = []
+
+            // updated tables
+            this.nodeDataDiffs.get('updated').forEach(({ newObj, oriObj }, i) => {
+                if (i === 0) parts.push(this.createSectionCmt('Alter tables'))
+                const builder = new TableScriptBuilder({
+                    initialData: oriObj,
+                    stagingData: newObj,
+                    refTargetMap: this.refTargetMap,
+                    tablesColNameMap: this.tablesColNameMap,
+                })
+                parts.push(builder.build())
+            })
+
             // new schemas
             this.newSchemas.forEach((s, i) => {
                 if (i === 0) parts.push(this.createSectionCmt('Create schemas'))
@@ -256,33 +250,13 @@ export default {
                     },
                 })
                 parts.push(builder.build())
-                const fks = this.buildAlterFkSQL({ builder, tbl, isNewTable: true })
-                if (fks) newFks.push(fks)
+                const fks = builder.buildForeignKeySQL()
+                if (fks) newTablesFks.push(fks)
             })
 
-            // updated tables
-            this.nodeDataDiffs.get('updated').forEach(({ newObj, oriObj }, i) => {
-                if (i === 0) parts.push(this.createSectionCmt('Alter tables'))
-                const builder = new TableScriptBuilder({
-                    initialData: oriObj,
-                    stagingData: newObj,
-                    refTargetMap: this.refTargetMap,
-                    tablesColNameMap: this.tablesColNameMap,
-                    options: { skipFkCreation: true },
-                })
-                parts.push(builder.build())
-                const fks = this.buildAlterFkSQL({ builder, tbl: newObj })
-                if (fks) alteredFks.push(fks)
-            })
-            // add altered FKs SQL
-            if (alteredFks.length) {
-                parts.push(this.createSectionCmt('Alter constraints'))
-                parts.push(alteredFks.join(';'))
-            }
-            // add FKs SQL
-            if (newFks.length) {
-                parts.push(this.createSectionCmt('Create constraints'))
-                parts.push(newFks.join(';'))
+            if (newTablesFks.length) {
+                parts.push(this.createSectionCmt('Add new tables constraints'))
+                parts.push(newTablesFks.join(''))
             }
 
             let sql = formatSQL(parts.join('\n'))
