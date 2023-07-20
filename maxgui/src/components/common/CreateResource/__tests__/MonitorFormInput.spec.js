@@ -35,7 +35,7 @@ const dummyResourceModules = [
                 {
                     mandatory: true,
                     name: 'password',
-                    type: 'password string',
+                    type: 'password',
                 },
                 {
                     mandatory: false,
