@@ -25,7 +25,7 @@ pwd = os.getcwd()
 os.chdir(test_dir)
 os.system("docker-compose up -d server1 server2")
 os.chdir(pwd)
-os.system("docker run --pull always --name mxs -d --rm -v " + pwd + "/rest_api.cnf:/etc/maxscale.cnf --network=host mariadb/maxscale:6.3")
+os.system("docker run --pull always --name mxs -d --rm -v " + pwd + "/rest_api.cnf:/etc/maxscale.cnf --network=host mariadb/maxscale:6.4")
 
 print("Give MaxScale and the databases a few seconds to start up")
 time.sleep(10)

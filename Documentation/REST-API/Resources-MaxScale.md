@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Tue, 17 May 2022 03:24:41 GMT",
-            "commit": "cdf2dd2884c6fdcaf2b42adebe28466836aa8d83",
+            "activated_at": "Thu, 20 Jul 2023 15:20:06 GMT",
+            "commit": "1dd63c813dccada2dba65e62bfd7faebccaa1bc9",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -46,8 +46,9 @@ file locations, configuration options and version information.
                 "auth_write_timeout": "10000ms",
                 "cachedir": "/var/cache/maxscale",
                 "config_sync_cluster": null,
+                "config_sync_db": "mysql",
                 "config_sync_interval": "5000ms",
-                "config_sync_password": "*****",
+                "config_sync_password": null,
                 "config_sync_timeout": "10000ms",
                 "config_sync_user": null,
                 "connector_plugindir": "/usr/lib64/maxscale/plugin",
@@ -98,9 +99,9 @@ file locations, configuration options and version information.
                 "writeq_low_water": 8192
             },
             "process_datadir": "/var/lib/maxscale/data19",
-            "started_at": "Tue, 17 May 2022 03:24:41 GMT",
+            "started_at": "Thu, 20 Jul 2023 15:20:06 GMT",
             "uptime": 10,
-            "version": "6.3.0"
+            "version": "6.4.7"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -118,14 +119,9 @@ PATCH /v1/maxscale
 ```
 
 Update MaxScale parameters. The request body must define updated values for the
-`data.attributes.parameters` object. The following parameters can be altered:
-
-- [admin_auth](../Getting-Started/Configuration-Guide.md#admin_auth)
-- [auth_connect_timeout](../Getting-Started/Configuration-Guide.md#auth_connect_timeout)
-- [auth_read_timeout](../Getting-Started/Configuration-Guide.md#auth_read_timeout)
-- [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
-- [admin_log_auth_failures](../Getting-Started/Configuration-Guide.md#admin_log_auth_failures)
-- [passive](../Getting-Started/Configuration-Guide.md#passive)
+`data.attributes.parameters` object. The parameters that can be modified are
+listed in the `/v1/maxscale/modules/maxscale` endpoint and have the `modifiable`
+value set to `true`.
 
 #### Response
 
@@ -600,22 +596,22 @@ This endpoint supports the following parameters:
         "attributes": {
             "log": [
                 {
-                    "id": "46",
-                    "message": "Server changed state: server2[127.0.0.1:3001]: slave_up. [Down] -> [Slave, Running]",
+                    "id": "42",
+                    "message": "Service 'RW-Split-Router' started (2/2)",
                     "priority": "notice",
-                    "timestamp": "2022-03-17 10:27:47"
+                    "timestamp": "2023-07-20 15:20:06"
                 },
                 {
-                    "id": "47",
+                    "id": "43",
                     "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-03-17 10:27:48"
+                    "timestamp": "2023-07-20 15:20:07"
                 },
                 {
-                    "id": "48",
+                    "id": "44",
                     "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-03-17 10:27:48"
+                    "timestamp": "2023-07-20 15:20:07"
                 }
             ],
             "log_source": "maxlog"
@@ -624,9 +620,9 @@ This endpoint supports the following parameters:
         "type": "log_data"
     },
     "links": {
-        "last": "http://localhost:8989/v1/maxscale/logs/data/?page[size]=3",
-        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=43&page[size]=3",
-        "self": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=46&page[size]=3"
+        "last": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bsize%5D=3",
+        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=39&page%5Bsize%5D=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=42&page%5Bsize%5D=3"
     }
 }
 ```
@@ -774,6 +770,9 @@ The `maxscale` module will display the global configuration options
 
 The `servers` module displays the server object type and the configuration
 parameters it accepts as a module.
+
+Any parameter with the `modifiable` value set to `true` can be modified
+at runtime using a PATCH command on the corresponding object endpoint.
 
 #### Response
 
@@ -982,7 +981,7 @@ parameters it accepts as a module.
                     "type": "enum"
                 },
                 {
-                    "default_value": 1073741824,
+                    "default_value": 1048576,
                     "description": "Maximum size of transaction to retry",
                     "mandatory": false,
                     "modifiable": true,
@@ -1140,6 +1139,15 @@ parameters it accepts as a module.
                     "modifiable": true,
                     "name": "max_sescmd_history",
                     "type": "count"
+                },
+                {
+                    "default_value": "60000ms",
+                    "description": "How long a session can wait for a connection to become available",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "multiplex_timeout",
+                    "type": "duration",
+                    "unit": "ms"
                 },
                 {
                     "default_value": "0ms",
@@ -1424,6 +1432,14 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
+                        "default_value": "mysql",
+                        "description": "Database where the 'maxscale_config' table is created.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "config_sync_db",
+                        "type": "string"
+                    },
+                    {
                         "default_value": "5000ms",
                         "description": "How often to synchronize the configuration.",
                         "mandatory": false,
@@ -1590,7 +1606,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
-                        "default_value": 5003807539,
+                        "default_value": 5001955123,
                         "description": "Maximum amount of memory used by query classifier cache.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1659,7 +1675,7 @@ one to see the parameters of a module before the object is created.
                         "default_value": false,
                         "description": "Do not resolve client IP addresses to hostnames during authentication",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "skip_name_resolve",
                         "type": "bool"
                     },
@@ -1734,7 +1750,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "6.3.0"
+                "version": "6.4.7"
             },
             "id": "maxscale",
             "links": {
@@ -1791,7 +1807,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "monitorpw",
-                        "type": "string"
+                        "type": "password"
                     },
                     {
                         "description": "Monitor user",
@@ -1831,7 +1847,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "priority",
-                        "type": "count"
+                        "type": "int"
                     },
                     {
                         "description": "Server protocol (deprecated)",
@@ -1951,7 +1967,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "6.3.0"
+                "version": "6.4.7"
             },
             "id": "servers",
             "links": {
@@ -3116,6 +3132,15 @@ one to see the parameters of a module before the object is created.
                         "type": "count"
                     },
                     {
+                        "default_value": "60000ms",
+                        "description": "How long a session can wait for a connection to become available",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "multiplex_timeout",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
                         "default_value": "0ms",
                         "description": "Network write timeout",
                         "mandatory": false,
@@ -3426,7 +3451,7 @@ one to see the parameters of a module before the object is created.
                         "type": "enum"
                     },
                     {
-                        "default_value": 1073741824,
+                        "default_value": 1048576,
                         "description": "Maximum size of transaction to retry",
                         "mandatory": false,
                         "modifiable": true,
@@ -3584,6 +3609,15 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "max_sescmd_history",
                         "type": "count"
+                    },
+                    {
+                        "default_value": "60000ms",
+                        "description": "How long a session can wait for a connection to become available",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "multiplex_timeout",
+                        "type": "duration",
+                        "unit": "ms"
                     },
                     {
                         "default_value": "0ms",
@@ -3781,6 +3815,7 @@ GET /v1/maxscale/query_classifier/classify?sql=SELECT+1
 {
     "data": {
         "attributes": {
+            "canonical": "SELECT ?",
             "fields": [],
             "functions": [],
             "has_where_clause": false,

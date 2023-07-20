@@ -27,7 +27,7 @@ user name.
             "account": "admin"
         },
         "id": "admin",
-        "relationships": {
+        "links": {
             "self": "http://localhost:8989/v1/users/inet/admin/"
         },
         "type": "inet"
@@ -58,7 +58,7 @@ Get all network users.
                 "account": "admin"
             },
             "id": "admin",
-            "relationships": {
+            "links": {
                 "self": "http://localhost:8989/v1/users/inet/admin/"
             },
             "type": "inet"
@@ -106,7 +106,7 @@ Get all administrative users.
                 "account": "admin"
             },
             "id": "admin",
-            "relationships": {
+            "links": {
                 "self": "http://localhost:8989/v1/users/inet/admin/"
             },
             "type": "inet"

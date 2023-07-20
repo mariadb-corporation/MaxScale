@@ -32,7 +32,7 @@ an external server, the operation may be expensive.
             "client": {
                 "cipher": ""
             },
-            "connected": "Thu Mar 17 10:27:52 2022",
+            "connected": "Thu Jul 20 15:20:16 2023",
             "connections": [
                 {
                     "cipher": "",
@@ -53,6 +53,7 @@ an external server, the operation may be expensive.
                 "log_notice": false,
                 "log_warning": false
             },
+            "port": 43050,
             "queries": [],
             "remote": "::ffff:127.0.0.1",
             "state": "Session started",
@@ -104,7 +105,7 @@ Get all sessions.
                 "client": {
                     "cipher": ""
                 },
-                "connected": "Thu Mar 17 10:27:52 2022",
+                "connected": "Thu Jul 20 15:20:16 2023",
                 "connections": [
                     {
                         "cipher": "",
@@ -125,6 +126,7 @@ Get all sessions.
                     "log_notice": false,
                     "log_warning": false
                 },
+                "port": 43050,
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",
                 "state": "Session started",

@@ -93,6 +93,7 @@ Get a single service.
                 "max_connections": 0,
                 "max_replication_lag": "0ms",
                 "max_sescmd_history": 50,
+                "multiplex_timeout": "60000ms",
                 "net_write_timeout": "0ms",
                 "password": "*****",
                 "prune_sescmd_history": true,
@@ -118,7 +119,7 @@ Get a single service.
                 "file": "/etc/maxscale.cnf",
                 "type": "static"
             },
-            "started": "Tue May 17 03:24:41 2022",
+            "started": "Thu Jul 20 15:20:06 2023",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -325,6 +326,7 @@ Get all services.
                     "max_connections": 0,
                     "max_replication_lag": "0ms",
                     "max_sescmd_history": 50,
+                    "multiplex_timeout": "60000ms",
                     "net_write_timeout": "0ms",
                     "password": "*****",
                     "prune_sescmd_history": true,
@@ -350,7 +352,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Tue May 17 03:24:41 2022",
+                "started": "Thu Jul 20 15:20:06 2023",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -544,6 +546,7 @@ Get all services.
                     "max_sescmd_history": 50,
                     "max_slave_connections": 255,
                     "max_slave_replication_lag": "0ms",
+                    "multiplex_timeout": "60000ms",
                     "net_write_timeout": "0ms",
                     "optimistic_trx": false,
                     "password": "*****",
@@ -563,7 +566,7 @@ Get all services.
                     "transaction_replay": false,
                     "transaction_replay_attempts": 5,
                     "transaction_replay_checksum": "full",
-                    "transaction_replay_max_size": 1073741824,
+                    "transaction_replay_max_size": 1048576,
                     "transaction_replay_retry_on_deadlock": false,
                     "transaction_replay_retry_on_mismatch": false,
                     "transaction_replay_timeout": "0ms",
@@ -608,7 +611,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Tue May 17 03:24:41 2022",
+                "started": "Thu Jul 20 15:20:06 2023",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,

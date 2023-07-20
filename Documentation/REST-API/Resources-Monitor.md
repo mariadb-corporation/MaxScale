@@ -39,7 +39,8 @@ Get a single monitor.
                         "name": "server1",
                         "read_only": false,
                         "server_id": 3000,
-                        "slave_connections": []
+                        "slave_connections": [],
+                        "state_details": null
                     },
                     {
                         "gtid_binlog_pos": "0-3000-5",
@@ -62,7 +63,8 @@ Get a single monitor.
                                 "slave_io_running": "Yes",
                                 "slave_sql_running": "Yes"
                             }
-                        ]
+                        ],
+                        "state_details": null
                     }
                 ],
                 "state": "Idle"
@@ -192,7 +194,8 @@ Get all monitors.
                             "name": "server1",
                             "read_only": false,
                             "server_id": 3000,
-                            "slave_connections": []
+                            "slave_connections": [],
+                            "state_details": null
                         },
                         {
                             "gtid_binlog_pos": "0-3000-5",
@@ -215,7 +218,8 @@ Get all monitors.
                                     "slave_io_running": "Yes",
                                     "slave_sql_running": "Yes"
                                 }
-                            ]
+                            ],
+                            "state_details": null
                         }
                     ],
                     "state": "Idle"
