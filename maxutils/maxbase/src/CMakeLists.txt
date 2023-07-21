@@ -59,6 +59,11 @@ if(BUILD_TOOLS)
   add_executable(test_pam_login test_pam_login.cc)
   target_link_libraries(test_pam_login maxbase)
   install_executable(test_pam_login core)
+
+  # Tool for testing local PAM config with suid wrapper.
+  add_executable(test_pam_login2 test_pam_login2.cc)
+  target_link_libraries(test_pam_login2 maxbase)
+  install_executable(test_pam_login2 core)
 endif()
 
 # Pam suid wrapper. Requires setuid permission
