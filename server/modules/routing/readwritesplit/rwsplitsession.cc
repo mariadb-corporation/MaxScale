@@ -1238,7 +1238,14 @@ void RWSplitSession::track_tx_isolation(const mxs::Reply& reply)
         value = trx_char;
     }
 
-    if (auto tx_isolation = reply.get_variable("tx_isolation"); !tx_isolation.empty())
+    auto tx_isolation = reply.get_variable("transaction_isolation");
+
+    if (tx_isolation.empty())
+    {
+        tx_isolation = reply.get_variable("tx_isolation");
+    }
+
+    if (!tx_isolation.empty())
     {
         m_locked_to_master = tx_isolation.find(LEVEL) != std::string_view::npos;
         value = tx_isolation;

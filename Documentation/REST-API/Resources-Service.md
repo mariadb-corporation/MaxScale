@@ -120,7 +120,7 @@ Get a single service.
                 "file": "/etc/maxscale.cnf",
                 "type": "static"
             },
-            "started": "Fri, 27 Jan 2023 13:21:28 GMT",
+            "started": "Fri, 21 Jul 2023 06:46:32 GMT",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -183,7 +183,7 @@ Get a single service.
                     "user": "root"
                 }
             ],
-            "users_last_update": "Fri, 27 Jan 2023 13:21:31 GMT"
+            "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
         },
         "id": "Read-Connection-Router",
         "links": {
@@ -314,7 +314,7 @@ Get all services.
                 ],
                 "parameters": {
                     "auth_all_servers": false,
-                    "causal_reads": "false",
+                    "causal_reads": "none",
                     "causal_reads_timeout": "10000ms",
                     "connection_keepalive": "300000ms",
                     "connection_timeout": "0ms",
@@ -357,7 +357,7 @@ Get all services.
                     "transaction_replay": false,
                     "transaction_replay_attempts": 5,
                     "transaction_replay_checksum": "full",
-                    "transaction_replay_max_size": 1073741824,
+                    "transaction_replay_max_size": 1048576,
                     "transaction_replay_retry_on_deadlock": false,
                     "transaction_replay_retry_on_mismatch": false,
                     "transaction_replay_timeout": "0ms",
@@ -402,7 +402,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri, 27 Jan 2023 13:21:28 GMT",
+                "started": "Fri, 21 Jul 2023 06:46:32 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -465,7 +465,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Fri, 27 Jan 2023 13:21:31 GMT"
+                "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
             },
             "id": "RW-Split-Router",
             "links": {
@@ -596,7 +596,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri, 27 Jan 2023 13:21:28 GMT",
+                "started": "Fri, 21 Jul 2023 06:46:32 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -659,7 +659,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Fri, 27 Jan 2023 13:21:31 GMT"
+                "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
             },
             "id": "Read-Connection-Router",
             "links": {

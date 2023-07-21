@@ -58,20 +58,20 @@ Response contains the requested resource.
 {
     "data": {
         "attributes": {
-            "seconds_idle": 0.0014909680000000001,
+            "seconds_idle": 0.0013705639999999999,
             "sql": null,
             "target": "server1",
             "thread_id": 10
         },
-        "id": "15c03b59-878f-471d-9e46-d9b0957ecfde",
+        "id": "96be0ffe-10fb-4ed1-8e66-a17ef1eea0fe",
         "links": {
-            "related": "http://localhost:8989/v1/sql/15c03b59-878f-471d-9e46-d9b0957ecfde/queries/",
-            "self": "http://localhost:8989/v1/sql/15c03b59-878f-471d-9e46-d9b0957ecfde/"
+            "related": "http://localhost:8989/v1/sql/96be0ffe-10fb-4ed1-8e66-a17ef1eea0fe/queries/",
+            "self": "http://localhost:8989/v1/sql/96be0ffe-10fb-4ed1-8e66-a17ef1eea0fe/"
         },
         "type": "sql"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/15c03b59-878f-471d-9e46-d9b0957ecfde/"
+        "self": "http://localhost:8989/v1/sql/96be0ffe-10fb-4ed1-8e66-a17ef1eea0fe/"
     }
 }
 ```
@@ -93,29 +93,29 @@ Response contains a resource collection with all the open SQL connections.
     "data": [
         {
             "attributes": {
-                "seconds_idle": 0.00097323899999999998,
+                "seconds_idle": 0.0010341230000000001,
                 "sql": null,
                 "target": "server1",
                 "thread_id": 12
             },
-            "id": "62368f6a-1fe6-4677-a581-56282dd0fab1",
+            "id": "90761656-3352-420b-83e7-0dcef691552a",
             "links": {
-                "related": "http://localhost:8989/v1/sql/62368f6a-1fe6-4677-a581-56282dd0fab1/queries/",
-                "self": "http://localhost:8989/v1/sql/62368f6a-1fe6-4677-a581-56282dd0fab1/"
+                "related": "http://localhost:8989/v1/sql/90761656-3352-420b-83e7-0dcef691552a/queries/",
+                "self": "http://localhost:8989/v1/sql/90761656-3352-420b-83e7-0dcef691552a/"
             },
             "type": "sql"
         },
         {
             "attributes": {
-                "seconds_idle": 0.0022802410000000001,
+                "seconds_idle": 0.002397377,
                 "sql": null,
                 "target": "server1",
                 "thread_id": 11
             },
-            "id": "9405a955-bb6f-431b-a989-3a7f3bfe27c4",
+            "id": "98a8b5c5-3632-4f0f-98bb-0dc440a3409a",
             "links": {
-                "related": "http://localhost:8989/v1/sql/9405a955-bb6f-431b-a989-3a7f3bfe27c4/queries/",
-                "self": "http://localhost:8989/v1/sql/9405a955-bb6f-431b-a989-3a7f3bfe27c4/"
+                "related": "http://localhost:8989/v1/sql/98a8b5c5-3632-4f0f-98bb-0dc440a3409a/queries/",
+                "self": "http://localhost:8989/v1/sql/98a8b5c5-3632-4f0f-98bb-0dc440a3409a/"
             },
             "type": "sql"
         }
@@ -231,23 +231,23 @@ Connection was opened:
 {
     "data": {
         "attributes": {
-            "seconds_idle": 6.8423999999999994e-5,
+            "seconds_idle": 7.6394000000000001e-5,
             "sql": null,
             "target": "server1",
             "thread_id": 13
         },
-        "id": "16b7452d-4061-44ab-8b2a-129920460a04",
+        "id": "f4e38d96-99b4-479e-ac36-5f3b437aff99",
         "links": {
-            "related": "http://localhost:8989/v1/sql/16b7452d-4061-44ab-8b2a-129920460a04/queries/",
-            "self": "http://localhost:8989/v1/sql/16b7452d-4061-44ab-8b2a-129920460a04/"
+            "related": "http://localhost:8989/v1/sql/f4e38d96-99b4-479e-ac36-5f3b437aff99/queries/",
+            "self": "http://localhost:8989/v1/sql/f4e38d96-99b4-479e-ac36-5f3b437aff99/"
         },
         "type": "sql"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/16b7452d-4061-44ab-8b2a-129920460a04/"
+        "self": "http://localhost:8989/v1/sql/f4e38d96-99b4-479e-ac36-5f3b437aff99/"
     },
     "meta": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxNmI3NDUyZC00MDYxLTQ0YWItOGIyYS0xMjk5MjA0NjBhMDQiLCJleHAiOjE2NzQ4NTQ1MDAsImlhdCI6MTY3NDgyNTcwMCwiaXNzIjoibXhzLXF1ZXJ5Iiwic3ViIjoiMTZiNzQ1MmQtNDA2MS00NGFiLThiMmEtMTI5OTIwNDYwYTA0In0.EjHbXICmNKLJ1wtNh8Q3IN6gpDO3WZEi6cJmWGjgZaA"
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJmNGUzOGQ5Ni05OWI0LTQ3OWUtYWMzNi01ZjNiNDM3YWZmOTkiLCJleHAiOjE2ODk5NTA4MDQsImlhdCI6MTY4OTkyMjAwNCwiaXNzIjoibXhzLXF1ZXJ5Iiwic3ViIjoiZjRlMzhkOTYtOTliNC00NzllLWFjMzYtNWYzYjQzN2FmZjk5In0.gCKYl7XwwnMLjJbQT6UShDuK8aJ6gessmredQ1i0On4"
     }
 }
 ```
@@ -375,7 +375,7 @@ responses.
 {
     "data": {
         "attributes": {
-            "execution_time": 0.00024064900000000001,
+            "execution_time": 0.00026922799999999999,
             "results": [
                 {
                     "complete": true,
@@ -397,11 +397,11 @@ responses.
             ],
             "sql": "SELECT id FROM test.t1"
         },
-        "id": "bb043a6e-9c47-4b14-9fda-d2fd47f11f87.1",
+        "id": "8eda4bbe-d917-4dd0-9b07-3aa3db5e78d5.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/bb043a6e-9c47-4b14-9fda-d2fd47f11f87/queries/bb043a6e-9c47-4b14-9fda-d2fd47f11f87.1/"
+        "self": "http://localhost:8989/v1/sql/8eda4bbe-d917-4dd0-9b07-3aa3db5e78d5/queries/8eda4bbe-d917-4dd0-9b07-3aa3db5e78d5.1/"
     }
 }
 ```
@@ -414,7 +414,7 @@ responses.
 {
     "data": {
         "attributes": {
-            "execution_time": 9.6858e-5,
+            "execution_time": 0.00012686699999999999,
             "results": [
                 {
                     "errno": 1064,
@@ -424,11 +424,11 @@ responses.
             ],
             "sql": "SELECT syntax_error FROM TABLE test.t1"
         },
-        "id": "a263c0f9-55b4-4391-8b79-9d31cb6c9055.1",
+        "id": "621bacd9-48fd-436c-afda-b4e4d0d7b228.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/a263c0f9-55b4-4391-8b79-9d31cb6c9055/queries/a263c0f9-55b4-4391-8b79-9d31cb6c9055.1/"
+        "self": "http://localhost:8989/v1/sql/621bacd9-48fd-436c-afda-b4e4d0d7b228/queries/621bacd9-48fd-436c-afda-b4e4d0d7b228.1/"
     }
 }
 ```
@@ -443,7 +443,7 @@ responses.
 {
     "data": {
         "attributes": {
-            "execution_time": 0.00049033499999999995,
+            "execution_time": 0.000474659,
             "results": [
                 {
                     "affected_rows": 0,
@@ -453,11 +453,11 @@ responses.
             ],
             "sql": "CREATE TABLE test.my_table(id INT)"
         },
-        "id": "8dd674c7-0771-405a-83b7-a9c6d063d070.1",
+        "id": "60005d40-c034-4aa3-94de-b15c14d9c91c.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/8dd674c7-0771-405a-83b7-a9c6d063d070/queries/8dd674c7-0771-405a-83b7-a9c6d063d070.1/"
+        "self": "http://localhost:8989/v1/sql/60005d40-c034-4aa3-94de-b15c14d9c91c/queries/60005d40-c034-4aa3-94de-b15c14d9c91c.1/"
     }
 }
 ```
@@ -486,7 +486,7 @@ Query successfully executed:
 {
     "data": {
         "attributes": {
-            "execution_time": 0.00012138000000000001,
+            "execution_time": 0.00014767200000000001,
             "results": [
                 {
                     "complete": true,
@@ -502,11 +502,11 @@ Query successfully executed:
             ],
             "sql": "SELECT 1"
         },
-        "id": "df62f486-3ce3-444f-9f5a-73653d026553.1",
+        "id": "1deac8a4-3184-43ad-8aed-941ba166bd44.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/df62f486-3ce3-444f-9f5a-73653d026553/queries/df62f486-3ce3-444f-9f5a-73653d026553.1/"
+        "self": "http://localhost:8989/v1/sql/1deac8a4-3184-43ad-8aed-941ba166bd44/queries/1deac8a4-3184-43ad-8aed-941ba166bd44.1/"
     }
 }
 ```
@@ -522,11 +522,11 @@ Query queued for execution:
             "execution_time": 0.0,
             "sql": "SELECT 1"
         },
-        "id": "8c91f85a-72fe-4bc3-8c73-16e073505af0.1",
+        "id": "3d23f7e0-6a83-4282-94a5-8a1089d56f72.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/8c91f85a-72fe-4bc3-8c73-16e073505af0/queries/8c91f85a-72fe-4bc3-8c73-16e073505af0.1/"
+        "self": "http://localhost:8989/v1/sql/3d23f7e0-6a83-4282-94a5-8a1089d56f72/queries/3d23f7e0-6a83-4282-94a5-8a1089d56f72.1/"
     }
 }
 ```
@@ -565,7 +565,7 @@ Query successfully executed:
 {
     "data": {
         "attributes": {
-            "execution_time": 0.000141528,
+            "execution_time": 0.00011945,
             "results": [
                 {
                     "complete": true,
@@ -581,11 +581,11 @@ Query successfully executed:
             ],
             "sql": "SELECT 1"
         },
-        "id": "256b250f-ad95-4d95-96ba-2cc1c3b5a6db.1",
+        "id": "7153ab30-fae7-44c8-858a-449cbf11c234.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/256b250f-ad95-4d95-96ba-2cc1c3b5a6db/queries/256b250f-ad95-4d95-96ba-2cc1c3b5a6db.1/"
+        "self": "http://localhost:8989/v1/sql/7153ab30-fae7-44c8-858a-449cbf11c234/queries/7153ab30-fae7-44c8-858a-449cbf11c234.1/"
     }
 }
 ```
@@ -837,7 +837,7 @@ following result.
 {
     "data": {
         "attributes": {
-            "execution_time": 0.0082404950000000005,
+            "execution_time": 0.0062226729999999997,
             "results": {
                 "ok": true,
                 "stage": "prepare",
@@ -853,11 +853,11 @@ following result.
             },
             "sql": "ETL"
         },
-        "id": "ee3b3814-461a-4e24-b546-001e6a5ed35c.1",
+        "id": "31dc09b7-ec09-4e6d-b098-e925f706233c.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/ee3b3814-461a-4e24-b546-001e6a5ed35c/queries/ee3b3814-461a-4e24-b546-001e6a5ed35c.1/"
+        "self": "http://localhost:8989/v1/sql/31dc09b7-ec09-4e6d-b098-e925f706233c/queries/31dc09b7-ec09-4e6d-b098-e925f706233c.1/"
     }
 }
 ```
@@ -916,14 +916,14 @@ following result.
 {
     "data": {
         "attributes": {
-            "execution_time": 0.021194253,
+            "execution_time": 0.0094386039999999997,
             "results": {
                 "ok": true,
                 "stage": "load",
                 "tables": [
                     {
                         "create": "CREATE DATABASE IF NOT EXISTS `test`;\nUSE `test`;\nCREATE TABLE `t1` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `data` varchar(255) DEFAULT NULL,\n  UNIQUE KEY `id` (`id`)\n) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
-                        "execution_time": 0.0067118610000000004,
+                        "execution_time": 0.0033923809999999999,
                         "insert": "INSERT INTO `test`.`t1` (`id`,`data`) VALUES (?,?)",
                         "rows": 1,
                         "schema": "test",
@@ -934,11 +934,11 @@ following result.
             },
             "sql": "ETL"
         },
-        "id": "195d597a-9a3e-4163-bf44-86db6fb3acdf.1",
+        "id": "1391b67e-58a7-4be3-b686-2498cb3a0e06.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/195d597a-9a3e-4163-bf44-86db6fb3acdf/queries/195d597a-9a3e-4163-bf44-86db6fb3acdf.1/"
+        "self": "http://localhost:8989/v1/sql/1391b67e-58a7-4be3-b686-2498cb3a0e06/queries/1391b67e-58a7-4be3-b686-2498cb3a0e06.1/"
     }
 }
 ```

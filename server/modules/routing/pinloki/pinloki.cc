@@ -119,7 +119,7 @@ wall_time::TimePoint file_mod_time(const std::string& file_name)
 /** Modification time of the oldest log file or wall_time::TimePoint::max() if there are no logs */
 wall_time::TimePoint oldest_logfile_time(InventoryWriter* pInventory)
 {
-    auto ret = wall_time::TimePoint::max();
+    auto ret = wall_time::TimePoint::min();
     const auto& file_names = pInventory->file_names();
     if (!file_names.empty())
     {
@@ -866,7 +866,7 @@ bool Pinloki::purge_old_binlogs()
     auto oldest_time = oldest_logfile_time(&m_inventory);
     wall_time::TimePoint next_purge_time = oldest_time + config().expire_log_duration() + 1s;
 
-    if (oldest_time == wall_time::TimePoint::max()
+    if (oldest_time == wall_time::TimePoint::min()
         || next_purge_time < now)
     {
         // No logs, or purge prevented due to expire_log_minimum_files.

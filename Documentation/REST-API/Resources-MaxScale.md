@@ -24,10 +24,13 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Fri, 27 Jan 2023 13:21:28 GMT",
-            "commit": "1cd89e5840c7f548f1c192f15ff15cf81d3a873c",
+            "activated_at": "Fri, 21 Jul 2023 06:46:32 GMT",
+            "commit": "d5224beb90cc1952656ca7e50fdb4e83cdf8fa0b",
             "config_sync": null,
             "parameters": {
+                "admin_audit": false,
+                "admin_audit_exclude_methods": [],
+                "admin_audit_file": "/var/log/maxscale/admin_audit.csv",
                 "admin_auth": true,
                 "admin_enabled": true,
                 "admin_gui": true,
@@ -52,8 +55,9 @@ file locations, configuration options and version information.
                 "auto_tune": [],
                 "cachedir": "/var/cache/maxscale",
                 "config_sync_cluster": null,
+                "config_sync_db": "mysql",
                 "config_sync_interval": "5000ms",
-                "config_sync_password": "*****",
+                "config_sync_password": null,
                 "config_sync_timeout": "10000ms",
                 "config_sync_user": null,
                 "connector_plugindir": "/usr/lib64/maxscale/plugin",
@@ -88,7 +92,7 @@ file locations, configuration options and version information.
                 "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
-                "query_classifier_cache_size": 5004527616,
+                "query_classifier_cache_size": 5001956352,
                 "query_retries": 1,
                 "query_retry_timeout": "5000ms",
                 "rebalance_period": "0ms",
@@ -108,29 +112,29 @@ file locations, configuration options and version information.
                 "writeq_low_water": 1024
             },
             "process_datadir": "/var/lib/maxscale/data1",
-            "started_at": "Fri, 27 Jan 2023 13:21:28 GMT",
+            "started_at": "Fri, 21 Jul 2023 06:46:32 GMT",
             "system": {
                 "machine": {
                     "cores_available": 8,
                     "cores_physical": 8,
                     "cores_virtual": 8.0,
-                    "memory_available": 33363517440,
-                    "memory_physical": 33363517440
+                    "memory_available": 33346375680,
+                    "memory_physical": 33346375680
                 },
                 "maxscale": {
-                    "query_classifier_cache_size": 5004527616,
+                    "query_classifier_cache_size": 5001956352,
                     "threads": 3
                 },
                 "os": {
                     "machine": "x86_64",
                     "nodename": "monolith",
-                    "release": "6.1.6-100.fc36.x86_64",
+                    "release": "6.3.12-100.fc37.x86_64",
                     "sysname": "Linux",
-                    "version": "#1 SMP PREEMPT_DYNAMIC Sat Jan 14 17:00:40 UTC 2023"
+                    "version": "#1 SMP PREEMPT_DYNAMIC Wed Jul  5 20:09:58 UTC 2023"
                 }
             },
             "uptime": 12,
-            "version": "22.08.5"
+            "version": "23.02.3"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -302,12 +306,12 @@ Get the information for all threads. Returns a collection of threads resources.
                         "last_second": 0
                     },
                     "max_event_queue_length": 2,
-                    "max_exec_time": 0,
+                    "max_exec_time": 1,
                     "max_queue_time": 0,
                     "memory": {
-                        "query_classifier": 1618,
-                        "sessions": 70191,
-                        "total": 71809,
+                        "query_classifier": 1481,
+                        "sessions": 70221,
+                        "total": 71702,
                         "zombies": 0
                     },
                     "query_classifier_cache": {
@@ -315,13 +319,13 @@ Get the information for all threads. Returns a collection of threads resources.
                         "hits": 0,
                         "inserts": 3,
                         "misses": 4,
-                        "size": 1618
+                        "size": 1481
                     },
                     "reads": 35,
                     "sessions": 1,
                     "state": "Active",
                     "total_descriptors": 8,
-                    "writes": 17,
+                    "writes": 15,
                     "zombies": 0
                 }
             },
@@ -495,24 +499,22 @@ This endpoint supports the following parameters:
         "attributes": {
             "log": [
                 {
-                    "id": "42",
-                    "message": "Server 'server2' charset: utf8mb4",
+                    "id": "41",
+                    "message": "'server2' sent version string '10.6.12-MariaDB-1:10.6.12+maria~ubu2004-log'. Detected type: 'MariaDB', version: 10.6.12.",
                     "priority": "notice",
-                    "timestamp": "2023-01-27 13:21:32"
+                    "timestamp": "2023-07-21 06:46:36"
+                },
+                {
+                    "id": "42",
+                    "message": "Server 'server2' charset: utf8mb4_general_ci",
+                    "priority": "notice",
+                    "timestamp": "2023-07-21 06:46:36"
                 },
                 {
                     "id": "43",
                     "message": "Server changed state: server2[127.0.0.1:3001]: slave_up. [Auth Error, Down] -> [Slave, Running]",
                     "priority": "notice",
-                    "timestamp": "2023-01-27 13:21:32"
-                },
-                {
-                    "id": "44",
-                    "message": "The function '=' is not found in the canonical statement 'INSERT INTO test.t1(id) VALUES (?), (?), (?)' created from the statement 'INSERT INTO test.t1(id) VALUES (1), (2), (3)'.",
-                    "module": "qc_sqlite",
-                    "priority": "warning",
-                    "session": "1",
-                    "timestamp": "2023-01-27 13:21:40"
+                    "timestamp": "2023-07-21 06:46:36"
                 }
             ],
             "log_source": "maxlog"
@@ -522,8 +524,8 @@ This endpoint supports the following parameters:
     },
     "links": {
         "last": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bsize%5D=3",
-        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=39&page%5Bsize%5D=3",
-        "self": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=45&page%5Bsize%5D=3"
+        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=38&page%5Bsize%5D=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=44&page%5Bsize%5D=3"
     }
 }
 ```
@@ -690,21 +692,21 @@ at runtime using a PATCH command on the corresponding object endpoint.
             "module_type": "Router",
             "parameters": [
                 {
-                    "default_value": "false",
+                    "default_value": "none",
                     "description": "Causal reads mode",
                     "enum_values": [
-                        "false",
-                        "off",
-                        "0",
-                        "true",
-                        "on",
-                        "1",
                         "none",
                         "local",
                         "global",
                         "fast_global",
                         "fast",
-                        "universal"
+                        "universal",
+                        "false",
+                        "off",
+                        "0",
+                        "true",
+                        "on",
+                        "1"
                     ],
                     "mandatory": false,
                     "modifiable": true,
@@ -884,7 +886,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "type": "enum"
                 },
                 {
-                    "default_value": 1073741824,
+                    "default_value": 1048576,
                     "description": "Maximum size of transaction to retry",
                     "mandatory": false,
                     "modifiable": true,
@@ -1195,6 +1197,41 @@ one to see the parameters of a module before the object is created.
                 "module_type": "maxscale",
                 "parameters": [
                     {
+                        "default_value": false,
+                        "description": "Enable REST audit logging",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "admin_audit",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": [],
+                        "description": "List of HTTP methods to exclude from audit logging, e.g. \"GET\"",
+                        "enum_values": [
+                            "GET",
+                            "PUT",
+                            "POST",
+                            "PATCH",
+                            "DELETE",
+                            "HEAD",
+                            "CONNECT",
+                            "OPTIONS",
+                            "TRACE"
+                        ],
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "admin_audit_exclude_methods",
+                        "type": "enum list"
+                    },
+                    {
+                        "default_value": "/var/log/maxscale/admin_audit.csv",
+                        "description": "Full path to admin audit file",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "admin_audit_file",
+                        "type": "string"
+                    },
+                    {
                         "default_value": true,
                         "description": "Admin interface authentication.",
                         "mandatory": false,
@@ -1406,6 +1443,14 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
+                        "default_value": "mysql",
+                        "description": "Database where the 'maxscale_config' table is created.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "config_sync_db",
+                        "type": "string"
+                    },
+                    {
                         "default_value": "5000ms",
                         "description": "How often to synchronize the configuration.",
                         "mandatory": false,
@@ -1415,7 +1460,6 @@ one to see the parameters of a module before the object is created.
                         "unit": "ms"
                     },
                     {
-                        "default_value": "*****",
                         "description": "Password for the user used for configuration synchronization.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1603,7 +1647,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
-                        "default_value": 5004527616,
+                        "default_value": 5001956352,
                         "description": "Maximum amount of memory used by query classifier cache.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1672,7 +1716,7 @@ one to see the parameters of a module before the object is created.
                         "default_value": false,
                         "description": "Do not resolve client IP addresses to hostnames during authentication",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "skip_name_resolve",
                         "type": "bool"
                     },
@@ -1755,7 +1799,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "22.08.5"
+                "version": "23.02.3"
             },
             "id": "maxscale",
             "links": {
@@ -1812,7 +1856,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "monitorpw",
-                        "type": "string"
+                        "type": "password"
                     },
                     {
                         "description": "Monitor user",
@@ -1980,7 +2024,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "22.08.5"
+                "version": "23.02.3"
             },
             "id": "servers",
             "links": {
@@ -2785,7 +2829,6 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "default_value": "*****",
                         "description": "Password for the user that is used for replication",
                         "mandatory": false,
                         "modifiable": true,
@@ -3410,6 +3453,20 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
+                        "description": "Exclude queries from hosts that match this pattern",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "source_exclude",
+                        "type": "regex"
+                    },
+                    {
+                        "description": "Log queries only from hosts that match this pattern",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "source_match",
+                        "type": "regex"
+                    },
+                    {
                         "default_value": false,
                         "description": "Write queries in canonical form",
                         "mandatory": false,
@@ -3423,6 +3480,20 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "user",
                         "type": "string"
+                    },
+                    {
+                        "description": "Exclude queries from users that match this pattern",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "user_exclude",
+                        "type": "regex"
+                    },
+                    {
+                        "description": "Log queries only from users that match this pattern",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "user_match",
+                        "type": "regex"
                     }
                 ],
                 "version": "V1.1.1"
@@ -3715,21 +3786,21 @@ one to see the parameters of a module before the object is created.
                 "module_type": "Router",
                 "parameters": [
                     {
-                        "default_value": "false",
+                        "default_value": "none",
                         "description": "Causal reads mode",
                         "enum_values": [
-                            "false",
-                            "off",
-                            "0",
-                            "true",
-                            "on",
-                            "1",
                             "none",
                             "local",
                             "global",
                             "fast_global",
                             "fast",
-                            "universal"
+                            "universal",
+                            "false",
+                            "off",
+                            "0",
+                            "true",
+                            "on",
+                            "1"
                         ],
                         "mandatory": false,
                         "modifiable": true,
@@ -3909,7 +3980,7 @@ one to see the parameters of a module before the object is created.
                         "type": "enum"
                     },
                     {
-                        "default_value": 1073741824,
+                        "default_value": 1048576,
                         "description": "Maximum size of transaction to retry",
                         "mandatory": false,
                         "modifiable": true,

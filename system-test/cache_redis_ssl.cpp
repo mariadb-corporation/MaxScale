@@ -37,6 +37,10 @@ bool build_redis(TestConnections& test)
 
     int rv = 0;
 
+    // Try to enable EPEL repositories if possible. If not, don't treat it as an error. This way the
+    // installation will only fail if the other dependencies can't be installed.
+    // TODO: The dependencies are RHEL-specific and prevent this test from being run on a non-RHEL machine.
+    install_dependency(test, "epel-release");
     rv += !install_dependency(test, "git");
     rv += !install_dependency(test, "make");
     rv += !install_dependency(test, "gcc");

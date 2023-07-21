@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const std::string BIG_VALUE(1000, 'a');
+const std::string BIG_VALUE(1500, 'a');
 
 int main(int argc, char** argv)
 {

@@ -46,7 +46,7 @@ the following form.
 ```javascript
 {
     "meta": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhY2NvdW50IjoiYWRtaW4iLCJhdWQiOiJhZG1pbiIsImV4cCI6MTY3NDg1NDUwMCwiaWF0IjoxNjc0ODI1NzAwLCJpc3MiOiJtYXhzY2FsZSIsInN1YiI6ImFkbWluIn0.-mUkYmDMTF3BDjxjLJnvBBfEm7i809T_3goDSXbq3bk"
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhY2NvdW50IjoiYWRtaW4iLCJhdWQiOiJhZG1pbiIsImV4cCI6MTY4OTk1MDgwNCwiaWF0IjoxNjg5OTIyMDA0LCJpc3MiOiJtYXhzY2FsZSIsInN1YiI6ImFkbWluIn0.LRFeXaFAhYNBm7kLIosUpR2nOgd5H-gv3MpuLaCpPvk"
     }
 }
 ```
