@@ -83,11 +83,6 @@
                     @click="handleChooseNodeOpt({ type: opt.type, node: activeNodeMenu })"
                 >
                     <v-list-item-title class="mxs-color-helper text-text">
-                        <div class="d-inline-block text-center mr-2" style="width:22px">
-                            <v-icon v-if="opt.icon" :color="opt.color" :size="opt.iconSize">
-                                {{ opt.icon }}
-                            </v-icon>
-                        </div>
                         {{ opt.text }}
                     </v-list-item-title>
                 </v-list-item>
@@ -158,6 +153,7 @@ export default {
         ...mapState({
             charset_collation_map: state => state.editorsMem.charset_collation_map,
             ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES,
+            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
         }),
         activeRecord() {
             return ErdTask.getters('activeRecord')
@@ -194,23 +190,13 @@ export default {
         },
         entityOpts() {
             const isNew = this.isNewEntity(this.activeNodeMenuId)
-            const { ALTER, EDIT, DELETE } = this.ENTITY_OPT_TYPES
-            return [
-                {
-                    text: this.$mxs_t(isNew ? 'edit' : 'alter'),
-                    type: isNew ? EDIT : ALTER,
-                    icon: isNew ? '$vuetify.icons.mxs_edit' : 'mdi-table-edit',
-                    iconSize: isNew ? 16 : 20,
-                    color: 'primary',
-                },
-                {
-                    text: this.$mxs_t('delete'),
-                    type: DELETE,
-                    icon: '$vuetify.icons.mxs_delete',
-                    iconSize: 16,
-                    color: 'error',
-                },
+            const { ALTER, EDIT, REMOVE, DROP } = this.ENTITY_OPT_TYPES
+            let opts = [
+                { text: this.$mxs_t(isNew ? 'editTbl' : 'alterTbl'), type: isNew ? EDIT : ALTER },
+                { text: this.$mxs_t('removeFromDiagram'), type: REMOVE },
             ]
+            if (!isNew) opts.push({ text: this.$mxs_t('dropTbl'), type: DROP })
+            return opts
         },
         activeNodeMenuId() {
             return this.$typy(this.activeNodeMenu, 'id').safeString
@@ -306,7 +292,7 @@ export default {
         },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
             if (this.connId) {
-                const { ALTER, EDIT, DELETE } = this.ENTITY_OPT_TYPES
+                const { ALTER, EDIT, REMOVE, DROP } = this.ENTITY_OPT_TYPES
                 switch (type) {
                     case ALTER:
                     case EDIT: {
@@ -318,21 +304,22 @@ export default {
                             this.$nextTick(() => this.zoomIntoNode(node))
                         break
                     }
-                    case DELETE: {
-                        // Remove node from staging data and diagram
+                    case REMOVE: {
+                        // close editor
                         ErdTaskTmp.update({
                             where: this.activeTaskId,
                             data: {
-                                // close editor
                                 active_entity_id: '',
                                 graph_height_pct: 100,
-                                nodes: this.stagingNodes.filter(n => n.id !== node.id),
                             },
                         })
                         this.$refs.diagram.removeNode(node)
                         ErdTask.dispatch('updateNodesHistory', this.stagingNodes)
                         break
                     }
+                    case DROP:
+                        //TODO: handle drop
+                        break
                 }
             } else
                 this.SET_SNACK_BAR_MESSAGE({

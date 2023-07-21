@@ -396,59 +396,58 @@ function findKeyTypesByColId({ keys, colId }) {
 }
 
 /**
+ *
  * @param {object} param
  * @param {Array.<object>} param.cols - parsed index columns to be transformed
  * @param {Array.<Array>} param.lookupCols - parsed columns to be looked up
  * @returns {Array.<object} transformed cols where the `name` property is replaced with `id`
  */
-function transformIndexCols({ cols, lookupCols }) {
-    return cols.map(item => {
-        const { name, ...rest } = item
-        if (!name) return item
-        const col = lookupCols.find(c => c.name === name)
-        return { id: col.id, ...rest }
+function replaceColNamesWithIds({ cols, lookupCols }) {
+    return lodash.cloneDeep(cols).map(item => {
+        if (!item.name) return item
+        const col = lookupCols.find(c => c.name === item.name)
+        item.id = col.id
+        delete item.name
+        return item
     })
 }
 
 /**
  * Transform parsed keys of a table into a data structure used
- * by the DDL editor. i.e. the referenced names will be replaced with corresponding
- * target ids found in parsedTables. This is done to ensure the relationships between tables
- * are intact when changing the target names.
+ * by the DDL editor in ERD worksheet. i.e. the referenced names will be replaced
+ * with corresponding target ids found in lookupTables. This is done to ensure the
+ * relationships between tables are intact when changing the target names.
  * @param {object} param
- *  * @param {array} param.keys - keys to be transformed
+ * @param {array} param.keys - keys
  * @param {array} param.cols - all columns of a table
- * @param {array} [param.parsedTables] - all parsed tables in the ERD. Required when parsing FK
- * @returns {array} - transformed keys
+ * @param {array} [param.lookupTables] - all parsed tables in the ERD. Required when parsing FK
+ * @returns {array} new array
  */
-function transformKeys({ keys, cols, parsedTables }) {
-    return keys.map(key => {
-        let transformedKey = {
-            ...key,
-            // transform referencing cols
-            cols: transformIndexCols({ cols: key.cols, lookupCols: cols }),
-        }
+function replaceNamesWithIds({ keys, cols, lookupTables }) {
+    return lodash.cloneDeep(keys).map(key => {
+        // transform referencing cols
+        key.cols = replaceColNamesWithIds({ cols: key.cols, lookupCols: cols })
         if (key.ref_tbl_name) {
             let refTbl
             // Find referenced node
-            parsedTables.forEach(tbl => {
+            lookupTables.forEach(tbl => {
                 if (tbl.name === key.ref_tbl_name && tbl.options.schema === key.ref_schema_name)
                     refTbl = tbl
             })
-            // If refTbl is not found, it's not in parsedTables, the fk shouldn't be transformed
+            // If refTbl is not found, it's not in lookupTables, the fk shouldn't be transformed
             if (refTbl) {
-                transformedKey.ref_tbl_id = refTbl.id
+                key.ref_tbl_id = refTbl.id
                 // Remove properties that are no longer needed.
-                delete transformedKey.ref_tbl_name
-                delete transformedKey.ref_schema_name
+                delete key.ref_tbl_name
+                delete key.ref_schema_name
                 // transform ref_cols
-                transformedKey.ref_cols = transformIndexCols({
+                key.ref_cols = replaceColNamesWithIds({
                     cols: key.ref_cols,
                     lookupCols: refTbl.definitions.cols,
                 })
             }
         }
-        return transformedKey
+        return key
     })
 }
 
@@ -463,17 +462,22 @@ function isSingleUQ({ keys, colId }) {
  * that is used by mxs-ddl-editor.
  * @param {object} param
  * @param {object} param.parsedTable - output of TableParser
- * @param {array} param.parsedTables - parsed tables. Use for transforming FKs
+ * @param {array} param.lookupTables - parsed tables. Use for transforming FKs
  * @param {object} param.charsetCollationMap - collations mapped by charset
  * @returns {object}
  */
-function tableParserTransformer({ parsedTable, parsedTables = [], charsetCollationMap }) {
+function tableParserTransformer({ parsedTable, lookupTables = [], charsetCollationMap }) {
     const {
         definitions: { cols, keys },
     } = parsedTable
     const transformedKeys = immutableUpdate(keys, {
         $set: ALL_TABLE_KEY_TYPES.reduce((res, type) => {
-            if (keys[type]) res[type] = transformKeys({ keys: keys[type], cols, parsedTables })
+            if (keys[type])
+                res[type] = replaceNamesWithIds({
+                    keys: keys[type],
+                    cols,
+                    lookupTables,
+                })
             return res
         }, {}),
     })

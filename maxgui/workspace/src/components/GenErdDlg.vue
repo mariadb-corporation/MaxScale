@@ -143,7 +143,7 @@ export default {
                         queryHelper.genErdNode({
                             nodeData: queryHelper.tableParserTransformer({
                                 parsedTable,
-                                parsedTables,
+                                lookupTables: parsedTables,
                                 charsetCollationMap: this.charset_collation_map,
                             }),
                             highlightColor: this.$helpers.dynamicColors(i),
