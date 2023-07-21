@@ -229,6 +229,14 @@ export default {
                 parts.push(builder.build())
             })
 
+            // Drop tables
+            this.nodeDataDiffs.get('removed').forEach((tbl, i) => {
+                if (i === 0) parts.push(this.createSectionCmt('Drop tables'))
+                const schema = quoting(tbl.options.schema)
+                const name = quoting(tbl.options.name)
+                parts.push(`DROP TABLE ${schema}.${name};`)
+            })
+
             // new schemas
             this.newSchemas.forEach((s, i) => {
                 if (i === 0) parts.push(this.createSectionCmt('Create schemas'))

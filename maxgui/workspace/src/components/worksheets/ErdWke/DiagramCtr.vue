@@ -304,22 +304,40 @@ export default {
                             this.$nextTick(() => this.zoomIntoNode(node))
                         break
                     }
-                    case REMOVE: {
-                        // close editor
+                    case REMOVE:
+                    case DROP: {
+                        const { foreignKey } = this.CREATE_TBL_TOKENS
+                        let nodes = this.stagingNodes
+                        if (type === DROP || (type === REMOVE && this.isNewEntity(node.id))) {
+                            nodes = nodes.filter(n => n.id !== node.id)
+                            nodes = nodes.map(n => {
+                                const fks = this.$typy(n, `data.definitions.keys[${foreignKey}]`)
+                                    .safeArray
+                                if (!fks.length) return n
+                                const remainingFks = fks.filter(key => key.ref_tbl_id !== node.id)
+                                return this.$helpers.immutableUpdate(n, {
+                                    data: {
+                                        definitions: {
+                                            keys: remainingFks.length
+                                                ? { $merge: { [foreignKey]: remainingFks } }
+                                                : { $unset: [foreignKey] },
+                                        },
+                                    },
+                                })
+                            }, [])
+                        }
                         ErdTaskTmp.update({
                             where: this.activeTaskId,
                             data: {
                                 active_entity_id: '',
-                                graph_height_pct: 100,
+                                graph_height_pct: 100, // close editor
+                                nodes,
                             },
                         })
                         this.$refs.diagram.removeNode(node)
-                        ErdTask.dispatch('updateNodesHistory', this.stagingNodes)
+                        ErdTask.dispatch('updateNodesHistory', nodes)
                         break
                     }
-                    case DROP:
-                        //TODO: handle drop
-                        break
                 }
             } else
                 this.SET_SNACK_BAR_MESSAGE({
