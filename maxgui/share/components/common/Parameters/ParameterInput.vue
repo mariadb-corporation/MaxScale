@@ -150,9 +150,9 @@
         </template>
     </v-text-field>
 
-    <!-- password string parameter type -->
+    <!-- password parameter type -->
     <v-text-field
-        v-else-if="targetItem.type === 'password string'"
+        v-else-if="targetItem.type === 'password'"
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"

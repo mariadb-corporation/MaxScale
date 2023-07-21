@@ -75,7 +75,7 @@ let sizeParam = {
     value: '8192',
     id: 'writeq_low_water',
 }
-let passwordParam = { type: 'password string', value: '', id: 'replication_password' }
+let passwordParam = { type: 'password', value: '', id: 'replication_password' }
 
 let stringParam = {
     type: 'string',
@@ -423,11 +423,11 @@ describe('ParameterInput.vue', () => {
         await testSuffixSelection(wrapper, sizeParam, 'Ki', '', '8Ki', sizeParam.value)
     })
 
-    it(`password string type: Component renders v-text-field
-      input if type is password string`, async () => {
+    it(`password type: Component renders v-text-field
+      input if type is password`, async () => {
         await renderAccurateInputType(wrapper, passwordParam, 'password-string')
     })
-    it(`password string type: Component renders error message if
+    it(`password type: Component renders error message if
       'mandatory' attribute is true and input value is invalid`, async () => {
         await requiredVTextField(
             wrapper,
@@ -435,7 +435,7 @@ describe('ParameterInput.vue', () => {
             'replication_password is required'
         )
     })
-    it(`password string type: Component allows to toggle masked password`, async () => {
+    it(`password type: Component allows to toggle masked password`, async () => {
         await wrapper.setProps({ item: passwordParam })
         expect(wrapper.vm.$data.isPwdVisible).to.be.equal(false)
         let toggleMaskPwdBtn = wrapper.findAll('.v-input__append-inner > button')
