@@ -155,19 +155,19 @@ Get a single server.
                                 "total": 0.0
                             },
                             {
-                                "count": 0,
+                                "count": 1,
                                 "time": "0.000100",
-                                "total": 0.0
+                                "total": 9.0147000000000003e-5
                             },
                             {
                                 "count": 3,
                                 "time": "0.001000",
-                                "total": 0.0020629009999999998
+                                "total": 0.00131908
                             },
                             {
-                                "count": 1,
+                                "count": 0,
                                 "time": "0.010000",
-                                "total": 0.0012917440000000001
+                                "total": 0.0
                             },
                             {
                                 "count": 0,
@@ -213,9 +213,9 @@ Get a single server.
                 "routed_packets": 4,
                 "total_connections": 1
             },
-            "triggered_at": "Fri, 27 Jan 2023 13:21:31 GMT",
+            "triggered_at": "Fri, 21 Jul 2023 06:46:34 GMT",
             "uptime": 15,
-            "version_string": "10.6.11-MariaDB-1:10.6.11+maria~ubu2004-log"
+            "version_string": "10.6.12-MariaDB-1:10.6.12+maria~ubu2004-log"
         },
         "id": "server1",
         "links": {
@@ -407,19 +407,19 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 0,
+                                    "count": 1,
                                     "time": "0.000100",
-                                    "total": 0.0
+                                    "total": 9.0147000000000003e-5
                                 },
                                 {
                                     "count": 3,
                                     "time": "0.001000",
-                                    "total": 0.0020629009999999998
+                                    "total": 0.00131908
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.010000",
-                                    "total": 0.0012917440000000001
+                                    "total": 0.0
                                 },
                                 {
                                     "count": 0,
@@ -465,9 +465,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 4,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 27 Jan 2023 13:21:31 GMT",
+                "triggered_at": "Fri, 21 Jul 2023 06:46:34 GMT",
                 "uptime": 15,
-                "version_string": "10.6.11-MariaDB-1:10.6.11+maria~ubu2004-log"
+                "version_string": "10.6.12-MariaDB-1:10.6.12+maria~ubu2004-log"
             },
             "id": "server1",
             "links": {
@@ -591,14 +591,14 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 0,
+                                    "count": 1,
                                     "time": "0.001000",
-                                    "total": 0.0
+                                    "total": 0.00037632399999999998
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.010000",
-                                    "total": 0.0018904239999999999
+                                    "total": 0.0
                                 },
                                 {
                                     "count": 0,
@@ -710,9 +710,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 1,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 27 Jan 2023 13:21:41 GMT",
+                "triggered_at": "Fri, 21 Jul 2023 06:46:45 GMT",
                 "uptime": 15,
-                "version_string": "10.6.11-MariaDB-1:10.6.11+maria~ubu2004-log"
+                "version_string": "10.6.12-MariaDB-1:10.6.12+maria~ubu2004-log"
             },
             "id": "server2",
             "links": {
@@ -862,18 +862,11 @@ server.
 
 ### Modifiable Fields
 
-The following standard server parameters can be modified.
-
-- [address](../Getting-Started/Configuration-Guide.md#address)
-- [port](../Getting-Started/Configuration-Guide.md#port)
-- [monitoruser](../Getting-Started/Configuration-Guide.md#monitoruser)
-- [monitorpw](../Getting-Started/Configuration-Guide.md#monitorpw)
-
-Refer to the documentation on these parameters for valid values.
-
-In addition to standard parameters, the _services_ and _monitors_ fields of the
-_relationships_ object can be modified. Removal, addition and modification of
-the links will change which service and monitors use this server.
+In addition to the server
+[parameters](../Getting-Started/Configuration-Guide.md#server-1), the _services_
+and _monitors_ fields of the _relationships_ object can be modified. Removal,
+addition and modification of the links will change which service and monitors
+use this server.
 
 For example, removing the first value in the _services_ list in the
 _relationships_ object from the following JSON document will remove the

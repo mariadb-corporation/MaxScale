@@ -41,8 +41,12 @@ GET /v1/filters/:name
                 "options": "",
                 "separator": ",",
                 "source": null,
+                "source_exclude": null,
+                "source_match": null,
                 "use_canonical_form": false,
-                "user": null
+                "user": null,
+                "user_exclude": null,
+                "user_match": null
             },
             "source": {
                 "file": "/etc/maxscale.cnf",
@@ -139,8 +143,12 @@ GET /v1/filters
                     "options": "",
                     "separator": ",",
                     "source": null,
+                    "source_exclude": null,
+                    "source_match": null,
                     "use_canonical_form": false,
-                    "user": null
+                    "user": null,
+                    "user_exclude": null,
+                    "user_match": null
                 },
                 "source": {
                     "file": "/etc/maxscale.cnf",

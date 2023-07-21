@@ -32,7 +32,7 @@ an external server, the operation may be expensive.
             "client": {
                 "cipher": ""
             },
-            "connected": "Fri, 27 Jan 2023 13:21:40 GMT",
+            "connected": "Fri, 21 Jul 2023 06:46:44 GMT",
             "connections": [
                 {
                     "cipher": "",
@@ -40,10 +40,27 @@ an external server, the operation may be expensive.
                     "server": "server1"
                 }
             ],
-            "idle": 5.2000000000000002,
+            "idle": 5.0999999999999996,
+            "io_activity": 16,
             "log": [],
             "memory": {
-                "connection_buffers": 67371,
+                "connection_buffers": {
+                    "backends": {
+                        "server1": {
+                            "misc": 795,
+                            "readq": 0,
+                            "total": 795,
+                            "writeq": 0
+                        }
+                    },
+                    "client": {
+                        "misc": 1040,
+                        "readq": 65536,
+                        "total": 66576,
+                        "writeq": 0
+                    },
+                    "total": 67371
+                },
                 "exec_metadata": 0,
                 "last_queries": 0,
                 "sescmd_history": 697,
@@ -57,7 +74,7 @@ an external server, the operation may be expensive.
                 "log_notice": false,
                 "log_warning": false
             },
-            "port": 55510,
+            "port": 55892,
             "queries": [],
             "remote": "::ffff:127.0.0.1",
             "state": "Session started",
@@ -110,7 +127,7 @@ Get all sessions.
                 "client": {
                     "cipher": ""
                 },
-                "connected": "Fri, 27 Jan 2023 13:21:40 GMT",
+                "connected": "Fri, 21 Jul 2023 06:46:44 GMT",
                 "connections": [
                     {
                         "cipher": "",
@@ -118,10 +135,27 @@ Get all sessions.
                         "server": "server1"
                     }
                 ],
-                "idle": 5.2000000000000002,
+                "idle": 5.0999999999999996,
+                "io_activity": 16,
                 "log": [],
                 "memory": {
-                    "connection_buffers": 67371,
+                    "connection_buffers": {
+                        "backends": {
+                            "server1": {
+                                "misc": 795,
+                                "readq": 0,
+                                "total": 795,
+                                "writeq": 0
+                            }
+                        },
+                        "client": {
+                            "misc": 1040,
+                            "readq": 65536,
+                            "total": 66576,
+                            "writeq": 0
+                        },
+                        "total": 67371
+                    },
                     "exec_metadata": 0,
                     "last_queries": 0,
                     "sescmd_history": 697,
@@ -135,7 +169,7 @@ Get all sessions.
                     "log_notice": false,
                     "log_warning": false
                 },
-                "port": 55510,
+                "port": 55892,
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",
                 "state": "Session started",
