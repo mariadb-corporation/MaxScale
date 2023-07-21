@@ -7,7 +7,7 @@
                         <label class="field__label mxs-color-helper text-small-text label-required">
                             {{ title }}
                         </label>
-                        <v-text-field
+                        <mxs-debounced-field
                             id="table-name"
                             v-model="tblOpts.name"
                             :rules="requiredRule($mxs_t('name'))"
@@ -128,7 +128,7 @@
                             <label class="field__label mxs-color-helper text-small-text">
                                 {{ $mxs_t('comment') }}
                             </label>
-                            <v-text-field
+                            <mxs-debounced-field
                                 v-model="tblOpts.comment"
                                 class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
                                 single-line

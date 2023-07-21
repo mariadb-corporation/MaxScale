@@ -58,7 +58,7 @@
         :disabled="isDisabled"
         :height="height"
     />
-    <v-text-field
+    <mxs-debounced-field
         v-else
         v-model="inputValue"
         class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"

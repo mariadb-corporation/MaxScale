@@ -1,5 +1,5 @@
 <template>
-    <v-text-field
+    <mxs-debounced-field
         v-if="data.field === FK_EDITOR_ATTRS.NAME"
         v-model="inputValue"
         class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
