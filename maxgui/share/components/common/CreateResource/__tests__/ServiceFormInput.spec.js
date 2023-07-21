@@ -35,7 +35,7 @@ const mockupResourceModules = [
                 {
                     mandatory: true,
                     name: 'password',
-                    type: 'password string',
+                    type: 'password',
                 },
             ],
         },
