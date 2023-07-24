@@ -456,13 +456,14 @@ export default {
             })
         },
         redrawnDiagram() {
+            const nodes = this.nodesHistory[this.activeHistoryIdx]
             ErdTaskTmp.update({
                 where: this.activeTaskId,
                 data: {
                     // close editor
                     active_entity_id: '',
                     graph_height_pct: 100,
-                    nodes: this.nodesHistory[this.activeHistoryIdx],
+                    nodes,
                 },
             })
             // update coord of nodes in ErdTask model as well
@@ -470,16 +471,12 @@ export default {
                 where: this.activeTaskId,
                 data: {
                     nodes: this.assignCoord({
-                        nodeMap: this.$helpers.lodash.keyBy(this.stagingNodes, 'id'),
+                        nodeMap: this.$helpers.lodash.keyBy(nodes, 'id'),
                         nodes: this.initialNodes,
-                        ignoreSize: true,
                     }),
                 },
             })
-            this.$nextTick(() => {
-                this.$refs.diagram.assignData()
-                this.$refs.diagram.runSimulation()
-            })
+            this.$refs.diagram.redraw(nodes)
         },
         navHistory(idx) {
             ErdTask.dispatch('updateActiveHistoryIdx', idx)

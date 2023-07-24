@@ -248,7 +248,7 @@ export default {
         // Render the diagram with a loading progress indicator
         if (this.nodes.length) {
             this.isRendering = true
-            this.assignData()
+            this.assignData(this.nodes)
         }
         this.graphDim = this.dim
     },
@@ -263,11 +263,12 @@ export default {
          * By assigning `nodes` to `graphNodes`,  @node-size-map event will be
          * emitted from `mxs-svg-graph-nodes` component which triggers the drawing
          * of the graph if there is a change in the ID of the nodes.
+         * @param {Array} nodes - erd nodes
          */
-        assignData() {
-            const nodes = this.$helpers.lodash.cloneDeep(this.nodes)
-            this.graphNodes = nodes
-            this.genLinks(nodes)
+        assignData(nodes) {
+            const allNodes = this.$helpers.lodash.cloneDeep(nodes)
+            this.graphNodes = allNodes
+            this.genLinks(allNodes)
         },
         genLinks(nodes) {
             this.graphLinks = nodes.reduce((links, node) => {
@@ -342,6 +343,15 @@ export default {
          */
         async getCanvas() {
             return await html2canvas(this.$el, { logging: false })
+        },
+        /**
+         * @public
+         * @param {Array} nodes - erd nodes
+         */
+        redraw(nodes) {
+            this.assignData(nodes)
+            // setNodeSizeMap will trigger updateNodeSizes method
+            this.$nextTick(() => this.$refs.graphNodes.setNodeSizeMap())
         },
         /**
          * @param {Object} nodeSizeMap - size of nodes

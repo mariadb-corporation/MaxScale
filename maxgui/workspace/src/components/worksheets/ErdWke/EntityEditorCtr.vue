@@ -140,13 +140,14 @@ export default {
                 data => {
                     const { immutableUpdate } = this.$helpers
                     const id = this.activeEntityId
-
                     let nodes = this.stagingNodes
 
                     const idx = nodes.findIndex(n => n.id === id)
                     nodes = immutableUpdate(nodes, { [idx]: { data: { $set: data } } })
 
                     ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes } })
+                    ErdTask.dispatch('updateNodesHistory', nodes)
+                    // Emit the event to redraw the diagram
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
                 },
                 { deep: true }
