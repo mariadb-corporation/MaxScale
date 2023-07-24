@@ -429,10 +429,11 @@ export default {
         handleCreateTable() {
             const length = this.stagingNodes.length
             const { tableParserTransformer, tableParser, genErdNode } = queryHelper
+            const schema = this.$typy(ErdTask.getters('stagingSchemas'), '[0]').safeString || 'test'
             const nodeData = tableParserTransformer({
                 parsedTable: tableParser.parse({
                     ddl: tableTemplate(`table_${length + 1}`),
-                    schema: this.$typy(ErdTask.getters('stagingSchemas'), '[0]').safeString,
+                    schema,
                     autoGenId: true,
                 }),
                 charsetCollationMap: this.charset_collation_map,

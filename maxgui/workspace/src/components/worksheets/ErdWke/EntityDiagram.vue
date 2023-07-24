@@ -331,10 +331,10 @@ export default {
          */
         getGraphExtent() {
             return {
-                minX: d3Min(this.graphNodes, n => n.x - n.size.width / 2),
-                minY: d3Min(this.graphNodes, n => n.y - n.size.height / 2),
-                maxX: d3Max(this.graphNodes, n => n.x + n.size.width / 2),
-                maxY: d3Max(this.graphNodes, n => n.y + n.size.height / 2),
+                minX: d3Min(this.graphNodes, n => n.x - n.size.width / 2) || 0,
+                minY: d3Min(this.graphNodes, n => n.y - n.size.height / 2) || 0,
+                maxX: d3Max(this.graphNodes, n => n.x + n.size.width / 2) || this.graphDim.width,
+                maxY: d3Max(this.graphNodes, n => n.y + n.size.height / 2) || this.graphDim.height,
             }
         },
         /**
