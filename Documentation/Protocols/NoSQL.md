@@ -806,6 +806,15 @@ stored changes, existing account information will automatically
 be converted and no manual intervention, such as re-creation of
 accounts, will be needed.
 
+# Wire Protocol
+
+_Nosqlprotocol_ fully supports wire protocol version 6 and only provides
+rudimentary support for earlier wire protocol versions, but reports at
+startup that it would support versions 0 to 6. The reason is that some
+client libraries are buggy and use an old wire protocol version if the
+server claims to support only version 6. Consequently, one should use a
+client library version that at least supports wire protocol version 6.
+
 # Client Library
 
 As the goal of _nosqlprotocol_ is to implement, to the extent that it
