@@ -13,22 +13,21 @@ then
   # DEB-based distro
   export DEBIAN_FRONTEND=noninteractive
   install_libdir=/usr/lib
-  source /etc/os-release
-  echo "deb http://mirror.netinch.com/pub/mariadb/repo/10.3/ubuntu/ ${UBUNTU_CODENAME} main" > mariadb.list
-  sudo cp mariadb.list /etc/apt/sources.list.d/
-  sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF1656F24C74CD1D8
-  export DEBIAN_FRONTEND=noninteractive
   apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
        -y --force-yes"
   ${apt_cmd} update
+
+  ${apt_cmd} install curl
+  curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | sudo bash
+
   ${apt_cmd} install \
        git wget build-essential libssl-dev \
        mariadb-client mariadb-plugin-gssapi-client \
        php perl \
        coreutils libjansson-dev zlib1g-dev \
        libsqlite3-dev libcurl4-gnutls-dev \
-       mariadb-test cmake libpam0g-dev oathtool krb5-user \
+       mariadb-test python3 python3-pip cmake libpam0g-dev oathtool krb5-user \
        libatomic1 \
        libsasl2-dev libxml2-dev libkrb5-dev
 
