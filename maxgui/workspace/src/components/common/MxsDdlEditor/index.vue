@@ -1,12 +1,12 @@
 <template>
-    <v-form v-model="isFormValid">
+    <v-form ref="form" v-model="isFormValid" lazy-validation>
         <div
             class="d-flex align-center mxs-color-helper border-bottom-table-border"
             :style="{ height: `${toolbarHeight}px` }"
         >
             <revert-btn :disabled="!hasChanged || isCreating" @click="onRevert" />
-            <apply-btn :disabled="!hasValidChanges" @click="onApply" />
-            <slot name="toolbar-append" :isFormValid="isFormValid" />
+            <apply-btn :disabled="!hasChanged" @click="onApply" />
+            <slot name="toolbar-append" :formRef="$refs.form" />
         </div>
         <div ref="header">
             <table-opts
@@ -195,9 +195,6 @@ export default {
         hasChanged() {
             return !this.$helpers.lodash.isEqual(this.initialData, this.stagingData)
         },
-        hasValidChanges() {
-            return this.isFormValid && this.hasChanged
-        },
         allLookupTables() {
             return Object.values({ ...this.lookupTables, ...this.newLookupTables })
         },
@@ -233,7 +230,10 @@ export default {
         this.setHeaderHeight()
     },
     methods: {
-        ...mapMutations({ SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG' }),
+        ...mapMutations({
+            SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG',
+            SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
+        }),
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
@@ -242,27 +242,32 @@ export default {
             this.stagingData = this.$helpers.lodash.cloneDeep(this.initialData)
         },
         onApply() {
-            const { lodash } = this.$helpers
-            const refTargetMap = lodash.keyBy(this.refTargets, 'id')
-            const builder = new TableScriptBuilder({
-                initialData: this.initialData,
-                stagingData: this.stagingData,
-                refTargetMap,
-                tablesColNameMap: this.tablesColNameMap,
-                options: { isCreating: this.isCreating },
-            })
-            this.SET_EXEC_SQL_DLG({
-                ...this.exec_sql_dlg,
-                is_opened: true,
-                sql: builder.build(),
-                on_exec: this.onExecute,
-                on_after_cancel: () =>
-                    this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
-            })
+            if (this.$refs.form.validate()) {
+                const { lodash } = this.$helpers
+                const refTargetMap = lodash.keyBy(this.refTargets, 'id')
+                const builder = new TableScriptBuilder({
+                    initialData: this.initialData,
+                    stagingData: this.stagingData,
+                    refTargetMap,
+                    tablesColNameMap: this.tablesColNameMap,
+                    options: { isCreating: this.isCreating },
+                })
+                this.SET_EXEC_SQL_DLG({
+                    ...this.exec_sql_dlg,
+                    is_opened: true,
+                    sql: builder.build(),
+                    on_exec: this.onExecute,
+                    on_after_cancel: () =>
+                        this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
+                })
+            } else
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: [this.$mxs_t('errors.requiredInputs')],
+                    type: 'error',
+                })
         },
         shortKeyHandler(key) {
-            if (this.hasValidChanges && (key === 'ctrl-enter' || key === 'mac-cmd-enter'))
-                this.onApply()
+            if (this.hasChanged && (key === 'ctrl-enter' || key === 'mac-cmd-enter')) this.onApply()
         },
     },
 }

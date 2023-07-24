@@ -12,13 +12,13 @@
         :onExecute="onExecute"
         v-on="$listeners"
     >
-        <template v-slot:toolbar-append="{ isFormValid }">
+        <template v-slot:toolbar-append="{ formRef }">
             <v-spacer />
             <mxs-tooltip-btn
                 btnClass="toolbar-square-btn"
                 text
                 color="error"
-                @click="close(isFormValid)"
+                @click="close(formRef)"
             >
                 <template v-slot:btn-content>
                     <v-icon size="12" color="error"> $vuetify.icons.mxs_close</v-icon>
@@ -153,8 +153,8 @@ export default {
                 { deep: true }
             )
         },
-        close(isFormValid) {
-            if (isFormValid)
+        close(formRef) {
+            if (formRef.validate())
                 ErdTaskTmp.update({
                     where: this.activeTaskId,
                     data: { graph_height_pct: 100, active_entity_id: '' },
