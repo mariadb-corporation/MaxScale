@@ -31,9 +31,9 @@ cp ${script_dir}/test_vm.json $HOME/${mdbci_config_name}_vms/
 
 if [ "$provider" == "aws" ]
 then
-    test_vm_box=${test_vm_box:-"ubuntu_bionic_gcp"}
+    test_vm_box=${test_vm_box:-"ubuntu_jammy_gcp"}
 else
-    test_vm_box=${test_vm_box:-"ubuntu_bionic_"$provider}
+    test_vm_box=${test_vm_box:-"ubuntu_jammy_"$provider}
 fi
 
 me=`whoami`
