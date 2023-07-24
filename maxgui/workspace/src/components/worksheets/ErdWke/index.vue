@@ -275,6 +275,7 @@ export default {
             this.SET_EXEC_SQL_DLG({
                 ...this.exec_sql_dlg,
                 is_opened: true,
+                editor_height: 450,
                 sql: this.genScript(),
                 on_exec: this.onExecuteScript,
                 on_after_cancel: () =>
@@ -285,11 +286,13 @@ export default {
             await this.exeDdlScript({
                 connId: this.connId,
                 actionName: `Apply script ${this.scriptName} at ${this.scriptGeneratedTime}`,
-                successCb: () =>
+                successCb: () => {
                     ErdTask.update({
                         where: this.activeTaskId,
                         data: { nodes: this.stagingNodes },
-                    }),
+                    })
+                    ErdTask.dispatch('setNodesHistory', [this.stagingNodes])
+                },
             })
         },
         exportScript() {

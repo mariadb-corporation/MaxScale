@@ -281,7 +281,7 @@ export default {
         },
         onRendered(diagram) {
             this.onNodesCoordsUpdate(diagram.nodes)
-            this.fitIntoView()
+            if (diagram.nodes.length) this.fitIntoView()
         },
         handleDblClickNode(node) {
             const { EDIT, ALTER } = this.ENTITY_OPT_TYPES

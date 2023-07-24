@@ -50,6 +50,13 @@ export default {
             }
             Worksheet.update({ where: wkeId, data: { erd_task_id: wkeId, name: erdName } })
         },
+        setNodesHistory({ getters, dispatch }, newHistory) {
+            ErdTaskTmp.update({
+                where: getters.activeRecordId,
+                data: { nodes_history: newHistory },
+            })
+            dispatch('updateActiveHistoryIdx', newHistory.length - 1)
+        },
         updateNodesHistory({ getters, dispatch }, nodes) {
             const currentHistory = getters.nodesHistory
             let newHistory = [nodes]
@@ -59,13 +66,10 @@ export default {
              */
             if (getters.activeHistoryIdx === currentHistory.length - 1)
                 newHistory = [...getters.nodesHistory, nodes]
-            else if (getters.nodesHistory.at(-1)) newHistory = [getters.nodesHistory.at(-1), nodes]
+            else if (currentHistory.at(-1)) newHistory = [currentHistory.at(-1), nodes]
             if (newHistory.length > 10) newHistory = newHistory.slice(1)
-            ErdTaskTmp.update({
-                where: getters.activeRecordId,
-                data: { nodes_history: newHistory },
-            })
-            dispatch('updateActiveHistoryIdx', newHistory.length - 1)
+
+            dispatch('setNodesHistory', newHistory)
         },
         updateActiveHistoryIdx({ getters }, idx) {
             ErdTaskTmp.update({

@@ -249,7 +249,7 @@ export default {
         if (this.nodes.length) {
             this.isRendering = true
             this.assignData(this.nodes)
-        }
+        } else this.emitOnRendered()
         this.graphDim = this.dim
     },
     beforeDestroy() {
@@ -396,12 +396,15 @@ export default {
             this.entityLink = new EntityLink(this.graphConfig)
             this.watchConfig()
         },
+        emitOnRendered() {
+            this.$emit('on-rendered', { nodes: this.graphNodes, links: this.graphLinks })
+        },
         draw() {
             this.setGraphNodeCoordMap()
             this.initLinkInstance()
             this.drawLinks()
             this.isRendering = false
-            this.$emit('on-rendered', { nodes: this.graphNodes, links: this.graphLinks })
+            this.emitOnRendered()
         },
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {

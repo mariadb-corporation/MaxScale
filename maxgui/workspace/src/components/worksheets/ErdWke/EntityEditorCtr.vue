@@ -173,11 +173,13 @@ export default {
                 isCreating: this.isCreating,
                 schema,
                 name,
-                successCb: () =>
+                successCb: () => {
                     ErdTask.update({
                         where: this.activeTaskId,
                         data: { nodes: this.stagingNodes },
-                    }),
+                    })
+                    ErdTask.dispatch('setNodesHistory', [this.stagingNodes])
+                },
             })
         },
     },
