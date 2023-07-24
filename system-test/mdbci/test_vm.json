@@ -1,5 +1,5 @@
 {
-    "ubuntu_bionic": {
+    "ubuntu_jammy": {
         "hostname": "default",
         "box" : "###test_vm_box###",
         "user" : "###test_vm_user###",
