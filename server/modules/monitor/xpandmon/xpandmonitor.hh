@@ -64,6 +64,7 @@ public:
         config::Count                               m_health_check_threshold;
         config::Bool                                m_dynamic_node_detection;
         config::Integer                             m_health_check_port;
+        config::String                              m_region;
         XpandMonitor*                               m_pMonitor;
     };
 

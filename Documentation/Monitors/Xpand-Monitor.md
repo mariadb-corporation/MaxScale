@@ -163,6 +163,18 @@ The default value is `3581`.
 Note that this parameter is _ignored_ unless `dynamic_node_detection`
 is `false`. Note also that the port must be the same for all nodes.
 
+### `region`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: ''
+
+`region` speficies the region of the instance MaxScale is running in.
+Should be specified only if Xpand Multi-Region HA cluster, which is
+available from Xpand 23.08 onwards, is used. With `region` specified,
+MaxScale will only consider nodes from that region.
+
 ## Commands
 
 The Xpand monitor supports the following module commands.

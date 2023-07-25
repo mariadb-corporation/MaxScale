@@ -97,6 +97,13 @@ config::ParamInteger
                       "Port number for Xpand health check.",
                       DEFAULT_HEALTH_CHECK_PORT,
                       0, std::numeric_limits<uint16_t>::max());     // min, max
+
+config::ParamString
+    region(&specification,
+           "region",
+           "The region MaxScale is running in.",
+           "");
+
 }
 
 const int DEFAULT_MYSQL_PORT = 3306;
@@ -235,6 +242,7 @@ XpandMonitor::Config::Config(const std::string& name, XpandMonitor* pMonitor)
     , m_health_check_threshold(this, &xpandmon::health_check_threshold)
     , m_dynamic_node_detection(this, &xpandmon::dynamic_node_detection)
     , m_health_check_port(this, &xpandmon::health_check_port)
+    , m_region(this, &xpandmon::region)
     , m_pMonitor(pMonitor)
 {
 }
