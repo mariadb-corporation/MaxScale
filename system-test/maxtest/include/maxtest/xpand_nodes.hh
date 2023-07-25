@@ -32,6 +32,11 @@ public:
 
     std::string get_srv_cnf_filename(int node) override;
 
+protected:
+    const char* mariadb_executable() const override
+    {
+        return "mysql";
+    }
 private:
     bool check_replication() override;
     bool reset_server(int i) override;
