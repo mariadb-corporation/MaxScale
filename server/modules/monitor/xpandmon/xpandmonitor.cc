@@ -342,9 +342,11 @@ bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
 
 json_t* XpandMonitor::diagnostics() const
 {
-    json_t* obj = json_object();
-    m_config.fill(obj);
-    return obj;
+    // Returning something that might be interesting would require
+    // protecting the data by a mutex. Postponed until there is a
+    // real need for something. The monitor configuration will be
+    // returned by default.
+    return nullptr;
 }
 
 mxs::config::Configuration& XpandMonitor::configuration()
