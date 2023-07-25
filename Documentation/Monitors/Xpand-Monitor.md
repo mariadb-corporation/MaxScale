@@ -96,28 +96,39 @@ These are optional parameters specific to the Xpand Monitor.
 
 ### `cluster_monitor_interval`
 
-Defines, in milliseconds, how often the monitor checks the state of the
-entire cluster. The default value is 60000 (1 minute), which should not
-be lowered as that may have an adverse effect on the Cluster itself.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `60s`
+
+Defines how often the monitor checks the state of the entire cluster. The
+default value is 60 seconds, which should not be lowered as that may have
+an adverse effect on the Cluster itself.
 
 ```
-cluster_monitor_interval=120000ms
+cluster_monitor_interval=120s
 ```
-The interval is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
-is provided, the value is interpreted as milliseconds in MaxScale 2.4. In subsequent
-versions a value without a unit may be rejected.
 
 ### `health_check_threshold`
 
+- **Type**: count
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `2`
+
 Defines how many times the health check may fail before the monitor
-considers a particular node to be down. The default value is 2.
+considers a particular node to be down.
 
 ```
 health_check_threshold=3
 ```
 
 ### `dynamic_node_detection`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `true`
 
 By default, the Xpand monitor will only use the bootstrap nodes
 in order to connect to the Xpand cluster and then find out the
@@ -152,13 +163,17 @@ See also [health_check_port](#health_check_port).
 
 ### `health_check_port`
 
+- **Type**: integer
+- **Mandatory**: no
+- **Dynamic**: no
+- **Default**: `3581`
+
 With this optional parameter it can be specified what health check
 port to use, if `dynamic_node_detection` has been disabled.
 
 ```
 health_check_port=4711
 ```
-The default value is `3581`.
 
 Note that this parameter is _ignored_ unless `dynamic_node_detection`
 is `false`. Note also that the port must be the same for all nodes.
