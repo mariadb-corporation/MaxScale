@@ -101,18 +101,19 @@ export default {
             return Worksheet.getters('activeRequestConfig')
         },
     },
-    async created() {
-        await this.queryDdlEditorSuppData({
-            connId: this.activeErdConnId,
-            config: this.activeRequestConfig,
-        })
-    },
     activated() {
         this.watch_activeEntityId()
+        this.watch_activeErdConnId()
     },
     deactivated() {
         this.$typy(this.unwatch_activeEntityId).safeFunction()
         this.$typy(this.unwatch_stagingData).safeFunction()
+        this.$typy(this.unwatch_activeErdConnId).safeFunction()
+    },
+    beforeDestroy() {
+        this.$typy(this.unwatch_activeEntityId).safeFunction()
+        this.$typy(this.unwatch_stagingData).safeFunction()
+        this.$typy(this.unwatch_activeErdConnId).safeFunction()
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
@@ -151,6 +152,19 @@ export default {
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
                 },
                 { deep: true }
+            )
+        },
+        watch_activeErdConnId() {
+            this.unwatch_activeErdConnId = this.$watch(
+                'activeErdConnId',
+                async v => {
+                    if (v)
+                        await this.queryDdlEditorSuppData({
+                            connId: this.activeErdConnId,
+                            config: this.activeRequestConfig,
+                        })
+                },
+                { immediate: true }
             )
         },
         close(formRef) {
