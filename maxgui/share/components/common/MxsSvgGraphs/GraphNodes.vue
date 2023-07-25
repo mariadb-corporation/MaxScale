@@ -49,6 +49,8 @@
  * node-size-map(obj): size of nodes, keyed by node id
  * dblclick(node)
  * contextmenu(node)
+ * click(node)
+ * click-out-side
  */
 export default {
     name: 'mxs-svg-graph-nodes',
@@ -72,6 +74,9 @@ export default {
         hoverable: { type: Boolean, default: false },
         dblclick: { type: Boolean, default: false },
         contextmenu: { type: Boolean, default: false },
+        click: { type: Boolean, default: false },
+        clickOutside: { type: Boolean, default: false },
+        clickedNodeId: { type: String, default: '' },
     },
     data() {
         return {
@@ -97,6 +102,14 @@ export default {
                 this.$emit('update:coordMap', v)
             },
         },
+        clickedGraphNodeId: {
+            get() {
+                return this.clickedNodeId
+            },
+            set(v) {
+                this.$emit('update:clickedNodeId', v)
+            },
+        },
     },
     watch: {
         nodeIds: {
@@ -118,6 +131,12 @@ export default {
     created() {
         if (this.draggable) this.setDefDraggingStates()
     },
+    mounted() {
+        if (this.clickOutside) document.addEventListener('click', this.onClickOutside)
+    },
+    beforeDestroy() {
+        if (this.clickOutside) document.removeEventListener('click', this.onClickOutside)
+    },
     methods: {
         handleAddEvents(node) {
             let events = {}
@@ -128,13 +147,21 @@ export default {
             }
             if (this.dblclick)
                 events.dblclick = e => {
+                    this.resetClickedNodeId()
                     e.stopPropagation()
                     this.$emit('dblclick', node)
                 }
             if (this.contextmenu)
                 events.contextmenu = e => {
+                    this.resetClickedNodeId()
                     e.preventDefault()
                     this.$emit('contextmenu', node)
+                }
+            if (this.click)
+                events.click = e => {
+                    e.stopPropagation()
+                    this.clickedGraphNodeId = node.id
+                    this.$emit('click', node)
                 }
             return events
         },
@@ -220,6 +247,7 @@ export default {
             this.addDragEvents(node)
         },
         drag({ e, node }) {
+            this.resetClickedNodeId()
             e.preventDefault()
             const { startCoord, draggingNodeId } = this.draggingStates
             if (startCoord && draggingNodeId === node.id) {
@@ -251,6 +279,15 @@ export default {
             this.$emit('drag-end', param)
             this.rmDragEvents()
             this.setDefDraggingStates()
+        },
+        resetClickedNodeId() {
+            this.clickedGraphNodeId = ''
+        },
+        onClickOutside() {
+            if (this.clickedGraphNodeId) {
+                this.$emit('click-out-side')
+                this.resetClickedNodeId()
+            }
         },
     },
 }

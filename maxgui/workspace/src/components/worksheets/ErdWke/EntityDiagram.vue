@@ -22,11 +22,14 @@
                     :defNodeSize="defNodeSize"
                     :nodeStyle="{ userSelect: 'none' }"
                     draggable
-                    hoverable
+                    :hoverable="hoverable"
                     :boardZoom="panAndZoomData.k"
                     autoWidth
                     dblclick
                     contextmenu
+                    click
+                    clickOutside
+                    :clickedNodeId.sync="clickedNodeId"
                     @node-size-map="updateNodeSizes"
                     @drag="onNodeDrag"
                     @drag-end="onNodeDragEnd"
@@ -39,6 +42,7 @@
                             v-if="node.id === activeNodeId"
                             class="active-node-border-div absolute rounded-lg"
                         />
+                        <!-- TODO: node.id === clickedNodeId show reference points -->
                         <table
                             class="entity-table"
                             :style="{ borderColor: node.styles.highlightColor }"
@@ -181,6 +185,7 @@ export default {
             graphConfig: null,
             isDraggingNode: false,
             graphDim: {},
+            clickedNodeId: '',
         }
     },
     computed: {
@@ -241,6 +246,14 @@ export default {
         },
         globalLinkColor() {
             return this.$typy(this.graphConfigData, 'link.color').safeString
+        },
+        hoverable() {
+            return Boolean(!this.clickedNodeId)
+        },
+    },
+    watch: {
+        hoverable(v) {
+            if (!v) this.mouseleaveNode()
         },
     },
     created() {
