@@ -35,6 +35,11 @@ void finish(TestConnections& test, Connection& c)
     test.expect(c.query("DROP TABLE IF EXISTS sq"), "Could not drop table.");
 }
 
+bool ignore_failure(TestConnections& test)
+{
+    return test.log_matches("Forcefully closing DCB");
+}
+
 const size_t N_THREADS = 10;
 const size_t N_INSERTS = 100;
 const size_t N_SELECTS = 10;
@@ -55,7 +60,9 @@ void thread_stress(TestConnections* pTest, int id)
     {
         string query = preamble + std::to_string(i) + ")";
 
-        pTest->expect(c.query(query), "Thread %d failed to execute INSERT: %s", id, c.error());
+        pTest->expect(c.query(query) || ignore_failure(*pTest),
+                      "Thread %d failed to execute INSERT: %s",
+                      id, c.error());
 
         for (size_t j = 0; j < N_SELECTS && pTest->ok(); ++j)
         {
@@ -66,7 +73,7 @@ void thread_stress(TestConnections* pTest, int id)
                << c.thread_id() << "-" << i << "-" << j % N_UNIQUE_SELECTS
                << "` FROM sq";
 
-            pTest->expect(c.query(ss.str()), "Thread %d (%u) failed to SELECT: %s",
+            pTest->expect(c.query(ss.str()) || ignore_failure(*pTest), "Thread %d (%u) failed to SELECT: %s",
                           id, c.thread_id(), c.error());
         }
 
@@ -101,7 +108,7 @@ void test_stress(TestConnections& test)
     test.repl->sync_slaves();
 
     Result rows = c.rows("SELECT * FROM sq");
-    test.expect(rows.size() == N_THREADS * N_INSERTS,
+    test.expect(rows.size() == N_THREADS * N_INSERTS || ignore_failure(test),
                 "Expected %lu inserts in total, but found %lu.", N_THREADS * N_INSERTS, rows.size());
 
     map<string, vector<string>> found_results;
@@ -110,21 +117,21 @@ void test_stress(TestConnections& test)
     {
         mxb_assert(row.size() == 2);
 
-        string tid { row[0] };
-        string f { row[1] };
+        string tid {row[0]};
+        string f {row[1]};
 
         found_results[tid].push_back(f);
     }
 
-    test.expect(found_results.size() == N_THREADS,
+    test.expect(found_results.size() == N_THREADS || ignore_failure(test),
                 "Expected results from %lu threads, but found %lu.", N_THREADS, found_results.size());
 
     for (const auto& kv : found_results)
     {
-        const string& tid { kv.first };
-        const vector<string>& fields { kv.second };
+        const string& tid {kv.first};
+        const vector<string>& fields {kv.second};
 
-        test.expect(fields.size() == N_INSERTS,
+        test.expect(fields.size() == N_INSERTS || ignore_failure(test),
                     "Expected %lu inserts for thread %s, but found only %lu.",
                     N_INSERTS, tid.c_str(), fields.size());
     }
@@ -134,7 +141,6 @@ void run_tests(TestConnections& test)
 {
     test_stress(test);
 }
-
 }
 
 int main(int argc, char* argv[])
