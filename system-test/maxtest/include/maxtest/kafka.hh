@@ -123,16 +123,6 @@ wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-
 
         m_test.reset_timeout();
 
-        // TODO: Install java with mdbci, this is a dumb workaround that will fail at some point.
-        if (m_test.maxscale->ssh_node_f(false, "sudo yum -y install java-latest-openjdk;") != 0
-            && m_test.maxscale->ssh_node_f(false, "sudo yum -y install java-11-openjdk;") != 0)
-        {
-            m_test.add_failure("Failed to install java-latest-openjdk");
-            return false;
-        }
-
-        m_test.reset_timeout();
-
         // The link can be updated by getting the closest mirror link from the Kafka download page and
         // changing `file` to `filename` and adding `action=download` (these are options to closer.cgi).
         std::string command =
