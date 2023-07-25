@@ -48,6 +48,15 @@
         cursor: text !important;
     }
 }
+.cursor-crosshair {
+    cursor: crosshair !important;
+}
+.cursor--all-crosshair {
+    @extend .cursor-crosshair;
+    * {
+        @extend .cursor-crosshair;
+    }
+}
 
 .hide {
     display: none !important;

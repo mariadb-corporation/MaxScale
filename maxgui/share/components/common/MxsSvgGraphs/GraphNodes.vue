@@ -127,12 +127,16 @@ export default {
                 this.$emit('node-size-map', v)
             },
         },
+        clickOutside: {
+            immediate: true,
+            handler(v) {
+                if (v) document.addEventListener('click', this.onClickOutside)
+                else document.removeEventListener('click', this.onClickOutside)
+            },
+        },
     },
     created() {
         if (this.draggable) this.setDefDraggingStates()
-    },
-    mounted() {
-        if (this.clickOutside) document.addEventListener('click', this.onClickOutside)
     },
     beforeDestroy() {
         if (this.clickOutside) document.removeEventListener('click', this.onClickOutside)
@@ -147,6 +151,9 @@ export default {
             }
             if (this.dblclick)
                 events.dblclick = e => {
+                    this.isDblclick = true
+                    clearTimeout(this.dblclickTimeout)
+                    this.dblclickTimeout = setTimeout(() => (this.isDblclick = false), 200)
                     this.resetClickedNodeId()
                     e.stopPropagation()
                     this.$emit('dblclick', node)
@@ -159,9 +166,14 @@ export default {
                 }
             if (this.click)
                 events.click = e => {
-                    e.stopPropagation()
-                    this.clickedGraphNodeId = node.id
-                    this.$emit('click', node)
+                    clearTimeout(this.clickTimeout)
+                    this.clickTimeout = setTimeout(() => {
+                        if (!this.isDblclick) {
+                            e.stopPropagation()
+                            this.clickedGraphNodeId = node.id
+                            this.$emit('click', node)
+                        }
+                    }, 200)
                 }
             return events
         },

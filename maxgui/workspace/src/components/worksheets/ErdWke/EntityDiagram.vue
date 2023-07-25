@@ -28,7 +28,7 @@
                     dblclick
                     contextmenu
                     click
-                    clickOutside
+                    :clickOutside="clickOutside"
                     :clickedNodeId.sync="clickedNodeId"
                     @node-size-map="updateNodeSizes"
                     @drag="onNodeDrag"
@@ -42,7 +42,15 @@
                             v-if="node.id === activeNodeId"
                             class="active-node-border-div absolute rounded-lg"
                         />
-                        <!-- TODO: node.id === clickedNodeId show reference points -->
+                        <ref-points
+                            v-if="node.id === clickedNodeId"
+                            :node="node"
+                            :lookupNodes="nodes"
+                            :entitySizeConfig="entitySizeConfig"
+                            :getColId="getColId"
+                            @drawing="clickOutside = false"
+                            @draw-end="$helpers.doubleRAF(() => (clickOutside = true))"
+                        />
                         <table
                             class="entity-table"
                             :style="{ borderColor: node.styles.highlightColor }"
@@ -152,6 +160,7 @@ import { min as d3Min, max as d3Max } from 'd3-array'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@wsSrc/components/worksheets/ErdWke/EntityLink'
 import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
+import RefPoints from '@wsSrc/components/worksheets/ErdWke/RefPoints'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { getConfig, LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -161,6 +170,7 @@ export default {
     name: 'entity-diagram',
     components: {
         'erd-key-icon': ErdKeyIcon,
+        RefPoints,
     },
     props: {
         dim: { type: Object, required: true },
@@ -186,6 +196,7 @@ export default {
             isDraggingNode: false,
             graphDim: {},
             clickedNodeId: '',
+            clickOutside: true,
         }
     },
     computed: {
