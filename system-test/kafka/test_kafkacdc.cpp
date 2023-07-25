@@ -18,10 +18,6 @@ int main(int argc, char** argv)
 
     test.repl->stop_slaves();
     auto conn = test.repl->get_connection(0);
-    test.maxscale->start();
-
-    // Connect to Kafka
-    Consumer consumer(test, "kafkacdc");
 
     test.tprintf("Inserting data");
     conn.connect();
@@ -30,10 +26,13 @@ int main(int argc, char** argv)
     conn.query("INSERT INTO t1 VALUES (1), (2), (3)");
     conn.query("UPDATE t1 SET id = 4 WHERE id = 2");
     conn.query("DELETE FROM t1 WHERE id = 3");
-    auto gtid = conn.field("SELECT @@gtid_binlog_pos");
 
     test.tprintf("Give MaxScale some time to process the events");
+    test.maxscale->start();
     sleep(5);
+
+    // Connect to Kafka
+    Consumer consumer(test, "kafkacdc");
 
     read_messages(test, consumer, 7);
 
