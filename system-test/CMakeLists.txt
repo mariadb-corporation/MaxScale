@@ -791,7 +791,8 @@ add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs205
 add_test_executable(mxs314.cpp mxs314 replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Basic mirror router test
-add_test_executable(test_mirror.cpp test_mirror test_mirror LABELS mirror LIGHT REPL_BACKEND)
+# Disabled in 2.5, it's in the experimental package there. Uncomment when merging upwards.
+# add_test_executable(test_mirror.cpp test_mirror test_mirror LABELS mirror LIGHT REPL_BACKEND)
 
 # Test connection_keepalive
 add_test_executable(connection_keepalive.cpp connection_keepalive connection_keepalive LABELS readwritesplit REPL_BACKEND)
