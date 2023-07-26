@@ -173,7 +173,7 @@ cfg::ParamBool s_auth_all_servers(
     &s_spec, "auth_all_servers", "Retrieve users from all backend servers instead of only one",
     false, cfg::Param::AT_RUNTIME);
 
-cfg::ParamBool s_strip_db_esc(
+cfg::ParamDeprecated<cfg::ParamBool> s_strip_db_esc(
     &s_spec, "strip_db_esc", "Strip escape characters from database names",
     true, cfg::Param::AT_RUNTIME);
 

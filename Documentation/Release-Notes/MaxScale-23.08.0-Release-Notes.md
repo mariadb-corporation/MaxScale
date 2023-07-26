@@ -28,8 +28,12 @@ name is now an alias to the new name. The use of the old name is deprecated.
 
 ## Deprecated Features
 
-   * The configuration parameters `query_classifier` and `query_classifier_args`
-     have been deprecated and are ignored.
+* The configuration parameters `query_classifier` and `query_classifier_args`
+  have been deprecated and are ignored.
+
+* The `strip_db_esc` parameter is deprecated and will be removed in a future
+  release. The default behavior of stripping escape characters is in all known
+  cases the correct thing to do and as such this parameter is never required.
 
 ## New Features
 

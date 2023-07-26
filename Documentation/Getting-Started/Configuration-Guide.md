@@ -1964,6 +1964,9 @@ loaded from all the servers and combined into one big data set.
 - **Default**: true
 - **Dynamic**: Yes
 
+**Note:** This parameter has been deprecated in MaxScale 23.08. The stripping of
+  escape characters is in all known cases the correct thing to do.
+
 This setting controls whether escape characters (`\`) are removed from database
 names when loading user grants from a backend server.  When enabled, a grant
 such as ``grant select on `test\_`.* to 'user'@'%';`` is read as ``grant select

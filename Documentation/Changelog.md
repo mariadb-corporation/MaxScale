@@ -57,6 +57,11 @@
   has been deprecated. If used, a warning will be logged that the parameter is
   deprecated.
 
+* The `strip_db_esc` parameter has been deprecated. The default behavior of
+  stripping the escape characters is in all known cases the correct thing to
+  do. Only broken legacy versions where the grants would be returned without
+  backslash escaping would require this parameter to work.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
