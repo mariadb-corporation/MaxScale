@@ -117,7 +117,7 @@ export default class EntityLinkShape {
             halfSrcWidth,
             halfTargetWidth,
         } = this
-        const { RIGHT, LEFT, INTERSECT } = TARGET_POS
+        const { RIGHT, LEFT, INTERSECT_RIGHT } = TARGET_POS
         const { type } = this.config
 
         let offset = 0
@@ -144,7 +144,7 @@ export default class EntityLinkShape {
                 x1 = targetX + halfTargetWidth + offset
                 break
             }
-            case INTERSECT: {
+            case INTERSECT_RIGHT: {
                 // move x0 & x1 to the right edge of the nodes
                 x0 = srcX + halfSrcWidth + offset
                 x1 = targetX + halfTargetWidth + offset

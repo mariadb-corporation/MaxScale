@@ -28,7 +28,7 @@ export default class EntityMarker {
             },
         } = d
         const { type } = this.linkShape
-        const { LEFT, RIGHT, INTERSECT } = TARGET_POS
+        const { LEFT, RIGHT, INTERSECT_RIGHT } = TARGET_POS
         const { width } = this.config
 
         let x = isSrc ? x0 : x1,
@@ -47,7 +47,7 @@ export default class EntityMarker {
                 offset = isSrc ? offsetDest : offsetSrc
                 z = isSrc ? 0 : 180
                 break
-            case INTERSECT:
+            case INTERSECT_RIGHT:
                 offset = offsetSrc
                 z = 180
                 break

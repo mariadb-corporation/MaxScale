@@ -50,7 +50,7 @@ export function getLinkStyles({ link, styleNamePath, linkConfig }) {
 function getOrthoValues({ data: { x0, y0, x1, y1 }, type, targetPos, offset = 0 }) {
     let midPointX, dx1, dx4, dx2, dx3
     const isEntityRelationShape = type === LINK_SHAPES.ENTITY_RELATION
-    const { RIGHT, LEFT, INTERSECT } = TARGET_POS
+    const { RIGHT, LEFT, INTERSECT_RIGHT, INTERSECT_LEFT } = TARGET_POS
     switch (targetPos) {
         case RIGHT: {
             midPointX = (x1 - x0) / 2
@@ -74,7 +74,7 @@ function getOrthoValues({ data: { x0, y0, x1, y1 }, type, targetPos, offset = 0 
             }
             break
         }
-        case INTERSECT: {
+        case INTERSECT_RIGHT: {
             dx1 = x1 + offset
             dx4 = dx1
             if (dx1 - offset <= x0) {
@@ -85,6 +85,15 @@ function getOrthoValues({ data: { x0, y0, x1, y1 }, type, targetPos, offset = 0 
                 }
             }
             if (dx4 <= dx1) dx4 = dx1
+            break
+        }
+        case INTERSECT_LEFT: {
+            midPointX = (x0 - x1) / 2
+            if (midPointX <= offset || isEntityRelationShape) midPointX = offset
+            dx1 = x0 - midPointX
+            dx2 = dx1
+            dx3 = dx1
+            dx4 = dx1
             break
         }
     }

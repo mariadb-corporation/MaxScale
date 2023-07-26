@@ -11,7 +11,7 @@
             :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
             :dim="dim"
             :graphDim="graphDim"
-            @get-graph-ctr="svgGroup = $event"
+            @get-graph-ctr="linkContainer = $event"
         >
             <template v-slot:append="{ data: { style } }">
                 <mxs-svg-graph-nodes
@@ -48,6 +48,9 @@
                             :lookupNodes="nodes"
                             :entitySizeConfig="entitySizeConfig"
                             :getColId="getColId"
+                            :linkContainer="linkContainer"
+                            :boardZoom="panAndZoomData.k"
+                            :graphConfig="graphConfig"
                             @drawing="clickOutside = false"
                             @draw-end="$helpers.doubleRAF(() => (clickOutside = true))"
                         />
@@ -186,7 +189,7 @@ export default {
     data() {
         return {
             isRendering: false,
-            svgGroup: null,
+            linkContainer: null,
             graphNodeCoordMap: {},
             graphNodes: [],
             graphLinks: [],
@@ -444,7 +447,7 @@ export default {
         },
         drawLinks() {
             this.entityLink.draw({
-                containerEle: this.svgGroup,
+                containerEle: this.linkContainer,
                 data: this.getLinks().filter(link => !link.hidden),
             })
         },

@@ -5,7 +5,7 @@
         :style="revertGraphStyle"
         :dim="dim"
         :graphDim="dagDim"
-        @get-graph-ctr="svgGroup = $event"
+        @get-graph-ctr="linkContainer = $event"
     >
         <template v-slot:append="{ data: { style } }">
             <mxs-svg-graph-nodes
@@ -64,7 +64,7 @@ export default {
     },
     data() {
         return {
-            svgGroup: null,
+            linkContainer: null,
             dagDim: { width: 0, height: 0 },
             graphNodes: [],
             graphNodeCoordMap: {},
@@ -352,7 +352,7 @@ export default {
         },
         drawLinks() {
             this.linkInstance.drawLinks({
-                containerEle: this.svgGroup,
+                containerEle: this.linkContainer,
                 data: this.dagLinks,
                 nodeIdPath: 'data.id',
                 pathGenerator: this.pathGenerator,

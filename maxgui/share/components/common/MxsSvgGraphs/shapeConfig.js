@@ -18,5 +18,6 @@ export const LINK_SHAPES = {
 export const TARGET_POS = {
     RIGHT: 'right',
     LEFT: 'left',
-    INTERSECT: 'intersect',
+    INTERSECT_RIGHT: 'intersect_right',
+    INTERSECT_LEFT: 'intersect_left',
 }

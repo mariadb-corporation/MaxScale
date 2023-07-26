@@ -55,7 +55,7 @@ export default class EntityLink extends Link {
 
         if (isTargetRight) value = TARGET_POS.RIGHT
         else if (isTargetLeft) value = TARGET_POS.LEFT
-        else value = TARGET_POS.INTERSECT
+        else value = TARGET_POS.INTERSECT_RIGHT
         this.mutateLinkData({ link, key: 'targetPos', value })
     }
 

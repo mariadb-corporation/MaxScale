@@ -6,15 +6,16 @@
             :key="i"
             class="ref-point cursor-crosshair absolute"
             :style="{
-                width: '10px',
-                height: '10px',
+                width: `${pointRadius * 2}px`,
+                height: `${pointRadius * 2}px`,
                 borderRadius: '50%',
                 backgroundColor: node.styles.highlightColor,
-                ...point.style,
+                top: `${point.pos.y}px`,
+                left: `${point.pos.x}px`,
+                zIndex: 5,
             }"
-            @mousedown.stop="dragStart({ e: $event, col: point.col })"
+            @mousedown.stop="dragStart({ e: $event, point })"
         />
-        <!-- TODO: Add an svg here to drag FK line-->
     </div>
 </template>
 
@@ -31,6 +32,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { createShape } from '@share/components/common/MxsSvgGraphs/utils'
+import { TARGET_POS } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 
 export default {
     name: 'ref-points',
@@ -39,42 +42,58 @@ export default {
         entitySizeConfig: { type: Object, required: true },
         getColId: { type: Function, required: true },
         lookupNodes: { type: Array, required: true },
+        linkContainer: { type: Object, required: true },
+        boardZoom: { type: Number, required: true },
+        graphConfig: { type: Object, required: true },
     },
     data() {
         return {
             defDraggingStates: {
-                isDragging: false,
                 srcAttrId: '',
                 targetAttrId: '',
-                startCoord: null,
-                endCoord: null,
+                startClientPoint: null,
+                startPoint: null,
+                pointDirection: '',
             },
             draggingStates: null,
+            path: null,
         }
     },
     computed: {
+        shapeType() {
+            return this.graphConfig.linkShape.type
+        },
+        markerWidth() {
+            return this.graphConfig.marker.width
+        },
+        pointRadius() {
+            return 5
+        },
         cols() {
             return this.node.data.definitions.cols
         },
         points() {
-            return [...this.getPoints('l'), ...this.getPoints('r')]
+            return [...this.getPoints(TARGET_POS.LEFT), ...this.getPoints(TARGET_POS.RIGHT)]
         },
     },
     created() {
         this.setDefDraggingStates()
     },
     methods: {
-        getTop(i) {
+        /**
+         * @param {string} pointDirection - either TARGET_POS.RIGHT or TARGET_POS.LEFT
+         */
+        getPoints(pointDirection) {
             const { headerHeight, rowHeight: k } = this.entitySizeConfig
-            return `${headerHeight + (k * i + k) - k / 2 - 5}px`
-        },
-        getPoints(direction) {
             return this.node.data.definitions.cols.map((c, i) => ({
-                style: {
-                    left: `${(direction === 'r' ? this.node.size.width : 0) - 5}px`,
-                    top: this.getTop(i),
+                pos: {
+                    x:
+                        (pointDirection === TARGET_POS.RIGHT ? this.node.size.width : 0) -
+                        this.pointRadius,
+                    y: headerHeight + (k * i + k) - k / 2 - this.pointRadius,
                 },
                 col: c,
+                pointDirection,
             }))
         },
         setDefDraggingStates() {
@@ -88,30 +107,74 @@ export default {
             document.removeEventListener('mousemove', this.drawing)
             document.removeEventListener('mouseup', this.drawEnd)
         },
-        dragStart({ e, col }) {
-            document.body.classList.add('cursor--all-crosshair')
+        pathGenerator(data) {
+            let targetPos = this.draggingStates.pointDirection
+            if (targetPos === TARGET_POS.RIGHT && data.x1 < this.node.x)
+                targetPos = TARGET_POS.INTERSECT_RIGHT
+            else if (targetPos === TARGET_POS.LEFT && data.x1 > this.node.x)
+                targetPos = TARGET_POS.INTERSECT_LEFT
+
+            return createShape({
+                type: this.shapeType,
+                offset: this.markerWidth,
+                data,
+                targetPos,
+            })
+        },
+        dragStart({ e, point }) {
+            const { col, pos, pointDirection } = point
+            const { width, height } = this.node.size
+            const offset = width / 2
+
+            const x0 = this.node.x + (pointDirection === TARGET_POS.LEFT ? -offset : offset)
+            const y0 = this.node.y - height / 2 + pos.y + this.pointRadius
+
+            const startPoint = { x0, y0 }
+
             this.draggingStates = {
-                ...this.draggingStates,
                 srcAttrId: this.getColId(col),
-                startCoord: { x: e.clientX, y: e.clientY },
-                endCoord: { x: e.clientX, y: e.clientY },
+                startClientPoint: { x: e.clientX, y: e.clientY },
+                startPoint,
+                pointDirection,
             }
+
+            this.path = this.linkContainer
+                .append('path')
+                .attr('class', 'staging-link')
+                .attr('fill', 'none')
+                .attr('stroke-width', '1')
+                .attr('stroke', '#0e9bc0')
+                .attr('stroke-dasharray', '5')
+                .attr('d', this.pathGenerator({ ...startPoint, x1: x0, y1: y0 }))
             this.addDragEvents()
         },
+        updatePath(diffPos) {
+            const { startPoint } = this.draggingStates
+            this.path.attr(
+                'd',
+                this.pathGenerator({
+                    x0: startPoint.x0,
+                    y0: startPoint.y0,
+                    x1: startPoint.x0 + diffPos.x,
+                    y1: startPoint.y0 + diffPos.y,
+                })
+            )
+        },
         drawing(e) {
-            e.preventDefault()
+            document.body.classList.add('cursor--all-crosshair')
             e.stopPropagation()
-            // update startCoord
-            this.draggingStates = {
-                ...this.draggingStates,
-                isDragging: true,
-                endCoord: { x: e.clientX, y: e.clientY },
+            const { startClientPoint } = this.draggingStates
+            const diffPos = {
+                x: (e.clientX - startClientPoint.x) / this.boardZoom,
+                y: (e.clientY - startClientPoint.y) / this.boardZoom,
             }
+            this.updatePath(diffPos)
             this.$emit('drawing', { e, draggingStates: this.draggingStates })
         },
         drawEnd(e) {
             document.body.classList.remove('cursor--all-crosshair')
-            //TODO: get targetAttrId in lookupNodes
+            this.path.remove() // remove the staging link
+            //TODO: get targetAttrId in lookupNodes and assign to draggingStates
             this.$emit('draw-end', { e, draggingStates: this.draggingStates })
             this.rmDragEvents()
             this.setDefDraggingStates()
