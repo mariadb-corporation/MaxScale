@@ -17,6 +17,11 @@ the SQL was logged verbatim, which would cause the log to contain extra newlines
 in case the SQL did. From 23.08 forward, newlines are replaced with the text `\n`,
 so that a logged line will not contain any extra newlines.
 
+### `connection_timeout` renamed to `wait_timeout`
+
+The `connection_timeout` parameter was renamed to `wait_timeout` and the old
+name is now an alias to the new name. The use of the old name is deprecated.
+
 ## Dropped Features
 
 ###

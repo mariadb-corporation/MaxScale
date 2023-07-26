@@ -154,12 +154,16 @@ cfg::ParamCount s_max_connections(
     &s_spec, "max_connections", "Maximum number of connections",
     0, cfg::Param::AT_RUNTIME);
 
-cfg::ParamSeconds s_connection_timeout(
-    &s_spec, "connection_timeout", "Connection idle timeout",
+cfg::ParamSeconds s_wait_timeout(
+    &s_spec, "wait_timeout", "Connection idle timeout",
     std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
 
+// Alias connection_timeout -> wait_timeout
+cfg::ParamDeprecated<cfg::ParamAlias> s_connection_timeout(
+    &s_spec, "connection_timeout", &s_wait_timeout);
+
 cfg::server::DurationDependency<std::chrono::seconds> s_dep_connection_timeout(
-    "wait_timeout", &s_connection_timeout, cfg::server::Dependency::MIN);
+    "wait_timeout", &s_wait_timeout, cfg::server::Dependency::MIN);
 
 cfg::ParamSeconds s_net_write_timeout(
     &s_spec, "net_write_timeout", "Network write timeout",
@@ -569,7 +573,7 @@ Service::Config::Config(SERVICE* service)
     add_native(&Config::m_v, &Values::password, &s_password);
     add_native(&Config::m_v, &Values::enable_root, &s_enable_root_user);
     add_native(&Config::m_v, &Values::max_connections, &s_max_connections);
-    add_native(&Config::m_v, &Values::conn_idle_timeout, &s_connection_timeout);
+    add_native(&Config::m_v, &Values::conn_idle_timeout, &s_wait_timeout);
     add_native(&Config::m_v, &Values::net_write_timeout, &s_net_write_timeout);
     add_native(&Config::m_v, &Values::users_from_all, &s_auth_all_servers);
     add_native(&Config::m_v, &Values::strip_db_esc, &s_strip_db_esc);

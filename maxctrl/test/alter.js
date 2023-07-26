@@ -128,11 +128,11 @@ describe("Alter Commands", function () {
 
   it("alters service with multiple parameters", function () {
     return verifyCommand(
-      "alter service Read-Connection-Router user testuser connection_timeout 123s",
+      "alter service Read-Connection-Router user testuser wait_timeout 123s",
       "services/Read-Connection-Router"
     ).then(function (res) {
       res.data.attributes.parameters.user.should.equal("testuser");
-      res.data.attributes.parameters.connection_timeout.should.equal("123000ms");
+      res.data.attributes.parameters.wait_timeout.should.equal("123000ms");
     });
   });
 
@@ -146,11 +146,11 @@ describe("Alter Commands", function () {
 
   it("alters service with multiple key=value parameters", async function () {
     var res = await verifyCommand(
-      "alter service Read-Connection-Router user=testuser3 connection_timeout=321s",
+      "alter service Read-Connection-Router user=testuser3 wait_timeout=321s",
       "services/Read-Connection-Router"
     );
     res.data.attributes.parameters.user.should.equal("testuser3");
-    res.data.attributes.parameters.connection_timeout.should.equal("321000ms");
+    res.data.attributes.parameters.wait_timeout.should.equal("321000ms");
   });
 
   it("alter service filters", function () {

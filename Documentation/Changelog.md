@@ -51,6 +51,12 @@
   [parameter](Getting-Started/Configuration-Guide.md#connection_metadata)
   documentation.
 
+* The `connection_timeout` parameter was renamed to `wait_timeout` to make the
+  naming of the parameters the same in MaxScale and MariaDB server. The old
+  `connection_timeout` parameter is now an alias to `wait_timeout` and its use
+  has been deprecated. If used, a warning will be logged that the parameter is
+  deprecated.
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the

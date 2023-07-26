@@ -440,7 +440,7 @@ The current auto tunable parameters are:
 |MaxScale Parameter|Server Variable Dependency|
 |------------------|--------------------------|
 |[connection_keepalive](#connection_keepalive)|80% of the smallest [`wait_timeout`](https://mariadb.com/docs/reference/mdb/system-variables/wait_timeout/) value of the servers used by the service|
-|[connection_timeout](#connection_timeout)|The smallest [`wait_timeout`](https://mariadb.com/docs/reference/mdb/system-variables/wait_timeout/) value of the servers used by the service|
+|[wait_timeout](#wait_timeout)|The smallest [`wait_timeout`](https://mariadb.com/docs/reference/mdb/system-variables/wait_timeout/) value of the servers used by the service|
 
 The values of the server variables are collected by monitors, which means that
 if the servers of a service are not monitored by a monitor, then the parameters
@@ -2034,7 +2034,7 @@ level configuration disables them.
 Debug messages are only enabled for debug builds. Enabling `log_debug` in a
 release build does nothing.
 
-### `connection_timeout`
+### `wait_timeout`
 
 - **Type**: [duration](#durations)
 - **Default**: 0s
@@ -2042,46 +2042,41 @@ release build does nothing.
 - **Dynamic**: Yes
 - **Auto tune**: [Yes](#auto_tune)
 
-The connection_timeout parameter is used to disconnect sessions to MariaDB
+The wait_timeout parameter is used to disconnect sessions to MariaDB
 MaxScale that have been idle for too long. The session timeouts are disabled by
 default. To enable them, define the timeout in seconds in the service's
 configuration section. A value of zero is interpreted as no timeout, the same
 as if the parameter is not defined.
 
-The value is specified as documented [here](#durations). If no explicit unit
-is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
-versions a value without a unit may be rejected. Note that since the granularity
-of the timeout is seconds, a timeout specified in milliseconds will be rejected,
-even if the duration is longer than a second.
+This parameter used to be called `connection_timeout` and this name is still
+accepted as an alias for `wait_timeout`. The old name has been deprecated in
+MaxScale 23.08.
+
+Note that since the granularity of the timeout is seconds, a timeout specified
+in milliseconds will be rejected, even if the duration is longer than a second.
 
 This parameter only takes effect in top-level services. A top-level service is
 the service where the listener that the client connected to points (i.e. the
 value of `service` in the listener). If a service defines other services in its
-`targets` parameter, the `connection_timeout` for those is not used.
+`targets` parameter, the `wait_timeout` for those is not used.
 
-The value of `connection_timeout` should be lower than the lowest `wait_timeout`
-value on the backend servers. This way idle clients are disconnected by MaxScale
-before the backend servers have to close them. Any client-side idle timeouts
-(e.g. maximum lifetime for connection pools) should be lower than both
-`connection_timeout` and `wait_timeout`. This way the client application will
-end up closing the connection itself which most of the time results in better
-and more helpful error messages.
+The value of `wait_timeout` in MaxScale should be lower than the lowest
+`wait_timeout` value on the backend servers. This way idle clients are
+disconnected by MaxScale before the backend servers have to close them. Any
+client-side idle timeouts (e.g. maximum lifetime for connection pools) should be
+lower than `wait_timeout` in both MaxScale and MariaDB. This way the client
+application will end up closing the connection itself which most of the time
+results in better and more helpful error messages.
 
 **Warning:** If a connection is idle for longer than the configured connection
 timeout, it will be forcefully disconnected and a warning will be logged in the
 MaxScale log file.
 
-In MaxScale versions 6.2.0 and older, if long-running operations (e.g. `ALTER
-TABLE`) were performed, MaxScale would close the connections if they look longer
-than `connection_timeout` seconds to execute
-([MXS-3893](https://jira.mariadb.org/browse/MXS-3893)). In MaxScale 6.2.1 this
-has been fixed and the active operations are now correctly tracked.
-
 Example:
 
 ```
 [Test-Service]
-connection_timeout=300s
+wait_timeout=300s
 ```
 
 ### `max_connections`
