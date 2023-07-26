@@ -24,7 +24,7 @@ using NetworkConfig = std::map<std::string, std::string>;
 class VMNode
 {
 public:
-    VMNode(SharedData& shared, const std::string& name);
+    VMNode(SharedData& shared, const std::string& name, const std::string& mariadb_executable);
     ~VMNode();
     VMNode(const VMNode&) = delete;
 
@@ -137,6 +137,7 @@ private:
     std::string m_homedir;  /**< Home directory of username */
     std::string m_sudo;     /**< empty or "sudo " */
     std::string m_sshkey;   /**< Path to ssh key */
+    std::string m_mariadb_executable;
 
     enum class NodeType
     {
@@ -212,6 +213,11 @@ protected:
 
     void clear_vms();
     bool add_node(const mxt::NetworkConfig& nwconfig, const std::string& name);
+
+    virtual const char* mariadb_executable() const
+    {
+        return "mariadb";
+    }
 
 private:
     std::vector<std::unique_ptr<mxt::VMNode>> m_vms;
