@@ -61,7 +61,7 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
     m_vmnode = nullptr;
     bool rval = false;
 
-    auto new_node = std::make_unique<mxt::VMNode>(m_shared, vm_name);
+    auto new_node = std::make_unique<mxt::VMNode>(m_shared, vm_name, "mariadb");
     if (new_node->configure(nwconfig))
     {
         m_vmnode = move(new_node);
