@@ -47,10 +47,24 @@ namespace
 
 struct ThisUnit
 {
-    const std::array<string, 4> extra_parameters;
+    const std::array<string, 13> extra_parameters;
 } this_unit =
 {
-    { CN_MAX_ROUTING_CONNECTIONS, CN_PERSISTMAXTIME, CN_PERSISTPOOLMAX, CN_PROXY_PROTOCOL }
+    {
+        CN_MAX_ROUTING_CONNECTIONS,
+        CN_PERSISTMAXTIME,
+        CN_PERSISTPOOLMAX,
+        CN_PROXY_PROTOCOL,
+        CN_SSL,
+        CN_SSL_CA,
+        CN_SSL_CERT,
+        CN_SSL_CERT_VERIFY_DEPTH,
+        CN_SSL_CIPHER,
+        CN_SSL_KEY,
+        CN_SSL_VERIFY_PEER_CERTIFICATE,
+        CN_SSL_VERIFY_PEER_HOST,
+        CN_SSL_VERSION,
+    }
 };
 
 namespace xpandmon
