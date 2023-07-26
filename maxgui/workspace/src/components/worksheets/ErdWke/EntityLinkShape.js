@@ -10,7 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { LINK_SHAPES, TARGET_POS } from '@wsSrc/components/worksheets/ErdWke/config'
+import { generateShape, getShapePoints } from '@share/components/common/MxsSvgGraphs/utils'
+import { LINK_SHAPES, TARGET_POS } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import { COL_ATTR_IDX_MAP, COL_ATTRS } from '@wsSrc/store/config'
 
 export default class EntityLinkShape {
@@ -154,118 +155,34 @@ export default class EntityLinkShape {
     }
 
     /**
-     * Get x values of source and target nodes based on shapeType
-     * @returns {Object} An object containing the x values of the source and target
-     * nodes, as well as the midpoint values of the link.
-     */
-    getValuesX() {
-        const { type } = this.config
-        let values = this.getStartEndXValues()
-        const { ORTHO, ENTITY_RELATION } = LINK_SHAPES
-        switch (type) {
-            case ORTHO:
-            case ENTITY_RELATION: {
-                values = this.getOrthoValuesX(values)
-            }
-        }
-        return values
-    }
-
-    /**
-     * Get x values to form an orthogonal link or
-     * app.diagrams.net entity relation link shape
-     * @param {String} param.x0 - x value of source node.
-     * @param {String} param.x1 - x value of target node.
-     * @returns {Object} x values
-     */
-    getOrthoValuesX({ x0, x1 }) {
-        let midPointX, dx1, dx4, dx2, dx3
-        const { type } = this.config
-        const { width: markerWidth = 0 } = this.markerConfig
-        const offset = markerWidth * 1.5
-        const isEntityRelationShape = type === LINK_SHAPES.ENTITY_RELATION
-        const { RIGHT, LEFT, INTERSECT } = TARGET_POS
-        switch (this.targetPos) {
-            case RIGHT: {
-                midPointX = (x1 - x0) / 2
-                if (midPointX <= offset || isEntityRelationShape) midPointX = offset
-                dx1 = x0 + midPointX
-                dx4 = x1 - midPointX
-                if (dx4 - dx1 <= 0) {
-                    dx2 = dx1
-                    dx3 = dx4
-                }
-                break
-            }
-            case LEFT: {
-                midPointX = (x0 - x1) / 2
-                if (midPointX <= offset || isEntityRelationShape) midPointX = offset
-                dx1 = x0 - midPointX
-                dx4 = x1 + midPointX
-                if (dx1 - dx4 <= 0) {
-                    dx2 = dx1
-                    dx3 = dx4
-                }
-                break
-            }
-            case INTERSECT: {
-                dx1 = x1 + offset
-                dx4 = dx1
-                if (dx1 - offset <= x0) {
-                    dx1 = x0 + offset
-                    if (dx4 - dx1 <= 0) {
-                        dx2 = dx1
-                        dx3 = dx1
-                    }
-                }
-                if (dx4 <= dx1) dx4 = dx1
-                break
-            }
-        }
-        return { x0, x1, dx1, dx2, dx3, dx4 }
-    }
-
-    // Generate a path from the given points
-    createPath({ x0, x1, dx1, dx2, dx3, dx4, y0, y1 }) {
-        const { type } = this.config
-        const point0 = [x0, y0]
-        const point5 = [x1, y1]
-        const { ORTHO, ENTITY_RELATION } = LINK_SHAPES
-        switch (type) {
-            case ORTHO:
-            case ENTITY_RELATION: {
-                const point1 = [dx1, y0]
-                const point4 = [dx4, y1]
-                if (dx2 && dx3) {
-                    const point2 = [dx2, (y0 + y1) / 2],
-                        point3 = [dx3, (y0 + y1) / 2]
-                    return `M${point0} L${point1} L${point2} L${point3} L${point4} L${point5}`
-                }
-                return `M${point0} L${point1} L${point4} L${point5}`
-            }
-            // straight line
-            default:
-                return `M${point0} L${point5}`
-        }
-    }
-
-    /**
      * Generates points for creating <path/> values
      * @param {Object} linkData - The link object
      * @returns {Object} An object containing the path points and y positions of both src && target
      */
-    genPathPoints(linkData) {
+    getPoints(linkData) {
         this.setData(linkData)
         const { srcYPos, targetYPos } = this.getYPositions()
         const yValues = {
             y0: srcYPos.center,
             y1: targetYPos.center,
         }
-        const xValues = this.getValuesX()
         return {
-            points: { ...xValues, ...yValues },
+            points: getShapePoints({
+                data: {
+                    ...this.getStartEndXValues(),
+                    ...yValues,
+                },
+                type: this.config.type,
+                offset: this.markerConfig.width,
+                targetPos: this.targetPos,
+            }),
             // position of y (top, center, bottom values)
             yPosSrcTarget: { srcYPos, targetYPos },
         }
+    }
+
+    // Generate a path from the given points
+    generate(data) {
+        return generateShape({ data, type: this.config.type })
     }
 }

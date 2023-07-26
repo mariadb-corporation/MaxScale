@@ -162,7 +162,9 @@ import EntityLink from '@wsSrc/components/worksheets/ErdWke/EntityLink'
 import ErdKeyIcon from '@wsSrc/components/worksheets/ErdWke/ErdKeyIcon'
 import RefPoints from '@wsSrc/components/worksheets/ErdWke/RefPoints'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
-import { getConfig, LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
+import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
+import { getConfig } from '@wsSrc/components/worksheets/ErdWke/config'
+
 import queryHelper from '@wsSrc/store/queryHelper'
 import html2canvas from 'html2canvas'
 

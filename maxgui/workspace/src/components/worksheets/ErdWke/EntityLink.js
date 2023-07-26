@@ -11,10 +11,10 @@
  * Public License.
  */
 import Link from '@share/components/common/MxsSvgGraphs/Link'
+import { TARGET_POS } from '@share/components/common/MxsSvgGraphs/shapeConfig'
+import { lodash } from '@share/utils/helpers'
 import EntityLinkShape from '@wsSrc/components/worksheets/ErdWke/EntityLinkShape'
 import EntityMarker from '@wsSrc/components/worksheets/ErdWke/EntityMarker'
-import { TARGET_POS } from '@wsSrc/components/worksheets/ErdWke/config'
-import { lodash } from '@share/utils/helpers'
 
 export default class EntityLink extends Link {
     constructor(graphConfig) {
@@ -119,7 +119,7 @@ export default class EntityLink extends Link {
     repositionOverlappedPoints() {
         this.data.forEach(link => {
             this.setTargetXPos(link)
-            const { points, yPosSrcTarget } = this.shape.genPathPoints(link)
+            const { points, yPosSrcTarget } = this.shape.getPoints(link)
             this.mutateLinkData({ link, key: 'pathPoints', value: points })
             this.mutateLinkData({ link, key: 'srcYPos', value: yPosSrcTarget.srcYPos })
             this.mutateLinkData({ link, key: 'targetYPos', value: yPosSrcTarget.targetYPos })
@@ -171,7 +171,7 @@ export default class EntityLink extends Link {
         this.drawLinks({
             containerEle,
             data,
-            pathGenerator: link => this.shape.createPath(link.pathPosData.pathPoints),
+            pathGenerator: link => this.shape.generate(link.pathPosData.pathPoints),
             afterEnter: this.drawMarkers.bind(this),
             afterUpdate: this.drawMarkers.bind(this),
             mouseOver: this.drawMarkers.bind(this),

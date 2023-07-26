@@ -231,7 +231,7 @@
  */
 import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
-import { LINK_SHAPES } from '@wsSrc/components/worksheets/ErdWke/config'
+import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
 import { EventBus } from '@wkeComps/EventBus'
 import { mapMutations, mapState } from 'vuex'

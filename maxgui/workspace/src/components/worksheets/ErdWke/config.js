@@ -11,18 +11,7 @@
  * Public License.
  */
 import { getLinkConfig } from '@share/components/common/MxsSvgGraphs/linkConfig'
-
-export const LINK_SHAPES = {
-    ORTHO: 'Orthogonal',
-    ENTITY_RELATION: 'Entity Relation',
-    STRAIGHT: 'Straight',
-}
-
-export const TARGET_POS = {
-    RIGHT: 'right',
-    LEFT: 'left',
-    INTERSECT: 'intersect',
-}
+import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 
 const optionalSymbol = 'M 0 0 a 4 4 0 1 0 9 0 a 4 4 0 1 0 -9 0'
 const manySymbol = 'M 9 0 L 18 0 M 9 0 L 18 -5 M 9 0 L 18 5'

@@ -11,11 +11,8 @@
  * Public License.
  */
 import { getLinkStyles } from '@share/components/common/MxsSvgGraphs/utils'
-import {
-    TARGET_POS,
-    CARDINALITY_SYMBOLS,
-    LINK_SHAPES,
-} from '@wsSrc/components/worksheets/ErdWke/config'
+import { CARDINALITY_SYMBOLS } from '@wsSrc/components/worksheets/ErdWke/config'
+import { TARGET_POS, LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 
 export default class EntityMarker {
     constructor(graphConfig) {
