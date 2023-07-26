@@ -30,8 +30,9 @@ Nodes::Nodes(mxt::SharedData* shared)
 
 namespace maxtest
 {
-VMNode::VMNode(SharedData& shared, const string& name)
+VMNode::VMNode(SharedData& shared, const string& name, const string& mariadb_executable)
     : m_name(name)
+    , m_mariadb_executable(mariadb_executable)
     , m_shared(shared)
 {
 }
@@ -260,7 +261,7 @@ void Nodes::clear_vms()
 bool Nodes::add_node(const mxt::NetworkConfig& nwconfig, const string& name)
 {
     bool rval = false;
-    auto node = std::make_unique<mxt::VMNode>(m_shared, name);
+    auto node = std::make_unique<mxt::VMNode>(m_shared, name, mariadb_executable());
     if (node->configure(nwconfig))
     {
         m_vms.push_back(move(node));
@@ -487,7 +488,7 @@ mxt::CmdResult VMNode::run_cmd_output_sudo(const string& cmd)
 
 mxt::CmdResult VMNode::run_sql_query(const std::string& sql)
 {
-    string cmd = mxb::string_printf("mariadb -N -s -e \"%s\"", sql.c_str());
+    string cmd = mxb::string_printf("%s -N -s -e \"%s\"", m_mariadb_executable.c_str(), sql.c_str());
     return run_cmd_output_sudo(cmd);
 }
 
