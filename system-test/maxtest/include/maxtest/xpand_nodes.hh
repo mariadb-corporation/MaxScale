@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-05-22
+ * Change Date: 2027-07-24
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -32,9 +32,17 @@ public:
 
     std::string get_srv_cnf_filename(int node) override;
 
+
     bool supports_require() const override { return false; }
 
     bool check_normal_conns() override;
+
+
+protected:
+    const char* mariadb_executable() const override
+    {
+        return "mysql";
+    }
 
 private:
     bool check_replication() override;

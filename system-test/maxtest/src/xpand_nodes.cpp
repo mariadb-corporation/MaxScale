@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-05-22
+ * Change Date: 2027-07-24
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -79,8 +79,8 @@ bool XpandCluster::reset_server(int m)
         logger().log_msgf("Xpand running on '%s'. Testing a simple query as root...", name);
 
         auto query_test = [&vm]() {
-                return vm.run_cmd_sudo("mariadb -e 'SELECT @@server_id;'");
-            };
+            return vm.run_cmd_sudo("mysql -e 'SELECT @@server_id;'");
+        };
 
         if (query_test() == 0)
         {
