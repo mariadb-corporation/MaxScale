@@ -32,6 +32,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+ * Emits:
+ * - on-drawing()
+ * - on-draw-end({ referencingNode: object, referencingData: object })
+ */
 import { createShape } from '@share/components/common/MxsSvgGraphs/utils'
 import { TARGET_POS } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 
@@ -41,7 +46,6 @@ export default {
         node: { type: Object, required: true },
         entitySizeConfig: { type: Object, required: true },
         getColId: { type: Function, required: true },
-        lookupNodes: { type: Array, required: true },
         linkContainer: { type: Object, required: true },
         boardZoom: { type: Number, required: true },
         graphConfig: { type: Object, required: true },
@@ -50,7 +54,6 @@ export default {
         return {
             defDraggingStates: {
                 srcAttrId: '',
-                targetAttrId: '',
                 startClientPoint: null,
                 startPoint: null,
                 pointDirection: '',
@@ -169,13 +172,15 @@ export default {
                 y: (e.clientY - startClientPoint.y) / this.boardZoom,
             }
             this.updatePath(diffPos)
-            this.$emit('drawing', { e, draggingStates: this.draggingStates })
+            this.$emit('drawing')
         },
-        drawEnd(e) {
+        drawEnd() {
             document.body.classList.remove('cursor--all-crosshair')
-            this.path.remove() // remove the staging link
-            //TODO: get targetAttrId in lookupNodes and assign to draggingStates
-            this.$emit('draw-end', { e, draggingStates: this.draggingStates })
+            const referencingData = {
+                cols: [{ id: this.draggingStates.srcAttrId }],
+            }
+            this.$emit('draw-end', { referencingNode: this.node, referencingData })
+            this.path.remove()
             this.rmDragEvents()
             this.setDefDraggingStates()
         },

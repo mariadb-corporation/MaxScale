@@ -28,6 +28,7 @@
             @on-node-drag-end="onNodeDragEnd"
             @dblclick="isFormValid ? handleDblClickNode($event) : null"
             @contextmenu="activeNodeMenu = $event"
+            @on-create-new-fk="onCreateNewFk"
         >
             <template v-slot:entity-name-append="{ node }">
                 <div class="d-inline-flex entity-name-append">
@@ -324,7 +325,7 @@ export default {
                                         },
                                     },
                                 })
-                            }, [])
+                            })
                         }
                         ErdTaskTmp.update({
                             where: this.activeTaskId,
@@ -482,6 +483,25 @@ export default {
         navHistory(idx) {
             ErdTask.dispatch('updateActiveHistoryIdx', idx)
             this.redrawnDiagram()
+        },
+        onCreateNewFk({ nodeIdx, currentFks, newKey }) {
+            /**
+             * TODO: Add newKey validation. both referencing and referenced cols must have the same datatype,
+             * if not, show an error.
+             * Auto adds a PLAIN key for referenced col if there is none.
+             */
+            const { foreignKey } = this.CREATE_TBL_TOKENS
+            const stagingNodes = this.$helpers.immutableUpdate(this.stagingNodes, {
+                [nodeIdx]: {
+                    data: {
+                        definitions: {
+                            keys: { $merge: { [foreignKey]: [...currentFks, newKey] } },
+                        },
+                    },
+                },
+            })
+            this.$refs.diagram.redraw(stagingNodes)
+            ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
         },
     },
 }

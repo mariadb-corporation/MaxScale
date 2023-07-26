@@ -45,14 +45,13 @@
                         <ref-points
                             v-if="node.id === clickedNodeId"
                             :node="node"
-                            :lookupNodes="nodes"
                             :entitySizeConfig="entitySizeConfig"
                             :getColId="getColId"
                             :linkContainer="linkContainer"
                             :boardZoom="panAndZoomData.k"
                             :graphConfig="graphConfig"
-                            @drawing="clickOutside = false"
-                            @draw-end="$helpers.doubleRAF(() => (clickOutside = true))"
+                            @drawing="onDrawingFk"
+                            @draw-end="onEndDrawFk"
                         />
                         <table
                             class="entity-table"
@@ -82,6 +81,14 @@
                                         height: `${entitySizeConfig.rowHeight}px`,
                                         ...getHighlightColStyle({ node, colId: getColId(col) }),
                                     }"
+                                    v-on="
+                                        isDrawingFk
+                                            ? {
+                                                  mouseenter: () => setRefTargetData({ node, col }),
+                                                  mouseleave: () => (refTargetData = null),
+                                              }
+                                            : {}
+                                    "
                                 >
                                     <td>
                                         <erd-key-icon
@@ -146,8 +153,9 @@
  */
 /*
  * Emits:
- * - $emit('on-rendered', { nodes, links })
- * - $emit('on-node-drag-end', node)
+ * - on-rendered({ nodes:array, links:array })
+ * - on-node-drag-end(node)
+ * - on-create-new-fk({ nodeIdx: number, currentFks: array, newKey: object })
  */
 import { mapState } from 'vuex'
 import {
@@ -167,7 +175,6 @@ import RefPoints from '@wsSrc/components/worksheets/ErdWke/RefPoints'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import { getConfig } from '@wsSrc/components/worksheets/ErdWke/config'
-
 import queryHelper from '@wsSrc/store/queryHelper'
 import html2canvas from 'html2canvas'
 
@@ -202,6 +209,8 @@ export default {
             graphDim: {},
             clickedNodeId: '',
             clickOutside: true,
+            refTargetData: null,
+            isDrawingFk: false,
         }
     },
     computed: {
@@ -209,6 +218,7 @@ export default {
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
+            REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
         }),
         panAndZoomData: {
             get() {
@@ -301,9 +311,7 @@ export default {
         },
         genLinks(nodes) {
             this.graphLinks = nodes.reduce((links, node) => {
-                const fks = this.$typy(
-                    node.data.definitions.keys[this.CREATE_TBL_TOKENS.foreignKey]
-                ).safeArray
+                const fks = this.getFks(node)
                 fks.forEach(fk => {
                     links = [
                         ...links,
@@ -583,6 +591,40 @@ export default {
                 if (link.isPartOfCompositeKey) link.hidden = !v
             })
             this.simulation.force('link').links(this.graphLinks)
+        },
+        onDrawingFk() {
+            this.clickOutside = false
+            this.isDrawingFk = true
+        },
+        getFks(node) {
+            return this.$typy(node.data.definitions.keys[this.CREATE_TBL_TOKENS.foreignKey])
+                .safeArray
+        },
+        onEndDrawFk({ referencingNode, referencingData }) {
+            this.isDrawingFk = false
+            if (this.refTargetData) {
+                const currentFks = this.getFks(referencingNode)
+                this.$emit('on-create-new-fk', {
+                    nodeIdx: referencingNode.index,
+                    currentFks,
+                    newKey: {
+                        id: `key_${this.$helpers.uuidv1()}`,
+                        name: `${referencingNode.data.options.name}_ibfk_${currentFks.length}`,
+                        ...referencingData,
+                        ...this.refTargetData,
+                    },
+                })
+                this.refTargetData = null
+                this.clickOutside = true // hide ref-points
+            } else this.$helpers.doubleRAF(() => (this.clickOutside = true))
+        },
+        setRefTargetData({ node, col }) {
+            this.refTargetData = {
+                ref_cols: [{ id: this.getColId(col) }],
+                ref_tbl_id: node.id,
+                on_delete: this.REF_OPTS.NO_ACTION,
+                on_update: this.REF_OPTS.NO_ACTION,
+            }
         },
     },
 }
