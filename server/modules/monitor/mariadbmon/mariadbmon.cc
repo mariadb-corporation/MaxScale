@@ -356,20 +356,20 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
 
     if (!m_settings.assume_unique_hostnames)
     {
-        const char requires[] = "%s requires that %s is on.";
+        const char REQUIRES[] = "%s requires that %s is on.";
         if (m_settings.auto_failover)
         {
-            MXB_ERROR(requires, CN_AUTO_FAILOVER, CN_ASSUME_UNIQUE_HOSTNAMES);
+            MXB_ERROR(REQUIRES, CN_AUTO_FAILOVER, CN_ASSUME_UNIQUE_HOSTNAMES);
             settings_ok = false;
         }
         if (m_settings.switchover_on_low_disk_space)
         {
-            MXB_ERROR(requires, CN_SWITCHOVER_ON_LOW_DISK_SPACE, CN_ASSUME_UNIQUE_HOSTNAMES);
+            MXB_ERROR(REQUIRES, CN_SWITCHOVER_ON_LOW_DISK_SPACE, CN_ASSUME_UNIQUE_HOSTNAMES);
             settings_ok = false;
         }
         if (m_settings.auto_rejoin)
         {
-            MXB_ERROR(requires, CN_AUTO_REJOIN, CN_ASSUME_UNIQUE_HOSTNAMES);
+            MXB_ERROR(REQUIRES, CN_AUTO_REJOIN, CN_ASSUME_UNIQUE_HOSTNAMES);
             settings_ok = false;
         }
     }

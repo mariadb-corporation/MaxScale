@@ -240,7 +240,7 @@ std::unique_ptr<NoSQLCursor> NoSQLCursor::create(const std::string& ns,
 //static
 std::unique_ptr<NoSQLCursor> NoSQLCursor::get(const std::string& collection, int64_t id)
 {
-    return std::move(this_unit.get_cursor(collection, id));
+    return this_unit.get_cursor(collection, id);
 }
 
 //static

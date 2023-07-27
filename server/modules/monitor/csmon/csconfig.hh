@@ -33,7 +33,7 @@ public:
     std::chrono::milliseconds cluster_monitor_interval; // Optional for 1.5
 
 private:
-    bool post_configure();
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
     bool check_api_key(const std::string& dir);
     bool check_mandatory();

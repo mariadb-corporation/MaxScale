@@ -146,7 +146,7 @@ void complain_mandatory(cs::Version version, const string& param)
 
 }
 
-bool CsConfig::post_configure()
+bool CsConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
     bool rv = true;
 
