@@ -102,6 +102,7 @@ export default class Link {
                     const linkCtr = enter
                         .insert('g')
                         .attr('id', d => d.id)
+                        .style('outline', 'none')
                         .attr('class', `${containerClass} pointer`)
                         .attr('src-id', d => lodash.objGet(d.source, nodeIdPath))
                         .attr('target-id', d => lodash.objGet(d.target, nodeIdPath))

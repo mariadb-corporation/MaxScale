@@ -135,6 +135,14 @@
                 </mxs-svg-graph-nodes>
             </template>
         </mxs-svg-graph-board>
+        <v-tooltip
+            v-if="hoveredFkId"
+            bottom
+            transition="slide-y-transition"
+            :activator="`#${hoveredFkId}`"
+        >
+            <pre>{{ hoveredFkInfo }}</pre>
+        </v-tooltip>
     </div>
 </template>
 
@@ -192,6 +200,8 @@ export default {
         graphConfigData: { type: Object, required: true },
         isLaidOut: { type: Boolean, default: false },
         activeNodeId: { type: String, default: '' },
+        refTargetMap: { type: Object, required: true },
+        tablesColNameMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -211,6 +221,7 @@ export default {
             clickOutside: true,
             refTargetData: null,
             isDrawingFk: false,
+            hoveredLink: null,
         }
     },
     computed: {
@@ -237,6 +248,9 @@ export default {
                 map[node.id] = node.data.definitions.keys
                 return map
             }, {})
+        },
+        nodeMap() {
+            return this.$helpers.lodash.keyBy(this.graphNodes, 'id')
         },
         entitySizeConfig() {
             return this.graphConfigData.linkShape.entitySizeConfig
@@ -275,6 +289,33 @@ export default {
         },
         hoverable() {
             return Boolean(!this.clickedNodeId)
+        },
+        hoveredFk() {
+            if (this.hoveredLink)
+                return this.getFks(this.hoveredLink.source).find(
+                    key => key.id === this.hoveredLink.id
+                )
+            return null
+        },
+        hoveredFkId() {
+            return this.$typy(this.hoveredFk, 'id').safeString
+        },
+        hoveredFkInfo() {
+            if (
+                this.hoveredFk &&
+                !this.$typy(this.refTargetMap).isEmptyObject &&
+                !this.$typy(this.tablesColNameMap).isEmptyObject
+            )
+                return queryHelper.genConstraint({
+                    key: this.hoveredFk,
+                    refTargetMap: this.refTargetMap,
+                    tablesColNameMap: this.tablesColNameMap,
+                    stagingColNameMap: this.$typy(
+                        this.tablesColNameMap,
+                        `[${this.hoveredLink.source.id}]`
+                    ).safeObjectOrEmpty,
+                })
+            return ''
         },
     },
     watch: {
@@ -461,6 +502,7 @@ export default {
             })
         },
         handleMouseOverOut({ link, linkCtr, pathGenerator, eventType }) {
+            this.hoveredLink = link
             this.setEventStyles({ links: [link], eventType })
             this.entityLink.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
             this.entityLink.drawMarkers({ linkCtr, joinType: 'update' })
@@ -501,7 +543,7 @@ export default {
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {
-            const nodeData = this.graphNodes.find(n => n.id === node.id)
+            const nodeData = this.nodeMap[node.id]
             nodeData.x = nodeData.x + diffX
             nodeData.y = nodeData.y + diffY
             this.setChosenLinks(node)

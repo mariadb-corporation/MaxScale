@@ -23,6 +23,8 @@
             :graphConfigData="graphConfigData"
             :isLaidOut="isLaidOut"
             :activeNodeId="activeEntityId"
+            :refTargetMap="refTargetMap"
+            :tablesColNameMap="tablesColNameMap"
             class="entity-diagram"
             @on-rendered.once="onRendered"
             @on-node-drag-end="onNodeDragEnd"
@@ -210,6 +212,12 @@ export default {
         },
         activeHistoryIdx() {
             return ErdTask.getters('activeHistoryIdx')
+        },
+        refTargetMap() {
+            return ErdTask.getters('refTargetMap')
+        },
+        tablesColNameMap() {
+            return ErdTask.getters('tablesColNameMap')
         },
     },
     watch: {
