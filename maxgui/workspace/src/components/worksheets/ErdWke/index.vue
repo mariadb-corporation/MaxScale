@@ -258,7 +258,7 @@ export default {
                     },
                 })
                 parts.push(builder.build())
-                const fks = builder.buildForeignKeySQL()
+                const fks = builder.buildNewFkSQL()
                 if (fks) newTablesFks.push(fks)
             })
 

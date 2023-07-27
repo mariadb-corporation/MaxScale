@@ -327,24 +327,50 @@ export default class TableScriptBuilder {
         })
         return parts.join(this.handleAddComma())
     }
-
+    /**
+     * This functions uses initial qualified name of a table, so
+     * the SQL must be placed before any modification to qualified name.
+     * @returns {string} sql for dropping FKs
+     */
+    buildRemovedFkSQL() {
+        /**
+         * When altering existing keys, the keys needed to be dropped first
+         * so that modified keys with existing name can be executed.
+         * i.e. Duplicate key on write or update.
+         */
+        const removedKeys = [
+            ...this.foreignKeyDiffs.get('removed'),
+            ...this.foreignKeyDiffs.get('updated'),
+        ].map(item => {
+            const key = item.oriObj ? item.oriObj : item
+            return `${tokens.drop} ${tokens.foreignKey} ${quoting(key.name)}`
+        })
+        let sql = ''
+        const alterTableLine = `${tokens.alterTable} ${quoting(this.initialSchemaName)}.${quoting(
+            this.initialTableName
+        )}`
+        if (removedKeys.length) {
+            sql += alterTableLine
+            sql += removedKeys.join(this.handleAddComma())
+            sql += ';'
+        }
+        return sql
+    }
     /**
      * @param {object} param
-     * @param {boolean} param.isCreating - if true, it returns `CONSTRAINT ...` instead
+     * @param {boolean} param.isPartOfTableCreation - if true, it returns `CONSTRAINT ...` instead
      * of `ADD CONSTRAINT ...`
      * @returns {String} - returns FK SQL
      */
-    buildForeignKeySQL({ isCreating = false } = {}) {
-        const removedKeys = this.foreignKeyDiffs.get('removed')
+    buildNewFkSQL({ isPartOfTableCreation = false } = {}) {
+        let sql = ''
+        const alterTableLine = `${tokens.alterTable} ${quoting(this.stagingSchemaName)}.${quoting(
+            this.stagingTableName
+        )}`
         const updatedKeys = this.foreignKeyDiffs.get('updated')
         const addedKeys = this.foreignKeyDiffs.get('added')
-        let droppedKeys = removedKeys.map(
-            ({ name }) => `${tokens.drop} ${tokens.foreignKey} ${quoting(name)}`
-        )
-        let parts = []
-        const newAndUpdatedKeys = [...updatedKeys, ...addedKeys]
-
-        newAndUpdatedKeys.forEach(item => {
+        const keys = [...updatedKeys, ...addedKeys]
+        const newFks = keys.map(item => {
             // updatedKeys has `oriObj` and `newObj` fields while addedKeys doesn't
             const {
                 name,
@@ -356,9 +382,6 @@ export default class TableScriptBuilder {
                 on_delete,
                 on_update,
             } = item.newObj ? item.newObj : item
-
-            if (item.newObj)
-                droppedKeys.push(`${tokens.drop} ${tokens.foreignKey} ${quoting(item.oriObj.name)}`)
 
             const constraintName = quoting(name)
 
@@ -392,27 +415,14 @@ export default class TableScriptBuilder {
                 tokens.update,
                 on_update,
             ]
-            if (isCreating) keyTokens.shift()
-            parts.push(keyTokens.join(' '))
+            if (isPartOfTableCreation) keyTokens.shift()
+            return keyTokens.join(' ')
         })
-        let sql = ''
-        const alterTableLine = `${tokens.alterTable} ${quoting(this.stagingSchemaName)}.${quoting(
-            this.stagingTableName
-        )}`
-        /**
-         * When altering existing keys, the keys needed to be dropped first
-         * so that modified keys with existing name can be executed.
-         * i.e. Duplicate key on write or update
-         */
-        if (droppedKeys.length) {
-            sql += alterTableLine
-            sql += droppedKeys.join(this.handleAddComma())
-            sql += ';'
-        }
-        if (parts.length) {
-            if (!isCreating) sql += alterTableLine
-            sql += parts.join(this.handleAddComma())
-            if (!isCreating) sql += ';'
+
+        if (newFks.length) {
+            if (!isPartOfTableCreation) sql += alterTableLine
+            sql += newFks.join(this.handleAddComma())
+            if (!isPartOfTableCreation) sql += ';'
         }
         return sql
     }
@@ -458,7 +468,7 @@ export default class TableScriptBuilder {
         specs.push(addedColSQL)
         const pkSQL = this.buildPkSQL()
         const uqSQL = this.buildUniqueKeySQL()
-        const fkSQL = this.skipFkCreation ? '' : this.buildForeignKeySQL({ isCreating: true })
+        const fkSQL = this.skipFkCreation ? '' : this.buildNewFkSQL({ isPartOfTableCreation: true })
         if (pkSQL) specs.push(pkSQL)
         if (uqSQL) specs.push(uqSQL)
         if (fkSQL) specs.push(fkSQL)
@@ -466,6 +476,13 @@ export default class TableScriptBuilder {
     }
     buildAlterScript() {
         let sql = ''
+        /**
+         * Removed FKs must be placed before any modifications to columns.
+         * e.g. Dropping a column is a part for buildAlterColsSql, so the FK must be dropped first.
+         */
+        const removedFkSQL = this.buildRemovedFkSQL()
+        if (removedFkSQL) sql += removedFkSQL
+
         let parts = [] // part of script which will be separated by commas
         if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
         if (this.isColsOptsChanged) parts.push(this.buildAlterColsSql())
@@ -477,7 +494,7 @@ export default class TableScriptBuilder {
             sql += ';'
         }
 
-        const fkSQL = this.skipFkCreation ? '' : this.buildForeignKeySQL()
+        const fkSQL = this.skipFkCreation ? '' : this.buildNewFkSQL()
         if (fkSQL) sql += fkSQL
         return formatSQL(sql)
     }
