@@ -31,8 +31,8 @@
 namespace
 {
 
-static char cmd[PATH_MAX + 1024];
 static char tmp[PATH_MAX + 1024];
+static char cmd[PATH_MAX + sizeof(tmp) + 1024];
 
 using Rename = std::tuple<const char*, const char*>;
 
