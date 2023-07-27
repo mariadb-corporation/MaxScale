@@ -17,7 +17,7 @@ password=xpandmon
 [Service]
 type=service
 router=readwritesplit
-cluster=Monitor
+cluster=Xpand-Monitor
 user=maxservice
 password=maxservice
 filters=LDI
