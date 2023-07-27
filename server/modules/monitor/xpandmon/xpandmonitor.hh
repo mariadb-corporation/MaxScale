@@ -41,31 +41,36 @@ public:
 
         long cluster_monitor_interval() const
         {
-            return m_cluster_monitor_interval.get().count();
+            return m_cluster_monitor_interval.count();
         }
 
         long health_check_threshold() const
         {
-            return m_health_check_threshold.get();
-        }
-
-        bool dynamic_node_detection() const
-        {
-            return m_dynamic_node_detection.get();
+            return m_health_check_threshold;
         }
 
         int health_check_port() const
         {
-            return m_health_check_port.get();
+            return m_health_check_port;
+        }
+
+        bool dynamic_node_detection() const
+        {
+            return m_dynamic_node_detection;
+        }
+
+        const std::string& region() const
+        {
+            return m_region;
         }
 
     private:
-        config::Duration<std::chrono::milliseconds> m_cluster_monitor_interval;
-        config::Count                               m_health_check_threshold;
-        config::Bool                                m_dynamic_node_detection;
-        config::Integer                             m_health_check_port;
-        config::String                              m_region;
-        XpandMonitor*                               m_pMonitor;
+        std::chrono::milliseconds m_cluster_monitor_interval;
+        int64_t                   m_health_check_threshold;
+        int64_t                   m_health_check_port;
+        bool                      m_dynamic_node_detection;
+        std::string               m_region;
+        XpandMonitor*             m_pMonitor;
     };
 
     ~XpandMonitor();

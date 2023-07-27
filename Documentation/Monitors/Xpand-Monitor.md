@@ -98,7 +98,7 @@ These are optional parameters specific to the Xpand Monitor.
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: `60s`
 
 Defines how often the monitor checks the state of the entire cluster. The
@@ -113,7 +113,7 @@ cluster_monitor_interval=120s
 
 - **Type**: count
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: `2`
 
 Defines how many times the health check may fail before the monitor
@@ -127,7 +127,7 @@ health_check_threshold=3
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: `true`
 
 By default, the Xpand monitor will only use the bootstrap nodes
@@ -164,8 +164,8 @@ See also [health_check_port](#health_check_port).
 ### `health_check_port`
 
 - **Type**: integer
-- **Mandatory**: no
-- **Dynamic**: no
+- **Mandatory**: No
+- **Dynamic**: Yes
 - **Default**: `3581`
 
 With this optional parameter it can be specified what health check
@@ -182,7 +182,7 @@ is `false`. Note also that the port must be the same for all nodes.
 
 - **Type**: string
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: ''
 
 `region` speficies the region of the instance MaxScale is running in.

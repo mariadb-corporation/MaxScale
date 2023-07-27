@@ -76,33 +76,38 @@ config::ParamDuration<milliseconds>
 cluster_monitor_interval(&specification,
                          "cluster_monitor_interval",
                          "How frequently the Xpand monitor should perform a cluster check.",
-                         milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
+                         milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL),
+                         config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamCount
-    health_check_threshold(&specification,
-                           "health_check_threshold",
-                           "How many failed health port pings before node is assumed to be down.",
-                           DEFAULT_HEALTH_CHECK_THRESHOLD,
-                           1, std::numeric_limits<uint32_t>::max());    // min, max
+health_check_threshold(&specification,
+                       "health_check_threshold",
+                       "How many failed health port pings before node is assumed to be down.",
+                       DEFAULT_HEALTH_CHECK_THRESHOLD,
+                       1, std::numeric_limits<uint32_t>::max(),    // min, max
+                       config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool
-    dynamic_node_detection(&specification,
-                           "dynamic_node_detection",
-                           "Should cluster configuration be figured out at runtime.",
-                           DEFAULT_DYNAMIC_NODE_DETECTION);
+dynamic_node_detection(&specification,
+                       "dynamic_node_detection",
+                       "Should cluster configuration be figured out at runtime.",
+                       DEFAULT_DYNAMIC_NODE_DETECTION,
+                       config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamInteger
-    health_check_port(&specification,
-                      "health_check_port",
-                      "Port number for Xpand health check.",
-                      DEFAULT_HEALTH_CHECK_PORT,
-                      0, std::numeric_limits<uint16_t>::max());     // min, max
+health_check_port(&specification,
+                  "health_check_port",
+                  "Port number for Xpand health check.",
+                  DEFAULT_HEALTH_CHECK_PORT,
+                  0, std::numeric_limits<uint16_t>::max(),     // min, max
+                  config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamString
-    region(&specification,
-           "region",
-           "The region MaxScale is running in.",
-           "");
+region(&specification,
+       "region",
+       "The region MaxScale is running in.",
+       "",
+       config::Param::Modifiable::AT_RUNTIME);
 
 }
 
@@ -238,13 +243,13 @@ void run_in_mainworker(const function<void(void)>& func)
 
 XpandMonitor::Config::Config(const std::string& name, XpandMonitor* pMonitor)
     : config::Configuration(name, &xpandmon::specification)
-    , m_cluster_monitor_interval(this, &xpandmon::cluster_monitor_interval)
-    , m_health_check_threshold(this, &xpandmon::health_check_threshold)
-    , m_dynamic_node_detection(this, &xpandmon::dynamic_node_detection)
-    , m_health_check_port(this, &xpandmon::health_check_port)
-    , m_region(this, &xpandmon::region)
     , m_pMonitor(pMonitor)
 {
+    add_native(&Config::m_cluster_monitor_interval, &xpandmon::cluster_monitor_interval);
+    add_native(&Config::m_health_check_threshold, &xpandmon::health_check_threshold);
+    add_native(&Config::m_health_check_port, &xpandmon::health_check_port);
+    add_native(&Config::m_dynamic_node_detection, &xpandmon::dynamic_node_detection);
+    add_native(&Config::m_region, &xpandmon::region);
 }
 
 bool XpandMonitor::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
