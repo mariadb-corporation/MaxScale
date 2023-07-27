@@ -156,7 +156,8 @@ export default {
         hasChanged() {
             return (
                 !this.$typy(this.updatedNodeMap).isEmptyObject ||
-                !this.$typy(this.newNodeMap).isEmptyObject
+                !this.$typy(this.newNodeMap).isEmptyObject ||
+                Boolean(this.nodeDataDiffs.get('removed').length)
             )
         },
         hasValidChanges() {
@@ -215,19 +216,27 @@ export default {
             this.scriptGeneratedTime = this.$helpers.dateFormat({ value: new Date() })
             const { formatSQL, quotingIdentifier: quoting } = this.$helpers
             let parts = [],
-                newTablesFks = []
+                newTablesFks = [],
+                alterTableParts = []
 
             // updated tables
-            this.nodeDataDiffs.get('updated').forEach(({ newObj, oriObj }, i) => {
-                if (i === 0) parts.push(this.createSectionCmt('Alter tables'))
+            this.nodeDataDiffs.get('updated').forEach(({ newObj, oriObj }) => {
                 const builder = new TableScriptBuilder({
                     initialData: oriObj,
                     stagingData: newObj,
                     refTargetMap: this.refTargetMap,
                     tablesColNameMap: this.tablesColNameMap,
+                    options: { skipFkCreation: true },
                 })
-                parts.push(builder.build())
+                const script = builder.build()
+                if (script) alterTableParts.push(script)
+                const fks = builder.buildNewFkSQL()
+                if (fks) newTablesFks.push(fks)
             })
+            if (alterTableParts.length) {
+                alterTableParts.unshift(this.createSectionCmt('Alter tables'))
+                parts = [...parts, ...alterTableParts]
+            }
 
             // Drop tables
             this.nodeDataDiffs.get('removed').forEach((tbl, i) => {
