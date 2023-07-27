@@ -744,6 +744,8 @@ private:
 class ParamNumber : public ConcreteParam<ParamNumber, int64_t>
 {
 public:
+    using Param::to_json;
+
     virtual std::string to_string(value_type value) const;
     virtual bool from_string(const std::string& value, value_type* pValue,
                              std::string* pMessage = nullptr) const;
@@ -1860,6 +1862,8 @@ private:
 class ParamString : public ConcreteParam<ParamString, std::string>
 {
 public:
+    using Param::to_json;
+
     enum Quotes
     {
         REQUIRED,   // The string *must* be surrounded by quotes.
