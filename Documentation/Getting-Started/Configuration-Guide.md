@@ -1936,15 +1936,6 @@ does not start with the number 5, a 5.5.5- prefix will be added to it. This
 means that a _version_string_ value of _MaxScale-Service_ would result in a
 _5.5.5-MaxScale-Service_ being sent to the client.
 
-### `weightby`
-
-This parameter has been removed. Server weights were deprecated in
-MaxScale 2.3.2 and removed in MaxScale 2.5.0. The feature has been
-replaced with the [`rank`](#rank) mechanism.
-
-If this value is found in the MaxScale configuration, a warning is logged
-and the value is ignored.
-
 ### `auth_all_servers`
 
 - **Type**: [boolean](#booleans)
@@ -2787,8 +2778,7 @@ if the disk space situation should be monitored.
 
 This parameter controls the order in which servers are used. Valid values for
 this parameter are `primary` and `secondary`. The default value is
-`primary`. This parameter replaces the use of the `weightby` parameter as the
-primary means of controlling server usage.
+`primary`.
 
 This behavior depends on the router implementation but the general rule of thumb
 is that primary servers will be used before secondary servers.
