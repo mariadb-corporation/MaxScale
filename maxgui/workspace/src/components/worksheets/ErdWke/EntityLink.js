@@ -155,17 +155,19 @@ export default class EntityLink extends Link {
     /**
      * Draw source && target markers
      * @param {Object} param.linkCtr - Link container element
-     * @param {String} param.type - enter or update
+     * @param {String} param.joinType - enter or update
      */
-    drawMarkers({ linkCtr, type }) {
-        this.marker.draw({ linkCtr, type, isSrc: true })
-        this.marker.draw({ linkCtr, type })
+    drawMarkers({ linkCtr, joinType }) {
+        this.marker.draw({ linkCtr, joinType, isSrc: true })
+        this.marker.draw({ linkCtr, joinType })
     }
     /**
-     * @param {Object} param.containerEle - container element of links to be drawn
-     * @param {String} param.data - Links data
+     * @param {object} param
+     * @param {object} param.containerEle - container element of links to be drawn
+     * @param {string} param.data - Links data
+     * @param {object} param.events - events to be bound to link
      */
-    draw({ containerEle, data }) {
+    draw({ containerEle, data, events }) {
         this.data = data
         this.repositionOverlappedPoints()
         this.drawLinks({
@@ -174,8 +176,7 @@ export default class EntityLink extends Link {
             pathGenerator: link => this.shape.generate(link.pathPosData.pathPoints),
             afterEnter: this.drawMarkers.bind(this),
             afterUpdate: this.drawMarkers.bind(this),
-            mouseOver: this.drawMarkers.bind(this),
-            mouseOut: this.drawMarkers.bind(this),
+            events,
         })
     }
 }

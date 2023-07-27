@@ -453,10 +453,34 @@ export default {
         getLinks() {
             return this.simulation.force('link').links()
         },
+        setEventStyles({ links, eventType }) {
+            this.entityLink.setEventStyles({
+                links,
+                eventType,
+                evtStylesMod: () => (this.isStraightShape ? { color: this.globalLinkColor } : null),
+            })
+        },
+        handleMouseOverOut({ link, linkCtr, pathGenerator, eventType }) {
+            this.setEventStyles({ links: [link], eventType })
+            this.entityLink.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
+            this.entityLink.drawMarkers({ linkCtr, joinType: 'update' })
+        },
         drawLinks() {
             this.entityLink.draw({
                 containerEle: this.linkContainer,
                 data: this.getLinks().filter(link => !link.hidden),
+                events: {
+                    mouseover: param =>
+                        this.handleMouseOverOut.bind(this)({
+                            ...param,
+                            eventType: EVENT_TYPES.HOVER,
+                        }),
+                    mouseout: param =>
+                        this.handleMouseOverOut.bind(this)({
+                            ...param,
+                            eventType: EVENT_TYPES.NONE,
+                        }),
+                },
             })
         },
         handleCollision() {
@@ -473,11 +497,7 @@ export default {
             this.chosenLinks = queryHelper.getNodeLinks({ links: this.getLinks(), node })
         },
         setEventLinkStyles(eventType) {
-            this.entityLink.setEventStyles({
-                links: this.chosenLinks,
-                eventType,
-                evtStylesMod: () => (this.isStraightShape ? { color: this.globalLinkColor } : null),
-            })
+            this.setEventStyles({ eventType, links: this.chosenLinks })
             this.drawLinks()
         },
         onNodeDrag({ node, diffX, diffY }) {

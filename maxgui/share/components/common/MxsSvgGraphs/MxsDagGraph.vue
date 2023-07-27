@@ -326,14 +326,14 @@ export default {
         },
         /**
          * @param {Object} linkCtr - container element of the link
-         * @param {String} type - enter or update
+         * @param {String} joinType - enter or update
          */
-        drawArrowHead({ linkCtr, type }) {
+        drawArrowHead({ linkCtr, joinType }) {
             const className = 'link__arrow'
             const transform = d => this.transformArrow(d)
             const opacity = d => this.linkInstance.getStyle(d, 'opacity')
             let arrowPaths
-            switch (type) {
+            switch (joinType) {
                 case 'enter':
                     arrowPaths = linkCtr.append('path').attr('class', className)
                     break
@@ -350,6 +350,11 @@ export default {
                 .attr('transform', transform)
                 .attr('opacity', opacity)
         },
+        handleMouseOverOut({ link, linkCtr, pathGenerator, eventType }) {
+            this.linkInstance.setEventStyles({ links: [link], eventType })
+            this.linkInstance.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
+            this.drawArrowHead({ linkCtr: linkCtr, joinType: 'update' })
+        },
         drawLinks() {
             this.linkInstance.drawLinks({
                 containerEle: this.linkContainer,
@@ -358,8 +363,18 @@ export default {
                 pathGenerator: this.pathGenerator,
                 afterEnter: this.drawArrowHead,
                 afterUpdate: this.drawArrowHead,
-                mouseOver: this.drawArrowHead,
-                mouseOut: this.drawArrowHead,
+                events: {
+                    mouseover: param =>
+                        this.handleMouseOverOut.bind(this)({
+                            ...param,
+                            eventType: EVENT_TYPES.HOVER,
+                        }),
+                    mouseout: param =>
+                        this.handleMouseOverOut.bind(this)({
+                            ...param,
+                            eventType: EVENT_TYPES.NONE,
+                        }),
+                },
             })
         },
         //-------------------------draggable methods---------------------------

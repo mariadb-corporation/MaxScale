@@ -10,11 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getLinkStyles } from '@share/components/common/MxsSvgGraphs/utils'
 import { select as d3Select } from 'd3-selection'
+import { getLinkStyles } from '@share/components/common/MxsSvgGraphs/utils'
 import { lodash } from '@share/utils/helpers'
 import { t } from 'typy'
-import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 
 export default class Link {
     constructor(config) {
@@ -24,23 +23,23 @@ export default class Link {
         return getLinkStyles({ link, styleNamePath, linkConfig: this.config })
     }
     /**
-     * @param {Object} param.containerEle - Container element of the path
-     * @param {String} param.type - enter or update
+     * @param {String} param.joinType - enter or update
+     * @param {Object} param.linkCtr - Container element of the path
      * @param {Boolean} param.isInvisible - Draw an invisible path
      * @param {Function} param.pathGenerator - Path generator function
      **/
-    drawPath({ containerEle, type, isInvisible, pathGenerator }) {
+    drawPath({ joinType, linkCtr, isInvisible, pathGenerator }) {
         const scope = this
         const { pathClass, invisiblePathClass } = this.config
         const className = isInvisible ? invisiblePathClass : pathClass
 
         let paths
-        switch (type) {
+        switch (joinType) {
             case 'enter':
-                paths = containerEle.append('path').attr('class', className)
+                paths = linkCtr.append('path').attr('class', className)
                 break
             case 'update':
-                paths = containerEle.select(`path.${className}`)
+                paths = linkCtr.select(`path.${className}`)
                 break
         }
 
@@ -66,19 +65,24 @@ export default class Link {
         this.drawPath({ ...params, isInvisible: true })
         this.drawPath(params)
     }
+
+    afterJoinProcess({ joinType, linkCtr, pathGenerator, cb }) {
+        this.drawPaths({ joinType, linkCtr, pathGenerator })
+        t(cb).safeFunction({ linkCtr, joinType })
+    }
+
     /**
      * The mouseover event on link <g/> element only works when the mouse is over the
      * "visiblePainted" of the <path/>, not the space between dots. However, the thinness
      * of the link makes it difficult to trigger the event, so an additional invisible
      * link with a large thickness is drawn to help with this.
-     * @param {Object} param.containerEle - container element of links to be drawn
-     * @param {String} param.data - Links data
-     * @param {String|Array} [param.nodeIdPath='id'] - The path to the identifier field of a node
-     * @param {Function} param.pathGenerator - Function to fill the value of the d attribute
-     * @param {Function} param.afterEnter - After links are entered into the DOM
-     * @param {Function} param.afterUpdate - After links are updated in the DOM
-     * @param {Function} param.mouseOver - mouseover link container element
-     * @param {Function} param.mouseOut - mouseout link container element
+     * @param {object} param.containerEle - container element of links to be drawn
+     * @param {string} param.data - Links data
+     * @param {string|array} [param.nodeIdPath='id'] - The path to the identifier field of a node
+     * @param {function} param.pathGenerator - Function to fill the value of the d attribute
+     * @param {function} param.afterEnter - After links are entered into the DOM
+     * @param {function} param.afterUpdate - After links are updated in the DOM
+     * @param {object} param.events - event handlers. e.g. { mouseover: handler() }
      */
     drawLinks({
         containerEle,
@@ -87,10 +91,8 @@ export default class Link {
         pathGenerator,
         afterEnter,
         afterUpdate,
-        mouseOver,
-        mouseOut,
+        events,
     }) {
-        const scope = this
         const { containerClass } = this.config
         containerEle
             .selectAll(`.${containerClass}`)
@@ -103,43 +105,28 @@ export default class Link {
                         .attr('class', `${containerClass} pointer`)
                         .attr('src-id', d => lodash.objGet(d.source, nodeIdPath))
                         .attr('target-id', d => lodash.objGet(d.target, nodeIdPath))
-                        .on('mouseover', function(e, d) {
+                    // Bind events
+                    Object.keys(events).forEach(key =>
+                        linkCtr.on(key, function(e, link) {
                             const linkCtr = d3Select(this)
-                            scope.setEventStyles({
-                                links: [d],
-                                eventType: EVENT_TYPES.HOVER,
-                            })
-                            scope.drawPaths({
-                                containerEle: linkCtr,
-                                type: 'update',
-                                pathGenerator,
-                            })
-                            t(mouseOver).safeFunction({ linkCtr, type: 'update' })
+                            events[key]({ e, link, linkCtr, pathGenerator })
                         })
-                        .on('mouseout', function(e, d) {
-                            const linkCtr = d3Select(this)
-                            scope.setEventStyles({
-                                links: [d],
-                                eventType: EVENT_TYPES.NONE,
-                            })
-                            scope.drawPaths({
-                                containerEle: linkCtr,
-                                type: 'update',
-                                pathGenerator,
-                            })
-                            t(mouseOut).safeFunction({ linkCtr, type: 'update' })
-                        })
-                    this.drawPaths({ containerEle: linkCtr, type: 'enter', pathGenerator })
-                    t(afterEnter).safeFunction({ linkCtr, type: 'enter' })
-                    return linkCtr
+                    )
+                    this.afterJoinProcess({
+                        joinType: 'enter',
+                        linkCtr,
+                        pathGenerator,
+                        cb: afterEnter,
+                    })
                 },
                 // update is called when node changes it size or its position
-                update => {
-                    const linkCtr = update
-                    this.drawPaths({ containerEle: linkCtr, type: 'update', pathGenerator })
-                    t(afterUpdate).safeFunction({ linkCtr, type: 'update' })
-                    return linkCtr
-                },
+                update =>
+                    this.afterJoinProcess({
+                        joinType: 'update',
+                        linkCtr: update,
+                        pathGenerator,
+                        cb: afterUpdate,
+                    }),
                 exit => exit.remove()
             )
     }

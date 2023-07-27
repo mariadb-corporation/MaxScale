@@ -64,17 +64,17 @@ export default class EntityMarker {
     }
     /**
      * @param {Object} param.linkCtr - Link container element
-     * @param {String} param.type - enter or update
+     * @param {String} param.joinType - enter or update
      * @param {String} param.isSrc - whether the marker is placed on the source or target
      **/
-    draw({ linkCtr, type, isSrc = false }) {
+    draw({ linkCtr, joinType, isSrc = false }) {
         const scope = this
         const { markerClass } = this.config
         const markerCtrClass = `entity-marker-${isSrc ? 'src' : 'target'}`
         const markerPathClass = `${markerClass}-${isSrc ? 'src' : 'target'}`
 
         let markers, paths
-        switch (type) {
+        switch (joinType) {
             case 'enter':
                 markers = linkCtr.insert('g').attr('class', markerCtrClass)
                 paths = markers.append('path').attr('class', markerPathClass)
