@@ -322,6 +322,23 @@ bool XpandMonitor::post_configure()
         return false;
     }
 
+    if (m_config.region().empty())
+    {
+        m_refresh_query =
+            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
+            "FROM system.nodeinfo AS ni "
+            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
+    }
+    else
+    {
+        // TODO: Update with region WHERE clause once the layout of systems.regions and systems.zones
+        // TODO: is known.
+        m_refresh_query =
+            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
+            "FROM system.nodeinfo AS ni "
+            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
+    }
+
     return true;
 }
 
@@ -700,12 +717,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 
     if (refreshed)
     {
-        const char ZQUERY[] =
-            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
-            "FROM system.nodeinfo AS ni "
-            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
-
-        if (query(pHub_con, ZQUERY))
+        if (query(pHub_con, m_refresh_query.c_str()))
         {
             MYSQL_RES* pResult = mysql_store_result(pHub_con);
 
@@ -843,7 +855,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
             else
             {
                 MXB_WARNING("%s: No result returned for '%s' on %s.",
-                            name(), ZQUERY, mysql_get_host_info(pHub_con));
+                            name(), m_refresh_query.c_str(), mysql_get_host_info(pHub_con));
             }
         }
 

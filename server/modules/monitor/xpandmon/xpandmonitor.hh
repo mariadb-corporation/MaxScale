@@ -193,6 +193,7 @@ private:
     std::vector<SERVER*>     m_cluster_servers;
     bool                     m_is_group_change {false};
     mxs::ConfigParameters    m_extra;
+    std::string              m_refresh_query;
 
     std::vector<XpandServer*> m_servers;    /**< Configured servers */
 
