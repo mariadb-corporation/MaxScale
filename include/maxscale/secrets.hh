@@ -29,4 +29,13 @@ namespace maxscale
  * @return The decrypted password.
  */
 std::string decrypt_password(const std::string& input);
+
+/**
+ * Encrypts a plaintext password using the currently loaded encryption key.
+ *
+ * @param input The password to encrypt
+ *
+ * @return The encrypted password
+ */
+std::string encrypt_password(const std::string& input);
 }

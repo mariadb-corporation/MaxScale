@@ -315,6 +315,12 @@ string decrypt_password(const string& input)
     }
     return rval;
 }
+
+string encrypt_password(const string& input)
+{
+    const auto& key = this_unit.key;
+    return key.empty() ? input : ::encrypt_password(key, input);
+}
 }
 
 /**
