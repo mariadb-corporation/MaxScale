@@ -445,7 +445,8 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
 
     if (client_dcb->state() == DCB::State::POLLING)
     {
-        json_object_set_new(attr, "idle", json_real(mxb::to_secs(client_dcb->idle_time())));
+        auto idle = client_connection()->is_idle() ? mxb::to_secs(client_dcb->idle_time()) : 0.0;
+        json_object_set_new(attr, "idle", json_real(idle));
     }
 
     mxb::Json memory = get_memory_statistics();
