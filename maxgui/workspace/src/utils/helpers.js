@@ -26,6 +26,7 @@ export function formatSQL(v) {
  * @return {String} Return quoted identifier name. e.g.  `db_name`
  */
 export function quotingIdentifier(identifier) {
+    if (!t(identifier).isString) return identifier
     return `\`${identifier.replace(/`/g, '``')}\``
 }
 
@@ -182,3 +183,5 @@ export function exportToJpeg({ canvas, fileName }) {
     a.click()
     document.body.removeChild(a)
 }
+
+export const addComma = () => ', '

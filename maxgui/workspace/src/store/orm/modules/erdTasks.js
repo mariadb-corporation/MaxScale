@@ -15,6 +15,8 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import { t } from 'typy'
+import queryHelper from '@wsSrc/store/queryHelper'
+import { lodash } from '@share/utils/helpers'
 
 export default {
     namespaced: true,
@@ -88,6 +90,7 @@ export default {
         // Temp states getters
         activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
         stagingNodes: (_, getters) => t(getters.activeTmpRecord, 'nodes').safeArray,
+        stagingNodesData: (_, getters) => getters.stagingNodes.map(n => n.data),
         nodesHistory: (_, getters) => t(getters.activeTmpRecord, 'nodes_history').safeArray,
         activeHistoryIdx: (_, getters) =>
             t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
@@ -96,6 +99,10 @@ export default {
         ],
         graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
         activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
+        tablesColNameMap: (_, getters) =>
+            queryHelper.createTablesColNameMap(getters.stagingNodesData),
+        refTargetMap: (_, getters) =>
+            lodash.keyBy(queryHelper.genRefTargets(getters.stagingNodesData), 'id'),
         // Other getters
         isNewEntity: (_, getters) =>
             !getters.initialNodes.some(item => item.id === getters.activeEntityId),

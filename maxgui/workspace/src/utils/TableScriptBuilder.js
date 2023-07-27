@@ -19,8 +19,9 @@ import {
 } from '@wsSrc/utils/helpers'
 import { CREATE_TBL_TOKENS as tokens, COL_ATTRS, GENERATED_TYPES } from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
+import { addComma } from '@wsSrc/utils/helpers'
 import { t as typy } from 'typy'
-
+import queryHelper from '@wsSrc/store/queryHelper'
 /**
  * Table script builder.
  * This is designed to work with the output of queryHelper.tableParserTransformer,
@@ -88,7 +89,7 @@ export default class TableScriptBuilder {
         })
         this.refTargetMap = refTargetMap
         this.tablesColNameMap = tablesColNameMap
-        this.stagingColNameMap = this.getTblColNameMap(stagingData.id)
+        this.stagingColNameMap = typy(tablesColNameMap, `[${stagingData.id}]`).safeObjectOrEmpty
 
         // options
         this.isCreating = isCreating
@@ -119,50 +120,35 @@ export default class TableScriptBuilder {
         return arrOfObjsDiff({ base: initial, newArr: staging, idField: 'id' })
     }
 
-    getTblColNameMap(tblId) {
-        return typy(this.tablesColNameMap, `[${tblId}]`).safeObjectOrEmpty
-    }
-    getColName({ tblId, colId }) {
-        return this.getTblColNameMap(tblId)[colId]
-    }
-    /**
-     * @param {Boolean} payload.ignore - ignore adding comma
-     * @returns {String} - return ', ' or ''
-     */
-    handleAddComma({ ignore = false } = {}) {
-        return ignore ? '' : ', '
-    }
-
     /**
      * This builds table_options SQL
      * @returns {String} - returns table_options sql
      */
     buildTblOptsSql() {
-        let sql = ''
-        this.optionDiffs.forEach((diff, i) => {
-            if (this.isCreating) sql += ' '
-            else sql += this.handleAddComma({ ignore: i === 0 })
+        let parts = []
+        this.optionDiffs.forEach(diff => {
             const key = diff.path[0]
             switch (key) {
                 case 'name':
                     if (this.isCreating) break
-                    sql += `RENAME TO ${quoting(this.initialSchemaName)}.${quoting(diff.rhs)}`
+                    parts.push(`RENAME TO ${quoting(this.initialSchemaName)}.${quoting(diff.rhs)}`)
                     break
                 case 'engine':
-                    sql += `ENGINE = ${diff.rhs}`
+                    parts.push(`ENGINE = ${diff.rhs}`)
                     break
                 case 'charset':
-                    sql += `CHARACTER SET = ${diff.rhs}`
+                    parts.push(`CHARACTER SET = ${diff.rhs}`)
                     break
                 case 'collation':
-                    sql += `COLLATE = ${diff.rhs}`
+                    parts.push(`COLLATE = ${diff.rhs}`)
                     break
                 case 'comment':
-                    sql += `COMMENT = '${diff.rhs}'`
+                    parts.push(`COMMENT = '${diff.rhs}'`)
                     break
             }
         })
-        return sql
+        if (this.isCreating) return parts.join(' ')
+        return parts.join(addComma())
     }
 
     /**
@@ -231,9 +217,7 @@ export default class TableScriptBuilder {
      * @returns {String} - returns DROP COLUMN sql
      */
     buildRemovedColSQL(cols) {
-        return cols
-            .map(row => `DROP COLUMN ${quoting(row[COL_ATTRS.NAME])}`)
-            .join(this.handleAddComma())
+        return cols.map(row => `DROP COLUMN ${quoting(row[COL_ATTRS.NAME])}`).join(addComma())
     }
 
     /**
@@ -255,13 +239,11 @@ export default class TableScriptBuilder {
         if (dfnColsChanged.length)
             return dfnColsChanged
                 .map(col => this.buildColDfnSQL({ col, isUpdated: true }))
-                .join(this.handleAddComma())
+                .join(addComma())
     }
 
     buildAddedColSQL(cols) {
-        return cols
-            .map(col => this.buildColDfnSQL({ col, isUpdated: false }))
-            .join(this.handleAddComma())
+        return cols.map(col => this.buildColDfnSQL({ col, isUpdated: false })).join(addComma())
     }
 
     /**
@@ -280,11 +262,11 @@ export default class TableScriptBuilder {
             if (updatedKey) parts.push(dropSQL)
             const indexCols = updatedKey ? updatedKey.newObj.cols : addedKey.cols
             const colNames = indexCols.map(({ id }) => quoting(this.stagingColNameMap[id]))
-            let keyDef = `${tokens.primaryKey} (${colNames.join(this.handleAddComma())})`
+            let keyDef = `${tokens.primaryKey} (${colNames.join(addComma())})`
             if (!this.isCreating) keyDef = `${tokens.add} ${keyDef}`
             parts.push(keyDef)
         }
-        return parts.join(this.handleAddComma())
+        return parts.join(addComma())
     }
     /**
      * @returns {String} - returns UQ SQL
@@ -297,9 +279,7 @@ export default class TableScriptBuilder {
         parts = removedKeys.map(({ name }) => `${tokens.drop} ${tokens.key} ${quoting(name)}`)
         addedKeys.forEach(({ name, cols }) => {
             const indexColNames = cols.map(({ id }) => quoting(this.stagingColNameMap[id]))
-            const keyDef = `${tokens.uniqueKey} ${quoting(name)}(${indexColNames.join(
-                this.handleAddComma()
-            )})`
+            const keyDef = `${tokens.uniqueKey} ${quoting(name)}(${indexColNames.join(addComma())})`
             if (this.isCreating) parts.push(keyDef)
             else parts.push(`${tokens.add} ${keyDef}`)
         })
@@ -320,12 +300,12 @@ export default class TableScriptBuilder {
                     parts.push(
                         `${tokens.add} ${tokens.uniqueKey} ${quoting(
                             newObj.name
-                        )}(${indexColNames.join(this.handleAddComma())})`
+                        )}(${indexColNames.join(addComma())})`
                     )
                 }
             })
         })
-        return parts.join(this.handleAddComma())
+        return parts.join(addComma())
     }
     /**
      * This functions uses initial qualified name of a table, so
@@ -351,7 +331,7 @@ export default class TableScriptBuilder {
         )}`
         if (removedKeys.length) {
             sql += alterTableLine
-            sql += removedKeys.join(this.handleAddComma())
+            sql += removedKeys.join(addComma())
             sql += ';'
         }
         return sql
@@ -371,57 +351,20 @@ export default class TableScriptBuilder {
         const addedKeys = this.foreignKeyDiffs.get('added')
         const keys = [...updatedKeys, ...addedKeys]
         const newFks = keys.map(item => {
-            // updatedKeys has `oriObj` and `newObj` fields while addedKeys doesn't
-            const {
-                name,
-                cols,
-                ref_tbl_id,
-                ref_schema_name = '',
-                ref_tbl_name = '',
-                ref_cols,
-                on_delete,
-                on_update,
-            } = item.newObj ? item.newObj : item
-
-            const constraintName = quoting(name)
-
-            const colNames = cols
-                .map(({ id }) => quoting(this.stagingColNameMap[id]))
-                .join(this.handleAddComma())
-
-            const refTarget = ref_tbl_id
-                ? this.refTargetMap[ref_tbl_id].text
-                : `${quoting(ref_schema_name)}.${quoting(ref_tbl_name)}`
-
-            const refColNames = ref_cols
-                .map(({ id, name }) =>
-                    id ? quoting(this.getColName({ tblId: ref_tbl_id, colId: id })) : quoting(name)
-                )
-                .join(this.handleAddComma())
-
-            let keyTokens = [
-                tokens.add,
-                tokens.constraint,
-                constraintName,
-                tokens.foreignKey,
-                `(${colNames})`,
-                tokens.references,
-                refTarget,
-                `(${refColNames})`,
-                tokens.on,
-                tokens.delete,
-                on_delete,
-                tokens.on,
-                tokens.update,
-                on_update,
-            ]
-            if (isPartOfTableCreation) keyTokens.shift()
-            return keyTokens.join(' ')
+            const constraintStr = queryHelper.genConstraint({
+                // updatedKeys has `oriObj` and `newObj` fields while addedKeys doesn't
+                key: item.newObj ? item.newObj : item,
+                refTargetMap: this.refTargetMap,
+                tablesColNameMap: this.tablesColNameMap,
+                stagingColNameMap: this.stagingColNameMap,
+            })
+            if (isPartOfTableCreation) return constraintStr
+            return `${tokens.add} ${constraintStr}`
         })
 
         if (newFks.length) {
             if (!isPartOfTableCreation) sql += alterTableLine
-            sql += newFks.join(this.handleAddComma())
+            sql += newFks.join(addComma())
             if (!isPartOfTableCreation) sql += ';'
         }
         return sql
@@ -454,7 +397,7 @@ export default class TableScriptBuilder {
         if (pkSQL) alterSpecs.push(pkSQL)
         if (uqSQL) alterSpecs.push(uqSQL)
 
-        return alterSpecs.join(this.handleAddComma())
+        return alterSpecs.join(addComma())
     }
 
     /**
@@ -472,7 +415,7 @@ export default class TableScriptBuilder {
         if (pkSQL) specs.push(pkSQL)
         if (uqSQL) specs.push(uqSQL)
         if (fkSQL) specs.push(fkSQL)
-        return specs.join(this.handleAddComma())
+        return specs.join(addComma())
     }
     buildAlterScript() {
         let sql = ''
@@ -490,7 +433,7 @@ export default class TableScriptBuilder {
             sql += `${tokens.alterTable} ${quoting(this.initialSchemaName)}.${quoting(
                 this.initialTableName
             )}`
-            sql += parts.join(this.handleAddComma())
+            sql += parts.join(addComma())
             sql += ';'
         }
 

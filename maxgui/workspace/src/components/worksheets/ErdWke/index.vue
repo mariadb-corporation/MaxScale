@@ -55,7 +55,6 @@ import Worksheet from '@wsSrc/store/orm/models/Worksheet'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
-import queryHelper from '@wsSrc/store/queryHelper'
 
 export default {
     name: 'erd-wke',
@@ -134,13 +133,10 @@ export default {
         initialNodesData() {
             return this.initialNodes.map(n => n.data)
         },
-        stagingNodesData() {
-            return this.stagingNodes.map(n => n.data)
-        },
         nodeDataDiffs() {
             return this.$helpers.arrOfObjsDiff({
                 base: this.initialNodesData,
-                newArr: this.stagingNodesData,
+                newArr: ErdTask.getters('stagingNodesData'),
                 idField: 'id',
             })
         },
@@ -168,15 +164,6 @@ export default {
         },
         halfBlockCmt() {
             return this.blockCmt.slice(0, Math.round(this.blockCmt.length / 2))
-        },
-        refTargets() {
-            return queryHelper.genRefTargets(this.stagingNodesData)
-        },
-        refTargetMap() {
-            return this.$helpers.lodash.keyBy(this.refTargets, 'id')
-        },
-        tablesColNameMap() {
-            return queryHelper.createTablesColNameMap(this.stagingNodesData)
         },
         newSchemas() {
             const { xorWith, isEqual } = this.$helpers.lodash
@@ -214,6 +201,8 @@ export default {
         },
         genScript() {
             this.scriptGeneratedTime = this.$helpers.dateFormat({ value: new Date() })
+            const tablesColNameMap = ErdTask.getters('tablesColNameMap')
+            const refTargetMap = ErdTask.getters('refTargetMap')
             const { formatSQL, quotingIdentifier: quoting } = this.$helpers
             let parts = [],
                 newTablesFks = [],
@@ -224,8 +213,8 @@ export default {
                 const builder = new TableScriptBuilder({
                     initialData: oriObj,
                     stagingData: newObj,
-                    refTargetMap: this.refTargetMap,
-                    tablesColNameMap: this.tablesColNameMap,
+                    refTargetMap,
+                    tablesColNameMap,
                     options: { skipFkCreation: true },
                 })
                 const script = builder.build()
@@ -258,8 +247,8 @@ export default {
                 const builder = new TableScriptBuilder({
                     initialData: {},
                     stagingData: tbl,
-                    refTargetMap: this.refTargetMap,
-                    tablesColNameMap: this.tablesColNameMap,
+                    refTargetMap,
+                    tablesColNameMap,
                     options: {
                         isCreating: true,
                         skipSchemaCreation: true,

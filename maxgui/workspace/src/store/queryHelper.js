@@ -23,9 +23,9 @@ import {
     COL_ATTR_IDX_MAP,
     GENERATED_TYPES,
 } from '@wsSrc/store/config'
-import { lodash, to, uuidv1, immutableUpdate } from '@share/utils/helpers'
+import { lodash, to, immutableUpdate } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { map2dArr, quotingIdentifier } from '@wsSrc/utils/helpers'
+import { map2dArr, quotingIdentifier as quoting, addComma } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import TableParser from '@wsSrc/utils/TableParser'
@@ -159,17 +159,15 @@ function genNode({
         case VIEW:
         case SP:
         case FN:
-            node.qualified_name = `${quotingIdentifier(schemaName)}.${quotingIdentifier(node.name)}`
+            node.qualified_name = `${quoting(schemaName)}.${quoting(node.name)}`
             break
         case TRIGGER:
         case COL:
         case IDX:
-            node.qualified_name = `${quotingIdentifier(getTblName(nodeGroup))}.${quotingIdentifier(
-                node.name
-            )}`
+            node.qualified_name = `${quoting(getTblName(nodeGroup))}.${quoting(node.name)}`
             break
         case SCHEMA:
-            node.qualified_name = quotingIdentifier(node.name)
+            node.qualified_name = quoting(node.name)
             break
     }
     // Auto assign child node groups unless nodeAttrs is provided with values other than the default ones
@@ -605,7 +603,7 @@ function genErdLink({
     srcCardinality,
     targetCardinality,
 }) {
-    const { name, on_delete, on_update } = fk
+    const { id, name, on_delete, on_update } = fk
 
     const colData = getColDefData({ node: srcNode, colId: indexColId })
     const referencedColData = getColDefData({ node: targetNode, colId: refColId })
@@ -616,7 +614,7 @@ function genErdLink({
     const type = `${srcOptionality}..${srcCardinality}:${targetOptionality}..${targetCardinality}`
 
     let link = {
-        id: `link_${uuidv1()}`,
+        id, // use fk id as link id
         source: srcNode.id,
         target: targetNode.id,
         relationshipData: {
@@ -769,10 +767,58 @@ function genRefTargets(tables) {
         const name = typy(tbl, 'options.name').safeString
         return {
             id: tbl.id,
-            text: `${quotingIdentifier(schema)}.${quotingIdentifier(name)}`,
+            text: `${quoting(schema)}.${quoting(name)}`,
         }
     })
 }
+/**
+ * TODO: Move all helpers related to ERD to a separate file
+ * @param {object} param
+ * @param {object} param.key - FK object
+ * @param {object} param.refTargetMap - referenced target map
+ * @param {object} param.tablesColNameMap - column names of all tables in ERD mapped by column id
+ * @param {object} param.stagingColNameMap - column names of the table has the FK mapped by column id
+ * @returns {string} FK constraint
+ */
+function genConstraint({ key, refTargetMap, tablesColNameMap, stagingColNameMap }) {
+    const {
+        name,
+        cols,
+        ref_tbl_id,
+        ref_schema_name = '',
+        ref_tbl_name = '',
+        ref_cols,
+        on_delete,
+        on_update,
+    } = key
+
+    const constraintName = quoting(name)
+
+    const colNames = cols.map(({ id }) => quoting(stagingColNameMap[id])).join(addComma())
+
+    const refTarget = ref_tbl_id
+        ? typy(refTargetMap[ref_tbl_id], 'text').safeString
+        : `${quoting(ref_schema_name)}.${quoting(ref_tbl_name)}`
+
+    const refColNames = ref_cols
+        .map(({ id, name }) => {
+            if (id) {
+                const colName = typy(tablesColNameMap, `[${ref_tbl_id}][${id}]`).safeString
+                return quoting(colName)
+            }
+            return quoting(name)
+        })
+        .join(addComma())
+
+    return [
+        `${tokens.constraint} ${constraintName}`,
+        `${tokens.foreignKey} (${colNames})`,
+        `${tokens.references} ${refTarget} (${refColNames})`,
+        `${tokens.on} ${tokens.delete} ${on_delete}`,
+        `${tokens.on} ${tokens.update} ${on_update}`,
+    ].join('\n')
+}
+
 export default {
     getSchemaName,
     getTblName,
@@ -797,4 +843,5 @@ export default {
     isSingleUQ,
     createTablesColNameMap,
     genRefTargets,
+    genConstraint,
 }
