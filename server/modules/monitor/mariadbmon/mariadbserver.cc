@@ -173,17 +173,19 @@ bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd, const std::stri
  * ran several times.
  * @param time_limit How long to retry. This does not overwrite the connector-c timeouts which are always
  * respected.
- * @param errmsg_out Error output
+ * @param errmsg_out Error message output
+ * @param errnum_out Error number output
  * @return True, if successful.
  */
 bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
-                                           string* errmsg_out)
+                                           string* errmsg_out, unsigned int* errnum_out)
 {
-    return execute_cmd_time_limit(cmd, "", time_limit, errmsg_out);
+    return execute_cmd_time_limit(cmd, "", time_limit, errmsg_out, errnum_out);
 }
 
 bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& masked_cmd,
-                                           maxbase::Duration time_limit, string* errmsg_out)
+                                           maxbase::Duration time_limit,
+                                           string* errmsg_out, unsigned int* errnum_out)
 {
     StopWatch timer;
     string max_stmt_time;
@@ -255,9 +257,16 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
                     std::this_thread::sleep_for(this_sleep);
                 }
             }
-            else if (errmsg_out)
+            else
             {
-                *errmsg_out = error_msg;    // The error string already has all required info.
+                if (errmsg_out)
+                {
+                    *errmsg_out = error_msg;
+                }
+                if (errnum_out)
+                {
+                    *errnum_out = errornum;
+                }
             }
         }
     }
@@ -2092,7 +2101,7 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
     SlaveStatus::Settings new_settings(conn_settings.name, conn_settings.master_endpoint, name());
     auto change_master = generate_change_master_cmd(new_settings);
     bool conn_created = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
-                                               time_remaining, &error_msg);
+                                               time_remaining, &error_msg, nullptr);
     time_remaining -= timer.restart();
     if (conn_created)
     {
@@ -2174,7 +2183,7 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
 
         string error_msg;
         bool changed = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
-                                              time_remaining, &error_msg);
+                                              time_remaining, &error_msg, nullptr);
         time_remaining -= timer.restart();
         if (changed)
         {
@@ -2356,12 +2365,13 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
             auto user = res->get_string(user_col);
             string kill_query = mxb::string_printf("KILL SOFT CONNECTION %li;", conn_id);
             StopWatch timer;
-            if (execute_cmd_time_limit(kill_query, time_remaining, &error_msg))
+            if (execute_cmd_time_limit(kill_query, time_remaining, &error_msg, &error_num))
             {
                 MXB_WARNING("Killed connection id %lu to '%s' from super-user '%s' to prevent writes.",
                             conn_id, name(), user.c_str());
             }
-            else
+            // The super-user may have logged out just before the kill-query.
+            else if (error_num != ER_NO_SUCH_THREAD)
             {
                 error = true;
                 PRINT_MXS_JSON_ERROR(error_out, "Could not kill connection %lu from super-user '%s': %s",
