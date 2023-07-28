@@ -1449,21 +1449,27 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
 
     // Change character set and collation to the values in the event description. Otherwise, the event
     // values could be changed to whatever the monitor connection happens to be using.
-    string alter_event_query = string_printf(
-        "SET NAMES %s COLLATE %s; ALTER DEFINER = %s EVENT %s %s;",
-        event.charset.c_str(), event.collation.c_str(), quoted_definer.c_str(), event.name.c_str(),
-        target_status.c_str());
-
-    if (execute_cmd(alter_event_query, &error_msg))
+    string set_names = string_printf("SET NAMES %s COLLATE %s;", event.charset.c_str(),
+                                     event.collation.c_str());
+    if (execute_cmd(set_names, &error_msg))
     {
-        rval = true;
-        const char FMT[] = "Event '%s' on server '%s' set to '%s'.";
-        MXB_NOTICE(FMT, event.name.c_str(), name(), target_status.c_str());
+        string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s %s;", quoted_definer.c_str(),
+                                                 event.name.c_str(), target_status.c_str());
+        if (execute_cmd(alter_event_query, &error_msg))
+        {
+            rval = true;
+            const char FMT[] = "Event '%s' on server '%s' set to '%s'.";
+            MXB_NOTICE(FMT, event.name.c_str(), name(), target_status.c_str());
+        }
+        else
+        {
+            const char FMT[] = "Could not alter event '%s' on server '%s': %s";
+            PRINT_JSON_ERROR(error_out, FMT, event.name.c_str(), name(), error_msg.c_str());
+        }
     }
     else
     {
-        const char FMT[] = "Could not alter event '%s' on server '%s': %s";
-        PRINT_JSON_ERROR(error_out, FMT, event.name.c_str(), name(), error_msg.c_str());
+        PRINT_JSON_ERROR(error_out, "Could not set character set: %s", error_msg.c_str());
     }
     return rval;
 }

@@ -191,6 +191,9 @@
       },
       {
         "name" : "binutils"
+      },
+      {
+        "name" : "java"
       }
     ]
   },
