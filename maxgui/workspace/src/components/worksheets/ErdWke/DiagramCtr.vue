@@ -507,14 +507,30 @@ export default {
             ErdTask.dispatch('updateActiveHistoryIdx', idx)
             this.redrawnDiagram()
         },
+        /**
+         * Adds a PLAIN index for provided colId to provided node
+         * @param {object} param
+         * @param {string} param.colId
+         * @param {object} param.node
+         * @returns {object} updated node
+         */
+        addPlainIndex({ colId, node }) {
+            const { key } = this.CREATE_TBL_TOKENS
+            const refTblDef = node.data.definitions
+            const plainKeys = this.$typy(refTblDef, `keys[${key}]`).safeArray
+            const newKey = queryHelper.genKey({ definitions: refTblDef, category: key, colId })
+            return this.$helpers.immutableUpdate(node, {
+                data: {
+                    definitions: {
+                        keys: { $merge: { [key]: [...plainKeys, newKey] } },
+                    },
+                },
+            })
+        },
         onCreateNewFk({ nodeIdx, currentFks, newKey }) {
-            /**
-             * TODO: Add newKey validation. both referencing and referenced cols must have the same datatype,
-             * if not, show an error.
-             * Auto adds a PLAIN key for referenced col if there is none.
-             */
             const { foreignKey } = this.CREATE_TBL_TOKENS
-            const stagingNodes = this.$helpers.immutableUpdate(this.stagingNodes, {
+            const { immutableUpdate } = this.$helpers
+            let stagingNodes = immutableUpdate(this.stagingNodes, {
                 [nodeIdx]: {
                     data: {
                         definitions: {
@@ -523,8 +539,25 @@ export default {
                     },
                 },
             })
+            // entity-diagram doesn't generate composite FK, so ref_cols always has one item
+            const refColId = newKey.ref_cols[0].id
+            // Auto adds a PLAIN index for referenced col if there is none.
+            const nonIndexedColId = this.colKeyTypeMap[refColId] ? null : refColId
+            if (nonIndexedColId) {
+                const refNodeIdx = stagingNodes.findIndex(n => n.id === newKey.ref_tbl_id)
+                const refNode = this.addPlainIndex({
+                    node: stagingNodes[refNodeIdx],
+                    colId: nonIndexedColId,
+                })
+                stagingNodes = immutableUpdate(stagingNodes, { [refNodeIdx]: { $set: refNode } })
+            }
+            /**
+             * TODO: Add newKey validation. both referencing and referenced cols must have the same datatype,
+             * if not, show an error.
+             */
             this.$refs.diagram.update(stagingNodes)
             ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
+            ErdTask.dispatch('updateNodesHistory', stagingNodes)
         },
     },
 }

@@ -17,7 +17,12 @@ import {
     arrOfObjsDiff,
     map2dArr,
 } from '@wsSrc/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens, COL_ATTRS, GENERATED_TYPES } from '@wsSrc/store/config'
+import {
+    CREATE_TBL_TOKENS as tokens,
+    COL_ATTRS,
+    GENERATED_TYPES,
+    ALL_TABLE_KEY_TYPES,
+} from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 import { addComma } from '@wsSrc/utils/helpers'
 import { t as typy } from 'typy'
@@ -65,28 +70,21 @@ export default class TableScriptBuilder {
             typy(initialData, 'options').safeObjectOrEmpty,
             this.stagingDataOptions
         )
-        this.isColsOptsChanged = !lodash.isEqual(this.initialColsData, this.stagingColsData)
+        this.hasColDefChanged = !lodash.isEqual(this.initialColsData, this.stagingColsData)
 
         // Keys
         this.initialKeys = typy(initialData, 'definitions.keys').safeObjectOrEmpty
         this.stagingKeys = typy(stagingData, 'definitions.keys').safeObjectOrEmpty
 
-        // Get the diff of pk, uq keys
-        this.pkKeyDiffs = this.getKeysDiffs({
-            initialKeys: this.initialKeys,
-            stagingKeys: this.stagingKeys,
-            category: tokens.primaryKey,
-        })
-        this.uqKeyDiffs = this.getKeysDiffs({
-            initialKeys: this.initialKeys,
-            stagingKeys: this.stagingKeys,
-            category: tokens.uniqueKey,
-        })
-        this.foreignKeyDiffs = this.getKeysDiffs({
-            initialKeys: this.initialKeys,
-            stagingKeys: this.stagingKeys,
-            category: tokens.foreignKey,
-        })
+        this.keyDiffs = ALL_TABLE_KEY_TYPES.reduce((map, type) => {
+            map[type] = this.getKeysDiffs({
+                initialKeys: this.initialKeys,
+                stagingKeys: this.stagingKeys,
+                category: type,
+            })
+            return map
+        }, {})
+
         this.refTargetMap = refTargetMap
         this.tablesColNameMap = tablesColNameMap
         this.stagingColNameMap = typy(tablesColNameMap, `[${stagingData.id}]`).safeObjectOrEmpty
@@ -252,9 +250,10 @@ export default class TableScriptBuilder {
      * @returns {String} - returns PK SQL
      */
     buildPkSQL() {
-        const removedKey = typy(this.pkKeyDiffs.get('removed'), '[0]').safeObject
-        const updatedKey = typy(this.pkKeyDiffs.get('updated'), '[0]').safeObject
-        const addedKey = typy(this.pkKeyDiffs.get('added'), '[0]').safeObject
+        const pkKeyDiffs = this.keyDiffs[tokens.primaryKey]
+        const removedKey = typy(pkKeyDiffs.get('removed'), '[0]').safeObject
+        const updatedKey = typy(pkKeyDiffs.get('updated'), '[0]').safeObject
+        const addedKey = typy(pkKeyDiffs.get('added'), '[0]').safeObject
         const dropSQL = `${tokens.drop} ${tokens.primaryKey}`
         let parts = []
         if (removedKey) parts.push(dropSQL)
@@ -269,17 +268,19 @@ export default class TableScriptBuilder {
         return parts.join(addComma())
     }
     /**
-     * @returns {String} - returns UQ SQL
+     * @param {string} category - key category
+     * @returns {string} - returns key SQL
      */
-    buildUniqueKeySQL() {
-        const removedKeys = this.uqKeyDiffs.get('removed')
-        const updatedKeys = this.uqKeyDiffs.get('updated')
-        const addedKeys = this.uqKeyDiffs.get('added')
+    buildKeySQL(category) {
+        const keyDiffs = this.keyDiffs[category]
+        const removedKeys = keyDiffs.get('removed')
+        const updatedKeys = keyDiffs.get('updated')
+        const addedKeys = keyDiffs.get('added')
         let parts = []
         parts = removedKeys.map(({ name }) => `${tokens.drop} ${tokens.key} ${quoting(name)}`)
         addedKeys.forEach(({ name, cols }) => {
             const indexColNames = cols.map(({ id }) => quoting(this.stagingColNameMap[id]))
-            const keyDef = `${tokens.uniqueKey} ${quoting(name)}(${indexColNames.join(addComma())})`
+            const keyDef = `${category} ${quoting(name)}(${indexColNames.join(addComma())})`
             if (this.isCreating) parts.push(keyDef)
             else parts.push(`${tokens.add} ${keyDef}`)
         })
@@ -298,29 +299,40 @@ export default class TableScriptBuilder {
                         quoting(this.stagingColNameMap[id])
                     )
                     parts.push(
-                        `${tokens.add} ${tokens.uniqueKey} ${quoting(
-                            newObj.name
-                        )}(${indexColNames.join(addComma())})`
+                        `${tokens.add} ${category} ${quoting(newObj.name)}(${indexColNames.join(
+                            addComma()
+                        )})`
                     )
                 }
             })
         })
         return parts.join(addComma())
     }
+    buildOtherKeys() {
+        let parts = []
+        const categories = [tokens.uniqueKey, tokens.key, tokens.fullTextKey, tokens.spatialKey]
+        categories.forEach(category => {
+            const sql = this.buildKeySQL(category)
+            if (sql) parts.push(sql)
+        })
+        return parts.join(addComma())
+    }
+
     /**
      * This functions uses initial qualified name of a table, so
      * the SQL must be placed before any modification to qualified name.
      * @returns {string} sql for dropping FKs
      */
     buildRemovedFkSQL() {
+        const foreignKeyDiffs = this.keyDiffs[tokens.foreignKey]
         /**
          * When altering existing keys, the keys needed to be dropped first
          * so that modified keys with existing name can be executed.
          * i.e. Duplicate key on write or update.
          */
         const removedKeys = [
-            ...this.foreignKeyDiffs.get('removed'),
-            ...this.foreignKeyDiffs.get('updated'),
+            ...foreignKeyDiffs.get('removed'),
+            ...foreignKeyDiffs.get('updated'),
         ].map(item => {
             const key = item.oriObj ? item.oriObj : item
             return `${tokens.drop} ${tokens.foreignKey} ${quoting(key.name)}`
@@ -343,12 +355,13 @@ export default class TableScriptBuilder {
      * @returns {String} - returns FK SQL
      */
     buildNewFkSQL({ isPartOfTableCreation = false } = {}) {
+        const foreignKeyDiffs = this.keyDiffs[tokens.foreignKey]
         let sql = ''
         const alterTableLine = `${tokens.alterTable} ${quoting(this.stagingSchemaName)}.${quoting(
             this.stagingTableName
         )}`
-        const updatedKeys = this.foreignKeyDiffs.get('updated')
-        const addedKeys = this.foreignKeyDiffs.get('added')
+        const updatedKeys = foreignKeyDiffs.get('updated')
+        const addedKeys = foreignKeyDiffs.get('added')
         const keys = [...updatedKeys, ...addedKeys]
         const newFks = keys.map(item => {
             const constraintStr = queryHelper.genConstraint({
@@ -371,10 +384,10 @@ export default class TableScriptBuilder {
     }
 
     /**
-     * Build SQL for altering columns and keys
+     * Build SQL for altering columns
      * @returns {String} - returns column alter sql
      */
-    buildAlterColsSql() {
+    buildColDefAlterSQL() {
         const base = map2dArr({ fields: this.colAttrs, arr: this.initialColsData })
         const newData = map2dArr({ fields: this.colAttrs, arr: this.stagingColsData })
         const diff = arrOfObjsDiff({ base, newArr: newData, idField: COL_ATTRS.ID })
@@ -388,14 +401,9 @@ export default class TableScriptBuilder {
         const updatedColSQL = this.buildUpdatedColSQL(updatedCols)
         const addedColSQL = this.buildAddedColSQL(addedCols)
 
-        const pkSQL = this.buildPkSQL()
-        const uqSQL = this.buildUniqueKeySQL()
-
         if (removedColSQL) alterSpecs.push(removedColSQL)
         if (updatedColSQL) alterSpecs.push(updatedColSQL)
         if (addedColSQL) alterSpecs.push(addedColSQL)
-        if (pkSQL) alterSpecs.push(pkSQL)
-        if (uqSQL) alterSpecs.push(uqSQL)
 
         return alterSpecs.join(addComma())
     }
@@ -410,10 +418,10 @@ export default class TableScriptBuilder {
         const addedColSQL = this.buildAddedColSQL(data)
         specs.push(addedColSQL)
         const pkSQL = this.buildPkSQL()
-        const uqSQL = this.buildUniqueKeySQL()
+        const otherKeysSQL = this.buildOtherKeys()
         const fkSQL = this.skipFkCreation ? '' : this.buildNewFkSQL({ isPartOfTableCreation: true })
         if (pkSQL) specs.push(pkSQL)
-        if (uqSQL) specs.push(uqSQL)
+        if (otherKeysSQL) specs.push(otherKeysSQL)
         if (fkSQL) specs.push(fkSQL)
         return specs.join(addComma())
     }
@@ -421,14 +429,20 @@ export default class TableScriptBuilder {
         let sql = ''
         /**
          * Removed FKs must be placed before any modifications to columns.
-         * e.g. Dropping a column is a part for buildAlterColsSql, so the FK must be dropped first.
+         * e.g. Dropping a column is a part for buildColDefAlterSQL, so the FK must be dropped first.
          */
         const removedFkSQL = this.buildRemovedFkSQL()
         if (removedFkSQL) sql += removedFkSQL
 
         let parts = [] // part of script which will be separated by commas
         if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
-        if (this.isColsOptsChanged) parts.push(this.buildAlterColsSql())
+        if (this.hasColDefChanged) parts.push(this.buildColDefAlterSQL())
+
+        const pkSQL = this.buildPkSQL()
+        const otherKeysSQL = this.buildOtherKeys()
+        if (pkSQL) parts.push(pkSQL)
+        if (otherKeysSQL) parts.push(otherKeysSQL)
+
         if (parts.length) {
             sql += `${tokens.alterTable} ${quoting(this.initialSchemaName)}.${quoting(
                 this.initialTableName

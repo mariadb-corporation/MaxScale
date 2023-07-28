@@ -213,9 +213,6 @@ export default {
         idxOfColId() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
         },
-        idxOfColName() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]
-        },
         idxOfCollation() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.COLLATE]
         },
@@ -659,13 +656,7 @@ export default {
         genKey({ definitions, category, colId }) {
             const existingKey = this.getKeyObjByColId({ keys: this.initialKeys, category, colId })
             if (existingKey) return existingKey
-            const col = definitions.cols.find(c => c[this.idxOfColId] === colId)
-            const colName = col[this.idxOfColName]
-            return {
-                id: `key_${this.$helpers.uuidv1()}`,
-                cols: [{ id: colId }],
-                name: queryHelper.genKeyName({ colName, category }),
-            }
+            return queryHelper.genKey({ definitions, category, colId })
         },
         /**
          * @param {object} param.definitions - parsed definitions

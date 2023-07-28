@@ -23,7 +23,7 @@ import {
     COL_ATTR_IDX_MAP,
     GENERATED_TYPES,
 } from '@wsSrc/store/config'
-import { lodash, to, immutableUpdate } from '@share/utils/helpers'
+import { lodash, to, immutableUpdate, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { map2dArr, quotingIdentifier as quoting, addComma } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
@@ -819,6 +819,24 @@ function genConstraint({ key, refTargetMap, tablesColNameMap, stagingColNameMap 
         `${tokens.on} ${tokens.update} ${on_update}`,
     ].join('\n')
 }
+/**
+ * @param {object} param
+ * @param {object} param.definitions - parsed definitions
+ * @param {string} param.category
+ * @param {string} param.colId
+ * @returns {object} new key object
+ */
+function genKey({ definitions, category, colId }) {
+    const idxOfId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
+    const idxOfName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
+    const col = definitions.cols.find(c => c[idxOfId] === colId)
+    const colName = col[idxOfName]
+    return {
+        id: `key_${uuidv1()}`,
+        cols: [{ id: colId }],
+        name: genKeyName({ colName, category }),
+    }
+}
 
 export default {
     getSchemaName,
@@ -845,4 +863,5 @@ export default {
     createTablesColNameMap,
     genRefTargets,
     genConstraint,
+    genKey,
 }
