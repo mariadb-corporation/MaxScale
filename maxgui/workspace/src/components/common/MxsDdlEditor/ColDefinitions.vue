@@ -110,6 +110,7 @@ export default {
         defTblCharset: { type: String, required: true },
         defTblCollation: { type: String, required: true },
         charsetCollationMap: { type: Object, required: true },
+        colKeyTypeMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -279,10 +280,7 @@ export default {
              * The key is dropped if cols is empty.
              */
             selectedItems.forEach(col => {
-                const keyTypes = queryHelper.findKeyTypesByColId({
-                    keys: definitions.keys,
-                    colId: col[this.idxOfColId],
-                })
+                const keyTypes = this.colKeyTypeMap[col[this.idxOfColId]] || []
                 keyTypes.forEach(category => {
                     definitions = this.keySideEffect({
                         definitions,

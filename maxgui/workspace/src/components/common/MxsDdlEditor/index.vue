@@ -38,6 +38,7 @@
                         :dim="tabDim"
                         :defTblCharset="$typy(tblOpts, 'charset').safeString"
                         :defTblCollation="$typy(tblOpts, 'collation').safeString"
+                        :colKeyTypeMap="colKeyTypeMap"
                     />
                     <template v-else-if="activeSpec === DDL_EDITOR_SPECS.FK">
                         <fk-definitions
@@ -203,6 +204,9 @@ export default {
         },
         tablesColNameMap() {
             return queryHelper.createTablesColNameMap(this.allLookupTables)
+        },
+        colKeyTypeMap() {
+            return queryHelper.genColKeyTypeMap(this.definitions.keys)
         },
         eventBus() {
             return EventBus

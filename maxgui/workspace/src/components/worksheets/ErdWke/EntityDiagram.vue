@@ -202,6 +202,7 @@ export default {
         activeNodeId: { type: String, default: '' },
         refTargetMap: { type: Object, required: true },
         tablesColNameMap: { type: Object, required: true },
+        colKeyTypeMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -581,14 +582,15 @@ export default {
                 spatialKey,
                 foreignKey,
             } = this.CREATE_TBL_TOKENS
-            const { color } = this.getHighlightColStyle({ node, colId }) || {}
 
-            const nodeKeys = this.entityKeyMap[node.id]
-            const keyTypes = queryHelper.findKeyTypesByColId({ keys: nodeKeys, colId })
+            const { color } = this.getHighlightColStyle({ node, colId }) || {}
+            const keyTypes = this.colKeyTypeMap[colId] || []
 
             let isUQ = false
-            if (keyTypes.includes(uniqueKey))
+            if (keyTypes.includes(uniqueKey)) {
+                const nodeKeys = this.entityKeyMap[node.id]
                 isUQ = queryHelper.isSingleUQ({ keys: nodeKeys, colId })
+            }
 
             if (keyTypes.includes(primaryKey))
                 return {

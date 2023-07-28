@@ -25,6 +25,7 @@
             :activeNodeId="activeEntityId"
             :refTargetMap="refTargetMap"
             :tablesColNameMap="tablesColNameMap"
+            :colKeyTypeMap="colKeyTypeMap"
             class="entity-diagram"
             @on-rendered.once="onRendered"
             @on-node-drag-end="onNodeDragEnd"
@@ -218,6 +219,9 @@ export default {
         },
         tablesColNameMap() {
             return ErdTask.getters('tablesColNameMap')
+        },
+        colKeyTypeMap() {
+            return ErdTask.getters('colKeyTypeMap')
         },
     },
     watch: {

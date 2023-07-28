@@ -380,19 +380,19 @@ function getDatabase(connection_string) {
 }
 
 /**
- * This function returns the type even if the provided column is
- * part of a composite key.
- * @param {object} param
- * @param {object} param.keys - transformed keys
- * @param {string} param.colId - column id to be looked up
- * @returns {array} types of the key
+ * @param {object} keys - keys that have been mapped with ids via tableParserTransformer function
+ * @returns {object} e.g. { 'col_id': ['PRIMARY KEY', ], }
  */
-function findKeyTypesByColId({ keys, colId }) {
-    return ALL_TABLE_KEY_TYPES.filter(type =>
-        typy(keys, `[${type}]`).safeArray.some(key => key.cols.some(item => item.id === colId))
-    )
+function genColKeyTypeMap(keys) {
+    return Object.keys(keys).reduce((map, type) => {
+        const colIds = keys[type].map(key => key.cols.map(c => c.id)).flat()
+        colIds.forEach(id => {
+            if (!map[id]) map[id] = []
+            map[id].push(type)
+        })
+        return map
+    }, {})
 }
-
 /**
  *
  * @param {object} param
@@ -499,11 +499,12 @@ function tableParserTransformer({ parsedTable, lookupTables = [], charsetCollati
         COLLATE,
         COMMENT,
     } = COL_ATTRS
-
+    const colKeyTypeMap = genColKeyTypeMap(transformedKeys)
     const transformedCols = cols.map(col => {
         let type = col.data_type
         if (col.data_type_size) type += `(${col.data_type_size})`
-        const keyTypes = findKeyTypesByColId({ keys: transformedKeys, colId: col.id })
+        const keyTypes = colKeyTypeMap[col.id] || []
+
         let uq = false
         if (keyTypes.includes(tokens.uniqueKey)) {
             /**
@@ -833,7 +834,7 @@ export default {
     getDatabase,
     handleGenErdLink,
     queryAndParseDDL,
-    findKeyTypesByColId,
+    genColKeyTypeMap,
     tableParserTransformer,
     genKeyName,
     tableParser,

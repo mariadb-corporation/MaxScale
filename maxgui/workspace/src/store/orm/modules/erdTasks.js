@@ -103,6 +103,12 @@ export default {
             queryHelper.createTablesColNameMap(getters.stagingNodesData),
         refTargetMap: (_, getters) =>
             lodash.keyBy(queryHelper.genRefTargets(getters.stagingNodesData), 'id'),
+        colKeyTypeMap: (_, getters) => {
+            return getters.stagingNodesData.reduce((map, tbl) => {
+                map = { ...map, ...queryHelper.genColKeyTypeMap(tbl.definitions.keys) }
+                return map
+            }, {})
+        },
         // Other getters
         isNewEntity: (_, getters) =>
             !getters.initialNodes.some(item => item.id === getters.activeEntityId),
