@@ -72,6 +72,7 @@ import { mapState } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import FkDefinitionCol from '@wsSrc/components/common/MxsDdlEditor/FkDefinitionCol.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 import { checkFkSupport } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 
 export default {
@@ -272,7 +273,7 @@ export default {
                 config: this.connData.config,
             })
             this.tmpLookupTables = parsedTables.reduce((map, tbl) => {
-                map[tbl.id] = queryHelper.tableParserTransformer({
+                map[tbl.id] = erdHelper.tableParserTransformer({
                     parsedTable: tbl,
                     charsetCollationMap: this.charsetCollationMap,
                 })

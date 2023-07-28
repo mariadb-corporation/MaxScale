@@ -17,9 +17,49 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import Worksheet from '@wsModels/Worksheet'
-import queryHelper from '@wsSrc/store/queryHelper'
 import connection from '@wsSrc/api/connection'
 import queries from '@wsSrc/api/queries'
+
+/**
+ *
+ * @param {Object} apiConnMap - connections from API mapped by id
+ * @param {Array} persistentConns - current persistent connections
+ * @returns {Object} - { alive_conns: [], orphaned_conn_ids: [] }
+ * alive_conns: stores connections that exists in the response of a GET to /sql/
+ * orphaned_conn_ids: When QueryEditor connection expires but its cloned connections (query tabs)
+ * are still alive, those are orphaned connections
+ */
+function categorizeConns({ apiConnMap, persistentConns }) {
+    let alive_conns = [],
+        orphaned_conn_ids = []
+
+    persistentConns.forEach(conn => {
+        const connId = conn.id
+        if (apiConnMap[connId]) {
+            // if this has value, it is a cloned connection from the QueryEditor connection
+            const { clone_of_conn_id: queryEditorConnId = '' } = conn || {}
+            if (queryEditorConnId && !apiConnMap[queryEditorConnId]) orphaned_conn_ids.push(conn.id)
+            else
+                alive_conns.push({
+                    ...conn,
+                    // update attributes
+                    attributes: apiConnMap[connId].attributes,
+                })
+        }
+    })
+
+    return { alive_conns, orphaned_conn_ids }
+}
+
+/**
+ * @param {String} connection_string
+ * @returns {String} Database name
+ */
+function getConnStrDb(connection_string) {
+    const matches = connection_string.match(/(database=)\w+/gi) || ['']
+    const matched = matches[0]
+    return matched.replace(/(database=)+/gi, '')
+}
 
 export default {
     namespaced: true,
@@ -132,7 +172,7 @@ export default {
             for (const config of requestConfigs) {
                 const [e, res] = await $helpers.to(connection.get(config))
                 const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
-                const { alive_conns = [], orphaned_conn_ids = [] } = queryHelper.categorizeConns({
+                const { alive_conns = [], orphaned_conn_ids = [] } = categorizeConns({
                     apiConnMap,
                     persistentConns,
                 })
@@ -269,7 +309,7 @@ export default {
                     case ETL_SRC:
                         target = $mxs_t('source').toLowerCase() + `: ${src_type}`
                         connData.active_db = $helpers.quotingIdentifier(
-                            queryHelper.getDatabase(body.connection_string)
+                            getConnStrDb(body.connection_string)
                         )
                         break
                     case ETL_DEST:

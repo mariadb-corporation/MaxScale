@@ -140,7 +140,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
-import queryHelper from '@wsSrc/store/queryHelper'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 export default {
     name: 'schema-tree-ctr',
@@ -512,8 +512,8 @@ export default {
                 case DROP: {
                     let sql = `DROP ${node.type} ${node.qualified_name};`
                     if (node.type === IDX) {
-                        const db = queryHelper.getSchemaName(node)
-                        const tbl = queryHelper.getTblName(node)
+                        const db = schemaNodeHelper.getSchemaName(node)
+                        const tbl = schemaNodeHelper.getTblName(node)
                         const target = `${quoting(db)}.${quoting(tbl)}`
                         sql = `DROP ${node.type} ${quoting(node.name)} ON ${target};`
                     }

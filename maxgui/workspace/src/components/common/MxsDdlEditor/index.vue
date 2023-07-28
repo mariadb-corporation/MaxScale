@@ -87,7 +87,7 @@ import FkDefinitions from '@wsSrc/components/common/MxsDdlEditor/FkDefinitions.v
 import RevertBtn from '@wsSrc/components/common/MxsDdlEditor/RevertBtn.vue'
 import ApplyBtn from '@wsSrc/components/common/MxsDdlEditor/ApplyBtn.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
-import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 import { EventBus } from '@wkeComps/EventBus'
 
 export default {
@@ -200,13 +200,13 @@ export default {
             return Object.values({ ...this.lookupTables, ...this.newLookupTables })
         },
         refTargets() {
-            return queryHelper.genRefTargets(this.allLookupTables)
+            return erdHelper.genRefTargets(this.allLookupTables)
         },
         tablesColNameMap() {
-            return queryHelper.createTablesColNameMap(this.allLookupTables)
+            return erdHelper.createTablesColNameMap(this.allLookupTables)
         },
         colKeyTypeMap() {
-            return queryHelper.genColKeyTypeMap(this.definitions.keys)
+            return erdHelper.genColKeyTypeMap(this.definitions.keys)
         },
         eventBus() {
             return EventBus

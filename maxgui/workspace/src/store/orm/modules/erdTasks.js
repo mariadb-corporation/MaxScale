@@ -15,7 +15,7 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import { t } from 'typy'
-import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 import { lodash } from '@share/utils/helpers'
 
 export default {
@@ -100,12 +100,12 @@ export default {
         graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
         activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
         tablesColNameMap: (_, getters) =>
-            queryHelper.createTablesColNameMap(getters.stagingNodesData),
+            erdHelper.createTablesColNameMap(getters.stagingNodesData),
         refTargetMap: (_, getters) =>
-            lodash.keyBy(queryHelper.genRefTargets(getters.stagingNodesData), 'id'),
+            lodash.keyBy(erdHelper.genRefTargets(getters.stagingNodesData), 'id'),
         colKeyTypeMap: (_, getters) => {
             return getters.stagingNodesData.reduce((map, tbl) => {
-                map = { ...map, ...queryHelper.genColKeyTypeMap(tbl.definitions.keys) }
+                map = { ...map, ...erdHelper.genColKeyTypeMap(tbl.definitions.keys) }
                 return map
             }, {})
         },

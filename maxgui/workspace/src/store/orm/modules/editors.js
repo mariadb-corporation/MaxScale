@@ -16,6 +16,7 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     namespaced: true,
@@ -59,7 +60,7 @@ export default {
                 Editor.update({
                     where: activeQueryTabId,
                     data(editor) {
-                        editor.tbl_creation_info.data = queryHelper.tableParserTransformer({
+                        editor.tbl_creation_info.data = erdHelper.tableParserTransformer({
                             parsedTable,
                             charsetCollationMap: rootState.editorsMem.charset_collation_map,
                         })

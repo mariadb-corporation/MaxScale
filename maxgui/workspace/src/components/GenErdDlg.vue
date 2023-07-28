@@ -55,6 +55,7 @@ import WorksheetTmp from '@wsModels/WorksheetTmp'
 import SelectableSchemaTableTree from '@wkeComps/SelectableSchemaTableTree'
 import connection from '@wsSrc/api/connection'
 import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'gen-erd-dlg',
@@ -140,8 +141,8 @@ export default {
 
                 const erdTaskData = {
                     nodes: parsedTables.map((parsedTable, i) =>
-                        queryHelper.genErdNode({
-                            nodeData: queryHelper.tableParserTransformer({
+                        erdHelper.genErdNode({
+                            nodeData: erdHelper.tableParserTransformer({
                                 parsedTable,
                                 lookupTables: parsedTables,
                                 charsetCollationMap: this.charset_collation_map,

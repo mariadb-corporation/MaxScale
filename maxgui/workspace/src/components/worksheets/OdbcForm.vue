@@ -128,7 +128,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from '@wsSrc/store/queryHelper'
 import { mapState } from 'vuex'
 
 export default {
@@ -174,7 +173,7 @@ export default {
                 password = '',
                 db = '',
             } = this.src
-            return queryHelper.genConnStr({ driver, server, port, user, password, db })
+            return this.genConnStr({ driver, server, port, user, password, db })
         },
     },
     watch: {
@@ -195,6 +194,21 @@ export default {
     methods: {
         requiredRule(inputName) {
             return [val => !!val || this.$mxs_t('errors.requiredInput', { inputName })]
+        },
+        /**
+         * @param {string} param.driver
+         * @param {string} param.server
+         * @param {string} param.port
+         * @param {string} param.user
+         * @param {string} param.password
+         * @param {string} [param.db] - required if driver is PostgreSQL
+         * @returns {string}  ODBC connection_string
+         */
+        genConnStr({ driver, server, port, user, password, db }) {
+            let connStr = `DRIVER=${driver};`
+            connStr += `SERVER=${server};PORT=${port};UID=${user};PWD={${password}}`
+            if (db) connStr += `;DATABASE=${db}`
+            return connStr
         },
     },
 }

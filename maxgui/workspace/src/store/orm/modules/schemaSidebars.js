@@ -19,6 +19,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@wsSrc/store/queryHelper'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import queries from '@wsSrc/api/queries'
 
 export default {
@@ -70,7 +71,7 @@ export default {
                     data: { loading_db_tree: false },
                 })
             else {
-                const { nodes, completionItems } = queryHelper.genNodeData({
+                const { nodes, completionItems } = schemaNodeHelper.genNodeData({
                     queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
                 })
                 if (nodes.length) {

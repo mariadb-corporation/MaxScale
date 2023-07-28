@@ -190,7 +190,7 @@ import RefPoints from '@wsSrc/components/worksheets/ErdWke/RefPoints'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import { getConfig } from '@wsSrc/components/worksheets/ErdWke/config'
-import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 import html2canvas from 'html2canvas'
 
 export default {
@@ -314,7 +314,7 @@ export default {
                 !this.$typy(this.refTargetMap).isEmptyObject &&
                 !this.$typy(this.tablesColNameMap).isEmptyObject
             )
-                return queryHelper.genConstraint({
+                return erdHelper.genConstraint({
                     key: this.hoveredFk,
                     refTargetMap: this.refTargetMap,
                     tablesColNameMap: this.tablesColNameMap,
@@ -365,7 +365,7 @@ export default {
                     fks.forEach(fk => {
                         links = [
                             ...links,
-                            ...queryHelper.handleGenErdLink({
+                            ...erdHelper.handleGenErdLink({
                                 srcNode: node,
                                 fk,
                                 nodes,
@@ -534,7 +534,7 @@ export default {
             )
         },
         setChosenLinks(node) {
-            this.chosenLinks = queryHelper.getNodeLinks({ links: this.getLinks(), node })
+            this.chosenLinks = erdHelper.getNodeLinks({ links: this.getLinks(), node })
         },
         setEventLinkStyles(eventType) {
             this.setEventStyles({ eventType, links: this.chosenLinks })
@@ -586,7 +586,7 @@ export default {
             let isUQ = false
             if (keyTypes.includes(uniqueKey)) {
                 const nodeKeys = this.entityKeyMap[node.id]
-                isUQ = queryHelper.isSingleUQ({ keys: nodeKeys, colId })
+                isUQ = erdHelper.isSingleUQ({ keys: nodeKeys, colId })
             }
 
             if (keyTypes.includes(primaryKey))

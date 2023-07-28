@@ -18,6 +18,7 @@ import QueryConn from '@wsModels/QueryConn'
 import queries from '@wsSrc/api/queries'
 import etl from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 export default {
     namespaced: true,
@@ -119,7 +120,7 @@ export default {
                         logName = $mxs_t('errors.retrieveSchemaObj')
                         logName += `\n${$helpers.queryResErrToStr(result)}`
                     } else {
-                        const { nodes } = queryHelper.genNodeData({
+                        const { nodes } = schemaNodeHelper.genNodeData({
                             queryResult: result,
                             nodeAttrs: {
                                 isEmptyChildren: true,
@@ -160,7 +161,7 @@ export default {
                         },
                         config,
                     })
-                    const tree = queryHelper.deepReplaceNode({
+                    const tree = schemaNodeHelper.deepReplaceNode({
                         treeData: getters.findSrcSchemaTree(taskId),
                         node: { ...nodeGroup, children: nodes },
                     })

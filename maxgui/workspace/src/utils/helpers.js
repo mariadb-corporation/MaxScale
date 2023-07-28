@@ -15,6 +15,9 @@ import { t } from 'typy'
 import { startOfDay, differenceInCalendarDays } from 'date-fns'
 import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
 import { formatDialect, mariadb } from 'sql-formatter'
+import TableParser from '@wsSrc/utils/TableParser'
+
+export const tableParser = new TableParser()
 
 export const deepDiff = require('deep-diff')
 

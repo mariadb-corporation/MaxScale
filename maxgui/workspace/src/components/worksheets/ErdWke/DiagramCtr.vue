@@ -117,7 +117,7 @@ import { EventBus } from '@wkeComps/EventBus'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
-import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'diagram-ctr',
@@ -452,10 +452,10 @@ export default {
         },
         handleCreateTable() {
             const length = this.stagingNodes.length
-            const { tableParserTransformer, tableParser, genErdNode } = queryHelper
+            const { tableParserTransformer, genErdNode } = erdHelper
             const schema = this.$typy(ErdTask.getters('stagingSchemas'), '[0]').safeString || 'test'
             const nodeData = tableParserTransformer({
-                parsedTable: tableParser.parse({
+                parsedTable: this.$helpers.tableParser.parse({
                     ddl: tableTemplate(`table_${length + 1}`),
                     schema,
                     autoGenId: true,
@@ -518,7 +518,7 @@ export default {
             const { key } = this.CREATE_TBL_TOKENS
             const refTblDef = node.data.definitions
             const plainKeys = this.$typy(refTblDef, `keys[${key}]`).safeArray
-            const newKey = queryHelper.genKey({ definitions: refTblDef, category: key, colId })
+            const newKey = erdHelper.genKey({ definitions: refTblDef, category: key, colId })
             return this.$helpers.immutableUpdate(node, {
                 data: {
                     definitions: {

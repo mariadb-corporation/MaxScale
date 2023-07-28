@@ -53,6 +53,7 @@ import Worksheet from '@wsSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@wsSrc/store/orm/models/SchemaSidebar'
 import queries from '@wsSrc/api/queries'
 import queryHelper from '@wsSrc/store/queryHelper'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 export default {
     name: 'selectable-schema-table-tree',
@@ -83,8 +84,8 @@ export default {
                 (obj, o) => {
                     // SCHEMA nodes will be included in selectedObjs even though those have no tables
                     if (o.type === this.NODE_TYPES.SCHEMA)
-                        obj.emptySchemas.push(queryHelper.minimizeNode(o))
-                    else obj.tables.push(queryHelper.minimizeNode(o))
+                        obj.emptySchemas.push(schemaNodeHelper.minimizeNode(o))
+                    else obj.tables.push(schemaNodeHelper.minimizeNode(o))
                     return obj
                 },
                 { tables: [], emptySchemas: [] }
@@ -153,7 +154,7 @@ export default {
                 if (this.$typy(result, 'errno').isDefined)
                     this.errMsg += `\n${this.$helpers.queryResErrToStr(result)}`
                 else {
-                    const { nodes } = queryHelper.genNodeData({
+                    const { nodes } = schemaNodeHelper.genNodeData({
                         queryResult: result,
                         nodeAttrs: { isEmptyChildren: true },
                     })
@@ -178,7 +179,7 @@ export default {
         async loadTables(node) {
             const { nodes } = await queryHelper.getChildNodeData({
                 connId: this.connId,
-                nodeGroup: queryHelper.genNodeGroup({
+                nodeGroup: schemaNodeHelper.genNodeGroup({
                     parentNode: node,
                     type: this.NODE_GROUP_TYPES.TBL_G,
                 }),

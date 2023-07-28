@@ -98,7 +98,7 @@ import {
     checkUniqueZeroFillSupport,
     checkAutoIncrementSupport,
 } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
-import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'col-definitions',
@@ -656,7 +656,7 @@ export default {
         genKey({ definitions, category, colId }) {
             const existingKey = this.getKeyObjByColId({ keys: this.initialKeys, category, colId })
             if (existingKey) return existingKey
-            return queryHelper.genKey({ definitions, category, colId })
+            return erdHelper.genKey({ definitions, category, colId })
         },
         /**
          * @param {object} param.definitions - parsed definitions

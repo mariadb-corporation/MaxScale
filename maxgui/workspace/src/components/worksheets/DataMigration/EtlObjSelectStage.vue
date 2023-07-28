@@ -115,10 +115,10 @@
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsSrc/store/orm/models/EtlTaskTmp'
 import { mapState } from 'vuex'
-import queryHelper from '@wsSrc/store/queryHelper'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlCreateModeInput from '@wkeComps/DataMigration/EtlCreateModeInput.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 export default {
     name: 'etl-obj-select-stage',
@@ -153,7 +153,7 @@ export default {
         parsedObjs() {
             return this.selectedObjs.reduce(
                 (obj, o) => {
-                    const schema = queryHelper.getSchemaName(o)
+                    const schema = schemaNodeHelper.getSchemaName(o)
                     // TBL_G nodes will be included in selectedObjs if those have no tables
                     if (o.type === this.NODE_GROUP_TYPES.TBL_G) obj.emptySchemas.push(schema)
                     else obj.tables.push({ schema, table: o.name })
@@ -223,7 +223,7 @@ export default {
          * @param {Object} param.groupNode - group node to be added
          */
         addGroupNode({ node, groupNode }) {
-            const tree = queryHelper.deepReplaceNode({
+            const tree = schemaNodeHelper.deepReplaceNode({
                 treeData: this.srcSchemaTree,
                 node: { ...node, children: [groupNode] },
             })
@@ -239,7 +239,7 @@ export default {
          */
         async handleLoadChildren(node) {
             if (node.type === this.NODE_TYPES.SCHEMA) {
-                const tblGroupNode = queryHelper.genNodeGroup({
+                const tblGroupNode = schemaNodeHelper.genNodeGroup({
                     parentNode: node,
                     type: this.NODE_GROUP_TYPES.TBL_G,
                 })

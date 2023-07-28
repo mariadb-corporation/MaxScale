@@ -26,10 +26,11 @@ import {
 import { lodash } from '@share/utils/helpers'
 import { addComma } from '@wsSrc/utils/helpers'
 import { t as typy } from 'typy'
-import queryHelper from '@wsSrc/store/queryHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
+
 /**
  * Table script builder.
- * This is designed to work with the output of queryHelper.tableParserTransformer,
+ * This is designed to work with the output of erdHelper.tableParserTransformer,
  * which is a data structure representing the parsed information of a table.
  * @typedef {Object} TableScriptBuilder
  */
@@ -364,7 +365,7 @@ export default class TableScriptBuilder {
         const addedKeys = foreignKeyDiffs.get('added')
         const keys = [...updatedKeys, ...addedKeys]
         const newFks = keys.map(item => {
-            const constraintStr = queryHelper.genConstraint({
+            const constraintStr = erdHelper.genConstraint({
                 // updatedKeys has `oriObj` and `newObj` fields while addedKeys doesn't
                 key: item.newObj ? item.newObj : item,
                 refTargetMap: this.refTargetMap,
