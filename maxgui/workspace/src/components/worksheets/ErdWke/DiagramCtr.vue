@@ -36,11 +36,11 @@
             <template v-slot:entity-name-append="{ node }">
                 <div class="d-inline-flex entity-name-append">
                     <span
-                        v-if="$typy(updatedNodeMap[node.id]).isObject"
+                        v-if="$typy(updatedTableMap[node.id]).isObject"
                         class="changes-indicator"
                     />
                     <span
-                        v-if="$typy(newNodeMap[node.id]).isObject"
+                        v-if="$typy(newTableMap[node.id]).isObject"
                         class="d-inline-flex align-center rounded text-uppercase new-tbl-indicator"
                     >
                         {{ $mxs_t('new') }}
@@ -126,8 +126,8 @@ export default {
         dim: { type: Object, required: true },
         hasValidChanges: { type: Boolean, required: true },
         connId: { type: String, required: true },
-        newNodeMap: { type: Object, required: true },
-        updatedNodeMap: { type: Object, required: true },
+        newTableMap: { type: Object, required: true },
+        updatedTableMap: { type: Object, required: true },
         isFormValid: { type: Boolean, required: true },
     },
     data() {
@@ -165,8 +165,8 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
-        initialNodes() {
-            return ErdTask.getters('initialNodes')
+        initialTables() {
+            return ErdTask.getters('initialTables')
         },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
@@ -301,7 +301,7 @@ export default {
             this.handleChooseNodeOpt({ type: this.isNewEntity(node.id) ? EDIT : ALTER, node })
         },
         isNewEntity(id) {
-            return !this.initialNodes.some(n => n.id === id)
+            return !this.initialTables.some(tbl => tbl.id === id)
         },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
             if (this.connId) {
@@ -309,9 +309,7 @@ export default {
                 switch (type) {
                     case ALTER:
                     case EDIT: {
-                        let data = { active_entity_id: node.id }
-                        if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
-                        ErdTaskTmp.update({ where: this.activeTaskId, data })
+                        this.openEditor(node)
                         if (!skipZoom)
                             // call in the next tick to ensure diagramDim height is up to date
                             this.$nextTick(() => this.zoomIntoNode(node))
@@ -349,15 +347,8 @@ export default {
                                 )
                             }
                         }
-
-                        ErdTaskTmp.update({
-                            where: this.activeTaskId,
-                            data: {
-                                active_entity_id: '',
-                                graph_height_pct: 100, // close editor
-                                nodes,
-                            },
-                        })
+                        this.closeEditor()
+                        ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: nodes } })
                         this.$refs.diagram.update(nodes)
                         ErdTask.dispatch('updateNodesHistory', nodes)
                         break
@@ -369,7 +360,7 @@ export default {
                     type: 'error',
                 })
         },
-        assignCoord({ nodeMap, nodes, ignoreSize = false }) {
+        assignCoord({ nodeMap, nodes }) {
             return nodes.map(n => {
                 if (!nodeMap[n.id]) return n
                 const { x, y, vx, vy, size } = nodeMap[n.id]
@@ -379,8 +370,8 @@ export default {
                     y,
                     vx,
                     vy,
+                    size,
                 }
-                if (!ignoreSize) res.size = size
                 return res
             })
         },
@@ -389,11 +380,11 @@ export default {
          */
         onNodesCoordsUpdate(v) {
             const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
-            const nodes = this.assignCoord({ nodeMap, nodes: this.initialNodes, ignoreSize: true })
             const stagingNodes = this.assignCoord({ nodeMap, nodes: this.stagingNodes })
-            ErdTask.update({ where: this.activeTaskId, data: { nodes, is_laid_out: true } })
-            // Also update the staging data
-            ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
+            ErdTask.update({
+                where: this.activeTaskId,
+                data: { staging_nodes: stagingNodes, is_laid_out: true },
+            })
             ErdTask.dispatch('updateNodesHistory', stagingNodes)
         },
         /**
@@ -452,10 +443,11 @@ export default {
         },
         handleCreateTable() {
             const length = this.stagingNodes.length
-            const { tableParserTransformer, genErdNode } = erdHelper
+            const { genDdlEditorData, genErdNode } = erdHelper
+            const { tableParser, dynamicColors, immutableUpdate } = this.$helpers
             const schema = this.$typy(ErdTask.getters('stagingSchemas'), '[0]').safeString || 'test'
-            const nodeData = tableParserTransformer({
-                parsedTable: this.$helpers.tableParser.parse({
+            const nodeData = genDdlEditorData({
+                parsedTable: tableParser.parse({
                     ddl: tableTemplate(`table_${length + 1}`),
                     schema,
                     autoGenId: true,
@@ -465,42 +457,36 @@ export default {
 
             const { x, y, k } = this.panAndZoom
             const node = {
-                ...genErdNode({ nodeData, highlightColor: this.$helpers.dynamicColors(length) }),
+                ...genErdNode({ nodeData, highlightColor: dynamicColors(length) }),
                 // plus extra padding
                 x: (0 - x) / k + 65,
                 y: (0 - y) / k + 42,
             }
-            const nodes = this.$helpers.immutableUpdate(this.stagingNodes, { $push: [node] })
-            ErdTaskTmp.update({
+            const stagingNodes = immutableUpdate(this.stagingNodes, { $push: [node] })
+            ErdTask.update({
                 where: this.activeTaskId,
-                data: { nodes },
+                data: { staging_nodes: stagingNodes },
             }).then(() => {
                 ErdTask.dispatch('updateNodesHistory', this.stagingNodes)
                 this.$refs.diagram.addNode(node)
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
         },
-        redrawnDiagram() {
-            const nodes = this.nodesHistory[this.activeHistoryIdx]
+        openEditor(node) {
+            let data = { active_entity_id: node.id }
+            if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
+            ErdTaskTmp.update({ where: this.activeTaskId, data })
+        },
+        closeEditor() {
             ErdTaskTmp.update({
                 where: this.activeTaskId,
-                data: {
-                    // close editor
-                    active_entity_id: '',
-                    graph_height_pct: 100,
-                    nodes,
-                },
+                data: { active_entity_id: '', graph_height_pct: 100 },
             })
-            // update coord of nodes in ErdTask model as well
-            ErdTask.update({
-                where: this.activeTaskId,
-                data: {
-                    nodes: this.assignCoord({
-                        nodeMap: this.$helpers.lodash.keyBy(nodes, 'id'),
-                        nodes: this.initialNodes,
-                    }),
-                },
-            })
+        },
+        redrawnDiagram() {
+            const nodes = this.nodesHistory[this.activeHistoryIdx]
+            this.closeEditor()
+            ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: nodes } })
             this.$refs.diagram.update(nodes)
         },
         navHistory(idx) {
@@ -568,7 +554,7 @@ export default {
                     },
                 })
                 this.$refs.diagram.update(stagingNodes)
-                ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
+                ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: stagingNodes } })
                 ErdTask.dispatch('updateNodesHistory', stagingNodes)
             } else {
                 this.SET_SNACK_BAR_MESSAGE({

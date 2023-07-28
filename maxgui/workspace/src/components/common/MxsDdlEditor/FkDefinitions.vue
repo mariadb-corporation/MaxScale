@@ -273,7 +273,7 @@ export default {
                 config: this.connData.config,
             })
             this.tmpLookupTables = parsedTables.reduce((map, tbl) => {
-                map[tbl.id] = erdHelper.tableParserTransformer({
+                map[tbl.id] = erdHelper.genDdlEditorData({
                     parsedTable: tbl,
                     charsetCollationMap: this.charsetCollationMap,
                 })

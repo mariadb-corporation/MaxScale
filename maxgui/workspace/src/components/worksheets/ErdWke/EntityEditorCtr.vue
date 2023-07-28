@@ -69,8 +69,8 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
-        initialNodes() {
-            return ErdTask.getters('initialNodes')
+        initialTables() {
+            return ErdTask.getters('initialTables')
         },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
@@ -78,15 +78,15 @@ export default {
         activeEntityId() {
             return ErdTask.getters('activeEntityId')
         },
-        initialActiveNode() {
-            return this.initialNodes.find(item => item.id === this.activeEntityId)
+        initialTable() {
+            return this.initialTables.find(tbl => tbl.id === this.activeEntityId) || {}
         },
         stagingActiveNode() {
             return this.stagingNodes.find(item => item.id === this.activeEntityId)
         },
         // persisted data
         initialData() {
-            return this.$typy(this.initialActiveNode, 'data').safeObjectOrEmpty
+            return this.initialTable
         },
         stagingInitialData() {
             return this.$typy(this.stagingActiveNode, 'data').safeObjectOrEmpty
@@ -146,7 +146,7 @@ export default {
                     const idx = nodes.findIndex(n => n.id === id)
                     nodes = immutableUpdate(nodes, { [idx]: { data: { $set: data } } })
 
-                    ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes } })
+                    ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: nodes } })
                     ErdTask.dispatch('updateNodesHistory', nodes)
                     // Emit the event to update the node in the diagram
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
@@ -190,7 +190,7 @@ export default {
                 successCb: () => {
                     ErdTask.update({
                         where: this.activeTaskId,
-                        data: { nodes: this.stagingNodes },
+                        data: { tables: this.stagingNodes.map(n => n.data) },
                     })
                     ErdTask.dispatch('setNodesHistory', [this.stagingNodes])
                 },

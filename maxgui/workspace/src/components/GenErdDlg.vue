@@ -138,24 +138,24 @@ export default {
                     config,
                 })
                 await this.queryDdlEditorSuppData({ connId: conn.id, config })
-
+                const nodes = parsedTables.map((parsedTable, i) =>
+                    erdHelper.genErdNode({
+                        nodeData: erdHelper.genDdlEditorData({
+                            parsedTable,
+                            lookupTables: parsedTables,
+                            charsetCollationMap: this.charset_collation_map,
+                        }),
+                        highlightColor: this.$helpers.dynamicColors(i),
+                    })
+                )
                 const erdTaskData = {
-                    nodes: parsedTables.map((parsedTable, i) =>
-                        erdHelper.genErdNode({
-                            nodeData: erdHelper.tableParserTransformer({
-                                parsedTable,
-                                lookupTables: parsedTables,
-                                charsetCollationMap: this.charset_collation_map,
-                            }),
-                            highlightColor: this.$helpers.dynamicColors(i),
-                        })
-                    ),
+                    tables: nodes.map(n => n.data),
+                    staging_nodes: nodes,
                     is_laid_out: false,
                 }
                 const erdTaskTmpData = {
                     graph_height_pct: 100,
                     active_entity_id: '',
-                    nodes: erdTaskData.nodes,
                     key: this.$helpers.uuidv1(),
                     nodes_history: [],
                     active_history_idx: 0,

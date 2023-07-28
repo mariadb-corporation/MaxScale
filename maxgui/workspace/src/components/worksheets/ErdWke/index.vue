@@ -15,8 +15,8 @@
                     :dim="erdDim"
                     :hasValidChanges="hasValidChanges"
                     :connId="connId"
-                    :newNodeMap="newNodeMap"
-                    :updatedNodeMap="updatedNodeMap"
+                    :newTableMap="newTableMap"
+                    :updatedTableMap="updatedTableMap"
                     :isFormValid="isFormValid"
                     @on-apply-script="applyScript"
                     @on-export-script="exportScript"
@@ -124,36 +124,30 @@ export default {
         connId() {
             return this.$typy(this.activeErdConn, 'id').safeString
         },
-        initialNodes() {
-            return ErdTask.getters('initialNodes')
-        },
         stagingNodes() {
             return ErdTask.getters('stagingNodes')
         },
-        initialNodesData() {
-            return this.initialNodes.map(n => n.data)
-        },
-        nodeDataDiffs() {
+        tableDiffs() {
             return this.$helpers.arrOfObjsDiff({
-                base: this.initialNodesData,
-                newArr: ErdTask.getters('stagingNodesData'),
+                base: ErdTask.getters('initialTables'),
+                newArr: ErdTask.getters('stagingTables'),
                 idField: 'id',
             })
         },
-        newNodeMap() {
-            return this.$helpers.lodash.keyBy(this.nodeDataDiffs.get('added'), 'id')
+        newTableMap() {
+            return this.$helpers.lodash.keyBy(this.tableDiffs.get('added'), 'id')
         },
-        updatedNodeMap() {
+        updatedTableMap() {
             return this.$helpers.lodash.keyBy(
-                this.nodeDataDiffs.get('updated').map(n => n.newObj),
+                this.tableDiffs.get('updated').map(n => n.newObj),
                 'id'
             )
         },
         hasChanged() {
             return (
-                !this.$typy(this.updatedNodeMap).isEmptyObject ||
-                !this.$typy(this.newNodeMap).isEmptyObject ||
-                Boolean(this.nodeDataDiffs.get('removed').length)
+                !this.$typy(this.updatedTableMap).isEmptyObject ||
+                !this.$typy(this.newTableMap).isEmptyObject ||
+                Boolean(this.tableDiffs.get('removed').length)
             )
         },
         hasValidChanges() {
@@ -185,14 +179,6 @@ export default {
             ].join('\n')
         },
     },
-    created() {
-        ErdTaskTmp.update({
-            where: this.activeTaskId,
-            data: {
-                nodes: this.initialNodes,
-            },
-        })
-    },
     methods: {
         ...mapActions({ exeDdlScript: 'mxsWorkspace/exeDdlScript' }),
         ...mapMutations({ SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG' }),
@@ -209,7 +195,7 @@ export default {
                 alterTableParts = []
 
             // updated tables
-            this.nodeDataDiffs.get('updated').forEach(({ newObj, oriObj }) => {
+            this.tableDiffs.get('updated').forEach(({ newObj, oriObj }) => {
                 const builder = new TableScriptBuilder({
                     initialData: oriObj,
                     stagingData: newObj,
@@ -228,7 +214,7 @@ export default {
             }
 
             // Drop tables
-            this.nodeDataDiffs.get('removed').forEach((tbl, i) => {
+            this.tableDiffs.get('removed').forEach((tbl, i) => {
                 if (i === 0) parts.push(this.createSectionCmt('Drop tables'))
                 const schema = quoting(tbl.options.schema)
                 const name = quoting(tbl.options.name)
@@ -242,7 +228,7 @@ export default {
                 parts.push(`CREATE SCHEMA IF NOT EXISTS ${schema};`)
             })
             // new tables
-            this.nodeDataDiffs.get('added').forEach((tbl, i) => {
+            this.tableDiffs.get('added').forEach((tbl, i) => {
                 if (i === 0) parts.push(this.createSectionCmt('Create tables'))
                 const builder = new TableScriptBuilder({
                     initialData: {},
@@ -287,7 +273,7 @@ export default {
                 successCb: () => {
                     ErdTask.update({
                         where: this.activeTaskId,
-                        data: { nodes: this.stagingNodes },
+                        data: { tables: this.stagingNodes.map(n => n.data) },
                     })
                     ErdTask.dispatch('setNodesHistory', [this.stagingNodes])
                 },

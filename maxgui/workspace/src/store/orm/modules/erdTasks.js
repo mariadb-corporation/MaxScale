@@ -83,34 +83,35 @@ export default {
     getters: {
         activeRecordId: () => Worksheet.getters('activeId'),
         activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
-        initialNodes: (_, getters) => t(getters.activeRecord, 'nodes').safeArray,
+        initialTables: (_, getters) => t(getters.activeRecord, 'tables').safeArray,
         initialSchemas: (_, getters) => [
-            ...new Set(getters.initialNodes.map(n => n.data.options.schema)),
+            ...new Set(getters.initialTables.map(tbl => tbl.options.schema)),
         ],
-        // Temp states getters
-        activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
-        stagingNodes: (_, getters) => t(getters.activeTmpRecord, 'nodes').safeArray,
-        stagingNodesData: (_, getters) => getters.stagingNodes.map(n => n.data),
-        nodesHistory: (_, getters) => t(getters.activeTmpRecord, 'nodes_history').safeArray,
-        activeHistoryIdx: (_, getters) =>
-            t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
+        // staging_nodes getters
+        stagingNodes: (_, getters) => t(getters.activeRecord, 'staging_nodes').safeArray,
+        stagingTables: (_, getters) => getters.stagingNodes.map(n => n.data),
         stagingSchemas: (_, getters) => [
             ...new Set(getters.stagingNodes.map(n => n.data.options.schema)),
         ],
-        graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
-        activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
-        tablesColNameMap: (_, getters) =>
-            erdHelper.createTablesColNameMap(getters.stagingNodesData),
+        tablesColNameMap: (_, getters) => erdHelper.createTablesColNameMap(getters.stagingTables),
         refTargetMap: (_, getters) =>
-            lodash.keyBy(erdHelper.genRefTargets(getters.stagingNodesData), 'id'),
+            lodash.keyBy(erdHelper.genRefTargets(getters.stagingTables), 'id'),
         colKeyTypeMap: (_, getters) => {
-            return getters.stagingNodesData.reduce((map, tbl) => {
+            return getters.stagingTables.reduce((map, tbl) => {
                 map = { ...map, ...erdHelper.genColKeyTypeMap(tbl.definitions.keys) }
                 return map
             }, {})
         },
+        // Temp states getters
+        activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
+        nodesHistory: (_, getters) => t(getters.activeTmpRecord, 'nodes_history').safeArray,
+        activeHistoryIdx: (_, getters) =>
+            t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
+        graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
+        activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
+
         // Other getters
         isNewEntity: (_, getters) =>
-            !getters.initialNodes.some(item => item.id === getters.activeEntityId),
+            !getters.initialTables.some(item => item.id === getters.activeEntityId),
     },
 }

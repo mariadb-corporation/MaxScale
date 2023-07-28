@@ -30,7 +30,7 @@ import erdHelper from '@wsSrc/utils/erdHelper'
 
 /**
  * Table script builder.
- * This is designed to work with the output of erdHelper.tableParserTransformer,
+ * This is designed to work with the output of erdHelper.genDdlEditorData,
  * which is a data structure representing the parsed information of a table.
  * @typedef {Object} TableScriptBuilder
  */

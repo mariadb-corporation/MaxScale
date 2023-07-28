@@ -60,7 +60,7 @@ export default {
                 Editor.update({
                     where: activeQueryTabId,
                     data(editor) {
-                        editor.tbl_creation_info.data = erdHelper.tableParserTransformer({
+                        editor.tbl_creation_info.data = erdHelper.genDdlEditorData({
                             parsedTable,
                             charsetCollationMap: rootState.editorsMem.charset_collation_map,
                         })

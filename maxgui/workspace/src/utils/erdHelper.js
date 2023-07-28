@@ -79,7 +79,7 @@ function replaceNamesWithIds({ keys, cols, lookupTables }) {
 }
 
 /**
- * @param {object} keys - keys that have been mapped with ids via tableParserTransformer function
+ * @param {object} keys - keys that have been mapped with ids via genDdlEditorData function
  * @returns {object} e.g. { 'col_id': ['PRIMARY KEY', ], }
  */
 function genColKeyTypeMap(keys) {
@@ -108,7 +108,7 @@ function isSingleUQ({ keys, colId }) {
  * @param {object} param.charsetCollationMap - collations mapped by charset
  * @returns {object}
  */
-function tableParserTransformer({ parsedTable, lookupTables = [], charsetCollationMap }) {
+function genDdlEditorData({ parsedTable, lookupTables = [], charsetCollationMap }) {
     const {
         definitions: { cols, keys },
     } = parsedTable
@@ -175,7 +175,7 @@ function tableParserTransformer({ parsedTable, lookupTables = [], charsetCollati
         }
     })
     return {
-        id: parsedTable.id,
+        ...parsedTable,
         options: {
             ...parsedTable.options,
             charset,
@@ -504,7 +504,7 @@ function validateFkColTypes({ src, target, colId, targetColId }) {
 export default {
     genColKeyTypeMap,
     isSingleUQ,
-    tableParserTransformer,
+    genDdlEditorData,
     genErdNode,
     handleGenErdLink,
     getNodeLinks,
