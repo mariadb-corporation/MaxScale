@@ -148,7 +148,7 @@ export default {
 
                     ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes } })
                     ErdTask.dispatch('updateNodesHistory', nodes)
-                    // Emit the event to redraw the diagram
+                    // Emit the event to update the node in the diagram
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
                 },
                 { deep: true }

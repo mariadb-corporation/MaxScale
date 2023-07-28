@@ -321,24 +321,35 @@ export default {
                     case DROP: {
                         const { foreignKey } = this.CREATE_TBL_TOKENS
                         let nodes = this.stagingNodes
-                        if (type === DROP || (type === REMOVE && this.isNewEntity(node.id))) {
-                            nodes = nodes.filter(n => n.id !== node.id)
-                            nodes = nodes.map(n => {
-                                const fks = this.$typy(n, `data.definitions.keys[${foreignKey}]`)
-                                    .safeArray
-                                if (!fks.length) return n
-                                const remainingFks = fks.filter(key => key.ref_tbl_id !== node.id)
-                                return this.$helpers.immutableUpdate(n, {
-                                    data: {
-                                        definitions: {
-                                            keys: remainingFks.length
-                                                ? { $merge: { [foreignKey]: remainingFks } }
-                                                : { $unset: [foreignKey] },
+                        if (type === DROP || type === REMOVE) {
+                            if (this.isNewEntity(node.id) || type === DROP) {
+                                nodes = nodes.filter(n => n.id !== node.id)
+                                nodes = nodes.map(n => {
+                                    const fks = this.$typy(
+                                        n,
+                                        `data.definitions.keys[${foreignKey}]`
+                                    ).safeArray
+                                    if (!fks.length) return n
+                                    const remainingFks = fks.filter(
+                                        key => key.ref_tbl_id !== node.id
+                                    )
+                                    return this.$helpers.immutableUpdate(n, {
+                                        data: {
+                                            definitions: {
+                                                keys: remainingFks.length
+                                                    ? { $merge: { [foreignKey]: remainingFks } }
+                                                    : { $unset: [foreignKey] },
+                                            },
                                         },
-                                    },
+                                    })
                                 })
-                            })
+                            } else {
+                                nodes = nodes.map(n =>
+                                    n.id === node.id ? { ...n, hidden: true } : n
+                                )
+                            }
                         }
+
                         ErdTaskTmp.update({
                             where: this.activeTaskId,
                             data: {
@@ -347,7 +358,7 @@ export default {
                                 nodes,
                             },
                         })
-                        this.$refs.diagram.removeNode(node)
+                        this.$refs.diagram.update(nodes)
                         ErdTask.dispatch('updateNodesHistory', nodes)
                         break
                     }
@@ -490,7 +501,7 @@ export default {
                     }),
                 },
             })
-            this.$refs.diagram.redraw(nodes)
+            this.$refs.diagram.update(nodes)
         },
         navHistory(idx) {
             ErdTask.dispatch('updateActiveHistoryIdx', idx)
@@ -512,7 +523,7 @@ export default {
                     },
                 },
             })
-            this.$refs.diagram.redraw(stagingNodes)
+            this.$refs.diagram.update(stagingNodes)
             ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
         },
     },
