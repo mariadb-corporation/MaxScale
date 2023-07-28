@@ -581,7 +581,9 @@ std::string hide_passwords_in_json(const std::string& json_str)
     else
     {
         hide_passwords(pJson);
-        ret = json_dumps(pJson, 0);
+        char* str = json_dumps(pJson, 0);
+        ret = str;
+        free(str);
         json_decref(pJson);
     }
     return ret;
