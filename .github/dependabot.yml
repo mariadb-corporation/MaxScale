@@ -6,10 +6,16 @@ updates:
     schedule:
       interval: "monthly"
     versioning-strategy: lockfile-only
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
-    directory: "/maxgui/queryEditor/package"
+    directory: "/maxgui/workspace/package"
     schedule:
       interval: "monthly"
     # ignore any version updates that affect the manifest
     versioning-strategy: lockfile-only
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
