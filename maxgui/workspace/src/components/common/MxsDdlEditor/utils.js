@@ -20,17 +20,17 @@ const getColumnTypes = () => [
     {
         header: 'String',
         types: [
-            { value: 'CHAR()' },
-            { value: 'NATIONAL CHAR()' }, // set charset to utf8
+            { value: 'CHAR' },
+            { value: 'NATIONAL CHAR' }, // set charset to utf8
             { value: 'VARCHAR()' },
             { value: 'NATIONAL VARCHAR()' }, // set charset to utf8
             { value: 'TINYTEXT' },
-            { value: 'TEXT()' },
+            { value: 'TEXT' },
             { value: 'MEDIUMTEXT' },
             { value: 'LONGTEXT' },
-            { value: 'JSON' }, // LONGTEXT alias with a default json_valid() CHECK
+            { value: 'JSON' },
             { value: 'TINYBLOB' },
-            { value: 'BLOB()' },
+            { value: 'BLOB' },
             { value: 'MEDIUMBLOB' },
             { value: 'LONGBLOB' },
             { value: 'BINARY()' },
@@ -38,36 +38,36 @@ const getColumnTypes = () => [
             { value: 'UUID' },
         ],
     },
-    { header: 'Bit ', types: [{ value: 'BIT()' }] },
+    { header: 'Bit ', types: [{ value: 'BIT' }] },
     { header: 'Set', types: [{ value: 'SET()' }, { value: 'ENUM()' }] },
     { header: 'Binary', types: [{ value: 'INET6' }] },
     {
         header: 'Integer',
         types: [
-            { value: 'TINYINT()' },
-            { value: 'SMALLINT()' },
-            { value: 'MEDIUMINT()' },
-            { value: 'INT()' },
-            { value: 'BIGINT()' },
+            { value: 'TINYINT' },
+            { value: 'SMALLINT' },
+            { value: 'MEDIUMINT' },
+            { value: 'INT' },
+            { value: 'BIGINT' },
         ],
     },
     {
         header: 'Fixed Num',
-        types: [{ value: 'DECIMAL()' }],
+        types: [{ value: 'DECIMAL' }],
     },
     {
         header: 'Float',
-        types: [{ value: 'FLOAT()' }, { value: 'DOUBLE()' }],
+        types: [{ value: 'FLOAT' }, { value: 'DOUBLE' }],
     },
     // Date and Time Data Type
-    { header: 'Time', types: [{ value: 'TIME()' }] },
+    { header: 'Time', types: [{ value: 'TIME' }] },
     {
         header: 'Date',
-        types: [{ value: 'YEAR()' }, { value: 'DATE' }],
+        types: [{ value: 'YEAR' }, { value: 'DATE' }],
     },
     {
         header: 'Date/Time',
-        types: [{ value: 'TIMESTAMP()' }, { value: 'DATETIME()' }],
+        types: [{ value: 'TIMESTAMP' }, { value: 'DATETIME' }],
     },
     {
         header: 'Geometry',
@@ -86,15 +86,6 @@ const getColumnTypes = () => [
         header: 'Alias',
         types: [
             { value: 'SERIAL' }, //alias for BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
-        ],
-    },
-    {
-        header: 'SQL/PL',
-        types: [
-            { value: 'NUMBER()' },
-            { value: 'RAW()' },
-            { value: 'VARCHAR2()' },
-            { value: 'CLOB' },
         ],
     },
 ]
@@ -163,10 +154,13 @@ const checkFkSupport = datatype => {
     const str = datatype.toUpperCase()
     return !str.includes('TEXT') && !str.includes('BLOB')
 }
+const integerTypes = typesSupport_AI
+
 export {
     getColumnTypes,
     checkAutoIncrementSupport,
     checkUniqueZeroFillSupport,
     checkCharsetSupport,
     checkFkSupport,
+    integerTypes,
 }

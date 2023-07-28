@@ -21,7 +21,7 @@ import { lodash, immutableUpdate, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { quotingIdentifier as quoting, addComma } from '@wsSrc/utils/helpers'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
-import { checkCharsetSupport } from '@wsSrc/components/common/MxsDdlEditor/utils'
+import { checkCharsetSupport, integerTypes } from '@wsSrc/components/common/MxsDdlEditor/utils'
 
 /**
  * @param {object} param
@@ -453,6 +453,53 @@ function genKey({ definitions, category, colId }) {
         name: genKeyName({ colName, category }),
     }
 }
+/**
+ *
+ * @param {string} str - a string with type and size combined e.g. INT(11)
+ * @returns {string} type e.g. INT
+ */
+function extractType(typeAndSize) {
+    let str = typeAndSize
+    if (str.includes('(')) return str.slice(0, str.indexOf('('))
+    return str
+}
+/**
+ *
+ * The foreign key columns and the referenced columns must be of the same type, or similar types.
+ * For integer types, the size and sign must also be the same.
+ * https://mariadb.com/kb/en/foreign-keys/
+ * @param {object} param
+ * @param {object} param.src
+ * @param {object} param.target
+ * @param {string} param.colId
+ * @param {string} param.targetColId
+ * @returns {boolean}
+ */
+function validateFkColTypes({ src, target, colId, targetColId }) {
+    const idxOfType = COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]
+    const col = getColDefData({ node: src, colId })
+    const targetCol = getColDefData({ node: target, colId: targetColId })
+
+    const typeAndSize = col[idxOfType].toUpperCase()
+    const targetTypeAndSize = targetCol[idxOfType].toUpperCase()
+
+    const type = extractType(typeAndSize)
+    const targetType = extractType(targetTypeAndSize)
+    if (type === targetType) {
+        // For integer types, the size and sign must also be the same.
+        if (integerTypes.includes(type)) {
+            const idxOfUN = COL_ATTR_IDX_MAP[COL_ATTRS.UN]
+            return typeAndSize === targetTypeAndSize && col[idxOfUN] === targetCol[idxOfUN]
+        }
+        return true
+    }
+    /**
+     * Handle similar types is not trivial as it involves several checks.
+     * For now, the users is responsible for that case. So this function returns
+     * true when both types are different,
+     */
+    return true
+}
 
 export default {
     genColKeyTypeMap,
@@ -467,4 +514,5 @@ export default {
     genConstraint,
     genKey,
     genKeyName,
+    validateFkColTypes,
 }

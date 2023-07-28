@@ -89,7 +89,7 @@
                                                 ? {
                                                       mouseenter: () =>
                                                           setRefTargetData({ node, col }),
-                                                      mouseleave: () => (refTargetData = null),
+                                                      mouseleave: () => (refTarget = null),
                                                   }
                                                 : {}
                                         "
@@ -170,7 +170,7 @@
  * Emits:
  * - on-rendered({ nodes:array, links:array })
  * - on-node-drag-end(node)
- * - on-create-new-fk({ nodeIdx: number, currentFks: array, newKey: object })
+ * - on-create-new-fk({ node:object, currentFks: array, newKey: object, refNode: object, })
  */
 import { mapState } from 'vuex'
 import {
@@ -227,7 +227,7 @@ export default {
             graphDim: {},
             clickedNodeId: '',
             clickOutside: true,
-            refTargetData: null,
+            refTarget: null,
             isDrawingFk: false,
             hoveredLink: null,
         }
@@ -661,30 +661,34 @@ export default {
             return this.$typy(node.data.definitions.keys[this.CREATE_TBL_TOKENS.foreignKey])
                 .safeArray
         },
-        onEndDrawFk({ referencingNode, referencingData }) {
+        onEndDrawFk({ node, cols }) {
             this.isDrawingFk = false
-            if (this.refTargetData) {
-                const currentFks = this.getFks(referencingNode)
+            if (this.refTarget) {
+                const currentFks = this.getFks(node)
                 this.$emit('on-create-new-fk', {
-                    nodeIdx: referencingNode.index,
+                    node,
                     currentFks,
                     newKey: {
                         id: `key_${this.$helpers.uuidv1()}`,
-                        name: `${referencingNode.data.options.name}_ibfk_${currentFks.length}`,
-                        ...referencingData,
-                        ...this.refTargetData,
+                        name: `${node.data.options.name}_ibfk_${currentFks.length}`,
+                        cols,
+                        ...this.refTarget.data,
                     },
+                    refNode: this.refTarget.node,
                 })
-                this.refTargetData = null
+                this.refTarget = null
                 this.clickOutside = true // hide ref-points
             } else this.$helpers.doubleRAF(() => (this.clickOutside = true))
         },
         setRefTargetData({ node, col }) {
-            this.refTargetData = {
-                ref_cols: [{ id: this.getColId(col) }],
-                ref_tbl_id: node.id,
-                on_delete: this.REF_OPTS.NO_ACTION,
-                on_update: this.REF_OPTS.NO_ACTION,
+            this.refTarget = {
+                data: {
+                    ref_cols: [{ id: this.getColId(col) }],
+                    ref_tbl_id: node.id,
+                    on_delete: this.REF_OPTS.NO_ACTION,
+                    on_update: this.REF_OPTS.NO_ACTION,
+                },
+                node,
             }
         },
     },

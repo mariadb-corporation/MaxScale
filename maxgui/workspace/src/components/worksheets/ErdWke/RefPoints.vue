@@ -35,7 +35,7 @@
 /*
  * Emits:
  * - on-drawing()
- * - on-draw-end({ referencingNode: object, referencingData: object })
+ * - on-draw-end({ node: object, cols: array })
  */
 import { createShape } from '@share/components/common/MxsSvgGraphs/utils'
 import { TARGET_POS } from '@share/components/common/MxsSvgGraphs/shapeConfig'
@@ -176,10 +176,10 @@ export default {
         },
         drawEnd() {
             document.body.classList.remove('cursor--all-crosshair')
-            const referencingData = {
+            this.$emit('draw-end', {
+                node: this.node,
                 cols: [{ id: this.draggingStates.srcAttrId }],
-            }
-            this.$emit('draw-end', { referencingNode: this.node, referencingData })
+            })
             this.path.remove()
             this.rmDragEvents()
             this.setDefDraggingStates()

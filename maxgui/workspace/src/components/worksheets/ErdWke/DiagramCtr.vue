@@ -527,37 +527,55 @@ export default {
                 },
             })
         },
-        onCreateNewFk({ nodeIdx, currentFks, newKey }) {
+        onCreateNewFk({ node, currentFks, newKey, refNode }) {
             const { foreignKey } = this.CREATE_TBL_TOKENS
             const { immutableUpdate } = this.$helpers
-            let stagingNodes = immutableUpdate(this.stagingNodes, {
-                [nodeIdx]: {
-                    data: {
-                        definitions: {
-                            keys: { $merge: { [foreignKey]: [...currentFks, newKey] } },
+            let stagingNodes = this.stagingNodes
+
+            // entity-diagram doesn't generate composite FK,so both cols and ref_cols always have one item
+            const colId = newKey.cols[0].id
+            const refColId = newKey.ref_cols[0].id
+            // Compare column types
+            if (
+                erdHelper.validateFkColTypes({
+                    src: node,
+                    target: refNode,
+                    colId,
+                    targetColId: refColId,
+                })
+            ) {
+                // Auto adds a PLAIN index for referenced col if there is none.
+                const nonIndexedColId = this.colKeyTypeMap[refColId] ? null : refColId
+                if (nonIndexedColId) {
+                    stagingNodes = immutableUpdate(stagingNodes, {
+                        [refNode.index]: {
+                            $set: this.addPlainIndex({
+                                node: stagingNodes[refNode.index],
+                                colId: nonIndexedColId,
+                            }),
+                        },
+                    })
+                }
+
+                // Add FK
+                stagingNodes = immutableUpdate(stagingNodes, {
+                    [node.index]: {
+                        data: {
+                            definitions: {
+                                keys: { $merge: { [foreignKey]: [...currentFks, newKey] } },
+                            },
                         },
                     },
-                },
-            })
-            // entity-diagram doesn't generate composite FK, so ref_cols always has one item
-            const refColId = newKey.ref_cols[0].id
-            // Auto adds a PLAIN index for referenced col if there is none.
-            const nonIndexedColId = this.colKeyTypeMap[refColId] ? null : refColId
-            if (nonIndexedColId) {
-                const refNodeIdx = stagingNodes.findIndex(n => n.id === newKey.ref_tbl_id)
-                const refNode = this.addPlainIndex({
-                    node: stagingNodes[refNodeIdx],
-                    colId: nonIndexedColId,
                 })
-                stagingNodes = immutableUpdate(stagingNodes, { [refNodeIdx]: { $set: refNode } })
+                this.$refs.diagram.update(stagingNodes)
+                ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
+                ErdTask.dispatch('updateNodesHistory', stagingNodes)
+            } else {
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: [this.$mxs_t('errors.fkColsRequirements')],
+                    type: 'error',
+                })
             }
-            /**
-             * TODO: Add newKey validation. both referencing and referenced cols must have the same datatype,
-             * if not, show an error.
-             */
-            this.$refs.diagram.update(stagingNodes)
-            ErdTaskTmp.update({ where: this.activeTaskId, data: { nodes: stagingNodes } })
-            ErdTask.dispatch('updateNodesHistory', stagingNodes)
         },
     },
 }
