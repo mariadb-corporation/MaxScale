@@ -64,6 +64,7 @@ its former sub-privileges. These must be given separately.
 GRANT RELOAD, PROCESS, SHOW DATABASES, EVENT, SET USER, READ_ONLY ADMIN ON *.* TO 'maxscale'@'maxscalehost';
 GRANT REPLICATION SLAVE ADMIN, BINLOG ADMIN, CONNECTION ADMIN ON *.* TO 'maxscale'@'maxscalehost';
 GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.global_priv TO 'maxscale'@'maxscalehost';
 ```
 
 If a separate replication user is defined (with `replication_user` and
@@ -386,14 +387,13 @@ privileges:
 
 - SUPER, to modify replica connections, set globals such as *read\_only* and kill
 connections from other super-users
-- SELECT on mysql.user, to see which users have SUPER
-- SELECT on mysql.global_priv so see to see which users have READ_ONLY ADMIN
 - REPLICATION CLIENT (REPLICATION SLAVE ADMIN in MariaDB Server 10.5), to list
 replica connections
 - RELOAD, to flush binary logs
 - PROCESS, to check if the *event\_scheduler* process is running
 - SHOW DATABASES and EVENT, to list and modify server events
 - SELECT on mysql.user, to see which users have SUPER
+- SELECT on mysql.global_priv so see to see which users have READ_ONLY ADMIN
 
 A list of the grants can be found in the [Required Grants](#required-grants)
 section.
@@ -415,6 +415,7 @@ connections
 - BINLOG ADMIN, to delete binary logs (during _reset-replication_)
 - CONNECTION ADMIN, to kill connections
 - SELECT on mysql.user, to see which users have SUPER
+- SELECT on mysql.global_priv so see to see which users have READ_ONLY ADMIN
 
 In addition, the monitor needs to know which username and password a
 replica should use when starting replication. These are given in
