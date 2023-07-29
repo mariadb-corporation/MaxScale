@@ -156,12 +156,7 @@
                 </v-tooltip>
             </template>
             <v-list>
-                <v-list-item
-                    v-for="opt in exportOptions"
-                    :key="opt.name"
-                    :disabled="opt.disabled"
-                    @click="opt.action"
-                >
+                <v-list-item v-for="opt in exportOptions" :key="opt.name" @click="opt.action">
                     <v-list-item-title class="mxs-color-helper text-text">
                         {{ opt.name }}
                     </v-list-item-title>
@@ -172,7 +167,7 @@
             btnClass="toolbar-square-btn"
             text
             color="primary"
-            :disabled="!hasValidChanges || !hasConnId"
+            :disabled="!hasConnId"
             @click="$emit('on-apply-script')"
         >
             <template v-slot:btn-content>
@@ -244,7 +239,6 @@ export default {
         height: { type: Number, required: true },
         zoom: { type: Number, required: true },
         isFitIntoView: { type: Boolean, required: true },
-        hasValidChanges: { type: Boolean, required: true },
     },
     computed: {
         ...mapState({
@@ -300,12 +294,10 @@ export default {
                 {
                     name: this.$mxs_t('exportScript'),
                     action: () => this.$emit('on-export-script'),
-                    disabled: !this.hasValidChanges,
                 },
                 {
                     name: this.$mxs_t('exportAsJpeg'),
                     action: () => this.$emit('on-export-as-jpeg'),
-                    disabled: false,
                 },
             ]
         },
@@ -362,7 +354,7 @@ export default {
                     break
                 case 'ctrl-shift-enter':
                 case 'mac-cmd-shift-enter':
-                    if (this.hasValidChanges) this.$emit('on-apply-script')
+                    this.$emit('on-apply-script')
                     break
             }
         },

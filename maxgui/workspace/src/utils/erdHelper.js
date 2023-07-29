@@ -290,7 +290,7 @@ function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
     let links = []
 
     const target = ref_tbl_id
-    const targetNode = nodes.find(n => !n.hidden && n.id === target)
+    const targetNode = nodes.find(n => n.id === target)
     const invisibleHighlightColor = getNodeHighlightColor(targetNode)
 
     if (targetNode) {

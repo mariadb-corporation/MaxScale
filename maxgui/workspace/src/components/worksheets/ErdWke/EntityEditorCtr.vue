@@ -4,10 +4,10 @@
         v-model="stagingData"
         class="fill-height mxs-color-helper border-top-table-border er-editor-ctr"
         :dim="dim"
-        :initialData="initialData"
-        :isCreating="isCreating"
-        :schemas="stagingSchemas"
-        :lookupTables="stagingNodes.reduce((map, n) => ((map[n.id] = n.data), map), {})"
+        :initialData="{}"
+        isCreating
+        :schemas="schemas"
+        :lookupTables="nodes.reduce((map, n) => ((map[n.id] = n.data), map), {})"
         :connData="{ id: activeErdConnId, config: activeRequestConfig }"
         :onExecute="onExecute"
         v-on="$listeners"
@@ -60,39 +60,26 @@ export default {
         }
     },
     computed: {
-        isCreating() {
-            return ErdTask.getters('isNewEntity')
-        },
         activeErdConnId() {
             return this.$typy(QueryConn.getters('activeErdConn'), 'id').safeString
         },
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
-        initialTables() {
-            return ErdTask.getters('initialTables')
-        },
-        stagingNodes() {
-            return ErdTask.getters('stagingNodes')
+        nodes() {
+            return ErdTask.getters('nodes')
         },
         activeEntityId() {
             return ErdTask.getters('activeEntityId')
         },
-        initialTable() {
-            return this.initialTables.find(tbl => tbl.id === this.activeEntityId) || {}
-        },
         stagingActiveNode() {
-            return this.stagingNodes.find(item => item.id === this.activeEntityId)
-        },
-        // persisted data
-        initialData() {
-            return this.initialTable
+            return this.nodes.find(item => item.id === this.activeEntityId)
         },
         stagingInitialData() {
             return this.$typy(this.stagingActiveNode, 'data').safeObjectOrEmpty
         },
-        stagingSchemas() {
-            return ErdTask.getters('stagingSchemas')
+        schemas() {
+            return ErdTask.getters('schemas')
         },
         eventBus() {
             return EventBus
@@ -141,12 +128,12 @@ export default {
                 data => {
                     const { immutableUpdate } = this.$helpers
                     const id = this.activeEntityId
-                    let nodes = this.stagingNodes
+                    let nodes = this.nodes
 
                     const idx = nodes.findIndex(n => n.id === id)
                     nodes = immutableUpdate(nodes, { [idx]: { data: { $set: data } } })
 
-                    ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: nodes } })
+                    ErdTask.update({ where: this.activeTaskId, data: { nodes } })
                     ErdTask.dispatch('updateNodesHistory', nodes)
                     // Emit the event to update the node in the diagram
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
@@ -180,20 +167,13 @@ export default {
                 })
         },
         async onExecute() {
-            const { options } = this.isCreating ? this.stagingData : this.initialData
+            const { options } = this.stagingData
             const { schema, name } = options
             await this.exeDdlScript({
                 connId: this.activeErdConnId,
-                isCreating: this.isCreating,
+                isCreating: true,
                 schema,
                 name,
-                successCb: () => {
-                    ErdTask.update({
-                        where: this.activeTaskId,
-                        data: { tables: this.stagingNodes.map(n => n.data) },
-                    })
-                    ErdTask.dispatch('setNodesHistory', [this.stagingNodes])
-                },
             })
         },
     },

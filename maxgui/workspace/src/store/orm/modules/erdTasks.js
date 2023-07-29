@@ -83,21 +83,13 @@ export default {
     getters: {
         activeRecordId: () => Worksheet.getters('activeId'),
         activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
-        initialTables: (_, getters) => t(getters.activeRecord, 'tables').safeArray,
-        initialSchemas: (_, getters) => [
-            ...new Set(getters.initialTables.map(tbl => tbl.options.schema)),
-        ],
-        // staging_nodes getters
-        stagingNodes: (_, getters) => t(getters.activeRecord, 'staging_nodes').safeArray,
-        stagingTables: (_, getters) => getters.stagingNodes.map(n => n.data),
-        stagingSchemas: (_, getters) => [
-            ...new Set(getters.stagingNodes.map(n => n.data.options.schema)),
-        ],
-        tablesColNameMap: (_, getters) => erdHelper.createTablesColNameMap(getters.stagingTables),
-        refTargetMap: (_, getters) =>
-            lodash.keyBy(erdHelper.genRefTargets(getters.stagingTables), 'id'),
+        nodes: (_, getters) => t(getters.activeRecord, 'nodes').safeArray,
+        tables: (_, getters) => getters.nodes.map(n => n.data),
+        schemas: (_, getters) => [...new Set(getters.nodes.map(n => n.data.options.schema))],
+        tablesColNameMap: (_, getters) => erdHelper.createTablesColNameMap(getters.tables),
+        refTargetMap: (_, getters) => lodash.keyBy(erdHelper.genRefTargets(getters.tables), 'id'),
         colKeyTypeMap: (_, getters) => {
-            return getters.stagingTables.reduce((map, tbl) => {
+            return getters.tables.reduce((map, tbl) => {
                 map = { ...map, ...erdHelper.genColKeyTypeMap(tbl.definitions.keys) }
                 return map
             }, {})
@@ -109,9 +101,5 @@ export default {
             t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
         graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
         activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
-
-        // Other getters
-        isNewEntity: (_, getters) =>
-            !getters.initialTables.some(item => item.id === getters.activeEntityId),
     },
 }

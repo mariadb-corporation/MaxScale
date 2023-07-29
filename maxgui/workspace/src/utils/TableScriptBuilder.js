@@ -461,7 +461,7 @@ export default class TableScriptBuilder {
         const { schema, name } = this.stagingDataOptions
         let sql = ''
         if (!this.skipSchemaCreation) sql += `CREATE SCHEMA IF NOT EXISTS ${quoting(schema)};`
-        sql += `${tokens.createTable} ${quoting(schema)}.${quoting(name)} (`
+        sql += `${tokens.createTable} IF NOT EXISTS ${quoting(schema)}.${quoting(name)} (`
         sql += `${this.buildCreateColsSql()})`
         sql += this.buildTblOptsSql()
         sql = formatSQL(`${sql};`)

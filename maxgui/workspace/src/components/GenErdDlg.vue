@@ -146,11 +146,7 @@ export default {
                         highlightColor: this.$helpers.dynamicColors(i),
                     })
                 )
-                const erdTaskData = {
-                    tables: nodes.map(n => n.data),
-                    staging_nodes: nodes,
-                    is_laid_out: false,
-                }
+                const erdTaskData = { nodes, is_laid_out: false }
                 const erdTaskTmpData = {
                     graph_height_pct: 100,
                     active_entity_id: '',

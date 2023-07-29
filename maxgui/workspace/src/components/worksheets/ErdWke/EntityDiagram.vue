@@ -38,106 +38,98 @@
                     v-on="$listeners"
                 >
                     <template v-slot:default="{ data: { node } }">
-                        <template v-if="!node.hidden">
-                            <div
-                                v-if="node.id === activeNodeId"
-                                class="active-node-border-div absolute rounded-lg"
-                            />
-                            <ref-points
-                                v-if="node.id === clickedNodeId"
-                                :node="node"
-                                :entitySizeConfig="entitySizeConfig"
-                                :getColId="getColId"
-                                :linkContainer="linkContainer"
-                                :boardZoom="panAndZoomData.k"
-                                :graphConfig="graphConfig"
-                                @drawing="onDrawingFk"
-                                @draw-end="onEndDrawFk"
-                            />
-                            <table
-                                class="entity-table"
-                                :style="{ borderColor: node.styles.highlightColor }"
-                            >
-                                <thead>
-                                    <tr :style="{ height: `${entitySizeConfig.headerHeight}px` }">
-                                        <th
-                                            class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg pl-4 pr-1"
-                                            colspan="3"
-                                        >
-                                            <div
-                                                class="d-flex flex-row align-center justify-center"
-                                            >
-                                                <div class="flex-grow-1">
-                                                    {{ node.data.options.name }}
-                                                    <slot name="entity-name-append" :node="node" />
-                                                </div>
-                                                <slot name="entity-setting-btn" :node="node" />
-                                            </div>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="col in node.data.definitions.cols"
-                                        :key="getColId(col)"
-                                        :style="{
-                                            height: `${entitySizeConfig.rowHeight}px`,
-                                            ...getHighlightColStyle({ node, colId: getColId(col) }),
-                                        }"
-                                        v-on="
-                                            isDrawingFk
-                                                ? {
-                                                      mouseenter: () =>
-                                                          setRefTargetData({ node, col }),
-                                                      mouseleave: () => (refTarget = null),
-                                                  }
-                                                : {}
-                                        "
+                        <div
+                            v-if="node.id === activeNodeId"
+                            class="active-node-border-div absolute rounded-lg"
+                        />
+                        <ref-points
+                            v-if="node.id === clickedNodeId"
+                            :node="node"
+                            :entitySizeConfig="entitySizeConfig"
+                            :getColId="getColId"
+                            :linkContainer="linkContainer"
+                            :boardZoom="panAndZoomData.k"
+                            :graphConfig="graphConfig"
+                            @drawing="onDrawingFk"
+                            @draw-end="onEndDrawFk"
+                        />
+                        <table
+                            class="entity-table"
+                            :style="{ borderColor: node.styles.highlightColor }"
+                        >
+                            <thead>
+                                <tr :style="{ height: `${entitySizeConfig.headerHeight}px` }">
+                                    <th
+                                        class="text-center font-weight-bold text-no-wrap rounded-tr-lg rounded-tl-lg pl-4 pr-1"
+                                        colspan="3"
                                     >
-                                        <td>
-                                            <erd-key-icon
-                                                class="fill-height d-flex align-center"
-                                                :data="getKeyIcon({ node, colId: getColId(col) })"
+                                        <div class="d-flex flex-row align-center justify-center">
+                                            <div class="flex-grow-1">
+                                                {{ node.data.options.name }}
+                                            </div>
+                                            <slot name="entity-setting-btn" :node="node" />
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="col in node.data.definitions.cols"
+                                    :key="getColId(col)"
+                                    :style="{
+                                        height: `${entitySizeConfig.rowHeight}px`,
+                                        ...getHighlightColStyle({ node, colId: getColId(col) }),
+                                    }"
+                                    v-on="
+                                        isDrawingFk
+                                            ? {
+                                                  mouseenter: () => setRefTargetData({ node, col }),
+                                                  mouseleave: () => (refTarget = null),
+                                              }
+                                            : {}
+                                    "
+                                >
+                                    <td>
+                                        <erd-key-icon
+                                            class="fill-height d-flex align-center"
+                                            :data="getKeyIcon({ node, colId: getColId(col) })"
+                                        />
+                                    </td>
+                                    <td>
+                                        <div class="fill-height d-flex align-center">
+                                            <mxs-truncate-str
+                                                :tooltipItem="{
+                                                    txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]],
+                                                }"
+                                                :maxWidth="tdMaxWidth"
                                             />
-                                        </td>
-                                        <td>
-                                            <div class="fill-height d-flex align-center">
-                                                <mxs-truncate-str
-                                                    :tooltipItem="{
-                                                        txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]],
-                                                    }"
-                                                    :maxWidth="tdMaxWidth"
-                                                />
-                                            </div>
-                                        </td>
-                                        <td
-                                            class="text-end"
-                                            :style="{
-                                                color:
-                                                    $typy(
-                                                        getHighlightColStyle({
-                                                            node,
-                                                            colId: getColId(col),
-                                                        }),
-                                                        'color'
-                                                    ).safeString || '#6c7c7b',
-                                            }"
-                                        >
-                                            <div
-                                                class="fill-height d-flex align-center text-lowercase"
-                                            >
-                                                <mxs-truncate-str
-                                                    :tooltipItem="{
-                                                        txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]],
-                                                    }"
-                                                    :maxWidth="tdMaxWidth"
-                                                />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </template>
+                                        </div>
+                                    </td>
+                                    <td
+                                        class="text-end"
+                                        :style="{
+                                            color:
+                                                $typy(
+                                                    getHighlightColStyle({
+                                                        node,
+                                                        colId: getColId(col),
+                                                    }),
+                                                    'color'
+                                                ).safeString || '#6c7c7b',
+                                        }"
+                                    >
+                                        <div class="fill-height d-flex align-center text-lowercase">
+                                            <mxs-truncate-str
+                                                :tooltipItem="{
+                                                    txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]],
+                                                }"
+                                                :maxWidth="tdMaxWidth"
+                                            />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </template>
                 </mxs-svg-graph-nodes>
             </template>
@@ -360,20 +352,18 @@ export default {
         },
         genLinks(nodes) {
             this.graphLinks = nodes.reduce((links, node) => {
-                if (!node.hidden) {
-                    const fks = this.getFks(node)
-                    fks.forEach(fk => {
-                        links = [
-                            ...links,
-                            ...erdHelper.handleGenErdLink({
-                                srcNode: node,
-                                fk,
-                                nodes,
-                                isAttrToAttr: this.isAttrToAttr,
-                            }),
-                        ]
-                    })
-                }
+                const fks = this.getFks(node)
+                fks.forEach(fk => {
+                    links = [
+                        ...links,
+                        ...erdHelper.handleGenErdLink({
+                            srcNode: node,
+                            fk,
+                            nodes,
+                            isAttrToAttr: this.isAttrToAttr,
+                        }),
+                    ]
+                })
                 return links
             }, [])
         },

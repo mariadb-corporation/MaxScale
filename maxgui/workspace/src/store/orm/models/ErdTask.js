@@ -24,11 +24,6 @@ export default class ErdTask extends Extender {
     static getNonKeyFields() {
         return {
             /**
-             * storing parsed tables.
-             * The same data structure using by mxs-ddl-editor
-             */
-            tables: this.attr([]),
-            /**
              * Storing nodes using by entity-diagram
              * Each object in the below field have these properties
              * @property {object} data - store the staging data of parsed table
@@ -39,9 +34,8 @@ export default class ErdTask extends Extender {
              * @property {number} vy -  the node’s current y-velocity
              * @property {number} x -  the node’s current x-position
              * @property {number} y -  the node’s current y-position
-             * @property {boolean} [hidden]
              */
-            staging_nodes: this.attr([]),
+            nodes: this.attr([]),
             count: this.number(1),
             graph_config: this.attr({
                 link: { isAttrToAttr: false },

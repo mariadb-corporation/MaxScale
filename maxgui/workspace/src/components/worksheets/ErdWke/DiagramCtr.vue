@@ -5,7 +5,6 @@
             :height="toolbarHeight"
             :zoom="panAndZoom.k"
             :isFitIntoView="isFitIntoView"
-            :hasValidChanges="hasValidChanges"
             @set-zoom="setZoom"
             @on-create-table="handleCreateTable"
             @on-undo="navHistory(activeHistoryIdx - 1)"
@@ -17,7 +16,7 @@
             ref="diagram"
             :key="diagramKey"
             :panAndZoom.sync="panAndZoom"
-            :nodes="stagingNodes"
+            :nodes="nodes"
             :dim="diagramDim"
             :scaleExtent="scaleExtent"
             :graphConfigData="graphConfigData"
@@ -33,20 +32,6 @@
             @contextmenu="activeNodeMenu = $event"
             @on-create-new-fk="onCreateNewFk"
         >
-            <template v-slot:entity-name-append="{ node }">
-                <div class="d-inline-flex entity-name-append">
-                    <span
-                        v-if="$typy(updatedTableMap[node.id]).isObject"
-                        class="changes-indicator"
-                    />
-                    <span
-                        v-if="$typy(newTableMap[node.id]).isObject"
-                        class="d-inline-flex align-center rounded text-uppercase new-tbl-indicator"
-                    >
-                        {{ $mxs_t('new') }}
-                    </span>
-                </div>
-            </template>
             <template v-slot:entity-setting-btn="{ node }">
                 <v-btn
                     :id="`setting-btn-${node.id}`"
@@ -124,10 +109,7 @@ export default {
     components: { ErToolbarCtr, EntityDiagram },
     props: {
         dim: { type: Object, required: true },
-        hasValidChanges: { type: Boolean, required: true },
         connId: { type: String, required: true },
-        newTableMap: { type: Object, required: true },
-        updatedTableMap: { type: Object, required: true },
         isFormValid: { type: Boolean, required: true },
     },
     data() {
@@ -165,11 +147,8 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
-        initialTables() {
-            return ErdTask.getters('initialTables')
-        },
-        stagingNodes() {
-            return ErdTask.getters('stagingNodes')
+        nodes() {
+            return ErdTask.getters('nodes')
         },
         activeGraphConfig() {
             return this.$typy(this.activeRecord, 'graph_config').safeObjectOrEmpty
@@ -193,14 +172,11 @@ export default {
             return this.$typy(ErdTask.getters('activeTmpRecord'), 'key').safeString
         },
         entityOpts() {
-            const isNew = this.isNewEntity(this.activeNodeMenuId)
-            const { ALTER, EDIT, REMOVE, DROP } = this.ENTITY_OPT_TYPES
-            let opts = [
-                { text: this.$mxs_t(isNew ? 'editTbl' : 'alterTbl'), type: isNew ? EDIT : ALTER },
+            const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
+            return [
+                { text: this.$mxs_t('editTbl'), type: EDIT },
                 { text: this.$mxs_t('removeFromDiagram'), type: REMOVE },
             ]
-            if (!isNew) opts.push({ text: this.$mxs_t('dropTbl'), type: DROP })
-            return opts
         },
         activeNodeMenuId() {
             return this.$typy(this.activeNodeMenu, 'id').safeString
@@ -297,17 +273,12 @@ export default {
             if (diagram.nodes.length) this.fitIntoView()
         },
         handleDblClickNode(node) {
-            const { EDIT, ALTER } = this.ENTITY_OPT_TYPES
-            this.handleChooseNodeOpt({ type: this.isNewEntity(node.id) ? EDIT : ALTER, node })
-        },
-        isNewEntity(id) {
-            return !this.initialTables.some(tbl => tbl.id === id)
+            this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node })
         },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
             if (this.connId) {
-                const { ALTER, EDIT, REMOVE, DROP } = this.ENTITY_OPT_TYPES
+                const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
                 switch (type) {
-                    case ALTER:
                     case EDIT: {
                         this.openEditor(node)
                         if (!skipZoom)
@@ -315,40 +286,27 @@ export default {
                             this.$nextTick(() => this.zoomIntoNode(node))
                         break
                     }
-                    case REMOVE:
-                    case DROP: {
+                    case REMOVE: {
                         const { foreignKey } = this.CREATE_TBL_TOKENS
-                        let nodes = this.stagingNodes
-                        if (type === DROP || type === REMOVE) {
-                            if (this.isNewEntity(node.id) || type === DROP) {
-                                nodes = nodes.filter(n => n.id !== node.id)
-                                nodes = nodes.map(n => {
-                                    const fks = this.$typy(
-                                        n,
-                                        `data.definitions.keys[${foreignKey}]`
-                                    ).safeArray
-                                    if (!fks.length) return n
-                                    const remainingFks = fks.filter(
-                                        key => key.ref_tbl_id !== node.id
-                                    )
-                                    return this.$helpers.immutableUpdate(n, {
-                                        data: {
-                                            definitions: {
-                                                keys: remainingFks.length
-                                                    ? { $merge: { [foreignKey]: remainingFks } }
-                                                    : { $unset: [foreignKey] },
-                                            },
-                                        },
-                                    })
-                                })
-                            } else {
-                                nodes = nodes.map(n =>
-                                    n.id === node.id ? { ...n, hidden: true } : n
-                                )
-                            }
-                        }
+                        let nodes = this.nodes
+                        nodes = nodes.filter(n => n.id !== node.id)
+                        nodes = nodes.map(n => {
+                            const fks = this.$typy(n, `data.definitions.keys[${foreignKey}]`)
+                                .safeArray
+                            if (!fks.length) return n
+                            const remainingFks = fks.filter(key => key.ref_tbl_id !== node.id)
+                            return this.$helpers.immutableUpdate(n, {
+                                data: {
+                                    definitions: {
+                                        keys: remainingFks.length
+                                            ? { $merge: { [foreignKey]: remainingFks } }
+                                            : { $unset: [foreignKey] },
+                                    },
+                                },
+                            })
+                        })
                         this.closeEditor()
-                        ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: nodes } })
+                        ErdTask.update({ where: this.activeTaskId, data: { nodes } })
                         this.$refs.diagram.update(nodes)
                         ErdTask.dispatch('updateNodesHistory', nodes)
                         break
@@ -380,12 +338,12 @@ export default {
          */
         onNodesCoordsUpdate(v) {
             const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
-            const stagingNodes = this.assignCoord({ nodeMap, nodes: this.stagingNodes })
+            const nodes = this.assignCoord({ nodeMap, nodes: this.nodes })
             ErdTask.update({
                 where: this.activeTaskId,
-                data: { staging_nodes: stagingNodes, is_laid_out: true },
+                data: { nodes, is_laid_out: true },
             })
-            ErdTask.dispatch('updateNodesHistory', stagingNodes)
+            ErdTask.dispatch('updateNodesHistory', nodes)
         },
         /**
          * @param {object} node - node with new coordinates
@@ -442,10 +400,10 @@ export default {
             this.$refs.diagram.updateNode(params)
         },
         handleCreateTable() {
-            const length = this.stagingNodes.length
+            const length = this.nodes.length
             const { genDdlEditorData, genErdNode } = erdHelper
             const { tableParser, dynamicColors, immutableUpdate } = this.$helpers
-            const schema = this.$typy(ErdTask.getters('stagingSchemas'), '[0]').safeString || 'test'
+            const schema = this.$typy(ErdTask.getters('schemas'), '[0]').safeString || 'test'
             const nodeData = genDdlEditorData({
                 parsedTable: tableParser.parse({
                     ddl: tableTemplate(`table_${length + 1}`),
@@ -462,12 +420,12 @@ export default {
                 x: (0 - x) / k + 65,
                 y: (0 - y) / k + 42,
             }
-            const stagingNodes = immutableUpdate(this.stagingNodes, { $push: [node] })
+            const nodes = immutableUpdate(this.nodes, { $push: [node] })
             ErdTask.update({
                 where: this.activeTaskId,
-                data: { staging_nodes: stagingNodes },
+                data: { nodes },
             }).then(() => {
-                ErdTask.dispatch('updateNodesHistory', this.stagingNodes)
+                ErdTask.dispatch('updateNodesHistory', this.nodes)
                 this.$refs.diagram.addNode(node)
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
@@ -486,7 +444,7 @@ export default {
         redrawnDiagram() {
             const nodes = this.nodesHistory[this.activeHistoryIdx]
             this.closeEditor()
-            ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: nodes } })
+            ErdTask.update({ where: this.activeTaskId, data: { nodes } })
             this.$refs.diagram.update(nodes)
         },
         navHistory(idx) {
@@ -516,7 +474,7 @@ export default {
         onCreateNewFk({ node, currentFks, newKey, refNode }) {
             const { foreignKey } = this.CREATE_TBL_TOKENS
             const { immutableUpdate } = this.$helpers
-            let stagingNodes = this.stagingNodes
+            let nodes = this.nodes
 
             // entity-diagram doesn't generate composite FK,so both cols and ref_cols always have one item
             const colId = newKey.cols[0].id
@@ -533,10 +491,10 @@ export default {
                 // Auto adds a PLAIN index for referenced col if there is none.
                 const nonIndexedColId = this.colKeyTypeMap[refColId] ? null : refColId
                 if (nonIndexedColId) {
-                    stagingNodes = immutableUpdate(stagingNodes, {
+                    nodes = immutableUpdate(nodes, {
                         [refNode.index]: {
                             $set: this.addPlainIndex({
-                                node: stagingNodes[refNode.index],
+                                node: nodes[refNode.index],
                                 colId: nonIndexedColId,
                             }),
                         },
@@ -544,7 +502,7 @@ export default {
                 }
 
                 // Add FK
-                stagingNodes = immutableUpdate(stagingNodes, {
+                nodes = immutableUpdate(nodes, {
                     [node.index]: {
                         data: {
                             definitions: {
@@ -553,9 +511,9 @@ export default {
                         },
                     },
                 })
-                this.$refs.diagram.update(stagingNodes)
-                ErdTask.update({ where: this.activeTaskId, data: { staging_nodes: stagingNodes } })
-                ErdTask.dispatch('updateNodesHistory', stagingNodes)
+                this.$refs.diagram.update(nodes)
+                ErdTask.update({ where: this.activeTaskId, data: { nodes } })
+                ErdTask.dispatch('updateNodesHistory', nodes)
             } else {
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.fkColsRequirements')],
@@ -578,17 +536,6 @@ export default {
         &:hover {
             .setting-btn {
                 visibility: visible;
-            }
-        }
-        .entity-name-append {
-            width: 24px;
-            .new-tbl-indicator {
-                background: $primary;
-                padding: 0 2px;
-                position: relative;
-                color: white;
-                font-size: 0.5rem;
-                bottom: 8px;
             }
         }
     }

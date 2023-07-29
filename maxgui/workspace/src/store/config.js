@@ -211,10 +211,8 @@ export const ALL_TABLE_KEY_TYPES = [primaryKey, uniqueKey, key, fullTextKey, spa
 
 // Entity node option types
 export const ENTITY_OPT_TYPES = Object.freeze({
-    ALTER: 'Alter', // alter existing entities
-    DROP: 'drop', // DROP TABLE
-    EDIT: 'Edit', // edit new entities
-    REMOVE: 'Remove', // remove node and its links from staging data
+    EDIT: 'Edit',
+    REMOVE: 'Remove',
 })
 
 export const EDITOR_MODES = Object.freeze({

@@ -4,7 +4,7 @@
             class="d-flex align-center mxs-color-helper border-bottom-table-border"
             :style="{ height: `${toolbarHeight}px` }"
         >
-            <revert-btn :disabled="!hasChanged || isCreating" @click="onRevert" />
+            <revert-btn v-if="!isCreating" :disabled="!hasChanged" @click="onRevert" />
             <apply-btn :disabled="!hasChanged" @click="onApply" />
             <slot name="toolbar-append" :formRef="$refs.form" />
         </div>
