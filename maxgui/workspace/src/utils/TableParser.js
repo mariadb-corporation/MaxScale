@@ -175,15 +175,15 @@ export default class TableParser {
         this.autoGenId = autoGenId
         this.schema = schema
         const match = ddl.match(createTableReg)
-        let name, definitions, options
+        let definitions, options
         if (match) {
             const { table_name, table_options, table_definitions } = match.groups
-            name = unquoteIdentifier(table_name)
             definitions = this.parseTableDefs(table_definitions)
             options = this.parseTableOpts(table_options)
             options.schema = schema
+            options.name = unquoteIdentifier(table_name)
         }
-        let parsed = { name, definitions, options }
+        let parsed = { definitions, options }
         if (this.autoGenId) parsed.id = `tbl_${uuidv1()}`
         return parsed
     }

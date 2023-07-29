@@ -58,7 +58,10 @@ function replaceNamesWithIds({ keys, cols, lookupTables }) {
             let refTbl
             // Find referenced node
             lookupTables.forEach(tbl => {
-                if (tbl.name === key.ref_tbl_name && tbl.options.schema === key.ref_schema_name)
+                if (
+                    tbl.options.name === key.ref_tbl_name &&
+                    tbl.options.schema === key.ref_schema_name
+                )
                     refTbl = tbl
             })
             // If refTbl is not found, it's not in lookupTables, the fk shouldn't be transformed
@@ -180,7 +183,6 @@ function genDdlEditorData({ parsedTable, lookupTables = [], charsetCollationMap 
             ...parsedTable.options,
             charset,
             collation,
-            name: parsedTable.name,
         },
         definitions: {
             cols: transformedCols.map(col => [...Object.values(col)]),
