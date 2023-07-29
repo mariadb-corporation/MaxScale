@@ -11,12 +11,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { NODE_TYPES } from '@wsSrc/store/config'
 import { to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { tableParser } from '@wsSrc/utils/helpers'
+import { tableParser, quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import erdHelper from '@wsSrc/utils/erdHelper'
 
 /**
  * @public
@@ -63,30 +63,37 @@ async function getNewTreeData({ connId, nodeGroup, data, completionItems = [], c
     }
 }
 
+function parseTables({ res, targets }) {
+    return typy(res, 'data.data.attributes.results').safeArray.reduce((result, item, i) => {
+        if (typy(item, 'data').safeArray.length) {
+            const ddl = typy(item, 'data[0][1]').safeString
+            const schema = targets[i].schema
+            result.push(tableParser.parse({ ddl, schema, autoGenId: true }))
+        }
+        return result
+    }, [])
+}
 /**
  * @param {string} param.connId - id of connection
- * @param {string[]} param.tableNodes - tables to be queried and parsed
+ * @param {object[]} param.targets - target tables to be queried and parsed. e.g. [ {schema: 'test', tbl: 't1'} ]
  * @param {object} param.config - axios config
- * @returns {Promise<array>} parsed tables
+ * @param {object} param.charsetCollationMap
+ * @returns {Promise<array>} parsed data
  */
-async function queryAndParseDDL({ connId, tableNodes, config }) {
-    const [e, res] = await to(
-        queries.post({
-            id: connId,
-            body: {
-                sql: tableNodes.map(node => `SHOW CREATE TABLE ${node.qualified_name};`).join('\n'),
-                max_rows: 0,
-            },
-            config,
-        })
-    )
+async function queryAndParseDDL({ connId, targets, config, charsetCollationMap }) {
+    const sql = targets
+        .map(t => `SHOW CREATE TABLE ${quoting(t.schema)}.${quoting(t.tbl)};`)
+        .join('\n')
+
+    const [e, res] = await to(queries.post({ id: connId, body: { sql, max_rows: 0 }, config }))
+    const tables = parseTables({ res, targets })
     return [
         e,
-        typy(res, 'data.data.attributes.results').safeArray.map((item, i) =>
-            tableParser.parse({
-                ddl: typy(item, 'data[0][1]').safeString,
-                schema: tableNodes[i].parentNameData[NODE_TYPES.SCHEMA],
-                autoGenId: true,
+        tables.map(parsedTable =>
+            erdHelper.genDdlEditorData({
+                parsedTable,
+                lookupTables: tables,
+                charsetCollationMap,
             })
         ),
     ]

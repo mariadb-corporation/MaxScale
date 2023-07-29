@@ -46,7 +46,7 @@
 // ========== Component for selecting schema and table objects ==========
 /*
  * Emits
- * $emit('selected-tables', object[])
+ * $emit('selected-targets', object[])
  */
 import { mapState } from 'vuex'
 import Worksheet from '@wsSrc/store/orm/models/Worksheet'
@@ -83,16 +83,19 @@ export default {
             return this.selectedObjs.reduce(
                 (obj, o) => {
                     // SCHEMA nodes will be included in selectedObjs even though those have no tables
-                    if (o.type === this.NODE_TYPES.SCHEMA)
-                        obj.emptySchemas.push(schemaNodeHelper.minimizeNode(o))
-                    else obj.tables.push(schemaNodeHelper.minimizeNode(o))
+                    if (o.type === this.NODE_TYPES.SCHEMA) obj.emptySchemas.push(o.name)
+                    else
+                        obj.targets.push({
+                            tbl: o.name,
+                            schema: o.parentNameData[this.NODE_TYPES.SCHEMA],
+                        })
                     return obj
                 },
-                { tables: [], emptySchemas: [] }
+                { targets: [], emptySchemas: [] }
             )
         },
-        tables() {
-            return this.parsedObjs.tables
+        targets() {
+            return this.parsedObjs.targets
         },
         emptySchemas() {
             return this.parsedObjs.emptySchemas
@@ -113,7 +116,7 @@ export default {
             deep: true,
             handler(v) {
                 if (v.length) {
-                    if (!this.tables.length)
+                    if (!this.targets.length)
                         this.inputMsg = {
                             type: 'error',
                             text: this.$mxs_t('errors.emptyVisualizeSchema'),
@@ -127,11 +130,11 @@ export default {
                 } else this.inputMsg = null
             },
         },
-        tables: {
+        targets: {
             deep: true,
             immediate: true,
             handler(v) {
-                this.$emit('selected-tables', v)
+                this.$emit('selected-targets', v)
             },
         },
     },

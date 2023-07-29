@@ -16,7 +16,6 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
-import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     namespaced: true,
@@ -31,10 +30,12 @@ export default {
             } = this.vue
 
             await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId, config })
+            const schema = node.parentNameData[rootState.mxsWorkspace.config.NODE_TYPES.SCHEMA]
             const [e, parsedTables] = await queryHelper.queryAndParseDDL({
                 connId,
-                tableNodes: [node],
+                targets: [{ tbl: node.name, schema }],
                 config,
+                charsetCollationMap: rootState.editorsMem.charset_collation_map,
             })
             Editor.update({
                 where: activeQueryTabId,
@@ -56,14 +57,10 @@ export default {
                     { root: true }
                 )
             } else {
-                const parsedTable = $typy(parsedTables, '[0]').safeObjectOrEmpty
                 Editor.update({
                     where: activeQueryTabId,
                     data(editor) {
-                        editor.tbl_creation_info.data = erdHelper.genDdlEditorData({
-                            parsedTable,
-                            charsetCollationMap: rootState.editorsMem.charset_collation_map,
-                        })
+                        editor.tbl_creation_info.data = $typy(parsedTables, '[0]').safeObjectOrEmpty
                         editor.tbl_creation_info.is_loading = false
                     },
                 })

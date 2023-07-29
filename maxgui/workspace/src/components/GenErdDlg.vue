@@ -20,7 +20,7 @@
                 :preselectedSchemas="preselectedSchemas"
                 :triggerDataFetch="isOpened"
                 excludeNonFkSupportedTbl
-                @selected-tables="selectedTableNodes = $event"
+                @selected-targets="selectedTargets = $event"
             />
             <div class="err-visualizing-message-ctr mt-3">
                 <p class="mxs-color-helper text-small-text mb-1">
@@ -62,7 +62,7 @@ export default {
     components: { SelectableSchemaTableTree },
     data() {
         return {
-            selectedTableNodes: [],
+            selectedTargets: [],
             errVisualizingMsg: '',
             name: '',
         }
@@ -97,7 +97,7 @@ export default {
             return Worksheet.getters('activeRequestConfig')
         },
         hasSavingErr() {
-            return Boolean(this.errVisualizingMsg) || Boolean(!this.selectedTableNodes.length)
+            return Boolean(this.errVisualizingMsg) || Boolean(!this.selectedTargets.length)
         },
         activeWkeId() {
             return Worksheet.getters('activeId') // activeWkeId is also erd_task_id
@@ -132,19 +132,17 @@ export default {
             if (this.genInNewWs) conn = await this.cloneConn({ conn, config })
             if (conn.id) {
                 await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId: conn.id, config })
+                await this.queryDdlEditorSuppData({ connId: conn.id, config })
                 const [, parsedTables] = await queryHelper.queryAndParseDDL({
                     connId: conn.id,
-                    tableNodes: this.selectedTableNodes,
+                    targets: this.selectedTargets,
                     config,
+                    charsetCollationMap: this.charset_collation_map,
                 })
-                await this.queryDdlEditorSuppData({ connId: conn.id, config })
+
                 const nodes = parsedTables.map((parsedTable, i) =>
                     erdHelper.genErdNode({
-                        nodeData: erdHelper.genDdlEditorData({
-                            parsedTable,
-                            lookupTables: parsedTables,
-                            charsetCollationMap: this.charset_collation_map,
-                        }),
+                        nodeData: parsedTable,
                         highlightColor: this.$helpers.dynamicColors(i),
                     })
                 )

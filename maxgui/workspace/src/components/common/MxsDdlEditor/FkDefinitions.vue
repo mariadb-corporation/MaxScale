@@ -72,7 +72,6 @@ import { mapState } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import FkDefinitionCol from '@wsSrc/components/common/MxsDdlEditor/FkDefinitionCol.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
-import erdHelper from '@wsSrc/utils/erdHelper'
 import { checkFkSupport } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 
 export default {
@@ -102,7 +101,6 @@ export default {
     },
     computed: {
         ...mapState({
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
@@ -199,16 +197,8 @@ export default {
             })
         },
         unknownTargets() {
-            const { quotingIdentifier: quote } = this.$helpers
             const targets = this.keys.reduce((res, { ref_tbl_name, ref_schema_name }) => {
-                if (ref_tbl_name) {
-                    res.push({
-                        qualified_name: `${quote(ref_schema_name)}.${quote(ref_tbl_name)}`,
-                        parentNameData: {
-                            [this.NODE_TYPES.SCHEMA]: ref_schema_name,
-                        },
-                    })
-                }
+                if (ref_tbl_name) res.push({ schema: ref_schema_name, tbl: ref_tbl_name })
                 return res
             }, [])
             return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
@@ -269,14 +259,12 @@ export default {
             this.isLoading = true
             const [, parsedTables] = await queryHelper.queryAndParseDDL({
                 connId: this.connData.id,
-                tableNodes: targets,
+                targets,
                 config: this.connData.config,
+                charsetCollationMap: this.charsetCollationMap,
             })
-            this.tmpLookupTables = parsedTables.reduce((map, tbl) => {
-                map[tbl.id] = erdHelper.genDdlEditorData({
-                    parsedTable: tbl,
-                    charsetCollationMap: this.charsetCollationMap,
-                })
+            this.tmpLookupTables = parsedTables.reduce((map, parsedTable) => {
+                map[parsedTable.id] = parsedTable
                 return map
             }, {})
             this.isLoading = false
