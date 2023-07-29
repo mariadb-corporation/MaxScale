@@ -48,7 +48,7 @@
  * drag-end({ e, node })
  * node-size-map(obj): size of nodes, keyed by node id
  * dblclick(node)
- * contextmenu(node)
+ * on-node-contextmenu({e:Event, node:object})
  * click(node)
  * click-out-side
  */
@@ -162,7 +162,7 @@ export default {
                 events.contextmenu = e => {
                     this.resetClickedNodeId()
                     e.preventDefault()
-                    this.$emit('contextmenu', node)
+                    this.$emit('on-node-contextmenu', { e, node })
                 }
             if (this.click)
                 events.click = e => {

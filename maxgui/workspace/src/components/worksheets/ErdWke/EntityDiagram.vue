@@ -12,6 +12,7 @@
             :dim="dim"
             :graphDim="graphDim"
             @get-graph-ctr="linkContainer = $event"
+            v-on="$listeners"
         >
             <template v-slot:append="{ data: { style } }">
                 <mxs-svg-graph-nodes
@@ -136,9 +137,15 @@
         </mxs-svg-graph-board>
         <v-tooltip
             v-if="hoveredFkId"
+            :key="hoveredFkId"
             bottom
             transition="slide-y-transition"
             :activator="`#${hoveredFkId}`"
+            absolute
+            offset-y
+            :position-x="tooltipX"
+            :position-y="tooltipY"
+            :open-delay="300"
         >
             <pre>{{ hoveredFkInfo }}</pre>
         </v-tooltip>
@@ -163,6 +170,8 @@
  * - on-rendered({ nodes:array, links:array })
  * - on-node-drag-end(node)
  * - on-create-new-fk({ node:object, currentFks: array, newKey: object, refNode: object, })
+ * - on-node-contextmenu({e: Event, node:object})
+ * - on-link-contextmenu({e: Event, link:object})
  */
 import { mapState } from 'vuex'
 import {
@@ -222,6 +231,8 @@ export default {
             refTarget: null,
             isDrawingFk: false,
             hoveredLink: null,
+            tooltipX: 0,
+            tooltipY: 0,
         }
     },
     computed: {
@@ -489,11 +500,19 @@ export default {
                 evtStylesMod: () => (this.isStraightShape ? { color: this.globalLinkColor } : null),
             })
         },
-        handleMouseOverOut({ link, linkCtr, pathGenerator, eventType }) {
+        handleMouseOverOut({ e, link, linkCtr, pathGenerator, eventType }) {
             this.hoveredLink = link
+            this.tooltipX = e.clientX
+            this.tooltipY = e.clientY
             this.setEventStyles({ links: [link], eventType })
             this.entityLink.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
             this.entityLink.drawMarkers({ linkCtr, joinType: 'update' })
+        },
+        openContextMenu(param) {
+            const { e, link } = param
+            e.preventDefault()
+            this.hoveredLink = null // hide tooltip
+            this.$emit('on-link-contextmenu', { e, link })
         },
         drawLinks() {
             this.entityLink.draw({
@@ -510,6 +529,7 @@ export default {
                             ...param,
                             eventType: EVENT_TYPES.NONE,
                         }),
+                    contextmenu: param => this.openContextMenu.bind(this)(param),
                 },
             })
         },

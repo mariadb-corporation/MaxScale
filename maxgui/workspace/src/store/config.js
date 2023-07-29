@@ -209,12 +209,20 @@ export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
 const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKENS
 export const ALL_TABLE_KEY_TYPES = [primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey]
 
-// Entity node option types
+// Context  option types
+export const CTX_TYPES = Object.freeze({
+    NODE: 'node',
+    LINK: 'link',
+})
 export const ENTITY_OPT_TYPES = Object.freeze({
     EDIT: 'Edit',
     REMOVE: 'Remove',
 })
-
+export const LINK_OPT_TYPES = Object.freeze({
+    EDIT: 'Edit',
+    REMOVE: 'Remove',
+    CHANGE_RELATIONSHIP: 'Change relationship type',
+})
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
     DDL_EDITOR: 'DDL_EDITOR',

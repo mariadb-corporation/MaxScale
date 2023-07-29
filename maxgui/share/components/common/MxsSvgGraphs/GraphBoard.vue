@@ -1,7 +1,13 @@
 <template>
     <div class="mxs-svg-graph-board fill-height">
         <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.mxs_gridBg</v-icon>
-        <svg ref="svg" class="mxs-graph" :width="dim.width" height="100%">
+        <svg
+            ref="svg"
+            class="mxs-graph"
+            :width="dim.width"
+            height="100%"
+            @contextmenu="$emit('on-board-contextmenu', $event)"
+        >
             <g id="graph-ctr" :style="style" />
         </svg>
         <slot name="append" :data="{ style }" />
@@ -25,6 +31,7 @@
 /**
  * Events
  * get-graph-ctr(SVGElement): graph-ctr <g/> element
+ * on-board-contextmenu(Event)
  */
 import { select as d3Select } from 'd3-selection'
 import 'd3-transition'

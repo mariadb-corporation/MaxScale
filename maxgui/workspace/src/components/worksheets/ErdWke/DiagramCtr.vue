@@ -29,21 +29,27 @@
             @on-rendered.once="onRendered"
             @on-node-drag-end="onNodeDragEnd"
             @dblclick="isFormValid ? handleDblClickNode($event) : null"
-            @contextmenu="activeNodeMenu = $event"
             @on-create-new-fk="onCreateNewFk"
+            @on-node-contextmenu="
+                setCtxMenu({ type: CTX_TYPES.NODE, e: $event.e, item: $event.node })
+            "
+            @on-link-contextmenu="
+                setCtxMenu({ type: CTX_TYPES.LINK, e: $event.e, item: $event.link })
+            "
+            @on-board-contextmenu="e => e.preventDefault()"
         >
             <template v-slot:entity-setting-btn="{ node }">
                 <v-btn
-                    :id="`setting-btn-${node.id}`"
+                    :id="node.id"
                     x-small
                     class="setting-btn"
                     :class="{
-                        'setting-btn--visible': activeNodeMenuId === node.id,
+                        'setting-btn--visible': activeCtxItemId === node.id,
                     }"
                     icon
                     color="primary"
                     :disabled="!isFormValid"
-                    @click.stop="activeNodeMenu = node"
+                    @click.stop="setCtxMenu({ e: $event, type: CTX_TYPES.NODE, item: node })"
                 >
                     <v-icon size="14">
                         $vuetify.icons.mxs_settings
@@ -52,24 +58,24 @@
             </template>
         </entity-diagram>
         <v-menu
-            v-if="activeNodeMenuId"
-            :key="`#setting-btn-${activeNodeMenuId}`"
-            :value="activeNodeMenuId"
-            transition="slide-y-transition"
+            :key="activeCtxItemId"
+            :value="Boolean(activeCtxItemId)"
+            absolute
             offset-y
-            left
-            content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
-            :activator="`#setting-btn-${activeNodeMenuId}`"
-            @input="activeNodeMenu = null"
+            :position-x="menuX"
+            :position-y="menuY"
+            transition="slide-y-transition"
+            content-class="v-menu--mariadb v-menu--mariadb-full-border"
+            @input="activeCtxItem = null"
         >
             <v-list>
                 <v-list-item
-                    v-for="(opt, i) in entityOpts"
+                    v-for="(opt, i) in ctxMenuItems"
                     :key="i"
                     dense
                     link
                     class="px-2"
-                    @click="handleChooseNodeOpt({ type: opt.type, node: activeNodeMenu })"
+                    @click="ctxMenuHandler(opt.type)"
                 >
                     <v-list-item-title class="mxs-color-helper text-text">
                         {{ opt.text }}
@@ -132,13 +138,18 @@ export default {
             isFitIntoView: false,
             panAndZoom: { x: 0, y: 0, k: 1 },
             diagramKey: '',
-            activeNodeMenu: null,
+            ctxMenuType: null, // CTX_TYPES
+            activeCtxItem: null,
+            menuX: 0,
+            menuY: 0,
         }
     },
     computed: {
         ...mapState({
             charset_collation_map: state => state.editorsMem.charset_collation_map,
+            CTX_TYPES: state => state.mxsWorkspace.config.CTX_TYPES,
             ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES,
+            LINK_OPT_TYPES: state => state.mxsWorkspace.config.LINK_OPT_TYPES,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
         }),
         activeRecord() {
@@ -178,8 +189,27 @@ export default {
                 { text: this.$mxs_t('removeFromDiagram'), type: REMOVE },
             ]
         },
-        activeNodeMenuId() {
-            return this.$typy(this.activeNodeMenu, 'id').safeString
+        linkOpts() {
+            const { EDIT, REMOVE, CHANGE_RELATIONSHIP } = this.LINK_OPT_TYPES
+            return [
+                { text: this.$mxs_t('editFk'), type: EDIT },
+                { text: this.$mxs_t('removeFk'), type: REMOVE },
+                { text: this.$mxs_t('changeRelationshipType'), type: CHANGE_RELATIONSHIP },
+            ]
+        },
+        ctxMenuItems() {
+            const { NODE, LINK } = this.CTX_TYPES
+            switch (this.ctxMenuType) {
+                case NODE:
+                    return this.entityOpts
+                case LINK:
+                    return this.linkOpts
+                default:
+                    return []
+            }
+        },
+        activeCtxItemId() {
+            return this.$typy(this.activeCtxItem, 'id').safeString
         },
         eventBus() {
             return EventBus
@@ -275,12 +305,29 @@ export default {
         handleDblClickNode(node) {
             this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node })
         },
+        setCtxMenu({ e, type, item }) {
+            this.menuX = e.clientX
+            this.menuY = e.clientY
+            this.ctxMenuType = type
+            this.activeCtxItem = item
+        },
+        ctxMenuHandler(type) {
+            const { NODE, LINK } = this.CTX_TYPES
+            switch (this.ctxMenuType) {
+                case NODE:
+                    this.handleChooseNodeOpt({ type, node: this.activeCtxItem })
+                    break
+                case LINK:
+                    this.handleChooseLinkOpt({ type, link: this.activeCtxItem })
+                    break
+            }
+        },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
             if (this.connId) {
                 const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
                 switch (type) {
                     case EDIT: {
-                        this.openEditor(node)
+                        this.openEditor({ node })
                         if (!skipZoom)
                             // call in the next tick to ensure diagramDim height is up to date
                             this.$nextTick(() => this.zoomIntoNode(node))
@@ -306,9 +353,7 @@ export default {
                             })
                         })
                         this.closeEditor()
-                        ErdTask.update({ where: this.activeTaskId, data: { nodes } })
-                        this.$refs.diagram.update(nodes)
-                        ErdTask.dispatch('updateNodesHistory', nodes)
+                        this.updateAndDrawNodes({ nodes })
                         break
                     }
                 }
@@ -317,6 +362,47 @@ export default {
                     text: [this.$mxs_t('errors.requiredConn')],
                     type: 'error',
                 })
+        },
+        handleChooseLinkOpt({ type, link }) {
+            const { EDIT, REMOVE, CHANGE_RELATIONSHIP } = this.LINK_OPT_TYPES
+            switch (type) {
+                case EDIT: {
+                    if (this.connId) {
+                        this.openEditor({ node: link.source })
+                        this.$nextTick(() => this.zoomIntoNode(link.source))
+                    } else
+                        this.SET_SNACK_BAR_MESSAGE({
+                            text: [this.$mxs_t('errors.requiredConn')],
+                            type: 'error',
+                        })
+                    break
+                }
+                case REMOVE: {
+                    const { foreignKey } = this.CREATE_TBL_TOKENS
+                    let nodeIdx = this.nodes.findIndex(n => n.id === link.source.id)
+                    let fks = this.$typy(
+                        this.nodes[nodeIdx],
+                        `data.definitions.keys[${foreignKey}]`
+                    ).safeArray
+                    fks = fks.filter(k => k.id !== link.id)
+                    const nodes = this.$helpers.immutableUpdate(this.nodes, {
+                        [nodeIdx]: {
+                            data: {
+                                definitions: {
+                                    keys: fks.length
+                                        ? { $merge: { [foreignKey]: fks } }
+                                        : { $unset: [foreignKey] },
+                                },
+                            },
+                        },
+                    })
+                    this.updateAndDrawNodes({ nodes })
+                    break
+                }
+                case CHANGE_RELATIONSHIP:
+                    //TODO: Open select-dlg to choose a relationship type
+                    break
+            }
         },
         assignCoord({ nodeMap, nodes }) {
             return nodes.map(n => {
@@ -430,7 +516,8 @@ export default {
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
         },
-        openEditor(node) {
+        //TODO: set active DDL_EDITOR_SPECS
+        openEditor({ node }) {
             let data = { active_entity_id: node.id }
             if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
             ErdTaskTmp.update({ where: this.activeTaskId, data })
@@ -441,11 +528,15 @@ export default {
                 data: { active_entity_id: '', graph_height_pct: 100 },
             })
         },
+        updateAndDrawNodes({ nodes, skipHistory }) {
+            ErdTask.update({ where: this.activeTaskId, data: { nodes } })
+            this.$refs.diagram.update(nodes)
+            if (!skipHistory) ErdTask.dispatch('updateNodesHistory', nodes)
+        },
         redrawnDiagram() {
             const nodes = this.nodesHistory[this.activeHistoryIdx]
             this.closeEditor()
-            ErdTask.update({ where: this.activeTaskId, data: { nodes } })
-            this.$refs.diagram.update(nodes)
+            this.updateAndDrawNodes({ nodes, skipHistory: true })
         },
         navHistory(idx) {
             ErdTask.dispatch('updateActiveHistoryIdx', idx)
@@ -511,9 +602,7 @@ export default {
                         },
                     },
                 })
-                this.$refs.diagram.update(nodes)
-                ErdTask.update({ where: this.activeTaskId, data: { nodes } })
-                ErdTask.dispatch('updateNodesHistory', nodes)
+                this.updateAndDrawNodes({ nodes })
             } else {
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.fkColsRequirements')],
