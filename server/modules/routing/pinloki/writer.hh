@@ -51,6 +51,8 @@ public:
 
     void set_connection_details(const mxq::Connection::ConnectionDetails& details);
 
+    std::pair<std::string, uint32_t> master_log_pos() const;
+
 private:
     InventoryWriter&  m_inventory;
     bool              m_commit_on_query = false;
@@ -60,6 +62,8 @@ private:
     std::thread       m_thread;
     maxbase::Timer    m_timer {10s};
     Error             m_error;
+    std::string       m_log_file;
+    uint32_t          m_log_pos {0};
 
     mxq::Connection::ConnectionDetails m_details;
 

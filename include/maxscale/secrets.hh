@@ -27,6 +27,15 @@ namespace maxscale
 constexpr size_t SECRETS_CIPHER_BYTES = 32;
 
 /**
+ * Encrypts a plaintext password using the currently loaded encryption key.
+ *
+ * @param input The password to encrypt
+ *
+ * @return The encrypted password
+ */
+std::string encrypt_password(const std::string& input);
+
+/**
  * Encrypts string using provided key.
  *
  * @param key    The symmetric key. Its length must be @c SECRETS_CIPHER_BYTES.
@@ -58,4 +67,5 @@ std::string decrypt_password(const std::vector<uint8_t>& key, const std::string&
  * @return The decrypted password.
  */
 std::string decrypt_password(const std::string& input);
+
 }

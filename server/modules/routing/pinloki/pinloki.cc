@@ -588,9 +588,17 @@ GWBUF Pinloki::show_slave_status(bool all) const
 
     auto rset = ResultSet::create({});
     rset->add_row({});
+    std::string log_file;
+    uint32_t log_pos = 0;
+    Error error {};
 
-    auto error = m_writer ? m_writer->get_err() : Error {};
+    if (m_writer)
+    {
+        error = m_writer->get_err();
+        std::tie(log_file, log_pos) = m_writer->master_log_pos();
+    }
 
+    std::string log_pos_str = std::to_string(log_pos);
     enum class State {Stopped, Connected, Error};
 
     State state = State::Error;
@@ -622,10 +630,10 @@ GWBUF Pinloki::show_slave_status(bool all) const
     rset->add_column("Master_User", m_master_config.user);
     rset->add_column("Master_Port", std::to_string(m_master_config.port));
     rset->add_column("Connect_Retry", "1");
-    rset->add_column("Master_Log_File", file_and_pos.first.c_str());
-    rset->add_column("Read_Master_Log_Pos", file_and_pos.second.c_str());
-    rset->add_column("Relay_Log_File", "");
-    rset->add_column("Relay_Log_Pos", "");
+    rset->add_column("Master_Log_File", log_file.c_str());
+    rset->add_column("Read_Master_Log_Pos", log_pos_str.c_str());
+    rset->add_column("Relay_Log_File", file_and_pos.first.c_str());
+    rset->add_column("Relay_Log_Pos", file_and_pos.second.c_str());
     rset->add_column("Relay_Master_Log_File", "");
     rset->add_column("Slave_IO_Running",
                      state == State::Stopped ? "No" :
@@ -642,7 +650,7 @@ GWBUF Pinloki::show_slave_status(bool all) const
     rset->add_column("Last_Errno", std::to_string(error.code));
     rset->add_column("Last_Error", error.str);
     rset->add_column("Skip_Counter", "0");
-    rset->add_column("Exec_Master_Log_Pos", file_and_pos.second.c_str());
+    rset->add_column("Exec_Master_Log_Pos", log_pos_str.c_str());
     rset->add_column("Relay_Log_Space", "0");
     rset->add_column("Until_Condition", "None");
     rset->add_column("Until_Log_File", "");
