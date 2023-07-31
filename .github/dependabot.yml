@@ -8,7 +8,7 @@ updates:
     versioning-strategy: lockfile-only
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "npm"
     directory: "/maxgui/workspace/package"
@@ -18,4 +18,4 @@ updates:
     versioning-strategy: lockfile-only
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
