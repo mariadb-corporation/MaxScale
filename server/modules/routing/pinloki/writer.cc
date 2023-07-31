@@ -243,6 +243,14 @@ void Writer::run()
                 {
                     save_gtid_list(file);
                 }
+
+                std::lock_guard<std::mutex> guard(m_lock);
+                m_log_pos = rpl_event.next_event_pos();
+
+                if (rpl_event.event_type() == ROTATE_EVENT)
+                {
+                    m_log_file = rpl_event.rotate().file_name;
+                }
             }
         }
         catch (const mxq::EncryptionError& x)
@@ -286,5 +294,11 @@ void Writer::save_gtid_list(FileWriter& file_writer)
         file_writer.commit_txn();
         m_inventory.config().save_rpl_state(m_current_gtid_list);
     }
+}
+
+std::pair<std::string, uint32_t> Writer::master_log_pos() const
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    return {m_log_file, m_log_pos};
 }
 }

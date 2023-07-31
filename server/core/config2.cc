@@ -2373,7 +2373,8 @@ std::string ParamPassword::type() const
 
 std::string ParamPassword::to_string(value_type value) const
 {
-    return !value.empty() && config_mask_passwords() ? "*****" : ParamString::to_string(value);
+    return !value.empty() && config_mask_passwords() ? "*****" :
+           ParamString::to_string(mxs::encrypt_password(value));
 }
 
 bool ParamPassword::from_string(const std::string& value, value_type* pValue, std::string* pMessage) const
@@ -2391,7 +2392,8 @@ bool ParamPassword::from_string(const std::string& value, value_type* pValue, st
 
 json_t* ParamPassword::to_json(value_type value) const
 {
-    return !value.empty() && config_mask_passwords() ? json_string("*****") : ParamString::to_json(value);
+    return !value.empty() && config_mask_passwords() ? json_string("*****") :
+           ParamString::to_json(mxs::encrypt_password(value));
 }
 
 bool ParamPassword::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
