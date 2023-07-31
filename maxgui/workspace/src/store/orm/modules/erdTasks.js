@@ -101,5 +101,6 @@ export default {
             t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
         graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
         activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
+        activeSpec: (_, getters) => getters.activeTmpRecord.active_spec || '',
     },
 }

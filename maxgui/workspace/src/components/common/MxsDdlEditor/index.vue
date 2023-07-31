@@ -22,7 +22,7 @@
                 @after-collapse="setHeaderHeight"
             />
         </div>
-        <v-tabs v-model="activeSpec" :height="24" class="v-tabs--mariadb">
+        <v-tabs v-model="activeSpecTab" :height="24" class="v-tabs--mariadb">
             <v-tab v-for="spec of DDL_EDITOR_SPECS" :key="spec" color="primary" :href="`#${spec}`">
                 <span> {{ $mxs_t(spec) }}</span>
             </v-tab>
@@ -31,7 +31,7 @@
             <v-slide-x-transition>
                 <keep-alive>
                     <col-definitions
-                        v-if="activeSpec === DDL_EDITOR_SPECS.COLUMNS"
+                        v-if="activeSpecTab === DDL_EDITOR_SPECS.COLUMNS"
                         v-model="definitions"
                         :charsetCollationMap="charset_collation_map"
                         :initialData="initialDefinitions"
@@ -40,10 +40,9 @@
                         :defTblCollation="$typy(tblOpts, 'collation').safeString"
                         :colKeyTypeMap="colKeyTypeMap"
                     />
-                    <template v-else-if="activeSpec === DDL_EDITOR_SPECS.FK">
+                    <template v-else-if="activeSpecTab === DDL_EDITOR_SPECS.FK">
                         <fk-definitions
                             v-if="$typy(tblOpts, 'engine').safeString === FK_SUPPORTED_ENGINE"
-                            :key="stagingData.id"
                             v-model="fks"
                             :initialData="initialFks"
                             :lookupTables="lookupTables"
@@ -109,12 +108,12 @@ export default {
         // parsed tables to be looked up in fk-definitions
         lookupTables: { type: Object, default: () => ({}) },
         connData: { type: Object, required: true },
+        activeSpec: { type: String, required: true }, //sync
     },
     data() {
         return {
             isFormValid: true,
             headerHeight: 0,
-            activeSpec: '',
             newLookupTables: {},
         }
     },
@@ -128,6 +127,14 @@ export default {
             def_db_charset_map: state => state.editorsMem.def_db_charset_map,
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
+        activeSpecTab: {
+            get() {
+                return this.activeSpec
+            },
+            set(v) {
+                this.$emit('update:activeSpec', v)
+            },
+        },
         stagingData: {
             get() {
                 return this.value
@@ -230,7 +237,6 @@ export default {
         this.eventBus.$off('workspace-shortkey')
     },
     mounted() {
-        this.activeSpec = this.DDL_EDITOR_SPECS.COLUMNS
         this.setHeaderHeight()
     },
     methods: {

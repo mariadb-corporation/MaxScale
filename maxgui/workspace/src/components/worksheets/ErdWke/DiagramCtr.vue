@@ -151,6 +151,7 @@ export default {
             ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES,
             LINK_OPT_TYPES: state => state.mxsWorkspace.config.LINK_OPT_TYPES,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
+            DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
         }),
         activeRecord() {
             return ErdTask.getters('activeRecord')
@@ -327,7 +328,7 @@ export default {
                 const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
                 switch (type) {
                     case EDIT: {
-                        this.openEditor({ node })
+                        this.openEditor({ node, spec: this.DDL_EDITOR_SPECS.COLUMNS })
                         if (!skipZoom)
                             // call in the next tick to ensure diagramDim height is up to date
                             this.$nextTick(() => this.zoomIntoNode(node))
@@ -368,7 +369,7 @@ export default {
             switch (type) {
                 case EDIT: {
                     if (this.connId) {
-                        this.openEditor({ node: link.source })
+                        this.openEditor({ node: link.source, spec: this.DDL_EDITOR_SPECS.FK })
                         this.$nextTick(() => this.zoomIntoNode(link.source))
                     } else
                         this.SET_SNACK_BAR_MESSAGE({
@@ -516,9 +517,8 @@ export default {
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
         },
-        //TODO: set active DDL_EDITOR_SPECS
-        openEditor({ node }) {
-            let data = { active_entity_id: node.id }
+        openEditor({ node, spec }) {
+            let data = { active_entity_id: node.id, active_spec: spec }
             if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
             ErdTaskTmp.update({ where: this.activeTaskId, data })
         },

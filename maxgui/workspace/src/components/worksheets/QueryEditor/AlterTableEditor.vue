@@ -8,6 +8,7 @@
             :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
             :onExecute="onExecute"
             :lookupTables="{ [stagingData.id]: stagingData }"
+            :activeSpec.sync="activeSpecTab"
         />
     </v-card>
 </template>
@@ -39,6 +40,7 @@ export default {
     data() {
         return {
             stagingData: null,
+            activeSpecTab: '',
         }
     },
     computed: {
@@ -54,12 +56,30 @@ export default {
         activeRequestConfig() {
             return Worksheet.getters('activeRequestConfig')
         },
+        activeQueryTabId() {
+            return QueryEditor.getters('activeQueryTabId')
+        },
+        activeSpec() {
+            return Editor.getters('activeSpec')
+        },
+    },
+    watch: {
+        activeSpecTab(v) {
+            Editor.update({
+                where: this.activeQueryTabId,
+                data(editor) {
+                    editor.tbl_creation_info.active_spec = v
+                },
+            })
+        },
     },
     activated() {
         this.watch_isLoading()
+        this.watch_activeSpec()
     },
     deactivated() {
         this.$typy(this.unwatch_isLoading).safeFunction()
+        this.$typy(this.unwatch_activeSpec).safeFunction()
     },
     methods: {
         ...mapActions({ exeDdlScript: 'mxsWorkspace/exeDdlScript' }),
@@ -76,6 +96,11 @@ export default {
                 { deep: true, immediate: true }
             )
         },
+        watch_activeSpec() {
+            this.unwatch_activeSpec = this.$watch('activeSpec', v => (this.activeSpecTab = v), {
+                immediate: true,
+            })
+        },
         async onExecute() {
             await this.exeDdlScript({
                 connId: this.activeQueryTabConnId,
@@ -84,7 +109,7 @@ export default {
                 successCb: () => {
                     const data = this.$helpers.lodash.cloneDeep(this.stagingData)
                     Editor.update({
-                        where: QueryEditor.getters('activeQueryTabId'),
+                        where: this.activeQueryTabId,
                         data(editor) {
                             editor.tbl_creation_info.data = data
                         },

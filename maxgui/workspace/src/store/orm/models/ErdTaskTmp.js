@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_TMP_ENTITIES } from '@wsSrc/store/config'
+import { ORM_TMP_ENTITIES, DDL_EDITOR_SPECS } from '@wsSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class ErdTaskTmp extends Extender {
@@ -24,6 +24,7 @@ export default class ErdTaskTmp extends Extender {
         return {
             graph_height_pct: this.number(100),
             active_entity_id: this.string(''),
+            active_spec: this.string(DDL_EDITOR_SPECS.COLUMNS),
             key: this.string(uuidv1()), // key for rerender purpose
             nodes_history: this.attr([]),
             active_history_idx: this.number(0),

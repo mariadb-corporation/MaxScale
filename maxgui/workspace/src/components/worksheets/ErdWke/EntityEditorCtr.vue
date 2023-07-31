@@ -3,6 +3,7 @@
         v-if="stagingData"
         v-model="stagingData"
         class="fill-height mxs-color-helper border-top-table-border er-editor-ctr"
+        :activeSpec.sync="activeSpec"
         :dim="dim"
         :initialData="{}"
         isCreating
@@ -86,6 +87,17 @@ export default {
         },
         activeRequestConfig() {
             return Worksheet.getters('activeRequestConfig')
+        },
+        activeSpec: {
+            get() {
+                return ErdTask.getters('activeSpec')
+            },
+            set(v) {
+                ErdTaskTmp.update({
+                    where: this.activeTaskId,
+                    data: { active_spec: v },
+                })
+            },
         },
     },
     activated() {

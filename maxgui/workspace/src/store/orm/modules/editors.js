@@ -28,9 +28,9 @@ export default {
                 $helpers: { getErrorsArr },
                 $typy,
             } = this.vue
-
+            const { NODE_TYPES, DDL_EDITOR_SPECS } = rootState.mxsWorkspace.config
             await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId, config })
-            const schema = node.parentNameData[rootState.mxsWorkspace.config.NODE_TYPES.SCHEMA]
+            const schema = node.parentNameData[NODE_TYPES.SCHEMA]
             const [e, parsedTables] = await queryHelper.queryAndParseDDL({
                 connId,
                 targets: [{ tbl: node.name, schema }],
@@ -62,6 +62,7 @@ export default {
                     data(editor) {
                         editor.tbl_creation_info.data = $typy(parsedTables, '[0]').safeObjectOrEmpty
                         editor.tbl_creation_info.is_loading = false
+                        editor.tbl_creation_info.active_spec = DDL_EDITOR_SPECS.COLUMNS
                     },
                 })
             }
@@ -85,5 +86,6 @@ export default {
             return is_loading
         },
         alteringNode: (state, getters) => getters.tblCreationInfo.altering_node || {},
+        activeSpec: (state, getters) => getters.tblCreationInfo.active_spec || '',
     },
 }
