@@ -243,8 +243,8 @@ function getCardinality({ node, cols }) {
  * @param {object} param.srcNode - referencing table
  * @param {object} param.targetNode - referenced table
  * @param {object} param.fk - parsed fk data
- * @param {string} param.indexColName - source column name
- * @param {string} param.referencedIndexColName - target column name
+ * @param {string} param.colId - source column id
+ * @param {string} param.refColId - target column id
  * @param {boolean} param.isPartOfCompositeKey - is a part of composite FK
  * @param {string} param.srcCardinality - either 1 or N
  * @param {string} param.targetCardinality - either 1 or N
@@ -253,7 +253,7 @@ function genErdLink({
     srcNode,
     targetNode,
     fk,
-    indexColId,
+    colId,
     refColId,
     isPartOfCompositeKey,
     srcCardinality,
@@ -261,7 +261,7 @@ function genErdLink({
 }) {
     const { id, name, on_delete, on_update } = fk
 
-    const colData = getColDefData({ node: srcNode, colId: indexColId })
+    const colData = getColDefData({ node: srcNode, colId })
     const referencedColData = getColDefData({ node: targetNode, colId: refColId })
     if (!colData || !referencedColData) return null
 
@@ -278,23 +278,44 @@ function genErdLink({
             name,
             on_delete,
             on_update,
-            src_attr_id: indexColId,
+            src_attr_id: colId,
             target_attr_id: refColId,
         },
     }
     if (isPartOfCompositeKey) link.isPartOfCompositeKey = isPartOfCompositeKey
     return link
 }
-
+/**
+ *
+ * @param {object} param
+ * @param {object} param.node - node has the FK
+ * @param {string} param.colId - id of the FK column
+ * @param {string} param.refCold - id of the referenced column
+ * @param {object} param.colKeyTypeMap
+ * @returns {boolean}
+ */
+function isIdentifyingRelation({ node, colId, refColId, colKeyTypeMap }) {
+    const pk = typy(node, `data.definitions.keys[${tokens.primaryKey}][0]`).safeObject
+    const hasCompositePk = typy(pk, 'cols').safeArray.length > 1
+    let isIdentify = false
+    if (hasCompositePk) {
+        const colKeyTypes = colKeyTypeMap[colId]
+        const refColKeyTypes = colKeyTypeMap[refColId]
+        if (colKeyTypes.includes(tokens.primaryKey) && refColKeyTypes.includes(tokens.primaryKey))
+            isIdentify = true
+    }
+    return isIdentify
+}
 /**
  *
  * @param {object} param.srcNode - source node
  * @param {object} param.fk - foreign key object
  * @param {array} param.nodes - all nodes of the ERD
  * @param {boolean} param.isAttrToAttr - isAttrToAttr: FK is drawn to associated column
- * @returns
+ * @param {object} param.colKeyTypeMap
+ * @returns {object}
  */
-function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
+function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr, colKeyTypeMap }) {
     const { cols, ref_tbl_id, ref_cols } = fk
     let links = []
 
@@ -309,13 +330,14 @@ function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
             cols: ref_cols,
         })
         for (const [i, item] of cols.entries()) {
-            const indexColId = item.id
+            const colId = item.id
             const refColId = typy(ref_cols, `[${i}].id`).safeString
+
             let linkObj = genErdLink({
                 srcNode,
                 targetNode,
                 fk,
-                indexColId,
+                colId,
                 refColId,
                 isPartOfCompositeKey: i >= 1,
                 srcCardinality,
@@ -324,6 +346,8 @@ function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr }) {
             if (linkObj) {
                 if (linkObj.isPartOfCompositeKey) linkObj.hidden = !isAttrToAttr
                 linkObj.styles = { invisibleHighlightColor }
+                if (isIdentifyingRelation({ node: srcNode, colId, refColId, colKeyTypeMap }))
+                    linkObj.styles.dashArr = 0
                 links.push(linkObj)
             }
         }

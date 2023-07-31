@@ -372,6 +372,7 @@ export default {
                             fk,
                             nodes,
                             isAttrToAttr: this.isAttrToAttr,
+                            colKeyTypeMap: this.colKeyTypeMap,
                         }),
                     ]
                 })
