@@ -97,6 +97,8 @@
             :key="activeCtxNode.key"
             v-model="showCtxMenu"
             left
+            offset-y
+            transition="slide-y-transition"
             :nudge-right="12"
             :nudge-bottom="10"
             :items="activeCtxItemOpts"

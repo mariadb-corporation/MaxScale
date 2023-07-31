@@ -116,6 +116,8 @@
             :key="ctxMenuActivator"
             v-model="showCtxMenu"
             left
+            offset-y
+            transition="slide-y-transition"
             :items="menuItems"
             :activator="ctxMenuActivator"
             @item-click="onChooseOpt"

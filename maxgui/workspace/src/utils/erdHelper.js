@@ -217,17 +217,26 @@ const getOptionality = colData =>
         ? RELATIONSHIP_OPTIONALITY.MANDATORY
         : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
-const isIndex = ({ indexDefs, cols }) => indexDefs.some(def => lodash.isEqual(def.cols, cols))
-
-function isUniqueCol({ node, cols }) {
-    const keys = node.data.definitions.keys
-    const pks = keys[tokens.primaryKey] || []
-    const uniqueKeys = keys[tokens.uniqueKey] || []
-    if (!pks.length && !uniqueKeys.length) return false
-    return isIndex({ indexDefs: pks, cols }) || isIndex({ indexDefs: uniqueKeys, cols })
+const areIndexed = ({ allKeys, category, colIds }) => {
+    const keys = allKeys[category] || []
+    if (!keys.length) return false
+    return keys.some(key =>
+        lodash.isEqual(
+            key.cols.map(c => c.id),
+            colIds
+        )
+    )
 }
-function getCardinality(params) {
-    return isUniqueCol(params) ? '1' : 'N'
+
+function areUniqueCols({ node, colIds }) {
+    const allKeys = node.data.definitions.keys
+    return (
+        areIndexed({ allKeys, category: tokens.primaryKey, colIds }) ||
+        areIndexed({ allKeys, category: tokens.uniqueKey, colIds })
+    )
+}
+function getCardinality({ node, cols }) {
+    return areUniqueCols({ node, colIds: cols.map(c => c.id) }) ? '1' : 'N'
 }
 
 /**
@@ -508,6 +517,7 @@ export default {
     isSingleUQ,
     genDdlEditorData,
     genErdNode,
+    areUniqueCols,
     handleGenErdLink,
     getNodeLinks,
     getExcludedLinks,

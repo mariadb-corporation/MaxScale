@@ -221,7 +221,8 @@ export const ENTITY_OPT_TYPES = Object.freeze({
 export const LINK_OPT_TYPES = Object.freeze({
     EDIT: 'Edit',
     REMOVE: 'Remove',
-    CHANGE_RELATIONSHIP: 'Change relationship type',
+    ONE_TO_ONE: 'One to One',
+    ONE_TO_MANY: 'One to Many',
 })
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',

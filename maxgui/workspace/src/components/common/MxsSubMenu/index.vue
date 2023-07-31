@@ -1,31 +1,31 @@
 <template>
     <v-menu
-        :value="activator ? isOpened : menuOpen"
-        :activator="activator"
-        :transition="transition"
-        :left="left"
-        :nudge-right="nudgeRight"
-        :nudge-bottom="nudgeBottom"
-        :offset-x="isOffsetX"
-        :offset-y="isOffsetY"
+        v-bind="$attrs"
+        :value="$attrs.activator ? isOpened : menuOpen"
         content-class="v-menu--mariadb v-menu--mariadb-full-border"
         :close-on-content-click="false"
-        :open-on-hover="openOnHover"
-        :open-delay="openDelay"
         min-width="auto"
-        @input="$emit('input', $event)"
+        v-on="$listeners"
     >
-        <template v-if="!activator" v-slot:activator="{ on }">
-            <v-list-item v-if="isSubMenu" class="d-flex justify-space-between" v-on="on">
-                <v-list-item-title class="mxs-color-helper text-text" v-text="text" />
+        <template v-if="!$attrs.activator" v-slot:activator="{ on }">
+            <v-list-item
+                v-if="submenuProps.isSubMenu"
+                class="d-flex justify-space-between cursor-default"
+                v-on="on"
+            >
+                <v-list-item-title class="mxs-color-helper text-text">
+                    {{ submenuProps.text }}
+                </v-list-item-title>
                 <v-icon size="24" color="primary">
                     mdi-menu-right
                 </v-icon>
             </v-list-item>
-            <div v-else v-on="on" @click="activator ? (isOpened = true) : (menuOpen = true)">
+            <div v-else v-on="on" @click="$attrs.activator ? (isOpened = true) : (menuOpen = true)">
                 <slot name="activator">
                     <v-list-item link dense>
-                        <v-list-item-title class="mxs-color-helper text-text" v-text="text" />
+                        <v-list-item-title class="mxs-color-helper text-text">
+                            {{ submenuProps.text }}
+                        </v-list-item-title>
                     </v-list-item>
                 </slot>
             </div>
@@ -36,13 +36,17 @@
                 <mxs-sub-menu
                     v-else-if="item.children"
                     :key="`mxs-sub-menu-${index}`"
-                    :isOffsetX="true"
-                    :isOffsetY="false"
-                    :isSubMenu="true"
                     :items="item.children"
-                    :text="item.text"
-                    :transition="nestedMenuTransition"
-                    :open-delay="nestedMenuOpenDelay"
+                    :submenuProps="{
+                        isSubMenu: true,
+                        text: item.text,
+                        nestedMenuTransition: 'scale-transition',
+                        nestedMenuOpenDelay: 150,
+                    }"
+                    offset-x
+                    :offset-y="false"
+                    :transition="submenuProps.nestedMenuTransition"
+                    :open-delay="submenuProps.nestedMenuOpenDelay"
                     :open-on-hover="true"
                     @item-click="emitClickEvent"
                 />
@@ -54,7 +58,9 @@
                     :disabled="item.disabled"
                     @click="emitClickEvent(item)"
                 >
-                    <v-list-item-title class="mxs-color-helper text-text" v-text="item.text" />
+                    <v-list-item-title class="mxs-color-helper text-text">
+                        {{ item.text }}
+                    </v-list-item-title>
                 </v-list-item>
             </template>
         </v-list>
@@ -76,23 +82,18 @@
  * Public License.
  */
 export default {
+    inheritAttrs: false,
     props: {
-        // if using activator, value is used
-        value: { type: Boolean, default: false },
-        activator: { type: String, default: '' },
-        text: { type: String, default: '' },
         items: { type: Array, required: true },
-        left: { type: Boolean, default: false },
-        nudgeRight: { type: Number, default: 0 },
-        nudgeBottom: { type: Number, default: 0 },
-        isOffsetX: { type: Boolean, default: false },
-        isOffsetY: { type: Boolean, default: true },
-        isSubMenu: { type: Boolean, default: false },
-        openOnHover: { type: Boolean, default: false },
-        transition: { type: String, default: 'slide-y-transition' },
-        nestedMenuTransition: { type: String, default: 'scale-transition' },
-        openDelay: { type: Number, default: 0 },
-        nestedMenuOpenDelay: { type: Number, default: 150 },
+        submenuProps: {
+            type: Object,
+            default: () => ({
+                isSubMenu: false,
+                text: '',
+                nestedMenuTransition: 'scale-transition',
+                nestedMenuOpenDelay: 150,
+            }),
+        },
     },
     data() {
         return {
@@ -103,7 +104,7 @@ export default {
         // use this to control menu visibility when using activator
         isOpened: {
             get() {
-                return this.value
+                return this.$attrs.value
             },
             set(v) {
                 this.$emit('input', v)
@@ -113,7 +114,7 @@ export default {
     methods: {
         emitClickEvent(item) {
             this.$emit('item-click', item)
-            if (this.activator) this.isOpened = false
+            if (this.$attrs.activator) this.isOpened = false
             else this.menuOpen = false
         },
     },

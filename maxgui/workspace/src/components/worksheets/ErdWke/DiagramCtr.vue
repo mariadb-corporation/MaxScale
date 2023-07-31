@@ -57,32 +57,20 @@
                 </v-btn>
             </template>
         </entity-diagram>
-        <v-menu
+        <mxs-sub-menu
             :key="activeCtxItemId"
             :value="Boolean(activeCtxItemId)"
+            :items="ctxMenuItems"
             absolute
             offset-y
             :position-x="menuX"
             :position-y="menuY"
             transition="slide-y-transition"
             content-class="v-menu--mariadb v-menu--mariadb-full-border"
+            :activator="activeCtxItemId ? `#${activeCtxItemId}` : ''"
             @input="activeCtxItem = null"
-        >
-            <v-list>
-                <v-list-item
-                    v-for="(opt, i) in ctxMenuItems"
-                    :key="i"
-                    dense
-                    link
-                    class="px-2"
-                    @click="ctxMenuHandler(opt.type)"
-                >
-                    <v-list-item-title class="mxs-color-helper text-text">
-                        {{ opt.text }}
-                    </v-list-item-title>
-                </v-list-item>
-            </v-list>
-        </v-menu>
+            @item-click="ctxMenuHandler($event.type)"
+        />
     </div>
 </template>
 
@@ -107,6 +95,7 @@ import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue
 import { EventBus } from '@wkeComps/EventBus'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
+import { MIN_MAX_CARDINALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
 import erdHelper from '@wsSrc/utils/erdHelper'
 
@@ -152,6 +141,8 @@ export default {
             LINK_OPT_TYPES: state => state.mxsWorkspace.config.LINK_OPT_TYPES,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
+            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
+            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
         }),
         activeRecord() {
             return ErdTask.getters('activeRecord')
@@ -191,12 +182,22 @@ export default {
             ]
         },
         linkOpts() {
-            const { EDIT, REMOVE, CHANGE_RELATIONSHIP } = this.LINK_OPT_TYPES
-            return [
+            const { EDIT, REMOVE, ONE_TO_ONE, ONE_TO_MANY } = this.LINK_OPT_TYPES
+            const { ONLY_ONE, ZERO_OR_ONE } = MIN_MAX_CARDINALITY
+
+            let opts = [
                 { text: this.$mxs_t('editFk'), type: EDIT },
                 { text: this.$mxs_t('removeFk'), type: REMOVE },
-                { text: this.$mxs_t('changeRelationshipType'), type: CHANGE_RELATIONSHIP },
             ]
+            const [src = ''] = this.$typy(
+                this.activeCtxItem,
+                'relationshipData.type'
+            ).safeString.split(':')
+
+            if (src === ONLY_ONE || src === ZERO_OR_ONE)
+                opts.push({ text: this.$mxs_t('changeToOneToMany'), type: ONE_TO_MANY })
+            else opts.push({ text: this.$mxs_t('changeToOneToOne'), type: ONE_TO_ONE })
+            return opts
         },
         ctxMenuItems() {
             const { NODE, LINK } = this.CTX_TYPES
@@ -229,6 +230,12 @@ export default {
         },
         colKeyTypeMap() {
             return ErdTask.getters('colKeyTypeMap')
+        },
+        idxOfUQ() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UQ]
+        },
+        idxOfId() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
         },
     },
     watch: {
@@ -365,7 +372,7 @@ export default {
                 })
         },
         handleChooseLinkOpt({ type, link }) {
-            const { EDIT, REMOVE, CHANGE_RELATIONSHIP } = this.LINK_OPT_TYPES
+            const { EDIT, REMOVE, ONE_TO_ONE, ONE_TO_MANY } = this.LINK_OPT_TYPES
             switch (type) {
                 case EDIT: {
                     if (this.connId) {
@@ -400,10 +407,64 @@ export default {
                     this.updateAndDrawNodes({ nodes })
                     break
                 }
-                case CHANGE_RELATIONSHIP:
-                    //TODO: Open select-dlg to choose a relationship type
+                case ONE_TO_MANY:
+                case ONE_TO_ONE: {
+                    const { src_attr_id } = link.relationshipData
+                    const nodes = this.$helpers.immutableUpdate(this.nodes, {
+                        [link.source.index]: {
+                            $set: this.toggleUnique({
+                                node: this.nodes[link.source.index],
+                                colId: src_attr_id,
+                                /**
+                                 * In a ONE_TO_MANY relationship, FK is placed on the "many" side,
+                                 * so the FK col can't be unique
+                                 */
+                                value: type == ONE_TO_MANY ? false : true,
+                            }),
+                        },
+                    })
+
+                    this.updateAndDrawNodes({ nodes })
                     break
+                }
             }
+        },
+        /**
+         * @param {object} param
+         * @param {object} param.node - entity-diagram node
+         * @param {string} param.colId - column id
+         * @param {boolean} param.value - if it's true, add UQ key if not exists, otherwise remove UQ
+         * @return {object} updated node
+         */
+        toggleUnique({ node, colId, value }) {
+            const category = this.CREATE_TBL_TOKENS.uniqueKey
+            // check if column is already unique
+            const isUnique = erdHelper.areUniqueCols({ node, colIds: [colId] })
+            if (value && isUnique) return node
+            const srcColIdx = node.data.definitions.cols.findIndex(c => c[this.idxOfId] === colId)
+            let keys = this.$typy(node, `data.definitions.keys[${category}]`).safeArray
+            // add UQ key
+            if (value)
+                keys.push(erdHelper.genKey({ definitions: node.data.definitions, category, colId }))
+            // remove UQ key
+            else
+                keys = keys.filter(
+                    k =>
+                        !this.$helpers.lodash.isEqual(
+                            k.cols.map(c => c.id),
+                            [colId]
+                        )
+                )
+            return this.$helpers.immutableUpdate(node, {
+                data: {
+                    definitions: {
+                        cols: { [srcColIdx]: { [this.idxOfUQ]: { $set: value } } },
+                        keys: keys.length
+                            ? { $merge: { [category]: keys } }
+                            : { $unset: [category] },
+                    },
+                },
+            })
         },
         assignCoord({ nodeMap, nodes }) {
             return nodes.map(n => {

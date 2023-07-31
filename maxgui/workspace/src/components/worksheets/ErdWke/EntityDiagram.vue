@@ -530,6 +530,7 @@ export default {
                             eventType: EVENT_TYPES.NONE,
                         }),
                     contextmenu: param => this.openContextMenu.bind(this)(param),
+                    click: param => this.openContextMenu.bind(this)(param),
                 },
             })
         },

@@ -21,7 +21,7 @@ export const RELATIONSHIP_OPTIONALITY = {
     OPTIONAL: '0',
 }
 
-const MIN_MAX_CARDINALITY = {
+export const MIN_MAX_CARDINALITY = {
     ONLY_ONE: '1..1',
     ZERO_OR_ONE: '0..1',
     ONE_OR_MANY: '1..N',
