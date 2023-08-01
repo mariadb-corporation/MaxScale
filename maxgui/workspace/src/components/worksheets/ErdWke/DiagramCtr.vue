@@ -58,6 +58,7 @@
             </template>
         </entity-diagram>
         <mxs-sub-menu
+            v-if="activeCtxItemId"
             :key="activeCtxItemId"
             :value="Boolean(activeCtxItemId)"
             :items="ctxMenuItems"

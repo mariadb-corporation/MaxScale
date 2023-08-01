@@ -437,7 +437,10 @@ export default class TableScriptBuilder {
 
         let parts = [] // part of script which will be separated by commas
         if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
-        if (this.hasColDefChanged) parts.push(this.buildColDefAlterSQL())
+        if (this.hasColDefChanged) {
+            const colSql = this.buildColDefAlterSQL()
+            if (colSql) parts.push(colSql)
+        }
 
         const pkSQL = this.buildPkSQL()
         const otherKeysSQL = this.buildOtherKeys()
