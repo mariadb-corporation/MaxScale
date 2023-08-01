@@ -90,7 +90,7 @@
                 :groupBy="groupBy"
                 :activeRow="activeRow"
                 :search="filterKeyword"
-                @selected-rows="selectedItems = $event"
+                :selectedItems.sync="selectedItems"
                 @is-grouping="isGrouping = $event"
                 @on-cell-right-click="onCellRClick"
                 v-on="$listeners"

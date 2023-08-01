@@ -61,8 +61,8 @@
             :boundingWidth="boundingWidth"
             showSelect
             :isVertTable="isVertTable"
+            :selectedItems.sync="selectedItems"
             v-on="$listeners"
-            @selected-rows="selectedItems = $event"
         >
             <template
                 v-for="(h, colOptIdx) in visHeaders"

@@ -22,12 +22,7 @@
                 class="v-checkbox--mariadb-xs ma-0 pa-0"
                 primary
                 hide-details
-                @change="
-                    val =>
-                        val
-                            ? selectedRows.push(row)
-                            : selectedRows.splice(getSelectedRowIdx(row), 1)
-                "
+                @change="onChangeCheckbox"
             />
         </div>
         <template v-for="(h, colIdx) in tableHeaders">
@@ -99,6 +94,7 @@ export default {
         cellContentWidthMap: { type: Object, required: true },
         isDragging: { type: Boolean, default: true },
         search: { type: String, required: true },
+        singleSelect: { type: Boolean, required: true },
     },
     computed: {
         selectedRows: {
@@ -125,6 +121,12 @@ export default {
          */
         isRowSelected(row) {
             return this.getSelectedRowIdx(row) === -1 ? false : true
+        },
+        onChangeCheckbox(val) {
+            if (val) {
+                if (this.singleSelect) this.selectedRows = [this.row]
+                else this.selectedRows.push(this.row)
+            } else this.selectedRows.splice(this.getSelectedRowIdx(this.row), 1)
         },
     },
 }

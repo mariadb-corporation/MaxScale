@@ -26,8 +26,8 @@
             :boundingWidth="dim.width"
             showSelect
             :isVertTable="isVertTable"
+            :selectedItems.sync="selectedItems"
             v-on="$listeners"
-            @selected-rows="selectedItems = $event"
         >
             <template v-for="name in requiredHeaders" v-slot:[`header-${name}`]>
                 <span :key="name" class="label-required">{{ name }}</span>

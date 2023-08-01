@@ -10,16 +10,18 @@
                     minWidth: `${checkboxColWidth}px`,
                 }"
             >
-                <v-checkbox
-                    :input-value="isAllselected"
-                    :indeterminate="indeterminate"
-                    dense
-                    class="v-checkbox--mariadb-xs ma-0"
-                    primary
-                    hide-details
-                    @change="val => $emit('toggle-select-all', val)"
-                />
-                <div class="header__resizer no-pointerEvent d-inline-block fill-height"></div>
+                <template v-if="!singleSelect">
+                    <v-checkbox
+                        :input-value="isAllselected"
+                        :indeterminate="indeterminate"
+                        dense
+                        class="v-checkbox--mariadb-xs ma-0"
+                        primary
+                        hide-details
+                        @change="val => $emit('toggle-select-all', val)"
+                    />
+                    <div class="header__resizer no-pointerEvent d-inline-block fill-height" />
+                </template>
             </div>
             <template v-for="(header, colIdx) in tableHeaders">
                 <div
@@ -141,6 +143,7 @@ export default {
         isVertTable: { type: Boolean, default: false },
         curr2dRowsLength: { type: Number, required: true },
         showSelect: { type: Boolean, required: true },
+        singleSelect: { type: Boolean, required: true },
         checkboxColWidth: { type: Number, required: true },
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },

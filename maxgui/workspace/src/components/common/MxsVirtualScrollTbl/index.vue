@@ -17,6 +17,7 @@
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
             :scrollBarThicknessOffset="scrollBarThicknessOffset"
+            :singleSelect="singleSelect"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
@@ -86,6 +87,7 @@
                     :cellContentWidthMap="cellContentWidthMap"
                     :isDragging="isDragging"
                     :search="search"
+                    :singleSelect="singleSelect"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -120,7 +122,6 @@
  */
 /*
 @on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
-@selected-rows: value:any[][]. Event is emitted when showSelect props is true
 @scroll-end: Emit when table scroll to the last row
 @is-grouping: boolean
 */
@@ -154,11 +155,13 @@ export default {
         bench: { type: Number, default: 10 },
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
+        singleSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
         search: { type: String, default: '' }, // Text input used to highlight cell
         noDataText: { type: String, default: '' },
+        selectedItems: { type: Array, default: () => [] }, //sync
     },
     data() {
         return {
@@ -173,7 +176,6 @@ export default {
             idxOfGroupCol: -1,
             collapsedRowGroups: [],
             // Select feat states
-            selectedTblRows: [],
             selectedGroupRows: [],
         }
     },
@@ -259,14 +261,16 @@ export default {
                 return obj
             }, {})
         },
-    },
-    watch: {
         selectedTblRows: {
-            deep: true,
-            handler(v) {
-                this.$emit('selected-rows', v)
+            get() {
+                return this.selectedItems
+            },
+            set(v) {
+                this.$emit('update:selectedItems', v)
             },
         },
+    },
+    watch: {
         rows: {
             deep: true,
             handler(v, oV) {
