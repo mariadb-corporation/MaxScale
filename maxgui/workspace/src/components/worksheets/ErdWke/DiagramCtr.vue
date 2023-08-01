@@ -175,28 +175,32 @@ export default {
             return this.$typy(ErdTask.getters('activeTmpRecord'), 'key').safeString
         },
         entityOpts() {
-            const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
-            return [
-                { text: this.$mxs_t('editTbl'), type: EDIT },
-                { text: this.$mxs_t('removeFromDiagram'), type: REMOVE },
-            ]
+            return Object.values(this.ENTITY_OPT_TYPES).map(type => ({
+                type,
+                text: this.$mxs_t(type),
+            }))
         },
         linkOpts() {
-            const { EDIT, REMOVE, ONE_TO_ONE, ONE_TO_MANY } = this.LINK_OPT_TYPES
-            const { ONLY_ONE, ZERO_OR_ONE } = MIN_MAX_CARDINALITY
-
+            const { EDIT, REMOVE } = this.LINK_OPT_TYPES
+            const link = this.activeCtxItem
             let opts = [
-                { text: this.$mxs_t('editFk'), type: EDIT },
-                { text: this.$mxs_t('removeFk'), type: REMOVE },
+                { text: this.$mxs_t(EDIT), type: EDIT },
+                { text: this.$mxs_t(REMOVE), type: REMOVE },
             ]
-            const [src = ''] = this.$typy(
-                this.activeCtxItem,
-                'relationshipData.type'
-            ).safeString.split(':')
 
-            if (src === ONLY_ONE || src === ZERO_OR_ONE)
-                opts.push({ text: this.$mxs_t('changeToOneToMany'), type: ONE_TO_MANY })
-            else opts.push({ text: this.$mxs_t('changeToOneToOne'), type: ONE_TO_ONE })
+            if (link) {
+                opts.push(this.genCardinalityOpt(link))
+                const { primaryKey } = this.CREATE_TBL_TOKENS
+                const {
+                    relationshipData: { src_attr_id, target_attr_id },
+                } = link
+                const colKeyTypes = this.colKeyTypeMap[src_attr_id]
+                const refColKeyTypes = this.colKeyTypeMap[target_attr_id]
+                if (!colKeyTypes.includes(primaryKey)) opts.push(this.genOptionalityOpt({ link }))
+                if (!refColKeyTypes.includes(primaryKey))
+                    opts.push(this.genOptionalityOpt({ link, isForRefTbl: true }))
+            }
+
             return opts
         },
         ctxMenuItems() {
@@ -233,6 +237,9 @@ export default {
         },
         idxOfUQ() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UQ]
+        },
+        idxOfNN() {
+            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NN]
         },
         idxOfId() {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
@@ -313,6 +320,39 @@ export default {
         handleDblClickNode(node) {
             this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node })
         },
+        genCardinalityOpt(link) {
+            const { SET_ONE_TO_ONE, SET_ONE_TO_MANY } = this.LINK_OPT_TYPES
+            const { ONLY_ONE, ZERO_OR_ONE } = MIN_MAX_CARDINALITY
+            const [src = ''] = link.relationshipData.type.split(':')
+            const optType =
+                src === ONLY_ONE || src === ZERO_OR_ONE ? SET_ONE_TO_MANY : SET_ONE_TO_ONE
+            return { text: this.$mxs_t(optType), type: optType }
+        },
+        genOptionalityOpt({ link, isForRefTbl = false }) {
+            const {
+                SET_MANDATORY,
+                SET_FK_COL_OPTIONAL,
+                SET_REF_COL_MANDATORY,
+                SET_REF_COL_OPTIONAL,
+            } = this.LINK_OPT_TYPES
+            const {
+                source,
+                target,
+                relationshipData: { src_attr_id, target_attr_id },
+            } = link
+            let node = source,
+                colId = src_attr_id,
+                optType = isForRefTbl ? SET_REF_COL_MANDATORY : SET_MANDATORY
+
+            if (isForRefTbl) {
+                node = target
+                colId = target_attr_id
+            }
+            if (erdHelper.isColMandatory({ node, colId }))
+                optType = isForRefTbl ? SET_REF_COL_OPTIONAL : SET_FK_COL_OPTIONAL
+
+            return { text: this.$mxs_t(optType), type: optType }
+        },
         setCtxMenu({ e, type, item }) {
             this.menuX = e.clientX
             this.menuY = e.clientY
@@ -372,7 +412,16 @@ export default {
                 })
         },
         handleChooseLinkOpt({ type, link }) {
-            const { EDIT, REMOVE, ONE_TO_ONE, ONE_TO_MANY } = this.LINK_OPT_TYPES
+            const {
+                EDIT,
+                REMOVE,
+                SET_ONE_TO_ONE,
+                SET_ONE_TO_MANY,
+                SET_MANDATORY,
+                SET_FK_COL_OPTIONAL,
+                SET_REF_COL_MANDATORY,
+                SET_REF_COL_OPTIONAL,
+            } = this.LINK_OPT_TYPES
             switch (type) {
                 case EDIT: {
                     if (this.connId) {
@@ -407,27 +456,75 @@ export default {
                     this.updateAndDrawNodes({ nodes })
                     break
                 }
-                case ONE_TO_MANY:
-                case ONE_TO_ONE: {
-                    const { src_attr_id } = link.relationshipData
-                    const nodes = this.$helpers.immutableUpdate(this.nodes, {
-                        [link.source.index]: {
-                            $set: this.toggleUnique({
-                                node: this.nodes[link.source.index],
-                                colId: src_attr_id,
-                                /**
-                                 * In a ONE_TO_MANY relationship, FK is placed on the "many" side,
-                                 * so the FK col can't be unique
-                                 */
-                                value: type == ONE_TO_MANY ? false : true,
-                            }),
-                        },
-                    })
+                case SET_ONE_TO_MANY:
+                case SET_ONE_TO_ONE:
+                case SET_FK_COL_OPTIONAL:
+                case SET_MANDATORY:
+                case SET_REF_COL_OPTIONAL:
+                case SET_REF_COL_MANDATORY:
+                    this.updateCardinality({ type, link })
+                    break
+            }
+        },
+        updateCardinality({ type, link }) {
+            const {
+                SET_ONE_TO_ONE,
+                SET_ONE_TO_MANY,
+                SET_MANDATORY,
+                SET_FK_COL_OPTIONAL,
+                SET_REF_COL_MANDATORY,
+                SET_REF_COL_OPTIONAL,
+            } = this.LINK_OPT_TYPES
+            let nodes = this.nodes
+            const { src_attr_id, target_attr_id } = link.relationshipData
+            let method,
+                nodeIdx = link.source.index,
+                node = this.nodes[nodeIdx],
+                colId = src_attr_id,
+                value = false
+            switch (type) {
+                case SET_ONE_TO_MANY:
+                case SET_ONE_TO_ONE: {
+                    method = 'toggleUnique'
+                    /**
+                     * In an one to many relationship, FK is placed on the "many" side,
+                     * and the FK col can't be unique. On the other hand, one to one
+                     * relationship, fk col and ref col must be both unique
+                     */
+                    if (type === SET_ONE_TO_ONE) {
+                        value = true
+                        // update also ref col of target node
+                        nodes = this.$helpers.immutableUpdate(nodes, {
+                            [link.target.index]: {
+                                $set: this[method]({
+                                    node: this.nodes[link.target.index],
+                                    colId: target_attr_id,
+                                    value,
+                                }),
+                            },
+                        })
+                    }
+                    break
+                }
+                case SET_MANDATORY:
+                case SET_FK_COL_OPTIONAL:
+                case SET_REF_COL_OPTIONAL:
+                case SET_REF_COL_MANDATORY: {
+                    method = 'toggleNotNull'
+                    if (type === SET_REF_COL_OPTIONAL || type === SET_REF_COL_MANDATORY) {
+                        nodeIdx = link.target.index
+                        node = this.nodes[nodeIdx]
+                        colId = target_attr_id
+                    }
+                    value = type === SET_MANDATORY || type === SET_REF_COL_MANDATORY
 
-                    this.updateAndDrawNodes({ nodes })
                     break
                 }
             }
+            nodes = this.$helpers.immutableUpdate(nodes, {
+                [nodeIdx]: { $set: this[method]({ node, colId, value }) },
+            })
+            this.updateAndDrawNodes({ nodes })
         },
         /**
          * @param {object} param
@@ -441,7 +538,7 @@ export default {
             // check if column is already unique
             const isUnique = erdHelper.areUniqueCols({ node, colIds: [colId] })
             if (value && isUnique) return node
-            const srcColIdx = node.data.definitions.cols.findIndex(c => c[this.idxOfId] === colId)
+            const colIdx = node.data.definitions.cols.findIndex(c => c[this.idxOfId] === colId)
             let keys = this.$typy(node, `data.definitions.keys[${category}]`).safeArray
             // add UQ key
             if (value)
@@ -458,10 +555,27 @@ export default {
             return this.$helpers.immutableUpdate(node, {
                 data: {
                     definitions: {
-                        cols: { [srcColIdx]: { [this.idxOfUQ]: { $set: value } } },
+                        cols: { [colIdx]: { [this.idxOfUQ]: { $set: value } } },
                         keys: keys.length
                             ? { $merge: { [category]: keys } }
                             : { $unset: [category] },
+                    },
+                },
+            })
+        },
+        /**
+         * @param {object} param
+         * @param {object} param.node - entity-diagram node
+         * @param {string} param.colId - column id
+         * @param {boolean} param.value - if it's true, turns on NOT NULL.
+         * @return {object} updated node
+         */
+        toggleNotNull({ node, colId, value }) {
+            const srcColIdx = node.data.definitions.cols.findIndex(c => c[this.idxOfId] === colId)
+            return this.$helpers.immutableUpdate(node, {
+                data: {
+                    definitions: {
+                        cols: { [srcColIdx]: { [this.idxOfNN]: { $set: value } } },
                     },
                 },
             })

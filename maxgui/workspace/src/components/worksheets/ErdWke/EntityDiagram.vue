@@ -505,6 +505,8 @@ export default {
             this.hoveredLink = link
             this.tooltipX = e.clientX
             this.tooltipY = e.clientY
+            if (eventType === EVENT_TYPES.HOVER) this.mouseenterNode({ node: link.source })
+            else this.mouseleaveNode()
             this.setEventStyles({ links: [link], eventType })
             this.entityLink.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
             this.entityLink.drawMarkers({ linkCtr, joinType: 'update' })
@@ -512,7 +514,6 @@ export default {
         openContextMenu(param) {
             const { e, link } = param
             e.preventDefault()
-            this.hoveredLink = null // hide tooltip
             this.$emit('on-link-contextmenu', { e, link })
         },
         drawLinks() {

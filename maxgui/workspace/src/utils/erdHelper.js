@@ -239,6 +239,9 @@ function getCardinality({ node, cols }) {
     return areUniqueCols({ node, colIds: cols.map(c => c.id) }) ? '1' : 'N'
 }
 
+function isColMandatory({ node, colId }) {
+    return getOptionality(getColDefData({ node, colId })) === RELATIONSHIP_OPTIONALITY.MANDATORY
+}
 /**
  * @param {object} param.srcNode - referencing table
  * @param {object} param.targetNode - referenced table
@@ -542,6 +545,7 @@ export default {
     genDdlEditorData,
     genErdNode,
     areUniqueCols,
+    isColMandatory,
     handleGenErdLink,
     getNodeLinks,
     getExcludedLinks,

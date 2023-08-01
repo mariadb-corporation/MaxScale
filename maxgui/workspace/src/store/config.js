@@ -215,14 +215,18 @@ export const CTX_TYPES = Object.freeze({
     LINK: 'link',
 })
 export const ENTITY_OPT_TYPES = Object.freeze({
-    EDIT: 'Edit',
-    REMOVE: 'Remove',
+    EDIT: 'editTbl',
+    REMOVE: 'removeFromDiagram',
 })
 export const LINK_OPT_TYPES = Object.freeze({
-    EDIT: 'Edit',
-    REMOVE: 'Remove',
-    ONE_TO_ONE: 'One to One',
-    ONE_TO_MANY: 'One to Many',
+    EDIT: 'editFk',
+    REMOVE: 'removeFk',
+    SET_ONE_TO_ONE: 'changeToOneToOne',
+    SET_ONE_TO_MANY: 'changeToOneToMany',
+    SET_MANDATORY: 'setMandatory',
+    SET_FK_COL_OPTIONAL: 'setFkColOptional',
+    SET_REF_COL_MANDATORY: 'setRefColMandatory',
+    SET_REF_COL_OPTIONAL: 'setRefColOptional',
 })
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
