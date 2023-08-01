@@ -315,7 +315,7 @@ void Config::set_binlogs_dirty() const
     m_binlog_files->set_is_dirty();
 }
 
-void Config::save_rpl_state(const maxsql::GtidList &gtids) const
+void Config::save_rpl_state(const maxsql::GtidList& gtids) const
 {
     m_binlog_files->set_rpl_state(gtids);
 }
@@ -338,7 +338,7 @@ BinglogIndexUpdater::BinglogIndexUpdater(const std::string& binlog_dir,
     }
     else
     {
-       m_watch = inotify_add_watch(m_inotify_fd, m_binlog_dir.c_str(), IN_CREATE | IN_DELETE);
+        m_watch = inotify_add_watch(m_inotify_fd, m_binlog_dir.c_str(), IN_CREATE | IN_DELETE);
 
         if (m_watch == -1)
         {
@@ -378,7 +378,7 @@ BinglogIndexUpdater::~BinglogIndexUpdater()
     }
 }
 
-void BinglogIndexUpdater::set_rpl_state(const maxsql::GtidList &gtids)
+void BinglogIndexUpdater::set_rpl_state(const maxsql::GtidList& gtids)
 {
     // Using the same mutex for rpl state as for file names. There
     // is very little action hitting this mutex.
