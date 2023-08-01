@@ -73,7 +73,7 @@ public:
     Connection(Connection&&) = delete;
     ~Connection();
 
-    void          start_replication(unsigned int server_id, GtidList gtid = GtidList());
+    void          start_replication(unsigned int server_id, bool semi_sync, const GtidList& gtid);
     MariaRplEvent get_rpl_msg();
 
     /**

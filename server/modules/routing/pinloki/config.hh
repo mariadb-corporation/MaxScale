@@ -95,6 +95,8 @@ public:
 
     mxb::Cipher::AesMode encryption_cipher() const;
 
+    bool semi_sync() const;
+
     // File purging
     int32_t             expire_log_minimum_files() const;
     wall_time::Duration expire_log_duration() const;
@@ -151,6 +153,7 @@ private:
     wall_time::Duration m_expire_log_duration;
     wall_time::Duration m_purge_startup_delay;
     wall_time::Duration m_purge_poll_timeout;
+    bool                m_semi_sync;
 
     std::function<bool()> m_cb;
 

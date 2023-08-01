@@ -108,7 +108,8 @@ void Writer::update_gtid_list(const mxq::Gtid& gtid)
 
 void Writer::start_replication(mxq::Connection& conn)
 {
-    conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
+    const auto& cnf = m_inventory.config();
+    conn.start_replication(cnf.server_id(), cnf.semi_sync(), m_current_gtid_list);
 }
 
 bool Writer::has_master_changed(const mxq::Connection& conn)

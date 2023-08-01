@@ -78,6 +78,9 @@ cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(
 cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(
     &s_spec, "purge_poll_timeout", "Purge timeout/poll when expire_log_minimum_files files exist",
     2min);
+
+cfg::ParamBool s_rpl_semi_sync_slave_enabled(
+    &s_spec, "rpl_semi_sync_slave_enabled", "Enable semi-synchronous replication", false);
 }
 
 namespace pinloki
@@ -261,6 +264,11 @@ mxb::Cipher::AesMode Config::encryption_cipher() const
     return m_encryption_cipher;
 }
 
+bool Config::semi_sync() const
+{
+    return m_semi_sync;
+}
+
 std::string gen_uuid()
 {
     char uuid_str[36 + 1];
@@ -301,6 +309,7 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&Config::m_purge_poll_timeout, &s_purge_poll_timeout);
+    add_native(&Config::m_semi_sync, &s_rpl_semi_sync_slave_enabled);
     m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir,
                                                  inventory_file_path()));
 }

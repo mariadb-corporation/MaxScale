@@ -343,6 +343,20 @@ Possible values are:
 
   * [AES in Counter Mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR)).
 
+### `rpl_semi_sync_slave_enabled`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+Enable
+[semi-synchronous](https://mariadb.com/kb/en/semisynchronous-replication/)
+replication when replicating from a MariaDB server. If enabled, the binlogrouter
+will send acknowledgment for each received event. Note that the
+[rpl_semi_sync_master_enabled](https://mariadb.com/kb/en/semisynchronous-replication/#rpl_semi_sync_master_enabled)
+parameter must be enabled in the MariaDB server where the replication is done
+from for the semi-synchronous replication to take place.
+
 ## New installation
 
  1. Configure and start MaxScale.
