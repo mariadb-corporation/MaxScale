@@ -44,7 +44,7 @@ private:
     {
         std::string   name;
         std::ofstream file;
-        int           write_pos;
+        int64_t       write_pos;
     };
 
 

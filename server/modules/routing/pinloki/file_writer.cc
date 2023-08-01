@@ -221,7 +221,19 @@ void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_ev
     fn.file.write(rpl_event.pBuffer(), rpl_event.buffer_size());
     fn.file.flush();
 
-    fn.write_pos = rpl_event.next_event_pos();
+    int64_t current_offset = fn.file.tellp();
+
+    if (rpl_event.next_event_pos() >= current_offset)
+    {
+        fn.write_pos = rpl_event.next_event_pos();
+    }
+    else
+    {
+        // If the binlog ends up growing past the 4GiB mark, we cannot rely on the next event position in the
+        // event as it is a 32-bit integer.
+        mxb_assert(current_offset > std::numeric_limits<uint32_t>::max());
+        fn.write_pos = current_offset;
+    }
 
     if (!fn.file.good())
     {
