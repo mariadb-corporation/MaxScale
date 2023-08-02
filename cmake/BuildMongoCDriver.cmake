@@ -12,7 +12,7 @@
 # MONGO_C_LIBRARIES    - The libraries for the mongo library.
 #
 
-set(MONGO_C_DRIVER_VERSION "1.17.0")
+set(MONGO_C_DRIVER_VERSION "1.24.2")
 
 message(STATUS "Using mongo-c-driver version ${MONGO_C_DRIVER_VERSION}")
 
