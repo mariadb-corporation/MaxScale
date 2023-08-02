@@ -47,6 +47,7 @@
                             :lookupTables="lookupTables"
                             :newLookupTables.sync="newLookupTables"
                             :allLookupTables="allLookupTables"
+                            :allTableColMap="allTableColMap"
                             :refTargets="refTargets"
                             :tablesColNameMap="tablesColNameMap"
                             :tableId="stagingData.id"
@@ -61,8 +62,9 @@
                     <index-definitions
                         v-else-if="activeSpecTab === DDL_EDITOR_SPECS.INDEXES"
                         v-model="keyMap"
-                        :tablesColNameMap="tablesColNameMap"
+                        :tableColNameMap="tablesColNameMap[stagingData.id]"
                         :dim="tabDim"
+                        :tableColMap="allTableColMap[stagingData.id]"
                     />
                 </keep-alive>
             </v-slide-x-transition>
@@ -227,6 +229,15 @@ export default {
         },
         colKeyTypeMap() {
             return erdHelper.genColKeyTypeMap(this.definitions.keys)
+        },
+        /**
+         * @returns {Object.<string, Array.<Array>>}  e.g. { "tbl_123": [][] }
+         */
+        allTableColMap() {
+            return this.allLookupTables.reduce((res, tbl) => {
+                res[tbl.id] = this.$typy(tbl, 'definitions.cols').safeArray
+                return res
+            }, {})
         },
         eventBus() {
             return EventBus

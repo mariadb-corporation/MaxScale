@@ -9,13 +9,9 @@
         singleSelect
         :noDataText="$mxs_t('noEntity', { entityName: $mxs_t('indexes') })"
         :style="{ width: `${dim.width}px` }"
-        :selectedItems.sync="selectedIndexes"
+        :selectedItems.sync="selectedItems"
+        @row-click="onRowClick"
     >
-        <template v-for="(h, key) in headers" v-slot:[`header-${h.text}`]="{ data: { header } }">
-            <span :key="key" :class="{ 'label-required': requiredHeaders.includes(h.text) }">
-                {{ $mxs_t(header.text) }}
-            </span>
-        </template>
         <template
             v-for="h in headers"
             v-slot:[h.text]="{ data: { cell, rowIdx, colIdx, rowData } }"
@@ -77,7 +73,7 @@ export default {
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
-        selectedItems: { type: Array, default: () => [] }, //sync
+        selectedItem: { type: Array, default: () => [] }, //sync
     },
     data() {
         return {
@@ -100,16 +96,13 @@ export default {
         },
         headers() {
             const { ID, NAME, CATEGORY, COMMENT } = this.KEY_EDITOR_ATTRS
+            const header = { sortable: false, uppercase: true }
             return [
                 { text: ID, hidden: true },
-                { text: NAME, minWidth: 90 },
-                { text: CATEGORY, width: 145, minWidth: 145 },
-                { text: COMMENT, minWidth: 200 },
+                { text: NAME, minWidth: 90, required: true, ...header },
+                { text: CATEGORY, width: 145, required: true, minWidth: 145, ...header },
+                { text: COMMENT, minWidth: 200, ...header },
             ]
-        },
-        requiredHeaders() {
-            const { NAME, CATEGORY } = this.KEY_EDITOR_ATTRS
-            return [NAME, CATEGORY]
         },
         keys: {
             get() {
@@ -119,12 +112,13 @@ export default {
                 this.$emit('input', v)
             },
         },
-        selectedIndexes: {
+        selectedItems: {
             get() {
-                return this.selectedItems
+                if (this.$typy(this.selectedItem).isEmptyObject) return []
+                return [this.selectedItem]
             },
             set(v) {
-                this.$emit('update:selectedItems', v)
+                this.$emit('update:selectedItem', this.$typy(v, '[0]').safeArray)
             },
         },
         hasPk() {
@@ -141,14 +135,6 @@ export default {
         },
     },
     watch: {
-        keys: {
-            deep: true,
-            handler(v) {
-                if (!this.$helpers.lodash.isEqual(v, this.stagingKeys)) {
-                    this.assignData()
-                }
-            },
-        },
         stagingKeys: {
             deep: true,
             handler(v) {
@@ -161,14 +147,14 @@ export default {
     },
     methods: {
         assignData() {
-            this.stagingKeys = this.keys
+            this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
             const { foreignKey, primaryKey } = this.CREATE_TBL_TOKENS
-            this.keyItems = Object.keys(this.stagingKeys).reduce((acc, category) => {
+            this.keyItems = Object.values(this.NON_FK_CATEGORIES).reduce((acc, category) => {
                 if (category !== foreignKey) {
                     const keys = Object.values(this.stagingKeys[category] || {})
                     acc = [
                         ...acc,
-                        ...keys.map(({ id, name = primaryKey, comment }) => [
+                        ...keys.map(({ id, name = this.categoryTxt(primaryKey), comment = '' }) => [
                             id,
                             name,
                             category,
@@ -178,7 +164,7 @@ export default {
                 }
                 return acc
             }, [])
-            if (this.keyItems.length) this.selectedIndexes.push(this.keyItems[0])
+            if (this.keyItems.length) this.selectedItems = [this.keyItems[0]]
         },
         categoryTxt(category) {
             if (category === this.CREATE_TBL_TOKENS.key) return 'INDEX'
@@ -196,7 +182,7 @@ export default {
         onChangeInput({ field, rowData, rowIdx, colIdx, value }) {
             const category = rowData[this.idxOfCategory]
             const keyId = rowData[this.idxOfId]
-            const { NAME, CATEGORY } = this.KEY_EDITOR_ATTRS
+            const { NAME, CATEGORY, COMMENT } = this.KEY_EDITOR_ATTRS
 
             let currKeyMap = this.stagingKeys[category] || {}
             const clonedKey = this.$helpers.lodash.cloneDeep(currKeyMap[keyId])
@@ -205,6 +191,13 @@ export default {
                 case NAME:
                     this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
                         [category]: { [keyId]: { name: { $set: value } } },
+                    })
+                    break
+                case COMMENT:
+                    this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
+                        [category]: {
+                            [keyId]: value ? { comment: { $set: value } } : { $unset: ['comment'] },
+                        },
                     })
                     break
                 case CATEGORY: {
@@ -230,11 +223,26 @@ export default {
                 }
             }
 
+            // Update component states
             this.keyItems = this.$helpers.immutableUpdate(this.keyItems, {
-                [rowIdx]: {
-                    [colIdx]: { $set: value },
-                },
+                [rowIdx]: { [colIdx]: { $set: value } },
             })
+
+            /* TODO: Resolve the current limitation in mxs-virtual-scroll-tbl.
+             * The `selectedItems` props stores the entire row data, so that
+             * the styles for selected rows can be applied.
+             * The id of the row should have been used to facilitate the edit
+             * feature. For now, selectedItems must be also updated.
+             */
+            const isUpdatingSelectedItem =
+                this.$typy(this.selectedItems, `[0][${this.idxOfId}]`).safeString === keyId
+            if (isUpdatingSelectedItem)
+                this.selectedItems = this.$helpers.immutableUpdate(this.selectedItems, {
+                    [0]: { [colIdx]: { $set: value } },
+                })
+        },
+        onRowClick(rowData) {
+            this.selectedItems = [rowData]
         },
     },
 }

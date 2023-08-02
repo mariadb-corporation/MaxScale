@@ -543,6 +543,22 @@ function validateFkColTypes({ src, target, colId, targetColId }) {
     return true
 }
 
+function genIdxColOpts({ tableColMap, disableHandler = () => false }) {
+    const idxOfColId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
+    const idxOfColType = COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]
+    const idxOfColName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
+    return tableColMap.reduce((options, c) => {
+        const type = c[idxOfColType]
+        options.push({
+            id: c[idxOfColId],
+            text: c[idxOfColName],
+            type,
+            disabled: typy(disableHandler).safeFunction(type),
+        })
+        return options
+    }, [])
+}
+
 export default {
     genColKeyTypeMap,
     isSingleUQ,
@@ -559,4 +575,5 @@ export default {
     genKey,
     genKeyName,
     validateFkColTypes,
+    genIdxColOpts,
 }

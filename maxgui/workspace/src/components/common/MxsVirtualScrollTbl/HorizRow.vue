@@ -23,6 +23,7 @@
                 primary
                 hide-details
                 @change="onChangeCheckbox"
+                @click.stop
             />
         </div>
         <template v-for="(h, colIdx) in tableHeaders">

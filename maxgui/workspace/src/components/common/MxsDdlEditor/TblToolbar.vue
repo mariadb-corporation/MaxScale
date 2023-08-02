@@ -15,7 +15,8 @@
             @click="$emit('on-delete-selected-items', selectedItems)"
         >
             <template v-slot:btn-content>
-                {{ $mxs_t('drop') }} ({{ selectedItems.length }})
+                {{ $mxs_t('drop') }}
+                <template v-if="selectedItems.length > 1"> ({{ selectedItems.length }}) </template>
             </template>
             {{ $mxs_t('dropSelected') }}
         </mxs-tooltip-btn>

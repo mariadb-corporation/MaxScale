@@ -21,17 +21,6 @@
                 :selectedItems.sync="selectedItems"
                 v-on="$listeners"
             >
-                <template
-                    v-for="(h, key) in headers"
-                    v-slot:[`header-${h.text}`]="{ data: { header } }"
-                >
-                    <span
-                        :key="key"
-                        :class="{ 'label-required': requiredHeaders.includes(h.text) }"
-                    >
-                        {{ $mxs_t(header.text) }}
-                    </span>
-                </template>
                 <template v-for="h in headers" v-slot:[h.text]="{ data: { cell, rowData } }">
                     <fk-definition-col
                         :key="h.text"
@@ -70,6 +59,7 @@ import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import FkDefinitionCol from '@wsSrc/components/common/MxsDdlEditor/FkDefinitionCol.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { checkFkSupport } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
+import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'fk-definitions',
@@ -81,6 +71,7 @@ export default {
         lookupTables: { type: Object, required: true },
         newLookupTables: { type: Object, required: true }, // sync
         allLookupTables: { type: Array, required: true },
+        allTableColMap: { type: Object, required: true },
         refTargets: { type: Array, required: true },
         tablesColNameMap: { type: Object, required: true },
         connData: { type: Object, required: true },
@@ -103,7 +94,7 @@ export default {
             REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
         }),
         headers() {
-            let header = { sortable: false }
+            let header = { sortable: false, uppercase: true }
             const {
                 ID,
                 NAME,
@@ -115,17 +106,13 @@ export default {
             } = this.FK_EDITOR_ATTRS
             return [
                 { text: ID, hidden: true },
-                { text: NAME, ...header },
-                { text: COLS, minWidth: 146, ...header },
-                { text: REF_TARGET, minWidth: 146, ...header },
-                { text: REF_COLS, minWidth: 142, ...header },
+                { text: NAME, required: true, ...header },
+                { text: COLS, required: true, minWidth: 146, ...header },
+                { text: REF_TARGET, required: true, minWidth: 146, ...header },
+                { text: REF_COLS, required: true, minWidth: 142, ...header },
                 { text: ON_UPDATE, width: 166, minWidth: 86, ...header },
                 { text: ON_DELETE, width: 166, minWidth: 86, ...header },
             ]
-        },
-        requiredHeaders() {
-            const { NAME, COLS, REF_TARGET, REF_COLS } = this.FK_EDITOR_ATTRS
-            return [NAME, COLS, REF_TARGET, REF_COLS]
         },
         // new referenced tables keyed by id
         tmpLookupTables: {
@@ -202,15 +189,6 @@ export default {
             }, [])
             return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
         },
-        /**
-         * @returns {Object.<string, Array.<Array>>}  e.g. { "tbl_123": [][] }
-         */
-        allTableColMap() {
-            return this.allLookupTables.reduce((res, tbl) => {
-                res[tbl.id] = this.$typy(tbl, 'definitions.cols').safeArray
-                return res
-            }, {})
-        },
         referencingColOptions() {
             return this.getColOptions(this.tableId)
         },
@@ -243,16 +221,10 @@ export default {
         },
         getColOptions(tableId) {
             if (!this.allTableColMap[tableId]) return []
-            return this.allTableColMap[tableId].reduce((options, c) => {
-                const type = c[this.idxOfColType]
-                options.push({
-                    id: c[this.idxOfColId],
-                    text: c[this.idxOfColName],
-                    type,
-                    disabled: !checkFkSupport(type),
-                })
-                return options
-            }, [])
+            return erdHelper.genIdxColOpts({
+                tableColMap: this.allTableColMap[tableId],
+                disableHandler: type => !checkFkSupport(type),
+            })
         },
         async fetchReferencedTablesData(targets) {
             this.isLoading = true

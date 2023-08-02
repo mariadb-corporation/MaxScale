@@ -39,6 +39,7 @@
                         pointer: enableSorting && header.sortable !== false,
                         [`sort--active ${sortOrder}`]: activeSort === header.text,
                         'text-capitalize': header.capitalize,
+                        'text-uppercase': header.uppercase,
                         'th--resizable': !isResizerDisabled(header),
                     }"
                     @click="
@@ -50,24 +51,24 @@
                 >
                     <template v-if="header.text === '#'">
                         <span> {{ header.text }}</span>
-                        <span class="ml-1 mxs-color-helper text-grayed-out">
+                        <span v-if="showTotalNumber" class="ml-1 mxs-color-helper text-grayed-out">
                             ({{ curr2dRowsLength }})
                         </span>
                     </template>
-                    <slot
-                        v-else
-                        :name="`header-${header.text}`"
-                        :data="{
-                            header,
-                            // maxWidth: minus padding and sort-icon
-                            maxWidth: headerTxtMaxWidth({ header, colIdx }),
-                            colIdx: colIdx,
-                            activatorID: genHeaderColID(colIdx),
-                        }"
-                    >
-                        {{ header.text }}
-                    </slot>
-
+                    <span v-else :class="{ 'label-required': header.required }">
+                        <slot
+                            :name="`header-${header.text}`"
+                            :data="{
+                                header,
+                                // maxWidth: minus padding and sort-icon
+                                maxWidth: headerTxtMaxWidth({ header, colIdx }),
+                                colIdx: colIdx,
+                                activatorID: genHeaderColID(colIdx),
+                            }"
+                        >
+                            {{ header.text }}
+                        </slot>
+                    </span>
                     <v-icon
                         v-if="enableSorting && header.sortable !== false"
                         size="14"
@@ -127,11 +128,13 @@
   minWidth?: string | number, allow resizing column to no smaller than provided value
   resizable?: boolean, true by default
   capitalize?: boolean, capitalize first letter of the header
+  uppercase?: boolean, uppercase all letters of the header
   groupable?: boolean
   customGroup?: (data:object) => rowMap. data.rows(2d array to be grouped). data.idx(col index of the inner array)
   hidden?: boolean, hidden the column
   draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
   sortable?: boolean, if false, column won't be sortable
+  required?: boolean, if true, `label-required` class will be added to the header
 }
  */
 export default {
@@ -149,6 +152,7 @@ export default {
         indeterminate: { type: Boolean, required: true },
         areHeadersHidden: { type: Boolean, required: true },
         scrollBarThicknessOffset: { type: Number, required: true },
+        showTotalNumber: { type: Boolean, required: true },
     },
     data() {
         return {

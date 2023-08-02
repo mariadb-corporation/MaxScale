@@ -18,6 +18,7 @@
             :areHeadersHidden="areHeadersHidden"
             :scrollBarThicknessOffset="scrollBarThicknessOffset"
             :singleSelect="singleSelect"
+            :showTotalNumber="showTotalNumber"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
@@ -51,6 +52,7 @@
                     :isDragging="isDragging"
                     :search="search"
                     @mousedown="onCellDragStart"
+                    @click.native="$emit('row-click', row)"
                     v-on="$listeners"
                 >
                     <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -70,6 +72,7 @@
                     :showSelect="showSelect"
                     :maxWidth="maxRowGroupWidth"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
+                    @click.native="$emit('row-click', row)"
                 />
                 <horiz-row
                     v-else
@@ -89,6 +92,7 @@
                     :search="search"
                     :singleSelect="singleSelect"
                     @mousedown="onCellDragStart"
+                    @click.native="$emit('row-click', row)"
                     v-on="$listeners"
                 >
                     <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -121,10 +125,12 @@
  * Public License.
  */
 /*
-@on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
-@scroll-end: Emit when table scroll to the last row
-@is-grouping: boolean
-*/
+ * Emits:
+ * - on-cell-right-click({ e: event, row:[], cell:string, activatorID:string })
+ * - scroll-end()
+ * - is-grouping(boolean)
+ * - row-click(rowData)
+ */
 import TableHeader from '@wsSrc/components/common/MxsVirtualScrollTbl/TableHeader'
 import VerticalRow from '@wsSrc/components/common/MxsVirtualScrollTbl/VerticalRow.vue'
 import HorizRow from '@wsSrc/components/common/MxsVirtualScrollTbl/HorizRow.vue'
@@ -162,6 +168,7 @@ export default {
         search: { type: String, default: '' }, // Text input used to highlight cell
         noDataText: { type: String, default: '' },
         selectedItems: { type: Array, default: () => [] }, //sync
+        showTotalNumber: { type: Boolean, default: true },
     },
     data() {
         return {
@@ -271,13 +278,6 @@ export default {
         },
     },
     watch: {
-        rows: {
-            deep: true,
-            handler(v, oV) {
-                // Clear selectedTblRows once rows value changes
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.selectedTblRows = []
-            },
-        },
         isVertTable(v) {
             // clear selected items
             if (v) this.selectedTblRows = []
@@ -445,6 +445,7 @@ export default {
         overflow: auto;
         .tr {
             display: flex;
+            cursor: pointer;
             .td {
                 font-size: 0.875rem;
                 color: $navigation;

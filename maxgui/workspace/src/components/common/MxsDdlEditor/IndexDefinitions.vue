@@ -1,21 +1,21 @@
 <template>
     <div class="fill-height">
         <tbl-toolbar
-            :selectedItems="selectedItems"
+            :selectedItems="[selectedItem]"
             :showRotateTable="false"
             reverse
             @get-computed-height="headerHeight = $event"
             @on-delete-selected-items="deleteSelectedKeys"
             @on-add="addNewKey"
         />
-        <indexes-list
-            v-model="stagingKeys"
-            :dim="{ height: dim.height - headerHeight, width: keyTblWidth }"
-            :selectedItems.sync="selectedItems"
-        />
-        <!-- TODO: based on selectedItems, show a component to alter column order
-        index order .i.e ASC or DESC, length.
-         -->
+        <div class="d-flex flex-row">
+            <indexes-list
+                v-model="stagingKeys"
+                :dim="{ height: dim.height - headerHeight, width: keyTblWidth }"
+                :selectedItem.sync="selectedItem"
+                class="mr-4"
+            />
+        </div>
     </div>
 </template>
 
@@ -42,12 +42,13 @@ export default {
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
-        tablesColNameMap: { type: Object, required: true },
+        tableColNameMap: { type: Object, required: true },
+        tableColMap: { type: Array, required: true },
     },
     data() {
         return {
             headerHeight: 0,
-            selectedItems: [],
+            selectedItem: [],
             stagingKeys: {},
         }
     },
@@ -67,7 +68,7 @@ export default {
             return this.dim.width / 2
         },
         keyColsTblWidth() {
-            return this.dim.width - this.keyTblWidth
+            return this.dim.width - this.keyTblWidth - 16
         },
         keys: {
             get() {
@@ -99,9 +100,8 @@ export default {
         assignData() {
             this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
         },
-        deleteSelectedKeys(selectedItems) {
-            // The index table has singleSelect, so selectedItems will have just 1 item
-            const item = selectedItems[0]
+        deleteSelectedKeys() {
+            const item = this.selectedItem
             const id = item[this.idxOfId]
             const category = item[this.idxOfCategory]
             let keyMap = this.stagingKeys[category] || {}

@@ -12,6 +12,12 @@
  * Public License.
  */
 import { isMAC } from '@share/utils/helpers'
+/**
+ * @param {object} attrs
+ * @returns {object}
+ */
+const genIdxMap = attrs =>
+    Object.freeze(Object.values(attrs).reduce((map, attr, i) => ((map[attr] = i), map), {}))
 
 export const ORM_NAMESPACE = 'ORM'
 export const ORM_PERSISTENT_ENTITIES = {
@@ -202,10 +208,7 @@ export const GENERATED_TYPES = Object.freeze({
     STORED: CREATE_TBL_TOKENS.stored,
 })
 
-export const COL_ATTR_IDX_MAP = Object.values(COL_ATTRS).reduce(
-    (map, attr, i) => ((map[attr] = i), map),
-    {}
-)
+export const COL_ATTR_IDX_MAP = genIdxMap(COL_ATTRS)
 
 const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKENS
 export const ALL_TABLE_KEY_CATEGORIES = [
@@ -319,10 +322,10 @@ export const FK_EDITOR_ATTRS = Object.freeze({
     ID: 'id',
     NAME: 'name',
     COLS: 'columns',
-    REF_TARGET: 'refTarget',
-    REF_COLS: 'refCols',
-    ON_UPDATE: 'onUpdate',
-    ON_DELETE: 'onDelete',
+    REF_TARGET: 'referenced target',
+    REF_COLS: 'referenced columns',
+    ON_UPDATE: 'on update',
+    ON_DELETE: 'on delete',
 })
 
 export const REF_OPTS = Object.freeze({
@@ -341,7 +344,4 @@ export const KEY_EDITOR_ATTRS = Object.freeze({
     COMMENT: 'comment',
 })
 
-export const KEY_EDITOR_ATTR_IDX_MAP = Object.values(KEY_EDITOR_ATTRS).reduce(
-    (map, attr, i) => ((map[attr] = i), map),
-    {}
-)
+export const KEY_EDITOR_ATTR_IDX_MAP = genIdxMap(KEY_EDITOR_ATTRS)

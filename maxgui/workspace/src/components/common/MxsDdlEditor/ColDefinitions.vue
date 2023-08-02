@@ -29,9 +29,6 @@
             :selectedItems.sync="selectedItems"
             v-on="$listeners"
         >
-            <template v-for="name in requiredHeaders" v-slot:[`header-${name}`]>
-                <span :key="name" class="label-required">{{ name }}</span>
-            </template>
             <template
                 v-for="(value, key) in abbreviatedHeaders"
                 v-slot:[`header-${key}`]="{ data: { header, maxWidth } }"
@@ -142,7 +139,7 @@ export default {
             return Object.values(this.COL_ATTRS)
         },
         headers() {
-            const { ID, PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
+            const { ID, NAME, TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
             return this.colAttrs.map(field => {
                 let h = {
                     text: field,
@@ -150,6 +147,10 @@ export default {
                     capitalize: true,
                 }
                 switch (field) {
+                    case NAME:
+                    case TYPE:
+                        h.required = true
+                        break
                     case PK:
                     case NN:
                     case UN:
@@ -170,10 +171,6 @@ export default {
                 }
                 return h
             })
-        },
-        requiredHeaders() {
-            const { NAME, TYPE } = this.COL_ATTRS
-            return [NAME, TYPE]
         },
         colSpecs() {
             return this.headers.filter(h => !h.hidden)

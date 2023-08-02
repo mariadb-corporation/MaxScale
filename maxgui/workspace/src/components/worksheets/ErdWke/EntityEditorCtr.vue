@@ -1,6 +1,7 @@
 <template>
     <mxs-ddl-editor
         v-if="stagingData"
+        :key="stagingData.id"
         v-model="stagingData"
         class="fill-height mxs-color-helper border-top-table-border er-editor-ctr"
         :activeSpec.sync="activeSpec"
