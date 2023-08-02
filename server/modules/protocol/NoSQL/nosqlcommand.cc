@@ -90,7 +90,10 @@ string Command::to_json() const
     return "";
 }
 
-void Command::patch_response(GWBUF& response, int32_t request_id, int32_t response_to)
+void Command::patch_response(GWBUF& response,
+                             int32_t request_id,
+                             int32_t response_to,
+                             ResponseChecksum response_checksum)
 {
     uint8_t* pData = response.data();
     protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(pData);
@@ -100,7 +103,12 @@ void Command::patch_response(GWBUF& response, int32_t request_id, int32_t respon
 
     size_t nData = response.length() - sizeof(uint32_t);
 
-    uint32_t checksum = crc32_func(pData, nData);
+    uint32_t checksum = 0;
+
+    if (response_checksum == ResponseChecksum::UPDATE)
+    {
+        checksum = crc32_func(pData, nData);
+    }
 
     pData += nData;
 

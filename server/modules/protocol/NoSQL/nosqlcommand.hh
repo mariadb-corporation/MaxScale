@@ -243,7 +243,16 @@ public:
         return m_response_kind;
     }
 
-    static void patch_response(GWBUF& response, int32_t request_id, int32_t response_to);
+    enum class ResponseChecksum
+    {
+        RESET,
+        UPDATE
+    };
+
+    static void patch_response(GWBUF& response,
+                               int32_t request_id,
+                               int32_t response_to,
+                               ResponseChecksum response_checksum);
 
 protected:
     Command(Database* pDatabase,

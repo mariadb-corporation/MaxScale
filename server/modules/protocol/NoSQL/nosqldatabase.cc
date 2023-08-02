@@ -247,7 +247,10 @@ Command::Response Database::get_cached_response(const std::string& name,
             MXB_NOTICE("Response to NoSQL command '%s' was FOUND in cache.", name.c_str());
         }
 
-        Command::patch_response(*pValue, m_context.next_request_id(), req.request_id());
+        Command::ResponseChecksum response_checksum =
+            req.checksum_present() ? Command::ResponseChecksum::UPDATE : Command::ResponseChecksum::RESET;
+
+        Command::patch_response(*pValue, m_context.next_request_id(), req.request_id(), response_checksum);
 
         response.reset(pValue, Command::Response::Status::NOT_CACHEABLE);
     }
