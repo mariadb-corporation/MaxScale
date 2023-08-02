@@ -273,6 +273,10 @@ export default {
             createGroup({ token: INDEX_NAME, optional: true }),
             // index_col_name group
             COL_NAMES,
+            createGroup({
+                token: `COMMENT ${createEscapeStrGroup('comment')}`,
+                optional: true,
+            }),
         ].join(WHITESPACE_OPT),
         'i'
     ),

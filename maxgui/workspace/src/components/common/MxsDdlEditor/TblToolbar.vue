@@ -1,5 +1,9 @@
 <template>
-    <div ref="container" class="pb-2 d-flex align-center flex-1">
+    <div
+        ref="container"
+        class="pb-2 d-flex align-center flex-1"
+        :class="{ 'flex-row-reverse': reverse }"
+    >
         <v-spacer />
         <mxs-tooltip-btn
             v-if="selectedItems.length"
@@ -26,6 +30,7 @@
             {{ $mxs_t('add') }}
         </v-btn>
         <mxs-tooltip-btn
+            v-if="showRotateTable"
             btnClass="ml-2 pa-1"
             x-small
             outlined
@@ -62,7 +67,9 @@ export default {
     name: 'tbl-toolbar',
     props: {
         selectedItems: { type: Array, required: true },
-        isVertTable: { type: Boolean, required: true }, //sync
+        isVertTable: { type: Boolean, default: true }, //sync
+        showRotateTable: { type: Boolean, default: true },
+        reverse: { type: Boolean, default: false },
     },
     computed: {
         isVertTableMode: {

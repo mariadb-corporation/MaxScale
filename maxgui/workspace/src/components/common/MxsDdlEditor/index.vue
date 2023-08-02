@@ -58,6 +58,12 @@
                             {{ $mxs_t('info.fkEngineSupport') }}
                         </span>
                     </template>
+                    <index-definitions
+                        v-else-if="activeSpecTab === DDL_EDITOR_SPECS.INDEXES"
+                        v-model="keyMap"
+                        :tablesColNameMap="tablesColNameMap"
+                        :dim="tabDim"
+                    />
                 </keep-alive>
             </v-slide-x-transition>
         </div>
@@ -82,6 +88,7 @@ import { mapState, mapMutations } from 'vuex'
 import TableOpts from '@wsSrc/components/common/MxsDdlEditor/TableOpts.vue'
 import ColDefinitions from '@wsSrc/components/common/MxsDdlEditor/ColDefinitions.vue'
 import FkDefinitions from '@wsSrc/components/common/MxsDdlEditor/FkDefinitions.vue'
+import IndexDefinitions from '@wsSrc/components/common/MxsDdlEditor/IndexDefinitions.vue'
 import RevertBtn from '@wsSrc/components/common/MxsDdlEditor/RevertBtn.vue'
 import ApplyBtn from '@wsSrc/components/common/MxsDdlEditor/ApplyBtn.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
@@ -96,6 +103,7 @@ export default {
         TableOpts,
         ColDefinitions,
         FkDefinitions,
+        IndexDefinitions,
     },
     props: {
         value: { type: Object, required: true },
@@ -179,6 +187,16 @@ export default {
                             },
                         },
                     },
+                })
+            },
+        },
+        keyMap: {
+            get() {
+                return this.$typy(this.definitions, `keys`).safeObjectOrEmpty
+            },
+            set(v) {
+                this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
+                    definitions: { keys: { $set: v } },
                 })
             },
         },

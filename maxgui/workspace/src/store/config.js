@@ -133,6 +133,7 @@ export const NODE_CTX_TYPES = Object.freeze({
 export const DDL_EDITOR_SPECS = Object.freeze({
     COLUMNS: 'columns',
     FK: 'foreignKeys',
+    INDEXES: 'indexes',
 })
 
 export const UNSUPPORTED_TBL_CREATION_ENGINES = ['SEQUENCE', 'PERFORMANCE_SCHEMA']
@@ -215,6 +216,7 @@ export const ALL_TABLE_KEY_CATEGORIES = [
     spatialKey,
     foreignKey,
 ]
+export const NON_FK_CATEGORIES = ALL_TABLE_KEY_CATEGORIES.filter(t => t !== foreignKey)
 
 // Context  option types
 export const CTX_TYPES = Object.freeze({
@@ -331,3 +333,15 @@ export const REF_OPTS = Object.freeze({
 })
 
 export const FK_SUPPORTED_ENGINE = 'InnoDB'
+
+export const KEY_EDITOR_ATTRS = Object.freeze({
+    ID: 'id',
+    NAME: 'name',
+    CATEGORY: 'category',
+    COMMENT: 'comment',
+})
+
+export const KEY_EDITOR_ATTR_IDX_MAP = Object.values(KEY_EDITOR_ATTRS).reduce(
+    (map, attr, i) => ((map[attr] = i), map),
+    {}
+)

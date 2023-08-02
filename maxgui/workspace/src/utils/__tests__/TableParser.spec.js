@@ -50,6 +50,7 @@ function stubColDef({
 function stubKeyDef({
     category,
     name,
+    comment,
     cols,
     ref_cols,
     ref_schema_name,
@@ -58,6 +59,7 @@ function stubKeyDef({
     on_update = REF_OPTS.NO_ACTION,
 }) {
     let mockParsedData = { cols }
+    if (comment) mockParsedData.comment = comment
     if (category !== tokens.primaryKey) mockParsedData.name = name
     if (category === tokens.foreignKey)
         mockParsedData = {
@@ -154,7 +156,7 @@ const expectedColIndexNameDefs = {
 }
 
 const mockKeyStr = [
-    'PRIMARY KEY (`col_int`)',
+    "PRIMARY KEY (`col_int`) COMMENT 'PK comment'",
     'UNIQUE KEY `col_invisible_UNIQUE` (`col_invisible`)',
     'UNIQUE KEY `col_invisible_col_string_UNIQUE` (`col_invisible`,`col_string`)',
     'KEY `col_a_PLAIN` (`col_a`)',
@@ -173,6 +175,7 @@ const expectedParsedKeys = [
     stubKeyDef({
         category: tokens.primaryKey,
         cols: [stubIndexColNameDef({ name: 'col_int' })],
+        comment: 'PK comment',
     }),
     stubKeyDef({
         category: tokens.uniqueKey,

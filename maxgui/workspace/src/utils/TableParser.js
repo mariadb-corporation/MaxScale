@@ -114,6 +114,7 @@ export default class TableParser {
         const {
             category,
             name,
+            comment,
             col_names,
             ref_col_names,
             ref_schema_name,
@@ -126,6 +127,7 @@ export default class TableParser {
             cols: this.parseKeyColNames(col_names),
         }
         if (this.autoGenId) parsed.id = `key_${uuidv1()}`
+        if (comment) parsed.comment = unquoteIdentifier(comment)
         if (category !== tokens.primaryKey) parsed.name = unquoteIdentifier(name)
         if (category === tokens.foreignKey)
             parsed = {
