@@ -34,6 +34,9 @@
         :rules="[v => (isColumnField ? Boolean(v.length) : !!v)]"
     >
         <template v-if="isColumnField" v-slot:item="{ item }">
+            <span class="col-order pr-2" :class="{ 'col-order--visible': getColOrder(item) > 0 }">
+                {{ getColOrder(item) }}
+            </span>
             <v-icon class="mr-3">
                 {{
                     inputValue.includes(item.id)
@@ -43,6 +46,7 @@
             </v-icon>
             {{ item.text }}
             <v-spacer />
+
             <span class="ma-0 ml-auto pl-2 field__label mxs-color-helper text-small-text">
                 {{ item.type }}
             </span>
@@ -126,5 +130,19 @@ export default {
             }
         },
     },
+    methods: {
+        getColOrder(col) {
+            return this.inputValue.findIndex(id => id === col.id) + 1
+        },
+    },
 }
 </script>
+
+<style lang="scss" scoped>
+.col-order {
+    visibility: hidden;
+    &--visible {
+        visibility: visible;
+    }
+}
+</style>
