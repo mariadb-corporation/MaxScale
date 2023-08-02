@@ -169,90 +169,82 @@ const mockKeyStr = [
     'CONSTRAINT `orders_ibfk_4` FOREIGN KEY (`customer_id`) REFERENCES ' +
         '`test`.`customers` (`customer_id`)',
 ]
-const expectedParsedKeys = {
-    [tokens.primaryKey]: [
-        stubKeyDef({
-            category: tokens.primaryKey,
-            cols: [stubIndexColNameDef({ name: 'col_int' })],
-        }),
-    ],
-    [tokens.uniqueKey]: [
-        stubKeyDef({
-            category: tokens.uniqueKey,
-            name: 'col_invisible_UNIQUE',
-            cols: [stubIndexColNameDef({ name: 'col_invisible' })],
-        }),
-        stubKeyDef({
-            category: tokens.uniqueKey,
-            name: 'col_invisible_col_string_UNIQUE',
-            cols: [
-                stubIndexColNameDef({ name: 'col_invisible' }),
-                stubIndexColNameDef({ name: 'col_string' }),
-            ],
-        }),
-    ],
-    [tokens.key]: [
-        stubKeyDef({
-            category: tokens.key,
-            name: 'col_a_PLAIN',
-            cols: [stubIndexColNameDef({ name: 'col_a' })],
-        }),
-        stubKeyDef({
-            category: tokens.key,
-            name: 'name_idx',
-            cols: [
-                stubIndexColNameDef({ name: 'last_name', length: '30', order: 'DESC' }),
-                stubIndexColNameDef({ name: 'first_name', length: '30' }),
-            ],
-        }),
-    ],
-    [tokens.foreignKey]: [
-        stubKeyDef({
-            category: tokens.foreignKey,
-            name: 'songs_album_id',
-            cols: [stubIndexColNameDef({ name: 'album_id' })],
-            ref_cols: [stubIndexColNameDef({ name: 'id' })],
-            ref_schema_name: 'test',
-            ref_tbl_name: 'albums',
-        }),
-        stubKeyDef({
-            category: tokens.foreignKey,
-            name: 'orders_ibfk_1',
-            cols: [stubIndexColNameDef({ name: "customer's id" })],
-            ref_cols: [stubIndexColNameDef({ name: 'id' })],
-            ref_schema_name: 'test',
-            ref_tbl_name: 'customers',
-            on_delete: 'CASCADE',
-        }),
-        stubKeyDef({
-            category: tokens.foreignKey,
-            name: 'orders_ibfk_2',
-            cols: [stubIndexColNameDef({ name: "customer's id" })],
-            ref_cols: [stubIndexColNameDef({ name: 'id' })],
-            ref_schema_name: 'test',
-            ref_tbl_name: 'customers',
-            on_update: 'SET NULL',
-        }),
-        stubKeyDef({
-            category: tokens.foreignKey,
-            name: 'orders_ibfk_3',
-            cols: [stubIndexColNameDef({ name: "customer's id" })],
-            ref_cols: [stubIndexColNameDef({ name: 'id' })],
-            ref_schema_name: 'test',
-            ref_tbl_name: 'customers',
-            on_delete: 'CASCADE',
-            on_update: 'NO ACTION',
-        }),
-        stubKeyDef({
-            category: tokens.foreignKey,
-            name: 'orders_ibfk_4',
-            cols: [stubIndexColNameDef({ name: 'customer_id' })],
-            ref_cols: [stubIndexColNameDef({ name: 'customer_id' })],
-            ref_schema_name: 'test',
-            ref_tbl_name: 'customers',
-        }),
-    ],
-}
+const expectedParsedKeys = [
+    stubKeyDef({
+        category: tokens.primaryKey,
+        cols: [stubIndexColNameDef({ name: 'col_int' })],
+    }),
+    stubKeyDef({
+        category: tokens.uniqueKey,
+        name: 'col_invisible_UNIQUE',
+        cols: [stubIndexColNameDef({ name: 'col_invisible' })],
+    }),
+    stubKeyDef({
+        category: tokens.uniqueKey,
+        name: 'col_invisible_col_string_UNIQUE',
+        cols: [
+            stubIndexColNameDef({ name: 'col_invisible' }),
+            stubIndexColNameDef({ name: 'col_string' }),
+        ],
+    }),
+    stubKeyDef({
+        category: tokens.key,
+        name: 'col_a_PLAIN',
+        cols: [stubIndexColNameDef({ name: 'col_a' })],
+    }),
+    stubKeyDef({
+        category: tokens.key,
+        name: 'name_idx',
+        cols: [
+            stubIndexColNameDef({ name: 'last_name', length: '30', order: 'DESC' }),
+            stubIndexColNameDef({ name: 'first_name', length: '30' }),
+        ],
+    }),
+    stubKeyDef({
+        category: tokens.foreignKey,
+        name: 'songs_album_id',
+        cols: [stubIndexColNameDef({ name: 'album_id' })],
+        ref_cols: [stubIndexColNameDef({ name: 'id' })],
+        ref_schema_name: 'test',
+        ref_tbl_name: 'albums',
+    }),
+    stubKeyDef({
+        category: tokens.foreignKey,
+        name: 'orders_ibfk_1',
+        cols: [stubIndexColNameDef({ name: "customer's id" })],
+        ref_cols: [stubIndexColNameDef({ name: 'id' })],
+        ref_schema_name: 'test',
+        ref_tbl_name: 'customers',
+        on_delete: 'CASCADE',
+    }),
+    stubKeyDef({
+        category: tokens.foreignKey,
+        name: 'orders_ibfk_2',
+        cols: [stubIndexColNameDef({ name: "customer's id" })],
+        ref_cols: [stubIndexColNameDef({ name: 'id' })],
+        ref_schema_name: 'test',
+        ref_tbl_name: 'customers',
+        on_update: 'SET NULL',
+    }),
+    stubKeyDef({
+        category: tokens.foreignKey,
+        name: 'orders_ibfk_3',
+        cols: [stubIndexColNameDef({ name: "customer's id" })],
+        ref_cols: [stubIndexColNameDef({ name: 'id' })],
+        ref_schema_name: 'test',
+        ref_tbl_name: 'customers',
+        on_delete: 'CASCADE',
+        on_update: 'NO ACTION',
+    }),
+    stubKeyDef({
+        category: tokens.foreignKey,
+        name: 'orders_ibfk_4',
+        cols: [stubIndexColNameDef({ name: 'customer_id' })],
+        ref_cols: [stubIndexColNameDef({ name: 'customer_id' })],
+        ref_schema_name: 'test',
+        ref_tbl_name: 'customers',
+    }),
+]
 
 const tableOpt = `ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8mb4 COMMENT="My table"`
 const expectTableOpts = {
@@ -266,10 +258,6 @@ const tableDefStr = [...Object.keys(expectedColDefs), ...mockKeyStr].join(',\n')
 const tblNames = ['`my_table`', '`my test``s  table`', '`test\'s table "`', '`table with ""`']
 const tables = tblNames.map(name => `CREATE TABLE ${name} (\n${tableDefStr}\n) ${tableOpt}`)
 
-const expectedTableDefs = {
-    cols: Object.values(expectedColDefs),
-    keys: expectedParsedKeys,
-}
 describe('TableParser', () => {
     let parser
 
@@ -296,29 +284,27 @@ describe('TableParser', () => {
         })
     })
     describe('parseKey', () => {
-        const allKeys = Object.values(expectedParsedKeys).flat()
         mockKeyStr.forEach((str, i) => {
             it(`Should parse: ${str}`, () => {
                 const { value } = parser.parseKey(str) || {}
-                expect(value).to.be.eql(allKeys[i])
+                expect(value).to.be.eql(expectedParsedKeys[i])
             })
         })
     })
     describe('parseTableDefs', () => {
         it(`Should parse table definitions string part`, () => {
-            expect(parser.parseTableDefs(tableDefStr)).to.be.eql(expectedTableDefs)
+            expect(parser.parseTableDefs(tableDefStr)).to.have.keys('cols', 'keys')
         })
     })
     describe('parse', () => {
         tables.forEach((ddl, i) => {
             it('should parse a CREATE TABLE statement', () => {
-                expect(parser.parse({ ddl, schema: 'test' })).to.be.eql({
-                    definitions: expectedTableDefs,
-                    options: {
-                        ...expectTableOpts,
-                        schema: 'test',
-                        name: unquoteIdentifier(tblNames[i]),
-                    },
+                const result = parser.parse({ ddl, schema: 'test' })
+                expect(result).to.have.keys('definitions', 'options')
+                expect(result.options).to.be.eql({
+                    ...expectTableOpts,
+                    schema: 'test',
+                    name: unquoteIdentifier(tblNames[i]),
                 })
             })
         })

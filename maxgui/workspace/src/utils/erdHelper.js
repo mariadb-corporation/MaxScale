@@ -12,7 +12,7 @@
  */
 import {
     CREATE_TBL_TOKENS as tokens,
-    ALL_TABLE_KEY_TYPES,
+    ALL_TABLE_KEY_CATEGORIES,
     COL_ATTRS,
     COL_ATTR_IDX_MAP,
     GENERATED_TYPES,
@@ -45,13 +45,13 @@ function replaceColNamesWithIds({ cols, lookupCols }) {
  * with corresponding target ids found in lookupTables. This is done to ensure the
  * relationships between tables are intact when changing the target names.
  * @param {object} param
- * @param {array} param.keys - keys
+ * @param {object} param.keyMap - keyMap
  * @param {array} param.cols - all columns of a table
  * @param {array} [param.lookupTables] - all parsed tables in the ERD. Required when parsing FK
- * @returns {array} new array
+ * @returns {object} transformed key
  */
-function replaceNamesWithIds({ keys, cols, lookupTables }) {
-    return lodash.cloneDeep(keys).map(key => {
+function replaceNamesWithIds({ keyMap, cols, lookupTables }) {
+    return Object.values(lodash.cloneDeep(keyMap)).reduce((map, key) => {
         // transform referencing cols
         key.cols = replaceColNamesWithIds({ cols: key.cols, lookupCols: cols })
         if (key.ref_tbl_name) {
@@ -77,8 +77,9 @@ function replaceNamesWithIds({ keys, cols, lookupTables }) {
                 })
             }
         }
-        return key
-    })
+        map[key.id] = key
+        return map
+    }, {})
 }
 
 /**
@@ -87,7 +88,9 @@ function replaceNamesWithIds({ keys, cols, lookupTables }) {
  */
 function genColKeyTypeMap(keys) {
     return Object.keys(keys).reduce((map, type) => {
-        const colIds = keys[type].map(key => key.cols.map(c => c.id)).flat()
+        const colIds = Object.values(keys[type])
+            .map(key => key.cols.map(c => c.id))
+            .flat()
         colIds.forEach(id => {
             if (!map[id]) map[id] = []
             map[id].push(type)
@@ -97,7 +100,7 @@ function genColKeyTypeMap(keys) {
 }
 
 function isSingleUQ({ keys, colId }) {
-    return typy(keys, `[${tokens.uniqueKey}]`).safeArray.some(key =>
+    return Object.values(keys[tokens.uniqueKey] || {}).some(key =>
         key.cols.every(c => c.id === colId)
     )
 }
@@ -116,10 +119,10 @@ function genDdlEditorData({ parsedTable, lookupTables = [], charsetCollationMap 
         definitions: { cols, keys },
     } = parsedTable
     const transformedKeys = immutableUpdate(keys, {
-        $set: ALL_TABLE_KEY_TYPES.reduce((res, type) => {
+        $set: ALL_TABLE_KEY_CATEGORIES.reduce((res, type) => {
             if (keys[type])
                 res[type] = replaceNamesWithIds({
-                    keys: keys[type],
+                    keyMap: keys[type],
                     cols,
                     lookupTables,
                 })
@@ -217,8 +220,8 @@ const getOptionality = colData =>
         ? RELATIONSHIP_OPTIONALITY.MANDATORY
         : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
-const areIndexed = ({ allKeys, category, colIds }) => {
-    const keys = allKeys[category] || []
+const areIndexed = ({ keyMap, category, colIds }) => {
+    const keys = Object.values(typy(keyMap[category]).safeObjectOrEmpty)
     if (!keys.length) return false
     return keys.some(key =>
         lodash.isEqual(
@@ -229,10 +232,10 @@ const areIndexed = ({ allKeys, category, colIds }) => {
 }
 
 function areUniqueCols({ node, colIds }) {
-    const allKeys = node.data.definitions.keys
+    const keyMap = node.data.definitions.keys
     return (
-        areIndexed({ allKeys, category: tokens.primaryKey, colIds }) ||
-        areIndexed({ allKeys, category: tokens.uniqueKey, colIds })
+        areIndexed({ keyMap, category: tokens.primaryKey, colIds }) ||
+        areIndexed({ keyMap, category: tokens.uniqueKey, colIds })
     )
 }
 function getCardinality({ node, cols }) {
@@ -298,8 +301,9 @@ function genErdLink({
  * @returns {boolean}
  */
 function isIdentifyingRelation({ node, colId, refColId, colKeyTypeMap }) {
-    const pk = typy(node, `data.definitions.keys[${tokens.primaryKey}][0]`).safeObject
-    const hasCompositePk = typy(pk, 'cols').safeArray.length > 1
+    const pk = typy(node, `data.definitions.keys[${tokens.primaryKey}]`).safeObjectOrEmpty
+    const pkCols = typy(Object.values(pk), '[0].cols').safeArray
+    const hasCompositePk = pkCols.length > 1
     let isIdentify = false
     if (hasCompositePk) {
         const colKeyTypes = colKeyTypeMap[colId]

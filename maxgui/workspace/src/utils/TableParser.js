@@ -156,8 +156,8 @@ export default class TableParser {
                 if (t(parsedDef).isString) {
                     const { category, value } = this.parseKey(parsedDef) || {}
                     if (category) {
-                        if (!keys[category]) keys[category] = []
-                        keys[category].push(value)
+                        if (!keys[category]) keys[category] = {}
+                        keys[category][value.id] = value
                     }
                 } else cols.push(parsedDef)
             }

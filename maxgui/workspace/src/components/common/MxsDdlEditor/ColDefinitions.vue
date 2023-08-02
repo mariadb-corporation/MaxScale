@@ -243,12 +243,26 @@ export default {
         initialKeys() {
             return this.$typy(this.initialData, 'keys').safeObjectOrEmpty
         },
+        stagingKeys() {
+            return this.$typy(this.definitions, 'keys').safeObjectOrEmpty
+        },
         initialCols() {
             return this.$typy(this.initialData, 'cols').safeArray
         },
+        initialPk() {
+            return this.$typy(
+                Object.values(this.initialKeys[this.CREATE_TBL_TOKENS.primaryKey] || {}),
+                `[0]`
+            ).safeObject
+        },
         initialPkCols() {
-            return this.$typy(this.initialKeys, `[${this.CREATE_TBL_TOKENS.primaryKey}][0].cols`)
-                .safeArray
+            return this.$typy(this.initialPk, 'cols').safeArray
+        },
+        stagingPk() {
+            return this.$typy(
+                Object.values(this.stagingKeys[this.CREATE_TBL_TOKENS.primaryKey] || {}),
+                `[0]`
+            ).safeObject
         },
     },
     mounted() {
@@ -596,17 +610,12 @@ export default {
          */
         updatePk({ definitions, colId, mode }) {
             const { primaryKey } = this.CREATE_TBL_TOKENS
-            const {
-                immutableUpdate,
-                lodash: { cloneDeep, sortBy, isEqual },
-            } = this.$helpers
-            const category = primaryKey
+            const { immutableUpdate } = this.$helpers
             // Get PK object.
-            let pkObj
-            if (definitions.keys[primaryKey]) {
-                // PK category always has one object if a table has PK,
-                pkObj = cloneDeep(definitions.keys[primaryKey][0])
-            } else pkObj = { cols: [] }
+            let pkObj = this.stagingPk || {
+                cols: [],
+                id: this.initialPk ? this.initialPk.id : `key_${this.$helpers.uuidv1()}`,
+            }
 
             switch (mode) {
                 case 'drop': {
@@ -619,42 +628,16 @@ export default {
                     break
             }
 
-            if (isEqual(sortBy(pkObj.cols, ['id']), sortBy(this.initialPkCols, ['id'])))
-                pkObj.cols = this.initialPkCols
-
-            if (!pkObj.id) {
-                const existingKey = this.getKeyObjByColId({
-                    keys: this.initialKeys,
-                    category,
-                    colId,
-                    isCompositeKey: true,
-                })
-                pkObj.id = existingKey ? existingKey.id : `key_${this.$helpers.uuidv1()}`
-            }
-
             return immutableUpdate(definitions, {
                 keys: pkObj.cols.length
-                    ? { $merge: { [primaryKey]: [pkObj] } }
+                    ? { $merge: { [primaryKey]: { [pkObj.id]: pkObj } } }
                     : { $unset: [primaryKey] },
             })
         },
-        /**
-         * @param {Object} param
-         * @param {object} param.keys - parsed keys from DDL of a table
-         * @param {string} param.category - category of the key
-         * @param {string} param.colId - column id to be looked up
-         * @param {boolean} param.isCompositeKey - return the key object if at least one col in
-         * cols matches with the provided column id.
-         * @returns {object} index object
-         */
-        getKeyObjByColId({ keys, category, colId, isCompositeKey }) {
-            return this.$typy(keys, `[${category}]`).safeArray.find(key => {
-                if (isCompositeKey) return key.cols.some(col => col.id === colId)
+        genKey({ definitions, category, colId }) {
+            const existingKey = Object.values(this.initialKeys[category] || {}).find(key => {
                 return key.cols.every(col => col.id === colId)
             })
-        },
-        genKey({ definitions, category, colId }) {
-            const existingKey = this.getKeyObjByColId({ keys: this.initialKeys, category, colId })
             if (existingKey) return existingKey
             return erdHelper.genKey({ definitions, category, colId })
         },
@@ -667,34 +650,40 @@ export default {
         updateKey({ definitions, category, colId, mode }) {
             const {
                 immutableUpdate,
-                lodash: { cloneDeep, sortBy, isEqual },
+                lodash: { cloneDeep },
             } = this.$helpers
-            let keys = cloneDeep(definitions.keys[category]) || []
+            let keyMap = cloneDeep(definitions.keys[category]) || {}
             switch (mode) {
                 case 'drop':
-                    keys = keys.filter(keyObj => !keyObj.cols.every(c => c.id === colId))
+                    keyMap = immutableUpdate(keyMap, {
+                        $unset: Object.values(keyMap).reduce((ids, k) => {
+                            if (k.cols.every(c => c.id === colId)) ids.push(k.id)
+                            return ids
+                        }, []),
+                    })
                     break
-                case 'delete': {
-                    keys = keys.reduce((acc, key) => {
-                        const targetIndex = key.cols.findIndex(c => c.id === colId)
-                        if (targetIndex >= 0) key.cols.splice(targetIndex, 1)
-                        if (key.cols.length) acc.push(key)
-                        return acc
-                    }, [])
+                case 'delete':
+                    keyMap = immutableUpdate(keyMap, {
+                        $set: Object.values(cloneDeep(keyMap)).reduce((obj, key) => {
+                            const targetIndex = key.cols.findIndex(c => c.id === colId)
+                            if (targetIndex >= 0) key.cols.splice(targetIndex, 1)
+                            if (key.cols.length) obj[key.id] = key
+                            return obj
+                        }, {}),
+                    })
+                    break
+                case 'add': {
+                    const newKey = this.genKey({ definitions, category, colId })
+                    keyMap = immutableUpdate(keyMap, {
+                        $merge: { [newKey.id]: newKey },
+                    })
                     break
                 }
-                case 'add':
-                    keys.push(this.genKey({ definitions, category, colId }))
-                    break
             }
-            /**
-             * Check the order of the keys, if it equals to initial keys, use that
-             */
-            const initialKeys = this.initialKeys[category] || []
-            if (isEqual(sortBy(keys, ['name']), sortBy(initialKeys, ['name']))) keys = initialKeys
-            // If there is no key, remove that category from definitions.keys
             return immutableUpdate(definitions, {
-                keys: keys.length ? { $merge: { [category]: keys } } : { $unset: [category] },
+                keys: Object.keys(keyMap).length
+                    ? { $merge: { [category]: keyMap } }
+                    : { $unset: [category] },
             })
         },
         /**

@@ -21,7 +21,7 @@ import {
     CREATE_TBL_TOKENS as tokens,
     COL_ATTRS,
     GENERATED_TYPES,
-    ALL_TABLE_KEY_TYPES,
+    ALL_TABLE_KEY_CATEGORIES,
 } from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 import { addComma } from '@wsSrc/utils/helpers'
@@ -74,15 +74,11 @@ export default class TableScriptBuilder {
         this.hasColDefChanged = !lodash.isEqual(this.initialColsData, this.stagingColsData)
 
         // Keys
-        this.initialKeys = typy(initialData, 'definitions.keys').safeObjectOrEmpty
-        this.stagingKeys = typy(stagingData, 'definitions.keys').safeObjectOrEmpty
+        const initialKeys = typy(initialData, 'definitions.keys').safeObjectOrEmpty
+        const stagingKeys = typy(stagingData, 'definitions.keys').safeObjectOrEmpty
 
-        this.keyDiffs = ALL_TABLE_KEY_TYPES.reduce((map, type) => {
-            map[type] = this.getKeysDiffs({
-                initialKeys: this.initialKeys,
-                stagingKeys: this.stagingKeys,
-                category: type,
-            })
+        this.keyDiffs = ALL_TABLE_KEY_CATEGORIES.reduce((map, category) => {
+            map[category] = this.getKeysDiffs({ category, initialKeys, stagingKeys })
             return map
         }, {})
 
@@ -98,22 +94,22 @@ export default class TableScriptBuilder {
 
     /**
      * @param {object} param
-     * @param {object} param.keys - all keys
+     * @param {object} param.keyMap - key map
      * @param {string}  param.category - key category
      * @returns {Array.<object} keys
      */
     getKeys({ keys, category }) {
-        return typy(keys, `${category}`).safeArray
+        return Object.values(keys[category] || {})
     }
 
     /**
      * @param {object} param
      * @param {object} param.initialKeys - all initial keys
      * @param {object} param.stagingKeys - all staging keys
-     * @param {string}  param.category - key category
+     * @param {string} param.category - key category
      * @returns {object}
      */
-    getKeysDiffs({ initialKeys, stagingKeys, category }) {
+    getKeysDiffs({ category, initialKeys, stagingKeys }) {
         const initial = this.getKeys({ keys: initialKeys, category })
         const staging = this.getKeys({ keys: stagingKeys, category })
         return arrOfObjsDiff({ base: initial, newArr: staging, idField: 'id' })

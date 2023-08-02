@@ -387,15 +387,18 @@ export default {
                         let nodes = this.nodes
                         nodes = nodes.filter(n => n.id !== node.id)
                         nodes = nodes.map(n => {
-                            const fks = this.$typy(n, `data.definitions.keys[${foreignKey}]`)
-                                .safeArray
-                            if (!fks.length) return n
-                            const remainingFks = fks.filter(key => key.ref_tbl_id !== node.id)
+                            const fkMap = n.data.definitions.keys[foreignKey]
+                            if (!fkMap) return n
+
+                            const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
+                                if (key.ref_tbl_id !== node.id) res[key.id] = key
+                                return res
+                            }, {})
                             return this.$helpers.immutableUpdate(n, {
                                 data: {
                                     definitions: {
-                                        keys: remainingFks.length
-                                            ? { $merge: { [foreignKey]: remainingFks } }
+                                        keys: Object.keys(updatedFkMap).length
+                                            ? { $merge: { [foreignKey]: updatedFkMap } }
                                             : { $unset: [foreignKey] },
                                     },
                                 },
@@ -438,17 +441,19 @@ export default {
                 case REMOVE: {
                     const { foreignKey } = this.CREATE_TBL_TOKENS
                     let nodeIdx = this.nodes.findIndex(n => n.id === link.source.id)
-                    let fks = this.$typy(
+                    let fkMap = this.$typy(
                         this.nodes[nodeIdx],
                         `data.definitions.keys[${foreignKey}]`
-                    ).safeArray
-                    fks = fks.filter(k => k.id !== link.id)
+                    ).safeObjectOrEmpty
+                    fkMap = this.$helpers.immutableUpdate(fkMap, {
+                        $unset: [link.id],
+                    })
                     const nodes = this.$helpers.immutableUpdate(this.nodes, {
                         [nodeIdx]: {
                             data: {
                                 definitions: {
-                                    keys: fks.length
-                                        ? { $merge: { [foreignKey]: fks } }
+                                    keys: Object.keys(fkMap).length
+                                        ? { $merge: { [foreignKey]: fkMap } }
                                         : { $unset: [foreignKey] },
                                 },
                             },
@@ -540,25 +545,37 @@ export default {
             const isUnique = erdHelper.areUniqueCols({ node, colIds: [colId] })
             if (value && isUnique) return node
             const colIdx = node.data.definitions.cols.findIndex(c => c[this.idxOfId] === colId)
-            let keys = this.$typy(node, `data.definitions.keys[${category}]`).safeArray
+            let keyMap = node.data.definitions.keys[category] || {}
             // add UQ key
-            if (value)
-                keys.push(erdHelper.genKey({ definitions: node.data.definitions, category, colId }))
+            if (value) {
+                const newKey = erdHelper.genKey({
+                    definitions: node.data.definitions,
+                    category,
+                    colId,
+                })
+                keyMap = this.$helpers.immutableUpdate(keyMap, { $merge: { [newKey.id]: newKey } })
+            }
             // remove UQ key
             else
-                keys = keys.filter(
-                    k =>
-                        !this.$helpers.lodash.isEqual(
-                            k.cols.map(c => c.id),
-                            [colId]
+                keyMap = this.$helpers.immutableUpdate(keyMap, {
+                    $unset: Object.values(keyMap).reduce((ids, k) => {
+                        if (
+                            this.$helpers.lodash.isEqual(
+                                k.cols.map(c => c.id),
+                                [colId]
+                            )
                         )
-                )
+                            ids.push(k.id)
+                        return ids
+                    }, []),
+                })
+
             return this.$helpers.immutableUpdate(node, {
                 data: {
                     definitions: {
                         cols: { [colIdx]: { [this.idxOfUQ]: { $set: value } } },
-                        keys: keys.length
-                            ? { $merge: { [category]: keys } }
+                        keys: Object.keys(keyMap).length
+                            ? { $merge: { [category]: keyMap } }
                             : { $unset: [category] },
                     },
                 },
@@ -728,17 +745,17 @@ export default {
         addPlainIndex({ colId, node }) {
             const { key } = this.CREATE_TBL_TOKENS
             const refTblDef = node.data.definitions
-            const plainKeys = this.$typy(refTblDef, `keys[${key}]`).safeArray
+            const plainKeyMap = this.$typy(refTblDef, `keys[${key}]`).safeObjectOrEmpty
             const newKey = erdHelper.genKey({ definitions: refTblDef, category: key, colId })
             return this.$helpers.immutableUpdate(node, {
                 data: {
                     definitions: {
-                        keys: { $merge: { [key]: [...plainKeys, newKey] } },
+                        keys: { $merge: { [key]: { ...plainKeyMap, [newKey.id]: newKey } } },
                     },
                 },
             })
         },
-        onCreateNewFk({ node, currentFks, newKey, refNode }) {
+        onCreateNewFk({ node, currentFkMap, newKey, refNode }) {
             const { foreignKey } = this.CREATE_TBL_TOKENS
             const { immutableUpdate } = this.$helpers
             let nodes = this.nodes
@@ -773,7 +790,11 @@ export default {
                     [node.index]: {
                         data: {
                             definitions: {
-                                keys: { $merge: { [foreignKey]: [...currentFks, newKey] } },
+                                keys: {
+                                    $merge: {
+                                        [foreignKey]: { ...currentFkMap, [newKey.id]: newKey },
+                                    },
+                                },
                             },
                         },
                     },

@@ -43,8 +43,7 @@
                     <template v-else-if="activeSpecTab === DDL_EDITOR_SPECS.FK">
                         <fk-definitions
                             v-if="$typy(tblOpts, 'engine').safeString === FK_SUPPORTED_ENGINE"
-                            v-model="fks"
-                            :initialData="initialFks"
+                            v-model="fkMap"
                             :lookupTables="lookupTables"
                             :newLookupTables.sync="newLookupTables"
                             :allLookupTables="allLookupTables"
@@ -166,10 +165,10 @@ export default {
         initialDefinitions() {
             return this.$typy(this.initialData, 'definitions').safeObjectOrEmpty
         },
-        fks: {
+        fkMap: {
             get() {
                 return this.$typy(this.definitions, `keys[${this.CREATE_TBL_TOKENS.foreignKey}]`)
-                    .safeArray
+                    .safeObjectOrEmpty
             },
             set(v) {
                 this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
@@ -182,10 +181,6 @@ export default {
                     },
                 })
             },
-        },
-        initialFks() {
-            return this.$typy(this.initialDefinitions, `keys[${this.CREATE_TBL_TOKENS.foreignKey}]`)
-                .safeArray
         },
         toolbarHeight() {
             return 28

@@ -169,7 +169,7 @@
  * Emits:
  * - on-rendered({ nodes:array, links:array })
  * - on-node-drag-end(node)
- * - on-create-new-fk({ node:object, currentFks: array, newKey: object, refNode: object, })
+ * - on-create-new-fk({ node:object, currentFkMap: object, newKey: object, refNode: object, })
  * - on-node-contextmenu({e: Event, node:object})
  * - on-link-contextmenu({e: Event, link:object})
  */
@@ -670,20 +670,22 @@ export default {
             this.clickOutside = false
             this.isDrawingFk = true
         },
+        getFkMap(node) {
+            return this.entityKeyMap[node.id][this.CREATE_TBL_TOKENS.foreignKey] || {}
+        },
         getFks(node) {
-            return this.$typy(node.data.definitions.keys[this.CREATE_TBL_TOKENS.foreignKey])
-                .safeArray
+            return Object.values(this.getFkMap(node))
         },
         onEndDrawFk({ node, cols }) {
             this.isDrawingFk = false
             if (this.refTarget) {
-                const currentFks = this.getFks(node)
+                const currentFkMap = this.getFkMap(node)
                 this.$emit('on-create-new-fk', {
                     node,
-                    currentFks,
+                    currentFkMap,
                     newKey: {
                         id: `key_${this.$helpers.uuidv1()}`,
-                        name: `${node.data.options.name}_ibfk_${currentFks.length}`,
+                        name: `${node.data.options.name}_ibfk_${Object.keys(currentFkMap).length}`,
                         cols,
                         ...this.refTarget.data,
                     },

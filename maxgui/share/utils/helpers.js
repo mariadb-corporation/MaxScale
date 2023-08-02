@@ -41,7 +41,6 @@ export const lodash = {
     escapeRegExp: require('lodash/escapeRegExp'),
     objGet: require('lodash/get'),
     groupBy: require('lodash/groupBy'),
-    flatMap: require('lodash/flatMap'),
     update: require('lodash/update'),
     sortBy: require('lodash/sortBy'),
     debounce: require('lodash/debounce'),

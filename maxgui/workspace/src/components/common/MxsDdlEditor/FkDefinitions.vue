@@ -32,16 +32,13 @@
                         {{ $mxs_t(header.text) }}
                     </span>
                 </template>
-                <template
-                    v-for="h in headers"
-                    v-slot:[h.text]="{ data: { cell, rowIdx, rowData } }"
-                >
+                <template v-for="h in headers" v-slot:[h.text]="{ data: { cell, rowData } }">
                     <fk-definition-col
                         :key="h.text"
                         :data="{
                             field: h.text,
                             value: cell,
-                            rowIdx,
+                            rowData,
                         }"
                         :height="28"
                         :referencingColOptions="referencingColOptions"
@@ -78,9 +75,8 @@ export default {
     name: 'fk-definitions',
     components: { TblToolbar, FkDefinitionCol },
     props: {
-        value: { type: Array, required: true },
+        value: { type: Object, required: true },
         tableId: { type: String, required: true },
-        initialData: { type: Array, required: true },
         dim: { type: Object, required: true },
         lookupTables: { type: Object, required: true },
         newLookupTables: { type: Object, required: true }, // sync
@@ -148,9 +144,12 @@ export default {
                 this.$emit('input', v)
             },
         },
+        fks() {
+            return Object.values(this.stagingKeys)
+        },
         // mapped by FK id
         fkRefTblMap() {
-            return this.stagingKeys.reduce((map, key) => {
+            return this.fks.reduce((map, key) => {
                 map[key.id] = this.allLookupTables.find(
                     t =>
                         t.id === key.ref_tbl_id ||
@@ -170,7 +169,7 @@ export default {
             return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.TYPE]
         },
         rows() {
-            return this.stagingKeys.map(({ id, name, cols, ref_cols, on_update, on_delete }) => {
+            return this.fks.map(({ id, name, cols, ref_cols, on_update, on_delete }) => {
                 const refTbl = this.fkRefTblMap[id]
                 let referencedColNames = [],
                     referencedColIds = []
@@ -197,7 +196,7 @@ export default {
             })
         },
         unknownTargets() {
-            const targets = this.keys.reduce((res, { ref_tbl_name, ref_schema_name }) => {
+            const targets = this.fks.reduce((res, { ref_tbl_name, ref_schema_name }) => {
                 if (ref_tbl_name) res.push({ schema: ref_schema_name, tbl: ref_tbl_name })
                 return res
             }, [])
@@ -271,24 +270,27 @@ export default {
         },
         deleteSelectedKeys(selectedItems) {
             const ids = selectedItems.map(([id]) => id)
-            this.stagingKeys = this.stagingKeys.filter(k => !ids.includes(k.id))
+            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, { $unset: ids })
         },
         addNewKey() {
             const tableName = this.$typy(this.lookupTables[this.tableId], 'options.name').safeString
-            this.stagingKeys.push({
+            const newKey = {
                 id: `key_${this.$helpers.uuidv1()}`,
                 cols: [],
-                name: `${tableName}_ibfk_${this.stagingKeys.length}`,
+                name: `${tableName}_ibfk_${this.fks.length}`,
                 on_delete: this.REF_OPTS.NO_ACTION,
                 on_update: this.REF_OPTS.NO_ACTION,
                 ref_cols: [],
                 ref_schema_name: '',
                 ref_tbl_name: '',
+            }
+            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
+                $merge: { [newKey.id]: newKey },
             })
         },
-        updateStagingKeys(rowIdx, keyField, value) {
+        updateStagingKeys(id, keyField, value) {
             this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                [rowIdx]: { [keyField]: { $set: value } },
+                [id]: { [keyField]: { $set: value } },
             })
         },
         /**
@@ -300,19 +302,20 @@ export default {
         },
         onChangeInput(item) {
             const { NAME, COLS, REF_TARGET, REF_COLS, ON_UPDATE, ON_DELETE } = this.FK_EDITOR_ATTRS
+            const id = item.rowData[0]
             switch (item.field) {
                 case NAME:
-                    this.updateStagingKeys(item.rowIdx, 'name', item.value)
+                    this.updateStagingKeys(id, 'name', item.value)
                     break
                 case ON_UPDATE:
-                    this.updateStagingKeys(item.rowIdx, 'on_update', item.value)
+                    this.updateStagingKeys(id, 'on_update', item.value)
                     break
                 case ON_DELETE:
-                    this.updateStagingKeys(item.rowIdx, 'on_delete', item.value)
+                    this.updateStagingKeys(id, 'on_delete', item.value)
                     break
                 case COLS:
                     this.updateStagingKeys(
-                        item.rowIdx,
+                        id,
                         'cols',
                         item.value.map(id => ({ id }))
                     )
@@ -332,7 +335,7 @@ export default {
                 case REF_TARGET: {
                     if (this.isReferencedTblPersisted(item.value)) {
                         this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                            [item.rowIdx]: {
+                            [id]: {
                                 $unset: ['ref_schema_name', 'ref_tbl_name'],
                                 ref_cols: { $set: [] },
                                 ref_tbl_id: { $set: item.value },
@@ -341,7 +344,7 @@ export default {
                     } else {
                         const newReferencedTbl = this.tmpLookupTables[item.value]
                         this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                            [item.rowIdx]: {
+                            [id]: {
                                 ref_cols: { $set: [] },
                                 $unset: ['ref_tbl_id'],
                                 ref_schema_name: { $set: newReferencedTbl.options.schema },
@@ -354,8 +357,7 @@ export default {
                 case REF_COLS: {
                     let values = []
                     if (item.value.length) {
-                        const keyId = this.stagingKeys[item.rowIdx].id
-                        const referencedTblId = this.fkRefTblMap[keyId].id
+                        const referencedTblId = this.fkRefTblMap[id].id
                         if (this.isReferencedTblPersisted(referencedTblId))
                             values = item.value.map(id => ({ id }))
                         else
@@ -363,7 +365,7 @@ export default {
                                 name: this.tablesColNameMap[referencedTblId][id],
                             }))
                     }
-                    this.updateStagingKeys(item.rowIdx, 'ref_cols', values)
+                    this.updateStagingKeys(id, 'ref_cols', values)
                     break
                 }
             }
