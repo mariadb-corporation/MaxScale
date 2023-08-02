@@ -10,7 +10,7 @@
 # MONGO_CXX_LIBRARIES   - The libraries for the mongo library.
 #
 
-set(MONGO_CXX_DRIVER_VERSION "3.6.0")
+set(MONGO_CXX_DRIVER_VERSION "3.7.2")
 
 message(STATUS "Using mongo-cxx-driver version ${MONGO_CXX_DRIVER_VERSION}")
 
