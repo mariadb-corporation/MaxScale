@@ -14,18 +14,21 @@
 
 var maxscale_host = process.env.maxscale_000_network;
 var nosql_port;
+var nosql_cache_port;
 
 if (!maxscale_host) {
     console.log("The environment variable 'maxscale_000_network' is not set, " +
                 "assuming 127.0.0.1.");
     maxscale_host="127.0.0.1"
     nosql_port = 17017;
+    nosql_cache_port = 17018;
 }
 else
 {
     // In the system-test environment we use 4006, which is open. The default
     // nosqlprotocol port of 17017 is not.
     nosql_port = 4006;
+    nosql_cache_port = 4007;
 }
 
 var timeout;
@@ -44,6 +47,7 @@ var config = {
     host: maxscale_host,
     mariadb_port: 4008,
     nosql_port: nosql_port,
+    nosql_cache_port: nosql_cache_port,
     user: 'maxskysql',
     password: 'skysql'
 };
@@ -98,8 +102,12 @@ var MariaDB = {
 }
 
 var MxsMongo = {
-    createClient: async function () {
-        var uri = "mongodb://" + config.host + ":" + config.nosql_port;
+    createClient: async function (port) {
+        if (!port) {
+            port = config.nosql_port
+        }
+
+        var uri = "mongodb://" + config.host + ":" + port;
         client = new mongodb.MongoClient(uri, { useUnifiedTopology: true });
         await client.connect();
         return client;
@@ -113,8 +121,8 @@ class NoSQL {
         this.admin = this.client.db('admin');
     }
 
-    static async create(dbname) {
-        var client = await MxsMongo.createClient();
+    static async create(dbname, port) {
+        var client = await MxsMongo.createClient(port);
 
         if (!dbname) {
             dbname = "nosql";

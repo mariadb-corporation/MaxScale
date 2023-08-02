@@ -32,3 +32,17 @@ protocol=nosqlprotocol
 nosqlprotocol.user=maxskysql
 nosqlprotocol.password=skysql
 port=4006
+
+[NoSQL-Listener-With-Cache]
+type=listener
+service=RCR-Master
+protocol=nosqlprotocol
+nosqlprotocol.user=maxskysql
+nosqlprotocol.password=skysql
+nosqlprotocol.internal_cache=cache
+nosqlprotocol.cache.cached_data=shared
+nosqlprotocol.cache.max_size=10M
+nosqlprotocol.cache.soft_ttl=300s
+nosqlprotocol.cache.hard_ttl=310s
+nosqlprotocol.cache.invalidate=current
+port=4007
