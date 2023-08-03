@@ -2429,6 +2429,7 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
     {
         StopWatch timer;
         auto [fetch_ok, conns] = get_super_user_conns(op.error_out);
+        op.time_remaining -= timer.lap();
         if (!conns.empty())
         {
             MXB_NOTICE("Detected %li super or read_only admin users logged in on %s. Kicking them out.",
@@ -2439,15 +2440,17 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
             {
                 string kill_query = mxb::string_printf("KILL SOFT CONNECTION %li;", user.conn_id);
                 string error_msg;
-                if (execute_cmd(kill_query, &error_msg))
+                unsigned int error_num = 0;
+                if (execute_cmd_time_limit(kill_query, op.time_remaining, &error_msg, &error_num))
                 {
                     kills++;
                 }
-                else
+                else if (error_num != ER_NO_SUCH_THREAD)
                 {
-                    MXB_WARNING("Could not kill connection %lu from super-user/read-only admin '%s': "
-                                "%s", user.conn_id, user.username.c_str(), error_msg.c_str());
+                    MXB_WARNING("Could not kill connection %lu from super-user/read-only admin '%s': %s",
+                                user.conn_id, user.username.c_str(), error_msg.c_str());
                 }
+                op.time_remaining -= timer.lap();
             }
 
             if (kills > 0)
