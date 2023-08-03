@@ -1,7 +1,7 @@
 <template>
     <div class="fill-height">
         <tbl-toolbar
-            :selectedItems="[selectedItem]"
+            :selectedItems="selectedItems"
             :showRotateTable="false"
             reverse
             @get-computed-height="headerHeight = $event"
@@ -9,13 +9,14 @@
             @on-add="addNewKey"
         />
         <div class="d-flex flex-row">
-            <indexes-list
+            <index-list
+                ref="indexesList"
                 v-model="stagingKeys"
                 :dim="{ height: dim.height - headerHeight, width: keyTblWidth }"
-                :selectedItem.sync="selectedItem"
+                :selectedItems.sync="selectedItems"
                 class="mr-4"
             />
-            <index-cols-list
+            <index-col-list
                 v-if="selectedKeyId"
                 v-model="stagingKeys"
                 :dim="{ height: dim.height - headerHeight, width: keyColsTblWidth }"
@@ -43,12 +44,12 @@
  */
 import { mapState } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
-import IndexesList from '@wsSrc/components/common/MxsDdlEditor/IndexesList.vue'
-import IndexColsList from '@wsSrc/components/common/MxsDdlEditor/IndexColsList.vue'
+import IndexList from '@wsSrc/components/common/MxsDdlEditor/IndexList.vue'
+import IndexColList from '@wsSrc/components/common/MxsDdlEditor/IndexColList.vue'
 
 export default {
     name: 'index-definitions',
-    components: { TblToolbar, IndexesList, IndexColsList },
+    components: { TblToolbar, IndexList, IndexColList },
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
@@ -58,7 +59,7 @@ export default {
     data() {
         return {
             headerHeight: 0,
-            selectedItem: [],
+            selectedItems: [],
             stagingKeys: {},
         }
     },
@@ -88,6 +89,9 @@ export default {
                 this.$emit('input', v)
             },
         },
+        selectedItem() {
+            return this.$typy(this.selectedItems, '[0]').safeArray
+        },
         selectedKeyId() {
             const idx = this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.ID]
             return this.selectedItem[idx]
@@ -101,7 +105,7 @@ export default {
         keys: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(v, this.stagingKeys)) this.assignData()
+                if (!this.$helpers.lodash.isEqual(v, this.stagingCategoryMap)) this.init()
             },
         },
         stagingKeys: {
@@ -112,11 +116,16 @@ export default {
         },
     },
     created() {
-        this.assignData()
+        this.init()
     },
     methods: {
-        assignData() {
+        selectFirstItem() {
+            this.selectedItems = []
+            this.$nextTick(() => this.$refs.indexesList.handleSelectItem(0))
+        },
+        init() {
             this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
+            this.selectFirstItem()
         },
         deleteSelectedKeys() {
             const item = this.selectedItem
@@ -129,9 +138,10 @@ export default {
             this.stagingKeys = this.$helpers.immutableUpdate(
                 this.stagingKeys,
                 Object.keys(keyMap).length
-                    ? { $merge: { [category]: keyMap } }
+                    ? { [category]: { $set: keyMap } }
                     : { $unset: [category] }
             )
+            this.selectFirstItem()
         },
         addNewKey() {
             const plainKey = this.CREATE_TBL_TOKENS.key
@@ -146,6 +156,10 @@ export default {
                     [plainKey]: { ...currPlainKeyMap, [newKey.id]: newKey },
                 },
             })
+            // wait for the next tick to ensure the list is regenerated before selecting the item
+            this.$nextTick(
+                () => this.$refs.indexesList.handleSelectItem(-1) // select last item
+            )
         },
     },
 }

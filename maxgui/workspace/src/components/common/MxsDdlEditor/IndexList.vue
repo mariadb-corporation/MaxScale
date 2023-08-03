@@ -9,7 +9,7 @@
         singleSelect
         :noDataText="$mxs_t('noEntity', { entityName: $mxs_t('indexes') })"
         :style="{ width: `${dim.width}px` }"
-        :selectedItems.sync="selectedItems"
+        :selectedItems.sync="selectedRows"
         @row-click="onRowClick"
     >
         <template
@@ -69,11 +69,11 @@
 import { mapState } from 'vuex'
 
 export default {
-    name: 'indexes-list',
+    name: 'index-list',
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
-        selectedItem: { type: Array, default: () => [] }, //sync
+        selectedItems: { type: Array, default: () => [] }, //sync
     },
     data() {
         return {
@@ -112,13 +112,12 @@ export default {
                 this.$emit('input', v)
             },
         },
-        selectedItems: {
+        selectedRows: {
             get() {
-                if (this.$typy(this.selectedItem).isEmptyObject) return []
-                return [this.selectedItem]
+                return this.selectedItems
             },
             set(v) {
-                this.$emit('update:selectedItem', this.$typy(v, '[0]').safeArray)
+                this.$emit('update:selectedItems', v)
             },
         },
         hasPk() {
@@ -135,6 +134,12 @@ export default {
         },
     },
     watch: {
+        keys: {
+            deep: true,
+            handler(v) {
+                if (!this.$helpers.lodash.isEqual(v, this.stagingKeys)) this.assignData()
+            },
+        },
         stagingKeys: {
             deep: true,
             handler(v) {
@@ -144,6 +149,7 @@ export default {
     },
     created() {
         this.assignData()
+        this.handleSelectItem(0)
     },
     methods: {
         assignData() {
@@ -164,7 +170,9 @@ export default {
                 }
                 return acc
             }, [])
-            if (this.keyItems.length) this.selectedItems = [this.keyItems[0]]
+        },
+        handleSelectItem(idx) {
+            if (this.keyItems.length) this.selectedRows = [this.keyItems.at(idx)]
         },
         categoryTxt(category) {
             if (category === this.CREATE_TBL_TOKENS.key) return 'INDEX'
@@ -232,17 +240,17 @@ export default {
              * The `selectedItems` props stores the entire row data, so that
              * the styles for selected rows can be applied.
              * The id of the row should have been used to facilitate the edit
-             * feature. For now, selectedItems must be also updated.
+             * feature. For now, selectedRows must be also updated.
              */
-            const isUpdatingSelectedItem =
-                this.$typy(this.selectedItems, `[0][${this.idxOfId}]`).safeString === keyId
-            if (isUpdatingSelectedItem)
-                this.selectedItems = this.$helpers.immutableUpdate(this.selectedItems, {
+            const isUpdatingIdxRow =
+                this.$typy(this.selectedRows, `[0][${this.idxOfId}]`).safeString === keyId
+            if (isUpdatingIdxRow)
+                this.selectedRows = this.$helpers.immutableUpdate(this.selectedRows, {
                     [0]: { [colIdx]: { $set: value } },
                 })
         },
         onRowClick(rowData) {
-            this.selectedItems = [rowData]
+            this.selectedRows = [rowData]
         },
     },
 }

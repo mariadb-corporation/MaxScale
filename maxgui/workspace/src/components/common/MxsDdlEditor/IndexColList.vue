@@ -71,7 +71,7 @@ import { mapState } from 'vuex'
 import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
-    name: 'index-cols-list',
+    name: 'index-col-list',
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
