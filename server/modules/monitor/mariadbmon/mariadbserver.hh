@@ -643,9 +643,10 @@ private:
     bool execute_cmd_ex(const std::string& cmd, const std::string& masked_cmd, QueryRetryMode mode,
                         std::string* errmsg_out = nullptr, unsigned int* errno_out = nullptr);
     bool execute_cmd_time_limit(const std::string& cmd, const std::string& masked_cmd,
-                                maxbase::Duration time_limit, std::string* errmsg_out);
+                                maxbase::Duration time_limit,
+                                std::string* errmsg_out, unsigned int* errnum_out);
     bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
-                                std::string* errmsg_out);
+                                std::string* errmsg_out, unsigned int* errnum_out = nullptr);
 
     bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, mxb::Json& error_out);
     bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);

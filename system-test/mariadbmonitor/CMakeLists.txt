@@ -135,6 +135,9 @@ add_test_executable_ex(NAME mariadbmon_rebuild_server SOURCE mariadbmon_rebuild_
 add_test_executable_ex(NAME mariadbmon_prom_dem_files SOURCE mariadbmon_prom_dem_files.cc
         CONFIG mariadbmon_prom_dem_files.cnf VMS repl_backend LABELS mysqlmon)
 
+add_test_executable_ex(NAME mariadbmon_switchover_kill_super SOURCE mariadbmon_switchover_kill_super.cc
+        CONFIG mariadbmon_switchover_kill_super.cnf VMS repl_backend LABELS mysqlmon)
+
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
 # to move test exec to a separate MV.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
