@@ -207,22 +207,6 @@ export default {
         },
     },
     watch: {
-        tableHeaders: {
-            deep: true,
-            immediate: true,
-            handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.getComputedWidth()
-            },
-        },
-        boundingWidth() {
-            this.getComputedWidth()
-        },
-        headerWidthMap: {
-            deep: true,
-            handler(v) {
-                this.$emit('get-header-width-map', v)
-            },
-        },
         isResizing(v) {
             this.$emit('is-resizing', v)
         },
@@ -230,12 +214,51 @@ export default {
     created() {
         window.addEventListener('mousemove', this.resizerMouseMove)
         window.addEventListener('mouseup', this.resizerMouseUp)
+        this.watch()
     },
     destroyed() {
         window.removeEventListener('mousemove', this.resizerMouseMove)
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
+    activated() {
+        this.watch()
+    },
+    deactivated() {
+        this.unwatch()
+    },
+    beforeDestroy() {
+        this.unwatch()
+    },
     methods: {
+        watch() {
+            this.watch_tableHeaders()
+            this.watch_boundingWidth()
+            this.watch_headerWidthMap()
+        },
+        unwatch() {
+            this.$typy(this.unwatch_tableHeaders).safeFunction()
+            this.$typy(this.unwatch_boundingWidth).safeFunction()
+            this.$typy(this.unwatch_headerWidthMap).safeFunction()
+        },
+        watch_tableHeaders() {
+            this.unwatch_tableHeaders = this.$watch(
+                'tableHeaders',
+                (v, oV) => {
+                    if (!this.$helpers.lodash.isEqual(v, oV)) this.getComputedWidth()
+                },
+                { deep: true, immediate: true }
+            )
+        },
+        watch_boundingWidth() {
+            this.unwatch_boundingWidth = this.$watch('boundingWidth', () => this.getComputedWidth())
+        },
+        watch_headerWidthMap() {
+            this.unwatch_headerWidthMap = this.$watch(
+                'headerWidthMap',
+                v => this.$emit('get-header-width-map', v),
+                { deep: true }
+            )
+        },
         genHeaderColID(colIdx) {
             return `table-header__header-text_${colIdx}`
         },

@@ -77,40 +77,38 @@
             </mxs-tooltip-btn>
             <slot name="right-table-tools-append" />
         </div>
-        <keep-alive>
-            <mxs-virtual-scroll-tbl
-                class="pb-2"
-                :headers="visibleHeaders"
-                :rows="filteredRows"
-                :itemHeight="30"
-                :maxHeight="tableHeight"
-                :boundingWidth="width"
-                :isVertTable="isVertTable"
-                :showSelect="showSelect"
-                :groupBy="groupBy"
-                :activeRow="activeRow"
-                :search="filterKeyword"
-                :selectedItems.sync="selectedItems"
-                @is-grouping="isGrouping = $event"
-                @on-cell-right-click="onCellRClick"
-                v-on="$listeners"
-            >
-                <template v-for="h in visibleHeaders" v-slot:[h.text]="{ data }">
-                    <editable-cell
-                        v-if="isEditing && h.editableCol"
-                        :key="`${h.text}-${data.cell}`"
-                        :cellItem="
-                            toCellItem({ rowData: data.rowData, cell: data.cell, colName: h.text })
-                        "
-                        :changedCells.sync="changedCells"
-                    />
-                    <slot v-else :name="`${h.text}`" :data="data" />
-                </template>
-                <template v-for="h in visibleHeaders" v-slot:[`header-${h.text}`]="{ data }">
-                    <slot :name="`header-${h.text}`" :data="data" />
-                </template>
-            </mxs-virtual-scroll-tbl>
-        </keep-alive>
+        <mxs-virtual-scroll-tbl
+            class="pb-2"
+            :headers="visibleHeaders"
+            :rows="filteredRows"
+            :itemHeight="30"
+            :maxHeight="tableHeight"
+            :boundingWidth="width"
+            :isVertTable="isVertTable"
+            :showSelect="showSelect"
+            :groupBy="groupBy"
+            :activeRow="activeRow"
+            :search="filterKeyword"
+            :selectedItems.sync="selectedItems"
+            @is-grouping="isGrouping = $event"
+            @on-cell-right-click="onCellRClick"
+            v-on="$listeners"
+        >
+            <template v-for="h in visibleHeaders" v-slot:[h.text]="{ data }">
+                <editable-cell
+                    v-if="isEditing && h.editableCol"
+                    :key="`${h.text}-${data.cell}`"
+                    :cellItem="
+                        toCellItem({ rowData: data.rowData, cell: data.cell, colName: h.text })
+                    "
+                    :changedCells.sync="changedCells"
+                />
+                <slot v-else :name="`${h.text}`" :data="data" />
+            </template>
+            <template v-for="h in visibleHeaders" v-slot:[`header-${h.text}`]="{ data }">
+                <slot :name="`header-${h.text}`" :data="data" />
+            </template>
+        </mxs-virtual-scroll-tbl>
         <mxs-sub-menu
             v-if="!$typy(ctxMenuData).isEmptyObject"
             :key="ctxMenuActivator"

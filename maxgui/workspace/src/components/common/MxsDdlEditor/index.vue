@@ -62,9 +62,9 @@
                     <index-definitions
                         v-else-if="activeSpecTab === DDL_EDITOR_SPECS.INDEXES"
                         v-model="keyCategoryMap"
-                        :tableColNameMap="tablesColNameMap[stagingData.id]"
+                        :tableColNameMap="$typy(tablesColNameMap[stagingData.id]).safeObjectOrEmpty"
                         :dim="tabDim"
-                        :tableColMap="allTableColMap[stagingData.id]"
+                        :tableColMap="$typy(allTableColMap[stagingData.id]).safeObjectOrEmpty"
                     />
                 </keep-alive>
             </v-slide-x-transition>

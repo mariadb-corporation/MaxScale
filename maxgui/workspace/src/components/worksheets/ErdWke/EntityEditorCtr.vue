@@ -1,7 +1,6 @@
 <template>
     <mxs-ddl-editor
         v-if="stagingData"
-        :key="stagingData.id"
         v-model="stagingData"
         class="fill-height mxs-color-helper border-top-table-border er-editor-ctr"
         :activeSpec.sync="activeSpec"
@@ -102,18 +101,13 @@ export default {
         },
     },
     activated() {
-        this.watch_activeEntityId()
-        this.watch_activeErdConnId()
+        this.watch()
     },
     deactivated() {
-        this.$typy(this.unwatch_activeEntityId).safeFunction()
-        this.$typy(this.unwatch_stagingData).safeFunction()
-        this.$typy(this.unwatch_activeErdConnId).safeFunction()
+        this.unwatch()
     },
     beforeDestroy() {
-        this.$typy(this.unwatch_activeEntityId).safeFunction()
-        this.$typy(this.unwatch_stagingData).safeFunction()
-        this.$typy(this.unwatch_activeErdConnId).safeFunction()
+        this.unwatch()
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
@@ -121,6 +115,15 @@ export default {
             queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData',
             exeDdlScript: 'mxsWorkspace/exeDdlScript',
         }),
+        watch() {
+            this.watch_activeEntityId()
+            this.watch_activeErdConnId()
+        },
+        unwatch() {
+            this.$typy(this.unwatch_activeEntityId).safeFunction()
+            this.$typy(this.unwatch_stagingData).safeFunction()
+            this.$typy(this.unwatch_activeErdConnId).safeFunction()
+        },
         //Watcher to work with multiple worksheets which are kept alive
         watch_activeEntityId() {
             this.unwatch_activeEntityId = this.$watch(
