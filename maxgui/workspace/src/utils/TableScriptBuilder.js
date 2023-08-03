@@ -28,6 +28,10 @@ import { addComma } from '@wsSrc/utils/helpers'
 import { t as typy } from 'typy'
 import erdHelper from '@wsSrc/utils/erdHelper'
 
+function escapeComment(comment) {
+    return comment.replace(/'/g, "\\'")
+}
+
 /**
  * Table script builder.
  * This is designed to work with the output of erdHelper.genDdlEditorData,
@@ -138,7 +142,7 @@ export default class TableScriptBuilder {
                     parts.push(`COLLATE = ${diff.rhs}`)
                     break
                 case 'comment':
-                    parts.push(`COMMENT = '${diff.rhs}'`)
+                    parts.push(`COMMENT = '${escapeComment(diff.rhs)}'`)
                     break
             }
         })
@@ -203,7 +207,7 @@ export default class TableScriptBuilder {
         if (generatedType === GENERATED_TYPES.NONE && defOrExp)
             sql += ` ${tokens.default} ${defOrExp}`
         else if (defOrExp) sql += ` ${tokens.generated} (${defOrExp}) ${generatedType}`
-        if (comment) sql += ` ${tokens.comment} '${comment}'`
+        if (comment) sql += ` ${tokens.comment} '${escapeComment(comment)}'`
         return sql
     }
 
@@ -242,6 +246,23 @@ export default class TableScriptBuilder {
     }
 
     /**
+     * @param {object} key - key object
+     * @returns {string} e.g. `key_name (first_name`(50) DESC, `last_name`(20) ASC) COMMENT = 'comment'
+     */
+    genKeyDef({ name, cols, comment }) {
+        let str = cols
+            .map(({ id, order, length }) => {
+                const name = quoting(this.stagingColNameMap[id])
+                return `${name}${length ? `(${length})` : ''} ${order ? order : ''}`
+            })
+            .join(addComma())
+        str = `(${str})`
+        if (name) str = `${quoting(name)} ${str}`
+        if (comment) str += ` ${tokens.comment} '${escapeComment(comment)}'`
+        return str
+    }
+
+    /**
      * If altering an existing table, it returns DROP/ADD PK SQL.
      * Otherwise, it returns just PK definition.
      * @returns {String} - returns PK SQL
@@ -256,9 +277,9 @@ export default class TableScriptBuilder {
         if (removedKey) parts.push(dropSQL)
         if (addedKey || updatedKey) {
             if (updatedKey) parts.push(dropSQL)
-            const indexCols = updatedKey ? updatedKey.newObj.cols : addedKey.cols
-            const colNames = indexCols.map(({ id }) => quoting(this.stagingColNameMap[id]))
-            let keyDef = `${tokens.primaryKey} (${colNames.join(addComma())})`
+            let keyDef = `${tokens.primaryKey} ${this.genKeyDef(
+                updatedKey ? updatedKey.newObj : addedKey
+            )}`
             if (!this.isCreating) keyDef = `${tokens.add} ${keyDef}`
             parts.push(keyDef)
         }
@@ -275,33 +296,15 @@ export default class TableScriptBuilder {
         const addedKeys = keyDiffs.get('added')
         let parts = []
         parts = removedKeys.map(({ name }) => `${tokens.drop} ${tokens.key} ${quoting(name)}`)
-        addedKeys.forEach(({ name, cols }) => {
-            const indexColNames = cols.map(({ id }) => quoting(this.stagingColNameMap[id]))
-            const keyDef = `${category} ${quoting(name)}(${indexColNames.join(addComma())})`
+        addedKeys.forEach(key => {
+            const keyDef = `${category} ${this.genKeyDef(key)}`
             if (this.isCreating) parts.push(keyDef)
             else parts.push(`${tokens.add} ${keyDef}`)
         })
-        updatedKeys.forEach(({ diff: keyDiff, oriObj, newObj }) => {
-            keyDiff.forEach(diff => {
-                // handle build new composite key when a column is removed from the key
-                if (
-                    diff.kind === 'A' &&
-                    typy(diff, 'item.kind').safeString === 'D' &&
-                    typy(diff, 'path[0]').safeString === 'cols'
-                ) {
-                    // drop the composite key
-                    parts.push(`${tokens.drop} ${tokens.key} ${quoting(oriObj.name)}`)
-                    // build new composite key with the remaining columns
-                    const indexColNames = newObj.cols.map(({ id }) =>
-                        quoting(this.stagingColNameMap[id])
-                    )
-                    parts.push(
-                        `${tokens.add} ${category} ${quoting(newObj.name)}(${indexColNames.join(
-                            addComma()
-                        )})`
-                    )
-                }
-            })
+        updatedKeys.forEach(({ oriObj, newObj }) => {
+            // Updating the key by firstly drop it and add then add a new one
+            parts.push(`${tokens.drop} ${tokens.key} ${quoting(oriObj.name)}`)
+            parts.push(`${tokens.add} ${category} ${this.genKeyDef(newObj)}`)
         })
         return parts.join(addComma())
     }

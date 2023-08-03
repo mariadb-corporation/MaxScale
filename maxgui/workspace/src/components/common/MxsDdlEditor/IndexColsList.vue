@@ -46,6 +46,7 @@
                 dense
                 :height="28"
                 hide-details
+                :rules="[v => /^\d+$/.test(v) || !v]"
                 @input="onChangeInput({ rowIdx, rowData, colIdx, value: $event })"
                 @click.native.stop
             />
@@ -173,7 +174,7 @@ export default {
                     const indexedCol = this.indexedColMap[id]
                     const order =
                         this.$typy(indexedCol, 'order').safeString || this.COL_ORDER_BY.ASC
-                    const length = this.$typy(indexedCol, 'length').safeNumber
+                    const length = this.$typy(indexedCol, 'length').safeString || null
                     return [id, '', text, type, order, length]
                 })
         },
