@@ -18,30 +18,26 @@ import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/store/config'
 function stubColDef({
     name,
     data_type,
-    data_type_size,
-    is_un = false,
-    is_zf = false,
-    is_nn = false,
+    un = false,
+    zf = false,
+    nn = false,
     charset,
     collate,
-    generated_exp,
-    generated_type,
-    is_ai = false,
+    generated,
+    ai = false,
     default_exp,
     comment,
 }) {
     return {
         name,
         data_type,
-        data_type_size,
-        is_un,
-        is_zf,
-        is_nn,
+        un,
+        zf,
+        nn,
         charset,
         collate,
-        generated_exp,
-        generated_type,
-        is_ai,
+        generated,
+        ai,
         default_exp,
         comment,
     }
@@ -81,20 +77,18 @@ const expectedColDefs = {
     '`id` INT unsigned AUTO_INCREMENT': stubColDef({
         name: 'id',
         data_type: 'INT',
-        is_un: true,
-        is_ai: true,
+        un: true,
+        ai: true,
     }),
     '`name` VARCHAR(255) NOT NULL': stubColDef({
         name: 'name',
-        data_type: 'VARCHAR',
-        data_type_size: '255',
-        is_nn: true,
+        data_type: 'VARCHAR(255)',
+        nn: true,
     }),
     '`my ``s `` col` VARCHAR(30) CHARACTER SET big5 COLLATE big5_bin  DEFAULT "\'`"" "': stubColDef(
         {
             name: 'my `s ` col',
-            data_type: 'VARCHAR',
-            data_type_size: '30',
+            data_type: 'VARCHAR(30)',
             charset: 'big5',
             collate: 'big5_bin',
             default_exp: '"\'`"" "',
@@ -103,33 +97,30 @@ const expectedColDefs = {
     '`col_timestamp` timestamp NOT NULL DEFAULT current_timestamp()': stubColDef({
         name: 'col_timestamp',
         data_type: 'timestamp',
-        is_nn: true,
+        nn: true,
         default_exp: 'current_timestamp()',
     }),
     '`vtxt` varchar(5) GENERATED ALWAYS AS (rtrim(`txt`)) STORED': stubColDef({
         name: 'vtxt',
-        data_type: 'varchar',
-        data_type_size: '5',
-        generated_exp: 'rtrim(`txt`)',
-        generated_type: 'STORED',
+        data_type: 'varchar(5)',
+        default_exp: 'rtrim(`txt`)',
+        generated: 'STORED',
     }),
     '`negative_int` int(11) DEFAULT -11': stubColDef({
         name: 'negative_int',
-        data_type: 'int',
-        data_type_size: '11',
+        data_type: 'int(11)',
         default_exp: '-11',
     }),
     "`col_comment` varchar(255) DEFAULT NULL COMMENT '`col``s comment`'": stubColDef({
         name: 'col_comment',
-        data_type: 'varchar',
-        data_type_size: '255',
+        data_type: 'varchar(255)',
         default_exp: 'NULL',
         comment: '`col``s comment`',
     }),
     '`zerofill` INT zerofill': stubColDef({
         name: 'zerofill',
         data_type: 'INT',
-        is_zf: true,
+        zf: true,
     }),
     '`a` int DEFAULT (1+1) COMMENT "(1+1)"': stubColDef({
         name: 'a',
@@ -296,14 +287,14 @@ describe('TableParser', () => {
     })
     describe('parseTableDefs', () => {
         it(`Should parse table definitions string part`, () => {
-            expect(parser.parseTableDefs(tableDefStr)).to.have.keys('cols', 'keys')
+            expect(parser.parseTableDefs(tableDefStr)).to.have.keys('col_map', 'key_category_map')
         })
     })
     describe('parse', () => {
         tables.forEach((ddl, i) => {
             it('should parse a CREATE TABLE statement', () => {
                 const result = parser.parse({ ddl, schema: 'test' })
-                expect(result).to.have.keys('definitions', 'options')
+                expect(result).to.have.keys('defs', 'options')
                 expect(result.options).to.be.eql({
                     ...expectTableOpts,
                     schema: 'test',

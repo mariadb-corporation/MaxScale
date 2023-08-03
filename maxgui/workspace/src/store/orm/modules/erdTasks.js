@@ -88,9 +88,9 @@ export default {
         schemas: (_, getters) => [...new Set(getters.nodes.map(n => n.data.options.schema))],
         tablesColNameMap: (_, getters) => erdHelper.createTablesColNameMap(getters.tables),
         refTargetMap: (_, getters) => lodash.keyBy(erdHelper.genRefTargets(getters.tables), 'id'),
-        colKeyTypeMap: (_, getters) => {
+        colKeyCategoryMap: (_, getters) => {
             return getters.tables.reduce((map, tbl) => {
-                map = { ...map, ...erdHelper.genColKeyTypeMap(tbl.definitions.keys) }
+                map = { ...map, ...erdHelper.genColKeyTypeMap(tbl.defs.key_category_map) }
                 return map
             }, {})
         },

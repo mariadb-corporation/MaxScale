@@ -83,14 +83,13 @@ export default {
             selectedItems: [],
             isVertTable: false,
             isLoading: false,
-            stagingKeys: {},
+            stagingKeyCategoryMap: {},
         }
     },
     computed: {
         ...mapState({
+            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
-            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
             REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
         }),
         headers() {
@@ -123,7 +122,7 @@ export default {
                 this.$emit('update:newLookupTables', v)
             },
         },
-        keys: {
+        keyCategoryMap: {
             get() {
                 return this.value
             },
@@ -131,8 +130,24 @@ export default {
                 this.$emit('input', v)
             },
         },
+        foreignKeyToken() {
+            return this.CREATE_TBL_TOKENS.foreignKey
+        },
+        plainKeyToken() {
+            return this.CREATE_TBL_TOKENS.key
+        },
+        plainKeyMap() {
+            return this.$typy(this.value, `[${this.plainKeyToken}]`).safeObjectOrEmpty
+        },
+        plainKeyNameMap() {
+            return this.$helpers.lodash.keyBy(Object.values(this.plainKeyMap), 'name')
+        },
+        fkMap() {
+            return this.$typy(this.stagingKeyCategoryMap, `[${this.foreignKeyToken}]`)
+                .safeObjectOrEmpty
+        },
         fks() {
-            return Object.values(this.stagingKeys)
+            return Object.values(this.fkMap)
         },
         // mapped by FK id
         fkRefTblMap() {
@@ -146,15 +161,6 @@ export default {
                 return map
             }, {})
         },
-        idxOfColId() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
-        },
-        idxOfColName() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NAME]
-        },
-        idxOfColType() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.TYPE]
-        },
         rows() {
             return this.fks.map(({ id, name, cols, ref_cols, on_update, on_delete }) => {
                 const refTbl = this.fkRefTblMap[id]
@@ -165,9 +171,8 @@ export default {
                         if (c.name) return c.name
                         return this.tablesColNameMap[refTbl.id][c.id]
                     })
-                    referencedColIds = refTbl.definitions.cols.reduce((res, c) => {
-                        if (referencedColNames.includes(c[this.idxOfColName]))
-                            res.push(c[this.idxOfColId])
+                    referencedColIds = Object.values(refTbl.defs.col_map).reduce((res, c) => {
+                        if (referencedColNames.includes(c.name)) res.push(c.id)
                         return res
                     }, [])
                 }
@@ -194,16 +199,16 @@ export default {
         },
     },
     watch: {
-        keys: {
+        keyCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(v, this.stagingKeys)) this.assignData()
+                if (!this.$helpers.lodash.isEqual(v, this.stagingKeyCategoryMap)) this.assignData()
             },
         },
-        stagingKeys: {
+        stagingKeyCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(this.keys, v)) this.keys = v
+                if (!this.$helpers.lodash.isEqual(this.keyCategoryMap, v)) this.keyCategoryMap = v
             },
         },
     },
@@ -217,7 +222,7 @@ export default {
                 await this.fetchReferencedTablesData(this.unknownTargets)
         },
         assignData() {
-            this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
+            this.stagingKeyCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
         },
         getColOptions(tableId) {
             if (!this.allTableColMap[tableId]) return []
@@ -241,10 +246,43 @@ export default {
             this.isLoading = false
         },
         deleteSelectedKeys(selectedItems) {
-            const ids = selectedItems.map(([id]) => id)
-            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, { $unset: ids })
+            const { immutableUpdate } = this.$helpers
+            const map = selectedItems.reduce(
+                (res, [id, name]) => {
+                    res.ids.push(id)
+                    res.names.push(name)
+                    /**
+                     * When creating an FK, if the col is not indexed,
+                     * a plain key will be generated automatically using
+                     * the same name as the FK.
+                     */
+                    const plainKey = this.plainKeyNameMap[name]
+                    if (plainKey) res.plainKeyIds.push(plainKey.id)
+                    return res
+                },
+                { ids: [], names: [], plainKeyIds: [] }
+            )
+
+            const fkMap = immutableUpdate(this.fkMap, { $unset: map.ids })
+            const plainKeyMap = immutableUpdate(this.plainKeyMap, { $unset: map.plainKeyIds })
+
+            let keyCategoryMap = this.$helpers.immutableUpdate(
+                this.stagingKeyCategoryMap,
+                Object.keys(fkMap).length
+                    ? { [this.foreignKeyToken]: { $set: fkMap } }
+                    : { $unset: [this.foreignKeyToken] }
+            )
+            // Drop also PLAIN key
+            keyCategoryMap = immutableUpdate(
+                keyCategoryMap,
+                Object.keys(plainKeyMap).length
+                    ? { [this.plainKeyToken]: { $set: plainKeyMap } }
+                    : { $unset: [this.plainKeyToken] }
+            )
+            this.stagingKeyCategoryMap = keyCategoryMap
         },
         addNewKey() {
+            const { immutableUpdate } = this.$helpers
             const tableName = this.$typy(this.lookupTables[this.tableId], 'options.name').safeString
             const newKey = {
                 id: `key_${this.$helpers.uuidv1()}`,
@@ -256,13 +294,18 @@ export default {
                 ref_schema_name: '',
                 ref_tbl_name: '',
             }
-            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                $merge: { [newKey.id]: newKey },
-            })
+            this.stagingKeyCategoryMap = immutableUpdate(
+                this.stagingKeyCategoryMap,
+                this.foreignKeyToken in this.stagingKeyCategoryMap
+                    ? { [this.foreignKeyToken]: { [newKey.id]: { $set: newKey } } }
+                    : { $merge: { [this.foreignKeyToken]: { [newKey.id]: newKey } } }
+            )
         },
         updateStagingKeys(id, keyField, value) {
-            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                [id]: { [keyField]: { $set: value } },
+            this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(this.stagingKeyCategoryMap, {
+                [this.foreignKeyToken]: {
+                    [id]: { [keyField]: { $set: value } },
+                },
             })
         },
         /**
@@ -306,23 +349,33 @@ export default {
                  */
                 case REF_TARGET: {
                     if (this.isReferencedTblPersisted(item.value)) {
-                        this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                            [id]: {
-                                $unset: ['ref_schema_name', 'ref_tbl_name'],
-                                ref_cols: { $set: [] },
-                                ref_tbl_id: { $set: item.value },
-                            },
-                        })
+                        this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(
+                            this.stagingKeyCategoryMap,
+                            {
+                                [this.foreignKeyToken]: {
+                                    [id]: {
+                                        $unset: ['ref_schema_name', 'ref_tbl_name'],
+                                        ref_cols: { $set: [] },
+                                        ref_tbl_id: { $set: item.value },
+                                    },
+                                },
+                            }
+                        )
                     } else {
                         const newReferencedTbl = this.tmpLookupTables[item.value]
-                        this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                            [id]: {
-                                ref_cols: { $set: [] },
-                                $unset: ['ref_tbl_id'],
-                                ref_schema_name: { $set: newReferencedTbl.options.schema },
-                                ref_tbl_name: { $set: newReferencedTbl.options.name },
-                            },
-                        })
+                        this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(
+                            this.stagingKeyCategoryMap,
+                            {
+                                [this.foreignKeyToken]: {
+                                    [id]: {
+                                        ref_cols: { $set: [] },
+                                        $unset: ['ref_tbl_id'],
+                                        ref_schema_name: { $set: newReferencedTbl.options.schema },
+                                        ref_tbl_name: { $set: newReferencedTbl.options.name },
+                                    },
+                                },
+                            }
+                        )
                     }
                     break
                 }

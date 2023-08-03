@@ -186,20 +186,20 @@ export const CREATE_TBL_TOKENS = Object.freeze({
 })
 // Column attribute names for altering/creating table editor
 export const COL_ATTRS = Object.freeze({
-    ID: 'ID',
-    NAME: 'NAME',
-    TYPE: 'TYPE',
-    PK: CREATE_TBL_TOKENS.primaryKey,
-    NN: CREATE_TBL_TOKENS.nn,
-    UN: CREATE_TBL_TOKENS.un,
-    UQ: CREATE_TBL_TOKENS.uniqueKey,
-    ZF: CREATE_TBL_TOKENS.zf,
-    AI: CREATE_TBL_TOKENS.ai,
-    GENERATED_TYPE: 'GENERATED TYPE',
-    DEF_EXP: 'DEFAULT/EXPRESSION',
-    CHARSET: CREATE_TBL_TOKENS.charset,
-    COLLATE: CREATE_TBL_TOKENS.collate,
-    COMMENT: CREATE_TBL_TOKENS.comment,
+    ID: 'id',
+    NAME: 'name',
+    TYPE: 'type',
+    PK: 'pk',
+    NN: 'nn',
+    UN: 'un',
+    UQ: 'uq',
+    ZF: 'zf',
+    AI: 'ai',
+    GENERATED: 'generated',
+    DEF_EXP: 'default_exp',
+    CHARSET: 'charset',
+    COLLATE: 'collate',
+    COMMENT: 'comment',
 })
 
 export const GENERATED_TYPES = Object.freeze({
@@ -207,8 +207,6 @@ export const GENERATED_TYPES = Object.freeze({
     VIRTUAL: CREATE_TBL_TOKENS.virtual,
     STORED: CREATE_TBL_TOKENS.stored,
 })
-
-export const COL_ATTR_IDX_MAP = genIdxMap(COL_ATTRS)
 
 const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKENS
 export const ALL_TABLE_KEY_CATEGORIES = [

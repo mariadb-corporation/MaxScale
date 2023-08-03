@@ -10,29 +10,23 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import {
-    CREATE_TBL_TOKENS as tokens,
-    ALL_TABLE_KEY_CATEGORIES,
-    COL_ATTRS,
-    COL_ATTR_IDX_MAP,
-    GENERATED_TYPES,
-} from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/store/config'
 import { lodash, immutableUpdate, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { quotingIdentifier as quoting, addComma } from '@wsSrc/utils/helpers'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
-import { checkCharsetSupport, integerTypes } from '@wsSrc/components/common/MxsDdlEditor/utils'
+import { integerTypes } from '@wsSrc/components/common/MxsDdlEditor/utils'
 
 /**
  * @param {object} param
  * @param {Array.<object>} param.cols - parsed index columns to be transformed
- * @param {Array.<Array>} param.lookupCols - parsed columns to be looked up
+ * @param {object} param.col_map - parsed columns to be looked up
  * @returns {Array.<object} transformed cols where the `name` property is replaced with `id`
  */
-function replaceColNamesWithIds({ cols, lookupCols }) {
+function replaceColNamesWithIds({ cols, col_map }) {
     return lodash.cloneDeep(cols).map(item => {
         if (!item.name) return item
-        const col = lookupCols.find(c => c.name === item.name)
+        const col = Object.values(col_map).find(c => c.name === item.name)
         item.id = col.id
         delete item.name
         return item
@@ -40,20 +34,20 @@ function replaceColNamesWithIds({ cols, lookupCols }) {
 }
 
 /**
- * Transform parsed keys of a table into a data structure used
+ * Transform parsed keyMap of a category into a data structure used
  * by the DDL editor in ERD worksheet. i.e. the referenced names will be replaced
  * with corresponding target ids found in lookupTables. This is done to ensure the
  * relationships between tables are intact when changing the target names.
  * @param {object} param
  * @param {object} param.keyMap - keyMap
- * @param {array} param.cols - all columns of a table
+ * @param {object} param.col_map - column map
  * @param {array} [param.lookupTables] - all parsed tables in the ERD. Required when parsing FK
  * @returns {object} transformed key
  */
-function replaceNamesWithIds({ keyMap, cols, lookupTables }) {
+function replaceNamesWithIds({ keyMap, col_map, lookupTables }) {
     return Object.values(lodash.cloneDeep(keyMap)).reduce((map, key) => {
         // transform referencing cols
-        key.cols = replaceColNamesWithIds({ cols: key.cols, lookupCols: cols })
+        key.cols = replaceColNamesWithIds({ cols: key.cols, col_map })
         if (key.ref_tbl_name) {
             let refTbl
             // Find referenced node
@@ -73,7 +67,7 @@ function replaceNamesWithIds({ keyMap, cols, lookupTables }) {
                 // transform ref_cols
                 key.ref_cols = replaceColNamesWithIds({
                     cols: key.ref_cols,
-                    lookupCols: refTbl.definitions.cols,
+                    col_map: refTbl.defs.col_map,
                 })
             }
         }
@@ -83,24 +77,24 @@ function replaceNamesWithIds({ keyMap, cols, lookupTables }) {
 }
 
 /**
- * @param {object} keys - keys that have been mapped with ids via genDdlEditorData function
+ * @param {object} keyCategoryMap - keyCategoryMap that have been mapped with ids via genDdlEditorData function
  * @returns {object} e.g. { 'col_id': ['PRIMARY KEY', ], }
  */
-function genColKeyTypeMap(keys) {
-    return Object.keys(keys).reduce((map, type) => {
-        const colIds = Object.values(keys[type])
+function genColKeyTypeMap(keyCategoryMap) {
+    return Object.keys(keyCategoryMap).reduce((map, category) => {
+        const colIds = Object.values(keyCategoryMap[category])
             .map(key => key.cols.map(c => c.id))
             .flat()
         colIds.forEach(id => {
             if (!map[id]) map[id] = []
-            map[id].push(type)
+            map[id].push(category)
         })
         return map
     }, {})
 }
 
-function isSingleUQ({ keys, colId }) {
-    return Object.values(keys[tokens.uniqueKey] || {}).some(key =>
+function isSingleUQ({ keyCategoryMap, colId }) {
+    return Object.values(keyCategoryMap[tokens.uniqueKey] || {}).some(key =>
         key.cols.every(c => c.id === colId)
     )
 }
@@ -116,70 +110,14 @@ function isSingleUQ({ keys, colId }) {
  */
 function genDdlEditorData({ parsedTable, lookupTables = [], charsetCollationMap }) {
     const {
-        definitions: { cols, keys },
+        defs: { col_map, key_category_map },
     } = parsedTable
-    const transformedKeys = immutableUpdate(keys, {
-        $set: ALL_TABLE_KEY_CATEGORIES.reduce((res, type) => {
-            if (keys[type])
-                res[type] = replaceNamesWithIds({
-                    keyMap: keys[type],
-                    cols,
-                    lookupTables,
-                })
-            return res
-        }, {}),
-    })
+
     const charset = parsedTable.options.charset
     const collation =
         typy(parsedTable, 'options.collation').safeString ||
         typy(charsetCollationMap, `[${charset}].defCollation`).safeString
-    const {
-        ID,
-        NAME,
-        TYPE,
-        PK,
-        NN,
-        UN,
-        UQ,
-        ZF,
-        AI,
-        GENERATED_TYPE,
-        DEF_EXP,
-        CHARSET,
-        COLLATE,
-        COMMENT,
-    } = COL_ATTRS
-    const colKeyTypeMap = genColKeyTypeMap(transformedKeys)
-    const transformedCols = cols.map(col => {
-        let type = col.data_type
-        if (col.data_type_size) type += `(${col.data_type_size})`
-        const keyTypes = colKeyTypeMap[col.id] || []
 
-        let uq = false
-        if (keyTypes.includes(tokens.uniqueKey)) {
-            /**
-             * UQ input is a checkbox for a column, so it can't handle composite unique
-             * key. Thus ignoring composite unique key.
-             */
-            uq = isSingleUQ({ keys: transformedKeys, colId: col.id })
-        }
-        return {
-            [ID]: col.id,
-            [NAME]: col.name,
-            [TYPE]: type.toUpperCase(),
-            [PK]: keyTypes.includes(tokens.primaryKey),
-            [NN]: col.is_nn,
-            [UN]: col.is_un,
-            [UQ]: uq,
-            [ZF]: col.is_zf,
-            [AI]: col.is_ai,
-            [GENERATED_TYPE]: col.generated_type ? col.generated_type : GENERATED_TYPES.NONE,
-            [DEF_EXP]: col.generated_exp ? col.generated_exp : typy(col.default_exp).safeString,
-            [CHARSET]: checkCharsetSupport(col.data_type) ? col.charset || charset : '',
-            [COLLATE]: checkCharsetSupport(col.data_type) ? col.collate || collation : '',
-            [COMMENT]: typy(col.comment).safeString,
-        }
-    })
     return {
         ...parsedTable,
         options: {
@@ -187,9 +125,19 @@ function genDdlEditorData({ parsedTable, lookupTables = [], charsetCollationMap 
             charset,
             collation,
         },
-        definitions: {
-            cols: transformedCols.map(col => [...Object.values(col)]),
-            keys: transformedKeys,
+        defs: {
+            col_map,
+            key_category_map: immutableUpdate(key_category_map, {
+                $set: ALL_TABLE_KEY_CATEGORIES.reduce((res, type) => {
+                    if (key_category_map[type])
+                        res[type] = replaceNamesWithIds({
+                            keyMap: key_category_map[type],
+                            col_map,
+                            lookupTables,
+                        })
+                    return res
+                }, {}),
+            }),
         },
     }
 }
@@ -212,16 +160,13 @@ function genErdNode({ nodeData, highlightColor }) {
 
 const getNodeHighlightColor = node => typy(node, 'styles.highlightColor').safeString
 
-const getColDefData = ({ node, colId }) =>
-    node.data.definitions.cols.find(col => col[COL_ATTR_IDX_MAP[COL_ATTRS.ID]] === colId)
+const getColDefData = ({ node, colId }) => node.data.defs.col_map[colId]
 
-const getOptionality = colData =>
-    colData[COL_ATTR_IDX_MAP[COL_ATTRS.NN]]
-        ? RELATIONSHIP_OPTIONALITY.MANDATORY
-        : RELATIONSHIP_OPTIONALITY.OPTIONAL
+const getOptionality = col =>
+    col.nn ? RELATIONSHIP_OPTIONALITY.MANDATORY : RELATIONSHIP_OPTIONALITY.OPTIONAL
 
-const areIndexed = ({ keyMap, category, colIds }) => {
-    const keys = Object.values(typy(keyMap[category]).safeObjectOrEmpty)
+const areIndexed = ({ keyCategoryMap, category, colIds }) => {
+    const keys = Object.values(typy(keyCategoryMap[category]).safeObjectOrEmpty)
     if (!keys.length) return false
     return keys.some(key =>
         lodash.isEqual(
@@ -232,10 +177,10 @@ const areIndexed = ({ keyMap, category, colIds }) => {
 }
 
 function areUniqueCols({ node, colIds }) {
-    const keyMap = node.data.definitions.keys
+    const keyCategoryMap = node.data.defs.key_category_map
     return (
-        areIndexed({ keyMap, category: tokens.primaryKey, colIds }) ||
-        areIndexed({ keyMap, category: tokens.uniqueKey, colIds })
+        areIndexed({ keyCategoryMap, category: tokens.primaryKey, colIds }) ||
+        areIndexed({ keyCategoryMap, category: tokens.uniqueKey, colIds })
     )
 }
 function getCardinality({ node, cols }) {
@@ -297,17 +242,17 @@ function genErdLink({
  * @param {object} param.node - node has the FK
  * @param {string} param.colId - id of the FK column
  * @param {string} param.refCold - id of the referenced column
- * @param {object} param.colKeyTypeMap
+ * @param {object} param.colKeyCategoryMap
  * @returns {boolean}
  */
-function isIdentifyingRelation({ node, colId, refColId, colKeyTypeMap }) {
-    const pk = typy(node, `data.definitions.keys[${tokens.primaryKey}]`).safeObjectOrEmpty
+function isIdentifyingRelation({ node, colId, refColId, colKeyCategoryMap }) {
+    const pk = typy(node, `data.defs.key_category_map[${tokens.primaryKey}]`).safeObjectOrEmpty
     const pkCols = typy(Object.values(pk), '[0].cols').safeArray
     const hasCompositePk = pkCols.length > 1
     let isIdentify = false
     if (hasCompositePk) {
-        const colKeyTypes = colKeyTypeMap[colId]
-        const refColKeyTypes = colKeyTypeMap[refColId]
+        const colKeyTypes = colKeyCategoryMap[colId]
+        const refColKeyTypes = colKeyCategoryMap[refColId]
         if (colKeyTypes.includes(tokens.primaryKey) && refColKeyTypes.includes(tokens.primaryKey))
             isIdentify = true
     }
@@ -319,10 +264,10 @@ function isIdentifyingRelation({ node, colId, refColId, colKeyTypeMap }) {
  * @param {object} param.fk - foreign key object
  * @param {array} param.nodes - all nodes of the ERD
  * @param {boolean} param.isAttrToAttr - isAttrToAttr: FK is drawn to associated column
- * @param {object} param.colKeyTypeMap
+ * @param {object} param.colKeyCategoryMap
  * @returns {object}
  */
-function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr, colKeyTypeMap }) {
+function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr, colKeyCategoryMap }) {
     const { cols, ref_tbl_id, ref_cols } = fk
     let links = []
 
@@ -353,7 +298,7 @@ function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr, colKeyTypeMap }) {
             if (linkObj) {
                 if (linkObj.isPartOfCompositeKey) linkObj.hidden = !isAttrToAttr
                 linkObj.styles = { invisibleHighlightColor }
-                if (isIdentifyingRelation({ node: srcNode, colId, refColId, colKeyTypeMap }))
+                if (isIdentifyingRelation({ node: srcNode, colId, refColId, colKeyCategoryMap }))
                     linkObj.styles.dashArr = 0
                 links.push(linkObj)
             }
@@ -396,11 +341,9 @@ function getExcludedLinks({ links, node }) {
  * @returns {Object.<string, Object.<string, string>>} e.g. { "tbl_1": { "col_1": "id", "col_2": "name" } }
  */
 function createTablesColNameMap(tables) {
-    const idxOfId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
-    const idxOfName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
     return tables.reduce((res, tbl) => {
-        res[tbl.id] = typy(tbl, 'definitions.cols').safeArray.reduce((map, arr) => {
-            map[arr[idxOfId]] = arr[idxOfName]
+        res[tbl.id] = Object.values(tbl.defs.col_map).reduce((map, col) => {
+            map[col.id] = col.name
             return map
         }, {})
         return res
@@ -479,16 +422,14 @@ const genKeyName = ({ colName, category }) => `${colName}_${category.replace(/\s
 
 /**
  * @param {object} param
- * @param {object} param.definitions - parsed definitions
+ * @param {object} param.defs - parsed defs
  * @param {string} param.category
  * @param {string} param.colId
  * @returns {object} new key object
  */
-function genKey({ definitions, category, colId }) {
-    const idxOfId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
-    const idxOfName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
-    const col = definitions.cols.find(c => c[idxOfId] === colId)
-    const colName = col[idxOfName]
+function genKey({ defs, category, colId }) {
+    const col = defs.col_map[colId]
+    const colName = col.name
     return {
         id: `key_${uuidv1()}`,
         cols: [{ id: colId }],
@@ -518,20 +459,18 @@ function extractType(typeAndSize) {
  * @returns {boolean}
  */
 function validateFkColTypes({ src, target, colId, targetColId }) {
-    const idxOfType = COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]
     const col = getColDefData({ node: src, colId })
     const targetCol = getColDefData({ node: target, colId: targetColId })
 
-    const typeAndSize = col[idxOfType].toUpperCase()
-    const targetTypeAndSize = targetCol[idxOfType].toUpperCase()
+    const typeAndSize = col.data_type.toUpperCase()
+    const targetTypeAndSize = targetCol.data_type.toUpperCase()
 
     const type = extractType(typeAndSize)
     const targetType = extractType(targetTypeAndSize)
     if (type === targetType) {
         // For integer types, the size and sign must also be the same.
         if (integerTypes.includes(type)) {
-            const idxOfUN = COL_ATTR_IDX_MAP[COL_ATTRS.UN]
-            return typeAndSize === targetTypeAndSize && col[idxOfUN] === targetCol[idxOfUN]
+            return typeAndSize === targetTypeAndSize && col.un === targetCol.un
         }
         return true
     }
@@ -544,14 +483,11 @@ function validateFkColTypes({ src, target, colId, targetColId }) {
 }
 
 function genIdxColOpts({ tableColMap, disableHandler = () => false }) {
-    const idxOfColId = COL_ATTR_IDX_MAP[COL_ATTRS.ID]
-    const idxOfColType = COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]
-    const idxOfColName = COL_ATTR_IDX_MAP[COL_ATTRS.NAME]
-    return tableColMap.reduce((options, c) => {
-        const type = c[idxOfColType]
+    return Object.values(tableColMap).reduce((options, c) => {
+        const type = c.data_type
         options.push({
-            id: c[idxOfColId],
-            text: c[idxOfColName],
+            id: c.id,
+            text: c.name,
             type,
             disabled: typy(disableHandler).safeFunction(type),
         })

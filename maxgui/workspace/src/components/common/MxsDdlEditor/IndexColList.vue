@@ -78,11 +78,11 @@ export default {
         keyId: { type: String, required: true },
         category: { type: String, required: true },
         tableColNameMap: { type: Object, required: true },
-        tableColMap: { type: Array, required: true },
+        tableColMap: { type: Object, required: true },
     },
     data() {
         return {
-            stagingKeys: {},
+            stagingCategoryMap: {},
             selectedItems: [],
             rows: [],
         }
@@ -116,7 +116,8 @@ export default {
             ]
         },
         indexedCols() {
-            return this.$typy(this.stagingKeys[this.category], `${this.keyId}.cols`).safeArray
+            return this.$typy(this.stagingCategoryMap[this.category], `${this.keyId}.cols`)
+                .safeArray
         },
         indexedColMap() {
             return this.indexedCols.reduce((map, key, i) => {
@@ -124,7 +125,7 @@ export default {
                 return map
             }, {})
         },
-        keys: {
+        keyCategoryMap: {
             get() {
                 return this.value
             },
@@ -135,20 +136,20 @@ export default {
     },
     watch: {
         // initialize with fresh data
-        keys: {
+        keyCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(v, this.stagingKeys)) this.init()
+                if (!this.$helpers.lodash.isEqual(v, this.stagingCategoryMap)) this.init()
             },
         },
         keyId(v, oV) {
             if (v !== oV) this.init()
         },
-        // sync changes to keys
-        stagingKeys: {
+        // sync changes to keyCategoryMap
+        stagingCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(this.keys, v)) this.keys = v
+                if (!this.$helpers.lodash.isEqual(this.keyCategoryMap, v)) this.keyCategoryMap = v
             },
         },
         selectedItems: {
@@ -163,7 +164,7 @@ export default {
     },
     methods: {
         init() {
-            this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
+            this.stagingCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
             this.setRows()
             this.setInitialSelectedItems()
         },
@@ -228,7 +229,7 @@ export default {
                 return acc
             }, [])
 
-            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
+            this.stagingCategoryMap = this.$helpers.immutableUpdate(this.stagingCategoryMap, {
                 [this.category]: { [this.keyId]: { cols: { $set: cols } } },
             })
         },

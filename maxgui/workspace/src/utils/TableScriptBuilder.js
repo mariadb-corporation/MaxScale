@@ -15,14 +15,8 @@ import {
     quotingIdentifier as quoting,
     deepDiff,
     arrOfObjsDiff,
-    map2dArr,
 } from '@wsSrc/utils/helpers'
-import {
-    CREATE_TBL_TOKENS as tokens,
-    COL_ATTRS,
-    GENERATED_TYPES,
-    ALL_TABLE_KEY_CATEGORIES,
-} from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 import { addComma } from '@wsSrc/utils/helpers'
 import { t as typy } from 'typy'
@@ -59,30 +53,33 @@ export default class TableScriptBuilder {
         options: { isCreating = false, skipSchemaCreation = false, skipFkCreation = false } = {},
     }) {
         // initialData is an empty object if `isCreating` is true
-        this.colAttrs = Object.values(COL_ATTRS)
         this.initialData = initialData
         this.initialSchemaName = typy(initialData, 'options.schema').safeString
         this.initialTableName = typy(initialData, 'options.name').safeString
-        this.initialColsData = typy(initialData, 'definitions.cols').safeArray
+        this.initialCols = Object.values(typy(initialData, 'defs.col_map').safeObjectOrEmpty)
 
         this.stagingSchemaName = typy(stagingData, 'options.schema').safeString
         this.stagingTableName = typy(stagingData, 'options.name').safeString
         this.stagingDataOptions = stagingData.options
 
-        this.stagingColsData = typy(stagingData, 'definitions.cols').safeArray
+        this.stagingCols = Object.values(typy(stagingData, 'defs.col_map').safeObjectOrEmpty)
 
         this.optionDiffs = deepDiff(
             typy(initialData, 'options').safeObjectOrEmpty,
             this.stagingDataOptions
         )
-        this.hasColDefChanged = !lodash.isEqual(this.initialColsData, this.stagingColsData)
+        this.hasColDefChanged = !lodash.isEqual(this.initialCols, this.stagingCols)
 
         // Keys
-        const initialKeys = typy(initialData, 'definitions.keys').safeObjectOrEmpty
-        const stagingKeys = typy(stagingData, 'definitions.keys').safeObjectOrEmpty
+        const initialKeyCategoryMap = typy(initialData, 'defs.key_category_map').safeObjectOrEmpty
+        const stagingKeyCategoryMap = typy(stagingData, 'defs.key_category_map').safeObjectOrEmpty
 
         this.keyDiffs = ALL_TABLE_KEY_CATEGORIES.reduce((map, category) => {
-            map[category] = this.getKeysDiffs({ category, initialKeys, stagingKeys })
+            map[category] = this.getKeysDiffs({
+                category,
+                initialKeyCategoryMap,
+                stagingKeyCategoryMap,
+            })
             return map
         }, {})
 
@@ -98,24 +95,24 @@ export default class TableScriptBuilder {
 
     /**
      * @param {object} param
-     * @param {object} param.keyMap - key map
+     * @param {object} param.keyCategoryMap - key map
      * @param {string}  param.category - key category
-     * @returns {Array.<object} keys
+     * @returns {Array.<object} keyCategoryMap
      */
-    getKeys({ keys, category }) {
-        return Object.values(keys[category] || {})
+    getKeys({ keyCategoryMap, category }) {
+        return Object.values(keyCategoryMap[category] || {})
     }
 
     /**
      * @param {object} param
-     * @param {object} param.initialKeys - all initial keys
-     * @param {object} param.stagingKeys - all staging keys
+     * @param {object} param.initialKeyCategoryMap - initial keyCategoryMap
+     * @param {object} param.stagingKeyCategoryMap - staging keyCategoryMap
      * @param {string} param.category - key category
      * @returns {object}
      */
-    getKeysDiffs({ category, initialKeys, stagingKeys }) {
-        const initial = this.getKeys({ keys: initialKeys, category })
-        const staging = this.getKeys({ keys: stagingKeys, category })
+    getKeysDiffs({ category, initialKeyCategoryMap, stagingKeyCategoryMap }) {
+        const initial = this.getKeys({ keyCategoryMap: initialKeyCategoryMap, category })
+        const staging = this.getKeys({ keyCategoryMap: stagingKeyCategoryMap, category })
         return arrOfObjsDiff({ base: initial, newArr: staging, idField: 'id' })
     }
 
@@ -159,54 +156,37 @@ export default class TableScriptBuilder {
      * @returns {String} - returns column definition SQL
      */
     buildColDfnSQL({ col, isUpdated }) {
-        const {
-            NAME,
-            TYPE,
-            NN,
-            UN,
-            ZF,
-            AI,
-            GENERATED_TYPE,
-            DEF_EXP,
-            CHARSET,
-            COLLATE,
-            COMMENT,
-        } = COL_ATTRS
         let sql = ''
         const colObj = isUpdated ? typy(col, 'newObj').safeObjectOrEmpty : col
-
         const {
-            [NAME]: name,
-            [TYPE]: type,
-            [NN]: nn,
-            [UN]: un,
-            [ZF]: zf,
-            [AI]: ai,
-            [GENERATED_TYPE]: generatedType,
-            [DEF_EXP]: defOrExp,
-            [CHARSET]: charset,
-            [COLLATE]: collate,
-            [COMMENT]: comment,
+            name,
+            data_type,
+            nn,
+            un,
+            zf,
+            ai,
+            generated,
+            default_exp,
+            charset,
+            collate,
+            comment,
         } = colObj
-
         if (!this.isCreating)
             if (isUpdated) {
-                const oldColName = typy(col, `oriObj.${NAME}`).safeString
+                const oldColName = typy(col, `oriObj.name`).safeString
                 sql += `${tokens.change} ${tokens.column} ${quoting(oldColName)} `
             } else sql += `${tokens.add} ${tokens.column} `
 
         sql += `${quoting(name)}`
-        sql += ` ${type}`
-        if (un && type !== 'SERIAL') sql += ` ${tokens.un}`
+        sql += ` ${data_type}`
+        if (un && data_type !== 'SERIAL') sql += ` ${tokens.un}`
         if (zf) sql += ` ${tokens.zf}`
         if (charset) sql += ` ${tokens.charset} ${charset} ${tokens.collate} ${collate}`
         // when column is generated, NN or NULL can not be defined
-        if (generatedType === GENERATED_TYPES.NONE && type !== 'SERIAL')
-            sql += ` ${nn ? tokens.nn : tokens.null}`
-        if (ai && type !== 'SERIAL') sql += ` ${tokens.ai}`
-        if (generatedType === GENERATED_TYPES.NONE && defOrExp)
-            sql += ` ${tokens.default} ${defOrExp}`
-        else if (defOrExp) sql += ` ${tokens.generated} (${defOrExp}) ${generatedType}`
+        if (!generated && data_type !== 'SERIAL') sql += ` ${nn ? tokens.nn : tokens.null}`
+        if (ai && data_type !== 'SERIAL') sql += ` ${tokens.ai}`
+        if (!generated && default_exp) sql += ` ${tokens.default} ${default_exp}`
+        else if (default_exp) sql += ` ${tokens.generated} (${default_exp}) ${generated}`
         if (comment) sql += ` ${tokens.comment} '${escapeComment(comment)}'`
         return sql
     }
@@ -216,33 +196,11 @@ export default class TableScriptBuilder {
      * @returns {String} - returns DROP COLUMN sql
      */
     buildRemovedColSQL(cols) {
-        return cols.map(row => `DROP COLUMN ${quoting(row[COL_ATTRS.NAME])}`).join(addComma())
+        return cols.map(col => `DROP COLUMN ${quoting(col.name)}`).join(addComma())
     }
 
-    /**
-     * @param {Array} cols - updated columns
-     * @returns {String} - returns CHANGE COLUMN sql
-     */
-    buildUpdatedColSQL(cols) {
-        /**
-         * Get diff of updated columns, updated of PK and UQ are ignored
-         * as they are handled separately.
-         */
-        const dfnColsChanged = cols.reduce((arr, col) => {
-            const dfnColDiff = col.diff.filter(
-                d => d.kind === 'E' && d.path[0] !== COL_ATTRS.PK && d.path[0] !== COL_ATTRS.UQ
-            )
-            if (dfnColDiff.length) arr.push({ ...col, diff: dfnColDiff })
-            return arr
-        }, [])
-        if (dfnColsChanged.length)
-            return dfnColsChanged
-                .map(col => this.buildColDfnSQL({ col, isUpdated: true }))
-                .join(addComma())
-    }
-
-    buildAddedColSQL(cols) {
-        return cols.map(col => this.buildColDfnSQL({ col, isUpdated: false })).join(addComma())
+    buildColsSQL({ cols, isUpdated = false }) {
+        return cols.map(col => this.buildColDfnSQL({ col, isUpdated })).join(addComma())
     }
 
     /**
@@ -388,9 +346,9 @@ export default class TableScriptBuilder {
      * @returns {String} - returns column alter sql
      */
     buildColDefAlterSQL() {
-        const base = map2dArr({ fields: this.colAttrs, arr: this.initialColsData })
-        const newData = map2dArr({ fields: this.colAttrs, arr: this.stagingColsData })
-        const diff = arrOfObjsDiff({ base, newArr: newData, idField: COL_ATTRS.ID })
+        const base = this.initialCols
+        const newData = this.stagingCols
+        const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
 
         const removedCols = diff.get('removed')
         const updatedCols = diff.get('updated')
@@ -398,8 +356,8 @@ export default class TableScriptBuilder {
         let alterSpecs = []
         // Build sql for different diff types
         const removedColSQL = this.buildRemovedColSQL(removedCols)
-        const updatedColSQL = this.buildUpdatedColSQL(updatedCols)
-        const addedColSQL = this.buildAddedColSQL(addedCols)
+        const updatedColSQL = this.buildColsSQL({ cols: updatedCols, isUpdated: true })
+        const addedColSQL = this.buildColsSQL({ cols: addedCols })
 
         if (removedColSQL) alterSpecs.push(removedColSQL)
         if (updatedColSQL) alterSpecs.push(updatedColSQL)
@@ -413,9 +371,9 @@ export default class TableScriptBuilder {
      * @returns {String} - returns column definition
      */
     buildCreateColsSql() {
-        const data = map2dArr({ fields: this.colAttrs, arr: this.stagingColsData })
+        const data = this.stagingCols
         let specs = []
-        const addedColSQL = this.buildAddedColSQL(data)
+        const addedColSQL = this.buildColsSQL({ cols: data })
         specs.push(addedColSQL)
         const pkSQL = this.buildPkSQL()
         const otherKeysSQL = this.buildOtherKeys()

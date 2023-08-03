@@ -78,7 +78,7 @@ export default {
     data() {
         return {
             keyItems: [],
-            stagingKeys: {},
+            stagingCategoryMap: {},
         }
     },
     computed: {
@@ -104,7 +104,7 @@ export default {
                 { text: COMMENT, minWidth: 200, ...header },
             ]
         },
-        keys: {
+        keyCategoryMap: {
             get() {
                 return this.value
             },
@@ -121,7 +121,7 @@ export default {
             },
         },
         hasPk() {
-            return Boolean(this.stagingKeys[this.CREATE_TBL_TOKENS.primaryKey])
+            return Boolean(this.stagingCategoryMap[this.CREATE_TBL_TOKENS.primaryKey])
         },
         categories() {
             return Object.values(this.NON_FK_CATEGORIES).map(item => {
@@ -134,16 +134,16 @@ export default {
         },
     },
     watch: {
-        keys: {
+        keyCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(v, this.stagingKeys)) this.assignData()
+                if (!this.$helpers.lodash.isEqual(v, this.stagingCategoryMap)) this.assignData()
             },
         },
-        stagingKeys: {
+        stagingCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(this.keys, v)) this.keys = v
+                if (!this.$helpers.lodash.isEqual(this.keyCategoryMap, v)) this.keyCategoryMap = v
             },
         },
     },
@@ -153,11 +153,11 @@ export default {
     },
     methods: {
         assignData() {
-            this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
+            this.stagingCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
             const { foreignKey, primaryKey } = this.CREATE_TBL_TOKENS
             this.keyItems = Object.values(this.NON_FK_CATEGORIES).reduce((acc, category) => {
                 if (category !== foreignKey) {
-                    const keys = Object.values(this.stagingKeys[category] || {})
+                    const keys = Object.values(this.stagingCategoryMap[category] || {})
                     acc = [
                         ...acc,
                         ...keys.map(({ id, name = this.categoryTxt(primaryKey), comment = '' }) => [
@@ -192,33 +192,41 @@ export default {
             const keyId = rowData[this.idxOfId]
             const { NAME, CATEGORY, COMMENT } = this.KEY_EDITOR_ATTRS
 
-            let currKeyMap = this.stagingKeys[category] || {}
+            let currKeyMap = this.stagingCategoryMap[category] || {}
             const clonedKey = this.$helpers.lodash.cloneDeep(currKeyMap[keyId])
 
             switch (field) {
                 case NAME:
-                    this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                        [category]: { [keyId]: { name: { $set: value } } },
-                    })
+                    this.stagingCategoryMap = this.$helpers.immutableUpdate(
+                        this.stagingCategoryMap,
+                        {
+                            [category]: { [keyId]: { name: { $set: value } } },
+                        }
+                    )
                     break
                 case COMMENT:
-                    this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
-                        [category]: {
-                            [keyId]: value ? { comment: { $set: value } } : { $unset: ['comment'] },
-                        },
-                    })
+                    this.stagingCategoryMap = this.$helpers.immutableUpdate(
+                        this.stagingCategoryMap,
+                        {
+                            [category]: {
+                                [keyId]: value
+                                    ? { comment: { $set: value } }
+                                    : { $unset: ['comment'] },
+                            },
+                        }
+                    )
                     break
                 case CATEGORY: {
                     currKeyMap = this.$helpers.immutableUpdate(currKeyMap, { $unset: [keyId] })
                     const newCategory = value
-                    let keys = this.$helpers.immutableUpdate(
-                        this.stagingKeys,
+                    let keyCategoryMap = this.$helpers.immutableUpdate(
+                        this.stagingCategoryMap,
                         Object.keys(currKeyMap).length
                             ? { $merge: { [category]: currKeyMap } }
                             : { $unset: [category] }
                     )
-                    const newCategoryKeyMap = keys[newCategory] || {}
-                    keys = this.$helpers.immutableUpdate(keys, {
+                    const newCategoryKeyMap = keyCategoryMap[newCategory] || {}
+                    keyCategoryMap = this.$helpers.immutableUpdate(keyCategoryMap, {
                         $merge: {
                             [newCategory]: {
                                 ...newCategoryKeyMap,
@@ -226,7 +234,7 @@ export default {
                             },
                         },
                     })
-                    this.stagingKeys = keys
+                    this.stagingCategoryMap = keyCategoryMap
                     break
                 }
             }

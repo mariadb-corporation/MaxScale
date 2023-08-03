@@ -278,6 +278,16 @@ export default {
         },
     },
     watch: {
+        rows: {
+            deep: true,
+            handler(v, oV) {
+                /**
+                 * Clear selectedTblRows once rows quantity changes.
+                 * e.g. when deleting a row
+                 */
+                if (v.length <= oV.length) this.selectedTblRows = []
+            },
+        },
         isVertTable(v) {
             // clear selected items
             if (v) this.selectedTblRows = []

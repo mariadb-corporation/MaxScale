@@ -47,7 +47,6 @@
                             v-if="node.id === clickedNodeId"
                             :node="node"
                             :entitySizeConfig="entitySizeConfig"
-                            :getColId="getColId"
                             :linkContainer="linkContainer"
                             :boardZoom="panAndZoomData.k"
                             :graphConfig="graphConfig"
@@ -75,11 +74,11 @@
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="col in node.data.definitions.cols"
-                                    :key="getColId(col)"
+                                    v-for="(col, colId) in node.data.defs.col_map"
+                                    :key="colId"
                                     :style="{
                                         height: `${entitySizeConfig.rowHeight}px`,
-                                        ...getHighlightColStyle({ node, colId: getColId(col) }),
+                                        ...getHighlightColStyle({ node, colId }),
                                     }"
                                     v-on="
                                         isDrawingFk
@@ -93,15 +92,13 @@
                                     <td>
                                         <erd-key-icon
                                             class="fill-height d-flex align-center"
-                                            :data="getKeyIcon({ node, colId: getColId(col) })"
+                                            :data="getKeyIcon({ node, colId })"
                                         />
                                     </td>
                                     <td>
                                         <div class="fill-height d-flex align-center">
                                             <mxs-truncate-str
-                                                :tooltipItem="{
-                                                    txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.NAME]],
-                                                }"
+                                                :tooltipItem="{ txt: col.name }"
                                                 :maxWidth="tdMaxWidth"
                                             />
                                         </div>
@@ -111,19 +108,14 @@
                                         :style="{
                                             color:
                                                 $typy(
-                                                    getHighlightColStyle({
-                                                        node,
-                                                        colId: getColId(col),
-                                                    }),
+                                                    getHighlightColStyle({ node, colId }),
                                                     'color'
                                                 ).safeString || '#6c7c7b',
                                         }"
                                     >
                                         <div class="fill-height d-flex align-center text-lowercase">
                                             <mxs-truncate-str
-                                                :tooltipItem="{
-                                                    txt: col[COL_ATTR_IDX_MAP[COL_ATTRS.TYPE]],
-                                                }"
+                                                :tooltipItem="{ txt: col.data_type }"
                                                 :maxWidth="tdMaxWidth"
                                             />
                                         </div>
@@ -210,7 +202,7 @@ export default {
         activeNodeId: { type: String, default: '' },
         refTargetMap: { type: Object, required: true },
         tablesColNameMap: { type: Object, required: true },
-        colKeyTypeMap: { type: Object, required: true },
+        colKeyCategoryMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -238,8 +230,6 @@ export default {
     computed: {
         ...mapState({
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
             REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
         }),
         panAndZoomData: {
@@ -254,9 +244,9 @@ export default {
             // entity max-width / 2 - offset. Offset includes padding and border
             return 320 / 2 - 27
         },
-        entityKeyMap() {
+        entityKeyCategoryMap() {
             return this.graphNodes.reduce((map, node) => {
-                map[node.id] = node.data.definitions.keys
+                map[node.id] = node.data.defs.key_category_map
                 return map
             }, {})
         },
@@ -372,7 +362,7 @@ export default {
                             fk,
                             nodes,
                             isAttrToAttr: this.isAttrToAttr,
-                            colKeyTypeMap: this.colKeyTypeMap,
+                            colKeyCategoryMap: this.colKeyCategoryMap,
                         }),
                     ]
                 })
@@ -594,15 +584,17 @@ export default {
             } = this.CREATE_TBL_TOKENS
 
             const { color } = this.getHighlightColStyle({ node, colId }) || {}
-            const keyTypes = this.colKeyTypeMap[colId] || []
+            const categories = this.colKeyCategoryMap[colId] || []
 
             let isUQ = false
-            if (keyTypes.includes(uniqueKey)) {
-                const nodeKeys = this.entityKeyMap[node.id]
-                isUQ = erdHelper.isSingleUQ({ keys: nodeKeys, colId })
+            if (categories.includes(uniqueKey)) {
+                isUQ = erdHelper.isSingleUQ({
+                    keyCategoryMap: this.entityKeyCategoryMap[node.id],
+                    colId,
+                })
             }
 
-            if (keyTypes.includes(primaryKey))
+            if (categories.includes(primaryKey))
                 return {
                     icon: 'mdi-key-variant',
                     color: color ? color : 'primary',
@@ -617,15 +609,12 @@ export default {
                     color: color ? color : 'navigation',
                     size: 16,
                 }
-            else if ([key, fullTextKey, spatialKey, foreignKey].some(k => keyTypes.includes(k)))
+            else if ([key, fullTextKey, spatialKey, foreignKey].some(k => categories.includes(k)))
                 return {
                     icon: '$vuetify.icons.mxs_indexKey',
                     color: color ? color : 'navigation',
                     size: 16,
                 }
-        },
-        getColId(col) {
-            return col[this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]]
         },
         getHighlightColStyle({ node, colId }) {
             const cols = this.highlightColStyleMap[node.id] || []
@@ -671,7 +660,10 @@ export default {
             this.isDrawingFk = true
         },
         getFkMap(node) {
-            return this.entityKeyMap[node.id][this.CREATE_TBL_TOKENS.foreignKey] || {}
+            return this.$typy(
+                this.entityKeyCategoryMap,
+                `[${node.id}][${this.CREATE_TBL_TOKENS.foreignKey}]`
+            ).safeObjectOrEmpty
         },
         getFks(node) {
             return Object.values(this.getFkMap(node))
@@ -698,7 +690,7 @@ export default {
         setRefTargetData({ node, col }) {
             this.refTarget = {
                 data: {
-                    ref_cols: [{ id: this.getColId(col) }],
+                    ref_cols: [{ id: col.id }],
                     ref_tbl_id: node.id,
                     on_delete: this.REF_OPTS.NO_ACTION,
                     on_update: this.REF_OPTS.NO_ACTION,

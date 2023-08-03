@@ -20,7 +20,7 @@
         </tbl-toolbar>
         <mxs-virtual-scroll-tbl
             :headers="visHeaders"
-            :rows="cols"
+            :rows="rows"
             :itemHeight="32"
             :maxHeight="tableMaxHeight"
             :boundingWidth="dim.width"
@@ -36,15 +36,18 @@
                 <v-tooltip :key="key" top transition="slide-y-transition" :disabled="isVertTable">
                     <template v-slot:activator="{ on }">
                         <div
-                            class="d-inline-block text-truncate"
+                            class="d-inline-block text-truncate text-uppercase"
                             :style="{ maxWidth: `${maxWidth}px` }"
                             v-on="on"
                         >
-                            {{ isVertTable ? header.text : value }}
+                            {{ isVertTable ? value : header.text }}
                         </div>
                     </template>
-                    <span>{{ header.text }}</span>
+                    <span>{{ value }}</span>
                 </v-tooltip>
+            </template>
+            <template v-slot:[`header-${COL_ATTRS.DEF_EXP}`]>
+                DEFAULT/EXPRESSION
             </template>
             <template
                 v-for="(h, colOptIdx) in visHeaders"
@@ -107,7 +110,7 @@ export default {
         defTblCharset: { type: String, required: true },
         defTblCollation: { type: String, required: true },
         charsetCollationMap: { type: Object, required: true },
-        colKeyTypeMap: { type: Object, required: true },
+        colKeyCategoryMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -120,14 +123,13 @@ export default {
     computed: {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
         tableMaxHeight() {
             return this.dim.height - this.headerHeight
         },
-        definitions: {
+        defs: {
             get() {
                 return this.value
             },
@@ -139,12 +141,12 @@ export default {
             return Object.values(this.COL_ATTRS)
         },
         headers() {
-            const { ID, NAME, TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
+            const { ID, NAME, TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED } = this.COL_ATTRS
             return this.colAttrs.map(field => {
                 let h = {
                     text: field,
                     sortable: false,
-                    capitalize: true,
+                    uppercase: true,
                 }
                 switch (field) {
                     case NAME:
@@ -161,7 +163,7 @@ export default {
                         h.maxWidth = 50
                         h.resizable = false
                         break
-                    case GENERATED_TYPE:
+                    case GENERATED:
                         h.width = 144
                         h.minWidth = 126
                         break
@@ -183,21 +185,80 @@ export default {
             })
         },
         abbreviatedHeaders() {
-            const { PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
+            const { PK, NN, UN, UQ, ZF, AI, GENERATED } = this.COL_ATTRS
+            const { primaryKey, nn, un, uniqueKey, zf, ai } = this.CREATE_TBL_TOKENS
             return {
-                [PK]: 'PK',
-                [NN]: 'NN',
-                [UN]: 'UN',
-                [UQ]: 'UQ',
-                [ZF]: 'ZF',
-                [AI]: 'AI',
-                [GENERATED_TYPE]: 'GENERATED',
-                [CHARSET]: 'CHARSET',
+                [PK]: primaryKey,
+                [NN]: nn,
+                [UN]: un,
+                [UQ]: uniqueKey,
+                [ZF]: zf,
+                [AI]: ai,
+                [GENERATED]: 'GENERATED',
             }
         },
-        // column definitions
         cols() {
-            return this.$typy(this.definitions, 'cols').safeArray
+            return Object.values(this.defs.col_map || {})
+        },
+        transformedCols() {
+            const {
+                ID,
+                NAME,
+                TYPE,
+                PK,
+                NN,
+                UN,
+                UQ,
+                ZF,
+                AI,
+                GENERATED,
+                DEF_EXP,
+                CHARSET,
+                COLLATE,
+                COMMENT,
+            } = this.COL_ATTRS
+            const tokens = this.CREATE_TBL_TOKENS
+
+            return this.cols.map(col => {
+                let type = col.data_type
+                if (col.data_type_size) type += `(${col.data_type_size})`
+                const categories = this.colKeyCategoryMap[col.id] || []
+
+                let uq = false
+                if (categories.includes(tokens.uniqueKey)) {
+                    /**
+                     * UQ input is a checkbox for a column, so it can't handle composite unique
+                     * key. Thus ignoring composite unique key.
+                     */
+                    uq = erdHelper.isSingleUQ({
+                        keyCategoryMap: this.$typy(this.defs, 'key_category_map').safeObjectOrEmpty,
+                        colId: col.id,
+                    })
+                }
+                return {
+                    [ID]: col.id,
+                    [NAME]: col.name,
+                    [TYPE]: type.toUpperCase(),
+                    [PK]: categories.includes(tokens.primaryKey),
+                    [NN]: col.nn,
+                    [UN]: col.un,
+                    [UQ]: uq,
+                    [ZF]: col.zf,
+                    [AI]: col.ai,
+                    [GENERATED]: col.generated ? col.generated : this.GENERATED_TYPES.NONE,
+                    [DEF_EXP]: col.default_exp,
+                    [CHARSET]: checkCharsetSupport(col.data_type)
+                        ? col.charset || this.defTblCharset
+                        : '',
+                    [COLLATE]: checkCharsetSupport(col.data_type)
+                        ? col.collate || this.defTblCollation
+                        : '',
+                    [COMMENT]: this.$typy(col.comment).safeString,
+                }
+            })
+        },
+        rows() {
+            return this.transformedCols.map(col => [...Object.values(col)])
         },
         dataTypes() {
             let items = []
@@ -207,48 +268,18 @@ export default {
             })
             return items
         },
-        idxOfColId() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
+        autoIncrementCol() {
+            return this.cols.find(col => col.ai)
         },
-        idxOfCollation() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.COLLATE]
+        initialKeyCategoryMap() {
+            return this.$typy(this.initialData, 'key_category_map').safeObjectOrEmpty
         },
-        idxOfCharset() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.CHARSET]
-        },
-        idxOfAI() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.AI]
-        },
-        idxOfGenType() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.GENERATED_TYPE]
-        },
-        idxOfUN() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UN]
-        },
-        idxOfNN() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NN]
-        },
-        idxOfUQ() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UQ]
-        },
-        idxOfDefAndExp() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.DEF_EXP]
-        },
-        hasAI() {
-            return this.cols.some(row => row[this.idxOfAI])
-        },
-        initialKeys() {
-            return this.$typy(this.initialData, 'keys').safeObjectOrEmpty
-        },
-        stagingKeys() {
-            return this.$typy(this.definitions, 'keys').safeObjectOrEmpty
-        },
-        initialCols() {
-            return this.$typy(this.initialData, 'cols').safeArray
+        stagingKeyCategoryMap() {
+            return this.$typy(this.defs, 'key_category_map').safeObjectOrEmpty
         },
         initialPk() {
             return this.$typy(
-                Object.values(this.initialKeys[this.CREATE_TBL_TOKENS.primaryKey] || {}),
+                Object.values(this.initialKeyCategoryMap[this.CREATE_TBL_TOKENS.primaryKey] || {}),
                 `[0]`
             ).safeObject
         },
@@ -257,7 +288,7 @@ export default {
         },
         stagingPk() {
             return this.$typy(
-                Object.values(this.stagingKeys[this.CREATE_TBL_TOKENS.primaryKey] || {}),
+                Object.values(this.stagingKeyCategoryMap[this.CREATE_TBL_TOKENS.primaryKey] || {}),
                 `[0]`
             ).safeObject
         },
@@ -276,55 +307,46 @@ export default {
             }
         },
         deleteSelectedRows(selectedItems) {
-            const { xorWith, isEqual } = this.$helpers.lodash
-            let definitions = this.$helpers.immutableUpdate(this.definitions, {
-                cols: {
-                    $set: xorWith(this.definitions.cols, selectedItems, isEqual),
-                },
+            const selectedIds = selectedItems.map(row => row[0])
+            let defs = this.$helpers.immutableUpdate(this.defs, {
+                col_map: { $unset: selectedIds },
             })
             /* All associated columns in keys also need to be deleted.
-             * When a column is deleted, the composite key
-             * (except PK) needs to be altered. i.e. removing the column from cols.
+             * When a column is deleted, the composite key needs to be modified. i.e.
+             * The cols array must remove the selected ids
              * The key is dropped if cols is empty.
              */
-            selectedItems.forEach(col => {
-                const keyTypes = this.colKeyTypeMap[col[this.idxOfColId]] || []
-                keyTypes.forEach(category => {
-                    definitions = this.keySideEffect({
-                        definitions,
+            selectedIds.forEach(id => {
+                const categories = this.colKeyCategoryMap[id] || []
+                categories.forEach(category => {
+                    defs = this.keySideEffect({
+                        defs,
                         category,
-                        col,
+                        colId: id,
                         mode: 'delete',
                     })
                 })
             })
-            this.definitions = definitions
+            this.defs = defs
         },
         addNewCol() {
-            let row = []
-            const { ID, PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE } = this.COL_ATTRS
-            this.headers.forEach(h => {
-                switch (h.text) {
-                    case ID:
-                        row.push(`col_${this.$helpers.uuidv1()}`)
-                        break
-                    case PK:
-                    case NN:
-                    case UN:
-                    case UQ:
-                    case ZF:
-                    case AI:
-                        row.push(false)
-                        break
-                    case GENERATED_TYPE:
-                        row.push(this.GENERATED_TYPES.NONE)
-                        break
-                    default:
-                        row.push('')
-                        break
-                }
+            const col = {
+                name: 'name',
+                data_type: 'CHAR',
+                un: false,
+                zf: false,
+                nn: false,
+                charset: undefined,
+                collate: undefined,
+                generated: undefined,
+                ai: false,
+                default_exp: this.CREATE_TBL_TOKENS.null,
+                comment: undefined,
+                id: `col_${this.$helpers.uuidv1()}`,
+            }
+            this.defs = this.$helpers.immutableUpdate(this.defs, {
+                col_map: { $merge: { [col.id]: col } },
             })
-            this.definitions.cols.push(row)
         },
         rowDataToObj(rowData) {
             const cols = this.$helpers.map2dArr({
@@ -338,274 +360,204 @@ export default {
          * @param {Object} item - cell data
          */
         onChangeInput(item) {
-            const alterColIdx = item.alterColIdx
-            let definitions = this.$helpers.immutableUpdate(this.definitions, {
-                cols: {
-                    [alterColIdx]: {
-                        [item.colOptIdx]: { $set: item.value },
-                    },
-                },
-            })
-            const { TYPE, PK, NN, UQ, AI, GENERATED_TYPE, CHARSET } = this.COL_ATTRS
-
-            const col = Object.values(item.rowObj)
-
+            let defs = this.$helpers.lodash.cloneDeep(this.defs)
+            const { ID, TYPE, PK, NN, UQ, AI, GENERATED, CHARSET } = this.COL_ATTRS
+            const colId = item.rowObj[ID]
+            const param = {
+                defs,
+                colId,
+                value: item.value,
+            }
             switch (item.field) {
                 case TYPE:
-                    definitions = this.onChangeType({ definitions, item })
+                    defs = this.onChangeType(param)
                     break
                 case PK:
-                case UQ:
-                    if (item.field === PK) definitions = this.onTogglePk({ definitions, item })
-                    definitions = this.keySideEffect({
-                        definitions,
-                        category: item.field,
-                        col,
+                case UQ: {
+                    const { uniqueKey, primaryKey } = this.CREATE_TBL_TOKENS
+                    if (item.field === PK) defs = this.onTogglePk(param)
+                    defs = this.keySideEffect({
+                        defs,
+                        category: item.field === PK ? primaryKey : uniqueKey,
+                        colId,
                         mode: item.value ? 'add' : 'drop',
                     })
                     break
+                }
                 case NN:
-                    definitions = this.notNullSideEffect({
-                        definitions,
-                        alterColIdx,
-                        isNN: item.value,
-                    })
+                    defs = this.toggleNotNull(param)
                     break
                 case AI:
-                    definitions = this.onToggleAi({ definitions, item })
+                    defs = this.onToggleAI(param)
                     break
-                case GENERATED_TYPE:
-                    definitions = this.$helpers.immutableUpdate(definitions, {
-                        cols: {
-                            [alterColIdx]: {
-                                [this.idxOfAI]: { $set: false },
-                                [this.idxOfNN]: { $set: false },
-                            },
-                        },
+                case GENERATED:
+                    defs = this.$helpers.immutableUpdate(defs, {
+                        col_map: { [colId]: { ai: { $set: false }, nn: { $set: false } } },
                     })
                     break
                 case CHARSET:
-                    definitions = this.patchCharsetCollation({
-                        definitions,
-                        alterColIdx,
-                        charset: item.value,
-                    })
+                    defs = this.setCharset(param)
                     break
+                default: {
+                    defs = this.$helpers.immutableUpdate(defs, {
+                        col_map: {
+                            [colId]: {
+                                [item.field]: { $set: item.value },
+                            },
+                        },
+                    })
+                }
             }
-            this.definitions = definitions
+            this.defs = defs
         },
-        /**
-         * This patches charset and collation at provided alterColIdx
-         * @param {Object} payload.definitions - current definitions
-         * @param {Number} payload.alterColIdx - row to be updated
-         * @param {String} payload.charset - charset to set.
-         * @returns {Object} - returns new definitions
-         */
-        patchCharsetCollation({ definitions, alterColIdx, charset }) {
-            return this.$helpers.immutableUpdate(definitions, {
-                cols: {
-                    [alterColIdx]: {
-                        [this.idxOfCharset]: { $set: charset },
-                        [this.idxOfCollation]: {
-                            $set: this.$typy(this.charsetCollationMap, `[${charset}].defCollation`)
+        setCharset({ defs, colId, value }) {
+            return this.$helpers.immutableUpdate(defs, {
+                col_map: {
+                    [colId]: {
+                        charset: { $set: value },
+                        // also set a default collation
+                        collate: {
+                            $set: this.$typy(this.charsetCollationMap, `[${value}].defCollation`)
                                 .safeString,
                         },
                     },
                 },
             })
         },
-        /**
-         * This handles auto set charset/collation to use utf8
-         * @param {Object} payload.definitions - current definitions
-         * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new definitions
-         */
-        handleNationalType({ definitions, item }) {
-            if (item.value.includes('NATIONAL'))
-                return this.patchCharsetCollation({
-                    definitions,
-                    alterColIdx: item.alterColIdx,
-                    charset: 'utf8',
-                })
-            return definitions
-        },
-        /**
-         * This handles auto uncheck UN, ZF, AI checkboxes if chosen type doesn't support
-         * @param {Object} payload.definitions - current definitions
-         * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new definitions
-         */
-        handleUncheck_UN_ZF_AI({ definitions, item }) {
-            if (!checkUniqueZeroFillSupport(item.value) || !checkAutoIncrementSupport(item.value)) {
-                const idxOfZF = this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ZF]
-                return this.$helpers.immutableUpdate(definitions, {
-                    cols: {
-                        [item.alterColIdx]: {
-                            [this.idxOfUN]: { $set: false },
-                            [idxOfZF]: { $set: false },
-                            [this.idxOfAI]: { $set: false },
-                        },
-                    },
-                })
-            }
-            return definitions
-        },
-        /**
-         * This handles set default charset/collation
-         * @param {Object} payload.definitions - current definitions
-         * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new definitions
-         */
-        handleSetDefCharset({ definitions, item }) {
-            let charset = null,
-                collation = null
-            if (checkCharsetSupport(item.value)) {
-                charset = this.defTblCharset
-                collation = this.defTblCollation
-            }
-            return this.$helpers.immutableUpdate(definitions, {
-                cols: {
-                    [item.alterColIdx]: {
-                        [this.idxOfCharset]: { $set: charset },
-                        [this.idxOfCollation]: { $set: collation },
+        uncheck_UN_ZF_AI({ defs, colId }) {
+            return this.$helpers.immutableUpdate(defs, {
+                col_map: {
+                    [colId]: {
+                        un: { $set: false },
+                        zf: { $set: false },
+                        ai: { $set: false },
                     },
                 },
             })
         },
-        /**
-         * This handles SERIAL type
-         * @param {Object} payload.definitions - current definitions
-         * @param {Object} payload.item - cell item
-         * @returns {Object} - returns new definitions
-         */
-        handleSerialType({ definitions, item }) {
-            let defs = definitions
-            const alterColIdx = item.alterColIdx
-            if (item.value === 'SERIAL') {
-                defs = this.uncheckOtherAI({ definitions: defs, alterColIdx })
-                defs = this.$helpers.immutableUpdate(defs, {
-                    cols: {
-                        [alterColIdx]: {
-                            [this.idxOfUN]: { $set: true },
-                            [this.idxOfNN]: { $set: true },
-                            [this.idxOfAI]: { $set: true },
-                            [this.idxOfUQ]: { $set: true },
-                        },
+        setDefCharset({ defs, colId }) {
+            return this.$helpers.immutableUpdate(defs, {
+                col_map: {
+                    [colId]: {
+                        charset: { $set: this.defTblCharset },
+                        collate: { $set: this.defTblCollation },
                     },
-                })
-                defs = this.keySideEffect({
-                    definitions: defs,
-                    col: Object.values(item.rowObj),
-                    category: this.CREATE_TBL_TOKENS.uniqueKey,
-                    mode: 'add',
-                })
-                return defs
+                },
+            })
+        },
+        setSerialType(param) {
+            const { colId, value } = param
+            let defs = param.defs
+            defs = this.uncheckAI({ defs, colId, value })
+            defs = this.$helpers.immutableUpdate(defs, {
+                col_map: {
+                    [colId]: {
+                        un: { $set: true },
+                        nn: { $set: true },
+                        ai: { $set: true },
+                    },
+                },
+            })
+            defs = this.keySideEffect({
+                defs,
+                colId,
+                category: this.CREATE_TBL_TOKENS.uniqueKey,
+                mode: 'add',
+            })
+            return defs
+        },
+        onChangeType(param) {
+            const { colId, value } = param
+            let defs = this.$helpers.immutableUpdate(param.defs, {
+                col_map: {
+                    [colId]: {
+                        data_type: { $set: value },
+                        charset: { $set: undefined },
+                        collate: { $set: undefined },
+                    },
+                },
+            })
+            if (value === 'SERIAL') defs = this.setSerialType({ defs, colId, value })
+            if (value.includes('NATIONAL')) defs = this.setCharset({ defs, colId, value: 'utf8' })
+            if (checkCharsetSupport(value)) {
+                defs = this.setDefCharset({ defs, colId })
             }
-            return defs
-        },
-        onChangeType({ definitions, item }) {
-            let defs = definitions
-            defs = this.handleSetDefCharset({ definitions, item })
-            defs = this.handleUncheck_UN_ZF_AI({ definitions, item })
-            defs = this.handleNationalType({ definitions, item })
-            defs = this.handleSerialType({ definitions, item })
+            if (!checkUniqueZeroFillSupport(value) || !checkAutoIncrementSupport(value))
+                defs = this.uncheck_UN_ZF_AI({ defs, colId, value })
             return defs
         },
         /**
-         * This unchecks the other auto_increment as there
-         * can be one table column has this.
-         * @param {Object} payload.definitions - current definitions
-         * @param {Number} payload.alterColIdx - alterColIdx to be excluded
-         * @returns {Object} - returns new definitions
+         * This uncheck auto_increment
+         * @param {object} defs - current defs
+         * @returns {Object} - returns new defs
          */
-        uncheckOtherAI({ definitions, alterColIdx }) {
-            let idx
-            for (const [i, col] of this.cols.entries())
-                if (col[this.idxOfAI] && i !== alterColIdx) {
-                    idx = i
-                    break
-                }
-            if (idx >= 0)
-                definitions = this.$helpers.immutableUpdate(definitions, {
-                    cols: {
-                        [idx]: { [this.idxOfAI]: { $set: false } },
-                    },
-                })
-            return definitions
-        },
-        /**
-         * @param {number} - index of the column
-         * @returns {string} - initial value of DEF_EXP attr
-         */
-        getInitialDefaultExp(colIdx) {
-            return this.$typy(this.initialData, `cols['${colIdx}']['${this.idxOfDefAndExp}']`)
-                .safeString
+        uncheckAI(defs) {
+            return (defs = this.$helpers.immutableUpdate(defs, {
+                col_map: { [this.autoIncrementCol.id]: { ai: { $set: false } } },
+            }))
         },
         /**
          * This updates NN cell and `default` cell.
-         * @param {Object} payload.definitions - current definitions
-         * @param {Number} payload.alterColIdx - alterColIdx to be updated
-         * @param {boolean} payload.isNN - is NOT NULL
-         * @param {string} payload.valueOfDefault - value of default cell
-         * @returns {Object} - returns new definitions
+         * @param {object} payload.defs - current defs
+         * @param {string} payload.colIdx - column index
+         * @param {boolean} payload.value
+         * @returns {object} - returns new defs
          */
-        notNullSideEffect({ definitions, alterColIdx, isNN }) {
-            return this.$helpers.immutableUpdate(definitions, {
-                cols: {
-                    [alterColIdx]: {
-                        [this.idxOfNN]: { $set: isNN },
-                        [this.idxOfDefAndExp]: {
-                            $set: isNN ? '' : this.getInitialDefaultExp(alterColIdx),
-                        },
+        toggleNotNull({ defs, colId, value }) {
+            const { default_exp = this.CREATE_TBL_TOKENS.null } = this.$typy(
+                this.initialData,
+                `col_map[${colId}]`
+            ).safeObjectOrEmpty
+            return this.$helpers.immutableUpdate(defs, {
+                col_map: {
+                    [colId]: {
+                        nn: { $set: value },
+                        default_exp: { $set: value ? undefined : default_exp },
                     },
                 },
             })
         },
-        onToggleAi({ definitions, item }) {
-            let defs = definitions
-            if (this.hasAI)
-                defs = this.uncheckOtherAI({ definitions: defs, alterColIdx: item.alterColIdx })
-            // update generated cells
+        onToggleAI(param) {
+            const { colId, value } = param
+            let defs = param.defs
+            if (this.autoIncrementCol) defs = this.uncheckAI(defs)
+
             defs = this.$helpers.immutableUpdate(defs, {
-                cols: {
-                    [item.alterColIdx]: {
-                        [this.idxOfGenType]: { $set: this.GENERATED_TYPES.NONE },
-                    },
+                col_map: {
+                    [colId]: { ai: { $set: value }, generated: { $set: undefined } },
                 },
             })
 
-            return this.notNullSideEffect({
-                definitions: defs,
-                alterColIdx: item.alterColIdx,
-                isNN: true,
-            })
+            return this.toggleNotNull({ defs, colId, value: true })
         },
-        onTogglePk({ definitions, item }) {
-            let defs = definitions
-            const alterColIdx = item.alterColIdx
-            // update UQ key value
-            defs = this.$helpers.immutableUpdate(defs, {
-                cols: { [alterColIdx]: { [this.idxOfUQ]: { $set: false } } },
+        onTogglePk(param) {
+            const { colId, value } = param
+            let defs = param.defs
+            defs = this.keySideEffect({
+                defs,
+                colId,
+                category: this.CREATE_TBL_TOKENS.primaryKey,
+                mode: value ? 'add' : 'drop',
             })
             defs = this.keySideEffect({
-                definitions: defs,
-                col: Object.values(item.rowObj),
+                defs,
+                colId,
                 category: this.CREATE_TBL_TOKENS.uniqueKey,
                 mode: 'drop',
             })
-            defs = this.notNullSideEffect({
-                definitions: defs,
-                alterColIdx,
-                isNN: true,
+            defs = this.toggleNotNull({
+                defs,
+                colId,
+                value: true,
             })
             return defs
         },
         /**
-         * @param {object} param.definitions - parsed definitions
+         * @param {object} param.defs - parsed defs
          * @param {string} param.colId - col id
-         * @returns {object} new definitions object
+         * @returns {object} new defs object
          */
-        updatePk({ definitions, colId, mode }) {
+        updatePk({ defs, colId, mode }) {
             const { primaryKey } = this.CREATE_TBL_TOKENS
             const { immutableUpdate } = this.$helpers
             // Get PK object.
@@ -625,31 +577,33 @@ export default {
                     break
             }
 
-            return immutableUpdate(definitions, {
-                keys: pkObj.cols.length
+            return immutableUpdate(defs, {
+                key_category_map: pkObj.cols.length
                     ? { $merge: { [primaryKey]: { [pkObj.id]: pkObj } } }
                     : { $unset: [primaryKey] },
             })
         },
-        genKey({ definitions, category, colId }) {
-            const existingKey = Object.values(this.initialKeys[category] || {}).find(key => {
-                return key.cols.every(col => col.id === colId)
-            })
+        genKey({ defs, category, colId }) {
+            const existingKey = Object.values(this.initialKeyCategoryMap[category] || {}).find(
+                key => {
+                    return key.cols.every(col => col.id === colId)
+                }
+            )
             if (existingKey) return existingKey
-            return erdHelper.genKey({ definitions, category, colId })
+            return erdHelper.genKey({ defs, category, colId })
         },
         /**
-         * @param {object} param.definitions - parsed definitions
+         * @param {object} param.defs - parsed defs
          * @param {string} param.category - uniqueKey, fullTextKey, spatialKey, key or foreignKey
          * @param {string} param.colId - col id
-         * @returns {object} new definitions object
+         * @returns {object} new defs object
          */
-        updateKey({ definitions, category, colId, mode }) {
+        updateKey({ defs, category, colId, mode }) {
             const {
                 immutableUpdate,
                 lodash: { cloneDeep },
             } = this.$helpers
-            let keyMap = cloneDeep(definitions.keys[category]) || {}
+            let keyMap = cloneDeep(defs.key_category_map[category]) || {}
             switch (mode) {
                 case 'drop':
                     keyMap = immutableUpdate(keyMap, {
@@ -670,29 +624,26 @@ export default {
                     })
                     break
                 case 'add': {
-                    const newKey = this.genKey({ definitions, category, colId })
-                    keyMap = immutableUpdate(keyMap, {
-                        $merge: { [newKey.id]: newKey },
-                    })
+                    const newKey = this.genKey({ defs, category, colId })
+                    keyMap = immutableUpdate(keyMap, { $merge: { [newKey.id]: newKey } })
                     break
                 }
             }
-            return immutableUpdate(definitions, {
-                keys: Object.keys(keyMap).length
+            return immutableUpdate(defs, {
+                key_category_map: Object.keys(keyMap).length
                     ? { $merge: { [category]: keyMap } }
                     : { $unset: [category] },
             })
         },
         /**
-         * @param {object} param.definitions - column definitions
+         * @param {object} param.defs - column defs
          * @param {string} param.category - key category
-         * @param {array} param.col - column data before updating
+         * @param {string} param.colId - column id
          * @param {string} param.mode - add|drop|delete. delete mode should be used
          * only after dropping a column as it's reserved for handling composite keys.
          * The column in the composite key objects will be deleted.
          */
-        keySideEffect({ definitions, category, col, mode }) {
-            const colId = col[this.idxOfColId]
+        keySideEffect({ defs, category, colId, mode }) {
             const {
                 primaryKey,
                 uniqueKey,
@@ -703,20 +654,20 @@ export default {
             } = this.CREATE_TBL_TOKENS
             switch (category) {
                 case primaryKey:
-                    return this.updatePk({ definitions, colId, mode })
+                    return this.updatePk({ defs, colId, mode })
                 case uniqueKey:
                 case fullTextKey:
                 case spatialKey:
                 case key:
                 case foreignKey:
                     return this.updateKey({
-                        definitions,
+                        defs,
                         category,
                         colId,
                         mode,
                     })
                 default:
-                    return definitions
+                    return defs
             }
         },
     },

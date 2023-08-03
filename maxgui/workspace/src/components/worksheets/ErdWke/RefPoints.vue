@@ -45,7 +45,6 @@ export default {
     props: {
         node: { type: Object, required: true },
         entitySizeConfig: { type: Object, required: true },
-        getColId: { type: Function, required: true },
         linkContainer: { type: Object, required: true },
         boardZoom: { type: Number, required: true },
         graphConfig: { type: Object, required: true },
@@ -73,7 +72,7 @@ export default {
             return 5
         },
         cols() {
-            return this.node.data.definitions.cols
+            return Object.values(this.node.data.defs.col_map)
         },
         points() {
             return [...this.getPoints(TARGET_POS.LEFT), ...this.getPoints(TARGET_POS.RIGHT)]
@@ -88,7 +87,7 @@ export default {
          */
         getPoints(pointDirection) {
             const { headerHeight, rowHeight: k } = this.entitySizeConfig
-            return this.node.data.definitions.cols.map((c, i) => ({
+            return this.cols.map((c, i) => ({
                 pos: {
                     x:
                         (pointDirection === TARGET_POS.RIGHT ? this.node.size.width : 0) -
@@ -135,7 +134,7 @@ export default {
             const startPoint = { x0, y0 }
 
             this.draggingStates = {
-                srcAttrId: this.getColId(col),
+                srcAttrId: col.id,
                 startClientPoint: { x: e.clientX, y: e.clientY },
                 startPoint,
                 pointDirection,

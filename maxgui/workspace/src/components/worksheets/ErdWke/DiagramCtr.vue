@@ -24,7 +24,7 @@
             :activeNodeId="activeEntityId"
             :refTargetMap="refTargetMap"
             :tablesColNameMap="tablesColNameMap"
-            :colKeyTypeMap="colKeyTypeMap"
+            :colKeyCategoryMap="colKeyCategoryMap"
             class="entity-diagram"
             @on-rendered.once="onRendered"
             @on-node-drag-end="onNodeDragEnd"
@@ -142,8 +142,6 @@ export default {
             LINK_OPT_TYPES: state => state.mxsWorkspace.config.LINK_OPT_TYPES,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
-            COL_ATTR_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTR_IDX_MAP,
-            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
         }),
         activeRecord() {
             return ErdTask.getters('activeRecord')
@@ -195,10 +193,11 @@ export default {
                 const {
                     relationshipData: { src_attr_id, target_attr_id },
                 } = link
-                const colKeyTypes = this.colKeyTypeMap[src_attr_id]
-                const refColKeyTypes = this.colKeyTypeMap[target_attr_id]
-                if (!colKeyTypes.includes(primaryKey)) opts.push(this.genOptionalityOpt({ link }))
-                if (!refColKeyTypes.includes(primaryKey))
+                const colKeyCategories = this.colKeyCategoryMap[src_attr_id]
+                const refColKeyCategories = this.colKeyCategoryMap[target_attr_id]
+                if (!colKeyCategories.includes(primaryKey))
+                    opts.push(this.genOptionalityOpt({ link }))
+                if (!refColKeyCategories.includes(primaryKey))
                     opts.push(this.genOptionalityOpt({ link, isForRefTbl: true }))
             }
 
@@ -233,17 +232,8 @@ export default {
         tablesColNameMap() {
             return ErdTask.getters('tablesColNameMap')
         },
-        colKeyTypeMap() {
-            return ErdTask.getters('colKeyTypeMap')
-        },
-        idxOfUQ() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.UQ]
-        },
-        idxOfNN() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.NN]
-        },
-        idxOfId() {
-            return this.COL_ATTR_IDX_MAP[this.COL_ATTRS.ID]
+        colKeyCategoryMap() {
+            return ErdTask.getters('colKeyCategoryMap')
         },
     },
     watch: {
@@ -387,7 +377,7 @@ export default {
                         let nodes = this.nodes
                         nodes = nodes.filter(n => n.id !== node.id)
                         nodes = nodes.map(n => {
-                            const fkMap = n.data.definitions.keys[foreignKey]
+                            const fkMap = n.data.defs.key_category_map[foreignKey]
                             if (!fkMap) return n
 
                             const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
@@ -396,8 +386,8 @@ export default {
                             }, {})
                             return this.$helpers.immutableUpdate(n, {
                                 data: {
-                                    definitions: {
-                                        keys: Object.keys(updatedFkMap).length
+                                    defs: {
+                                        key_category_map: Object.keys(updatedFkMap).length
                                             ? { $merge: { [foreignKey]: updatedFkMap } }
                                             : { $unset: [foreignKey] },
                                     },
@@ -443,16 +433,14 @@ export default {
                     let nodeIdx = this.nodes.findIndex(n => n.id === link.source.id)
                     let fkMap = this.$typy(
                         this.nodes[nodeIdx],
-                        `data.definitions.keys[${foreignKey}]`
+                        `data.defs.key_category_map[${foreignKey}]`
                     ).safeObjectOrEmpty
-                    fkMap = this.$helpers.immutableUpdate(fkMap, {
-                        $unset: [link.id],
-                    })
+                    fkMap = this.$helpers.immutableUpdate(fkMap, { $unset: [link.id] })
                     const nodes = this.$helpers.immutableUpdate(this.nodes, {
                         [nodeIdx]: {
                             data: {
-                                definitions: {
-                                    keys: Object.keys(fkMap).length
+                                defs: {
+                                    key_category_map: Object.keys(fkMap).length
                                         ? { $merge: { [foreignKey]: fkMap } }
                                         : { $unset: [foreignKey] },
                                 },
@@ -544,12 +532,11 @@ export default {
             // check if column is already unique
             const isUnique = erdHelper.areUniqueCols({ node, colIds: [colId] })
             if (value && isUnique) return node
-            const colIdx = node.data.definitions.cols.findIndex(c => c[this.idxOfId] === colId)
-            let keyMap = node.data.definitions.keys[category] || {}
+            let keyMap = node.data.defs.key_category_map[category] || {}
             // add UQ key
             if (value) {
                 const newKey = erdHelper.genKey({
-                    definitions: node.data.definitions,
+                    defs: node.data.defs,
                     category,
                     colId,
                 })
@@ -572,9 +559,8 @@ export default {
 
             return this.$helpers.immutableUpdate(node, {
                 data: {
-                    definitions: {
-                        cols: { [colIdx]: { [this.idxOfUQ]: { $set: value } } },
-                        keys: Object.keys(keyMap).length
+                    defs: {
+                        key_category_map: Object.keys(keyMap).length
                             ? { $merge: { [category]: keyMap } }
                             : { $unset: [category] },
                     },
@@ -589,13 +575,8 @@ export default {
          * @return {object} updated node
          */
         toggleNotNull({ node, colId, value }) {
-            const srcColIdx = node.data.definitions.cols.findIndex(c => c[this.idxOfId] === colId)
             return this.$helpers.immutableUpdate(node, {
-                data: {
-                    definitions: {
-                        cols: { [srcColIdx]: { [this.idxOfNN]: { $set: value } } },
-                    },
-                },
+                data: { defs: { col_map: { [colId]: { nn: { $set: value } } } } },
             })
         },
         assignCoord({ nodeMap, nodes }) {
@@ -744,13 +725,15 @@ export default {
          */
         addPlainIndex({ colId, node }) {
             const { key } = this.CREATE_TBL_TOKENS
-            const refTblDef = node.data.definitions
-            const plainKeyMap = this.$typy(refTblDef, `keys[${key}]`).safeObjectOrEmpty
-            const newKey = erdHelper.genKey({ definitions: refTblDef, category: key, colId })
+            const refTblDef = node.data.defs
+            const plainKeyMap = this.$typy(refTblDef, `key_category_map[${key}]`).safeObjectOrEmpty
+            const newKey = erdHelper.genKey({ defs: refTblDef, category: key, colId })
             return this.$helpers.immutableUpdate(node, {
                 data: {
-                    definitions: {
-                        keys: { $merge: { [key]: { ...plainKeyMap, [newKey.id]: newKey } } },
+                    defs: {
+                        key_category_map: {
+                            $merge: { [key]: { ...plainKeyMap, [newKey.id]: newKey } },
+                        },
                     },
                 },
             })
@@ -773,7 +756,7 @@ export default {
                 })
             ) {
                 // Auto adds a PLAIN index for referenced col if there is none.
-                const nonIndexedColId = this.colKeyTypeMap[refColId] ? null : refColId
+                const nonIndexedColId = this.colKeyCategoryMap[refColId] ? null : refColId
                 if (nonIndexedColId) {
                     nodes = immutableUpdate(nodes, {
                         [refNode.index]: {
@@ -789,8 +772,8 @@ export default {
                 nodes = immutableUpdate(nodes, {
                     [node.index]: {
                         data: {
-                            definitions: {
-                                keys: {
+                            defs: {
+                                key_category_map: {
                                     $merge: {
                                         [foreignKey]: { ...currentFkMap, [newKey.id]: newKey },
                                     },

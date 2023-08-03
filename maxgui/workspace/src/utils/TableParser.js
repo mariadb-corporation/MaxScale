@@ -42,7 +42,7 @@ export default class TableParser {
         return opts
     }
     /**
-     * Parse create and column definitions
+     * Parse create and column defs
      * @param {String} def - Column definition string
      * @returns {object|string} - object if it is column def, otherwise initial def string will be returned
      */
@@ -59,24 +59,22 @@ export default class TableParser {
                 charset,
                 collate,
                 generated_exp,
-                generated_type,
+                generated,
                 ai,
                 default_exp,
                 comment,
             } = match.groups
             let parsedDef = {
                 name: unquoteIdentifier(name),
-                data_type,
-                data_type_size,
-                is_un: Boolean(un),
-                is_zf: Boolean(zf),
-                is_nn: Boolean(nn),
+                data_type: `${data_type}${data_type_size ? `(${data_type_size})` : ''}`,
+                un: Boolean(un),
+                zf: Boolean(zf),
+                nn: Boolean(nn),
                 charset,
                 collate,
-                generated_exp,
-                generated_type,
-                is_ai: Boolean(ai),
-                default_exp,
+                generated,
+                ai: Boolean(ai),
+                default_exp: default_exp || generated_exp,
                 comment: unquoteIdentifier(comment),
             }
             if (this.autoGenId) parsedDef.id = `col_${uuidv1()}`
@@ -145,26 +143,28 @@ export default class TableParser {
         return { value: parsed, category }
     }
     /**
-     * @param {String} defsStr - table definitions including create, column and constraint definitions
+     * @param {String} defsStr - table defs including create, column and constraint defs
      * @returns {Object}
      */
     parseTableDefs(defsStr) {
         const defLines = defsStr.split('\n')
-        let cols = [],
-            keys = {}
+        let col_map = {},
+            key_category_map = {}
         defLines.forEach(def => {
             const parsedDef = this.parseColDef(def.trim().replace(/,\s*$/, ''))
             if (parsedDef) {
                 if (t(parsedDef).isString) {
                     const { category, value } = this.parseKey(parsedDef) || {}
                     if (category) {
-                        if (!keys[category]) keys[category] = {}
-                        keys[category][value.id] = value
+                        if (!key_category_map[category]) key_category_map[category] = {}
+                        key_category_map[category][value.id] = value
                     }
-                } else cols.push(parsedDef)
+                } else if (parsedDef.id) {
+                    col_map[parsedDef.id] = parsedDef
+                }
             }
         })
-        return { cols, keys }
+        return { col_map, key_category_map }
     }
     /** Parse the result of SHOW CREATE TABLE
      * @param {object} param
@@ -177,15 +177,15 @@ export default class TableParser {
         this.autoGenId = autoGenId
         this.schema = schema
         const match = ddl.match(createTableReg)
-        let definitions, options
+        let defs, options
         if (match) {
             const { table_name, table_options, table_definitions } = match.groups
-            definitions = this.parseTableDefs(table_definitions)
+            defs = this.parseTableDefs(table_definitions)
             options = this.parseTableOpts(table_options)
             options.schema = schema
             options.name = unquoteIdentifier(table_name)
         }
-        let parsed = { definitions, options }
+        let parsed = { defs, options }
         if (this.autoGenId) parsed.id = `tbl_${uuidv1()}`
         return parsed
     }

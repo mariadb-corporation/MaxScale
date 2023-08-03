@@ -21,7 +21,7 @@
         :return-object="false"
     />
     <v-select
-        v-else-if="data.field === COL_ATTRS.GENERATED_TYPE"
+        v-else-if="data.field === COL_ATTRS.GENERATED"
         v-model="inputValue"
         class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
         :class="data.field"
@@ -133,7 +133,7 @@ export default {
         },
         isGenerated() {
             return (
-                this.$typy(this.data, `rowObj.${this.COL_ATTRS.GENERATED_TYPE}`).safeString !==
+                this.$typy(this.data, `rowObj.${this.COL_ATTRS.GENERATED}`).safeString !==
                 this.GENERATED_TYPES.NONE
             )
         },
@@ -144,7 +144,7 @@ export default {
             return this.$typy(this.data, `rowObj.${this.COL_ATTRS.AI}`).safeBoolean
         },
         isDisabled() {
-            const { PK, NN, UN, UQ, ZF, AI, GENERATED_TYPE, CHARSET, COLLATE } = this.COL_ATTRS
+            const { PK, NN, UN, UQ, ZF, AI, GENERATED, CHARSET, COLLATE } = this.COL_ATTRS
             switch (this.$typy(this.data, 'field').safeString) {
                 case CHARSET:
                 case COLLATE:
@@ -164,7 +164,7 @@ export default {
                     return this.isAI || this.isPK || this.isGenerated
                 case UQ:
                     return this.isPK // implies UNIQUE already so UQ must be disabled
-                case GENERATED_TYPE:
+                case GENERATED:
                     //disable if column is PK
                     return this.isPK //https://mariadb.com/kb/en/generated-columns/#index-support
                 default:

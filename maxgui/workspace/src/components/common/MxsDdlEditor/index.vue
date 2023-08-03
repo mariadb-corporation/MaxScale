@@ -32,18 +32,18 @@
                 <keep-alive>
                     <col-definitions
                         v-if="activeSpecTab === DDL_EDITOR_SPECS.COLUMNS"
-                        v-model="definitions"
+                        v-model="defs"
                         :charsetCollationMap="charset_collation_map"
                         :initialData="initialDefinitions"
                         :dim="tabDim"
                         :defTblCharset="$typy(tblOpts, 'charset').safeString"
                         :defTblCollation="$typy(tblOpts, 'collation').safeString"
-                        :colKeyTypeMap="colKeyTypeMap"
+                        :colKeyCategoryMap="colKeyCategoryMap"
                     />
                     <template v-else-if="activeSpecTab === DDL_EDITOR_SPECS.FK">
                         <fk-definitions
                             v-if="$typy(tblOpts, 'engine').safeString === FK_SUPPORTED_ENGINE"
-                            v-model="fkMap"
+                            v-model="keyCategoryMap"
                             :lookupTables="lookupTables"
                             :newLookupTables.sync="newLookupTables"
                             :allLookupTables="allLookupTables"
@@ -61,7 +61,7 @@
                     </template>
                     <index-definitions
                         v-else-if="activeSpecTab === DDL_EDITOR_SPECS.INDEXES"
-                        v-model="keyMap"
+                        v-model="keyCategoryMap"
                         :tableColNameMap="tablesColNameMap[stagingData.id]"
                         :dim="tabDim"
                         :tableColMap="allTableColMap[stagingData.id]"
@@ -129,7 +129,6 @@ export default {
     computed: {
         ...mapState({
             DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             FK_SUPPORTED_ENGINE: state => state.mxsWorkspace.config.FK_SUPPORTED_ENGINE,
             charset_collation_map: state => state.editorsMem.charset_collation_map,
             engines: state => state.editorsMem.engines,
@@ -162,43 +161,26 @@ export default {
                 })
             },
         },
-        definitions: {
+        defs: {
             get() {
-                return this.$typy(this.stagingData, 'definitions').safeObjectOrEmpty
+                return this.$typy(this.stagingData, 'defs').safeObjectOrEmpty
             },
             set(v) {
                 this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
-                    definitions: { $set: v },
+                    defs: { $set: v },
                 })
             },
         },
         initialDefinitions() {
-            return this.$typy(this.initialData, 'definitions').safeObjectOrEmpty
+            return this.$typy(this.initialData, 'defs').safeObjectOrEmpty
         },
-        fkMap: {
+        keyCategoryMap: {
             get() {
-                return this.$typy(this.definitions, `keys[${this.CREATE_TBL_TOKENS.foreignKey}]`)
-                    .safeObjectOrEmpty
+                return this.$typy(this.defs, `key_category_map`).safeObjectOrEmpty
             },
             set(v) {
                 this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
-                    definitions: {
-                        keys: {
-                            $merge: {
-                                [this.CREATE_TBL_TOKENS.foreignKey]: v,
-                            },
-                        },
-                    },
-                })
-            },
-        },
-        keyMap: {
-            get() {
-                return this.$typy(this.definitions, `keys`).safeObjectOrEmpty
-            },
-            set(v) {
-                this.stagingData = this.$helpers.immutableUpdate(this.stagingData, {
-                    definitions: { keys: { $set: v } },
+                    defs: { key_category_map: { $set: v } },
                 })
             },
         },
@@ -227,15 +209,15 @@ export default {
         tablesColNameMap() {
             return erdHelper.createTablesColNameMap(this.allLookupTables)
         },
-        colKeyTypeMap() {
-            return erdHelper.genColKeyTypeMap(this.definitions.keys)
+        colKeyCategoryMap() {
+            return erdHelper.genColKeyTypeMap(this.defs.key_category_map)
         },
         /**
-         * @returns {Object.<string, Array.<Array>>}  e.g. { "tbl_123": [][] }
+         * @returns {Object.<string, object.<object>>}  e.g. { "tbl_123": {} }
          */
         allTableColMap() {
             return this.allLookupTables.reduce((res, tbl) => {
-                res[tbl.id] = this.$typy(tbl, 'definitions.cols').safeArray
+                res[tbl.id] = this.$typy(tbl, 'defs.col_map').safeObjectOrEmpty
                 return res
             }, {})
         },

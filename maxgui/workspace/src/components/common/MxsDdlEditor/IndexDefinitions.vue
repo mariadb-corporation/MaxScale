@@ -11,14 +11,14 @@
         <div class="d-flex flex-row">
             <index-list
                 ref="indexesList"
-                v-model="stagingKeys"
+                v-model="stagingCategoryMap"
                 :dim="{ height: dim.height - headerHeight, width: keyTblWidth }"
                 :selectedItems.sync="selectedItems"
                 class="mr-4"
             />
             <index-col-list
                 v-if="selectedKeyId"
-                v-model="stagingKeys"
+                v-model="stagingCategoryMap"
                 :dim="{ height: dim.height - headerHeight, width: keyColsTblWidth }"
                 :keyId="selectedKeyId"
                 :category="selectedKeyCategory"
@@ -54,13 +54,13 @@ export default {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
         tableColNameMap: { type: Object, required: true },
-        tableColMap: { type: Array, required: true },
+        tableColMap: { type: Object, required: true },
     },
     data() {
         return {
             headerHeight: 0,
             selectedItems: [],
-            stagingKeys: {},
+            stagingCategoryMap: {},
         }
     },
     computed: {
@@ -81,7 +81,7 @@ export default {
         keyColsTblWidth() {
             return this.dim.width - this.keyTblWidth - 16
         },
-        keys: {
+        keyCategoryMap: {
             get() {
                 return this.value
             },
@@ -102,16 +102,16 @@ export default {
         },
     },
     watch: {
-        keys: {
+        keyCategoryMap: {
             deep: true,
             handler(v) {
                 if (!this.$helpers.lodash.isEqual(v, this.stagingCategoryMap)) this.init()
             },
         },
-        stagingKeys: {
+        stagingCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(this.keys, v)) this.keys = v
+                if (!this.$helpers.lodash.isEqual(this.keyCategoryMap, v)) this.keyCategoryMap = v
             },
         },
     },
@@ -119,24 +119,24 @@ export default {
         this.init()
     },
     methods: {
+        init() {
+            this.stagingCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
+            this.selectFirstItem()
+        },
         selectFirstItem() {
             this.selectedItems = []
             this.$nextTick(() => this.$refs.indexesList.handleSelectItem(0))
-        },
-        init() {
-            this.stagingKeys = this.$helpers.lodash.cloneDeep(this.keys)
-            this.selectFirstItem()
         },
         deleteSelectedKeys() {
             const item = this.selectedItem
             const id = item[this.idxOfId]
             const category = item[this.idxOfCategory]
-            let keyMap = this.stagingKeys[category] || {}
+            let keyMap = this.stagingCategoryMap[category] || {}
             keyMap = this.$helpers.immutableUpdate(keyMap, {
                 $unset: [id],
             })
-            this.stagingKeys = this.$helpers.immutableUpdate(
-                this.stagingKeys,
+            this.stagingCategoryMap = this.$helpers.immutableUpdate(
+                this.stagingCategoryMap,
                 Object.keys(keyMap).length
                     ? { [category]: { $set: keyMap } }
                     : { $unset: [category] }
@@ -145,13 +145,13 @@ export default {
         },
         addNewKey() {
             const plainKey = this.CREATE_TBL_TOKENS.key
-            const currPlainKeyMap = this.stagingKeys[plainKey] || {}
+            const currPlainKeyMap = this.stagingCategoryMap[plainKey] || {}
             const newKey = {
                 id: `key_${this.$helpers.uuidv1()}`,
                 cols: [],
                 name: `index_${Object.keys(currPlainKeyMap).length}`,
             }
-            this.stagingKeys = this.$helpers.immutableUpdate(this.stagingKeys, {
+            this.stagingCategoryMap = this.$helpers.immutableUpdate(this.stagingCategoryMap, {
                 $merge: {
                     [plainKey]: { ...currPlainKeyMap, [newKey.id]: newKey },
                 },

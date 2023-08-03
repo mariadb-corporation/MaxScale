@@ -12,7 +12,6 @@
  */
 import { generateShape, getShapePoints } from '@share/components/common/MxsSvgGraphs/utils'
 import { LINK_SHAPES, TARGET_POS } from '@share/components/common/MxsSvgGraphs/shapeConfig'
-import { COL_ATTR_IDX_MAP, COL_ATTRS } from '@wsSrc/store/config'
 
 export default class EntityLinkShape {
     constructor(graphConfig) {
@@ -63,9 +62,7 @@ export default class EntityLinkShape {
         } = this.config
         const { isAttrToAttr } = this.linkConfig
 
-        const colIdx = node.data.definitions.cols.findIndex(
-            c => c[COL_ATTR_IDX_MAP[COL_ATTRS.ID]] === attrId
-        )
+        const colIdx = Object.values(node.data.defs.col_map).findIndex(c => c.id === attrId)
         const center = isAttrToAttr
             ? node.y +
               nodeHeight / 2 -

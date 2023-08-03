@@ -163,7 +163,7 @@ const GENERATED = createGroup({
         }),
         createGroup({
             token: `${tokens.virtual}|${tokens.persistent}|${tokens.stored}`,
-            name: 'generated_type',
+            name: 'generated',
         }),
     ].join(WHITESPACE_REQ),
     optional: true,
