@@ -184,6 +184,15 @@ void Writer::run()
 
                 switch (rpl_event.event_type())
                 {
+                case FORMAT_DESCRIPTION_EVENT:
+                    if (!rpl_event.format_description().checksum)
+                    {
+                        MXB_THROW(BinlogWriteError,
+                                  "Server at '" << host << "' is configured with binlog_checksum=NONE, "
+                                                << "binlogrouter requires binlog_checksum=CRC32.");
+                    }
+                    break;
+
                 case GTID_EVENT:
                     {
                         maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
