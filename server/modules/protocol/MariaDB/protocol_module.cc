@@ -190,8 +190,13 @@ MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* serve
 
 uint64_t MySQLProtocolModule::capabilities() const
 {
-    return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA
-           | mxs::ProtocolModule::CAP_AUTH_MODULES;
+    auto rval = mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTH_MODULES;
+    // If passthrough auth is on, user account info is not required.
+    if (!m_user_search_settings.passthrough_auth)
+    {
+        rval |= mxs::ProtocolModule::CAP_AUTHDATA;
+    }
+    return rval;
 }
 
 bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* params)
@@ -351,15 +356,30 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
 
     if (!error)
     {
-        // Check if any of the authenticators support anonymous users.
+        // Check if any of the authenticators support anonymous users or if passthrough is enabled.
         for (const auto& auth_module : authenticators)
         {
-            auto mariadb_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
-            if (mariadb_auth->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
+            auto prot_auth_module = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
+            auto caps = prot_auth_module->capabilities();
+
+            if (caps & mariadb::AuthenticatorModule::CAP_ANON_USER)
             {
                 m_user_search_settings.allow_anon_user = true;
-                break;
             }
+            if (caps & mariadb::AuthenticatorModule::CAP_PASSTHROUGH)
+            {
+                m_user_search_settings.passthrough_auth = true;
+            }
+        }
+
+        // Passthrough authentication does not support multiple authenticators since we wouldn't know
+        // which one to pick.
+        if (m_user_search_settings.passthrough_auth && authenticators.size() > 1)
+        {
+            MXB_ERROR("Passthrough authentication mode is enabled for listener, but the listener has "
+                      "multiple authenticators configured. Passthrough authentication only supports one "
+                      "authenticator per listener.");
+            error = true;
         }
     }
 

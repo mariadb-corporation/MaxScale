@@ -120,7 +120,8 @@ public:
 
     enum Capabilities
     {
-        CAP_ANON_USER = (1 << 0),   /**< Does the module allow anonymous users? */
+        CAP_ANON_USER   = (1 << 0), /**< Does the module allow anonymous users? */
+        CAP_PASSTHROUGH = (1 << 1), /**< Is passthrough authentication enabled? */
     };
 
     AuthenticatorModule() = default;

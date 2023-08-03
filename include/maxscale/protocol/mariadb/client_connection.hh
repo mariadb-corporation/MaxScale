@@ -102,6 +102,14 @@ public:
      */
     static bool module_init();
 
+    /**
+     * Used with passthrough authentication. Signals to client connection that backend authentication
+     * result is available and should be processed.
+     *
+     * @param auth_reply Reply from backend.
+     */
+    void deliver_backend_auth_result(GWBUF&& auth_reply);
+
 private:
     /** Return type of process_special_commands() */
     enum class SpecialCmdRes
@@ -174,6 +182,7 @@ private:
     bool read_proxy_hdr_ssl_safe(GWBUF& buffer);
 
     void update_user_account_entry(mariadb::AuthenticationData& auth_data);
+    void set_passthrough_account_entry(mariadb::AuthenticationData& auth_data);
     void assign_backend_authenticator(mariadb::AuthenticationData& auth_data);
 
     mariadb::AuthenticatorModule* find_auth_module(const std::string& plugin_name);
@@ -245,6 +254,7 @@ private:
         CONTINUE_EXCHANGE,  /**< Continue exchange */
         CHECK_TOKEN,        /**< Check token against user account entry */
         START_SESSION,      /**< Start routing session */
+        WAIT_FOR_BACKEND,   /**< Wait for backend authentication result */
         CHANGE_USER_OK,     /**< User-change processed */
         FAIL,               /**< Authentication failed */
         COMPLETE,           /**< Authentication is complete */
@@ -325,6 +335,7 @@ private:
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
 
+    std::unique_ptr<GWBUF>                    m_be_auth_reply;  /**< Auth reply from backend */
     std::vector<std::unique_ptr<LocalClient>> m_local_clients;
 
     int                      m_num_responses {0};   // How many responses we are waiting for

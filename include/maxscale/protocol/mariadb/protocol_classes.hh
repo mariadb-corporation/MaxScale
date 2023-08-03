@@ -44,6 +44,7 @@ struct UserSearchSettings
         bool check_password {true};
         bool match_host_pattern {true};
         bool allow_anon_user {false};
+        bool passthrough_auth {false};
 
         DBNameCmpMode db_name_cmp_mode {DBNameCmpMode::CASE_SENSITIVE};
     };
@@ -119,6 +120,9 @@ public:
     ClientCapabilities client_caps; /**< Client capabilities from handshake response packet */
 
     bool client_conn_encrypted {false};     /**< Is connection to client using SSL? */
+
+    /**< Backend authentication passthrough callback. */
+    std::function<void(GWBUF && auth_result)> passthrough_be_auth_cb;
 
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;

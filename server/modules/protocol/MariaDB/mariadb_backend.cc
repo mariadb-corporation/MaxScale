@@ -2662,18 +2662,35 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
     // Have a complete response from the server.
     uint8_t cmd = MYSQL_GET_COMMAND(buffer.data());
 
+    auto* mysql_ses = mysql_session();
+    bool need_pt_be_auth_reply = (bool)(mysql_ses->passthrough_be_auth_cb);
+    auto deliver_pt_reply = [mysql_ses](GWBUF&& auth_reply) {
+        // Bypass routing logic, as routers are not expecting this reply.
+        mysql_ses->passthrough_be_auth_cb(std::move(auth_reply));
+        mysql_ses->passthrough_be_auth_cb = nullptr;
+    };
+
     // Three options: OK, ERROR or AuthSwitch/other.
     auto rval = StateMachineRes::ERROR;
     if (cmd == MYSQL_REPLY_OK)
     {
         MXB_INFO("Authentication to '%s' succeeded.", m_server.name());
         rval = StateMachineRes::DONE;
+        if (need_pt_be_auth_reply)
+        {
+            deliver_pt_reply(std::move(buffer));
+        }
     }
     else if (cmd == MYSQL_REPLY_ERR)
     {
         // Server responded with an error, authentication failed.
+        auto temp = buffer.deep_clone();
         handle_error_response(m_dcb, &buffer);
         rval = StateMachineRes::ERROR;
+        if (need_pt_be_auth_reply)
+        {
+            deliver_pt_reply(std::move(temp));
+        }
     }
     else
     {
@@ -2684,7 +2701,22 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
             m_dcb->writeq_append(move(res.output));
         }
 
-        rval = res.success ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
+        if (res.success)
+        {
+            rval = StateMachineRes::IN_PROGRESS;
+        }
+        else
+        {
+            rval = StateMachineRes::ERROR;
+            if (need_pt_be_auth_reply)
+            {
+                // Backend auth failure without an error packet. Need to send something to client since it's
+                // waiting for a result. Typically, this should only happen due to misconfiguration. The log
+                // will have more information.
+                deliver_pt_reply(mysql_create_custom_error(
+                    0, 0, ER_ACCESS_DENIED_ERROR, "Access denied."));
+            }
+        }
     }
 
     return rval;

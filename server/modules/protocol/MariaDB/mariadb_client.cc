@@ -666,7 +666,15 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
         {
         case AuthState::FIND_ENTRY:
             {
-                update_user_account_entry(auth_data);
+                if (m_session_data->user_search_settings.listener.passthrough_auth)
+                {
+                    set_passthrough_account_entry(auth_data);
+                }
+                else
+                {
+                    update_user_account_entry(auth_data);
+                }
+
                 if (user_entry_type == UserEntryType::USER_ACCOUNT_OK)
                 {
                     m_auth_state = AuthState::START_EXCHANGE;
@@ -744,22 +752,43 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             break;
 
         case AuthState::START_SESSION:
-            // Authentication success, initialize session. Backend authenticator must be set before
-            // connecting to backends.
-            m_session_data->current_db = auth_data.default_db;
-            m_session_data->role = auth_data.user_entry.entry.default_role;
-            assign_backend_authenticator(auth_data);
-            if (m_session->start())
             {
-                mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
-                m_auth_state = AuthState::COMPLETE;
-            }
-            else
-            {
-                // Send internal error, as in this case the client has done nothing wrong.
-                send_mysql_err_packet(1815, "HY000", "Internal error: Session creation failed");
-                MXB_ERROR("Failed to create session for %s.", m_session_data->user_and_host().c_str());
-                m_auth_state = AuthState::FAIL;
+                // Authentication success, initialize session. Backend authenticator must be set before
+                // connecting to backends.
+                bool session_started = false;
+                if (m_session_data->user_search_settings.listener.passthrough_auth)
+                {
+                    assign_backend_authenticator(auth_data);
+                    if (m_session->start())
+                    {
+                        m_auth_state = AuthState::WAIT_FOR_BACKEND;
+                        m_session_data->passthrough_be_auth_cb = [this](GWBUF&& auth_reply) {
+                            deliver_backend_auth_result(std::move(auth_reply));
+                        };
+                        session_started = true;
+                        state_machine_continue = false;
+                    }
+                }
+                else
+                {
+                    m_session_data->current_db = auth_data.default_db;
+                    m_session_data->role = auth_data.user_entry.entry.default_role;
+                    assign_backend_authenticator(auth_data);
+                    if (m_session->start())
+                    {
+                        mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
+                        m_auth_state = AuthState::COMPLETE;
+                        session_started = true;
+                    }
+                }
+
+                if (!session_started)
+                {
+                    // Send internal error, as in this case the client has done nothing wrong.
+                    send_mysql_err_packet(1815, "HY000", "Internal error: Session creation failed");
+                    MXB_ERROR("Failed to create session for %s.", m_session_data->user_and_host().c_str());
+                    m_auth_state = AuthState::FAIL;
+                }
             }
             break;
 
@@ -771,6 +800,39 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                 state_machine_continue = false;
                 break;
             }
+
+        case AuthState::WAIT_FOR_BACKEND:
+            if (m_be_auth_reply)
+            {
+                auto reply = std::move(m_be_auth_reply);
+                mxb_assert(!reply->empty());
+                auto cmd = MYSQL_GET_COMMAND(reply->data());
+                if (cmd == MYSQL_REPLY_OK)
+                {
+                    m_session_data->current_db = auth_data.default_db;
+                    // Don't set current role as we don't know it.
+                    m_auth_state = AuthState::COMPLETE;
+                }
+                else
+                {
+                    // Send the original error from backend to client. Fix sequence.
+                    mxb_assert(reply->is_unique());
+                    *(reply->data() + MYSQL_SEQ_OFFSET) = m_next_sequence;
+                    write(std::move(*reply));
+                    mxs::Listener::mark_auth_as_failed(m_dcb->remote());
+                    m_session->service->stats().add_failed_auth();
+                    m_auth_state = AuthState::FAIL;
+                }
+            }
+            else
+            {
+                // Should not get client data (or read events) before authentication to backend is complete.
+                MXB_ERROR("Client %s sent data when waiting for passthrough authentication. Closing session.",
+                          m_session_data->user_and_host().c_str());
+                send_misc_error("Unexpected client event");
+                m_auth_state = AuthState::FAIL;
+            }
+            break;
 
         case AuthState::COMPLETE:
             m_sql_mode = m_session->listener_data()->m_default_sql_mode;
@@ -831,6 +893,22 @@ void MariaDBClientConnection::update_user_account_entry(mariadb::AuthenticationD
                  search_res.entry.plugin.c_str());
     }
     auth_data.user_entry = move(search_res);
+}
+
+void MariaDBClientConnection::set_passthrough_account_entry(mariadb::AuthenticationData& auth_data)
+{
+    auto& auth_modules = m_session->listener_data()->m_authenticators;
+    mxb_assert(auth_modules.size() == 1);
+    auto* selected_module = static_cast<mariadb::AuthenticatorModule*>(auth_modules[0].get());
+    auth_data.client_auth_module = selected_module;
+
+    // The authenticator class should not change, but this may reset some fields.
+    m_authenticator = selected_module->create_client_authenticator();
+
+    // Imagine that the user account was found.
+    auth_data.user_entry.type = UserEntryType::USER_ACCOUNT_OK;
+    // Leave the other fields of 'user_entry' unset, as they are only accessed when doing normal
+    // authentication.
 }
 
 /**
@@ -2521,17 +2599,14 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
     else
     {
         AuthRes auth_val;
-        if (m_session_data->user_search_settings.listener.check_password)
+        auto& sett = m_session_data->user_search_settings.listener;
+        if (sett.check_password && !sett.passthrough_auth)
         {
             auth_val = m_authenticator->authenticate(m_session_data, auth_data);
         }
         else
         {
             auth_val.status = AuthRes::Status::SUCCESS;
-            // Need to copy the authentication tokens directly. The tokens should work as is for PAM and
-            // GSSAPI.
-            auth_data.backend_token = auth_data.client_token;
-            auth_data.backend_token_2fa = auth_data.client_token_2fa;
         }
 
         if (auth_val.status == AuthRes::Status::SUCCESS)
@@ -3198,6 +3273,21 @@ void MariaDBClientConnection::assign_backend_authenticator(mariadb::Authenticati
     {
         // No mapping, use client authenticator.
         auth_data.be_auth_module = auth_data.client_auth_module;
+        auto& sett = m_session_data->user_search_settings.listener;
+        // If passthrough auth or skip auth is on, authenticate() was not ran.
+        if (sett.passthrough_auth)
+        {
+            // Authenticator should have calculated backend token during exchange().
+        }
+        else if (!sett.check_password)
+        {
+            //  Backend token is empty, generate it from the client token.
+            auto ptr = (const char*)auth_data.client_token.data();
+            auto len = auth_data.client_token.size();
+            string temp(ptr, len);
+            auth_data.backend_token = auth_data.be_auth_module->generate_token(temp);
+            auth_data.backend_token_2fa = auth_data.client_token_2fa;
+        }
     }
 }
 
@@ -3407,4 +3497,12 @@ bool MariaDBClientConnection::read_proxy_hdr_ssl_safe(GWBUF& buffer)
     }
     while (header_res.type == INCOMPLETE);
     return rval;
+}
+
+void MariaDBClientConnection::deliver_backend_auth_result(GWBUF&& auth_reply)
+{
+    mxb_assert(m_auth_state == AuthState::WAIT_FOR_BACKEND);
+    m_be_auth_reply = std::make_unique<GWBUF>(std::move(auth_reply));
+    m_be_auth_reply->ensure_unique();
+    m_dcb->trigger_read_event();
 }
