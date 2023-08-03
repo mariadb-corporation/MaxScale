@@ -15,6 +15,15 @@
                 :selectedItem.sync="selectedItem"
                 class="mr-4"
             />
+            <index-cols-list
+                v-if="selectedKeyId"
+                v-model="stagingKeys"
+                :dim="{ height: dim.height - headerHeight, width: keyColsTblWidth }"
+                :keyId="selectedKeyId"
+                :category="selectedKeyCategory"
+                :tableColNameMap="tableColNameMap"
+                :tableColMap="tableColMap"
+            />
         </div>
     </div>
 </template>
@@ -35,10 +44,11 @@
 import { mapState } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import IndexesList from '@wsSrc/components/common/MxsDdlEditor/IndexesList.vue'
+import IndexColsList from '@wsSrc/components/common/MxsDdlEditor/IndexColsList.vue'
 
 export default {
     name: 'index-definitions',
-    components: { TblToolbar, IndexesList },
+    components: { TblToolbar, IndexesList, IndexColsList },
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
@@ -77,6 +87,14 @@ export default {
             set(v) {
                 this.$emit('input', v)
             },
+        },
+        selectedKeyId() {
+            const idx = this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.ID]
+            return this.selectedItem[idx]
+        },
+        selectedKeyCategory() {
+            const idx = this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.CATEGORY]
+            return this.selectedItem[idx]
         },
     },
     watch: {

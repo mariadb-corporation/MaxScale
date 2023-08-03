@@ -345,3 +345,19 @@ export const KEY_EDITOR_ATTRS = Object.freeze({
 })
 
 export const KEY_EDITOR_ATTR_IDX_MAP = genIdxMap(KEY_EDITOR_ATTRS)
+
+export const KEY_COL_EDITOR_ATTRS = Object.freeze({
+    ID: 'id',
+    COL_ORDER: '#',
+    NAME: 'name',
+    TYPE: 'type',
+    ORDER_BY: 'order',
+    LENGTH: 'length',
+})
+
+export const KEY_COL_EDITOR_ATTRS_IDX_MAP = genIdxMap(KEY_COL_EDITOR_ATTRS)
+
+export const COL_ORDER_BY = Object.freeze({
+    ASC: 'ASC',
+    DESC: 'DESC',
+})
