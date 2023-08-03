@@ -96,6 +96,8 @@ test_env_list=(
     "maxscale_product"
     "force_maxscale_version"
     "force_backend_version"
+    "xpand_product"
+    "xpand_version"
 )
 
 for s in ${test_env_list[@]} ; do
