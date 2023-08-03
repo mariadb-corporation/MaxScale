@@ -45,6 +45,24 @@ std::string next_file_name(const std::string& master, const std::string& prev)
 
     return MAKE_STR(base_name << '.' << setfill('0') << setw(6) << num);
 }
+
+bool fde_events_match(const maxsql::RplEvent& a, const maxsql::RplEvent& b)
+{
+    bool match = false;
+
+    if (a.buffer_size() == b.buffer_size() && memcmp(a.pHeader(), b.pHeader(), mxq::RPL_HEADER_LEN) == 0)
+    {
+        auto a_fde = a.format_description();
+        auto b_fde = b.format_description();
+
+        if (a_fde.checksum == b_fde.checksum && a_fde.server_version == b_fde.server_version)
+        {
+            match = true;
+        }
+    }
+
+    return match;
+}
 }
 
 namespace pinloki
@@ -152,7 +170,18 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     auto last_file_name = last_string(file_names);
 
-    std::ifstream log_file(last_file_name);
+    if (open_binlog(last_file_name, &fmt_event))
+    {
+        m_ignore_preamble = true;
+    }
+
+    return m_ignore_preamble;
+}
+
+bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEvent* ev)
+{
+    std::ifstream log_file(file_name);
+
     if (!log_file)
     {
         return false;
@@ -161,18 +190,19 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
     // Read the first event which is always a format event
     long file_pos = pinloki::PINLOKI_MAGIC.size();
     maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
+    bool rv = false;
 
-    if (event == fmt_event)
+    if (event.event_type() == FORMAT_DESCRIPTION_EVENT && (!ev || fde_events_match(event, *ev)))
     {
-        m_ignore_preamble = true;
-        m_current_pos.name = last_file_name;
+        rv = true;
+        m_current_pos.name = file_name;
         m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out
                                 | std::ios_base::binary);
         m_current_pos.file.seekp(0, std::ios_base::end);
         m_current_pos.write_pos = m_current_pos.file.tellp();
     }
 
-    return m_ignore_preamble;
+    return rv;
 }
 
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate)

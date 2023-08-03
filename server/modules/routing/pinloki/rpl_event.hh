@@ -21,6 +21,12 @@
 
 namespace maxsql
 {
+struct FormatDescription
+{
+    std::array<char, 50> server_version;
+    bool                 checksum;
+};
+
 struct Rotate
 {
     bool        is_fake;
@@ -127,10 +133,11 @@ public:
     const char*  pBody() const;
     unsigned int checksum() const;
 
-    Rotate        rotate() const;
-    GtidEvent     gtid_event() const;
-    GtidListEvent gtid_list() const;
-    bool          is_commit() const;
+    Rotate            rotate() const;
+    GtidEvent         gtid_event() const;
+    GtidListEvent     gtid_list() const;
+    FormatDescription format_description() const;
+    bool              is_commit() const;
 
     /** For the writer */
     void            set_next_pos(uint32_t next_pos);

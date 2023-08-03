@@ -184,6 +184,17 @@ Rotate RplEvent::rotate() const
     return rot;
 }
 
+FormatDescription RplEvent::format_description() const
+{
+    FormatDescription fde;
+    // The checksum algorithm is the second to last field and the last field is a 4 byte checksum
+    fde.checksum = pBuffer()[buffer_size() - 4 - 1];
+
+    // string<50> The MariaDB server version (example: 10.2.1-debug-log), padded with 0x00 bytes on the right.
+    memcpy(fde.server_version.data(), pBuffer() + RPL_HEADER_LEN + 2, 50);
+    return fde;
+}
+
 bool RplEvent::is_commit() const
 {
     return strcasecmp(query_event_sql().c_str(), "COMMIT") == 0;
