@@ -26,12 +26,15 @@
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using mariadb::UserEntry;
+using std::string;
+using TokenType = mariadb::AuthenticationData::TokenType;
 
 namespace
 {
+const string clearpw_plugin = "mysql_clear_password";
+const string native_plugin = DEFAULT_MYSQL_AUTH_PLUGIN;
 // Support the empty plugin as well, as that means default.
-const std::unordered_set<std::string> plugins = {"mysql_native_password", "caching_sha2_password",
-                                                 "mysql_clear_password",  ""};
+const std::unordered_set<std::string> plugins = {native_plugin, "caching_sha2_password", clearpw_plugin, ""};
 }
 
 /**
@@ -108,31 +111,38 @@ mariadb::AuthByteVec MariaDBAuthenticatorModule::generate_token(const std::strin
     return rval;
 }
 
+namespace
+{
 // Helper function for generating an AuthSwitchRequest packet.
-static GWBUF gen_auth_switch_request_packet(const MYSQL_session* client_data)
+GWBUF gen_auth_switch_request_packet(TokenType token_type, const MYSQL_session* client_data)
 {
     /**
      * The AuthSwitchRequest packet:
      * 4 bytes     - Header
      * 0xfe        - Command byte
      * string[NUL] - Auth plugin name
-     * string[NUL] - Scramble
+     * string[NUL] - Scramble (if native plugin)
      */
-    const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
+    bool native = token_type == TokenType::PW_HASH;
+    const auto& plugin = native ? native_plugin : clearpw_plugin;
 
     /* When sending an AuthSwitchRequest for "mysql_native_password", the scramble data needs an extra
      * byte in the end. */
-    unsigned int payloadlen = 1 + sizeof(plugin) + MYSQL_SCRAMBLE_LEN + 1;
-    unsigned int buflen = MYSQL_HEADER_LEN + payloadlen;
+    int plen = 1 + plugin.length() + 1 + (native ? (MYSQL_SCRAMBLE_LEN + 1) : 0);
+    int buflen = MYSQL_HEADER_LEN + plen;
+
     GWBUF buffer(buflen);
-    auto bufdata = buffer.data();
-    bufdata = mariadb::write_header(bufdata, payloadlen, 0);// protocol will set sequence
-    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;             // AuthSwitchRequest command
-    bufdata = mariadb::copy_chars(bufdata, plugin, sizeof(plugin));
-    bufdata = mariadb::copy_bytes(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
-    *bufdata++ = '\0';
+    auto bufdata = mariadb::write_header(buffer.data(), plen, 0);       // protocol will set sequence
+    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
+    bufdata = mariadb::copy_chars(bufdata, plugin.c_str(), plugin.length() + 1);
+    if (native)
+    {
+        bufdata = mariadb::copy_bytes(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
+        *bufdata++ = '\0';
+    }
     mxb_assert(bufdata - buffer.data() == buflen);
     return buffer;
+}
 }
 
 MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch, bool passthrough_mode)
@@ -147,28 +157,50 @@ MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, Authen
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
 
+    auto complete_exchange = [this, &auth_data, &rval]() {
+        auth_data.client_token_type = m_passthrough_mode ? TokenType::CLEARPW : TokenType::PW_HASH;
+        if (m_passthrough_mode)
+        {
+            // Best to calculate sha1(pw) even before we know what backend will ask for, so that
+            // protocol code can send the hash in the handshake response.
+            // TODO: add protocol-level support for detecting/sending authenticator-aware handshake resp.
+            const auto& pw = auth_data.client_token;
+            string temp;    // TODO: change to string_view
+            if (!pw.empty())
+            {
+                auto len = strnlen((const char*)pw.data(), pw.size());
+                temp.assign(pw.data(), pw.data() + len);
+            }
+            auth_data.backend_token = auth_data.client_auth_module->generate_token(temp);
+        }
+        rval.status = ExchRes::Status::READY;
+        m_state = State::CHECK_TOKEN;
+    };
+
     switch (m_state)
     {
     case State::INIT:
-        // First, check that session is using correct plugin. The handshake response has already been
-        // parsed in protocol code. Some old clients may send an empty plugin name. If so, assume
-        // that they are using "mysql_native_password". If this is not the case, authentication will fail.
-        if (auth_data.plugin == DEFAULT_MYSQL_AUTH_PLUGIN || auth_data.plugin.empty())
         {
-            // Correct plugin, token should have been read by protocol code.
-            rval.status = ExchRes::Status::READY;
-            m_state = State::CHECK_TOKEN;
-        }
-        else
-        {
-            // Client is attempting to use wrong authenticator, send switch request packet.
-            MXB_INFO("Client %s is using an unsupported authenticator plugin '%s'. Trying to "
-                     "switch to '%s'.",
-                     session->user_and_host().c_str(),
-                     auth_data.plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
-            rval.packet = gen_auth_switch_request_packet(session);
-            rval.status = ExchRes::Status::INCOMPLETE;
-            m_state = State::AUTHSWITCH_SENT;
+            // First, check if client is already using correct plugin. The handshake response was parsed in
+            // protocol code. Some old clients may send an empty plugin name, interpret it as
+            // "mysql_native_password".
+            // Passthrough-mode requires cleartext password from client since we may not have the double
+            // hash available.
+            bool correct_plugin = m_passthrough_mode ? (auth_data.plugin == clearpw_plugin) :
+                (auth_data.plugin == native_plugin || auth_data.plugin.empty());
+            if (correct_plugin)
+            {
+                // Correct plugin, token should have been read by protocol code.
+                complete_exchange();
+            }
+            else
+            {
+                // Client is attempting to use wrong authenticator, send switch request packet.
+                auto req_token = m_passthrough_mode ? TokenType::CLEARPW : TokenType::PW_HASH;
+                rval.packet = gen_auth_switch_request_packet(req_token, session);
+                rval.status = ExchRes::Status::INCOMPLETE;
+                m_state = State::AUTHSWITCH_SENT;
+            }
         }
         break;
 
@@ -176,25 +208,8 @@ MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, Authen
         {
             // Client is replying to an AuthSwitch request. The packet should contain
             // the authentication token or be empty if trying to log in without pw.
-            auto buflen = buf.length();
-            auto has_token = buflen == (MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN);
-            if (has_token || buflen == MYSQL_HEADER_LEN)
-            {
-                auto& auth_token = auth_data.client_token;
-                if (has_token)
-                {
-                    auth_token.resize(MYSQL_SCRAMBLE_LEN);
-                    buf.copy_data(MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
-                }
-                else
-                {
-                    auth_token.clear();     // authenticating without password
-                }
-                // Assume that correct authenticator is now used. If this is not the case,
-                // authentication will fail.
-                rval.status = ExchRes::Status::READY;
-                m_state = State::CHECK_TOKEN;
-            }
+            auth_data.client_token.assign(buf.data() + MYSQL_HEADER_LEN, buf.end());
+            complete_exchange();
         }
         break;
 
@@ -208,7 +223,7 @@ MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, Authen
 
 AuthRes MariaDBClientAuthenticator::authenticate(MYSQL_session* session, AuthenticationData& auth_data)
 {
-    mxb_assert(m_state == State::CHECK_TOKEN);
+    mxb_assert(m_state == State::CHECK_TOKEN && !m_passthrough_mode);
     const auto& stored_pw_hash2 = auth_data.user_entry.entry.password;
     const auto& auth_token = auth_data.client_token;        // Binary-form token sent by client.
 
@@ -245,6 +260,7 @@ AuthRes MariaDBClientAuthenticator::authenticate(MYSQL_session* session, Authent
         return rval;
     }
 
+    mxb_assert(auth_data.client_token_type == TokenType::PW_HASH);
     uint8_t stored_pw_hash2_bin[SHA_DIGEST_LENGTH] = {};
     size_t stored_hash_len = sizeof(stored_pw_hash2_bin);
 

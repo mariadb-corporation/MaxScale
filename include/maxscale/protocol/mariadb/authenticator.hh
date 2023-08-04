@@ -99,6 +99,9 @@ struct AuthenticationData
     ByteVec backend_token;      /**< First backend token */
     ByteVec backend_token_2fa;  /**< Second backend token */
 
+    enum class TokenType {CLEARPW, PW_HASH};
+    TokenType client_token_type {TokenType::PW_HASH};   /**< Keeps track of client token type */
+
     mariadb::UserEntryResult user_entry;    /**< User account information */
 
     /** Client authenticator module. */
