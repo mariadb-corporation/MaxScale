@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <algorithm>
 #include <set>
+#include <maxbase/format.hh>
 #include <maxbase/host.hh>
 #include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>
@@ -346,12 +347,32 @@ bool XpandMonitor::post_configure()
     }
     else
     {
-        // TODO: Update with region WHERE clause once the layout of systems.regions and systems.zones
-        // TODO: is known.
-        m_refresh_query =
-            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
-            "FROM system.nodeinfo AS ni "
-            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
+        if (!m_config.region_name().empty())
+        {
+            m_refresh_query = mxb::string_printf(
+                "SELECT nir.nodeid, nir.iface_ip, nir.mysql_port, nir.healthmon_port, sn.nodeid "
+                "FROM (SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, r.name "
+                "      FROM system.nodeinfo AS ni "
+                "      LEFT JOIN system.zones AS z ON ni.zone = z.zoneid "
+                "      LEFT JOIN system.regions AS r ON z.region = r.region) AS nir "
+                "LEFT JOIN system.softfailed_nodes AS sn ON nir.nodeid = sn.nodeid "
+                "WHERE nir.name = '%s'",
+                m_config.region_name().c_str());
+        }
+        else
+        {
+            mxb_assert(!m_config.region_oid().empty());
+
+            m_refresh_query = mxb::string_printf(
+                "SELECT nir.nodeid, nir.iface_ip, nir.mysql_port, nir.healthmon_port, sn.nodeid "
+                "FROM (SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, z.region "
+                "      FROM system.nodeinfo AS ni LEFT JOIN system.zones AS z ON ni.zone = z.zoneid) AS nir "
+                "LEFT JOIN system.softfailed_nodes AS sn ON nir.nodeid = sn.nodeid "
+                "WHERE nir.region = '%s'",
+                m_config.region_oid().c_str());
+        }
+
+        MXB_INFO("%s: Query used for refreshing nodes: %s", name(), m_refresh_query.c_str());
     }
 
     return true;
