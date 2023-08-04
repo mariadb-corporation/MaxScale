@@ -59,16 +59,16 @@ export default {
             })
             dispatch('updateActiveHistoryIdx', newHistory.length - 1)
         },
-        updateNodesHistory({ getters, dispatch }, nodes) {
+        updateNodesHistory({ getters, dispatch }, nodeMap) {
             const currentHistory = getters.nodesHistory
-            let newHistory = [nodes]
+            let newHistory = [nodeMap]
             /**
              * Push new data if the current index is the last item, otherwise,
              * override the history by concatenating the last item with the latest one
              */
             if (getters.activeHistoryIdx === currentHistory.length - 1)
-                newHistory = [...getters.nodesHistory, nodes]
-            else if (currentHistory.at(-1)) newHistory = [currentHistory.at(-1), nodes]
+                newHistory = [...getters.nodesHistory, nodeMap]
+            else if (currentHistory.at(-1)) newHistory = [currentHistory.at(-1), nodeMap]
             if (newHistory.length > 10) newHistory = newHistory.slice(1)
 
             dispatch('setNodesHistory', newHistory)
@@ -83,8 +83,10 @@ export default {
     getters: {
         activeRecordId: () => Worksheet.getters('activeId'),
         activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
-        nodes: (_, getters) => t(getters.activeRecord, 'nodes').safeArray,
+        nodeMap: (_, getters) => t(getters.activeRecord, 'nodeMap').safeObjectOrEmpty,
+        nodes: (_, getters) => Object.values(getters.nodeMap),
         tables: (_, getters) => getters.nodes.map(n => n.data),
+        lookupTables: (_, getters) => lodash.keyBy(getters.tables, 'id'),
         schemas: (_, getters) => [...new Set(getters.nodes.map(n => n.data.options.schema))],
         tablesColNameMap: (_, getters) => erdHelper.createTablesColNameMap(getters.tables),
         refTargetMap: (_, getters) => lodash.keyBy(erdHelper.genRefTargets(getters.tables), 'id'),

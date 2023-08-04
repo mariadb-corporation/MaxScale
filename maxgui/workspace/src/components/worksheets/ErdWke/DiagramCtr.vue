@@ -150,6 +150,9 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
+        nodeMap() {
+            return ErdTask.getters('nodeMap')
+        },
         nodes() {
             return ErdTask.getters('nodes')
         },
@@ -376,28 +379,31 @@ export default {
                     }
                     case REMOVE: {
                         const { foreignKey } = this.CREATE_TBL_TOKENS
-                        let nodes = this.nodes
-                        nodes = nodes.filter(n => n.id !== node.id)
-                        nodes = nodes.map(n => {
-                            const fkMap = n.data.defs.key_category_map[foreignKey]
-                            if (!fkMap) return n
+                        const nodeMap = this.nodes.reduce((map, n) => {
+                            if (n.id !== node.id) {
+                                const fkMap = n.data.defs.key_category_map[foreignKey]
+                                if (!fkMap) map[n.id] = n
+                                else {
+                                    const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
+                                        if (key.ref_tbl_id !== node.id) res[key.id] = key
+                                        return res
+                                    }, {})
+                                    map[n.id] = this.$helpers.immutableUpdate(n, {
+                                        data: {
+                                            defs: {
+                                                key_category_map: Object.keys(updatedFkMap).length
+                                                    ? { $merge: { [foreignKey]: updatedFkMap } }
+                                                    : { $unset: [foreignKey] },
+                                            },
+                                        },
+                                    })
+                                }
+                            }
 
-                            const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
-                                if (key.ref_tbl_id !== node.id) res[key.id] = key
-                                return res
-                            }, {})
-                            return this.$helpers.immutableUpdate(n, {
-                                data: {
-                                    defs: {
-                                        key_category_map: Object.keys(updatedFkMap).length
-                                            ? { $merge: { [foreignKey]: updatedFkMap } }
-                                            : { $unset: [foreignKey] },
-                                    },
-                                },
-                            })
-                        })
+                            return map
+                        }, {})
                         this.closeEditor()
-                        this.updateAndDrawNodes({ nodes })
+                        this.updateAndDrawNodes({ nodeMap })
                         break
                     }
                 }
@@ -432,14 +438,13 @@ export default {
                 }
                 case REMOVE: {
                     const { foreignKey } = this.CREATE_TBL_TOKENS
-                    let nodeIdx = this.nodes.findIndex(n => n.id === link.source.id)
                     let fkMap = this.$typy(
-                        this.nodes[nodeIdx],
+                        this.nodeMap[link.source.id],
                         `data.defs.key_category_map[${foreignKey}]`
                     ).safeObjectOrEmpty
                     fkMap = this.$helpers.immutableUpdate(fkMap, { $unset: [link.id] })
-                    const nodes = this.$helpers.immutableUpdate(this.nodes, {
-                        [nodeIdx]: {
+                    const nodeMap = this.$helpers.immutableUpdate(this.nodeMap, {
+                        [link.source.id]: {
                             data: {
                                 defs: {
                                     key_category_map: Object.keys(fkMap).length
@@ -449,7 +454,7 @@ export default {
                             },
                         },
                     })
-                    this.updateAndDrawNodes({ nodes })
+                    this.updateAndDrawNodes({ nodeMap })
                     break
                 }
                 case SET_ONE_TO_MANY:
@@ -471,11 +476,11 @@ export default {
                 SET_REF_COL_MANDATORY,
                 SET_REF_COL_OPTIONAL,
             } = this.LINK_OPT_TYPES
-            let nodes = this.nodes
+            let nodeMap = this.nodeMap
             const { src_attr_id, target_attr_id } = link.relationshipData
             let method,
-                nodeIdx = link.source.index,
-                node = this.nodes[nodeIdx],
+                nodeId = link.source.id,
+                node = this.nodeMap[nodeId],
                 colId = src_attr_id,
                 value = false
             switch (type) {
@@ -490,10 +495,10 @@ export default {
                     if (type === SET_ONE_TO_ONE) {
                         value = true
                         // update also ref col of target node
-                        nodes = this.$helpers.immutableUpdate(nodes, {
-                            [link.target.index]: {
+                        nodeMap = this.$helpers.immutableUpdate(nodeMap, {
+                            [link.target.id]: {
                                 $set: this[method]({
-                                    node: this.nodes[link.target.index],
+                                    node: this.nodeMap[link.target.id],
                                     colId: target_attr_id,
                                     value,
                                 }),
@@ -508,8 +513,8 @@ export default {
                 case SET_REF_COL_MANDATORY: {
                     method = 'toggleNotNull'
                     if (type === SET_REF_COL_OPTIONAL || type === SET_REF_COL_MANDATORY) {
-                        nodeIdx = link.target.index
-                        node = this.nodes[nodeIdx]
+                        nodeId = link.target.id
+                        node = this.nodeMap[nodeId]
                         colId = target_attr_id
                     }
                     value = type === SET_MANDATORY || type === SET_REF_COL_MANDATORY
@@ -517,10 +522,10 @@ export default {
                     break
                 }
             }
-            nodes = this.$helpers.immutableUpdate(nodes, {
-                [nodeIdx]: { $set: this[method]({ node, colId, value }) },
+            nodeMap = this.$helpers.immutableUpdate(nodeMap, {
+                [nodeId]: { $set: this[method]({ node, colId, value }) },
             })
-            this.updateAndDrawNodes({ nodes })
+            this.updateAndDrawNodes({ nodeMap })
         },
         /**
          * @param {object} param
@@ -581,32 +586,33 @@ export default {
                 data: { defs: { col_map: { [colId]: { nn: { $set: value } } } } },
             })
         },
-        assignCoord({ nodeMap, nodes }) {
-            return nodes.map(n => {
-                if (!nodeMap[n.id]) return n
-                const { x, y, vx, vy, size } = nodeMap[n.id]
-                let res = {
-                    ...n,
-                    x,
-                    y,
-                    vx,
-                    vy,
-                    size,
+        assignCoord(nodeMap) {
+            return this.nodes.reduce((map, n) => {
+                if (!nodeMap[n.id]) map[n.id] = n
+                else {
+                    const { x, y, vx, vy, size } = nodeMap[n.id]
+                    map[n.id] = {
+                        ...n,
+                        x,
+                        y,
+                        vx,
+                        vy,
+                        size,
+                    }
                 }
-                return res
-            })
+                return map
+            }, {})
         },
         /**
          * @param {array} v - diagram staging nodes with new coordinate values
          */
         onNodesCoordsUpdate(v) {
-            const nodeMap = this.$helpers.lodash.keyBy(v, 'id')
-            const nodes = this.assignCoord({ nodeMap, nodes: this.nodes })
+            const nodeMap = this.assignCoord(this.$helpers.lodash.keyBy(v, 'id'))
             ErdTask.update({
                 where: this.activeTaskId,
-                data: { nodes, is_laid_out: true },
+                data: { nodeMap, is_laid_out: true },
             })
-            ErdTask.dispatch('updateNodesHistory', nodes)
+            ErdTask.dispatch('updateNodesHistory', nodeMap)
         },
         /**
          * @param {object} node - node with new coordinates
@@ -683,12 +689,12 @@ export default {
                 x: (0 - x) / k + 65,
                 y: (0 - y) / k + 42,
             }
-            const nodes = immutableUpdate(this.nodes, { $push: [node] })
+            const nodeMap = immutableUpdate(this.nodeMap, { $merge: { [node.id]: node } })
             ErdTask.update({
                 where: this.activeTaskId,
-                data: { nodes },
+                data: { nodeMap },
             }).then(() => {
-                ErdTask.dispatch('updateNodesHistory', this.nodes)
+                ErdTask.dispatch('updateNodesHistory', nodeMap)
                 this.$refs.diagram.addNode(node)
                 this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
             })
@@ -704,15 +710,16 @@ export default {
                 data: { active_entity_id: '', graph_height_pct: 100 },
             })
         },
-        updateAndDrawNodes({ nodes, skipHistory }) {
-            ErdTask.update({ where: this.activeTaskId, data: { nodes } })
-            this.$refs.diagram.update(nodes)
-            if (!skipHistory) ErdTask.dispatch('updateNodesHistory', nodes)
+        updateAndDrawNodes({ nodeMap, skipHistory }) {
+            ErdTask.update({ where: this.activeTaskId, data: { nodeMap } }).then(() => {
+                this.$refs.diagram.update(this.nodes)
+                if (!skipHistory) ErdTask.dispatch('updateNodesHistory', nodeMap)
+            })
         },
         redrawnDiagram() {
-            const nodes = this.nodesHistory[this.activeHistoryIdx]
+            const nodeMap = this.nodesHistory[this.activeHistoryIdx]
             this.closeEditor()
-            this.updateAndDrawNodes({ nodes, skipHistory: true })
+            this.updateAndDrawNodes({ nodeMap, skipHistory: true })
         },
         navHistory(idx) {
             ErdTask.dispatch('updateActiveHistoryIdx', idx)
@@ -743,7 +750,7 @@ export default {
         onCreateNewFk({ node, currentFkMap, newKey, refNode }) {
             const { foreignKey } = this.CREATE_TBL_TOKENS
             const { immutableUpdate } = this.$helpers
-            let nodes = this.nodes
+            let nodeMap = this.nodeMap
 
             // entity-diagram doesn't generate composite FK,so both cols and ref_cols always have one item
             const colId = newKey.cols[0].id
@@ -760,10 +767,10 @@ export default {
                 // Auto adds a PLAIN index for referenced col if there is none.
                 const nonIndexedColId = this.colKeyCategoryMap[refColId] ? null : refColId
                 if (nonIndexedColId) {
-                    nodes = immutableUpdate(nodes, {
-                        [refNode.index]: {
+                    nodeMap = immutableUpdate(nodeMap, {
+                        [refNode.id]: {
                             $set: this.addPlainIndex({
-                                node: nodes[refNode.index],
+                                node: nodeMap[refNode.id],
                                 colId: nonIndexedColId,
                             }),
                         },
@@ -771,8 +778,8 @@ export default {
                 }
 
                 // Add FK
-                nodes = immutableUpdate(nodes, {
-                    [node.index]: {
+                nodeMap = immutableUpdate(nodeMap, {
+                    [node.id]: {
                         data: {
                             defs: {
                                 key_category_map: {
@@ -784,7 +791,7 @@ export default {
                         },
                     },
                 })
-                this.updateAndDrawNodes({ nodes })
+                this.updateAndDrawNodes({ nodeMap })
             } else {
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.fkColsRequirements')],

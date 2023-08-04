@@ -8,7 +8,7 @@
         :initialData="{}"
         isCreating
         :schemas="schemas"
-        :lookupTables="nodes.reduce((map, n) => ((map[n.id] = n.data), map), {})"
+        :lookupTables="lookupTables"
         :connData="{ id: activeErdConnId, config: activeRequestConfig }"
         :onExecute="onExecute"
         v-on="$listeners"
@@ -67,14 +67,17 @@ export default {
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
         },
-        nodes() {
-            return ErdTask.getters('nodes')
+        nodeMap() {
+            return ErdTask.getters('nodeMap')
+        },
+        lookupTables() {
+            return ErdTask.getters('lookupTables')
         },
         activeEntityId() {
             return ErdTask.getters('activeEntityId')
         },
         stagingActiveNode() {
-            return this.nodes.find(item => item.id === this.activeEntityId)
+            return this.nodeMap[this.activeEntityId]
         },
         stagingInitialData() {
             return this.$typy(this.stagingActiveNode, 'data').safeObjectOrEmpty
@@ -144,13 +147,11 @@ export default {
                 data => {
                     const { immutableUpdate } = this.$helpers
                     const id = this.activeEntityId
-                    let nodes = this.nodes
-
-                    const idx = nodes.findIndex(n => n.id === id)
-                    nodes = immutableUpdate(nodes, { [idx]: { data: { $set: data } } })
-
-                    ErdTask.update({ where: this.activeTaskId, data: { nodes } })
-                    ErdTask.dispatch('updateNodesHistory', nodes)
+                    const nodeMap = immutableUpdate(this.nodeMap, {
+                        [id]: { data: { $set: data } },
+                    })
+                    ErdTask.update({ where: this.activeTaskId, data: { nodeMap } })
+                    ErdTask.dispatch('updateNodesHistory', nodeMap)
                     // Emit the event to update the node in the diagram
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
                 },

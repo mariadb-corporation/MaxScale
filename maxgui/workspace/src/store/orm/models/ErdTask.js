@@ -24,8 +24,8 @@ export default class ErdTask extends Extender {
     static getNonKeyFields() {
         return {
             /**
-             * Storing nodes using by entity-diagram
-             * Each object in the below field have these properties
+             * Storing nodeMap using by entity-diagram.
+             * The key is the id of the node and the value has the below properties
              * @property {object} data - store the staging data of parsed table
              * @property {string} id - table id is used as node id
              * @property {object} size - table dimension size. i.e. width, height
@@ -35,7 +35,7 @@ export default class ErdTask extends Extender {
              * @property {number} x -  the node’s current x-position
              * @property {number} y -  the node’s current y-position
              */
-            nodes: this.attr([]),
+            nodeMap: this.attr({}),
             count: this.number(1),
             graph_config: this.attr({
                 link: { isAttrToAttr: false, isHighlightAll: false },

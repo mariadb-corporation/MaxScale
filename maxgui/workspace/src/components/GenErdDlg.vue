@@ -140,13 +140,15 @@ export default {
                     charsetCollationMap: this.charset_collation_map,
                 })
 
-                const nodes = parsedTables.map((parsedTable, i) =>
-                    erdHelper.genErdNode({
+                const nodeMap = parsedTables.reduce((map, parsedTable, i) => {
+                    const node = erdHelper.genErdNode({
                         nodeData: parsedTable,
                         highlightColor: this.$helpers.dynamicColors(i),
                     })
-                )
-                const erdTaskData = { nodes, is_laid_out: false }
+                    map[node.id] = node
+                    return map
+                }, {})
+                const erdTaskData = { nodeMap, is_laid_out: false }
                 const erdTaskTmpData = {
                     graph_height_pct: 100,
                     active_entity_id: '',
