@@ -167,7 +167,7 @@ bool search_file(const std::string& file_name,
 
             maxsql::GtidListEvent event = rpl.gtid_list();
 
-            uint32_t highest_seq = 0;
+            uint64_t highest_seq = 0;
             bool domain_in_list = false;
 
             for (const auto& tid : event.gtid_list.gtids())
