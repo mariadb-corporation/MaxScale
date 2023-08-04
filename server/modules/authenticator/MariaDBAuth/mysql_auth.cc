@@ -323,23 +323,63 @@ MariaDBBackendSession::exchange(GWBUF&& input)
     case State::EXPECT_AUTHSWITCH:
         {
             auto parse_res = mariadb::parse_auth_switch_request(input);
-            // The server scramble should be null-terminated, don't copy the null.
-            if (parse_res.success && parse_res.plugin_data.size() >= MYSQL_SCRAMBLE_LEN)
+            if (parse_res.success)
             {
-                // Expecting the server to only ask for native password plugin.
-                if (parse_res.plugin_name == DEFAULT_MYSQL_AUTH_PLUGIN)
+                auto new_seqno = MYSQL_GET_PACKET_NO(input.data()) + 1;
+                const auto& auth_data = *m_shared_data.client_data->auth_data;
+                bool have_clearpw = auth_data.client_token_type == TokenType::CLEARPW;
+
+                if (parse_res.plugin_name == native_plugin)
                 {
-                    // Looks ok. The server has sent a new scramble. Save it and generate a response.
-                    memcpy(m_shared_data.scramble, parse_res.plugin_data.data(), MYSQL_SCRAMBLE_LEN);
-                    auto old_seqno = MYSQL_GET_PACKET_NO(input.data());
-                    rval.output = generate_auth_response(old_seqno + 1);
-                    m_state = State::PW_SENT;
-                    rval.success = true;
+                    // The server scramble should be null-terminated, don't copy the null.
+                    if (parse_res.plugin_data.size() >= MYSQL_SCRAMBLE_LEN)
+                    {
+                        // Looks ok. The server has sent a new scramble. Save it and generate a response.
+                        memcpy(m_shared_data.scramble, parse_res.plugin_data.data(), MYSQL_SCRAMBLE_LEN);
+
+                        // Backend token should have been calculated if password is used, regardless of
+                        // passthrough-setting.
+                        mxb_assert(auth_data.backend_token.empty()
+                                   || auth_data.backend_token.size() == SHA_DIGEST_LENGTH);
+                        rval.output = gen_native_auth_response(auth_data.backend_token, new_seqno);
+                        rval.success = true;
+                        m_state = State::PW_SENT;
+                    }
+                    else
+                    {
+                        MXB_ERROR(MALFORMED_AUTH_SWITCH, m_shared_data.servername);
+                    }
+                }
+                else if (parse_res.plugin_name == clearpw_plugin)
+                {
+                    // Can answer this if client token is cleartext pw.
+                    if (have_clearpw)
+                    {
+                        rval.output = gen_clearpw_auth_response(auth_data.client_token, new_seqno);
+                        rval.success = true;
+                        m_state = State::PW_SENT;
+                    }
+                    else
+                    {
+                        MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
+                                  m_shared_data.client_data->user_and_host().c_str(), native_plugin.c_str());
+                    }
                 }
                 else
                 {
-                    MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
-                              m_shared_data.client_data->user_and_host().c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
+                    if (have_clearpw)
+                    {
+                        MXB_ERROR("'%s' asked for authentication plugin '%s' when authenticating %s. "
+                                  "Only '%s' or '%s' are supported.",
+                                  m_shared_data.servername, parse_res.plugin_name.c_str(),
+                                  m_shared_data.client_data->user_and_host().c_str(),
+                                  native_plugin.c_str(), clearpw_plugin.c_str());
+                    }
+                    else
+                    {
+                        MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
+                                  m_shared_data.client_data->user_and_host().c_str(), native_plugin.c_str());
+                    }
                 }
             }
             else
@@ -363,17 +403,29 @@ MariaDBBackendSession::exchange(GWBUF&& input)
     return rval;
 }
 
-GWBUF MariaDBBackendSession::generate_auth_response(uint8_t seqno)
+GWBUF MariaDBBackendSession::gen_native_auth_response(const mariadb::ByteVec& sha_pw, uint8_t seqno)
 {
     size_t pload_len = SHA_DIGEST_LENGTH;
     size_t total_len = MYSQL_HEADER_LEN + pload_len;
     GWBUF rval(total_len);
     auto ptr = mariadb::write_header(rval.data(), pload_len, seqno);
-    auto& sha_pw = m_shared_data.client_data->auth_data->backend_token;
     const uint8_t* curr_passwd = sha_pw.empty() ? null_client_sha1 : sha_pw.data();
     mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, ptr);
     ptr += SHA_DIGEST_LENGTH;
     mxb_assert(ptr - rval.data() == (ptrdiff_t)total_len);
+    return rval;
+}
+
+GWBUF MariaDBBackendSession::gen_clearpw_auth_response(const mariadb::ByteVec& pw, uint8_t seqno)
+{
+    size_t tok_len = pw.size();
+    size_t total_len = MYSQL_HEADER_LEN + tok_len;
+    GWBUF rval(total_len);
+    auto ptr = mariadb::write_header(rval.data(), tok_len, seqno);
+    if (tok_len > 0)
+    {
+        mariadb::copy_bytes(ptr, pw.data(), tok_len);
+    }
     return rval;
 }
 

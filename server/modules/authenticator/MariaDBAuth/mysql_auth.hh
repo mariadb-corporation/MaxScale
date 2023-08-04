@@ -72,7 +72,8 @@ public:
     AuthRes exchange(GWBUF&& input) override;
 
 private:
-    GWBUF generate_auth_response(uint8_t seqno);
+    GWBUF gen_native_auth_response(const mariadb::ByteVec& sha_pw, uint8_t seqno);
+    GWBUF gen_clearpw_auth_response(const mariadb::ByteVec& pw, uint8_t seqno);
 
     /** Authentication states */
     enum class State
