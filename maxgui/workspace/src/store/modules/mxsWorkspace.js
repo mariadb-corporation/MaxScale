@@ -47,6 +47,15 @@ export default {
             on_exec: () => null,
             on_after_cancel: () => null,
         },
+        confirm_dlg: {
+            is_opened: false,
+            title: '',
+            confirm_msg: '',
+            save_text: 'save',
+            cancel_text: 'dontSave',
+            on_save: () => null,
+            on_cancel: () => null,
+        },
         etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
         conn_dlg: { is_opened: false, type: config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR },
@@ -63,6 +72,9 @@ export default {
         },
         SET_EXEC_SQL_DLG(state, payload) {
             state.exec_sql_dlg = payload
+        },
+        SET_CONFIRM_DLG(state, payload) {
+            state.confirm_dlg = payload
         },
         SET_ETL_POLLING_INTERVAL(state, payload) {
             state.etl_polling_interval = payload

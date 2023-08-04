@@ -40,9 +40,10 @@
                 </template>
             </template>
             <execute-sql-dialog />
+            <confirm-dlg />
             <migr-delete-dlg />
-            <reconn-dlg-ctr />
             <gen-erd-dlg />
+            <reconn-dlg-ctr />
         </div>
     </div>
 </template>
@@ -63,6 +64,7 @@
  */
 import { mapActions, mapState, mapMutations } from 'vuex'
 import Worksheet from '@wsModels/Worksheet'
+import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke'
 import DataMigration from '@wkeComps/DataMigration'
 import ErdWke from '@wkeComps/ErdWke'
@@ -70,24 +72,24 @@ import { EventBus } from '@wkeComps/EventBus'
 import QueryEditor from '@wkeComps/QueryEditor'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import ExecuteSqlDialog from '@wsComps/ExecuteSqlDialog.vue'
+import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
-import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
-
 import '@wsSrc/styles/workspace.scss'
 
 export default {
     name: 'workspace-ctr',
     components: {
+        WkeNavCtr,
         BlankWke,
         DataMigration,
         ErdWke,
         QueryEditor,
         MigrDeleteDlg,
         ExecuteSqlDialog,
+        ConfirmDlg,
         GenErdDlg,
         ReconnDlgCtr,
-        WkeNavCtr,
     },
     props: {
         disableRunQueries: { type: Boolean, default: false },

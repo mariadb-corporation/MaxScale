@@ -17,13 +17,6 @@ export default {
     namespaced: true,
     state: {
         selected_query_txt: '',
-        file_dlg_data: {
-            is_opened: false,
-            title: '',
-            confirm_msg: '',
-            on_save: () => null,
-            dont_save: () => null,
-        },
         is_max_rows_valid: true,
         // states for DDL_EDITOR
         charset_collation_map: {},
@@ -33,9 +26,6 @@ export default {
     mutations: {
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
-        },
-        SET_FILE_DLG_DATA(state, payload) {
-            state.file_dlg_data = payload
         },
         SET_IS_MAX_ROWS_VALID(state, payload) {
             state.is_max_rows_valid = payload

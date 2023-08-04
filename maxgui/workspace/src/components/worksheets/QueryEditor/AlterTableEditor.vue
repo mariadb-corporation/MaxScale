@@ -1,14 +1,14 @@
 <template>
     <v-card class="alter-table-editor fill-height" :loading="isLoading" tile>
         <mxs-ddl-editor
-            v-if="stagingData"
+            v-if="!$typy(stagingData).isEmptyObject"
             v-model="stagingData"
             :dim="dim"
             :initialData="initialData"
             :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
             :onExecute="onExecute"
             :lookupTables="{ [stagingData.id]: stagingData }"
-            :activeSpec.sync="activeSpecTab"
+            :activeSpec.sync="activeSpec"
         />
     </v-card>
 </template>
@@ -31,17 +31,13 @@ import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
+import QueryTab from '@wsSrc/store/orm/models/QueryTab'
+import QueryTabTmp from '@wsSrc/store/orm/models/QueryTabTmp'
 
 export default {
     name: 'alter-table-editor',
     props: {
         dim: { type: Object, required: true },
-    },
-    data() {
-        return {
-            stagingData: null,
-            activeSpecTab: '',
-        }
     },
     computed: {
         isLoading() {
@@ -59,47 +55,62 @@ export default {
         activeQueryTabId() {
             return QueryEditor.getters('activeQueryTabId')
         },
-        activeSpec() {
-            return Editor.getters('activeSpec')
+        stagingAlterData() {
+            return QueryTab.getters('stagingAlterData')
         },
-    },
-    watch: {
-        activeSpecTab(v) {
-            Editor.update({
-                where: this.activeQueryTabId,
-                data(editor) {
-                    editor.tbl_creation_info.active_spec = v
-                },
-            })
+        stagingData: {
+            get() {
+                return this.stagingAlterData
+            },
+            set(data) {
+                QueryTabTmp.update({
+                    where: this.activeQueryTabId,
+                    data: { staging_alter_data: data },
+                })
+            },
+        },
+        activeSpec: {
+            get() {
+                return Editor.getters('activeSpec')
+            },
+            set(v) {
+                Editor.update({
+                    where: this.activeQueryTabId,
+                    data(editor) {
+                        editor.tbl_creation_info.active_spec = v
+                    },
+                })
+            },
         },
     },
     activated() {
         this.watch_isLoading()
-        this.watch_activeSpec()
     },
     deactivated() {
         this.$typy(this.unwatch_isLoading).safeFunction()
-        this.$typy(this.unwatch_activeSpec).safeFunction()
+    },
+    beforeDestroy() {
+        this.$typy(this.unwatch_isLoading).safeFunction()
     },
     methods: {
         ...mapActions({ exeDdlScript: 'mxsWorkspace/exeDdlScript' }),
-        assignData() {
-            this.stagingData = this.$helpers.lodash.cloneDeep(this.initialData)
-        },
-        //Watcher to work with multiple worksheets which are kept alive
         watch_isLoading() {
             this.unwatch_isLoading = this.$watch(
                 'isLoading',
                 v => {
-                    if (!v && this.$typy(this.stagingData).isNull) this.assignData()
+                    if (!v && this.$typy(this.stagingAlterData).isEmptyObject) {
+                        QueryTabTmp.update({
+                            where: this.activeQueryTabId,
+                            data: {
+                                staging_alter_data: this.$helpers.lodash.cloneDeep(
+                                    this.initialData
+                                ),
+                            },
+                        })
+                    }
                 },
                 { deep: true, immediate: true }
             )
-        },
-        watch_activeSpec() {
-            this.unwatch_activeSpec = this.$watch('activeSpec', v => (this.activeSpecTab = v), {
-                immediate: true,
-            })
         },
         async onExecute() {
             await this.exeDdlScript({

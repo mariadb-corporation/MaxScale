@@ -2,16 +2,16 @@
     <mxs-conf-dlg
         v-model="isOpened"
         minBodyWidth="768px"
-        :title="file_dlg_data.title"
+        :title="confirm_dlg.title"
         :closeImmediate="true"
         :lazyValidation="false"
-        :onSave="file_dlg_data.on_save"
-        cancelText="dontSave"
-        saveText="save"
-        @on-cancel="file_dlg_data.dont_save"
+        :onSave="confirm_dlg.on_save"
+        :cancelText="confirm_dlg.cancel_text"
+        :saveText="confirm_dlg.save_text"
+        @on-cancel="confirm_dlg.on_cancel"
     >
         <template v-slot:form-body>
-            <p v-html="file_dlg_data.confirm_msg" />
+            <p v-html="confirm_dlg.confirm_msg" />
         </template>
     </mxs-conf-dlg>
 </template>
@@ -31,18 +31,18 @@
  */
 import { mapState, mapMutations } from 'vuex'
 export default {
-    name: 'file-dlg-ctr',
+    name: 'confirm-dlg',
     computed: {
-        ...mapState({ file_dlg_data: state => state.editorsMem.file_dlg_data }),
+        ...mapState({ confirm_dlg: state => state.mxsWorkspace.confirm_dlg }),
         isOpened: {
             get() {
-                return this.file_dlg_data.is_opened
+                return this.confirm_dlg.is_opened
             },
             set(value) {
-                this.SET_FILE_DLG_DATA({ ...this.file_dlg_data, is_opened: value })
+                this.SET_CONFIRM_DLG({ ...this.confirm_dlg, is_opened: value })
             },
         },
     },
-    methods: { ...mapMutations({ SET_FILE_DLG_DATA: 'editorsMem/SET_FILE_DLG_DATA' }) },
+    methods: { ...mapMutations({ SET_CONFIRM_DLG: 'mxsWorkspace/SET_CONFIRM_DLG' }) },
 }
 </script>

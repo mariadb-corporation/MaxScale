@@ -35,7 +35,6 @@
                             <alter-table-editor v-else :dim="editorDim" />
                         </template>
                     </keep-alive>
-                    <file-dlg-ctr />
                 </div>
             </template>
         </mxs-split-pane>
@@ -65,7 +64,6 @@ import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
-import FileDlgCtr from '@wkeComps/QueryEditor/FileDlgCtr.vue'
 
 export default {
     name: 'query-editor',
@@ -74,7 +72,6 @@ export default {
         SidebarCtr,
         TxtEditorCtr,
         QueryTabNavCtr,
-        FileDlgCtr,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -88,7 +85,6 @@ export default {
         ...mapState({
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             sidebar_pct_width: state => state.prefAndStorage.sidebar_pct_width,
-            exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
         activeQueryTabConn() {
             return QueryConn.getters('activeQueryTabConn')

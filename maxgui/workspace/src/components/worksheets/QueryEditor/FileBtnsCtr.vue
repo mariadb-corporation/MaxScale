@@ -77,7 +77,7 @@ export default {
     props: { queryTab: { type: Object, required: true } },
     computed: {
         ...mapState({
-            file_dlg_data: state => state.editorsMem.file_dlg_data,
+            confirm_dlg: state => state.mxsWorkspace.confirm_dlg,
             OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
         }),
         ...mapGetters({
@@ -112,7 +112,7 @@ export default {
         ...mapActions({ updateFileHandleDataMap: 'fileSysAccess/updateFileHandleDataMap' }),
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
-            SET_FILE_DLG_DATA: 'editorsMem/SET_FILE_DLG_DATA',
+            SET_CONFIRM_DLG: 'mxsWorkspace/SET_CONFIRM_DLG',
         }),
         /**
          * Legacy support for reading uploaded file
@@ -167,7 +167,8 @@ export default {
          */
         async handleLoadFile(blob) {
             if (this.getIsQueryTabUnsaved(this.queryTab.id)) {
-                this.SET_FILE_DLG_DATA({
+                this.SET_CONFIRM_DLG({
+                    ...this.confirm_dlg,
                     is_opened: true,
                     title: this.$mxs_t('openScript'),
                     confirm_msg: this.$mxs_t('confirmations.openScript', {
@@ -178,9 +179,9 @@ export default {
                         await this.handleSaveFile(this.queryTab)
                         await this.loadFileToActiveQueryTab(blob)
                     },
-                    dont_save: async () => {
+                    on_cancel: async () => {
                         await this.loadFileToActiveQueryTab(blob)
-                        this.SET_FILE_DLG_DATA({ ...this.file_dlg_data, is_opened: false })
+                        this.SET_CONFIRM_DLG({ ...this.confirm_dlg, is_opened: false })
                     },
                 })
             } else await this.loadFileToActiveQueryTab(blob)

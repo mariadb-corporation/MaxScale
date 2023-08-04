@@ -5,7 +5,7 @@
                 :tooltipItem="{ txt: `${queryTab.name}`, nudgeLeft: 36 }"
                 :maxWidth="112"
             />
-            <span v-if="isQueryTabUnsaved" class="changes-indicator" />
+            <span v-if="isQueryTabUnsaved || hasAlterEditorDataChanged" class="changes-indicator" />
             <v-progress-circular
                 v-if="isLoadingQueryResult"
                 class="ml-2"
@@ -20,7 +20,7 @@
             icon
             x-small
             :disabled="isQueryTabConnBusy"
-            @click.stop.prevent="isQueryTabUnsaved ? openFileDlg() : handleDeleteTab()"
+            @click.stop.prevent="onClickClose"
         >
             <v-icon size="8" :color="isQueryTabConnBusy ? '' : 'error'">
                 $vuetify.icons.mxs_close
@@ -43,12 +43,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapGetters } from 'vuex'
+import { mapState, mapMutations, mapGetters } from 'vuex'
 import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
 import saveFile from '@wsSrc/mixins/saveFile'
-
+import Editor from '@wsSrc/store/orm/models/Editor'
 export default {
     name: 'query-tab-nav-item',
     mixins: [saveFile],
@@ -59,42 +59,78 @@ export default {
         }
     },
     computed: {
+        ...mapState({ confirm_dlg: state => state.mxsWorkspace.confirm_dlg }),
         ...mapGetters({ getIsQueryTabUnsaved: 'fileSysAccess/getIsQueryTabUnsaved' }),
+        tabId() {
+            return this.queryTab.id
+        },
         isQueryTabUnsaved() {
-            return this.getIsQueryTabUnsaved(this.queryTab.id)
+            return this.getIsQueryTabUnsaved(this.tabId)
+        },
+        initialData() {
+            return this.$typy(Editor.find(this.tabId).tbl_creation_info, 'data').safeObjectOrEmpty
+        },
+        stagingData() {
+            return QueryTab.getters('findStagingAlterData')(this.tabId)
+        },
+        hasAlterEditorDataChanged() {
+            if (this.$typy(this.stagingData).isEmptyObject) return false
+            return !this.$helpers.lodash.isEqual(this.initialData, this.stagingData)
         },
         queryTabsOfActiveWke() {
             return QueryTab.getters('queryTabsOfActiveWke')
         },
         isLoadingQueryResult() {
-            return QueryResult.getters('findIsLoading')(this.queryTab.id)
+            return QueryResult.getters('findIsLoading')(this.tabId)
         },
         isQueryTabConnBusy() {
-            return QueryConn.getters('isConnBusyByQueryTabId')(this.queryTab.id)
+            return QueryConn.getters('isConnBusyByQueryTabId')(this.tabId)
         },
     },
     methods: {
-        ...mapMutations({
-            SET_FILE_DLG_DATA: 'editorsMem/SET_FILE_DLG_DATA',
-        }),
-        openFileDlg() {
-            this.SET_FILE_DLG_DATA({
+        ...mapMutations({ SET_CONFIRM_DLG: 'mxsWorkspace/SET_CONFIRM_DLG' }),
+        onClickClose() {
+            if (this.isQueryTabUnsaved || this.hasAlterEditorDataChanged) {
+                let confirm_msg = this.$mxs_t('confirmations.deleteQueryTab', {
+                        targetId: this.queryTab.name,
+                    }),
+                    on_save = async () => {
+                        await this.handleSaveFile(this.queryTab)
+                        await this.handleDeleteTab()
+                    },
+                    save_text = 'save',
+                    cancel_text = 'dontSave'
+
+                if (this.hasAlterEditorDataChanged) {
+                    confirm_msg = this.$mxs_t('confirmations.deleteAlterTab', {
+                        targetId: this.queryTab.name,
+                    })
+                    on_save = async () => await this.handleDeleteTab()
+                    save_text = 'confirm'
+                    cancel_text = 'cancel'
+                }
+
+                this.openConfirmDlg({
+                    save_text,
+                    cancel_text,
+                    title: this.$mxs_t('deleteTab'),
+                    confirm_msg,
+                    on_save,
+                })
+            } else this.handleDeleteTab()
+        },
+        openConfirmDlg(dlgParam) {
+            this.SET_CONFIRM_DLG({
+                ...this.confirm_dlg,
                 is_opened: true,
-                title: this.$mxs_t('deleteQueryTab'),
-                confirm_msg: this.$mxs_t('confirmations.deleteQueryTab', {
-                    targetId: this.queryTab.name,
-                }),
-                on_save: async () => {
-                    await this.handleSaveFile(this.queryTab)
-                    await this.handleDeleteTab()
-                },
-                dont_save: async () => await this.handleDeleteTab(),
+                ...dlgParam,
+                on_cancel: async () => await this.handleDeleteTab(),
             })
         },
         async handleDeleteTab() {
             if (this.queryTabsOfActiveWke.length === 1)
-                QueryTab.dispatch('refreshLastQueryTab', this.queryTab.id)
-            else await QueryTab.dispatch('handleDeleteQueryTab', this.queryTab.id)
+                QueryTab.dispatch('refreshLastQueryTab', this.tabId)
+            else await QueryTab.dispatch('handleDeleteQueryTab', this.tabId)
         },
     },
 }

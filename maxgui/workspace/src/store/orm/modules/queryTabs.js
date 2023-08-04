@@ -142,5 +142,8 @@ export default {
                 .get(),
         activeTmpRecord: (_, getters) => QueryTabTmp.find(getters.activeRecord.id) || {},
         findTmpRecord: () => query_tab_id => QueryTabTmp.find(query_tab_id) || {},
+        stagingAlterData: (_, getters) => getters.activeTmpRecord.staging_alter_data || {},
+        findStagingAlterData: (_, getters) => query_tab_id =>
+            getters.findTmpRecord(query_tab_id).staging_alter_data || {},
     },
 }
