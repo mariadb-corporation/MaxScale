@@ -340,8 +340,12 @@ bool XpandMonitor::post_configure()
 
     if (m_config.region_name().empty() && m_config.region_oid().empty())
     {
+        // 'sn.nodeid' will be NULL if the node is not softfailed and the same
+        // as 'ni.nodeid' if it is. Renamed to 'softfailed' to make it less
+        // confusing.
+
         m_refresh_query =
-            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
+            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid AS softfailed "
             "FROM system.nodeinfo AS ni "
             "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
     }
@@ -350,7 +354,8 @@ bool XpandMonitor::post_configure()
         if (!m_config.region_name().empty())
         {
             m_refresh_query = mxb::string_printf(
-                "SELECT nir.nodeid, nir.iface_ip, nir.mysql_port, nir.healthmon_port, sn.nodeid "
+                "SELECT nir.nodeid, nir.iface_ip, nir.mysql_port, nir.healthmon_port, "
+                "       sn.nodeid AS softfailed "
                 "FROM (SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, r.name "
                 "      FROM system.nodeinfo AS ni "
                 "      LEFT JOIN system.zones AS z ON ni.zone = z.zoneid "
@@ -364,7 +369,8 @@ bool XpandMonitor::post_configure()
             mxb_assert(!m_config.region_oid().empty());
 
             m_refresh_query = mxb::string_printf(
-                "SELECT nir.nodeid, nir.iface_ip, nir.mysql_port, nir.healthmon_port, sn.nodeid "
+                "SELECT nir.nodeid, nir.iface_ip, nir.mysql_port, nir.healthmon_port, "
+                "       sn.nodeid AS softfailed "
                 "FROM (SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, z.region "
                 "      FROM system.nodeinfo AS ni LEFT JOIN system.zones AS z ON ni.zone = z.zoneid) AS nir "
                 "LEFT JOIN system.softfailed_nodes AS sn ON nir.nodeid = sn.nodeid "
