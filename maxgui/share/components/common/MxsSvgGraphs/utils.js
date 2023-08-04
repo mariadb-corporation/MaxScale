@@ -54,7 +54,10 @@ function getOrthoValues({ data: { x0, y0, x1, y1 }, type, targetPos, offset = 0 
     switch (targetPos) {
         case RIGHT: {
             midPointX = (x1 - x0) / 2
-            if (midPointX <= offset || isEntityRelationShape) midPointX = offset
+            if (midPointX <= offset || isEntityRelationShape) {
+                midPointX = offset
+                if (isEntityRelationShape) midPointX *= 2
+            }
             dx1 = x0 + midPointX
             dx4 = x1 - midPointX
             if (dx4 - dx1 <= 0) {
@@ -65,7 +68,10 @@ function getOrthoValues({ data: { x0, y0, x1, y1 }, type, targetPos, offset = 0 
         }
         case LEFT: {
             midPointX = (x0 - x1) / 2
-            if (midPointX <= offset || isEntityRelationShape) midPointX = offset
+            if (midPointX <= offset || isEntityRelationShape) {
+                midPointX = offset
+                if (isEntityRelationShape) midPointX *= 2
+            }
             dx1 = x0 - midPointX
             dx4 = x1 + midPointX
             if (dx1 - dx4 <= 0) {
@@ -89,7 +95,10 @@ function getOrthoValues({ data: { x0, y0, x1, y1 }, type, targetPos, offset = 0 
         }
         case INTERSECT_LEFT: {
             midPointX = (x0 - x1) / 2
-            if (midPointX <= offset || isEntityRelationShape) midPointX = offset
+            if (midPointX <= offset || isEntityRelationShape) {
+                midPointX = offset
+                if (isEntityRelationShape) midPointX *= 2
+            }
             dx1 = x0 - midPointX
             dx2 = dx1
             dx3 = dx1
