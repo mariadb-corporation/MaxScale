@@ -114,7 +114,13 @@ RplEvent::RplEvent(MariaRplEvent&& maria_event)
 }
 
 RplEvent::RplEvent(std::vector<char>&& raw)
+    : RplEvent(std::move(raw), raw.size())
+{
+}
+
+RplEvent::RplEvent(std::vector<char>&& raw, size_t real_size)
     : m_raw(std::move(raw))
+    , m_real_size(real_size)
 {
     if (!m_raw.empty())
     {
@@ -210,6 +216,16 @@ void RplEvent::set_next_pos(uint32_t next_pos)
     mariadb::set_byte4(const_cast<uint8_t*>(buf), m_next_event_pos);
 
     recalculate_crc();
+}
+
+size_t RplEvent::real_size() const
+{
+    return m_real_size;
+}
+
+void RplEvent::set_real_size(size_t size)
+{
+    m_real_size = size;
 }
 
 void RplEvent::recalculate_crc()
@@ -479,10 +495,17 @@ mxq::RplEvent RplEvent::read_event(std::istream& file, const std::unique_ptr<mxq
 {
     std::vector<char> raw(RPL_HEADER_LEN);
 
-    long pos = file.tellg();
-    file.read(raw.data(), RPL_HEADER_LEN);
+    long pos = 0;
 
-    if (file.tellg() != pos + RPL_HEADER_LEN)
+    if (enc)
+    {
+        pos = file.tellg();
+    }
+
+    file.read(raw.data(), RPL_HEADER_LEN);
+    size_t bytes = file.gcount();
+
+    if (bytes != RPL_HEADER_LEN)
     {
         // Partial, or no header. Wait for more via inotify.
         return mxq::RplEvent();
@@ -492,21 +515,20 @@ mxq::RplEvent RplEvent::read_event(std::istream& file, const std::unique_ptr<mxq
 
     raw.resize(event_length);
     file.read(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
+    bytes += file.gcount();
 
-    if (file.tellg() != pos + event_length)
+    if (bytes != event_length)
     {
         // Wait for more via inotify.
         return mxq::RplEvent();
     }
-
-    size_t event_len = raw.size();
 
     if (enc)
     {
         raw = enc->decrypt_event(raw, pos);
     }
 
-    return mxq::RplEvent(std::move(raw));
+    return mxq::RplEvent(std::move(raw), bytes);
 }
 
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)

@@ -88,9 +88,9 @@ std::vector<GtidPosition> FileReader::find_gtid_position(const std::vector<maxsq
 long FileReader::search_gtid_in_file(std::ifstream& file, const std::unique_ptr<mxq::EncryptCtx>& encrypt,
                                      long file_pos, const maxsql::Gtid& gtid)
 {
-    for (long pos = file.tellg();
-         maxsql::RplEvent rpl = maxsql::RplEvent::read_event(file, encrypt);
-         pos = file.tellg())
+    long pos = file.tellg();
+
+    while (maxsql::RplEvent rpl = maxsql::RplEvent::read_event(file, encrypt))
     {
         if (rpl.event_type() == GTID_EVENT)
         {
@@ -101,6 +101,9 @@ long FileReader::search_gtid_in_file(std::ifstream& file, const std::unique_ptr<
                 return pos;
             }
         }
+
+        pos += rpl.real_size();
+        mxb_assert(pos == file.tellg());
     }
 
     return 0;
