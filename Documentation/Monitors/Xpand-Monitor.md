@@ -178,17 +178,33 @@ health_check_port=4711
 Note that this parameter is _ignored_ unless `dynamic_node_detection`
 is `false`. Note also that the port must be the same for all nodes.
 
-### `region`
+### `region_name`
 
 - **Type**: string
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Default**: ''
 
-`region` speficies the region of the instance MaxScale is running in.
-Should be specified only if Xpand Multi-Region HA cluster, which is
-available from Xpand 23.08 onwards, is used. With `region` specified,
-MaxScale will only consider nodes from that region.
+Mutually exclusive with `region_oid`.
+
+`region_name` speficies the name of the region the instance MaxScale is
+running in. Should be specified only if Xpand Multi-Region HA cluster,
+which is available from Xpand 23.08 onwards, is used. With `region_name`
+specified, MaxScale will only consider nodes from that region.
+
+### `region_oid`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: ''
+
+Mutually exclusive with `region_name`.
+
+`region_oid` speficies the oid of the region the instance MaxScale is
+running in. Should be specified only if Xpand Multi-Region HA cluster,
+which is available from Xpand 23.08 onwards, is used. With `region_oid`
+specified, MaxScale will only consider nodes from that region.
 
 ## Commands
 

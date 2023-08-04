@@ -103,9 +103,16 @@ health_check_port(&specification,
                   config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamString
-region(&specification,
-       "region",
-       "The region MaxScale is running in.",
+region_name(&specification,
+       "region_name",
+       "The name of the region MaxScale is running in. Mutually exclusive with 'region_oid'.",
+       "",
+       config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamString
+region_oid(&specification,
+       "region_oid",
+       "The oid of the region MaxScale is running in. Mutually exclusive with 'region_name'.",
        "",
        config::Param::Modifiable::AT_RUNTIME);
 
@@ -249,7 +256,8 @@ XpandMonitor::Config::Config(const std::string& name, XpandMonitor* pMonitor)
     add_native(&Config::m_health_check_threshold, &xpandmon::health_check_threshold);
     add_native(&Config::m_health_check_port, &xpandmon::health_check_port);
     add_native(&Config::m_dynamic_node_detection, &xpandmon::dynamic_node_detection);
-    add_native(&Config::m_region, &xpandmon::region);
+    add_native(&Config::m_region_name, &xpandmon::region_name);
+    add_native(&Config::m_region_oid, &xpandmon::region_oid);
 }
 
 bool XpandMonitor::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
@@ -322,7 +330,14 @@ bool XpandMonitor::post_configure()
         return false;
     }
 
-    if (m_config.region().empty())
+    if (!m_config.region_name().empty() && !m_config.region_oid().empty())
+    {
+        MXB_ERROR("%s: 'region_name' and 'region_oid' are mutually exclusive. "
+                  "One, but not the other may be specified.", name());
+        return false;
+    }
+
+    if (m_config.region_name().empty() && m_config.region_oid().empty())
     {
         m_refresh_query =
             "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "

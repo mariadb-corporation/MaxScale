@@ -59,9 +59,14 @@ public:
             return m_dynamic_node_detection;
         }
 
-        const std::string& region() const
+        const std::string& region_name() const
         {
-            return m_region;
+            return m_region_name;
+        }
+
+        const std::string& region_oid() const
+        {
+            return m_region_oid;
         }
 
     private:
@@ -69,7 +74,8 @@ public:
         int64_t                   m_health_check_threshold;
         int64_t                   m_health_check_port;
         bool                      m_dynamic_node_detection;
-        std::string               m_region;
+        std::string               m_region_name;
+        std::string               m_region_oid;
         XpandMonitor*             m_pMonitor;
     };
 
