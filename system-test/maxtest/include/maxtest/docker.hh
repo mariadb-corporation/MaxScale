@@ -50,7 +50,9 @@ public:
         cleanup();
 
         std::ostringstream cmd;
-        cmd << "docker run -d --rm --name " << name << " ";
+        // The --privileged flag works around this problem that's encoutered with
+        // older Docker releases: https://github.com/moby/moby/issues/42680
+        cmd << "docker run --privileged -d --rm --name " << name << " ";
 
         for (auto p : ports)
         {
