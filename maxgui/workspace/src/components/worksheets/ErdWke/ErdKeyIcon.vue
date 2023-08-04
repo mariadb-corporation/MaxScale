@@ -1,5 +1,12 @@
 <template>
-    <v-icon v-if="data" :size="data.size" :color="data.color" :style="data.style">
+    <v-icon
+        v-if="data"
+        :size="data.size"
+        :color="data.color"
+        :style="{
+            width: '18px',
+        }"
+    >
         {{ data.icon }}
     </v-icon>
 </template>

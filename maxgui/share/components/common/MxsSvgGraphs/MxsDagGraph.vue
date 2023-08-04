@@ -163,7 +163,7 @@ export default {
             )
         },
         initLinkInstance() {
-            this.linkInstance = new Link(this.graphConfig.link)
+            this.linkInstance = new Link(this.graphConfig.config.link)
         },
         /**
          * @param {Object} node - dag node

@@ -49,7 +49,7 @@
                             :entitySizeConfig="entitySizeConfig"
                             :linkContainer="linkContainer"
                             :boardZoom="panAndZoomData.k"
-                            :graphConfig="graphConfig"
+                            :graphConfig="graphConfig.config"
                             @drawing="onDrawingFk"
                             @draw-end="onEndDrawFk"
                         />
@@ -279,6 +279,9 @@ export default {
         isAttrToAttr() {
             return this.$typy(this.graphConfigData, 'link.isAttrToAttr').safeBoolean
         },
+        isHighlightAll() {
+            return this.$typy(this.graphConfigData, 'link.isHighlightAll').safeBoolean
+        },
         isStraightShape() {
             return (
                 this.$typy(this.graphConfigData, 'linkShape.type').safeString ===
@@ -485,10 +488,13 @@ export default {
             )
         },
         initLinkInstance() {
-            this.entityLink = new EntityLink(this.graphConfig)
+            this.entityLink = new EntityLink(this.graphConfig.config)
             this.watchConfig()
         },
         emitOnRendered() {
+            // after finish rendering, set styles for all links
+            if (this.isHighlightAll) this.handleHighlightAllLinks()
+
             this.$emit('on-rendered', { nodes: this.graphNodes, links: this.graphLinks })
         },
         /**
@@ -523,11 +529,13 @@ export default {
             this.hoveredLink = link
             this.tooltipX = e.clientX
             this.tooltipY = e.clientY
-            if (eventType === EVENT_TYPES.HOVER) this.mouseenterNode({ node: link.source })
-            else this.mouseleaveNode()
-            this.setEventStyles({ links: [link], eventType })
-            this.entityLink.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
-            this.entityLink.drawMarkers({ linkCtr, joinType: 'update' })
+            if (!this.isHighlightAll) {
+                if (eventType === EVENT_TYPES.HOVER) this.mouseenterNode({ node: link.source })
+                else this.mouseleaveNode()
+                this.setEventStyles({ links: [link], eventType })
+                this.entityLink.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
+                this.entityLink.drawMarkers({ linkCtr, joinType: 'update' })
+            }
         },
         openContextMenu(param) {
             const { e, link } = param
@@ -575,8 +583,10 @@ export default {
             const nodeData = this.nodeMap[node.id]
             nodeData.x = nodeData.x + diffX
             nodeData.y = nodeData.y + diffY
-            this.setChosenLinks(node)
-            if (!this.isDraggingNode) this.setEventLinkStyles(EVENT_TYPES.DRAGGING)
+            if (!this.isHighlightAll) {
+                this.setChosenLinks(node)
+                if (!this.isDraggingNode) this.setEventLinkStyles(EVENT_TYPES.DRAGGING)
+            }
             this.isDraggingNode = true
             /**
              * drawLinks is called inside setEventLinkStyles method but it run once.
@@ -587,19 +597,26 @@ export default {
         },
         onNodeDragEnd({ node }) {
             if (this.isDraggingNode) {
-                this.setEventLinkStyles(EVENT_TYPES.NONE)
+                if (!this.isHighlightAll) {
+                    this.setEventLinkStyles(EVENT_TYPES.NONE)
+                    this.chosenLinks = []
+                }
                 this.isDraggingNode = false
-                this.chosenLinks = []
+
                 this.$emit('on-node-drag-end', node)
             }
         },
         mouseenterNode({ node }) {
-            this.setChosenLinks(node)
-            this.setEventLinkStyles(EVENT_TYPES.HOVER)
+            if (!this.isHighlightAll) {
+                this.setChosenLinks(node)
+                this.setEventLinkStyles(EVENT_TYPES.HOVER)
+            }
         },
         mouseleaveNode() {
-            this.setEventLinkStyles(EVENT_TYPES.NONE)
-            this.chosenLinks = []
+            if (!this.isHighlightAll) {
+                this.setEventLinkStyles(EVENT_TYPES.NONE)
+                this.chosenLinks = []
+            }
         },
         getKeyIcon({ node, colId }) {
             const {
@@ -624,11 +641,8 @@ export default {
 
             if (categories.includes(primaryKey))
                 return {
-                    icon: 'mdi-key-variant',
+                    icon: 'mdi-key',
                     color: color ? color : 'primary',
-                    style: {
-                        transform: 'rotate(180deg) scale(1, -1)',
-                    },
                     size: 18,
                 }
             else if (isUQ)
@@ -657,21 +671,26 @@ export default {
                      * access the diff with hard-code indexes.
                      */
                     const diff = this.$typy(this.$helpers.deepDiff(oV, v), '[0]').safeObjectOrEmpty
-                    const diffKey = diff.path[1]
-                    const aValueDiff = this.$helpers.lodash.objGet(v, diff.path.join('.'))
-                    this.graphConfig.updateConfig({
-                        key: diff.path[0],
-                        patch: { [diffKey]: aValueDiff },
-                    })
-                    switch (diffKey) {
-                        case 'isAttrToAttr':
-                            this.handleIsAttrToAttrMode(aValueDiff)
+                    const path = diff.path.join('.')
+                    const value = diff.rhs
+                    this.graphConfig.updateConfig({ path, value })
+                    switch (path) {
+                        case 'link.isAttrToAttr':
+                            this.handleIsAttrToAttrMode(value)
+                            break
+                        case 'link.isHighlightAll':
+                            this.handleHighlightAllLinks()
                             break
                     }
                     this.drawLinks()
                 },
                 { deep: true }
             )
+        },
+        handleHighlightAllLinks() {
+            if (this.isHighlightAll) this.chosenLinks = this.graphLinks
+            this.setEventLinkStyles(this.isHighlightAll ? EVENT_TYPES.HOVER : EVENT_TYPES.NONE)
+            if (!this.isHighlightAll) this.chosenLinks = []
         },
         /**
          * If value is true, the diagram shows all links including composite links for composite keys

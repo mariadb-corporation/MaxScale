@@ -247,6 +247,7 @@ export default {
                         graph_config: this.$helpers.immutableUpdate(this.activeGraphConfig, {
                             link: {
                                 isAttrToAttr: { $set: v.link.isAttrToAttr },
+                                isHighlightAll: { $set: v.link.isHighlightAll },
                             },
                             linkShape: {
                                 type: { $set: v.linkShape.type },

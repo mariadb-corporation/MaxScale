@@ -38,7 +38,7 @@ export default class ErdTask extends Extender {
             nodes: this.attr([]),
             count: this.number(1),
             graph_config: this.attr({
-                link: { isAttrToAttr: false },
+                link: { isAttrToAttr: false, isHighlightAll: false },
                 linkShape: { type: LINK_SHAPES.ORTHO },
             }),
             is_laid_out: this.boolean(false), //conditionally skip the simulation

@@ -15,13 +15,9 @@ import { lodash } from '@share/utils/helpers'
 
 export default class GraphConfig {
     constructor(config) {
-        let allConfig = config
-        this.link = allConfig.link
-        this.marker = allConfig.marker
-        this.linkShape = allConfig.linkShape
+        this.config = lodash.cloneDeep(config)
     }
-
-    updateConfig({ key, patch }) {
-        this[key] = lodash.merge(this[key], patch)
+    updateConfig({ path, value }) {
+        lodash.set(this.config, path, value)
     }
 }

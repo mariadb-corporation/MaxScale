@@ -40,7 +40,6 @@
                     v-if="isConfDlgOpened"
                     v-model="currSql"
                     :class="`fill-height`"
-                    readOnly
                     :completionItems="completionItems"
                     :options="{
                         fontSize: 10,

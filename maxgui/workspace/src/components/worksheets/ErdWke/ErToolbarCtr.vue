@@ -45,7 +45,7 @@
             :text="!config.link.isAttrToAttr"
             depressed
             color="primary"
-            @click="toggleIsAttrToAttr"
+            @click="togglePersistentAttr('link.isAttrToAttr')"
         >
             <template v-slot:btn-content>
                 <v-icon size="22">mdi-key-link </v-icon>
@@ -63,6 +63,30 @@
                 <v-icon size="22">mdi-arrange-send-to-back </v-icon>
             </template>
             {{ $mxs_t('info.autoArrangeErd') }}
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            :text="!config.link.isHighlightAll"
+            depressed
+            color="primary"
+            @click="togglePersistentAttr('link.isHighlightAll')"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22">
+                    {{
+                        config.link.isHighlightAll
+                            ? 'mdi-lightbulb-on-outline'
+                            : ' mdi-lightbulb-outline'
+                    }}
+                </v-icon>
+            </template>
+            {{
+                $mxs_t(
+                    config.link.isHighlightAll
+                        ? 'info.turnOffRelationshipHighlight'
+                        : 'info.turnOnRelationshipHighlight'
+                )
+            }}
         </mxs-tooltip-btn>
         <v-tooltip top transition="slide-y-transition">
             <template v-slot:activator="{ on }">
@@ -332,11 +356,11 @@ export default {
             this.$helpers.lodash.update(updatedObj, path, () => value)
             return updatedObj
         },
-        toggleIsAttrToAttr() {
+        togglePersistentAttr(path) {
             this.config = this.immutableUpdateConfig(
                 this.config,
-                'link.isAttrToAttr',
-                !this.config.link.isAttrToAttr
+                path,
+                !this.$helpers.lodash.get(this.config, path)
             )
         },
         onChangeLinkShape(v) {
