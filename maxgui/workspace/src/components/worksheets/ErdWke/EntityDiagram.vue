@@ -430,7 +430,12 @@ export default {
             })
             if (Object.keys(nodeSizeMap).length) this.runSimulation()
         },
-        runSimulation() {
+        /**
+         * @param {function} cb - callback function to be run after the simulation is end
+         * @public
+         */
+        runSimulation(cb) {
+            let tickCount = 1
             this.simulation = forceSimulation(this.graphNodes)
                 .force(
                     'link',
@@ -449,9 +454,28 @@ export default {
             if (this.isLaidOut) {
                 this.simulation.stop()
                 // Adding a loading animation can enhance the smoothness, even if the graph is already laid out.
-                this.$helpers.delay(this.isRendering ? 300 : 0).then(this.draw)
+                this.$helpers.delay(this.isRendering ? 300 : 0).then(() => {
+                    this.draw(tickCount)
+                    this.emitOnRendered()
+                })
             } else {
-                this.simulation.alphaMin(0.1).on('end', this.draw)
+                /**
+                 * TODO: Make alphaMin customizable by the user, the smaller the number is, the better
+                 * the layout would be but it also takes longer time.
+                 */
+                this.simulation
+                    .alphaMin(0.1)
+                    .on('tick', () => {
+                        this.draw(tickCount)
+                        tickCount++
+                    })
+                    .on('end', () => {
+                        this.emitOnRendered()
+                        this.$typy(cb).safeFunction({
+                            nodes: this.graphNodes,
+                            links: this.graphLinks,
+                        })
+                    })
                 this.handleCollision()
             }
         },
@@ -467,12 +491,16 @@ export default {
         emitOnRendered() {
             this.$emit('on-rendered', { nodes: this.graphNodes, links: this.graphLinks })
         },
-        draw() {
+        /**
+         * @param {number} tickCount - number of times this function is called.
+         * This helps to prevent initLinkInstance from being called repeatedly memory which
+         * causes memory leaks. initLinkInstance should be called once
+         */
+        draw(tickCount) {
             this.setGraphNodeCoordMap()
-            this.initLinkInstance()
+            if (tickCount === 1) this.initLinkInstance()
             this.drawLinks()
-            this.isRendering = false
-            this.emitOnRendered()
+            if (tickCount === 1) this.isRendering = false
         },
         setGraphNodeCoordMap() {
             this.graphNodeCoordMap = this.graphNodes.reduce((map, n) => {

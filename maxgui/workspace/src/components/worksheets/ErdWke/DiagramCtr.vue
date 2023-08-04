@@ -9,6 +9,7 @@
             @on-create-table="handleCreateTable"
             @on-undo="navHistory(activeHistoryIdx - 1)"
             @on-redo="navHistory(activeHistoryIdx + 1)"
+            @click-auto-arrange="onClickAutoArrange"
             v-on="$listeners"
         />
         <entity-diagram
@@ -789,6 +790,12 @@ export default {
                     type: 'error',
                 })
             }
+        },
+        onClickAutoArrange() {
+            ErdTask.update({
+                where: this.activeTaskId,
+                data: { is_laid_out: false },
+            }).then(() => this.$refs.diagram.runSimulation(diagram => this.onRendered(diagram)))
         },
     },
 }

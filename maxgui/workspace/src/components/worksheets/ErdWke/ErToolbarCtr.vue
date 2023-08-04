@@ -40,6 +40,30 @@
             </template>
             {{ $mxs_t('shapeOfLinks') }}
         </v-tooltip>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            :text="!config.link.isAttrToAttr"
+            depressed
+            color="primary"
+            @click="toggleIsAttrToAttr"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22">mdi-key-link </v-icon>
+            </template>
+            {{ $mxs_t('info.drawFkLinks') }}
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            text
+            depressed
+            color="primary"
+            @click="$emit('click-auto-arrange')"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="22">mdi-arrange-send-to-back </v-icon>
+            </template>
+            {{ $mxs_t('info.autoArrangeErd') }}
+        </mxs-tooltip-btn>
         <v-tooltip top transition="slide-y-transition">
             <template v-slot:activator="{ on }">
                 <div class="er-toolbar__btn" v-on="on">
@@ -75,7 +99,6 @@
             </template>
             {{ $mxs_t('zoom') }}
         </v-tooltip>
-
         <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
@@ -110,18 +133,6 @@
         <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
-            :text="!config.link.isAttrToAttr"
-            depressed
-            color="primary"
-            @click="toggleIsAttrToAttr"
-        >
-            <template v-slot:btn-content>
-                <v-icon size="22">mdi-key-link </v-icon>
-            </template>
-            {{ $mxs_t('info.drawFkLinks') }}
-        </mxs-tooltip-btn>
-        <mxs-tooltip-btn
-            btnClass="toolbar-square-btn"
             text
             depressed
             color="primary"
@@ -133,7 +144,6 @@
             </template>
             {{ $mxs_t('createTable') }}
         </mxs-tooltip-btn>
-        <v-divider class="align-self-center er-toolbar__separator mx-2" vertical />
         <v-menu
             offset-y
             bottom
@@ -222,6 +232,7 @@
  * on-export-script: void
  * on-export-as-jpeg: void
  * on-apply-script: void
+ * click-auto-arrange: void
  * input: Object. v-model
  */
 import ErdTask from '@wsModels/ErdTask'

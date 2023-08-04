@@ -276,6 +276,7 @@
         "inDays": "in days",
         "indexes": "Indexes",
         "info": {
+            "autoArrangeErd": "Auto-arrange entities",
             "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
             "deleteEtlTask": "This would also delete the worksheet used to launch this migration task.",
             "disconnectAll": "There are open database connections from Workspace. Uncheck the box to keep these connections open.",
