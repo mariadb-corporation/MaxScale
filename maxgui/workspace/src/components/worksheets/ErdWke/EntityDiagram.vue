@@ -166,15 +166,7 @@
  * - on-link-contextmenu({e: Event, link:object})
  */
 import { mapState } from 'vuex'
-import {
-    forceSimulation,
-    forceLink,
-    forceManyBody,
-    forceCenter,
-    forceCollide,
-    forceX,
-    forceY,
-} from 'd3-force'
+import { forceSimulation, forceLink, forceCenter, forceCollide, forceX, forceY } from 'd3-force'
 import { min as d3Min, max as d3Max } from 'd3-array'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
 import EntityLink from '@wsSrc/components/worksheets/ErdWke/EntityLink'
@@ -442,13 +434,10 @@ export default {
             this.simulation = forceSimulation(this.graphNodes)
                 .force(
                     'link',
-                    forceLink(this.graphLinks).id(d => d.id)
-                )
-                .force(
-                    'charge',
-                    forceManyBody()
-                        .strength(-15)
-                        .theta(0.5)
+                    forceLink(this.graphLinks)
+                        .id(d => d.id)
+                        .strength(0.5)
+                        .distance(100)
                 )
                 .force('center', forceCenter(this.dim.width / 2, this.dim.height / 2))
                 .force('x', forceX().strength(0.1))
@@ -481,6 +470,16 @@ export default {
                     })
                 this.handleCollision()
             }
+        },
+        handleCollision() {
+            this.simulation.force(
+                'collide',
+                forceCollide().radius(d => {
+                    const { width, height } = d.size
+                    // Because nodes are densely packed,  this adds an extra radius of 50 pixels to the nodes
+                    return Math.sqrt(width * width + height * height) / 2 + 50
+                })
+            )
         },
         initGraphConfig() {
             this.graphConfig = new GraphConfig(
@@ -561,16 +560,6 @@ export default {
                     click: param => this.openContextMenu.bind(this)(param),
                 },
             })
-        },
-        handleCollision() {
-            this.simulation.force(
-                'collide',
-                forceCollide().radius(d => {
-                    const { width, height } = d.size
-                    // Because nodes are densely packed,  this adds an extra radius of 100 pixels to the nodes
-                    return Math.sqrt(width * width + height * height) / 2 + 100
-                })
-            )
         },
         setChosenLinks(node) {
             this.chosenLinks = erdHelper.getNodeLinks({ links: this.getLinks(), node })
