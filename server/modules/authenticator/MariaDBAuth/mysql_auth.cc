@@ -43,23 +43,32 @@ const std::unordered_set<std::string> plugins = {"mysql_native_password", "cachi
 MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
     bool log_pw_mismatch = false;
+    bool passthrough_mode = false;
     const std::string opt_log_mismatch = "log_password_mismatch";
     if (options->contains(opt_log_mismatch))
     {
         log_pw_mismatch = options->get_bool(opt_log_mismatch);
         options->remove(opt_log_mismatch);
     }
-    return new MariaDBAuthenticatorModule(log_pw_mismatch);
+    const std::string opt_passthrough = "clear_pw_passthrough";
+    if (options->contains(opt_passthrough))
+    {
+        passthrough_mode = options->get_bool(opt_passthrough);
+        options->remove(opt_passthrough);
+    }
+
+    return new MariaDBAuthenticatorModule(log_pw_mismatch, passthrough_mode);
 }
 
-MariaDBAuthenticatorModule::MariaDBAuthenticatorModule(bool log_pw_mismatch)
+MariaDBAuthenticatorModule::MariaDBAuthenticatorModule(bool log_pw_mismatch, bool passthrough_mode)
     : m_log_pw_mismatch(log_pw_mismatch)
+    , m_passthrough_mode(passthrough_mode)
 {
 }
 
 uint64_t MariaDBAuthenticatorModule::capabilities() const
 {
-    return 0;
+    return m_passthrough_mode ? CAP_PASSTHROUGH : 0;
 }
 
 std::string MariaDBAuthenticatorModule::supported_protocol() const
@@ -79,7 +88,7 @@ const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plu
 
 mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()
 {
-    return mariadb::SClientAuth(new(std::nothrow) MariaDBClientAuthenticator(m_log_pw_mismatch));
+    return std::make_unique<MariaDBClientAuthenticator>(m_log_pw_mismatch, m_passthrough_mode);
 }
 
 mariadb::SBackendAuth
@@ -126,8 +135,9 @@ static GWBUF gen_auth_switch_request_packet(const MYSQL_session* client_data)
     return buffer;
 }
 
-MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch)
+MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch, bool passthrough_mode)
     : m_log_pw_mismatch(log_pw_mismatch)
+    , m_passthrough_mode(passthrough_mode)
 {
 }
 

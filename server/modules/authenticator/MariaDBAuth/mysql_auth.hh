@@ -22,7 +22,7 @@ class MariaDBAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
     static MariaDBAuthenticatorModule* create(mxs::ConfigParameters* options);
-    explicit MariaDBAuthenticatorModule(bool log_pw_mismatch);
+    explicit MariaDBAuthenticatorModule(bool log_pw_mismatch, bool passthrough_mode);
     ~MariaDBAuthenticatorModule() override = default;
 
     mariadb::SClientAuth  create_client_authenticator() override;
@@ -37,12 +37,13 @@ public:
 
 private:
     bool m_log_pw_mismatch {false};     /**< Print pw hash when authentication fails */
+    bool m_passthrough_mode {false};
 };
 
 class MariaDBClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
-    MariaDBClientAuthenticator(bool log_pw_mismatch);
+    MariaDBClientAuthenticator(bool log_pw_mismatch, bool passthrough_mode);
     ~MariaDBClientAuthenticator() override = default;
 
     ExchRes exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
@@ -58,6 +59,7 @@ private:
 
     State m_state {State::INIT};
     bool  m_log_pw_mismatch {false};/**< Print pw hash when authentication fails */
+    bool  m_passthrough_mode {false};
 };
 
 /** Structure representing the authentication state */
