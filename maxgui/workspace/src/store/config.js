@@ -359,3 +359,17 @@ export const COL_ORDER_BY = Object.freeze({
     ASC: 'ASC',
     DESC: 'DESC',
 })
+/**
+ * When using the `alter-table-editor` to alter or add foreign keys,
+ * the "REFERENCED TARGET" dropdown is populated with known targets in
+ * the same schema. To alter table, the users must have expanded the
+ * schema node in the sidebar, so we get a list of tables in that schema.
+ * Known targets can be then populated in the "REFERENCED TARGET" dropdown
+ * as a quick suggestion. However, those tables are not parsed, so the
+ * items for the "REFERENCED COLUMNS" dropdown can't be populated until
+ * those tables are parsed. To recognize unparsed tables, the id for
+ * the table in the "REFERENCED TARGET" dropdown will have a placeholder
+ * prefix name, so when the users select the table, its DDL will be queried
+ * and parsed. It's basically "lazy-loading".
+ */
+export const UNPARSED_TBL_PLACEHOLDER = 'UNPARSED_TBL__'

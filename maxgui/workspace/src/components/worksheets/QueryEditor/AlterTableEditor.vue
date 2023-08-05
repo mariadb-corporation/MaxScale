@@ -8,6 +8,7 @@
             :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
             :onExecute="onExecute"
             :lookupTables="{ [stagingData.id]: stagingData }"
+            :hintedRefTargets="hintedRefTargets"
             :activeSpec.sync="activeSpec"
         />
     </v-card>
@@ -26,13 +27,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
-import QueryTab from '@wsSrc/store/orm/models/QueryTab'
-import QueryTabTmp from '@wsSrc/store/orm/models/QueryTabTmp'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
+import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 
 export default {
     name: 'alter-table-editor',
@@ -40,6 +42,11 @@ export default {
         dim: { type: Object, required: true },
     },
     computed: {
+        ...mapState({
+            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
+            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+            UNPARSED_TBL_PLACEHOLDER: state => state.mxsWorkspace.config.UNPARSED_TBL_PLACEHOLDER,
+        }),
         isLoading() {
             return Editor.getters('isLoadingTblCreationInfo')
         },
@@ -81,6 +88,31 @@ export default {
                     },
                 })
             },
+        },
+        schema() {
+            return this.$typy(this.stagingData, 'options.schema').safeString
+        },
+        tblName() {
+            return this.$typy(this.stagingData, 'options.name').safeString
+        },
+        sidebarSchemaNode() {
+            return SchemaSidebar.getters('dbTreeData').find(n => n.name === this.schema)
+        },
+        tablesInSchema() {
+            const schemaGroupNode = this.$typy(this.sidebarSchemaNode, 'children').safeArray.find(
+                n => n.type === this.NODE_GROUP_TYPES.TBL_G
+            )
+            return this.$typy(schemaGroupNode, 'children').safeArray.filter(
+                n => n.name !== this.tblName
+            )
+        },
+        hintedRefTargets() {
+            return this.tablesInSchema.map(n => ({
+                id: `${this.UNPARSED_TBL_PLACEHOLDER}${n.qualified_name}`,
+                text: n.qualified_name,
+                name: n.name,
+                schema: n.parentNameData[this.NODE_TYPES.SCHEMA],
+            }))
         },
     },
     activated() {

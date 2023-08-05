@@ -116,6 +116,11 @@ export default {
         onExecute: { type: Function, required: true },
         // parsed tables to be looked up in fk-definitions
         lookupTables: { type: Object, default: () => ({}) },
+        /**
+         * hinted referenced targets is a list of tables that are in
+         * the same schema as the table being altered/created
+         */
+        hintedRefTargets: { type: Array, default: () => [] },
         connData: { type: Object, required: true },
         activeSpec: { type: String, required: true }, //sync
     },
@@ -203,8 +208,18 @@ export default {
         allLookupTables() {
             return Object.values({ ...this.lookupTables, ...this.newLookupTables })
         },
-        refTargets() {
+        knownTargets() {
             return erdHelper.genRefTargets(this.allLookupTables)
+        },
+        knownTargetMap() {
+            // keyed by text as the genRefTargets method assign qualified name of the table to text field
+            return this.$helpers.lodash.keyBy(this.knownTargets, 'text')
+        },
+        refTargets() {
+            return [
+                ...this.knownTargets,
+                ...this.hintedRefTargets.filter(item => !this.knownTargetMap[item.text]),
+            ]
         },
         tablesColNameMap() {
             return erdHelper.createTablesColNameMap(this.allLookupTables)

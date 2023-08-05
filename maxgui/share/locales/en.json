@@ -204,6 +204,7 @@
             "failedToConnectTo": "Failed to connect to {0}.",
             "failedToExeAction": "Failed to {action}",
             "failedToExeStatements": "Failed to execute SQL statement. | Failed to execute SQL statements.",
+            "failedToGetRefTbl": "Failed to get the referenced table data",
             "failedToPrepareMigrationScript": "Failed to prepare migration script.",
             "fkColsRequirements": "The foreign key columns and the referenced columns must be of the same type, or similar types. For integer types, the size and sign must also be the same.",
             "largerThanZero": "{inputName} must be larger than zero",

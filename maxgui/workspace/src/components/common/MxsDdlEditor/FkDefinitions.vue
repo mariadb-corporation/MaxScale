@@ -54,7 +54,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import FkDefinitionCol from '@wsSrc/components/common/MxsDdlEditor/FkDefinitionCol.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -91,6 +91,7 @@ export default {
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
             REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
+            UNPARSED_TBL_PLACEHOLDER: state => state.mxsWorkspace.config.UNPARSED_TBL_PLACEHOLDER,
         }),
         headers() {
             let header = { sortable: false, uppercase: true }
@@ -216,10 +217,16 @@ export default {
         await this.init()
     },
     methods: {
+        ...mapMutations({
+            SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
+        }),
         async init() {
             this.assignData()
-            if (this.unknownTargets.length)
-                await this.fetchReferencedTablesData(this.unknownTargets)
+            if (this.unknownTargets.length) {
+                this.isLoading = true
+                await this.fetchUnparsedRefTbl(this.unknownTargets)
+                this.isLoading = false
+            }
         },
         assignData() {
             this.stagingKeyCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
@@ -231,19 +238,20 @@ export default {
                 disableHandler: type => !checkFkSupport(type),
             })
         },
-        async fetchReferencedTablesData(targets) {
-            this.isLoading = true
+        async fetchUnparsedRefTbl(targets) {
             const [, parsedTables] = await queryHelper.queryAndParseDDL({
                 connId: this.connData.id,
                 targets,
                 config: this.connData.config,
                 charsetCollationMap: this.charsetCollationMap,
             })
-            this.tmpLookupTables = parsedTables.reduce((map, parsedTable) => {
-                map[parsedTable.id] = parsedTable
-                return map
-            }, {})
-            this.isLoading = false
+            this.tmpLookupTables = this.$helpers.lodash.merge(
+                this.tmpLookupTables,
+                parsedTables.reduce((map, parsedTable) => {
+                    map[parsedTable.id] = parsedTable
+                    return map
+                }, {})
+            )
         },
         deleteSelectedKeys(selectedItems) {
             const { immutableUpdate } = this.$helpers
@@ -315,7 +323,7 @@ export default {
         isReferencedTblPersisted(id) {
             return Boolean(this.lookupTables[id])
         },
-        onChangeInput(item) {
+        async onChangeInput(item) {
             const { NAME, COLS, REF_TARGET, REF_COLS, ON_UPDATE, ON_DELETE } = this.FK_EDITOR_ATTRS
             const id = item.rowData[0]
             switch (item.field) {
@@ -341,41 +349,49 @@ export default {
                  * ids; otherwise, names will be assigned. This is an intention to
                  * keep new referenced tables data in memory (tmpLookupTables) and because of the
                  * following reasons:
-                 * In alter-table-editor component, lookupTables always has 1 table which is itself.
-                 * Using referenced names for referenced targets data as tmpLookupTables is kept in
-                 * memory.
+                 * In alter-table-editor component, when the component is mounted,
+                 * lookupTables always has 1 table which is itself. Unknown targets or new targets
+                 * will be fetched, parsed and kept in memory.
+                 * Using referenced names directly for referenced targets data as the names are not
+                 * mutable.
                  * In entity-editor-ctr component, lookupTables has all tables in the ERD, ids are
                  * used for reference targets because the names can be altered.
                  */
                 case REF_TARGET: {
                     if (this.isReferencedTblPersisted(item.value)) {
-                        this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(
-                            this.stagingKeyCategoryMap,
-                            {
-                                [this.foreignKeyToken]: {
-                                    [id]: {
-                                        $unset: ['ref_schema_name', 'ref_tbl_name'],
-                                        ref_cols: { $set: [] },
-                                        ref_tbl_id: { $set: item.value },
-                                    },
-                                },
-                            }
-                        )
+                        this.setTargetRefTblId({ keyId: id, value: item.value })
                     } else {
-                        const newReferencedTbl = this.tmpLookupTables[item.value]
-                        this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(
-                            this.stagingKeyCategoryMap,
-                            {
-                                [this.foreignKeyToken]: {
-                                    [id]: {
-                                        ref_cols: { $set: [] },
-                                        $unset: ['ref_tbl_id'],
-                                        ref_schema_name: { $set: newReferencedTbl.options.schema },
-                                        ref_tbl_name: { $set: newReferencedTbl.options.name },
+                        let newReferencedTbl = this.tmpLookupTables[item.value]
+                        if (item.value.includes(this.UNPARSED_TBL_PLACEHOLDER)) {
+                            const unparsedTblTarget = this.refTargets.find(
+                                target => target.id === item.value
+                            )
+                            const [, parsedTables] = await queryHelper.queryAndParseDDL({
+                                connId: this.connData.id,
+                                targets: [
+                                    {
+                                        schema: unparsedTblTarget.schema,
+                                        tbl: unparsedTblTarget.name,
                                     },
-                                },
-                            }
-                        )
+                                ],
+                                config: this.connData.config,
+                                charsetCollationMap: this.charsetCollationMap,
+                            })
+                            newReferencedTbl = parsedTables[0]
+                            this.tmpLookupTables = this.$helpers.immutableUpdate(
+                                this.tmpLookupTables,
+                                { [newReferencedTbl.id]: { $set: newReferencedTbl } }
+                            )
+                        }
+                        if (newReferencedTbl)
+                            this.setNewTargetRefTblName({ keyId: id, newReferencedTbl })
+                        else {
+                            this.SET_SNACK_BAR_MESSAGE({
+                                text: [this.$mxs_t('errors.failedToGetRefTbl')],
+                                type: 'error',
+                            })
+                            this.setTargetRefTblId({ keyId: id, value: '' })
+                        }
                     }
                     break
                 }
@@ -394,6 +410,33 @@ export default {
                     break
                 }
             }
+        },
+        setTargetRefTblId({ keyId, value }) {
+            this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(this.stagingKeyCategoryMap, {
+                [this.foreignKeyToken]: {
+                    [keyId]: {
+                        $unset: ['ref_schema_name', 'ref_tbl_name'],
+                        ref_cols: { $set: [] },
+                        ref_tbl_id: { $set: value },
+                    },
+                },
+            })
+        },
+        setNewTargetRefTblName({ keyId, newReferencedTbl }) {
+            this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(this.stagingKeyCategoryMap, {
+                [this.foreignKeyToken]: {
+                    [keyId]: {
+                        ref_cols: { $set: [] },
+                        $unset: ['ref_tbl_id'],
+                        ref_schema_name: {
+                            $set: newReferencedTbl.options.schema,
+                        },
+                        ref_tbl_name: {
+                            $set: newReferencedTbl.options.name,
+                        },
+                    },
+                },
+            })
         },
     },
 }
