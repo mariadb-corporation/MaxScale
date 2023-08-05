@@ -49,8 +49,8 @@
  * $emit('selected-targets', object[])
  */
 import { mapState } from 'vuex'
-import Worksheet from '@wsSrc/store/orm/models/Worksheet'
-import SchemaSidebar from '@wsSrc/store/orm/models/SchemaSidebar'
+import Worksheet from '@wsModels/Worksheet'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
 import queries from '@wsSrc/api/queries'
 import queryHelper from '@wsSrc/store/queryHelper'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'

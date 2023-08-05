@@ -37,7 +37,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import QueryConn from '@wsSrc/store/orm/models/QueryConn'
+import QueryConn from '@wsModels/QueryConn'
 import EtlOverviewStage from '@wkeComps/DataMigration/EtlOverviewStage.vue'
 import EtlConnsStage from '@wkeComps/DataMigration/EtlConnsStage.vue'
 import EtlObjSelectStage from '@wkeComps/DataMigration/EtlObjSelectStage.vue'

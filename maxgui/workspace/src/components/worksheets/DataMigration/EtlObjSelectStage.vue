@@ -113,7 +113,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import EtlTaskTmp from '@wsSrc/store/orm/models/EtlTaskTmp'
+import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import { mapState } from 'vuex'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlCreateModeInput from '@wkeComps/DataMigration/EtlCreateModeInput.vue'

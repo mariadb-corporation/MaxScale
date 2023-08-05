@@ -66,7 +66,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
-import QueryConn from '@wsSrc/store/orm/models/QueryConn'
+import QueryConn from '@wsModels/QueryConn'
 import { mapState } from 'vuex'
 
 export default {

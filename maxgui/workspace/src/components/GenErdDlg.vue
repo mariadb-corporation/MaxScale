@@ -47,10 +47,10 @@
  * Public License.
  */
 import { mapState, mapMutations, mapActions } from 'vuex'
-import ErdTask from '@wsSrc/store/orm/models/ErdTask'
-import ErdTaskTmp from '@wsSrc/store/orm/models/ErdTaskTmp'
-import QueryConn from '@wsSrc/store/orm/models/QueryConn'
-import Worksheet from '@wsSrc/store/orm/models/Worksheet'
+import ErdTask from '@wsModels/ErdTask'
+import ErdTaskTmp from '@wsModels/ErdTaskTmp'
+import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 import SelectableSchemaTableTree from '@wkeComps/SelectableSchemaTableTree'
 import connection from '@wsSrc/api/connection'

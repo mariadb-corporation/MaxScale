@@ -48,7 +48,7 @@ import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
 import saveFile from '@wsSrc/mixins/saveFile'
-import Editor from '@wsSrc/store/orm/models/Editor'
+import Editor from '@wsModels/Editor'
 export default {
     name: 'query-tab-nav-item',
     mixins: [saveFile],

@@ -152,7 +152,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import QueryConn from '@wsSrc/store/orm/models/QueryConn'
+import QueryConn from '@wsModels/QueryConn'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
