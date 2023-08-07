@@ -285,7 +285,7 @@ export default {
                  * Clear selectedTblRows once rows quantity changes.
                  * e.g. when deleting a row
                  */
-                if (v.length <= oV.length) this.selectedTblRows = []
+                if (!(v.length <= oV.length)) this.selectedTblRows = []
             },
         },
         isVertTable(v) {

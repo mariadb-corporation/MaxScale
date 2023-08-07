@@ -5,7 +5,7 @@
             :style="{ height: `${toolbarHeight}px` }"
         >
             <revert-btn v-if="!isCreating" :disabled="!hasChanged" @click="onRevert" />
-            <apply-btn :disabled="!hasChanged" @click="onApply" />
+            <apply-btn v-if="showApplyBtn" :disabled="!hasChanged" @click="onApply" />
             <slot name="toolbar-append" :formRef="$refs.form" />
         </div>
         <div ref="header">
@@ -113,7 +113,7 @@ export default {
         initialData: { type: Object, required: true },
         isCreating: { type: Boolean, default: false }, // set true to output CREATE TABLE script
         schemas: { type: Array, default: () => [] }, // list of schema names
-        onExecute: { type: Function, required: true },
+        onExecute: { type: Function, default: () => null },
         // parsed tables to be looked up in fk-definitions
         lookupTables: { type: Object, default: () => ({}) },
         /**
@@ -123,6 +123,7 @@ export default {
         hintedRefTargets: { type: Array, default: () => [] },
         connData: { type: Object, required: true },
         activeSpec: { type: String, required: true }, //sync
+        showApplyBtn: { type: Boolean, default: true },
     },
     data() {
         return {
@@ -246,16 +247,16 @@ export default {
         },
     },
     created() {
-        this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
+        this.addKeyEvtListener()
     },
     activated() {
-        this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
+        this.addKeyEvtListener()
     },
     deactivated() {
-        this.eventBus.$off('workspace-shortkey')
+        this.removeKeyEvtListener()
     },
     beforeDestroy() {
-        this.eventBus.$off('workspace-shortkey')
+        this.removeKeyEvtListener()
     },
     mounted() {
         this.setHeaderHeight()
@@ -265,6 +266,12 @@ export default {
             SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG',
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
         }),
+        addKeyEvtListener() {
+            if (this.showApplyBtn) this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
+        },
+        removeKeyEvtListener() {
+            if (this.showApplyBtn) this.eventBus.$off('workspace-shortkey')
+        },
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight

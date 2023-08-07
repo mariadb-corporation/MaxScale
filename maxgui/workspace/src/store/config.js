@@ -234,7 +234,7 @@ export const LINK_OPT_TYPES = Object.freeze({
     REMOVE: 'removeFk',
     SET_ONE_TO_ONE: 'changeToOneToOne',
     SET_ONE_TO_MANY: 'changeToOneToMany',
-    SET_MANDATORY: 'setMandatory',
+    SET_MANDATORY: 'setFkColMandatory',
     SET_FK_COL_OPTIONAL: 'setFkColOptional',
     SET_REF_COL_MANDATORY: 'setRefColMandatory',
     SET_REF_COL_OPTIONAL: 'setRefColOptional',

@@ -89,7 +89,7 @@ export default {
         },
         minErdPct() {
             return this.$helpers.pxToPct({
-                px: this.activeEntityId ? 42 : 0,
+                px: this.activeEntityId ? 40 : 0,
                 containerPx: this.dim.height,
             })
         },

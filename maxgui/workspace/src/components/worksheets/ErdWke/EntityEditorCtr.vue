@@ -10,7 +10,7 @@
         :schemas="schemas"
         :lookupTables="lookupTables"
         :connData="{ id: activeErdConnId, config: activeRequestConfig }"
-        :onExecute="onExecute"
+        :showApplyBtn="false"
         v-on="$listeners"
     >
         <template v-slot:toolbar-append="{ formRef }">
@@ -116,7 +116,6 @@ export default {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
         ...mapActions({
             queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData',
-            exeDdlScript: 'mxsWorkspace/exeDdlScript',
         }),
         watch() {
             this.watch_activeEntityId()
@@ -182,16 +181,6 @@ export default {
                     text: [this.$mxs_t('errors.requiredInputs')],
                     type: 'error',
                 })
-        },
-        async onExecute() {
-            const { options } = this.stagingData
-            const { schema, name } = options
-            await this.exeDdlScript({
-                connId: this.activeErdConnId,
-                isCreating: true,
-                schema,
-                name,
-            })
         },
     },
 }
