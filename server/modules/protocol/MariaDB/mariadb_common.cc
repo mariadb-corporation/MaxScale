@@ -510,7 +510,7 @@ uint64_t AuthenticatorModule::capabilities() const
     return 0;
 }
 
-mariadb::AuthByteVec AuthenticatorModule::generate_token(const std::string& password)
+mariadb::AuthByteVec AuthenticatorModule::generate_token(std::string_view password)
 {
     // Simply write the password as is. This works for PAM and GSSApi (in theory).
     return mariadb::AuthByteVec(password.begin(), password.end());

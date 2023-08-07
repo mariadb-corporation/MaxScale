@@ -167,7 +167,7 @@ public:
      * @param password Password read from file
      * @return Authentication token
      */
-    virtual AuthByteVec generate_token(const std::string& password);
+    virtual AuthByteVec generate_token(std::string_view password);
 };
 
 /**

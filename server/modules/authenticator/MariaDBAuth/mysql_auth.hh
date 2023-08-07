@@ -27,7 +27,7 @@ public:
 
     mariadb::SClientAuth  create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
-    mariadb::AuthByteVec  generate_token(const std::string& password) override;
+    mariadb::AuthByteVec  generate_token(std::string_view password) override;
 
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;

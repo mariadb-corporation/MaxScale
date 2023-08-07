@@ -100,13 +100,13 @@ MariaDBAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthDat
     return mariadb::SBackendAuth(new MariaDBBackendSession(auth_data));
 }
 
-mariadb::AuthByteVec MariaDBAuthenticatorModule::generate_token(const std::string& password)
+mariadb::AuthByteVec MariaDBAuthenticatorModule::generate_token(std::string_view password)
 {
     mariadb::AuthByteVec rval;
     if (!password.empty())
     {
         rval.resize(SHA_DIGEST_LENGTH);
-        gw_sha1_str((const uint8_t*)password.c_str(), password.length(), rval.data());
+        gw_sha1_str((const uint8_t*)password.data(), password.length(), rval.data());
     }
     return rval;
 }
@@ -164,14 +164,14 @@ MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, Authen
             // Best to calculate sha1(pw) even before we know what backend will ask for, so that
             // protocol code can send the hash in the handshake response.
             // TODO: add protocol-level support for detecting/sending authenticator-aware handshake resp.
-            const auto& pw = auth_data.client_token;
-            string temp;    // TODO: change to string_view
-            if (!pw.empty())
+            std::string_view pw;
+            const auto& cli_token = auth_data.client_token;
+            if (!cli_token.empty())
             {
-                auto len = strnlen((const char*)pw.data(), pw.size());
-                temp.assign(pw.data(), pw.data() + len);
+                // According to protocol, clear password should always be 0-terminated.
+                pw = std::string_view((const char*)cli_token.data(), cli_token.size() - 1);
             }
-            auth_data.backend_token = auth_data.client_auth_module->generate_token(temp);
+            auth_data.backend_token = auth_data.client_auth_module->generate_token(pw);
         }
         rval.status = ExchRes::Status::READY;
         m_state = State::CHECK_TOKEN;
