@@ -64,7 +64,7 @@ public:
             return m_region_name;
         }
 
-        const std::string& region_oid() const
+        const int64_t region_oid() const
         {
             return m_region_oid;
         }
@@ -75,7 +75,7 @@ public:
         int64_t                   m_health_check_port;
         bool                      m_dynamic_node_detection;
         std::string               m_region_name;
-        std::string               m_region_oid;
+        int64_t                   m_region_oid;
         XpandMonitor*             m_pMonitor;
     };
 

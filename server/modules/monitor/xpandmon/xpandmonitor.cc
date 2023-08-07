@@ -110,11 +110,11 @@ region_name(&specification,
        "",
        config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamString
+config::ParamInteger
 region_oid(&specification,
        "region_oid",
        "The oid of the region MaxScale is running in. Mutually exclusive with 'region_name'.",
-       "",
+       0,
        config::Param::Modifiable::AT_RUNTIME);
 
 }
@@ -331,14 +331,14 @@ bool XpandMonitor::post_configure()
         return false;
     }
 
-    if (!m_config.region_name().empty() && !m_config.region_oid().empty())
+    if (!m_config.region_name().empty() && m_config.region_oid() != 0)
     {
         MXB_ERROR("%s: 'region_name' and 'region_oid' are mutually exclusive. "
                   "One, but not the other may be specified.", name());
         return false;
     }
 
-    if (m_config.region_name().empty() && m_config.region_oid().empty())
+    if (m_config.region_name().empty() && m_config.region_oid() == 0)
     {
         // 'sn.nodeid' will be NULL if the node is not softfailed and the same
         // as 'ni.nodeid' if it is. Renamed to 'softfailed' to make it less
@@ -366,7 +366,7 @@ bool XpandMonitor::post_configure()
         }
         else
         {
-            mxb_assert(!m_config.region_oid().empty());
+            mxb_assert(m_config.region_oid() != 0);
 
             m_refresh_query = mxb::string_printf(
                 "SELECT nir.nodeid, nir.iface_ip, nir.mysql_port, nir.healthmon_port, "
@@ -374,8 +374,8 @@ bool XpandMonitor::post_configure()
                 "FROM (SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, z.region "
                 "      FROM system.nodeinfo AS ni LEFT JOIN system.zones AS z ON ni.zone = z.zoneid) AS nir "
                 "LEFT JOIN system.softfailed_nodes AS sn ON nir.nodeid = sn.nodeid "
-                "WHERE nir.region = '%s'",
-                m_config.region_oid().c_str());
+                "WHERE nir.region = %ld",
+                m_config.region_oid());
         }
 
         MXB_INFO("%s: Query used for refreshing nodes: %s", name(), m_refresh_query.c_str());

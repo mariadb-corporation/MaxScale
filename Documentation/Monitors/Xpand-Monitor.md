@@ -194,7 +194,7 @@ specified, MaxScale will only consider nodes from that region.
 
 ### `region_oid`
 
-- **Type**: string
+- **Type**: integer
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Default**: ''
