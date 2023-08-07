@@ -686,11 +686,11 @@ public:
 private:
     void extract_payload()
     {
-        m_warnings = *m_pData++;
-        m_warnings += (*m_pData++ << 8);
+        m_warnings = gw_mysql_get_byte2(m_pData);
+        m_pData += 2;
 
-        m_status = *m_pData++;
-        m_status += (*m_pData++ << 8);
+        m_status = gw_mysql_get_byte2(m_pData);
+        m_pData += 2;
     }
 
 private:
@@ -743,11 +743,11 @@ private:
         m_affected_rows = LEncInt(&m_pData).value();
         m_last_insert_id = LEncInt(&m_pData).value();
 
-        m_status = *m_pData++;
-        m_status += (*m_pData++ << 8);
+        m_status = gw_mysql_get_byte2(m_pData);
+        m_pData += 2;
 
-        m_warnings = *m_pData++;
-        m_warnings += (*m_pData++ << 8);
+        m_warnings = gw_mysql_get_byte2(m_pData);
+        m_pData += 2;
     }
 
 private:
@@ -802,16 +802,16 @@ public:
         , m_org_name(&m_pData)
         , m_length_fixed_fields(&m_pData)
     {
-        m_character_set = *reinterpret_cast<const uint16_t*>(m_pData);
+        m_character_set = gw_mysql_get_byte2(m_pData);
         m_pData += 2;
 
-        m_column_length = *reinterpret_cast<const uint32_t*>(m_pData);
+        m_column_length = gw_mysql_get_byte4(m_pData);
         m_pData += 4;
 
         m_type = static_cast<enum_field_types>(*m_pData);
         m_pData += 1;
 
-        m_flags = *reinterpret_cast<const uint16_t*>(m_pData);
+        m_flags = gw_mysql_get_byte2(m_pData);
         m_pData += 2;
 
         m_decimals = *m_pData;
