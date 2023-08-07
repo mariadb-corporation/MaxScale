@@ -161,7 +161,7 @@ private:
 
     GWBUF track_response(GWBUF& buffer);
     bool  read_backend_handshake(GWBUF&& buffer);
-    void  handle_error_response(DCB* plain_dcb, GWBUF* buffer);
+    void  handle_error_response(const GWBUF& buffer);
     bool  session_ok_to_route(DCB* dcb);
     bool  handle_auth_change_response(const GWBUF& reply, DCB* dcb);
     int   send_mysql_native_password_response(const GWBUF& reply, DCB* dcb);

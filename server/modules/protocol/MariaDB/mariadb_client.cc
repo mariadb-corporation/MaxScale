@@ -2298,7 +2298,7 @@ void MariaDBClientConnection::complete_change_user_p2()
     m_session_data->role = curr_auth_data->user_entry.entry.default_role;
 }
 
-void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
+void MariaDBClientConnection::cancel_change_user_p2(const GWBUF& buffer)
 {
     auto& curr_auth_data = m_session_data->auth_data;
     auto& orig_auth_data = m_change_user.auth_data_bu;
@@ -2306,7 +2306,7 @@ void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
     MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' succeeded on MaxScale but "
                 "returned (0x%0hhx) on backends: %s",
                 orig_auth_data->user.c_str(), curr_auth_data->user.c_str(),
-                mxs_mysql_get_command(*buffer), mariadb::extract_error(buffer).c_str());
+                mxs_mysql_get_command(buffer), mariadb::extract_error(buffer).c_str());
 
     // Restore original auth data from backup.
     curr_auth_data = move(orig_auth_data);
@@ -2924,7 +2924,7 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
                 else
                 {
                     // Change user succeeded on MaxScale but failed on backends. Cancel it.
-                    cancel_change_user_p2(&buffer);
+                    cancel_change_user_p2(buffer);
                 }
                 break;
 

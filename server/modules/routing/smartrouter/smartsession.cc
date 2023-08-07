@@ -212,7 +212,7 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
         case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
             MXB_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
                                                             << " Error code=" << err_code
-                                                            << ' ' << mariadb::extract_error(&packet));
+                                                            << ' ' << mariadb::extract_error(packet));
             m_pSession->kill();
             return 1;
         }

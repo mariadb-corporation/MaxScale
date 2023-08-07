@@ -912,10 +912,10 @@ GWBUF create_ok_packet()
     return GWBUF(ok, sizeof(ok));
 }
 
-std::string extract_error(const GWBUF* buffer)
+std::string extract_error(const GWBUF& buffer)
 {
     std::string rval;
-    auto* data = buffer->data();
+    auto* data = buffer.data();
     if (MYSQL_IS_ERROR_PACKET(data))
     {
         const uint8_t* pState;

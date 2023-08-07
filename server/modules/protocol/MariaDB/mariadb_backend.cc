@@ -247,18 +247,14 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
 /**
  * @brief Log handshake failure
  *
- * @param dcb Backend DCB where authentication failed
  * @param buffer Buffer containing the response from the backend
  */
-void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buffer)
+void MariaDBBackendConnection::handle_error_response(const GWBUF& buffer)
 {
-    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
-    uint16_t errcode = mxs_mysql_get_mysql_errno(*buffer);
+    uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
     std::string reason = mariadb::extract_error(buffer);
-    std::string errmsg = mxb::string_printf(
-        "Authentication to '%s' failed: %hu, %s",
-        dcb->server()->name(), errcode, reason.c_str());
+    std::string errmsg = mxb::string_printf("Authentication to '%s' failed: %hu, %s",
+                                            m_server.name(), errcode, reason.c_str());
 
     if (m_session->service->config()->log_auth_warnings)
     {
@@ -995,7 +991,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
         {
             if (cmd == MYSQL_REPLY_ERR)
             {
-                std::string errmsg = "Failed to reuse connection: " + mariadb::extract_error(&buffer);
+                std::string errmsg = "Failed to reuse connection: " + mariadb::extract_error(buffer);
                 do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
                 rv = StateMachineRes::ERROR;
             }
@@ -2539,7 +2535,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                 else if (mxs_mysql_get_command(buffer) == MYSQL_REPLY_ERR)
                 {
                     // Server responded with an error instead of a handshake, probably too many connections.
-                    do_handle_error(m_dcb, "Connection rejected: " + mariadb::extract_error(&buffer),
+                    do_handle_error(m_dcb, "Connection rejected: " + mariadb::extract_error(buffer),
                                     mxs::ErrorType::TRANSIENT);
                     m_hs_state = HandShakeState::FAIL;
                 }
@@ -2684,12 +2680,11 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
     else if (cmd == MYSQL_REPLY_ERR)
     {
         // Server responded with an error, authentication failed.
-        auto temp = buffer.deep_clone();
-        handle_error_response(m_dcb, &buffer);
+        handle_error_response(buffer);
         rval = StateMachineRes::ERROR;
         if (need_pt_be_auth_reply)
         {
-            deliver_pt_reply(std::move(temp));
+            deliver_pt_reply(std::move(buffer));
         }
     }
     else

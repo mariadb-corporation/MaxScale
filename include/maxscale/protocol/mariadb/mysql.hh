@@ -279,7 +279,7 @@ GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, std::string_view s
  *
  * @return String representation of the error
  */
-std::string extract_error(const GWBUF* buffer);
+std::string extract_error(const GWBUF& buffer);
 }
 
 /** MySQL protocol constants */
