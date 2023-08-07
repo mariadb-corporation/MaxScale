@@ -36,16 +36,13 @@ class FileWriter
 public:
     FileWriter(InventoryWriter* inv, const Writer& writer);
 
-    void begin_txn();
     void add_event(maxsql::RplEvent& rpl_event);
-    void commit_txn();
-    void rollback_txn();
 private:
     struct WritePosition
     {
         std::string   name;
         std::ofstream file;
-        int           write_pos;
+        int64_t       write_pos;
     };
 
     bool open_binlog(const std::string& file_name, const maxsql::RplEvent* ev = nullptr);
@@ -65,9 +62,6 @@ private:
     const Writer&    m_writer;
     WritePosition    m_current_pos;
     maxsql::Rotate   m_rotate;
-
-    bool              m_in_transaction = false;
-    std::vector<char> m_tx_buffer;
 
     std::unique_ptr<mxq::EncryptCtx> m_encrypt;
 };

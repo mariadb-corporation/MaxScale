@@ -523,3 +523,6 @@ port=3306
 * Only replication from MariaDB servers (including Galera) is supported.
 
 * Old encrypted binary logs are not re-encrypted with newer key versions ([MXS-4140](https://jira.mariadb.org/browse/MXS-4140))
+
+* The MariaDB server where the replication is done from must be configured with
+  `binlog_checksum=CRC32`.

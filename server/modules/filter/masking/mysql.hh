@@ -275,11 +275,11 @@ public:
 private:
     void extract_payload()
     {
-        m_warnings = *m_pData++;
-        m_warnings += (*m_pData++ << 8);
+        m_warnings = mariadb::get_byte2(m_pData);
+        m_pData += 2;
 
-        m_status = *m_pData++;
-        m_status += (*m_pData++ << 8);
+        m_status = mariadb::get_byte2(m_pData);
+        m_pData += 2;
     }
 
 private:

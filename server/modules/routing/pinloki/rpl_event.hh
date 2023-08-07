@@ -29,6 +29,12 @@ DEFINE_EXCEPTION(EncryptionError);
 
 struct EncryptCtx;
 
+struct FormatDescription
+{
+    std::array<char, 50> server_version;
+    bool                 checksum;
+};
+
 struct Rotate
 {
     bool        is_fake;
@@ -82,6 +88,14 @@ public:
      */
     explicit RplEvent(std::vector<char>&& raw);
 
+    /**
+     * @brief RplEvent from a raw buffer
+     *
+     * @param raw       The in-memory data of the event
+     * @param real_size The size on disk that this event would take
+     */
+    explicit RplEvent(std::vector<char>&& raw, size_t real_size);
+
     RplEvent(RplEvent&& rhs);
     RplEvent& operator=(RplEvent&& rhs);
 
@@ -127,6 +141,15 @@ public:
     const char* pHeader() const;
     const char* pEnd() const;
 
+    /**
+     * The real length of the event, including any overhead added by encryption
+     *
+     * @return The size in bytes that this event occupied when stored on disk. If the event was replicated or
+     *         it was stored unencrypted, the return value is the same as buffer_size(). For encrypted events
+     *         this value might be slightly larger than the logical size of the event.
+     */
+    size_t real_size() const;
+
     mariadb_rpl_event event_type() const;
     unsigned int      timestamp() const;
     unsigned int      server_id() const;
@@ -155,12 +178,13 @@ public:
     GtidEvent            gtid_event() const;
     GtidListEvent        gtid_list() const;
     StartEncryptionEvent start_encryption_event() const;
+    FormatDescription format_description() const;
     bool                 is_commit() const;
-
 
     /** For the writer */
     void            set_next_pos(uint32_t next_pos);
     static uint32_t get_event_length(const std::vector<char>& header);
+    void            set_real_size(size_t size);
 
 private:
     // Initialize the raw buffer to size sz. Used with read_header_only()
@@ -175,6 +199,7 @@ private:
     MariaRplEvent     m_maria_rpl;
     std::vector<char> m_raw;
 
+    size_t            m_real_size{0};
     mariadb_rpl_event m_event_type;
     unsigned int      m_timestamp;
     unsigned int      m_server_id;
