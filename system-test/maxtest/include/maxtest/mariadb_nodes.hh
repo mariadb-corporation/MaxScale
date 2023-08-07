@@ -48,6 +48,11 @@ public:
     bool stop_database();
     bool cleanup_database();
 
+    void stash_server_settings();
+    void restore_server_settings();
+    void disable_server_setting(const char* setting);
+    void add_server_setting(const char* setting);
+
     bool        copy_logs(const std::string& destination_prefix);
     std::string version_as_string();
 

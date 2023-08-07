@@ -1,3 +1,9 @@
+add_library(auth_utils SHARED auth_utils.cc)
+target_link_libraries(auth_utils maxtest)
+set_target_properties(auth_utils PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
+install(TARGETS auth_utils DESTINATION system-test/authentication)
+add_dependencies(auth_utils maxtest)
+
 # PAM authentication and various other authentication related issues:
 # 1. PAM authentication, normal + roles (MXS-2478)
 # 2. Multiple authenticators on the same listener (MXS-2497)
@@ -36,3 +42,7 @@ add_test_executable_ex(NAME wrong_client_auth_plugin SOURCE wrong_client_auth_pl
 # MXS-4270: Ed25519 authentication test
 add_test_executable_ex(NAME ed25519_authentication SOURCE ed25519_authentication.cc
         CONFIG ed25519_authentication.cnf VMS repl_backend)
+
+# MXS-4506: passthrough authentication test
+add_test_executable_ex(NAME auth_mariadb_passthrough SOURCE auth_mariadb_passthrough.cc
+        CONFIG auth_mariadb_passthrough.cnf VMS repl_backend LIBS auth_utils)

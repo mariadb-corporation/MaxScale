@@ -470,12 +470,21 @@ void VMNode::add_linux_user(const string& uname, const string& pw)
 {
     auto unamec = uname.c_str();
     string add_user_cmd = mxb::string_printf("useradd %s", unamec);
-    string add_pw_cmd = mxb::string_printf("echo %s | passwd --stdin %s", pw.c_str(), unamec);
 
     auto ret1 = run_cmd_output_sudo(add_user_cmd);
     if (ret1.rc == 0)
     {
-        int ret2 = run_cmd_sudo(add_pw_cmd);
+        int ret2 = -1;
+        if (pw.empty())
+        {
+            string remove_pw_cmd = mxb::string_printf("passwd --delete %s", unamec);
+            ret2 = run_cmd_output_sudof("passwd --delete %s", unamec).rc;
+        }
+        else
+        {
+            string add_pw_cmd = mxb::string_printf("echo %s | passwd --stdin %s", pw.c_str(), unamec);
+            ret2 = run_cmd_sudo(add_pw_cmd);
+        }
         log().expect(ret2 == 0, "Failed to change password of user '%s' on %s: %d",
                      unamec, name(), ret2);
     }

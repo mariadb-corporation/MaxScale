@@ -1,2 +1,2 @@
-auth             required        pam_unix.so audit
+auth             required        pam_unix.so audit nullok
 account          required        pam_unix.so audit

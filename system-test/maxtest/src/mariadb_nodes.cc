@@ -764,25 +764,22 @@ void MariaDBCluster::close_active_connections()
 
 void MariaDBCluster::stash_server_settings(int node)
 {
-    ssh_node(node, "sudo rm -rf /etc/my.cnf.d.backup/", true);
-    ssh_node(node, "sudo mkdir /etc/my.cnf.d.backup/", true);
-    ssh_node(node, "sudo cp -r /etc/my.cnf.d/* /etc/my.cnf.d.backup/", true);
+    m_backends[node]->stash_server_settings();
 }
 
 void MariaDBCluster::restore_server_settings(int node)
 {
-    ssh_node(node, "sudo mv -f /etc/my.cnf.d.backup/* /etc/my.cnf.d/", true);
+    m_backends[node]->restore_server_settings();
 }
 
 void MariaDBCluster::disable_server_setting(int node, const char* setting)
 {
-    ssh_node_f(node, true, "sudo sed -i 's/%s/#%s/' /etc/my.cnf.d/*", setting, setting);
+    m_backends[node]->disable_server_setting(setting);
 }
 
 void MariaDBCluster::add_server_setting(int node, const char* setting)
 {
-    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/*server*.cnf");
-    ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting);
+    m_backends[node]->add_server_setting(setting);
 }
 
 void MariaDBCluster::reset_server_settings(int node)
@@ -1428,5 +1425,30 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl, bool su
     }
 
     return create_ok && !grant_error;
+}
+
+void MariaDBServer::stash_server_settings()
+{
+    m_vm.run_cmd_output_sudo("rm -rf /etc/my.cnf.d.backup/");
+    m_vm.run_cmd_output_sudo("mkdir /etc/my.cnf.d.backup/");
+    m_vm.run_cmd_output_sudo("cp -r /etc/my.cnf.d/* /etc/my.cnf.d.backup/");
+}
+
+void MariaDBServer::restore_server_settings()
+{
+    m_vm.run_cmd_output_sudo("mv -f /etc/my.cnf.d.backup/* /etc/my.cnf.d/");
+}
+
+void MariaDBServer::disable_server_setting(const char* setting)
+{
+    m_vm.run_cmd(mxb::string_printf("sed -i 's/%s/#%s/' /etc/my.cnf.d/*", setting, setting),
+                 VMNode::CmdPriv::SUDO);
+}
+
+void MariaDBServer::add_server_setting(const char* setting)
+{
+    m_vm.run_cmd("sed -i '$a [server]' /etc/my.cnf.d/*server*.cnf", VMNode::CmdPriv::SUDO);
+    m_vm.run_cmd(mxb::string_printf("sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting),
+                 VMNode::CmdPriv::SUDO);
 }
 }
