@@ -77,8 +77,20 @@ Access this page by clicking the gear icon on the sidebar navigation.
 Realtime MaxScale logs can be accessed by clicking the logs icon on the sidebar
 navigation.
 
-## Query Editor
+## Workspace
 
-Query Editor is a SQL editor tool allowing to run queries on a server, service,
-or listener. The query results can be visualized into a line, bar, or scatter
-graph and exported as CSV or JSON.
+The "Workspace" page offers a versatile set of tools for effectively managing
+data and database interactions. It includes the following key tasks:
+
+### 1. Run Queries
+
+Execute queries on various servers, services, or listeners to retrieve data and
+perform database operations. Visualize query results using different graph
+types such as line, bar, or scatter graphs. Export query results in formats
+like CSV or JSON for further analysis and sharing.
+
+### 2. Data Migration
+
+The "Data Migration" feature facilitates seamless transitions from PostgreSQL
+to MariaDB. Transfer data and database structures between the two systems while
+ensuring data integrity and consistency throughout the process.
