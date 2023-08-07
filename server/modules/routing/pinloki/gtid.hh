@@ -52,7 +52,7 @@ struct Gtid
     {
         return m_server_id;
     }
-    uint32_t sequence_nr() const
+    uint64_t sequence_nr() const
     {
         return m_sequence_nr;
     }

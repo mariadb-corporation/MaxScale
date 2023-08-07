@@ -101,7 +101,7 @@ namespace maxsql
 
 uint32_t RplEvent::get_event_length(const std::vector<char>& header)
 {
-    return *((uint32_t*) (header.data() + 4 + 1 + 4));
+    return mariadb::get_byte4(reinterpret_cast<const uint8_t*>(header.data()) + 4 + 1 + 4);
 }
 
 RplEvent::RplEvent(MariaRplEvent&& maria_event)
@@ -243,6 +243,17 @@ Rotate RplEvent::rotate() const
     rot.file_name = get_rotate_name(pBuffer(), buffer_size());
 
     return rot;
+}
+
+FormatDescription RplEvent::format_description() const
+{
+    FormatDescription fde;
+    // The checksum algorithm is the second to last field and the last field is a 4 byte checksum
+    fde.checksum = pBuffer()[buffer_size() - 4 - 1];
+
+    // string<50> The MariaDB server version (example: 10.2.1-debug-log), padded with 0x00 bytes on the right.
+    memcpy(fde.server_version.data(), pBuffer() + RPL_HEADER_LEN + 2, 50);
+    return fde;
 }
 
 bool RplEvent::is_commit() const

@@ -180,7 +180,14 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
         buffer = reset_gtid_probe();
     }
 
-    if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
+    if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
+    {
+        MXB_ERROR("All backends are permanently unusable for %s (%s: %s), closing connection.\n%s",
+                  route_target_to_string(res.route_target), STRPACKETTYPE(buffer.data()[4]),
+                  buffer.get_sql().c_str(), get_verbose_status().c_str());
+        ok = false;
+    }
+    else if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
     {
         // If the connection to the previous transaction target is still open, we must close it to prevent the
         // transaction from being accidentally committed whenever a new transaction is started on it.

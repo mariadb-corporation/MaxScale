@@ -29,6 +29,12 @@ DEFINE_EXCEPTION(EncryptionError);
 
 struct EncryptCtx;
 
+struct FormatDescription
+{
+    std::array<char, 50> server_version;
+    bool                 checksum;
+};
+
 struct Rotate
 {
     bool        is_fake;
@@ -172,8 +178,8 @@ public:
     GtidEvent            gtid_event() const;
     GtidListEvent        gtid_list() const;
     StartEncryptionEvent start_encryption_event() const;
+    FormatDescription format_description() const;
     bool                 is_commit() const;
-
 
     /** For the writer */
     void            set_next_pos(uint32_t next_pos);
