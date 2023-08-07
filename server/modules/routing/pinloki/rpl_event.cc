@@ -56,7 +56,7 @@ namespace maxsql
 
 uint32_t RplEvent::get_event_length(const std::vector<char>& header)
 {
-    return *((uint32_t*) (header.data() + 4 + 1 + 4));
+    return mariadb::get_byte4(reinterpret_cast<const uint8_t*>(header.data()) + 4 + 1 + 4);
 }
 
 RplEvent::RplEvent(MariaRplEvent&& maria_event)
