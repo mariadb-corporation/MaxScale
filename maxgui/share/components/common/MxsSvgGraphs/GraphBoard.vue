@@ -6,7 +6,7 @@
             class="mxs-graph"
             :width="dim.width"
             height="100%"
-            @contextmenu="$emit('on-board-contextmenu', $event)"
+            @contextmenu.prevent="$emit('on-board-contextmenu', $event)"
         >
             <g id="graph-ctr" :style="style" />
         </svg>

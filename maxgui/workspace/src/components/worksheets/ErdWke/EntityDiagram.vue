@@ -539,6 +539,7 @@ export default {
         openContextMenu(param) {
             const { e, link } = param
             e.preventDefault()
+            e.stopPropagation()
             this.$emit('on-link-contextmenu', { e, link })
         },
         drawLinks() {

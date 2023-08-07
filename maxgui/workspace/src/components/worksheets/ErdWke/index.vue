@@ -18,6 +18,7 @@
                     @on-apply-script="applyScript"
                     @on-export-script="exportScript"
                     @on-export-as-jpeg="exportAsJpeg"
+                    @on-copy-script-to-clipboard="copyScriptToClipboard"
                 />
             </template>
             <template slot="pane-right">
@@ -219,6 +220,9 @@ export default {
         async exportAsJpeg() {
             const canvas = await this.$refs.diagramCtr.$refs.diagram.getCanvas()
             this.$helpers.exportToJpeg({ canvas, fileName: this.taskName })
+        },
+        copyScriptToClipboard() {
+            this.$helpers.copyTextToClipboard(this.genScript())
         },
     },
 }

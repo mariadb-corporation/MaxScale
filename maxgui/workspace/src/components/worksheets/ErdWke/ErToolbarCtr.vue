@@ -7,7 +7,7 @@
             <template v-slot:activator="{ on }">
                 <div class="er-toolbar__btn" v-on="on">
                     <v-select
-                        :value="config.linkShape.type"
+                        :value="graphConfig.linkShape.type"
                         :items="allLinkShapes"
                         item-text="text"
                         item-value="id"
@@ -23,7 +23,12 @@
                         dense
                         :height="buttonHeight"
                         hide-details
-                        @change="onChangeLinkShape"
+                        @change="
+                            $emit('change-graph-config-attr-value', {
+                                path: 'linkShape.type',
+                                value: $event,
+                            })
+                        "
                     >
                         <template v-slot:selection="{ item }">
                             <v-icon size="28" color="primary">
@@ -42,15 +47,26 @@
         </v-tooltip>
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
-            :text="!config.link.isAttrToAttr"
+            :text="!graphConfig.link.isAttrToAttr"
             depressed
             color="primary"
-            @click="togglePersistentAttr('link.isAttrToAttr')"
+            @click="
+                $emit('change-graph-config-attr-value', {
+                    path: 'link.isAttrToAttr',
+                    value: !graphConfig.link.isAttrToAttr,
+                })
+            "
         >
             <template v-slot:btn-content>
                 <v-icon size="22">mdi-key-link </v-icon>
             </template>
-            {{ $mxs_t('info.drawFkLinks') }}
+            {{
+                $mxs_t(
+                    graphConfig.link.isAttrToAttr
+                        ? 'disableDrawingFksToCols'
+                        : 'enableDrawingFksToCols'
+                )
+            }}
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
@@ -62,19 +78,24 @@
             <template v-slot:btn-content>
                 <v-icon size="22">mdi-arrange-send-to-back </v-icon>
             </template>
-            {{ $mxs_t('info.autoArrangeErd') }}
+            {{ $mxs_t('autoArrangeErd') }}
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
-            :text="!config.link.isHighlightAll"
+            :text="!graphConfig.link.isHighlightAll"
             depressed
             color="primary"
-            @click="togglePersistentAttr('link.isHighlightAll')"
+            @click="
+                $emit('change-graph-config-attr-value', {
+                    path: 'link.isHighlightAll',
+                    value: !graphConfig.link.isHighlightAll,
+                })
+            "
         >
             <template v-slot:btn-content>
                 <v-icon size="22">
                     {{
-                        config.link.isHighlightAll
+                        graphConfig.link.isHighlightAll
                             ? 'mdi-lightbulb-on-outline'
                             : ' mdi-lightbulb-outline'
                     }}
@@ -82,9 +103,9 @@
             </template>
             {{
                 $mxs_t(
-                    config.link.isHighlightAll
-                        ? 'info.turnOffRelationshipHighlight'
-                        : 'info.turnOnRelationshipHighlight'
+                    graphConfig.link.isHighlightAll
+                        ? 'turnOffRelationshipHighlight'
+                        : 'turnOnRelationshipHighlight'
                 )
             }}
         </mxs-tooltip-btn>
@@ -190,9 +211,9 @@
                 </v-tooltip>
             </template>
             <v-list>
-                <v-list-item v-for="opt in exportOptions" :key="opt.name" @click="opt.action">
+                <v-list-item v-for="opt in exportOptions" :key="opt.text" @click="opt.action">
                     <v-list-item-title class="mxs-color-helper text-text">
-                        {{ opt.name }}
+                        {{ opt.text }}
                     </v-list-item-title>
                 </v-list-item>
             </v-list>
@@ -253,11 +274,12 @@
  * on-undo: void
  * on-redo: void
  * on-create-table: void
+ * on-copy-script-to-clipboard: void
  * on-export-script: void
  * on-export-as-jpeg: void
  * on-apply-script: void
  * click-auto-arrange: void
- * input: Object. v-model
+ * change-graph-config-attr-value: { path: string, value: any}. path. e.g. 'link.isAttrToAttr'
  */
 import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
@@ -270,10 +292,11 @@ export default {
     name: 'er-toolbar-ctr',
     components: { ConnectionBtn },
     props: {
-        value: { type: Object, required: true },
+        graphConfig: { type: Object, required: true },
         height: { type: Number, required: true },
         zoom: { type: Number, required: true },
         isFitIntoView: { type: Boolean, required: true },
+        exportOptions: { type: Array, required: true },
     },
     computed: {
         ...mapState({
@@ -281,14 +304,6 @@ export default {
             ERD_ZOOM_OPTS: state => state.mxsWorkspace.config.ERD_ZOOM_OPTS,
             OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
         }),
-        config: {
-            get() {
-                return this.value
-            },
-            set(v) {
-                this.$emit('input', v)
-            },
-        },
         allLinkShapes() {
             return Object.values(LINK_SHAPES)
         },
@@ -324,18 +339,6 @@ export default {
         eventBus() {
             return EventBus
         },
-        exportOptions() {
-            return [
-                {
-                    name: this.$mxs_t('exportScript'),
-                    action: () => this.$emit('on-export-script'),
-                },
-                {
-                    name: this.$mxs_t('exportAsJpeg'),
-                    action: () => this.$emit('on-export-as-jpeg'),
-                },
-            ]
-        },
     },
     activated() {
         this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
@@ -351,21 +354,6 @@ export default {
             SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG',
             SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG',
         }),
-        immutableUpdateConfig(obj, path, value) {
-            const updatedObj = this.$helpers.lodash.cloneDeep(obj)
-            this.$helpers.lodash.update(updatedObj, path, () => value)
-            return updatedObj
-        },
-        togglePersistentAttr(path) {
-            this.config = this.immutableUpdateConfig(
-                this.config,
-                path,
-                !this.$helpers.lodash.get(this.config, path)
-            )
-        },
-        onChangeLinkShape(v) {
-            this.config = this.immutableUpdateConfig(this.config, 'linkShape.type', v)
-        },
         genErd() {
             this.SET_GEN_ERD_DLG({
                 is_opened: true,

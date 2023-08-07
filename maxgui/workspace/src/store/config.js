@@ -219,10 +219,11 @@ export const ALL_TABLE_KEY_CATEGORIES = [
 ]
 export const NON_FK_CATEGORIES = ALL_TABLE_KEY_CATEGORIES.filter(t => t !== foreignKey)
 
-// Context  option types
+// ERD diagram context option types
 export const CTX_TYPES = Object.freeze({
     NODE: 'node',
     LINK: 'link',
+    DIAGRAM: 'diagram',
 })
 export const ENTITY_OPT_TYPES = Object.freeze({
     EDIT: 'editTbl',
@@ -238,6 +239,20 @@ export const LINK_OPT_TYPES = Object.freeze({
     SET_REF_COL_MANDATORY: 'setRefColMandatory',
     SET_REF_COL_OPTIONAL: 'setRefColOptional',
 })
+export const ERD_EXPORT_OPTS = [
+    {
+        text: 'copyScriptToClipboard',
+        event: 'on-copy-script-to-clipboard',
+    },
+    {
+        text: 'exportScript',
+        event: 'on-export-script',
+    },
+    {
+        text: 'exportAsJpeg',
+        event: 'on-export-as-jpeg',
+    },
+]
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
     DDL_EDITOR: 'DDL_EDITOR',

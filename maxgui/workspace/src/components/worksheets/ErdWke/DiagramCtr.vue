@@ -1,15 +1,17 @@
 <template>
-    <div class="fill-height d-flex flex-column">
+    <div :id="diagramId" class="fill-height d-flex flex-column">
         <er-toolbar-ctr
-            v-model="graphConfigData"
+            :graphConfig="graphConfigData"
             :height="toolbarHeight"
             :zoom="panAndZoom.k"
             :isFitIntoView="isFitIntoView"
+            :exportOptions="exportOptions"
             @set-zoom="setZoom"
             @on-create-table="handleCreateTable"
             @on-undo="navHistory(activeHistoryIdx - 1)"
             @on-redo="navHistory(activeHistoryIdx + 1)"
             @click-auto-arrange="onClickAutoArrange"
+            @change-graph-config-attr-value="changeGraphConfigAttrValue"
             v-on="$listeners"
         />
         <entity-diagram
@@ -37,7 +39,9 @@
             @on-link-contextmenu="
                 setCtxMenu({ type: CTX_TYPES.LINK, e: $event.e, item: $event.link })
             "
-            @on-board-contextmenu="e => e.preventDefault()"
+            @on-board-contextmenu="
+                setCtxMenu({ type: CTX_TYPES.DIAGRAM, e: $event, item: { id: diagramId } })
+            "
         >
             <template v-slot:entity-setting-btn="{ node }">
                 <v-btn
@@ -71,7 +75,7 @@
             content-class="v-menu--mariadb v-menu--mariadb-full-border"
             :activator="activeCtxItemId ? `#${activeCtxItemId}` : ''"
             @input="activeCtxItem = null"
-            @item-click="ctxMenuHandler($event.type)"
+            @item-click="$event.action()"
         />
     </div>
 </template>
@@ -143,12 +147,16 @@ export default {
             LINK_OPT_TYPES: state => state.mxsWorkspace.config.LINK_OPT_TYPES,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
+            ERD_EXPORT_OPTS: state => state.mxsWorkspace.config.ERD_EXPORT_OPTS,
         }),
         activeRecord() {
             return ErdTask.getters('activeRecord')
         },
         activeTaskId() {
             return ErdTask.getters('activeRecordId')
+        },
+        diagramId() {
+            return `${this.CTX_TYPES.DIAGRAM}_${this.diagramKey}`
         },
         nodeMap() {
             return ErdTask.getters('nodeMap')
@@ -177,10 +185,61 @@ export default {
         erdTaskKey() {
             return this.$typy(ErdTask.getters('activeTmpRecord'), 'key').safeString
         },
+        exportOptions() {
+            return this.ERD_EXPORT_OPTS.map(({ text, event }) => ({
+                text: this.$mxs_t(text),
+                action: () => this.$emit(event),
+            }))
+        },
+        diagramOpts() {
+            return [
+                {
+                    text: this.$mxs_t('createTable'),
+                    action: () => this.handleCreateTable(),
+                },
+                {
+                    text: this.$mxs_t('fitDiagramInView'),
+                    action: () => this.fitIntoView(),
+                },
+                {
+                    text: this.$mxs_t('autoArrangeErd'),
+                    action: () => this.onClickAutoArrange(),
+                },
+                {
+                    text: this.$mxs_t(
+                        this.graphConfigData.link.isAttrToAttr
+                            ? 'disableDrawingFksToCols'
+                            : 'enableDrawingFksToCols'
+                    ),
+                    action: () =>
+                        this.changeGraphConfigAttrValue({
+                            path: 'link.isAttrToAttr',
+                            value: !this.graphConfigData.link.isAttrToAttr,
+                        }),
+                },
+                {
+                    text: this.$mxs_t(
+                        this.graphConfigData.link.isHighlightAll
+                            ? 'turnOffRelationshipHighlight'
+                            : 'turnOnRelationshipHighlight'
+                    ),
+                    action: () =>
+                        this.changeGraphConfigAttrValue({
+                            path: 'link.isHighlightAll',
+                            value: !this.graphConfigData.link.isHighlightAll,
+                        }),
+                },
+                {
+                    text: this.$mxs_t('export'),
+                    children: this.exportOptions,
+                },
+            ]
+        },
         entityOpts() {
             return Object.values(this.ENTITY_OPT_TYPES).map(type => ({
                 type,
                 text: this.$mxs_t(type),
+                action: () => this.handleChooseNodeOpt({ type, node: this.activeCtxItem }),
             }))
         },
         linkOpts() {
@@ -190,7 +249,6 @@ export default {
                 { text: this.$mxs_t(EDIT), type: EDIT },
                 { text: this.$mxs_t(REMOVE), type: REMOVE },
             ]
-
             if (link) {
                 opts.push(this.genCardinalityOpt(link))
                 const { primaryKey } = this.CREATE_TBL_TOKENS
@@ -204,12 +262,13 @@ export default {
                 if (!refColKeyCategories.includes(primaryKey))
                     opts.push(this.genOptionalityOpt({ link, isForRefTbl: true }))
             }
-
-            return opts
+            return opts.map(opt => ({ ...opt, action: () => this.handleChooseLinkOpt(opt.type) }))
         },
         ctxMenuItems() {
-            const { NODE, LINK } = this.CTX_TYPES
+            const { NODE, LINK, DIAGRAM } = this.CTX_TYPES
             switch (this.ctxMenuType) {
+                case DIAGRAM:
+                    return this.diagramOpts
                 case NODE:
                     return this.entityOpts
                 case LINK:
@@ -355,17 +414,6 @@ export default {
             this.ctxMenuType = type
             this.activeCtxItem = item
         },
-        ctxMenuHandler(type) {
-            const { NODE, LINK } = this.CTX_TYPES
-            switch (this.ctxMenuType) {
-                case NODE:
-                    this.handleChooseNodeOpt({ type, node: this.activeCtxItem })
-                    break
-                case LINK:
-                    this.handleChooseLinkOpt({ type, link: this.activeCtxItem })
-                    break
-            }
-        },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
             if (this.connId) {
                 const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
@@ -413,7 +461,8 @@ export default {
                     type: 'error',
                 })
         },
-        handleChooseLinkOpt({ type, link }) {
+        handleChooseLinkOpt(type) {
+            const link = this.activeCtxItem
             const {
                 EDIT,
                 REMOVE,
@@ -804,6 +853,14 @@ export default {
                 where: this.activeTaskId,
                 data: { is_laid_out: false },
             }).then(() => this.$refs.diagram.runSimulation(diagram => this.onRendered(diagram)))
+        },
+        immutableUpdateConfig(obj, path, value) {
+            const updatedObj = this.$helpers.lodash.cloneDeep(obj)
+            this.$helpers.lodash.update(updatedObj, path, () => value)
+            return updatedObj
+        },
+        changeGraphConfigAttrValue({ path, value }) {
+            this.graphConfigData = this.immutableUpdateConfig(this.graphConfigData, path, value)
         },
     },
 }
