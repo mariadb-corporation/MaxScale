@@ -101,7 +101,7 @@ namespace maxsql
 
 uint32_t RplEvent::get_event_length(const std::vector<char>& header)
 {
-    return *((uint32_t*) (header.data() + 4 + 1 + 4));
+    return mariadb::get_byte4(reinterpret_cast<const uint8_t*>(header.data()) + 4 + 1 + 4);
 }
 
 RplEvent::RplEvent(MariaRplEvent&& maria_event)
@@ -114,7 +114,13 @@ RplEvent::RplEvent(MariaRplEvent&& maria_event)
 }
 
 RplEvent::RplEvent(std::vector<char>&& raw)
+    : RplEvent(std::move(raw), raw.size())
+{
+}
+
+RplEvent::RplEvent(std::vector<char>&& raw, size_t real_size)
     : m_raw(std::move(raw))
+    , m_real_size(real_size)
 {
     if (!m_raw.empty())
     {
@@ -212,6 +218,16 @@ void RplEvent::set_next_pos(uint32_t next_pos)
     recalculate_crc();
 }
 
+size_t RplEvent::real_size() const
+{
+    return m_real_size;
+}
+
+void RplEvent::set_real_size(size_t size)
+{
+    m_real_size = size;
+}
+
 void RplEvent::recalculate_crc()
 {
     auto crc_pos = (uint8_t*) pEnd() - 4;
@@ -227,6 +243,17 @@ Rotate RplEvent::rotate() const
     rot.file_name = get_rotate_name(pBuffer(), buffer_size());
 
     return rot;
+}
+
+FormatDescription RplEvent::format_description() const
+{
+    FormatDescription fde;
+    // The checksum algorithm is the second to last field and the last field is a 4 byte checksum
+    fde.checksum = pBuffer()[buffer_size() - 4 - 1];
+
+    // string<50> The MariaDB server version (example: 10.2.1-debug-log), padded with 0x00 bytes on the right.
+    memcpy(fde.server_version.data(), pBuffer() + RPL_HEADER_LEN + 2, 50);
+    return fde;
 }
 
 bool RplEvent::is_commit() const
@@ -479,10 +506,17 @@ mxq::RplEvent RplEvent::read_event(std::istream& file, const std::unique_ptr<mxq
 {
     std::vector<char> raw(RPL_HEADER_LEN);
 
-    long pos = file.tellg();
-    file.read(raw.data(), RPL_HEADER_LEN);
+    long pos = 0;
 
-    if (file.tellg() != pos + RPL_HEADER_LEN)
+    if (enc)
+    {
+        pos = file.tellg();
+    }
+
+    file.read(raw.data(), RPL_HEADER_LEN);
+    size_t bytes = file.gcount();
+
+    if (bytes != RPL_HEADER_LEN)
     {
         // Partial, or no header. Wait for more via inotify.
         return mxq::RplEvent();
@@ -492,21 +526,20 @@ mxq::RplEvent RplEvent::read_event(std::istream& file, const std::unique_ptr<mxq
 
     raw.resize(event_length);
     file.read(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
+    bytes += file.gcount();
 
-    if (file.tellg() != pos + event_length)
+    if (bytes != event_length)
     {
         // Wait for more via inotify.
         return mxq::RplEvent();
     }
-
-    size_t event_len = raw.size();
 
     if (enc)
     {
         raw = enc->decrypt_event(raw, pos);
     }
 
-    return mxq::RplEvent(std::move(raw));
+    return mxq::RplEvent(std::move(raw), bytes);
 }
 
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)

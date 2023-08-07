@@ -45,6 +45,24 @@ std::string next_file_name(const std::string& master, const std::string& prev)
 
     return MAKE_STR(base_name << '.' << setfill('0') << setw(6) << num);
 }
+
+bool fde_events_match(const maxsql::RplEvent& a, const maxsql::RplEvent& b)
+{
+    bool match = false;
+
+    if (a.buffer_size() == b.buffer_size() && memcmp(a.pHeader(), b.pHeader(), mxq::RPL_HEADER_LEN) == 0)
+    {
+        auto a_fde = a.format_description();
+        auto b_fde = b.format_description();
+
+        if (a_fde.checksum == b_fde.checksum && a_fde.server_version == b_fde.server_version)
+        {
+            match = true;
+        }
+    }
+
+    return match;
+}
 }
 
 namespace pinloki
@@ -53,57 +71,6 @@ FileWriter::FileWriter(InventoryWriter* inv, const Writer& writer)
     : m_inventory(*inv)
     , m_writer(writer)
 {
-}
-
-void FileWriter::begin_txn()
-{
-    mxb_assert(m_in_transaction == false);
-    m_in_transaction = true;
-}
-
-void FileWriter::commit_txn()
-{
-    mxb_assert(m_in_transaction == true);
-    m_in_transaction = false;
-    flush_buffer();
-}
-
-void FileWriter::store_in_buffer(maxsql::RplEvent& rpl_event)
-{
-    if (m_encrypt)
-    {
-        std::vector<char> plaintext(rpl_event.pBuffer(), rpl_event.pEnd());
-        uint32_t current_pos = m_current_pos.write_pos + m_tx_buffer.size();
-        auto encrypted = m_encrypt->encrypt_event(plaintext, current_pos);
-        m_tx_buffer.insert(m_tx_buffer.end(), encrypted.begin(), encrypted.end());
-    }
-    else
-    {
-        m_tx_buffer.insert(m_tx_buffer.end(), rpl_event.pBuffer(), rpl_event.pEnd());
-    }
-}
-
-void FileWriter::flush_buffer()
-{
-    m_current_pos.file.seekp(m_current_pos.write_pos);
-    m_current_pos.file.write(m_tx_buffer.data(), m_tx_buffer.size());
-
-    m_current_pos.write_pos = m_current_pos.file.tellp();
-    m_current_pos.file.flush();
-
-    m_tx_buffer.clear();
-
-    if (!m_current_pos.file.good())
-    {
-        MXB_THROW(BinlogWriteError, "Could not write event to " << m_current_pos.name);
-    }
-}
-
-void FileWriter::rollback_txn()
-{
-    mxb_assert(m_in_transaction == true);
-    m_in_transaction = false;
-    m_tx_buffer.clear();
 }
 
 void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
@@ -126,7 +93,6 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     {
         if (etype == FORMAT_DESCRIPTION_EVENT)
         {
-            mxb_assert(m_in_transaction == false);
             mxb_assert(m_rotate.file_name.empty() == false);
 
             if (!open_for_appending(m_rotate, rpl_event))
@@ -145,14 +111,9 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
 
         if (!m_ignore_preamble)
         {
-            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
-                                   + m_tx_buffer.size());
+            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size());
 
-            if (m_in_transaction)
-            {
-                store_in_buffer(rpl_event);
-            }
-            else if (etype == GTID_LIST_EVENT)
+            if (etype == GTID_LIST_EVENT)
             {
                 write_gtid_list();
             }
@@ -204,8 +165,7 @@ bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEven
     maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
     bool rv = false;
 
-    if (event.event_type() == FORMAT_DESCRIPTION_EVENT
-        && (!ev || memcmp(ev->pHeader(), event.pHeader(), mxq::RPL_HEADER_LEN) == 0))
+    if (event.event_type() == FORMAT_DESCRIPTION_EVENT && (!ev || fde_events_match(event, *ev)))
     {
         rv = true;
         m_current_pos.name = file_name;
@@ -327,7 +287,7 @@ void FileWriter::write_plain_to_file(const char* ptr, size_t bytes)
     m_current_pos.file.seekp(m_current_pos.write_pos);
     m_current_pos.file.write(ptr, bytes);
 
-    m_current_pos.write_pos = m_current_pos.file.tellp();
+    m_current_pos.write_pos += bytes;
     m_current_pos.file.flush();
 
     if (!m_current_pos.file.good())

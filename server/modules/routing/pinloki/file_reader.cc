@@ -249,7 +249,8 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     }
 
     // The next event always starts at the position the previous one ends
-    m_read_pos.next_pos = m_read_pos.file.tellg();
+    m_read_pos.next_pos += rpl.real_size();
+    mxb_assert(m_read_pos.next_pos == m_read_pos.file.tellg());
 
     if (m_generating_preamble)
     {
@@ -271,7 +272,8 @@ maxsql::RplEvent FileReader::fetch_event_internal()
                     return maxsql::RplEvent();
                 }
 
-                m_read_pos.next_pos = m_read_pos.file.tellg();
+                m_read_pos.next_pos += rpl.real_size();
+                mxb_assert(m_read_pos.next_pos == m_read_pos.file.tellg());
             }
         }
     }

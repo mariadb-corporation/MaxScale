@@ -435,7 +435,7 @@ private:
         std::atomic<uint64_t> sequence {0};
     };
 
-    mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
+    mxs::WorkerLocal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
 
     using GlobalDistributions = mxs::WorkerGlobal<maxscale::ResponseDistribution>;
     GlobalDistributions m_read_distributions;
