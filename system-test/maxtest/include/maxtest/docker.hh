@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-05-22
+ * Change Date: 2027-07-24
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -52,7 +52,9 @@ public:
         cleanup();
 
         std::ostringstream cmd;
-        cmd << "docker run -d --rm --name " << name << " ";
+        // The --privileged flag works around this problem that's encoutered with
+        // older Docker releases: https://github.com/moby/moby/issues/42680
+        cmd << "docker run --privileged -d --rm --name " << name << " ";
 
         for (auto p : ports)
         {
