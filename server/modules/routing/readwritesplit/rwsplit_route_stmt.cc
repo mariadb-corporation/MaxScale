@@ -169,7 +169,14 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
     bool ok = true;
     auto next_master = get_master_backend();
 
-    if (should_migrate_trx(next_master))
+    if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
+    {
+        MXB_ERROR("All backends are permanently unusable for %s (%s: %s), closing connection.\n%s",
+                  route_target_to_string(res.route_target), STRPACKETTYPE(buffer.data()[4]),
+                  mxs::extract_sql(buffer.get()).c_str(), get_verbose_status().c_str());
+        ok = false;
+    }
+    else if (should_migrate_trx(next_master))
     {
         ok = start_trx_migration(next_master, buffer.get());
 

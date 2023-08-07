@@ -184,10 +184,18 @@ void Writer::run()
 
                 switch (rpl_event.event_type())
                 {
+                case FORMAT_DESCRIPTION_EVENT:
+                    if (!rpl_event.format_description().checksum)
+                    {
+                        MXB_THROW(BinlogWriteError,
+                                  "Server at '" << host << "' is configured with binlog_checksum=NONE, "
+                                                << "binlogrouter requires binlog_checksum=CRC32.");
+                    }
+                    break;
+
                 case GTID_EVENT:
                     {
                         maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
-                        file.begin_txn();
                         update_gtid_list(gtid_event.gtid);
 
                         if (gtid_event.flags & mxq::F_STANDALONE)
@@ -263,7 +271,6 @@ void Writer::save_gtid_list(FileWriter& file_writer)
 {
     if (m_current_gtid_list.is_valid())
     {
-        file_writer.commit_txn();
         m_inventory.config().save_rpl_state(m_current_gtid_list);
     }
 }

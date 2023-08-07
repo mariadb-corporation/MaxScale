@@ -45,6 +45,24 @@ std::string next_file_name(const std::string& master, const std::string& prev)
 
     return MAKE_STR(base_name << '.' << setfill('0') << setw(6) << num);
 }
+
+bool fde_events_match(const maxsql::RplEvent& a, const maxsql::RplEvent& b)
+{
+    bool match = false;
+
+    if (a.buffer_size() == b.buffer_size() && memcmp(a.pHeader(), b.pHeader(), mxq::RPL_HEADER_LEN) == 0)
+    {
+        auto a_fde = a.format_description();
+        auto b_fde = b.format_description();
+
+        if (a_fde.checksum == b_fde.checksum && a_fde.server_version == b_fde.server_version)
+        {
+            match = true;
+        }
+    }
+
+    return match;
+}
 }
 
 namespace pinloki
@@ -53,26 +71,6 @@ FileWriter::FileWriter(InventoryWriter* inv, const Writer& writer)
     : m_inventory(*inv)
     , m_writer(writer)
 {
-}
-
-void FileWriter::begin_txn()
-{
-    mxb_assert(m_in_transaction == false);
-    m_in_transaction = true;
-}
-
-void FileWriter::commit_txn()
-{
-    mxb_assert(m_in_transaction == true);
-    m_in_transaction = false;
-
-    m_current_pos.file.seekp(m_current_pos.write_pos);
-    m_current_pos.file.write(m_tx_buffer.data(), m_tx_buffer.size());
-
-    m_current_pos.write_pos = m_current_pos.file.tellp();
-    m_current_pos.file.flush();
-
-    m_tx_buffer.clear();
 }
 
 void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
@@ -95,7 +93,6 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     {
         if (etype == FORMAT_DESCRIPTION_EVENT)
         {
-            mxb_assert(m_in_transaction == false);
             mxb_assert(m_rotate.file_name.empty() == false);
 
             if (!open_for_appending(m_rotate, rpl_event))
@@ -114,15 +111,9 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
 
         if (!m_ignore_preamble)
         {
-            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
-                                   + m_tx_buffer.size());
+            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size());
 
-            if (m_in_transaction)
-            {
-                const char* ptr = rpl_event.pBuffer();
-                m_tx_buffer.insert(m_tx_buffer.end(), ptr, ptr + rpl_event.buffer_size());
-            }
-            else if (etype == GTID_LIST_EVENT)
+            if (etype == GTID_LIST_EVENT)
             {
                 write_gtid_list(m_current_pos);
             }
@@ -152,7 +143,18 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     auto last_file_name = last_string(file_names);
 
-    std::ifstream log_file(last_file_name);
+    if (open_binlog(last_file_name, &fmt_event))
+    {
+        m_ignore_preamble = true;
+    }
+
+    return m_ignore_preamble;
+}
+
+bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEvent* ev)
+{
+    std::ifstream log_file(file_name);
+
     if (!log_file)
     {
         return false;
@@ -161,18 +163,19 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
     // Read the first event which is always a format event
     long file_pos = pinloki::PINLOKI_MAGIC.size();
     maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
+    bool rv = false;
 
-    if (event == fmt_event)
+    if (event.event_type() == FORMAT_DESCRIPTION_EVENT && (!ev || fde_events_match(event, *ev)))
     {
-        m_ignore_preamble = true;
-        m_current_pos.name = last_file_name;
+        rv = true;
+        m_current_pos.name = file_name;
         m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out
                                 | std::ios_base::binary);
         m_current_pos.file.seekp(0, std::ios_base::end);
         m_current_pos.write_pos = m_current_pos.file.tellp();
     }
 
-    return m_ignore_preamble;
+    return rv;
 }
 
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
@@ -221,7 +224,19 @@ void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_ev
     fn.file.write(rpl_event.pBuffer(), rpl_event.buffer_size());
     fn.file.flush();
 
-    fn.write_pos = rpl_event.next_event_pos();
+    int64_t current_offset = fn.file.tellp();
+
+    if (rpl_event.next_event_pos() >= current_offset)
+    {
+        fn.write_pos = rpl_event.next_event_pos();
+    }
+    else
+    {
+        // If the binlog ends up growing past the 4GiB mark, we cannot rely on the next event position in the
+        // event as it is a 32-bit integer.
+        mxb_assert(current_offset > std::numeric_limits<uint32_t>::max());
+        fn.write_pos = current_offset;
+    }
 
     if (!fn.file.good())
     {

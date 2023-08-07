@@ -64,7 +64,7 @@ private:
     {
         std::string   name;
         std::ifstream file;
-        int           next_pos;
+        int64_t       next_pos;
     };
 
     void              open(const std::string& file_name);

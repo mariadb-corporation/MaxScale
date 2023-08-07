@@ -653,26 +653,27 @@ uint64_t Server::status_from_string(const char* str)
 
 void Server::set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& domains)
 {
-    mxs::MainWorker::get()->execute(
-        [this, domains]() {
-            auto gtids = *m_gtids;
+    auto fn = [this, domains]() {
+        auto& gtids = *m_gtids;
 
-            for (const auto& p : domains)
-            {
-                gtids[p.first] = p.second;
-            }
+        for (const auto& p : domains)
+        {
+            gtids[p.first] = p.second;
+        }
+    };
 
-            m_gtids.assign(gtids);
-        }, mxb::Worker::EXECUTE_AUTO);
+    mxs::RoutingWorker::broadcast(fn, mxb::Worker::EXECUTE_AUTO);
+    mxs::MainWorker::get()->execute(fn, mxb::Worker::EXECUTE_AUTO);
 }
 
 void Server::clear_gtid_list()
 {
-    mxs::MainWorker::get()->execute(
-        [this]() {
-            m_gtids->clear();
-            m_gtids.assign(*m_gtids);
-        }, mxb::Worker::EXECUTE_AUTO);
+    auto fn = [this]() {
+        m_gtids->clear();
+    };
+
+    mxs::RoutingWorker::broadcast(fn, mxb::Worker::EXECUTE_AUTO);
+    mxs::MainWorker::get()->execute(fn, mxb::Worker::EXECUTE_AUTO);
 }
 
 uint64_t Server::gtid_pos(uint32_t domain) const

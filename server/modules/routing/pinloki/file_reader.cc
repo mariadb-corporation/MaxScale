@@ -310,7 +310,16 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     }
     else
     {
-        m_read_pos.next_pos = rpl.next_event_pos();
+        if (m_read_pos.next_pos <= rpl.next_event_pos())
+        {
+            m_read_pos.next_pos = rpl.next_event_pos();
+        }
+        else
+        {
+            // We've gone past the 4GiB mark and the next event positions cannot be relied on anymore
+            mxb_assert(m_read_pos.next_pos > std::numeric_limits<uint32_t>::max());
+            m_read_pos.next_pos += rpl.buffer_size();
+        }
     }
 
     return rpl;
