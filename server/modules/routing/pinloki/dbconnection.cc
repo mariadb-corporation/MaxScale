@@ -48,7 +48,7 @@ Connection::~Connection()
     mysql_close(m_conn);
 }
 
-void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid)
+void Connection::start_replication(unsigned int server_id, bool semi_sync, const maxsql::GtidList& gtid)
 {
     std::string gtid_str = gtid.is_valid() ? gtid.to_string() : "";
 
@@ -65,12 +65,17 @@ void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid
         "SET @slave_gtid_strict_mode=1",
         "SET @slave_gtid_ignore_duplicates=1",
         "SET NAMES latin1",
-        "SET @rpl_semi_sync_slave=@@rpl_semi_sync_master_enabled",
     };
 
     for (const auto& sql : queries)
     {
         query(sql);
+    }
+
+    if (semi_sync)
+    {
+        // TODO: Configure the connector to expect semi-sync once an option for it is added
+        query("SET @rpl_semi_sync_slave=1");
     }
 
     if (!(m_rpl = mariadb_rpl_init(m_conn)))

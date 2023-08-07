@@ -108,7 +108,8 @@ void Writer::update_gtid_list(const mxq::Gtid& gtid)
 
 void Writer::start_replication(mxq::Connection& conn)
 {
-    conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
+    const auto& cnf = m_inventory.config();
+    conn.start_replication(cnf.server_id(), cnf.semi_sync(), m_current_gtid_list);
 }
 
 bool Writer::has_master_changed(const mxq::Connection& conn)
@@ -180,7 +181,7 @@ void Writer::run()
 
                 m_inventory.set_master_id(rpl_event.server_id());
                 m_inventory.set_is_writer_connected(true);
-                bool do_add_event = true; // set to false on rollback
+                bool do_add_event = true;   // set to false on rollback
                 bool do_save_gtid_list = false;
 
                 switch (rpl_event.event_type())
@@ -236,7 +237,7 @@ void Writer::run()
 
                 if (do_add_event)
                 {
-                   file.add_event(rpl_event);
+                    file.add_event(rpl_event);
                 }
 
                 if (do_save_gtid_list)

@@ -72,13 +72,13 @@ public:
      */
     std::string path(const std::string& name) const;
 
-    std::string inventory_file_path() const;
-    std::string gtid_file_path() const;
-    std::string requested_gtid_file_path() const;
-    std::string master_info_file() const;
-    uint32_t    server_id() const;
+    std::string              inventory_file_path() const;
+    std::string              gtid_file_path() const;
+    std::string              requested_gtid_file_path() const;
+    std::string              master_info_file() const;
+    uint32_t                 server_id() const;
     std::vector<std::string> binlog_file_names() const;
-    void set_binlogs_dirty() const;
+    void                     set_binlogs_dirty() const;
 
     /** The replication state */
     void             save_rpl_state(const maxsql::GtidList& gtids) const;
@@ -94,6 +94,8 @@ public:
     const std::string& key_id() const;
 
     mxb::Cipher::AesMode encryption_cipher() const;
+
+    bool semi_sync() const;
 
     // File purging
     int32_t             expire_log_minimum_files() const;
@@ -151,6 +153,7 @@ private:
     wall_time::Duration m_expire_log_duration;
     wall_time::Duration m_purge_startup_delay;
     wall_time::Duration m_purge_poll_timeout;
+    bool                m_semi_sync;
 
     std::function<bool()> m_cb;
 

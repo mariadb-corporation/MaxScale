@@ -1,9 +1,5 @@
 #  Binlogrouter
 
-**NOTE:** The binlog router delivered with 2.5 is completely new and is **not**
-          100% backward compatible with the binlog router delivered with earlier
-          versions of MaxScale.
-
 The binlogrouter is a router that acts as a replication proxy for MariaDB
 primary-replica replication. The router connects to a primary, retrieves the binary
 logs and stores them locally. Replica servers can connect to MaxScale like they
@@ -20,42 +16,6 @@ database has to do which can be significant if there are a large number of
 replicating replicas.
 
 [TOC]
-
-## Differences Between Old and New Binlogrouter Implementations
-
-The binlogrouter in MaxScale 2.5.0 is a new and improved version of the original
-binlogrouter found in older MaxScale versions. The new implementation contains
-most of the features that were in the original binlogrouter but some of them
-were removed as they were either redundant or not useful.
-
-The major differences between the new and old binlog router are:
-
- * The list of servers where the database users for authentication are loaded
-   must be explicitly configured with the `cluster`, `servers` or
-   `targets` parameter. Alternatively, the users can be read from a file. See
-   [user_accounts_file](../Getting-Started/Configuration-Guide.md#user_accounts_file)
-   for more information.
-
- * The old binlog router had both `server_id` and `master_id`, the new only
-   `server_id`.
-
- * No need to configure _heartbeat_ and _burst interval_ anymore as they are
-   now automatically configured.
-
- * Traditional replication that uses the binary log name and file offset to
-   start the replication process is not supported.
-
- * Semi-sync support is not implemented.
-
- * _Secondary masters_ are not supported, but the functionality provided by
-   `select_master` is roughly equivalent.
-
- * The new binlogrouter will write its own binlog files to prevent problems that
-   could happen when the primary changes. This causes the binlog names to be
-   different in the binlogrouter when compared to the ones on the primary.
-
-The documentation for the binlogrouter in MaxScale 2.4 is provided for reference
-[here](Binlogrouter-2.4.md).
 
 ## Supported SQL Commands
 
@@ -238,6 +198,11 @@ supports. The following commands are supported:
      coordinates of the binlogrouter. In addition to these, the `server_id`
      variable will return the configured server ID of the binlogrouter.
 
+## Semi-sync replication
+
+If the server from which the binlogrouter replicates from is using semi-sync
+replication, the binlogrouter will acknowledge the replicated events.
+
 ## Configuration Parameters
 
 The binlogrouter is configured similarly to how normal routers are configured in
@@ -378,6 +343,20 @@ Possible values are:
 
   * [AES in Counter Mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR)).
 
+### `rpl_semi_sync_slave_enabled`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+Enable
+[semi-synchronous](https://mariadb.com/kb/en/semisynchronous-replication/)
+replication when replicating from a MariaDB server. If enabled, the binlogrouter
+will send acknowledgment for each received event. Note that the
+[rpl_semi_sync_master_enabled](https://mariadb.com/kb/en/semisynchronous-replication/#rpl_semi_sync_master_enabled)
+parameter must be enabled in the MariaDB server where the replication is done
+from for the semi-synchronous replication to take place.
+
 ## New installation
 
  1. Configure and start MaxScale.
@@ -400,7 +379,7 @@ START SLAVE;
 SHOW SLAVE STATUS \G
 ```
 
-## Upgrading to version 2.5
+## Upgrading from legacy versions
 
 Binlogrouter does not read any of the data that a version prior to 2.5
 has saved. By default binlogrouter will request the replication stream
@@ -422,7 +401,7 @@ and store all the data.
 ### Deployment
 
 The method described here inflicts the least downtime. Assuming you have
-configured version 2.5, and it is ready to go:
+configured MaxScale version 2.5 or newer, and it is ready to go:
 
  1. Redirect each replica that replicates from Binlogrouter to replicate from the
     primary.
