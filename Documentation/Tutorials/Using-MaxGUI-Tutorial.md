@@ -175,13 +175,14 @@ This page show real-time MaxScale logs with filter options.
 
 # Workspace
 
-On this page, you may add numerous worksheets, each of which can be used for either "Run queries" or "Data migration".
+On this page, you may add numerous worksheets, each of which can be used for
+"Run queries", "Data migration" or "Create an ERD" task.
 
 ![MaxGUI MaxScale Workspace](./images/MaxGUI-workspace.png)
 
 ## Run Queries
 
-Clicking on the "Run Queries" card will pop-up a dialog, providing options
+Clicking on the "Run Queries" card will open a dialog, providing options
 to establish a connection to different MaxScale object types, including
 "Listener, Server, Service".
 
@@ -235,7 +236,7 @@ There are two ways to quickly insert an object to the editor:
 
 - Drag the object and drop it in the desire position in the editor.
 - Right-click on the object to show the context menu, then mouse
-hover the `Place to Editor` option and select the desired insert option.
+  hover the `Place to Editor` option and select the desired insert option.
 
 #### Editor
 
@@ -260,9 +261,16 @@ Press CTRL/CMD + D to save the current SQL in the editor to the snippets storage
 A snippet is created with a prefix keyword, so when that keyword is typed in
 the editor, it will be suggested in the "code completion" menu.
 
+#### Generate an ERD
+
+To initiate the process, either right-click on the schema name and select the
+`Generate ERD` option, or click on the icon button that resembles a line graph,
+located on the schemas sidebar. This will open a dialog for selecting the
+tables for the diagram.
+
 ## Data Migration
 
-Clicking on the "Data Migration" card will pop-up a dialog, providing an option
+Clicking on the "Data Migration" card will open a dialog, providing an option
 to name the task. The Data Migration worksheet will be rendered in the active
 worksheet after clicking the `Create` button in the dialog.
 
@@ -270,7 +278,7 @@ worksheet after clicking the `Create` button in the dialog.
 
 MaxScale uses ODBC for extracting and loading from the data source to a server
 in MaxScale. Before starting a migration, ensure that you have set up the
-necessary configurations on the MaxScale server.  Instruction can be found [here](../REST-API/Resources-SQL.md#prepare-etl-operation)
+necessary configurations on the MaxScale server. Instruction can be found [here](../REST-API/Resources-SQL.md#prepare-etl-operation)
 and limitations [here](../About/Limitations.md#etl-limitations).
 
 #### Connections
@@ -323,3 +331,113 @@ To retain the report and terminate open connections after migration, click the
 Deleting the worksheet will not delete the migration task. To clean-up
 everything after migration, click the `Manage` button, then select
 `Delete`.
+
+## Create an ERD
+
+There are various features in the ERD worksheet, the most notable ones are
+listed below.
+
+![MaxGUI Workspace ERD](./images/MaxGUI-workspace-erd.png)
+
+### ERD worksheet
+
+From an empty new worksheet, clicking on the "Create an ERD" card will open a
+connection dialog. After connecting successfully, the ERD worksheet will be
+rendered in the active worksheet. The connection is required to retrieve
+essential metadata, such as engines, character sets, and collation.
+
+#### Generate an ERD from the existing databases
+
+Click on the icon button featured as a line graph, located on the top
+toolbar next to the connection button. This will open a dialog for selecting
+the tables for the diagram.
+
+#### Create a new ERD
+
+New tables can be created by using either of the following methods:
+
+- Click on the icon button that resembles a line graph, located on the
+  top toolbar.
+- Right-click on the diagram board and select the `Create Table`
+  option.
+
+#### Entity options
+
+Two options are available: `Edit Table` and `Remove from Diagram`. These
+options can be accessed using either of the following methods:
+
+- Right-click on the entity and choose the desired option.
+- Hover over the entity, click the gear icon button, and select the desired
+  option.
+
+For quickly editing or viewing the table definitions, double-clicking on the
+entity. The entity editor will be shown at the bottom of the worksheet.
+
+#### Foreign keys quick common options
+
+![MaxGUI Workspace ERD FK Options](./images/MaxGUI-workspace-erd-fk-options.png)
+
+- Edit Foreign Key, this opens an editor for viewing/editing foreign keys.
+- Remove Foreign Key.
+- `Change to One To One` or `Change to One To Many`. Toggling the uniqueness
+  of the foreign key column.
+- `Set FK Column Mandatory` or `Set FK Column Optional`. Toggling the
+  `NOT NULL` option of the foreign key column.
+- `Set Referenced Column Mandatory` or `Set Referenced Column Optional`
+  Toggling the `NOT NULL` option of the referenced column.
+
+To show the above foreign key common options, perform a right-click on the link
+within the diagram.
+
+#### Viewing foreign key constraint SQL
+
+Hover over the link in the diagram, the constraint SQL of that foreign key will
+be shown in a tooltip.
+
+#### Quickly draw a foreign key link
+
+![MaxGUI Workspace ERD FK Quick Option](./images/MaxGUI-workspace-erd-fk-quick-option.png)
+
+As shown in the screenshot, a foreign key can be quickly established by
+performing the following actions:
+
+1. Click on the entity that will have the foreign key.
+2. Click on the connecting point of the desired foreign key column and drag
+   it over the desired referenced column.
+
+#### Entity editor
+
+![MaxGUI Workspace ERD Entity editor](./images/MaxGUI-workspace-erd-entity-editor.png)
+
+Table columns, foreign keys and indexes can be modified via
+the entity editor which can be accessed quickly by double-clicking
+on the entity.
+
+#### Export options
+
+Three options are available: `Copy script to clipboard`, `Export script` and
+`Export as jpeg`. These options can be accessed using either of the following
+methods:
+
+- Right-click on the diagram board and choose the desired option.
+- Click the export icon button, and select the desired option.
+
+#### Applying the script
+
+Click the icon button resembling a play icon to execute the generated script
+for all tables in the diagram. This action will prompt a confirmation dialog
+for script execution. If needed, the script can be manually edited using the
+editor within the dialog.
+
+#### Visual Enhancement options
+
+![MaxGUI Workspace ERD Visual Enhancements](./images/MaxGUI-workspace-erd-visual-enhancements.png)
+
+The first section of the top toolbar, there are options to improve the visual of
+the diagram as follows:
+
+- Change the shape of links
+- Drawing foreign keys to columns
+- Auto-arrange entities
+- Highlight relationship
+- Zoom control

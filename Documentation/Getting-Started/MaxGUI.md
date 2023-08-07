@@ -94,3 +94,8 @@ like CSV or JSON for further analysis and sharing.
 The "Data Migration" feature facilitates seamless transitions from PostgreSQL
 to MariaDB. Transfer data and database structures between the two systems while
 ensuring data integrity and consistency throughout the process.
+
+### 3. Create an ERD
+
+Generating Entity-Relationship Diagrams (ERDs) to gain insights regarding data
+structure, optimizing database design for both efficiency and clarity.
