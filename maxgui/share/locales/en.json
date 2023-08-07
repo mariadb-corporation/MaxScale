@@ -221,7 +221,7 @@
             "reconnFailed": "Reconnection attempt failed.",
             "refreshLater": "Please refresh in a few moments",
             "requiredCatalog": "Catalog must be defined for generic ODBC.",
-            "requiredConn": "No connection found, please create a new one. A connection is required edit table.",
+            "requiredConn": "No connection found, please create a new one. The editor relies on a connection to retrieve essential metadata, such as engines, character sets, and collations.",
             "requiredDb": "Database must be defined for the chosen driver.",
             "requiredInput": "{inputName} is required",
             "requiredInputs": "Please fill out all required fields.",

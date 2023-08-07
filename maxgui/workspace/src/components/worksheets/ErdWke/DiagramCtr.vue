@@ -415,51 +415,46 @@ export default {
             this.activeCtxItem = item
         },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
-            if (this.connId) {
-                const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
-                switch (type) {
-                    case EDIT: {
-                        this.openEditor({ node, spec: this.DDL_EDITOR_SPECS.COLUMNS })
-                        if (!skipZoom)
-                            // call in the next tick to ensure diagramDim height is up to date
-                            this.$nextTick(() => this.zoomIntoNode(node))
-                        break
-                    }
-                    case REMOVE: {
-                        const { foreignKey } = this.CREATE_TBL_TOKENS
-                        const nodeMap = this.nodes.reduce((map, n) => {
-                            if (n.id !== node.id) {
-                                const fkMap = n.data.defs.key_category_map[foreignKey]
-                                if (!fkMap) map[n.id] = n
-                                else {
-                                    const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
-                                        if (key.ref_tbl_id !== node.id) res[key.id] = key
-                                        return res
-                                    }, {})
-                                    map[n.id] = this.$helpers.immutableUpdate(n, {
-                                        data: {
-                                            defs: {
-                                                key_category_map: Object.keys(updatedFkMap).length
-                                                    ? { $merge: { [foreignKey]: updatedFkMap } }
-                                                    : { $unset: [foreignKey] },
-                                            },
-                                        },
-                                    })
-                                }
-                            }
+            const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
+            switch (type) {
+                case EDIT: {
+                    this.handleOpenEditor({ node, spec: this.DDL_EDITOR_SPECS.COLUMNS })
+                    if (this.connId && !skipZoom)
+                        // call in the next tick to ensure diagramDim height is up to date
+                        this.$nextTick(() => this.zoomIntoNode(node))
 
-                            return map
-                        }, {})
-                        this.closeEditor()
-                        this.updateAndDrawNodes({ nodeMap })
-                        break
-                    }
+                    break
                 }
-            } else
-                this.SET_SNACK_BAR_MESSAGE({
-                    text: [this.$mxs_t('errors.requiredConn')],
-                    type: 'error',
-                })
+                case REMOVE: {
+                    const { foreignKey } = this.CREATE_TBL_TOKENS
+                    const nodeMap = this.nodes.reduce((map, n) => {
+                        if (n.id !== node.id) {
+                            const fkMap = n.data.defs.key_category_map[foreignKey]
+                            if (!fkMap) map[n.id] = n
+                            else {
+                                const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
+                                    if (key.ref_tbl_id !== node.id) res[key.id] = key
+                                    return res
+                                }, {})
+                                map[n.id] = this.$helpers.immutableUpdate(n, {
+                                    data: {
+                                        defs: {
+                                            key_category_map: Object.keys(updatedFkMap).length
+                                                ? { $merge: { [foreignKey]: updatedFkMap } }
+                                                : { $unset: [foreignKey] },
+                                        },
+                                    },
+                                })
+                            }
+                        }
+
+                        return map
+                    }, {})
+                    this.closeEditor()
+                    this.updateAndDrawNodes({ nodeMap })
+                    break
+                }
+            }
         },
         handleChooseLinkOpt(type) {
             const link = this.activeCtxItem
@@ -474,17 +469,10 @@ export default {
                 SET_REF_COL_OPTIONAL,
             } = this.LINK_OPT_TYPES
             switch (type) {
-                case EDIT: {
-                    if (this.connId) {
-                        this.openEditor({ node: link.source, spec: this.DDL_EDITOR_SPECS.FK })
-                        this.$nextTick(() => this.zoomIntoNode(link.source))
-                    } else
-                        this.SET_SNACK_BAR_MESSAGE({
-                            text: [this.$mxs_t('errors.requiredConn')],
-                            type: 'error',
-                        })
+                case EDIT:
+                    this.handleOpenEditor({ node: link.source, spec: this.DDL_EDITOR_SPECS.FK })
+                    if (this.connId) this.$nextTick(() => this.zoomIntoNode(link.source))
                     break
-                }
                 case REMOVE: {
                     const { foreignKey } = this.CREATE_TBL_TOKENS
                     let fkMap = this.$typy(
@@ -718,40 +706,56 @@ export default {
             this.$refs.diagram.updateNode(params)
         },
         handleCreateTable() {
-            const length = this.nodes.length
-            const { genDdlEditorData, genErdNode } = erdHelper
-            const { tableParser, dynamicColors, immutableUpdate } = this.$helpers
-            const schema = this.$typy(ErdTask.getters('schemas'), '[0]').safeString || 'test'
-            const nodeData = genDdlEditorData({
-                parsedTable: tableParser.parse({
-                    ddl: tableTemplate(`table_${length + 1}`),
-                    schema,
-                    autoGenId: true,
-                }),
-                charsetCollationMap: this.charset_collation_map,
-            })
+            if (this.connId) {
+                const length = this.nodes.length
+                const { genDdlEditorData, genErdNode } = erdHelper
+                const { tableParser, dynamicColors, immutableUpdate } = this.$helpers
+                const schema = this.$typy(ErdTask.getters('schemas'), '[0]').safeString || 'test'
+                const nodeData = genDdlEditorData({
+                    parsedTable: tableParser.parse({
+                        ddl: tableTemplate(`table_${length + 1}`),
+                        schema,
+                        autoGenId: true,
+                    }),
+                    charsetCollationMap: this.charset_collation_map,
+                })
 
-            const { x, y, k } = this.panAndZoom
-            const node = {
-                ...genErdNode({ nodeData, highlightColor: dynamicColors(length) }),
-                // plus extra padding
-                x: (0 - x) / k + 65,
-                y: (0 - y) / k + 42,
-            }
-            const nodeMap = immutableUpdate(this.nodeMap, { $merge: { [node.id]: node } })
-            ErdTask.update({
-                where: this.activeTaskId,
-                data: { nodeMap },
-            }).then(() => {
-                ErdTask.dispatch('updateNodesHistory', nodeMap)
-                this.$refs.diagram.addNode(node)
-                this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node, skipZoom: true })
-            })
+                const { x, y, k } = this.panAndZoom
+                const node = {
+                    ...genErdNode({ nodeData, highlightColor: dynamicColors(length) }),
+                    // plus extra padding
+                    x: (0 - x) / k + 65,
+                    y: (0 - y) / k + 42,
+                }
+                const nodeMap = immutableUpdate(this.nodeMap, { $merge: { [node.id]: node } })
+                ErdTask.update({
+                    where: this.activeTaskId,
+                    data: { nodeMap },
+                }).then(() => {
+                    ErdTask.dispatch('updateNodesHistory', nodeMap)
+                    this.$refs.diagram.addNode(node)
+                    this.handleChooseNodeOpt({
+                        type: this.ENTITY_OPT_TYPES.EDIT,
+                        node,
+                        skipZoom: true,
+                    })
+                })
+            } else
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: [this.$mxs_t('errors.requiredConn')],
+                    type: 'error',
+                })
         },
-        openEditor({ node, spec }) {
-            let data = { active_entity_id: node.id, active_spec: spec }
-            if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
-            ErdTaskTmp.update({ where: this.activeTaskId, data })
+        handleOpenEditor({ node, spec }) {
+            if (this.connId) {
+                let data = { active_entity_id: node.id, active_spec: spec }
+                if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
+                ErdTaskTmp.update({ where: this.activeTaskId, data })
+            } else
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: [this.$mxs_t('errors.requiredConn')],
+                    type: 'error',
+                })
         },
         closeEditor() {
             ErdTaskTmp.update({

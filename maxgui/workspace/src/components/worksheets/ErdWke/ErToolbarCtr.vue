@@ -181,7 +181,6 @@
             text
             depressed
             color="primary"
-            :disabled="!hasConnId"
             @click="$emit('on-create-table')"
         >
             <template v-slot:btn-content>
@@ -237,7 +236,7 @@
             btnClass="er-toolbar__btn toolbar-square-btn"
             text
             :disabled="!hasConnId"
-            :color="activeErdConn ? 'primary' : ''"
+            :color="hasConnId ? 'primary' : ''"
             @click="genErd"
         >
             <template v-slot:btn-content>
