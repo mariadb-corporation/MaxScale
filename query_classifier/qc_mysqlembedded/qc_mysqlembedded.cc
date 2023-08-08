@@ -1186,6 +1186,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         break;
 
     case SQLCOM_SHOW_TABLES:
+    case SQLCOM_SHOW_TABLE_STATUS:
         type |= QUERY_TYPE_SHOW_TABLES;
         goto return_qtype;
         break;
@@ -2033,12 +2034,15 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, std::vector<std::string>* p
 
     if (lex->describe || (is_show_command(lex->sql_command)
                           && !(lex->sql_command == SQLCOM_SHOW_TABLES)
+                          && !(lex->sql_command == SQLCOM_SHOW_TABLE_STATUS)
                           && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
     {
         return QC_RESULT_OK;
     }
 
-    if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
+    if (lex->sql_command == SQLCOM_CHANGE_DB
+        || lex->sql_command == SQLCOM_SHOW_TABLES
+        || lex->sql_command == SQLCOM_SHOW_TABLE_STATUS)
     {
         SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
         if (qcme_string_get(select_lex->db)
