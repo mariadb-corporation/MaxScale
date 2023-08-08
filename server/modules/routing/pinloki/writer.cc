@@ -167,10 +167,6 @@ void Writer::run()
             while (m_running)
             {
                 auto rpl_event = maxsql::RplEvent(conn.get_rpl_msg());
-                if (rpl_event.event_type() != HEARTBEAT_LOG_EVENT)
-                {
-                    MXB_SDEBUG("INCOMING " << rpl_event);
-                }
 
                 if (m_inventory.config().select_master() && timer.alarm() && has_master_changed(conn))
                 {
@@ -180,7 +176,7 @@ void Writer::run()
 
                 m_inventory.set_master_id(rpl_event.server_id());
                 m_inventory.set_is_writer_connected(true);
-                bool do_add_event = true; // set to false on rollback
+                bool do_add_event = true;   // set to false on rollback
                 bool do_save_gtid_list = false;
 
                 switch (rpl_event.event_type())
@@ -205,9 +201,11 @@ void Writer::run()
                         }
 
                         m_was_ddl = gtid_event.flags & mxq::F_DDL;
+                        do_add_event = !m_inventory.config().ddl_only() || m_was_ddl;
                     }
                     break;
 
+                case QUERY_COMPRESSED_EVENT:
                 case QUERY_EVENT:
                     if (m_inventory.config().ddl_only() && !m_was_ddl)
                     {
@@ -236,13 +234,42 @@ void Writer::run()
                     }
                     break;
 
+
+                case TABLE_MAP_EVENT:
+                case PRE_GA_WRITE_ROWS_EVENT:
+                case PRE_GA_UPDATE_ROWS_EVENT:
+                case PRE_GA_DELETE_ROWS_EVENT:
+                case WRITE_ROWS_EVENT_V1:
+                case UPDATE_ROWS_EVENT_V1:
+                case DELETE_ROWS_EVENT_V1:
+                case WRITE_ROWS_EVENT:
+                case UPDATE_ROWS_EVENT:
+                case DELETE_ROWS_EVENT:
+                case ANNOTATE_ROWS_EVENT:
+                case WRITE_ROWS_COMPRESSED_EVENT_V1:
+                case UPDATE_ROWS_COMPRESSED_EVENT_V1:
+                case DELETE_ROWS_COMPRESSED_EVENT_V1:
+                case WRITE_ROWS_COMPRESSED_EVENT:
+                case UPDATE_ROWS_COMPRESSED_EVENT:
+                case DELETE_ROWS_COMPRESSED_EVENT:
+                    if (m_inventory.config().ddl_only() && !m_was_ddl)
+                    {
+                        do_add_event = false;
+                    }
+                    break;
+
                 default:
                     break;
                 }
 
+                if (rpl_event.event_type() != HEARTBEAT_LOG_EVENT)
+                {
+                    MXB_SDEBUG("INCOMING " << (do_add_event ? "" : "[SKIP] ") << rpl_event);
+                }
+
                 if (do_add_event)
                 {
-                   file.add_event(rpl_event);
+                    file.add_event(rpl_event);
                 }
 
                 if (do_save_gtid_list)

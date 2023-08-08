@@ -67,3 +67,6 @@ add_test_executable_ex(NAME pinloki_encryption_vault SOURCE pinloki_encryption_v
 
 add_test_executable_ex(NAME pinloki_encryption_kmip SOURCE pinloki_encryption_kmip.cc
   CONFIG pinloki_encryption_kmip.cnf VMS repl_backend LABELS pinloki)
+
+add_test_executable_ex(NAME pinloki_ddl_only SOURCE pinloki_ddl_only.cc
+  CONFIG pinloki_ddl_only.cnf VMS repl_backend LABELS pinloki)

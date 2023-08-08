@@ -131,9 +131,10 @@ protected:
         auto start_gtid = dest.field("SELECT @@gtid_current_pos");
         auto res = dest.field("SELECT MASTER_GTID_WAIT('" + gtid + "', 30)");
         test.expect(res == "0",
-                    "`MASTER_GTID_WAIT('%s', 30)` returned: %s (error: %s). "
+                    "`MASTER_GTID_WAIT('%s', 30)` on %s returned: %s (error: %s). "
                     "Target GTID: %s Starting GTID: %s",
-                    gtid.c_str(), res.c_str(), slave.error(), gtid.c_str(), start_gtid.c_str());
+                    gtid.c_str(), &dest == &maxscale ? "MaxScale" : "slave",
+                    res.c_str(), slave.error(), gtid.c_str(), start_gtid.c_str());
     }
 
     // Syncs maxscale with master and then the slave with master
