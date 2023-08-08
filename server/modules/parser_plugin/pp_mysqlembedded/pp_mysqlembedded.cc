@@ -1410,6 +1410,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     case SQLCOM_SHOW_SLAVE_STAT:
     case SQLCOM_SHOW_STATUS:
     case SQLCOM_SHOW_TABLES:
+    case SQLCOM_SHOW_TABLE_STATUS:
         type |= mxs::sql::TYPE_READ;
         goto return_qtype;
         break;
@@ -2040,12 +2041,15 @@ int32_t pp_mysql_get_database_names(const Parser::Helper& helper,
 
         if (lex->describe || (is_show_command(lex->sql_command)
                               && !(lex->sql_command == SQLCOM_SHOW_TABLES)
+                              && !(lex->sql_command == SQLCOM_SHOW_TABLE_STATUS)
                               && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
         {
             return PP_RESULT_OK;
         }
 
-        if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
+        if (lex->sql_command == SQLCOM_CHANGE_DB
+            || lex->sql_command == SQLCOM_SHOW_TABLES
+            || lex->sql_command == SQLCOM_SHOW_TABLE_STATUS)
         {
             SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
             if (qcme_string_get(select_lex->db)
