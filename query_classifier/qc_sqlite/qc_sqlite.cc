@@ -3278,10 +3278,6 @@ public:
             m_type_mask = QUERY_TYPE_WRITE;
             break;
 
-        case MXS_SHOW_TABLE_STATUS:
-            m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
         case MXS_SHOW_STATUS:
             switch (pShow->data)
             {
@@ -3309,6 +3305,7 @@ public:
             }
             break;
 
+        case MXS_SHOW_TABLE_STATUS:
         case MXS_SHOW_TABLES:
             m_type_mask = QUERY_TYPE_SHOW_TABLES;
             if (pShow->pDatabase->z)
