@@ -27,12 +27,21 @@
 
 struct ExecInfo
 {
+    ExecInfo(uint32_t stmt_id, mxs::RWBackend* t = nullptr)
+        : id(stmt_id)
+        , target(t)
+    {
+    }
+
+    bool operator==(const ExecInfo& other) const
+    {
+        return id == other.id;
+    }
+
+    uint32_t id;
     // The latest server this was executed on, used to figure out where COM_STMT_FETCH needs to be sent.
     mxs::RWBackend* target = nullptr;
 };
-
-/** Map of COM_STMT_EXECUTE targets by internal ID */
-typedef std::unordered_map<uint32_t, ExecInfo> ExecMap;
 
 /**
  * The client session of a RWSplit instance
@@ -448,7 +457,7 @@ private:
     RWSplit*          m_router;         /**< The router instance */
     mxs::RWBackend*   m_sescmd_replier {nullptr};
 
-    ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
+    std::vector<ExecInfo> m_exec_map;       // Information about COM_STMT_EXECUTE execution
 
     RWSplit::gtid   m_gtid_pos {0, 0, 0};   /**< Gtid position for causal read */
     wait_gtid_state m_wait_gtid;            /**< State of MASTER_GTID_WAIT reply */
