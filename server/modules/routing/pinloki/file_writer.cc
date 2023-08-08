@@ -119,7 +119,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
             }
             else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
             {
-                write_to_file(rpl_event);
+                write_rpl_event(rpl_event);
             }
         }
     }
@@ -221,14 +221,13 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 
     m_current_pos.name = file_name;
     m_current_pos.file.open(m_current_pos.name, std::ios_base::out | std::ios_base::binary);
-    m_current_pos.file.write(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
-    m_current_pos.write_pos = PINLOKI_MAGIC.size();
-    m_current_pos.file.flush();
+    m_current_pos.write_pos = 0;
+    write_to_file(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
 
     m_inventory.config().set_binlogs_dirty();
 }
 
-void FileWriter::write_to_file(maxsql::RplEvent& rpl_event)
+void FileWriter::write_rpl_event(maxsql::RplEvent& rpl_event)
 {
     const std::string& key_id = m_inventory.config().key_id();
 
@@ -238,7 +237,7 @@ void FileWriter::write_to_file(maxsql::RplEvent& rpl_event)
         // START_ENCRYPTION events must be unencrypted even if the previous file was also encrypted.
         m_encrypt.reset();
 
-        write_plain_to_file(rpl_event.pBuffer(), rpl_event.buffer_size());
+        write_to_file(rpl_event.pBuffer(), rpl_event.buffer_size());
 
         if (auto key_manager = mxs::key_manager())
         {
@@ -249,7 +248,7 @@ void FileWriter::write_to_file(maxsql::RplEvent& rpl_event)
                 maxsql::RplEvent event(
                     mxq::create_start_encryption_event(rpl_event.server_id(), vers, m_current_pos.write_pos));
 
-                write_plain_to_file(event.pBuffer(), event.buffer_size());
+                write_to_file(event.pBuffer(), event.buffer_size());
 
                 auto start_encryption = event.start_encryption_event();
                 const auto cipher = m_inventory.config().encryption_cipher();
@@ -274,15 +273,15 @@ void FileWriter::write_to_file(maxsql::RplEvent& rpl_event)
 
         std::vector<char> plaintext(rpl_event.pBuffer(), rpl_event.pEnd());
         auto encrypted = m_encrypt->encrypt_event(plaintext, m_current_pos.write_pos);
-        write_plain_to_file(encrypted.data(), encrypted.size());
+        write_to_file(encrypted.data(), encrypted.size());
     }
     else
     {
-        write_plain_to_file(rpl_event.pBuffer(), rpl_event.buffer_size());
+        write_to_file(rpl_event.pBuffer(), rpl_event.buffer_size());
     }
 }
 
-void FileWriter::write_plain_to_file(const char* ptr, size_t bytes)
+void FileWriter::write_to_file(const char* ptr, size_t bytes)
 {
     m_current_pos.file.seekp(m_current_pos.write_pos);
     m_current_pos.file.write(ptr, bytes);
@@ -340,7 +339,7 @@ void FileWriter::write_stop(const std::string& file_name)
     mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
 
     mxq::RplEvent event(std::move(data));
-    write_to_file(event);
+    write_rpl_event(event);
 }
 
 void FileWriter::write_rotate(const std::string& to_file_name)
@@ -351,7 +350,7 @@ void FileWriter::write_rotate(const std::string& to_file_name)
                                            mxq::Kind::Real);
 
     mxq::RplEvent event(std::move(vec));
-    write_to_file(event);
+    write_rpl_event(event);
 }
 
 void FileWriter::write_gtid_list()
@@ -406,6 +405,6 @@ void FileWriter::write_gtid_list()
     mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
 
     mxq::RplEvent event(std::move(data));
-    write_to_file(event);
+    write_rpl_event(event);
 }
 }
