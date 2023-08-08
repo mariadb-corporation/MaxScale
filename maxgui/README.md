@@ -129,7 +129,7 @@ Workspace is divided into two structures, ORM structure, and state modules.
 The image below illustrates the ORM structure of the workspace. It is
 implemented to have a flat Vuex store architecture using [vuex-orm](https://vuex-orm.org/).
 
-![Workspace ORM structure diagram](./images/workspace_orm_diagram.png)
+![Workspace ORM structure diagram](./images/workspace_orm_diagram.jpeg)
 
 All tables are persistent tables except tables with names having `Tmp` as a
 suffix. Those temporary tables store large data that are only needed during
