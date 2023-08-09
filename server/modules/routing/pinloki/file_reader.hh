@@ -42,7 +42,7 @@ public:
     FileReader(const maxsql::GtidList& gtid_list, const InventoryReader* inv);
     ~FileReader();
 
-    maxsql::RplEvent fetch_event();
+    maxsql::RplEvent fetch_event(const maxbase::Timer& timer);
 
     // Artificial replication heartbeat event
     maxsql::RplEvent create_heartbeat_event() const;
