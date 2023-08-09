@@ -62,6 +62,12 @@
   do. Only broken legacy versions where the grants would be returned without
   backslash escaping would require this parameter to work.
 
+* The Xpand monitor is now region aware.
+
+For more details, please refer to:
+
+* [MariaDB MaxScale 23.02.0 Release Notes](Release-Notes/MaxScale-23.02.0-Release-Notes.md)
+
 ## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
