@@ -98,6 +98,7 @@ export default {
                         await this.handleSaveFile(this.queryTab)
                         await this.handleDeleteTab()
                     },
+                    on_cancel = async () => await this.handleDeleteTab(),
                     save_text = 'save',
                     cancel_text = 'dontSave'
 
@@ -106,26 +107,21 @@ export default {
                         targetId: this.queryTab.name,
                     })
                     on_save = async () => await this.handleDeleteTab()
+                    on_cancel = () => null
                     save_text = 'confirm'
                     cancel_text = 'cancel'
                 }
-
-                this.openConfirmDlg({
+                this.SET_CONFIRM_DLG({
+                    ...this.confirm_dlg,
+                    is_opened: true,
                     save_text,
                     cancel_text,
                     title: this.$mxs_t('deleteTab'),
                     confirm_msg,
                     on_save,
+                    on_cancel,
                 })
             } else this.handleDeleteTab()
-        },
-        openConfirmDlg(dlgParam) {
-            this.SET_CONFIRM_DLG({
-                ...this.confirm_dlg,
-                is_opened: true,
-                ...dlgParam,
-                on_cancel: async () => await this.handleDeleteTab(),
-            })
         },
         async handleDeleteTab() {
             if (this.queryTabsOfActiveWke.length === 1)
