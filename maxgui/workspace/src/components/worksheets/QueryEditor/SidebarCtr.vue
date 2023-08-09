@@ -81,7 +81,7 @@
  */
 
 import { mapState, mapActions, mapMutations } from 'vuex'
-import Editor from '@wsModels/Editor'
+import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
@@ -183,10 +183,10 @@ export default {
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,
-                editorMode: this.EDITOR_MODES.DDL_EDITOR,
+                editor_mode: this.EDITOR_MODES.ALTER_EDITOR,
             })
             await this.queryDdlEditorSuppData({ connId: this.activeQueryTabConnId, config })
-            await Editor.dispatch('queryTblCreationInfo', node)
+            await AlterEditor.dispatch('queryTblCreationInfo', node)
         },
 
         handleOpenExecSqlDlg(sql) {

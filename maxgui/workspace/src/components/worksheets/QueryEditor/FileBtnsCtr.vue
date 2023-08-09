@@ -66,7 +66,7 @@
  */
 import { mapState, mapMutations, mapGetters, mapActions } from 'vuex'
 import QueryTab from '@wsModels/QueryTab'
-import Editor from '@wsModels/Editor'
+import TxtEditor from '@wsModels/TxtEditor'
 import { fileOpen } from 'browser-fs-access'
 import { EventBus } from '@wkeComps/EventBus'
 import saveFile from '@wsSrc/mixins/saveFile'
@@ -93,7 +93,7 @@ export default {
             )
         },
         isSaveFileAsDisabled() {
-            return !this.$typy(Editor.find(this.queryTab.id), 'query_txt').safeString
+            return !this.$typy(TxtEditor.find(this.queryTab.id), 'query_txt').safeString
         },
         eventBus() {
             return EventBus
@@ -210,7 +210,7 @@ export default {
                     txt: blobTxt,
                 },
             })
-            Editor.update({ where: this.queryTab.id, data: { query_txt: blobTxt } })
+            TxtEditor.update({ where: this.queryTab.id, data: { query_txt: blobTxt } })
         },
 
         shortKeyHandler(key) {

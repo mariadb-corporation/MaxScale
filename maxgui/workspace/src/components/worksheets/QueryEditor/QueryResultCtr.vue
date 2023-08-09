@@ -84,9 +84,9 @@
  */
 import { mapState } from 'vuex'
 import QueryEditor from '@wsModels/QueryEditor'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
 import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
@@ -178,7 +178,7 @@ export default {
             return this.$typy(this.queryData, 'total_duration').safeNumber
         },
         previewingNodeQualifiedName() {
-            return SchemaSidebar.getters('previewingNodeQualifiedName')
+            return QueryTab.getters('previewingNodeQualifiedName')
         },
     },
 }

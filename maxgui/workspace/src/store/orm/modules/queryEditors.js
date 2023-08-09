@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
@@ -103,7 +102,7 @@ export default {
                             data: { name: connection_name },
                         })
                     }
-                    if (Editor.getters('isDdlEditor'))
+                    if (QueryTab.getters('isAlterEditor'))
                         await dispatch(
                             'editorsMem/queryDdlEditorSuppData',
                             { connId, config },

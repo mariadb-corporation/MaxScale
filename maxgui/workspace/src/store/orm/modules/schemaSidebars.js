@@ -14,7 +14,6 @@
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import { lodash } from '@share/utils/helpers'
@@ -128,8 +127,5 @@ export default {
             lodash.uniqBy(QueryEditor.getters('activeTmpRecord').completion_items || [], 'label'),
         dbTreeOfConn: () => QueryEditor.getters('activeTmpRecord').db_tree_of_conn || '',
         dbTreeData: () => QueryEditor.getters('activeTmpRecord').db_tree || {},
-        previewingNode: () => QueryTab.getters('activeTmpRecord').previewing_node || {},
-        previewingNodeQualifiedName: (state, getters) =>
-            getters.previewingNode.qualified_name || '',
     },
 }

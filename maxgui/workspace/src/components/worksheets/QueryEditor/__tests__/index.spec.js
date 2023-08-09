@@ -93,7 +93,7 @@ describe('query-editor', () => {
             })
         })
     })
-    const editorModes = ['TXT_EDITOR', 'DDL_EDITOR']
+    const editorModes = ['TXT_EDITOR', 'ALTER_EDITOR']
     editorModes.forEach(mode => {
         let wrapper
         describe(`${mode} mode: child component's data communication tests`, () => {

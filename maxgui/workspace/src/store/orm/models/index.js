@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Editor from '@wsModels/Editor'
+import AlterEditor from '@wsModels/AlterEditor'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTask from '@wsModels/EtlTask'
@@ -23,11 +23,12 @@ import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
+import TxtEditor from '@wsModels/TxtEditor'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 
 export default {
-    Editor,
+    AlterEditor,
     ErdTask,
     ErdTaskTmp,
     EtlTask,
@@ -39,6 +40,7 @@ export default {
     QueryTab,
     QueryTabTmp,
     SchemaSidebar,
+    TxtEditor,
     Worksheet,
     WorksheetTmp,
 }

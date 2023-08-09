@@ -16,7 +16,7 @@
             disable
         >
             <template slot="pane-left">
-                <!-- Editor pane contains editor and result pane -->
+                <!-- TxtEditor pane contains editor and result pane -->
                 <mxs-split-pane
                     ref="editorResultPane"
                     v-model="queryPanePctHeight"
@@ -107,9 +107,10 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-import Editor from '@wsModels/Editor'
+import TxtEditor from '@wsModels/TxtEditor'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import TxtEditorToolbarCtr from '@wkeComps/QueryEditor/TxtEditorToolbarCtr.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
@@ -166,7 +167,7 @@ export default {
             return EventBus
         },
         isVisSidebarShown() {
-            return Editor.getters('isVisSidebarShown')
+            return TxtEditor.getters('isVisSidebarShown')
         },
         isTabMoveFocus: {
             get() {
@@ -192,7 +193,7 @@ export default {
             // preview data
             const { PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
-            const previewingNode = SchemaSidebar.getters('previewingNode')
+            const prvwNodeQualifiedName = QueryTab.getters('previewingNodeQualifiedName')
             for (const mode of prvwModes) {
                 const data = this.$helpers.stringifyClone(
                     this.$typy(
@@ -211,7 +212,7 @@ export default {
                             break
                     }
                     resSets.push({
-                        id: `${resName} of ${previewingNode.qualified_name}`,
+                        id: `${resName} of ${prvwNodeQualifiedName}`,
                         ...data,
                     })
                 }
@@ -273,10 +274,10 @@ export default {
         },
         allQueryTxt: {
             get() {
-                return Editor.getters('queryTxt')
+                return TxtEditor.getters('queryTxt')
             },
             set(value) {
-                Editor.update({
+                TxtEditor.update({
                     where: QueryEditor.getters('activeQueryTabId'),
                     data: {
                         query_txt: value,

@@ -12,7 +12,7 @@
  * Public License.
  */
 import { Database } from '@vuex-orm/core'
-import Editor from '@wsModels/Editor'
+import AlterEditor from '@wsModels/AlterEditor'
 import ErdTask from '@wsModels/ErdTask'
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
@@ -20,6 +20,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
+import TxtEditor from '@wsModels/TxtEditor'
 import Worksheet from '@wsModels/Worksheet'
 // entities to be stored only in memory
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
@@ -28,7 +29,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 // Store modules
-import editors from '@wsSrc/store/orm/modules/editors'
+import alterEditors from '@wsSrc/store/orm/modules/alterEditors'
 import erdTasks from '@wsSrc/store/orm/modules/erdTasks'
 import etlTasks from '@wsSrc/store/orm/modules/etlTasks'
 import queryConns from '@wsSrc/store/orm/modules/queryConns'
@@ -36,10 +37,11 @@ import queryEditors from '@wsSrc/store/orm/modules/queryEditors'
 import queryResults from '@wsSrc/store/orm/modules/queryResults'
 import queryTabs from '@wsSrc/store/orm/modules/queryTabs'
 import schemaSidebars from '@wsSrc/store/orm/modules/schemaSidebars'
+import txtEditors from '@wsSrc/store/orm/modules/txtEditors'
 import worksheets from '@wsSrc/store/orm/modules/worksheets'
 
 const database = new Database()
-database.register(Editor, editors)
+database.register(AlterEditor, alterEditors)
 database.register(ErdTask, erdTasks)
 database.register(EtlTask, etlTasks)
 database.register(QueryConn, queryConns)
@@ -48,6 +50,7 @@ database.register(QueryResult, queryResults)
 database.register(QueryTab, queryTabs)
 database.register(SchemaSidebar, schemaSidebars)
 database.register(Worksheet, worksheets)
+database.register(TxtEditor, txtEditors)
 database.register(ErdTaskTmp)
 database.register(EtlTaskTmp)
 database.register(QueryTabTmp)

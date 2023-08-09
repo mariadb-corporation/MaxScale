@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Editor from '@wsModels/Editor'
+import TxtEditor from '@wsModels/TxtEditor'
 import { supported } from 'browser-fs-access'
 import localForage from 'localforage'
 
@@ -61,7 +61,7 @@ export default {
         async updateFileHandleDataMap({ commit, state, rootState }, payload) {
             commit('UPDATE_FILE_HANDLE_DATA_MAP', payload)
             // Workaround, update editor query_txt so getIsQueryTabUnsaved getter can recompute
-            Editor.update({ where: payload.id, data: { query_txt: payload.data.txt } })
+            TxtEditor.update({ where: payload.id, data: { query_txt: payload.data.txt } })
             await localForage.setItem(
                 rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE,
                 state.file_handle_data_map
@@ -91,7 +91,7 @@ export default {
         getFileHandleName: (state, getters) => id => getters.getFileHandle(id).name || '',
         getIsFileHandleValid: (state, getters) => id => Boolean(getters.getFileHandleName(id)),
         getIsQueryTabUnsaved: (state, getters) => id => {
-            const { query_txt = '' } = Editor.find(id) || {}
+            const { query_txt = '' } = TxtEditor.find(id) || {}
 
             const {
                 txt: file_handle_txt = '',

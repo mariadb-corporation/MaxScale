@@ -48,7 +48,7 @@
                     :id="`prvw-btn-tooltip-activator-${node.key}`"
                     icon
                     x-small
-                    :disabled="hasAlteringNode"
+                    :disabled="!isTxtEditor"
                     class="mr-1"
                     @click.stop="previewNode(node)"
                 >
@@ -130,14 +130,16 @@ This component emits the following events
 @truncate-tbl: sql:string.
 @use-db: qualified_name:string.
 @gen-erd: Node.
+@analyze-node: Node. Either Schema or Table node.
 @load-children: Node. Async event.
 @on-dragging: Event.
 @on-dragend: Event.
 */
 import { mapState } from 'vuex'
-import Editor from '@wsModels/Editor'
+import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
+import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import customDragEvt from '@share/mixins/customDragEvt'
@@ -179,11 +181,49 @@ export default {
         dbTreeData() {
             return SchemaSidebar.getters('dbTreeData')
         },
-        previewingNode() {
-            return SchemaSidebar.getters('previewingNode')
+        editorMode() {
+            return QueryTab.getters('editorMode')
         },
-        alteringNode() {
-            return Editor.getters('alteringNode')
+        isTxtEditor() {
+            return QueryTab.getters('isTxtEditor')
+        },
+        activeSchemaNode() {
+            const { ALTER_EDITOR, TXT_EDITOR } = this.EDITOR_MODES
+            switch (this.editorMode) {
+                case ALTER_EDITOR:
+                    return AlterEditor.getters('activeSchemaNode')
+                case TXT_EDITOR:
+                    return QueryTab.getters('previewingNode')
+                default:
+                    return null
+            }
+        },
+        activeNodes: {
+            get() {
+                return [this.activeSchemaNode]
+            },
+            set(v) {
+                if (v.length) {
+                    const activeNode = this.$typy(this.minimizeNodes(v), '[0]').safeObjectOrEmpty
+                    const { ALTER_EDITOR, TXT_EDITOR } = this.EDITOR_MODES
+                    switch (this.editorMode) {
+                        case ALTER_EDITOR:
+                            AlterEditor.update({
+                                where: this.activeQueryTabId,
+                                data: { active_schema_node: activeNode },
+                            })
+                            break
+                        case TXT_EDITOR:
+                            QueryTabTmp.update({
+                                where: this.activeQueryTabId,
+                                data: {
+                                    previewing_node: activeNode,
+                                },
+                            })
+                            break
+                    }
+                }
+            },
         },
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
@@ -209,12 +249,12 @@ export default {
                 {
                     text: this.$mxs_t('previewData'),
                     type: PRVW_DATA,
-                    disabled: this.hasAlteringNode,
+                    disabled: !this.isTxtEditor,
                 },
                 {
                     text: this.$mxs_t('viewDetails'),
                     type: PRVW_DATA_DETAILS,
-                    disabled: this.hasAlteringNode,
+                    disabled: !this.isTxtEditor,
                 },
                 { divider: true },
                 ...this.txtOpts,
@@ -233,38 +273,6 @@ export default {
                 [IDX]: this.txtOpts,
                 [TRIGGER]: this.txtOpts,
             }
-        },
-        hasAlteringNode() {
-            return Boolean(this.$typy(this.alteringNode, 'id').safeString)
-        },
-        // Use either previewingNode or alteringNode
-        activeNodes: {
-            get() {
-                let nodes = []
-                if (this.hasAlteringNode) nodes = [...nodes, this.alteringNode]
-                else if (this.$typy(this.previewingNode, 'id').safeString)
-                    nodes = [...nodes, this.previewingNode]
-                return nodes
-            },
-            set(v) {
-                if (v.length) {
-                    const activeNodes = this.minimizeNodes(v)
-                    if (this.hasAlteringNode)
-                        Editor.update({
-                            where: this.activeQueryTabId,
-                            data(editor) {
-                                editor.tbl_creation_info.altering_node = activeNodes[0]
-                            },
-                        })
-                    else
-                        QueryTabTmp.update({
-                            where: this.activeQueryTabId,
-                            data: {
-                                previewing_node: activeNodes[0],
-                            },
-                        })
-                }
-            },
         },
     },
     watch: {
@@ -495,12 +503,6 @@ export default {
                     break
                 case PRVW_DATA:
                 case PRVW_DATA_DETAILS:
-                    Editor.update({
-                        where: this.activeQueryTabId,
-                        data: {
-                            curr_editor_mode: this.EDITOR_MODES.TXT_EDITOR,
-                        },
-                    })
                     this.activeNodes = [node] // updateActiveNode
                     this.$emit('get-node-data', {
                         query_mode: opt.type,

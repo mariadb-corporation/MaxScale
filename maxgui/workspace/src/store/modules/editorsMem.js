@@ -18,7 +18,7 @@ export default {
     state: {
         selected_query_txt: '',
         is_max_rows_valid: true,
-        // states for DDL_EDITOR
+        // states for ALTER_EDITOR
         charset_collation_map: {},
         def_db_charset_map: {},
         engines: [],

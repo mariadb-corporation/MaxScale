@@ -48,7 +48,8 @@ import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
 import saveFile from '@wsSrc/mixins/saveFile'
-import Editor from '@wsModels/Editor'
+import AlterEditor from '@wsModels/AlterEditor'
+
 export default {
     name: 'query-tab-nav-item',
     mixins: [saveFile],
@@ -67,15 +68,18 @@ export default {
         isQueryTabUnsaved() {
             return this.getIsQueryTabUnsaved(this.tabId)
         },
-        initialData() {
-            return this.$typy(Editor.find(this.tabId).tbl_creation_info, 'data').safeObjectOrEmpty
+        initialDdlEditorData() {
+            return this.$typy(AlterEditor.find(this.tabId), 'data').safeObjectOrEmpty
         },
-        stagingData() {
-            return QueryTab.getters('findStagingAlterData')(this.tabId)
+        alterEditorStagingData() {
+            return QueryTab.getters('findAlterEditorStagingData')(this.tabId)
         },
         hasAlterEditorDataChanged() {
-            if (this.$typy(this.stagingData).isEmptyObject) return false
-            return !this.$helpers.lodash.isEqual(this.initialData, this.stagingData)
+            if (this.$typy(this.alterEditorStagingData).isEmptyObject) return false
+            return !this.$helpers.lodash.isEqual(
+                this.initialDdlEditorData,
+                this.alterEditorStagingData
+            )
         },
         queryTabsOfActiveWke() {
             return QueryTab.getters('queryTabsOfActiveWke')

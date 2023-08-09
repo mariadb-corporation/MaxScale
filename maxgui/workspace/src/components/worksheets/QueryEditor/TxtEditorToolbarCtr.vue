@@ -174,7 +174,7 @@
  */
 import { mapMutations, mapState, mapActions } from 'vuex'
 import QueryConn from '@wsModels/QueryConn'
-import Editor from '@wsModels/Editor'
+import TxtEditor from '@wsModels/TxtEditor'
 import QueryResult from '@wsModels/QueryResult'
 import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
@@ -222,10 +222,10 @@ export default {
             return EventBus
         },
         isVisSidebarShown() {
-            return Editor.getters('isVisSidebarShown')
+            return TxtEditor.getters('isVisSidebarShown')
         },
         queryTxt() {
-            return Editor.getters('queryTxt')
+            return TxtEditor.getters('queryTxt')
         },
         isRowLimitValid: {
             get() {
@@ -243,7 +243,7 @@ export default {
         },
         isRunBtnDisabled() {
             const queryTabConn = QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
-            const { query_txt } = Editor.find(this.queryTab.id) || {}
+            const { query_txt } = TxtEditor.find(this.queryTab.id) || {}
             return (
                 !query_txt ||
                 !queryTabConn.id ||
@@ -278,7 +278,7 @@ export default {
             SET_IS_MAX_ROWS_VALID: 'editorsMem/SET_IS_MAX_ROWS_VALID',
         }),
         toggleVisSidebar() {
-            Editor.update({
+            TxtEditor.update({
                 where: this.queryTab.id,
                 data(obj) {
                     obj.is_vis_sidebar_shown = !obj.is_vis_sidebar_shown

@@ -11,7 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Editor from '@wsModels/Editor'
+import AlterEditor from '@wsModels/AlterEditor'
+import TxtEditor from '@wsModels/TxtEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
@@ -34,7 +35,8 @@ export default {
                 QueryTab.delete(id) // delete itself
                 // delete record in its the relational tables
                 QueryTabTmp.delete(id)
-                Editor.delete(id)
+                AlterEditor.delete(id)
+                TxtEditor.delete(id)
                 dispatch('fileSysAccess/deleteFileHandleData', id, { root: true })
                 QueryResult.delete(id)
                 QueryConn.delete(c => c.query_tab_id === id)
@@ -44,19 +46,24 @@ export default {
          * Refresh non-key and non-relational fields of an entity and its relations
          * @param {String|Function} payload - either a QueryTab id or a callback function that return Boolean (filter)
          */
-        cascadeRefresh(_, payload) {
+        cascadeRefresh({ rootState }, payload) {
             const entityIds = QueryTab.filterEntity(QueryTab, payload).map(entity => entity.id)
             entityIds.forEach(id => {
-                const target = QueryTab.query()
-                    .with('editor') // get editor relational field
-                    .whereId(id)
-                    .first()
+                const target = QueryTab.find(id)
                 if (target) {
+                    const { TXT_EDITOR } = rootState.mxsWorkspace.config.EDITOR_MODES
                     QueryTab.refreshName(id)
                     // refresh its relations
                     QueryTabTmp.refresh(id)
-                    // keep query_txt data even after refresh all fields
-                    Editor.refresh(id, ['query_txt'])
+                    // Refresh all fields except query_txt
+                    if (target.editor_mode === TXT_EDITOR) {
+                        TxtEditor.refresh(id, ['query_txt'])
+                    } else {
+                        // If not TEXT_EDITOR, change to it and delete other editor models
+                        QueryTab.update({ where: id, data: { editor_mode: TXT_EDITOR } })
+                        TxtEditor.insert({ data: { id } })
+                        AlterEditor.delete(id)
+                    }
                     QueryResult.refresh(id)
                 }
             })
@@ -66,19 +73,16 @@ export default {
          * @param {String} param.query_editor_id  - id of the QueryEditor has QueryTab being inserted
          * @param {String} [param.query_tab_id]
          * @param {String} [param.name]
-         * @param {String} [param.editorMode] - EDITOR_MODES values. default is TXT_EDITOR
+         * @param {String} [param.editor_mode] - EDITOR_MODES values. default is TXT_EDITOR
          */
         insertQueryTab(
             { rootState },
-            {
-                query_editor_id,
-                query_tab_id = this.vue.$helpers.uuidv1(),
-                name = '',
-                editorMode = rootState.mxsWorkspace.config.EDITOR_MODES.TXT_EDITOR,
-            }
+            { query_editor_id, query_tab_id = this.vue.$helpers.uuidv1(), name = '', editor_mode }
         ) {
+            const { ALTER_EDITOR, TXT_EDITOR } = rootState.mxsWorkspace.config.EDITOR_MODES
             let tabName = 'Query Tab 1',
-                count = 1
+                count = 1,
+                editorMode = editor_mode || TXT_EDITOR
 
             const lastQueryTabOfWke = QueryTab.query()
                 .where(t => t.query_editor_id === query_editor_id)
@@ -92,10 +96,19 @@ export default {
                     id: query_tab_id,
                     count,
                     name: name ? name : tabName,
+                    editor_mode: editorMode,
                     query_editor_id,
                 },
             })
-            Editor.insert({ data: { id: query_tab_id, curr_editor_mode: editorMode } })
+            switch (editorMode) {
+                case TXT_EDITOR:
+                    TxtEditor.insert({ data: { id: query_tab_id } })
+                    break
+                case ALTER_EDITOR:
+                    AlterEditor.insert({ data: { id: query_tab_id } })
+                    break
+            }
+
             QueryResult.insert({ data: { id: query_tab_id } })
             QueryTabTmp.insert({ data: { id: query_tab_id } })
             QueryEditor.update({
@@ -107,12 +120,10 @@ export default {
          * This action add new queryTab to the provided QueryEditor id.
          * It uses the QueryEditor connection to clone into a new connection and bind it
          * to the queryTab being created.
-         * @param {String} param.query_editor_id - QueryEditor id
-         * @param {String} param.name - queryTab name. If not provided, it'll be auto generated
          */
-        async handleAddQueryTab({ dispatch }, { query_editor_id, name = '', editorMode }) {
+        async handleAddQueryTab({ dispatch }, param) {
             const query_tab_id = this.vue.$helpers.uuidv1()
-            dispatch('insertQueryTab', { query_editor_id, query_tab_id, name, editorMode })
+            dispatch('insertQueryTab', { query_tab_id, ...param })
             const queryEditorConn = QueryConn.getters('activeQueryEditorConn')
             // Clone the QueryEditor conn and bind it to the new queryTab
             if (queryEditorConn.id)
@@ -130,20 +141,34 @@ export default {
         refreshLastQueryTab({ dispatch }, query_tab_id) {
             dispatch('cascadeRefresh', query_tab_id)
             QueryTab.update({ where: query_tab_id, data: { name: 'Query Tab 1', count: 1 } })
-            Editor.refresh(query_tab_id)
+            // cascadeRefresh won't refresh query_txt but refresh does
+            TxtEditor.refresh(query_tab_id)
             dispatch('fileSysAccess/deleteFileHandleData', query_tab_id, { root: true })
         },
     },
     getters: {
-        activeRecord: () => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {},
+        activeRecord: () =>
+            QueryTab.query()
+                .withAll()
+                .find(QueryEditor.getters('activeQueryTabId')) || {},
         queryTabsOfActiveWke: () =>
             QueryTab.query()
                 .where(t => t.query_editor_id === QueryEditor.getters('activeId'))
                 .get(),
-        activeTmpRecord: (_, getters) => QueryTabTmp.find(getters.activeRecord.id) || {},
+        editorMode: (_, getters) => getters.activeRecord.editor_mode,
+        isTxtEditor: (_, getters, rootState) =>
+            getters.editorMode === rootState.mxsWorkspace.config.EDITOR_MODES.TXT_EDITOR,
+        isAlterEditor: (_, getters, rootState) =>
+            getters.editorMode === rootState.mxsWorkspace.config.EDITOR_MODES.ALTER_EDITOR,
+        // getters for mem states
+        activeTmpRecord: (_, getters) => getters.activeRecord.queryTabTmp || {},
         findTmpRecord: () => query_tab_id => QueryTabTmp.find(query_tab_id) || {},
-        stagingAlterData: (_, getters) => getters.activeTmpRecord.staging_alter_data || {},
-        findStagingAlterData: (_, getters) => query_tab_id =>
-            getters.findTmpRecord(query_tab_id).staging_alter_data || {},
+        alterEditorStagingData: (_, getters) =>
+            getters.activeTmpRecord.alter_editor_staging_data || {},
+        findAlterEditorStagingData: (_, getters) => query_tab_id =>
+            getters.findTmpRecord(query_tab_id).alter_editor_staging_data || {},
+        previewingNode: (_, getters) => getters.activeTmpRecord.previewing_node || {},
+        previewingNodeQualifiedName: (state, getters) =>
+            getters.previewingNode.qualified_name || '',
     },
 }

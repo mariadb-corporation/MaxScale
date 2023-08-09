@@ -30,11 +30,11 @@
                 class="mb-4 pt-2 pl-2 mxs-color-helper all-border-table-border"
                 :style="{ height: `${exec_sql_dlg.editor_height}px` }"
             >
-                <!-- Workaround: assign true to skipRegCompleters props when curr_editor_mode is TXT_EDITOR
-               in order to not call regCompleters. In other words, when multiple editors are visible
-               on the same page, they all re-call registerCompletionItemProvider which causes duplicated
-               completion items
-               https://github.com/microsoft/monaco-editor/issues/1957
+                <!--When there are more than one `mxs-sql-editor` components renders on the same view,
+                    Completion items will be duplicated as the `registerCompletionItemProvider` registers
+                    items at global scope. https://github.com/microsoft/monaco-editor/issues/1957
+                    So when the editor_mode is TXT_EDITOR, uses the `skipRegCompleters` props to skip
+                    the registration.
                 -->
                 <mxs-sql-editor
                     v-if="isConfDlgOpened"
@@ -67,7 +67,7 @@
  * Public License.
  */
 import { mapMutations, mapState, mapGetters } from 'vuex'
-import Editor from '@wsModels/Editor'
+import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 
 export default {
@@ -81,7 +81,7 @@ export default {
             getExecErr: 'mxsWorkspace/getExecErr',
         }),
         isTxtEditor() {
-            return Editor.getters('isTxtEditor')
+            return QueryTab.getters('isTxtEditor')
         },
         isConfDlgOpened: {
             get() {

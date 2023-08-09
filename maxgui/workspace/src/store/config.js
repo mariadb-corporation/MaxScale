@@ -21,7 +21,7 @@ const genIdxMap = attrs =>
 
 export const ORM_NAMESPACE = 'ORM'
 export const ORM_PERSISTENT_ENTITIES = {
-    EDITORS: 'editors',
+    ALTER_EDITORS: 'alterEditors',
     ERD_TASKS: 'erdTasks',
     ETL_TASKS: 'etlTasks',
     QUERY_CONNS: 'queryConns',
@@ -29,6 +29,7 @@ export const ORM_PERSISTENT_ENTITIES = {
     QUERY_RESULTS: 'queryResults',
     QUERY_TABS: 'queryTabs',
     SCHEMA_SIDEBARS: 'schemaSidebars',
+    TXT_EDITORS: 'txtEditors',
     WORKSHEETS: 'worksheets',
 }
 export const ORM_TMP_ENTITIES = {
@@ -255,7 +256,7 @@ export const ERD_EXPORT_OPTS = [
 ]
 export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
-    DDL_EDITOR: 'DDL_EDITOR',
+    ALTER_EDITOR: 'ALTER_EDITOR',
 })
 export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 50000]
 export const SQL_CHART_TYPES = Object.freeze({

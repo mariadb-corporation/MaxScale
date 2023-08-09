@@ -56,7 +56,6 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-import Editor from '@wsModels/Editor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
@@ -90,7 +89,7 @@ export default {
             return QueryConn.getters('activeQueryTabConn')
         },
         isTxtEditor() {
-            return Editor.getters('isTxtEditor')
+            return QueryTab.getters('isTxtEditor')
         },
         allQueryTabs() {
             return QueryTab.all()

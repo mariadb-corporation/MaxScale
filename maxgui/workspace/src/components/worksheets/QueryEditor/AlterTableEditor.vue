@@ -1,5 +1,5 @@
 <template>
-    <v-card class="alter-table-editor fill-height" :loading="isLoading" tile>
+    <v-card class="alter-table-editor fill-height" :loading="isFetchingData" tile>
         <mxs-ddl-editor
             v-if="!$typy(stagingData).isEmptyObject"
             v-model="stagingData"
@@ -28,7 +28,7 @@
  * Public License.
  */
 import { mapState, mapActions } from 'vuex'
-import Editor from '@wsModels/Editor'
+import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
@@ -47,11 +47,11 @@ export default {
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             UNPARSED_TBL_PLACEHOLDER: state => state.mxsWorkspace.config.UNPARSED_TBL_PLACEHOLDER,
         }),
-        isLoading() {
-            return Editor.getters('isLoadingTblCreationInfo')
+        isFetchingData() {
+            return AlterEditor.getters('isFetchingData')
         },
         initialData() {
-            return this.$typy(Editor.getters('tblCreationInfo'), 'data').safeObjectOrEmpty
+            return AlterEditor.getters('data')
         },
         activeQueryTabConnId() {
             return this.$typy(QueryConn.getters('activeQueryTabConn'), 'id').safeString
@@ -62,30 +62,28 @@ export default {
         activeQueryTabId() {
             return QueryEditor.getters('activeQueryTabId')
         },
-        stagingAlterData() {
-            return QueryTab.getters('stagingAlterData')
+        alterEditorStagingData() {
+            return QueryTab.getters('alterEditorStagingData')
         },
         stagingData: {
             get() {
-                return this.stagingAlterData
+                return this.alterEditorStagingData
             },
             set(data) {
                 QueryTabTmp.update({
                     where: this.activeQueryTabId,
-                    data: { staging_alter_data: data },
+                    data: { alter_editor_staging_data: data },
                 })
             },
         },
         activeSpec: {
             get() {
-                return Editor.getters('activeSpec')
+                return AlterEditor.getters('activeSpec')
             },
             set(v) {
-                Editor.update({
+                AlterEditor.update({
                     where: this.activeQueryTabId,
-                    data(editor) {
-                        editor.tbl_creation_info.active_spec = v
-                    },
+                    data: { active_spec: v },
                 })
             },
         },
@@ -128,13 +126,13 @@ export default {
         ...mapActions({ exeDdlScript: 'mxsWorkspace/exeDdlScript' }),
         watch_isLoading() {
             this.unwatch_isLoading = this.$watch(
-                'isLoading',
+                'isFetchingData',
                 v => {
-                    if (!v && this.$typy(this.stagingAlterData).isEmptyObject) {
+                    if (!v && this.$typy(this.alterEditorStagingData).isEmptyObject) {
                         QueryTabTmp.update({
                             where: this.activeQueryTabId,
                             data: {
-                                staging_alter_data: this.$helpers.lodash.cloneDeep(
+                                alter_editor_staging_data: this.$helpers.lodash.cloneDeep(
                                     this.initialData
                                 ),
                             },
@@ -151,11 +149,9 @@ export default {
                 name: this.initialData.options.name,
                 successCb: () => {
                     const data = this.$helpers.lodash.cloneDeep(this.stagingData)
-                    Editor.update({
+                    AlterEditor.update({
                         where: this.activeQueryTabId,
-                        data(editor) {
-                            editor.tbl_creation_info.data = data
-                        },
+                        data: { data },
                     })
                 },
             })

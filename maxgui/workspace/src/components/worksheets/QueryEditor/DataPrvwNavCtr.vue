@@ -35,8 +35,8 @@
  */
 import { mapState } from 'vuex'
 import QueryEditor from '@wsModels/QueryEditor'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
 
 export default {
     name: 'data-prvw-nav-ctr',
@@ -86,7 +86,7 @@ export default {
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
                         await QueryResult.dispatch('fetchPrvw', {
-                            qualified_name: SchemaSidebar.getters('previewingNodeQualifiedName'),
+                            qualified_name: QueryTab.getters('previewingNodeQualifiedName'),
                             query_mode,
                         })
                     }

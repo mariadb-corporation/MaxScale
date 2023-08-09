@@ -12,7 +12,7 @@
  * Public License.
  */
 import QueryTab from '@wsModels/QueryTab'
-import Editor from '@wsModels/Editor'
+import TxtEditor from '@wsModels/TxtEditor'
 import { mapGetters, mapActions } from 'vuex'
 
 export default {
@@ -93,7 +93,7 @@ export default {
          */
         async saveFileLegacy(queryTab) {
             const { id: queryTabId, name: queryTabName } = queryTab
-            const editor = Editor.find(queryTabId) || {}
+            const editor = TxtEditor.find(queryTabId) || {}
             let a = document.createElement('a')
             // If there is no file_handle, use the current queryTab name
             const fileName = this.getFileHandleName(queryTab.id) || `${queryTabName}.sql`
@@ -116,7 +116,7 @@ export default {
             if (!this.getIsFileHandleValid(queryTab.id)) fileHandleName += '.sql'
             const fileHandle = await this.getNewFileHandle(fileHandleName)
             try {
-                const { query_txt } = Editor.find(queryTab.id) || {}
+                const { query_txt } = TxtEditor.find(queryTab.id) || {}
                 await this.writeFile({ fileHandle, contents: query_txt })
                 QueryTab.update({ where: queryTab.id, data: { name: fileHandle.name } })
                 await this.updateFileHandleDataMap({
@@ -147,7 +147,7 @@ export default {
                 const fileHandle = this.getFileHandle(queryTab.id)
                 const hasPriv = await this.verifyWritePriv(fileHandle)
                 if (hasPriv) {
-                    const { query_txt } = Editor.find(queryTab.id) || {}
+                    const { query_txt } = TxtEditor.find(queryTab.id) || {}
                     await this.writeFile({ fileHandle, contents: query_txt })
                     await this.updateFileHandleDataMap({
                         id: queryTab.id,
