@@ -107,8 +107,8 @@ Listeners have sections of their own in the MaxScale configuration file.
 
 ### Include
 
-An _include_ section defines common parameters used in other configuration
-sections.
+An [include section](#include-1) defines common parameters used in other
+configuration sections.
 
 # Administration
 
