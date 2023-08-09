@@ -27,9 +27,9 @@ const char* SET_VARIABLES = "SET @maxscale.ldi.s3_key='my-access-key', "
 // Puts InnoDB into a special mode that makes it faster
 const char* GO_FASTER = "SET autocommit=0, unique_checks=0, foreign_key_checks=0";
 
-void ldi_from_s3(TestConnections& test)
+void ldi_from_s3(TestConnections& test, mxt::MariaDBServer* backend)
 {
-    auto conn = test.repl->backend(0)->open_connection();
+    auto conn = backend->open_connection();
     auto table = conn->create_table("test.t1", "data CHAR(10)");
 
     auto c = test.maxscale->rwsplit();
@@ -45,7 +45,7 @@ void ldi_from_s3(TestConnections& test)
     MXT_EXPECT_F(rows == ROWS, "Expected %s rows, got %s", ROWS.c_str(), rows.c_str());
 }
 
-void normal_ldli(TestConnections& test)
+void normal_ldli(TestConnections& test, mxt::MariaDBServer* backend)
 {
     char filepath[256] = "/tmp/data.csv.XXXXXX";
     int fd = mkstemp(filepath);
@@ -59,7 +59,7 @@ void normal_ldli(TestConnections& test)
 
     try
     {
-        auto conn = test.repl->backend(0)->open_connection();
+        auto conn = backend->open_connection();
         auto table = conn->create_table("test.t1", "data CHAR(10)");
 
         auto c = test.maxscale->rwsplit();
@@ -99,11 +99,14 @@ void test_main(TestConnections& test)
         container.execute(cmd);
     }
 
+    auto backend = test.maxctrl("show monitors").output.find("xpandmon") != std::string::npos ?
+        test.xpand->backend(0) : test.repl->backend(0);
+
     test.log_printf("Testing LDI from S3");
-    ldi_from_s3(test);
+    ldi_from_s3(test, backend);
 
     test.log_printf("Testing normal LDLI");
-    normal_ldli(test);
+    normal_ldli(test, backend);
 }
 
 int main(int argc, char** argv)
