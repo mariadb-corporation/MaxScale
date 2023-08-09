@@ -752,9 +752,9 @@ int RWSplitSession::get_max_replication_lag()
     int conf_max_rlag = mxs::Target::RLAG_UNDEFINED;
 
     /** if there is no configured value, then longest possible int is used */
-    if (m_config->max_slave_replication_lag.count() > 0)
+    if (m_config->max_replication_lag.count() > 0)
     {
-        conf_max_rlag = m_config->max_slave_replication_lag.count();
+        conf_max_rlag = m_config->max_replication_lag.count();
     }
 
     return conf_max_rlag;
@@ -788,7 +788,8 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_tar
                      target ? "found target" : "target not valid");
         }
         else if (hint.type == Hint::Type::PARAMETER
-                 && mxb::sv_case_eq(hint.data, "max_slave_replication_lag"))
+                 && (mxb::sv_case_eq(hint.data, "max_replication_lag")
+                     || mxb::sv_case_eq(hint.data, "max_slave_replication_lag")))
         {
             auto hint_max_rlag = strtol(hint.value.c_str(), nullptr, 10);
             if (hint_max_rlag > 0)

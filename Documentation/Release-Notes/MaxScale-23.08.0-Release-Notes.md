@@ -22,6 +22,12 @@ so that a logged line will not contain any extra newlines.
 The `connection_timeout` parameter was renamed to `wait_timeout` and the old
 name is now an alias to the new name. The use of the old name is deprecated.
 
+### `max_slave_replication_lag` renamed to `max_replication_lag`
+
+The _Readwritesplit_ `max_slave_replication_lag` parameter was renamed to
+`max_replication_lag` and the old name is now an alias for the new name.
+The use of the old name is deprecated.
+
 ## Dropped Features
 
 ###

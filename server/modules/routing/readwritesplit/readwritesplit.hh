@@ -142,10 +142,13 @@ static cfg::ParamEnum<CausalReads> s_causal_reads(
     {CausalReads::LOCAL, "1"},
 }, CausalReads::NONE, cfg::Param::AT_RUNTIME);
 
-static cfg::ParamSeconds s_max_slave_replication_lag(
-    &s_spec, "max_slave_replication_lag", "Maximum allowed slave replication lag",
+static cfg::ParamSeconds s_max_replication_lag(
+    &s_spec, "max_replication_lag", "Maximum replication lag",
     std::chrono::seconds(0),
     cfg::Param::AT_RUNTIME);
+
+static cfg::ParamDeprecated<cfg::ParamAlias> s_max_slave_replication_lag(
+    &s_spec, "max_slave_replication_lag", &s_max_replication_lag);
 
 static cfg::ParamCount s_max_slave_connections(
     &s_spec, "max_slave_connections", "Maximum number of slave connections",
@@ -258,7 +261,7 @@ struct RWSConfig : public mxs::config::Configuration
 
         mxs_target_t use_sql_variables_in;      /**< Whether to send user variables to master or all nodes */
         failure_mode master_failure_mode;       /**< Master server failure handling mode */
-        seconds      max_slave_replication_lag; /**< Maximum replication lag */
+        seconds      max_replication_lag;       /**< Maximum replication lag */
         bool         master_accept_reads;       /**< Use master for reads */
         bool         strict_multi_stmt;         /**< Force non-multistatement queries to be routed to the
                                                  * master after a multistatement query. */

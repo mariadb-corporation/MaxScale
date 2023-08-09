@@ -114,22 +114,23 @@ resource usage due to the smaller amount of initial backend
 connections. It is recommended to use `slave_connections=1` when the
 lifetime of the client connections is short.
 
-### `max_slave_replication_lag`
+### `max_replication_lag`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Default**: 0s
 
+**NOTE** Up until 23.02, this parameter was called `max_slave_replication_lag`,
+which has been deprecated but still works as an alias for `max_replication_lag`.
+
 Specify how many seconds a replica is allowed to be behind the primary. The lag of
 a replica must be less than the configured value in order for it to be used for
-routing. If set to 0 (the default value), the feature is disabled.
+routing. If set to `0s` (the default value), the feature is disabled.
 
-In MaxScale 2.5.0, the replica lag must be less than `max_slave_replication_lag`
-whereas in older versions the replica lag had to be less than or equal to
-`max_slave_replication_lag`. This means that in MaxScale 2.5.0 it is possible to
-define, with `max_slave_replication_lag=1`, that all replicas must be up to date
-in order for them to be used for routing.
+The replica lag must be less than `max_replication_lag`. This means that it
+is possible to define, with `max_replication_lag=1s`, that all replicas must
+be up to date in order for them to be used for routing.
 
 Note that this feature does not guarantee that writes done on the primary are
 visible for reads done on the replica. This is mainly due to the method of
@@ -137,11 +138,9 @@ replication lag measurement. For a feature that guarantees this, refer to
 [`causal_reads`](#causal_reads).
 
 The lag is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
-is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
-versions a value without a unit may be rejected. Note that since the granularity
-of the lag is seconds, a lag specified in milliseconds will be rejected, even if
-the duration is longer than a second.
+[here](../Getting-Started/Configuration-Guide.md#durations). Note that since
+the granularity of the lag is seconds, a lag specified in milliseconds will be
+rejected, even if the duration is longer than a second.
 
 The Readwritesplit-router does not detect the replication lag itself. A monitor
 such as the MariaDB-monitor for a Primary-Replica cluster is required. This option
@@ -1151,7 +1150,7 @@ The following operations are routed to primary:
 * Statements that use `LAST_INSERT_ID()`
 
 In addition to these, if the **readwritesplit** service is configured with the
-`max_slave_replication_lag` parameter, and if all replicas suffer from too much
+`max_replication_lag` parameter, and if all replicas suffer from too much
 replication lag, then statements will be routed to the primary. (There might be
 other similar configuration parameters in the future which limit the number of
 statements that will be routed to replicas.)
