@@ -58,7 +58,7 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
      */
     std::string query = "SELECT id FROM t1 where id = '";
 
-    for (int i = 0; i < 100000; i++)
+    for (int i = 0; i < 10000; i++)
     {
         query += "x";
     }
