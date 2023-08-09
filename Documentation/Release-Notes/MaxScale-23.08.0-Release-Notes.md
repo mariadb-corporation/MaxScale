@@ -125,6 +125,12 @@ It is now possible to limit the nodes the Xpand monitor dynamically detects
 to those residing in a specific region. See [region_name](../Monitors/Xpand-Monitor.md#region_name)
 and [region_oid](../Monitors/Xpand-Monitor.md#region_oid) for more information.
 
+### [MXS-4506](https://jira.mariadb.org/browse/MXS-4506) Add passthrough authentication support for Xpand LDAP
+
+Passthrough authentication mode for MariaDBAuth-module. See
+[authenticator documentation](../Authenticators/MySQL-Authenticator.md#clear_pw_passthrough) for more
+information.
+
 ### MaxGUI
 Numerous additions have been added and improvements made to MaxGUI.
 The most notable ones are listed here:

@@ -64,6 +64,10 @@
 
 * The Xpand monitor is now region aware.
 
+* Passthrough authentication mode added to MariaDBAuth-module. See
+  [authenticator documentation](Authenticators/MySQL-Authenticator.md#clear_pw_passthrough) for more
+  information.
+
 For more details, please refer to:
 
 * [MariaDB MaxScale 23.02.0 Release Notes](Release-Notes/MaxScale-23.02.0-Release-Notes.md)
