@@ -103,6 +103,12 @@ private:
 
 // Can't rely on stat() to sort files. The files can have the
 // same creation/mod time
+
+/**
+ * @brief get_file_sequence_number
+ * @param file_name
+ * @return sequence number or 0 for unexpected file name
+ */
 long get_file_sequence_number(const std::string& file_name)
 {
     try
@@ -113,8 +119,7 @@ long get_file_sequence_number(const std::string& file_name)
     }
     catch (std::exception& ex)
     {
-        MXB_THROW(BinlogReadError, "Unexpected binlog file name '"
-                  << file_name << "' error " << ex.what());
+        return 0;
     }
 }
 
@@ -148,7 +153,17 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
                 if (is && magic == PINLOKI_MAGIC)
                 {
                     auto seq_no = get_file_sequence_number(file_path);
-                    binlogs.insert({seq_no, file_path});
+                    if (seq_no)
+                    {
+                        binlogs.insert({seq_no, file_path});
+                    }
+                    else
+                    {
+                        MXB_SWARNING("Unexpected binlog file name '" << file_path <<
+                                     "'. File ignored."
+                                     " Avoid copying or otherwise changing files in the binlog"
+                                     " directory. Please delete possible copies of binlogs.");
+                    }
                 }
             }
         }
