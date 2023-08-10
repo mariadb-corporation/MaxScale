@@ -142,7 +142,7 @@ bool SmartRouterSession::routeQuery(GWBUF&& buffer)
             MXB_SDEBUG("Write all");
             ret = write_to_all(std::move(buffer), Mode::Query);
         }
-        else if (m_qc.target_is_master(route_info.target()) || protocol_data().is_trx_active())
+        else if (m_qc.target_is_master(route_info.target()) || route_info.trx().is_trx_active())
         {
             MXB_SDEBUG("Write to primary");
             ret = write_to_master(std::move(buffer));

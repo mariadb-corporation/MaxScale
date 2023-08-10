@@ -1277,7 +1277,13 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
     {
         auto& tracker = m_session_data->trx_tracker();
 
-        if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+        if (rcap_type_required(capabilities, RCAP_TYPE_SESCMD_HISTORY))
+        {
+            // The transaction state can be copied from m_qc where it was already tracked by the session
+            // command history code.
+            tracker = m_qc.current_route_info().trx();
+        }
+        else if (rcap_type_required(capabilities, RCAP_TYPE_QUERY_CLASSIFICATION))
         {
             tracker.track_transaction_state(buffer, MariaDBParser::get());
         }

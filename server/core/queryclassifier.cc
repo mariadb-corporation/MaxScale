@@ -668,37 +668,8 @@ bool QueryClassifier::query_continues_ps(const GWBUF& buffer)
     return m_parser.continues_ps(buffer, m_route_info.command());
 }
 
-const QueryClassifier::RouteInfo& QueryClassifier::update_route_info(GWBUF& buffer)
-{
-    auto protocol_data = session()->protocol_data();
-    TrxTracker tracker;
-    tracker.m_autocommit = protocol_data->is_autocommit();
-
-    if (protocol_data->is_trx_read_only())
-    {
-        tracker.m_trx_state |= TrxTracker::TrxState::TRX_READ_ONLY;
-    }
-
-    if (protocol_data->is_trx_ending())
-    {
-        tracker.m_trx_state |= TrxTracker::TrxState::TRX_ENDING;
-    }
-
-    if (protocol_data->is_trx_starting())
-    {
-        tracker.m_trx_state |= TrxTracker::TrxState::TRX_STARTING;
-    }
-
-    if (protocol_data->is_trx_active())
-    {
-        tracker.m_trx_state |= TrxTracker::TrxState::TRX_ACTIVE;
-    }
-
-    return update_route_info(buffer, tracker);
-}
-
 const QueryClassifier::RouteInfo&
-QueryClassifier::update_route_info(GWBUF& buffer, const TrxTracker& trx_tracker)
+QueryClassifier::update_route_info(GWBUF& buffer)
 {
     uint32_t route_target = TARGET_MASTER;
     uint8_t cmd = 0xFF;
@@ -706,10 +677,12 @@ QueryClassifier::update_route_info(GWBUF& buffer, const TrxTracker& trx_tracker)
     uint32_t stmt_id = 0;
     bool locked_to_master = m_pHandler->is_locked_to_master();
     current_target_t current_target = locked_to_master ? CURRENT_TARGET_MASTER : CURRENT_TARGET_UNDEFINED;
+    TrxTracker& trx_tracker = m_route_info.m_trx_tracker;
 
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
 
+    trx_tracker.track_transaction_state(buffer, m_parser);
     m_route_info.set_multi_part_packet(m_parser.is_multi_part_packet(buffer));
 
     if (m_route_info.multi_part_packet())
@@ -861,6 +834,11 @@ void QueryClassifier::update_from_reply(const mxs::Reply& reply)
 {
     m_route_info.set_load_data_state(reply.state() == mxs::ReplyState::LOAD_DATA ?
                                      LOAD_DATA_ACTIVE : LOAD_DATA_INACTIVE);
+
+    if (reply.is_complete())
+    {
+        m_route_info.m_trx_tracker.fix_trx_state(reply);
+    }
 }
 
 // static

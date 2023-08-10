@@ -117,18 +117,15 @@ bool RWSplitSession::routeQuery(GWBUF&& buffer)
 bool RWSplitSession::route_query(GWBUF&& buffer)
 {
     bool rval = false;
-
-    auto prev_trx_state = m_trx_tracker;
-    m_trx_tracker.track_transaction_state(buffer, parser());
-    m_qc.update_route_info(buffer, m_trx_tracker);
+    bool trx_was_ending = trx_is_ending();
+    m_qc.update_route_info(buffer);
     RoutingPlan res = resolve_route(buffer, route_info());
 
-    if (can_route_query(buffer, res, prev_trx_state))
+    if (can_route_query(buffer, res, trx_was_ending))
     {
         if (need_gtid_probe(res))
         {
             m_qc.revert_update();
-            m_trx_tracker = prev_trx_state;
             m_query_queue.push_front(std::move(buffer));
             std::tie(buffer, res) = start_gtid_probe();
         }
@@ -140,7 +137,6 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
     {
         // Roll back the query classifier state to keep it consistent.
         m_qc.revert_update();
-        m_trx_tracker = prev_trx_state;
 
         // Already busy executing a query, put the query in a queue and route it later
         MXB_INFO("Storing query (len: %lu cmd: %0x), expecting %d replies to current command: %s. "
@@ -585,7 +581,10 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         return 1;
     }
 
-    m_qc.update_from_reply(reply);
+    if (m_wait_gtid != GTID_READ_DONE)
+    {
+        m_qc.update_from_reply(reply);
+    }
 
     // TODO: Do this in the client protocol, it seems to be a pretty logical place for it as it already
     // assigns the prepared statement IDs.
@@ -613,11 +612,6 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         /** Got a complete reply, decrement expected response count */
         m_expected_responses--;
         mxb_assert(m_expected_responses >= 0);
-
-        if (m_wait_gtid != GTID_READ_DONE)
-        {
-            m_trx_tracker.fix_trx_state(reply);
-        }
 
         track_tx_isolation(reply);
 
@@ -831,7 +825,7 @@ bool RWSplitSession::start_trx_replay()
                  */
                 MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query.buffer));
                 mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
-                                   || !m_trx_tracker.is_autocommit(),
+                                   || !route_info().trx().is_autocommit(),
                                    "The current query (%s) should start or stop a transaction "
                                    "or autocommit should be disabled",
                                    get_sql_string(m_interrupted_query.buffer).c_str());
@@ -845,7 +839,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(m_trx_tracker.is_autocommit() || trx_is_ending(),
+            mxb_assert_message(route_info().trx().is_autocommit() || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }

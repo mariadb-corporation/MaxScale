@@ -25,7 +25,131 @@
 
 namespace mariadb
 {
-class TrxTracker;
+class QueryClassifier;
+
+class TrxTracker
+{
+public:
+
+    enum TrxState : uint8_t
+    {
+        TRX_INACTIVE  = 0,
+        TRX_ACTIVE    = 1 << 0,
+        TRX_READ_ONLY = 1 << 1,
+        TRX_ENDING    = 1 << 2,
+        TRX_STARTING  = 1 << 3,
+    };
+
+    bool is_autocommit() const
+    {
+        return m_autocommit;
+    }
+
+    bool is_trx_read_only() const
+    {
+        return m_trx_state & TRX_READ_ONLY;
+    }
+
+    bool is_trx_ending() const
+    {
+        return m_trx_state & TRX_ENDING;
+    }
+
+    bool is_trx_starting() const
+    {
+        return m_trx_state & TRX_STARTING;
+    }
+
+    bool is_trx_active() const
+    {
+        return m_trx_state & TRX_ACTIVE;
+    }
+
+    /**
+     * Track the transaction state
+     *
+     * @tparam ParseType Whether to use the query classifier or the custom parser to track the transaction
+     *                   state. By default tracking is done using the query classifier.
+     *
+     * @param packetbuf A query that is being executed
+     * @param parser    The parser class to use
+     */
+    template<mxs::Parser::ParseTrxUsing ParseType = mxs::Parser::ParseTrxUsing::DEFAULT>
+    void track_transaction_state(const GWBUF& packetbuf, const mxs::Parser& parser);
+
+    /**
+     * Use reply to fix the transaction state
+     *
+     * If the state reported by the server does not match the expected one, the internal state is fixed to
+     * match the server state. The only case when this happens is when something hidden (e.g. a stored
+     * procedure call) opens a transaction that's not seen by the parsing done by MaxScale.
+     *
+     * Currently this only supports fixing the transaction state based on the reply server status bits that
+     * are specific to MariaDB protocol. All other protocols should emulate it by setting the corresponding
+     * bits there.
+     *
+     * @param reply The reply from the server
+     */
+    void fix_trx_state(const mxs::Reply& reply);
+
+    void set_autocommit(bool value)
+    {
+        m_autocommit = value;
+    }
+
+    void set_state(uint8_t state)
+    {
+        m_trx_state = state;
+    }
+
+private:
+    // The QueryClassifier internally uses an internal TrxTracker to query the transaction state if the
+    // caller-provided TrxTracker is not given to QueryClassifier::update_route_info().
+    friend class QueryClassifier;
+
+    /**
+     * The default mode for transactions. Set with SET SESSION TRANSACTION with the access mode set to either
+     * READ ONLY or READ WRITE. The default is READ WRITE.
+     */
+    uint8_t m_default_trx_mode {0};
+
+    /**
+     * The access mode for the next transaction. Set with SET TRANSACTION and it only affects the next one.
+     * All transactions after it will use the default transaction access mode.
+     */
+    uint8_t m_next_trx_mode {0};
+
+    /**
+     * The transaction state of the session.
+     *
+     * This tells only the state of @e explicitly started transactions.
+     * That is, if @e autocommit is OFF, which means that there is always an
+     * active transaction that is ended with an explicit COMMIT or ROLLBACK,
+     * at which point a new transaction is started, this variable will still
+     * be TRX_INACTIVE, unless a transaction has explicitly been
+     * started with START TRANSACTION.
+     *
+     * Likewise, if @e autocommit is ON, which means that every statement is
+     * executed in a transaction of its own, this will return false, unless a
+     * transaction has explicitly been started with START TRANSACTION.
+     *
+     * The value is valid only if either a router or a filter
+     * has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     */
+    uint8_t m_trx_state {TRX_INACTIVE};
+
+    /**
+     * Tells whether autocommit is ON or not. The value effectively only tells the last value
+     * of the statement "set autocommit=...".
+     *
+     * That is, if the statement "set autocommit=1" has been executed, then even if a transaction has
+     * been started, which implicitly will cause autocommit to be set to 0 for the duration of the
+     * transaction, this value will be true.
+     *
+     * By default autocommit is ON.
+     */
+    bool m_autocommit {true};
+};
 
 class QueryClassifier
 {
@@ -243,10 +367,16 @@ public:
             m_tmp_tables.clear();
         }
 
-    private:
+        const TrxTracker& trx() const
+        {
+            return m_trx_tracker;
+        }
 
+    private:
+        friend class QueryClassifier;
         using TableSet = std::unordered_set<std::string>;
 
+        TrxTracker         m_trx_tracker;
         const mxs::Parser* m_pParser;
         uint32_t           m_target = QueryClassifier::TARGET_UNDEFINED;
         uint8_t            m_command = 0xff;
@@ -427,17 +557,7 @@ public:
      *
      * @return A const reference to the current route info.
      */
-    const RouteInfo& update_route_info(GWBUF& buffer); // TODO: const correct
-
-    /**
-     * @brief Update the RouteInfo using the given TrxTracker
-     *
-     * @param buffer      A request buffer
-     * @param trx_tracker The transaction state tracker to use
-     *
-     * @return A const reference to the current route info.
-     */
-    const RouteInfo& update_route_info(GWBUF& buffer, const TrxTracker& trx_tracker);
+    const RouteInfo& update_route_info(GWBUF& buffer);          // TODO: const correct
 
     /**
      * Update the RouteInfo state based on the reply from the downstream component
@@ -540,130 +660,6 @@ private:
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
-};
-
-class TrxTracker
-{
-public:
-
-    enum TrxState : uint8_t
-    {
-        TRX_INACTIVE  = 0,
-        TRX_ACTIVE    = 1 << 0,
-        TRX_READ_ONLY = 1 << 1,
-        TRX_ENDING    = 1 << 2,
-        TRX_STARTING  = 1 << 3,
-    };
-
-    bool is_autocommit() const
-    {
-        return m_autocommit;
-    }
-
-    bool is_trx_read_only() const
-    {
-        return m_trx_state & TRX_READ_ONLY;
-    }
-
-    bool is_trx_ending() const
-    {
-        return m_trx_state & TRX_ENDING;
-    }
-
-    bool is_trx_starting() const
-    {
-        return m_trx_state & TRX_STARTING;
-    }
-
-    bool is_trx_active() const
-    {
-        return m_trx_state & TRX_ACTIVE;
-    }
-
-    /**
-     * Track the transaction state
-     *
-     * @tparam ParseType Whether to use the query classifier or the custom parser to track the transaction
-     *                   state. By default tracking is done using the query classifier.
-     *
-     * @param packetbuf A query that is being executed
-     * @param parser    The parser class to use
-     */
-    template<mxs::Parser::ParseTrxUsing ParseType = mxs::Parser::ParseTrxUsing::DEFAULT>
-    void track_transaction_state(const GWBUF& packetbuf, const mxs::Parser& parser);
-
-    /**
-     * Use reply to fix the transaction state
-     *
-     * If the state reported by the server does not match the expected one, the internal state is fixed to
-     * match the server state. The only case when this happens is when something hidden (e.g. a stored
-     * procedure call) opens a transaction that's not seen by the parsing done by MaxScale.
-     *
-     * Currently this only supports fixing the transaction state based on the reply server status bits that
-     * are specific to MariaDB protocol. All other protocols should emulate it by setting the corresponding
-     * bits there.
-     *
-     * @param reply The reply from the server
-     */
-    void fix_trx_state(const mxs::Reply& reply);
-
-    void set_autocommit(bool value)
-    {
-        m_autocommit = value;
-    }
-
-    void set_state(uint8_t state)
-    {
-        m_trx_state = state;
-    }
-
-private:
-    // The QueryClassifier internally uses an internal TrxTracker to query the transaction state if the
-    // caller-provided TrxTracker is not given to QueryClassifier::update_route_info().
-    friend class QueryClassifier;
-
-    /**
-     * The default mode for transactions. Set with SET SESSION TRANSACTION with the access mode set to either
-     * READ ONLY or READ WRITE. The default is READ WRITE.
-     */
-    uint8_t m_default_trx_mode {0};
-
-    /**
-     * The access mode for the next transaction. Set with SET TRANSACTION and it only affects the next one.
-     * All transactions after it will use the default transaction access mode.
-     */
-    uint8_t m_next_trx_mode {0};
-
-    /**
-     * The transaction state of the session.
-     *
-     * This tells only the state of @e explicitly started transactions.
-     * That is, if @e autocommit is OFF, which means that there is always an
-     * active transaction that is ended with an explicit COMMIT or ROLLBACK,
-     * at which point a new transaction is started, this variable will still
-     * be TRX_INACTIVE, unless a transaction has explicitly been
-     * started with START TRANSACTION.
-     *
-     * Likewise, if @e autocommit is ON, which means that every statement is
-     * executed in a transaction of its own, this will return false, unless a
-     * transaction has explicitly been started with START TRANSACTION.
-     *
-     * The value is valid only if either a router or a filter
-     * has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     */
-    uint8_t m_trx_state {TRX_INACTIVE};
-
-    /**
-     * Tells whether autocommit is ON or not. The value effectively only tells the last value
-     * of the statement "set autocommit=...".
-     *
-     * That is, if the statement "set autocommit=1" has been executed, then even if a transaction has
-     * been started, which implicitly will cause autocommit to be set to 0 for the duration of the
-     * transaction, this value will be true.
-     *
-     * By default autocommit is ON.
-     */
-    bool m_autocommit {true};
 };
 
 //
