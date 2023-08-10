@@ -13,6 +13,7 @@
  */
 import { Database } from '@vuex-orm/core'
 import AlterEditor from '@wsModels/AlterEditor'
+import InsightViewer from '@wsModels/InsightViewer'
 import ErdTask from '@wsModels/ErdTask'
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
@@ -30,6 +31,7 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 // Store modules
 import alterEditors from '@wsSrc/store/orm/modules/alterEditors'
+import insightViewers from '@wsSrc/store/orm/modules/insightViewers'
 import erdTasks from '@wsSrc/store/orm/modules/erdTasks'
 import etlTasks from '@wsSrc/store/orm/modules/etlTasks'
 import queryConns from '@wsSrc/store/orm/modules/queryConns'
@@ -42,6 +44,7 @@ import worksheets from '@wsSrc/store/orm/modules/worksheets'
 
 const database = new Database()
 database.register(AlterEditor, alterEditors)
+database.register(InsightViewer, insightViewers)
 database.register(ErdTask, erdTasks)
 database.register(EtlTask, etlTasks)
 database.register(QueryConn, queryConns)

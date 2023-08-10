@@ -239,7 +239,7 @@ export default {
             })
         },
         async fetchUnparsedRefTbl(targets) {
-            const [, parsedTables] = await queryHelper.queryAndParseDDL({
+            const [, parsedTables] = await queryHelper.queryAndParseTblDDL({
                 connId: this.connData.id,
                 targets,
                 config: this.connData.config,
@@ -366,7 +366,7 @@ export default {
                             const unparsedTblTarget = this.refTargets.find(
                                 target => target.id === item.value
                             )
-                            const [, parsedTables] = await queryHelper.queryAndParseDDL({
+                            const [, parsedTables] = await queryHelper.queryAndParseTblDDL({
                                 connId: this.connData.id,
                                 targets: [
                                     {

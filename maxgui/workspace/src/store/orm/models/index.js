@@ -11,11 +11,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
 import AlterEditor from '@wsModels/AlterEditor'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import InsightViewer from '@wsModels/InsightViewer'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
@@ -33,6 +35,7 @@ export default {
     ErdTaskTmp,
     EtlTask,
     EtlTaskTmp,
+    InsightViewer,
     QueryConn,
     QueryEditor,
     QueryEditorTmp,

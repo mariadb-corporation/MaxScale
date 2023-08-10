@@ -71,7 +71,7 @@ describe('query-editor', () => {
         }
         Object.keys(fnEvtMap).forEach(key => {
             it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-ctr`, () => {
-                wrapper = mountFactory({ shallow: false, computed: { isTxtEditor: () => true } })
+                wrapper = mountFactory({ shallow: false, computed: { isSqlEditor: () => true } })
                 const spyFn = sinon.spy(
                     wrapper.vm.$typy(wrapper.vm.$refs, 'editor[0]').safeObject,
                     key
@@ -93,28 +93,47 @@ describe('query-editor', () => {
             })
         })
     })
-    const editorModes = ['TXT_EDITOR', 'ALTER_EDITOR']
-    editorModes.forEach(mode => {
+    const queryTabTypes = ['SQL_EDITOR', 'ALTER_EDITOR', 'INSIGHT_VIEWER']
+    queryTabTypes.forEach(type => {
         let wrapper
-        describe(`${mode} mode: child component's data communication tests`, () => {
+        describe(`${type} type: child component's data communication tests`, () => {
             beforeEach(() => {
                 wrapper = mountFactory({
-                    computed: { isTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
+                    computed: {
+                        isSqlEditor: () => (type === 'SQL_EDITOR' ? true : false),
+                        isAlterEditor: () => (type === 'ALTER_EDITOR' ? true : false),
+                    },
                 })
             })
-            const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-ctr' : 'mxs-ddl-editor'
-            const hiddenCom = mode === 'TXT_EDITOR' ? 'mxs-ddl-editor' : 'txt-editor-ctr'
-            it(`Should render ${renCom}`, () => {
-                const editor = wrapper.findAllComponents({ name: renCom }).at(0)
+            let renComp = '',
+                hiddenComps = []
+            switch (type) {
+                case 'ALTER_EDITOR':
+                    renComp = 'alter-table-editor'
+                    hiddenComps = ['txt-editor-ctr', 'insight-viewer']
+                    break
+                case 'INSIGHT_VIEWER':
+                    renComp = 'insight-viewer'
+                    hiddenComps = ['txt-editor-ctr', 'alter-table-editor']
+                    break
+                case 'SQL_EDITOR':
+                    renComp = 'txt-editor-ctr'
+                    hiddenComps = ['insight-viewer', 'alter-table-editor']
+                    break
+            }
+            it(`Should render ${renComp}`, () => {
+                const editor = wrapper.findAllComponents({ name: renComp }).at(0)
                 expect(editor.exists()).to.be.true
             })
-            it(`Should pass accurate data to ${renCom} via props`, () => {
-                const { dim } = wrapper.findAllComponents({ name: renCom }).at(0).vm.$props
+            it(`Should pass accurate data to ${renComp} via props`, () => {
+                const { dim } = wrapper.findAllComponents({ name: renComp }).at(0).vm.$props
                 expect(dim).to.be.deep.equals(wrapper.vm.editorDim)
             })
-            it(`Should not render ${hiddenCom}`, () => {
-                expect(wrapper.findAllComponents({ name: hiddenCom }).length).to.be.equals(0)
-            })
+            hiddenComps.forEach(hiddenCom =>
+                it(`Should not render ${hiddenCom}`, () => {
+                    expect(wrapper.findAllComponents({ name: hiddenCom }).length).to.be.equals(0)
+                })
+            )
         })
     })
     describe(`Computed, method and other tests`, () => {

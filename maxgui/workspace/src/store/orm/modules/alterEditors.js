@@ -31,7 +31,7 @@ export default {
             const { NODE_TYPES, DDL_EDITOR_SPECS } = rootState.mxsWorkspace.config
             await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId, config })
             const schema = node.parentNameData[NODE_TYPES.SCHEMA]
-            const [e, parsedTables] = await queryHelper.queryAndParseDDL({
+            const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
                 connId,
                 targets: [{ tbl: node.name, schema }],
                 config,
@@ -52,7 +52,7 @@ export default {
                     where: activeQueryTabId,
                     data: {
                         is_fetching: false,
-                        active_schema_node: node,
+                        active_node: node,
                         active_spec: DDL_EDITOR_SPECS.COLUMNS,
                         data: $typy(parsedTables, '[0]').safeObjectOrEmpty,
                     },
@@ -63,7 +63,7 @@ export default {
     getters: {
         activeRecord: () => QueryTab.getters('activeRecord').alterEditor || {},
         isFetchingData: (state, getters) => getters.activeRecord.is_fetching || false,
-        activeSchemaNode: (state, getters) => getters.activeRecord.active_schema_node || {},
+        activeNode: (state, getters) => getters.activeRecord.active_node || {},
         activeSpec: (state, getters) => getters.activeRecord.active_spec,
         data: (state, getters) => getters.activeRecord.data || {},
     },

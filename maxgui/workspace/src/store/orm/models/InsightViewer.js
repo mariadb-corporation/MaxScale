@@ -11,20 +11,18 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, DDL_EDITOR_SPECS } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES } from '@wsSrc/store/config'
 
-export default class AlterEditor extends Extender {
-    static entity = ORM_PERSISTENT_ENTITIES.ALTER_EDITORS
+export default class InsightViewer extends Extender {
+    static entity = ORM_PERSISTENT_ENTITIES.INSIGHT_VIEWERS
 
     /**
      * @returns {Object} - return fields that are not key, relational fields
      */
     static getNonKeyFields() {
         return {
-            active_spec: this.string(DDL_EDITOR_SPECS.COLUMNS),
-            data: this.attr({}),
+            active_spec: this.string(''),
             active_node: this.attr(null),
-            is_fetching: this.boolean(true),
         }
     }
 

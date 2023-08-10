@@ -14,6 +14,7 @@
 import { to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { tableParser, quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
+import { NODE_TYPES } from '@wsSrc/store/config'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import erdHelper from '@wsSrc/utils/erdHelper'
@@ -63,8 +64,30 @@ async function getNewTreeData({ connId, nodeGroup, data, completionItems = [], c
     }
 }
 
+/**
+ * @param {string} param.connId - id of connection
+ * @param {string} param.type - NODE_TYPES
+ * @param {object[]} param.qualifiedNames - e.g. ['`test`.`t1`']
+ * @param {object} param.config - axios config
+
+ * @returns {Promise<array>}
+ */
+async function queryDDL({ connId, type, qualifiedNames, config }) {
+    const [e, res] = await to(
+        queries.post({
+            id: connId,
+            body: {
+                sql: qualifiedNames.map(item => `SHOW CREATE ${type} ${item};`).join('\n'),
+                max_rows: 0,
+            },
+            config,
+        })
+    )
+    return [e, typy(res, 'data.data.attributes.results').safeArray]
+}
+
 function parseTables({ res, targets }) {
-    return typy(res, 'data.data.attributes.results').safeArray.reduce((result, item, i) => {
+    return res.reduce((result, item, i) => {
         if (typy(item, 'data').safeArray.length) {
             const ddl = typy(item, 'data[0][1]').safeString
             const schema = targets[i].schema
@@ -73,6 +96,7 @@ function parseTables({ res, targets }) {
         return result
     }, [])
 }
+
 /**
  * @param {string} param.connId - id of connection
  * @param {object[]} param.targets - target tables to be queried and parsed. e.g. [ {schema: 'test', tbl: 't1'} ]
@@ -80,12 +104,13 @@ function parseTables({ res, targets }) {
  * @param {object} param.charsetCollationMap
  * @returns {Promise<array>} parsed data
  */
-async function queryAndParseDDL({ connId, targets, config, charsetCollationMap }) {
-    const sql = targets
-        .map(t => `SHOW CREATE TABLE ${quoting(t.schema)}.${quoting(t.tbl)};`)
-        .join('\n')
-
-    const [e, res] = await to(queries.post({ id: connId, body: { sql, max_rows: 0 }, config }))
+async function queryAndParseTblDDL({ connId, targets, config, charsetCollationMap }) {
+    const [e, res] = await queryDDL({
+        connId,
+        type: NODE_TYPES.TBL,
+        qualifiedNames: targets.map(t => `${quoting(t.schema)}.${quoting(t.tbl)}`),
+        config,
+    })
     const tables = parseTables({ res, targets })
     return [
         e,
@@ -102,5 +127,6 @@ async function queryAndParseDDL({ connId, targets, config, charsetCollationMap }
 export default {
     getChildNodeData,
     getNewTreeData,
-    queryAndParseDDL,
+    queryDDL,
+    queryAndParseTblDDL,
 }

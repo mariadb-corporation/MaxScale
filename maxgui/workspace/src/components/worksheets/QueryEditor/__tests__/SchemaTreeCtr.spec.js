@@ -255,7 +255,8 @@ describe(`schema-tree-ctr - context menu tests`, () => {
         wrapper = mountFactory({ data: () => ({ activeCtxNode: dummy_schema_node }) })
         await wrapper.setData({ activeCtxItemOpts: wrapper.vm.genNodeOpts(dummy_schema_node) })
         const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
-        const { value, left, items, activator } = menu.vm.$props
+        const { value, left, activator } = menu.vm.$attrs
+        const { items } = menu.vm.$props
         expect(value).to.be.equals(wrapper.vm.showCtxMenu)
         expect(left).to.be.true
         expect(items).to.be.deep.equals(wrapper.vm.$data.activeCtxItemOpts)
@@ -353,18 +354,37 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
     })
     Object.values(NODE_TYPES).forEach(type => {
         it(`baseOptsMap should return accurate value for node type ${type} `, () => {
-            wrapper = mountFactory()
+            wrapper = mountFactory({
+                computed: { isSqlEditor: () => true },
+            })
             const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = NODE_TYPES
-            const { USE, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = NODE_CTX_TYPES
+            const { USE, PRVW_DATA, PRVW_DATA_DETAILS, VIEW_INSIGHTS, GEN_ERD } = NODE_CTX_TYPES
             switch (type) {
                 case SCHEMA:
                     expect(wrapper.vm.baseOptsMap[type]).to.eql([
                         { text: wrapper.vm.$mxs_t('useDb'), type: USE },
+                        { text: wrapper.vm.$mxs_t('viewInsights'), type: VIEW_INSIGHTS },
                         { text: wrapper.vm.$mxs_t('genErd'), type: GEN_ERD },
                         ...wrapper.vm.txtOpts,
                     ])
                     break
                 case TBL:
+                    expect(wrapper.vm.baseOptsMap[type]).to.eql([
+                        {
+                            text: wrapper.vm.$mxs_t('previewData'),
+                            type: PRVW_DATA,
+                            disabled: false,
+                        },
+                        {
+                            text: wrapper.vm.$mxs_t('viewDetails'),
+                            type: PRVW_DATA_DETAILS,
+                            disabled: false,
+                        },
+                        { text: wrapper.vm.$mxs_t('viewInsights'), type: VIEW_INSIGHTS },
+                        { divider: true },
+                        ...wrapper.vm.txtOpts,
+                    ])
+                    break
                 case VIEW:
                     expect(wrapper.vm.baseOptsMap[type]).to.eql([
                         {

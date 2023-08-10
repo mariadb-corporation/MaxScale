@@ -12,7 +12,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES, EDITOR_MODES } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES, QUERY_TAB_TYPES } from '@wsSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class QueryTab extends Extender {
@@ -25,7 +25,7 @@ export default class QueryTab extends Extender {
         return {
             name: this.string('Query Tab 1'),
             count: this.number(1),
-            editor_mode: this.string(EDITOR_MODES.TXT_EDITOR),
+            type: this.string(QUERY_TAB_TYPES.SQL_EDITOR),
         }
     }
 
@@ -53,6 +53,7 @@ export default class QueryTab extends Extender {
             query_editor_id: this.attr(null),
             // relationship fields
             alterEditor: this.hasOne(ORM_PERSISTENT_ENTITIES.ALTER_EDITORS, 'id'),
+            insightViewer: this.hasOne(ORM_PERSISTENT_ENTITIES.INSIGHT_VIEWERS, 'id'),
             txtEditor: this.hasOne(ORM_PERSISTENT_ENTITIES.TXT_EDITORS, 'id'),
             queryResult: this.hasOne(ORM_PERSISTENT_ENTITIES.QUERY_RESULTS, 'id'),
             queryTabTmp: this.hasOne(ORM_TMP_ENTITIES.QUERY_TABS_TMP, 'id'),

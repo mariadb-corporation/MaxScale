@@ -24,6 +24,7 @@ export const ORM_PERSISTENT_ENTITIES = {
     ALTER_EDITORS: 'alterEditors',
     ERD_TASKS: 'erdTasks',
     ETL_TASKS: 'etlTasks',
+    INSIGHT_VIEWERS: 'insightViewers',
     QUERY_CONNS: 'queryConns',
     QUERY_EDITORS: 'queryEditors',
     QUERY_RESULTS: 'queryResults',
@@ -135,6 +136,7 @@ export const NODE_CTX_TYPES = Object.freeze({
     PRVW_DATA: QUERY_MODES.PRVW_DATA,
     PRVW_DATA_DETAILS: QUERY_MODES.PRVW_DATA_DETAILS,
     GEN_ERD: 'Generate ERD',
+    VIEW_INSIGHTS: 'View Insights',
 })
 
 export const DDL_EDITOR_SPECS = Object.freeze({
@@ -254,9 +256,10 @@ export const ERD_EXPORT_OPTS = [
         event: 'on-export-as-jpeg',
     },
 ]
-export const EDITOR_MODES = Object.freeze({
-    TXT_EDITOR: 'TXT_EDITOR',
+export const QUERY_TAB_TYPES = Object.freeze({
     ALTER_EDITOR: 'ALTER_EDITOR',
+    INSIGHT_VIEWER: 'INSIGHT_VIEWER',
+    SQL_EDITOR: 'SQL_EDITOR',
 })
 export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 50000]
 export const SQL_CHART_TYPES = Object.freeze({
@@ -389,3 +392,21 @@ export const COL_ORDER_BY = Object.freeze({
  * and parsed. It's basically "lazy-loading".
  */
 export const UNPARSED_TBL_PLACEHOLDER = 'UNPARSED_TBL__'
+
+export const SCHEMA_INSIGHT_SPECS = Object.freeze({
+    DDL: 'DDL',
+    TABLES: NODE_GROUP_TYPES.TBL_G,
+    VIEWS: NODE_GROUP_TYPES.VIEW_G,
+    COLUMNS: NODE_GROUP_TYPES.COL_G,
+    INDEXES: NODE_GROUP_TYPES.IDX_G,
+    TRIGGERS: NODE_GROUP_TYPES.TRIGGER_G,
+    SP: NODE_GROUP_TYPES.SP_G,
+    FN: NODE_GROUP_TYPES.FN_G,
+})
+
+export const TBL_INSIGHT_SPECS = Object.freeze({
+    DDL: 'DDL',
+    COLUMNS: NODE_GROUP_TYPES.COL_G,
+    INDEXES: NODE_GROUP_TYPES.IDX_G,
+    TRIGGERS: NODE_GROUP_TYPES.TRIGGER_G,
+})

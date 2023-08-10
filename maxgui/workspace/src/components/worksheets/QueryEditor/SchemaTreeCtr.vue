@@ -48,7 +48,7 @@
                     :id="`prvw-btn-tooltip-activator-${node.key}`"
                     icon
                     x-small
-                    :disabled="!isTxtEditor"
+                    :disabled="!isSqlEditor"
                     class="mr-1"
                     @click.stop="previewNode(node)"
                 >
@@ -96,8 +96,8 @@
             v-if="activeCtxNode"
             :key="activeCtxNode.key"
             v-model="showCtxMenu"
-            left
-            offset-y
+            :left="true"
+            :offset-y="true"
             transition="slide-y-transition"
             :nudge-right="12"
             :nudge-bottom="10"
@@ -130,12 +130,13 @@ This component emits the following events
 @truncate-tbl: sql:string.
 @use-db: qualified_name:string.
 @gen-erd: Node.
-@analyze-node: Node. Either Schema or Table node.
+@view-node-insights: Node. Either Schema or Table node.
 @load-children: Node. Async event.
 @on-dragging: Event.
 @on-dragend: Event.
 */
 import { mapState } from 'vuex'
+import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
@@ -161,7 +162,7 @@ export default {
     computed: {
         ...mapState({
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
-            EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
+            QUERY_TAB_TYPES: state => state.mxsWorkspace.config.QUERY_TAB_TYPES,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
             NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
@@ -181,18 +182,20 @@ export default {
         dbTreeData() {
             return SchemaSidebar.getters('dbTreeData')
         },
-        editorMode() {
-            return QueryTab.getters('editorMode')
+        queryTabType() {
+            return QueryTab.getters('type')
         },
-        isTxtEditor() {
-            return QueryTab.getters('isTxtEditor')
+        isSqlEditor() {
+            return QueryTab.getters('isSqlEditor')
         },
-        activeSchemaNode() {
-            const { ALTER_EDITOR, TXT_EDITOR } = this.EDITOR_MODES
-            switch (this.editorMode) {
+        activeNode() {
+            const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = this.QUERY_TAB_TYPES
+            switch (this.queryTabType) {
                 case ALTER_EDITOR:
-                    return AlterEditor.getters('activeSchemaNode')
-                case TXT_EDITOR:
+                    return AlterEditor.getters('activeNode')
+                case INSIGHT_VIEWER:
+                    return InsightViewer.getters('activeNode')
+                case SQL_EDITOR:
                     return QueryTab.getters('previewingNode')
                 default:
                     return null
@@ -200,20 +203,26 @@ export default {
         },
         activeNodes: {
             get() {
-                return [this.activeSchemaNode]
+                return [this.activeNode]
             },
             set(v) {
                 if (v.length) {
                     const activeNode = this.$typy(this.minimizeNodes(v), '[0]').safeObjectOrEmpty
-                    const { ALTER_EDITOR, TXT_EDITOR } = this.EDITOR_MODES
-                    switch (this.editorMode) {
+                    const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = this.QUERY_TAB_TYPES
+                    switch (this.queryTabType) {
                         case ALTER_EDITOR:
                             AlterEditor.update({
                                 where: this.activeQueryTabId,
-                                data: { active_schema_node: activeNode },
+                                data: { active_node: activeNode },
                             })
                             break
-                        case TXT_EDITOR:
+                        case INSIGHT_VIEWER:
+                            InsightViewer.update({
+                                where: this.activeQueryTabId,
+                                data: { active_node: activeNode },
+                            })
+                            break
+                        case SQL_EDITOR:
                             QueryTabTmp.update({
                                 where: this.activeQueryTabId,
                                 data: {
@@ -243,30 +252,40 @@ export default {
         // basic node options for different node types
         baseOptsMap() {
             const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = this.NODE_TYPES
-            const { USE, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = this.NODE_CTX_TYPES
+            const {
+                USE,
+                VIEW_INSIGHTS,
+                PRVW_DATA,
+                PRVW_DATA_DETAILS,
+                GEN_ERD,
+            } = this.NODE_CTX_TYPES
 
-            const tblViewOpts = [
+            const previewOpts = [
                 {
                     text: this.$mxs_t('previewData'),
                     type: PRVW_DATA,
-                    disabled: !this.isTxtEditor,
+                    disabled: !this.isSqlEditor,
                 },
                 {
                     text: this.$mxs_t('viewDetails'),
                     type: PRVW_DATA_DETAILS,
-                    disabled: !this.isTxtEditor,
+                    disabled: !this.isSqlEditor,
                 },
-                { divider: true },
-                ...this.txtOpts,
             ]
             return {
                 [SCHEMA]: [
                     { text: this.$mxs_t('useDb'), type: USE },
+                    { text: this.$mxs_t('viewInsights'), type: VIEW_INSIGHTS },
                     { text: this.$mxs_t('genErd'), type: GEN_ERD },
                     ...this.txtOpts,
                 ],
-                [TBL]: tblViewOpts,
-                [VIEW]: tblViewOpts,
+                [TBL]: [
+                    ...previewOpts,
+                    { text: this.$mxs_t('viewInsights'), type: VIEW_INSIGHTS },
+                    { divider: true },
+                    ...this.txtOpts,
+                ],
+                [VIEW]: [...previewOpts, { divider: true }, ...this.txtOpts],
                 [SP]: this.txtOpts,
                 [FN]: this.txtOpts,
                 [COL]: this.txtOpts,
@@ -492,6 +511,7 @@ export default {
                 ALTER,
                 TRUNCATE,
                 GEN_ERD,
+                VIEW_INSIGHTS,
             } = this.NODE_CTX_TYPES
 
             const { quotingIdentifier: quoting } = this.$helpers
@@ -533,6 +553,10 @@ export default {
                     break
                 case GEN_ERD:
                     this.$emit('gen-erd', this.minimizeNode(node))
+                    break
+                case VIEW_INSIGHTS:
+                    this.$emit('view-node-insights', this.minimizeNode(node))
+                    break
             }
         },
     },

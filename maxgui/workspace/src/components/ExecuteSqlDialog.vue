@@ -33,7 +33,7 @@
                 <!--When there are more than one `mxs-sql-editor` components renders on the same view,
                     Completion items will be duplicated as the `registerCompletionItemProvider` registers
                     items at global scope. https://github.com/microsoft/monaco-editor/issues/1957
-                    So when the editor_mode is TXT_EDITOR, uses the `skipRegCompleters` props to skip
+                    So when the QueryTab type is SQL_EDITOR, uses the `skipRegCompleters` props to skip
                     the registration.
                 -->
                 <mxs-sql-editor
@@ -46,7 +46,7 @@
                         contextmenu: false,
                         wordWrap: 'on',
                     }"
-                    :skipRegCompleters="isTxtEditor"
+                    :skipRegCompleters="isSqlEditor"
                 />
             </div>
         </template>
@@ -80,8 +80,8 @@ export default {
             isExecFailed: 'mxsWorkspace/isExecFailed',
             getExecErr: 'mxsWorkspace/getExecErr',
         }),
-        isTxtEditor() {
-            return QueryTab.getters('isTxtEditor')
+        isSqlEditor() {
+            return QueryTab.getters('isSqlEditor')
         },
         isConfDlgOpened: {
             get() {

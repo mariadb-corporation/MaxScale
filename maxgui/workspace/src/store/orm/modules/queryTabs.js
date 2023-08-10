@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import TxtEditor from '@wsModels/TxtEditor'
 import QueryConn from '@wsModels/QueryConn'
@@ -35,6 +36,7 @@ export default {
                 QueryTab.delete(id) // delete itself
                 // delete record in its the relational tables
                 QueryTabTmp.delete(id)
+                InsightViewer.delete(id)
                 AlterEditor.delete(id)
                 TxtEditor.delete(id)
                 dispatch('fileSysAccess/deleteFileHandleData', id, { root: true })
@@ -51,18 +53,19 @@ export default {
             entityIds.forEach(id => {
                 const target = QueryTab.find(id)
                 if (target) {
-                    const { TXT_EDITOR } = rootState.mxsWorkspace.config.EDITOR_MODES
+                    const { SQL_EDITOR } = rootState.mxsWorkspace.config.QUERY_TAB_TYPES
                     QueryTab.refreshName(id)
                     // refresh its relations
                     QueryTabTmp.refresh(id)
                     // Refresh all fields except query_txt
-                    if (target.editor_mode === TXT_EDITOR) {
+                    if (target.type === SQL_EDITOR) {
                         TxtEditor.refresh(id, ['query_txt'])
                     } else {
                         // If not TEXT_EDITOR, change to it and delete other editor models
-                        QueryTab.update({ where: id, data: { editor_mode: TXT_EDITOR } })
+                        QueryTab.update({ where: id, data: { type: SQL_EDITOR } })
                         TxtEditor.insert({ data: { id } })
                         AlterEditor.delete(id)
+                        InsightViewer.delete(id)
                     }
                     QueryResult.refresh(id)
                 }
@@ -73,17 +76,20 @@ export default {
          * @param {String} param.query_editor_id  - id of the QueryEditor has QueryTab being inserted
          * @param {String} [param.query_tab_id]
          * @param {String} [param.name]
-         * @param {String} [param.editor_mode] - EDITOR_MODES values. default is TXT_EDITOR
+         * @param {String} [param.type] - QUERY_TAB_TYPES values. default is SQL_EDITOR
          */
         insertQueryTab(
             { rootState },
-            { query_editor_id, query_tab_id = this.vue.$helpers.uuidv1(), name = '', editor_mode }
+            { query_editor_id, query_tab_id = this.vue.$helpers.uuidv1(), name = '', type }
         ) {
-            const { ALTER_EDITOR, TXT_EDITOR } = rootState.mxsWorkspace.config.EDITOR_MODES
+            const {
+                ALTER_EDITOR,
+                INSIGHT_VIEWER,
+                SQL_EDITOR,
+            } = rootState.mxsWorkspace.config.QUERY_TAB_TYPES
             let tabName = 'Query Tab 1',
                 count = 1,
-                editorMode = editor_mode || TXT_EDITOR
-
+                tabType = type || SQL_EDITOR
             const lastQueryTabOfWke = QueryTab.query()
                 .where(t => t.query_editor_id === query_editor_id)
                 .last()
@@ -96,16 +102,19 @@ export default {
                     id: query_tab_id,
                     count,
                     name: name ? name : tabName,
-                    editor_mode: editorMode,
+                    type: tabType,
                     query_editor_id,
                 },
             })
-            switch (editorMode) {
-                case TXT_EDITOR:
-                    TxtEditor.insert({ data: { id: query_tab_id } })
-                    break
+            switch (tabType) {
                 case ALTER_EDITOR:
                     AlterEditor.insert({ data: { id: query_tab_id } })
+                    break
+                case INSIGHT_VIEWER:
+                    InsightViewer.insert({ data: { id: query_tab_id } })
+                    break
+                case SQL_EDITOR:
+                    TxtEditor.insert({ data: { id: query_tab_id } })
                     break
             }
 
@@ -155,11 +164,11 @@ export default {
             QueryTab.query()
                 .where(t => t.query_editor_id === QueryEditor.getters('activeId'))
                 .get(),
-        editorMode: (_, getters) => getters.activeRecord.editor_mode,
-        isTxtEditor: (_, getters, rootState) =>
-            getters.editorMode === rootState.mxsWorkspace.config.EDITOR_MODES.TXT_EDITOR,
+        type: (_, getters) => getters.activeRecord.type,
+        isSqlEditor: (_, getters, rootState) =>
+            getters.type === rootState.mxsWorkspace.config.QUERY_TAB_TYPES.SQL_EDITOR,
         isAlterEditor: (_, getters, rootState) =>
-            getters.editorMode === rootState.mxsWorkspace.config.EDITOR_MODES.ALTER_EDITOR,
+            getters.type === rootState.mxsWorkspace.config.QUERY_TAB_TYPES.ALTER_EDITOR,
         // getters for mem states
         activeTmpRecord: (_, getters) => getters.activeRecord.queryTabTmp || {},
         findTmpRecord: () => query_tab_id => QueryTabTmp.find(query_tab_id) || {},

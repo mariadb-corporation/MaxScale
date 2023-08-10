@@ -59,6 +59,7 @@
                 @drop-action="handleOpenExecSqlDlg"
                 @truncate-tbl="handleOpenExecSqlDlg"
                 @gen-erd="handleShowGenErdDlg([$event.qualified_name])"
+                @view-node-insights="viewNodeInsights"
                 v-on="$listeners"
             />
         </keep-alive>
@@ -81,6 +82,7 @@
  */
 
 import { mapState, mapActions, mapMutations } from 'vuex'
+import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
@@ -103,7 +105,7 @@ export default {
         ...mapState({
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
+            QUERY_TAB_TYPES: state => state.mxsWorkspace.config.QUERY_TAB_TYPES,
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
@@ -183,7 +185,7 @@ export default {
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,
-                editor_mode: this.EDITOR_MODES.ALTER_EDITOR,
+                type: this.QUERY_TAB_TYPES.ALTER_EDITOR,
             })
             await this.queryDdlEditorSuppData({ connId: this.activeQueryTabConnId, config })
             await AlterEditor.dispatch('queryTblCreationInfo', node)
@@ -216,6 +218,17 @@ export default {
                 preselected_schemas: this.$typy(preselectedSchemas).safeArray,
                 connection: this.activeQueryEditorConn,
                 gen_in_new_ws: true,
+            })
+        },
+        async viewNodeInsights(node) {
+            await QueryTab.dispatch('handleAddQueryTab', {
+                query_editor_id: this.queryEditorId,
+                name: `Analyze ${node.name}`,
+                type: this.QUERY_TAB_TYPES.INSIGHT_VIEWER,
+            })
+            InsightViewer.update({
+                where: this.activeQueryTabId,
+                data: { active_node: node },
             })
         },
     },

@@ -133,7 +133,7 @@ export default {
             if (conn.id) {
                 await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId: conn.id, config })
                 await this.queryDdlEditorSuppData({ connId: conn.id, config })
-                const [, parsedTables] = await queryHelper.queryAndParseDDL({
+                const [, parsedTables] = await queryHelper.queryAndParseTblDDL({
                     connId: conn.id,
                     targets: this.selectedTargets,
                     config,

@@ -27,12 +27,13 @@
                     <keep-alive v-for="queryTab in allQueryTabs" :key="queryTab.id" :max="20">
                         <template v-if="activeQueryTabId === queryTab.id">
                             <txt-editor-ctr
-                                v-if="isTxtEditor"
+                                v-if="isSqlEditor"
                                 ref="editor"
                                 :queryTab="queryTab"
                                 :dim="editorDim"
                             />
-                            <alter-table-editor v-else :dim="editorDim" />
+                            <alter-table-editor v-else-if="isAlterEditor" :dim="editorDim" />
+                            <insight-viewer v-else :dim="editorDim" />
                         </template>
                     </keep-alive>
                 </div>
@@ -59,16 +60,18 @@ import { mapMutations, mapState } from 'vuex'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
-import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
+import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
+import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
 
 export default {
     name: 'query-editor',
     components: {
-        AlterTableEditor,
         SidebarCtr,
+        InsightViewer,
+        AlterTableEditor,
         TxtEditorCtr,
         QueryTabNavCtr,
     },
@@ -88,8 +91,11 @@ export default {
         activeQueryTabConn() {
             return QueryConn.getters('activeQueryTabConn')
         },
-        isTxtEditor() {
-            return QueryTab.getters('isTxtEditor')
+        isSqlEditor() {
+            return QueryTab.getters('isSqlEditor')
+        },
+        isAlterEditor() {
+            return QueryTab.getters('isAlterEditor')
         },
         allQueryTabs() {
             return QueryTab.all()
