@@ -358,7 +358,8 @@ BinlogIndexUpdater::BinlogIndexUpdater(const std::string& binlog_dir,
     }
     else
     {
-        m_watch = inotify_add_watch(m_inotify_fd, m_binlog_dir.c_str(), IN_CREATE | IN_DELETE);
+        m_watch = inotify_add_watch(m_inotify_fd, m_binlog_dir.c_str(),
+                                    IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
 
         if (m_watch == -1)
         {
@@ -417,9 +418,7 @@ void BinlogIndexUpdater::update()
     const size_t SZ = 1024;
     char buffer[SZ];
 
-    std::unique_lock<std::mutex> lock(m_file_names_mutex);
-    m_file_names = read_binlog_file_names(m_binlog_dir);
-    lock.unlock();
+    std::unique_lock<std::mutex> lock(m_file_names_mutex, std::defer_lock);
 
     while (m_running.load(std::memory_order_relaxed))
     {
@@ -431,7 +430,16 @@ void BinlogIndexUpdater::update()
 
         lock.lock();
         auto new_names = read_binlog_file_names(m_binlog_dir);
-        if (new_names != m_file_names)
+        std::ifstream index(m_inventory_file_path);
+
+        decltype(new_names) index_names;
+        std::string line;
+        while(std::getline(index, line))
+        {
+            index_names.push_back(line);
+        }
+
+        if (new_names != index_names)
         {
             m_file_names = std::move(new_names);
             std::string tmp = m_inventory_file_path + ".tmp";
