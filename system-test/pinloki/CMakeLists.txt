@@ -71,3 +71,6 @@ add_test_executable_ex(NAME pinloki_encryption_kmip SOURCE pinloki_encryption_km
 # MXS-3004: Semi-synchronous replication
 add_test_executable_ex(NAME pinloki_semisync SOURCE pinloki_semisync.cc
   CONFIG pinloki.cnf VMS repl_backend LABELS pinloki)
+
+add_test_executable_ex(NAME pinloki_ddl_only SOURCE pinloki_ddl_only.cc
+  CONFIG pinloki_ddl_only.cnf VMS repl_backend LABELS pinloki)

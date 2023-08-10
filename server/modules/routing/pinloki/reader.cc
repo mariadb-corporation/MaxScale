@@ -172,16 +172,15 @@ void Reader::send_events()
     {
         maxsql::RplEvent event;
         maxbase::Timer timer(1ms);
-        bool timer_alarm = false;
         while (!m_in_high_water
-               && !(timer_alarm = timer.alarm())
-               && (event = m_sFile_reader->fetch_event()))
+               && timer.until_alarm() != mxb::Duration::zero()
+               && (event = m_sFile_reader->fetch_event(timer)))
         {
             m_send_callback(event);
             m_last_event = maxbase::Clock::now();
         }
 
-        if (timer_alarm)
+        if (timer.alarm())
         {
             auto callback = [this, ref = get_ref()]() {
                 if (auto r = ref.lock())
