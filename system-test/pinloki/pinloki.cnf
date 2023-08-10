@@ -18,6 +18,8 @@ router=binlogrouter
 user=maxskysql
 password=skysql
 cluster=mariadb-cluster
+# TODO: Disable this once the connector-c has been fixed
+rpl_semi_sync_slave_enabled=true
 
 [pinloki-listener]
 type=listener
