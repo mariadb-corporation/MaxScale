@@ -114,6 +114,14 @@ bool FileReader::search_file(const std::string& file_name,
                              GtidPosition* ret_pos,
                              bool first_file)
 {
+    if (first_file)
+    {
+        // First file, no need to seek into the binlog: the event is guaranteed to be in the future
+        ret_pos->file_name = file_name;
+        ret_pos->file_pos = PINLOKI_MAGIC.size();
+        return true;
+    }
+
     std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
 
     if (!file.good())
@@ -175,28 +183,12 @@ bool FileReader::search_file(const std::string& file_name,
 
     bool success = false;
 
-    // The first file does not necessarily have a GtidList
-    if ((result == NotFound && first_file) || result == GtidInThisFile)
+    if (result == GtidInThisFile || result == GtidInPriorFile)
     {
-        if (result == NotFound)
-        {
-            file_pos = PINLOKI_MAGIC.size();
-        }
-
-        file.clear();
-        file_pos = search_gtid_in_file(file, encrypt, file_pos, gtid);
-        if (file_pos)
-        {
-            success = true;
-            ret_pos->file_name = file_name;
-            ret_pos->file_pos = file_pos;
-        }
-    }
-    else if (result == GtidInPriorFile)
-    {
-        // The gtid is in a prior log file, and the caller already has it.
-        // file_pos points one past the gtid list, but to be sure the whole file
-        // is always sent, let the reader handle positioning.
+        // If the result is GtidInThisFile, the GTID is somewhere in this file. In this case the
+        // GTID_LIST_EVENT had a GTID in it that was smaller than the target GTID. If the result is
+        // GtidInPriorFile, the GTID list contained the exact target GTID. In this case no GTIDs need to be
+        // skipped. In both cases the skipping of already replicated transactions is handled in send_event().
         success = true;
         ret_pos->file_name = file_name;
         ret_pos->file_pos = PINLOKI_MAGIC.size();

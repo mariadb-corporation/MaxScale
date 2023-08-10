@@ -155,7 +155,7 @@ void FileReader::fd_notify(uint32_t events)
     }
 }
 
-maxsql::RplEvent FileReader::fetch_event()
+maxsql::RplEvent FileReader::fetch_event(const maxbase::Timer& timer)
 {
     maxsql::RplEvent event;
     do
@@ -172,7 +172,7 @@ maxsql::RplEvent FileReader::fetch_event()
             m_encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(),
                                                    m_read_pos.name, event);
             // TODO: This recursion seems a little stupid. Figure out if there's a better way.
-            return fetch_event();
+            return fetch_event(timer);
         }
 
         if (event.event_type() == GTID_EVENT)
@@ -219,7 +219,12 @@ maxsql::RplEvent FileReader::fetch_event()
             m_encrypt.reset();
         }
     }
-    while (m_skip_gtid);
+    while (m_skip_gtid && timer.until_alarm() != mxb::Duration::zero());
+
+    if (m_skip_gtid && timer.until_alarm() == mxb::Duration::zero())
+    {
+        return maxsql::RplEvent{};
+    }
 
     return event;
 }
