@@ -335,7 +335,10 @@ private:
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
 
-    std::unique_ptr<GWBUF>                    m_be_auth_reply;  /**< Auth reply from backend */
+    /**< Backend auth result. Used with passthrough-mode */
+    enum class PtAuthResult {NONE, OK, ERROR};
+    PtAuthResult m_pt_be_auth_res {PtAuthResult::NONE};
+
     std::vector<std::unique_ptr<LocalClient>> m_local_clients;
 
     int                      m_num_responses {0};   // How many responses we are waiting for

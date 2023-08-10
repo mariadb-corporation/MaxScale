@@ -802,35 +802,26 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             }
 
         case AuthState::WAIT_FOR_BACKEND:
-            if (m_be_auth_reply)
+            switch (m_pt_be_auth_res)
             {
-                auto reply = std::move(m_be_auth_reply);
-                mxb_assert(!reply->empty());
-                auto cmd = MYSQL_GET_COMMAND(reply->data());
-                if (cmd == MYSQL_REPLY_OK)
-                {
-                    m_session_data->current_db = auth_data.default_db;
-                    // Don't set current role as we don't know it.
-                    m_auth_state = AuthState::COMPLETE;
-                }
-                else
-                {
-                    // Send the original error from backend to client. Fix sequence.
-                    mxb_assert(reply->is_unique());
-                    *(reply->data() + MYSQL_SEQ_OFFSET) = m_next_sequence;
-                    write(std::move(*reply));
-                    mxs::Listener::mark_auth_as_failed(m_dcb->remote());
-                    m_session->service->stats().add_failed_auth();
-                    m_auth_state = AuthState::FAIL;
-                }
-            }
-            else
-            {
+            case PtAuthResult::OK:
+                m_session_data->current_db = auth_data.default_db;
+                // Don't set current role as we don't know it.
+                m_auth_state = AuthState::COMPLETE;
+                break;
+
+            case PtAuthResult::ERROR:
+                // Error was already sent to client, let state machine continue to session closure.
+                m_auth_state = AuthState::FAIL;
+                break;
+
+            case PtAuthResult::NONE:
                 // Should not get client data (or read events) before authentication to backend is complete.
                 MXB_ERROR("Client %s sent data when waiting for passthrough authentication. Closing session.",
                           m_session_data->user_and_host().c_str());
                 send_misc_error("Unexpected client event");
                 m_auth_state = AuthState::FAIL;
+                break;
             }
             break;
 
@@ -3502,7 +3493,22 @@ bool MariaDBClientConnection::read_proxy_hdr_ssl_safe(GWBUF& buffer)
 void MariaDBClientConnection::deliver_backend_auth_result(GWBUF&& auth_reply)
 {
     mxb_assert(m_auth_state == AuthState::WAIT_FOR_BACKEND);
-    m_be_auth_reply = std::make_unique<GWBUF>(std::move(auth_reply));
-    m_be_auth_reply->ensure_unique();
+    mxb_assert(!auth_reply.empty());
+    auto cmd = MYSQL_GET_COMMAND(auth_reply.data());
+    if (cmd == MYSQL_REPLY_OK)
+    {
+        m_pt_be_auth_res = PtAuthResult::OK;
+    }
+    else
+    {
+        // Send the original error from backend to client, fix sequence. Router may have already called
+        // session->kill() so the client-side state machine is not guaranteed to be invoked.
+        *(auth_reply.data() + MYSQL_SEQ_OFFSET) = m_next_sequence;
+        write(std::move(auth_reply));
+        mxs::Listener::mark_auth_as_failed(m_dcb->remote());
+        m_session->service->stats().add_failed_auth();
+        m_pt_be_auth_res = PtAuthResult::ERROR;
+    }
+
     m_dcb->trigger_read_event();
 }
