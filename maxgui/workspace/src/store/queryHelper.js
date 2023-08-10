@@ -78,7 +78,6 @@ async function queryDDL({ connId, type, qualifiedNames, config }) {
             id: connId,
             body: {
                 sql: qualifiedNames.map(item => `SHOW CREATE ${type} ${item};`).join('\n'),
-                max_rows: 0,
             },
             config,
         })

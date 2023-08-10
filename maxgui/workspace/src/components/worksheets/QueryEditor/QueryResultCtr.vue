@@ -109,7 +109,7 @@ export default {
     },
     data() {
         return {
-            tabItemClass: 'pt-2 px-5 query-result-ctr-fontStyle mxs-color-helper text-small-text',
+            tabItemClass: 'pt-2 px-5 mxs-field-text-size mxs-color-helper text-small-text',
         }
     },
     computed: {
@@ -183,9 +183,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.query-result-ctr-fontStyle {
-    font-size: 14px;
-}
-</style>

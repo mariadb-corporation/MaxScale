@@ -18,13 +18,9 @@ import {
 } from '@wsSrc/utils/helpers'
 import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
-import { addComma } from '@wsSrc/utils/helpers'
+import { addComma, escapeSingleQuote } from '@wsSrc/utils/helpers'
 import { t as typy } from 'typy'
 import erdHelper from '@wsSrc/utils/erdHelper'
-
-function escapeComment(comment) {
-    return comment.replace(/'/g, "\\'")
-}
 
 /**
  * Table script builder.
@@ -139,7 +135,7 @@ export default class TableScriptBuilder {
                     parts.push(`COLLATE = ${diff.rhs}`)
                     break
                 case 'comment':
-                    parts.push(`COMMENT = '${escapeComment(diff.rhs)}'`)
+                    parts.push(`COMMENT = '${escapeSingleQuote(diff.rhs)}'`)
                     break
             }
         })
@@ -187,7 +183,7 @@ export default class TableScriptBuilder {
         if (ai && data_type !== 'SERIAL') sql += ` ${tokens.ai}`
         if (!generated && default_exp) sql += ` ${tokens.default} ${default_exp}`
         else if (default_exp) sql += ` ${tokens.generated} (${default_exp}) ${generated}`
-        if (comment) sql += ` ${tokens.comment} '${escapeComment(comment)}'`
+        if (comment) sql += ` ${tokens.comment} '${escapeSingleQuote(comment)}'`
         return sql
     }
 
@@ -216,7 +212,7 @@ export default class TableScriptBuilder {
             .join(addComma())
         str = `(${str})`
         if (name) str = `${quoting(name)} ${str}`
-        if (comment) str += ` ${tokens.comment} '${escapeComment(comment)}'`
+        if (comment) str += ` ${tokens.comment} '${escapeSingleQuote(comment)}'`
         return str
     }
 

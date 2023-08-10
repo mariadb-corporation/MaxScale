@@ -119,6 +119,7 @@ export default {
         maxHeight: { type: Number, required: true },
         returnObject: { type: Boolean, default: false },
         selectAllOnCreated: { type: Boolean, default: false },
+        selectAllOnActivated: { type: Boolean, default: false },
         activatorClass: { type: String, default: '' },
     },
     data() {
@@ -173,6 +174,9 @@ export default {
     },
     created() {
         if (this.selectAllOnCreated) this.selectAll()
+    },
+    activated() {
+        if (this.selectAllOnActivated) this.selectAll()
     },
     methods: {
         toggleAll(v) {

@@ -43,6 +43,10 @@ export function unquoteIdentifier(identifier) {
     return identifier.slice(1, -1).replace(new RegExp(quoteMark + quoteMark, 'g'), quoteMark)
 }
 
+export function escapeSingleQuote(str) {
+    if (!t(str).isString) return str
+    return str.replace(/'/g, "\\'")
+}
 /**
  * @param {Array} payload.fields - fields
  * @param {Array} payload.rows - 2d array
