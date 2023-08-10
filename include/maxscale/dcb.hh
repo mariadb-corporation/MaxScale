@@ -597,8 +597,7 @@ protected:
      */
     virtual bool release_from(MXS_SESSION* session) = 0;
 
-    int         log_errors_SSL(int ret);
-    std::string get_one_SSL_error(unsigned long ssl_errno);
+    int log_errors_SSL(int ret);
 
     struct Encryption
     {
@@ -630,6 +629,7 @@ protected:
     int64_t    m_last_read;             /**< Last time the DCB received data */
     int64_t    m_last_write;            /**< Last time the DCB sent data */
     Encryption m_encryption;            /**< Encryption state */
+    int        m_old_ssl_io_error {0};
 
     GWBUF    m_writeq;                  /**< Write Data Queue */
     GWBUF    m_readq;                   /**< Read queue for incomplete reads */
@@ -677,6 +677,9 @@ private:
 
     void add_event_via_loop(uint32_t ev);
     void add_event(uint32_t ev);
+
+    void        log_ssl_errors(int ssl_io_error);
+    std::string get_one_SSL_error(unsigned long ssl_errno);
 };
 
 class ClientDCB : public DCB

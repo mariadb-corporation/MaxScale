@@ -49,6 +49,7 @@
 #include <atomic>
 
 #include <maxbase/alloc.hh>
+#include <maxbase/format.hh>
 #include <maxbase/hexdump.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
@@ -462,6 +463,12 @@ bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
  */
 bool DCB::socket_read_SSL(size_t maxbytes)
 {
+    if (m_old_ssl_io_error)
+    {
+        log_ssl_errors(m_old_ssl_io_error);
+        return false;
+    }
+
     if (m_encryption.write_want_read)
     {
         // A write-operation was waiting for a readable socket. Now that the socket seems readable,
@@ -509,7 +516,8 @@ bool DCB::socket_read_SSL(size_t maxbytes)
             keep_reading = false;
             socket_cleared = true;
 
-            switch (SSL_get_error(m_encryption.handle, ret))
+            auto io_error = SSL_get_error(m_encryption.handle, ret);
+            switch (io_error)
             {
             case SSL_ERROR_ZERO_RETURN:
                 // SSL-connection closed.
@@ -527,8 +535,27 @@ bool DCB::socket_read_SSL(size_t maxbytes)
                 m_encryption.read_want_write = true;
                 break;
 
+            case SSL_ERROR_SYSCALL:
+            case SSL_ERROR_SSL:
+                // Non-recoverable error, connection will be closed. Check SSL error queue for more info.
+                // If data was already read, return success + data, then return here after data has been
+                // processed. Often the connection will be closed before the triggered event is processed.
+                if (bytes_from_socket > 0)
+                {
+                    m_old_ssl_io_error = io_error;
+                    trigger_read_event();
+                }
+                else
+                {
+                    log_ssl_errors(io_error);
+                    success = false;
+                }
+                break;
+
             default:
-                success = (log_errors_SSL(ret) >= 0);
+                // Unexpected error, should not happen. Close connection.
+                success = false;
+                log_ssl_errors(io_error);
                 break;
             }
         }
@@ -610,6 +637,62 @@ std::string DCB::get_one_SSL_error(unsigned long ssl_errno)
     }
 
     return rval;
+}
+
+void DCB::log_ssl_errors(int ssl_io_error)
+{
+    string errmsg;
+    bool first_error = true;
+
+    auto append_openssl_errmsgs = [this, &errmsg, &first_error]() {
+        for (auto ssl_errno = ERR_get_error(); ssl_errno != 0; ssl_errno = ERR_get_error())
+        {
+            errmsg.append(first_error ? " " : ", ");
+            errmsg.append(get_one_SSL_error(ssl_errno));
+            first_error = false;
+        }
+    };
+
+    string error_type;
+    switch (ssl_io_error)
+    {
+    case SSL_ERROR_SYSCALL:
+        {
+            // Both the OpenSSL error queue and standard errno may contain details. Try to combine.
+            error_type = "system call";
+            int eno = errno;
+            if (eno != 0)
+            {
+                errmsg.append(mxb::string_printf(" Error %i: %s", eno, mxb_strerror(eno)));
+                first_error = false;
+            }
+            append_openssl_errmsgs();
+        }
+        break;
+
+    case SSL_ERROR_SSL:
+        // The error queue should contain more details.
+        error_type = "ssl";
+        append_openssl_errmsgs();
+        break;
+
+    default:
+        mxb_assert(!true);
+        error_type = "miscellaneous";
+        append_openssl_errmsgs();
+        break;
+    }
+
+    if (m_role == Role::CLIENT)
+    {
+        MXB_ERROR("Client connection (client: %s) OpenSSL %s error.%s",
+                  client_remote().c_str(), error_type.c_str(), errmsg.c_str());
+    }
+    else
+    {
+        MXB_ERROR("Server connection (server: %s, client: %s) OpenSSL %s error.%s",
+                  remote().c_str(), client_remote().c_str(), error_type.c_str(), errmsg.c_str());
+    }
 }
 
 /**
