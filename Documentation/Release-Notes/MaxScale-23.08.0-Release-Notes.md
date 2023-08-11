@@ -45,7 +45,12 @@ The use of the old name is deprecated.
 
 ### [MXS-2744](https://jira.mariadb.org/browse/MXS-2744) Switchover improvements
 
-### [MXS-3531](https://jira.mariadb.org/browse/MXS-3531) Regex matchin for SQL has no hard limits
+### [MXS-3531](https://jira.mariadb.org/browse/MXS-3531) Lower regular expression matching limits
+
+The PCRE2 library used by MaxScale now limits the heap memory to 1GB and the
+matching limit to 500000 matches. This change was done to prevent catastrophic
+backtracing that occurred when regular expressions used nested recursion
+e.g. `SELECT.*.*FROM.*.*t1`.
 
 ### [MXS-3664](https://jira.mariadb.org/browse/MXS-3664) Built-in caching in nosqlprotocol
 
@@ -63,9 +68,11 @@ reasonable time. May lead to diverging replication on the old primary.
 
 ### [MXS-4123](https://jira.mariadb.org/browse/MXS-4123) Fast universal causal reads
 
-### [MXS-4214](https://jira.mariadb.org/browse/MXS-4214) Allow schemarouter caches to be refesh during off-peak hours
+The `causal_reads=fast_universal` mode uses the same mechanism to retrieve the
+GTID position that the `universal` mode uses but behaves like the `fast` mode
+when routing queries.
 
-### [MXS-4215](https://jira.mariadb.org/browse/MXS-4215) Allow manual clearing of schemarouter caches
+### [MXS-4215](https://jira.mariadb.org/browse/MXS-4215) Manual schemarouter cache invalidation
 
 The schemarouter database map cache can now be manually cleared with a MaxCtrl
 command:
@@ -77,7 +84,7 @@ maxctrl call command schemarouter clear <service>
 This makes it possible to schedule the clearing of the caches for busy systems
 where the update of the map takes a long time.
 
-### [MXS-4216](https://jira.mariadb.org/browse/MXS-4216) Allow stale cache usage in schemarouter
+### [MXS-4216](https://jira.mariadb.org/browse/MXS-4216) Stale cache usage in schemarouter
 
 Stale entries in the schemarouter database map can now be used up to
 `max_staleness` seconds. This reduces the impact that a shard update causes to
@@ -93,7 +100,11 @@ the password, as the password in the backend and in MaxScale need not be changed
 simultaneously. More information about this functionality can be found
 [here](../Getting-Started/Configuration-Guide.md#user-and-password).
 
-### [MXS-4277](https://jira.mariadb.org/browse/MXS-4277) iss filed in JWI tokens is always "maxscale"
+### [MXS-4277](https://jira.mariadb.org/browse/MXS-4277) Configurable `iss` field in JWTs
+
+The `iss` field of the JWTs that the REST-API in MaxScale generates can now be
+configured with `admin_jwt_issuer`. This allows REST-API clients to see who
+issued the token.
 
 ### [MXS-4377](https://jira.mariadb.org/browse/MXS-4377) Common options
 
@@ -103,21 +114,38 @@ that otherwise are identically configured, but for their list of servers. More
 information about this functionality can be found
 [here](../Getting-Started/Configuration-Guide.md#include-1).
 
-### [MXS-4505](https://jira.mariadb.org/browse/MXS-4505) Prevent replaying about-to-be-committed transactions
+### [MXS-4505](https://jira.mariadb.org/browse/MXS-4505) Safer replaying of about-to-commit transactions
 
-### [MXS-4549](https://jira.mariadb.org/browse/MXS-4549) Replay queries with partially returned results
+The new `transaction_replay_safe_commit` variable controls whether
+about-to-commit transaction are replayed when `transaction_replay` is
+enabled. The new default is to not replay transactions that were being committed
+when the connection to the server was lost.
+
+### [MXS-4549](https://jira.mariadb.org/browse/MXS-4549) Queries with partially returned results can be replayed
 
 If a query in a transaction is interrupted and the result was partially
 delivered to the client, readwritesplit will now retry the execution of the
 query and discard the already delivered part of the result.
 
-### [MXS-4618](https://jira.mariadb.org/browse/MXS-4618) Load data from S3
+### [MXS-4618](https://jira.mariadb.org/browse/MXS-4618) LOAD DATA LOCAL INFILE from S3
 
-### [MXS-4635](https://jira.mariadb.org/browse/MXS-4635) Send metadata in connection handshake
+The [LDI filter](../Filters/Ldi.md) adds support for `LOAD DATA LOCAL INFILE`
+from S3 compatible storage.
+
+### [MXS-4635](https://jira.mariadb.org/browse/MXS-4635) Early connection metadata
 
 The new `connection_metadata` listener parameter controls the set of metadata
-variables that is sent to the client during connection creation. By default the
-current number of connections (`threads_connected`) is sent.
+variables that are sent to the client during connection creation.
+
+By default the values of the system variables `character_set_client`,
+`character_set_connection`, `character_set_results`, `max_allowed_packet`,
+`system_time_zone`, `time_zone` and `tx_isolation` are sent as well as the
+current number of connections as the `threads_connected` variable and the real
+64-bit connection ID as `connection_id`.
+
+Compatible MariaDB connectors will use this information from MaxScale instead of
+querying the values of the variables from the database server which greatly
+speeds up connection creation.
 
 ### [MXS-4637](https://jira.mariadb.org/browse/MXS-4637) Bootstrap process for Xpand should be region-aware
 
