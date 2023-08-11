@@ -111,16 +111,18 @@ private:
  */
 long get_file_sequence_number(const std::string& file_name)
 {
-    try
+    auto pos1 = file_name.find_last_of(".");
+    auto pos2 = std::string::npos;
+    if (pos1 && pos1 != std::string::npos
+        && file_name.substr(pos1 + 1, std::string::npos) == COMPRESSION_EXTENSION)
     {
-        auto num_str = file_name.substr(file_name.find_last_of(".") + 1);
-        long seq_no = 1 + std::stoi(num_str.c_str());
-        return seq_no;
+        pos2 = pos1;
+        pos1 = file_name.find_last_of(".", pos1 - 1);
     }
-    catch (std::exception& ex)
-    {
-        return 0;
-    }
+
+    auto num_str = file_name.substr(pos1 + 1, pos2 - pos1 - 1);
+
+    return std::atol(num_str.c_str());
 }
 
 std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
@@ -145,12 +147,12 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
 
             auto file_path = MAKE_STR(binlog_dir.c_str() << '/' << pentry->d_name);
 
-            decltype(PINLOKI_MAGIC) magic;
+            std::array<char, MAGIC_SIZE> magic;
             std::ifstream is{file_path.c_str(), std::ios::binary};
             if (is)
             {
                 is.read(magic.data(), PINLOKI_MAGIC.size());
-                if (is && magic == PINLOKI_MAGIC)
+                if (is && (magic == PINLOKI_MAGIC || magic == ZSTD_MAGIC))
                 {
                     auto seq_no = get_file_sequence_number(file_path);
                     if (seq_no)
