@@ -55,7 +55,11 @@
                             ({{ curr2dRowsLength }})
                         </span>
                     </template>
-                    <span v-else :class="{ 'label-required': header.required }">
+                    <span
+                        v-else
+                        :class="{ 'label-required': header.required }"
+                        :style="{ whiteSpace: 'nowrap' }"
+                    >
                         <slot
                             :name="`header-${header.text}`"
                             :data="{

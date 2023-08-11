@@ -12,16 +12,11 @@
         top
         transition="slide-y-transition"
         content-class="shadow-drop rounded-sm"
-        :max-width="600"
+        :max-width="800"
         :max-height="600"
         allow-overflow
     >
-        <v-sheet
-            class="mxs-truncate-tooltip-menu py-2 px-4 text-body-2"
-            :class="[$typy(truncate_tooltip_item, 'contentClass').safeString]"
-        >
-            <span :style="{ wordBreak: 'break-word' }">{{ truncate_tooltip_item.txt }}</span>
-        </v-sheet>
+        <div :class="contentClass">{{ truncate_tooltip_item.txt }}</div>
     </v-menu>
 </template>
 
@@ -45,14 +40,22 @@ export default {
     name: 'mxs-truncate-tooltip',
     computed: {
         ...mapState({ truncate_tooltip_item: state => state.mxsApp.truncate_tooltip_item }),
+        contentClass() {
+            return [
+                'mxs-truncate-tooltip-menu py-2 px-4 text-body-2',
+                this.$typy(this.truncate_tooltip_item, 'contentClass').safeString,
+            ]
+        },
     },
 }
 </script>
 
 <style lang="scss">
 .mxs-truncate-tooltip-menu {
-    background: #303033 !important;
+    background: $tooltip-background-color;
     opacity: 0.9;
-    color: #d9dae0 !important;
+    color: $tooltip-text-color;
+    white-space: pre;
+    overflow: auto;
 }
 </style>
