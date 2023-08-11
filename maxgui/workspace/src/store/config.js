@@ -394,6 +394,7 @@ export const COL_ORDER_BY = Object.freeze({
 export const UNPARSED_TBL_PLACEHOLDER = 'UNPARSED_TBL__'
 
 export const INSIGHT_SPECS = Object.freeze({
+    CREATION_INFO: 'CREATION INFO',
     DDL: 'DDL',
     TABLES: NODE_GROUP_TYPES.TBL_G,
     VIEWS: NODE_GROUP_TYPES.VIEW_G,

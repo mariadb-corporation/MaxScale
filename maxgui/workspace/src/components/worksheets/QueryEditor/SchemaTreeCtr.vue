@@ -272,9 +272,14 @@ export default {
                     disabled: !this.isSqlEditor,
                 },
             ]
+            const spFnTriggerOpts = [
+                { text: this.$mxs_t('showCreate'), type: VIEW_INSIGHTS },
+                { divider: true },
+                ...this.txtOpts,
+            ]
             return {
                 [SCHEMA]: [
-                    { text: this.$mxs_t('useDb'), type: USE },
+                    { text: this.$mxs_t('useDb'), type: USE, disabled: !this.isSqlEditor },
                     { text: this.$mxs_t('viewInsights'), type: VIEW_INSIGHTS },
                     { text: this.$mxs_t('genErd'), type: GEN_ERD },
                     ...this.txtOpts,
@@ -285,12 +290,17 @@ export default {
                     { divider: true },
                     ...this.txtOpts,
                 ],
-                [VIEW]: [...previewOpts, { divider: true }, ...this.txtOpts],
-                [SP]: this.txtOpts,
-                [FN]: this.txtOpts,
+                [VIEW]: [
+                    ...previewOpts,
+                    { text: this.$mxs_t('showCreate'), type: VIEW_INSIGHTS },
+                    { divider: true },
+                    ...this.txtOpts,
+                ],
+                [SP]: spFnTriggerOpts,
+                [FN]: spFnTriggerOpts,
                 [COL]: this.txtOpts,
                 [IDX]: this.txtOpts,
-                [TRIGGER]: this.txtOpts,
+                [TRIGGER]: spFnTriggerOpts,
             }
         },
     },
@@ -482,7 +492,8 @@ export default {
             })
         },
         onNodeDblClick(node) {
-            if (node.type === this.NODE_TYPES.SCHEMA) this.$emit('use-db', node.qualified_name)
+            if (node.type === this.NODE_TYPES.SCHEMA && this.isSqlEditor)
+                this.$emit('use-db', node.qualified_name)
         },
         onContextMenu({ e, item: node }) {
             if (this.nodesHaveCtxMenu.includes(node.type)) this.handleOpenCtxMenu({ e, node })

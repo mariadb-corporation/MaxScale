@@ -3,7 +3,7 @@
     <keep-alive v-else>
         <mxs-sql-editor
             v-if="activeSpec === specs.DDL"
-            :value="$typy(analyzedData, `[${activeSpec}]data[0][1]`).safeString"
+            :value="ddlData"
             readOnly
             class="pl-2 fill-height"
             :options="{ contextmenu: false, fontSize: 14 }"
@@ -44,6 +44,7 @@ import { mapState, mapMutations } from 'vuex'
 import Worksheet from '@wsModels/Worksheet'
 import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable'
 import queries from '@wsSrc/api/queries'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 export default {
     name: 'insight-viewer-tab-item',
@@ -55,7 +56,6 @@ export default {
         activeSpec: { type: String, required: true },
         specs: { type: Object, required: true },
         nodeType: { type: String, required: true },
-        isSchemaNode: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -74,18 +74,40 @@ export default {
         specData() {
             return this.$typy(this.analyzedData, `[${this.activeSpec}]`).safeObject
         },
+        isSchemaNode() {
+            return this.nodeType === this.NODE_TYPES.SCHEMA
+        },
+        schemaName() {
+            return schemaNodeHelper.getSchemaName(this.node)
+        },
         specQueryMap() {
             const { escapeSingleQuote, quotingIdentifier } = this.$helpers
             const { qualified_name } = this.node
-            const schemaName = this.isSchemaNode
-                ? escapeSingleQuote(this.node.name)
-                : this.node.parentNameData[this.NODE_TYPES.SCHEMA]
-            const nodeName = escapeSingleQuote(this.node.name)
-            const { DDL, TABLES, VIEWS, COLUMNS, INDEXES, TRIGGERS, SP, FN } = this.INSIGHT_SPECS
+
+            const nodeIdentifier = quotingIdentifier(this.node.name)
+            const nodeLiteralStr = `'${escapeSingleQuote(this.node.name)}'`
+
+            const schemaIdentifier = quotingIdentifier(this.schemaName)
+            const schemaLiteralStr = `'${escapeSingleQuote(this.schemaName)}'`
+
+            const {
+                CREATION_INFO,
+                DDL,
+                TABLES,
+                VIEWS,
+                COLUMNS,
+                INDEXES,
+                TRIGGERS,
+                SP,
+                FN,
+            } = this.INSIGHT_SPECS
             return Object.values(this.specs).reduce((map, spec) => {
                 switch (spec) {
+                    case CREATION_INFO:
                     case DDL:
-                        map[spec] = `SHOW CREATE ${this.nodeType} ${qualified_name}`
+                        if (this.nodeType === this.NODE_TYPES.TRIGGER)
+                            map[spec] = `SHOW CREATE ${this.nodeType} ${nodeIdentifier}`
+                        else map[spec] = `SHOW CREATE ${this.nodeType} ${qualified_name}`
                         break
                     case TABLES:
                     case VIEWS:
@@ -99,14 +121,14 @@ export default {
                             spec === COLUMNS
                                 ? 'INFORMATION_SCHEMA.COLUMNS'
                                 : 'INFORMATION_SCHEMA.STATISTICS'
-                        let query = `SELECT * FROM ${tbl} WHERE TABLE_SCHEMA = '${schemaName}'`
-                        if (!this.isSchemaNode) query += ` AND TABLE_NAME = '${nodeName}'`
+                        let query = `SELECT * FROM ${tbl} WHERE TABLE_SCHEMA = ${schemaLiteralStr}`
+                        if (!this.isSchemaNode) query += ` AND TABLE_NAME = ${nodeLiteralStr}`
                         map[spec] = query
                         break
                     }
                     case TRIGGERS: {
-                        let query = `SHOW TRIGGERS FROM ${quotingIdentifier(schemaName)}`
-                        if (!this.isSchemaNode) query += ` WHERE \`Table\` = '${nodeName}'`
+                        let query = `SHOW TRIGGERS FROM ${schemaIdentifier}`
+                        if (!this.isSchemaNode) query += ` WHERE \`Table\` = ${nodeLiteralStr}`
                         map[spec] = query
                         break
                     }
@@ -114,7 +136,7 @@ export default {
                     case FN:
                         map[spec] = `SHOW ${
                             spec === SP ? 'PROCEDURE' : 'FUNCTION'
-                        } STATUS WHERE Db = '${schemaName}'`
+                        } STATUS WHERE Db = ${schemaLiteralStr}`
                         break
                 }
                 return map
@@ -133,6 +155,21 @@ export default {
                     h.hidden = true
                 return h
             })
+        },
+        ddlData() {
+            const { VIEW, TRIGGER, SP, FN } = this.NODE_TYPES
+            let ddl = ''
+            switch (this.nodeType) {
+                case TRIGGER:
+                case SP:
+                case FN:
+                    ddl = this.$typy(this.analyzedData, `[${this.activeSpec}]data[0][2]`).safeString
+                    break
+                case VIEW:
+                default:
+                    ddl = this.$typy(this.analyzedData, `[${this.activeSpec}]data[0][1]`).safeString
+            }
+            return this.$helpers.formatSQL(ddl)
         },
         rows() {
             return this.$typy(this.specData, 'data').safeArray
@@ -176,7 +213,7 @@ export default {
             this.unwatch_activeSpec = this.$watch(
                 'activeSpec',
                 async v => {
-                    if (!this.analyzedData[v]) {
+                    if (this.specQueryMap[v] && !this.analyzedData[v]) {
                         const result = await this.query(this.specQueryMap[v])
                         this.$set(this.analyzedData, v, result)
                         this.isFetching = false

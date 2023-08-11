@@ -18,7 +18,6 @@
                     :activeSpec="activeSpec"
                     :specs="specs"
                     :nodeType="nodeType"
-                    :isSchemaNode="isSchemaNode"
                 />
             </keep-alive>
         </div>
@@ -77,17 +76,29 @@ export default {
         nodeType() {
             return this.$typy(this.activeNode, 'type').safeString
         },
-        isSchemaNode() {
-            return this.nodeType === this.NODE_TYPES.SCHEMA
-        },
         specs() {
-            if (this.isSchemaNode) return this.INSIGHT_SPECS
-            return this.$helpers.lodash.pick(this.INSIGHT_SPECS, [
-                'DDL',
-                'COLUMNS',
-                'INDEXES',
-                'TRIGGERS',
-            ])
+            const { SCHEMA, TBL, VIEW, TRIGGER, SP, FN } = this.NODE_TYPES
+            switch (this.nodeType) {
+                case SCHEMA:
+                    return this.$helpers.lodash.pickBy(
+                        this.INSIGHT_SPECS,
+                        (value, key) => key !== 'CREATION_INFO'
+                    )
+                case TBL:
+                    return this.$helpers.lodash.pick(this.INSIGHT_SPECS, [
+                        'DDL',
+                        'COLUMNS',
+                        'INDEXES',
+                        'TRIGGERS',
+                    ])
+                case VIEW:
+                case TRIGGER:
+                case SP:
+                case FN:
+                    return this.$helpers.lodash.pick(this.INSIGHT_SPECS, ['CREATION_INFO', 'DDL'])
+                default:
+                    return {}
+            }
         },
         tabNavHeight() {
             return 24

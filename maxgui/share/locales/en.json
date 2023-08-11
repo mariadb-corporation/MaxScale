@@ -481,6 +481,7 @@
         "setUpConns": "Set up connections",
         "shapeOfLinks": "Shape of links",
         "show": "Show",
+        "showCreate": "Show Create",
         "showQueryConfirm": "Show confirmation before executing the statements",
         "showSysSchemas": "Show system schemas",
         "showTrendline": "Show Trendline",

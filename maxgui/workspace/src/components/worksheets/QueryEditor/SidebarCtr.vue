@@ -226,9 +226,19 @@ export default {
             })
         },
         async viewNodeInsights(node) {
+            let name = `Analyze ${node.name}`
+            const { VIEW, TRIGGER, SP, FN } = this.NODE_TYPES
+            switch (node.type) {
+                case VIEW:
+                case TRIGGER:
+                case SP:
+                case FN:
+                    name = `Show create ${node.name} `
+                    break
+            }
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
-                name: `Analyze ${node.name}`,
+                name,
                 type: this.QUERY_TAB_TYPES.INSIGHT_VIEWER,
                 schema: this.getSchemaIdentifier(node),
             })
