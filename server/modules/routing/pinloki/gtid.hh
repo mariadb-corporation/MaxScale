@@ -20,15 +20,16 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <mysql.h>
+#include <mariadb_rpl.h>
 
-struct st_mariadb_gtid;
 
 namespace maxsql
 {
 struct Gtid
 {
     Gtid() = default;
-    Gtid(st_mariadb_gtid* mgtid);
+    Gtid(MARIADB_GTID* mgtid);
     Gtid(uint32_t domain, uint32_t server_id, uint64_t sequence)
         : m_domain_id(domain)
         , m_server_id(server_id)

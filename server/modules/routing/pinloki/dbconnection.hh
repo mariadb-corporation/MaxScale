@@ -24,9 +24,6 @@
 
 #include <chrono>
 
-struct st_mysql;
-struct st_mysql_res;
-
 namespace maxsql
 {
 DEFINE_EXCEPTION(DatabaseError);
@@ -95,8 +92,8 @@ public:
     std::string mariadb_error_str();
 
 private:
-    st_mysql*         m_conn {nullptr};
-    st_mariadb_rpl*   m_rpl {nullptr};
+    MYSQL*            m_conn {nullptr};
+    MARIADB_RPL*      m_rpl {nullptr};
     ConnectionDetails m_details;
 
     void connect();

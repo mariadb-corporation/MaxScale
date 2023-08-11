@@ -26,7 +26,7 @@ using namespace std::literals::string_literals;
 
 namespace maxsql
 {
-MariaRplEvent::MariaRplEvent(st_mariadb_rpl_event* pEvent, st_mariadb_rpl* handle)
+MariaRplEvent::MariaRplEvent(MARIADB_RPL_EVENT* pEvent, MARIADB_RPL* handle)
     : m_pEvent {pEvent}
     , m_pRpl_handle {handle}
 {
@@ -52,7 +52,7 @@ MariaRplEvent& MariaRplEvent::operator=(MariaRplEvent&& rhs)
     return *this;
 }
 
-const st_mariadb_rpl_event& MariaRplEvent::event() const
+const MARIADB_RPL_EVENT& MariaRplEvent::event() const
 {
     return *m_pEvent;
 }
