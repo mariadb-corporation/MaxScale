@@ -26,19 +26,27 @@ protocol=MariaDBBackend
 # This will keep MaxScale aware of the state of the servers.
 # MariaDB Monitor documentation:
 # https://mariadb.com/kb/en/maxscale-6-monitors/
+#
+# The GRANTs needed by the monitor user depend on the actual monitor.
+# The GRANTs required by the MariaDB Monitor can be found here:
+# https://mariadb.com/kb/en/mariadb-maxscale-6-mariadb-monitor/#required-grants
+#
 
 [MariaDB-Monitor]
 type=monitor
 module=mariadbmon
 servers=server1
-user=myuser
-password=mypwd
+user=monitor_user
+password=monitor_pw
 monitor_interval=2000
 
 # Service definitions
 #
 # Service Definition for a read-only service and
 # a read/write splitting service.
+#
+# The GRANTs needed by the service user can be found here:
+# https://mariadb.com/kb/en/mariadb-maxscale-6-authentication-modules/#required-grants
 #
 
 # ReadConnRoute documentation:
@@ -48,8 +56,8 @@ monitor_interval=2000
 type=service
 router=readconnroute
 servers=server1
-user=myuser
-password=mypwd
+user=service_user
+password=service_pw
 router_options=slave
 
 # ReadWriteSplit documentation:
@@ -59,8 +67,8 @@ router_options=slave
 type=service
 router=readwritesplit
 servers=server1
-user=myuser
-password=mypwd
+user=service_user
+password=service_pw
 
 # Listener definitions for the services
 #
