@@ -17,7 +17,24 @@
             :rows="rows"
             :hasInsertOpt="false"
             showGroupBy
-        />
+        >
+            <template v-slot:right-table-tools-prepend>
+                <mxs-tooltip-btn
+                    btnClass="reload-schemas mr-2"
+                    x-small
+                    outlined
+                    depressed
+                    :disabled="isFetching"
+                    color="primary"
+                    @click="fetchAll"
+                >
+                    <template v-slot:btn-content>
+                        <v-icon size="14">$vuetify.icons.mxs_reload </v-icon>
+                    </template>
+                    {{ $mxs_t('reload') }}
+                </mxs-tooltip-btn>
+            </template>
+        </result-data-table>
         <div v-else>
             <div v-for="(v, key) in specData" :key="key">
                 <b>{{ key }}:</b>
@@ -213,14 +230,19 @@ export default {
             this.unwatch_activeSpec = this.$watch(
                 'activeSpec',
                 async v => {
-                    if (this.specQueryMap[v] && !this.analyzedData[v]) {
-                        const result = await this.query(this.specQueryMap[v])
-                        this.$set(this.analyzedData, v, result)
-                        this.isFetching = false
-                    }
+                    if (!this.analyzedData[v]) await this.fetch(v)
                 },
                 { immediate: true }
             )
+        },
+        async fetch(spec) {
+            const sql = this.specQueryMap[spec]
+            if (sql) {
+                this.isFetching = true
+                const result = await this.query(sql)
+                this.$set(this.analyzedData, spec, result)
+            }
+            this.isFetching = false
         },
         async query(sql) {
             const { getErrorsArr } = this.$helpers
@@ -233,6 +255,9 @@ export default {
             )
             if (e) this.SET_SNACK_BAR_MESSAGE({ text: getErrorsArr(e), type: 'error' })
             return this.$typy(res, 'data.data.attributes.results[0]').safeObjectOrEmpty
+        },
+        async fetchAll() {
+            for (const spec of Object.values(this.specs)) await this.fetch(spec)
         },
     },
 }

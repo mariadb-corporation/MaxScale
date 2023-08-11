@@ -86,10 +86,10 @@ export default {
                     )
                 case TBL:
                     return this.$helpers.lodash.pick(this.INSIGHT_SPECS, [
-                        'DDL',
                         'COLUMNS',
                         'INDEXES',
                         'TRIGGERS',
+                        'DDL',
                     ])
                 case VIEW:
                 case TRIGGER:
