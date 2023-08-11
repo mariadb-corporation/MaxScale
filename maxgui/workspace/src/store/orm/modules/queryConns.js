@@ -220,11 +220,13 @@ export default {
                 const activeQueryTabIds = QueryTab.getters('queryTabsOfActiveWke').map(t => t.id)
 
                 if (activeQueryTabIds.length) {
+                    const schema = $helpers.quotingIdentifier(body.db)
                     await dispatch('cloneQueryEditorConnToQueryTabs', {
                         queryTabIds: activeQueryTabIds,
                         queryEditorConn,
+                        schema,
                     })
-                    if (body.db) await dispatch('useDb', body.db)
+                    if (schema) await dispatch('useDb', schema)
                 }
 
                 commit(
@@ -243,20 +245,28 @@ export default {
          * @param {Array} param.queryTabIds - queryTabIds
          * @param {Object} param.queryEditorConn - connection bound to a QueryEditor
          */
-        async cloneQueryEditorConnToQueryTabs({ dispatch }, { queryTabIds, queryEditorConn }) {
+        async cloneQueryEditorConnToQueryTabs(
+            { dispatch },
+            { queryTabIds, queryEditorConn, schema }
+        ) {
             // clone the connection and bind it to all queryTabs
             await Promise.all(
                 queryTabIds.map(id =>
-                    dispatch('openQueryTabConn', { queryEditorConn, query_tab_id: id })
+                    dispatch('openQueryTabConn', { queryEditorConn, query_tab_id: id, schema })
                 )
             )
         },
         /**
          * Open a query tab connection
-         * @param {Object} param.queryEditorConn - QueryEditor connection
-         * @param {String} param.query_tab_id - id of the queryTab that binds this connection
+         * @param {object} param
+         * @param {object} param.queryEditorConn - QueryEditor connection
+         * @param {string} param.query_tab_id - id of the queryTab that binds this connection
+         * @param {string} [param.schema] - schema identifier name
          */
-        async openQueryTabConn({ rootState }, { queryEditorConn, query_tab_id }) {
+        async openQueryTabConn(
+            { rootState, dispatch },
+            { queryEditorConn, query_tab_id, schema = '' }
+        ) {
             const config = Worksheet.getters('activeRequestConfig')
             const {
                 QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
@@ -266,7 +276,7 @@ export default {
                 connection.clone({ id: queryEditorConn.id, config })
             )
             if (e) this.vue.$logger.error(e)
-            else if (res.status === 201)
+            else if (res.status === 201) {
                 QueryConn.insert({
                     data: {
                         id: res.data.data.id,
@@ -277,6 +287,9 @@ export default {
                         meta: queryEditorConn.meta,
                     },
                 })
+                console.log(`schema`, schema)
+                if (schema) await dispatch('useDb', schema)
+            }
         },
         /**
          * @param {String} param.connection_string - connection_string

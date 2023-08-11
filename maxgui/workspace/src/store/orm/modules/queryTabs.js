@@ -73,10 +73,11 @@ export default {
         },
         /**
          * Initialize a blank QueryTab and its mandatory relational entities
-         * @param {String} param.query_editor_id  - id of the QueryEditor has QueryTab being inserted
-         * @param {String} [param.query_tab_id]
-         * @param {String} [param.name]
-         * @param {String} [param.type] - QUERY_TAB_TYPES values. default is SQL_EDITOR
+         * @param {object} param
+         * @param {string} param.query_editor_id  - id of the QueryEditor has QueryTab being inserted
+         * @param {string} [param.query_tab_id]
+         * @param {string} [param.name]
+         * @param {string} [param.type] - QUERY_TAB_TYPES values. default is SQL_EDITOR
          */
         insertQueryTab(
             { rootState },
@@ -136,7 +137,11 @@ export default {
             const queryEditorConn = QueryConn.getters('activeQueryEditorConn')
             // Clone the QueryEditor conn and bind it to the new queryTab
             if (queryEditorConn.id)
-                await QueryConn.dispatch('openQueryTabConn', { queryEditorConn, query_tab_id })
+                await QueryConn.dispatch('openQueryTabConn', {
+                    queryEditorConn,
+                    query_tab_id,
+                    schema: param.schema,
+                })
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const config = Worksheet.getters('activeRequestConfig')

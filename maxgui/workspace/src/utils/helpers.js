@@ -29,7 +29,7 @@ export function formatSQL(v) {
  * @return {String} Return quoted identifier name. e.g.  `db_name`
  */
 export function quotingIdentifier(identifier) {
-    if (!t(identifier).isString) return identifier
+    if (!t(identifier).isString || !identifier) return identifier
     return `\`${identifier.replace(/`/g, '``')}\``
 }
 

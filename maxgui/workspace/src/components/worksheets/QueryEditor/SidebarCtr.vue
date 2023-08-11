@@ -92,6 +92,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import WkeSidebar from '@wkeComps/WkeSidebar.vue'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 export default {
     name: 'sidebar-ctr',
@@ -180,12 +181,16 @@ export default {
         async handleLoadChildren(node) {
             await SchemaSidebar.dispatch('loadChildNodes', node)
         },
+        getSchemaIdentifier(node) {
+            return this.$helpers.quotingIdentifier(schemaNodeHelper.getSchemaName(node))
+        },
         async onAlterTable(node) {
             const config = Worksheet.getters('activeRequestConfig')
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,
                 type: this.QUERY_TAB_TYPES.ALTER_EDITOR,
+                schema: this.getSchemaIdentifier(node),
             })
             await this.queryDdlEditorSuppData({ connId: this.activeQueryTabConnId, config })
             await AlterEditor.dispatch('queryTblCreationInfo', node)
@@ -225,6 +230,7 @@ export default {
                 query_editor_id: this.queryEditorId,
                 name: `Analyze ${node.name}`,
                 type: this.QUERY_TAB_TYPES.INSIGHT_VIEWER,
+                schema: this.getSchemaIdentifier(node),
             })
             InsightViewer.update({
                 where: this.activeQueryTabId,

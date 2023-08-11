@@ -8,7 +8,9 @@
                 small
                 class="float-left add-query-tab-btn"
                 icon
-                @click="add({ query_editor_id: queryEditorId })"
+                @click="
+                    add({ query_editor_id: queryEditorId, schema: activeQueryTabConn.active_db })
+                "
             >
                 <v-icon size="18" color="blue-azure">mdi-plus</v-icon>
             </v-btn>
