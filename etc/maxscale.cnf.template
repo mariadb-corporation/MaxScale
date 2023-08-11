@@ -1,10 +1,10 @@
 # MaxScale documentation:
-# https://mariadb.com/kb/en/mariadb-maxscale-6/
+# https://mariadb.com/kb/en/mariadb-maxscale-2208/
 
 # Global parameters
 #
 # Complete list of configuration options:
-# https://mariadb.com/kb/en/mariadb-maxscale-6-mariadb-maxscale-configuration-guide/
+# https://mariadb.com/kb/en/mariadb-maxscale-2208-mariadb-maxscale-configuration-guide/
 
 [maxscale]
 threads=auto
@@ -25,12 +25,11 @@ protocol=MariaDBBackend
 #
 # This will keep MaxScale aware of the state of the servers.
 # MariaDB Monitor documentation:
-# https://mariadb.com/kb/en/maxscale-6-monitors/
+# https://mariadb.com/kb/en/mariadb-maxscale-2208-monitors/
 #
-# Create the monitor user with:
-#
-#  CREATE USER 'monitor_user'@'%' IDENTIFIED BY 'monitor_pw';
-#  GRANT REPLICATION CLIENT, FILE, SUPER, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'monitor_user'@'%';
+# The GRANTs needed by the monitor user depend on the actual monitor.
+# The GRANTs required by the MariaDB Monitor can be found here:
+# https://mariadb.com/kb/en/mariadb-maxscale-2208-mariadb-monitor/#required-grants
 #
 
 [MariaDB-Monitor]
@@ -46,21 +45,12 @@ monitor_interval=2s
 # Service Definition for a read-only service and
 # a read/write splitting service.
 #
-# Create the service user with:
-#
-#  CREATE USER 'service_user'@'%' IDENTIFIED BY 'service_pw';
-#  GRANT SELECT ON mysql.user TO 'service_user'@'%';
-#  GRANT SELECT ON mysql.db TO 'service_user'@'%';
-#  GRANT SELECT ON mysql.tables_priv TO 'service_user'@'%';
-#  GRANT SELECT ON mysql.columns_priv TO 'service_user'@'%';
-#  GRANT SELECT ON mysql.procs_priv TO 'service_user'@'%';
-#  GRANT SELECT ON mysql.proxies_priv TO 'service_user'@'%';
-#  GRANT SELECT ON mysql.roles_mapping TO 'service_user'@'%';
-#  GRANT SHOW DATABASES ON *.* TO 'service_user'@'%';
+# The GRANTs needed by the service user can be found here:
+# https://mariadb.com/kb/en/mariadb-maxscale-2208-authentication-modules/#required-grants
 #
 
 # ReadConnRoute documentation:
-# https://mariadb.com/kb/en/mariadb-maxscale-6-readconnroute/
+# https://mariadb.com/kb/en/mariadb-maxscale-2208-readconnroute/
 
 [Read-Only-Service]
 type=service
@@ -71,7 +61,7 @@ password=service_pw
 router_options=slave
 
 # ReadWriteSplit documentation:
-# https://mariadb.com/kb/en/mariadb-maxscale-6-readwritesplit/
+# https://mariadb.com/kb/en/mariadb-maxscale-2208-readwritesplit/
 
 [Read-Write-Service]
 type=service
