@@ -1,10 +1,10 @@
 # MaxScale documentation:
-# https://mariadb.com/kb/en/mariadb-maxscale-23-02/
+# https://mariadb.com/kb/en/mariadb-maxscale-23-08/
 
 # Global parameters
 #
 # Complete list of configuration options:
-# https://mariadb.com/kb/en/mariadb-maxscale-2302-mariadb-maxscale-configuration-guide/
+# https://mariadb.com/kb/en/mariadb-maxscale-2308-mariadb-maxscale-configuration-guide/
 
 [maxscale]
 threads=auto
@@ -25,11 +25,11 @@ protocol=MariaDBBackend
 #
 # This will keep MaxScale aware of the state of the servers.
 # MariaDB Monitor documentation:
-# https://mariadb.com/kb/en/mariadb-maxscale-2302-monitors/
+# https://mariadb.com/kb/en/mariadb-maxscale-2308-monitors/
 #
 # The GRANTs needed by the monitor user depend on the actual monitor.
 # The GRANTs required by the MariaDB Monitor can be found here:
-# https://mariadb.com/kb/en/mariadb-maxscale-2302-mariadb-monitor/#required-grants
+# https://mariadb.com/kb/en/mariadb-maxscale-2308-mariadb-monitor/#required-grants
 #
 
 [MariaDB-Monitor]
@@ -46,11 +46,11 @@ monitor_interval=2s
 # a read/write splitting service.
 #
 # The GRANTs needed by the service user can be found here:
-# https://mariadb.com/kb/en/mariadb-maxscale-2302-authentication-modules/#required-grants
+# https://mariadb.com/kb/en/mariadb-maxscale-2308-authentication-modules/#required-grants
 #
 
 # ReadConnRoute documentation:
-# https://mariadb.com/kb/en/mariadb-maxscale-2302-readconnroute/
+# https://mariadb.com/kb/en/mariadb-maxscale-2308-readconnroute/
 
 [Read-Only-Service]
 type=service
@@ -61,7 +61,7 @@ password=service_pw
 router_options=slave
 
 # ReadWriteSplit documentation:
-# https://mariadb.com/kb/en/mariadb-maxscale-2302-readwritesplit/
+# https://mariadb.com/kb/en/mariadb-maxscale-2308-readwritesplit/
 
 [Read-Write-Service]
 type=service
