@@ -164,9 +164,13 @@ export default {
                 }
             },
         },
+        providedList() {
+            return this.$helpers.lodash.cloneDeep(this.items.filter(item => !item.hidden))
+        },
         itemsList() {
-            let list = this.$helpers.lodash.cloneDeep(this.items)
-            return list.filter(obj => this.$helpers.ciStrIncludes(`${obj.text}`, this.filterTxt))
+            return this.providedList.filter(obj =>
+                this.$helpers.ciStrIncludes(`${obj.text}`, this.filterTxt)
+            )
         },
         isAllSelected() {
             return this.selectedItems.length === this.items.length

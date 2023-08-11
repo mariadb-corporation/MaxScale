@@ -1,6 +1,8 @@
 <template>
     <div class="fill-height">
+        <v-progress-linear v-if="isInitializing" indeterminate />
         <mxs-split-pane
+            v-else
             v-model="sidebarPct"
             class="query-view__content"
             :boundary="ctrDim.width"
@@ -81,6 +83,7 @@ export default {
     data() {
         return {
             queryTabCtrHeight: 30,
+            isInitializing: true,
         }
     },
     computed: {
@@ -168,7 +171,10 @@ export default {
             this.unwatch_activeQueryTabConn = this.$watch(
                 'activeQueryTabConn.id',
                 async (v, oV) => {
-                    if (v !== oV) await QueryEditor.dispatch('handleInitialFetch')
+                    if (v !== oV) {
+                        await QueryEditor.dispatch('handleInitialFetch')
+                        this.isInitializing = false
+                    } else if (!v) this.isInitializing = false
                 },
                 { deep: true, immediate: true }
             )

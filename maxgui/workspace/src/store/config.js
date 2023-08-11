@@ -393,7 +393,7 @@ export const COL_ORDER_BY = Object.freeze({
  */
 export const UNPARSED_TBL_PLACEHOLDER = 'UNPARSED_TBL__'
 
-export const SCHEMA_INSIGHT_SPECS = Object.freeze({
+export const INSIGHT_SPECS = Object.freeze({
     DDL: 'DDL',
     TABLES: NODE_GROUP_TYPES.TBL_G,
     VIEWS: NODE_GROUP_TYPES.VIEW_G,
@@ -402,11 +402,4 @@ export const SCHEMA_INSIGHT_SPECS = Object.freeze({
     TRIGGERS: NODE_GROUP_TYPES.TRIGGER_G,
     SP: NODE_GROUP_TYPES.SP_G,
     FN: NODE_GROUP_TYPES.FN_G,
-})
-
-export const TBL_INSIGHT_SPECS = Object.freeze({
-    DDL: 'DDL',
-    COLUMNS: NODE_GROUP_TYPES.COL_G,
-    INDEXES: NODE_GROUP_TYPES.IDX_G,
-    TRIGGERS: NODE_GROUP_TYPES.TRIGGER_G,
 })

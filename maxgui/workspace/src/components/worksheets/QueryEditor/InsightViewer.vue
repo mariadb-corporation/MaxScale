@@ -1,11 +1,27 @@
 <template>
     <v-card class="insight-viewer fill-height" tile>
-        <v-tabs v-model="activeSpec" :height="24" class="v-tabs--mariadb">
+        <v-tabs v-model="activeSpec" :height="tabNavHeight" class="v-tabs--mariadb">
             <v-tab v-for="spec of specs" :key="spec" color="primary" :href="`#${spec}`">
                 {{ spec }}
             </v-tab>
         </v-tabs>
-        <!-- TODO: Add tab spec item -->
+        <div
+            :style="{ height: `${tabItemDim.height}px` }"
+            class="pt-2 px-5 mxs-field-text-size mxs-color-helper text-small-text"
+        >
+            <keep-alive>
+                <insight-viewer-tab-item
+                    v-if="activeConn.id && activeNode.id"
+                    :dim="tabItemDim"
+                    :conn="activeConn"
+                    :node="activeNode"
+                    :activeSpec="activeSpec"
+                    :specs="specs"
+                    :nodeType="nodeType"
+                    :isSchemaNode="isSchemaNode"
+                />
+            </keep-alive>
+        </div>
     </v-card>
 </template>
 
@@ -24,19 +40,20 @@
  */
 import { mapState } from 'vuex'
 import InsightViewer from '@wsModels/InsightViewer'
-
+import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
+import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem'
 
 export default {
     name: 'insight-viewer',
+    components: { InsightViewerTabItem },
     props: {
         dim: { type: Object, required: true },
     },
     computed: {
         ...mapState({
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            SCHEMA_INSIGHT_SPECS: state => state.mxsWorkspace.config.SCHEMA_INSIGHT_SPECS,
-            TBL_INSIGHT_SPECS: state => state.mxsWorkspace.config.TBL_INSIGHT_SPECS,
+            INSIGHT_SPECS: state => state.mxsWorkspace.config.INSIGHT_SPECS,
         }),
         activeSpec: {
             get() {
@@ -51,15 +68,33 @@ export default {
                 })
             },
         },
+        activeConn() {
+            return QueryConn.getters('activeQueryTabConn')
+        },
         activeNode() {
             return InsightViewer.getters('activeNode')
         },
         nodeType() {
             return this.$typy(this.activeNode, 'type').safeString
         },
+        isSchemaNode() {
+            return this.nodeType === this.NODE_TYPES.SCHEMA
+        },
         specs() {
-            if (this.nodeType === this.NODE_TYPES.SCHEMA) return this.SCHEMA_INSIGHT_SPECS
-            return this.TBL_INSIGHT_SPECS
+            if (this.isSchemaNode) return this.INSIGHT_SPECS
+            return this.$helpers.lodash.pick(this.INSIGHT_SPECS, [
+                'DDL',
+                'COLUMNS',
+                'INDEXES',
+                'TRIGGERS',
+            ])
+        },
+        tabNavHeight() {
+            return 24
+        },
+        tabItemDim() {
+            // minus pt-2 px-5 padding
+            return { width: this.dim.width - 40, height: this.dim.height - this.tabNavHeight - 16 }
         },
     },
 }

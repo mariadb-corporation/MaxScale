@@ -171,6 +171,7 @@ export default {
         menuOpts: { type: Array, default: () => [] },
         showEditBtn: { type: Boolean, default: false },
         defExportFileName: { type: String, default: 'MaxScale Query Results' },
+        hasInsertOpt: { type: Boolean, default: true },
     },
     data() {
         return {
@@ -257,16 +258,13 @@ export default {
             return this.genTxtOpts(INSERT)
         },
         baseOpts() {
-            return [
-                {
+            let opts = [{ text: this.$mxs_t('copyToClipboard'), children: this.clipboardOpts }]
+            if (this.hasInsertOpt)
+                opts.unshift({
                     text: this.$mxs_t('placeToEditor'),
                     children: this.insertOpts,
-                },
-                {
-                    text: this.$mxs_t('copyToClipboard'),
-                    children: this.clipboardOpts,
-                },
-            ]
+                })
+            return opts
         },
         menuItems() {
             if (this.menuOpts.length) {
