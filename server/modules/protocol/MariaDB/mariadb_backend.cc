@@ -2711,6 +2711,8 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
                 deliver_pt_reply(mysql_create_custom_error(
                     0, 0, ER_ACCESS_DENIED_ERROR, "Access denied."));
             }
+
+            do_handle_error(m_dcb, "Authentication plugin error.", mxs::ErrorType::PERMANENT);
         }
     }
 
