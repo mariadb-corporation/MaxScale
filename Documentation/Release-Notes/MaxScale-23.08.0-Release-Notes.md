@@ -136,8 +136,12 @@ Numerous additions have been added and improvements made to MaxGUI.
 The most notable ones are listed here:
 
 * [MXS-3735](https://jira.mariadb.org/browse/MXS-3735) Add ERD modeler to the
-workspace. Instructions on using it can be found [here](../Tutorials/Using-MaxGUI-Tutorial.md#create-an-erd)
+workspace. Instructions on using it can be found [here](../Tutorials/Using-MaxGUI-Tutorial.md#create-an-erd).
 
+* [MXS-3991](https://jira.mariadb.org/browse/MXS-3991) Show schema objects
+insights. Instructions on using it can be found [here](../Tutorials/Using-MaxGUI-Tutorial.md#show-object-creation-statement-and-insights-info).
+
+* [MXS-4364](https://jira.mariadb.org/browse/MXS-4364) Auto choose active schema for new query tab.
 
 ## Bug fixes
 

@@ -238,6 +238,12 @@ There are two ways to quickly insert an object to the editor:
 - Right-click on the object to show the context menu, then mouse
   hover the `Place to Editor` option and select the desired insert option.
 
+##### Show object creation statement and insights info
+
+To view the statement that creates the given object in the [Schemas objects sidebar](#schemas-objects-sidebar), right-clicking on schema or table node and
+select the `View Insights` option. For other objects such as view, stored
+procedure, function and trigger, select the `Show Create` option.
+
 #### Editor
 
 The editor is powered by [Monaco editor](https://microsoft.github.io/monaco-editor/), therefore, its features are similar to those of
