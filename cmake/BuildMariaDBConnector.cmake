@@ -9,7 +9,7 @@ set(MARIADB_CONNECTOR_C_REPO "https://github.com/MariaDB/mariadb-connector-c.git
   CACHE STRING "MariaDB Connector-C Git repository")
 
 # Connector-C tag to use
-set(MARIADB_CONNECTOR_C_TAG "v3.3.5"
+set(MARIADB_CONNECTOR_C_TAG "3.3.6-MS"
   CACHE STRING "MariaDB Connector-C Git tag")
 
 ExternalProject_Add(connector-c

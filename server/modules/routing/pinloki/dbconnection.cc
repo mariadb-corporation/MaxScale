@@ -72,12 +72,6 @@ void Connection::start_replication(unsigned int server_id, bool semi_sync, const
         query(sql);
     }
 
-    if (semi_sync)
-    {
-        // TODO: Configure the connector to expect semi-sync once an option for it is added
-        query("SET @rpl_semi_sync_slave=1");
-    }
-
     if (!(m_rpl = mariadb_rpl_init(m_conn)))
     {   // TODO this should be of a more fatal kind
         MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
@@ -85,6 +79,8 @@ void Connection::start_replication(unsigned int server_id, bool semi_sync, const
                                                  << mysql_error(m_conn));
     }
 
+    const unsigned int using_semisync = semi_sync;
+    mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_SEMI_SYNC, &using_semisync);
     mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_SERVER_ID, server_id);
     mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_START, 4);
     mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_FLAGS, MARIADB_RPL_BINLOG_SEND_ANNOTATE_ROWS);
