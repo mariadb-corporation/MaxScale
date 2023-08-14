@@ -1555,6 +1555,8 @@ void Session::parse_and_set_trx_state(const mxs::Reply& reply)
 
 void Session::tick(int64_t idle)
 {
+    Scope scope(this);
+
     if (auto timeout = service->config()->conn_idle_timeout)
     {
         if (idle > timeout)
