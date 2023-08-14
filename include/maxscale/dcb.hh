@@ -597,7 +597,7 @@ protected:
      */
     virtual bool release_from(MXS_SESSION* session) = 0;
 
-    int log_errors_SSL(int ret);
+    void log_ssl_errors(int ssl_io_error);
 
     struct Encryption
     {
@@ -678,7 +678,6 @@ private:
     void add_event_via_loop(uint32_t ev);
     void add_event(uint32_t ev);
 
-    void        log_ssl_errors(int ssl_io_error);
     std::string get_one_SSL_error(unsigned long ssl_errno);
 };
 

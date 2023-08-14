@@ -700,47 +700,6 @@ void DCB::log_ssl_errors(int ssl_io_error)
     }
 }
 
-/**
- * Log errors from an SSL operation
- *
- * @param dcb       The DCB of the client
- * @param fd        The file descriptor.
- * @param ret       Return code from SSL operation if error is SSL_ERROR_SYSCALL
- * @return          -1 if an error found, 0 if no error found
- */
-int DCB::log_errors_SSL(int ret)
-{
-    std::ostringstream ss;
-    unsigned long ssl_errno = ERR_get_error();
-
-    if (0 == ssl_errno || m_silence_errors)
-    {
-        return 0;
-    }
-
-    if (ret && !ssl_errno)
-    {
-        ss << "network error (" << errno << ", " << mxb_strerror(errno) << ")";
-    }
-    else
-    {
-        ss << get_one_SSL_error(ssl_errno);
-
-        while ((ssl_errno = ERR_get_error()) != 0)
-        {
-            ss << ", " << get_one_SSL_error(ssl_errno);
-        }
-    }
-
-    if (ret || ssl_errno)
-    {
-        MXB_ERROR("SSL operation failed for %s at '%s': %s",
-                  mxs::to_string(m_role), client_remote().c_str(), ss.str().c_str());
-    }
-
-    return -1;
-}
-
 bool DCB::writeq_append(GWBUF&& data)
 {
     // polling_worker() can not be used here, the last backend write takes place
@@ -1867,54 +1826,33 @@ int ClientDCB::ssl_handshake()
 
     set_SSL_mode_bits(m_encryption.handle);
     int ssl_rval = SSL_accept(m_encryption.handle);
-
-    switch (SSL_get_error(m_encryption.handle, ssl_rval))
+    if (ssl_rval > 0)
     {
-    case SSL_ERROR_NONE:
-        MXB_DEBUG("SSL_accept done for %s", m_remote.c_str());
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
         return verify_peer_host() ? 1 : -1;
-
-    case SSL_ERROR_WANT_READ:
-        MXB_DEBUG("SSL_accept ongoing want read for %s", m_remote.c_str());
-        return 0;
-
-    case SSL_ERROR_WANT_WRITE:
-        MXB_DEBUG("SSL_accept ongoing want write for %s", m_remote.c_str());
-        m_encryption.read_want_write = true;
-        return 0;
-
-    case SSL_ERROR_ZERO_RETURN:
-        MXB_DEBUG("SSL error, shut down cleanly during SSL accept %s", m_remote.c_str());
-        log_errors_SSL(0);
-        trigger_hangup_event();
-        return 0;
-
-    case SSL_ERROR_SYSCALL:
-        MXB_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s", m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
+    }
+    else
+    {
+        auto io_error = SSL_get_error(m_encryption.handle, ssl_rval);
+        switch (io_error)
         {
+        case SSL_ERROR_WANT_READ:
+            return 0;
+
+        case SSL_ERROR_WANT_WRITE:
+            m_encryption.read_want_write = true;
+            return 0;
+
+        case SSL_ERROR_ZERO_RETURN:
+            trigger_hangup_event();
+            return 0;
+
+        default:
+            log_ssl_errors(io_error);
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
             trigger_hangup_event();
             return -1;
-        }
-        else
-        {
-            return 0;
-        }
-
-    default:
-        MXB_DEBUG("SSL connection shut down with error during SSL accept %s", m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
-        {
-            m_encryption.state = SSLState::HANDSHAKE_FAILED;
-            trigger_hangup_event();
-            return -1;
-        }
-        else
-        {
-            return 0;
         }
     }
 }
@@ -2089,62 +2027,38 @@ int BackendDCB::ssl_handshake()
     m_encryption.state = SSLState::HANDSHAKE_REQUIRED;
     ssl_rval = SSL_connect(m_encryption.handle);
 
-    switch (SSL_get_error(m_encryption.handle, ssl_rval))
+    if (ssl_rval > 0)
     {
-    case SSL_ERROR_NONE:
-        MXB_DEBUG("SSL_connect done for %s", m_remote.c_str());
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
         return_code = verify_peer_host() ? 1 : -1;
-        break;
-
-    case SSL_ERROR_WANT_READ:
-        MXB_DEBUG("SSL_connect ongoing want read for %s", m_remote.c_str());
-        return_code = 0;
-        break;
-
-    case SSL_ERROR_WANT_WRITE:
-        MXB_DEBUG("SSL_connect ongoing want write for %s", m_remote.c_str());
-        m_encryption.read_want_write = true;
-        return_code = 0;
-        break;
-
-    case SSL_ERROR_ZERO_RETURN:
-        MXB_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote.c_str());
-        if (log_errors_SSL(0) < 0)
+    }
+    else
+    {
+        auto io_error = SSL_get_error(m_encryption.handle, ssl_rval);
+        switch (io_error)
         {
+        case SSL_ERROR_WANT_READ:
+            return_code = 0;
+            break;
+
+        case SSL_ERROR_WANT_WRITE:
+            m_encryption.read_want_write = true;
+            return_code = 0;
+            break;
+
+        case SSL_ERROR_ZERO_RETURN:
             trigger_hangup_event();
-        }
-        return_code = 0;
-        break;
+            return_code = 0;
+            break;
 
-    case SSL_ERROR_SYSCALL:
-        MXB_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
-        {
+        default:
+            log_ssl_errors(io_error);
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
             trigger_hangup_event();
             return_code = -1;
+            break;
         }
-        else
-        {
-            return_code = 0;
-        }
-        break;
-
-    default:
-        MXB_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
-        {
-            m_encryption.state = SSLState::HANDSHAKE_FAILED;
-            trigger_hangup_event();
-            return -1;
-        }
-        else
-        {
-            return 0;
-        }
-        break;
     }
     return return_code;
 }
