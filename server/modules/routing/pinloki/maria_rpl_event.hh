@@ -25,9 +25,6 @@
 #include <mysql.h>
 #include <mariadb_rpl.h>
 
-struct st_mariadb_rpl_event;
-struct st_mariadb_rpl;
-
 namespace maxsql
 {
 
@@ -44,7 +41,7 @@ class MariaRplEvent
 {
 public:
     MariaRplEvent() = default;      // => is_empty() == true
-    MariaRplEvent(st_mariadb_rpl_event* pEvent, st_mariadb_rpl* handle);
+    MariaRplEvent(MARIADB_RPL_EVENT* pEvent, MARIADB_RPL* handle);
     MariaRplEvent(MariaRplEvent&& rhs);
     MariaRplEvent& operator=(MariaRplEvent&& rhs);
 
@@ -52,10 +49,11 @@ public:
     {
         return m_pRpl_handle == nullptr;
     }
-    const st_mariadb_rpl_event& event() const;
-    const char*                 raw_data() const;
-    size_t                      raw_data_size() const;
-    const st_mariadb_rpl& rpl_hndl() const
+    const MARIADB_RPL_EVENT& event() const;
+    const char*              raw_data() const;
+    size_t                   raw_data_size() const;
+
+    const MARIADB_RPL& rpl_hndl() const
     {
         return *m_pRpl_handle;
     }
@@ -63,7 +61,7 @@ public:
     ~MariaRplEvent();
 private:
     size_t raw_data_offset() const;
-    st_mariadb_rpl_event* m_pEvent = nullptr;
-    st_mariadb_rpl*       m_pRpl_handle = nullptr;
+    MARIADB_RPL_EVENT* m_pEvent = nullptr;
+    MARIADB_RPL*       m_pRpl_handle = nullptr;
 };
 }

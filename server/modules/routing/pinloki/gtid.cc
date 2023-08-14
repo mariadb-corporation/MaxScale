@@ -30,7 +30,7 @@
 namespace maxsql
 {
 
-Gtid::Gtid(st_mariadb_gtid* mgtid)
+Gtid::Gtid(MARIADB_GTID* mgtid)
     : m_domain_id(mgtid->domain_id)
     , m_server_id(mgtid->server_id)
     , m_sequence_nr(mgtid->sequence_nr)
