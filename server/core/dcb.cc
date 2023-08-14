@@ -641,6 +641,11 @@ std::string DCB::get_one_SSL_error(unsigned long ssl_errno)
 
 void DCB::log_ssl_errors(int ssl_io_error)
 {
+    if (m_silence_errors)
+    {
+        return;
+    }
+
     string errmsg;
     bool first_error = true;
 
@@ -915,7 +920,8 @@ void DCB::socket_write_SSL()
         else
         {
             keep_writing = false;
-            switch (SSL_get_error(m_encryption.handle, res))
+            auto io_error = SSL_get_error(m_encryption.handle, res);
+            switch (io_error)
             {
             case SSL_ERROR_ZERO_RETURN:
                 // SSL-connection closed.
@@ -937,10 +943,8 @@ void DCB::socket_write_SSL()
 
             default:
                 // Report errors and shutdown the connection.
-                if (log_errors_SSL(res) < 0)
-                {
-                    trigger_hangup_event();
-                }
+                log_ssl_errors(io_error);
+                trigger_hangup_event();
                 break;
             }
         }
