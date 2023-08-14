@@ -2569,7 +2569,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                 // SSL-connection starts by sending a cleartext SSLRequest-packet,
                 // then initiating SSL-negotiation.
                 GWBUF ssl_req = gw_generate_auth_response(true, false, m_dcb->service()->capabilities());
-                if (m_dcb->writeq_append(std::move(ssl_req)) && m_dcb->ssl_handshake() >= 0)
+                if (m_dcb->writeq_append(std::move(ssl_req)) && m_dcb->ssl_start_connect() >= 0)
                 {
                     m_hs_state = HandShakeState::SSL_NEG;
                 }

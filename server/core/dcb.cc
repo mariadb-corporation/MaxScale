@@ -1805,18 +1805,7 @@ mxs::ClientConnection* ClientDCB::protocol() const
     return m_protocol.get();
 }
 
-/**
- * Accept a SSL connection and do the SSL authentication handshake.
- * This function accepts a client connection to a DCB. It assumes that the SSL
- * structure has the underlying method of communication set and this method is ready
- * for usage. It then proceeds with the SSL handshake and stops only if an error
- * occurs or the client has not yet written enough data to complete the handshake.
- * @param dcb DCB which should accept the SSL connection
- * @return 1 if the handshake was successfully completed, 0 if the handshake is
- * still ongoing and another call to dcb_SSL_accept should be made or -1 if an
- * error occurred during the handshake and the connection should be terminated.
- */
-int ClientDCB::ssl_handshake()
+int ClientDCB::ssl_start_accept()
 {
     if (!m_session->listener_data()->m_ssl.valid()
         || (!m_encryption.handle && !create_SSL(m_session->listener_data()->m_ssl)))
@@ -1825,36 +1814,13 @@ int ClientDCB::ssl_handshake()
     }
 
     set_SSL_mode_bits(m_encryption.handle);
-    int ssl_rval = SSL_accept(m_encryption.handle);
-    if (ssl_rval > 0)
-    {
-        m_encryption.state = SSLState::ESTABLISHED;
-        m_encryption.read_want_write = false;
-        return verify_peer_host() ? 1 : -1;
-    }
-    else
-    {
-        auto io_error = SSL_get_error(m_encryption.handle, ssl_rval);
-        switch (io_error)
-        {
-        case SSL_ERROR_WANT_READ:
-            return 0;
+    m_encryption.state = SSLState::HANDSHAKE_REQUIRED;
+    return ssl_handshake();
+}
 
-        case SSL_ERROR_WANT_WRITE:
-            m_encryption.read_want_write = true;
-            return 0;
-
-        case SSL_ERROR_ZERO_RETURN:
-            trigger_hangup_event();
-            return 0;
-
-        default:
-            log_ssl_errors(io_error);
-            m_encryption.state = SSLState::HANDSHAKE_FAILED;
-            trigger_hangup_event();
-            return -1;
-        }
-    }
+int ClientDCB::ssl_handshake()
+{
+    return ssl_handshake_check_rval(SSL_accept(m_encryption.handle));
 }
 
 int ClientDCB::port() const
@@ -2002,21 +1968,8 @@ mxs::BackendConnection* BackendDCB::protocol() const
     return m_protocol.get();
 }
 
-/**
- * Initiate an SSL client connection to a server
- *
- * This functions starts an SSL client connection to a server which is expecting
- * an SSL handshake. The DCB should already have a TCP connection to the server and
- * this connection should be in a state that expects an SSL handshake.
- * THIS CODE IS UNUSED AND UNTESTED as at 4 Jan 2016
- * @param dcb DCB to connect
- * @return 1 on success, -1 on error and 0 if the SSL handshake is still ongoing
- */
-int BackendDCB::ssl_handshake()
+int BackendDCB::ssl_start_connect()
 {
-    int ssl_rval;
-    int return_code;
-
     if (!m_ssl || (!m_encryption.handle && !create_SSL(*m_ssl)))
     {
         mxb_assert(m_ssl);
@@ -2025,8 +1978,17 @@ int BackendDCB::ssl_handshake()
 
     set_SSL_mode_bits(m_encryption.handle);
     m_encryption.state = SSLState::HANDSHAKE_REQUIRED;
-    ssl_rval = SSL_connect(m_encryption.handle);
+    return ssl_handshake();
+}
 
+int BackendDCB::ssl_handshake()
+{
+    return ssl_handshake_check_rval(SSL_connect(m_encryption.handle));
+}
+
+int DCB::ssl_handshake_check_rval(int ssl_rval)
+{
+    int return_code = -1;
     if (ssl_rval > 0)
     {
         m_encryption.state = SSLState::ESTABLISHED;
@@ -2056,7 +2018,6 @@ int BackendDCB::ssl_handshake()
             log_ssl_errors(io_error);
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
             trigger_hangup_event();
-            return_code = -1;
             break;
         }
     }

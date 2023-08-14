@@ -465,33 +465,22 @@ int MariaDBClientConnection::ssl_authenticate_client()
     /* Now we know SSL is required and client is capable */
     if (m_dcb->ssl_state() != DCB::SSLState::ESTABLISHED)
     {
-        int return_code;
-        /** Do the SSL Handshake */
-        if (m_dcb->ssl_state() == DCB::SSLState::HANDSHAKE_UNKNOWN)
-        {
-            m_dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
-        }
         /**
-         * Note that this will often fail to achieve its result, because further
-         * reading (or possibly writing) of SSL related information is needed.
-         * When that happens, there is a call in poll.c so that an EPOLLIN
-         * event that arrives while the SSL state is SSL_HANDSHAKE_REQUIRED
-         * will trigger DCB::ssl_handshake. This situation does not result in a
-         * negative return code - that indicates a real failure.
+         * This will often not complete because further reading (or possibly writing) of SSL-related
+         * information is needed. DCB::process_events() calls DCB::ssl_handshake() on EPOLLIN-event
+         * while the SSL state is SSL_HANDSHAKE_REQUIRED.
          */
-        return_code = dcb->ssl_handshake();
+        int return_code = dcb->ssl_start_accept();
         if (return_code < 0)
         {
-            MXB_INFO("Client from '%s' failed to connect to service '%s' with SSL.",
-                     remote, service);
+            MXB_INFO("Client from '%s' failed to connect to service '%s' with SSL.", remote, service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
         else if (mxb_log_should_log(LOG_INFO))
         {
             if (return_code == 1)
             {
-                MXB_INFO("Client from '%s' connected to service '%s' with SSL.",
-                         remote, service);
+                MXB_INFO("Client from '%s' connected to service '%s' with SSL.", remote, service);
             }
             else
             {

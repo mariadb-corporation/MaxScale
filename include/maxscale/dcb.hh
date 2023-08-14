@@ -586,6 +586,7 @@ protected:
 
     bool create_SSL(const mxs::SSLContext& ssl);
 
+    int  ssl_handshake_check_rval(int ssl_rval);
     bool verify_peer_host();
 
     /**
@@ -596,8 +597,6 @@ protected:
      * @return True, if the DCB was released and can be deleted, false otherwise.
      */
     virtual bool release_from(MXS_SESSION* session) = 0;
-
-    void log_ssl_errors(int ssl_io_error);
 
     struct Encryption
     {
@@ -678,6 +677,7 @@ private:
     void add_event_via_loop(uint32_t ev);
     void add_event(uint32_t ev);
 
+    void        log_ssl_errors(int ssl_io_error);
     std::string get_one_SSL_error(unsigned long ssl_errno);
 };
 
@@ -704,12 +704,13 @@ public:
     mxs::ClientConnection* protocol() const override;
 
     /**
-     * Accept an SSL connection and perform the SSL authentication handshake.
+     * Initialize ssl-data and and start accepting ssl handshake.
      *
      * @return -1 if an error occurred,
      *          0 if the handshaking is still ongoing and another call to ssl_handshake() is needed, and
      *          1 if the handshaking succeeded
      */
+    int ssl_start_accept();
     int ssl_handshake() override;
 
     void shutdown() override;
@@ -812,12 +813,14 @@ public:
     }
 
     /**
-     * Initate an SSL handshake with a server.
+     * Initialize ssl-data and and start sending ssl handshake. The remote end should be in a state that
+     * expects an SSL handshake.
      *
      * @return -1 if an error occurred,
      *          0 if the handshaking is still ongoing and another call to ssl_handshake() is needed, and
      *          1 if the handshaking succeeded
      */
+    int ssl_start_connect();
     int ssl_handshake() override;
 
     void set_connection(std::unique_ptr<mxs::BackendConnection> conn);
