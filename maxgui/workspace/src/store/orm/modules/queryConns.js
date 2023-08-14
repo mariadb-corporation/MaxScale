@@ -287,7 +287,6 @@ export default {
                         meta: queryEditorConn.meta,
                     },
                 })
-                console.log(`schema`, schema)
                 if (schema) await dispatch('useDb', schema)
             }
         },
