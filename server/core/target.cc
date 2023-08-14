@@ -12,6 +12,7 @@
  * Public License.
  */
 
+#include <maxbase/pretty_print.hh>
 #include <maxscale/target.hh>
 #include <maxscale/service.hh>
 #include <maxscale/server.hh>
@@ -286,6 +287,38 @@ void Error::clear()
     m_code = 0;
     m_sql_state.clear();
     m_message.clear();
+}
+
+std::string Reply::describe() const
+{
+    std::ostringstream ss;
+
+    if (is_complete())
+    {
+        if (error())
+        {
+            ss << "Error: " << error().code() << ", " << error().sql_state() << " " << error().message();
+        }
+        else if (is_ok())
+        {
+            ss << "OK: " << num_warnings() << " warnings";
+        }
+        else if (is_resultset())
+        {
+            ss << "Resultset: " << rows_read() << " rows in " << mxb::pretty_size(size());
+        }
+        else
+        {
+            // TODO: Is this really unknown?
+            ss << "Unknown result type";
+        }
+    }
+    else
+    {
+        ss << "Partial reply";
+    }
+
+    return ss.str();
 }
 
 ReplyState Reply::state() const

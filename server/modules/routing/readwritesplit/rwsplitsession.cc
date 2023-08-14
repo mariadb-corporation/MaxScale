@@ -526,7 +526,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (reply.is_complete())
     {
-        MXS_INFO("Reply complete, last reply from %s", backend->name());
+        MXB_INFO("Reply complete from '%s' (%s)", backend->name(), reply.describe().c_str());
         backend->ack_write();
 
         /** Got a complete reply, decrement expected response count */

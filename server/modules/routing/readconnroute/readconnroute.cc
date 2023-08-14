@@ -446,6 +446,12 @@ int RCRSession::routeQuery(GWBUF* queue)
 
 void RCRSession::clientReply(GWBUF* pPacket, const maxscale::ReplyRoute& down, const maxscale::Reply& pReply)
 {
+    if (pReply.is_complete())
+    {
+        const char* who = down.empty() ? "<none>" : down.front()->target()->name();
+        MXB_INFO("Reply complete from '%s': %s", who, pReply.describe().c_str());
+    }
+
     RouterSession::clientReply(pPacket, down, pReply);
     m_query_timer.end_interval();
 }
