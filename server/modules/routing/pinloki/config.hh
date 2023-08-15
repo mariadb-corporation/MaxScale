@@ -30,12 +30,12 @@ namespace pinloki
 
 std::string gen_uuid();
 
-class BinglogIndexUpdater final
+class BinlogIndexUpdater final
 {
 public:
-    BinglogIndexUpdater(const std::string& binlog_dir,
+    BinlogIndexUpdater(const std::string& binlog_dir,
                         const std::string& inventory_file_path);
-    ~BinglogIndexUpdater();
+    ~BinlogIndexUpdater();
     void                     set_is_dirty();
     std::vector<std::string> binlog_file_names();
 
@@ -173,6 +173,6 @@ private:
 
     std::function<bool()> m_cb;
 
-    std::unique_ptr<BinglogIndexUpdater> m_binlog_files;
+    std::unique_ptr<BinlogIndexUpdater> m_binlog_files;
 };
 }
