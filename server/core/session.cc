@@ -1389,6 +1389,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
 
 void Session::tick(int64_t idle)
 {
+    Scope scope(this);
     m_client_conn->tick(std::chrono::seconds(idle));
 
     const auto& svc_config = *service->config();
