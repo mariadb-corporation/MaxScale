@@ -245,13 +245,12 @@ export default {
                 config: this.connData.config,
                 charsetCollationMap: this.charsetCollationMap,
             })
-            this.tmpLookupTables = this.$helpers.lodash.merge(
-                this.tmpLookupTables,
-                parsedTables.reduce((map, parsedTable) => {
+            this.tmpLookupTables = this.$helpers.immutableUpdate(this.tmpLookupTables, {
+                $merge: parsedTables.reduce((map, parsedTable) => {
                     map[parsedTable.id] = parsedTable
                     return map
-                }, {})
-            )
+                }, {}),
+            })
         },
         deleteSelectedKeys(selectedItems) {
             const { immutableUpdate } = this.$helpers
