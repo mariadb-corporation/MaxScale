@@ -285,7 +285,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     // This is a workaround to the fact that the datadir is not created if the default value is used.
     if (mxs_mkdir_all(m_binlog_dir.c_str(), S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP))
     {
-        m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir, inventory_file_path()));
+        m_binlog_files.reset(new BinlogIndexUpdater(m_binlog_dir, inventory_file_path()));
         ok = m_cb();
     }
 
@@ -308,8 +308,6 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&Config::m_purge_poll_timeout, &s_purge_poll_timeout);
     add_native(&Config::m_semi_sync, &s_rpl_semi_sync_slave_enabled);
-    m_binlog_files.reset(new BinglogIndexUpdater(m_binlog_dir,
-                                                 inventory_file_path()));
 }
 
 std::vector<std::string> Config::binlog_file_names() const
@@ -332,7 +330,7 @@ maxsql::GtidList Config::rpl_state() const
     return m_binlog_files->rpl_state();
 }
 
-BinglogIndexUpdater::BinglogIndexUpdater(const std::string& binlog_dir,
+BinlogIndexUpdater::BinlogIndexUpdater(const std::string& binlog_dir,
                                          const std::string& inventory_file_path)
     : m_inotify_fd(inotify_init1(0))
     , m_binlog_dir(binlog_dir)
@@ -354,17 +352,17 @@ BinglogIndexUpdater::BinglogIndexUpdater(const std::string& binlog_dir,
         }
         else
         {
-            m_update_thread = std::thread(&BinglogIndexUpdater::update, this);
+            m_update_thread = std::thread(&BinlogIndexUpdater::update, this);
         }
     }
 }
 
-void BinglogIndexUpdater::set_is_dirty()
+void BinlogIndexUpdater::set_is_dirty()
 {
     m_is_dirty.store(true, std::memory_order_relaxed);
 }
 
-std::vector<std::string> BinglogIndexUpdater::binlog_file_names()
+std::vector<std::string> BinlogIndexUpdater::binlog_file_names()
 {
     std::unique_lock<std::mutex> lock(m_file_names_mutex);
     if (m_is_dirty)
@@ -375,7 +373,7 @@ std::vector<std::string> BinglogIndexUpdater::binlog_file_names()
     return m_file_names;
 }
 
-BinglogIndexUpdater::~BinglogIndexUpdater()
+BinlogIndexUpdater::~BinlogIndexUpdater()
 {
     m_running.store(false, std::memory_order_relaxed);
     if (m_watch != -1)
@@ -385,7 +383,7 @@ BinglogIndexUpdater::~BinglogIndexUpdater()
     }
 }
 
-void BinglogIndexUpdater::set_rpl_state(const maxsql::GtidList& gtids)
+void BinlogIndexUpdater::set_rpl_state(const maxsql::GtidList& gtids)
 {
     // Using the same mutex for rpl state as for file names. There
     // is very little action hitting this mutex.
@@ -393,13 +391,13 @@ void BinglogIndexUpdater::set_rpl_state(const maxsql::GtidList& gtids)
     m_rpl_state = gtids;
 }
 
-maxsql::GtidList BinglogIndexUpdater::rpl_state()
+maxsql::GtidList BinlogIndexUpdater::rpl_state()
 {
     std::unique_lock<std::mutex> lock(m_file_names_mutex);
     return m_rpl_state;
 }
 
-void BinglogIndexUpdater::update()
+void BinlogIndexUpdater::update()
 {
     const size_t SZ = 1024;
     char buffer[SZ];
