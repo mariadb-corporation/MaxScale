@@ -1345,7 +1345,6 @@ void XpandMonitor::make_health_check()
         break;
 
     case http::Async::READY:
-        MXB_INFO("%s: Health check available immediately.", name());
         break;
     }
 }
