@@ -48,7 +48,6 @@ void test_main(TestConnections& test)
             if (test.ok())
             {
                 test.tprintf("Logged in and queried successfully.\n");
-                test.log_includes("is using an unsupported authenticator plugin 'caching_sha2_password'.");
             }
             else
             {

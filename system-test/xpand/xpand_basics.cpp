@@ -120,7 +120,7 @@ void check_login(TestConnections& test)
 
     const char drop_fmt[] = "DROP USER %s;";
     const char create_fmt[] = "CREATE USER %s IDENTIFIED BY '%s';";
-
+    const char grant_fmt[] = "GRANT SELECT ON test.* TO %s;";
     const char super_user[] = "super_user";
     const char super_user_host[] = "'super_user'@'%'";
     const char super_pw[] = "super_pw";
@@ -143,8 +143,10 @@ void check_login(TestConnections& test)
 
     conn->cmd_f(create_fmt, super_user_host, super_pw);
     conn->cmd_f("GRANT SUPER ON *.* TO %s;", super_user_host);
+    conn->cmd_f(grant_fmt, super_user_host);
+
     conn->cmd_f(create_fmt, db_user_host, db_pw);
-    conn->cmd_f("GRANT SELECT ON test.* TO %s;", db_user_host);
+    conn->cmd_f(grant_fmt, db_user_host);
     conn->cmd_f(create_fmt, no_db_user_host, no_db_pw);
 
     sleep(1);
