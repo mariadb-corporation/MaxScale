@@ -1,12 +1,13 @@
 [maxscale]
 threads=###threads###
 log_info=true
+
 ###server###
 
 [mariadb-cluster]
 type=monitor
 module=mariadbmon
-servers=###server_line###, pinloki
+servers=###server_line###
 user=maxskysql
 password=skysql
 monitor_interval=1000ms
@@ -18,15 +19,11 @@ router=binlogrouter
 user=maxskysql
 password=skysql
 cluster=mariadb-cluster
+select_master=true
+rpl_semi_sync_slave_enabled=true
 
 [pinloki-listener]
 type=listener
 service=pinloki-service
 protocol=mariadbclient
 port=4006
-
-[pinloki]
-type = server
-address = 127.0.0.1
-port = 4006
-protocol = MariaDBBackend

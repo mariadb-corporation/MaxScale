@@ -10,7 +10,7 @@ public:
     {
         test.expect(master.connect(), "Failed to connect to master: %s", master.error());
         test.expect(master.query("SET GLOBAL rpl_semi_sync_master_enabled=ON, "
-                                 "rpl_semi_sync_master_timeout=10000000"),
+                                 "rpl_semi_sync_master_timeout=200000"),
                     "Failed to enable semi-sync on master: %s", master.error());
 
         test.expect(slave.connect(), "Failed to connect to slave: %s", slave.error());
