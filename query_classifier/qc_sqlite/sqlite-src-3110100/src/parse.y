@@ -3133,10 +3133,8 @@ cmd ::= rename.
 %type table_to_rename {SrcList*}
 %destructor table_to_rename {sqlite3SrcListDelete(pParse->db, $$);}
 
-table_to_rename(A) ::= fullname(X) TO nm(Y). {
-  // The new name is passed in the alias field.
-  X->a[0].zAlias = sqlite3NameFromToken(pParse->db, &Y);
-  A = X;
+table_to_rename(A) ::= fullname(X) TO fullname(Y). {
+  A = sqlite3SrcListCat(pParse->db, X, Y);
 }
 
 %type tables_to_rename {SrcList*}
