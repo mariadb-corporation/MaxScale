@@ -178,16 +178,24 @@ and should be set to the value used by the backends.
 
 The setting accepts the values 0, 1 or 2:
 
-0. Case-sensitive matching (default)
-1. Convert the requested database name to lower case before using case-insensitive
+* `0`: case-sensitive matching (default)
+* `1`: convert the requested database name to lower case before using case-insensitive
 matching. Assumes that database names on the server are stored in lower case.
-2. Use case-insensitive matching.
+* `2`: use case-insensitive matching.
 
 *true* and *false* are also accepted for backwards compatibility. These map to 1
 and 0, respectively.
 
 The identifier names are converted using an ASCII-only function. This means that
 non-ASCII characters will retain their case-sensitivity.
+
+Starting with MaxScale versions 2.5.25, 6.4.6, 22.08.5 and 23.02.2, the behavior
+of `lower_case_table_names=1` is identical with how the MariaDB server
+behaves. In older releases the comparisons were done in a case-sensitive manner
+after the requested database name was converted into lowercase. Using
+`lower_case_table_names=2` will behave identically in all versions which makes
+it a safe alternative to use when a mix of older and newer MaxScale versions is
+being used.
 
 ```
 authenticator_options=lower_case_table_names=0
