@@ -199,3 +199,8 @@ SELECT uuid FROM Transaction LIMIT 1;
 # This not the beginning of a transaction but of a non atomic block. qc_mysqlembedded
 # classifies as QUERY_TYPE_WRITE but qc_sqlite used to classify as QUERY_TYPE_BEGIN_TRX.
 BEGIN NOT ATOMIC SELECT 1; SELECT 2; END;
+
+# MXS-4714
+# qc_sqlite claims the affected tables would be db1.table1 and db2, and not
+# db1.table1 and db2.table2.
+RENAME TABLE db1.table1 TO db2.table2;
