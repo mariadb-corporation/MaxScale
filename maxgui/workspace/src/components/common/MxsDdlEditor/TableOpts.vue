@@ -8,13 +8,11 @@
                             {{ title }}
                         </label>
                         <mxs-debounced-field
-                            id="table-name"
                             v-model="tblOpts.name"
                             :rules="requiredRule($mxs_t('name'))"
                             required
-                            name="table-name"
                             :height="28"
-                            class="vuetify-input--override error--text__bottom"
+                            class="name vuetify-input--override error--text__bottom"
                             hide-details="auto"
                             dense
                             outlined
@@ -30,7 +28,7 @@
                             outlined
                             dense
                             :height="28"
-                            class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
+                            class="schemas vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
                             :menu-props="{
                                 contentClass: 'v-select--menu-mariadb',
                                 bottom: true,
@@ -79,9 +77,8 @@
                             <v-select
                                 v-model="tblOpts.engine"
                                 :items="engines"
-                                name="table-engine"
                                 outlined
-                                class="vuetify-input--override v-select--mariadb error--text__bottom"
+                                class="table-engine vuetify-input--override v-select--mariadb error--text__bottom"
                                 :menu-props="{
                                     contentClass: 'v-select--menu-mariadb',
                                     bottom: true,
@@ -104,7 +101,8 @@
                                 :defItem="defDbCharset"
                                 :height="28"
                                 :rules="requiredRule($mxs_t('charset'))"
-                                @input="onSelectCharset"
+                                class="charset"
+                                @input="setDefCollation"
                             />
                         </v-col>
                         <v-col cols="6" md="2" class="py-0 px-1">
@@ -122,6 +120,7 @@
                                 :defItem="defCollation"
                                 :height="28"
                                 :rules="requiredRule($mxs_t('collation'))"
+                                class="collation"
                             />
                         </v-col>
                         <v-col cols="12" md="6" class="py-0 px-1">
@@ -130,7 +129,7 @@
                             </label>
                             <mxs-debounced-field
                                 v-model="tblOpts.comment"
-                                class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
+                                class="comment vuetify-input--override error--text__bottom error--text__bottom--no-margin"
                                 single-line
                                 outlined
                                 dense
@@ -196,7 +195,7 @@ export default {
         },
     },
     methods: {
-        onSelectCharset() {
+        setDefCollation() {
             // Use default collation of selected charset
             this.tblOpts.collation = this.defCollation
         },

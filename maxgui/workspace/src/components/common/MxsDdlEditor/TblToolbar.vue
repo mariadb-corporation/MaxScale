@@ -7,7 +7,7 @@
         <v-spacer />
         <mxs-tooltip-btn
             v-if="selectedItems.length"
-            btnClass="ml-2 pa-1 text-capitalize"
+            btnClass="delete-btn ml-2 pa-1 text-capitalize"
             x-small
             outlined
             depressed
@@ -21,7 +21,7 @@
             {{ $mxs_t('dropSelected') }}
         </mxs-tooltip-btn>
         <v-btn
-            class="ml-2 pa-1 text-capitalize"
+            class="add-btn ml-2 pa-1 text-capitalize"
             x-small
             outlined
             depressed
@@ -32,7 +32,7 @@
         </v-btn>
         <mxs-tooltip-btn
             v-if="showRotateTable"
-            btnClass="ml-2 pa-1"
+            btnClass="rotate-btn ml-2 pa-1"
             x-small
             outlined
             depressed

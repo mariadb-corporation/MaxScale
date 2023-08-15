@@ -357,12 +357,12 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             wrapper = mountFactory({
                 computed: { isSqlEditor: () => true },
             })
-            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, FN, COL, TRIGGER } = NODE_TYPES
             const { USE, PRVW_DATA, PRVW_DATA_DETAILS, VIEW_INSIGHTS, GEN_ERD } = NODE_CTX_TYPES
             switch (type) {
                 case SCHEMA:
                     expect(wrapper.vm.baseOptsMap[type]).to.eql([
-                        { text: wrapper.vm.$mxs_t('useDb'), type: USE },
+                        { disabled: false, text: wrapper.vm.$mxs_t('useDb'), type: USE },
                         { text: wrapper.vm.$mxs_t('viewInsights'), type: VIEW_INSIGHTS },
                         { text: wrapper.vm.$mxs_t('genErd'), type: GEN_ERD },
                         ...wrapper.vm.txtOpts,
@@ -397,14 +397,22 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
                             type: PRVW_DATA_DETAILS,
                             disabled: false,
                         },
+                        { text: wrapper.vm.$mxs_t('showCreate'), type: VIEW_INSIGHTS },
                         { divider: true },
                         ...wrapper.vm.txtOpts,
                     ])
                     break
-                case SP:
                 case COL:
-                case TRIGGER:
                     expect(wrapper.vm.baseOptsMap[type]).to.eql(wrapper.vm.txtOpts)
+                    break
+                case SP:
+                case FN:
+                case TRIGGER:
+                    expect(wrapper.vm.baseOptsMap[type]).to.eql([
+                        { text: wrapper.vm.$mxs_t('showCreate'), type: VIEW_INSIGHTS },
+                        { divider: true },
+                        ...wrapper.vm.txtOpts,
+                    ])
                     break
             }
         })
