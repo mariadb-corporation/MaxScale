@@ -238,7 +238,7 @@ export default {
                 return {
                     [ID]: col.id,
                     [NAME]: col.name,
-                    [TYPE]: type.toUpperCase(),
+                    [TYPE]: type,
                     [PK]: categories.includes(tokens.primaryKey),
                     [NN]: col.nn,
                     [UN]: col.un,
@@ -293,7 +293,7 @@ export default {
             ).safeObject
         },
     },
-    mounted() {
+    created() {
         this.handleShowColSpecs()
     },
     methods: {
@@ -392,7 +392,14 @@ export default {
                     break
                 case GENERATED:
                     defs = this.$helpers.immutableUpdate(defs, {
-                        col_map: { [colId]: { ai: { $set: false }, nn: { $set: false } } },
+                        col_map: {
+                            [colId]: {
+                                [item.field]: { $set: item.value },
+                                default_exp: { $set: '' },
+                                ai: { $set: false },
+                                nn: { $set: false },
+                            },
+                        },
                     })
                     break
                 case CHARSET:

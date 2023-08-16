@@ -66,7 +66,9 @@ export default class TableParser {
             } = match.groups
             let parsedDef = {
                 name: unquoteIdentifier(name),
-                data_type: `${data_type}${data_type_size ? `(${data_type_size})` : ''}`,
+                data_type: `${data_type.toUpperCase()}${
+                    data_type_size ? `(${data_type_size})` : ''
+                }`,
                 un: Boolean(un),
                 zf: Boolean(zf),
                 nn: Boolean(nn),

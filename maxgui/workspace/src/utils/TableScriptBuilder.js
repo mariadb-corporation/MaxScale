@@ -182,7 +182,7 @@ export default class TableScriptBuilder {
         if (!generated && data_type !== 'SERIAL') sql += ` ${nn ? tokens.nn : tokens.null}`
         if (ai && data_type !== 'SERIAL') sql += ` ${tokens.ai}`
         if (!generated && default_exp) sql += ` ${tokens.default} ${default_exp}`
-        else if (default_exp) sql += ` ${tokens.generated} (${default_exp}) ${generated}`
+        else if (generated) sql += ` ${tokens.generated} (${default_exp}) ${generated}`
         if (comment) sql += ` ${tokens.comment} '${escapeSingleQuote(comment)}'`
         return sql
     }
