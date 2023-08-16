@@ -2587,11 +2587,13 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
             if (!read_protocol_packet(m_dcb, &buffer))
             {
                 do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
+                break;
             }
             else if (buffer.empty())
             {
                 // Didn't get enough data, read again later.
                 rval = StateMachineRes::IN_PROGRESS;
+                break;
             }
             else
             {
