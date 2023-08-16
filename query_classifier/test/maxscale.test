@@ -225,3 +225,9 @@ UPDATE objects o,
     ) tmp
 ) order_table
 SET o.o_index = order_table.newIndex;
+
+# MXS-4714
+# qc_sqlite claims the affected tables would be db1.table1 and db2, and not
+# db1.table1 and db2.table2.
+RENAME TABLE db1.table1 TO db2.table2;
+
