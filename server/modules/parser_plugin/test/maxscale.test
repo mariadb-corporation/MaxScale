@@ -230,3 +230,8 @@ SET o.o_index = order_table.newIndex;
 XA START 0x03, 0x02, 0x01;
 XA COMMIT 0x01;
 XA END 0x01
+
+# MXS-4714
+# qc_sqlite claims the affected tables would be db1.table1 and db2, and not
+# db1.table1 and db2.table2.
+RENAME TABLE db1.table1 TO db2.table2;

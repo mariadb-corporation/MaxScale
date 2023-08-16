@@ -2829,15 +2829,19 @@ public:
         m_status = Parser::Result::PARSED;
         m_type_mask = mxs::sql::TYPE_WRITE;
 
+        mxb_assert(pTables->nSrc % 2 == 0);
+
         for (int i = 0; i < pTables->nSrc; ++i)
         {
-            const SrcList::SrcList_item* pItem = &pTables->a[i];
+            const SrcList::SrcList_item* pFrom = &pTables->a[i];
+            ++i;
+            const SrcList::SrcList_item* pTo = &pTables->a[i];
 
-            mxb_assert(pItem->zName);
-            mxb_assert(pItem->zAlias);
+            mxb_assert(pFrom->zName);
+            mxb_assert(pTo->zName);
 
-            update_names(pItem->zDatabase, pItem->zName, NULL, NULL);
-            update_names(NULL, pItem->zAlias, NULL, NULL);      // The new name is passed in the alias field.
+            update_names(pFrom->zDatabase, pFrom->zName, NULL, NULL);
+            update_names(pTo->zDatabase, pTo->zName, NULL, NULL);
         }
 
         exposed_sqlite3SrcListDelete(pParse->db, pTables);
