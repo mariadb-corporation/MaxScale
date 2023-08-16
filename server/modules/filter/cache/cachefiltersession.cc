@@ -171,8 +171,11 @@ StatementType get_statement_type(std::string_view sql)
 
     pSql = mariadb::bypass_whitespace(pSql, len);
 
+    static const char ALTER[]  = "ALTER";
     static const char DELETE[] = "DELETE";
+    static const char DROP[]   = "DROP";
     static const char INSERT[] = "INSERT";
+    static const char RENAME[] = "RENAME";
     static const char SELECT[] = "SELECT";
     static const char UPDATE[] = "UPDATE";
 
@@ -183,11 +186,34 @@ StatementType get_statement_type(std::string_view sql)
     {
         switch (*pSql)
         {
+        case 'A':
+        case 'a':
+            type = StatementType::DUPSERT;
+            pKey = ALTER;
+            pKey_end = pKey + sizeof(ALTER) - 1;
+            break;
+
         case 'D':
         case 'd':
-            type = StatementType::DUPSERT;
-            pKey = DELETE;
-            pKey_end = pKey + sizeof(DELETE) - 1;
+            if (pSql_end > pSql + 1)
+            {
+                switch (*(pSql + 1))
+                {
+                case 'r':
+                case 'R':
+                    type = StatementType::DUPSERT;
+                    pKey = DROP;
+                    pKey_end = pKey + sizeof(DROP) - 1;
+                    break;
+
+                case 'e':
+                case 'E':
+                    type = StatementType::DUPSERT;
+                    pKey = DELETE;
+                    pKey_end = pKey + sizeof(DELETE) - 1;
+                    break;
+                }
+            }
             break;
 
         case 'I':
@@ -195,6 +221,13 @@ StatementType get_statement_type(std::string_view sql)
             type = StatementType::DUPSERT;
             pKey = INSERT;
             pKey_end = pKey + sizeof(INSERT) - 1;
+            break;
+
+        case 'R':
+        case 'r':
+            type = StatementType::DUPSERT;
+            pKey = RENAME;
+            pKey_end = pKey + sizeof(RENAME) - 1;
             break;
 
         case 'S':
@@ -984,7 +1017,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                         }
                         else
                         {
-                            const char* zPrefix = "UPDATE/DELETE/INSERT statement could not be parsed.";
+                            const char* zPrefix = "DUPSERT statement could not be parsed. ";
                             const char* zSuffix = nullptr;
 
                             if (m_sCache->config().clear_cache_on_parse_errors)
