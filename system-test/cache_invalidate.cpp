@@ -25,11 +25,15 @@ namespace
 const int PORT_LOCAL_CACHE = 4006;
 const int PORT_REDIS_CACHE = 4007;
 
+const char* ZCREATE_STMT = "CREATE TABLE cache_invalidate (f INT)";
+const char* ZDROP_STMT   = "DROP TABLE IF EXISTS cache_invalidate";
+const char* ZSELECT_STMT = "SELECT * FROM cache_invalidate";
+
 void drop(TestConnections& test)
 {
     MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
-    test.try_query(pMysql, "DROP TABLE IF EXISTS cache_invalidate");
+    test.try_query(pMysql, "%s", ZDROP_STMT);
 }
 
 void create(TestConnections& test)
@@ -38,7 +42,16 @@ void create(TestConnections& test)
 
     MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
-    test.try_query(pMysql, "CREATE TABLE cache_invalidate (f INT)");
+    test.try_query(pMysql, "%s", ZCREATE_STMT);
+}
+
+Result prepare(TestConnections& test, Connection& c)
+{
+    drop(test);
+    create(test);
+    c.query("INSERT INTO cache_invalidate values (2)");
+
+    return c.rows(ZSELECT_STMT);
 }
 
 enum class Expect
@@ -90,10 +103,31 @@ void run(TestConnections& test, int port, Expect expect)
 
     Result rows = c.rows("SELECT * FROM cache_invalidate");
 
+    // Straightforward cases.
     rows = check(test, c, "INSERT INTO cache_invalidate values (2)", expect, rows);
     rows = check(test, c, "UPDATE cache_invalidate SET f = 3 WHERE f = 2", expect, rows);
     rows = check(test, c, "DELETE FROM cache_invalidate WHERE f = 3", expect, rows);
 
+    // Esoteric cases
+
+    // ALTER
+    rows = prepare(test, c);
+
+    check(test, c, "ALTER TABLE cache_invalidate RENAME cache_invalidate_2", expect, rows);
+    c.query("ALTER TABLE cache_invalidate_2 RENAME cache_invalidate");
+
+    // DROP
+    rows = prepare(test, c);
+
+    check(test, c, ZDROP_STMT, expect, rows);
+
+    // RENAME
+    rows = prepare(test, c);
+
+    check(test, c, "RENAME TABLE cache_invalidate TO cache_invalidate_2", expect, rows);
+    c.query("RENAME TABLE cache_invalidate_2 TO cache_invalidate");
+
+    // Finish
     drop(test);
 }
 }
