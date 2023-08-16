@@ -13,21 +13,11 @@
 
 import mount from '@tests/unit/setup'
 import TableOpts from '@wsSrc/components/common/MxsDdlEditor/TableOpts'
+import {
+    editorDataStub,
+    charsetCollationMapStub,
+} from '@wsSrc/components/common/MxsDdlEditor/__tests__/stubData'
 import { lodash } from '@share/utils/helpers'
-
-const charsetCollationMapStub = {
-    utf8mb4: {
-        collations: ['utf8mb4_general_ci'],
-        defCollation: 'utf8mb4_general_ci',
-    },
-}
-const tableOptsMock = {
-    engine: 'InnoDB',
-    charset: 'utf8mb4',
-    schema: 'company',
-    name: 'table_6',
-    collation: 'utf8mb4_general_ci',
-}
 
 const mountFactory = opts =>
     mount(
@@ -35,7 +25,7 @@ const mountFactory = opts =>
             {
                 component: TableOpts,
                 propsData: {
-                    value: tableOptsMock,
+                    value: editorDataStub.options,
                     engines: ['InnoDB'],
                     defDbCharset: 'utf8mb4',
                     charsetCollationMap: charsetCollationMapStub,

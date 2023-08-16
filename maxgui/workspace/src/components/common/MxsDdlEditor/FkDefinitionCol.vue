@@ -81,7 +81,7 @@
  * data: {
  *  field?: string, header name
  *  value?:  (string | string[]), cell value
- *  rowIdx?: number, row index of the key being altered
+ *  rowData?: array
  * }
  */
 import { mapState } from 'vuex'

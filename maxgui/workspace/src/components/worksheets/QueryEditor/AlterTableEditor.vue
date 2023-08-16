@@ -1,16 +1,18 @@
 <template>
     <v-card class="alter-table-editor fill-height" :loading="isFetchingData" tile>
-        <mxs-ddl-editor
-            v-if="!$typy(stagingData).isEmptyObject"
-            v-model="stagingData"
-            :dim="dim"
-            :initialData="initialData"
-            :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
-            :onExecute="onExecute"
-            :lookupTables="{ [stagingData.id]: stagingData }"
-            :hintedRefTargets="hintedRefTargets"
-            :activeSpec.sync="activeSpec"
-        />
+        <keep-alive>
+            <mxs-ddl-editor
+                v-if="!$typy(stagingData).isEmptyObject"
+                v-model="stagingData"
+                :dim="dim"
+                :initialData="initialData"
+                :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
+                :onExecute="onExecute"
+                :lookupTables="{ [stagingData.id]: stagingData }"
+                :hintedRefTargets="hintedRefTargets"
+                :activeSpec.sync="activeSpec"
+            />
+        </keep-alive>
     </v-card>
 </template>
 

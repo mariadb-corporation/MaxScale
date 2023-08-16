@@ -13,27 +13,12 @@
 
 import mount from '@tests/unit/setup'
 import MxsDdlEditor from '@wsSrc/components/common/MxsDdlEditor'
-import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
-import erdHelper from '@wsSrc/utils/erdHelper'
 import { lodash } from '@share/utils/helpers'
-import { tableParser } from '@wsSrc/utils/helpers'
 import { DDL_EDITOR_SPECS } from '@wsSrc/store/config'
-
-const charsetCollationMapStub = {
-    utf8mb4: {
-        collations: ['utf8mb4_general_ci'],
-        defCollation: 'utf8mb4_general_ci',
-    },
-}
-
-const mockData = erdHelper.genDdlEditorData({
-    parsedTable: tableParser.parse({
-        ddl: tableTemplate('table_1'),
-        schema: 'test',
-        autoGenId: true,
-    }),
-    charsetCollationMap: charsetCollationMapStub,
-})
+import {
+    editorDataStub,
+    charsetCollationMapStub,
+} from '@wsSrc/components/common/MxsDdlEditor/__tests__/stubData'
 
 const mountFactory = opts =>
     mount(
@@ -41,12 +26,12 @@ const mountFactory = opts =>
             {
                 component: MxsDdlEditor,
                 propsData: {
-                    value: mockData,
+                    value: editorDataStub,
                     dim: { width: 500, height: 800 },
-                    initialData: lodash.cloneDeep(mockData),
+                    initialData: lodash.cloneDeep(editorDataStub),
                     connData: {},
                     activeSpec: '',
-                    lookupTables: { [mockData.id]: mockData },
+                    lookupTables: { [editorDataStub.id]: editorDataStub },
                 },
                 computed: {
                     charset_collation_map: () => charsetCollationMapStub,
@@ -136,7 +121,7 @@ describe('mxs-ddl-editor', () => {
         it(`Should not render fk-definitions if engine isn't supported`, () => {
             wrapper = mountFactory({
                 computed: {
-                    tblOpts: () => ({ ...mockData.options, engine: 'MEMORY' }),
+                    tblOpts: () => ({ ...editorDataStub.options, engine: 'MEMORY' }),
                     activeSpecTab: () => DDL_EDITOR_SPECS.FK,
                 },
             })

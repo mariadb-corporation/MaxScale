@@ -27,7 +27,7 @@
                 <span> {{ $mxs_t(spec) }}</span>
             </v-tab>
         </v-tabs>
-        <div class="px-3 py-2">
+        <div class="px-3 py-2" :style="{ height: `${tabDim.height + 16}px` }">
             <v-slide-x-transition>
                 <keep-alive>
                     <col-definitions
