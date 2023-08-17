@@ -347,7 +347,7 @@ bool XpandMonitor::post_configure()
         m_refresh_query =
             "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid AS softfailed "
             "FROM system.nodeinfo AS ni "
-            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
+            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid ORDER BY ni.nodeid";
     }
     else
     {
@@ -361,7 +361,7 @@ bool XpandMonitor::post_configure()
                 "      LEFT JOIN system.zones AS z ON ni.zone = z.zoneid "
                 "      LEFT JOIN system.regions AS r ON z.region = r.region) AS nir "
                 "LEFT JOIN system.softfailed_nodes AS sn ON nir.nodeid = sn.nodeid "
-                "WHERE nir.name = '%s'",
+                "WHERE nir.name = '%s' ORDER BY nir.nodeid",
                 m_config.region_name().c_str());
         }
         else
@@ -374,7 +374,7 @@ bool XpandMonitor::post_configure()
                 "FROM (SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, z.region "
                 "      FROM system.nodeinfo AS ni LEFT JOIN system.zones AS z ON ni.zone = z.zoneid) AS nir "
                 "LEFT JOIN system.softfailed_nodes AS sn ON nir.nodeid = sn.nodeid "
-                "WHERE nir.region = %ld",
+                "WHERE nir.region = %ld ORDER BY nir.nodeid",
                 m_config.region_oid());
         }
 
