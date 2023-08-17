@@ -225,6 +225,7 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , net_write_timeout(params->get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count())
     , retain_last_statements(params->get_integer(CN_RETAIN_LAST_STATEMENTS))
     , connection_keepalive(params->get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
+    , force_connection_keepalive(params->get_bool(CN_FORCE_CONNECTION_KEEPALIVE))
     , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
     , rank(params->get_enum(CN_RANK, rank_values))
 {
@@ -1276,6 +1277,7 @@ const MXS_MODULE_PARAM* common_service_params()
             CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
         },
         {CN_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
+        {CN_FORCE_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_BOOL, "false"},
         {NULL}
     };
     return config_service_params;

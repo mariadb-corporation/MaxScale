@@ -36,6 +36,7 @@ class Listener;
 
 constexpr char CN_CONNECTION_KEEPALIVE[] = "connection_keepalive";
 constexpr char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
+constexpr char CN_FORCE_CONNECTION_KEEPALIVE[] = "force_connection_keepalive";
 constexpr char CN_NET_WRITE_TIMEOUT[] = "net_write_timeout";
 
 // The internal service representation

@@ -100,6 +100,7 @@ public:
         int32_t     retain_last_statements;         /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
         int64_t connection_keepalive;               /**< How often to ping idle sessions */
+        bool    force_connection_keepalive;
 
         /**
          * Remove the '\' characters from database names when querying them from the server. This

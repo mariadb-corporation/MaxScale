@@ -1712,6 +1712,27 @@ performance will be the same with or without `connection_keepalive`.
 If you want to avoid the performance cost and you don't need the connection
 keepalive feature, you can disable it with `connection_keepalive=0s`.
 
+### `force_connection_keepalive`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
+
+By default, connection keepalive pings are only sent if the client is either
+executing a query or has been idle for less than the duration configured in
+`connection_keepalive`. When this parameter is enabled, keepalive pings are
+unconditionally sent to any backends that have been idle for longer than
+`connection_keepalive` seconds. This option can be used to emulate the
+pre-2.5.21 behavior if long-lived application connections rely on the old
+unconditional keepalive pings.
+
+*Note:* if `force_connection_keepalive` is enabled and `connection_keepalive` in
+MaxScale is set to a lower value than the `wait_timeout` on the database, the
+client idle timeouts that `wait_timeout` control are no longer effective. This
+happens because MaxScale unconditionally sends the pings which make the client
+behave like it is not idle and thus the connections will never be killed due to
+`wait_timeout`.
+
 ### `net_write_timeout`
 
 This parameter controls how long a network write to the client can stay

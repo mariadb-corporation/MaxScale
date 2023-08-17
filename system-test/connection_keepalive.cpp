@@ -7,12 +7,23 @@
 
 #include <maxtest/testconnections.hh>
 
+Connection open_shortlived_connection(TestConnections& test, int port)
+{
+    auto c = test.maxscale->get_connection(port);
+    test.expect(c.connect(), "Failed to open connection to forced keepalive service: %s", c.error());
+    test.expect(c.query("SET wait_timeout=10"), "Failed to set wait_timeout: %s", c.error());
+    return c;
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
     auto conn = test.maxscale->get_connection(4006);
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
+
+    auto still_alive = open_shortlived_connection(test, 4009);
+    auto not_alive = open_shortlived_connection(test, 4006);
 
     test.expect(conn.query("CREATE OR REPLACE TABLE test.t1(id INT)"), "CREATE should work: %s",
                 conn.error());
@@ -71,6 +82,11 @@ int main(int argc, char* argv[])
     // Cleanup
     conn.connect();
     conn.query("DROP TABLE test.t1");
+
+    test.tprintf("Check that connection with force_connection_keepalive is alive");
+    test.expect(still_alive.query("SELECT 1"), "Connection should be alive: %s", still_alive.error());
+    test.tprintf("Check that connection without force_connection_keepalive is dead");
+    test.expect(!not_alive.query("SELECT 1"), "Connection should be dead");
 
     return test.global_result;
 }
