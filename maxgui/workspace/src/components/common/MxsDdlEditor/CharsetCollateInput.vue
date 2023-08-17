@@ -12,11 +12,11 @@
             ref="inputCtr"
             v-model="inputValue"
             :items="
-                field === COL_ATTRS.CHARSET
+                isCharsetInput
                     ? Object.keys(charsetCollationMap)
                     : $typy(charsetCollationMap, `[${columnCharset}].collations`).safeArray
             "
-            :defItem="field === COL_ATTRS.CHARSET ? defTblCharset : defTblCollation"
+            :defItem="isCharsetInput ? defTblCharset : defTblCollation"
             :disabled="isDisabled"
             :height="height"
             @blur="onBlur"
@@ -71,8 +71,11 @@ export default {
             return this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.TYPE]}]`)
                 .safeString
         },
+        isCharsetInput() {
+            return this.field === this.COL_ATTRS.CHARSET
+        },
         isDisabled() {
-            if (this.columnCharset === 'utf8') return true
+            if (this.columnType.includes('NATIONAL')) return true
             return !checkCharsetSupport(this.columnType)
         },
         inputValue: {

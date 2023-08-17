@@ -4,7 +4,7 @@
         :inputValue="inputValue"
         :height="height"
         :error.sync="error"
-        :required="isNameInput"
+        :required="isRequired"
         :getInputRef="() => $typy($refs, 'inputCtr.$children[0]').safeObject"
         class="fill-height d-flex align-center"
     >
@@ -17,8 +17,8 @@
             dense
             :height="height"
             hide-details
-            :required="isNameInput"
-            :rules="[v => (isNameInput ? !!v : true)]"
+            :required="isRequired"
+            :rules="[v => (isRequired ? !!v : true)]"
             :error="error"
             @blur="onBlur"
         />
@@ -57,7 +57,7 @@ export default {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
         }),
-        isNameInput() {
+        isRequired() {
             return this.field === this.COL_ATTRS.NAME
         },
         inputValue: {
@@ -72,7 +72,7 @@ export default {
     methods: {
         onBlur(e) {
             this.inputValue = this.$typy(e, 'srcElement.value').safeString
-            if (this.inputValue || !this.isNameInput) this.isInputShown = false
+            if (this.inputValue || !this.isRequired) this.isInputShown = false
         },
     },
 }

@@ -25,7 +25,6 @@
             dense
             :height="height"
             hide-details
-            required
             :rules="[v => !!v]"
             :return-object="false"
             :error="error"
