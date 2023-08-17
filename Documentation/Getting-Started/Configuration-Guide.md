@@ -1125,6 +1125,37 @@ Default is `0`.
 The session trace log is also exposed by REST API and is shown with
 `maxctrl show sessions`.
 
+### `session_trace_match`
+
+**Type**: [regex](#regular-expressions)
+**Default**: none
+**Dynamic**: Yes
+
+If both `session_trace` and `session_trace_match` are defined, and a trace log
+entry of a session matches the regular expression, the trace log is written to
+disk. The check for the match is done when the session is stopping.
+
+The most effective way to debug MaxScale related issues is to turn on `log_info`
+and observe the events written into the MaxScale log. The only problem with this
+approach is that it can cause a severe performance bottleneck and can easily
+fill up the disk as the amount of data written to it is significant. With
+`session_trace` and `session_trace_match`, the content that actually gets logged
+can be filtered to only what is needed.
+
+For example, the following configuration would only log the trace log messages
+from sessions that execute SQL queries with syntax errors:
+
+```
+session_trace=1000
+session_trace_match=/You have an error in your SQL syntax/
+```
+
+This could be used to easily identify which applications execute the queries
+without having to gather the info level log output from all the sessions that
+connect to MaxScale. For every session that ends up logging a syntax error
+message, the last 1000 lines of log output done by that session is written into
+the MaxScale log.
+
 ### `writeq_high_water`
 
 High water mark for network write buffer. When the size of the outbound network

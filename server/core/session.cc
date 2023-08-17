@@ -738,6 +738,21 @@ Session::~Session()
         dump_statements();
     }
 
+    if (!m_log.empty())
+    {
+        if (auto re = mxs::Config::get().session_trace_match.get())
+        {
+            for (const std::string& line : m_log)
+            {
+                if (re.match(line))
+                {
+                    dump_session_log();
+                    break;
+                }
+            }
+        }
+    }
+
     m_state = MXS_SESSION::State::FREE;
 }
 
