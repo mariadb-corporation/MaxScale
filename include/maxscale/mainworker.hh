@@ -110,6 +110,11 @@ public:
      */
     static void start_shutdown();
 
+    const char* name() const override
+    {
+        return "MainWorker";
+    }
+
 private:
     bool pre_run() override;
     void post_run() override;

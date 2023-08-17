@@ -1334,10 +1334,11 @@ bool Session::start()
         rval = true;
         m_state = MXS_SESSION::State::STARTED;
 
-        MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
+        MXB_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s on '%s'",
                  service->name(), id(),
                  !m_user.empty() ? m_user.c_str() : "<no user>",
-                 m_client_conn->dcb()->remote().c_str());
+                 m_client_conn->dcb()->remote().c_str(),
+                 m_worker->name());
     }
 
     return rval;
