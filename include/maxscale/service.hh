@@ -109,6 +109,7 @@ public:
                                                  * -1 if not explicitly specified. */
 
             std::chrono::seconds connection_keepalive;      /**< How often to ping idle sessions */
+            bool                 force_connection_keepalive;
 
             /**
              * Remove the '\' characters from database names when querying them from the server. This
