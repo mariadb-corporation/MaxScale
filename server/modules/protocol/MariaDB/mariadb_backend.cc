@@ -2977,6 +2977,8 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
                 {
                     do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
                 }
+
+                break;
             }
             else
             {

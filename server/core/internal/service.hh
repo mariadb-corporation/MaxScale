@@ -37,6 +37,7 @@ class Monitor;
 constexpr char CN_CONNECTION_KEEPALIVE[] = "connection_keepalive";
 constexpr char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
 constexpr char CN_DISABLE_SESCMD_HISTORY[] = "disable_sescmd_history";
+constexpr char CN_FORCE_CONNECTION_KEEPALIVE[] = "force_connection_keepalive";
 constexpr char CN_MAX_SESCMD_HISTORY[] = "max_sescmd_history";
 constexpr char CN_NET_WRITE_TIMEOUT[] = "net_write_timeout";
 constexpr char CN_PRUNE_SESCMD_HISTORY[] = "prune_sescmd_history";
