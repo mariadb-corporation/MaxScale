@@ -72,7 +72,6 @@ of their use.
  - [Read Write Split](Routers/ReadWriteSplit.md)
  - [Schemarouter](Routers/SchemaRouter.md)
  - [SmartRouter](Routers/SmartRouter.md)
- - [XRouter](Routers/XRouter.md)
 
 ## Filters
 
