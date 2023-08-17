@@ -34,7 +34,9 @@ During switchover, MariaDB-Monitor creates a new connection to the master with
 a long timeout, ignoring the limit of `backend_read_timeout`. This reduces the
 probability of long commands such as `set global read_only=1` timing out. When
 kicking out super and read-only admin users, monitor prevent writes with
-"flush tables with read lock".
+"flush tables with read lock". See
+[monitor documentation](../Monitors/MariaDB-Monitor.md#operation-details)
+for more information.
 
 ## Dropped Features
 
@@ -70,7 +72,9 @@ More information about this functionality can be found
 
 This version of switchover performs the switch even if the primary server is
 unresponsive i.e. responds to pings but does not perform any commands in a
-reasonable time. May lead to diverging replication on the old primary.
+reasonable time. May lead to diverging replication on the old primary. See
+[monitor documentation](../Monitors/MariaDB-Monitor.md#operation-details)
+for more information.
 
 ### [MXS-4123](https://jira.mariadb.org/browse/MXS-4123) Fast universal causal reads
 
