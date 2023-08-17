@@ -56,13 +56,17 @@ export default {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTRS_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTRS_IDX_MAP,
+            GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
         colData() {
-            const { TYPE, PK, AI } = this.COL_ATTRS
+            const { TYPE, PK, AI, GENERATED } = this.COL_ATTRS
             return {
                 type: this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[TYPE]}]`).safeString,
                 isPK: this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[PK]}]`).safeBoolean,
                 isAI: this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[AI]}]`).safeBoolean,
+                isGenerated:
+                    this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[GENERATED]}]`)
+                        .safeString !== this.GENERATED_TYPES.NONE,
             }
         },
         isDisabled() {
@@ -70,7 +74,7 @@ export default {
             switch (this.field) {
                 case PK:
                     //disable if column is generated
-                    return this.isGenerated
+                    return this.colData.isGenerated
                 case UN:
                 case ZF:
                     return !checkUniqueZeroFillSupport(this.colData.type)
