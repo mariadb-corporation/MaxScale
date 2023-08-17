@@ -1252,27 +1252,34 @@ void Session::close()
 
 void Session::append_session_log(const std::string& log)
 {
-    m_log.push_front(log);
-
-    if (m_log.size() >= this_unit.session_trace)
+    if (!m_dumping_log)
     {
-        m_log.pop_back();
+        m_log.push_front(log);
+
+        if (m_log.size() >= this_unit.session_trace)
+        {
+            m_log.pop_back();
+        }
     }
 }
 
 void Session::dump_session_log()
 {
-    if (!(m_log.empty()))
+    // Logging the messages with MXB_NOTICE will cause the in-memory log handler to be called which would end
+    // up modifying the log while we iterate over it. Even if it didn't invalidate the iterators, it would
+    // still end up replacing the contents with the new messages that are about to be logged.
+    m_dumping_log = true;
+
+    for (auto it = m_log.rbegin(); it != m_log.rend(); ++it)
     {
-        std::string log;
-
-        for (const auto& s : m_log)
-        {
-            log += s;
-        }
-
-        MXS_NOTICE("Session log for session (%" PRIu64 "): \n%s ", id(), log.c_str());
+        // Both the original message and this new message will contain the session ID in them. To make it easy
+        // to filter the log output to just the original message, a prefix of ### Trace ### is added to all
+        // messages. This also helps identify which ones are trace log messages and which ones are other info
+        // messages from things like session-level or service-level info logging.
+        MXB_NOTICE("### Trace ### %s", it->c_str());
     }
+
+    m_dumping_log = false;
 }
 
 bool Session::routeQuery(GWBUF* buffer)

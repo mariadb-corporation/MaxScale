@@ -1125,6 +1125,12 @@ Default is `0`.
 The session trace log is also exposed by REST API and is shown with
 `maxctrl show sessions`.
 
+The order in which the session trace messages are logged into the log changed in
+MaxScale 6.4.9 (MXS-4716). Newer versions will log the messages in the "normal
+log order" of older events coming first and newer events appearing later in the
+file. Older versions of MaxScale logged the trace dump in the reverse order with
+the newest messages first and oldest ones last.
+
 ### `session_trace_match`
 
 **Type**: [regex](#regular-expressions)
