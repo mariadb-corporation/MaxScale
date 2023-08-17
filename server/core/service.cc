@@ -215,6 +215,10 @@ cfg::ParamSeconds s_connection_keepalive(
 cfg::server::DurationDependency<std::chrono::seconds> s_dep_connection_keepalive(
     "wait_timeout", &s_connection_keepalive, cfg::server::Dependency::MIN, 80);
 
+cfg::ParamBool s_force_connection_keepalive(
+    &s_spec, CN_FORCE_CONNECTION_KEEPALIVE, "Ping connections unconditionally",
+    false, cfg::Param::AT_RUNTIME);
+
 cfg::ParamBool s_prune_sescmd_history(
     &s_spec, "prune_sescmd_history", "Prune old session command history if the limit is exceeded",
     true, cfg::Param::AT_RUNTIME);
@@ -584,6 +588,7 @@ Service::Config::Config(SERVICE* service)
     add_native(&Config::m_v, &Values::session_trace, &s_session_trace);
     add_native(&Config::m_v, &Values::rank, &s_rank);
     add_native(&Config::m_v, &Values::connection_keepalive, &s_connection_keepalive);
+    add_native(&Config::m_v, &Values::force_connection_keepalive, &s_force_connection_keepalive);
     add_native(&Config::m_v, &Values::prune_sescmd_history, &s_prune_sescmd_history);
     add_native(&Config::m_v, &Values::disable_sescmd_history, &s_disable_sescmd_history);
     add_native(&Config::m_v, &Values::max_sescmd_history, &s_max_sescmd_history);
