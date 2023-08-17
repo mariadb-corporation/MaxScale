@@ -96,24 +96,24 @@ const expectedColDefs = {
     ),
     '`col_timestamp` timestamp NOT NULL DEFAULT current_timestamp()': stubColDef({
         name: 'col_timestamp',
-        data_type: 'timestamp',
+        data_type: 'TIMESTAMP',
         nn: true,
         default_exp: 'current_timestamp()',
     }),
     '`vtxt` varchar(5) GENERATED ALWAYS AS (rtrim(`txt`)) STORED': stubColDef({
         name: 'vtxt',
-        data_type: 'varchar(5)',
+        data_type: 'VARCHAR(5)',
         default_exp: 'rtrim(`txt`)',
         generated: 'STORED',
     }),
     '`negative_int` int(11) DEFAULT -11': stubColDef({
         name: 'negative_int',
-        data_type: 'int(11)',
+        data_type: 'INT(11)',
         default_exp: '-11',
     }),
     "`col_comment` varchar(255) DEFAULT NULL COMMENT '`col``s comment`'": stubColDef({
         name: 'col_comment',
-        data_type: 'varchar(255)',
+        data_type: 'VARCHAR(255)',
         default_exp: 'NULL',
         comment: '`col``s comment`',
     }),
@@ -124,7 +124,7 @@ const expectedColDefs = {
     }),
     '`a` int DEFAULT (1+1) COMMENT "(1+1)"': stubColDef({
         name: 'a',
-        data_type: 'int',
+        data_type: 'INT',
         default_exp: '(1+1)',
         comment: '(1+1)',
     }),

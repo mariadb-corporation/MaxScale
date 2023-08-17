@@ -300,6 +300,15 @@ export default {
                         colId: col.id,
                     })
                 }
+                let charset = '',
+                    collate = ''
+                if (checkCharsetSupport(col.data_type)) {
+                    charset = this.$typy(col.charset).isUndefined ? this.defTblCharset : col.charset
+                    collate = this.$typy(col.collate).isUndefined
+                        ? this.$typy(this.charsetCollationMap, `[${charset}].defCollation`)
+                              .safeString
+                        : col.collate
+                }
                 return {
                     [ID]: col.id,
                     [NAME]: col.name,
@@ -312,12 +321,8 @@ export default {
                     [AI]: col.ai,
                     [GENERATED]: col.generated ? col.generated : this.GENERATED_TYPES.NONE,
                     [DEF_EXP]: col.default_exp,
-                    [CHARSET]: checkCharsetSupport(col.data_type)
-                        ? col.charset || this.defTblCharset
-                        : '',
-                    [COLLATE]: checkCharsetSupport(col.data_type)
-                        ? col.collate || this.defTblCollation
-                        : '',
+                    [CHARSET]: charset,
+                    [COLLATE]: collate,
                     [COMMENT]: this.$typy(col.comment).safeString,
                 }
             })
@@ -537,10 +542,8 @@ export default {
                 },
             })
             if (value === 'SERIAL') defs = this.setSerialType({ defs, colId, value })
-            if (value.includes('NATIONAL')) defs = this.setCharset({ defs, colId, value: 'utf8' })
-            if (checkCharsetSupport(value)) {
-                defs = this.setDefCharset({ defs, colId })
-            }
+            if (checkCharsetSupport(value)) defs = this.setDefCharset({ defs, colId })
+            if (value.includes('NATIONAL')) defs = this.setCharset({ defs, colId, value: '' })
             if (!checkUniqueZeroFillSupport(value) || !checkAutoIncrementSupport(value))
                 defs = this.uncheck_UN_ZF_AI({ defs, colId, value })
             return defs

@@ -29,3 +29,20 @@ export const editorDataStub = erdHelper.genDdlEditorData({
     }),
     charsetCollationMap: charsetCollationMapStub,
 })
+
+export const rowDataStub = [
+    'col_74dcf0f0-3cc3-11ee-8a1e-f377468c3f6a',
+    'id',
+    'INT(11)',
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    '(none)',
+    null,
+    '',
+    '',
+    '',
+]

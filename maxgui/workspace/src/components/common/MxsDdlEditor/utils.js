@@ -21,9 +21,9 @@ const getColumnTypes = () => [
         header: 'String',
         types: [
             { value: 'CHAR' },
-            { value: 'NATIONAL CHAR' }, // set charset to utf8
+            { value: 'NATIONAL CHAR' },
             { value: 'VARCHAR()' },
-            { value: 'NATIONAL VARCHAR()' }, // set charset to utf8
+            { value: 'NATIONAL VARCHAR()' },
             { value: 'TINYTEXT' },
             { value: 'TEXT' },
             { value: 'MEDIUMTEXT' },

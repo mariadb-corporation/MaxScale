@@ -21,7 +21,7 @@
             outlined
             dense
             :height="height"
-            hide-details="auto"
+            hide-details
             :disabled="isDisabled"
             cache-items
             @blur="isInputShown = false"
