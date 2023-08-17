@@ -67,7 +67,7 @@ import typy from '@/plugins/typy'
 import VueI18n from 'vue-i18n'
 import Vuex from 'vuex'
 import Vuetify from 'vuetify/lib'
-import { Resize } from 'vuetify/lib/directives'
+import { Resize, Ripple } from 'vuetify/lib/directives'
 import MxsWorkspace from 'mxs-workspace'
 import vuetify from '@/plugins/vuetify'
 import i18n from '@/plugins/i18n'
@@ -77,7 +77,7 @@ Vue.use(shortkey)
 Vue.use(typy)
 Vue.use(VueI18n)
 Vue.use(Vuex)
-Vue.use(Vuetify, { directives: { Resize } })
+Vue.use(Vuetify, { directives: { Resize, Ripple } })
 Vue.use(Vuetify)
 /* store and i18n must be valid and defined.
  * e.g. Vue.use(Vuex) is called before importing store.

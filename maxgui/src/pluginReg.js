@@ -12,11 +12,13 @@ import Vuex from 'vuex'
 import PortalVue from 'portal-vue'
 import VueI18n from 'vue-i18n'
 import Workspace from '@rootSrc/plugins/workspace.js'
+import Ripple from 'vuetify/lib/directives/ripple'
 
 Vue.use(VueI18n)
 // i18n only available after Vue.use(VueI18n)
 Vue.use(scopingI18n, { i18n: require('@share/plugins/i18n').default })
-Vue.use(Vuetify)
+// Workaround Ripple issue for v-simple-checkbox https://github.com/vuetifyjs/vuetify/issues/12224
+Vue.use(Vuetify, { directives: { Ripple } })
 Vue.use(helpersPlugin, { addon: { ...maxguiHelpers, ...workspaceHelpers } })
 Vue.use(typy)
 Vue.use(shortkey)

@@ -205,6 +205,8 @@ export const COL_ATTRS = Object.freeze({
     COMMENT: 'comment',
 })
 
+export const COL_ATTRS_IDX_MAP = genIdxMap(COL_ATTRS)
+
 export const GENERATED_TYPES = Object.freeze({
     NONE: '(none)',
     VIRTUAL: CREATE_TBL_TOKENS.virtual,

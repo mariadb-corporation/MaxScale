@@ -14,7 +14,6 @@
                     <v-checkbox
                         :input-value="isAllselected"
                         :indeterminate="indeterminate"
-                        dense
                         class="v-checkbox--mariadb-xs ma-0"
                         primary
                         hide-details

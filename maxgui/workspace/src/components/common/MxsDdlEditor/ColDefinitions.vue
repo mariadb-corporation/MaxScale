@@ -49,27 +49,68 @@
             <template v-slot:[`header-${COL_ATTRS.DEF_EXP}`]>
                 DEFAULT/EXPRESSION
             </template>
-            <template
-                v-for="(h, colOptIdx) in visHeaders"
-                v-slot:[h.text]="{ data: { rowData, cell, rowIdx: alterColIdx } }"
-            >
-                <div :key="h.text" class="fill-height d-flex align-center">
-                    <col-opt-input
-                        :data="{
-                            field: h.text,
-                            value: cell,
-                            alterColIdx,
-                            colOptIdx,
-                            rowObj: rowDataToObj(rowData),
-                        }"
+            <template v-slot:[COL_ATTRS.TYPE]="{ data: { rowData, cell } }">
+                <div class="fill-height d-flex align-center">
+                    <data-type-input
+                        :value="cell"
                         :height="28"
-                        :charsetCollationMap="charsetCollationMap"
-                        :defTblCharset="defTblCharset"
-                        :defTblCollation="defTblCollation"
-                        :dataTypes="dataTypes"
-                        @on-input="onChangeInput"
+                        :items="dataTypes"
+                        @on-input="
+                            value => onChangeInput({ value, rowData, field: COL_ATTRS.TYPE })
+                        "
                     />
                 </div>
+            </template>
+            <template v-slot:[COL_ATTRS.GENERATED]="{ data: { rowData, cell } }">
+                <div class="fill-height d-flex align-center">
+                    <generated-input
+                        :value="cell"
+                        :rowData="rowData"
+                        :height="28"
+                        :items="Object.values(GENERATED_TYPES)"
+                        @on-input="
+                            value => onChangeInput({ value, rowData, field: COL_ATTRS.GENERATED })
+                        "
+                    />
+                </div>
+            </template>
+            <template v-for="txtField in txtFields" v-slot:[txtField]="{ data: { rowData, cell } }">
+                <txt-input
+                    :key="txtField"
+                    :value="cell"
+                    :field="txtField"
+                    :height="28"
+                    @on-input="value => onChangeInput({ value, rowData, field: txtField })"
+                />
+            </template>
+            <template
+                v-for="boolField in boolFields"
+                v-slot:[boolField]="{ data: { rowData, cell } }"
+            >
+                <bool-input
+                    :key="boolField"
+                    :value="cell"
+                    :rowData="rowData"
+                    :field="boolField"
+                    :height="28"
+                    @on-input="value => onChangeInput({ value, rowData, field: boolField })"
+                />
+            </template>
+            <template
+                v-for="field in charsetCollateFields"
+                v-slot:[field]="{ data: { rowData, cell } }"
+            >
+                <charset-collate-input
+                    :key="field"
+                    :value="cell"
+                    :rowData="rowData"
+                    :field="field"
+                    :height="28"
+                    :charsetCollationMap="charsetCollationMap"
+                    :defTblCharset="defTblCharset"
+                    :defTblCollation="defTblCollation"
+                    @on-input="value => onChangeInput({ value, rowData, field })"
+                />
             </template>
         </mxs-virtual-scroll-tbl>
     </div>
@@ -90,7 +131,11 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import ColOptInput from '@wsSrc/components/common/MxsDdlEditor/ColOptInput.vue'
+import TxtInput from '@wsSrc/components/common/MxsDdlEditor/TxtInput'
+import DataTypeInput from '@wsSrc/components/common/MxsDdlEditor/DataTypeInput'
+import GeneratedInput from '@wsSrc/components/common/MxsDdlEditor/GeneratedInput'
+import BoolInput from '@wsSrc/components/common/MxsDdlEditor/BoolInput'
+import CharsetCollateInput from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateInput'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import {
     getColumnTypes,
@@ -102,7 +147,14 @@ import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'col-definitions',
-    components: { ColOptInput, TblToolbar },
+    components: {
+        TxtInput,
+        DataTypeInput,
+        GeneratedInput,
+        BoolInput,
+        CharsetCollateInput,
+        TblToolbar,
+    },
     props: {
         value: { type: Object, required: true },
         initialData: { type: Object, required: true },
@@ -123,6 +175,7 @@ export default {
     computed: {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
+            COL_ATTRS_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTRS_IDX_MAP,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
             GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
         }),
@@ -183,6 +236,18 @@ export default {
                     return { ...h, hidden: true }
                 return h
             })
+        },
+        txtFields() {
+            const { NAME, DEF_EXP, COMMENT } = this.COL_ATTRS
+            return [NAME, DEF_EXP, COMMENT]
+        },
+        boolFields() {
+            const { PK, NN, UN, UQ, ZF, AI } = this.COL_ATTRS
+            return [PK, NN, UN, UQ, ZF, AI]
+        },
+        charsetCollateFields() {
+            const { CHARSET, COLLATE } = this.COL_ATTRS
+            return [CHARSET, COLLATE]
         },
         abbreviatedHeaders() {
             const { PK, NN, UN, UQ, ZF, AI, GENERATED } = this.COL_ATTRS
@@ -348,39 +413,30 @@ export default {
                 col_map: { $merge: { [col.id]: col } },
             })
         },
-        rowDataToObj(rowData) {
-            const cols = this.$helpers.map2dArr({
-                fields: this.colAttrs,
-                arr: [rowData],
-            })
-            if (cols.length) return cols[0]
-            return []
-        },
         /**
-         * @param {Object} item - cell data
+         * @param {object} param
+         * @param {string|boolean} param.value - cell value
+         * @param {array} param.rowData - row data
+         * @param {string} param.field - field name
          */
-        onChangeInput(item) {
+        onChangeInput({ value, rowData, field }) {
             let defs = this.$helpers.lodash.cloneDeep(this.defs)
             const { ID, TYPE, PK, NN, UQ, AI, GENERATED, CHARSET } = this.COL_ATTRS
-            const colId = item.rowObj[ID]
-            const param = {
-                defs,
-                colId,
-                value: item.value,
-            }
-            switch (item.field) {
+            const colId = rowData[this.COL_ATTRS_IDX_MAP[ID]]
+            const param = { defs, colId, value }
+            switch (field) {
                 case TYPE:
                     defs = this.onChangeType(param)
                     break
                 case PK:
                 case UQ: {
                     const { uniqueKey, primaryKey } = this.CREATE_TBL_TOKENS
-                    if (item.field === PK) defs = this.onTogglePk(param)
+                    if (field === PK) defs = this.onTogglePk(param)
                     defs = this.keySideEffect({
                         defs,
-                        category: item.field === PK ? primaryKey : uniqueKey,
+                        category: field === PK ? primaryKey : uniqueKey,
                         colId,
-                        mode: item.value ? 'add' : 'drop',
+                        mode: value ? 'add' : 'drop',
                     })
                     break
                 }
@@ -394,7 +450,7 @@ export default {
                     defs = this.$helpers.immutableUpdate(defs, {
                         col_map: {
                             [colId]: {
-                                [item.field]: { $set: item.value },
+                                [field]: { $set: value },
                                 default_exp: { $set: '' },
                                 ai: { $set: false },
                                 nn: { $set: false },
@@ -407,11 +463,7 @@ export default {
                     break
                 default: {
                     defs = this.$helpers.immutableUpdate(defs, {
-                        col_map: {
-                            [colId]: {
-                                [item.field]: { $set: item.value },
-                            },
-                        },
+                        col_map: { [colId]: { [field]: { $set: value } } },
                     })
                 }
             }

@@ -18,7 +18,6 @@
         >
             <v-checkbox
                 :input-value="isRowSelected(row)"
-                dense
                 class="v-checkbox--mariadb-xs ma-0 pa-0"
                 primary
                 hide-details
