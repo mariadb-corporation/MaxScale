@@ -16,6 +16,7 @@
                     :value="inputValue"
                     class="v-checkbox--mariadb-xs ma-0 pa-0"
                     :color="inputValue && !disabled ? 'primary' : ''"
+                    :disabled="disabled"
                     @click="onFocus"
                 />
             </template>
@@ -57,7 +58,7 @@ export default {
     name: 'mxs-lazy-input',
     props: {
         value: { type: Boolean, required: true }, // model
-        inputValue: { type: [String, Boolean], require: true },
+        inputValue: { type: [String, Boolean], default: null },
         height: { type: Number, required: true },
         getInputRef: { type: Function, required: true },
         type: { type: String, default: 'text' }, // text, select, checkbox
