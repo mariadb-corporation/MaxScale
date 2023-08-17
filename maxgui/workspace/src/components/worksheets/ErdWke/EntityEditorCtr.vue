@@ -118,26 +118,29 @@ export default {
             queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData',
         }),
         watch() {
-            this.watch_activeEntityId()
+            this.watch_stagingInitialData()
             this.watch_activeErdConnId()
         },
         unwatch() {
-            this.$typy(this.unwatch_activeEntityId).safeFunction()
+            this.$typy(this.unwatch_stagingInitialData).safeFunction()
             this.$typy(this.unwatch_stagingData).safeFunction()
             this.$typy(this.unwatch_activeErdConnId).safeFunction()
         },
         //Watcher to work with multiple worksheets which are kept alive
-        watch_activeEntityId() {
-            this.unwatch_activeEntityId = this.$watch(
-                'activeEntityId',
+        watch_stagingInitialData() {
+            this.unwatch_stagingInitialData = this.$watch(
+                'stagingInitialData',
                 v => {
-                    if (v) {
+                    if (
+                        !this.$typy(v).isEmptyObject &&
+                        !this.$helpers.lodash.isEqual(v, this.stagingData)
+                    ) {
                         this.$typy(this.unwatch_stagingData).safeFunction()
-                        this.stagingData = this.$helpers.lodash.cloneDeep(this.stagingInitialData)
+                        this.stagingData = this.$helpers.lodash.cloneDeep(v)
                         this.watch_stagingData()
                     }
                 },
-                { immediate: true }
+                { deep: true, immediate: true }
             )
         },
         watch_stagingData() {

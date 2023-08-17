@@ -171,10 +171,15 @@ export default {
                         },
                     })
                 } else {
-                    ErdTask.update({ where: activeWkeId, data: erdTaskData })
-                    ErdTaskTmp.update({ where: activeWkeId, data: erdTaskTmpData })
+                    // Close the entity-editor-ctr before assigning new data
+                    ErdTaskTmp.update({
+                        where: activeWkeId,
+                        data: { active_entity_id: '', graph_height_pct: 100 },
+                    }).then(() => {
+                        ErdTask.update({ where: activeWkeId, data: erdTaskData })
+                        ErdTaskTmp.update({ where: activeWkeId, data: erdTaskTmpData })
+                    })
                 }
-
                 WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
                 Worksheet.update({ where: activeWkeId, data: { name: this.name } })
             }

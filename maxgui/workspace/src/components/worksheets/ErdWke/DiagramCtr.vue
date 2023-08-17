@@ -771,7 +771,6 @@ export default {
         },
         redrawnDiagram() {
             const nodeMap = this.nodesHistory[this.activeHistoryIdx]
-            this.closeEditor()
             this.updateAndDrawNodes({ nodeMap, skipHistory: true })
         },
         navHistory(idx) {
