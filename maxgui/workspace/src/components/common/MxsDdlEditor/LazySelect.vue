@@ -1,12 +1,13 @@
 <template>
     <mxs-lazy-input
         v-model="isInputShown"
-        :inputValue="inputValue"
-        :height="height"
+        :inputValue="selectionText || inputValue"
+        :height="$attrs.height"
         type="select"
-        :disabled="isDisabled"
+        :disabled="Boolean($attrs.disabled)"
+        :required="Boolean($attrs.required)"
         :getInputRef="() => $typy($refs, 'inputCtr').safeObject"
-        class="fill-height d-flex align-center"
+        v-on="$listeners"
     >
         <v-select
             ref="inputCtr"
@@ -17,15 +18,19 @@
                 bottom: true,
                 offsetY: true,
             }"
-            :items="items"
             outlined
             dense
-            :height="height"
             hide-details
-            :disabled="isDisabled"
             cache-items
+            :rules="[v => ($attrs.required ? !!v : true)]"
+            v-bind="{ ...$attrs }"
+            v-on="$listeners"
             @blur="isInputShown = false"
-        />
+        >
+            <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                <slot :name="slot" v-bind="props" />
+            </template>
+        </v-select>
     </mxs-lazy-input>
 </template>
 
@@ -42,14 +47,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 export default {
-    name: 'generated-input',
+    name: 'lazy-select',
+    inheritAttrs: false,
     props: {
-        value: { type: String, required: true },
-        rowData: { type: Array, required: true },
-        height: { type: Number, required: true },
-        items: { type: Array, default: () => [] },
+        selectionText: { type: String, default: '' }, // custom selection text
     },
     data() {
         return {
@@ -57,21 +59,9 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTRS_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTRS_IDX_MAP,
-        }),
-        isPK() {
-            return this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.PK]}]`)
-                .safeBoolean
-        },
-        isDisabled() {
-            //disable if column is PK
-            return this.isPK //https://mariadb.com/kb/en/generated-columns/#index-support
-        },
         inputValue: {
             get() {
-                return this.value
+                return this.$attrs.value
             },
             set(v) {
                 this.$emit('on-input', v)

@@ -16,38 +16,26 @@
             v-for="h in headers"
             v-slot:[h.text]="{ data: { cell, rowIdx, colIdx, rowData } }"
         >
-            <v-select
+            <lazy-select
                 v-if="h.text === KEY_EDITOR_ATTRS.CATEGORY"
                 :key="h.text"
                 :value="cell"
-                class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
-                :menu-props="{
-                    contentClass: 'v-select--menu-mariadb',
-                    bottom: true,
-                    offsetY: true,
-                }"
-                :items="categories"
-                outlined
-                dense
                 :height="28"
-                hide-details
+                :items="categories"
                 :disabled="isInputDisabled({ field: h.text, rowData })"
-                @input="onChangeInput({ value: $event, field: h.text, rowIdx, colIdx, rowData })"
+                :selectionText="categoryTxt(cell)"
+                @on-input="onChangeInput({ value: $event, field: h.text, rowIdx, colIdx, rowData })"
+                @on-focused="onRowClick(rowData)"
             />
-            <mxs-debounced-field
+            <lazy-text-field
                 v-else
                 :key="h.text"
                 :value="cell"
-                class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
-                single-line
-                outlined
-                dense
                 :height="28"
-                hide-details
                 :required="isInputRequired(h.text)"
                 :disabled="isInputDisabled({ field: h.text, rowData })"
-                :rules="isInputRequired(h.text) ? [v => !!v] : []"
-                @input="onChangeInput({ value: $event, field: h.text, rowIdx, colIdx, rowData })"
+                @on-input="onChangeInput({ value: $event, field: h.text, rowIdx, colIdx, rowData })"
+                @on-focused="onRowClick(rowData)"
             />
         </template>
     </mxs-virtual-scroll-tbl>
@@ -67,9 +55,12 @@
  * Public License.
  */
 import { mapState } from 'vuex'
+import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
+import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
 
 export default {
     name: 'index-list',
+    components: { LazyTextField, LazySelect },
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },

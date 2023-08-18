@@ -11,8 +11,7 @@
  * Public License.
  */
 import erdHelper from '@wsSrc/utils/erdHelper'
-import { tableParser } from '@wsSrc/utils/helpers'
-import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
+import { GENERATED_TYPES } from '@wsSrc/store/config'
 
 export const charsetCollationMapStub = {
     utf8mb4: {
@@ -20,18 +19,50 @@ export const charsetCollationMapStub = {
         defCollation: 'utf8mb4_general_ci',
     },
 }
+const parsedTableStub = {
+    defs: {
+        col_map: {
+            'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c': {
+                name: 'id',
+                data_type: 'INT(11)',
+                un: false,
+                zf: false,
+                nn: true,
+                charset: undefined,
+                collate: undefined,
+                generated: undefined,
+                ai: false,
+                default_exp: undefined,
+                comment: undefined,
+                id: 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c',
+            },
+        },
+        key_category_map: {
+            'PRIMARY KEY': {
+                'key_6c425e40-3d9e-11ee-ae7d-f7b5c34f152c': {
+                    id: 'key_6c425e40-3d9e-11ee-ae7d-f7b5c34f152c',
+                    cols: [{ id: 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c' }],
+                },
+            },
+        },
+    },
+    options: {
+        engine: 'InnoDB',
+        charset: 'utf8mb4',
+        schema: 'test',
+        name: 'table_1',
+        collation: 'utf8mb4_general_ci',
+    },
+    id: 'tbl_1cb11b00-3d9e-11ee-bd9e-5944f4c72ef1',
+}
 
 export const editorDataStub = erdHelper.genDdlEditorData({
-    parsedTable: tableParser.parse({
-        ddl: tableTemplate('table_1'),
-        schema: 'test',
-        autoGenId: true,
-    }),
+    parsedTable: parsedTableStub,
     charsetCollationMap: charsetCollationMapStub,
 })
 
 export const rowDataStub = [
-    'col_74dcf0f0-3cc3-11ee-8a1e-f377468c3f6a',
+    'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c',
     'id',
     'INT(11)',
     true,
@@ -46,3 +77,11 @@ export const rowDataStub = [
     '',
     '',
 ]
+
+export const generatedTypeItemsStub = Object.values(GENERATED_TYPES)
+
+export const colKeyCategoryMapStub = { 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c': ['PRIMARY KEY'] }
+
+export const tableColNameMapStub = { 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c': 'id' }
+
+export const tableColMapStub = parsedTableStub.col_map

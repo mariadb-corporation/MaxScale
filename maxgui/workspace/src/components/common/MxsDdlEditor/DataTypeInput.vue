@@ -7,7 +7,6 @@
         required
         :error.sync="error"
         :getInputRef="() => $typy($refs, 'inputCtr').safeObject"
-        class="fill-height d-flex align-center"
     >
         <v-combobox
             ref="inputCtr"

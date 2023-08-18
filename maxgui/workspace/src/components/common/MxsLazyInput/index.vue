@@ -1,15 +1,13 @@
 <template>
-    <div class="lazy-input-ctr" @click="onFocus">
+    <div class="fill-height d-flex align-center">
         <slot v-if="isInputShown" />
         <div
             v-else
-            class="readonly-input-ctr d-flex align-center"
-            :class="{
-                'readonly-input-ctr--disabled': disabled,
-                'readonly-input-ctr--error': isError,
-                [`readonly-input-ctr-type-${type}`]: type,
+            :class="readonlyInputClass"
+            :style="{
+                height: `${height}px`,
+                paddingTop: isSelectMenu ? '2px' : 0,
             }"
-            :style="{ height: `${height}px` }"
         >
             <template v-if="type === 'checkbox'">
                 <v-simple-checkbox
@@ -25,14 +23,17 @@
                     type="text"
                     :value="inputValue"
                     :disabled="disabled"
-                    class="mxs-field-text-size"
+                    class="mxs-field-text-size text-truncate"
+                    @click.stop
                     @focus="onFocusReadonlyInput"
                 />
                 <v-icon
                     v-if="isSelectMenu"
                     :disabled="disabled"
                     :color="isError ? 'error' : ''"
-                    class="pl-1 ml-auto"
+                    class="pl-1"
+                    @click.stop
+                    @focus="onFocusReadonlyInput"
                 >
                     mdi-menu-down
                 </v-icon>
@@ -58,7 +59,7 @@ export default {
     name: 'mxs-lazy-input',
     props: {
         value: { type: Boolean, required: true }, // model
-        inputValue: { type: [String, Boolean], default: null },
+        inputValue: { type: [String, Boolean, Array], default: null },
         height: { type: Number, required: true },
         getInputRef: { type: Function, required: true },
         type: { type: String, default: 'text' }, // text, select, checkbox
@@ -86,6 +87,16 @@ export default {
         isSelectMenu() {
             return this.type === 'select'
         },
+        readonlyInputClass() {
+            const className = 'lazy-input'
+            return [
+                `d-flex align-center justify-space-between`,
+                className,
+                `${className}-type-${this.type}`,
+                this.disabled ? `${className}--disabled` : '',
+                this.isError ? `${className}--error` : '',
+            ]
+        },
     },
     watch: {
         inputValue: {
@@ -102,10 +113,10 @@ export default {
         },
     },
     methods: {
-        onFocusReadonlyInput() {
-            this.onFocus()
+        onFocusReadonlyInput(e) {
+            this.onFocus(e)
         },
-        onFocus() {
+        onFocus(e) {
             if (!this.disabled) {
                 this.isInputShown = true
                 if (this.type === 'checkbox') this.$emit('toggle-checkbox')
@@ -120,6 +131,7 @@ export default {
                             }
                         }
                     })
+                this.$emit('on-focused', e)
             }
         },
     },
@@ -127,36 +139,34 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.lazy-input-ctr {
+.lazy-input {
     width: 100%;
-    .readonly-input-ctr {
-        border: 1px solid $text-subtle;
-        border-radius: 4px;
-        padding: 0 11px;
-        position: relative;
-        max-width: 100%;
-        min-width: 0;
+    border: 1px solid $text-subtle;
+    border-radius: 4px;
+    position: relative;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+    padding: 0 11px;
+    input {
         width: 100%;
+        color: $navigation;
+        &:focus {
+            outline: none;
+        }
+    }
+    &--disabled {
+        opacity: 0.5;
         input {
-            color: $navigation;
-            min-width: 64px;
-            &:focus {
-                outline: none;
-            }
+            color: rgba(0, 0, 0, 0.38);
         }
-        &--disabled {
-            opacity: 0.5;
-            input {
-                color: rgba(0, 0, 0, 0.38);
-            }
-        }
-        &--error {
-            border-color: $error;
-        }
-        &-type-checkbox {
-            padding: 1px 1px 0 0;
-            border: none;
-        }
+    }
+    &--error {
+        border-color: $error;
+    }
+    &-type-checkbox {
+        padding: 1px 1px 0 0;
+        border: none;
     }
 }
 </style>

@@ -12,26 +12,21 @@
  */
 
 import mount from '@tests/unit/setup'
-import TxtInput from '@wsSrc/components/common/MxsDdlEditor/TxtInput'
-import { COL_ATTRS } from '@wsSrc/store/config'
+import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>
     mount(
         lodash.merge(
             {
-                component: TxtInput,
-                propsData: {
-                    value: 'id',
-                    field: COL_ATTRS.NAME,
-                    height: 28,
-                },
+                component: LazyTextField,
+                propsData: { value: 'id', height: 28, disabled: false, required: false },
             },
             opts
         )
     )
 
-describe('txt-input', () => {
+describe('lazy-text-field', () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
         it(`Should pass accurate data to mxs-lazy-input`, () => {
@@ -40,14 +35,16 @@ describe('txt-input', () => {
                 value,
                 inputValue,
                 height,
+                disabled,
                 required,
                 error,
                 getInputRef,
             } = wrapper.findComponent({ name: 'mxs-lazy-input' }).vm.$props
             expect(value).to.be.eql(wrapper.vm.$data.isInputShown)
             expect(inputValue).to.be.eql(wrapper.vm.inputValue)
-            expect(height).to.be.eql(wrapper.vm.$props.height)
-            expect(required).to.be.eql(wrapper.vm.isRequired)
+            expect(height).to.be.eql(wrapper.vm.$attrs.height)
+            expect(disabled).to.be.eql(wrapper.vm.$attrs.disabled)
+            expect(required).to.be.eql(wrapper.vm.$attrs.required)
             expect(error).to.be.eql(wrapper.vm.$data.error)
             expect(getInputRef).to.be.a('function')
         })
@@ -58,16 +55,18 @@ describe('txt-input', () => {
                 height,
                 ['hide-details']: hideDetails,
                 error,
+                disabled,
                 required,
                 rules,
             } = wrapper.findComponent({
                 name: 'mxs-debounced-field',
             }).vm.$attrs
             expect(value).to.be.eql(wrapper.vm.inputValue)
-            expect(height).to.be.eql(wrapper.vm.$props.height)
+            expect(height).to.be.eql(wrapper.vm.$attrs.height)
             expect(hideDetails).to.be.eql('')
             expect(error).to.be.eql(wrapper.vm.$data.error)
-            expect(required).to.be.eql(wrapper.vm.isRequired)
+            expect(disabled).to.be.eql(wrapper.vm.$attrs.disabled)
+            expect(required).to.be.eql(wrapper.vm.$attrs.required)
             expect(rules).to.be.an('array')
             expect(rules.length).to.be.eql(1)
             expect(rules[0]).to.be.a('function')
@@ -77,14 +76,9 @@ describe('txt-input', () => {
     })
 
     describe(`Computed properties`, () => {
-        it(`Should return accurate value for isRequired`, () => {
-            wrapper = mountFactory({ propsData: { field: COL_ATTRS.COMMENT } })
-            expect(wrapper.vm.isRequired).to.be.false
-        })
-
         it(`Should return accurate value for inputValue`, () => {
             wrapper = mountFactory()
-            expect(wrapper.vm.inputValue).to.be.eql(wrapper.vm.$props.value)
+            expect(wrapper.vm.inputValue).to.be.eql(wrapper.vm.$attrs.value)
         })
 
         it(`Should emit on-input event`, () => {

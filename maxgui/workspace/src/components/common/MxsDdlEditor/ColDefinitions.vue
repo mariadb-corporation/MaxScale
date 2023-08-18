@@ -61,11 +61,13 @@
             </template>
             <template v-slot:[COL_ATTRS.GENERATED]="{ data: { rowData, cell } }">
                 <div class="fill-height d-flex align-center">
-                    <generated-input
+                    <!-- disable if column is PK
+                    https://mariadb.com/kb/en/generated-columns/#index-support -->
+                    <lazy-select
                         :value="cell"
-                        :rowData="rowData"
                         :height="28"
-                        :items="Object.values(GENERATED_TYPES)"
+                        :items="generatedTypeItems"
+                        :disabled="isPkRow(rowData)"
                         @on-input="
                             onChangeInput({ value: $event, rowData, field: COL_ATTRS.GENERATED })
                         "
@@ -73,11 +75,11 @@
                 </div>
             </template>
             <template v-for="txtField in txtFields" v-slot:[txtField]="{ data: { rowData, cell } }">
-                <txt-input
+                <lazy-text-field
                     :key="txtField"
                     :value="cell"
-                    :field="txtField"
                     :height="28"
+                    :required="txtField === COL_ATTRS.NAME"
                     @on-input="onChangeInput({ value: $event, rowData, field: txtField })"
                 />
             </template>
@@ -129,9 +131,9 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import TxtInput from '@wsSrc/components/common/MxsDdlEditor/TxtInput'
+import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
 import DataTypeInput from '@wsSrc/components/common/MxsDdlEditor/DataTypeInput'
-import GeneratedInput from '@wsSrc/components/common/MxsDdlEditor/GeneratedInput'
+import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
 import BoolInput from '@wsSrc/components/common/MxsDdlEditor/BoolInput'
 import CharsetCollateInput from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateInput'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
@@ -146,9 +148,9 @@ import erdHelper from '@wsSrc/utils/erdHelper'
 export default {
     name: 'col-definitions',
     components: {
-        TxtInput,
+        LazyTextField,
         DataTypeInput,
-        GeneratedInput,
+        LazySelect,
         BoolInput,
         CharsetCollateInput,
         TblToolbar,
@@ -359,6 +361,9 @@ export default {
                 Object.values(this.stagingKeyCategoryMap[this.CREATE_TBL_TOKENS.primaryKey] || {}),
                 `[0]`
             ).safeObject
+        },
+        generatedTypeItems() {
+            return Object.values(this.GENERATED_TYPES)
         },
     },
     created() {
@@ -730,6 +735,9 @@ export default {
                 default:
                     return defs
             }
+        },
+        isPkRow(rowData) {
+            return this.$typy(rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.PK]}]`).safeBoolean
         },
     },
 }

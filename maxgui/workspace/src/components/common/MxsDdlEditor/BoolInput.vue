@@ -6,7 +6,6 @@
         :height="height"
         :disabled="isDisabled"
         :getInputRef="() => $typy($refs, 'inputCtr').safeObject"
-        class="fill-height d-flex align-center"
         @toggle-checkbox="toggle"
     >
         <v-checkbox

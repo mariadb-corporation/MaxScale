@@ -6,7 +6,6 @@
         :disabled="isDisabled"
         type="select"
         :getInputRef="() => $typy($refs, 'inputCtr.$children[0]').safeObject"
-        class="fill-height d-flex align-center"
     >
         <charset-collate-select
             ref="inputCtr"
