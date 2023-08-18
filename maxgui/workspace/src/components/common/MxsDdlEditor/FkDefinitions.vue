@@ -250,7 +250,7 @@ export default {
                 if (ref_tbl_name) res.push({ schema: ref_schema_name, tbl: ref_tbl_name })
                 return res
             }, [])
-            return this.$helpers.lodash.uniqBy(targets, 'qualified_name')
+            return this.$helpers.lodash.uniqBy(targets, target => `${target.schema}.${target.tbl}`)
         },
         referencingColOptions() {
             return this.getColOptions(this.tableId)
