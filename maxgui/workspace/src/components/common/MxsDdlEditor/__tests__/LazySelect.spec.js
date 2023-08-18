@@ -12,29 +12,29 @@
  */
 
 import mount from '@tests/unit/setup'
-import GeneratedInput from '@wsSrc/components/common/MxsDdlEditor/GeneratedInput'
+import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
 import { lodash } from '@share/utils/helpers'
-import { GENERATED_TYPES } from '@wsSrc/store/config'
-import { rowDataStub } from '@wsSrc/components/common/MxsDdlEditor/__tests__/stubData'
 
-const itemsStub = Object.values(GENERATED_TYPES)
+const itemsStub = ['a', 'b']
+
 const mountFactory = opts =>
     mount(
         lodash.merge(
             {
-                component: GeneratedInput,
-                propsData: {
+                component: LazySelect,
+                attrs: {
                     value: true,
-                    rowData: rowDataStub,
                     height: 28,
                     items: itemsStub,
+                    disabled: false,
+                    required: false,
                 },
             },
             opts
         )
     )
 
-describe('generated-input', () => {
+describe('lazy-select', () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
         it(`Should pass accurate data to mxs-lazy-input`, () => {
@@ -44,14 +44,16 @@ describe('generated-input', () => {
                 inputValue,
                 height,
                 disabled,
+                required,
                 type,
                 getInputRef,
             } = wrapper.findComponent({ name: 'mxs-lazy-input' }).vm.$props
             expect(value).to.be.eql(wrapper.vm.$data.isInputShown)
             expect(inputValue).to.be.eql(wrapper.vm.inputValue)
             expect(type).to.be.eql('select')
-            expect(height).to.be.eql(wrapper.vm.$props.height)
-            expect(disabled).to.be.eql(wrapper.vm.isDisabled)
+            expect(height).to.be.eql(wrapper.vm.$attrs.height)
+            expect(disabled).to.be.eql(wrapper.vm.$attrs.disabled)
+            expect(required).to.be.eql(wrapper.vm.$attrs.required)
             expect(getInputRef).to.be.a('function')
         })
         it(`Should pass accurate data to v-select`, () => {
@@ -63,30 +65,26 @@ describe('generated-input', () => {
                 height,
                 hideDetails,
                 cacheItems,
-            } = wrapper.findComponent({ name: 'v-select' }).vm
+            } = wrapper.findComponent({ name: 'v-select' }).vm.$props
             expect(value).to.be.eql(wrapper.vm.inputValue)
-            expect(items).to.be.eql(itemsStub)
-            expect(disabled).to.be.eql(wrapper.vm.isDisabled)
-            expect(height).to.be.eql(wrapper.vm.$props.height)
+            expect(items).to.be.eql(wrapper.vm.$attrs.items)
+            expect(disabled).to.be.eql(wrapper.vm.$attrs.disabled)
+            expect(height).to.be.eql(wrapper.vm.$attrs.height)
             expect(hideDetails).to.be.true
             expect(cacheItems).to.be.true
         })
     })
 
     describe(`Computed properties`, () => {
-        it(`isDisabled should return true if isPK true`, () => {
-            wrapper = mountFactory({ computed: { isPK: () => true } })
-            expect(wrapper.vm.isDisabled).to.be.true
-        })
         it(`Should return accurate value for inputValue`, () => {
             wrapper = mountFactory()
-            expect(wrapper.vm.inputValue).to.be.eql(wrapper.vm.$props.value)
+            expect(wrapper.vm.inputValue).to.be.eql(wrapper.vm.$attrs.value)
         })
 
         it(`Should emit on-input event`, () => {
             wrapper = mountFactory()
-            wrapper.vm.inputValue = GENERATED_TYPES.STORED
-            expect(wrapper.emitted('on-input')[0]).to.be.eql([GENERATED_TYPES.STORED])
+            wrapper.vm.inputValue = itemsStub[1]
+            expect(wrapper.emitted('on-input')[0]).to.be.eql([itemsStub[1]])
         })
     })
 })

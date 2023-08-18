@@ -11,14 +11,14 @@
         <div class="d-flex flex-row">
             <index-list
                 ref="indexesList"
-                v-model="stagingCategoryMap"
+                v-model="stagingKeyCategoryMap"
                 :dim="{ height: dim.height - headerHeight, width: keyTblWidth }"
                 :selectedItems.sync="selectedItems"
                 class="mr-4"
             />
             <index-col-list
                 v-if="selectedKeyId"
-                v-model="stagingCategoryMap"
+                v-model="stagingKeyCategoryMap"
                 :dim="{ height: dim.height - headerHeight, width: keyColsTblWidth }"
                 :keyId="selectedKeyId"
                 :category="selectedKeyCategory"
@@ -60,7 +60,7 @@ export default {
         return {
             headerHeight: 0,
             selectedItems: [],
-            stagingCategoryMap: {},
+            stagingKeyCategoryMap: {},
         }
     },
     computed: {
@@ -76,7 +76,7 @@ export default {
             return this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.CATEGORY]
         },
         keyTblWidth() {
-            return this.dim.width / 2
+            return this.dim.width / 2.25
         },
         keyColsTblWidth() {
             return this.dim.width - this.keyTblWidth - 16
@@ -105,10 +105,13 @@ export default {
         keyCategoryMap: {
             deep: true,
             handler(v) {
-                if (!this.$helpers.lodash.isEqual(v, this.stagingCategoryMap)) this.init()
+                if (!this.$helpers.lodash.isEqual(v, this.stagingKeyCategoryMap)) {
+                    this.init()
+                    this.selectFirstItem()
+                }
             },
         },
-        stagingCategoryMap: {
+        stagingKeyCategoryMap: {
             deep: true,
             handler(v) {
                 if (!this.$helpers.lodash.isEqual(this.keyCategoryMap, v)) this.keyCategoryMap = v
@@ -120,8 +123,7 @@ export default {
     },
     methods: {
         init() {
-            this.stagingCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
-            this.selectFirstItem()
+            this.stagingKeyCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
         },
         selectFirstItem() {
             this.selectedItems = []
@@ -131,12 +133,12 @@ export default {
             const item = this.selectedItem
             const id = item[this.idxOfId]
             const category = item[this.idxOfCategory]
-            let keyMap = this.stagingCategoryMap[category] || {}
+            let keyMap = this.stagingKeyCategoryMap[category] || {}
             keyMap = this.$helpers.immutableUpdate(keyMap, {
                 $unset: [id],
             })
-            this.stagingCategoryMap = this.$helpers.immutableUpdate(
-                this.stagingCategoryMap,
+            this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(
+                this.stagingKeyCategoryMap,
                 Object.keys(keyMap).length
                     ? { [category]: { $set: keyMap } }
                     : { $unset: [category] }
@@ -145,13 +147,13 @@ export default {
         },
         addNewKey() {
             const plainKey = this.CREATE_TBL_TOKENS.key
-            const currPlainKeyMap = this.stagingCategoryMap[plainKey] || {}
+            const currPlainKeyMap = this.stagingKeyCategoryMap[plainKey] || {}
             const newKey = {
                 id: `key_${this.$helpers.uuidv1()}`,
                 cols: [],
                 name: `index_${Object.keys(currPlainKeyMap).length}`,
             }
-            this.stagingCategoryMap = this.$helpers.immutableUpdate(this.stagingCategoryMap, {
+            this.stagingKeyCategoryMap = this.$helpers.immutableUpdate(this.stagingKeyCategoryMap, {
                 $merge: {
                     [plainKey]: { ...currPlainKeyMap, [newKey.id]: newKey },
                 },

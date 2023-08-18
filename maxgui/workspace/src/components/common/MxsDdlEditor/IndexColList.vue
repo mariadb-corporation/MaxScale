@@ -18,37 +18,21 @@
         <template
             v-slot:[KEY_COL_EDITOR_ATTRS.ORDER_BY]="{ data: { cell, rowIdx, colIdx, rowData } }"
         >
-            <v-select
+            <lazy-select
                 :value="cell"
-                class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
-                :menu-props="{
-                    contentClass: 'v-select--menu-mariadb',
-                    bottom: true,
-                    offsetY: true,
-                }"
-                :items="Object.values(COL_ORDER_BY)"
-                outlined
-                dense
                 :height="28"
-                hide-details
-                @input="onChangeInput({ rowIdx, rowData, colIdx, value: $event })"
-                @click.stop
+                :items="orderByItems"
+                @on-input="onChangeInput({ rowIdx, rowData, colIdx, value: $event })"
             />
         </template>
         <template
             v-slot:[KEY_COL_EDITOR_ATTRS.LENGTH]="{ data: { cell, rowIdx, colIdx, rowData } }"
         >
-            <mxs-debounced-field
+            <lazy-text-field
                 :value="cell"
-                class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
-                single-line
-                outlined
-                dense
                 :height="28"
-                hide-details
-                :rules="[v => /^\d+$/.test(v) || !v]"
-                @input="onChangeInput({ rowIdx, rowData, colIdx, value: $event })"
-                @click.native.stop
+                @keypress="$helpers.preventNonNumericalVal($event)"
+                @on-input="onChangeInput({ rowIdx, rowData, colIdx, value: $event })"
             />
         </template>
     </mxs-virtual-scroll-tbl>
@@ -68,10 +52,13 @@
  * Public License.
  */
 import { mapState } from 'vuex'
+import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
+import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
 import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'index-col-list',
+    components: { LazyTextField, LazySelect },
     props: {
         value: { type: Object, required: true },
         dim: { type: Object, required: true },
@@ -135,6 +122,9 @@ export default {
         },
         rowMap() {
             return this.$helpers.lodash.keyBy(this.rows, row => row[this.idxOfId])
+        },
+        orderByItems() {
+            return Object.values(this.COL_ORDER_BY)
         },
     },
     watch: {

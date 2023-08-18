@@ -38,9 +38,6 @@ describe('mxs-lazy-input', () => {
         inputTypes.forEach(type => {
             it(`Should render readonly ${type} input when value props is false`, () => {
                 wrapper = mountFactory({ propsData: { type } })
-                expect(wrapper.find('.readonly-input-ctr').classes()).to.include(
-                    `readonly-input-ctr-type-${type}`
-                )
                 switch (type) {
                     case 'text':
                     case 'select':
@@ -67,14 +64,14 @@ describe('mxs-lazy-input', () => {
         })
 
         const expectedClasses = {
-            disabled: 'readonly-input-ctr--disabled',
-            error: 'readonly-input-ctr--error',
+            disabled: 'lazy-input--readonly--disabled',
+            error: 'lazy-input--readonly--error',
         }
         Object.keys(expectedClasses).forEach(props => {
             const className = expectedClasses[props]
             it(`Should add ${className} class when ${props} props is true`, () => {
                 wrapper = mountFactory({ propsData: { [props]: true } })
-                expect(wrapper.find('.readonly-input-ctr').classes()).to.include(className)
+                expect(wrapper.vm.readonlyInputClass).to.include(className)
             })
         })
     })
