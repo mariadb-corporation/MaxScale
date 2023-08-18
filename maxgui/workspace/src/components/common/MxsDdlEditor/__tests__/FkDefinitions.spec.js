@@ -98,24 +98,59 @@ describe('fk-definitions', () => {
             expect(isVertTable).to.be.eql(wrapper.vm.$data.isVertTable)
         })
 
-        it(`Should pass accurate data to fk-definition-col`, () => {
+        it(`Should pass accurate data to lazy-text-field`, () => {
+            wrapper = mountFactory()
+            const { value, height, required } = wrapper.findComponent({
+                name: 'lazy-text-field',
+            }).vm.$attrs
+            expect(value).to.be.a('string')
+            expect(height).to.be.eql(28)
+            expect(required).to.be.true
+        })
+
+        it(`Should pass accurate data to ref-target-input`, () => {
             wrapper = mountFactory()
             const {
-                data,
+                value,
+                height,
+                items,
+                ['item-text']: itemText,
+                ['item-value']: itemValue,
+                rules,
+                required,
+            } = wrapper.find('.ref-target-input').vm.$attrs
+            expect(value).to.be.a('string')
+            expect(height).to.be.eql(28)
+            expect(items).to.be.eql(wrapper.vm.$props.refTargets)
+            expect(itemText).to.equal('text')
+            expect(itemValue).to.equal('id')
+            expect(rules).to.be.an('array')
+            expect(required).to.be.true
+        })
+
+        it(`Should pass accurate data to ref-opt-input`, () => {
+            wrapper = mountFactory()
+            const { value, height, items } = wrapper.find('.ref-opt-input').vm.$attrs
+            expect(value).to.be.a('string')
+            expect(height).to.be.eql(28)
+            expect(items).to.be.eql(wrapper.vm.refOptItems)
+        })
+
+        it(`Should pass accurate data to fk-col-field-input`, () => {
+            wrapper = mountFactory()
+            const {
+                value,
+                field,
                 height,
                 referencingColOptions,
-                refTargets,
                 refColOpts,
             } = wrapper.findComponent({
-                name: 'fk-definition-col',
+                name: 'fk-col-field-input',
             }).vm.$props
-            expect(data).to.be.an('object')
-            expect(data).to.have.property('field')
-            expect(data).to.have.property('value')
-            expect(data).to.have.property('rowData')
+            expect(value).to.be.an('array')
+            expect(field).to.be.a('string')
             expect(height).to.be.eql(28)
             expect(referencingColOptions).to.be.eql(wrapper.vm.referencingColOptions)
-            expect(refTargets).to.be.eql(wrapper.vm.$props.refTargets)
             expect(refColOpts).to.be.an('array')
         })
     })
