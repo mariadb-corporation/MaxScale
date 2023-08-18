@@ -65,7 +65,7 @@ export default {
                 return this.value
             },
             set(v) {
-                this.$emit('on-input', this.$typy(v).safeString)
+                if (v !== this.inputValue) this.$emit('on-input', this.$typy(v).safeString)
             },
         },
     },

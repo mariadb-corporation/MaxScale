@@ -237,7 +237,7 @@ export default {
             return this.currRows.length
         },
         tableRows() {
-            let rows = this.$helpers.stringifyClone(this.rows)
+            let rows = this.$helpers.lodash.cloneDeep(this.rows)
             if (this.idxOfSortingCol !== -1) this.handleSort(rows)
             if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows

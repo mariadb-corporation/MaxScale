@@ -55,7 +55,7 @@ export default {
                 return this.$attrs.value
             },
             set(v) {
-                this.$emit('on-input', v)
+                if (v !== this.inputValue) this.$emit('on-input', v)
             },
         },
     },

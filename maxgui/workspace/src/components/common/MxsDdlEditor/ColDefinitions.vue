@@ -139,7 +139,6 @@ import CharsetCollateInput from '@wsSrc/components/common/MxsDdlEditor/CharsetCo
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import {
     getColumnTypes,
-    checkCharsetSupport,
     checkUniqueZeroFillSupport,
     checkAutoIncrementSupport,
 } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
@@ -300,15 +299,6 @@ export default {
                         colId: col.id,
                     })
                 }
-                let charset = '',
-                    collate = ''
-                if (checkCharsetSupport(col.data_type)) {
-                    charset = this.$typy(col.charset).isUndefined ? this.defTblCharset : col.charset
-                    collate = this.$typy(col.collate).isUndefined
-                        ? this.$typy(this.charsetCollationMap, `[${charset}].defCollation`)
-                              .safeString
-                        : col.collate
-                }
                 return {
                     [ID]: col.id,
                     [NAME]: col.name,
@@ -321,8 +311,8 @@ export default {
                     [AI]: col.ai,
                     [GENERATED]: col.generated ? col.generated : this.GENERATED_TYPES.NONE,
                     [DEF_EXP]: col.default_exp,
-                    [CHARSET]: charset,
-                    [COLLATE]: collate,
+                    [CHARSET]: this.$typy(col.charset).safeString,
+                    [COLLATE]: this.$typy(col.collate).safeString,
                     [COMMENT]: this.$typy(col.comment).safeString,
                 }
             })
@@ -471,22 +461,21 @@ export default {
                     break
                 default: {
                     defs = this.$helpers.immutableUpdate(defs, {
-                        col_map: { [colId]: { [field]: { $set: value } } },
+                        col_map: { [colId]: { [field]: { $set: value || undefined } } },
                     })
                 }
             }
             this.defs = defs
         },
         setCharset({ defs, colId, value }) {
+            const charset = value === this.defTblCharset ? undefined : value || undefined
+            const { defCollation } = this.charsetCollationMap[charset] || {}
             return this.$helpers.immutableUpdate(defs, {
                 col_map: {
                     [colId]: {
-                        charset: { $set: value },
+                        charset: { $set: charset },
                         // also set a default collation
-                        collate: {
-                            $set: this.$typy(this.charsetCollationMap, `[${value}].defCollation`)
-                                .safeString,
-                        },
+                        collate: { $set: defCollation },
                     },
                 },
             })
@@ -498,16 +487,6 @@ export default {
                         un: { $set: false },
                         zf: { $set: false },
                         ai: { $set: false },
-                    },
-                },
-            })
-        },
-        setDefCharset({ defs, colId }) {
-            return this.$helpers.immutableUpdate(defs, {
-                col_map: {
-                    [colId]: {
-                        charset: { $set: this.defTblCharset },
-                        collate: { $set: this.defTblCollation },
                     },
                 },
             })
@@ -545,8 +524,6 @@ export default {
                 },
             })
             if (value === 'SERIAL') defs = this.setSerialType({ defs, colId, value })
-            if (checkCharsetSupport(value)) defs = this.setDefCharset({ defs, colId })
-            if (value.includes('NATIONAL')) defs = this.setCharset({ defs, colId, value: '' })
             if (!checkUniqueZeroFillSupport(value) || !checkAutoIncrementSupport(value))
                 defs = this.uncheck_UN_ZF_AI({ defs, colId, value })
             return defs
