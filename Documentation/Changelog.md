@@ -236,6 +236,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 2.5.28 Release Notes](Release-Notes/MaxScale-2.5.28-Release-Notes.md)
 * [MariaDB MaxScale 2.5.27 Release Notes](Release-Notes/MaxScale-2.5.27-Release-Notes.md)
 * [MariaDB MaxScale 2.5.26 Release Notes](Release-Notes/MaxScale-2.5.26-Release-Notes.md)
 * [MariaDB MaxScale 2.5.25 Release Notes](Release-Notes/MaxScale-2.5.25-Release-Notes.md)
