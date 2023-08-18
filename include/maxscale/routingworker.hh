@@ -147,6 +147,11 @@ public:
         return m_id;
     }
 
+    const char* name() const override
+    {
+        return m_name.c_str();
+    }
+
     /**
      * Return a reference to the session registry of this worker.
      *
@@ -500,6 +505,7 @@ private:
 
 private:
     const int      m_id;        /*< The id of the worker. */
+    std::string    m_name;
     SessionsById   m_sessions;  /*< A mapping of session_id->MXS_SESSION */
     Zombies        m_zombies;   /*< DCBs to be deleted. */
     IndexedStorage m_storage;   /*< The storage of this worker. */

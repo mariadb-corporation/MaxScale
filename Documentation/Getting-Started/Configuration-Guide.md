@@ -379,6 +379,20 @@ If both are defined, the query needs to match *match* but not match *exclude*.
 Even if a filter does not act on a query, the query is not lost. The query is simply
 passed on to the next module in the processing chain as if the filter was not there.
 
+### Enumerations
+
+Enumeration type parameters have a pre-defined set of accepted values. For types
+declared as `enum`, only one value is accepted. For `enum_mask` types, multiple
+values can be defined by separating them with commas. All enumeration values in
+MaxScale are case-sensitive.
+
+For example the `router_options` parameter in the `readconnroute` router is a
+mask type enumeration:
+
+```
+router_options=master,slave
+```
+
 ## Global Settings
 
 The global settings, in a section named `[MaxScale]`, allow various parameters
