@@ -51,6 +51,8 @@ public:
     public:
         virtual ~Dependent();
 
+        virtual const char* name() const = 0;
+
         const WatchdogNotifier& notifier() const
         {
             return m_notifier;

@@ -149,6 +149,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 
 RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
+    , m_name(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << index()))
     , m_callable(this)
     , m_pool_handler(this)
 {
@@ -379,8 +380,9 @@ bool RoutingWorker::start_workers()
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
+        mxb_assert(pWorker->index() == i);
 
-        if (!pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
+        if (!pWorker->start(pWorker->m_name))
         {
             MXB_ALERT("Could not start routing worker %d of %d.", i, this_unit.nWorkers);
             rv = false;

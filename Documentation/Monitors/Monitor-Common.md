@@ -21,16 +21,17 @@ the `monitorpw` parameter, that value will be used instead.
 
 ### `monitor_interval`
 
-Defines how often the monitor updates the status of the
-servers. The default value is 2 seconds. Choose a lower value if servers
-should be queried more often. The smallest possible value is 100 milliseconds.
-If querying the servers takes longer than `monitor_interval`, the effective
-update rate is reduced.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Default**: 2s
+- **Dynamic**: Yes
 
-The default value of `monitor_interval` is 2000 milliseconds.
+Defines how often the monitor updates the status of the servers. Choose a lower
+value if servers should be queried more often. The smallest possible value is
+100 milliseconds.  If querying the servers takes longer than `monitor_interval`,
+the effective update rate is reduced.
 
 ```
-monitor_interval=2500ms
+monitor_interval=2s
 ```
 
 The interval is specified as documented
@@ -40,14 +41,17 @@ versions a value without a unit may be rejected.
 
 ### `backend_connect_timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Default**: 3s
+- **Dynamic**: Yes
+
 This parameter controls the timeout for connecting to a monitored server.
 The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
 is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
-even if the duration is longer than a second. The minimum value is 1 second and
-the default value for this is 3 seconds.
+even if the duration is longer than a second. The minimum value is 1 second.
 
 ```
 backend_connect_timeout=3s
@@ -55,14 +59,17 @@ backend_connect_timeout=3s
 
 ### `backend_write_timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Default**: 3s
+- **Dynamic**: Yes
+
 This parameter controls the timeout for writing to a monitored server.
 The timeout is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
 is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
-even if the duration is longer than a second. The minimum value is 1 second and
-the default value for this is 3 seconds.
+even if the duration is longer than a second. The minimum value is 1 seconds.
 
 ```
 backend_write_timeout=3s
@@ -70,14 +77,17 @@ backend_write_timeout=3s
 
 ### `backend_read_timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Default**: 3s
+- **Dynamic**: Yes
+
 This parameter controls the timeout for reading from a monitored server.
 The timeout is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
 is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
-even if the duration is longer than a second. The minimum value is 1 second and
-the default value for this is 3 seconds.
+even if the duration is longer than a second. The minimum value is 1 second.
 
 ```
 backend_read_timeout=3s
@@ -85,10 +95,14 @@ backend_read_timeout=3s
 
 ### `backend_connect_attempts`
 
+- **Type**: integer
+- **Default**: 1
+- **Dynamic**: Yes
+
 This parameter defines the maximum times a backend connection is attempted every
-monitoring loop. The default is 1. Every attempt may take up to
-`backend_connect_timeout` seconds to perform. If none of the attempts are
-successful, the backend is considered to be unreachable and down.
+monitoring loop. Every attempt may take up to `backend_connect_timeout` seconds
+to perform. If none of the attempts are successful, the backend is considered to
+be unreachable and down.
 
 ```
 backend_connect_attempts=1
@@ -186,6 +200,10 @@ at `/DbData` while both `server2` and `server3` have it mounted on
 
 ### `disk_space_check_interval`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Default**: 0s
+- **Dynamic**: Yes
+
 With this parameter it can be specified the minimum amount of time
 between disk space checks. The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
@@ -199,11 +217,12 @@ cycle, the disk space check interval is affected by the value of
 `monitor_interval`. In particular, even if the value of
 `disk_space_check_interval` is smaller than that of `monitor_interval`,
 the checking will still take place at `monitor_interval` intervals.
-```
-disk_space_check_interval=10000ms
-```
 
 ### `script`
+
+- **Type**: string
+- **Default**: none
+- **Dynamic**: Yes
 
 This command will be executed on a server state change. The parameter should
 be an absolute path to a command or the command should be in the executable
@@ -264,18 +283,27 @@ calls as they cause a deadlock:
 
 ### `script_timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Default**: 90s
+- **Dynamic**: Yes
+
 The timeout for the executed script. The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
 is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
-even if the duration is longer than a second. The default value is 90 seconds.
+even if the duration is longer than a second.
 
 If the script execution exceeds the configured timeout, it is stopped by sending
 a SIGTERM signal to it. If the process does not stop, a SIGKILL signal will be
 sent to it once the execution time is greater than twice the configured timeout.
 
 ### `events`
+
+- **Type**: enum
+- **Dynamic**: Yes
+- **Values**: `master_down`, `master_up`, `slave_down`, `slave_up`, `server_down`, `server_up`, `lost_master`, `lost_slave`, `new_master`, `new_slave`
+- **Default**: All events
 
 A list of event names which cause the script to be executed. If this option is
 not defined, all events cause the script to be executed. The list must contain a
@@ -303,12 +331,16 @@ new_slave   |A new Slave was detected
 
 ### `journal_max_age`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Default**: 28800s
+- **Dynamic**: Yes
+
 The maximum journal file age. The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
 is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the max age is seconds, a max age specified in milliseconds will be rejected,
-even if the duration is longer than a second. The default value is 28800 seconds.
+even if the duration is longer than a second.
 
 When the monitor starts, it reads any stored journal files. If the journal file
 is older than the value of _journal_max_age_, it will be removed and the monitor

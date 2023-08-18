@@ -128,6 +128,11 @@ public:
      */
     static bool remove_listener(Listener* pListener);
 
+    const char* name() const override
+    {
+        return m_name.c_str();
+    }
+
     /**
      * Return a reference to the session registry of this worker.
      *
@@ -483,6 +488,7 @@ private:
     bool try_shutdown();
 
 private:
+    std::string      m_name;
     Worker::Callable m_callable;  /*< Context for own dcalls */
     SessionsById     m_sessions;  /*< A mapping of session_id->MXS_SESSION */
     Zombies          m_zombies;   /*< DCBs to be deleted. */
