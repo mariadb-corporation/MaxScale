@@ -41,6 +41,7 @@ add_library(maxbase STATIC
   workertask.cc
   cpuinfo.cc
   csv_writer.cc
+  compress.cc
   inih/ini.c
   )
 
