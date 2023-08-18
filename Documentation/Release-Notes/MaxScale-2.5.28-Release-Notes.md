@@ -15,6 +15,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-4722](https://jira.mariadb.org/browse/MXS-4722) Case-sensitiveness of enumerations is not documented
+* [MXS-4721](https://jira.mariadb.org/browse/MXS-4721) Galeramon does not update replication lag of replicating servers
 * [MXS-4720](https://jira.mariadb.org/browse/MXS-4720) Implement an option to switch to the old "ping" behaviour in MaxScale
 * [MXS-4719](https://jira.mariadb.org/browse/MXS-4719) Connection init sql file execution can hang
 * [MXS-4714](https://jira.mariadb.org/browse/MXS-4714) qc_sqlite does not properly parse a RENAME statement
