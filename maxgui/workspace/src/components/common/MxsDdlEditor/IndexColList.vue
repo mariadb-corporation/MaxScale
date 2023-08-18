@@ -133,6 +133,9 @@ export default {
                 this.$emit('input', v)
             },
         },
+        rowMap() {
+            return this.$helpers.lodash.keyBy(this.rows, row => row[this.idxOfId])
+        },
     },
     watch: {
         // initialize with fresh data
@@ -181,7 +184,7 @@ export default {
         },
         setInitialSelectedItems() {
             const ids = Object.keys(this.indexedColMap)
-            this.selectedItems = this.rows.filter(c => ids.includes(c[this.idxOfId]))
+            this.selectedItems = ids.map(id => this.rowMap[id])
         },
         getColOrder(rowData) {
             const id = rowData[this.idxOfId]
