@@ -21,19 +21,67 @@
                 :selectedItems.sync="selectedItems"
                 v-on="$listeners"
             >
-                <template v-for="h in headers" v-slot:[h.text]="{ data: { cell, rowData } }">
-                    <fk-definition-col
-                        :key="h.text"
-                        :data="{
-                            field: h.text,
-                            value: cell,
-                            rowData,
-                        }"
+                <template v-slot:[FK_EDITOR_ATTRS.NAME]="{ data: { cell, rowData } }">
+                    <lazy-text-field
+                        :value="cell"
+                        :height="28"
+                        :required="true"
+                        @on-input="
+                            onChangeInput({ value: $event, field: FK_EDITOR_ATTRS.NAME, rowData })
+                        "
+                    />
+                </template>
+                <template v-slot:[FK_EDITOR_ATTRS.REF_TARGET]="{ data: { cell, rowData } }">
+                    <lazy-select
+                        :value="cell"
+                        class="ref-target-input"
+                        :height="28"
+                        :items="refTargets"
+                        item-text="text"
+                        item-value="id"
+                        :selectionText="
+                            $typy(
+                                refTargets.find(item => item.id === cell),
+                                'text'
+                            ).safeString
+                        "
+                        :required="true"
+                        :rules="[v => !!v]"
+                        @on-input="
+                            onChangeInput({
+                                value: $event,
+                                field: FK_EDITOR_ATTRS.REF_TARGET,
+                                rowData,
+                            })
+                        "
+                    />
+                    <!-- TODO: Add an option for REF_TARGET input to manually type in new target -->
+                </template>
+                <template
+                    v-for="optField in refOptFields"
+                    v-slot:[optField]="{ data: { cell, rowData } }"
+                >
+                    <lazy-select
+                        :key="optField"
+                        class="ref-opt-input"
+                        :value="cell"
+                        :height="28"
+                        :items="refOptItems"
+                        @on-input="onChangeInput({ value: $event, field: optField, rowData })"
+                    />
+                </template>
+                <template
+                    v-for="field in columnFields"
+                    v-slot:[field]="{ data: { cell, rowData } }"
+                >
+                    <fk-col-field-input
+                        :key="field"
+                        :value="cell"
+                        :field="field"
                         :height="28"
                         :referencingColOptions="referencingColOptions"
-                        :refTargets="refTargets"
                         :refColOpts="getColOptions($typy(fkRefTblMap[rowData[0]], 'id').safeString)"
-                        @on-input="onChangeInput"
+                        @on-input="onChangeInput({ value: $event, field, rowData })"
                     />
                 </template>
             </mxs-virtual-scroll-tbl>
@@ -56,14 +104,16 @@
  */
 import { mapState, mapMutations } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
-import FkDefinitionCol from '@wsSrc/components/common/MxsDdlEditor/FkDefinitionCol.vue'
+import FkColFieldInput from '@wsSrc/components/common/MxsDdlEditor/FkColFieldInput.vue'
+import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
+import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { checkFkSupport } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'fk-definitions',
-    components: { TblToolbar, FkDefinitionCol },
+    components: { TblToolbar, FkColFieldInput, LazySelect, LazyTextField },
     props: {
         value: { type: Object, required: true },
         tableId: { type: String, required: true },
@@ -113,6 +163,17 @@ export default {
                 { text: ON_UPDATE, width: 166, minWidth: 86, ...header },
                 { text: ON_DELETE, width: 166, minWidth: 86, ...header },
             ]
+        },
+        refOptFields() {
+            const { ON_UPDATE, ON_DELETE } = this.FK_EDITOR_ATTRS
+            return [ON_UPDATE, ON_DELETE]
+        },
+        columnFields() {
+            const { COLS, REF_COLS } = this.FK_EDITOR_ATTRS
+            return [COLS, REF_COLS]
+        },
+        refOptItems() {
+            return Object.values(this.REF_OPTS)
         },
         // new referenced tables keyed by id
         tmpLookupTables: {
@@ -165,17 +226,13 @@ export default {
         rows() {
             return this.fks.map(({ id, name, cols, ref_cols, on_update, on_delete }) => {
                 const refTbl = this.fkRefTblMap[id]
-                let referencedColNames = [],
-                    referencedColIds = []
+                let referencedColIds = []
                 if (refTbl) {
-                    referencedColNames = ref_cols.map(c => {
-                        if (c.name) return c.name
-                        return this.tablesColNameMap[refTbl.id][c.id]
+                    const refTblCols = Object.values(refTbl.defs.col_map)
+                    referencedColIds = ref_cols.map(c => {
+                        if (c.name) return refTblCols.find(item => item.name === c.name).id
+                        return c.id
                     })
-                    referencedColIds = Object.values(refTbl.defs.col_map).reduce((res, c) => {
-                        if (referencedColNames.includes(c.name)) res.push(c.id)
-                        return res
-                    }, [])
                 }
                 return [
                     id,

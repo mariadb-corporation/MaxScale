@@ -1,39 +1,17 @@
 <template>
-    <mxs-debounced-field
-        v-if="data.field === FK_EDITOR_ATTRS.NAME"
-        v-model="inputValue"
-        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
-        :class="`${data.field}`"
-        single-line
-        outlined
-        dense
+    <lazy-select
+        :value="inputValue"
         :height="height"
-        hide-details
-        required
-        :rules="[v => !!v]"
-    />
-    <v-select
-        v-else
-        v-model="inputValue"
-        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
-        :class="data.field"
-        :menu-props="{
-            contentClass: 'v-select--menu-mariadb',
-            bottom: true,
-            offsetY: true,
-        }"
-        :items="enumValues"
+        :items="items"
         item-text="text"
         item-value="id"
-        outlined
-        dense
-        :height="height"
-        :multiple="isColumnField"
-        hide-details
-        required
-        :rules="[v => (isColumnField ? Boolean(v.length) : !!v)]"
+        :selectionText="selectionText"
+        :multiple="true"
+        :required="true"
+        :rules="[v => Boolean(v.length)]"
+        @on-input="inputValue = $event"
     >
-        <template v-if="isColumnField" v-slot:item="{ item }">
+        <template v-slot:item="{ item }">
             <span class="col-order pr-2" :class="{ 'col-order--visible': getColOrder(item) > 0 }">
                 {{ getColOrder(item) }}
             </span>
@@ -51,16 +29,15 @@
                 {{ item.type }}
             </span>
         </template>
-        <template v-if="isColumnField" v-slot:selection="{ item, index }">
-            <span class="v-select__selection v-select__selection--comma">
+        <template v-slot:selection="{ item, index }">
+            <span class="v-select__selection v-select__selection--comma mr-0">
                 <template v-if="index === 0"> {{ item.text }}</template>
                 <template v-else-if="index === 1">
-                    (+{{ inputValue.length - 1 }} {{ $mxs_t('others') }})
+                    &nbsp;(+{{ inputValue.length - 1 }} {{ $mxs_t('others') }})
                 </template>
             </span>
         </template>
-    </v-select>
-    <!-- TODO: Add an option for REF_TARGET input to manually type in new target -->
+    </lazy-select>
 </template>
 
 <script>
@@ -76,58 +53,53 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
- *
- * data: {
- *  field?: string, header name
- *  value?:  (string | string[]), cell value
- *  rowData?: array
- * }
- */
 import { mapState } from 'vuex'
+import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
+
 export default {
-    name: 'fk-definition-col',
+    name: 'fk-col-field-input',
+    components: { LazySelect },
     props: {
-        data: { type: Object, required: true },
+        value: { type: Array, required: true },
+        field: { type: String, required: true },
         height: { type: Number, required: true },
         referencingColOptions: { type: Array, required: true },
-        refTargets: { type: Array, required: true },
         refColOpts: { type: Array, required: true },
     },
     computed: {
         ...mapState({
             FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
-            REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
         }),
         inputValue: {
             get() {
-                return this.data.value
+                return this.value
             },
             set(v) {
-                this.$emit('on-input', { ...this.data, value: v })
+                this.$emit('on-input', v)
             },
         },
-        isColumnField() {
-            return (
-                this.data.field === this.FK_EDITOR_ATTRS.COLS ||
-                this.data.field === this.FK_EDITOR_ATTRS.REF_COLS
-            )
-        },
-        enumValues() {
-            const { COLS, REF_TARGET, REF_COLS, ON_UPDATE, ON_DELETE } = this.FK_EDITOR_ATTRS
-            switch (this.data.field) {
+        items() {
+            const { COLS, REF_COLS } = this.FK_EDITOR_ATTRS
+            switch (this.field) {
                 case COLS:
                     return this.referencingColOptions
-                case REF_TARGET:
-                    return this.refTargets
                 case REF_COLS:
                     return this.refColOpts
-                case ON_UPDATE:
-                case ON_DELETE:
-                    return Object.values(this.REF_OPTS)
                 default:
                     return []
             }
+        },
+        itemMap() {
+            return this.$helpers.lodash.keyBy(this.items, 'id')
+        },
+        selectionText() {
+            const selectedNames = this.inputValue.map(
+                id => this.$typy(this.itemMap, `[${id}]text`).safeString
+            )
+            if (selectedNames.length > 1) {
+                return `${selectedNames[0]} (+${selectedNames.length - 1} ${this.$mxs_t('others')})`
+            }
+            return this.$typy(selectedNames, '[0]').safeString
         },
     },
     methods: {
