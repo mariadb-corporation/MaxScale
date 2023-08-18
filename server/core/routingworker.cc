@@ -261,6 +261,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 RoutingWorker::RoutingWorker(int index, size_t rebalance_window)
     : mxb::WatchedWorker(this_unit.pNotifier)
     , m_index(index)
+    , m_name(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << index))
     , m_state(State::DORMANT)
     , m_listening(false)
     , m_routing(false)
@@ -1559,7 +1560,7 @@ unique_ptr<RoutingWorker> RoutingWorker::create(int index,
 
     if (sWorker)
     {
-        if (sWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << index)))
+        if (sWorker->start(sWorker->m_name))
         {
             bool success = false;
             sWorker->call([&sWorker, &listeners, &success]() {

@@ -256,6 +256,7 @@ public:
     LogThrottling         log_throttling;           /**< When and how to throttle logged messaged. */
     SessionDumpStatements dump_statements;          /**< Whether to dump last statements. */
     config::Count         session_trace;            /**< How entries stored to session trace log.*/
+    config::Regex         session_trace_match;      /**< Regex that controls when to log session traces. */
     config::Bool          ms_timestamp;             /**< Enable or disable high precision timestamps */
     config::Count         retain_last_statements;   /**< How many statements should be retained. */
     config::Bool          syslog;                   /**< Log to syslog */
@@ -407,6 +408,7 @@ private:
     static ParamLogThrottling                           s_log_throttling;
     static config::ParamEnum<session_dump_statements_t> s_dump_statements;
     static config::ParamCount                           s_session_trace;
+    static config::ParamRegex                           s_session_trace_match;
     static config::ParamBool                            s_ms_timestamp;
     static config::ParamCount                           s_retain_last_statements;
     static config::ParamBool                            s_syslog;
