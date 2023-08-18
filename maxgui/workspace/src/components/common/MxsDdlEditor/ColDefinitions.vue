@@ -55,9 +55,7 @@
                         :value="cell"
                         :height="28"
                         :items="dataTypes"
-                        @on-input="
-                            value => onChangeInput({ value, rowData, field: COL_ATTRS.TYPE })
-                        "
+                        @on-input="onChangeInput({ value: $event, rowData, field: COL_ATTRS.TYPE })"
                     />
                 </div>
             </template>
@@ -69,7 +67,7 @@
                         :height="28"
                         :items="Object.values(GENERATED_TYPES)"
                         @on-input="
-                            value => onChangeInput({ value, rowData, field: COL_ATTRS.GENERATED })
+                            onChangeInput({ value: $event, rowData, field: COL_ATTRS.GENERATED })
                         "
                     />
                 </div>
@@ -80,7 +78,7 @@
                     :value="cell"
                     :field="txtField"
                     :height="28"
-                    @on-input="value => onChangeInput({ value, rowData, field: txtField })"
+                    @on-input="onChangeInput({ value: $event, rowData, field: txtField })"
                 />
             </template>
             <template
@@ -93,7 +91,7 @@
                     :rowData="rowData"
                     :field="boolField"
                     :height="28"
-                    @on-input="value => onChangeInput({ value, rowData, field: boolField })"
+                    @on-input="onChangeInput({ value: $event, rowData, field: boolField })"
                 />
             </template>
             <template
@@ -109,7 +107,7 @@
                     :charsetCollationMap="charsetCollationMap"
                     :defTblCharset="defTblCharset"
                     :defTblCollation="defTblCollation"
-                    @on-input="value => onChangeInput({ value, rowData, field })"
+                    @on-input="onChangeInput({ value: $event, rowData, field })"
                 />
             </template>
         </mxs-virtual-scroll-tbl>
@@ -629,6 +627,7 @@ export default {
             }
 
             switch (mode) {
+                case 'delete':
                 case 'drop': {
                     const targetIndex = pkObj.cols.findIndex(c => c.id === colId)
                     if (targetIndex >= 0) pkObj.cols.splice(targetIndex, 1)
