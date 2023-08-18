@@ -64,8 +64,8 @@ describe('mxs-lazy-input', () => {
         })
 
         const expectedClasses = {
-            disabled: 'lazy-input--readonly--disabled',
-            error: 'lazy-input--readonly--error',
+            disabled: 'lazy-input--disabled',
+            error: 'lazy-input--error',
         }
         Object.keys(expectedClasses).forEach(props => {
             const className = expectedClasses[props]

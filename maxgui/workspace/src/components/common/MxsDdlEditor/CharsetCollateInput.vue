@@ -4,6 +4,7 @@
         :inputValue="inputValue"
         :height="height"
         :disabled="isDisabled"
+        :placeholder="isDisabled ? '' : CREATE_TBL_TOKENS.default"
         type="select"
         :getInputRef="() => $typy($refs, 'inputCtr.$children[0]').safeObject"
     >
@@ -15,9 +16,11 @@
                     ? Object.keys(charsetCollationMap)
                     : $typy(charsetCollationMap, `[${columnCharset}].collations`).safeArray
             "
-            :defItem="isCharsetInput ? defTblCharset : defTblCollation"
+            :defItem="defItem"
+            :cache-items="isCharsetInput"
             :disabled="isDisabled"
             :height="height"
+            :placeholder="CREATE_TBL_TOKENS.default"
             @blur="onBlur"
         />
     </mxs-lazy-input>
@@ -61,10 +64,13 @@ export default {
         ...mapState({
             COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
             COL_ATTRS_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTRS_IDX_MAP,
+            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
         }),
         columnCharset() {
-            return this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.CHARSET]}]`)
-                .safeString
+            return (
+                this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.CHARSET]}]`)
+                    .safeString || this.defTblCharset
+            )
         },
         columnType() {
             return this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.TYPE]}]`)
@@ -77,12 +83,15 @@ export default {
             if (this.columnType.includes('NATIONAL')) return true
             return !checkCharsetSupport(this.columnType)
         },
+        defItem() {
+            return this.isCharsetInput ? this.defTblCharset : this.defTblCollation
+        },
         inputValue: {
             get() {
                 return this.value
             },
             set(v) {
-                this.$emit('on-input', v)
+                if (v != this.inputValue) this.$emit('on-input', v)
             },
         },
     },

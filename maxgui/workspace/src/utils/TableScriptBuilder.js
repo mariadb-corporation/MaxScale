@@ -177,7 +177,8 @@ export default class TableScriptBuilder {
         sql += ` ${data_type}`
         if (un && data_type !== 'SERIAL') sql += ` ${tokens.un}`
         if (zf) sql += ` ${tokens.zf}`
-        if (charset) sql += ` ${tokens.charset} ${charset} ${tokens.collate} ${collate}`
+        if (charset) sql += ` ${tokens.charset} ${charset}`
+        if (collate) sql += ` ${tokens.collate} ${collate}`
         // when column is generated, NN or NULL can not be defined
         if (!generated && data_type !== 'SERIAL') sql += ` ${nn ? tokens.nn : tokens.null}`
         if (ai && data_type !== 'SERIAL') sql += ` ${tokens.ai}`

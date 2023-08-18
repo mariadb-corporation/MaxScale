@@ -1,5 +1,5 @@
 <template>
-    <div class="fill-height d-flex align-center">
+    <div class="fill-height d-flex align-center" @click.stop>
         <slot v-if="isInputShown" />
         <div
             v-else
@@ -23,9 +23,10 @@
                     type="text"
                     :value="inputValue"
                     :disabled="disabled"
+                    :placeholder="placeholder"
                     class="mxs-field-text-size text-truncate"
                     @click.stop
-                    @focus="onFocusReadonlyInput"
+                    @focus="onFocus"
                 />
                 <v-icon
                     v-if="isSelectMenu"
@@ -33,7 +34,7 @@
                     :color="isError ? 'error' : ''"
                     class="pl-1"
                     @click.stop
-                    @focus="onFocusReadonlyInput"
+                    @focus="onFocus"
                 >
                     mdi-menu-down
                 </v-icon>
@@ -60,6 +61,7 @@ export default {
     props: {
         value: { type: Boolean, required: true }, // model
         inputValue: { type: [String, Boolean, Array], default: null },
+        placeholder: { type: String, default: '' },
         height: { type: Number, required: true },
         getInputRef: { type: Function, required: true },
         type: { type: String, default: 'text' }, // text, select, checkbox
@@ -113,10 +115,14 @@ export default {
         },
     },
     methods: {
-        onFocusReadonlyInput(e) {
-            this.onFocus(e)
-        },
-        onFocus(e) {
+        async onFocus(e) {
+            /**
+             * https://bugs.chromium.org/p/chromium/issues/detail?id=919540&q=selectionStart&can=2
+             * A workaround to get selectionStart
+             */
+            await this.$helpers.delay(0)
+            const selectionStart = e.target.selectionStart
+
             if (!this.disabled) {
                 this.isInputShown = true
                 if (this.type === 'checkbox') this.$emit('toggle-checkbox')
@@ -128,7 +134,13 @@ export default {
                             if (this.isSelectMenu) {
                                 inputCtr.activateMenu()
                                 this.$nextTick(() => inputCtr.$refs.input.select())
-                            }
+                            } else
+                                this.$nextTick(() =>
+                                    inputCtr.$refs.input.setSelectionRange(
+                                        selectionStart,
+                                        selectionStart
+                                    )
+                                )
                         }
                     })
                 this.$emit('on-focused', e)

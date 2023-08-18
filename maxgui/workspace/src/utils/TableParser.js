@@ -72,7 +72,8 @@ export default class TableParser {
                 un: Boolean(un),
                 zf: Boolean(zf),
                 nn: Boolean(nn),
-                charset,
+                charset:
+                    this.skipColCharsetIfEqual && charset === this.tblCharset ? undefined : charset,
                 collate,
                 generated,
                 ai: Boolean(ai),
@@ -173,19 +174,23 @@ export default class TableParser {
      * @param {string} param.ddl - result of SHOW CREATE TABLE
      * @param {string} param.schema - name of the schema
      * @param {boolean} [param.autoGenId] - if true, id will be generated for the table and its columns
+     * @param {boolean} [param.skipColCharsetIfEqual] - if true, when column charset is equal to
+     * table charset, it will be parsed to undefined.
      * @returns {object} parsed ddl
      */
-    parse({ ddl, schema, autoGenId = false }) {
+    parse({ ddl, schema, autoGenId = false, skipColCharsetIfEqual = true }) {
         this.autoGenId = autoGenId
         this.schema = schema
+        this.skipColCharsetIfEqual = skipColCharsetIfEqual
         const match = ddl.match(createTableReg)
         let defs, options
         if (match) {
             const { table_name, table_options, table_definitions } = match.groups
-            defs = this.parseTableDefs(table_definitions)
             options = this.parseTableOpts(table_options)
             options.schema = schema
             options.name = unquoteIdentifier(table_name)
+            this.tblCharset = options.charset
+            defs = this.parseTableDefs(table_definitions)
         }
         let parsed = { defs, options }
         if (this.autoGenId) parsed.id = `tbl_${uuidv1()}`
