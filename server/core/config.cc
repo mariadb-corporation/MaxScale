@@ -680,6 +680,12 @@ config::ParamCount Config::s_session_trace(
     std::numeric_limits<config::ParamCount::value_type>::max(), // max
     config::Param::Modifiable::AT_RUNTIME);
 
+config::ParamRegex Config::s_session_trace_match(
+    &Config::s_specification, "session_trace_match",
+    "Regular expression that is matched against the contents of the session trace log and "
+    "if it matches the contents are logged when the session stops.",
+    "", config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamBool Config::s_ms_timestamp(
     &Config::s_specification,
     CN_MS_TIMESTAMP,
@@ -1262,6 +1268,7 @@ Config::Config(int argc, char** argv)
     session_set_session_trace(count);
     mxb_log_set_session_trace(count > 0 ? true : false);
 }),
+    session_trace_match(this, &s_session_trace_match),
     ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
     mxb_log_set_highprecision_enabled(enable);
 }),

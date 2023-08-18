@@ -123,18 +123,20 @@ void WatchdogNotifier::run()
 void WatchdogNotifier::notify_systemd_watchdog()
 {
     unique_lock<mutex> guard(m_dependents_lock);
+    bool all_ticking = true;
 
-    bool all_ticking = std::all_of(
-        m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
-            return pDependent->is_ticking();
-        });
-
-    if (all_ticking)
+    for (Dependent* pDependent : m_dependents)
     {
-        std::for_each(
-            m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
-                pDependent->mark_not_ticking();
-            });
+        if (pDependent->is_ticking())
+        {
+            pDependent->mark_not_ticking();
+        }
+        else
+        {
+            all_ticking = false;
+            MXB_WARNING("Thread '%s' has not reported back in %ld seconds.",
+                        pDependent->name(), m_interval.count());
+        }
     }
 
     guard.unlock();

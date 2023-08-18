@@ -396,7 +396,8 @@ passed on to the next module in the processing chain as if the filter was not th
 
 Enumeration type parameters have a pre-defined set of accepted values. For types
 declared as `enum`, only one value is accepted. For `enum_mask` types, multiple
-values can be defined by separating them with commas.
+values can be defined by separating them with commas. All enumeration values in
+MaxScale are case-sensitive.
 
 For example the `router_options` parameter in the `readconnroute` router is a
 mask type enumeration:
@@ -1162,9 +1163,16 @@ than `0`, this configuration setting will not have an effect.
 
 How many log entries are stored in the session specific trace log. This log is
 written to disk when a session ends abnormally and can be used for debugging
-purposes. It would be good to enable this if a session is disconnected and the
-log is not detailed enough. In this case the info log might reveal the true
-cause of why the connection was closed.
+purposes. Currently the session trace log is written to the log in the following situations:
+
+* When MaxScale receives a fatal signal and is about to crash.
+* Whenever an unexpected response is read from a server
+* If the session is not closed gracefully (i.e. client doesn't send a  COM_QUIT packet)
+* Whenever readwritesplit receives a responce that is was not expecting.
+
+It would be good to enable this if a session is disconnected and the log is not
+detailed enough. In this case the info log might reveal the true cause of why
+the connection was closed.
 
 ```
 session_trace=20
@@ -1173,6 +1181,43 @@ Default is `0`.
 
 The session trace log is also exposed by REST API and is shown with
 `maxctrl show sessions`.
+
+The order in which the session trace messages are logged into the log changed in
+MaxScale 6.4.9 (MXS-4716). Newer versions will log the messages in the "normal
+log order" of older events coming first and newer events appearing later in the
+file. Older versions of MaxScale logged the trace dump in the reverse order with
+the newest messages first and oldest ones last.
+
+### `session_trace_match`
+
+**Type**: [regex](#regular-expressions)
+**Default**: none
+**Dynamic**: Yes
+
+If both `session_trace` and `session_trace_match` are defined, and a trace log
+entry of a session matches the regular expression, the trace log is written to
+disk. The check for the match is done when the session is stopping.
+
+The most effective way to debug MaxScale related issues is to turn on `log_info`
+and observe the events written into the MaxScale log. The only problem with this
+approach is that it can cause a severe performance bottleneck and can easily
+fill up the disk as the amount of data written to it is significant. With
+`session_trace` and `session_trace_match`, the content that actually gets logged
+can be filtered to only what is needed.
+
+For example, the following configuration would only log the trace log messages
+from sessions that execute SQL queries with syntax errors:
+
+```
+session_trace=1000
+session_trace_match=/You have an error in your SQL syntax/
+```
+
+This could be used to easily identify which applications execute the queries
+without having to gather the info level log output from all the sessions that
+connect to MaxScale. For every session that ends up logging a syntax error
+message, the last 1000 lines of log output done by that session is written into
+the MaxScale log.
 
 ### `writeq_high_water`
 

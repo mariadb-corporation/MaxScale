@@ -383,6 +383,7 @@ private:
     int               m_current_query {-1};     /*< The index of the current query */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
+    bool              m_dumping_log {false};    /*< If true, the session is dumping the log */
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
 

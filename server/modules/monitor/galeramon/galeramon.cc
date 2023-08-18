@@ -237,6 +237,7 @@ void get_slave_status(GaleraServer* srv, GaleraNode* info)
             if (res.next_row() && res.get_string("Slave_SQL_Running") == "Yes")
             {
                 info->master_id = res.get_int("Master_Server_Id");
+                srv->server->set_replication_lag(res.get_int("Seconds_Behind_Master"));
             }
         }
     }

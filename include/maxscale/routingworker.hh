@@ -198,6 +198,11 @@ public:
      */
     static bool remove_listener(Listener* pListener);
 
+    const char* name() const override
+    {
+        return m_name.c_str();
+    }
+
     /**
      * Return a reference to the session registry of this worker.
      *
@@ -807,6 +812,7 @@ private:
     static std::mutex  s_datas_lock;
 
     int                m_index;     /*< Index of routing worker */
+    std::string        m_name;
     std::atomic<State> m_state;     /*< State of routing worker */
     std::atomic<bool>  m_listening; /*< Is the routing worker listening. */
     std::atomic<bool>  m_routing;   /*< Is the routing worker routing. */
