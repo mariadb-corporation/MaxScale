@@ -8,6 +8,7 @@
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 6.4.9 Release Notes](Release-Notes/MaxScale-6.4.9-Release-Notes.md)
 * [MariaDB MaxScale 6.4.8 Release Notes](Release-Notes/MaxScale-6.4.8-Release-Notes.md)
 * [MariaDB MaxScale 6.4.7 Release Notes](Release-Notes/MaxScale-6.4.7-Release-Notes.md)
 * [MariaDB MaxScale 6.4.6 Release Notes](Release-Notes/MaxScale-6.4.6-Release-Notes.md)
