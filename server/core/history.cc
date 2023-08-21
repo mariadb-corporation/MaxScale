@@ -39,51 +39,49 @@ uint32_t History::Subscriber::current_id() const
     return m_current_id;
 }
 
-bool History::Subscriber::add_response(bool result_is_ok)
-{
-    if (m_current_id)
-    {
-        // It's possible that there's already a response for this command. This can happen if the session
-        // command is executed multiple times before the accepted answer has arrived. We only care about
-        // the latest result.
-        m_ids_to_check[m_current_id] = result_is_ok;
-
-        // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
-        // response is read without a pre-assigned ID.
-        m_current_id = 0;
-    }
-
-    return compare_responses();
-}
-
-bool History::Subscriber::compare_responses()
+bool History::Subscriber::add_response(bool success)
 {
     bool ok = true;
-    bool found = false;
-    auto it = m_ids_to_check.begin();
 
-    while (it != m_ids_to_check.end())
+    if (m_current_id)
     {
-        if (auto cmd = get(it->first))
+        if (auto cmd = get(m_current_id))
         {
-            m_history.set_position(this, it->first);
-
-            if (it->second != cmd.value())
-            {
-                ok = false;
-                break;
-            }
-
-            it = m_ids_to_check.erase(it);
-            found = true;
+            // A response to this command has already arrived. Record the current position so that old
+            // responses can be pruned if they were being held for this subscriber.
+            m_history.set_position(this, m_current_id);
+            ok = success == cmd.value();
         }
         else
         {
-            ++it;
+            // It's possible that there's already a queued response for this command. This can happen if the
+            // session command is executed multiple times before the accepted answer has arrived. We only care
+            // about the latest result so we overwrite the previous one if it existed.
+            m_ids_to_check[m_current_id] = success;
+
+            // Do the check again when the response has arrived
+            m_history.need_response(this);
         }
+
+        // Reset the ID to make sure debug assertions will catch any cases where a PS response is read without
+        // a pre-assigned ID.
+        m_current_id = 0;
     }
 
-    if (ok && !found && !m_ids_to_check.empty())
+    return ok;
+}
+
+bool History::Subscriber::compare_responses(uint32_t id, bool success)
+{
+    bool ok = true;
+
+    if (auto it = m_ids_to_check.find(id); it != m_ids_to_check.end())
+    {
+        m_history.set_position(this, id);
+        ok = it->second == success;
+        m_ids_to_check.erase(it);
+    }
+    else if (!m_ids_to_check.empty())
     {
         m_history.need_response(this);
     }
@@ -233,7 +231,7 @@ void History::remove(Subscriber* backend)
     m_history_info.erase(backend);
 }
 
-void History::check_early_responses()
+void History::check_early_responses(uint32_t id, bool success)
 {
     // Call compare_responses() for any subscribers that responded before the accepted response was received.
     // Collect the subscribers first into a separate vector: the act of checking the history might end up
@@ -251,7 +249,7 @@ void History::check_early_responses()
 
     for (auto subscriber : subscribers)
     {
-        if (!subscriber->compare_responses())
+        if (!subscriber->compare_responses(id, success))
         {
             subscriber->m_cb();
         }

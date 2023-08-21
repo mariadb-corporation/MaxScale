@@ -276,7 +276,6 @@ private:
         LOAD_DATA,              /**< Expecting the client to continue streaming CSV-data */
         CHANGING_STATE,         /**< Client/session is changing db, role or user, waiting server response */
         RECORD_HISTORY,         /**< Recording a command and the result it generated */
-        COMPARE_RESPONSES,      /**< Call callbacks that compare the recorded responses */
     };
 
     enum class ChangingState

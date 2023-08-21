@@ -63,7 +63,7 @@ public:
         {
             auto& session = context.session();
 
-            if (session.is_started())
+            if (session.is_alive())
             {
                 // This could (in some cases) be handled as a COM_CHANGE_USER,
                 // but simpler to just close the session as that will cause the

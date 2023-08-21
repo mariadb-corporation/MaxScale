@@ -274,7 +274,12 @@ public:
         return m_state;
     }
 
-    bool is_started() const
+    /**
+     * Is the session is still alive and ready for routing?
+     *
+     * @return True if the session is still alive and not shutting down
+     */
+    bool is_alive() const
     {
         return m_state == State::STARTED;
     }

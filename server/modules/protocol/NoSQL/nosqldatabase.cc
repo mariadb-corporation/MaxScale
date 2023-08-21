@@ -274,7 +274,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, Command::Resp
 
     auto& session = m_context.session();
 
-    if (sCommand->session_must_be_ready() && !session.is_started())
+    if (sCommand->session_must_be_ready() && !session.is_alive())
     {
         ready = session.start();
 

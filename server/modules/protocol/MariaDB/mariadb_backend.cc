@@ -898,11 +898,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
             if (m_reply.is_complete())
             {
-                if (m_subscriber->add_response(m_reply.is_ok()))
-                {
-                    MXB_INFO("Reply to %u complete", m_subscriber->current_id());
-                }
-                else
+                MXB_INFO("Reply to %u complete", m_subscriber->current_id());
+
+                if (!m_subscriber->add_response(m_reply.is_ok()))
                 {
                     // This server sent a different response than the one we sent to the client. Trigger a
                     // hangup event so that it is closed.

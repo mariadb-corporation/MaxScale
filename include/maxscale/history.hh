@@ -61,14 +61,14 @@ public:
         /**
          * Add a response and compare it to the one stored in the history
          *
-         * @param ok Whether the command succeeded or not
+         * @param success Whether the command succeeded or not
          *
          * @return True if the command matched the one in the history or false if it didn't. If the validity
          *         could not yet be verified, due to the recorded response not having arrived yet, the
          *         function returns true. If at a later point it turns out that the result was a mismatch, the
          *         callback given to the constructor is called.
          */
-        bool add_response(bool ok);
+        bool add_response(bool success);
 
         /**
          * Get the current history
@@ -89,7 +89,7 @@ public:
     private:
         friend class History;
 
-        bool compare_responses();
+        bool compare_responses(uint32_t id, bool success);
 
         History& m_history;
 
@@ -164,8 +164,11 @@ public:
      * Compare history responses that arrived before the accepted reply arrived
      *
      * This should be called by the client protocol module after a command was added to the history.
+     *
+     * @param id      The ID of the command that just completed
+     * @param success Whether the command succeeded or not
      */
-    void check_early_responses();
+    void check_early_responses(uint32_t id, bool success);
 
     /**
      * Check if the history has been pruned

@@ -1323,8 +1323,18 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
             m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
         }
 
-        m_routing_state = RoutingState::COMPARE_RESPONSES;
-        m_dcb->trigger_read_event();
+        // Check the early responses to this command that arrived and were discarded before the accepted
+        // response that ended up here was received. Doing this with lcall() allows the command ID and the
+        // result to be stored inside it which removes the need to permanently store the latest command in
+        // MariaDBClientConnection as a member variable.
+        m_session->worker()->lcall([this, id = m_pending_cmd.id(), ok = reply.is_ok()](){
+            if (m_session->is_alive())
+            {
+                m_session_data->history().check_early_responses(id, ok);
+            }
+        });
+
+        m_routing_state = RoutingState::PACKET_START;
         m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok());
         m_pending_cmd.clear();
     }
@@ -1360,12 +1370,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     {
         // We're still waiting for a response from the backend, read more data once we get it.
         return StateMachineRes::IN_PROGRESS;
-    }
-    else if (m_routing_state == RoutingState::COMPARE_RESPONSES)
-    {
-        // A session command that was recorded was just processed.
-        m_session_data->history().check_early_responses();
-        m_routing_state = RoutingState::PACKET_START;
     }
 
     auto [read_ok, buffer] = read_protocol_packet();
@@ -1432,7 +1436,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     case RoutingState::CHANGING_STATE:
     case RoutingState::RECORD_HISTORY:
-    case RoutingState::COMPARE_RESPONSES:
         mxb_assert_message(!true, "We should never end up here");
         break;
     }

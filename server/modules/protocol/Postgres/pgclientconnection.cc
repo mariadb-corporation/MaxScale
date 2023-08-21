@@ -883,12 +883,14 @@ void PgClientConnection::handle_response(SimpleRequest&& req, const mxs::Reply& 
 void PgClientConnection::handle_response(HistoryRequest&& req, const mxs::Reply& reply)
 {
     mxb_assert(m_session.capabilities() & RCAP_TYPE_SESCMD_HISTORY);
-    m_protocol_data->history().add(std::move(*req), !reply.error());
 
     // Check the history responses once we've returned from clientReply
-    m_session.worker()->lcall([this](){
-        m_protocol_data->history().check_early_responses();
+    m_session.worker()->lcall([this, id = req->id(), ok = !reply.error()](){
+        if (m_session.is_alive())
+        m_protocol_data->history().check_early_responses(id, ok);
     });
+
+    m_protocol_data->history().add(std::move(*req), !reply.error());
 }
 
 void PgClientConnection::send_cancel_request(uint32_t id, uint32_t secret)
