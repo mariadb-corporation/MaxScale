@@ -18,8 +18,6 @@
   is connection pools that prepare the connection with a small set of commands
   like `SET NAMES` and `SET SQL_MODE`.
 
-* Added the new [XRouter](./Routers/XRouter.md) module.
-
 * Common configuration settings can now be specified in a separate section,
   to be included by other sections.
 

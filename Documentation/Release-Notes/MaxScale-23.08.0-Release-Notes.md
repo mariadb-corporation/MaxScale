@@ -28,6 +28,16 @@ The _Readwritesplit_ `max_slave_replication_lag` parameter was renamed to
 `max_replication_lag` and the old name is now an alias for the new name.
 The use of the old name is deprecated.
 
+### [MXS-2744](https://jira.mariadb.org/browse/MXS-2744) Switchover improvements
+
+During switchover, MariaDB-Monitor creates a new connection to the master with
+a long timeout, ignoring the limit of `backend_read_timeout`. This reduces the
+probability of long commands such as `set global read_only=1` timing out. When
+kicking out super and read-only admin users, monitor prevent writes with
+"flush tables with read lock". See
+[monitor documentation](../Monitors/MariaDB-Monitor.md#operation-details)
+for more information.
+
 ## Dropped Features
 
 ###
@@ -42,8 +52,6 @@ The use of the old name is deprecated.
   cases the correct thing to do and as such this parameter is never required.
 
 ## New Features
-
-### [MXS-2744](https://jira.mariadb.org/browse/MXS-2744) Switchover improvements
 
 ### [MXS-3531](https://jira.mariadb.org/browse/MXS-3531) Lower regular expression matching limits
 
@@ -64,7 +72,9 @@ More information about this functionality can be found
 
 This version of switchover performs the switch even if the primary server is
 unresponsive i.e. responds to pings but does not perform any commands in a
-reasonable time. May lead to diverging replication on the old primary.
+reasonable time. May lead to diverging replication on the old primary. See
+[monitor documentation](../Monitors/MariaDB-Monitor.md#operation-details)
+for more information.
 
 ### [MXS-4123](https://jira.mariadb.org/browse/MXS-4123) Fast universal causal reads
 
@@ -89,8 +99,6 @@ where the update of the map takes a long time.
 Stale entries in the schemarouter database map can now be used up to
 `max_staleness` seconds. This reduces the impact that a shard update causes to
 the client applications.
-
-### [MXS-4226](https://jira.mariadb.org/browse/MXS-4226) Force a Switchover
 
 ### [MXS-4232](https://jira.mariadb.org/browse/MXS-4232) Remember old service password
 
