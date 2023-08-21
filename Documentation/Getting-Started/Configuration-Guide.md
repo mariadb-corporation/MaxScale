@@ -1147,9 +1147,9 @@ the newest messages first and oldest ones last.
 
 ### `session_trace_match`
 
-**Type**: [regex](#regular-expressions)
-**Default**: none
-**Dynamic**: Yes
+- **Type**: [regex](#regular-expressions)
+- **Default**: none
+- **Dynamic**: Yes
 
 If both `session_trace` and `session_trace_match` are defined, and a trace log
 entry of a session matches the regular expression, the trace log is written to
