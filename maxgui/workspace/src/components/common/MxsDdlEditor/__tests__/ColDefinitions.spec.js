@@ -4,11 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
-<<<<<<< HEAD
- * Change Date: 2027-05-22
-=======
  * Change Date: 2027-07-24
->>>>>>> 23.08.0
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -104,21 +100,23 @@ describe('col-definitions', () => {
         })
 
         it('Should pass accurate data to lazy-select', () => {
-            const { value, height, items, disabled } = wrapper.findComponent({
+            const { value, height, name, items, disabled } = wrapper.findComponent({
                 name: 'lazy-select',
             }).vm.$attrs
             expect(value).to.be.a('string')
             expect(height).to.be.eql(28)
+            expect(name).to.be.eql(COL_ATTRS.GENERATED)
             expect(items).to.be.eql(generatedTypeItemsStub)
             expect(disabled).to.be.a('boolean')
         })
 
         it('Should pass accurate data to lazy-text-field', () => {
-            const { value, height, required } = wrapper.findComponent({
+            const { value, height, name, required } = wrapper.findComponent({
                 name: 'lazy-text-field',
             }).vm.$attrs
             expect(value).to.be.a('string')
             expect(height).to.be.eql(28)
+            expect(name).to.be.a('string')
             expect(required).to.be.a('boolean')
         })
 

@@ -46,6 +46,7 @@ describe('charset-collate-input', () => {
                 value,
                 inputValue,
                 height,
+                name,
                 disabled,
                 type,
                 getInputRef,
@@ -54,6 +55,7 @@ describe('charset-collate-input', () => {
             expect(inputValue).to.be.eql(wrapper.vm.inputValue)
             expect(type).to.be.eql('select')
             expect(height).to.be.eql(wrapper.vm.$props.height)
+            expect(name).to.be.eql(wrapper.vm.name)
             expect(disabled).to.be.eql(wrapper.vm.isDisabled)
             expect(getInputRef).to.be.a('function')
         })

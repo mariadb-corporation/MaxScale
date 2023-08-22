@@ -20,6 +20,7 @@
                 v-if="h.text === KEY_EDITOR_ATTRS.CATEGORY"
                 :key="h.text"
                 :value="cell"
+                :name="h.text"
                 :height="28"
                 :items="categories"
                 :disabled="isInputDisabled({ field: h.text, rowData })"
@@ -31,6 +32,7 @@
                 v-else
                 :key="h.text"
                 :value="cell"
+                :name="h.text"
                 :height="28"
                 :required="isInputRequired(h.text)"
                 :disabled="isInputDisabled({ field: h.text, rowData })"
@@ -139,10 +141,13 @@ export default {
         },
     },
     created() {
-        this.assignData()
-        this.handleSelectItem(0)
+        this.init()
     },
     methods: {
+        init() {
+            this.assignData()
+            this.handleSelectItem(0)
+        },
         assignData() {
             this.stagingCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
             const { foreignKey, primaryKey } = this.CREATE_TBL_TOKENS

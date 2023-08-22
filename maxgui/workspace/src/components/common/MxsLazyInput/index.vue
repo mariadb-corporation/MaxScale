@@ -24,6 +24,8 @@
                     :value="inputValue"
                     :disabled="disabled"
                     :placeholder="placeholder"
+                    :name="name"
+                    autocomplete="off"
                     class="mxs-field-text-size text-truncate"
                     @click.stop
                     @focus="onFocus"
@@ -68,6 +70,7 @@ export default {
         disabled: { type: Boolean, default: false },
         required: { type: Boolean, default: false },
         error: { type: Boolean, default: false }, // sync
+        name: { type: String, required: true },
     },
     computed: {
         isError: {

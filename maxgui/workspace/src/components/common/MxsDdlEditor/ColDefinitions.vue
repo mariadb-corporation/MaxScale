@@ -66,6 +66,7 @@
                     <lazy-select
                         :value="cell"
                         :height="28"
+                        :name="COL_ATTRS.GENERATED"
                         :items="generatedTypeItems"
                         :disabled="isPkRow(rowData)"
                         @on-input="
@@ -77,6 +78,7 @@
             <template v-for="txtField in txtFields" v-slot:[txtField]="{ data: { rowData, cell } }">
                 <lazy-text-field
                     :key="txtField"
+                    :name="txtField"
                     :value="cell"
                     :height="28"
                     :required="txtField === COL_ATTRS.NAME"

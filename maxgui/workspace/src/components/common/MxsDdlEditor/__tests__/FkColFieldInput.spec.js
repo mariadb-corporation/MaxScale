@@ -74,6 +74,7 @@ describe('fk-col-field-input', () => {
                 $attrs: {
                     value,
                     height,
+                    name,
                     items,
                     ['item-text']: itemText,
                     ['item-value']: itemValue,
@@ -87,6 +88,7 @@ describe('fk-col-field-input', () => {
             }).vm
             expect(value).to.be.eql(wrapper.vm.inputValue)
             expect(height).to.be.eql(wrapper.vm.$props.height)
+            expect(name).to.be.eql(wrapper.vm.$props.field)
             expect(items).to.be.eql(wrapper.vm.items)
             expect(itemText).to.be.eql('text')
             expect(itemValue).to.be.eql('id')

@@ -24,6 +24,7 @@
                 <template v-slot:[FK_EDITOR_ATTRS.NAME]="{ data: { cell, rowData } }">
                     <lazy-text-field
                         :value="cell"
+                        :name="FK_EDITOR_ATTRS.NAME"
                         :height="28"
                         :required="true"
                         @on-input="
@@ -36,6 +37,7 @@
                         :value="cell"
                         class="ref-target-input"
                         :height="28"
+                        :name="FK_EDITOR_ATTRS.REF_TARGET"
                         :items="refTargets"
                         item-text="text"
                         item-value="id"
@@ -65,6 +67,7 @@
                         :key="optField"
                         class="ref-opt-input"
                         :value="cell"
+                        :name="optField"
                         :height="28"
                         :items="refOptItems"
                         @on-input="onChangeInput({ value: $event, field: optField, rowData })"

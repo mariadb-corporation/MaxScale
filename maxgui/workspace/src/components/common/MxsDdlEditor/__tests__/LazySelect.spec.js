@@ -28,6 +28,7 @@ const mountFactory = opts =>
                     items: itemsStub,
                     disabled: false,
                     required: false,
+                    name: 'select-input',
                 },
             },
             opts
@@ -47,6 +48,7 @@ describe('lazy-select', () => {
                 required,
                 type,
                 getInputRef,
+                name,
             } = wrapper.findComponent({ name: 'mxs-lazy-input' }).vm.$props
             expect(value).to.be.eql(wrapper.vm.$data.isInputShown)
             expect(inputValue).to.be.eql(wrapper.vm.inputValue)
@@ -54,6 +56,7 @@ describe('lazy-select', () => {
             expect(height).to.be.eql(wrapper.vm.$attrs.height)
             expect(disabled).to.be.eql(wrapper.vm.$attrs.disabled)
             expect(required).to.be.eql(wrapper.vm.$attrs.required)
+            expect(name).to.be.eql(wrapper.vm.$attrs.name)
             expect(getInputRef).to.be.a('function')
         })
         it(`Should pass accurate data to v-select`, () => {

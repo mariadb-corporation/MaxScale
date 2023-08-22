@@ -20,6 +20,7 @@
         >
             <lazy-select
                 :value="cell"
+                :name="KEY_COL_EDITOR_ATTRS.ORDER_BY"
                 :height="28"
                 :items="orderByItems"
                 @on-input="onChangeInput({ rowIdx, rowData, colIdx, value: $event })"
@@ -30,6 +31,7 @@
         >
             <lazy-text-field
                 :value="cell"
+                :name="KEY_COL_EDITOR_ATTRS.LENGTH"
                 :height="28"
                 @keypress="$helpers.preventNonNumericalVal($event)"
                 @on-input="onChangeInput({ rowIdx, rowData, colIdx, value: $event })"
@@ -168,7 +170,7 @@ export default {
                     const indexedCol = this.indexedColMap[id]
                     const order =
                         this.$typy(indexedCol, 'order').safeString || this.COL_ORDER_BY.ASC
-                    const length = this.$typy(indexedCol, 'length').safeString || null
+                    const length = this.$typy(indexedCol, 'length').safeString || undefined
                     return [id, '', text, type, order, length]
                 })
         },

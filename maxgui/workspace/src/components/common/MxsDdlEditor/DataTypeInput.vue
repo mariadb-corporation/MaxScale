@@ -4,6 +4,7 @@
         :inputValue="inputValue"
         :height="height"
         type="select"
+        name="data-type"
         required
         :error.sync="error"
         :getInputRef="() => $typy($refs, 'inputCtr').safeObject"

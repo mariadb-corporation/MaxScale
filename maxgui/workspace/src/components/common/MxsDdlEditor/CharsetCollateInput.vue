@@ -6,6 +6,7 @@
         :disabled="isDisabled"
         :placeholder="isDisabled ? '' : CREATE_TBL_TOKENS.default"
         type="select"
+        :name="name"
         :getInputRef="() => $typy($refs, 'inputCtr.$children[0]').safeObject"
     >
         <charset-collate-select
@@ -78,6 +79,9 @@ export default {
         },
         isCharsetInput() {
             return this.field === this.COL_ATTRS.CHARSET
+        },
+        name() {
+            return this.isCharsetInput ? 'charset' : 'collation'
         },
         isDisabled() {
             if (this.columnType.includes('NATIONAL')) return true

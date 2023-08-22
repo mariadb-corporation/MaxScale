@@ -4,6 +4,7 @@
         :inputValue="inputValue"
         type="checkbox"
         :height="height"
+        :name="field"
         :disabled="isDisabled"
         :getInputRef="() => $typy($refs, 'inputCtr').safeObject"
         @toggle-checkbox="toggle"

@@ -43,6 +43,7 @@ describe('bool-input', () => {
                 inputValue,
                 type,
                 height,
+                name,
                 disabled,
                 getInputRef,
             } = wrapper.findComponent({ name: 'mxs-lazy-input' }).vm.$props
@@ -50,6 +51,7 @@ describe('bool-input', () => {
             expect(inputValue).to.be.eql(wrapper.vm.inputValue)
             expect(type).to.be.eql('checkbox')
             expect(height).to.be.eql(wrapper.vm.$props.height)
+            expect(name).to.be.eql(wrapper.vm.$props.field)
             expect(disabled).to.be.eql(wrapper.vm.isDisabled)
             expect(getInputRef).to.be.a('function')
         })

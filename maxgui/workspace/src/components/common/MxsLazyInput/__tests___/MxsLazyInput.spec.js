@@ -25,6 +25,7 @@ const mountFactory = opts =>
                     height: 28,
                     getInputRef: () => null,
                     type: 'text',
+                    name: 'test-input',
                 },
             },
             opts
@@ -40,11 +41,19 @@ describe('mxs-lazy-input', () => {
                 wrapper = mountFactory({ propsData: { type } })
                 switch (type) {
                     case 'text':
-                    case 'select':
-                        expect(wrapper.find('input[type="text"]').exists()).to.be.true
+                    case 'select': {
+                        const input = wrapper.find('input[type="text"]')
+                        expect(input.exists()).to.be.true
+                        expect(input.attributes()).to.include.keys(
+                            'type',
+                            'placeholder',
+                            'name',
+                            'autocomplete'
+                        )
                         if (type === 'select')
                             expect(wrapper.findComponent({ name: 'v-icon' }).exists()).to.be.true
                         break
+                    }
                     case 'checkbox':
                         expect(wrapper.findComponent({ name: 'v-simple-checkbox' }).exists()).to.be
                             .true

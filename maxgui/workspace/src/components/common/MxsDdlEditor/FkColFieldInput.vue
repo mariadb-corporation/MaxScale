@@ -5,6 +5,7 @@
         :items="items"
         item-text="text"
         item-value="id"
+        :name="field"
         :selectionText="selectionText"
         :multiple="true"
         :required="true"

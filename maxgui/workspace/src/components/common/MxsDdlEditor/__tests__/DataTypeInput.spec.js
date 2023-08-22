@@ -43,9 +43,8 @@ describe('data-type-input', () => {
                 required,
                 getInputRef,
                 error,
-            } = wrapper.findComponent({
-                name: 'mxs-lazy-input',
-            }).vm.$props
+                name,
+            } = wrapper.findComponent({ name: 'mxs-lazy-input' }).vm.$props
             expect(value).to.be.eql(wrapper.vm.$data.isInputShown)
             expect(inputValue).to.be.eql(wrapper.vm.inputValue)
             expect(height).to.be.eql(wrapper.vm.$props.height)
@@ -53,6 +52,7 @@ describe('data-type-input', () => {
             expect(required).to.be.true
             expect(error).to.be.eql(wrapper.vm.$data.error)
             expect(getInputRef).to.be.a('function')
+            expect(name).to.be.eql('data-type')
         })
         it(`Should pass accurate data to v-combobox`, () => {
             wrapper = mountFactory({ data: () => ({ isInputShown: true }) })

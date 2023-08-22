@@ -4,6 +4,7 @@
         :inputValue="selectionText || inputValue"
         :height="$attrs.height"
         type="select"
+        :name="$attrs.name"
         :disabled="Boolean($attrs.disabled)"
         :required="Boolean($attrs.required)"
         :getInputRef="() => $typy($refs, 'inputCtr').safeObject"

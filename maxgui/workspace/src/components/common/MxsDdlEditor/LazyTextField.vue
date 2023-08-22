@@ -3,6 +3,7 @@
         v-model="isInputShown"
         :inputValue="inputValue"
         :height="$attrs.height"
+        :name="$attrs.name"
         :error.sync="error"
         :disabled="Boolean($attrs.disabled)"
         :required="Boolean($attrs.required)"
@@ -17,6 +18,7 @@
             outlined
             dense
             hide-details
+            autocomplete="off"
             :rules="[v => ($attrs.required ? !!v : true)]"
             :error="error"
             v-bind="{ ...$attrs }"

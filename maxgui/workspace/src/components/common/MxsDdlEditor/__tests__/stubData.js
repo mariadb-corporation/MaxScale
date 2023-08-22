@@ -84,4 +84,4 @@ export const colKeyCategoryMapStub = { 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c
 
 export const tableColNameMapStub = { 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c': 'id' }
 
-export const tableColMapStub = parsedTableStub.col_map
+export const tableColMapStub = parsedTableStub.defs.col_map

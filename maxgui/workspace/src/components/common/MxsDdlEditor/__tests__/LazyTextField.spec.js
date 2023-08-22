@@ -20,7 +20,13 @@ const mountFactory = opts =>
         lodash.merge(
             {
                 component: LazyTextField,
-                propsData: { value: 'id', height: 28, disabled: false, required: false },
+                attrs: {
+                    value: 'id',
+                    height: 28,
+                    disabled: false,
+                    required: false,
+                    name: 'test-input',
+                },
             },
             opts
         )
@@ -35,6 +41,7 @@ describe('lazy-text-field', () => {
                 value,
                 inputValue,
                 height,
+                name,
                 disabled,
                 required,
                 error,
@@ -42,6 +49,7 @@ describe('lazy-text-field', () => {
             } = wrapper.findComponent({ name: 'mxs-lazy-input' }).vm.$props
             expect(value).to.be.eql(wrapper.vm.$data.isInputShown)
             expect(inputValue).to.be.eql(wrapper.vm.inputValue)
+            expect(name).to.be.eql(wrapper.vm.$attrs.name)
             expect(height).to.be.eql(wrapper.vm.$attrs.height)
             expect(disabled).to.be.eql(wrapper.vm.$attrs.disabled)
             expect(required).to.be.eql(wrapper.vm.$attrs.required)
@@ -53,17 +61,21 @@ describe('lazy-text-field', () => {
             const {
                 value,
                 height,
+                autocomplete,
                 ['hide-details']: hideDetails,
                 error,
                 disabled,
                 required,
                 rules,
+                name,
             } = wrapper.findComponent({
                 name: 'mxs-debounced-field',
             }).vm.$attrs
             expect(value).to.be.eql(wrapper.vm.inputValue)
             expect(height).to.be.eql(wrapper.vm.$attrs.height)
+            expect(autocomplete).to.be.eql('off')
             expect(hideDetails).to.be.eql('')
+            expect(name).to.be.eql(wrapper.vm.$attrs.name)
             expect(error).to.be.eql(wrapper.vm.$data.error)
             expect(disabled).to.be.eql(wrapper.vm.$attrs.disabled)
             expect(required).to.be.eql(wrapper.vm.$attrs.required)

@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import FkDefinitions from '@wsSrc/components/common/MxsDdlEditor/FkDefinitions'
 import { lodash } from '@share/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, FK_EDITOR_ATTRS } from '@wsSrc/store/config'
 
 const mockFkObj = {
     cols: [{ id: 'col_3e0af061-3b54-11ee-a8e8-25db6da41f2a' }],
@@ -100,11 +100,12 @@ describe('fk-definitions', () => {
 
         it(`Should pass accurate data to lazy-text-field`, () => {
             wrapper = mountFactory()
-            const { value, height, required } = wrapper.findComponent({
+            const { value, height, name, required } = wrapper.findComponent({
                 name: 'lazy-text-field',
             }).vm.$attrs
             expect(value).to.be.a('string')
             expect(height).to.be.eql(28)
+            expect(name).to.be.eql(FK_EDITOR_ATTRS.NAME)
             expect(required).to.be.true
         })
 
@@ -113,6 +114,7 @@ describe('fk-definitions', () => {
             const {
                 value,
                 height,
+                name,
                 items,
                 ['item-text']: itemText,
                 ['item-value']: itemValue,
@@ -121,6 +123,7 @@ describe('fk-definitions', () => {
             } = wrapper.find('.ref-target-input').vm.$attrs
             expect(value).to.be.a('string')
             expect(height).to.be.eql(28)
+            expect(name).to.be.eql(FK_EDITOR_ATTRS.REF_TARGET)
             expect(items).to.be.eql(wrapper.vm.$props.refTargets)
             expect(itemText).to.equal('text')
             expect(itemValue).to.equal('id')
