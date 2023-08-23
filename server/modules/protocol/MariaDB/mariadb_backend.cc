@@ -837,7 +837,8 @@ void MariaDBBackendConnection::normal_read()
         // The router closed the session, erase the callbacks to prevent the client protocol from calling it.
         m_subscriber.reset();
     }
-    else if (m_reply.is_complete() && !m_subscriber->add_response(m_reply.is_ok()))
+    else if (rcap_type_required(capabilities, RCAP_TYPE_SESCMD_HISTORY)
+             && m_reply.is_complete() && !m_subscriber->add_response(m_reply.is_ok()))
     {
         handle_history_mismatch();
     }
