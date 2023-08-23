@@ -60,10 +60,11 @@ enum class Expect
     DIFFERENT
 };
 
-Result check(TestConnections& test, Connection& c, const string& stmt, Expect expect, const Result& base_line)
+Result check(TestConnections& test, Connection& c, const string& stmt, Expect expect, const Result& base_line,
+             const char* zQuery = "SELECT * FROM cache_invalidate")
 {
     c.query(stmt);
-    Result rows = c.rows("SELECT * FROM cache_invalidate");
+    Result rows = c.rows(zQuery);
 
     if (expect == Expect::SAME)
     {
@@ -127,8 +128,16 @@ void run(TestConnections& test, int port, Expect expect)
     check(test, c, "RENAME TABLE cache_invalidate TO cache_invalidate_2", expect, rows);
     c.query("RENAME TABLE cache_invalidate_2 TO cache_invalidate");
 
-    // Finish
+
     drop(test);
+
+    // information_schema
+    rows = c.rows("SELECT table_name FROM information_schema.tables ORDER BY table_name");
+    rows = check(test, c, "CREATE TABLE cache_invalidate_create (f INT)", expect, rows,
+                 "SELECT table_name FROM information_schema.tables ORDER BY table_name");
+
+    check(test, c, "DROP TABLE cache_invalidate_create", expect, rows,
+          "SELECT table_name FROM information_schema.tables ORDER BY table_name");
 }
 }
 

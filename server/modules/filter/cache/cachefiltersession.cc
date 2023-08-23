@@ -158,6 +158,8 @@ enum class StatementType
 {
     SELECT,
     DUPSERT,    // DELETE, UPDATE, INSERT
+    DRALTER,    // DROP, RENAME, ALTER
+    CREATE,
     UNKNOWN
 };
 
@@ -176,6 +178,7 @@ StatementType get_statement_type(GWBUF* pStmt)
     pSql = modutil_MySQL_bypass_whitespace(pSql, len);
 
     static const char ALTER[]  = "ALTER";
+    static const char CREATE[] = "CREATE";
     static const char DELETE[] = "DELETE";
     static const char DROP[]   = "DROP";
     static const char INSERT[] = "INSERT";
@@ -192,9 +195,16 @@ StatementType get_statement_type(GWBUF* pStmt)
         {
         case 'A':
         case 'a':
-            type = StatementType::DUPSERT;
+            type = StatementType::DRALTER;
             pKey = ALTER;
             pKey_end = pKey + sizeof(ALTER) - 1;
+            break;
+
+        case 'C':
+        case 'c':
+            type = StatementType::CREATE;
+            pKey = CREATE;
+            pKey_end = pKey + sizeof(CREATE) - 1;
             break;
 
         case 'D':
@@ -205,7 +215,7 @@ StatementType get_statement_type(GWBUF* pStmt)
                 {
                 case 'r':
                 case 'R':
-                    type = StatementType::DUPSERT;
+                    type = StatementType::DRALTER;
                     pKey = DROP;
                     pKey_end = pKey + sizeof(DROP) - 1;
                     break;
@@ -229,7 +239,7 @@ StatementType get_statement_type(GWBUF* pStmt)
 
         case 'R':
         case 'r':
-            type = StatementType::DUPSERT;
+            type = StatementType::DRALTER;
             pKey = RENAME;
             pKey_end = pKey + sizeof(RENAME) - 1;
             break;
@@ -858,6 +868,17 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
     }
 }
 
+namespace
+{
+
+void add_information_schema_tables(std::unordered_set<std::string>& tables)
+{
+    tables.insert("information_schema.tables");
+    tables.insert("information_schema.schemata");
+}
+
+}
+
 /**
  * Whether the cache should be consulted.
  *
@@ -878,7 +899,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
         const CacheConfig& config = m_sCache->config();
-        auto protocol_data = m_pSession->protocol_data();
+        auto* pProtocol_data = m_pSession->protocol_data();
 
         if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
@@ -890,7 +911,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             // When a transaction is started, we initially assume it is read-only.
             m_is_read_only = true;
         }
-        else if (!protocol_data->is_trx_active())
+        else if (!pProtocol_data->is_trx_active())
         {
             if (log_decisions())
             {
@@ -898,7 +919,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             action = CACHE_USE_AND_POPULATE;
         }
-        else if (protocol_data->is_trx_read_only())
+        else if (pProtocol_data->is_trx_read_only())
         {
             if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
             {
@@ -962,7 +983,9 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             else
             {
-                switch (get_statement_type(pPacket))
+                auto statement_type = get_statement_type(pPacket);
+
+                switch (statement_type)
                 {
                 case StatementType::SELECT:
                     if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
@@ -994,11 +1017,29 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     }
                     break;
 
+                case StatementType::CREATE:
+                    if (m_invalidate)
+                    {
+                        add_information_schema_tables(m_tables);
+                        m_invalidate_now = true;
+                    }
+                    m_is_read_only = false;
+
+                    action = CACHE_IGNORE;
+                    zPrimary_reason = "statement is not SELECT";
+                    break;
+
+                case StatementType::DRALTER:
                 case StatementType::DUPSERT:
                     if (m_invalidate)
                     {
-                        auto mariases = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-                        if (!protocol_data->is_trx_active() && mariases->is_autocommit)
+                        auto* pMaria_session = static_cast<MYSQL_session*>(pProtocol_data);
+
+                        if (statement_type == StatementType::DRALTER)
+                        {
+                            m_invalidate_now = true;
+                        }
+                        if (!pProtocol_data->is_trx_active() && pMaria_session->is_autocommit)
                         {
                             m_invalidate_now = true;
                         }
@@ -1007,11 +1048,11 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                         if (result == QC_QUERY_PARSED)
                         {
-                            update_table_names(pPacket);
+                            update_table_names(pPacket, statement_type == StatementType::DRALTER);
                         }
                         else
                         {
-                            const char* zPrefix = "DUPSERT statement could not be parsed. ";
+                            const char* zPrefix = "Modifying statement could not be parsed. ";
                             const char* zSuffix = nullptr;
 
                             if (m_sCache->config().clear_cache_on_parse_errors)
@@ -1118,7 +1159,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
     return action;
 }
 
-void CacheFilterSession::update_table_names(GWBUF* pPacket)
+void CacheFilterSession::update_table_names(GWBUF* pPacket, bool add_information_schema)
 {
     // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
@@ -1149,6 +1190,11 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
         }
 
         m_tables.insert(qtable);
+    }
+
+    if (add_information_schema)
+    {
+        add_information_schema_tables(m_tables);
     }
 }
 
@@ -1691,7 +1737,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
 
         if (parse_result == QC_QUERY_PARSED)
         {
-            update_table_names(pPacket);
+            update_table_names(pPacket, false);
         }
         else
         {
