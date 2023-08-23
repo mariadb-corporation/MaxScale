@@ -165,7 +165,7 @@ private:
 
     cache_action_t get_cache_action(GWBUF* pPacket);
 
-    void update_table_names(GWBUF* pPacket);
+    void update_table_names(GWBUF* pPacket, bool add_information_schema);
 
     enum routing_action_t
     {
