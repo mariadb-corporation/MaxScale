@@ -1,7 +1,9 @@
 <template>
     <div
         :class="
-            `resizer resizer--${split} resizer--${split}-${active ? 'resizing' : 'not-resizing'}`
+            `resize-handle resize-handle--${split} resize-handle--${split}-${
+                active ? 'resizing' : 'not-resizing'
+            }`
         "
     />
 </template>
@@ -20,7 +22,7 @@
  * Public License.
  */
 export default {
-    name: 'resizer',
+    name: 'resize-handle',
     props: {
         split: {
             validator(value) {
@@ -33,7 +35,7 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.resizer {
+.resize-handle {
     position: absolute;
     opacity: 0.5;
     z-index: 1;

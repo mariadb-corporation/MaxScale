@@ -1,35 +1,33 @@
 <template>
-    <div class="fill-height">
-        <mxs-split-pane
-            v-model="graphHeightPct"
-            :boundary="dim.height"
-            split="horiz"
-            :minPercent="minErdPct"
-            :maxPercent="maxErdPct"
-            :deactivatedMaxPctZone="maxErdPct - (100 - maxErdPct) * 2"
-            :disable="graphHeightPct === 100"
-        >
-            <template slot="pane-left">
-                <diagram-ctr
-                    ref="diagramCtr"
-                    :dim="erdDim"
-                    :connId="connId"
-                    :isFormValid="isFormValid"
-                    @on-apply-script="applyScript"
-                    @on-export-script="exportScript"
-                    @on-export-as-jpeg="exportAsJpeg"
-                    @on-copy-script-to-clipboard="copyScriptToClipboard"
-                />
-            </template>
-            <template slot="pane-right">
-                <entity-editor-ctr
-                    v-show="activeEntityId"
-                    :dim="editorDim"
-                    @is-form-valid="isFormValid = $event"
-                />
-            </template>
-        </mxs-split-pane>
-    </div>
+    <mxs-split-pane
+        v-model="graphHeightPct"
+        :boundary="dim.height"
+        split="horiz"
+        :minPercent="minErdPct"
+        :maxPercent="maxErdPct"
+        :deactivatedMaxPctZone="maxErdPct - (100 - maxErdPct) * 2"
+        :disable="graphHeightPct === 100"
+    >
+        <template slot="pane-left">
+            <diagram-ctr
+                ref="diagramCtr"
+                :dim="erdDim"
+                :connId="connId"
+                :isFormValid="isFormValid"
+                @on-apply-script="applyScript"
+                @on-export-script="exportScript"
+                @on-export-as-jpeg="exportAsJpeg"
+                @on-copy-script-to-clipboard="copyScriptToClipboard"
+            />
+        </template>
+        <template slot="pane-right">
+            <entity-editor-ctr
+                v-show="activeEntityId"
+                :dim="editorDim"
+                @is-form-valid="isFormValid = $event"
+            />
+        </template>
+    </mxs-split-pane>
 </template>
 
 <script>

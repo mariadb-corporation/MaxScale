@@ -1,47 +1,44 @@
 <template>
-    <div class="fill-height">
-        <v-progress-linear v-if="isInitializing" indeterminate />
-        <mxs-split-pane
-            v-else
-            v-model="sidebarPct"
-            class="query-view__content"
-            :boundary="ctrDim.width"
-            :minPercent="minSidebarPct"
-            :deactivatedMinPctZone="deactivatedMinSizeBarPoint"
-            :maxPercent="maxSidebarPct"
-            split="vert"
-            progress
-            revertRender
-            @resizing="onResizing"
-        >
-            <template slot="pane-left">
-                <sidebar-ctr
-                    @place-to-editor="$typy($refs, 'editor[0].placeToEditor').safeFunction($event)"
-                    @on-dragging="$typy($refs, 'editor[0].draggingTxt').safeFunction($event)"
-                    @on-dragend="$typy($refs, 'editor[0].dropTxtToEditor').safeFunction($event)"
-                />
-            </template>
-            <template slot="pane-right">
-                <div class="d-flex flex-column fill-height">
-                    <query-tab-nav-ctr :height="queryTabCtrHeight">
-                        <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-                    </query-tab-nav-ctr>
-                    <keep-alive v-for="queryTab in allQueryTabs" :key="queryTab.id" :max="20">
-                        <template v-if="activeQueryTabId === queryTab.id">
-                            <txt-editor-ctr
-                                v-if="isSqlEditor"
-                                ref="editor"
-                                :queryTab="queryTab"
-                                :dim="editorDim"
-                            />
-                            <alter-table-editor v-else-if="isAlterEditor" :dim="editorDim" />
-                            <insight-viewer v-else :dim="editorDim" />
-                        </template>
-                    </keep-alive>
-                </div>
-            </template>
-        </mxs-split-pane>
-    </div>
+    <v-progress-linear v-if="isInitializing" indeterminate />
+    <mxs-split-pane
+        v-else
+        v-model="sidebarPct"
+        class="query-view__content"
+        :boundary="ctrDim.width"
+        :minPercent="minSidebarPct"
+        :deactivatedMinPctZone="deactivatedMinSizeBarPoint"
+        :maxPercent="maxSidebarPct"
+        split="vert"
+        progress
+        @resizing="onResizing"
+    >
+        <template slot="pane-left">
+            <sidebar-ctr
+                @place-to-editor="$typy($refs, 'editor[0].placeToEditor').safeFunction($event)"
+                @on-dragging="$typy($refs, 'editor[0].draggingTxt').safeFunction($event)"
+                @on-dragend="$typy($refs, 'editor[0].dropTxtToEditor').safeFunction($event)"
+            />
+        </template>
+        <template slot="pane-right">
+            <div class="d-flex flex-column fill-height">
+                <query-tab-nav-ctr :height="queryTabCtrHeight">
+                    <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                </query-tab-nav-ctr>
+                <keep-alive v-for="queryTab in allQueryTabs" :key="queryTab.id" :max="20">
+                    <template v-if="activeQueryTabId === queryTab.id">
+                        <txt-editor-ctr
+                            v-if="isSqlEditor"
+                            ref="editor"
+                            :queryTab="queryTab"
+                            :dim="editorDim"
+                        />
+                        <alter-table-editor v-else-if="isAlterEditor" :dim="editorDim" />
+                        <insight-viewer v-else :dim="editorDim" />
+                    </template>
+                </keep-alive>
+            </div>
+        </template>
+    </mxs-split-pane>
 </template>
 
 <script>

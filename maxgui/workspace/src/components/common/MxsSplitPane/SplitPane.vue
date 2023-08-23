@@ -1,5 +1,5 @@
 <template>
-    <div :class="`splitter-pane ${splitTypeClass} ${panePosClass}`">
+    <div :class="`split-pane ${splitTypeClass} ${panePosClass}`">
         <slot />
     </div>
 </template>
@@ -19,13 +19,14 @@
  * Public License.
  */
 export default {
-    name: 'pane',
+    name: 'split-pane',
     props: {
+        split: { type: String, required: true },
         isLeft: { type: Boolean, default: false },
     },
     computed: {
         splitTypeClass() {
-            return `splitter-pane--${this.$parent.split}`
+            return `split-pane--${this.split}`
         },
         panePosClass() {
             return `${this.isLeft ? `${this.splitTypeClass}-left` : `${this.splitTypeClass}-right`}`
@@ -35,7 +36,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.splitter-pane {
+.split-pane {
     position: absolute;
     overflow: hidden;
     &--vert {

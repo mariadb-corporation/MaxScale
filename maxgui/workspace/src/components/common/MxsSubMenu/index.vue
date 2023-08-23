@@ -56,6 +56,7 @@
                     dense
                     link
                     :disabled="item.disabled"
+                    data-test="child-menu-item"
                     @click="emitClickEvent(item)"
                 >
                     <v-list-item-title class="mxs-color-helper text-text">

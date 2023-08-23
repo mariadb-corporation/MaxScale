@@ -1,12 +1,15 @@
 <template>
-    <div class="mxs-split-pane-container" :style="{ cursor, ...resizingStyle }">
-        <pane :isLeft="!revertRender" :split="split" :style="leftPaneStyle">
-            <slot :name="`pane-${revertRender ? 'right' : 'left'}`" />
-        </pane>
-        <pane :isLeft="revertRender" :split="split" :style="rightPaneStyle">
-            <slot :name="`pane-${revertRender ? 'left' : 'right'}`" />
-        </pane>
-        <resizer
+    <div
+        class="mxs-split-pane-container fill-height relative"
+        :style="{ cursor, ...resizingStyle }"
+    >
+        <split-pane isLeft :split="split" :style="leftPanelPos" data-test="pane-left">
+            <slot name="pane-left" />
+        </split-pane>
+        <split-pane :split="split" :style="rightPanelPos" data-test="pane-right">
+            <slot name="pane-right" />
+        </split-pane>
+        <resize-handle
             v-if="!disable"
             :style="resizerStyle"
             :split="split"
@@ -31,11 +34,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Resizer from '@wsSrc/components/common/MxsSplitPane/Resizer.vue'
-import Pane from '@wsSrc/components/common/MxsSplitPane/Pane.vue'
+import ResizeHandle from '@wsSrc/components/common/MxsSplitPane/ResizeHandle.vue'
+import SplitPane from '@wsSrc/components/common/MxsSplitPane/SplitPane.vue'
 export default {
     name: 'mxs-split-pane',
-    components: { Resizer, Pane },
+    components: { ResizeHandle, SplitPane },
     props: {
         value: { type: Number, required: true },
         boundary: { type: Number, required: true }, // boundary value in pixel unit
@@ -57,7 +60,6 @@ export default {
             required: true,
         },
         disable: { type: Boolean, default: false },
-        revertRender: { type: Boolean, default: false },
         /**
          * let the resize action continue but the value props is stopped at minPercent or maxPercent.
          * This emits @resizing with value beyond minPercent/maxPercent threshold
@@ -103,12 +105,6 @@ export default {
         cursor() {
             return this.active ? (this.split === 'vert' ? 'col-resize' : 'row-resize') : ''
         },
-        leftPaneStyle() {
-            return this.revertRender ? this.rightPanelPos : this.leftPanelPos
-        },
-        rightPaneStyle() {
-            return this.revertRender ? this.leftPanelPos : this.rightPanelPos
-        },
         resizingStyle() {
             return {
                 pointerEvents: this.active ? 'all !important' : 'auto',
@@ -131,13 +127,15 @@ export default {
             if (v) document.body.classList.add('no-userSelect--all', 'no-pointerEvent--all')
             else document.body.classList.remove('no-userSelect--all', 'no-pointerEvent--all')
         },
-        value(v) {
-            // update current pecent when value change. e.g when pane is toggled
-            if (v !== this.currPct) this.currPct = v
+        /* Set initial value and update current percent when value change. e.g when
+         * value is changed by the parent component
+         */
+        value: {
+            immediate: true,
+            handler(v) {
+                if (v !== this.currPct) this.currPct = v
+            },
         },
-    },
-    created() {
-        this.currPct = this.value
     },
     methods: {
         addEvents() {
@@ -200,10 +198,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.mxs-split-pane-container {
-    height: 100%;
-    position: relative;
-}
-</style>

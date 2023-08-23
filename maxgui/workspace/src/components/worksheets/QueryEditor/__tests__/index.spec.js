@@ -52,7 +52,6 @@ describe('query-editor', () => {
                 maxPercent,
                 split,
                 progress,
-                revertRender,
             } = wrapper.findComponent({
                 name: 'mxs-split-pane',
             }).vm.$props
@@ -62,7 +61,6 @@ describe('query-editor', () => {
             expect(maxPercent).to.be.equals(wrapper.vm.maxSidebarPct)
             expect(split).to.be.equals('vert')
             expect(progress).to.be.equals(true)
-            expect(revertRender).to.be.equals(true)
         })
 
         const fnEvtMap = {
