@@ -1067,36 +1067,42 @@ private:
 
                 if (reply.is_array())
                 {
-                    vector<const char*> srem_argv;
-                    vector<size_t> srem_argvlen;
+                    auto nElements = reply.elements();
 
-                    srem_argv.push_back("SREM");
-                    srem_argvlen.push_back(4);
-
-                    srem_argv.push_back(words[i].c_str());
-                    srem_argvlen.push_back(words[i].length());
-
-                    for (size_t j = 0; j < reply.elements(); ++j)
+                    // If there are no elements, then there is nothing to remove.
+                    if (nElements != 0)
                     {
-                        Redis::Reply element = reply.element(j);
+                        vector<const char*> srem_argv;
+                        vector<size_t> srem_argvlen;
 
-                        if (element.is_string())
-                        {
-                            del_argv.push_back(element.str());
-                            del_argvlen.push_back(element.len());
+                        srem_argv.push_back("SREM");
+                        srem_argvlen.push_back(4);
 
-                            srem_argv.push_back(element.str());
-                            srem_argvlen.push_back(element.len());
-                        }
-                        else
+                        srem_argv.push_back(words[i].c_str());
+                        srem_argvlen.push_back(words[i].length());
+
+                        for (size_t j = 0; j < nElements; ++j)
                         {
-                            MXS_ERROR("Unexpected type returned by redis: %s",
-                                      redis_type_to_string(element.type()));
+                            Redis::Reply element = reply.element(j);
+
+                            if (element.is_string())
+                            {
+                                del_argv.push_back(element.str());
+                                del_argvlen.push_back(element.len());
+
+                                srem_argv.push_back(element.str());
+                                srem_argvlen.push_back(element.len());
+                            }
+                            else
+                            {
+                                MXS_ERROR("Unexpected type returned by redis: %s",
+                                          redis_type_to_string(element.type()));
+                            }
                         }
+
+                        srem_argvs.push_back(std::move(srem_argv));
+                        srem_argvlens.push_back(std::move(srem_argvlen));
                     }
-
-                    srem_argvs.push_back(std::move(srem_argv));
-                    srem_argvlens.push_back(std::move(srem_argvlen));
                 }
 
                 to_free.emplace_back(std::move(reply));
