@@ -223,19 +223,20 @@ public:
     static const int64_t DEFAULT_THREADS_MAX = 256;
 
     /**
-     * Initialize the config object. To be called *once* at program startup.
+     * Initialization, to be called *once* at program startup.
      *
      * @param argc  The argc provided to main.
      * @param argv  The argv procided to main.
-     *
-     * @return The MaxScale global configuration.
      */
-    static Config& init(int argc, char** argv);
+    static void init(int argc, char** argv);
 
     /**
      * @return The MaxScale global configuration.
      */
-    static Config& get();
+    static Config& get()
+    {
+        return s_config;
+    }
 
     /**
      * Check if an object was read from a static configuration file
@@ -392,7 +393,11 @@ public:
     using HttpMethods = std::vector<maxbase::http::Method>;
 
 
-    std::vector<std::string> argv;                  /**< Copy of the argv array given to main. */
+    static const std::vector<std::string>& argv()  /**< Copy of the argv array given to main. */
+    {
+        mxb_assert(!s_argv.empty());
+        return s_argv;
+    }
 
     // RUNTIME-modifiable automatically configured parameters.
     config::Bool          log_debug;                /**< Whether debug messages are logged. */
@@ -498,7 +503,7 @@ public:
                    mxs::ConfigParameters* pUnrecognized = nullptr) override;
 
 private:
-    Config(int argc, char** argv);
+    Config();
 
     void check_cpu_situation() const;
     void check_memory_situation() const;
@@ -506,6 +511,9 @@ private:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
+    static Config s_config;
+    static std::vector<std::string> s_argv;
+
     class Specification : public config::Specification
     {
     public:

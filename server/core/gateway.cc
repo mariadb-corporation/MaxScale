@@ -1387,7 +1387,9 @@ int main(int argc, char** argv)
 
     atexit(mxb_log_finish);
 
-    mxs::Config& cnf = mxs::Config::init(argc, argv);
+    mxs::Config::init(argc, argv);
+
+    mxs::Config& cnf = Config::get();
 
     maxscale_reset_starttime();
 

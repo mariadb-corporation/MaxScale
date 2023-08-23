@@ -1240,9 +1240,8 @@ private:
 };
 
 
-Config::Config(int argc, char** argv)
+Config::Config()
     : config::Configuration(CN_MAXSCALE, &s_specification)
-    , argv(argv, argv + argc)
     , log_debug(this, &s_log_debug, [](bool enable) {
 #ifndef SS_DEBUG
     MXB_WARNING("The 'log_debug' option has no effect in release mode.");
@@ -1373,22 +1372,17 @@ Config::Config(int argc, char** argv)
 }
 
 // static
-Config& Config::init(int argc, char** argv)
-{
-#if defined (SS_DEBUG)
-    static bool inited;
-    mxb_assert((!inited && argc && argv) || (inited && !argc && !argv));
-    inited = true;
-#endif
-    static Config config(argc, argv);
-
-    return config;
-}
+Config Config::s_config;
 
 // static
-Config& Config::get()
+std::vector<std::string> Config::s_argv;
+
+// static
+void Config::init(int argc, char** argv)
 {
-    return init(0, nullptr);
+    mxb_assert(s_argv.empty());
+
+    s_argv.insert(s_argv.begin(), argv, argv + argc);
 }
 
 // static
