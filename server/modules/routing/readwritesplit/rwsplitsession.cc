@@ -369,6 +369,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
                 // is needed in case the server where it's being executed on fails.
                 MXB_INFO("Transaction is too big (%lu bytes), can't replay if it fails.", size);
                 m_can_replay_trx = false;
+                mxb::atomic::add(&m_router->stats().n_trx_too_big, 1, mxb::atomic::RELAXED);
             }
         }
     }

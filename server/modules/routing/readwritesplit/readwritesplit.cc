@@ -324,6 +324,7 @@ json_t* RWSplit::diagnostics() const
     json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
     json_object_set_new(rval, "max_sescmd_history_length", json_integer(stats().n_max_sescmd_sz));
     json_object_set_new(rval, "avg_sescmd_history_length", json_integer(avg_sescmd_sz()));
+    json_object_set_new(rval, "trx_max_size_exceeded", json_integer(stats().n_trx_too_big));
 
     if (config()->reuse_ps)
     {
