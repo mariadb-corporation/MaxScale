@@ -539,6 +539,9 @@ The amount of memory needed to store a particular transaction will be slightly
 larger than the length in bytes of the SQL used in the transaction. If the limit
 is ever exceeded, a message will be logged at the info level.
 
+Starting with MaxScale 6.4.10, the number of times that this limit has been
+exceeded is shown in `maxctrl show service` as `trx_max_size_exceeded`.
+
 Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
 for more details on size type parameters in MaxScale.
 
