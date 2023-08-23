@@ -846,7 +846,7 @@ void MariaDBBackendConnection::normal_read()
         // The router closed the session, erase the callbacks to prevent the client protocol from calling it.
         mysql_session()->history_info.erase(this);
     }
-    else if (m_reply.is_complete())
+    else if (rcap_type_required(capabilities, RCAP_TYPE_SESCMD_HISTORY) && m_reply.is_complete())
     {
         if (!compare_responses())
         {
@@ -975,6 +975,7 @@ void MariaDBBackendConnection::pin_history_responses()
 
 bool MariaDBBackendConnection::compare_responses()
 {
+    mxb_assert(rcap_type_required(m_session->capabilities(), RCAP_TYPE_SESCMD_HISTORY));
     MYSQL_session* data = mysql_session();
 
     if (m_current_id)
