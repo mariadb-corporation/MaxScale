@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
@@ -102,7 +103,10 @@ export default {
                             data: { name: connection_name },
                         })
                     }
-                    if (QueryTab.getters('isAlterEditor'))
+                    if (
+                        QueryTab.getters('isAlterEditor') &&
+                        !this.vue.$typy(AlterEditor.getters('data')).isEmptyObject
+                    )
                         await dispatch(
                             'editorsMem/queryDdlEditorSuppData',
                             { connId, config },
