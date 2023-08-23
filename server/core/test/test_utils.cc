@@ -169,7 +169,7 @@ int test_externcmd()
     cmd->wait();
     errors += compare(result, "world");
 
-    cmd = ExternalCmd::create("/usr/bin/sh -c 'sleep 1; echo hello world'", 30, handler);
+    cmd = ExternalCmd::create("/bin/sh -c 'sleep 1; echo hello world'", 30, handler);
     cmd->start();
 
     int rc = Process::ERROR;
@@ -183,7 +183,7 @@ int test_externcmd()
     errors += compare(rc, 0);
     errors += compare(result, "hello world");
 
-    cmd = ExternalCmd::create("/usr/bin/cat", 30, handler);
+    cmd = ExternalCmd::create("/bin/cat", 30, handler);
     cmd->start();
     std::string msg = "echo";
     cmd->write(msg.c_str(), msg.size());
@@ -195,7 +195,7 @@ int test_externcmd()
 
     std::vector<std::string> results;
     std::vector<std::string> expected;
-    cmd = ExternalCmd::create("/usr/bin/cat", 30, [&](auto cmd, auto line){
+    cmd = ExternalCmd::create("/bin/cat", 30, [&](auto cmd, auto line){
         results.push_back(line);
     });
     cmd->start();
