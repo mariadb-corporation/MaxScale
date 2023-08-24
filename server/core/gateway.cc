@@ -240,6 +240,8 @@ string resolve_maxscale_conf_fname(const string& cnf_file_arg);
     vsnprintf(message, sizeof(message), format, ap ## __LINE__); \
     va_end(ap ## __LINE__);
 
+#define PRINT_AND_LOG(format, ...) fprintf(stderr, format, ##__VA_ARGS__); MXB_ALERT(format, ##__VA_ARGS__);
+
 struct DEBUG_ARGUMENT
 {
     const char* name;                       /**< The name of the debug argument */
@@ -475,16 +477,10 @@ static void sigfatal_handler(int i)
 
     const mxs::Config& cnf = mxs::Config::get();
 
-    char str[512]; // Enough
-    sprintf(str,
-            "MaxScale %s received fatal signal %d. "
-            "Commit ID: %s, System name: %s, Release string: %s, Thread: %s",
-            MAXSCALE_VERSION, i, maxscale_commit(),
-            cnf.sysname.c_str(), cnf.release_string, mxb::get_thread_name().c_str());
-
-    cerr << str << "\n" << endl;
-
-    MXB_ALERT("%s", str);
+    PRINT_AND_LOG("MaxScale %s received fatal signal %d. "
+                  "Commit ID: %s, System name: %s, Release string: %s, Thread: %s",
+                  MAXSCALE_VERSION, i, maxscale_commit(),
+                  cnf.sysname.c_str(), cnf.release_string, mxb::get_thread_name().c_str());
 
     const char* pStmt = "none/unknown";
     size_t nStmt = strlen(pStmt);
