@@ -58,6 +58,9 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
         test.reset_timeout();
         conn.connect();
 
+        // This should prevent leftover idle connections from holding locks on the database
+        conn.query("SET wait_timeout=5");
+
         for (const auto& query : before)
         {
             test.expect(conn.query(query), "%s: %s should work: %u, %s",
