@@ -152,7 +152,6 @@ enum class StatementType
     SELECT,
     DUPSERT,    // DELETE, UPDATE, INSERT
     DRALTER,    // DROP, RENAME, ALTER
-    CREATE,
     UNKNOWN
 };
 
@@ -171,7 +170,6 @@ StatementType get_statement_type(GWBUF* pStmt)
     pSql = modutil_MySQL_bypass_whitespace(pSql, len);
 
     static const char ALTER[]  = "ALTER";
-    static const char CREATE[] = "CREATE";
     static const char DELETE[] = "DELETE";
     static const char DROP[]   = "DROP";
     static const char INSERT[] = "INSERT";
@@ -191,13 +189,6 @@ StatementType get_statement_type(GWBUF* pStmt)
             type = StatementType::DRALTER;
             pKey = ALTER;
             pKey_end = pKey + sizeof(ALTER) - 1;
-            break;
-
-        case 'C':
-        case 'c':
-            type = StatementType::CREATE;
-            pKey = CREATE;
-            pKey_end = pKey + sizeof(CREATE) - 1;
             break;
 
         case 'D':
@@ -817,29 +808,50 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
     m_res = pData;
 
     std::vector<std::string> invalidation_words;
+    bool put_value = true;
 
     if (m_invalidate)
     {
-        std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+        for (const auto& table : m_tables)
+        {
+            if (table.find("information_schema.") == 0)
+            {
+                // If any table from "information_schema" is involved in the SELECT,
+                // the result will not be cached.
+                invalidation_words.clear();
+                put_value = false;
+                break;
+            }
+            else
+            {
+                invalidation_words.emplace_back(table);
+            }
+        }
+
         m_tables.clear();
     }
 
-    std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
+    cache_result_t result = CACHE_RESULT_OK;
 
-    cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
-                                                [sWeak, down, reply](cache_result_t result) {
-                                                    auto sThis = sWeak.lock();
+    if (put_value)
+    {
+        std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-                                                    // If we do not have an sThis, then the session
-                                                    // has been terminated.
-                                                    if (sThis)
-                                                    {
-                                                        if (sThis->put_value_handler(result, down, reply))
-                                                        {
-                                                            sThis->flush_response(down, reply);
-                                                        }
-                                                    }
-                                                });
+        result = m_sCache->put_value(m_key, invalidation_words, m_res,
+                                     [sWeak, down, reply](cache_result_t result) {
+                                         auto sThis = sWeak.lock();
+
+                                         // If we do not have an sThis, then the session
+                                         // has been terminated.
+                                         if (sThis)
+                                         {
+                                             if (sThis->put_value_handler(result, down, reply))
+                                             {
+                                                 sThis->flush_response(down, reply);
+                                             }
+                                         }
+                                     });
+    }
 
     if (!CACHE_RESULT_IS_PENDING(result))
     {
@@ -854,17 +866,6 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
         m_sCache->refreshed(m_key, this);
         m_refreshing = false;
     }
-}
-
-namespace
-{
-
-void add_information_schema_tables(std::unordered_set<std::string>& tables)
-{
-    tables.insert("information_schema.tables");
-    tables.insert("information_schema.schemata");
-}
-
 }
 
 /**
@@ -1005,18 +1006,6 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     }
                     break;
 
-                case StatementType::CREATE:
-                    if (m_invalidate)
-                    {
-                        add_information_schema_tables(m_tables);
-                        m_invalidate_now = true;
-                    }
-                    m_is_read_only = false;
-
-                    action = CACHE_IGNORE;
-                    zPrimary_reason = "statement is not SELECT";
-                    break;
-
                 case StatementType::DRALTER:
                 case StatementType::DUPSERT:
                     if (m_invalidate)
@@ -1036,7 +1025,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                         if (result == QC_QUERY_PARSED)
                         {
-                            update_table_names(pPacket, statement_type == StatementType::DRALTER);
+                            update_table_names(pPacket);
                         }
                         else
                         {
@@ -1147,7 +1136,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
     return action;
 }
 
-void CacheFilterSession::update_table_names(GWBUF* pPacket, bool add_information_schema)
+void CacheFilterSession::update_table_names(GWBUF* pPacket)
 {
     // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
@@ -1172,11 +1161,6 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket, bool add_information
         }
 
         m_tables.insert(table);
-    }
-
-    if (add_information_schema)
-    {
-        add_information_schema_tables(m_tables);
     }
 }
 
@@ -1720,7 +1704,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
 
         if (parse_result == QC_QUERY_PARSED)
         {
-            update_table_names(pPacket, false);
+            update_table_names(pPacket);
         }
         else
         {
