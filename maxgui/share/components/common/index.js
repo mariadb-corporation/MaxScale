@@ -18,6 +18,9 @@ import DetailsPage from '@share/components/common/DetailsPage'
 import GlobalSearch from '@share/components/common/GlobalSearch'
 import IconSpriteSheet from '@share/components/common/IconSpriteSheet'
 import MonitorPageHeader from '@share/components/common/MonitorPageHeader'
+import MxsCollapse from '@share/components/common/MxsCollapse'
+import MxsConfDlg from '@share/components/common/MxsConfDlg'
+import MxsSelDlg from '@share/components/common/MxsSelDlg'
 import MxsLineChartStream from '@share/components/common/MxsCharts/MxsLineChartStream.vue'
 import MxsDagGraph from '@share/components/common/MxsSvgGraphs/MxsDagGraph.vue'
 import MxsTreeGraph from '@share/components/common/MxsSvgGraphs/MxsTreeGraph.vue'
@@ -43,6 +46,9 @@ export default {
     'global-search': GlobalSearch,
     'icon-sprite-sheet': IconSpriteSheet,
     'monitor-page-header': MonitorPageHeader,
+    'mxs-collapse': MxsCollapse,
+    'mxs-conf-dlg': MxsConfDlg,
+    'mxs-sel-dlg': MxsSelDlg,
     'mxs-line-chart-stream': MxsLineChartStream,
     'mxs-dag-graph': MxsDagGraph,
     'mxs-tree-graph': MxsTreeGraph,

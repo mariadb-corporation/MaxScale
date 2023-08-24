@@ -1,5 +1,5 @@
 <template>
-    <mxs-conf-dlg
+    <mxs-dlg
         v-model="isOpened"
         minBodyWidth="768px"
         :title="confirm_dlg.title"
@@ -13,7 +13,7 @@
         <template v-slot:form-body>
             <p v-html="confirm_dlg.confirm_msg" />
         </template>
-    </mxs-conf-dlg>
+    </mxs-dlg>
 </template>
 <script>
 /*

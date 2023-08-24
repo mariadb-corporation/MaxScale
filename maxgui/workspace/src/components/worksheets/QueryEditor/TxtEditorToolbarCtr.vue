@@ -100,7 +100,7 @@
                 </template>
             </row-limit-ctr>
         </v-form>
-        <mxs-conf-dlg
+        <mxs-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :saveText="confDlg.type"
@@ -109,7 +109,7 @@
             :lazyValidation="false"
             :onSave="confDlg.onSave"
         >
-            <template v-slot:body-prepend>
+            <template v-slot:form-body>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <mxs-sql-editor
                         :value="confDlg.sqlTxt"
@@ -151,7 +151,7 @@
                 />
                 <v-spacer />
             </template>
-        </mxs-conf-dlg>
+        </mxs-dlg>
     </div>
 </template>
 <script>

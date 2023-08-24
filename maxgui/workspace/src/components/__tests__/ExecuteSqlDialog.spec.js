@@ -24,9 +24,6 @@ const mountFactory = opts =>
                 propsData: {
                     ctrDim: { width: 1000, height: 500 },
                 },
-                stubs: {
-                    'mxs-sql-editor': "<div class='stub'></div>",
-                },
             },
             opts
         )
@@ -34,23 +31,39 @@ const mountFactory = opts =>
 let wrapper
 describe('execute-sql-dialog', () => {
     describe(`Created hook and child component's data communication tests`, () => {
-        it(`Should pass accurate data to mxs-conf-dlg via props`, () => {
-            wrapper = mountFactory({ isExecFailed: () => false })
-            const {
-                $props: { smallInfo },
-                $attrs: { value, title, hasSavingErr, onSave },
-            } = wrapper.findComponent({
-                name: 'mxs-conf-dlg',
-            }).vm
+        it(`Should pass accurate data to mxs-dlg via props`, () => {
+            wrapper = mountFactory()
+            const { value, title, hasSavingErr, onSave } = wrapper.findComponent({
+                name: 'mxs-dlg',
+            }).vm.$props
             expect(value).to.be.equals(wrapper.vm.isConfDlgOpened)
             expect(title).to.be.equals(
                 wrapper.vm.$mxs_tc('confirmations.exeStatements', wrapper.vm.stmtI18nPluralization)
             )
-            expect(smallInfo).to.be.equals(
-                wrapper.vm.$mxs_tc('info.exeStatementsInfo', wrapper.vm.stmtI18nPluralization)
-            )
             expect(hasSavingErr).to.be.equals(wrapper.vm.isExecFailed)
             expect(onSave).to.be.equals(wrapper.vm.exec_sql_dlg.on_exec)
+        })
+
+        it(`Should pass accurate data to mxs-sql-editor via props`, () => {
+            wrapper = mountFactory({
+                computed: {
+                    isConfDlgOpened: () => true, // mock dialog opened
+                },
+            })
+            const { value, completionItems, options, skipRegCompleters } = wrapper.findComponent({
+                name: 'mxs-sql-editor',
+            }).vm.$props
+            expect(value).to.be.equals(wrapper.vm.currSql)
+            expect(completionItems).to.be.equals(wrapper.vm.completionItems)
+            expect(options).to.be.eql({ fontSize: 10, contextmenu: false, wordWrap: 'on' })
+            expect(skipRegCompleters).to.be.equals(wrapper.vm.isSqlEditor)
+        })
+
+        it(`Should show small info`, () => {
+            wrapper = mountFactory()
+            expect(wrapper.find('small').text()).to.be.equals(
+                wrapper.vm.$mxs_tc('info.exeStatementsInfo', wrapper.vm.stmtI18nPluralization)
+            )
         })
     })
     describe(`Computed, method and other tests`, () => {

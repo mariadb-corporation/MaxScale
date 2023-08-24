@@ -1,5 +1,5 @@
 <template>
-    <mxs-conf-dlg
+    <mxs-dlg
         v-model="isOpened"
         :title="$mxs_t('selectObjsToVisualize')"
         saveText="visualize"
@@ -8,7 +8,7 @@
         :hasSavingErr="hasSavingErr"
         :onSave="visualize"
     >
-        <template v-slot:body-prepend>
+        <template v-slot:form-body>
             <mxs-label-field
                 v-model.trim="name"
                 :label="$mxs_t('name')"
@@ -31,7 +31,7 @@
                 </p>
             </div>
         </template>
-    </mxs-conf-dlg>
+    </mxs-dlg>
 </template>
 <script>
 /*

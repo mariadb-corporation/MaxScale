@@ -36,11 +36,12 @@ const mountFactory = opts =>
 describe(`txt-editor-toolbar-ctr`, () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
-        it(`Should pass accurate data to mxs-conf-dlg`, () => {
-            // shallow mount so that mxs-conf-dlg in connection-manager will be stubbed
+        it(`Should pass accurate data to mxs-dlg`, () => {
+            // shallow mount so that mxs-dlg in connection-manager will be stubbed
             wrapper = mountFactory({ shallow: true, computed: { query_confirm_flag: () => 1 } })
-            const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
-            const { value, title, onSave, closeImmediate, saveText } = confirmDialog.vm.$attrs
+            const { value, title, onSave, closeImmediate, saveText } = wrapper.findComponent({
+                name: 'mxs-dlg',
+            }).vm.$props
             expect(value).to.be.equals(wrapper.vm.confDlg.isOpened)
             expect(title).to.be.equals(wrapper.vm.confDlg.title)
             expect(saveText).to.be.equals(wrapper.vm.confDlg.type)

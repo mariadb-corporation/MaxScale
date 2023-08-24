@@ -1,8 +1,7 @@
 <template>
-    <mxs-conf-dlg
+    <mxs-dlg
         v-model="isConfDlgOpened"
         :title="title"
-        :smallInfo="isExecFailed ? '' : $mxs_tc('info.exeStatementsInfo', stmtI18nPluralization)"
         saveText="execute"
         minBodyWidth="768px"
         :hasSavingErr="isExecFailed"
@@ -11,7 +10,7 @@
         @after-close="$typy(exec_sql_dlg, 'on_after_cancel').safeFunction()"
         @after-cancel="$typy(exec_sql_dlg, 'on_after_cancel').safeFunction()"
     >
-        <template v-slot:body-prepend>
+        <template v-slot:form-body>
             <table v-if="isExecFailed" class="tbl-code pa-4">
                 <tr>
                     <td><b>sql</b></td>
@@ -39,7 +38,7 @@
                 <mxs-sql-editor
                     v-if="isConfDlgOpened"
                     v-model="currSql"
-                    :class="`fill-height`"
+                    class="fill-height"
                     :completionItems="completionItems"
                     :options="{
                         fontSize: 10,
@@ -49,8 +48,12 @@
                     :skipRegCompleters="isSqlEditor"
                 />
             </div>
+
+            <small>
+                {{ isExecFailed ? '' : $mxs_tc('info.exeStatementsInfo', stmtI18nPluralization) }}
+            </small>
         </template>
-    </mxs-conf-dlg>
+    </mxs-dlg>
 </template>
 <script>
 /*

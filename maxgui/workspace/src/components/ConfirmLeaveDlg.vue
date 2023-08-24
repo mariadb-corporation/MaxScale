@@ -1,5 +1,5 @@
 <template>
-    <mxs-conf-dlg
+    <mxs-dlg
         :title="$mxs_t('confirmations.leavePage')"
         saveText="confirm"
         minBodyWidth="624px"
@@ -7,10 +7,8 @@
         v-bind="{ ...$attrs }"
         v-on="$listeners"
     >
-        <template v-slot:confirm-text>
+        <template v-slot:form-body>
             <p>{{ $mxs_t('info.disconnectAll') }}</p>
-        </template>
-        <template v-slot:body-append>
             <v-checkbox
                 v-model="confirmDelAll"
                 class="v-checkbox--mariadb"
@@ -20,7 +18,7 @@
                 hide-details
             />
         </template>
-    </mxs-conf-dlg>
+    </mxs-dlg>
 </template>
 
 <script>
@@ -44,7 +42,6 @@
 export default {
     name: 'confirm-leave-dlg',
     inheritAttrs: false,
-
     data() {
         return {
             confirmDelAll: true,

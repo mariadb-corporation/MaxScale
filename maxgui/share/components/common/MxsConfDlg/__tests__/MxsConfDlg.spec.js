@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import MxsConfDlg from '@share/components/common/MxsDlgs/MxsConfDlg'
+import MxsConfDlg from '@share/components/common/MxsConfDlg'
 
 describe('MxsConfDlg.vue', () => {
     let wrapper

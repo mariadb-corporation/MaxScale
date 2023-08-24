@@ -12,9 +12,8 @@
  */
 // Components to be shared between workspace and maxgui
 import '@share/components/common/MxsCharts/config'
-import MxsCollapse from '@share/components/common/MxsCollapse'
 import MxsDataTable from '@share/components/common/MxsDataTable'
-import MxsDlgs from '@share/components/common/MxsDlgs'
+import MxsDlg from '@share/components/common/MxsDlg'
 import MxsFilterList from '@share/components/common/MxsFilterList'
 import MxsSelect from '@share/components/common/MxsSelect'
 import MxsTooltipBtn from '@share/components/common/MxsTooltipBtn'
@@ -28,9 +27,8 @@ import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 
 export default {
-    'mxs-collapse': MxsCollapse,
     'mxs-data-table': MxsDataTable,
-    ...MxsDlgs,
+    'mxs-dlg': MxsDlg,
     'mxs-filter-list': MxsFilterList,
     'mxs-select': MxsSelect,
     'mxs-tooltip-btn': MxsTooltipBtn,

@@ -157,7 +157,7 @@
                 </template>
             </i18n>
         </keep-alive>
-        <mxs-conf-dlg
+        <mxs-dlg
             v-model="isConfDlgOpened"
             :title="
                 activeView === QUERY_MODES.HISTORY
@@ -170,7 +170,7 @@
             minBodyWidth="624px"
             :onSave="deleteSelectedRows"
         >
-            <template v-slot:confirm-text>
+            <template v-slot:form-body>
                 <p>
                     {{
                         $mxs_t('info.clearSelectedQueries', {
@@ -185,7 +185,7 @@
                     }}
                 </p>
             </template>
-        </mxs-conf-dlg>
+        </mxs-dlg>
     </div>
 </template>
 
