@@ -224,8 +224,8 @@
       "XPAND_BACKEND"
     ],
     "product" : {
-      "name" : "clustrix",
-      "version" : "latest"
+      "name" : "${xpand_product}",
+      "version" : "${xpand_version}"
     }
   },
 
@@ -238,8 +238,8 @@
       "XPAND_BACKEND"
     ],
     "product" : {
-      "name" : "clustrix",
-      "version" : "latest"
+      "name" : "${xpand_product}",
+      "version" : "${xpand_version}"
     }
   },
 
@@ -252,8 +252,8 @@
       "XPAND_BACKEND"
     ],
     "product" : {
-      "name" : "clustrix",
-      "version" : "latest"
+      "name" : "${xpand_product}",
+      "version" : "${xpand_version}"
     }
   },
 
@@ -266,8 +266,8 @@
       "XPAND_BACKEND"
     ],
     "product" : {
-      "name" : "clustrix",
-      "version" : "latest"
+      "name" : "${xpand_product}",
+      "version" : "${xpand_version}"
     }
   }
 }
