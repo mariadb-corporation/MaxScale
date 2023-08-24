@@ -22,7 +22,7 @@ import MxsSubMenu from '@wsSrc/components/common/MxsSubMenu'
 import MxsSqlEditor from '@wsSrc/components/common/MxsSqlEditor'
 import MxsTimeoutInput from '@wsSrc/components/common/MxsTimeoutInput/'
 import MxsTreeview from '@wsSrc/components/common/MxsTreeview'
-import MxsTxtFieldWithLabel from '@wsSrc/components/common/MxsTxtFieldWithLabel'
+import MxsLabelField from '@wsSrc/components/common/MxsLabelField'
 import MxsUidInput from '@wsSrc/components/common/MxsUidInput'
 import MxsVirtualScrollTbl from '@wsSrc/components/common/MxsVirtualScrollTbl'
 
@@ -36,7 +36,7 @@ export const workspaceComponents = {
     'mxs-sub-menu': MxsSubMenu,
     'mxs-timeout-input': MxsTimeoutInput,
     'mxs-treeview': MxsTreeview,
-    'mxs-txt-field-with-label': MxsTxtFieldWithLabel,
+    'mxs-label-field': MxsLabelField,
     'mxs-uid-input': MxsUidInput,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
     'mxs-sql-editor': MxsSqlEditor,

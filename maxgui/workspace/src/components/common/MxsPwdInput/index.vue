@@ -1,5 +1,5 @@
 <template>
-    <mxs-txt-field-with-label
+    <mxs-label-field
         v-bind="{ ...$attrs }"
         :required="true"
         :type="isPwdVisible ? 'text' : 'password'"
@@ -10,7 +10,7 @@
         <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
             {{ isPwdVisible ? 'mdi-eye-off' : 'mdi-eye' }}
         </v-icon>
-    </mxs-txt-field-with-label>
+    </mxs-label-field>
 </template>
 
 <script>

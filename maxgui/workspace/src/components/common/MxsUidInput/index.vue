@@ -1,5 +1,5 @@
 <template>
-    <mxs-txt-field-with-label
+    <mxs-label-field
         v-bind="{ ...$attrs }"
         :required="true"
         autocomplete="new-username"

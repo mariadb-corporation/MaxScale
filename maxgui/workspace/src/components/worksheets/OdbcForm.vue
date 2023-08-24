@@ -55,7 +55,7 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <mxs-txt-field-with-label
+            <mxs-label-field
                 v-model.trim="src.db"
                 :label="isGeneric ? $mxs_t('catalog') : $mxs_t('database')"
                 :required="shouldRequireField"
@@ -67,7 +67,7 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <mxs-txt-field-with-label
+            <mxs-label-field
                 v-model.trim="src.server"
                 :label="$mxs_t('hostname/IP')"
                 :required="true"
@@ -75,7 +75,7 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <mxs-txt-field-with-label
+            <mxs-label-field
                 v-model.trim="src.port"
                 :label="$mxs_t('port')"
                 :required="true"

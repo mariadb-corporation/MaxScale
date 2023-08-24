@@ -96,10 +96,7 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <mxs-txt-field-with-label
-                            v-model.trim="body.db"
-                            :label="$mxs_t('database')"
-                        />
+                        <mxs-label-field v-model.trim="body.db" :label="$mxs_t('database')" />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <mxs-timeout-input v-model.number="body.timeout" />

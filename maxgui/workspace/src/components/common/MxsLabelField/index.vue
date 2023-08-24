@@ -3,10 +3,12 @@
         <label
             class="field__label mxs-color-helper text-small-text"
             :class="{ 'label-required': $attrs.required }"
+            :for="id"
         >
             {{ label }}
         </label>
         <v-text-field
+            :id="id"
             v-bind="{ ...$attrs }"
             class="vuetify-input--override error--text__bottom"
             dense
@@ -36,13 +38,17 @@
  * Public License.
  */
 export default {
-    name: 'mxs-txt-field-with-label',
+    name: 'mxs-label-field',
     inheritAttrs: false,
     props: {
         label: { type: String, required: true },
         customErrMsg: { type: String, default: '' },
     },
     computed: {
+        id() {
+            if (this.$attrs.id) return this.$attrs.id
+            return `mxs-label-field-${this.$helpers.lodash.uniqueId()}`
+        },
         customRules() {
             return this.$typy(this.$attrs, 'rules').safeArray
         },

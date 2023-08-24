@@ -9,7 +9,7 @@
         :onSave="visualize"
     >
         <template v-slot:body-prepend>
-            <mxs-txt-field-with-label
+            <mxs-label-field
                 v-model.trim="name"
                 :label="$mxs_t('name')"
                 :required="true"

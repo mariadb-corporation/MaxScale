@@ -20,7 +20,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { lodash } from '@share/utils/helpers'
 export default {
     name: 'mxs-debounced-field',
     inheritAttrs: false,
@@ -34,7 +33,7 @@ export default {
     },
     computed: {
         filteredListeners() {
-            return lodash.pickBy(this.$listeners, (value, key) => key !== 'input')
+            return this.$helpers.lodash.pickBy(this.$listeners, (value, key) => key !== 'input')
         },
     },
     watch: {
@@ -43,7 +42,7 @@ export default {
         },
     },
     created() {
-        this.debouncedInput = lodash.debounce(v => {
+        this.debouncedInput = this.$helpers.lodash.debounce(v => {
             this.inputValue = v
             this.$emit('input', v)
         }, this.debounceTime)
