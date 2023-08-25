@@ -41,17 +41,22 @@ public:
 
         auto direct = test.repl->backend(2)->admin_connection()->query("SHOW SLAVE STATUS");
         auto c = test.maxscale->open_rwsplit_connection2();
-        auto via_maxscale = c->query("SHOW SLAVE STATUS");
 
-        test.expect(direct->next_row(), "Empty direct result");
-        test.expect(via_maxscale->next_row(), "Empty maxscale result");
-
-        for (std::string field : {"Master_Log_File", "Read_Master_Log_Pos", "Exec_Master_Log_Pos"})
+        if (test.ok())
         {
-            auto expected = direct->get_string(field);
-            auto result = via_maxscale->get_string(field);
-            test.expect(expected == result, "Expected %s to be %s but it was %s",
-                        field.c_str(), expected.c_str(), result.c_str());
+            if (auto via_maxscale = c->query("SHOW SLAVE STATUS"))
+            {
+                test.expect(direct->next_row(), "Empty direct result");
+                test.expect(via_maxscale->next_row(), "Empty maxscale result");
+
+                for (std::string field : {"Master_Log_File", "Read_Master_Log_Pos", "Exec_Master_Log_Pos"})
+                {
+                    auto expected = direct->get_string(field);
+                    auto result = via_maxscale->get_string(field);
+                    test.expect(expected == result, "Expected %s to be %s but it was %s",
+                                field.c_str(), expected.c_str(), result.c_str());
+                }
+            }
         }
     }
 
