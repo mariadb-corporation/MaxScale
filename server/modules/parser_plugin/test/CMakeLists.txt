@@ -89,7 +89,7 @@ endif()
 
 if (BUILD_POSTGRES)
   target_link_libraries(compare postgresprotocol)
-  target_compile_definitions(compare -DBUILD_POSTGRES=1)
+  target_compile_definitions(compare PRIVATE -DBUILD_POSTGRES=1)
 
   file(GLOB POSTGRES_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.sql)
 
