@@ -19,6 +19,7 @@ import re
 import shutil
 import sys
 import tempfile
+from datetime import datetime
 
 # A string literal would be a match and cause an unintended modification.
 pattern=" " + "Change Date:" + " .*"
@@ -35,6 +36,27 @@ def print_usage_and_exit(name, code):
     print("If path is a directory, the change date will recursively be set in all ")
     print("files in that directory hierarchy.")
     sys.exit(code)
+
+def check_change_date(cd):
+    try:
+        specified_cd = datetime.strptime(cd, "%Y-%m-%d")
+    except:
+        print("error: Not a valid date: " + cd);
+        return False
+
+    now = datetime.today()
+    ideal_cd = datetime(now.year + 4, now.month, now.day)
+
+    diff = ideal_cd - specified_cd
+    days_diff = abs(diff.days);
+
+    if days_diff > 30:
+        print("error: More than 30 days difference between ideal change date "
+              + ideal_cd.strftime("%Y-%m-%d") + " and specified change date "
+              + specified_cd.strftime("%Y-%m-%d") + ".")
+        return False
+
+    return True
 
 def update_change_date_in_file(changedate, filename):
     print(filename)
@@ -97,20 +119,27 @@ def update_change_date_in_paths(changedate, paths):
 def main(argv):
     name=argv[0]
     try:
-        opts, args = getopt.getopt(argv[1:], "hc:")
+        opts, args = getopt.getopt(argv[1:], "fhc:")
     except getopt.GetoptError:
         print_usage_and_exit(name, 1)
 
     changedate=''
+    force=False
 
     for opt, arg in opts:
         if opt == '-h':
             print_usage_and_exit(name, 0)
         elif opt == '-c':
             changedate = arg
+        elif opt == '-f':
+            force = True
 
     if changedate == '':
         print_usage_and_exit(name, 1)
+
+    if not force:
+        if not check_change_date(changedate):
+            sys.exit(1)
 
     update_change_date_in_paths(changedate, args)
 
