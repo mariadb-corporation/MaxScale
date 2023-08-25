@@ -1343,6 +1343,14 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
         m_routing_state = RoutingState::PACKET_START;
         m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok());
         m_pending_cmd.clear();
+
+        if (!m_dcb->readq_empty())
+        {
+            // There's possibly another packet ready to be read in the DCB's readq. This happens for example
+            // when direct execution of prepared statements is done where the COM_STMT_PREPARE and
+            // COM_STMT_EXECUTE are sent as one batch.
+            m_dcb->trigger_read_event();
+        }
     }
 }
 
