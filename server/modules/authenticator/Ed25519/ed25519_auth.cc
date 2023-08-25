@@ -235,7 +235,7 @@ Ed25519ClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Aut
     case State::INIT:
         if (m_mode == Ed25519Authenticator::Mode::SHA256)
         {
-            rval.packet = sha_create_auth_change_packet(session);
+            rval.packet = sha_create_auth_change_packet(session->scramble);
             rval.status = ExchRes::Status::INCOMPLETE;
             m_state = State::SHA_AUTHSWITCH_SENT;
         }
@@ -252,7 +252,7 @@ Ed25519ClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Aut
 
     case State::ED_AUTHSWITCH_SENT:
         // Client should have responded with signed scramble.
-        if (ed_read_signature(session, buffer))
+        if (ed_read_signature(buffer, session, auth_data.client_token))
         {
             rval.status = ExchRes::Status::READY;
             m_state = State::ED_CHECK_SIGNATURE;
@@ -385,16 +385,16 @@ GWBUF Ed25519ClientAuthenticator::ed_create_auth_change_packet()
     return rval;
 }
 
-bool Ed25519ClientAuthenticator::ed_read_signature(MYSQL_session* session, const GWBUF& buffer)
+bool Ed25519ClientAuthenticator::ed_read_signature(const GWBUF& buffer, MYSQL_session* session,
+                                                   mariadb::AuthByteVec& out)
 {
     // Buffer is known to be complete.
     bool rval = false;
     size_t plen = mariadb::get_header(buffer.data()).pl_length;
     if (plen == ED::SIGNATURE_LEN)
     {
-        auto& token = session->auth_data->client_token;
-        token.resize(ED::SIGNATURE_LEN);
-        buffer.copy_data(MYSQL_HEADER_LEN, ED::SIGNATURE_LEN, token.data());
+        out.resize(ED::SIGNATURE_LEN);
+        buffer.copy_data(MYSQL_HEADER_LEN, ED::SIGNATURE_LEN, out.data());
         rval = true;
     }
     else
@@ -448,7 +448,7 @@ Ed25519ClientAuthenticator::ed_check_signature(const AuthenticationData& auth_da
     return rval;
 }
 
-GWBUF Ed25519ClientAuthenticator::sha_create_auth_change_packet(MYSQL_session* session)
+GWBUF Ed25519ClientAuthenticator::sha_create_auth_change_packet(const uint8_t* scramble)
 {
     /**
      * AuthSwitchRequest packet:
@@ -466,7 +466,7 @@ GWBUF Ed25519ClientAuthenticator::sha_create_auth_change_packet(MYSQL_session* s
     *ptr++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
     ptr = mariadb::copy_chars(ptr, SHA2::CLIENT_PLUGIN_NAME, sizeof(SHA2::CLIENT_PLUGIN_NAME));
     // Use mysql_native_password scramble, as it's the same length.
-    ptr = mariadb::copy_bytes(ptr, session->scramble, MYSQL_SCRAMBLE_LEN);
+    ptr = mariadb::copy_bytes(ptr, scramble, MYSQL_SCRAMBLE_LEN);
     *ptr = 0;
     rval.write_complete(sha256_authswitch_buflen);
     return rval;

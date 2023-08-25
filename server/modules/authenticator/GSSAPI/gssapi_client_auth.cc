@@ -73,16 +73,14 @@ GWBUF GSSAPIClientAuthenticator::create_auth_change_packet()
  * GSSAPI authentication is done.
  *
  * @param buffer Buffer containing the key
+ * @param out    Token storage
  */
-void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, const GWBUF& buffer)
+void GSSAPIClientAuthenticator::store_client_token(const GWBUF& buffer, mariadb::AuthByteVec& out)
 {
-    // Buffer is known to be complete.
-    auto* data = buffer.data();
-    auto header = mariadb::get_header(data);
+    auto header = mariadb::get_header(buffer.data());
     size_t plen = header.pl_length;
-    auto& token = session->auth_data->client_token;
-    token.resize(plen);
-    buffer.copy_data(MYSQL_HEADER_LEN, plen, token.data());
+    out.resize(plen);
+    buffer.copy_data(MYSQL_HEADER_LEN, plen, out.data());
 }
 
 mariadb::ClientAuthenticator::ExchRes
@@ -103,7 +101,7 @@ GSSAPIClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Auth
         break;
 
     case State::DATA_SENT:
-        store_client_token(session, buffer);
+        store_client_token(buffer, auth_data.client_token);
         rval.status = ExchRes::Status::READY;
         m_state = State::TOKEN_READY;
         break;

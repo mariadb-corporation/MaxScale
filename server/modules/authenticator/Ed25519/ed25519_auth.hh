@@ -71,11 +71,11 @@ private:
     mariadb::ByteVec m_client_passwd;   /**< Cleartext password received from client */
 
     GWBUF   ed_create_auth_change_packet();
-    bool    ed_read_signature(MYSQL_session* session, const GWBUF& buffer);
+    bool    ed_read_signature(const GWBUF& buffer, MYSQL_session* session, mariadb::AuthByteVec& out);
     AuthRes ed_check_signature(const AuthenticationData& auth_data, const uint8_t* signature,
                                const uint8_t* message, size_t message_len);
 
-    GWBUF   sha_create_auth_change_packet(MYSQL_session* session);
+    GWBUF   sha_create_auth_change_packet(const uint8_t* scramble);
     bool    sha_read_client_token(const GWBUF& buffer);
     GWBUF   sha_create_request_encrypted_pw_packet() const;
     void    sha_read_client_pw(const GWBUF& buffer);

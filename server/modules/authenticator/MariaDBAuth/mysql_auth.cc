@@ -114,7 +114,7 @@ mariadb::AuthByteVec MariaDBAuthenticatorModule::generate_token(std::string_view
 namespace
 {
 // Helper function for generating an AuthSwitchRequest packet.
-GWBUF gen_auth_switch_request_packet(TokenType token_type, const MYSQL_session* client_data)
+GWBUF gen_auth_switch_request_packet(TokenType token_type, const uint8_t* scramble)
 {
     /**
      * The AuthSwitchRequest packet:
@@ -137,7 +137,7 @@ GWBUF gen_auth_switch_request_packet(TokenType token_type, const MYSQL_session* 
     bufdata = mariadb::copy_chars(bufdata, plugin.c_str(), plugin.length() + 1);
     if (native)
     {
-        bufdata = mariadb::copy_bytes(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
+        bufdata = mariadb::copy_bytes(bufdata, scramble, MYSQL_SCRAMBLE_LEN);
         *bufdata++ = '\0';
     }
     mxb_assert(bufdata - buffer.data() == buflen);
@@ -197,7 +197,7 @@ MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, Authen
             {
                 // Client is attempting to use wrong authenticator, send switch request packet.
                 auto req_token = m_passthrough_mode ? TokenType::CLEARPW : TokenType::PW_HASH;
-                rval.packet = gen_auth_switch_request_packet(req_token, session);
+                rval.packet = gen_auth_switch_request_packet(req_token, session->scramble);
                 rval.status = ExchRes::Status::INCOMPLETE;
                 m_state = State::AUTHSWITCH_SENT;
             }

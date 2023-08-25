@@ -27,7 +27,7 @@ public:
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
 private:
-    void  store_client_token(MYSQL_session* session, const GWBUF& buffer);
+    void  store_client_token(const GWBUF& buffer, mariadb::AuthByteVec& out);
     bool  validate_gssapi_token(AuthenticationData& auth_data);
     GWBUF create_auth_change_packet();
 

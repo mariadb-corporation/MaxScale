@@ -32,17 +32,17 @@ namespace
  * Read the client's password, store it to buffer.
  *
  * @param buffer Buffer containing the password
- * @param output Password output
+ * @param out Password output
  * @return True on success, false if packet didn't have a valid header
  */
-bool store_client_password(const GWBUF& buffer, mariadb::AuthByteVec* output)
+bool store_client_password(const GWBUF& buffer, mariadb::AuthByteVec& out)
 {
     bool rval = false;
     if (buffer.length() >= MYSQL_HEADER_LEN)
     {
         size_t plen = mariadb::get_header(buffer.data()).pl_length;
-        output->resize(plen);
-        buffer.copy_data(MYSQL_HEADER_LEN, plen, output->data());
+        out.resize(plen);
+        buffer.copy_data(MYSQL_HEADER_LEN, plen, out.data());
         rval = true;
     }
     return rval;
@@ -113,7 +113,7 @@ PamClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Authent
 
     case State::ASKED_FOR_PW:
         // Client should have responded with password.
-        if (store_client_password(buffer, &session->auth_data->client_token))
+        if (store_client_password(buffer, auth_data.client_token))
         {
             if (m_settings.mode == AuthMode::PW)
             {
@@ -131,7 +131,7 @@ PamClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Authent
         break;
 
     case State::ASKED_FOR_2FA:
-        if (store_client_password(buffer, &session->auth_data->client_token_2fa))
+        if (store_client_password(buffer, auth_data.client_token_2fa))
         {
             rval.status = ExchRes::Status::READY;
             m_state = State::PW_RECEIVED;
