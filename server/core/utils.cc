@@ -204,14 +204,10 @@ void gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out)
 void gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out)
 {
     SHA_CTX context;
-    unsigned char hash[SHA_DIGEST_LENGTH];
-
     SHA1_Init(&context);
     SHA1_Update(&context, in, in_len);
     SHA1_Update(&context, in2, in2_len);
-    SHA1_Final(hash, &context);
-
-    memcpy(out, hash, SHA_DIGEST_LENGTH);
+    SHA1_Final(out, &context);
 }
 
 

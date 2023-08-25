@@ -19,6 +19,7 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
+#include <openssl/sha.h>
 #include <maxbase/format.hh>
 #include <maxbase/hexdump.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -36,6 +37,8 @@ using UserEntry = mariadb::UserEntry;
 
 namespace
 {
+uint8_t empty_pw_sha1[SHA_DIGEST_LENGTH] = "";
+
 // Helper function for debug assertions
 bool only_one_packet(const GWBUF& buffer)
 {
@@ -309,23 +312,18 @@ int response_length(bool with_ssl, bool ssl_established, const char* user,
     return bytes;
 }
 
-void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* passwd, uint8_t* output)
+void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* pw_sha1, uint8_t* output)
 {
-    uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE] = "";
-    uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE] = "";
-    uint8_t new_sha[GW_MYSQL_SCRAMBLE_SIZE] = "";
+    const uint8_t* hash1 = pw_sha1 ? pw_sha1 : empty_pw_sha1;
 
-    // hash1 is the function input, SHA1(real_password)
-    memcpy(hash1, passwd, GW_MYSQL_SCRAMBLE_SIZE);
+    uint8_t hash2[SHA_DIGEST_LENGTH];   // SHA1(SHA1(password))
+    SHA1(hash1, SHA_DIGEST_LENGTH, hash2);
 
-    // hash2 is the SHA1(input data), where input_data = SHA1(real_password)
-    gw_sha1_str(hash1, GW_MYSQL_SCRAMBLE_SIZE, hash2);
+    uint8_t new_sha[SHA_DIGEST_LENGTH];     // SHA1(CONCAT(scramble, hash2))
+    gw_sha1_2_str(scramble, GW_MYSQL_SCRAMBLE_SIZE, hash2, SHA_DIGEST_LENGTH, new_sha);
 
-    // new_sha is the SHA1(CONCAT(scramble, hash2)
-    gw_sha1_2_str(scramble, GW_MYSQL_SCRAMBLE_SIZE, hash2, GW_MYSQL_SCRAMBLE_SIZE, new_sha);
-
-    // compute the xor in client_scramble
-    mxs::bin_bin_xor(new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE, output);
+    // Final token is SHA1(CONCAT(scramble, hash2)) ⊕ SHA1(password)
+    mxs::bin_bin_xor(new_sha, hash1, SHA_DIGEST_LENGTH, output);
 }
 
 /**

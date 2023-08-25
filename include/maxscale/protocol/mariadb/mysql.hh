@@ -549,15 +549,15 @@ inline constexpr bool mxs_mysql_is_binlog_dump(uint8_t cmd)
 }
 
 /**
- * Calculates the a hash from a scramble and a password
+ * Calculates mysql_native_password auth token from a scramble and a password hash
  *
  * The algorithm used is: `SHA1(scramble + SHA1(SHA1(password))) ^ SHA1(password)`
  *
  * @param scramble The 20 byte scramble sent by the server
- * @param passwd   The SHA1(password) sent by the client
+ * @param pw_sha1  The SHA1(password) sent by the client. If null, assumes no password.
  * @param output   Pointer where the resulting 20 byte hash is stored
  */
-void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* passwd, uint8_t* output);
+void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* pw_sha1, uint8_t* output);
 
 int response_length(bool with_ssl, bool ssl_established, const char* user, const uint8_t* passwd,
                     const char* dbname, const char* auth_module);

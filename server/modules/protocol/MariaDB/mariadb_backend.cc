@@ -1237,49 +1237,23 @@ GWBUF MariaDBBackendConnection::create_reset_connection_packet()
  * Create COM_CHANGE_USER packet and store it to GWBUF.
  *
  * @return GWBUF buffer consisting of COM_CHANGE_USER packet
- * @note the function doesn't fail
  */
 GWBUF MariaDBBackendConnection::create_change_user_packet()
 {
     const auto& client_auth_data = *m_auth_data.client_data->auth_data;
     auto make_auth_token = [this, &client_auth_data] {
         std::vector<uint8_t> rval;
-        const string& hex_hash2 = client_auth_data.user_entry.entry.password;
-        if (hex_hash2.empty())
+        // SHA1(password) was sent by client and is in binary form.
+        auto& hash1 = client_auth_data.backend_token;
+        if (hash1.size() == SHA_DIGEST_LENGTH)
         {
-            m_current_auth_token.clear();
-            return rval;        // Empty password -> empty token
-        }
-
-        // Need to compute the value of:
-        // SHA1(scramble || SHA1(SHA1(password))) ⊕ SHA1(password)
-
-        // SHA1(SHA1(password)) is in the user entry and needs to be converted to binary form.
-        if (hex_hash2.length() == 2 * SHA_DIGEST_LENGTH)
-        {
-            uint8_t hash2[SHA_DIGEST_LENGTH];
-            mxs::hex2bin(hex_hash2.c_str(), hex_hash2.length(), hash2);
-
-            // Calculate SHA1(CONCAT(scramble, hash2) */
-            uint8_t concat_hash[SHA_DIGEST_LENGTH];
-            gw_sha1_2_str(m_auth_data.scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH,
-                          concat_hash);
-
-            // SHA1(password) was sent by client and is in binary form.
-            auto& hash1 = client_auth_data.backend_token;
-            if (hash1.size() == SHA_DIGEST_LENGTH)
-            {
-                m_current_auth_token = hash1;
-                // Compute the XOR */
-                uint8_t new_token[SHA_DIGEST_LENGTH];
-                mxs::bin_bin_xor(concat_hash, hash1.data(), SHA_DIGEST_LENGTH, new_token);
-                rval.assign(new_token, new_token + SHA_DIGEST_LENGTH);
-            }
+            rval.resize(SHA_DIGEST_LENGTH);
+            mxs_mysql_calculate_hash(m_auth_data.scramble, hash1.data(), rval.data());
+            m_current_auth_token = hash1;
         }
         return rval;
     };
 
-    auto mses = m_auth_data.client_data;
     std::vector<uint8_t> payload;
     payload.reserve(200);   // Enough for most cases.
 
@@ -1294,7 +1268,8 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
 
     insert_stringz(client_auth_data.user);
 
-    // Calculate the authentication token.
+    // Calculate the authentication token. For simplicity, always try mysql_native_password first, server
+    // will change auth plugin if required.
     auto token = make_auth_token();
     payload.push_back(token.size());
     payload.insert(payload.end(), token.begin(), token.end());
@@ -1305,7 +1280,7 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
     mariadb::set_byte2(charset, client_auth_data.collation);
     payload.insert(payload.end(), charset, charset + sizeof(charset));
 
-    insert_stringz(client_auth_data.plugin);
+    insert_stringz(DEFAULT_MYSQL_AUTH_PLUGIN);
     auto& attr = client_auth_data.attributes;
     payload.insert(payload.end(), attr.begin(), attr.end());
 
