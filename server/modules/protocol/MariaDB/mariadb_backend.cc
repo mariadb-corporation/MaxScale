@@ -1071,12 +1071,12 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                 {
                     // Busy with something else, wait for it to complete and then send the COM_CHANGE_USER.
                     m_state = State::SEND_CHANGE_USER;
-                    return 1;
                 }
                 else
                 {
-                    return send_change_user_to_backend();
+                    send_change_user_to_backend();
                 }
+                return 1;
             }
 
             prepare_for_write(queue);
@@ -1319,15 +1319,12 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
  *
  * @return True on success
  */
-bool MariaDBBackendConnection::send_change_user_to_backend()
+void MariaDBBackendConnection::send_change_user_to_backend()
 {
-    bool rval = false;
-    if (m_dcb->writeq_append(create_change_user_packet()))
-    {
-        m_state = State::READ_CHANGE_USER;
-        rval = true;
-    }
-    return rval;
+    m_authenticator =
+        m_auth_data.client_data->auth_data->be_auth_module->create_backend_authenticator(m_auth_data);
+    m_dcb->writeq_append(create_change_user_packet());
+    m_state = State::READ_CHANGE_USER;
 }
 
 /* Send proxy protocol header. See

@@ -147,7 +147,7 @@ private:
     StateMachineRes read_history_response();
     void            handle_history_mismatch();
 
-    bool            send_change_user_to_backend();
+    void            send_change_user_to_backend();
     StateMachineRes read_change_user();
 
     bool  send_proxy_protocol_header();
