@@ -179,7 +179,7 @@ export default {
                         await this.handleSaveFile(this.queryTab)
                         await this.loadFileToActiveQueryTab(blob)
                     },
-                    on_cancel: async () => {
+                    after_cancel: async () => {
                         await this.loadFileToActiveQueryTab(blob)
                         this.SET_CONFIRM_DLG({ ...this.confirm_dlg, is_opened: false })
                     },

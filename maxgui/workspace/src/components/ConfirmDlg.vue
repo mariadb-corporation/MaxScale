@@ -8,7 +8,7 @@
         :onSave="confirm_dlg.on_save"
         :cancelText="confirm_dlg.cancel_text"
         :saveText="confirm_dlg.save_text"
-        @on-cancel="confirm_dlg.on_cancel"
+        @after-cancel="confirm_dlg.after_cancel"
     >
         <template v-slot:form-body>
             <p v-html="confirm_dlg.confirm_msg" />

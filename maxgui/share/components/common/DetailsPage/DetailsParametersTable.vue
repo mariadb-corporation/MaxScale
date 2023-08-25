@@ -64,7 +64,7 @@
             :title="`${$mxs_t('implementChanges')}`"
             saveText="confirm"
             :hasChanged="hasChanged"
-            @on-cancel="cancelEdit"
+            @after-cancel="cancelEdit"
         >
             <template v-slot:form-body>
                 <span class="d-block confirmation-text mb-4">

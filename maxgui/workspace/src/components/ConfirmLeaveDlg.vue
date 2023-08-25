@@ -8,7 +8,7 @@
         v-on="$listeners"
     >
         <template v-slot:form-body>
-            <p>{{ $mxs_t('info.disconnectAll') }}</p>
+            <p data-test="disconnect-info">{{ $mxs_t('info.disconnectAll') }}</p>
             <v-checkbox
                 v-model="confirmDelAll"
                 class="v-checkbox--mariadb"

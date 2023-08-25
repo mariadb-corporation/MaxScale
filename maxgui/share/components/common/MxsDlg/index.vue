@@ -20,50 +20,53 @@
                 <h3 class="font-weight-light mxs-color-helper text-deep-ocean">
                     {{ title }}
                 </h3>
-                <v-btn v-if="!isForceAccept && showCloseIcon" class="close" icon @click="close">
+                <v-btn
+                    v-if="!isForceAccept && showCloseBtn"
+                    class="close"
+                    data-test="close-btn"
+                    icon
+                    @click="close"
+                >
                     <v-icon size="20" color="navigation"> $vuetify.icons.mxs_close</v-icon>
                 </v-btn>
             </v-card-title>
             <v-card-text class="px-0 pb-12">
-                <div class="card-text-padding-x">
+                <div v-if="$slots.body" data-test="body-slot-ctr" class="card-text-padding-x">
                     <slot name="body" />
                 </div>
-
                 <v-divider v-if="hasFormDivider" class="my-6" />
-
                 <v-form
                     ref="form"
                     v-model="isFormValid"
                     :lazy-validation="lazyValidation"
                     class="card-text-padding-x"
                     :class="{ 'mt-4': !hasFormDivider }"
+                    data-test="form-body-slot-ctr"
                 >
-                    <slot name="form-body"></slot>
+                    <slot name="form-body" />
                 </v-form>
             </v-card-text>
-            <v-card-actions class="v-card-actions_padding mxs-color-helper border-top-separator">
-                <slot
-                    :cancel="cancel"
-                    :save="save"
-                    :close="close"
-                    :isSaveDisabled="isSaveDisabled"
-                    name="actions"
+            <v-card-actions
+                class="v-card-actions_padding mxs-color-helper border-top-separator"
+                data-test="action-ctr"
+            >
+                <slot name="action-prepend" />
+                <v-spacer />
+                <v-btn
+                    v-if="!isForceAccept"
+                    small
+                    height="36"
+                    color="primary"
+                    class="cancel font-weight-medium px-7 text-capitalize"
+                    rounded
+                    outlined
+                    depressed
+                    data-test="cancel-btn"
+                    @click="cancel"
                 >
-                    <slot name="action-prepend"></slot>
-                    <v-spacer />
-                    <v-btn
-                        v-if="!isForceAccept"
-                        small
-                        height="36"
-                        color="primary"
-                        class="cancel font-weight-medium px-7 text-capitalize"
-                        rounded
-                        outlined
-                        depressed
-                        @click="cancel"
-                    >
-                        {{ $mxs_t(cancelText) }}
-                    </v-btn>
+                    {{ $mxs_t(cancelText) }}
+                </v-btn>
+                <slot name="save-btn" :save="save" :isSaveDisabled="isSaveDisabled">
                     <v-btn
                         small
                         height="36"
@@ -72,6 +75,7 @@
                         rounded
                         depressed
                         :disabled="isSaveDisabled"
+                        data-test="save-btn"
                         @click="save"
                     >
                         {{ $mxs_t(saveText) }}
@@ -100,8 +104,6 @@
 /*
  * Events
  * is-form-valid?: (boolean)
- * on-cancel?: (function)
- * on-close?: (function)
  * after-cancel?: (function)
  * after-close: (function)
  */
@@ -132,7 +134,7 @@ export default {
          */
         closeImmediate: { type: Boolean, default: false },
         allowEnterToSubmit: { type: Boolean, default: true },
-        showCloseIcon: { type: Boolean, default: true },
+        showCloseBtn: { type: Boolean, default: true },
     },
     data() {
         return {
@@ -159,22 +161,16 @@ export default {
     },
     methods: {
         ...mapMutations({ SET_OVERLAY_TYPE: 'mxsApp/SET_OVERLAY_TYPE' }),
-        async closeDialog() {
+        closeDialog() {
             this.$emit('input', false)
-            /** Workaround to ensure dialog is closed completely to emit after close events
-             * https://github.com/vuetifyjs/vuetify/blob/master/packages/vuetify/src/components/VDialog/VDialog.sass
-             */
-            await this.$helpers.delay(300) // wait until dialog transition is done
         },
-        async cancel() {
-            this.$emit('on-cancel')
+        cancel() {
             this.cleanUp()
-            await this.closeDialog()
+            this.closeDialog()
             this.$emit('after-cancel')
         },
-        async close() {
-            this.$emit('on-close')
-            await this.closeDialog()
+        close() {
+            this.closeDialog()
             this.$emit('after-close')
         },
         async keydownHandler() {
@@ -190,14 +186,17 @@ export default {
             // wait time out for loading animation
             await this.$helpers.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
             this.cleanUp()
-            await this.closeDialog()
+            this.closeDialog()
         },
-        async handleCloseImmediate() {
-            await this.closeDialog()
+        handleCloseImmediate() {
+            this.closeDialog()
             this.SET_OVERLAY_TYPE(null)
         },
-        async save() {
+        async validateForm() {
             await this.$refs.form.validate()
+        },
+        async save() {
+            await this.validateForm()
             if (!this.isFormValid) {
                 let invalidEles = document.getElementsByClassName('v-messages__message')
                 return invalidEles[0].scrollIntoView({
@@ -207,7 +206,7 @@ export default {
                 })
             } else {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
-                if (!this.hasSavingErr && this.closeImmediate) await this.handleCloseImmediate()
+                if (!this.hasSavingErr && this.closeImmediate) this.handleCloseImmediate()
                 await this.onSave()
                 if (!this.closeImmediate) {
                     if (!this.hasSavingErr) await this.waitClose()

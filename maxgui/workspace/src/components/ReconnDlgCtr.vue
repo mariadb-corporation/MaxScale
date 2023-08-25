@@ -6,8 +6,8 @@
         :onSave="handleReconnect"
         cancelText="disconnect"
         saveText="reconnect"
-        :showCloseIcon="false"
-        @on-cancel="deleteConns"
+        :showCloseBtn="false"
+        @after-cancel="deleteConns"
     >
         <template v-slot:form-body>
             <table v-if="showReconnDialog" class="tbl-code lost-conn-tbl pa-4">

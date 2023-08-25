@@ -10,28 +10,16 @@
         @is-form-valid="isFormValid = $event"
         v-on="$listeners"
     >
-        <template v-slot:actions="{ cancel, save }">
-            <v-spacer />
+        <template v-slot:save-btn="{ save }">
             <v-btn
                 small
                 height="36"
                 color="primary"
-                class="cancel font-weight-medium px-7 text-capitalize"
-                rounded
-                outlined
-                depressed
-                @click="cancel"
-            >
-                {{ $mxs_t('cancel') }}
-            </v-btn>
-            <v-btn
-                small
-                height="36"
-                color="primary"
-                class="save font-weight-medium px-7 text-capitalize"
+                class="font-weight-medium px-7 text-capitalize"
                 rounded
                 depressed
                 :disabled="!isFormValid"
+                data-test="connect-btn"
                 @click="save"
             >
                 {{ $mxs_t('connect') }}

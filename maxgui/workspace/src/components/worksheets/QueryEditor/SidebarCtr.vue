@@ -203,7 +203,7 @@ export default {
                 editor_height: 200,
                 sql,
                 on_exec: this.confirmExeStatements,
-                on_after_cancel: this.clearExeStatementsResult,
+                after_cancel: this.clearExeStatementsResult,
             })
             this.actionName = sql.slice(0, -1)
         },

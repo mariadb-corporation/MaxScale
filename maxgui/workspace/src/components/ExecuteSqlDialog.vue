@@ -7,8 +7,8 @@
         :hasSavingErr="isExecFailed"
         :allowEnterToSubmit="false"
         :onSave="$typy(exec_sql_dlg, 'on_exec').safeFunction"
-        @after-close="$typy(exec_sql_dlg, 'on_after_cancel').safeFunction()"
-        @after-cancel="$typy(exec_sql_dlg, 'on_after_cancel').safeFunction()"
+        @after-close="$typy(exec_sql_dlg, 'after_cancel').safeFunction()"
+        @after-cancel="$typy(exec_sql_dlg, 'after_cancel').safeFunction()"
     >
         <template v-slot:form-body>
             <table v-if="isExecFailed" class="tbl-code pa-4">

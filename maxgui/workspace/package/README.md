@@ -243,11 +243,11 @@ open connections.
 
 #### Events
 
-| Name       | Parameter             |                      Description                      |
-| ---------- | --------------------- | :---------------------------------------------------: |
-| on-confirm | confirmDelAll:boolean | Event that fires when clicking the "Confirm" button.  |
-| on-close   |                       | Event that fires when clicking the close icon button. |
-| on-cancel  |                       |  Event that fires when clicking the "Cancel" button.  |
+| Name         | Parameter             |                      Description                       |
+| ------------ | --------------------- | :----------------------------------------------------: |
+| on-confirm   | confirmDelAll:boolean |  Event that fires when clicking the "Confirm" button.  |
+| after-close  |                       | Event that fires after clicking the close icon button. |
+| after-cancel |                       |  Event that fires after clicking the "Cancel" button.  |
 
 ### MigrCreateDlg
 
@@ -281,8 +281,8 @@ example are importable.
         <confirm-leave-dlg
             v-model="isConfDlgOpened"
             @on-confirm="onConfirm"
-            @on-close="cancelLeave"
-            @on-cancel="cancelLeave"
+            @after-close="cancelLeave"
+            @after-cancel="cancelLeave"
         />
         <conn-dlg v-model="isConnDlgOpened" :handleSave="openConn" />
         <migr-create-dlg :handleSave="createEtlTask">

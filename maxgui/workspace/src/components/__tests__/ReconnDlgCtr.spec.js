@@ -44,13 +44,13 @@ describe('ReconnDlgCtr', () => {
     })
     it('Should pass accurate data to mxs-dlg via props', () => {
         const baseDialog = wrapper.findComponent({ name: 'mxs-dlg' })
-        const { value, title, cancelText, saveText, onSave, showCloseIcon } = baseDialog.vm.$props
+        const { value, title, cancelText, saveText, onSave, showCloseBtn } = baseDialog.vm.$props
         expect(title).to.be.equals('Server has gone away')
         expect(value).to.be.equals(wrapper.vm.showReconnDialog)
         expect(cancelText).to.be.equals('disconnect')
         expect(saveText).to.be.equals('reconnect')
         expect(onSave).to.be.equals(wrapper.vm.handleReconnect)
-        expect(showCloseIcon).to.be.false
+        expect(showCloseBtn).to.be.false
     })
     it('Should call deleteConn when clicking disconnect button ', async () => {
         const spy = sinon.spy(ReconnDlgCtr.methods, 'deleteConns')

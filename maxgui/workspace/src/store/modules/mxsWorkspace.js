@@ -45,7 +45,7 @@ export default {
              */
             result: null,
             on_exec: () => null,
-            on_after_cancel: () => null,
+            after_cancel: () => null,
         },
         confirm_dlg: {
             is_opened: false,
@@ -54,7 +54,7 @@ export default {
             save_text: 'save',
             cancel_text: 'dontSave',
             on_save: () => null,
-            on_cancel: () => null,
+            after_cancel: () => null,
         },
         etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL

@@ -295,7 +295,7 @@ export default {
                     is_opened: true,
                     sql: builder.build(),
                     on_exec: this.onExecute,
-                    on_after_cancel: () =>
+                    after_cancel: () =>
                         this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
                 })
             } else

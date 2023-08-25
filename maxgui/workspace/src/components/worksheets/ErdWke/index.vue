@@ -192,8 +192,7 @@ export default {
                 editor_height: 450,
                 sql: this.genScript(),
                 on_exec: this.onExecuteScript,
-                on_after_cancel: () =>
-                    this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
+                after_cancel: () => this.SET_EXEC_SQL_DLG({ ...this.exec_sql_dlg, result: null }),
             })
         },
         async onExecuteScript() {

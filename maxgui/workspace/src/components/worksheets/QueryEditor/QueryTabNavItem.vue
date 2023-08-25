@@ -102,7 +102,7 @@ export default {
                         await this.handleSaveFile(this.queryTab)
                         await this.handleDeleteTab()
                     },
-                    on_cancel = async () => await this.handleDeleteTab(),
+                    after_cancel = async () => await this.handleDeleteTab(),
                     save_text = 'save',
                     cancel_text = 'dontSave'
 
@@ -111,7 +111,7 @@ export default {
                         targetId: this.queryTab.name,
                     })
                     on_save = async () => await this.handleDeleteTab()
-                    on_cancel = () => null
+                    after_cancel = () => null
                     save_text = 'confirm'
                     cancel_text = 'cancel'
                 }
@@ -123,7 +123,7 @@ export default {
                     title: this.$mxs_t('deleteTab'),
                     confirm_msg,
                     on_save,
-                    on_cancel,
+                    after_cancel,
                 })
             } else this.handleDeleteTab()
         },

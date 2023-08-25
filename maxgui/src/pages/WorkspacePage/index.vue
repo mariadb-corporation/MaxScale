@@ -4,8 +4,8 @@
         <confirm-leave-dlg
             v-model="isConfDlgOpened"
             @on-confirm="onConfirm"
-            @on-close="cancelLeave"
-            @on-cancel="cancelLeave"
+            @after-close="cancelLeave"
+            @after-cancel="cancelLeave"
         />
         <conn-dlg-ctr v-model="isConnDlgOpened" />
         <migr-create-dlg :handleSave="createEtlTask" />
