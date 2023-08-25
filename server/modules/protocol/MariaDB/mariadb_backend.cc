@@ -419,26 +419,6 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             }
             break;
 
-        case State::AUTHENTICATING:
-            {
-                auto auth_res = authenticate();
-                switch (auth_res)
-                {
-                case StateMachineRes::IN_PROGRESS:
-                    state_machine_continue = false;
-                    break;
-
-                case StateMachineRes::DONE:
-                    m_state = State::CONNECTION_INIT;
-                    break;
-
-                case StateMachineRes::ERROR:
-                    m_state = State::FAILED;
-                    break;
-                }
-            }
-            break;
-
         case State::CONNECTION_INIT:
             {
                 auto init_res = send_connection_init_queries();
@@ -489,24 +469,67 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             send_delayed_packets();
             break;
 
+        case State::AUTHENTICATING:
         case State::RESET_CONNECTION_FAST:
         case State::RESET_CONNECTION:
         case State::READ_CHANGE_USER:
             {
-                auto res = read_change_user();
-
-                switch (res)
+                // All of these cases process one protocol packet.
+                auto [read_ok, buffer] = mariadb::read_protocol_packet(m_dcb);
+                if (buffer.empty())
                 {
-                case StateMachineRes::IN_PROGRESS:
-                    state_machine_continue = false;
-                    break;
-
-                case StateMachineRes::DONE:
-                    break;
-
-                case StateMachineRes::ERROR:
+                    if (read_ok)
+                    {
+                        state_machine_continue = false;
+                    }
+                    else
+                    {
+                        do_handle_error(m_dcb, "Read from backend failed");
+                        m_state = State::FAILED;
+                    }
+                }
+                else if (buffer.length() == MYSQL_HEADER_LEN)
+                {
+                    // Should not happen in these states.
+                    do_handle_error(m_dcb, "Invalid packet", mxs::ErrorType::TRANSIENT);
                     m_state = State::FAILED;
-                    break;
+                }
+                else if (m_state == State::AUTHENTICATING)
+                {
+                    auto res = authenticate(std::move(buffer));
+                    switch (res)
+                    {
+                    case StateMachineRes::IN_PROGRESS:
+                        state_machine_continue = false;
+                        break;
+
+                    case StateMachineRes::DONE:
+                        m_state = State::CONNECTION_INIT;
+                        break;
+
+                    case StateMachineRes::ERROR:
+                        m_state = State::FAILED;
+                        break;
+                    }
+                }
+                else if (m_state == State::READ_CHANGE_USER || m_state == State::RESET_CONNECTION)
+                {
+                    // Function sets state on success.
+                    auto res = read_change_user(std::move(buffer));
+                    if (res == StateMachineRes::IN_PROGRESS)
+                    {
+                        state_machine_continue = false;
+                    }
+                    else if (res == StateMachineRes::ERROR)
+                    {
+                        m_state = State::FAILED;
+                    }
+                }
+                else
+                {
+                    // RESET_CONNECTION_FAST
+                    // Func call sets next state.
+                    read_reset_conn_resp(std::move(buffer));
                 }
             }
             break;
@@ -943,33 +966,13 @@ void MariaDBBackendConnection::handle_history_mismatch()
     do_handle_error(m_dcb, ss.str(), mxs::ErrorType::PERMANENT);
 }
 
-MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_user()
+MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_user(GWBUF&& buffer)
 {
-    auto [read_ok, buffer] = mariadb::read_protocol_packet(m_dcb);
-
-    if (buffer.empty())
+    int cmd = mxs_mysql_get_command(buffer);
+    // Similar to authenticate(). Three options: OK, ERROR or AuthSwitch.
+    auto rval = StateMachineRes::ERROR;
+    if (cmd == MYSQL_REPLY_OK || cmd == MYSQL_REPLY_ERR)
     {
-        if (read_ok)
-        {
-            return StateMachineRes::IN_PROGRESS;
-        }
-        else
-        {
-            do_handle_error(m_dcb, "Read from backend failed");
-            return StateMachineRes::ERROR;
-        }
-    }
-
-    auto rv = StateMachineRes::ERROR;
-
-    if (auth_change_requested(buffer) && handle_auth_change_response(buffer, m_dcb))
-    {
-        rv = StateMachineRes::IN_PROGRESS;
-    }
-    else
-    {
-        int cmd = mxs_mysql_get_command(buffer);
-
         if (m_state == State::READ_CHANGE_USER)
         {
             // The COM_CHANGE_USER is now complete. The reply state must be updated here as the normal
@@ -984,38 +987,64 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
                 // If packets were received from the router while the COM_CHANGE_USER was in progress,
                 // they are stored in the same delayed queue that is used for the initial connection.
                 m_state = State::SEND_DELAYQ;
-                rv = StateMachineRes::DONE;
-            }
-            else
-            {
-                rv = StateMachineRes::ERROR;
-            }
-        }
-        else if (m_state == State::RESET_CONNECTION || m_state == State::RESET_CONNECTION_FAST)
-        {
-            if (cmd == MYSQL_REPLY_ERR)
-            {
-                std::string errmsg = "Failed to reuse connection: " + mariadb::extract_error(buffer);
-                do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
-                rv = StateMachineRes::ERROR;
-            }
-            else
-            {
-                MXB_INFO("Connection reset complete");
-                // Connection is being attached to a new session, so all initializations must be redone.
-                m_state = m_state == State::RESET_CONNECTION_FAST ?
-                    State::READ_HISTORY : State::CONNECTION_INIT;
-
-                rv = StateMachineRes::DONE;
+                rval = StateMachineRes::DONE;
             }
         }
         else
         {
-            mxb_assert(!true);
+            mxb_assert(m_state == State::RESET_CONNECTION);
+            if (cmd == MYSQL_REPLY_OK)
+            {
+                MXB_INFO("Connection reset complete.");
+                // Connection is being attached to a new session, so all initializations must be redone.
+                m_state = State::CONNECTION_INIT;
+                rval = StateMachineRes::DONE;
+            }
+            else
+            {
+                std::string errmsg = "Failed to reuse connection: " + mariadb::extract_error(buffer);
+                do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+            }
         }
     }
+    else
+    {
+        // Something else, likely AuthSwitch or a message to the authentication plugin.
+        auto res = m_authenticator->exchange(std::move(buffer));
+        if (!res.output.empty())
+        {
+            m_dcb->writeq_append(std::move(res.output));
+        }
 
-    return rv;
+        if (res.success)
+        {
+            rval = StateMachineRes::IN_PROGRESS;
+        }
+        else
+        {
+            // Backend auth failure without an error packet.
+            do_handle_error(m_dcb, "Authentication plugin error.", mxs::ErrorType::PERMANENT);
+        }
+    }
+    return rval;
+}
+
+void MariaDBBackendConnection::read_reset_conn_resp(GWBUF&& buffer)
+{
+    mxb_assert(m_state == State::RESET_CONNECTION_FAST);
+    int cmd = mxs_mysql_get_command(buffer);
+    if (cmd == MYSQL_REPLY_OK)
+    {
+        MXB_INFO("Connection reset complete");
+        // History has already been sent to server, go to response read.
+        m_state = State::READ_HISTORY;
+    }
+    else
+    {
+        std::string errmsg = "Failed to reuse connection: " + mariadb::extract_error(buffer);
+        do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+        m_state = State::FAILED;
+    }
 }
 
 void MariaDBBackendConnection::read_com_ping_response()
@@ -2608,29 +2637,8 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
     return rval;
 }
 
-MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate()
+MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate(GWBUF&& buffer)
 {
-    auto [read_ok, buffer] = mariadb::read_protocol_packet(m_dcb);
-    if (buffer.empty())
-    {
-        if (read_ok)
-        {
-            // Didn't get enough data, read again later.
-            return StateMachineRes::IN_PROGRESS;
-        }
-        else
-        {
-            do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
-            return StateMachineRes::ERROR;
-        }
-    }
-    else if (buffer.length() == MYSQL_HEADER_LEN)
-    {
-        // Effectively empty buffer. Should not happen during authentication. Error.
-        do_handle_error(m_dcb, "Invalid packet", mxs::ErrorType::TRANSIENT);
-        return StateMachineRes::ERROR;
-    }
-
     // Have a complete response from the server.
     uint8_t cmd = MYSQL_GET_COMMAND(buffer.data());
 
@@ -2657,7 +2665,6 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
     {
         // Server responded with an error, authentication failed.
         handle_error_response(buffer);
-        rval = StateMachineRes::ERROR;
         if (need_pt_be_auth_reply)
         {
             deliver_pt_reply(std::move(buffer));
@@ -2678,7 +2685,6 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
         }
         else
         {
-            rval = StateMachineRes::ERROR;
             if (need_pt_be_auth_reply)
             {
                 // Backend auth failure without an error packet. Need to send something to client since it's

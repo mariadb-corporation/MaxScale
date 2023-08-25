@@ -138,7 +138,7 @@ private:
     MariaDBBackendConnection(SERVER& server);
 
     StateMachineRes handshake();
-    StateMachineRes authenticate();
+    StateMachineRes authenticate(GWBUF&& buffer);
     StateMachineRes send_connection_init_queries();
     bool            send_delayed_packets();
     void            normal_read();
@@ -148,7 +148,8 @@ private:
     void            handle_history_mismatch();
 
     void            send_change_user_to_backend();
-    StateMachineRes read_change_user();
+    StateMachineRes read_change_user(GWBUF&& buffer);
+    void            read_reset_conn_resp(GWBUF&& buffer);
 
     bool  send_proxy_protocol_header();
     GWBUF create_change_user_packet();
