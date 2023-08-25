@@ -16,9 +16,7 @@
             inset
         >
             <span class="footer-text mxs-color-helper text-code-color align-center text-truncate">
-                MariaDB Corporation <span class="footer__separator" />
-                Copyright © 2020 MariaDB ab. All rights reserved.
-                Copyright © 202023 MariaDB plc, Finnish Branch
+                © 2023 MariaDB. All rights reserved.
                 <span class="footer__separator" />
                 <a
                     target="_blank"
