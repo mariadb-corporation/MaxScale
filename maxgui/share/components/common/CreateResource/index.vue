@@ -45,57 +45,63 @@
                 />
             </template>
             <template v-if="selectedForm" v-slot:form-body>
-                <label class="field__label mxs-color-helper text-small-text d-block">
-                    {{ $mxs_t('resourceLabelName', { resourceName: selectedForm }) }}
-                </label>
-                <v-text-field
-                    id="id"
-                    v-model="resourceId"
-                    :rules="rules.resourceId"
-                    name="id"
-                    required
-                    class="resource-id vuetify-input--override error--text__bottom"
-                    dense
-                    :height="36"
-                    outlined
-                    :placeholder="$mxs_t('nameYour', { resourceName: selectedForm.toLowerCase() })"
-                />
-                <service-form-input
-                    v-if="selectedForm === RESOURCE_FORM_TYPES.SERVICE"
-                    :ref="`form_${RESOURCE_FORM_TYPES.SERVICE}`"
-                    :resourceModules="resourceModules"
-                    :allFilters="all_filters"
-                    :defaultItems="defaultRelationshipItems"
-                />
-                <monitor-form-input
-                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.MONITOR"
-                    :ref="`form_${RESOURCE_FORM_TYPES.MONITOR}`"
-                    :resourceModules="resourceModules"
-                    :allServers="all_servers"
-                    :defaultItems="defaultRelationshipItems"
-                />
-                <filter-form-input
-                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.FILTER"
-                    :ref="`form_${RESOURCE_FORM_TYPES.FILTER}`"
-                    :resourceModules="resourceModules"
-                />
-                <listener-form-input
-                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.LISTENER"
-                    :ref="`form_${RESOURCE_FORM_TYPES.LISTENER}`"
-                    :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
-                    :resourceModules="resourceModules"
-                    :allServices="all_services"
-                    :defaultItems="defaultRelationshipItems"
-                />
-                <server-form-input
-                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.SERVER"
-                    :ref="`form_${RESOURCE_FORM_TYPES.SERVER}`"
-                    :allServices="all_services"
-                    :allMonitors="all_monitors"
-                    :resourceModules="resourceModules"
-                    :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
-                    :defaultItems="defaultRelationshipItems"
-                />
+                <!-- Use isDlgOpened as a key to force a rerender so that
+                default values can be "fresh" -->
+                <div :key="isDlgOpened">
+                    <label class="field__label mxs-color-helper text-small-text d-block">
+                        {{ $mxs_t('resourceLabelName', { resourceName: selectedForm }) }}
+                    </label>
+                    <v-text-field
+                        id="id"
+                        v-model="resourceId"
+                        :rules="rules.resourceId"
+                        name="id"
+                        required
+                        class="resource-id vuetify-input--override error--text__bottom"
+                        dense
+                        :height="36"
+                        outlined
+                        :placeholder="
+                            $mxs_t('nameYour', { resourceName: selectedForm.toLowerCase() })
+                        "
+                    />
+                    <service-form-input
+                        v-if="selectedForm === RESOURCE_FORM_TYPES.SERVICE"
+                        :ref="`form_${RESOURCE_FORM_TYPES.SERVICE}`"
+                        :resourceModules="resourceModules"
+                        :allFilters="all_filters"
+                        :defaultItems="defaultRelationshipItems"
+                    />
+                    <monitor-form-input
+                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.MONITOR"
+                        :ref="`form_${RESOURCE_FORM_TYPES.MONITOR}`"
+                        :resourceModules="resourceModules"
+                        :allServers="all_servers"
+                        :defaultItems="defaultRelationshipItems"
+                    />
+                    <filter-form-input
+                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.FILTER"
+                        :ref="`form_${RESOURCE_FORM_TYPES.FILTER}`"
+                        :resourceModules="resourceModules"
+                    />
+                    <listener-form-input
+                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.LISTENER"
+                        :ref="`form_${RESOURCE_FORM_TYPES.LISTENER}`"
+                        :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
+                        :resourceModules="resourceModules"
+                        :allServices="all_services"
+                        :defaultItems="defaultRelationshipItems"
+                    />
+                    <server-form-input
+                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.SERVER"
+                        :ref="`form_${RESOURCE_FORM_TYPES.SERVER}`"
+                        :allServices="all_services"
+                        :allMonitors="all_monitors"
+                        :resourceModules="resourceModules"
+                        :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
+                        :defaultItems="defaultRelationshipItems"
+                    />
+                </div>
             </template>
         </mxs-dlg>
     </div>
