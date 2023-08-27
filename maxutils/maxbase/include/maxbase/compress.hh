@@ -34,7 +34,8 @@ enum class CompressionStatus : char
     OK,
     COMPRESSION_ERROR,
     EMPTY_INPUT_STREAM,
-    INIT_ERROR
+    INIT_ERROR,
+    IO_ERROR
 };
 
 /**
