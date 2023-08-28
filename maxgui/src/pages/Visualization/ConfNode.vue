@@ -23,7 +23,7 @@
                 class="node-type font-weight-medium text-no-wrap text-uppercase"
                 :style="{ color: headingColor.txt }"
             >
-                {{ $helpers.resourceTxtTransform(nodeType) }}
+                {{ $mxs_tc(nodeType, 1) }}
             </span>
         </div>
         <filter-nodes

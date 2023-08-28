@@ -116,25 +116,6 @@ export function capitalizeFirstLetter(string) {
 }
 
 /**
- * The function is used to convert plural resource name to singular and capitalize
- * first letter for UI usage
- * @param {String} str string to be processed
- * @return {String} return str that removed last char s and capitalized first char
- */
-export function resourceTxtTransform(str) {
-    let lowerCaseStr = str.toLowerCase()
-    const suffix = 's'
-    const chars = lowerCaseStr.split('')
-    if (chars[chars.length - 1] === suffix) {
-        lowerCaseStr = strReplaceAt({
-            str: lowerCaseStr,
-            index: chars.length - 1,
-            newChar: '',
-        })
-    }
-    return capitalizeFirstLetter(lowerCaseStr)
-}
-/**
  * Case insensitive check if substring is included in source string
  * @param {String} str source string
  * @param {String} subStr sub string to be searched

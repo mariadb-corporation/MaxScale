@@ -25,7 +25,7 @@
                 {{ $mxs_t('connect') }}
             </v-btn>
         </template>
-        <template v-if="isOpened" v-slot:body>
+        <template v-slot:body>
             <v-select
                 v-model="resourceType"
                 :items="resourceTypes"
@@ -42,13 +42,13 @@
                 hide-details="auto"
             >
                 <template v-slot:selection="{ item }">
-                    <div class="v-select__selection v-select__selection--comma">
-                        {{ $helpers.resourceTxtTransform(item) }}
+                    <div class="v-select__selection v-select__selection--comma text-capitalize">
+                        {{ $mxs_tc(item, 1) }}
                     </div>
                 </template>
-                <template v-slot:item="{ item, on, attrs }">
-                    <v-list-item-title v-bind="attrs" v-on="on">
-                        {{ $helpers.resourceTxtTransform(item) }}
+                <template v-slot:item="{ item }">
+                    <v-list-item-title class="text-capitalize">
+                        {{ $mxs_tc(item, 1) }}
                     </v-list-item-title>
                 </template>
             </v-select>
@@ -60,7 +60,7 @@
                         <label class="field__label mxs-color-helper text-small-text label-required">
                             {{
                                 $mxs_t('resourceLabelName', {
-                                    resourceName: $helpers.resourceTxtTransform(resourceType),
+                                    resourceName: $mxs_tc(resourceType, 1),
                                 })
                             }}
                         </label>
@@ -72,22 +72,23 @@
                             clearable
                             showPlaceHolder
                             required
-                            :errorMessages="errRsrcMsg"
                         />
                     </v-col>
-
                     <v-col cols="12" md="6" class="pa-1">
                         <mxs-uid-input v-model.trim="body.user" name="db-user" />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <mxs-pwd-input v-model.trim="body.password" name="db-password" />
                     </v-col>
-
                     <v-col cols="12" md="6" class="pa-1">
-                        <mxs-label-field v-model.trim="body.db" :label="$mxs_t('database')" />
+                        <mxs-label-field
+                            v-model.trim="body.db"
+                            :label="$mxs_t('database')"
+                            name="db"
+                        />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <mxs-timeout-input v-model.number="body.timeout" />
+                        <mxs-timeout-input v-model.number="body.timeout" name="timeout" />
                     </v-col>
                 </v-row>
             </v-container>
@@ -129,7 +130,6 @@ export default {
             },
             isFormValid: false,
             resourceTypes: ['listeners', 'servers', 'services'],
-            errRsrcMsg: '',
         }
     },
     computed: {
@@ -157,23 +157,14 @@ export default {
         isOpened: {
             immediate: true,
             async handler(v) {
-                if (v) {
-                    let rscType = this.resourceTypes[0] // use the first one as default
-                    if (this.pre_select_conn_rsrc) rscType = this.pre_select_conn_rsrc.type
-                    this.resourceType = rscType
-                } else {
-                    this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
-                    this.SET_PRE_SELECT_CONN_RSRC(null)
-                }
+                if (v) this.setDefResourceType()
+                else this.resetFormData()
             },
         },
         resourceType: {
             immediate: true,
             async handler(v) {
-                if (v) {
-                    await this.handleFetchRsrcs(v)
-                    this.handleChooseDefRsrc(v)
-                }
+                if (v) await this.onChangeResourceType(v)
             },
         },
     },
@@ -184,21 +175,33 @@ export default {
         ...mapMutations({
             SET_PRE_SELECT_CONN_RSRC: 'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',
         }),
-        async handleFetchRsrcs(rscType) {
+        async onChangeResourceType(v) {
+            await this.handleFetchResources(v)
+            this.handleChooseDefResource(v)
+        },
+        async handleFetchResources(rscType) {
             // fetch if it's not been fetched
             if (!this.rc_target_names_map[rscType]) await this.fetchRcTargetNames(rscType)
+        },
+        setDefResourceType() {
+            let rscType = this.resourceTypes[0] // use the first one as default
+            if (this.pre_select_conn_rsrc) rscType = this.pre_select_conn_rsrc.type
+            this.resourceType = rscType
+        },
+        resetFormData() {
+            this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
+            this.SET_PRE_SELECT_CONN_RSRC(null)
         },
         /**
          * This function handles automatically select default selectedResource.
          * It chooses the first item in resourceItems if pre_select_conn_rsrc has no value
          * @param {String} resourceType - resource type
          */
-        handleChooseDefRsrc() {
+        handleChooseDefResource() {
             if (this.resourceItems.length) {
                 if (this.pre_select_conn_rsrc) this.selectedResource = this.pre_select_conn_rsrc
                 else this.selectedResource = this.resourceItems[0]
-                this.errRsrcMsg = ''
-            } else this.errRsrcMsg = ''
+            }
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource
