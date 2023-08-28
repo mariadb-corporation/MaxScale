@@ -380,4 +380,24 @@ void Decompressor::set_buffer_sizes(size_t input_size, size_t output_size)
     m_input_buffer.resize(input_size);
     m_output_buffer.resize(output_size);
 }
+
+std::string to_string(CompressionStatus status)
+{
+    switch (status)
+    {
+    case CompressionStatus::OK:
+        return "OK";
+    case CompressionStatus::COMPRESSION_ERROR:
+        return "COMPRESSION_ERROR";
+    case CompressionStatus::EMPTY_INPUT_STREAM:
+        return "EMPTY_INPUT_STREAM";
+    case CompressionStatus::INIT_ERROR:
+        return "INIT_ERROR";
+    case CompressionStatus::IO_ERROR:
+        return "IO_ERROR";
+    }
+
+    mxb_assert(!true);
+    return "UNKNOWN";
+}
 }

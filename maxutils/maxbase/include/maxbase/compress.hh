@@ -38,6 +38,8 @@ enum class CompressionStatus : char
     IO_ERROR
 };
 
+std::string to_string(CompressionStatus status);
+
 /**
  * @brief Compressor class. One instance per thread, decompress can be
  *        called multiple times on the same instance (avoid re-creation of
