@@ -158,6 +158,7 @@ enum class StatementType
 {
     SELECT,
     DUPSERT,    // DELETE, UPDATE, INSERT
+    DRALTER,    // DROP, RENAME, ALTER
     UNKNOWN
 };
 
@@ -175,8 +176,11 @@ StatementType get_statement_type(GWBUF* pStmt)
 
     pSql = modutil_MySQL_bypass_whitespace(pSql, len);
 
+    static const char ALTER[]  = "ALTER";
     static const char DELETE[] = "DELETE";
+    static const char DROP[]   = "DROP";
     static const char INSERT[] = "INSERT";
+    static const char RENAME[] = "RENAME";
     static const char SELECT[] = "SELECT";
     static const char UPDATE[] = "UPDATE";
 
@@ -187,11 +191,34 @@ StatementType get_statement_type(GWBUF* pStmt)
     {
         switch (*pSql)
         {
+        case 'A':
+        case 'a':
+            type = StatementType::DRALTER;
+            pKey = ALTER;
+            pKey_end = pKey + sizeof(ALTER) - 1;
+            break;
+
         case 'D':
         case 'd':
-            type = StatementType::DUPSERT;
-            pKey = DELETE;
-            pKey_end = pKey + sizeof(DELETE) - 1;
+            if (pSql_end > pSql + 1)
+            {
+                switch (*(pSql + 1))
+                {
+                case 'r':
+                case 'R':
+                    type = StatementType::DRALTER;
+                    pKey = DROP;
+                    pKey_end = pKey + sizeof(DROP) - 1;
+                    break;
+
+                case 'e':
+                case 'E':
+                    type = StatementType::DUPSERT;
+                    pKey = DELETE;
+                    pKey_end = pKey + sizeof(DELETE) - 1;
+                    break;
+                }
+            }
             break;
 
         case 'I':
@@ -199,6 +226,13 @@ StatementType get_statement_type(GWBUF* pStmt)
             type = StatementType::DUPSERT;
             pKey = INSERT;
             pKey_end = pKey + sizeof(INSERT) - 1;
+            break;
+
+        case 'R':
+        case 'r':
+            type = StatementType::DRALTER;
+            pKey = RENAME;
+            pKey_end = pKey + sizeof(RENAME) - 1;
             break;
 
         case 'S':
@@ -786,29 +820,50 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
     m_res = pData;
 
     std::vector<std::string> invalidation_words;
+    bool put_value = true;
 
     if (m_invalidate)
     {
-        std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+        for (const auto& table : m_tables)
+        {
+            if (table.find("information_schema.") == 0)
+            {
+                // If any table from "information_schema" is involved in the SELECT,
+                // the result will not be cached.
+                invalidation_words.clear();
+                put_value = false;
+                break;
+            }
+            else
+            {
+                invalidation_words.emplace_back(table);
+            }
+        }
+
         m_tables.clear();
     }
 
-    std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
+    cache_result_t result = CACHE_RESULT_OK;
 
-    cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
-                                                [sWeak, down, reply](cache_result_t result) {
-                                                    auto sThis = sWeak.lock();
+    if (put_value)
+    {
+        std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-                                                    // If we do not have an sThis, then the session
-                                                    // has been terminated.
-                                                    if (sThis)
-                                                    {
-                                                        if (sThis->put_value_handler(result, down, reply))
-                                                        {
-                                                            sThis->flush_response(down, reply);
-                                                        }
-                                                    }
-                                                });
+        result = m_sCache->put_value(m_key, invalidation_words, m_res,
+                                     [sWeak, down, reply](cache_result_t result) {
+                                         auto sThis = sWeak.lock();
+
+                                         // If we do not have an sThis, then the session
+                                         // has been terminated.
+                                         if (sThis)
+                                         {
+                                             if (sThis->put_value_handler(result, down, reply))
+                                             {
+                                                 sThis->flush_response(down, reply);
+                                             }
+                                         }
+                                     });
+    }
 
     if (!CACHE_RESULT_IS_PENDING(result))
     {
@@ -845,7 +900,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
         const CacheConfig& config = m_sCache->config();
-        auto protocol_data = m_pSession->protocol_data();
+        auto* pProtocol_data = m_pSession->protocol_data();
 
         if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
@@ -857,7 +912,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             // When a transaction is started, we initially assume it is read-only.
             m_is_read_only = true;
         }
-        else if (!protocol_data->is_trx_active())
+        else if (!pProtocol_data->is_trx_active())
         {
             if (log_decisions())
             {
@@ -865,7 +920,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             action = CACHE_USE_AND_POPULATE;
         }
-        else if (protocol_data->is_trx_read_only())
+        else if (pProtocol_data->is_trx_read_only())
         {
             if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
             {
@@ -929,7 +984,9 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             else
             {
-                switch (get_statement_type(pPacket))
+                auto statement_type = get_statement_type(pPacket);
+
+                switch (statement_type)
                 {
                 case StatementType::SELECT:
                     if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
@@ -961,11 +1018,17 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     }
                     break;
 
+                case StatementType::DRALTER:
                 case StatementType::DUPSERT:
                     if (m_invalidate)
                     {
-                        auto mariases = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-                        if (!protocol_data->is_trx_active() && mariases->is_autocommit)
+                        auto* pMaria_session = static_cast<MYSQL_session*>(pProtocol_data);
+
+                        if (statement_type == StatementType::DRALTER)
+                        {
+                            m_invalidate_now = true;
+                        }
+                        if (!pProtocol_data->is_trx_active() && pMaria_session->is_autocommit)
                         {
                             m_invalidate_now = true;
                         }
@@ -978,7 +1041,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                         }
                         else
                         {
-                            const char* zPrefix = "UPDATE/DELETE/INSERT statement could not be parsed.";
+                            const char* zPrefix = "Modifying statement could not be parsed. ";
                             const char* zSuffix = nullptr;
 
                             if (m_sCache->config().clear_cache_on_parse_errors)
