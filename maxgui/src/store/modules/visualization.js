@@ -104,7 +104,10 @@ export default {
             else {
                 const blankQueryEditorWke = Worksheet.query()
                     .where(
-                        w => $typy(w, 'etl_task_id').isNull && $typy(w, 'query_editor_id').isNull
+                        w =>
+                            $typy(w, 'etl_task_id').isNull &&
+                            $typy(w, 'query_editor_id').isNull &&
+                            $typy(w, 'erd_task_id').isNull
                     )
                     .first()
                 // Use a blank query editor wke if there is one, otherwise create a new one
