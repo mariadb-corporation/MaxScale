@@ -12,6 +12,7 @@ add_dependencies(auth_utils maxtest)
 # 5. log_password_mismatch (MXS-2916)
 # 6. pam_backend_mapping=mariadb (MXS-3475)
 # 7. Token authentication with PAM users (MXS-4355)
+# 8. com_change_user between different authenticators (MXS-4731)
 #
 # Also tests MXS-1662: PAM admin authentication
 add_test_executable_ex(NAME pam_authentication SOURCE pam_authentication.cc

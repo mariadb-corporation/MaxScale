@@ -164,27 +164,37 @@ void test_main(TestConnections& test)
     const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED VIA pam USING '%s';";
     if (test.ok())
     {
-        MYSQL* conn = test.repl->nodes[0];
-        // Create the PAM user on the master, it will replicate. Use the standard password service for
-        // authenticating.
-        test.try_query(conn, create_pam_user_fmt, pam_user, pam_config_name);
-        test.try_query(conn, "GRANT SELECT ON *.* TO '%s'@'%%';", pam_user);
-        test.try_query(conn, "FLUSH PRIVILEGES;");
-        sleep(1);
-        test.repl->sync_slaves();
+        auto& repl = test.repl;
+        auto conn = repl->backend(0)->open_connection();
+        // Create a PAM user + a normal user.
+        auto pam_usr = conn->create_user(pam_user, "%", pam_config_name, "pam");
+        pam_usr.grant("SELECT ON *.*");
+
+        const char basic_un[] = "basic";
+        const char basic_pw[] = "basic_pw";
+        auto basic_user = conn->create_user(basic_un, "%", basic_pw);
+
+        repl->sync_slaves();
         update_users();
         mxs.get_servers().print();
 
-        // If ok so far, try logging in with PAM.
+        test.tprintf("Testing normal PAM user.");
+        try_log_in(pam_user, pam_pw, "");
+        test.log_includes(pam_message_contents.c_str());
+
         if (test.ok())
         {
-            cout << "Testing normal PAM user.\n";
-            try_log_in(pam_user, pam_pw, "");
-            test.log_includes(pam_message_contents.c_str());
+            // MXS-4731, com_change_user between different authenticators.
+            test.tprintf("Testing COM_CHANGE_USER from native user to pam user.");
+            auto basic_conn = mxs.try_open_rwsplit_connection(basic_un, basic_pw);
+            auto changed = basic_conn->change_user(pam_user, pam_pw, "test");
+            test.expect(changed, "COM_CHANGE_USER %s->%s failed.", basic_un, pam_user);
+            if (changed)
+            {
+                auto res = basic_conn->query("select rand();");
+                test.expect(res && res->next_row(), "Query after COM_CHANGE_USER failed.");
+            }
         }
-
-        // Remove the created user.
-        test.try_query(conn, "DROP USER '%s'@'%%';", pam_user);
     }
 
     if (test.ok())

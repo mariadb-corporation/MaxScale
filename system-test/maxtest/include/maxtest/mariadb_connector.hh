@@ -70,6 +70,9 @@ public:
     ScopedUser create_user(const std::string& user, const std::string& host,
                            const std::string& pw);
 
+    maxtest::ScopedUser create_user(const std::string& user, const std::string& host,
+                                    const std::string& auth_string, const std::string& plugin);
+
     /**
      * Same as above for Xpand. Will create some extra error messages.
      */
