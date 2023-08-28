@@ -14,12 +14,15 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4730](https://jira.mariadb.org/browse/MXS-4730) GUI default value of inputs in the object creation dialog is empty after closing the dialog
 * [MXS-4722](https://jira.mariadb.org/browse/MXS-4722) Case-sensitiveness of enumerations is not documented
 * [MXS-4721](https://jira.mariadb.org/browse/MXS-4721) Galeramon does not update replication lag of replicating servers
 * [MXS-4720](https://jira.mariadb.org/browse/MXS-4720) Implement an option to switch to the old "ping" behaviour in MaxScale
 * [MXS-4719](https://jira.mariadb.org/browse/MXS-4719) Connection init sql file execution can hang
+* [MXS-4717](https://jira.mariadb.org/browse/MXS-4717) information_schema is not invalidated as needed
 * [MXS-4714](https://jira.mariadb.org/browse/MXS-4714) qc_sqlite does not properly parse a RENAME statement
 * [MXS-4708](https://jira.mariadb.org/browse/MXS-4708) Update maxscale.cnf default file
+* [MXS-4706](https://jira.mariadb.org/browse/MXS-4706) Cache does not invalidate when a table is ALTERed, DROPed or RENAMEd
 * [MXS-4704](https://jira.mariadb.org/browse/MXS-4704) SHOW TABLE STATUS FROM some_schema Fails with SchemaRouter
 * [MXS-4701](https://jira.mariadb.org/browse/MXS-4701) GTID update may block the REST-API
 * [MXS-4700](https://jira.mariadb.org/browse/MXS-4700) Binlogrouter treats GTID sequences as 32-bit integers
