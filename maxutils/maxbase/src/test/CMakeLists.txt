@@ -69,3 +69,7 @@ add_test(test_small_vector test_small_vector)
 add_executable(test_window test_window.cc)
 target_link_libraries(test_window maxbase)
 add_test(test_window test_window)
+
+add_executable(test_compression test_compression.cc)
+target_link_libraries(test_compression maxbase zstd)
+add_test(test_compression test_compression)
