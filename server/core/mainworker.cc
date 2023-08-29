@@ -15,6 +15,7 @@
 #include <maxscale/mainworker.hh>
 
 #include <signal.h>
+#include <fcntl.h>
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
@@ -49,6 +50,7 @@ namespace maxscale
 
 MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
+    , m_signal_handler(this)
 {
     mxb_assert(!this_unit.pMain);
 
@@ -210,14 +212,38 @@ bool MainWorker::pre_run()
 
     bool rval = false;
 
-    m_tick_dc = dcall(100, &MainWorker::inc_ticks);
-
-    update_rebalancing();
-
-    if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
+    if (pipe2(m_signal_pipe, O_NONBLOCK | O_CLOEXEC) == -1)
     {
-        rval = true;
-        qc_use_local_cache(false);
+        MXB_ERROR("Failed to create pipe for signals: %d, %s", errno, mxb_strerror(errno));
+    }
+    else
+    {
+        add_fd(m_signal_pipe[0], EPOLLIN, &m_signal_handler);
+
+        m_tick_dc = dcall(100, &MainWorker::inc_ticks);
+
+        update_rebalancing();
+
+        if (modules_thread_init())
+        {
+            if (qc_thread_init(QC_INIT_SELF))
+            {
+                rval = true;
+                qc_use_local_cache(false);
+            }
+            else
+            {
+                modules_thread_finish();
+            }
+        }
+
+        if (!rval)
+        {
+            close(m_signal_pipe[0]);
+            close(m_signal_pipe[1]);
+            m_signal_pipe[0] = -1;
+            m_signal_pipe[1] = -1;
+        }
     }
 
     return rval;
@@ -225,6 +251,11 @@ bool MainWorker::pre_run()
 
 void MainWorker::post_run()
 {
+    mxb_assert(m_signal_pipe[0] != -1 && m_signal_pipe[1] != -1);
+    remove_fd(m_signal_pipe[0]);
+    close(m_signal_pipe[0]);
+    close(m_signal_pipe[1]);
+
     // Clearing the storage right after the main loop returns guarantees that both the MainWorker and the
     // RoutingWorkers are alive when stored data is destroyed. Without this, the destruction of filters is
     // delayed until the MainWorker is destroyed which is something that must be avoided. All objects in
@@ -363,6 +394,39 @@ bool MainWorker::wait_for_shutdown(Call::action_t action)
     }
 
     return again;
+}
+
+MainWorker::SignalHandler::SignalHandler(MainWorker* main_worker)
+{
+    this->handler = &epoll_handler;
+    this->owner = main_worker;
+}
+
+// static
+uint32_t MainWorker::SignalHandler::epoll_handler(struct MXB_POLL_DATA* data,
+                                                  MXB_WORKER* worker,
+                                                  uint32_t events)
+{
+    mxb_assert(this_unit.pMain == worker);
+    static_cast<MainWorker*>(worker)->read_signal_from_pipe();
+    return events;
+}
+
+bool MainWorker::execute_signal_safe(void (* func)(void))
+{
+    intptr_t val = (intptr_t)func;
+    int rc = write(m_signal_pipe[1], &val, sizeof(val));
+    return rc == sizeof(val);
+}
+
+void MainWorker::read_signal_from_pipe()
+{
+    intptr_t val;
+
+    while (read(m_signal_pipe[0], &val, sizeof(val)) == sizeof(val))
+    {
+        ((void (*)(void)) val)();
+    }
 }
 }
 

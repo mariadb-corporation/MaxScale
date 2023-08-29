@@ -361,14 +361,19 @@ static void sighup_handler(int i)
     // Legacy configuration reload handler
 }
 
+static void process_sigusr1()
+{
+    MXS_NOTICE("Log file flush following reception of SIGUSR1\n");
+    mxs_log_rotate();
+}
+
 /**
  * Handler for SIGUSR1 signal. A SIGUSR1 signal will cause
  * maxscale to rotate all log files.
  */
 static void sigusr1_handler(int i)
 {
-    MXS_NOTICE("Log file flush following reception of SIGUSR1\n");
-    mxs_log_rotate();
+    mxs::MainWorker::get()->execute_signal_safe(process_sigusr1);
 }
 
 static const char shutdown_msg[] = "\n\nShutting down MaxScale\n\n";
@@ -2092,7 +2097,7 @@ int main(int argc, char** argv)
                     MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
                               cnf_file_path.c_str());
                     rc = MAXSCALE_BADCONFIG;
-                    maxscale_shutdown();
+                    main_worker.start_shutdown();
                     return;
                 }
 
@@ -2106,7 +2111,7 @@ int main(int argc, char** argv)
                     }
 
                     rc = MAXSCALE_SHUTDOWN;
-                    maxscale_shutdown();
+                    main_worker.start_shutdown();
                     return;
                 }
             }
@@ -2142,7 +2147,7 @@ int main(int argc, char** argv)
                         rc = MAXSCALE_BADCONFIG;
                     }
 
-                    maxscale_shutdown();
+                    main_worker.start_shutdown();
                     return;
                 }
             }
@@ -2170,7 +2175,7 @@ int main(int argc, char** argv)
                 {
                     log_startup_error("Failed to initialize REST API.");
                     rc = MAXSCALE_INTERNALERROR;
-                    maxscale_shutdown();
+                    main_worker.start_shutdown();
                     return;
                 }
             }
@@ -2189,7 +2194,7 @@ int main(int argc, char** argv)
                     log_startup_error("The value of '%s' is not the name of a monitor: %s.",
                                       CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
                     rc = MAXSCALE_BADCONFIG;
-                    maxscale_shutdown();
+                    main_worker.start_shutdown();
                     return;
                 }
 
@@ -2200,7 +2205,7 @@ int main(int argc, char** argv)
                 {
                     log_startup_error("Failed to start all MaxScale services.");
                     rc = MAXSCALE_NOSERVICES;
-                    maxscale_shutdown();
+                    main_worker.start_shutdown();
                     return;
                 }
             }

@@ -62,7 +62,7 @@ int maxscale_shutdown()
 
     if (n == 0)
     {
-        mxs::MainWorker::start_shutdown();
+        mxs::MainWorker::get()->execute_signal_safe(&mxs::MainWorker::start_shutdown);
     }
 
     return n + 1;

@@ -115,6 +115,20 @@ public:
         return "MainWorker";
     }
 
+    /**
+     * Call a function in a signal-safe manner
+     *
+     * This function can be safely called from a signal handler since it only writes the address of the
+     * callback function into an internal pipe that is added to epoll. This makes it possible to move the
+     * execution away from the signal handler where it is very hard to do pretty much anything in a safe
+     * manner.
+     *
+     * @param func The function that will be called by the MainWorker
+     *
+     * @return True if the execution of the function was queued successfully
+     */
+    bool execute_signal_safe(void (* func)(void));
+
 private:
     bool pre_run() override;
     void post_run() override;
@@ -140,11 +154,19 @@ private:
         mxb::Worker::DCId id;
     };
 
+    struct SignalHandler : public MXB_POLL_DATA
+    {
+        SignalHandler(MainWorker* main_worker);
+        static uint32_t epoll_handler(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+    };
+
     bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
     bool balance_workers_dc(Worker::Call::action_t action);
     void order_balancing_dc();
+
+    void read_signal_from_pipe();
 
     // Waits until all RoutingWorkers have stopped and then stops the MainWorker
     bool wait_for_shutdown(Worker::Call::action_t action);
@@ -154,5 +176,7 @@ private:
     mxb::Worker::DCId           m_rebalancing_dc {0};
     mxb::Worker::DCId           m_tick_dc {0};
     mxb::TimePoint              m_last_rebalancing;
+    int                         m_signal_pipe[2] {-1, -1};
+    SignalHandler               m_signal_handler;
 };
 }
