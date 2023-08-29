@@ -78,6 +78,7 @@
 #include "internal/maxscale.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
+#include "internal/profiler.hh"
 #include "internal/service.hh"
 #include "internal/secrets.hh"
 #include "internal/servermanager.hh"
@@ -384,6 +385,11 @@ static void maxscale_ssl_id(CRYPTO_THREADID* id)
 static void sighup_handler(int i)
 {
     // Legacy configuration reload handler
+}
+
+static void profiling_handler(int i)
+{
+    mxs::Profiler::get().save_stacktrace();
 }
 
 static void process_sigusr1()
@@ -1063,6 +1069,11 @@ bool disable_signals(void)
     }
 #endif
 
+    if (!delete_signal(&sigset, Profiler::profiling_signal(), "RT signal 1"))
+    {
+        return false;
+    }
+
     if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
     {
         MXB_ALERT("Failed to set the signal set for MaxScale: %s", mxb_strerror(errno));
@@ -1097,6 +1108,11 @@ bool disable_normal_signals(void)
         return false;
     }
 
+    if (!delete_signal(&sigset, Profiler::profiling_signal(), "RT signal 1"))
+    {
+        return false;
+    }
+
     if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
     {
         MXB_ALERT("Failed to set the signal set for MaxScale: %s", mxb_strerror(errno));
@@ -1115,13 +1131,13 @@ bool disable_normal_signals(void)
  *
  * @return True, if the signal could be configured, false otherwise.
  */
-static bool configure_signal(int signum, const char* signame, void (* handler)(int))
+static bool configure_signal(int signum, const std::string& signame, void (* handler)(int))
 {
     int rc = signal_set(signum, handler);
 
     if (rc != 0)
     {
-        MXB_ALERT("Failed to set signal handler for %s.", signame);
+        MXB_ALERT("Failed to set signal handler for %s.", signame.c_str());
     }
 
     return rc == 0;
@@ -1191,6 +1207,13 @@ bool configure_normal_signals(void)
         return false;
     }
 
+    int rt_sig = Profiler::profiling_signal();
+
+    if (!configure_signal(rt_sig, "RT signal (" + std::to_string(rt_sig) + ")", profiling_handler))
+    {
+        return false;
+    }
+
     return true;
 }
 
@@ -1236,6 +1259,9 @@ void restore_signals()
     configure_signal(SIGABRT, "SIGABRT", SIG_DFL);
     configure_signal(SIGILL, "SIGILL", SIG_DFL);
     configure_signal(SIGFPE, "SIGFPE", SIG_DFL);
+
+    int rt_sig = Profiler::profiling_signal();
+    configure_signal(rt_sig, "RT signal (" + std::to_string(rt_sig) + ")", SIG_DFL);
 #ifdef SIGBUS
     configure_signal(SIGBUS, "SIGBUS", SIG_DFL);
 #endif

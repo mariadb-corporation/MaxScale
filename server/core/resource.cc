@@ -45,6 +45,7 @@
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
 #include "internal/session.hh"
+#include "internal/profiler.hh"
 
 using std::map;
 using std::string;
@@ -1120,6 +1121,11 @@ HttpResponse cb_monitor_wait(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK);
 }
 
+HttpResponse cb_profile_snapshot(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, mxs::Profiler::get().snapshot(request.host()));
+}
+
 HttpResponse cb_create_user(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1562,6 +1568,7 @@ public:
         m_put.emplace_back(cb_thread_listen, "maxscale", "debug", "threads", ":thread", "listen");
         m_put.emplace_back(cb_thread_unlisten, "maxscale", "debug", "threads", ":thread", "unlisten");
         m_get.emplace_back(cb_termination_in_process, "maxscale", "debug", "termination_in_process");
+        m_get.emplace_back(cb_profile_snapshot, "maxscale", "debug", "stacktrace");
 
         /** Create new resources */
         m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_server, "servers");
