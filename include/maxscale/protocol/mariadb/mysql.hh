@@ -437,30 +437,6 @@ static inline uint32_t MYSQL_GET_PACKET_LEN(const GWBUF* buffer)
     return MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
 }
 
-static inline bool MYSQL_IS_ERROR_PACKET(const uint8_t* header)
-{
-    return MYSQL_GET_COMMAND(header) == MYSQL_REPLY_ERR;
-}
-
-static inline bool MYSQL_IS_COM_QUIT(const uint8_t* header)
-{
-    return MYSQL_GET_COMMAND(header) == MXS_COM_QUIT
-           && MYSQL_GET_PAYLOAD_LEN(header) == 1;
-}
-
-static inline bool MYSQL_IS_COM_INIT_DB(const uint8_t* header)
-{
-    return MYSQL_GET_COMMAND(header) == MXS_COM_INIT_DB;
-}
-
-static inline bool MYSQL_IS_CHANGE_USER(const uint8_t* header)
-{
-    return MYSQL_GET_COMMAND(header) == MXS_COM_CHANGE_USER;
-}
-
-/* The following can be compared using memcmp to detect a null password */
-inline static uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
-
 GWBUF mysql_create_com_quit();
 GWBUF mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnum, const char* errmsg);
 

@@ -164,8 +164,7 @@ private:
     bool  read_backend_handshake(GWBUF&& buffer);
     void  handle_error_response(const GWBUF& buffer);
     bool  session_ok_to_route(DCB* dcb);
-    bool  handle_auth_change_response(const GWBUF& reply, DCB* dcb);
-    int   send_mysql_native_password_response(const GWBUF& reply, DCB* dcb);
+
     int   gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
     bool  expecting_reply() const;
@@ -236,10 +235,6 @@ private:
 
     uint32_t server_capabilities {0};   /**< Server capabilities */
     uint32_t extra_capabilities {0};    /**< Extra MariaDB capabilities */
-
-    // The auth token used with the latest COM_CHANGE_USER, required in case a new COM_CHANGE_USER arrives
-    // before the server responds to the previous one and the server sends an AuthSwitchRequest packet.
-    mariadb::AuthByteVec m_current_auth_token;
 
     std::queue<TrackedQuery> m_track_queue;
 

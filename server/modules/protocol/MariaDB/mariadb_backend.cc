@@ -659,30 +659,6 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
     return rval;
 }
 
-static inline bool auth_change_requested(const GWBUF& buf)
-{
-    return mxs_mysql_get_command(buf) == MYSQL_REPLY_AUTHSWITCHREQUEST
-           && buf.length() > MYSQL_EOF_PACKET_LEN;
-}
-
-bool MariaDBBackendConnection::handle_auth_change_response(const GWBUF& reply, DCB* dcb)
-{
-    bool rval = false;
-
-    if (strcmp((const char*)reply.data() + 5, DEFAULT_MYSQL_AUTH_PLUGIN) == 0)
-    {
-        /**
-         * The server requested a change of authentication methods.
-         * If we're changing the authentication method to the same one we
-         * are using now, it means that the server is simply generating
-         * a new scramble for the re-authentication process.
-         */
-        rval = send_mysql_native_password_response(reply, dcb);
-    }
-
-    return rval;
-}
-
 /**
  * With authentication completed, read new data and write to backend
  */
@@ -1278,7 +1254,6 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
         {
             rval.resize(SHA_DIGEST_LENGTH);
             mxs_mysql_calculate_hash(m_auth_data.scramble, hash1.data(), rval.data());
-            m_current_auth_token = hash1;
         }
         return rval;
     };
@@ -1487,32 +1462,6 @@ bool MariaDBBackendConnection::capability_mismatch() const
 
 
     return mismatch;
-}
-
-/**
- * Sends a response for an AuthSwitchRequest to the default auth plugin
- */
-int MariaDBBackendConnection::send_mysql_native_password_response(const GWBUF& reply, DCB* dcb)
-{
-    // Calculate the next sequence number
-    auto header = mariadb::get_header(reply.data());
-    auto seqno = header.seq + 1;
-
-    // Copy the new scramble. Skip packet header, command byte and null-terminated plugin name.
-    const char default_plugin_name[] = DEFAULT_MYSQL_AUTH_PLUGIN;
-    reply.copy_data(MYSQL_HEADER_LEN + 1 + sizeof(default_plugin_name), sizeof(m_auth_data.scramble),
-                    m_auth_data.scramble);
-
-    const auto& sha1_pw = m_current_auth_token;
-    const uint8_t* curr_passwd = sha1_pw.empty() ? null_client_sha1 : sha1_pw.data();
-
-    GWBUF buffer(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
-    uint8_t* data = buffer.data();
-    mariadb::set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
-    data[3] = seqno;    // This is the third packet after the COM_CHANGE_USER
-    mxs_mysql_calculate_hash(m_auth_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
-
-    return dcb->writeq_append(std::move(buffer));
 }
 
 /**

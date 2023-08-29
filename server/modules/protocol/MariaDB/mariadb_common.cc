@@ -47,6 +47,11 @@ bool only_one_packet(const GWBUF& buffer)
     return header.pl_length + MYSQL_HEADER_LEN == buffer_len;
 }
 
+bool MYSQL_IS_ERROR_PACKET(const uint8_t* header)
+{
+    return MYSQL_GET_COMMAND(header) == MYSQL_REPLY_ERR;
+}
+
 // Lookup table for the set of valid commands
 constexpr std::array<bool, std::numeric_limits<uint8_t>::max()> create_command_lut()
 {
