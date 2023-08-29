@@ -535,9 +535,6 @@ inline constexpr bool mxs_mysql_is_binlog_dump(uint8_t cmd)
  */
 void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* pw_sha1, uint8_t* output);
 
-int response_length(bool with_ssl, bool ssl_established, const char* user, const uint8_t* passwd,
-                    const char* dbname, const char* auth_module);
-
 uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const uint8_t* passwd);
 
 

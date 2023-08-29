@@ -254,69 +254,6 @@ void encode_leint(uint8_t* ptr, size_t prefix_size, size_t value)
     }
 }
 
-/**
- * @brief Computes the size of the response to the DB initial handshake
- *
- * When the connection is to be SSL, but an SSL connection has not yet been
- * established, only a basic 36 byte response is sent, including the SSL
- * capability flag.
- *
- * Otherwise, the packet size is computed, based on the minimum size and
- * increased by the optional or variable elements.
- *
- * @param with_ssl        SSL is used
- * @param ssl_established SSL is established
- * @param user            Name of the user seeking to connect
- * @param passwd          Password for the user seeking to connect
- * @param dbname          Name of the database to be made default, if any
- *
- * @return The length of the response packet
- */
-int response_length(bool with_ssl, bool ssl_established, const char* user,
-                    const uint8_t* passwd, const char* dbname, const char* auth_module)
-{
-    long bytes;
-
-    if (with_ssl && !ssl_established)
-    {
-        return MYSQL_AUTH_PACKET_BASE_SIZE;
-    }
-
-    // Protocol MySQL HandshakeResponse for CLIENT_PROTOCOL_41
-    // 4 bytes capabilities + 4 bytes max packet size + 1 byte charset + 23 '\0' bytes
-    // 4 + 4 + 1 + 23  = 32
-    bytes = 32;
-
-    if (user)
-    {
-        bytes += strlen(user);
-    }
-    // the NULL
-    bytes++;
-
-    // next will be + 1 (scramble_len) + 20 (fixed_scramble) + 1 (user NULL term) + 1 (db NULL term)
-
-    if (passwd)
-    {
-        bytes += GW_MYSQL_SCRAMBLE_SIZE;
-    }
-    bytes++;
-
-    if (dbname && strlen(dbname))
-    {
-        bytes += strlen(dbname);
-        bytes++;
-    }
-
-    bytes += strlen(auth_module);
-    bytes++;
-
-    // the packet header
-    bytes += 4;
-
-    return bytes;
-}
-
 void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* pw_sha1, uint8_t* output)
 {
     const uint8_t* hash1 = pw_sha1 ? pw_sha1 : empty_pw_sha1;

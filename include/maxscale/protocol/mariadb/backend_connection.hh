@@ -165,14 +165,16 @@ private:
     void  handle_error_response(const GWBUF& buffer);
     bool  session_ok_to_route(DCB* dcb);
 
-    int   gw_decode_mysql_server_handshake(uint8_t* payload);
-    GWBUF gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
-    bool  expecting_reply() const;
-    bool  capability_mismatch() const;
+    int      gw_decode_mysql_server_handshake(uint8_t* payload);
+    GWBUF    create_ssl_request_packet() const;
+    GWBUF    create_hs_response_packet(bool with_ssl);
+    uint8_t* write_capabilities(bool ssl_capability, uint8_t* buffer) const;
+    bool     expecting_reply() const;
+    bool     capability_mismatch() const;
 
     std::string create_response_mismatch_error();
 
-    uint32_t create_capabilities(bool with_ssl, uint64_t capabilities);
+    uint32_t create_capabilities(bool with_ssl, uint64_t capabilities) const;
     GWBUF    process_packets(GWBUF& result);
     void     process_one_packet(Iter it, Iter end, uint32_t len);
     void     process_reply_start(Iter it, Iter end);

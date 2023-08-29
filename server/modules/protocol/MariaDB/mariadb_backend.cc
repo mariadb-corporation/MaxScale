@@ -41,6 +41,7 @@ using std::move;
 
 namespace
 {
+const size_t CAPS_SECTION_SIZE = 32;
 using Iter = MariaDBBackendConnection::Iter;
 
 void skip_encoded_int(Iter& it)
@@ -1563,127 +1564,115 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     return 0;
 }
 
+GWBUF MariaDBBackendConnection::create_ssl_request_packet() const
+{
+    // SSLRequest is header + 32bytes.
+    GWBUF rval(MYSQL_HEADER_LEN + CAPS_SECTION_SIZE);
+    // Server handshake was seq 0, so our reply is seq 1.
+    auto ptr = mariadb::write_header(rval.data(), CAPS_SECTION_SIZE, 1);
+    ptr = write_capabilities(true, ptr);
+    mxb_assert(ptr - rval.data() == (intptr_t)rval.length());
+    return rval;
+}
+
+/**
+ * Write capabilities section of a SSLRequest Packet or a Handshake Response Packet.
+ *
+ * @param ssl_capability Write ssl capability bit
+ * @param buffer Target buffer, must have at least 32bytes space
+ * @return Pointer to byte after
+ */
+uint8_t* MariaDBBackendConnection::write_capabilities(bool ssl_capability, uint8_t* buffer) const
+{
+    // Base client capabilities.
+    uint32_t base_caps = create_capabilities(ssl_capability, m_dcb->service()->capabilities());
+    buffer += mariadb::set_byte4(buffer, base_caps);
+
+    buffer += mariadb::set_byte4(buffer, 16777216);     // max-packet size
+    auto* mysql_ses = m_auth_data.client_data;
+    *buffer++ = mysql_ses->auth_data->collation;    // charset
+
+    // 19 filler bytes of 0
+    size_t filler_bytes = 19;
+    memset(buffer, 0, filler_bytes);
+    buffer += filler_bytes;
+
+    // Either MariaDB 10.2 extra capabilities or 4 bytes filler
+    uint32_t extra_caps = mysql_ses->extra_capabilities();
+    buffer += mariadb::set_byte4(buffer, extra_caps);
+    return buffer;
+}
+
 /**
  * Create a response to the server handshake
  *
  * @param with_ssl             Whether to create an SSL response or a normal response packet
- * @param ssl_established      Set to true if the SSL response has been sent
- * @param service_capabilities Capabilities of the connecting service
  *
  * @return Generated response packet
  */
-GWBUF MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ssl_established,
-                                                          uint64_t service_capabilities)
+GWBUF MariaDBBackendConnection::create_hs_response_packet(bool with_ssl)
 {
-    auto client_data = m_auth_data.client_data;
-    uint8_t client_capabilities[4] = {0, 0, 0, 0};
-    const uint8_t* curr_passwd = NULL;
+    // Calculate total packet length. Response begins with the same capabilities section as SSLRequest.
+    auto pl_len = CAPS_SECTION_SIZE;
 
-    if (client_data->auth_data->backend_token.size() == SHA_DIGEST_LENGTH)
+    auto* mysql_ses = m_auth_data.client_data;
+    const auto& auth_data = *mysql_ses->auth_data;
+    const string& username = auth_data.user;
+
+    pl_len += username.length() + 1;
+    // See create_capabilities() why this is currently ok.
+    pl_len += 1;    // auth token length
+    bool have_pw = auth_data.backend_token.size() == SHA_DIGEST_LENGTH;
+    if (have_pw)
     {
-        curr_passwd = client_data->auth_data->backend_token.data();
+        pl_len += SHA_DIGEST_LENGTH;
     }
-
-    const auto& default_db = client_data->auth_data->default_db;
-    uint32_t capabilities = create_capabilities(with_ssl, service_capabilities);
-    mariadb::set_byte4(client_capabilities, capabilities);
+    const string& default_db = auth_data.default_db;
+    if (!default_db.empty())
+    {
+        pl_len += default_db.length() + 1;
+    }
 
     /**
      * Use the default authentication plugin name. If the server is using a
      * different authentication mechanism, it will send an AuthSwitchRequest
-     * packet.
+     * packet. TODO: use the real authenticator & auth token immediately
      */
-    const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
+    const char auth_plugin_name[] = DEFAULT_MYSQL_AUTH_PLUGIN;
+    pl_len += sizeof(auth_plugin_name);
 
-    const std::string& username = client_data->auth_data->user;
-    // TODO: Make this a member function, only MariaDBBackendConnection uses it
-    long bytes = response_length(with_ssl,
-                                 ssl_established,
-                                 username.c_str(),
-                                 curr_passwd,
-                                 default_db.c_str(),
-                                 auth_plugin_name);
-
-    const auto& attrs = client_data->auth_data->attributes;
-    if (!with_ssl || ssl_established)
+    bool have_attrs = false;
+    const auto& attrs = auth_data.attributes;
+    uint32_t capabilities = create_capabilities(with_ssl, m_dcb->service()->capabilities());
+    if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
     {
-        if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
-        {
-            bytes += attrs.size();
-        }
+        pl_len += attrs.size();
+        have_attrs = true;
     }
 
-    // allocating the GWBUF
-    GWBUF buffer(bytes);
-    uint8_t* payload = buffer.data();
-
-    // clearing data
-    memset(payload, '\0', bytes);
-
-    // put here the paylod size: bytes to write - 4 bytes packet header
-    mariadb::set_byte3(payload, (bytes - 4));
-
-    // set packet # = 1
-    payload[3] = ssl_established ? '\x02' : '\x01';
-    payload += 4;
-
-    // set client capabilities
-    memcpy(payload, client_capabilities, 4);
-
-    // set now the max-packet size
-    payload += 4;
-    mariadb::set_byte4(payload, 16777216);
-
-    // set the charset
-    payload += 4;
-    *payload = client_data->auth_data->collation;
-
-    payload++;
-
-    // 19 filler bytes of 0
-    payload += 19;
-
-    // Either MariaDB 10.2 extra capabilities or 4 bytes filler
-    uint32_t extra_capabilities = client_data->extra_capabilities();
-    memcpy(payload, &extra_capabilities, sizeof(extra_capabilities));
-    payload += 4;
-
-    if (!with_ssl || ssl_established)
+    GWBUF rval(MYSQL_HEADER_LEN + pl_len);
+    auto ptr = mariadb::write_header(rval.data(), pl_len, with_ssl ? 2 : 1);
+    ptr = write_capabilities(with_ssl, ptr);
+    ptr = mariadb::copy_chars(ptr, username.c_str(), username.length() + 1);
+    if (have_pw)
     {
-        // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
-        memcpy(payload, username.c_str(), username.length());
-        payload += username.length();
-        payload++;
-
-        if (curr_passwd)
-        {
-            payload = load_hashed_password(m_auth_data.scramble, payload, curr_passwd);
-        }
-        else
-        {
-            payload++;
-        }
-
-        // if the db is not NULL append it
-        if (default_db[0])
-        {
-            memcpy(payload, default_db.c_str(), default_db.length());
-            payload += default_db.length();
-            payload++;
-        }
-
-        memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
-
-        if ((capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
-            && !attrs.empty())
-        {
-            // Copy client attributes as-is. This allows us to pass them along without having to process them.
-            payload += strlen(auth_plugin_name) + 1;
-            memcpy(payload, attrs.data(), attrs.size());
-        }
+        ptr = load_hashed_password(m_auth_data.scramble, ptr, auth_data.backend_token.data());
     }
-
-    return buffer;
+    else
+    {
+        *ptr++ = 0;
+    }
+    if (!default_db.empty())
+    {
+        ptr = mariadb::copy_chars(ptr, default_db.c_str(), default_db.length() + 1);
+    }
+    ptr = mariadb::copy_chars(ptr, auth_plugin_name, sizeof(auth_plugin_name));
+    if (have_attrs)
+    {
+        ptr = mariadb::copy_bytes(ptr, attrs.data(), attrs.size());
+    }
+    mxb_assert(ptr - rval.data() == (intptr_t)rval.length());
+    return rval;
 }
 
 /**
@@ -1701,7 +1690,7 @@ GWBUF MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ss
  * @return Bit mask (32 bits)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
-uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t capabilities)
+uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t capabilities) const
 {
     uint32_t final_capabilities = m_auth_data.client_data->client_capabilities();
 
@@ -2522,8 +2511,8 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
             {
                 // SSL-connection starts by sending a cleartext SSLRequest-packet,
                 // then initiating SSL-negotiation.
-                GWBUF ssl_req = gw_generate_auth_response(true, false, m_dcb->service()->capabilities());
-                if (m_dcb->writeq_append(std::move(ssl_req)) && m_dcb->ssl_start_connect() >= 0)
+                m_dcb->writeq_append(create_ssl_request_packet());
+                if (m_dcb->ssl_start_connect() >= 0)
                 {
                     m_hs_state = HandShakeState::SSL_NEG;
                 }
@@ -2559,8 +2548,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
         case HandShakeState::SEND_HS_RESP:
             {
                 bool with_ssl = m_dcb->using_ssl();
-                GWBUF hs_resp = gw_generate_auth_response(with_ssl, with_ssl,
-                                                          m_dcb->service()->capabilities());
+                GWBUF hs_resp = create_hs_response_packet(with_ssl);
                 if (m_dcb->writeq_append(std::move(hs_resp)))
                 {
                     m_hs_state = HandShakeState::COMPLETE;
