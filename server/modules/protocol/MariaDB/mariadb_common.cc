@@ -254,9 +254,10 @@ void encode_leint(uint8_t* ptr, size_t prefix_size, size_t value)
     }
 }
 
-void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* pw_sha1, uint8_t* output)
+uint8_t* mxs_mysql_calculate_hash(const uint8_t* scramble, const std::vector<uint8_t>& pw_sha1,
+                                  uint8_t* output)
 {
-    const uint8_t* hash1 = pw_sha1 ? pw_sha1 : empty_pw_sha1;
+    const uint8_t* hash1 = pw_sha1.empty() ? empty_pw_sha1 : pw_sha1.data();
 
     uint8_t hash2[SHA_DIGEST_LENGTH];   // SHA1(SHA1(password))
     SHA1(hash1, SHA_DIGEST_LENGTH, hash2);
@@ -266,21 +267,7 @@ void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* pw_sha1, u
 
     // Final token is SHA1(CONCAT(scramble, hash2)) ⊕ SHA1(password)
     mxs::bin_bin_xor(new_sha, hash1, SHA_DIGEST_LENGTH, output);
-}
-
-/**
- * @brief Helper function to load hashed password
- *
- * @param payload Destination where hashed password is written
- * @param passwd Client's double SHA1 password
- *
- * @return Address of the next byte after the end of the stored password
- */
-uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const uint8_t* passwd)
-{
-    *payload++ = GW_MYSQL_SCRAMBLE_SIZE;
-    mxs_mysql_calculate_hash(scramble, passwd, payload);
-    return payload + GW_MYSQL_SCRAMBLE_SIZE;
+    return output + SHA_DIGEST_LENGTH;
 }
 
 bool mxs_mysql_is_valid_command(uint8_t command)

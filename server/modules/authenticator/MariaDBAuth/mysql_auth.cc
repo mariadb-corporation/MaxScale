@@ -408,9 +408,7 @@ GWBUF MariaDBBackendSession::gen_native_auth_response(const mariadb::ByteVec& sh
     size_t total_len = MYSQL_HEADER_LEN + pload_len;
     GWBUF rval(total_len);
     auto ptr = mariadb::write_header(rval.data(), pload_len, seqno);
-    const uint8_t* curr_passwd = sha_pw.empty() ? nullptr : sha_pw.data();
-    mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, ptr);
-    ptr += SHA_DIGEST_LENGTH;
+    ptr = mxs_mysql_calculate_hash(m_shared_data.scramble, sha_pw, ptr);
     mxb_assert(ptr - rval.data() == (ptrdiff_t)total_len);
     return rval;
 }

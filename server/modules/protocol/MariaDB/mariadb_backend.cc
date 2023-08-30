@@ -1246,19 +1246,6 @@ GWBUF MariaDBBackendConnection::create_reset_connection_packet()
  */
 GWBUF MariaDBBackendConnection::create_change_user_packet()
 {
-    const auto& client_auth_data = *m_auth_data.client_data->auth_data;
-    auto make_auth_token = [this, &client_auth_data] {
-        std::vector<uint8_t> rval;
-        // SHA1(password) was sent by client and is in binary form.
-        auto& hash1 = client_auth_data.backend_token;
-        if (hash1.size() == SHA_DIGEST_LENGTH)
-        {
-            rval.resize(SHA_DIGEST_LENGTH);
-            mxs_mysql_calculate_hash(m_auth_data.scramble, hash1.data(), rval.data());
-        }
-        return rval;
-    };
-
     std::vector<uint8_t> payload;
     payload.reserve(200);   // Enough for most cases.
 
@@ -1271,11 +1258,19 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
     // Command byte COM_CHANGE_USER 0x11 */
     payload.push_back(MXS_COM_CHANGE_USER);
 
+    const auto& client_auth_data = *m_auth_data.client_data->auth_data;
     insert_stringz(client_auth_data.user);
 
     // Calculate the authentication token. For simplicity, always try mysql_native_password first, server
     // will change auth plugin if required.
-    auto token = make_auth_token();
+    std::vector<uint8_t> token;
+    auto& hash1 = client_auth_data.backend_token;
+    if (hash1.size() == SHA_DIGEST_LENGTH)
+    {
+        token.resize(SHA_DIGEST_LENGTH);
+        mxs_mysql_calculate_hash(m_auth_data.scramble, hash1, token.data());
+    }
+
     payload.push_back(token.size());
     payload.insert(payload.end(), token.begin(), token.end());
 
@@ -1650,7 +1645,8 @@ GWBUF MariaDBBackendConnection::create_hs_response_packet(bool with_ssl)
     ptr = mariadb::copy_chars(ptr, username.c_str(), username.length() + 1);
     if (have_pw)
     {
-        ptr = load_hashed_password(m_auth_data.scramble, ptr, auth_data.backend_token.data());
+        *ptr++ = SHA_DIGEST_LENGTH;
+        ptr = mxs_mysql_calculate_hash(m_auth_data.scramble, auth_data.backend_token, ptr);
     }
     else
     {
