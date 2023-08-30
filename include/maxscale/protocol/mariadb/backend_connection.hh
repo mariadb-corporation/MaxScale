@@ -168,13 +168,13 @@ private:
     int      gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF    create_ssl_request_packet() const;
     GWBUF    create_hs_response_packet(bool with_ssl);
-    uint8_t* write_capabilities(bool ssl_capability, uint8_t* buffer) const;
+    uint8_t* write_capabilities(uint8_t* buffer) const;
     bool     expecting_reply() const;
     bool     capability_mismatch() const;
 
     std::string create_response_mismatch_error();
 
-    uint32_t create_capabilities(bool with_ssl, uint64_t capabilities) const;
+    uint32_t create_capabilities(bool with_ssl) const;
     GWBUF    process_packets(GWBUF& result);
     void     process_one_packet(Iter it, Iter end, uint32_t len);
     void     process_reply_start(Iter it, Iter end);
@@ -235,8 +235,9 @@ private:
     bool        m_large_query = false;
     mxs::Reply  m_reply;
 
-    uint32_t server_capabilities {0};   /**< Server capabilities */
-    uint32_t extra_capabilities {0};    /**< Extra MariaDB capabilities */
+    uint32_t m_mxs_capabilities {0};            /**< Client capabilities sent to server */
+    uint32_t m_server_capabilities {0};         /**< Server capabilities */
+    uint32_t m_server_extra_capabilities {0};   /**< Extra MariaDB capabilities */
 
     std::queue<TrackedQuery> m_track_queue;
 

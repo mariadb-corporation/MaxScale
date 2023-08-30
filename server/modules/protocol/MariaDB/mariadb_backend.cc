@@ -1439,7 +1439,7 @@ bool MariaDBBackendConnection::capability_mismatch() const
 {
     bool mismatch = false;
 
-    if (use_deprecate_eof() && (server_capabilities & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0)
+    if (use_deprecate_eof() && (m_server_capabilities & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0)
     {
         // This is an unexpected situation but it can happen if the server is swapped out without MaxScale
         // recalculating the version. Mostly this is here to catch any possible bugs that there might be in
@@ -1453,10 +1453,10 @@ bool MariaDBBackendConnection::capability_mismatch() const
 
     uint32_t client_extra = mysql_session()->extra_capabilities();
 
-    if ((client_extra & extra_capabilities) != client_extra)
+    if ((client_extra & m_server_extra_capabilities) != client_extra)
     {
         MXB_INFO("Client uses extended capabilities that the server does not implement: %u != %u",
-                 client_extra, extra_capabilities);
+                 client_extra, m_server_extra_capabilities);
         mxb_assert(!true);
         mismatch = true;
     }
@@ -1523,8 +1523,7 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     payload += 5;
 
     mysql_server_capabilities_two = mariadb::get_byte2(payload);
-
-    conn->server_capabilities = mysql_server_capabilities_one | mysql_server_capabilities_two << 16;
+    m_server_capabilities = mysql_server_capabilities_one | mysql_server_capabilities_two << 16;
 
     // 2 bytes shift
     payload += 2;
@@ -1546,9 +1545,9 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     // skip 6 bytes of filler
     payload += 6;
 
-    if ((conn->server_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
+    if ((m_server_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
     {
-        conn->extra_capabilities = mariadb::get_byte4(payload);
+        m_server_extra_capabilities = mariadb::get_byte4(payload);
     }
 
     payload += 4;
@@ -1570,7 +1569,7 @@ GWBUF MariaDBBackendConnection::create_ssl_request_packet() const
     GWBUF rval(MYSQL_HEADER_LEN + CAPS_SECTION_SIZE);
     // Server handshake was seq 0, so our reply is seq 1.
     auto ptr = mariadb::write_header(rval.data(), CAPS_SECTION_SIZE, 1);
-    ptr = write_capabilities(true, ptr);
+    ptr = write_capabilities(ptr);
     mxb_assert(ptr - rval.data() == (intptr_t)rval.length());
     return rval;
 }
@@ -1578,15 +1577,13 @@ GWBUF MariaDBBackendConnection::create_ssl_request_packet() const
 /**
  * Write capabilities section of a SSLRequest Packet or a Handshake Response Packet.
  *
- * @param ssl_capability Write ssl capability bit
  * @param buffer Target buffer, must have at least 32bytes space
  * @return Pointer to byte after
  */
-uint8_t* MariaDBBackendConnection::write_capabilities(bool ssl_capability, uint8_t* buffer) const
+uint8_t* MariaDBBackendConnection::write_capabilities(uint8_t* buffer) const
 {
     // Base client capabilities.
-    uint32_t base_caps = create_capabilities(ssl_capability, m_dcb->service()->capabilities());
-    buffer += mariadb::set_byte4(buffer, base_caps);
+    buffer += mariadb::set_byte4(buffer, m_mxs_capabilities);
 
     buffer += mariadb::set_byte4(buffer, 16777216);     // max-packet size
     auto* mysql_ses = m_auth_data.client_data;
@@ -1606,8 +1603,7 @@ uint8_t* MariaDBBackendConnection::write_capabilities(bool ssl_capability, uint8
 /**
  * Create a response to the server handshake
  *
- * @param with_ssl             Whether to create an SSL response or a normal response packet
- *
+ * @param with_ssl True if ssl is in use
  * @return Generated response packet
  */
 GWBUF MariaDBBackendConnection::create_hs_response_packet(bool with_ssl)
@@ -1642,17 +1638,15 @@ GWBUF MariaDBBackendConnection::create_hs_response_packet(bool with_ssl)
     pl_len += sizeof(auth_plugin_name);
 
     bool have_attrs = false;
-    const auto& attrs = auth_data.attributes;
-    uint32_t capabilities = create_capabilities(with_ssl, m_dcb->service()->capabilities());
-    if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
+    if (m_mxs_capabilities & m_server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
     {
-        pl_len += attrs.size();
+        pl_len += auth_data.attributes.size();
         have_attrs = true;
     }
 
     GWBUF rval(MYSQL_HEADER_LEN + pl_len);
     auto ptr = mariadb::write_header(rval.data(), pl_len, with_ssl ? 2 : 1);
-    ptr = write_capabilities(with_ssl, ptr);
+    ptr = write_capabilities(ptr);
     ptr = mariadb::copy_chars(ptr, username.c_str(), username.length() + 1);
     if (have_pw)
     {
@@ -1669,7 +1663,7 @@ GWBUF MariaDBBackendConnection::create_hs_response_packet(bool with_ssl)
     ptr = mariadb::copy_chars(ptr, auth_plugin_name, sizeof(auth_plugin_name));
     if (have_attrs)
     {
-        ptr = mariadb::copy_bytes(ptr, attrs.data(), attrs.size());
+        ptr = mariadb::copy_bytes(ptr, auth_data.attributes.data(), auth_data.attributes.size());
     }
     mxb_assert(ptr - rval.data() == (intptr_t)rval.length());
     return rval;
@@ -1685,12 +1679,11 @@ GWBUF MariaDBBackendConnection::create_hs_response_packet(bool with_ssl)
  * database name has been specified in the function call, the relevant flag
  * is set.
  *
- * @param db_specified Whether the connection request specified a database
- * @param compress Whether compression is requested - NOT SUPPORTED
+ * @param with_ssl Is ssl required?
  * @return Bit mask (32 bits)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
-uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t capabilities) const
+uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl) const
 {
     uint32_t final_capabilities = m_auth_data.client_data->client_capabilities();
 
@@ -1707,7 +1700,8 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
         final_capabilities &= ~GW_MYSQL_CAPABILITIES_SSL;
     }
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING))
+    uint64_t service_caps = m_dcb->service()->capabilities();
+    if (rcap_type_required(service_caps, RCAP_TYPE_SESSION_STATE_TRACKING))
     {
         /** add session track */
         final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
@@ -1736,7 +1730,7 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
         | GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA;
 
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_MULTI_STMT_SQL))
+    if (rcap_type_required(service_caps, RCAP_TYPE_MULTI_STMT_SQL))
     {
         // Currently only readwritesplit requires this as it implements causal_reads with multi-statements.
         final_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS | GW_MYSQL_CAPABILITIES_MULTI_RESULTS;
@@ -2001,7 +1995,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     {
         // TODO: Benchmark the extra cost of always processing the session tracking variables and see if it's
         // too much.
-        mxb_assert(server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK);
+        mxb_assert(m_server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK);
 
         skip_encoded_str(it);   // Skip human-readable info
 
@@ -2494,8 +2488,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                         }
                         else
                         {
-                            m_hs_state = m_dcb->using_ssl() ? HandShakeState::START_SSL :
-                                HandShakeState::SEND_HS_RESP;
+                            bool ssl_on = m_dcb->using_ssl();
+                            m_mxs_capabilities = create_capabilities(ssl_on);
+                            m_hs_state = ssl_on ? HandShakeState::START_SSL : HandShakeState::SEND_HS_RESP;
                         }
                     }
                     else
