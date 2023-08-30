@@ -166,5 +166,24 @@ std::tuple<int, std::string> extract_string(const char* ptr, const char* end);
  * @param out Output vector
  */
 void add_string(std::string_view str, std::vector<uint8_t>* out);
+
+/**
+ * Generate suid tool execute command.
+ *
+ * @param debug True if debugging
+ * @return The command, or empty on error
+ */
+std::string gen_auth_tool_run_cmd(bool debug);
+
+/**
+ * Create a message containing settings for the suid process.
+ *
+ * @param user Username to authenticate
+ * @param service Pam service
+ * @param mapping_enabled True if mapping is on
+ * @return The message
+ */
+std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string_view service,
+                                              bool mapping_enabled);
 }
 }

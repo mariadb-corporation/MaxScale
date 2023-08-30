@@ -71,37 +71,7 @@ int main(int argc, char* argv[])
         mapping_on = true;
     }
 
-    // Get path to current executable. Should typically fit in PATH_MAX.
-    string total_path;
-    const int max_len = PATH_MAX + 1;
-    char buf[max_len];
-    const char func_call[] = "readlink(\"/proc/self/exe\")";
-    if (auto len = readlink("/proc/self/exe", buf, max_len); len > 0)
-    {
-        if (len < max_len)
-        {
-            buf[len] = '\0';
-            char* directory = dirname(buf);
-            total_path = directory;
-            total_path.append("/maxscale_pam_auth_tool");
-            if (debug)
-            {
-                total_path.append(" -d");
-            }
-        }
-        else
-        {
-            MXB_ERROR("%s returned too much data.", func_call);
-        }
-    }
-    else if (len == 0)
-    {
-        MXB_ERROR("%s did not return any data.", func_call);
-    }
-    else
-    {
-        MXB_ERROR("%s failed. Error %i: '%s'", func_call, errno, mxb_strerror(errno));
-    }
+    string total_path = mxb::pam::gen_auth_tool_run_cmd(debug);
 
     int timeout_s = 10;
     int rval = EXIT_FAILURE;
@@ -114,12 +84,8 @@ int main(int argc, char* argv[])
                 bool auth_ok = false;
                 // Command should have started. The subprocess now expects to read a settings byte,
                 // username and service name.
-                std::vector<uint8_t> first_msg;
-                uint8_t settings = mapping_on ? 1 : 0;
-                first_msg.reserve(100);
-                first_msg.push_back(settings);
-                mxb::pam::add_string(username, &first_msg);
-                mxb::pam::add_string(service, &first_msg);
+                std::vector<uint8_t> first_msg = mxb::pam::create_suid_settings_msg(
+                    username, service, mapping_on);
 
                 if (ext_proc->write(first_msg.data(), first_msg.size()))
                 {

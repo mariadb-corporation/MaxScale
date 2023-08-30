@@ -17,7 +17,10 @@
 #include <cstring>
 #include <security/pam_appl.h>
 #include <unistd.h>
+#include <climits>
+#include <libgen.h>
 #include <maxbase/alloc.hh>
+#include <maxbase/string.hh>
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 
@@ -173,6 +176,54 @@ std::tuple<int, string> extract_string(const char* ptr, const char* end)
         }
     }
     return {bytes_read, message};
+}
+
+string gen_auth_tool_run_cmd(bool debug)
+{
+    // Get path to current executable. Should typically fit in PATH_MAX.
+    string total_path;
+    const int len_limit = PATH_MAX + 1;
+    char buf[len_limit];
+    const char func_call_str[] = "readlink(\"/proc/self/exe\")";
+    if (auto len = readlink("/proc/self/exe", buf, len_limit); len > 0)
+    {
+        if (len < len_limit)
+        {
+            buf[len] = '\0';
+            char* directory = dirname(buf);
+            total_path = directory;
+            total_path.append("/maxscale_pam_auth_tool");
+            if (debug)
+            {
+                total_path.append(" -d");
+            }
+        }
+        else
+        {
+            MXB_ERROR("%s returned too much data.", func_call_str);
+        }
+    }
+    else if (len == 0)
+    {
+        MXB_ERROR("%s did not return any data.", func_call_str);
+    }
+    else
+    {
+        MXB_ERROR("%s failed. Error %i: '%s'", func_call_str, errno, mxb_strerror(errno));
+    }
+    return total_path;
+}
+
+std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string_view service,
+                                              bool mapping_enabled)
+{
+    std::vector<uint8_t> first_msg;
+    uint8_t settings = mapping_enabled ? 1 : 0;
+    first_msg.reserve(100);
+    first_msg.push_back(settings);
+    mxb::pam::add_string(user, &first_msg);
+    mxb::pam::add_string(service, &first_msg);
+    return first_msg;
 }
 }
 }
