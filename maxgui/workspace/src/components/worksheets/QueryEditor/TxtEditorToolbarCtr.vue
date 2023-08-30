@@ -219,6 +219,7 @@ export default {
             is_max_rows_valid: state => state.editorsMem.is_max_rows_valid,
             selected_query_txt: state => state.editorsMem.selected_query_txt,
             tab_moves_focus: state => state.prefAndStorage.tab_moves_focus,
+            max_statements: state => state.prefAndStorage.max_statements,
         }),
         eventBus() {
             return EventBus
@@ -261,6 +262,9 @@ export default {
                     this.isExecuting)
             )
         },
+        sqlTxt() {
+            return this.activeRunMode === 'selected' ? this.selected_query_txt : this.queryTxt
+        },
     },
     activated() {
         this.eventBus.$on('shortkey', this.shortKeyHandler)
@@ -276,6 +280,7 @@ export default {
             SET_QUERY_ROW_LIMIT: 'prefAndStorage/SET_QUERY_ROW_LIMIT',
             SET_QUERY_CONFIRM_FLAG: 'prefAndStorage/SET_QUERY_CONFIRM_FLAG',
             SET_IS_MAX_ROWS_VALID: 'editorsMem/SET_IS_MAX_ROWS_VALID',
+            SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
         }),
         toggleVisSidebar() {
             Editor.update({
@@ -296,21 +301,25 @@ export default {
         },
         async handleRun(mode) {
             if (!this.isRunBtnDisabled)
-                if (!this.query_confirm_flag) await this.onRun(mode)
-                else if (this.shouldOpenDialog(mode)) {
-                    this.activeRunMode = mode
-                    this.dontShowConfirm = false // clear checkbox state
-                    this.confDlg = {
-                        ...this.confDlg,
-                        isOpened: true,
-                        title: this.$mxs_t('confirmations.runQuery'),
-                        type: 'run',
-                        isCreatingSnippet: false,
-                        sqlTxt:
-                            this.activeRunMode === 'selected'
-                                ? this.selected_query_txt
-                                : this.queryTxt,
-                        onSave: this.confirmRunning,
+                if (this.$helpers.splitQuery(this.sqlTxt).length > this.max_statements)
+                    this.SET_SNACK_BAR_MESSAGE({
+                        text: [this.$mxs_t('errors.maxStatements', [this.max_statements])],
+                        type: 'error',
+                    })
+                else {
+                    if (!this.query_confirm_flag) await this.onRun(mode)
+                    else if (this.shouldOpenDialog(mode)) {
+                        this.activeRunMode = mode
+                        this.dontShowConfirm = false // clear checkbox state
+                        this.confDlg = {
+                            ...this.confDlg,
+                            isOpened: true,
+                            title: this.$mxs_t('confirmations.runQuery'),
+                            type: 'run',
+                            isCreatingSnippet: false,
+                            sqlTxt: this.sqlTxt,
+                            onSave: this.confirmRunning,
+                        }
                     }
                 }
         },

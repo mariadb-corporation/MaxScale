@@ -19,6 +19,7 @@ MaxScale Workspace peerDependencies
 | chart.js                     |  2.9.x  |
 | chartjs-plugin-trendline     |  0.2.x  |
 | deep-diff                    |  1.0.x  |
+| dbgate-query-splitter        |  4.9.x  |
 | immutability-helper          |  3.1.x  |
 | localforage                  | 1.10.x  |
 | lodash                       | 4.17.x  |
