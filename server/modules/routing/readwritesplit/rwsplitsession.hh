@@ -465,6 +465,9 @@ private:
     Stmt    m_orig_stmt;            /**< The backup of the statement that was interrupted */
     int64_t m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
 
+    // The SET TRANSACTION statement if one was sent. Reset after each transaction.
+    GWBUF m_set_trx;
+
     mxb::StopWatch m_trx_replay_timer;      /**< When the last transaction replay started */
 
     mxb::StopWatch m_session_timer;

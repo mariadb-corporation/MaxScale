@@ -41,6 +41,12 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
     {
         MXB_INFO("Connected to '%s'", target->name());
         mxb_assert(!target->is_waiting_result());
+
+        if (m_set_trx && target == m_current_master)
+        {
+            MXB_INFO("Re-executing SET TRANSACTION: %s", get_sql_string(m_set_trx).c_str());
+            target->write(m_set_trx.shallow_clone(), mxs::Backend::IGNORE_RESPONSE);
+        }
     }
 
     return rval;
@@ -1119,6 +1125,11 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
 
         ++m_expected_responses;     // The server will reply to this command
         response = mxs::Backend::EXPECT_RESPONSE;
+    }
+
+    if (Parser::type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_NEXT_TRX))
+    {
+        m_set_trx = buffer.shallow_clone();
     }
 
     if (trx_is_open())

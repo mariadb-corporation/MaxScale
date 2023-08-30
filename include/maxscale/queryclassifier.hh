@@ -114,12 +114,6 @@ private:
     uint8_t m_default_trx_mode {0};
 
     /**
-     * The access mode for the next transaction. Set with SET TRANSACTION and it only affects the next one.
-     * All transactions after it will use the default transaction access mode.
-     */
-    uint8_t m_next_trx_mode {0};
-
-    /**
      * The transaction state of the session.
      *
      * This tells only the state of @e explicitly started transactions.
@@ -683,8 +677,7 @@ void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Pars
         else
         {
             // Without autocommit the end of a transaction starts a new one
-            m_trx_state = trx_starting_active | m_next_trx_mode;
-            m_next_trx_mode = m_default_trx_mode;
+            m_trx_state = trx_starting_active | m_default_trx_mode;
         }
     }
     else if (m_trx_state & TRX_STARTING)
@@ -694,8 +687,7 @@ void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Pars
     else if (!m_autocommit && m_trx_state == TRX_INACTIVE)
     {
         // This state is entered when autocommit was disabled
-        m_trx_state = trx_starting_active | m_next_trx_mode;
-        m_next_trx_mode = m_default_trx_mode;
+        m_trx_state = trx_starting_active | m_default_trx_mode;
     }
 
     if (parser.is_query(packetbuf))
@@ -718,8 +710,8 @@ void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Pars
             }
             else
             {
-                auto new_trx_state = trx_starting_active | m_next_trx_mode;
-                m_next_trx_mode = m_default_trx_mode;
+                auto new_trx_state = trx_starting_active | m_default_trx_mode;
+
                 if (type & mxs::sql::TYPE_READ)
                 {
                     new_trx_state |= TRX_READ_ONLY;
@@ -749,7 +741,6 @@ void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Pars
             mxb_assert(ParseType == mxs::Parser::ParseTrxUsing::DEFAULT
                        && parser.get_operation(packetbuf) == mxs::sql::OP_SET_TRANSACTION);
             uint32_t mode = type & mxs::sql::TYPE_READONLY ? TRX_READ_ONLY : 0;
-            m_next_trx_mode = mode;
 
             if (!(type & mxs::sql::TYPE_NEXT_TRX))
             {
