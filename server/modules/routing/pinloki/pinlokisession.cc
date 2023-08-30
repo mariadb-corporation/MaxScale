@@ -624,6 +624,7 @@ void PinlokiSession::purge_logs(const std::string& up_to)
 
 void PinlokiSession::error(const std::string& err)
 {
+    mxb_assert(!err.empty());
     set_response(mariadb::create_error_packet(1, 1064, "42000", err.c_str()));
 }
 }
