@@ -517,8 +517,6 @@ void test_set_transaction(Tester& tester)
                     auto type = tester.get_type(sql);
                     auto type_str = qc_typemask_to_string(type);
 
-                    expect(type & QUERY_TYPE_SESSION_WRITE, "Query should be QUERY_TYPE_SESSION_WRITE");
-
                     if (scope == "")
                     {
                         expect(type & QUERY_TYPE_NEXT_TRX,
@@ -528,6 +526,10 @@ void test_set_transaction(Tester& tester)
                     {
                         expect(type & QUERY_TYPE_GSYSVAR_WRITE,
                                "%s should be QUERY_TYPE_GSYSVAR_WRITE: %s", sql.c_str(), type_str.c_str());
+                    }
+                    else
+                    {
+                        expect(type & QUERY_TYPE_SESSION_WRITE, "Query should be QUERY_TYPE_SESSION_WRITE");
                     }
 
                     if (scope != "GLOBAL" && v.find(trx) != std::string::npos)

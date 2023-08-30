@@ -1224,15 +1224,17 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
         case SET_TYPE_TRANSACTION:
             {
-                type |= QUERY_TYPE_SESSION_WRITE;
-
                 if (lex->option_type == SHOW_OPT_GLOBAL)
                 {
                     type |= QUERY_TYPE_GSYSVAR_WRITE;
                 }
                 else
                 {
-                    if (lex->option_type != SHOW_OPT_SESSION)
+                    if (lex->option_type == SHOW_OPT_SESSION)
+                    {
+                        type |= QUERY_TYPE_SESSION_WRITE;
+                    }
+                    else
                     {
                         type |= QUERY_TYPE_NEXT_TRX;
                     }
