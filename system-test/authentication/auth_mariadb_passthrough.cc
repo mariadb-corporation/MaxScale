@@ -96,7 +96,7 @@ void test_main(TestConnections& test)
         master_srv->stash_server_settings();
         master_srv->add_server_setting("plugin_load_add = auth_pam");
         master_srv->add_server_setting("pam-use-cleartext-plugin=ON");
-        auth_utils::copy_basic_pam_cfg(master_srv);
+        auth_utils::copy_basic_pam_cfg(master_srv->vm_node());
         master_srv->start_database();
         sleep(1);
         repl.ping_or_open_admin_connections();
@@ -104,14 +104,17 @@ void test_main(TestConnections& test)
         // Create users
         const char pam_user[] = "pam_user";
         const char pam_pw[] = "pam_password";
-        auth_utils::create_basic_pam_user(master_srv, pam_user, pam_pw);
+        auth_utils::create_basic_pam_user(master_srv, pam_user);
+        master_srv->vm_node().add_linux_user(pam_user, pam_pw);
 
         const char pam_user2[] = "pam_user2";
         const char pam_pw2[] = "pam_password2";
-        auth_utils::create_basic_pam_user(master_srv, pam_user2, pam_pw2);
+        auth_utils::create_basic_pam_user(master_srv, pam_user2);
+        master_srv->vm_node().add_linux_user(pam_user2, pam_pw2);
 
         const char pam_no_pass[] = "pam_nopass";
-        auth_utils::create_basic_pam_user(master_srv, pam_no_pass, "");
+        auth_utils::create_basic_pam_user(master_srv, pam_no_pass);
+        master_srv->vm_node().add_linux_user(pam_no_pass, "");
 
         mxs.wait_for_monitor();
         mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
@@ -138,12 +141,18 @@ void test_main(TestConnections& test)
 
         // Cleanup users
         auth_utils::delete_basic_pam_user(master_srv, pam_user);
+        master_srv->vm_node().remove_linux_user(pam_user);
+
         auth_utils::delete_basic_pam_user(master_srv, pam_user2);
+        master_srv->vm_node().remove_linux_user(pam_user2);
+
         auth_utils::delete_basic_pam_user(master_srv, pam_no_pass);
+        master_srv->vm_node().remove_linux_user(pam_no_pass);
+
         // Cleanup pam settings.
         master_srv->stop_database();
         master_srv->restore_server_settings();
-        auth_utils::remove_basic_pam_cfg(master_srv);
+        auth_utils::remove_basic_pam_cfg(master_srv->vm_node());
         master_srv->start_database();
     }
 }

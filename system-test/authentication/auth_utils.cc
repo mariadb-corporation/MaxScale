@@ -66,30 +66,82 @@ void try_conn(TestConnections& test, int port, Ssl ssl, const string& user, cons
     }
 }
 
-void copy_basic_pam_cfg(mxt::MariaDBServer* server)
+void copy_basic_pam_cfg(mxt::VMNode& node)
 {
     // Copy pam config.
     string pam_config_path_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, basic_pam_cfg);
     string pam_config_path_dst = mxb::string_printf(pam_cfg_loc, basic_pam_cfg);
-    server->vm_node().copy_to_node_sudo(pam_config_path_src, pam_config_path_dst);
+    node.copy_to_node_sudo(pam_config_path_src, pam_config_path_dst);
 }
 
-void remove_basic_pam_cfg(mxt::MariaDBServer* server)
+void remove_basic_pam_cfg(mxt::VMNode& node)
 {
     string pam_config_path_dst = mxb::string_printf(pam_cfg_loc, basic_pam_cfg);
-    server->vm_node().delete_from_node(pam_config_path_dst);
+    node.delete_from_node(pam_config_path_dst);
 }
 
-void create_basic_pam_user(mxt::MariaDBServer* server, const string& user, const std::string& pw)
+void create_basic_pam_user(mxt::MariaDBServer* server, const string& user)
 {
     server->admin_connection()->cmd_f("create or replace user %s identified via pam using '%s';",
                                       user.c_str(), basic_pam_cfg);
-    server->vm_node().add_linux_user(user, pw);
 }
 
 void delete_basic_pam_user(mxt::MariaDBServer* server, const string& user)
 {
     server->admin_connection()->cmd_f("drop user %s;", user.c_str());
-    server->vm_node().remove_linux_user(user);
+}
+
+void install_pam_plugin(mxt::MariaDBServer* server)
+{
+    server->admin_connection()->cmd("INSTALL SONAME 'auth_pam';");
+}
+
+void uninstall_pam_plugin(mxt::MariaDBServer* server)
+{
+    server->admin_connection()->cmd("UNINSTALL SONAME 'auth_pam';");
+}
+
+void prepare_basic_pam_user(const string& user, const string& pw, mxt::MaxScale* mxs,
+                            mxt::MariaDBServer* master, const std::vector<mxt::MariaDBServer*>& slaves)
+{
+    prepare_pam_user(user, pw, basic_pam_cfg, mxs, master, slaves);
+}
+
+void prepare_pam_user(const string& user, const string& pw, const string& service, mxt::MaxScale* mxs,
+                      mxt::MariaDBServer* master, const std::vector<mxt::MariaDBServer*>& slaves)
+{
+    // Create Linux user on every server vm + MaxScale vm. Create MariaDB user on master.
+    if (mxs)
+    {
+        mxs->vm_node().add_linux_user(user, pw);
+    }
+    if (master)
+    {
+        master->vm_node().add_linux_user(user, pw);
+        master->admin_connection()->cmd_f("create or replace user %s identified via pam using '%s';",
+                                          user.c_str(), service.c_str());
+    }
+    for (auto& srv : slaves)
+    {
+        srv->vm_node().add_linux_user(user, pw);
+    }
+}
+
+void remove_pam_user(const string& user, mxt::MaxScale* mxs, mxt::MariaDBServer* master,
+                     const std::vector<mxt::MariaDBServer*>& slaves)
+{
+    for (auto& srv : slaves)
+    {
+        srv->vm_node().remove_linux_user(user);
+    }
+    if (master)
+    {
+        master->admin_connection()->cmd_f("drop user %s;", user.c_str());
+        master->vm_node().remove_linux_user(user);
+    }
+    if (mxs)
+    {
+        mxs->vm_node().remove_linux_user(user);
+    }
 }
 }

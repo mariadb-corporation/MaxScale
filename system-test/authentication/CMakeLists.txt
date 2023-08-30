@@ -4,6 +4,9 @@ set_target_properties(auth_utils PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,de
 install(TARGETS auth_utils DESTINATION system-test/authentication)
 add_dependencies(auth_utils maxtest)
 
+add_test_executable_ex(NAME pam_authentication_suid SOURCE pam_authentication_suid.cc
+        CONFIG pam_authentication_suid.cnf VMS repl_backend LIBS auth_utils)
+
 # PAM authentication and various other authentication related issues:
 # 1. PAM authentication, normal + roles (MXS-2478)
 # 2. Multiple authenticators on the same listener (MXS-2497)

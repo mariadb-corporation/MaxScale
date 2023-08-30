@@ -1,0 +1,41 @@
+[maxscale]
+threads=###threads###
+log_info=1
+users_refresh_time=1s
+
+[MariaDB-Monitor]
+type=monitor
+module=mariadbmon
+servers=server1, server2
+user=mariadbmon
+password=mariadbmon
+monitor_interval=1000ms
+replication_user=repl
+replication_password=repl
+backend_connect_timeout=10s
+backend_read_timeout=10s
+backend_write_timeout=10s
+
+[RWSplit-Router]
+type=service
+router=readwritesplit
+servers=server1, server2
+user=maxservice
+password=maxservice
+
+[RWSplit-Listener]
+type=listener
+service=RWSplit-Router
+port=4006
+authenticator=pamauth, mysqlauth
+authenticator_options=pam_mode=suid
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
