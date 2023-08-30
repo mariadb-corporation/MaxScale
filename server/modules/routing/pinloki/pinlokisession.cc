@@ -605,6 +605,7 @@ void PinlokiSession::purge_logs(const std::string& up_to)
 
 void PinlokiSession::error(const std::string& err)
 {
+    mxb_assert(!err.empty());
     send(modutil_create_mysql_err_msg(1, 0, 1064, "42000", err.c_str()));
 }
 }
