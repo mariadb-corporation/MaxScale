@@ -24,6 +24,7 @@ export default {
         query_history_expired_time: addDaysToNow(30),
         query_show_sys_schemas_flag: 1,
         tab_moves_focus: false,
+        max_statements: 1000,
     },
     mutations: {
         SET_QUERY_ROW_LIMIT(state, payload) {
@@ -54,6 +55,9 @@ export default {
         },
         SET_TAB_MOVES_FOCUS(state, payload) {
             state.tab_moves_focus = payload
+        },
+        SET_MAX_STATEMENTS(state, payload) {
+            state.max_statements = payload
         },
     },
     actions: {

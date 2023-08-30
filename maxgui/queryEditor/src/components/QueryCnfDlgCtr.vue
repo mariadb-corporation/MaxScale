@@ -7,6 +7,7 @@
             query_history_expired_time,
             query_show_sys_schemas_flag,
             tab_moves_focus,
+            max_statements,
         }"
         v-on="$listeners"
         @confirm-save="save"
@@ -41,6 +42,7 @@ export default {
             query_history_expired_time: state => state.queryPersisted.query_history_expired_time,
             query_show_sys_schemas_flag: state => state.queryPersisted.query_show_sys_schemas_flag,
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
+            max_statements: state => state.queryPersisted.max_statements,
         }),
     },
     methods: {
@@ -50,6 +52,7 @@ export default {
             SET_QUERY_SHOW_SYS_SCHEMAS_FLAG: 'queryPersisted/SET_QUERY_SHOW_SYS_SCHEMAS_FLAG',
             SET_QUERY_HISTORY_EXPIRED_TIME: 'queryPersisted/SET_QUERY_HISTORY_EXPIRED_TIME',
             SET_TAB_MOVES_FOCUS: 'queryPersisted/SET_TAB_MOVES_FOCUS',
+            SET_MAX_STATEMENTS: 'queryPersisted/SET_MAX_STATEMENTS',
         }),
         save(cnf) {
             this.SET_QUERY_ROW_LIMIT(cnf.query_row_limit)
@@ -57,6 +60,7 @@ export default {
             this.SET_QUERY_HISTORY_EXPIRED_TIME(cnf.query_history_expired_time)
             this.SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(cnf.query_show_sys_schemas_flag)
             this.SET_TAB_MOVES_FOCUS(cnf.tab_moves_focus)
+            this.SET_MAX_STATEMENTS(cnf.max_statements)
         },
     },
 }

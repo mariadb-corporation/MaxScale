@@ -8,102 +8,126 @@
         :hasChanged="hasChanged"
     >
         <template v-slot:form-body>
-            <v-container class="pa-1">
-                <v-row class="my-0 mx-n1">
-                    <v-col cols="12" class="pa-1">
-                        <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $mxs_t('rowLimit') }}
-                        </label>
-                        <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
-                        <row-limit-ctr
-                            :key="isOpened"
-                            :height="36"
-                            hide-details="auto"
-                            class="vuetify-input--override error--text__bottom mb-2 rowLimit"
-                            @change="config.rowLimit = $event"
-                        />
-                        <v-icon size="16" color="warning" class="mr-2">
-                            $vuetify.icons.mxs_alertWarning
-                        </v-icon>
-                        <small v-html="$mxs_t('info.rowLimit')" />
-                    </v-col>
-                    <v-col cols="12" class="pa-1 mb-3">
-                        <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $mxs_t('queryHistoryRetentionPeriod') }} ({{ $mxs_t('inDays') }})
-                        </label>
-                        <v-text-field
-                            v-model.number="config.queryHistoryRetentionPeriod"
-                            type="number"
-                            :rules="rules.queryHistoryRetentionPeriod"
-                            class="vuetify-input--override error--text__bottom mb-2 queryHistoryRetentionPeriod"
-                            dense
-                            :height="36"
-                            hide-details="auto"
-                            outlined
-                            required
-                            @keypress="$helpers.preventNonNumericalVal($event)"
-                        />
-                    </v-col>
-                    <v-col
-                        v-for="(value, key) in $helpers.lodash.pick(config, [
-                            'showQueryConfirm',
-                            'showSysSchemas',
-                            'tabMovesFocus',
-                        ])"
-                        :key="key"
-                        cols="12"
-                        class="pa-1"
-                    >
-                        <v-checkbox
-                            v-model="config[key]"
-                            class="v-checkbox--custom-label pa-0 ma-0"
-                            dense
-                            :class="[key]"
-                            color="primary"
-                            hide-details="auto"
+            <div class="px-1 py-2">
+                <label class="field__label mxs-color-helper text-small-text label-required">
+                    {{ $mxs_t('rowLimit') }}
+                </label>
+                <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
+                <row-limit-ctr
+                    :key="isOpened"
+                    :height="36"
+                    hide-details="auto"
+                    class="vuetify-input--override error--text__bottom mb-2 rowLimit"
+                    @change="config.rowLimit = $event"
+                />
+                <v-icon size="16" color="warning" class="mr-2">
+                    $vuetify.icons.mxs_alertWarning
+                </v-icon>
+                <small v-html="$mxs_t('info.rowLimit')" />
+            </div>
+            <div class="px-1 py-2">
+                <label class="field__label mxs-color-helper text-small-text label-required">
+                    {{ $mxs_t('maxStatements') }}
+                </label>
+                <v-text-field
+                    v-model.number="config.maxStatements"
+                    type="number"
+                    :rules="[
+                        v =>
+                            validatePositiveNumber({
+                                v,
+                                inputName: $mxs_t('maxStatements'),
+                            }),
+                    ]"
+                    class="vuetify-input--override error--text__bottom mb-2 maxStatements"
+                    dense
+                    :height="36"
+                    hide-details="auto"
+                    outlined
+                    required
+                    @keypress="$helpers.preventNonNumericalVal($event)"
+                />
+                <v-icon size="16" color="warning" class="mr-2">
+                    $vuetify.icons.mxs_alertWarning
+                </v-icon>
+                <small v-html="$mxs_t('info.maxStatements')" />
+            </div>
+            <div class="px-1 py-2">
+                <label class="field__label mxs-color-helper text-small-text label-required">
+                    {{ $mxs_t('queryHistoryRetentionPeriod') }} ({{ $mxs_t('inDays') }})
+                </label>
+                <v-text-field
+                    v-model.number="config.queryHistoryRetentionPeriod"
+                    type="number"
+                    :rules="[
+                        v =>
+                            validatePositiveNumber({
+                                v,
+                                inputName: $mxs_t('queryHistoryRetentionPeriod'),
+                            }),
+                    ]"
+                    class="vuetify-input--override error--text__bottom mb-2 queryHistoryRetentionPeriod"
+                    dense
+                    :height="36"
+                    hide-details="auto"
+                    outlined
+                    required
+                    @keypress="$helpers.preventNonNumericalVal($event)"
+                />
+            </div>
+            <div
+                v-for="(value, key) in $helpers.lodash.pick(config, [
+                    'showQueryConfirm',
+                    'showSysSchemas',
+                    'tabMovesFocus',
+                ])"
+                :key="key"
+                class="pa-1"
+            >
+                <v-checkbox
+                    v-model="config[key]"
+                    class="v-checkbox--custom-label pa-0 ma-0"
+                    dense
+                    :class="[key]"
+                    color="primary"
+                    hide-details="auto"
+                >
+                    <template v-slot:label>
+                        <label class="v-label pointer">{{ $mxs_t(key) }}</label>
+                        <v-tooltip
+                            v-if="key === 'tabMovesFocus'"
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                            max-width="400"
                         >
-                            <template v-slot:label>
-                                <label class="v-label pointer">{{ $mxs_t(key) }}</label>
-                                <v-tooltip
-                                    v-if="key === 'tabMovesFocus'"
-                                    top
-                                    transition="slide-y-transition"
-                                    content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-                                    max-width="400"
+                            <template v-slot:activator="{ on }">
+                                <v-icon
+                                    class="ml-1 material-icons-outlined pointer"
+                                    size="16"
+                                    color="#9DB4BB"
+                                    v-on="on"
                                 >
-                                    <template v-slot:activator="{ on }">
-                                        <v-icon
-                                            class="ml-1 material-icons-outlined pointer"
-                                            size="16"
-                                            color="#9DB4BB"
-                                            v-on="on"
-                                        >
-                                            mdi-information-outline
-                                        </v-icon>
-                                    </template>
-                                    <i18n
-                                        :path="
-                                            config[key]
-                                                ? 'mxs.info.tabMovesFocus'
-                                                : 'mxs.info.tabInsetChar'
-                                        "
-                                        tag="span"
-                                    >
-                                        <template v-slot:shortcut>
-                                            <b>
-                                                {{
-                                                    `${OS_KEY} ${$helpers.isMAC() ? '+ SHIFT' : ''}`
-                                                }}
-                                                + M
-                                            </b>
-                                        </template>
-                                    </i18n>
-                                </v-tooltip>
+                                    mdi-information-outline
+                                </v-icon>
                             </template>
-                        </v-checkbox>
-                    </v-col>
-                </v-row>
-            </v-container>
+                            <i18n
+                                :path="
+                                    config[key] ? 'mxs.info.tabMovesFocus' : 'mxs.info.tabInsetChar'
+                                "
+                                tag="span"
+                            >
+                                <template v-slot:shortcut>
+                                    <b>
+                                        {{ `${OS_KEY} ${$helpers.isMAC() ? '+ SHIFT' : ''}` }}
+                                        + M
+                                    </b>
+                                </template>
+                            </i18n>
+                        </v-tooltip>
+                    </template>
+                </v-checkbox>
+            </div>
         </template>
     </mxs-dlg>
 </template>
@@ -147,7 +171,9 @@ export default {
                     'query_show_sys_schemas_flag' in obj &&
                     typeof obj.query_show_sys_schemas_flag === 'number' &&
                     'tab_moves_focus' in obj &&
-                    typeof obj.tab_moves_focus === 'boolean'
+                    typeof obj.tab_moves_focus === 'boolean' &&
+                    'max_statements' in obj &&
+                    typeof obj.max_statements === 'number'
                 )
             },
             required: true,
@@ -155,15 +181,6 @@ export default {
     },
     data() {
         return {
-            rules: {
-                queryHistoryRetentionPeriod: [
-                    v =>
-                        this.validatePositiveNumber({
-                            v,
-                            inputName: this.$mxs_t('queryHistoryRetentionPeriod'),
-                        }),
-                ],
-            },
             config: {},
         }
     },
@@ -189,6 +206,7 @@ export default {
                 }),
                 showSysSchemas: Boolean(this.cnf.query_show_sys_schemas_flag),
                 tabMovesFocus: this.cnf.tab_moves_focus,
+                maxStatements: this.cnf.max_statements,
             }
         },
         hasChanged() {
@@ -221,6 +239,7 @@ export default {
                 ),
                 query_show_sys_schemas_flag: Number(this.config.showSysSchemas),
                 tab_moves_focus: this.config.tabMovesFocus,
+                max_statements: this.config.maxStatements,
             })
         },
     },

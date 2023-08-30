@@ -28,6 +28,7 @@
         "core-js": "^3.24.0",
         "d3": "^7.6.1",
         "d3-dag": "^0.10.0",
+        "dbgate-query-splitter": "^4.9.3",
         "deep-diff": "^1.0.2",
         "deepmerge": "^4.2.2",
         "git-describe": "^4.1.1",

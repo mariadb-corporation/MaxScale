@@ -12,6 +12,7 @@
  */
 import { lodash } from '@share/utils/helpers'
 import sqlFormatter from '@queryEditorSrc/components/SqlEditor/formatter'
+import { splitQuery as splitSql, mysqlSplitterOptions } from 'dbgate-query-splitter'
 
 export const deepDiff = require('deep-diff')
 
@@ -22,6 +23,23 @@ export function formatSQL(v) {
         linesBetweenQueries: 2,
     })
 }
+
+/**
+ * This function splits the query into statements accurately for most cases
+ * except compound statements. It requires the presence of DELIMITER to split
+ * correctly.
+ * For example: below sql will be splitted accurately into 1 statement.
+ * DELIMITER //
+ * IF (1>0) THEN BEGIN NOT ATOMIC SELECT 1; END ; END IF;
+ * DELIMITER ;
+ * This function should be now only used for counting the number of statements.
+ * @param {string} sql
+ * @returns {string[]}
+ */
+export function splitQuery(sql) {
+    return splitSql(sql, mysqlSplitterOptions)
+}
+
 /**
  * @param {String} str plain identifier string. e.g. db_name.tbl_name
  * @return {String} Return escaped identifier string. e.g.  \`db_name\`.\`tbl_name\`
