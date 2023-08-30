@@ -1,4 +1,4 @@
-# MariaDB MaxScale 6.4.10 Release Notes
+# MariaDB MaxScale 6.4.10 Release Notes -- 2023-08-30
 
 Release 6.4.10 is a GA release.
 
@@ -16,7 +16,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 * [MXS-4726](https://jira.mariadb.org/browse/MXS-4726) Session command response verification unnecessarily stores PS IDs for readconnroute
 * [MXS-4717](https://jira.mariadb.org/browse/MXS-4717) information_schema is not invalidated as needed
-* [MXS-4706](https://jira.mariadb.org/browse/MXS-4706) Cache does not invalidate when a table is ALTERed, DROPed or RENAMEd 
+* [MXS-4706](https://jira.mariadb.org/browse/MXS-4706) Cache does not invalidate when a table is ALTERed, DROPed or RENAMEd
 
 ## Known Issues and Limitations
 
