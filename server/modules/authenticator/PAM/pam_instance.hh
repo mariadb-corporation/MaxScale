@@ -19,6 +19,10 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
 class SERVICE;
+namespace maxbase
+{
+class AsyncCmd;
+}
 
 /** The instance class for the client side PAM authenticator, created in pam_auth_init() */
 class PamAuthenticatorModule : public mariadb::AuthenticatorModule
@@ -41,8 +45,10 @@ public:
 private:
     using AuthMode = mxb::pam::AuthMode;
 
-    PamAuthenticatorModule(AuthSettings& settings, PasswordMap&& backend_pwds);
+    PamAuthenticatorModule(AuthSettings& settings, PasswordMap&& backend_pwds,
+                           std::unique_ptr<mxb::AsyncCmd> ext_cmd = nullptr);
 
-    const AuthSettings m_settings;
-    const PasswordMap  m_backend_pwds;
+    const AuthSettings             m_settings;
+    const PasswordMap              m_backend_pwds;
+    std::unique_ptr<mxb::AsyncCmd> m_cmd;
 };

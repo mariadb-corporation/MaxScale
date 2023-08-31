@@ -16,6 +16,7 @@
 
 #include <string>
 #include <maxbase/json.hh>
+#include <maxbase/externcmd.hh>
 #include <maxscale/config_common.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/secrets.hh>
@@ -33,6 +34,7 @@ const string opt_cleartext_plugin = "pam_use_cleartext_plugin";
 const string opt_pam_mode = "pam_mode";
 const string pam_mode_pw = "password";
 const string pam_mode_pw_2fa = "password_2FA";
+const string pam_mode_suid = "suid";
 
 const string opt_be_map = "pam_backend_mapping";
 const string be_map_none = "none";
@@ -114,6 +116,10 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
         {
             settings.mode = AuthMode::PW_2FA;
         }
+        else if (user_pam_mode == pam_mode_suid)
+        {
+            settings.mode = AuthMode::SUID;
+        }
         else if (user_pam_mode != pam_mode_pw)
         {
             MXB_ERROR(errmsg, user_pam_mode.c_str(), opt_pam_mode.c_str(),
@@ -159,7 +165,21 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
     PamAuthenticatorModule* rval = nullptr;
     if (!error)
     {
-        rval = new PamAuthenticatorModule(settings, move(backend_pwds));
+        if (settings.mode == AuthMode::SUID)
+        {
+            if (string cmd_str = mxb::pam::gen_auth_tool_run_cmd(true); !cmd_str.empty())
+            {
+                int timeout_ms = 500;
+                if (auto ext_cmd = mxb::AsyncCmd::create(cmd_str, timeout_ms))
+                {
+                    rval = new PamAuthenticatorModule(settings, std::move(backend_pwds), std::move(ext_cmd));
+                }
+            }
+        }
+        else
+        {
+            rval = new PamAuthenticatorModule(settings, move(backend_pwds));
+        }
     }
     return rval;
 }
@@ -176,7 +196,20 @@ std::string PamAuthenticatorModule::supported_protocol() const
 
 mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator(MariaDBClientConnection& client)
 {
-    return std::make_unique<PamClientAuthenticator>(m_settings, m_backend_pwds);
+    mariadb::SClientAuth rval;
+    if (m_cmd)
+    {
+        if (auto proc = m_cmd->start())
+        {
+            rval = std::make_unique<PamClientAuthenticator>(
+                m_settings, m_backend_pwds, client, std::move(proc));
+        }
+    }
+    else
+    {
+        rval = std::make_unique<PamClientAuthenticator>(m_settings, m_backend_pwds, client);
+    }
+    return rval;
 }
 
 mariadb::SBackendAuth
@@ -207,9 +240,11 @@ const std::unordered_set<std::string>& PamAuthenticatorModule::supported_plugins
     return plugins;
 }
 
-PamAuthenticatorModule::PamAuthenticatorModule(AuthSettings& settings, PasswordMap&& backend_pwds)
+PamAuthenticatorModule::PamAuthenticatorModule(AuthSettings& settings, PasswordMap&& backend_pwds,
+                                               std::unique_ptr<mxb::AsyncCmd> ext_cmd)
     : m_settings(settings)
     , m_backend_pwds(move(backend_pwds))
+    , m_cmd(std::move(ext_cmd))
 {
 }
 

@@ -15,6 +15,7 @@
 #include "pam_client_session.hh"
 
 #include <set>
+#include <maxbase/externcmd.hh>
 #include <maxbase/pam_utils.hh>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
@@ -58,9 +59,13 @@ string_view eff_pam_service(string_view pam_service)
 }
 }
 
-PamClientAuthenticator::PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds)
+PamClientAuthenticator::PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds,
+                                               MariaDBClientConnection& client,
+                                               std::unique_ptr<mxb::AsyncProcess> proc)
     : m_settings(settings)
     , m_backend_pwds(backend_pwds)
+    , m_client(client)
+    , m_proc(std::move(proc))
 {
 }
 

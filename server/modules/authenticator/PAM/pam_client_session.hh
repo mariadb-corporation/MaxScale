@@ -20,6 +20,11 @@
 #include <maxbase/pam_utils.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
+namespace maxbase
+{
+class AsyncProcess;
+}
+class PamClientAuthenticator;
 class MariaDBClientConnection;
 
 class PipeWatcher : mxb::Pollable
@@ -45,7 +50,9 @@ class PamClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
     using AuthMode = mxb::pam::AuthMode;
-    PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds);
+    PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds,
+                           MariaDBClientConnection& client,
+                           std::unique_ptr<mxb::AsyncProcess> proc = nullptr);
 
     ExchRes exchange(GWBUF&& read_buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
@@ -70,4 +77,7 @@ private:
     State              m_state {State::INIT};       /**< Authentication state */
     const AuthSettings m_settings;
     const PasswordMap& m_backend_pwds;
+
+    MariaDBClientConnection&           m_client;
+    std::unique_ptr<mxb::AsyncProcess> m_proc;
 };
