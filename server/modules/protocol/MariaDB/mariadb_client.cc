@@ -934,8 +934,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         else
         {
             // Without autocommit the end of a transaction starts a new one
-            ses_trx_state = trx_starting_active | m_session_data->next_trx_mode;
-            m_session_data->next_trx_mode = m_session_data->default_trx_mode;
+            ses_trx_state = trx_starting_active | m_session_data->default_trx_mode;
         }
     }
     else if (ses_trx_state & TrxState::TRX_STARTING)
@@ -945,8 +944,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     else if (!m_session_data->is_autocommit && ses_trx_state == TrxState::TRX_INACTIVE)
     {
         // This state is entered when autocommit was disabled
-        ses_trx_state = trx_starting_active | m_session_data->next_trx_mode;
-        m_session_data->next_trx_mode = m_session_data->default_trx_mode;
+        ses_trx_state = trx_starting_active | m_session_data->default_trx_mode;
     }
 
     if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
@@ -972,8 +970,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             }
             else
             {
-                auto new_trx_state = trx_starting_active | m_session_data->next_trx_mode;
-                m_session_data->next_trx_mode = m_session_data->default_trx_mode;
+                auto new_trx_state = trx_starting_active | m_session_data->default_trx_mode;
                 if (type & QUERY_TYPE_READ)
                 {
                     new_trx_state |= TrxState::TRX_READ_ONLY;
@@ -1002,7 +999,6 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             // Currently only qc_sqlite should return these types
             mxb_assert(use_qc && qc_get_operation(packetbuf) == QUERY_OP_SET_TRANSACTION);
             uint32_t mode = type & QUERY_TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
-            m_session_data->next_trx_mode = mode;
 
             if ((type & QUERY_TYPE_NEXT_TRX) == 0)
             {
