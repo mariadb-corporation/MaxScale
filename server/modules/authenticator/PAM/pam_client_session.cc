@@ -180,7 +180,96 @@ mariadb::ClientAuthenticator::ExchRes
 PamClientAuthenticator::exchange_suid(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
     ExchRes rval;
+
+    switch (m_state)
+    {
+    case State::INIT:
+        {
+            bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
+            auto pam_service = eff_pam_service(auth_data.user_entry.entry.auth_string);
+            auto settings_msg = mxb::pam::create_suid_settings_msg(auth_data.user, pam_service,
+                                                                   map_to_mariadbauth);
+            if (m_proc->write(settings_msg.data(), settings_msg.size()))
+            {
+                // Init ok, start listening for external process.
+                m_watcher = std::make_unique<PipeWatcher>(m_client, mxb::Worker::get_current(),
+                                                          m_proc->read_fd());
+                if (m_watcher->poll())
+                {
+                    m_state = State::SUID_WAITING_CONV;
+                    rval.status = ExchRes::Status::INCOMPLETE;
+                }
+            }
+        }
+        break;
+
+    case State::SUID_WAITING_CONV:
+        {
+            if (buffer.empty())
+            {
+                // Triggered by external process i/o.
+                rval = process_suid_messages();
+            }
+            else
+            {
+                // Client sent a packet when we were not waiting for one. Error.
+                MXB_ERROR("Client %s sent a packet when authentication was not waiting for a response. "
+                          "Closing session.", session->user_and_host().c_str());
+            }
+        }
+        break;
+
+    case State::SUID_WAITING_CLIENT_REPLY:
+        {
+            // Client replied to question. Store the answer and also send it to the external process for
+            // checking.
+            mxb_assert(!buffer.empty());
+            mxb_assert(m_conv_msgs == 1 || m_conv_msgs == 2);
+            auto& storage = (m_conv_msgs == 1) ? auth_data.client_token : auth_data.client_token_2fa;
+            store_client_password(buffer, storage);
+            if (m_eof_received)
+            {
+                // Authentication already succeeded, disregard client answer.
+                rval.status = ExchRes::Status::READY;
+                mxb_assert(!m_watcher && !m_proc);
+            }
+            else
+            {
+                string_view answer(reinterpret_cast<const char*>(storage.data()), storage.size());
+                std::vector<uint8_t> answer_msg;
+                mxb::pam::add_string(answer, &answer_msg);
+                if (m_proc->write(answer_msg.data(), answer_msg.size()))
+                {
+                    if (m_watcher->poll())
+                    {
+                        m_state = State::SUID_WAITING_CONV;
+                        rval.status = ExchRes::Status::INCOMPLETE;
+                    }
+                }
+            }
+        }
+        break;
+
+    default:
+        MXB_ERROR(unexpected_state, static_cast<int>(m_state));
+        mxb_assert(!true);
+        break;
+    }
+
+    // If we are about to return an error (= authentication failed abnormally) first stop polling, then kill
+    // external process.
+    if (rval.status == ExchRes::Status::FAIL)
+    {
+        m_watcher = nullptr;
+        m_proc = nullptr;
+    }
+    return rval;
+}
+
+mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messages()
+{
     // TODO
+    ExchRes rval;
     return rval;
 }
 
@@ -275,7 +364,23 @@ AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, Authent
 AuthRes PamClientAuthenticator::authenticate_suid(MYSQL_session* session, AuthenticationData& auth_data)
 {
     AuthRes rval;
-    // TODO
+    if (m_eof_received)
+    {
+        rval.status = AuthRes::Status::SUCCESS;
+        if (m_settings.be_mapping == BackendMapping::NONE)
+        {
+            auth_data.backend_token = auth_data.client_token;
+            auth_data.backend_token_2fa = auth_data.client_token_2fa;
+        }
+        else if (!m_mapped_user.empty() && m_mapped_user != auth_data.user)
+        {
+            // TODO
+        }
+    }
+    else
+    {
+        rval.status = AuthRes::Status::FAIL_WRONG_PW;
+    }
     return rval;
 }
 

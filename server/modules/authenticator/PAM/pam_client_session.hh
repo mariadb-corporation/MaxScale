@@ -60,6 +60,7 @@ public:
 private:
     ExchRes exchange_old(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
     ExchRes exchange_suid(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
+    ExchRes process_suid_messages();
     AuthRes authenticate_old(MYSQL_session* session, AuthenticationData& auth_data);
     AuthRes authenticate_suid(MYSQL_session* session, AuthenticationData& auth_data);
     GWBUF   create_auth_change_packet(std::string_view msg) const;
@@ -71,6 +72,8 @@ private:
         ASKED_FOR_PW,
         ASKED_FOR_2FA,
         PW_RECEIVED,
+        SUID_WAITING_CONV,
+        SUID_WAITING_CLIENT_REPLY,
         DONE
     };
 
@@ -80,4 +83,9 @@ private:
 
     MariaDBClientConnection&           m_client;
     std::unique_ptr<mxb::AsyncProcess> m_proc;
+    std::unique_ptr<PipeWatcher>       m_watcher;
+
+    std::string m_mapped_user;
+    int         m_conv_msgs {0};
+    bool        m_eof_received {false};
 };
