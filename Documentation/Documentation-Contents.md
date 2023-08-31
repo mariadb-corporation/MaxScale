@@ -127,7 +127,3 @@ document.
 
  - [MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
  - [GSSAPI Authenticator](Authenticators/GSSAPI-Authenticator.md)
-
-## Design Documents
-
- - [Plugin development guide](Design-Documents/Plugin-development-guide.md)
