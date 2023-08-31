@@ -224,10 +224,19 @@ void test_mxs4269(TestConnections& test)
 class Query
 {
 public:
+    static constexpr struct error_t {} ERROR {};
+
     Query(int line, std::string query, std::string expected)
         : m_line(line)
         , m_query(query)
         , m_expected(expected)
+    {
+    }
+
+    Query(int line, std::string query, error_t)
+        : m_line(line)
+        , m_query(query)
+        , m_should_fail(true)
     {
     }
 
@@ -247,8 +256,12 @@ public:
     {
         auto res = c.read_query_result_field();
 
-        if (test.expect(res.has_value(), "Line %d: Query '%s' failed: %d, %s",
-                        m_line, query(), c.errnum(), c.error()))
+        if (m_should_fail)
+        {
+            test.expect(!res.has_value(), "Line %d: Query '%s' did not fail", m_line, query());
+        }
+        else if (test.expect(res.has_value(), "Line %d: Query '%s' failed: %d, %s",
+                             m_line, query(), c.errnum(), c.error()))
         {
             test.expect(res.value() == m_expected, "Line %d: Unexpected result for '%s': %s != %s",
                         m_line, query(), res.value().c_str(), m_expected.c_str());
@@ -264,6 +277,7 @@ private:
     int         m_line;
     std::string m_query;
     std::string m_expected;
+    bool        m_should_fail {false};
 };
 
 #define QUERY(...) Query(__LINE__,  ##__VA_ARGS__)
@@ -362,7 +376,7 @@ void test_mxs4419(TestConnections& test)
         // This should only make one transaction read-only
         QUERY("SET TRANSACTION READ ONLY"),
         QUERY("BEGIN"),
-        QUERY("SELECT @@server_id", slave_id),
+        QUERY("INSERT INTO t1 VALUES (123)", Query::ERROR),
         QUERY("COMMIT"),
         QUERY("BEGIN"),
         QUERY("SELECT @@server_id", master_id),
