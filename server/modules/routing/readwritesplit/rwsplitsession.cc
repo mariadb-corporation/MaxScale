@@ -1001,7 +1001,10 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             m_wait_gtid = NONE;
         }
 
-        if (trx_is_read_only() && m_trx.target() == backend)
+        // If a GTID probe is ongoing and the target of the transaction failed, the replay cannot be started
+        // until the GTID probe either ends or the current master server fails at which point the replay will
+        // be started.
+        if (trx_is_read_only() && m_trx.target() == backend && m_wait_gtid != READING_GTID)
         {
             // Try to replay the transaction on another node
             can_continue = start_trx_replay();
