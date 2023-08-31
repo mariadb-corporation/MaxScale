@@ -16,7 +16,7 @@ void test_reads(TestConnections& test)
     auto conn = test.maxscale->rwsplit();
     conn.connect();
     test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT)"),
-                "Table creation should work: %u, %s", conn.thread_id(), conn.error());
+                "[%d] Table creation should work: %s", conn.thread_id(), conn.error());
     conn.disconnect();
 
     auto secondary = test.maxscale->rwsplit();
@@ -27,17 +27,19 @@ void test_reads(TestConnections& test)
         test.reset_timeout();
         conn.connect();
         test.expect(conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')"),
-                    "INSERT should work: %u, %s", conn.thread_id(), conn.error());
+                    "[%u] INSERT should work: %s", conn.thread_id(), conn.error());
 
         // Existing connections should also see the inserted rows
         auto count = atoi(secondary.field("SELECT COUNT(*) FROM " + table).c_str());
-        test.expect(count == i + 1, "Missing %d rows from open connection.", (i + 1) - count);
+        test.expect(count == i + 1, "[%u] Missing %d rows from open connection.",
+                    conn.thread_id(), (i + 1) - count);
         conn.disconnect();
 
         // New connections should see the inserted rows
         conn.connect();
         auto second_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
-        test.expect(second_count == i + 1, "Missing %d rows.", (i + 1) - second_count);
+        test.expect(second_count == i + 1, "[%u] Missing %d rows in second connection.",
+                    conn.thread_id(), (i + 1) - second_count);
         conn.disconnect();
     }
 }
@@ -51,12 +53,14 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
     test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT PRIMARY KEY)"),
                 "%s: Table creation should work: %u, %s", func, conn.thread_id(), conn.error());
     conn.disconnect();
-    int inserted = 0;
 
     for (int i = 0; i < 100 && running && test.ok(); i++)
     {
         test.reset_timeout();
         conn.connect();
+
+        // This should prevent leftover idle connections from holding locks on the database
+        conn.query("SET wait_timeout=5");
 
         for (const auto& query : before)
         {
@@ -64,42 +68,31 @@ void test_queries(TestConnections& test, const char* func, std::initializer_list
                         func, query.c_str(), conn.thread_id(), conn.error());
         }
 
-        bool insert_ok = conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')");
+        auto val = std::to_string(i);
+        bool ok = conn.query("INSERT INTO " + table + " VALUES ('" + val + "')");
         bool ro_error = conn.errnum() == ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION && ignore_errors;
         bool duplicate = conn.errnum() == ER_DUP_ENTRY;
-        test.expect(insert_ok || ignore_errors || duplicate, "%s: INSERT should work: %u, %s",
-                    func, conn.thread_id(), conn.error());
-        auto first_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
-        test.expect(first_count == inserted + 1 || ro_error,
-                    "%s: Missing %d rows.", func, (i + 1) - first_count);
+        test.expect(ok || ignore_errors || duplicate, "[%u] %s: INSERT should work: %s",
+                    conn.thread_id(), func, conn.error());
+        auto max_val = conn.field("SELECT MAX(a) FROM " + table);
+        test.expect(max_val == val || ro_error, "[%u] %s: Missing row %d.",
+                    conn.thread_id(), func, i + 1);
 
-        bool after_ok = true;
 
         for (const auto& query : after)
         {
             bool query_ok = conn.query(query);
             bool replay_error = query == "COMMIT" && strstr(conn.error(), "Transaction checksum mismatch");
-            test.expect(query_ok || replay_error, "%s: %s should work: %u, %s",
-                        func, query.c_str(), conn.thread_id(), conn.error());
-
-            if (!query_ok)
-            {
-                after_ok = false;
-            }
+            test.expect(query_ok || replay_error, "[%u] %s: %s should work:, %s",
+                        conn.thread_id(), func, query.c_str(), conn.error());
         }
 
-        if (insert_ok && after_ok)
-        {
-            // Check that the inserted row is visible from a different connection
-            conn.disconnect();
-            conn.connect();
-            auto second_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
-            test.expect(second_count == i + 1 || ro_error,
-                        "%s: Missing %d rows with the second connection.", func, (i + 1) - second_count);
-            conn.disconnect();
-
-            ++inserted;
-        }
+        conn.disconnect();
+        conn.connect();
+        auto second_max_val = conn.field("SELECT MAX(a) FROM " + table);
+        test.expect(second_max_val == max_val || ro_error, "[%u] %s: Missing row %d in second connection.",
+                    conn.thread_id(), func, i + 1);
+        conn.disconnect();
     }
 }
 
