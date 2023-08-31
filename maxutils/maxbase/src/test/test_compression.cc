@@ -15,6 +15,7 @@
 #include <maxbase/random.hh>
 #include <maxbase/compress.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/temp_file.hh>
 
 #include <cstdio>
 #include <string>
@@ -27,39 +28,9 @@
 #include <unistd.h>
 
 using std::ios_base;
+using namespace maxbase;
 
-// Names, touches and finally deletes the file by name.
-// This is not a temp file, but just a convience
-// for these tests.
-class TestFile
-{
-public:
-    TestFile() : m_name(MAKE_STR("/tmp/test-compress-"s << ++file_number))
-    {
-        std::ofstream touch{m_name};
-    }
-
-    template<typename T>
-    T get_stream(ios_base::openmode mode) const
-    {
-        return T(name(), mode);
-    }
-
-    std::string name() const
-    {
-        return m_name;
-    }
-
-    ~TestFile()
-    {
-         remove(m_name.c_str());
-    }
-
-private:
-    static int  file_number;
-    std::string m_name;
-};
-int TestFile::file_number = 0;
+TempDirectory temp_files("/tmp/pinloki_tmp");
 
 // Level 3 is the zstd default. Level 2 is much faster and
 // compresses only slightly less than level 3.
@@ -71,17 +42,17 @@ void exit_on_error(const S& s)
     if (s.status() != maxbase::CompressionStatus::OK)
     {
         std::string comp_err = s.last_comp_error() ? " : "s + s.last_comp_error_str() : "";
-        std::cout << to_string(s.status()) << comp_err << std::endl;;
+        std::cout << to_string(s.status()) << comp_err << std::endl;
         exit(1);
     }
 }
 
-void generate_input_data(const TestFile& input)
+void generate_input_data(const TempFile& input)
 {
     maxbase::StopWatch sw;
     maxbase::XorShiftRandom rnd;
     std::string chars = "abc ";
-    auto os = input.get_stream<std::ofstream>(ios_base::trunc);
+    auto os = input.make_stream<std::ofstream>(ios_base::trunc);
     for (size_t i = 0; i < 100 * 1024 * 1024; ++i)
     {
         // not quite random so it compresses well enough, about 2/1.
@@ -90,11 +61,11 @@ void generate_input_data(const TestFile& input)
     std::cout << "Generate input " << maxbase::to_string(sw.split()) << std::endl;
 }
 
-void test_compress(const TestFile& input, const TestFile& compressed)
+void test_compress(const TempFile& input, const TempFile& compressed)
 {
     maxbase::StopWatch sw;
-    auto in = input.get_stream<std::ifstream>(ios_base::in);
-    auto out = compressed.get_stream<std::ofstream>(ios_base::trunc);
+    auto in = input.make_stream<std::ifstream>(ios_base::in);
+    auto out = compressed.make_stream<std::ofstream>(ios_base::trunc);
     maxbase::Compressor compressor(COMPRESSION_LEVEL);
     exit_on_error(compressor);
     compressor.compress(in, out);
@@ -102,11 +73,11 @@ void test_compress(const TestFile& input, const TestFile& compressed)
     std::cout << "Compress " << maxbase::to_string(sw.split()) << std::endl;
 }
 
-void test_decompress(const TestFile& compressed, const TestFile& decompressed)
+void test_decompress(const TempFile& compressed, const TempFile& decompressed)
 {
     maxbase::StopWatch sw;
-    auto in = compressed.get_stream<std::ifstream>(ios_base::in);
-    auto out = decompressed.get_stream<std::ofstream>(ios_base::trunc);
+    auto in = compressed.make_stream<std::ifstream>(ios_base::in);
+    auto out = decompressed.make_stream<std::ofstream>(ios_base::trunc);
     maxbase::Decompressor decompressor;
     exit_on_error(decompressor);
     decompressor.decompress(in, out);
@@ -114,23 +85,22 @@ void test_decompress(const TestFile& compressed, const TestFile& decompressed)
     std::cout << "Decompress " << maxbase::to_string(sw.split()) << std::endl;
 }
 
-void test_decompress_async(const TestFile& compressed, const TestFile& verify)
+void test_decompress_async(const TempFile& compressed, const TempFile& verify)
 {
     maxbase::StopWatch sw;
     using SD = maxbase::Decompressor;
-    TestFile temp_file;     // TODO this should be a real tmpfile() when used in maxscale
+    TempFile temp_file = temp_files.temp_file();
 
-    auto in = compressed.get_stream<std::ifstream>(ios_base::in);
-    auto out = temp_file.get_stream<std::ofstream>(ios_base::out);
-    auto async_in = temp_file.get_stream<std::ifstream>(ios_base::in);
-    auto verify_out = verify.get_stream<std::ofstream>(ios_base::out);
+    auto in = compressed.make_stream<std::ifstream>(ios_base::in);
+    auto out = temp_file.make_stream<std::ofstream>(ios_base::out);
+    auto async_in = temp_file.make_stream<std::ifstream>(ios_base::in);
+    auto verify_out = verify.make_stream<std::ofstream>(ios_base::out);
 
     SD decompressor;
     exit_on_error(decompressor);
 
     auto future = std::async(&SD::decompress, &decompressor,
                              std::ref(in), std::ref(out));
-
 
     const size_t CHUNK = 1024 * 1024;
     std::array<char, CHUNK> buf;
@@ -156,7 +126,7 @@ void test_decompress_async(const TestFile& compressed, const TestFile& verify)
     std::cout << "Async decompress " << maxbase::to_string(sw.split()) << std::endl;
 }
 
-void compare_files(const TestFile& thing1, const TestFile& thing2)
+void compare_files(const TempFile& thing1, const TempFile& thing2)
 {
     auto diff = MAKE_STR("diff " << thing1.name() << ' ' << thing2.name().c_str()
                                  << " >/dev/null");
@@ -174,10 +144,10 @@ int main()
 {
     mxb_log_init(MXB_LOG_TARGET_STDOUT);
 
-    TestFile input;
-    TestFile compressed;
-    TestFile decompressed;
-    TestFile verify;
+    TempFile input = temp_files.temp_file();
+    TempFile compressed = temp_files.temp_file();
+    TempFile decompressed = temp_files.temp_file();
+    TempFile verify = temp_files.temp_file();
 
     generate_input_data(input);
 

@@ -42,6 +42,7 @@ add_library(maxbase STATIC
   cpuinfo.cc
   csv_writer.cc
   compress.cc
+  temp_file.cc
   inih/ini.c
   )
 
