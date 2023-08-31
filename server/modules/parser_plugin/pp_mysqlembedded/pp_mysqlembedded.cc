@@ -1237,15 +1237,17 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
         case SET_TYPE_TRANSACTION:
             {
-                type |= mxs::sql::TYPE_SESSION_WRITE;
-
                 if (lex->option_type == SHOW_OPT_GLOBAL)
                 {
                     type |= mxs::sql::TYPE_GSYSVAR_WRITE;
                 }
                 else
                 {
-                    if (lex->option_type != SHOW_OPT_SESSION)
+                    if (lex->option_type == SHOW_OPT_SESSION)
+                    {
+                        type |= mxs::sql::TYPE_SESSION_WRITE;
+                    }
+                    else
                     {
                         type |= mxs::sql::TYPE_NEXT_TRX;
                     }

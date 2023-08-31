@@ -503,8 +503,6 @@ void test_set_transaction(Tester& tester)
                     auto type = tester.get_type(sql);
                     auto type_str = mxs::Parser::type_mask_to_string(type);
 
-                    expect(type & mxs::sql::TYPE_SESSION_WRITE, "Query should be mxs::sql::TYPE_SESSION_WRITE");
-
                     if (scope == "")
                     {
                         expect(type & mxs::sql::TYPE_NEXT_TRX,
@@ -514,6 +512,10 @@ void test_set_transaction(Tester& tester)
                     {
                         expect(type & mxs::sql::TYPE_GSYSVAR_WRITE,
                                "%s should be mxs::sql::TYPE_GSYSVAR_WRITE: %s", sql.c_str(), type_str.c_str());
+                    }
+                    else
+                    {
+                        expect(type & mxs::sql::TYPE_SESSION_WRITE, "Query should be QUERY_TYPE_SESSION_WRITE");
                     }
 
                     if (scope != "GLOBAL" && v.find(trx) != std::string::npos)

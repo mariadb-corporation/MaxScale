@@ -3123,15 +3123,25 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
         m_operation = mxs::sql::OP_SET_TRANSACTION;
 
         if (scope == TK_GLOBAL)
         {
-            m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
+            m_type_mask = mxs::sql::TYPE_GSYSVAR_WRITE;
         }
         else
         {
+            if (scope == TK_SESSION)
+            {
+                
+                m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
+            }
+            else
+            {
+                // The SET TRANSACTION affects only the next transaction
+                m_type_mask = mxs::sql::TYPE_NEXT_TRX;
+            }
+
             if (access_mode == TK_WRITE)
             {
                 m_type_mask |= mxs::sql::TYPE_READWRITE;
@@ -3139,12 +3149,6 @@ public:
             else if (access_mode == TK_READ)
             {
                 m_type_mask |= mxs::sql::TYPE_READONLY;
-            }
-
-            if (scope != TK_SESSION)
-            {
-                // The SET TRANSACTION affects only the next transaction
-                m_type_mask |= mxs::sql::TYPE_NEXT_TRX;
             }
         }
     }

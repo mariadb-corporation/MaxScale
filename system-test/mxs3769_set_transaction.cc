@@ -6,6 +6,32 @@
 
 #include <maxtest/testconnections.hh>
 
+void mxs4734(TestConnections& test)
+{
+    test.check_maxctrl("alter service RWS transaction_replay=true transaction_replay_timeout=120s");
+    auto rws = test.maxscale->rwsplit();
+    test.expect(rws.connect(), "Failed to connect: %s", rws.error());
+
+    test.expect(rws.query("CREATE OR REPLACE TABLE test.t1(id INT)"),
+                "CREATE should not fail: %s", rws.error());
+    test.expect(rws.query("SET TRANSACTION READ ONLY"), "SET TRANSACTION failed: %s", rws.error());
+    test.expect(rws.query("START TRANSACTION"), "START TRANSACTION failed: %s", rws.error());
+    test.expect(!rws.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should fail");
+
+    test.repl->block_node(0);
+    test.maxscale->wait_for_monitor(2);
+    test.repl->unblock_node(0);
+    test.maxscale->wait_for_monitor(2);
+
+    test.expect(rws.query("SELECT 1"), "SELECT should work: %s", rws.error());
+    test.expect(!rws.query("INSERT INTO test.t1 VALUES (1)"), "Second INSERT should fail");
+    test.expect(rws.query("COMMIT"), "COMMIT should work: %s", rws.error());
+
+    test.check_maxctrl("alter service RWS transaction_replay=false transaction_replay_timeout=0s");
+}
+
+#define TRX(a, b) do_trx(a, b, __LINE__)
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -15,60 +41,53 @@ int main(int argc, char** argv)
 
     auto rws = test.maxscale->rwsplit();
     test.expect(rws.connect(), "Failed to connect: %s", rws.error());
+    test.expect(rws.query("CREATE OR REPLACE TABLE t1(id INT)"), "CREATE failed: %s", rws.error());
 
-    auto do_trx = [&](std::string trx_sql) {
-            rws.query(trx_sql);
-            std::string id = rws.field("SELECT @@server_id");
-            rws.query("COMMIT");
-            return id;
-        };
+    auto do_trx = [&](std::string trx_sql, bool expected, int line) {
+        test.expect(rws.query(trx_sql), "at line %d: %s failed: %s", line, trx_sql.c_str(), rws.error());
+        test.expect(rws.query("INSERT INTO t1 VALUES (1)") == expected,
+                    "at line %d, INSERT %s: %s", line, expected ? "failed" : "succeeded", rws.error());
+        test.expect(rws.query("COMMIT"), "at line %d, COMMIT failed: %s", line, rws.error());
+    };
 
-    auto master_trx = [&](std::string trx_sql) {
-            auto id = do_trx(trx_sql);
-            test.expect(id == master,
-                        "Response for transaction should come from server with ID %s, not %s",
-                        master.c_str(), id.c_str());
-        };
-
-    auto slave_trx = [&](std::string trx_sql) {
-            test.expect(do_trx(trx_sql) != master,
-                        "Response for transaction should not come from server with ID %s",
-                        master.c_str());
-        };
-
-    // SET TRANSACTION affects only the next transaction. As the default access mode is READ WRITE, the next
-    // transaction should be routed to a slave server.
+    // SET TRANSACTION affects only the next transaction. The INSERT should fail but in the subsequent
+    // transaction it should work.
     rws.query("SET TRANSACTION READ ONLY");
-    sleep(2);
-    slave_trx("START TRANSACTION");
-    master_trx("START TRANSACTION");
+    TRX("START TRANSACTION", false);
+    TRX("START TRANSACTION", true);
 
     // Changing the default access mode should cause transactions to be routed to slave servers unless an
     // explicit READ WRITE transaction is used.
     rws.query("SET SESSION TRANSACTION READ ONLY");
     sleep(2);
-    slave_trx("START TRANSACTION");
-    slave_trx("START TRANSACTION");
-    master_trx("START TRANSACTION READ WRITE");
-    master_trx("START TRANSACTION READ WRITE");
+    TRX("START TRANSACTION", false);
+    TRX("START TRANSACTION", false);
+    TRX("START TRANSACTION READ WRITE ", true);
+    TRX("START TRANSACTION READ WRITE", true);
 
     // Setting the access mode to READ WRITE while the session default is READ ONLY should cause the next
     // transaction to be routed to the master server.
     rws.query("SET TRANSACTION READ WRITE");
-    sleep(2);
-    master_trx("START TRANSACTION");
-    slave_trx("START TRANSACTION");
+    TRX("START TRANSACTION", true);
+    TRX("START TRANSACTION", false);
 
     // Changing the default back to READ WRITE should make transactions behave normally.
     rws.query("SET SESSION TRANSACTION READ WRITE");
     sleep(2);
-    master_trx("START TRANSACTION");
+    TRX("START TRANSACTION", true);
+    TRX("START TRANSACTION", true);
 
     // SET TRANSACTION READ ONLY should now again only redirect one transaction.
     rws.query("SET TRANSACTION READ ONLY");
-    sleep(2);
-    slave_trx("START TRANSACTION");
-    master_trx("START TRANSACTION");
+    TRX("START TRANSACTION", false);
+    TRX("START TRANSACTION", true);
+
+    rws.query("DROP TABLE t1");
+    rws.disconnect();
+
+    // MXS-4734: SET TRANSACTION READ ONLY isn't replayed correctly with transaction_replay
+    // https://jira.mariadb.org/browse/MXS-4734
+    mxs4734(test);
 
     return test.global_result;
 }

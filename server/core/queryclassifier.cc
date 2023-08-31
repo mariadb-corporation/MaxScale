@@ -423,6 +423,16 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype, const TrxTracker& trx
         target = TARGET_ALL;
     }
     /**
+     * Either SET TRANSACTION READ ONLY or SET TRANSACTION READ WRITE. They need to be treated as a write as
+     * it only modifies the behavior of the next START TRANSACTION statement. As such, it is routed exactly
+     * like a normal transaction except that the router is responsible for injecting the SET TRANSACTION
+     * command if a reconnection takes place.
+     */
+    else if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_NEXT_TRX))
+    {
+        target = TARGET_MASTER;
+    }
+    /**
      * These queries should be routed to all servers
      */
     else if (!load_active && !Parser::type_mask_contains(qtype, mxs::sql::TYPE_WRITE)

@@ -485,6 +485,7 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
              mxb::pretty_size(m_trx.size()).c_str());
     m_trx.close();
     m_can_replay_trx = true;
+    m_set_trx.clear();
 }
 
 bool RWSplitSession::discard_partial_result(GWBUF& buffer, const mxs::Reply& reply)
@@ -1159,7 +1160,7 @@ bool RWSplitSession::lock_to_master()
 
 bool RWSplitSession::is_locked_to_master() const
 {
-    return m_locked_to_master;
+    return m_locked_to_master || m_set_trx;
 }
 
 bool RWSplitSession::supports_hint(Hint::Type hint_type) const
