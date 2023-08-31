@@ -110,6 +110,12 @@ public:
      */
     void deliver_backend_auth_result(GWBUF&& auth_reply);
 
+    /**
+     * Trigger a call of the authentication exchange function without trying to read data from network.
+     * Only needed when authentication module waits for some external event.
+     */
+    void trigger_ext_auth_exchange();
+
 private:
     /** Return type of process_special_commands() */
     enum class SpecialCmdRes

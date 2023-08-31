@@ -16,6 +16,7 @@
 
 #include <set>
 #include <maxbase/pam_utils.hh>
+#include <maxscale/protocol/mariadb/client_connection.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "pam_instance.hh"
@@ -286,4 +287,55 @@ GWBUF PamClientAuthenticator::create_2fa_prompt_packet(std::string_view msg) con
     uint8_t* pData = mariadb::write_header(rval.data(), plen, 0);
     mariadb::copy_chars(pData, msg.data(), msg.length());
     return rval;
+}
+
+PipeWatcher::PipeWatcher(MariaDBClientConnection& client, mxb::Worker* worker, int fd)
+    : m_client(client)
+    , m_worker(worker)
+    , m_poll_fd(fd)
+{
+}
+
+int PipeWatcher::poll_fd() const
+{
+    return m_poll_fd;
+}
+
+uint32_t
+PipeWatcher::handle_poll_events(mxb::Worker* pWorker, uint32_t events, maxbase::Pollable::Context context)
+{
+    // Any error or hangup events will be detected when reading from the pipe.
+    m_client.trigger_ext_auth_exchange();
+    // At this point, the "this" object may be already deleted. Don't access any fields.
+    return events;
+}
+
+bool PipeWatcher::poll()
+{
+    mxb_assert(!m_polling);
+    auto ret = m_worker->add_pollable(EPOLLIN, this);
+    if (ret)
+    {
+        m_polling = true;
+    }
+    return ret;
+}
+
+bool PipeWatcher::stop_poll()
+{
+    mxb_assert(m_polling);
+    auto ret = m_worker->remove_pollable(this);
+    if (ret)
+    {
+        m_polling = false;
+    }
+    return ret;
+}
+
+PipeWatcher::~PipeWatcher()
+{
+    if (m_polling)
+    {
+        stop_poll();
+    }
 }

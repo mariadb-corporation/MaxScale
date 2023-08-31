@@ -20,6 +20,26 @@
 #include <maxbase/pam_utils.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
+class MariaDBClientConnection;
+
+class PipeWatcher : mxb::Pollable
+{
+public:
+    PipeWatcher(MariaDBClientConnection& client, mxb::Worker* worker, int fd);
+    ~PipeWatcher();
+
+    bool     poll();
+    bool     stop_poll();
+    int      poll_fd() const override;
+    uint32_t handle_poll_events(mxb::Worker* pWorker, uint32_t events, Context context) override;
+
+private:
+    MariaDBClientConnection& m_client;
+    mxb::Worker*             m_worker {nullptr};
+    int                      m_poll_fd {-1};
+    bool                     m_polling {false};
+};
+
 /** Client authenticator PAM-specific session data */
 class PamClientAuthenticator : public mariadb::ClientAuthenticator
 {

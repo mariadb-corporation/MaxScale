@@ -2512,6 +2512,17 @@ void MariaDBClientConnection::send_misc_error(const std::string& msg)
     send_mysql_err_packet(1105, "HY000", msg.c_str());
 }
 
+void MariaDBClientConnection::trigger_ext_auth_exchange()
+{
+    auto& auth_data = (m_state == State::CHANGING_USER) ? *m_change_user.auth_data :
+        *m_session_data->auth_data;
+    auto adv_state = perform_auth_exchange(auth_data);
+    if (adv_state)
+    {
+        m_dcb->trigger_read_event();    // Get the main state machine to advance.
+    }
+}
+
 /**
  * Authentication exchange state for authenticator state machine.
  *
