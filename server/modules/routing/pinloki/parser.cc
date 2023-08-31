@@ -581,7 +581,14 @@ void parse(const std::string& line, Handler* handler)
     }
     else
     {
-        handler->error(err.str());
+        std::string errmsg = err.str();
+
+        if (errmsg.empty())
+        {
+            errmsg = "Unknown command: " + line;
+        }
+
+        handler->error(errmsg);
     }
 }
 }
