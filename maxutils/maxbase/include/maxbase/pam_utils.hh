@@ -52,7 +52,8 @@ struct AuthResult
 enum class AuthMode
 {
     PW,         /**< Password only */
-    PW_2FA      /**< Password + 2FA code */
+    PW_2FA,     /**< Password + 2FA code */
+    SUID        /**< Suid wrapper, supports 2FA */
 };
 
 struct UserData

@@ -31,7 +31,12 @@ public:
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
 private:
-    GWBUF create_auth_change_packet() const;
+    ExchRes exchange_old(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
+    ExchRes exchange_suid(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
+    AuthRes authenticate_old(MYSQL_session* session, AuthenticationData& auth_data);
+    AuthRes authenticate_suid(MYSQL_session* session, AuthenticationData& auth_data);
+    GWBUF   create_auth_change_packet(std::string_view msg) const;
+    GWBUF   create_2fa_prompt_packet(std::string_view msg) const;
 
     enum class State
     {
@@ -45,6 +50,4 @@ private:
     State              m_state {State::INIT};       /**< Authentication state */
     const AuthSettings m_settings;
     const PasswordMap& m_backend_pwds;
-
-    GWBUF create_2fa_prompt_packet() const;
 };

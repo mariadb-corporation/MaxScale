@@ -22,11 +22,14 @@
 
 using maxscale::Buffer;
 using std::string;
+using std::string_view;
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+using ExchRes = mariadb::ClientAuthenticator::ExchRes;
 using mariadb::UserEntry;
 
 namespace
 {
+const char unexpected_state[] = "Unexpected authentication state: %d";
 
 /**
  * Read the client's password, store it to buffer.
@@ -47,6 +50,17 @@ bool store_client_password(const GWBUF& buffer, mariadb::AuthByteVec& out)
     }
     return rval;
 }
+
+string_view eff_pam_service(string_view pam_service)
+{
+    return pam_service.empty() ? "mysql" : pam_service;
+}
+}
+
+PamClientAuthenticator::PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds)
+    : m_settings(settings)
+    , m_backend_pwds(backend_pwds)
+{
 }
 
 /**
@@ -61,7 +75,7 @@ bool store_client_password(const GWBUF& buffer, mariadb::AuthByteVec& out)
  * @see
  * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  */
-GWBUF PamClientAuthenticator::create_auth_change_packet() const
+GWBUF PamClientAuthenticator::create_auth_change_packet(std::string_view msg) const
 {
     bool dialog = !m_settings.cleartext_plugin;
     /**
@@ -69,43 +83,49 @@ GWBUF PamClientAuthenticator::create_auth_change_packet() const
      * 4 bytes     - Header
      * 0xfe        - Command byte
      * string[NUL] - Auth plugin name
-     * byte        - Message type
-     * string[EOF] - Message
+     * byte        - Message type (contained in msg)
+     * string[EOF] - Message (contained in msg)
      *
-     * If using mysql_clear_password, no messages are added.
+     * If using mysql_clear_password, no message is added.
      */
-    size_t plen = dialog ? (1 + DIALOG_SIZE + 1 + PASSWORD_QUERY.length()) : (1 + CLEAR_PW_SIZE);
+    size_t plen = dialog ? (1 + DIALOG_SIZE + msg.length()) : (1 + CLEAR_PW_SIZE);
     size_t buflen = MYSQL_HEADER_LEN + plen;
-    uint8_t bufdata[buflen];
-    uint8_t* pData = mariadb::write_header(bufdata, plen, 0);
+    GWBUF rval(buflen);
+    uint8_t* pData = mariadb::write_header(rval.data(), plen, 0);
     *pData++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
     if (dialog)
     {
-        memcpy(pData, DIALOG.c_str(), DIALOG_SIZE);     // Plugin name.
-        pData += DIALOG_SIZE;
-        *pData++ = DIALOG_ECHO_DISABLED;
-        memcpy(pData, PASSWORD_QUERY.c_str(), PASSWORD_QUERY.length());     // First message
+        pData = mariadb::copy_chars(pData, DIALOG.c_str(), DIALOG_SIZE);// Plugin name.
+        mariadb::copy_chars(pData, msg.data(), msg.size());             // Message type + contents
     }
     else
     {
         memcpy(pData, CLEAR_PW.c_str(), CLEAR_PW_SIZE);
     }
-
-    return GWBUF(bufdata, buflen);
+    return rval;
 }
 
 mariadb::ClientAuthenticator::ExchRes
 PamClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
-    using ExchRes = mariadb::ClientAuthenticator::ExchRes;
+    return (m_settings.mode == AuthMode::SUID) ? exchange_suid(std::move(buffer), session, auth_data) :
+           exchange_old(std::move(buffer), session, auth_data);
+}
+
+mariadb::ClientAuthenticator::ExchRes
+PamClientAuthenticator::exchange_old(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
+{
     ExchRes rval;
 
     switch (m_state)
     {
     case State::INIT:
         {
-            // TODO: what if authenticator was already correct? Could this part be skipped?
-            rval.packet = create_auth_change_packet();
+            int msglen = 1 + PASSWORD_QUERY.length();
+            char msg[msglen];
+            msg[0] = DIALOG_ECHO_DISABLED;
+            memcpy(msg + 1, PASSWORD_QUERY.c_str(), PASSWORD_QUERY.length());
+            rval.packet = create_auth_change_packet(string_view(msg, msglen));
             rval.status = ExchRes::Status::INCOMPLETE;
             m_state = State::ASKED_FOR_PW;
         }
@@ -123,7 +143,11 @@ PamClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Authent
             else
             {
                 // Generate prompt for 2FA.
-                rval.packet = create_2fa_prompt_packet();
+                int msglen = 1 + TWO_FA_QUERY.length();
+                char msg[msglen];
+                msg[0] = DIALOG_ECHO_DISABLED;      // Equivalent to server 2FA prompt
+                memcpy(msg + 1, TWO_FA_QUERY.c_str(), TWO_FA_QUERY.length());
+                rval.packet = create_2fa_prompt_packet(string_view(msg, msglen));
                 rval.status = ExchRes::Status::INCOMPLETE;
                 m_state = State::ASKED_FOR_2FA;
             }
@@ -139,14 +163,28 @@ PamClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Authent
         break;
 
     default:
-        MXB_ERROR("Unexpected authentication state: %d", static_cast<int>(m_state));
+        MXB_ERROR(unexpected_state, static_cast<int>(m_state));
         mxb_assert(!true);
         break;
     }
     return rval;
 }
 
+mariadb::ClientAuthenticator::ExchRes
+PamClientAuthenticator::exchange_suid(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
+{
+    ExchRes rval;
+    // TODO
+    return rval;
+}
+
 AuthRes PamClientAuthenticator::authenticate(MYSQL_session* session, AuthenticationData& auth_data)
+{
+    return (m_settings.mode == AuthMode::SUID) ? authenticate_suid(session, auth_data) :
+           authenticate_old(session, auth_data);
+}
+
+AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, AuthenticationData& auth_data)
 {
     using mxb::pam::AuthResult;
     mxb_assert(m_state == State::PW_RECEIVED);
@@ -175,7 +213,7 @@ AuthRes PamClientAuthenticator::authenticate(MYSQL_session* session, Authenticat
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
     mxb::pam::AuthSettings sett;
-    sett.service = entry.auth_string.empty() ? "mysql" : entry.auth_string;
+    sett.service = eff_pam_service(entry.auth_string);
     sett.mapping_on = map_to_mariadbauth;
 
     AuthRes rval;
@@ -228,24 +266,24 @@ AuthRes PamClientAuthenticator::authenticate(MYSQL_session* session, Authenticat
     return rval;
 }
 
-PamClientAuthenticator::PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds)
-    : m_settings(settings)
-    , m_backend_pwds(backend_pwds)
+AuthRes PamClientAuthenticator::authenticate_suid(MYSQL_session* session, AuthenticationData& auth_data)
 {
+    AuthRes rval;
+    // TODO
+    return rval;
 }
 
-GWBUF PamClientAuthenticator::create_2fa_prompt_packet() const
+GWBUF PamClientAuthenticator::create_2fa_prompt_packet(std::string_view msg) const
 {
     /**
      * 4 bytes     - Header
-     * byte        - Message type
-     * string[EOF] - Message
+     * byte        - Message type (contained in msg)
+     * string[EOF] - Message (contained in msg)
      */
-    size_t plen = 1 + TWO_FA_QUERY.length();
+    size_t plen = msg.size();
     size_t buflen = MYSQL_HEADER_LEN + plen;
-    uint8_t bufdata[buflen];
-    uint8_t* pData = mariadb::write_header(bufdata, plen, 0);
-    *pData++ = DIALOG_ECHO_DISABLED;    // Equivalent to server 2FA prompt
-    memcpy(pData, TWO_FA_QUERY.c_str(), TWO_FA_QUERY.length());
-    return GWBUF(bufdata, buflen);
+    GWBUF rval(buflen);
+    uint8_t* pData = mariadb::write_header(rval.data(), plen, 0);
+    mariadb::copy_chars(pData, msg.data(), msg.length());
+    return rval;
 }
