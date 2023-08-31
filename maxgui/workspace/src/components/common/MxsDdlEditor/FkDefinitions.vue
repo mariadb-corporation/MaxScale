@@ -299,18 +299,27 @@ export default {
             })
         },
         async fetchUnparsedRefTbl(targets) {
-            const [, parsedTables] = await queryHelper.queryAndParseTblDDL({
+            const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
                 connId: this.connData.id,
                 targets,
                 config: this.connData.config,
                 charsetCollationMap: this.charsetCollationMap,
             })
-            this.tmpLookupTables = this.$helpers.immutableUpdate(this.tmpLookupTables, {
-                $merge: parsedTables.reduce((map, parsedTable) => {
-                    map[parsedTable.id] = parsedTable
-                    return map
-                }, {}),
-            })
+            if (e)
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: [
+                        this.$mxs_t('errors.failedToGetRefTbl'),
+                        ...this.$helpers.getErrorsArr(e),
+                    ],
+                    type: 'error',
+                })
+            else
+                this.tmpLookupTables = this.$helpers.immutableUpdate(this.tmpLookupTables, {
+                    $merge: parsedTables.reduce((map, parsedTable) => {
+                        map[parsedTable.id] = parsedTable
+                        return map
+                    }, {}),
+                })
         },
         deleteSelectedKeys(selectedItems) {
             const { immutableUpdate } = this.$helpers
@@ -421,11 +430,12 @@ export default {
                         this.setTargetRefTblId({ keyId: id, value: item.value })
                     } else {
                         let newReferencedTbl = this.tmpLookupTables[item.value]
+                        let errors = []
                         if (item.value.includes(this.UNPARSED_TBL_PLACEHOLDER)) {
                             const unparsedTblTarget = this.refTargets.find(
                                 target => target.id === item.value
                             )
-                            const [, parsedTables] = await queryHelper.queryAndParseTblDDL({
+                            const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
                                 connId: this.connData.id,
                                 targets: [
                                     {
@@ -436,17 +446,20 @@ export default {
                                 config: this.connData.config,
                                 charsetCollationMap: this.charsetCollationMap,
                             })
-                            newReferencedTbl = parsedTables[0]
-                            this.tmpLookupTables = this.$helpers.immutableUpdate(
-                                this.tmpLookupTables,
-                                { [newReferencedTbl.id]: { $set: newReferencedTbl } }
-                            )
+                            if (e) errors = this.$helpers.getErrorsArr(e)
+                            else {
+                                newReferencedTbl = parsedTables[0]
+                                this.tmpLookupTables = this.$helpers.immutableUpdate(
+                                    this.tmpLookupTables,
+                                    { [newReferencedTbl.id]: { $set: newReferencedTbl } }
+                                )
+                            }
                         }
                         if (newReferencedTbl)
                             this.setNewTargetRefTblName({ keyId: id, newReferencedTbl })
                         else {
                             this.SET_SNACK_BAR_MESSAGE({
-                                text: [this.$mxs_t('errors.failedToGetRefTbl')],
+                                text: [this.$mxs_t('errors.failedToGetRefTbl'), ...errors],
                                 type: 'error',
                             })
                             this.setTargetRefTblId({ keyId: id, value: '' })

@@ -64,12 +64,17 @@ async function getNewTreeData({ connId, nodeGroup, data, completionItems = [], c
     }
 }
 
+function stringifyQueryResErr(result) {
+    return Object.keys(result)
+        .map(key => `${key}: ${result[key]}`)
+        .join('\n')
+}
+
 /**
  * @param {string} param.connId - id of connection
  * @param {string} param.type - NODE_TYPES
  * @param {object[]} param.qualifiedNames - e.g. ['`test`.`t1`']
  * @param {object} param.config - axios config
-
  * @returns {Promise<array>}
  */
 async function queryDDL({ connId, type, qualifiedNames, config }) {
@@ -82,6 +87,12 @@ async function queryDDL({ connId, type, qualifiedNames, config }) {
             config,
         })
     )
+    const results = typy(res, 'data.data.attributes.results').safeArray
+    const errors = results.reduce((errors, result) => {
+        if (result.errno) errors.push({ detail: stringifyQueryResErr(result) })
+        return errors
+    }, [])
+    if (errors.length) return [{ response: { data: { errors } } }, []]
     return [e, typy(res, 'data.data.attributes.results').safeArray]
 }
 
@@ -110,22 +121,24 @@ async function queryAndParseTblDDL({ connId, targets, config, charsetCollationMa
         qualifiedNames: targets.map(t => `${quoting(t.schema)}.${quoting(t.tbl)}`),
         config,
     })
-    const tables = parseTables({ res, targets })
-    return [
-        e,
-        tables.map(parsedTable =>
-            erdHelper.genDdlEditorData({
-                parsedTable,
-                lookupTables: tables,
-                charsetCollationMap,
-            })
-        ),
-    ]
+    if (e) return [e, []]
+    else {
+        const tables = parseTables({ res, targets })
+        return [
+            e,
+            tables.map(parsedTable =>
+                erdHelper.genDdlEditorData({
+                    parsedTable,
+                    lookupTables: tables,
+                    charsetCollationMap,
+                })
+            ),
+        ]
+    }
 }
 
 export default {
     getChildNodeData,
     getNewTreeData,
-    queryDDL,
     queryAndParseTblDDL,
 }

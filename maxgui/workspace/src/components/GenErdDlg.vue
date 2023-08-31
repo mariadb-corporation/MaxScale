@@ -23,11 +23,11 @@
                 @selected-targets="selectedTargets = $event"
             />
             <div class="err-visualizing-message-ctr mt-3">
-                <p class="mxs-color-helper text-small-text mb-1">
+                <p class="mxs-color-helper text-small-text mb-1" data-test="erd-support-table-info">
                     {{ $mxs_t('info.erdTableSupport') }}
                 </p>
-                <p v-if="errVisualizingMsg" class="v-messages__message error--text">
-                    {{ errVisualizingMsg }}
+                <p v-if="errMsg" class="v-messages__message error--text mt-2" data-test="err-msg">
+                    {{ errMsg }}
                 </p>
             </div>
         </template>
@@ -51,7 +51,6 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
-import WorksheetTmp from '@wsModels/WorksheetTmp'
 import SelectableSchemaTableTree from '@wkeComps/SelectableSchemaTableTree'
 import connection from '@wsSrc/api/connection'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -63,7 +62,7 @@ export default {
     data() {
         return {
             selectedTargets: [],
-            errVisualizingMsg: '',
+            errMsg: '',
             name: '',
         }
     },
@@ -97,7 +96,7 @@ export default {
             return Worksheet.getters('activeRequestConfig')
         },
         hasSavingErr() {
-            return Boolean(this.errVisualizingMsg) || Boolean(!this.selectedTargets.length)
+            return Boolean(this.errMsg) || Boolean(!this.selectedTargets.length)
         },
         activeWkeId() {
             return Worksheet.getters('activeId') // activeWkeId is also erd_task_id
@@ -109,37 +108,29 @@ export default {
                 if (v) {
                     const { id, count = 0 } = ErdTask.query().last() || {}
                     this.name = `ERD ${this.activeWkeId === id ? count : count + 1}`
-                }
+                } else this.errMsg = ''
             },
         },
     },
     methods: {
         ...mapMutations({ SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG' }),
         ...mapActions({ queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData' }),
-        async cloneConn({ conn, config }) {
+        async handleCloneConn({ conn, config }) {
             const [e, res] = await this.$helpers.to(connection.clone({ id: conn.id, config }))
-            if (e) this.errVisualizingMsg = this.$helpers.getErrorsArr(e).join('\n')
+            if (e) this.errMsg = this.$helpers.getErrorsArr(e).join('\n')
             return this.$typy(res, 'data.data').safeObjectOrEmpty
         },
-        async visualize() {
-            const config = this.$helpers.lodash.cloneDeep(this.activeRequestConfig)
-            let conn = this.$helpers.lodash.cloneDeep(this.conn),
-                connMeta = conn.meta,
-                activeWkeId = this.activeWkeId
-            /**
-             * Clone the current connection and request_config data
-             */
-            if (this.genInNewWs) conn = await this.cloneConn({ conn, config })
-            if (conn.id) {
-                await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId: conn.id, config })
-                await this.queryDdlEditorSuppData({ connId: conn.id, config })
-                const [, parsedTables] = await queryHelper.queryAndParseTblDDL({
-                    connId: conn.id,
-                    targets: this.selectedTargets,
-                    config,
-                    charsetCollationMap: this.charset_collation_map,
-                })
-
+        async handleQueryData({ conn, config }) {
+            await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId: conn.id, config })
+            await this.queryDdlEditorSuppData({ connId: conn.id, config })
+            const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
+                connId: conn.id,
+                targets: this.selectedTargets,
+                config,
+                charsetCollationMap: this.charset_collation_map,
+            })
+            if (e) this.errMsg = this.$helpers.getErrorsArr(e).join('\n')
+            else {
                 const nodeMap = parsedTables.reduce((map, parsedTable, i) => {
                     const node = erdHelper.genErdNode({
                         nodeData: parsedTable,
@@ -148,41 +139,62 @@ export default {
                     map[node.id] = node
                     return map
                 }, {})
-                const erdTaskData = { nodeMap, is_laid_out: false }
-                const erdTaskTmpData = {
-                    graph_height_pct: 100,
-                    active_entity_id: '',
-                    key: this.$helpers.uuidv1(),
-                    nodes_history: [],
-                    active_history_idx: 0,
+
+                return {
+                    erdTaskData: { nodeMap, is_laid_out: false },
+                    erdTaskTmpData: {
+                        graph_height_pct: 100,
+                        active_entity_id: '',
+                        key: this.$helpers.uuidv1(),
+                        nodes_history: [],
+                        active_history_idx: 0,
+                    },
                 }
-                // Bind connection to a new worksheet
-                if (this.genInNewWs) {
-                    Worksheet.dispatch('insertBlankWke')
-                    ErdTask.dispatch('initErdEntities', { erdTaskData, erdTaskTmpData })
-                    activeWkeId = Worksheet.getters('activeId')
-                    QueryConn.insert({
-                        data: {
-                            id: conn.id,
-                            attributes: conn.attributes,
-                            binding_type: this.QUERY_CONN_BINDING_TYPES.ERD,
-                            erd_task_id: activeWkeId,
-                            meta: connMeta,
-                        },
-                    })
-                } else {
-                    // Close the entity-editor-ctr before assigning new data
-                    ErdTaskTmp.update({
-                        where: activeWkeId,
-                        data: { active_entity_id: '', graph_height_pct: 100 },
-                    }).then(() => {
-                        ErdTask.update({ where: activeWkeId, data: erdTaskData })
-                        ErdTaskTmp.update({ where: activeWkeId, data: erdTaskTmpData })
-                    })
-                }
-                WorksheetTmp.update({ where: activeWkeId, data: { request_config: config } })
-                Worksheet.update({ where: activeWkeId, data: { name: this.name } })
             }
+        },
+        async visualize() {
+            const config = this.activeRequestConfig
+            const connMeta = this.conn.meta
+            let conn = this.conn
+
+            if (this.genInNewWs)
+                conn = await this.handleCloneConn({
+                    conn: this.$helpers.lodash.cloneDeep(this.conn),
+                    config,
+                })
+            if (conn.id) {
+                const data = await this.handleQueryData({ conn, config })
+                if (data) {
+                    const { erdTaskData, erdTaskTmpData } = data
+                    if (this.genInNewWs)
+                        this.visualizeInNewWs({ conn, connMeta, erdTaskData, erdTaskTmpData })
+                    else this.visualizeInCurrentWs({ erdTaskData, erdTaskTmpData })
+                    Worksheet.update({ where: this.activeWkeId, data: { name: this.name } })
+                }
+            }
+        },
+        visualizeInNewWs({ conn, connMeta, erdTaskData, erdTaskTmpData }) {
+            Worksheet.dispatch('insertBlankWke')
+            ErdTask.dispatch('initErdEntities', { erdTaskData, erdTaskTmpData })
+            QueryConn.insert({
+                data: {
+                    id: conn.id,
+                    attributes: conn.attributes,
+                    binding_type: this.QUERY_CONN_BINDING_TYPES.ERD,
+                    erd_task_id: this.activeWkeId,
+                    meta: connMeta,
+                },
+            })
+        },
+        visualizeInCurrentWs({ erdTaskData, erdTaskTmpData }) {
+            // Close the entity-editor-ctr before assigning new data
+            ErdTaskTmp.update({
+                where: this.activeWkeId,
+                data: { active_entity_id: '', graph_height_pct: 100 },
+            }).then(() => {
+                ErdTask.update({ where: this.activeWkeId, data: erdTaskData })
+                ErdTaskTmp.update({ where: this.activeWkeId, data: erdTaskTmpData })
+            })
         },
     },
 }
@@ -191,5 +203,9 @@ export default {
 <style lang="scss" scoped>
 .err-visualizing-message-ctr {
     min-height: 24px;
+    .error--text {
+        white-space: pre-wrap;
+        line-height: 1.5rem;
+    }
 }
 </style>
