@@ -208,7 +208,7 @@ PamClientAuthenticator::exchange_suid(GWBUF&& buffer, MYSQL_session* session, Au
             if (buffer.empty())
             {
                 // Triggered by external process i/o.
-                rval = process_suid_messages();
+                rval = process_suid_messages(session);
             }
             else
             {
@@ -266,10 +266,96 @@ PamClientAuthenticator::exchange_suid(GWBUF&& buffer, MYSQL_session* session, Au
     return rval;
 }
 
-mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messages()
+mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messages(MYSQL_session* ses)
 {
-    // TODO
+    mxb_assert(m_state == State::SUID_WAITING_CONV);
     ExchRes rval;
+    auto [read_ok, data] = m_proc->read_output();
+    if (read_ok)
+    {
+        m_suid_msgs.append(data);
+        rval.status = ExchRes::Status::INCOMPLETE;
+
+        while (!m_suid_msgs.empty())
+        {
+            auto [type, msg] = next_message(m_suid_msgs);
+            if (type == mxb::pam::SBOX_CONV)
+            {
+                if (m_conv_msgs < 2)
+                {
+                    // Send to client, wait for reply.
+                    rval.packet = create_conv_packet(msg);
+                    rval.status = ExchRes::Status::INCOMPLETE;
+                    m_watcher->stop_poll();
+                    m_conv_msgs++;
+                    m_state = State::SUID_WAITING_CLIENT_REPLY;
+                }
+                else
+                {
+                    // Have already sent two questions to client, more is not supported (for now).
+                    MXB_ERROR("Pam asked more than two questions from client %s. Not supported.",
+                              ses->user_and_host().c_str());
+                    m_watcher.reset();
+                    m_proc.reset();
+                    rval.status = ExchRes::Status::READY;   // Go to auth fail.
+                }
+                break;
+            }
+            else if (type == mxb::pam::SBOX_AUTHENTICATED_AS)
+            {
+                m_mapped_user = std::move(msg);
+            }
+            else if (type == mxb::pam::SBOX_EOF)
+            {
+                m_eof_received = true;
+                // Last message, stop polling.
+                m_watcher.reset();
+                int rc = m_proc->wait();
+                if (rc != 0)
+                {
+                    // Must be some weird waitpid error or fail in suid tool.
+                    MXB_WARNING("Pam SUID process exited with code %i after authentication success.", rc);
+                    mxb_assert(!true);
+                }
+                m_proc.reset();
+
+                if (m_conv_msgs == 0)
+                {
+                    // Special case, authentication succeeded without any input from client. In this case
+                    // we still need to send a message to client and get a response. Sending an empty
+                    // message should be ok, client will interpret it as password query.
+                    rval.packet = create_conv_packet("");
+                    rval.status = ExchRes::Status::INCOMPLETE;
+                    m_conv_msgs++;
+                    m_state = State::SUID_WAITING_CLIENT_REPLY;
+                }
+                else
+                {
+                    rval.status = ExchRes::Status::READY;
+                }
+                break;
+            }
+            else if (type == 0)
+            {
+                // Incomplete message, wait for more data from external process.
+                break;
+            }
+            else
+            {
+                // Garbled data, end authentication.
+                rval.status = ExchRes::Status::FAIL;
+                break;
+            }
+        }
+    }
+    else
+    {
+        // Pipe likely closed due to authentication failure. Proceed to next step.
+        // TODO: separate normal auth failure from other errors in the auth tool.
+        m_watcher.reset();
+        m_proc.reset();
+        rval.status = ExchRes::Status::READY;
+    }
     return rval;
 }
 
@@ -397,6 +483,71 @@ GWBUF PamClientAuthenticator::create_2fa_prompt_packet(std::string_view msg) con
     uint8_t* pData = mariadb::write_header(rval.data(), plen, 0);
     mariadb::copy_chars(pData, msg.data(), msg.length());
     return rval;
+}
+
+/**
+ * Get next message from message buffer.
+ *
+ * @param msg_buf Buffer with message(s)
+ * @return Message type and message. Type is -1 on error and 0 if buffer is empty.
+ */
+std::tuple<int, std::string> PamClientAuthenticator::next_message(string& msg_buf)
+{
+    mxb_assert(!msg_buf.empty());
+
+    int rval = -1;
+    string rval_msg;
+
+    uint8_t msg_type = msg_buf[0];
+    switch (msg_type)
+    {
+    case mxb::pam::SBOX_CONV:
+    case mxb::pam::SBOX_AUTHENTICATED_AS:
+        {
+            auto [bytes, message] = mxb::pam::extract_string(&msg_buf[1], msg_buf.data() + msg_buf.size());
+            if (bytes > 0)
+            {
+                // The CONV-message should have at least style byte. Username is also expected to not be
+                // empty.
+                if (!message.empty())
+                {
+                    rval = msg_type;
+                    rval_msg = std::move(message);
+                    msg_buf.erase(0, 1 + bytes);
+                }
+            }
+            else if (bytes == 0)
+            {
+                // Incomplete message.
+                rval = 0;
+            }
+        }
+        break;
+
+    case mxb::pam::SBOX_EOF:
+        rval = msg_type;
+        // This should be the last message.
+        mxb_assert(msg_buf.length() == 1);
+        break;
+
+    default:
+        break;
+    }
+    return {rval, rval_msg};
+}
+
+GWBUF PamClientAuthenticator::create_conv_packet(std::string_view msg) const
+{
+    if (m_conv_msgs == 0)
+    {
+        // Sending first message to client. The message is attached to the AuthSwitchRequest-packet.
+        return create_auth_change_packet(msg);
+    }
+    else
+    {
+        // Additional messages are simpler.
+        return create_2fa_prompt_packet(msg);
+    }
 }
 
 PipeWatcher::PipeWatcher(MariaDBClientConnection& client, mxb::Worker* worker, int fd)

@@ -60,11 +60,14 @@ public:
 private:
     ExchRes exchange_old(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
     ExchRes exchange_suid(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
-    ExchRes process_suid_messages();
+    ExchRes process_suid_messages(MYSQL_session* ses);
     AuthRes authenticate_old(MYSQL_session* session, AuthenticationData& auth_data);
     AuthRes authenticate_suid(MYSQL_session* session, AuthenticationData& auth_data);
     GWBUF   create_auth_change_packet(std::string_view msg) const;
     GWBUF   create_2fa_prompt_packet(std::string_view msg) const;
+    GWBUF   create_conv_packet(std::string_view msg) const;
+
+    static std::tuple<int, std::string> next_message(std::string& msg_buf);
 
     enum class State
     {
@@ -85,6 +88,7 @@ private:
     std::unique_ptr<mxb::AsyncProcess> m_proc;
     std::unique_ptr<PipeWatcher>       m_watcher;
 
+    std::string m_suid_msgs;    /**< Unprocessed messages from external suid process */
     std::string m_mapped_user;
     int         m_conv_msgs {0};
     bool        m_eof_received {false};
