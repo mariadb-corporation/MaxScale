@@ -62,14 +62,17 @@ public:
         std::string exec_name;
     };
 
+    enum class ForkType {FORK, SPAWN};
     /**
      * Start external process and return process information.
      *
      * @param cmd Command string
      * @param redirect Redirect stderror of subprocess
+     * @param fork_type Subprocess launch mode
      * @return Process information
      */
-    static std::optional<Info> start_external_cmd(const std::string& cmd, RedirStdErr redirect);
+    static std::optional<Info> start_external_cmd(const std::string& cmd, RedirStdErr redirect,
+                                                  ForkType fork_type);
 
 protected:
     Process(Info info, int timeout_ms);
@@ -87,6 +90,9 @@ protected:
     int         timeout_ms() const;
 
 private:
+    static std::optional<Info> fork_external_cmd(const std::string& cmd, RedirStdErr redirect);
+    static std::optional<Info> spawn_external_cmd(const std::string& cmd, RedirStdErr redirect);
+
     Info m_proc_info;
     int  m_timeout_ms {-1};
     int  m_result {TIMEOUT};

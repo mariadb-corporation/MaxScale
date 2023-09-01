@@ -16,12 +16,13 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <spawn.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <thread>
 #include <utility>
-#include <fcntl.h>
-#include <sys/wait.h>
-#include <poll.h>
 
 #include <maxbase/assert.hh>
 #include <maxbase/alloc.hh>
@@ -173,7 +174,13 @@ int ExternalCmd::run()
 }
 
 std::optional<Process::Info>
-Process::start_external_cmd(const string& cmd, RedirStdErr redirect)
+Process::start_external_cmd(const string& cmd, RedirStdErr redirect, ForkType fork_type)
+{
+    return (fork_type == ForkType::FORK) ? fork_external_cmd(cmd, redirect) :
+           spawn_external_cmd(cmd, redirect);
+}
+
+std::optional<Process::Info> Process::fork_external_cmd(const string& cmd, Process::RedirStdErr redirect)
 {
     // Create a pipe where the command can print output
     int read_fd[2];
@@ -263,6 +270,90 @@ Process::start_external_cmd(const string& cmd, RedirStdErr redirect)
         MXB_FREE(argvec[i]);
     }
 
+    return rval;
+}
+
+std::optional<Process::Info> Process::spawn_external_cmd(const string& cmd, Process::RedirStdErr redirect)
+{
+    // Create two pipes to communicate with the external process.
+    const char pipe_fail[] = "Failed to open pipe: [%d] %s";
+    int c_to_p[2];
+    int p_to_c[2];
+    if (pipe(c_to_p) == -1)
+    {
+        MXB_ERROR(pipe_fail, errno, mxb_strerror(errno));
+        return {};
+    }
+    else if (pipe(p_to_c) == -1)
+    {
+        close(c_to_p[0]);
+        close(c_to_p[1]);
+        MXB_ERROR(pipe_fail, errno, mxb_strerror(errno));
+        return {};
+    }
+
+    // "execvp" takes its arguments as an array of tokens where the first element is the command.
+    const int MAX_ARGS{256};
+    char* argvec[MAX_ARGS + 1]{};
+    ::tokenize_args(cmd, argvec, MAX_ARGS);
+    const char* exec_name = argvec[0];
+
+    posix_spawn_file_actions_t file_actions;
+    int rc = posix_spawn_file_actions_init(&file_actions);
+    // posix_spawn_file_actions_init should not fail.
+    mxb_assert(!rc);
+    // Instruct child process to immediately close non-used fd:s and redirect standard streams.
+    rc = posix_spawn_file_actions_addclose(&file_actions, c_to_p[0])
+        || posix_spawn_file_actions_adddup2(&file_actions, c_to_p[1], STDOUT_FILENO)
+        || posix_spawn_file_actions_addclose(&file_actions, p_to_c[1])
+        || posix_spawn_file_actions_adddup2(&file_actions, p_to_c[0], STDIN_FILENO)
+        || (redirect == RedirStdErr::YES
+            && posix_spawn_file_actions_adddup2(&file_actions, c_to_p[1], STDERR_FILENO));
+
+    std::optional<Info> rval;
+    if (rc == 0)
+    {
+        pid_t pid = -1;
+        rc = posix_spawn(&pid, exec_name, &file_actions, NULL, argvec, NULL);
+        mxb_assert((rc == 0 && pid > 0) || (rc != 0 && pid == -1));
+        if (rc == 0)
+        {
+            // Set remaining pipe fd:s non-blocking.
+            fcntl(c_to_p[0], F_SETFL, O_NONBLOCK);
+            fcntl(p_to_c[1], F_SETFL, O_NONBLOCK);
+
+            MXB_INFO("Executing command '%s' in process %d", exec_name, pid);
+            rval = std::optional<Info>({pid, c_to_p[0], p_to_c[1], exec_name});
+        }
+        else
+        {
+            MXB_ERROR("Failed to execute command '%s', posix_spawn failed. Error %i: %s",
+                      exec_name, rc, mxb_strerror(rc));
+        }
+    }
+    else
+    {
+        MXB_ERROR("posix_spawn_file_actions error. Error %i: %s", rc, mxb_strerror(rc));
+    }
+    posix_spawn_file_actions_destroy(&file_actions);
+
+    // Regardless of success, close the write end of the child-to-parent pipe and read end of
+    // the parent-to-child pipe.
+    close(c_to_p[1]);
+    close(p_to_c[0]);
+
+    if (!rval.has_value())
+    {
+        // Fail, close remaining pipe fd:s.
+        close(c_to_p[0]);
+        close(p_to_c[1]);
+    }
+
+    // Free the token array.
+    for (int i = 0; i < MAX_ARGS && argvec[i]; i++)
+    {
+        MXB_FREE(argvec[i]);
+    }
     return rval;
 }
 
@@ -509,7 +600,7 @@ int Process::timeout_ms() const
 bool Process::start_set_external_cmd(const string& cmd, RedirStdErr redirect)
 {
     bool rval = false;
-    auto res = start_external_cmd(cmd, redirect);
+    auto res = start_external_cmd(cmd, redirect, ForkType::FORK);
     if (res)
     {
         m_proc_info = std::move(*res);
@@ -533,7 +624,7 @@ AsyncCmd::AsyncCmd(const string& cmd, int timeout_ms)
 std::unique_ptr<AsyncProcess> AsyncCmd::start()
 {
     std::unique_ptr<AsyncProcess> rval;
-    auto res = Process::start_external_cmd(m_cmd, Process::RedirStdErr::NO);
+    auto res = Process::start_external_cmd(m_cmd, Process::RedirStdErr::NO, Process::ForkType::SPAWN);
     if (res)
     {
         rval.reset(new AsyncProcess(std::move(*res), m_timeout_ms));
