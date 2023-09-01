@@ -5,7 +5,7 @@ updates:
     directory: "/maxgui"
     schedule:
       interval: "monthly"
-    versioning-strategy: lockfile-only
+    versioning-strategy: auto
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -15,7 +15,7 @@ updates:
     schedule:
       interval: "monthly"
     # ignore any version updates that affect the manifest
-    versioning-strategy: lockfile-only
+    versioning-strategy: auto
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
