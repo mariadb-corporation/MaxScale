@@ -16,6 +16,7 @@
 
 #include <signal.h>
 #include <vector>
+#include <fcntl.h>
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
@@ -132,52 +133,67 @@ bool MainWorker::pre_run()
 {
     bool rval = false;
 
-    if (modules_thread_init())
+    if (pipe2(m_signal_pipe, O_NONBLOCK | O_CLOEXEC) == -1)
     {
-        mxs::CachingParser::thread_init();
-        // No point in wasting memory for the parser cache in the main thread.
-        mxs::CachingParser::set_thread_cache_enabled(false);
+        MXB_ERROR("Failed to create pipe for signals: %d, %s", errno, mxb_strerror(errno));
+    }
+    else
+    {
+        add_pollable(EPOLLIN, &m_signal_handler);
 
         m_callable.dcall(100ms, &MainWorker::inc_ticks);
         update_rebalancing();
 
-        rval = true;
-    }
-
-    if (rval)
-    {
-        const auto& auto_tune = Config::get().auto_tune;
-
-        if (!auto_tune.empty())
+        if (modules_thread_init())
         {
-            if (auto_tune.size() == 1 && auto_tune.front() == CN_ALL)
+            mxs::CachingParser::thread_init();
+            // No point in wasting memory for the parser cache in the main thread.
+            mxs::CachingParser::set_thread_cache_enabled(false);
+            rval = true;
+        }
+
+        if (rval)
+        {
+            const auto& auto_tune = Config::get().auto_tune;
+
+            if (!auto_tune.empty())
             {
-                const auto& server_dependencies = Service::specification()->server_dependencies();
-
-                for (const auto* pDependency : server_dependencies)
+                if (auto_tune.size() == 1 && auto_tune.front() == CN_ALL)
                 {
-                    m_tunables.insert(pDependency->parameter().name());
+                    const auto& server_dependencies = Service::specification()->server_dependencies();
+
+                    for (const auto* pDependency : server_dependencies)
+                    {
+                        m_tunables.insert(pDependency->parameter().name());
+                    }
                 }
-            }
-            else
-            {
-                for (const auto& parameter : auto_tune)
+                else
                 {
-                    m_tunables.insert(parameter);
+                    for (const auto& parameter : auto_tune)
+                    {
+                        m_tunables.insert(parameter);
+                    }
                 }
-            }
 
-            MXB_NOTICE("The following parameters will be auto tuned: %s",
-                       mxb::join(m_tunables, ", ", "'").c_str());
+                MXB_NOTICE("The following parameters will be auto tuned: %s",
+                           mxb::join(m_tunables, ", ", "'").c_str());
 
-            m_callable.dcall(5s, [this]() {
+                m_callable.dcall(5s, [this]() {
                     check_dependencies_dc();
                     return true;
                 });
+            }
+            else
+            {
+                MXB_INFO("No 'auto_tune' parameters specified, no auto tuning will be performed.");
+            }
         }
         else
         {
-            MXB_INFO("No 'auto_tune' parameters specified, no auto tuning will be performed.");
+            close(m_signal_pipe[0]);
+            close(m_signal_pipe[1]);
+            m_signal_pipe[0] = -1;
+            m_signal_pipe[1] = -1;
         }
     }
 
@@ -186,6 +202,11 @@ bool MainWorker::pre_run()
 
 void MainWorker::post_run()
 {
+    mxb_assert(m_signal_pipe[0] != -1 && m_signal_pipe[1] != -1);
+    remove_pollable(&m_signal_handler);
+    close(m_signal_pipe[0]);
+    close(m_signal_pipe[1]);
+
     // Clearing the storage right after the main loop returns guarantees that both the MainWorker and the
     // RoutingWorkers are alive when stored data is destroyed. Without this, the destruction of filters is
     // delayed until the MainWorker is destroyed which is something that must be avoided. All objects in
@@ -309,6 +330,38 @@ bool MainWorker::wait_for_shutdown()
     }
 
     return again;
+}
+
+uint32_t MainWorker::SignalHandler::handle_poll_events(mxb::Worker* worker,
+                                                       uint32_t events,
+                                                       Pollable::Context context)
+{
+    mxb_assert(this_unit.pMain == worker);
+    static_cast<MainWorker*>(worker)->read_signal_from_pipe();
+    return events;
+}
+
+int MainWorker::SignalHandler::poll_fd() const
+{
+    // Can't use polling_worker() here: the value is not set when this functions is first called.
+    return this_unit.pMain->m_signal_pipe[0];
+}
+
+bool MainWorker::execute_signal_safe(void (* func)(void))
+{
+    intptr_t val = (intptr_t)func;
+    int rc = write(m_signal_pipe[1], &val, sizeof(val));
+    return rc == sizeof(val);
+}
+
+void MainWorker::read_signal_from_pipe()
+{
+    intptr_t val;
+
+    while (read(m_signal_pipe[0], &val, sizeof(val)) == sizeof(val))
+    {
+        ((void (*)(void)) val)();
+    }
 }
 }
 

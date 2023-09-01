@@ -23,7 +23,7 @@
  * Initiate shutdown of MaxScale.
  *
  * This functions informs all threads that they should stop the
- * processing and exit.
+ * processing and exit. This should only be called by the SIGTERM and SIGINT signal handlers.
  *
  * @return How many times maxscale_shutdown() has been called.
  */
