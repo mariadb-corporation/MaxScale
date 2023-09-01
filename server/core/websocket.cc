@@ -15,6 +15,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <fcntl.h>
 #include <sys/epoll.h>
 
 #include <maxscale/utils.hh>
@@ -31,6 +32,23 @@ struct ThisUnit
     std::mutex                              lock;
     std::vector<std::unique_ptr<WebSocket>> connections;
 } this_unit;
+
+int setnonblocking(int fd)
+{
+    int fl = fcntl(fd, F_GETFL, 0);
+    if (fl == -1)
+    {
+        MXB_ERROR("Can't GET fcntl for %i, errno = %d, %s.", fd, errno, mxb_strerror(errno));
+        return 1;
+    }
+
+    if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
+    {
+        MXB_ERROR("Can't SET fcntl for %i, errno = %d, %s", fd, errno, mxb_strerror(errno));
+        return 1;
+    }
+    return 0;
+}
 }
 
 // static

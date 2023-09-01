@@ -233,7 +233,7 @@ bool Connection::connect(const std::string& table, const std::string& gtid)
         remote.sin_port = htons(m_port);
         remote.sin_family = AF_INET;
 
-        int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        int fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
 
         if (fd == -1)
         {

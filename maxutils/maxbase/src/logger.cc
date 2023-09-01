@@ -44,7 +44,7 @@ namespace
 int open_fd(const std::string& filename)
 {
     int fd = open(filename.c_str(),
-                  O_WRONLY | O_APPEND | O_CREAT,
+                  O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC,
                   S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
     if (fd == -1)

@@ -99,7 +99,7 @@ std::unique_ptr<Exporter> build_exporter(const Config& config)
 
     case ExporterType::EXPORT_FILE:
         {
-            int fd = open(config.file.c_str(), O_APPEND | O_WRONLY | O_CREAT,
+            int fd = open(config.file.c_str(), O_APPEND | O_WRONLY | O_CREAT | O_CLOEXEC,
                           S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
             if (fd != -1)

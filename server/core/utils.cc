@@ -31,7 +31,6 @@
 
 #include <maxscale/utils.hh>
 
-#include <fcntl.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -123,58 +122,6 @@ bool is_valid_posix_path(char* path)
         }
     }
     return true;
-}
-
-/*****************************************
-* backend read event triggered by EPOLLIN
-*****************************************/
-
-int setnonblocking(int fd)
-{
-    int fl;
-
-    if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
-    {
-        MXB_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
-                  fd,
-                  errno,
-                  mxb_strerror(errno));
-        return 1;
-    }
-
-    if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
-    {
-        MXB_ERROR("Can't SET fcntl for %i, errno = %d, %s",
-                  fd,
-                  errno,
-                  mxb_strerror(errno));
-        return 1;
-    }
-    return 0;
-}
-
-int setblocking(int fd)
-{
-    int fl;
-
-    if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
-    {
-        MXB_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
-                  fd,
-                  errno,
-                  mxb_strerror(errno));
-        return 1;
-    }
-
-    if (fcntl(fd, F_SETFL, fl & ~O_NONBLOCK) == -1)
-    {
-        MXB_ERROR("Can't SET fcntl for %i, errno = %d, %s",
-                  fd,
-                  errno,
-                  mxb_strerror(errno));
-        return 1;
-    }
-    return 0;
 }
 
 char* gw_strend(const char* s)
@@ -404,8 +351,7 @@ bool configure_network_socket(int so, int type)
             return false;
         }
     }
-
-    return setnonblocking(so) == 0;
+    return true;
 }
 
 static bool configure_listener_socket(int so)
@@ -429,8 +375,7 @@ static bool configure_listener_socket(int so)
         }
     }
 #endif
-
-    return setnonblocking(so) == 0;
+    return true;
 }
 
 static void set_port(struct sockaddr_storage* addr, uint16_t port)
@@ -470,7 +415,7 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
     /* Take the first one */
     if (ai)
     {
-        if ((so = socket(ai->ai_family, SOCK_STREAM, 0)) == -1)
+        if ((so = socket(ai->ai_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) == -1)
         {
             MXB_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
         }
@@ -568,8 +513,7 @@ static bool configure_unix_socket(int so)
         MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
         return false;
     }
-
-    return setnonblocking(so) == 0;
+    return true;
 }
 
 int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
@@ -583,7 +527,7 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
                   path,
                   sizeof(addr->sun_path) - 1);
     }
-    else if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    else if ((fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) < 0)
     {
         MXB_ERROR("Can't create UNIX socket: %d, %s", errno, mxb_strerror(errno));
     }

@@ -1194,7 +1194,6 @@ static bool get_milliseconds(const char* zName,
                              const char* zDisplay_value,
                              time_t* pMilliseconds);
 
-static int get_ifaddr(unsigned char* output);
 static int get_release_string(char* release);
 
 namespace maxscale
@@ -2486,7 +2485,7 @@ bool export_config_file(const char* filename, ConfigSectionMap& config)
         ss << '\n';
     }
 
-    int fd = open(filename, O_CREAT | O_EXCL | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+    int fd = open(filename, O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
     if (fd != -1)
     {
@@ -3288,72 +3287,6 @@ int config_truth_value(const char* str)
 }
 
 /**
- * Get the MAC address of first network interface
- *
- * and fill the provided allocated buffer with SHA1 encoding
- * @param output        Allocated 6 bytes buffer
- * @return 1 on success, 0 on failure
- *
- */
-static int get_ifaddr(unsigned char* output)
-{
-    struct ifreq ifr;
-    struct ifconf ifc;
-    char buf[1024];
-    struct ifreq* it;
-    struct ifreq* end;
-    int success = 0;
-
-    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (sock == -1)
-    {
-        return 0;
-    }
-
-    ifc.ifc_len = sizeof(buf);
-    ifc.ifc_buf = buf;
-    if (ioctl(sock, SIOCGIFCONF, &ifc) == -1)
-    {
-        close(sock);
-        return 0;
-    }
-
-    it = ifc.ifc_req;
-    end = it + (ifc.ifc_len / sizeof(struct ifreq));
-
-    for (; it != end; ++it)
-    {
-        strcpy(ifr.ifr_name, it->ifr_name);
-
-        if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0)
-        {
-            if (!(ifr.ifr_flags & IFF_LOOPBACK))
-            {
-                /* don't count loopback */
-                if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0)
-                {
-                    success = 1;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            close(sock);
-            return 0;
-        }
-    }
-
-    if (success)
-    {
-        memcpy(output, ifr.ifr_hwaddr.sa_data, 6);
-    }
-    close(sock);
-
-    return success;
-}
-
-/**
  * Get the linux distribution info
  *
  * @param release The buffer where the found distribution is copied.
@@ -3376,7 +3309,7 @@ static int get_release_string(char* release)
     have_distribution = false;
 
     /* get data from lsb-release first */
-    if ((fd = open("/etc/lsb-release", O_RDONLY)) != -1)
+    if ((fd = open("/etc/lsb-release", O_RDONLY | O_CLOEXEC)) != -1)
     {
         /* LSB-compliant distribution! */
         size_t len = read(fd, (char*)distribution, sizeof(distribution) - 1);
@@ -3440,7 +3373,7 @@ static int get_release_string(char* release)
                 startindex++;
             }
 
-            if ((fd = open(found.gl_pathv[startindex], O_RDONLY)) != -1)
+            if ((fd = open(found.gl_pathv[startindex], O_RDONLY | O_CLOEXEC)) != -1)
             {
                 /*
                  +5 and -8 below cut the file name part out of the
