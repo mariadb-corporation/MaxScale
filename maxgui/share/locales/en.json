@@ -280,7 +280,7 @@
         "hostname/IP": "Hostname/IP",
         "implementChanges": "Implement Changes?",
         "incomplete": "Incomplete",
-        "inDays": "in days",
+        "days": "days",
         "indexes": "Indexes",
         "info": {
             "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",

@@ -120,6 +120,10 @@
                 text-transform: uppercase;
             }
         }
+        .v-text-field__suffix {
+            font-size: 0.75rem;
+            color: $navigation;
+        }
     }
 }
 
