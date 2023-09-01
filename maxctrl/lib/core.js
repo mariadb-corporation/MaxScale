@@ -273,6 +273,7 @@ function program() {
     .command(require("./call.js"))
     .command(require("./api.js"))
     .command(require("./classify.js"))
+    .command(require("./debug.js"))
     .epilog(
       "If no commands are given, maxctrl is started in interactive mode. " +
         "Use `exit` to exit the interactive mode."
