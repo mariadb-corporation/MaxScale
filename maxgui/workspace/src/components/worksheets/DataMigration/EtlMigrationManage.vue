@@ -18,7 +18,6 @@
         v-model="isMenuOpened"
         :task="task"
         :types="actionTypes"
-        content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
         v-on="$listeners"
     >
         <template v-slot:activator="{ on, attrs }">

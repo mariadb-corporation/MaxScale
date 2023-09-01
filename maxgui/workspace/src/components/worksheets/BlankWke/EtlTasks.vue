@@ -39,7 +39,6 @@
             <etl-task-manage
                 :task="item"
                 :types="actionTypes"
-                content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
                 @input="activeItemMenu = $event ? value : null"
             >
                 <template v-slot:activator="{ on, attrs }">

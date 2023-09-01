@@ -1,5 +1,12 @@
 <template>
-    <v-menu transition="slide-y-transition" offset-y left v-bind="{ ...$attrs }" v-on="$listeners">
+    <v-menu
+        transition="slide-y-transition"
+        offset-y
+        left
+        content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
+        v-bind="{ ...$attrs }"
+        v-on="$listeners"
+    >
         <template v-for="slot in Object.keys($scopedSlots)" v-slot:[slot]="slotData">
             <slot :name="slot" v-bind="slotData" />
         </template>
