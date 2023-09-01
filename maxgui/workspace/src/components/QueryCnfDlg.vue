@@ -59,7 +59,13 @@
                 <v-text-field
                     v-model.number="config.queryHistoryRetentionPeriod"
                     type="number"
-                    :rules="rules.queryHistoryRetentionPeriod"
+                    :rules="[
+                        v =>
+                            validatePositiveNumber({
+                                v,
+                                inputName: $mxs_t('queryHistoryRetentionPeriod'),
+                            }),
+                    ]"
                     class="vuetify-input--override error--text__bottom mb-2 queryHistoryRetentionPeriod"
                     dense
                     :height="36"
@@ -165,7 +171,9 @@ export default {
                     'query_show_sys_schemas_flag' in obj &&
                     typeof obj.query_show_sys_schemas_flag === 'number' &&
                     'tab_moves_focus' in obj &&
-                    typeof obj.tab_moves_focus === 'boolean'
+                    typeof obj.tab_moves_focus === 'boolean' &&
+                    'max_statements' in obj &&
+                    typeof obj.max_statements === 'number'
                 )
             },
             required: true,
@@ -173,15 +181,6 @@ export default {
     },
     data() {
         return {
-            rules: {
-                queryHistoryRetentionPeriod: [
-                    v =>
-                        this.validatePositiveNumber({
-                            v,
-                            inputName: this.$mxs_t('queryHistoryRetentionPeriod'),
-                        }),
-                ],
-            },
             config: {},
         }
     },
@@ -206,6 +205,7 @@ export default {
                 ),
                 showSysSchemas: Boolean(this.cnf.query_show_sys_schemas_flag),
                 tabMovesFocus: this.cnf.tab_moves_focus,
+                maxStatements: this.cnf.max_statements,
             }
         },
         hasChanged() {
@@ -238,6 +238,7 @@ export default {
                 ),
                 query_show_sys_schemas_flag: Number(this.config.showSysSchemas),
                 tab_moves_focus: this.config.tabMovesFocus,
+                max_statements: this.config.maxStatements,
             })
         },
     },
