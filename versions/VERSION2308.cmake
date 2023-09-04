@@ -13,6 +13,6 @@ set(MAXSCALE_VERSION_MINOR_NUM "8" CACHE STRING "Minor version")
 # This should only be incremented if a package is rebuilt
 set(MAXSCALE_BUILD_NUMBER 1 CACHE STRING "Release number")
 
-set(MAXSCALE_MATURITY "GA" CACHE STRING "Release maturity")
+set(MAXSCALE_MATURITY "Beta" CACHE STRING "Release maturity")
 
 set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
