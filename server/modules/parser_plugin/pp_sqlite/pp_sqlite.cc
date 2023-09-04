@@ -3133,7 +3133,6 @@ public:
         {
             if (scope == TK_SESSION)
             {
-                
                 m_type_mask = mxs::sql::TYPE_SESSION_WRITE;
             }
             else

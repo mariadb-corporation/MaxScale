@@ -16,6 +16,7 @@
 
 ## Upgrading MariaDB MaxScale
 
+- [Upgrading MariaDB MaxScale from 23.02 to 23.08](Upgrading/Upgrading-To-MaxScale-23.08.md)
 - [Upgrading MariaDB MaxScale from 22.08 to 23.02](Upgrading/Upgrading-To-MaxScale-23.02.md)
 - [Upgrading MariaDB MaxScale from 6 to 22.08](Upgrading/Upgrading-To-MaxScale-22.08.md)
 - [Upgrading MariaDB MaxScale from 2.5 to 6](Upgrading/Upgrading-To-MaxScale-6.md)
@@ -126,7 +127,3 @@ document.
 
  - [MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
  - [GSSAPI Authenticator](Authenticators/GSSAPI-Authenticator.md)
-
-## Design Documents
-
- - [Plugin development guide](Design-Documents/Plugin-development-guide.md)

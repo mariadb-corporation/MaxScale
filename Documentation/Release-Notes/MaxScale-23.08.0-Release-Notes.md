@@ -1,4 +1,4 @@
-# MariaDB MaxScale 23.08 Release Notes -- 2023-08-
+# MariaDB MaxScale 23.08 Release Notes -- 2023-09-04
 
 Release 23.08.0 is a Beta release.
 
@@ -9,6 +9,16 @@ For any problems you encounter, please consider submitting a bug
 report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
+
+### [MXS-2744](https://jira.mariadb.org/browse/MXS-2744) Switchover improvements
+
+During switchover, MariaDB-Monitor creates a new connection to the master with
+a long timeout, ignoring the limit of `backend_read_timeout`. This reduces the
+probability of long commands such as `set global read_only=1` timing out. When
+kicking out super and read-only admin users, monitor prevent writes with
+"flush tables with read lock". See
+[monitor documentation](../Monitors/MariaDB-Monitor.md#operation-details)
+for more information.
 
 ### [MXS-4385](https://jira.mariadb.org/browse/MXS-4385) No newlines in logged messages
 
@@ -27,16 +37,6 @@ name is now an alias to the new name. The use of the old name is deprecated.
 The _Readwritesplit_ `max_slave_replication_lag` parameter was renamed to
 `max_replication_lag` and the old name is now an alias for the new name.
 The use of the old name is deprecated.
-
-### [MXS-2744](https://jira.mariadb.org/browse/MXS-2744) Switchover improvements
-
-During switchover, MariaDB-Monitor creates a new connection to the master with
-a long timeout, ignoring the limit of `backend_read_timeout`. This reduces the
-probability of long commands such as `set global read_only=1` timing out. When
-kicking out super and read-only admin users, monitor prevent writes with
-"flush tables with read lock". See
-[monitor documentation](../Monitors/MariaDB-Monitor.md#operation-details)
-for more information.
 
 ## Dropped Features
 
@@ -129,6 +129,11 @@ about-to-commit transaction are replayed when `transaction_replay` is
 enabled. The new default is to not replay transactions that were being committed
 when the connection to the server was lost.
 
+### [MXS-4506](https://jira.mariadb.org/browse/MXS-4506) Add passthrough authentication support for Xpand LDAP
+
+Passthrough authentication mode for MariaDBAuth-module. See
+[authenticator documentation](../Authenticators/MySQL-Authenticator.md#clear_pw_passthrough) for more information.
+
 ### [MXS-4549](https://jira.mariadb.org/browse/MXS-4549) Queries with partially returned results can be replayed
 
 If a query in a transaction is interrupted and the result was partially
@@ -160,12 +165,6 @@ speeds up connection creation.
 It is now possible to limit the nodes the Xpand monitor dynamically detects
 to those residing in a specific region. See [region_name](../Monitors/Xpand-Monitor.md#region_name)
 and [region_oid](../Monitors/Xpand-Monitor.md#region_oid) for more information.
-
-### [MXS-4506](https://jira.mariadb.org/browse/MXS-4506) Add passthrough authentication support for Xpand LDAP
-
-Passthrough authentication mode for MariaDBAuth-module. See
-[authenticator documentation](../Authenticators/MySQL-Authenticator.md#clear_pw_passthrough) for more
-information.
 
 ### MaxGUI
 Numerous additions have been added and improvements made to MaxGUI.
