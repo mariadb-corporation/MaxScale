@@ -58,7 +58,7 @@
         "lodash": "4.17.x",
         "monaco-editor": "0.33.x",
         "monaco-editor-webpack-plugin": "7.1.x",
-        "sql-formatter": "12.2.x",
+        "sql-formatter": "13.0.x",
         "stacktrace-parser": "0.1.x",
         "typy": "3.3.x",
         "uuid": "8.3.x",

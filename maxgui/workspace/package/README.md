@@ -27,7 +27,7 @@ MaxScale Workspace peerDependencies
 
 | Dependency                   | Version |
 | ---------------------------- | :-----: |
-| @mdi/font                    |  7.0.x  |
+| @mdi/font                    |  7.1.x  |
 | @vuex-orm/core               | 0.36.x  |
 | axios                        | 0.27.x  |
 | browser-fs-access            | 0.31.x  |
@@ -42,8 +42,8 @@ MaxScale Workspace peerDependencies
 | localforage                  | 1.10.x  |
 | lodash                       | 4.17.x  |
 | monaco-editor                | 0.33.x  |
-| monaco-editor-webpack-plugin |  7.0.x  |
-| sql-formatter                | 12.2.x  |
+| monaco-editor-webpack-plugin |  7.1.x  |
+| sql-formatter                | 13.0.x  |
 | stacktrace-parser            |  0.1.x  |
 | typy                         |  3.3.x  |
 | uuid                         |  8.3.x  |
