@@ -1,4 +1,4 @@
-# MariaDB MaxScale 23.08 Release Notes -- 2023-08-
+# MariaDB MaxScale 23.08 Release Notes -- 2023-09-04
 
 Release 23.08.0 is a Beta release.
 
