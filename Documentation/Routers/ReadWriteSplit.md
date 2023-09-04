@@ -244,6 +244,12 @@ are copied and modified to favor faster servers, while at the same time
 guaranteeing at lest some traffic to the slowest servers. The server selection
 is probabilistic based on roulette wheel selection.
 
+Starting with MaxScale versions 2.5.29, 6.4.11, 22.08.9, 23.02.5 and 23.08.1,
+lowercase versions of the values are also accepted. For example,
+`slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
+`slave_selection_criteria=least_current_operations` are both accepted as valid
+values.
+
 #### Server Weights and `slave_selection_criteria`
 
 NOTE: Server Weights have been deprecated in MaxScale 2.3 and will be removed
