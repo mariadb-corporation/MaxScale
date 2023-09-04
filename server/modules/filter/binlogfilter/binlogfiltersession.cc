@@ -344,7 +344,7 @@ bool BinlogFilterSession::checkEvent(GWBUF& buffer, const REP_HEADER& hdr)
         case EXECUTE_LOAD_QUERY_EVENT:
             // EXECUTE_LOAD_QUERY_EVENT has an extra 13 bytes of data (file ID, file offset etc.)
             extra_bytes = 4 + 4 + 4 + 1;
-            /** Fallthrough */
+            [[fallthrough]];
 
         case QUERY_EVENT:
             // Handle the SQL statement: DDL, DML, BEGIN, COMMIT

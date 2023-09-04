@@ -774,6 +774,7 @@ public:
         case ComResponse::LOCAL_INFILE_PACKET:
             mxb_assert(!true);
             throw_unexpected_packet();
+            break;
 
         default:
             {

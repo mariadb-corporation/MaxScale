@@ -126,6 +126,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
         mxb_assert(!true);
         MXB_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
                   (int)config.thread_model);
+        [[fallthrough]];
 
     case CACHE_THREAD_MODEL_MT:
         sStorage = InMemoryStorageMT::create(zName, config);

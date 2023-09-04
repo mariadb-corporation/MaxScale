@@ -17,7 +17,7 @@ include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100)
 include_directories(${MARIADB_CONNECTOR_INCLUDE_DIR})
 
 # GCC thinks there is an array-bounds error in sqlite code.
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=array-bounds -Wno-misleading-indentation -Wno-uninitialized")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=array-bounds -Wno-misleading-indentation -Wno-uninitialized -Wno-implicit-fallthrough -Wno-cast-function-type")
 
 add_library(pp_sqlite SHARED pp_sqlite.cc pp_sqlite3.c builtin_functions.cc)
 add_dependencies(pp_sqlite maxscale_sqlite)

@@ -380,7 +380,7 @@ bool mxs_mysql_is_ps_command(uint8_t cmd)
 
 uint8_t mxs_mysql_get_command(const GWBUF& buffer)
 {
-    return buffer.length() > MYSQL_HEADER_LEN ? buffer[MYSQL_HEADER_LEN] : MXS_COM_UNDEFINED;
+    return buffer.length() > MYSQL_HEADER_LEN ? buffer[MYSQL_HEADER_LEN] : (uint8_t)MXS_COM_UNDEFINED;
 }
 
 uint32_t mxs_mysql_extract_ps_id(const GWBUF& buffer)

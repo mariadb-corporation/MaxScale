@@ -777,6 +777,7 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
     case ComResponse::LOCAL_INFILE_PACKET:
         mxb_assert(!true);
         throw_unexpected_packet();
+        break;
 
     default:
         {

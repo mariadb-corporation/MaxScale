@@ -3009,7 +3009,7 @@ int sqlite3ExprCodeTarget(Parse *pParse, Expr *pExpr, int target){
         ** loading.
         */
         if( (pDef->funcFlags & (SQLITE_FUNC_LENGTH|SQLITE_FUNC_TYPEOF))!=0 ){
-          u8 exprOp;
+          u16 exprOp;
           assert( nFarg==1 );
           assert( pFarg->a[0].pExpr!=0 );
           exprOp = pFarg->a[0].pExpr->op;

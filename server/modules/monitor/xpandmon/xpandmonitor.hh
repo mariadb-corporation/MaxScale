@@ -64,7 +64,7 @@ public:
             return m_region_name;
         }
 
-        const int64_t region_oid() const
+        int64_t region_oid() const
         {
             return m_region_oid;
         }

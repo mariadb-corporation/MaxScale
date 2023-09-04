@@ -107,7 +107,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             ss << "No role names dbAdminAnyDatabase@" << role.db;
             throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
         }
-        // [[fallthrough]]
+        [[fallthrough]];
     case role::Id::DB_ADMIN:
         add_privileges::dbAdmin(is_on_admin, privileges);
         break;
@@ -129,7 +129,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             ss << "No role names readWriteAnyDatabase@" << role.db;
             throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
         }
-        // [[fallthrough]]
+        [[fallthrough]];
     case role::Id::READ_WRITE:
         add_privileges::readWrite(privileges);
         break;
@@ -145,7 +145,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             ss << "No role names readAnyDatabase@" << role.db;
             throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
         }
-        // [[fallthrough]]
+        [[fallthrough]];
     case role::Id::READ:
         add_privileges::read(privileges);
         break;
@@ -178,7 +178,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             ss << "No role names userAdminAnyDatabase@" << role.db;
             throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
         }
-        // [[fallthrough]]
+        [[fallthrough]];
     case role::Id::USER_ADMIN:
         add_privileges::userAdmin(user, command, preposition, privileges, statements);
         break;
@@ -816,7 +816,7 @@ public:
 
                             throw SoftError(ss.str(), error::UNAUTHORIZED);
                         }
-                        // [[fallthrough]]
+                        [[fallthrough]];
                     default:
                         MXB_ERROR("Grant statement '%s' failed: %s",
                                   m_statements[nStatements].c_str(), err.message().c_str());
@@ -1018,7 +1018,7 @@ public:
 
                             throw SoftError(ss.str(), error::UNAUTHORIZED);
                         }
-                        // [[fallthrough]]
+                        [[fallthrough]];
                     default:
                         MXB_ERROR("Revoke statement '%s' failed: %s",
                                   m_statements[nStatements].c_str(), err.message().c_str());
@@ -1640,7 +1640,7 @@ public:
                     break;
                 }
             }
-            // [[fallthrough]]
+            [[fallthrough]];
         default:
             throw SoftError("User and role names must be either strings or objects", error::BAD_VALUE);
         }

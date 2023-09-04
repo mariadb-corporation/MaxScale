@@ -61,21 +61,27 @@ int TestStorage::run(int argc, char** argv)
         {
         default:
             mxb_assert(!true);
+            [[fallthrough]];
 
         case 7:
             max_size = atoi(argv[6]);
+            [[fallthrough]];
 
         case 6:
             min_size = atoi(argv[5]);
+            [[fallthrough]];
 
         case 5:
             items = atoi(argv[4]);
+            [[fallthrough]];
 
         case 4:
             seconds = atoi(argv[3]);
+            [[fallthrough]];
 
         case 3:
             threads = atoi(argv[2]);
+            [[fallthrough]];
 
         case 2:
             zModule = argv[1];

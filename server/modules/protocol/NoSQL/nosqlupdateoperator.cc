@@ -351,7 +351,7 @@ public:
                     break;
                 }
             }
-            //[[fallthrough]];
+            [[fallthrough]];
         default:
             {
                 auto value = element_to_value(field, ValueFor::JSON_NESTED);
