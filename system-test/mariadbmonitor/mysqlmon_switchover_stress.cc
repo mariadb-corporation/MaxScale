@@ -20,7 +20,7 @@
 #include <vector>
 #include <random>
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
+#include "fail_switch_rejoin_common.cc"
 
 using namespace std;
 
@@ -28,15 +28,15 @@ using namespace std;
 // NOTE: Ensure this is identical with the value in the configuration file.
 const time_t MONITOR_INTERVAL = 1;
 
-// After how many seconds should the failover/rejoin operation surely have
+// After how many seconds should the switchover operation surely have
 // been performed. Not very critical.
-const time_t FAILOVER_DURATION = 5;
+const time_t SWITCHOVER_DURATION = 5;
 
-// The test now runs only two failovers. Change for a longer time limit later.
-// TODO: add semisync to remove this limitation.
+// How long should we keep in running.
+const time_t TEST_DURATION = 90;
 
-// Number of backends
-const int N = 4;
+const char* CLIENT_USER = "mysqlmon_switchover_stress";
+const char* CLIENT_PASSWORD = "mysqlmon_switchover_stress";
 
 #define CMESSAGE(msg) \
     do { \
@@ -437,11 +437,11 @@ bool check_server_status(TestConnections& test, int id)
     if (statuses.count("Master"))
     {
         is_master = true;
-        cout << "OK";
+        cout << "OK" << endl;
     }
     else if (statuses.count("Slave"))
     {
-        cout << "OK";
+        cout << "OK" << endl;
     }
     else if (statuses.count("Running"))
     {
@@ -450,36 +450,20 @@ bool check_server_status(TestConnections& test, int id)
         char result[1024];
         if (find_field(pConn, "SHOW SLAVE STATUS", "Last_IO_Error", result) == 0)
         {
-            const char needle[] =
-                ", which is not in the master's binlog. "
-                "Since the master's binlog contains GTIDs with higher sequence numbers, "
-                "it probably means that the slave has diverged due to executing extra "
-                "erroneous transactions";
-
-            if (strstr(result, needle))
-            {
-                // A rejoin was attempted, but it failed because the node (old master)
-                // had events that were not present in the new master. That is, a rejoin
-                // is not possible in principle without corrective action.
-                cout << "OK (could not be joined due to GTID issue)";
-            }
-            else
-            {
-                cout << result;
-                test.expect(false, "Merely 'Running' node did not error in expected way.");
-            }
+            cout << result << endl;
+            test.expect(false, "Server is neither slave, nor master.");
         }
         else
         {
+            cout << "?" << endl;
             test.expect(false, "Could not execute \"SHOW SLAVE STATUS\"");
         }
     }
     else
     {
+        cout << "?" << endl;
         test.expect(false, "Unexpected server state for %s.", server.c_str());
     }
-
-    cout << endl;
 
     return is_master;
 }
@@ -493,30 +477,85 @@ void check_server_statuses(TestConnections& test)
     masters += check_server_status(test, 3);
     masters += check_server_status(test, 4);
 
-    if (masters == 0)
-    {
-        test.global_result = 0;
-        test.tprintf("No master, checking that autofail has been turned off.");
-        test.log_includes("disabling automatic failover");
-    }
-    else if (masters != 1)
-    {
-        test.expect(!true, "Unexpected number of masters: %d", masters);
-    }
+    test.expect(masters == 1, "Unpexpected number of masters: %d", masters);
 }
 
-bool is_valid_server_id(TestConnections& test, int id)
+int get_next_master_id(TestConnections& test, int current_id)
 {
-    std::set<int> ids;
-    test.repl->connect();
+    int next_id = current_id;
 
-    for (int i = 0; i < N; i++)
+    do
     {
-        ids.insert(test.repl->get_server_id(i));
+        next_id = (next_id + 1) % 5;
+        if (next_id == 0)
+        {
+            next_id = 1;
+        }
+        ss_dassert(next_id >= 1);
+        ss_dassert(next_id <= 4);
+        string server("server");
+        server += std::to_string(next_id);
+        StringSet states = test.get_server_status(server.c_str());
+        if (states.count("Slave") != 0)
+        {
+            break;
+        }
     }
+    while (next_id != current_id);
 
-    test.repl->disconnect();
-    return ids.count(id);
+    return next_id != current_id ? next_id : -1;
+}
+
+void create_client_user(TestConnections& test)
+{
+    string stmt;
+
+    // Drop user
+    stmt = "DROP USER IF EXISTS ";
+    stmt += "'";
+    stmt += CLIENT_USER;
+    stmt += "'@'%%'";
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
+
+    // Create user
+    stmt = "CREATE USER ";
+    stmt += "'";
+    stmt += CLIENT_USER;
+    stmt += "'@'%%'";
+    stmt += " IDENTIFIED BY ";
+    stmt += "'";
+    stmt += CLIENT_PASSWORD;
+    stmt += "'";
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
+
+    // Grant access
+    stmt = "GRANT SELECT, INSERT, UPDATE ON *.* TO ";
+    stmt += "'";
+    stmt += CLIENT_USER;
+    stmt += "'@'%%'";
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
+
+    test.try_query(test.maxscale->conn_rwsplit, "FLUSH PRIVILEGES");
+}
+
+void switchover(TestConnections& test, int next_master_id, int current_master_id)
+{
+    cout << "\nTrying to do manual switchover from server" << current_master_id
+         << " to server" << next_master_id << endl;
+
+    string command("call command mysqlmon switchover MySQL-Monitor ");
+    command += "server";
+    command += std::to_string(next_master_id);
+    command += " ";
+    command += "server";
+    command += std::to_string(current_master_id);
+
+    cout << "\nCommand: " << command << endl;
+
+    test.print_maxctrl(command);
+
+    sleep(1);
+    list_servers(test);
 }
 
 void run(TestConnections& test)
@@ -524,61 +563,69 @@ void run(TestConnections& test)
     cout << "\nConnecting to MaxScale." << endl;
     test.maxscale->connect_maxscale();
 
+    create_client_user(test);
+
     Client::init(test, Client::DEFAULT_N_CLIENTS, Client::DEFAULT_N_ROWS);
 
     if (test.ok())
     {
         const char* zHost = test.maxscale->ip4();
         int port = test.maxscale->rwsplit_port;
-        const char* zUser = test.maxscale->user_name().c_str();
-        const char* zPassword = test.maxscale->password().c_str();
+        const char* zUser = CLIENT_USER;
+        const char* zPassword = CLIENT_PASSWORD;
 
         cout << "Connecting to " << zHost << ":" << port << " as " << zUser << ":" << zPassword << endl;
         cout << "Starting clients." << endl;
         Client::start(test.verbose(), zHost, port, zUser, zPassword);
 
+        time_t start = time(NULL);
+
         list_servers(test);
 
-        for (int i = 0; i < 2; i++)
+        int current_master_id = 1;
+
+        while ((test.global_result == 0) && (time(NULL) - start < TEST_DURATION))
         {
-            test.reset_timeout();
-            test.maxscale->wait_for_monitor();
+            sleep(SWITCHOVER_DURATION);
 
-            int master_id = get_master_server_id(test);
+            int next_master_id = get_next_master_id(test, current_master_id);
 
-            if (is_valid_server_id(test, master_id))
+            if (next_master_id != -1)
             {
-                test.reset_timeout();
-                cout << "\nStopping node: " << master_id << endl;
-                test.repl->stop_node(master_id - 1);
+                switchover(test, next_master_id, current_master_id);
+                current_master_id = next_master_id;
 
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
+                sleep(SWITCHOVER_DURATION);
 
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
+                int master_id = get_master_server_id(test);
 
-                test.reset_timeout();
-                test.maxscale->wait_for_monitor();
-                cout << "\nStarting node: " << master_id << endl;
-                test.repl->start_node(master_id - 1);
-
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
-
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
+                if (master_id < 0)
+                {
+                    test.expect(false, "No master available after switchover.");
+                }
+                else if (master_id != current_master_id)
+                {
+                    test.expect(false,
+                                "Master should have been server%d, but it was server%d.",
+                                current_master_id,
+                                master_id);
+                }
             }
             else
             {
-                test.expect(false, "Unexpected master id: %d", master_id);
+                test.expect(false,
+                            "Could not find any slave to switch to.");
             }
         }
 
-        test.maxscale->wait_for_monitor();
-
         cout << "\nStopping clients.\n" << flush;
         Client::stop();
+
+        // Ensure master is at server1. Shortens startup time for next test.
+        if (current_master_id != 1)
+        {
+            switchover(test, 1, current_master_id);
+        }
 
         test.repl->close_connections();
         test.repl->connect();
@@ -593,6 +640,10 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
     run(test);
+
+    test.repl->connect();
+    execute_query(test.repl->nodes[0], "DROP TABLE test.t");
+    test.repl->disconnect();
 
     return test.global_result;
 }

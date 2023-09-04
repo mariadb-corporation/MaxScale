@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include "fail_switch_rejoin_common.cpp"
+#include "fail_switch_rejoin_common.cc"
 
 using std::string;
 

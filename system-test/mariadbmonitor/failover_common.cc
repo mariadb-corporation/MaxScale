@@ -1,4 +1,4 @@
-#include "fail_switch_rejoin_common.cpp"
+#include "fail_switch_rejoin_common.cc"
 #include <sstream>
 #include <iostream>
 

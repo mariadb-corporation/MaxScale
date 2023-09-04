@@ -12,23 +12,28 @@
  * Public License.
  */
 
-#include <maxtest/mariadb_nodes.hh>
-#include "failover_common.cpp"
+#include <maxtest/testconnections.hh>
+#include "failover_common.cc"
 
 int main(int argc, char** argv)
 {
+    const char FAILOVER_CMD[] = "maxctrl call command mysqlmon failover MySQL-Monitor";
+    // interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     test.repl->connect();
 
-    test.maxscale->wait_for_monitor(2);
     basic_test(test);
     print_gtids(test);
 
-    // Part 1
-    int node0_id = prepare_test_1(test);
-    test.maxscale->wait_for_monitor(2);
-    check_test_1(test, node0_id);
+    int node0_id = -1;
 
+    // Part 1
+    node0_id = prepare_test_1(test);
+
+    test.maxscale->ssh_output(FAILOVER_CMD);
+    test.maxscale->wait_for_monitor();
+
+    check_test_1(test, node0_id);
     if (test.global_result != 0)
     {
         return test.global_result;
@@ -36,9 +41,11 @@ int main(int argc, char** argv)
 
     // Part 2
     prepare_test_2(test);
-    test.maxscale->wait_for_monitor(2);
-    check_test_2(test);
 
+    test.maxscale->ssh_output(FAILOVER_CMD);
+    test.maxscale->wait_for_monitor();
+
+    check_test_2(test);
     if (test.global_result != 0)
     {
         return test.global_result;
@@ -46,8 +53,10 @@ int main(int argc, char** argv)
 
     // Part 3
     prepare_test_3(test);
-    test.maxscale->wait_for_monitor(2);
-    check_test_3(test);
 
+    test.maxscale->ssh_output(FAILOVER_CMD);
+    test.maxscale->wait_for_monitor();
+
+    check_test_3(test);
     return test.global_result;
 }

@@ -15,7 +15,7 @@
 // MXS-2652: https://jira.mariadb.org/browse/MXS-2652
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
+#include "fail_switch_rejoin_common.cc"
 using std::string;
 
 namespace

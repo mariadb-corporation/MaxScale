@@ -13,7 +13,7 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
+#include "fail_switch_rejoin_common.cc"
 #include <iostream>
 
 using std::string;
