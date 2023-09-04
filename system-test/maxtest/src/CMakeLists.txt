@@ -19,7 +19,7 @@ add_library(maxtest SHARED
         sql_t1.cc
         tcp_connection.cc
         testconnections.cc
-        xpand_nodes.cpp
+        xpand_nodes.cc
         ${CMAKE_CURRENT_BINARY_DIR}/test_info.cc)
 
 target_link_libraries(maxtest
