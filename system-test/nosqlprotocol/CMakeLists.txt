@@ -42,7 +42,7 @@ include_directories(${MONGO_CXX_INCLUDE_DIR})
 
 add_test_executable_ex(
   NAME nosqlprotocol_bootstrap_shared
-  SOURCE nosqlprotocol_bootstrap_shared.cpp
+  SOURCE nosqlprotocol_bootstrap_shared.cc
   CONFIG nosqlprotocol_bootstrap_shared.cnf nosqlprotocol_bootstrap_shared.cnf
   VMS repl_backend second_maxscale
   LABELS nosqlprotocol)

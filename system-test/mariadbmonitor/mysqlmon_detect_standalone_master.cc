@@ -1,5 +1,5 @@
 /**
- * @file mysqlmon_detect_standalone_master.cpp MySQL Monitor Standalone Master Test
+ * @file mysqlmon_detect_standalone_master.cc MySQL Monitor Standalone Master Test
  * - block all nodes, but one
  * - wait for monitor (monitor_interval), monitor should select remaining node as master
  * - check that queries work
