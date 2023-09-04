@@ -1,46 +1,18 @@
 <template>
-    <v-tooltip
-        v-if="isActivated"
-        :disabled="isGettingEndTime"
-        top
-        transition="slide-y-transition"
-        min-width="250"
-        max-width="450"
-    >
-        <template v-slot:activator="{ on }">
-            <span v-on="on">
-                {{
-                    $mxs_tc('seconds', duration === 1 ? 1 : 2, {
-                        value: isGettingEndTime ? Math.round(duration) : duration,
-                    })
-                }}
-            </span>
-        </template>
-        <table class="duration-table">
-            <tr class="font-weight-bold">
-                <td>{{ $mxs_t('totalDuration') }}:</td>
-                <td>
-                    {{ $mxs_tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}
-                </td>
-            </tr>
-            <tr>
-                <td>{{ $mxs_t('networkDelay') }}:</td>
-                <td>
-                    {{
-                        $mxs_tc('seconds', networkDelay === 1 ? 1 : 2, {
-                            value: networkDelay,
-                        })
-                    }}
-                </td>
-            </tr>
-            <tr>
-                <td>{{ $mxs_t('exeTime') }}:</td>
-                <td>
-                    {{ $mxs_tc('seconds', executionTime === 1 ? 1 : 2, { value: executionTime }) }}
-                </td>
-            </tr>
-        </table>
-    </v-tooltip>
+    <div class="d-inline-flex flex-wrap">
+        <div class="ml-4" data-test="exe-time">
+            <span class="font-weight-bold">{{ $mxs_t('exeTime') }}:</span>
+            {{ isGettingEndTime ? 'N/A' : `${executionTime} sec` }}
+        </div>
+        <div class="ml-4" data-test="latency-time">
+            <span class="font-weight-bold">{{ $mxs_t('latency') }}:</span>
+            {{ isGettingEndTime ? 'N/A' : `${latency} sec` }}
+        </div>
+        <div class="ml-4" data-test="total-time">
+            <span class="font-weight-bold"> {{ $mxs_t('total') }}:</span>
+            {{ isGettingEndTime ? Math.round(duration) : duration }} sec
+        </div>
+    </div>
 </template>
 
 <script>
@@ -76,29 +48,25 @@ export default {
     data() {
         return {
             duration: 0,
-            isActivated: false,
         }
     },
     computed: {
         isGettingEndTime() {
             return this.totalDuration === 0
         },
-        networkDelay() {
+        latency() {
             return Math.abs(this.duration - this.executionTime).toFixed(4)
         },
     },
     activated() {
-        this.isActivated = true
         this.duration = this.totalDuration
         this.watch_executionTime()
     },
     deactivated() {
         this.$typy(this.unwatch_executionTime).safeFunction()
-        this.isActivated = false
     },
     methods: {
         watch_executionTime() {
-            // store watcher to unwatch_executionTime and use it for removing the watcher
             this.unwatch_executionTime = this.$watch(
                 'executionTime',
                 v => {
@@ -118,11 +86,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.duration-table {
-    td:first-child {
-        padding-right: 8px;
-    }
-}
-</style>
