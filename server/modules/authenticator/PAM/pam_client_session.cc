@@ -335,6 +335,10 @@ mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messa
                 }
                 break;
             }
+            else if (type == mxb::pam::SBOX_WARN)
+            {
+                MXB_WARNING("%s", msg.c_str());
+            }
             else if (type == 0)
             {
                 // Incomplete message, wait for more data from external process.
@@ -465,12 +469,13 @@ std::tuple<int, std::string> PamClientAuthenticator::next_message(string& msg_bu
     {
     case mxb::pam::SBOX_CONV:
     case mxb::pam::SBOX_AUTHENTICATED_AS:
+    case mxb::pam::SBOX_WARN:
         {
             auto [bytes, message] = mxb::pam::extract_string(&msg_buf[1], msg_buf.data() + msg_buf.size());
             if (bytes > 0)
             {
-                // The CONV-message should have at least style byte. Username is also expected to not be
-                // empty.
+                // The CONV-message should have at least style byte. Username and warning messages are also
+                // expected to have contents.
                 if (!message.empty())
                 {
                     rval = msg_type;

@@ -254,24 +254,6 @@ authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pa
         {
         case PAM_SUCCESS:
             authenticated = true;
-            MXB_DEBUG("pam_authenticate returned success.");
-            if (sett.mapping_on)
-            {
-                // Fetch the final username. It may not be identical to the one doing the authentication.
-                const void* user_after_auth = nullptr;
-                int rc = pam_get_item(pam_handle, PAM_USER, &user_after_auth);
-                if (rc == PAM_SUCCESS)
-                {
-                    if (user_after_auth)
-                    {
-                        result.mapped_user = static_cast<const char*>(user_after_auth);
-                    }
-                }
-                else
-                {
-                    MXB_WARNING(PAM_ITEM_ERR_MSG, userc, pam_strerror(pam_handle, rc));
-                }
-            }
             break;
 
         case PAM_USER_UNKNOWN:
@@ -301,8 +283,23 @@ authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pa
     {
         if (sett.mapping_on)
         {
-            // Don't check account, since username may have changed.
-            result.type = Result::SUCCESS;
+            // Don't check account, since username may have changed. Instead, fetch the final username.
+            // It may not be identical to the one doing the authentication. TODO: in next major version,
+            // do as server does.
+            const void* user_after_auth = nullptr;
+            int rc = pam_get_item(pam_handle, PAM_USER, &user_after_auth);
+            if (rc == PAM_SUCCESS)
+            {
+                result.type = Result::SUCCESS;
+                if (user_after_auth)
+                {
+                    result.mapped_user = static_cast<const char*>(user_after_auth);
+                }
+            }
+            else
+            {
+                result.error = mxb::string_printf(PAM_ITEM_ERR_MSG, userc, pam_strerror(pam_handle, rc));
+            }
         }
         else
         {
