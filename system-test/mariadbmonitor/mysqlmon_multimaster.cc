@@ -1,5 +1,5 @@
 /**
- * @file mysqlmon_multimaster.cpp MySQL Monitor Multi-master Test
+ * @file mysqlmon_multimaster.cc MySQL Monitor Multi-master Test
  * - Configure all servers into a multi-master ring with one slave
  * - check status using 'show servers' and 'show monitor "MySQL Monitor"'
  * - Set nodes 0 and 1 into read-only mode
