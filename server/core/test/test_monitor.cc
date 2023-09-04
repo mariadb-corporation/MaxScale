@@ -140,8 +140,8 @@ std::vector<std::tuple<uint64_t, uint64_t, mxs_monitor_event_t>> test_monitor_te
             uint64_t before = get_state(i);
             uint64_t after = get_state(j);
 
-            const auto check = [](uint64_t before, uint64_t after, uint64_t mask){
-                    return (before & mask) == mask || (after & mask) == mask;
+            const auto check = [](uint64_t before_ev, uint64_t after_ev, uint64_t mask){
+                    return (before_ev & mask) == mask || (after_ev & mask) == mask;
                 };
 
             // Check for nonsensical states

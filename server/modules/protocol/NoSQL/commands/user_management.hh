@@ -1708,10 +1708,10 @@ private:
 
             case bsoncxx::type::k_document:
                 {
-                    bsoncxx::document::view doc = element.get_document();
+                    bsoncxx::document::view d = element.get_document();
 
-                    string db = get_string(doc, key::DB);
-                    string user = get_string(doc, key::USER);
+                    string db = get_string(d, key::DB);
+                    string user = get_string(d, key::USER);
 
                     authorize(db, user);
 

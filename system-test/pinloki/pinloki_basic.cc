@@ -66,9 +66,9 @@ public:
                 for (std::string field : {"Master_Log_File", "Read_Master_Log_Pos", "Exec_Master_Log_Pos"})
                 {
                     auto expected = direct->get_string(field);
-                    auto result = via_maxscale->get_string(field);
-                    test.expect(expected == result, "Expected %s to be %s but it was %s",
-                                field.c_str(), expected.c_str(), result.c_str());
+                    auto value = via_maxscale->get_string(field);
+                    test.expect(expected == value, "Expected %s to be %s but it was %s",
+                                field.c_str(), expected.c_str(), value.c_str());
                 }
             }
         }

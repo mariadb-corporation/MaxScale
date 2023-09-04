@@ -214,13 +214,13 @@ int TesterLRUStorage::test_max_size(size_t n_threads,
     {
         rv = execute_tasks(n_threads, n_seconds, cache_items, *pStorage);
 
-        uint64_t size;
-        cache_result_t result = pStorage->get_size(&size);
+        uint64_t sz;
+        cache_result_t result = pStorage->get_size(&sz);
         mxb_assert(result == CACHE_RESULT_OK);
 
-        out() << "Max size: " << max_size << ", size: " << size << "." << endl;
+        out() << "Max size: " << max_size << ", size: " << sz << "." << endl;
 
-        if (size > max_size)
+        if (sz > max_size)
         {
             rv = EXIT_FAILURE;
         }
@@ -268,13 +268,13 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads,
             rv = EXIT_FAILURE;
         }
 
-        uint64_t size;
-        MXB_AT_DEBUG(result = ) pStorage->get_size(&size);
+        uint64_t sz;
+        MXB_AT_DEBUG(result = ) pStorage->get_size(&sz);
         mxb_assert(result == CACHE_RESULT_OK);
 
-        out() << "Max size: " << max_size << ", size: " << size << "." << endl;
+        out() << "Max size: " << max_size << ", size: " << sz << "." << endl;
 
-        if (size > max_size)
+        if (sz > max_size)
         {
             rv = EXIT_FAILURE;
         }

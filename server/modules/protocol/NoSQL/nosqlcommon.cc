@@ -180,9 +180,9 @@ string get_logical_condition(const bsoncxx::document::element& element)
 
     const auto& key = element.key();
 
-    auto get_array = [](const char* zOp, const bsoncxx::document::element& element)
+    auto get_array = [](const char* zOp, const bsoncxx::document::element& el)
     {
-        if (element.type() != bsoncxx::type::k_array)
+        if (el.type() != bsoncxx::type::k_array)
         {
             ostringstream ss;
             ss << zOp << " must be an array";
@@ -190,7 +190,7 @@ string get_logical_condition(const bsoncxx::document::element& element)
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        auto array = static_cast<bsoncxx::array::view>(element.get_array());
+        auto array = static_cast<bsoncxx::array::view>(el.get_array());
 
         auto begin = array.begin();
         auto end = array.end();
@@ -2007,17 +2007,17 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
             {
                 bsoncxx::document::element options;
 
-                auto jt = it;
-                ++jt;
-                while (jt != end)
+                auto kt = it;
+                ++kt;
+                while (kt != end)
                 {
-                    if (jt->key().compare("$options") == 0)
+                    if (kt->key().compare("$options") == 0)
                     {
                         ignore_options = true;
-                        options = *jt;
+                        options = *kt;
                         break;
                     }
-                    ++jt;
+                    ++kt;
                 }
 
                 condition = regex_to_condition(*this, element, options);
@@ -2029,17 +2029,17 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
             {
                 bsoncxx::document::element regex;
 
-                auto jt = it;
-                ++jt;
-                while (jt != end)
+                auto kt = it;
+                ++kt;
+                while (kt != end)
                 {
-                    if (jt->key().compare("$regex") == 0)
+                    if (kt->key().compare("$regex") == 0)
                     {
                         ignore_regex = true;
-                        regex = *jt;
+                        regex = *kt;
                         break;
                     }
-                    ++jt;
+                    ++kt;
                 }
 
                 condition = regex_to_condition(*this, regex, element);
@@ -2692,7 +2692,7 @@ std::vector<Path::Incarnation> Path::get_incarnations(const std::string& path)
 
     for (const Part* pLeaf : leafs)
     {
-        string path = pLeaf->path();
+        string leaf_path = pLeaf->path();
         Part* pParent = pLeaf->parent();
 
         string parent_path;
@@ -2725,7 +2725,7 @@ std::vector<Path::Incarnation> Path::get_incarnations(const std::string& path)
             }
         }
 
-        rv.push_back(Incarnation(std::move(path), std::move(parent_path), std::move(array_path)));
+        rv.push_back(Incarnation(std::move(leaf_path), std::move(parent_path), std::move(array_path)));
     }
 
     return rv;

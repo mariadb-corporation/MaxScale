@@ -405,12 +405,12 @@ private:
                 // Might be something like "SET A=B, C=D, SQL_MODE=ORACLE", so we first consume
                 // the identifier and if it is followed by a "=" we consume the value.
                 {
-                    char c;
+                    char ch;
                     if (consume_id())
                     {
                         bypass_whitespace();
 
-                        if (peek_current_char(&c) && (c == '='))
+                        if (peek_current_char(&ch) && (ch == '='))
                         {
                             ++m_pI;
                             const char* ignored1;

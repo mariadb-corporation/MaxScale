@@ -661,9 +661,9 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 
     HostPortPairs nodes;
     char* pError = nullptr;
-    int rv = sqlite3_exec(m_pDb, SQL_DN_SELECT, select_cb, &nodes, &pError);
+    int sqlite_rv = sqlite3_exec(m_pDb, SQL_DN_SELECT, select_cb, &nodes, &pError);
 
-    if (rv == SQLITE_OK)
+    if (sqlite_rv == SQLITE_OK)
     {
         const std::string& username = conn_settings().username;
         const std::string& password = conn_settings().password;
@@ -1259,8 +1259,7 @@ void XpandMonitor::update_server_statuses()
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
                           [&ips](const std::pair<int, XpandNode>& element) -> bool {
                               const XpandNode& info = element.second;
-                              auto it = find(ips.begin(), ips.end(), info.ip());
-                              return it != ips.end();
+                              return find(ips.begin(), ips.end(), info.ip()) != ips.end();
                           });
 
         if (it != m_nodes_by_id.end())

@@ -187,8 +187,8 @@ std::unique_ptr<mxb::ExternalCmd> LDISession::create_import_cmd(SERVER* node, Lo
 
     MXB_INFO("CMD: %s", cmd.c_str());
 
-    return mxb::ExternalCmd::create(cmd, 120, [](auto cmd, auto line){
-        MXB_INFO("%s: %s", cmd.c_str(), line.c_str());
+    return mxb::ExternalCmd::create(cmd, 120, [](auto cmd_name, auto line){
+        MXB_INFO("%s: %s", cmd_name.c_str(), line.c_str());
     });
 }
 
@@ -772,7 +772,7 @@ void LDLIConversion::enqueue(GWBUF&& data)
     m_session->client_dcb->set_reads_enabled(false);
 
     mxs::thread_pool().execute([this, ref = shared_from_this()](){
-        std::unique_lock guard(m_lock);
+        std::unique_lock thr_guard(m_lock);
         drain_queue();
 
         // If the session is still alive, enable reads on it now that the queue has been emptied. This must be

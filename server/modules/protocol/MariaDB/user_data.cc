@@ -772,10 +772,10 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
 }
 
 MariaDBUserManager::UserLoadRes
-MariaDBUserManager::load_users_from_file(const string& source, UserDatabase& output)
+MariaDBUserManager::load_users_from_file(const string& src, UserDatabase& output)
 {
     using mxb::Json;
-    auto filepathc = source.c_str();
+    auto filepathc = src.c_str();
 
     auto read_str_if_exists = [filepathc](const Json& source, const char* key,
                                           const string& user, const string& host, string* out) {
@@ -827,7 +827,7 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase& out
 
     UserLoadRes rval;
     Json all;
-    if (all.load(source))
+    if (all.load(src))
     {
         rval.success = true;
         int n_users = -1;
@@ -1263,9 +1263,9 @@ bool UserDatabase::user_can_access_role(const std::string& user, const std::stri
 
 bool UserDatabase::role_can_access_db(const string& role, const string& db, bool case_sensitive_db) const
 {
-    auto role_has_global_priv = [this](const string& role) {
+    auto role_has_global_priv = [this](const string& rol) {
         bool rval = false;
-        auto iter = m_users.find(role);
+        auto iter = m_users.find(rol);
         if (iter != m_users.end())
         {
             auto& entrylist = iter->second;
@@ -1282,9 +1282,9 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db, bool
         return rval;
     };
 
-    auto find_linked_roles = [this](const string& role) {
+    auto find_linked_roles = [this](const string& rol) {
         std::vector<string> rval;
-        string key = role + "@";
+        string key = rol + "@";
         auto iter = m_roles_mapping.find(key);
         if (iter != m_roles_mapping.end())
         {
@@ -1554,7 +1554,7 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
         const char esc = '\\';      // '\' is an escape char to allow e.g. my_host.com to match properly.
         bool escaped = false;
 
-        auto classify_char = [is_wc, &maybe_address, &maybe_hostname](char c) {
+        auto classify_char = [is_wc, &maybe_address, &maybe_hostname](char ch) {
             auto is_ipchar = [](char c) {
                 return std::isxdigit(c) || c == ':' || c == '.';
             };
@@ -1563,17 +1563,17 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
                 return std::isalnum(c) || c == '_' || c == '.' || c == '-';
             };
 
-            if (is_wc(c))
+            if (is_wc(ch))
             {
                 // Can be address or hostname.
             }
             else
             {
-                if (!is_ipchar(c))
+                if (!is_ipchar(ch))
                 {
                     maybe_address = false;
                 }
-                if (!is_hostnamechar(c))
+                if (!is_hostnamechar(ch))
                 {
                     maybe_hostname = false;
                 }

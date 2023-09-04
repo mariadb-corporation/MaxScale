@@ -724,18 +724,18 @@ void UserManager::ensure_initial_user()
         MXB_INFO("Primary not yet available, checking shortly again.");
 
         dcall(1s, [this]() {
-                const SERVER* pMaster = get_master();
+                const SERVER* pM = get_master();
 
-                if (pMaster)
+                if (pM)
                 {
-                    check_initial_user(pMaster);
+                    check_initial_user(pM);
                 }
                 else
                 {
                     MXB_INFO("Primary still not available, checking shortly again.");
                 }
 
-                return !pMaster;
+                return !pM;
             });
     }
 }
@@ -1688,15 +1688,15 @@ bool UserManagerMariaDB::check_connection() const
 
         if (it != end)
         {
-            SERVER* pServer = *it;
+            SERVER* pSrv = *it;
 
-            MXB_SINFO(m_name << " uses " << pServer->name() << " for storing user data.");
+            MXB_SINFO(m_name << " uses " << pSrv->name() << " for storing user data.");
 
-            if (m_db.open(pServer->address(), pServer->port()))
+            if (m_db.open(pSrv->address(), pSrv->port()))
             {
                 if (prepare_server())
                 {
-                    m_pServer = pServer;
+                    m_pServer = pSrv;
                 }
                 else
                 {
@@ -1705,8 +1705,8 @@ bool UserManagerMariaDB::check_connection() const
             }
             else
             {
-                MXB_SERROR("Could not open connection to " << pServer->name() << " at "
-                           << pServer->address() << ":" << pServer->port() << ": " << m_db.error());
+                MXB_SERROR("Could not open connection to " << pSrv->name() << " at "
+                           << pSrv->address() << ":" << pSrv->port() << ": " << m_db.error());
             }
         }
         else
@@ -2312,13 +2312,13 @@ bool UserManagerMariaDB::do_update(const string& db,
         }
         json.set_object("roles", role::to_json_array(info.roles));
 
-        string data = encrypt_data(json, mariadb_user);
-        rv = !data.empty();
+        string strdata = encrypt_data(json, mariadb_user);
+        rv = !strdata.empty();
 
         if (rv)
         {
             ostringstream sql;
-            sql << "UPDATE " << m_table << " SET data = '" << data << "' "
+            sql << "UPDATE " << m_table << " SET data = '" << strdata << "' "
                 << "WHERE mariadb_user = '" << mariadb_user << "'";
 
             rv = m_db.cmd(sql.str());

@@ -375,9 +375,8 @@ void test_main(TestConnections& test)
         test.try_query(conn, grant_sel_fmt, test_db2, userz, host);
 
         auto test_normal_login_short = [&test, &user, pass, mxs_ip](int port, const string& db) {
-                auto host = mxs_ip;
                 MYSQL* maxconn = nullptr;
-                maxconn = open_conn_db(port, host, db, user, pass);
+                maxconn = open_conn_db(port, mxs_ip, db, user, pass);
                 auto err = mysql_error(maxconn);
                 bool rval = (*err == '\0');
                 if (*err)

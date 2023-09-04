@@ -413,15 +413,15 @@ HttpResponse clone(const HttpRequest& request)
 
         if (auto config = this_unit.manager.get_configuration(id))
         {
-            std::string err;
-            std::string new_id = create_connection(config.value(), &err);
+            std::string errmsg;
+            std::string new_id = create_connection(config.value(), &errmsg);
             if (!new_id.empty())
             {
                 response = create_connect_response(host, new_id, persist, max_age);
             }
             else
             {
-                response = HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", err.c_str()));
+                response = HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", errmsg.c_str()));
             }
         }
         else

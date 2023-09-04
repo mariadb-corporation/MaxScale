@@ -43,16 +43,16 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
     int next_index = NodeData::INDEX_FIRST;
     // This lambda is recursive, so its type needs to be defined and it needs to "capture itself".
     std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit =
-        [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& visitor) {
+        [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& vis) {
         mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
         node->m_node.index = next_index++;
-        if (visitor(node))
+        if (vis(node))
         {
             for (MariaDBServer* slave : node->m_node.children)
             {
                 if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
                 {
-                    topology_DFS_visit(slave, visitor);
+                    topology_DFS_visit(slave, vis);
                 }
             }
         }
@@ -329,14 +329,14 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     ServerArray master_candidates;
 
     // Helper function for finding normal master candidates.
-    auto search_outside_cycles = [this, &master_candidates](RequireRunning req_running,
+    auto search_outside_cycles = [this, &master_candidates](RequireRunning require_running,
                                                             DelimitedPrinter& topo_messages) {
         for (MariaDBServer* server : m_servers)
         {
             if (server->m_node.parents.empty())
             {
                 string why_not;
-                if (is_candidate_valid(server, req_running, &why_not))
+                if (is_candidate_valid(server, require_running, &why_not))
                 {
                     master_candidates.push_back(server);
                 }
@@ -349,7 +349,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     };
 
     // Helper function for finding master candidates inside cycles.
-    auto search_inside_cycles = [this, &master_candidates](RequireRunning req_running,
+    auto search_inside_cycles = [this, &master_candidates](RequireRunning require_running,
                                                            DelimitedPrinter& topo_messages) {
         // For each cycle, it's enough to take one sample server, as all members of a cycle have the
         // same reach. The sample server needs to be valid, though.
@@ -365,7 +365,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
                 for (MariaDBServer* elem : cycle_members)
                 {
                     mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
-                    if (is_candidate_valid(elem, req_running))
+                    if (is_candidate_valid(elem, require_running))
                     {
                         cycle_cand = elem;
                         break;
@@ -389,7 +389,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
                     for (MariaDBServer* elem : cycle_members)
                     {
                         string server_msg;
-                        is_candidate_valid(elem, req_running, &server_msg);
+                        is_candidate_valid(elem, require_running, &server_msg);
                         cycle_invalid_msg.cat(server_msg);
                     }
                     cycle_invalid_msg.cat("");          // Adds a linebreak

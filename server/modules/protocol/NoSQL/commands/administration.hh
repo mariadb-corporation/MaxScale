@@ -581,10 +581,10 @@ private:
             {
                 auto doc = static_cast<bsoncxx::document::view>(key.get_document());
 
-                for (const auto& element : static_cast<bsoncxx::document::view>(key.get_document()))
+                for (const auto& key_element : static_cast<bsoncxx::document::view>(key.get_document()))
                 {
                     int64_t number;
-                    if (nosql::get_number_as_integer(element, &number))
+                    if (nosql::get_number_as_integer(key_element, &number))
                     {
                         if (number == 0)
                         {
@@ -595,12 +595,12 @@ private:
                             throw (ss.str(), error::CANNOT_CREATE_INDEX);
                         }
                     }
-                    else if (element.type() != bsoncxx::type::k_utf8)
+                    else if (key_element.type() != bsoncxx::type::k_utf8)
                     {
                         ostringstream ss;
                         ss << "Error in specification " << bsoncxx::to_json(doc)
                            << " :: caused by :: Values in v:2 index key pattern cannot be of type "
-                           << bsoncxx::to_string(element.type())
+                           << bsoncxx::to_string(key_element.type())
                            << ". Only numbers > 0, numbers < 0, and strings are allowed.";
 
                         throw SoftError(ss.str(), error::CANNOT_CREATE_INDEX);
@@ -611,7 +611,7 @@ private:
                         ostringstream ss;
                         ss << "Error in specification " << bsoncxx::to_json(doc)
                            << " :: caused by :: Unknown index plugin '"
-                           << static_cast<string_view>(element.get_utf8())
+                           << static_cast<string_view>(key_element.get_utf8())
                            << "'";
 
                         throw SoftError(ss.str(), error::CANNOT_CREATE_INDEX);

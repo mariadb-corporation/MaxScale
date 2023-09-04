@@ -64,8 +64,8 @@ int ThrottleSession::real_routeQuery(GWBUF&& buffer, bool is_delayed)
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
 
-        auto cb = [this](GWBUF&& buffer){
-            return real_routeQuery(std::move(buffer), true);
+        auto cb = [this](GWBUF&& buf){
+            return real_routeQuery(std::move(buf), true);
         };
 
         m_pSession->delay_routing(this, std::move(buffer), std::chrono::milliseconds(delay), cb);

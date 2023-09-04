@@ -325,9 +325,9 @@ std::unique_ptr<Creds> Creds::create(const std::string& cert_file, const std::st
             MXB_ERROR("Failed to load REST API TLS private key: %s", gnutls_strerror(rc));
             gnutls_privkey_deinit(pkey);
 
-            for (auto& cert : pcerts)
+            for (auto& certificate : pcerts)
             {
-                gnutls_pcert_deinit(&cert);
+                gnutls_pcert_deinit(&certificate);
             }
         }
     }

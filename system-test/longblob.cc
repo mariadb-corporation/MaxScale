@@ -27,9 +27,8 @@ int main(int argc, char* argv[])
 
     repl.execute_query_all_nodes("set global max_allowed_packet=67108864");
 
-    auto run_test_case = [&test](const char* blob_type, size_t chunk_size, size_t chunks) {
+    auto run_test_case = [&](const char* blob_type, size_t chunk_size, size_t chunks) {
         auto& mxs = *test.maxscale;
-        auto& repl = *test.repl;
         mxs.connect_maxscale();
         repl.connect();
         test.tprintf("%s, rwsplit, chunk size %lu, chunks %lu", blob_type, chunk_size, chunks);

@@ -34,11 +34,10 @@ int main(int argc, char* argv[])
 
     const int TestConnNum = 100;
     MYSQL* conn[TestConnNum];
-    int i;
     int conn_num;
 
     MYSQL* backend_conn;
-    for (i = 0; i < Test->repl->N; i++)
+    for (int i = 0; i < Test->repl->N; i++)
     {
         backend_conn = open_conn(Test->repl->port[i],
                                  Test->repl->ip4(i),
@@ -50,7 +49,7 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Creating %d connections to RWSplit router\n", TestConnNum);
-    for (i = 0; i < TestConnNum; i++)
+    for (int i = 0; i < TestConnNum; i++)
     {
         conn[i] = Test->maxscale->open_rwsplit_connection();
     }
@@ -94,7 +93,7 @@ int main(int argc, char* argv[])
     {
         Test->add_result(1, "total number of connections is wrong\n");
     }
-    for (i = 0; i < TestConnNum; i++)
+    for (int i = 0; i < TestConnNum; i++)
     {
         mysql_close(conn[i]);
     }

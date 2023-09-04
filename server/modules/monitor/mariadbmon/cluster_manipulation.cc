@@ -317,17 +317,17 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                    monitored_servers_to_string(targets).c_str(), new_master->name());
 
         // Helper function for running a command on all servers in the list.
-        auto exec_cmd_on_array = [&error](const ServerArray& targets, const string& query,
-                                          mxb::Json& error_out) {
+        auto exec_cmd_on_array = [&error](const ServerArray& tgts, const string& query,
+                                          mxb::Json& err_out) {
             if (!error)
             {
-                for (MariaDBServer* server : targets)
+                for (MariaDBServer* server : tgts)
                 {
                     string error_msg;
                     if (!server->execute_cmd(query, &error_msg))
                     {
                         error = true;
-                        PRINT_JSON_ERROR(error_out, "%s", error_msg.c_str());
+                        PRINT_JSON_ERROR(err_out, "%s", error_msg.c_str());
                         break;
                     }
                 }

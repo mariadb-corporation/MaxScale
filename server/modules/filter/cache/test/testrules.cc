@@ -102,14 +102,14 @@ int CacheRules::Tester::test_user()
 
 
         CacheConfig config("noconfig", nullptr);
-        CacheRules::SVector sRules = CacheRules::parse(&config, test_case.json);
-        mxb_assert(sRules);
+        CacheRules::SVector sRule_vec = CacheRules::parse(&config, test_case.json);
+        mxb_assert(sRule_vec);
 
-        auto rules = *sRules.get();
+        auto rules = *sRule_vec.get();
 
-        for (size_t i = 0; i < rules.size(); ++i)
+        for (size_t j = 0; j < rules.size(); ++j)
         {
-            CacheRules::S sRules = rules[i];
+            CacheRules::S sRules = rules[j];
 
             mxb_assert(!sRules->m_use_rules.empty());
 
@@ -394,9 +394,9 @@ int CacheRules::Tester::test_store()
 
         auto& rules = *sRules.get();
 
-        for (size_t i = 0; i < rules.size(); ++i)
+        for (size_t j = 0; j < rules.size(); ++j)
         {
-            CacheRules* pRules = rules[i].get();
+            CacheRules* pRules = rules[j].get();
 
             mxb_assert(!pRules->m_store_rules.empty());
             CacheRule* pRule = pRules->m_store_rules.front().get();

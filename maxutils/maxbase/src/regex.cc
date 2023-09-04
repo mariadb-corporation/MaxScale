@@ -164,20 +164,20 @@ std::vector<std::string> Regex::substr(const char* str, size_t len) const
 
         for (int i = 0; i < rc; i++)
         {
-            auto& str = substrings[i];
+            auto& substr = substrings[i];
             size_t sz = 0;
-            int rc = pcre2_substring_length_bynumber(this_thread.md, i, &sz);
+            int rc2 = pcre2_substring_length_bynumber(this_thread.md, i, &sz);
 
-            if (rc == 0)
+            if (rc2 == 0)
             {
                 // The copying seems to set the terminating null byte so we need one extra byte of space.
                 ++sz;
-                str.resize(sz);
+                substr.resize(sz);
 
-                if (pcre2_substring_copy_bynumber(this_thread.md, i, (uint8_t*)&str[0], &sz) == 0)
+                if (pcre2_substring_copy_bynumber(this_thread.md, i, (uint8_t*)&substr[0], &sz) == 0)
                 {
                     // Remove the extra byte we added.
-                    str.resize(sz);
+                    substr.resize(sz);
                 }
                 else
                 {
@@ -185,10 +185,10 @@ std::vector<std::string> Regex::substr(const char* str, size_t len) const
                     return {};
                 }
             }
-            else if (rc == PCRE2_ERROR_UNSET)
+            else if (rc2 == PCRE2_ERROR_UNSET)
             {
                 // A capture that was defined but not captured
-                str.clear();
+                substr.clear();
             }
             else
             {

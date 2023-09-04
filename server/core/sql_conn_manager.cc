@@ -87,7 +87,7 @@ ConnectionManager::get_connection(const std::string& id)
         }
         else
         {
-            std::lock_guard guard(elem->m_lock);
+            std::lock_guard elem_guard(elem->m_lock);
             info = elem->info();
 
             if (elem->m_status_handler)

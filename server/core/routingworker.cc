@@ -389,7 +389,7 @@ bool RoutingWorker::increase_workers(int nDelta)
         else
         {
             // activate_workers(...) may change, must be fetched again.
-            int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+            nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
 
             MXB_ERROR("Could activate %d threads of %d required. %d workers "
                       "currently available.", nActivated, nDelta, nRunning);

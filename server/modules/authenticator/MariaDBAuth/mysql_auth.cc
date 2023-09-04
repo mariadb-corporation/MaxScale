@@ -154,7 +154,6 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch, boo
 mariadb::ClientAuthenticator::ExchRes
 MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, AuthenticationData& auth_data)
 {
-    using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
 
     auto complete_exchange = [this, &auth_data, &rval]() {

@@ -101,8 +101,8 @@ void GtidList::replace(const Gtid& gtid)
         sort();
     }
 
-    m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) {
-        return gtid.is_valid();
+    m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& g) {
+        return g.is_valid();
     });
 }
 

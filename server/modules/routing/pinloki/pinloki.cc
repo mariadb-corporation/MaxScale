@@ -546,7 +546,7 @@ std::string Pinloki::start_slave()
     {
         const auto& cfg = m_master_config;
 
-        std::string err_str = verify_master_settings();
+        err_str = verify_master_settings();
 
         if (err_str.empty())
         {

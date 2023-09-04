@@ -195,7 +195,7 @@ int test_externcmd()
 
     std::vector<std::string> results;
     std::vector<std::string> expected;
-    cmd = ExternalCmd::create("/bin/cat", 30, [&](auto cmd, auto line){
+    cmd = ExternalCmd::create("/bin/cat", 30, [&](auto ignored, auto line){
         results.push_back(line);
     });
     cmd->start();

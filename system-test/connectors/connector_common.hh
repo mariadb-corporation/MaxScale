@@ -17,7 +17,7 @@ static inline bool clone_repo(TestConnections& test, const std::string& repo,
     return test.ok();
 }
 
-static inline int run_maven_test(TestConnections& test, int argc, char** argv,
+static inline int run_maven_test(TestConnections& test_arg, int argc, char** argv,
                                  std::string repo, std::string branch, std::string repo_dir)
 {
     auto maven_test_main = [&repo, &branch, &repo_dir](TestConnections& test){
@@ -52,10 +52,10 @@ static inline int run_maven_test(TestConnections& test, int argc, char** argv,
         return TestConnections::TEST_SKIPPED;
     }
 
-    return test.run_test(argc, argv, maven_test_main);
+    return test_arg.run_test(argc, argv, maven_test_main);
 }
 
-static inline int run_npm_test(TestConnections& test, int argc, char** argv,
+static inline int run_npm_test(TestConnections& test_arg, int argc, char** argv,
                                std::string repo, std::string branch, std::string repo_dir)
 {
     auto npm_test_main = [&repo, &branch, &repo_dir](TestConnections& test){
@@ -84,5 +84,5 @@ static inline int run_npm_test(TestConnections& test, int argc, char** argv,
         return TestConnections::TEST_SKIPPED;
     }
 
-    return test.run_test(argc, argv, npm_test_main);
+    return test_arg.run_test(argc, argv, npm_test_main);
 }

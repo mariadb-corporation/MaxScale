@@ -1001,9 +1001,9 @@ CacheRuleUser* CacheRuleUser::create(const CacheConfig* pConfig,
             {
                 // No wildcard, no need to use regexp.
 
-                std::string value = user;
-                value += "@";
-                value += host;
+                std::string strvalue = user;
+                strvalue += "@";
+                strvalue += host;
 
                 class RuleSimpleUser : public CacheRuleConcrete
                 {
@@ -1023,7 +1023,7 @@ CacheRuleUser* CacheRuleUser::create(const CacheConfig* pConfig,
                     }
                 };
 
-                pDelegate = new RuleSimpleUser(pConfig, attribute, op, std::move(value));
+                pDelegate = new RuleSimpleUser(pConfig, attribute, op, std::move(strvalue));
             }
         }
         else

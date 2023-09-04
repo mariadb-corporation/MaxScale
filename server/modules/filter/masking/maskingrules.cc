@@ -1185,7 +1185,6 @@ void MaskingRules::MatchRule::rewrite(mxq::LEncString& s) const
 {
     int rv = 0;
     uint32_t n_matches = 0;
-    PCRE2_SIZE* ovector = NULL;
     // Create the match data object from m_regexp class member
     pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_regexp, NULL);
     // Set initial offset to the input beginning
@@ -1257,7 +1256,7 @@ void MaskingRules::ObfuscateRule::rewrite(mxq::LEncString& s) const
     mxq::LEncString::iterator i = s.begin();
     size_t c = *i + i_len;
 
-    for (mxq::LEncString::iterator i = s.begin(); i != s.end(); i++)
+    for (; i != s.end(); i++)
     {
         // ASCII 32 is first printable char
         unsigned char d = abs((char)(*i ^ c)) + 32;

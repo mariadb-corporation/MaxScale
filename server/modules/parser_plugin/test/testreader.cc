@@ -337,13 +337,13 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     {
                         line = line.substr(0, i);
 
-                        string l;
-                        skip_postgres_block_quote(l);
+                        string ln;
+                        skip_postgres_block_quote(ln);
 
-                        if (!l.empty())
+                        if (!ln.empty())
                         {
                             line += " ";
-                            line += l;
+                            line += ln;
                         }
                     }
 
@@ -380,10 +380,10 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                         trim(line);
                     }
 
-                    string::iterator i = std::find_if(line.begin(),
+                    string::iterator it = std::find_if(line.begin(),
                                                       line.end(),
                                                       std::ptr_fun<int, int>(std::isspace));
-                    string keyword = line.substr(0, i - line.begin());
+                    string keyword = line.substr(0, it - line.begin());
 
                     skip_action_t action = get_action(keyword, m_delimiter);
 
@@ -397,7 +397,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                         continue;
 
                     case SKIP_DELIMITER:
-                        line = line.substr(i - line.begin());
+                        line = line.substr(it - line.begin());
                         trim(line);
                         if (line.length() > 0)
                         {
@@ -439,7 +439,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
                 // If there is a trailing comment "CREATE TABLE t ( -- t is for ...", remove
                 // it before appending to the statement.
-                auto i = line.find("-- ");
+                i = line.find("-- ");
                 if (i != string::npos)
                 {
                     line = line.substr(0, i);

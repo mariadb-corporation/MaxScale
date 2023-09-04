@@ -184,7 +184,7 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
                                            maxbase::Duration time_limit,
                                            string* errmsg_out, unsigned int* errnum_out)
 {
-    auto build_cmds = [this, &cmd, &masked_cmd](mxb::Duration time_limit) -> std::tuple<string, string> {
+    auto build_cmds = [this, &cmd, &masked_cmd](mxb::Duration time_lim) -> std::tuple<string, string> {
         string max_stmt_time;
         if (m_capabilities.max_statement_time)
         {
@@ -194,12 +194,12 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
             MXB_AT_DEBUG(int rv = ) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT, &conn_to);
             mxb_assert(rv == 0);
             // Even if time has effectively run out, give an individual query a few seconds to complete.
-            auto time_limit_s = std::max(round_to_seconds(time_limit), 5);
+            auto time_lim_s = std::max(round_to_seconds(time_lim), 5);
 
             int eff_stmt_time = -1;
             if (conn_to <= 0)
             {
-                eff_stmt_time = time_limit_s;
+                eff_stmt_time = time_lim_s;
             }
             else if (conn_to <= 4)
             {
@@ -209,7 +209,7 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
             else
             {
                 // Use a statement timeout a bit smaller than hard connector timeout to ensure it's hit first.
-                eff_stmt_time = std::min(conn_to - 1, time_limit_s);
+                eff_stmt_time = std::min(conn_to - 1, time_lim_s);
             }
             max_stmt_time = string_printf("SET STATEMENT max_statement_time=%i FOR ", eff_stmt_time);
         }
@@ -1316,12 +1316,12 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
     int events_altered = 0;
     // Helper function which alters an event depending on the mapper-function.
     EventManipulator alterer = [this, &target_events, &events_altered, &mapper](const EventInfo& event,
-                                                                                mxb::Json& error_out) {
+                                                                                mxb::Json& err_out) {
         string target_state = mapper(event);
         if (!target_state.empty())
         {
             target_events++;
-            if (alter_event(event, target_state, error_out))
+            if (alter_event(event, target_state, err_out))
             {
                 events_altered++;
             }

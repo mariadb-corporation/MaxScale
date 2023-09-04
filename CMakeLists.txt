@@ -169,6 +169,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(FLAGS "${FLAGS} -Wno-tautological-constant-out-of-range-compare")
   set(FLAGS "${FLAGS} -Wno-implicit-const-int-float-conversion")
   set(FLAGS "${FLAGS} -Wno-unqualified-std-cast-call")
+else() # GCC
+  if (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER 7.1.0)
+    add_compile_options(-Wshadow=local)
+  endif()
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_GNU_SOURCE=1 ${FLAGS}")

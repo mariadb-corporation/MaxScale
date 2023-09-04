@@ -34,9 +34,9 @@ int main(int argc, char** argv)
         };
 
     auto check_result = [&test](std::string name, std::string res) {
-            std::string query = "SELECT " + name;
+            std::string sql = "SELECT " + name;
             char value[1024];
-            return find_field(test.maxscale->conn_rwsplit, query.c_str(), name.c_str(), value) == 0
+            return find_field(test.maxscale->conn_rwsplit, sql.c_str(), name.c_str(), value) == 0
                    && res == value;
         };
 

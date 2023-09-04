@@ -1230,9 +1230,9 @@ void Worker::poll_waitevents()
             m_scheduled_polls.erase(it);
 
             auto* pPollable = pending_poll.pPollable;
-            auto events = pending_poll.events;
+            auto pending_events = pending_poll.events;
 
-            loop_now = deliver_events(cycle_start, loop_now, pPollable, events, Pollable::REPEATED_CALL);
+            loop_now = deliver_events(cycle_start, loop_now, pPollable, pending_events, Pollable::REPEATED_CALL);
         }
 
         if (!m_lcalls.empty())
@@ -1296,9 +1296,9 @@ void Worker::tick()
         i = m_sorted_calls.begin();
     }
 
-    for (auto i = repeating_calls.begin(); i != repeating_calls.end(); ++i)
+    for (auto it = repeating_calls.begin(); it != repeating_calls.end(); ++it)
     {
-        DCall* pCall = *i;
+        DCall* pCall = *it;
 
         m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
         m_calls.insert(std::make_pair(pCall->id(), pCall));

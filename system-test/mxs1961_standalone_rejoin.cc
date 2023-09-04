@@ -52,25 +52,25 @@ int main(int argc, char* argv[])
             return test.get_server_status(server);
         };
 
-    auto comment = [&](const char* comment) {
-            cout << comment << endl;
+    auto comment = [&](const char* comment_str) {
+            cout << comment_str << endl;
         test.maxscale->ssh_node_f(true,
-                                  "echo '----- %s -----' >> /var/log/maxscale/maxscale.log", comment);
+                                  "echo '----- %s -----' >> /var/log/maxscale/maxscale.log", comment_str);
         };
 
     auto slave = [&](const char* name) {
-            static StringSet slave {"Slave", "Running"};
-            test.expect(status(name) == slave, "'%s' should be a slave", name);
+            static StringSet slave_status {"Slave", "Running"};
+            test.expect(status(name) == slave_status, "'%s' should be a slave", name);
         };
 
     auto master = [&](const char* name) {
-            static StringSet master {"Master", "Running"};
-            test.expect(status(name) == master, "'%s' should be the master", name);
+            static StringSet master_status {"Master", "Running"};
+            test.expect(status(name) == master_status, "'%s' should be the master", name);
         };
 
     auto down = [&](const char* name) {
-            static StringSet down {"Down"};
-            test.expect(status(name) == down, "'%s' should be down", name);
+            static StringSet down_status {"Down"};
+            test.expect(status(name) == down_status, "'%s' should be down", name);
         };
 
     auto block = [&](int servernum) {

@@ -617,12 +617,12 @@ bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, 
 
                     cache_result_t result =
                         m_sCache->invalidate(invalidation_words,
-                                             [sWeak, pData, down, reply](cache_result_t result) {
+                                             [sWeak, pData, down, reply](cache_result_t res) {
                                                  std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
                                                  if (sThis)
                                                  {
-                                                     sThis->invalidate_handler(result);
+                                                     sThis->invalidate_handler(res);
 
                                                      sThis->client_reply_post_process(pData, down, reply);
                                                  }
@@ -856,14 +856,14 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
         result = m_sCache->put_value(m_key, invalidation_words, m_res,
-                                     [sWeak, down, reply](cache_result_t result) {
+                                     [sWeak, down, reply](cache_result_t res) {
                                          auto sThis = sWeak.lock();
 
                                          // If we do not have an sThis, then the session
                                          // has been terminated.
                                          if (sThis)
                                          {
-                                             if (sThis->put_value_handler(result, down, reply))
+                                             if (sThis->put_value_handler(res, down, reply))
                                              {
                                                  sThis->flush_response(down, reply);
                                              }
@@ -1256,9 +1256,9 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
 
                 if (sThis)
                 {
-                    auto routing_action = sThis->get_value_handler(pPacket, result, pResponse);
+                    auto action = sThis->get_value_handler(pPacket, result, pResponse);
 
-                    if (routing_action == ROUTING_CONTINUE)
+                    if (action == ROUTING_CONTINUE)
                     {
                         sThis->continue_routing(pPacket);
                     }
@@ -1584,14 +1584,14 @@ bool CacheFilterSession::put_value_handler(cache_result_t result,
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
         result = m_sCache->del_value(m_key,
-                                     [sWeak, down, reply](cache_result_t result) {
+                                     [sWeak, down, reply](cache_result_t res) {
                                          auto sThis = sWeak.lock();
 
                                         // If we do not have an sThis, then the session
                                         // has been terminated.
                                          if (sThis)
                                          {
-                                             sThis->del_value_handler(result);
+                                             sThis->del_value_handler(res);
                                              sThis->flush_response(down, reply);
                                          }
                                      });

@@ -430,25 +430,25 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
     {
         for (const auto& a : targets)
         {
-            if (auto s = ServerManager::find_by_unique_name(a))
+            if (auto srv = ServerManager::find_by_unique_name(a))
             {
-                service->add_target(s);
+                service->add_target(srv);
             }
-            else if (auto s = Service::find(mxb::trimmed_copy(a)))
+            else if (auto svc = Service::find(mxb::trimmed_copy(a)))
             {
-                auto theirs = get_target_protocols(s->m_protocols, s->m_data->targets);
+                auto theirs = get_target_protocols(svc->m_protocols, svc->m_data->targets);
                 auto combined = merge_protocols(ours, theirs);
 
                 if (combined.empty())
                 {
                     MXB_ERROR("Protocol mismatch: service '%s' supports '%s' but service '%s' requires '%s'.",
-                              service->name(), mxb::join(ours).c_str(), s->name(), mxb::join(theirs).c_str());
+                              service->name(), mxb::join(ours).c_str(), svc->name(), mxb::join(theirs).c_str());
                     service->state = State::FAILED;
                     return nullptr;
                 }
                 else
                 {
-                    service->add_target(s);
+                    service->add_target(svc);
                     ours = std::move(combined);
                 }
             }
@@ -972,7 +972,7 @@ bool service_all_services_have_listeners()
 std::vector<Service*> service_server_in_use(const SERVER* server)
 {
     std::vector<Service*> rval;
-    LockGuard guard(this_unit.lock);
+    LockGuard unit_guard(this_unit.lock);
 
     for (Service* service : this_unit.services)
     {
@@ -1396,7 +1396,7 @@ json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::str
 json_t* service_relations_to_server(const SERVER* server, const std::string& host, const std::string& self)
 {
     std::vector<std::string> names;
-    LockGuard guard(this_unit.lock);
+    LockGuard unit_guard(this_unit.lock);
 
     for (Service* service : this_unit.services)
     {

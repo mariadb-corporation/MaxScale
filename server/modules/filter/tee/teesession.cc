@@ -30,16 +30,16 @@ TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* clie
 {
     if (m_sync)
     {
-        auto reply = [this](GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) {
+        auto reply_cb = [this](GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) {
                 handle_reply(reply, true);
             };
 
-        auto err = [this](const std::string& err, mxs::Target* target, const mxs::Reply& reply) {
+        auto err_cb = [this](const std::string& err, mxs::Target* target, const mxs::Reply& reply) {
                 MXB_INFO("Branch connection failed: %s", err.c_str());
                 m_pSession->kill();
             };
 
-        m_client->set_notify(reply, err);
+        m_client->set_notify(reply_cb, err_cb);
     }
 }
 

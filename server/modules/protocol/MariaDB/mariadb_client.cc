@@ -1571,7 +1571,7 @@ bool MariaDBClientConnection::write(GWBUF&& buffer)
     return m_dcb->writeq_append(move(buffer));
 }
 
-void MariaDBClientConnection::error(DCB* event_dcb, const char* errmsg)
+void MariaDBClientConnection::error(DCB* event_dcb, const char* error)
 {
     mxb_assert(m_dcb == event_dcb);
 
@@ -3011,8 +3011,8 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
 {
     // Prune stale LocalClients before adding the new one
     m_local_clients.erase(
-        std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& client) {
-        return !client->is_open();
+        std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& c) {
+        return !c->is_open();
     }), m_local_clients.end());
 
     m_local_clients.emplace_back(client);

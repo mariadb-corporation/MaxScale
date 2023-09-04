@@ -186,11 +186,11 @@ void ThreadPool::execute(const Task& task, const std::string& name)
 
                 do
                 {
-                    std::unique_lock<std::mutex> threads_lock(m_idle_threads_mx);
+                    std::unique_lock<std::mutex> thr_lock(m_idle_threads_mx);
                     std::unique_lock<std::mutex> tasks_lock(m_tasks_mx);
                     if (!m_tasks.empty())
                     {
-                        threads_lock.unlock();
+                        thr_lock.unlock();
 
                         auto tp = std::move(m_tasks.front());
                         m_tasks.pop();
@@ -203,7 +203,7 @@ void ThreadPool::execute(const Task& task, const std::string& name)
                         tasks_lock.unlock();
                         pThread->set_name("idle");
                         m_idle_threads.push(pThread);
-                        threads_lock.unlock();
+                        thr_lock.unlock();
 
                         ready = true;
                     }

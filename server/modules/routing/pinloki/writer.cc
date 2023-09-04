@@ -121,8 +121,8 @@ bool Writer::has_master_changed(const mxq::Connection& conn)
 
 void Writer::run()
 {
-    std::unique_lock<std::mutex> guard(m_lock);
-    guard.unlock();
+    std::unique_lock<std::mutex> init_guard(m_lock);
+    init_guard.unlock();
     mxb::LogScope scope(m_inventory.config().name().c_str());
     bool log_host_warning = true;
 

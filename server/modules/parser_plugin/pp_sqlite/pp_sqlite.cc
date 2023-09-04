@@ -3049,16 +3049,16 @@ public:
                 {
                     // If it's not a user-variable we need to check whether it might
                     // be 'autocommit'.
-                    const char* zName = pVariable->u.zToken;
+                    const char* zTok_name = pVariable->u.zToken;
 
-                    while (*zName == '@')
+                    while (*zTok_name == '@')
                     {
-                        ++zName;
+                        ++zTok_name;
                     }
 
                     // As pVariable points to the rightmost part, we'll catch both
                     // "autocommit" and "@@global.autocommit".
-                    if (strcasecmp(zName, "autocommit") == 0)
+                    if (strcasecmp(zTok_name, "autocommit") == 0)
                     {
                         int enable = -1;
 

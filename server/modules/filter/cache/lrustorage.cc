@@ -178,11 +178,11 @@ public:
 
         for (auto& word : words)
         {
-            auto it = m_nodes_by_word.find(word);
+            auto word_it = m_nodes_by_word.find(word);
 
-            if (it != m_nodes_by_word.end())
+            if (word_it != m_nodes_by_word.end())
             {
-                Nodes& nodes = it->second;
+                Nodes& nodes = word_it->second;
 
                 auto it = nodes.begin();
 

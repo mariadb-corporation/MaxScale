@@ -342,14 +342,9 @@ bool MariaDBCluster::create_base_users(int node)
                 user_def.name = name;
                 user_def.password = pw;
 
-                bool rval = false;
-                if (be->create_user(user_def, ssl_mode, sr)
+                return be->create_user(user_def, ssl_mode, sr)
                     && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
-                                                         name.c_str()))
-                {
-                    rval = true;
-                }
-                return rval;
+                                                         name.c_str());
             };
 
         auto ssl_mode = ssl() ? SslMode::ON : SslMode::OFF;

@@ -1140,9 +1140,9 @@ bool compare_get_function_info(const Parser& parser1,
         if (!real_error)
         {
             // We assume that names1 are from the pp_mysqlembedded and names2 from pp_sqlite.
-            for (std::set<std::string>::iterator i = names1.begin(); i != names1.end(); ++i)
+            for (std::set<std::string>::iterator it = names1.begin(); it != names1.end(); ++it)
             {
-                if (*i == "date_add_interval")
+                if (*it == "date_add_interval")
                 {
                     // The embedded parser reports all date_add(), adddate(), date_sub() and subdate()
                     // functions as date_add_interval(). Further, all "DATE + INTERVAL ..." cases become
@@ -1157,7 +1157,7 @@ bool compare_get_function_info(const Parser& parser1,
                         real_error = true;
                     }
                 }
-                else if (*i == "cast")
+                else if (*it == "cast")
                 {
                     // The embedded parser returns "convert" as "cast".
                     if (names2.count("convert") == 0)
@@ -1165,7 +1165,7 @@ bool compare_get_function_info(const Parser& parser1,
                         real_error = true;
                     }
                 }
-                else if (*i == "substr")
+                else if (*it == "substr")
                 {
                     // The embedded parser returns "substring" as "substr".
                     if (names2.count("substring") == 0)

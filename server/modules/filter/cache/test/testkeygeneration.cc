@@ -65,14 +65,14 @@ int test(StorageFactory& factory, istream& in)
 
                 if (result == CACHE_RESULT_OK)
                 {
-                    Keys::iterator i = keys.find(key);
+                    Keys::iterator it = keys.find(key);
 
-                    if (i != keys.end())
+                    if (it != keys.end())
                     {
-                        if (i->second != statement)
+                        if (it->second != statement)
                         {
                             ++n_collisions;
-                            cerr << "error: Same key generated for '" << i->second << "' and '"
+                            cerr << "error: Same key generated for '" << it->second << "' and '"
                                  << statement << "'." << endl;
                         }
                     }

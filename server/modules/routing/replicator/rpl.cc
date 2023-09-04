@@ -1940,7 +1940,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
     if (create != m_created_tables.end())
     {
         mxb_assert(create->second->columns.size() > 0);
-        auto id = create->second->map_table(ptr, ev_len);
+        id = create->second->map_table(ptr, ev_len);
         m_active_maps[id] = create->second;
         MXB_DEBUG("Table %s mapped to %lu", create->second->id().c_str(), id);
 

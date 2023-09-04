@@ -169,8 +169,7 @@ bool select_user(MYSQL* pMysql, string* pUser)
 
         while (mysql_next_result(pMysql) == 0)
         {
-            MYSQL_RES* pRes = mysql_store_result(pMysql);
-            mysql_free_result(pRes);
+            mysql_free_result(mysql_store_result(pMysql));
         }
     }
 

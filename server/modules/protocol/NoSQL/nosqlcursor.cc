@@ -393,9 +393,9 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
 
     if (m_pBuffer)
     {
-        if (create_batch([&batch, &total_size](bsoncxx::document::value&& doc)
+        if (create_batch([&batch, &total_size](bsoncxx::document::value&& document)
                          {
-                             size_t size = doc.view().length();
+                             size_t size = document.view().length();
 
                              if (total_size + size > protocol::MAX_BSON_OBJECT_SIZE)
                              {
@@ -405,7 +405,7 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
                              {
                                  total_size += size;
 
-                                 batch.append(doc);
+                                 batch.append(document);
                                  return true;
                              }
                          },

@@ -34,11 +34,10 @@ int main(int argc, char* argv[])
 
     const int TestConnNum = 100;
     MYSQL* conn[TestConnNum];
-    int i;
     int conn_num;
 
     Test->tprintf("Creating %d connections to ReadConnRouter in 'slave' mode\n", TestConnNum);
-    for (i = 0; i < TestConnNum; i++)
+    for (int i = 0; i < TestConnNum; i++)
     {
         Test->reset_timeout();
         conn[i] = Test->maxscale->open_readconn_slave_connection();
@@ -81,7 +80,7 @@ int main(int argc, char* argv[])
         Test->add_result(1, "total number of connections is wrong\n");
     }
 
-    for (i = 0; i < TestConnNum; i++)
+    for (int i = 0; i < TestConnNum; i++)
     {
         mysql_close(conn[i]);
     }

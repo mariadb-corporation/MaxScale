@@ -1001,8 +1001,8 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
     }
 
     return std::all_of(
-        m_backends.begin(), m_backends.end(), [](const auto& b) {
-        return !b->in_use() || b->is_mapped();
+        m_backends.begin(), m_backends.end(), [](const auto& bref) {
+        return !bref->in_use() || bref->is_mapped();
     });
 }
 

@@ -47,9 +47,7 @@ void sht_rst_service()
     int threads_num = 5;
     pthread_t thread1[threads_num];
 
-    int i;
-
-    for (i = 0; i < threads_num; i++)
+    for (int i = 0; i < threads_num; i++)
     {
         pthread_create(&thread1[i], NULL, query_thread1, NULL);
     }

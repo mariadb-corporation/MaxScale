@@ -133,9 +133,9 @@ try
 
         case 'm':
             {
-                std::string mode = optarg;
-                help = !(mode == "writer" || mode == "reader");
-                writer_mode = mode == "writer";
+                std::string mod = optarg;
+                help = !(mod == "writer" || mod == "reader");
+                writer_mode = mod == "writer";
             }
             break;
 

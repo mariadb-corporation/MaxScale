@@ -2017,8 +2017,8 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
         skip_encoded_str(it);   // Skip human-readable info
 
         // Skip the total packet length, we don't need it since we know it implicitly via the end iterator
-        MXB_AT_DEBUG(ptrdiff_t total_size = ) get_encoded_int(it);
-        mxb_assert(total_size == std::distance(it, end));
+        MXB_AT_DEBUG(ptrdiff_t total_packet_len = ) get_encoded_int(it);
+        mxb_assert(total_packet_len == std::distance(it, end));
 
         while (it != end)
         {

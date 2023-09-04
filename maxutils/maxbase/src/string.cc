@@ -156,8 +156,8 @@ std::string create_list_string(const std::vector<string>& elements,
     string rval;
     rval.reserve(total_len);
 
-    auto add_elem = [&rval, &quote](const string& elem, const string& delim) {
-            rval += delim;
+    auto add_elem = [&rval, &quote](const string& elem, const string& delimiter) {
+            rval += delimiter;
             rval += quote;
             rval += elem;
             rval += quote;

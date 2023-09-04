@@ -807,7 +807,7 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
 
                 while (!sCursor->exhausted())
                 {
-                    int32_t position = sCursor->position();
+                    position = sCursor->position();
 
                     documents.clear();
                     sCursor->create_batch(worker(), nReturn, false, &size_of_documents, &documents);

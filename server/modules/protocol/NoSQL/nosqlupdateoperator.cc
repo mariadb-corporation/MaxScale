@@ -194,11 +194,11 @@ public:
 
             default:
                 {
-                    ostringstream ss;
-                    ss << bsoncxx::to_string(type) << " is not valid type for $currentDate. "
+                    ostringstream err;
+                    err << bsoncxx::to_string(type) << " is not valid type for $currentDate. "
                        << "Please use a boolean ('true') or a $type expression ({$type: 'timestamp/date'}).";
 
-                    throw SoftError(ss.str(), error::BAD_VALUE);
+                    throw SoftError(err.str(), error::BAD_VALUE);
                 }
                 break;
             }
@@ -258,9 +258,9 @@ public:
             double d;
             if (!element_as(field, Conversion::RELAXED, &d))
             {
-                ostringstream ss;
-                ss << "Expected a number: " << key << ": " << element_to_string(field);
-                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+                ostringstream err;
+                err << "Expected a number: " << key << ": " << element_to_string(field);
+                throw SoftError(err.str(), error::FAILED_TO_PARSE);
             }
 
             switch ((int)d)
@@ -283,9 +283,9 @@ public:
 
             default:
                 {
-                    ostringstream ss;
-                    ss << "Expected an integer: " << key << d;
-                    throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+                    ostringstream err;
+                    err << "Expected an integer: " << key << d;
+                    throw SoftError(err.str(), error::FAILED_TO_PARSE);
                 }
             }
 
@@ -521,14 +521,14 @@ public:
 
                 vector<string> parts = mxb::strtok(t, ".");
 
-                auto it = parts.begin();
+                auto kt = parts.begin();
                 auto end = parts.end() - 1;
 
-                ss2 << "'$." << *it << "', JSON_OBJECT(";
+                ss2 << "'$." << *kt << "', JSON_OBJECT(";
 
-                ++it;
+                ++kt;
 
-                convert_rename(ss2, rv, f, it, end);
+                convert_rename(ss2, rv, f, kt, end);
 
                 ss2 << ")))";
 

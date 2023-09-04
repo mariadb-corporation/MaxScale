@@ -2065,7 +2065,7 @@ process_includes(const mxb::ini::map_result::Configuration& input)
                     {
                         const maxbase::ini::map_result::ConfigSection& included_config = jt->second;
 
-                        auto type = get_section_type(included_config);
+                        type = get_section_type(included_config);
 
                         if (type == CN_INCLUDE)
                         {
@@ -3419,7 +3419,6 @@ static int get_release_string(char* release)
 
         if (glob(masks[i], GLOB_NOSORT, NULL, &found) == 0)
         {
-            int fd;
             size_t k = 0;
             int skipindex = 0;
             int startindex = 0;

@@ -192,13 +192,13 @@ void check_login(TestConnections& test)
     auto test_login = [&test](int port, const string& user, const string& pw, const string& db,
                               bool expect_success) {
         test.tprintf("Logging in to db '%s' as user '%s'.", db.c_str(), user.c_str());
-        auto conn = test.maxscale->try_open_connection(port, user, pw, db);
+        auto c = test.maxscale->try_open_connection(port, user, pw, db);
         if (expect_success)
         {
-            test.expect(conn->is_open(), "Connection failed: '%s'", conn->error());
-            if (conn->is_open())
+            test.expect(c->is_open(), "Connection failed: '%s'", c->error());
+            if (c->is_open())
             {
-                auto res = conn->query("select rand();");
+                auto res = c->query("select rand();");
                 test.expect(res.get(), "Query failed.");
                 if (res)
                 {
@@ -208,7 +208,7 @@ void check_login(TestConnections& test)
         }
         else
         {
-            test.expect(!conn->is_open(), "Connection succeeded when failure was expected.");
+            test.expect(!c->is_open(), "Connection succeeded when failure was expected.");
         }
     };
 

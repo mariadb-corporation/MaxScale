@@ -251,13 +251,13 @@ bool Specification::validate(const Configuration* pConfig,
 
             for (const auto& kv : unrecognized_parameters)
             {
-                for (const auto& params : kv.second)
+                for (const auto& p : kv.second)
                 {
-                    auto key = kv.first + "." + params.first;
+                    auto key = kv.first + "." + p.first;
 
                     if (pUnrecognized)
                     {
-                        pUnrecognized->set(key, params.second);
+                        pUnrecognized->set(key, p.second);
                     }
                     else
                     {
