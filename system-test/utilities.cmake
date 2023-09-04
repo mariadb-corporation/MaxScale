@@ -41,9 +41,9 @@ endfunction()
 # template Configuration file template file name. Should only be the last part of the file name. The file
 # should be located in the /cnf/ directory and have prefix "maxscale.cnf.template.".
 # labels Test labels. The labels can be given as "Label1;Label2;Label3..." or "Label1 Label2 Label3 ..."
-# Example: to add simple_test.cpp with maxscale.cnf.template.simple_config to the
+# Example: to add simple_test.cc with maxscale.cnf.template.simple_config to the
 # test set, the function should be called as follows:
-#     add_test_executable(simple_test.cpp simple_test simple_config LABELS some_label)
+#     add_test_executable(simple_test.cc simple_test simple_config LABELS some_label)
 function(add_test_executable source name template labels)
   list(APPEND labels ${ARGN})
   add_template(${name} ${template} "${labels}")
@@ -226,8 +226,8 @@ macro(light_weight_tests)
 endmacro()
 
 # Test utilities
-add_test_executable_notest(non_native_setup.cpp non_native_setup replication)
-add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
+add_test_executable_notest(non_native_setup.cc non_native_setup replication)
+add_test_executable_notest(sysbench_example.cc sysbench_example replication)
 
 #
 # Check that all required components are present. To build even without them,
