@@ -30,6 +30,7 @@ struct LuaData
 {
     MXS_SESSION* session = nullptr;
     GWBUF*       buffer = nullptr;
+    const char*  target = nullptr;
 };
 
 class LuaContext
@@ -50,24 +51,10 @@ public:
 private:
     LuaContext(lua_State* state);
 
-    // Helper class for making sure the data is reset to a known good state after each function call
-    struct Scope
-    {
-        Scope(LuaContext* ctx, LuaData new_data)
-            : m_ctx(ctx)
-            , m_data(std::exchange(ctx->m_data, new_data))
-        {
-        }
-
-        ~Scope()
-        {
-            m_ctx->m_data = m_data;
-        }
-
-        LuaContext* m_ctx;
-        LuaData     m_data;
-    };
-
     LuaData    m_data;
     lua_State* m_state {nullptr};
+
+    // References to the commonly used global functions
+    int m_route_query {LUA_REFNIL};
+    int m_client_reply {LUA_REFNIL};
 };

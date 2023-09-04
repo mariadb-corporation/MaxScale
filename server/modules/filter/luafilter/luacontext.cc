@@ -22,13 +22,31 @@
 namespace
 {
 
+const char* CN_CREATE_INSTANCE = "createInstance";
+const char* CN_NEW_SESSON = "newSession";
+const char* CN_ROUTE_QUERY = "routeQuery";
+const char* CN_CLIENT_REPLY = "clientReply";
+const char* CN_CLOSE_SESSION = "closeSession";
+const char* CN_DIAGNOSTIC = "diagnostic";
+
 //
 // Helpers for dealing with the Lua C API
 //
 
+inline void check_precondition(lua_State* state, bool value)
+{
+    if (!value)
+    {
+        lua_pushstring(state, "Function called outside of the correct callback function");
+        lua_error(state);   // lua_error does a longjump and doesn't return
+    }
+}
+
 const LuaData& get_data(lua_State* state)
 {
-    return *static_cast<LuaData*>(lua_touserdata(state, lua_upvalueindex(1)));
+    LuaData* data = static_cast<LuaData*>(lua_touserdata(state, lua_upvalueindex(1)));
+    check_precondition(state, data);
+    return *data;
 }
 
 void push_arg(lua_State* state, std::string_view str)
@@ -39,6 +57,25 @@ void push_arg(lua_State* state, std::string_view str)
 void push_arg(lua_State* state, int64_t i)
 {
     lua_pushinteger(state, i);
+}
+
+template<class ... Args>
+bool call_pushed_function(lua_State* state, const char* name, int nret, Args ... args)
+{
+    bool ok = true;
+    mxb_assert(lua_type(state, -1) == LUA_TFUNCTION);
+
+    (push_arg(state, std::forward<Args>(args)), ...);
+    constexpr int nargs = sizeof...(Args);
+
+    if (lua_pcall(state, nargs, nret, 0))
+    {
+        MXB_WARNING("The call to '%s' failed: %s", name, lua_tostring(state, -1));
+        lua_pop(state, -1);     // Pop the error off the stack
+        ok = false;
+    }
+
+    return ok;
 }
 
 template<class ... Args>
@@ -56,18 +93,42 @@ bool call_function(lua_State* state, const char* name, int nret, Args ... args)
     }
     else
     {
-        (push_arg(state, std::forward<Args>(args)), ...);
-        constexpr int nargs = sizeof...(Args);
-
-        if (lua_pcall(state, nargs, nret, 0))
-        {
-            MXB_WARNING("The call to '%s' failed: %s", name, lua_tostring(state, -1));
-            lua_pop(state, -1);     // Pop the error off the stack
-            ok = false;
-        }
+        ok = call_pushed_function(state, name, nret, std::forward<Args>(args)...);
     }
 
     return ok;
+}
+
+template<class ... Args>
+bool call_function(lua_State* state, int ref, const char* name, int nret, Args ... args)
+{
+    if (ref == LUA_REFNIL)
+    {
+        return false;
+    }
+
+    MXB_AT_DEBUG(int type = ) lua_rawgeti(state, LUA_REGISTRYINDEX, ref);
+    mxb_assert(type == LUA_TFUNCTION);
+    return call_pushed_function(state, name, nret, std::forward<Args>(args)...);
+}
+
+int get_function_ref(lua_State* state, const char* name)
+{
+    int rv = LUA_REFNIL;
+    lua_getglobal(state, name);
+    int type = lua_type(state, -1);
+
+    if (type != LUA_TFUNCTION)
+    {
+        MXB_WARNING("The '%s' global is not a function but a %s", name, lua_typename(state, type));
+        lua_pop(state, -1);     // Pop the value off the stack
+    }
+    else
+    {
+        rv = luaL_ref(state, LUA_REGISTRYINDEX);
+    }
+
+    return rv;
 }
 
 //
@@ -76,105 +137,96 @@ bool call_function(lua_State* state, const char* name, int nret, Args ... args)
 
 static int lua_get_session_id(lua_State* state)
 {
-    uint64_t id = 0;
     const auto& data = get_data(state);
+    check_precondition(state, data.session);
 
-    if (data.session)
-    {
-        id = data.session->id();
-    }
-
-    lua_pushinteger(state, id);
+    lua_pushinteger(state, data.session->id());
     return 1;
 }
 
 static int lua_get_type_mask(lua_State* state)
 {
     const auto& data = get_data(state);
+    check_precondition(state, data.session && data.buffer);
 
-    if (data.buffer)
-    {
-        uint32_t type = data.session->client_connection()->parser()->get_type_mask(*data.buffer);
-        std::string mask = mxs::Parser::type_mask_to_string(type);
-        lua_pushstring(state, mask.c_str());
-    }
-    else
-    {
-        lua_pushliteral(state, "");
-    }
-
+    uint32_t type = data.session->client_connection()->parser()->get_type_mask(*data.buffer);
+    std::string mask = mxs::Parser::type_mask_to_string(type);
+    lua_pushlstring(state, mask.data(), mask.size());
     return 1;
 }
 
 static int lua_get_operation(lua_State* state)
 {
     const auto& data = get_data(state);
-    const char* opstring = "";
+    check_precondition(state, data.session && data.buffer);
 
-    if (data.buffer)
-    {
-        mxs::sql::OpCode op = data.session->client_connection()->parser()->get_operation(*data.buffer);
-        opstring = mxs::sql::to_string(op);
-    }
-
-    lua_pushstring(state, opstring);
+    mxs::sql::OpCode op = data.session->client_connection()->parser()->get_operation(*data.buffer);
+    lua_pushstring(state, mxs::sql::to_string(op));
     return 1;
 }
 
 static int lua_get_canonical(lua_State* state)
 {
     const auto& data = get_data(state);
-    std::string sql;
+    check_precondition(state, data.session && data.buffer);
 
-    if (data.session && data.buffer)
-    {
-        sql = std::string(data.session->client_connection()->parser()->get_sql(*data.buffer));
-        maxsimd::get_canonical(&sql);
-    }
+    auto sql = data.session->client_connection()->parser()->get_canonical(*data.buffer);
+    lua_pushlstring(state, sql.data(), sql.size());
 
-    lua_pushstring(state, sql.c_str());
+
     return 1;
 }
 
 static int lua_get_db(lua_State* state)
 {
     const auto& data = get_data(state);
-    std::string db;
+    check_precondition(state, data.session);
 
-    if (data.session)
-    {
-        db = data.session->client_connection()->current_db();
-    }
+    std::string db = data.session->client_connection()->current_db();
+    lua_pushlstring(state, db.data(), db.size());
 
-    lua_pushstring(state, db.c_str());
     return 1;
 }
 
 static int lua_get_user(lua_State* state)
 {
     const auto& data = get_data(state);
-    std::string user;
+    check_precondition(state, data.session);
 
-    if (data.session)
-    {
-        user = data.session->user();
-    }
+    const auto& user = data.session->user();
+    lua_pushlstring(state, user.data(), user.size());
 
-    lua_pushstring(state, user.c_str());
     return 1;
 }
 
 static int lua_get_host(lua_State* state)
 {
     const auto& data = get_data(state);
-    std::string remote;
+    check_precondition(state, data.session);
 
-    if (data.session)
-    {
-        remote = data.session->client_remote();
-    }
+    const auto& remote = data.session->client_remote();
+    lua_pushlstring(state, remote.data(), remote.size());
 
-    lua_pushstring(state, remote.c_str());
+    return 1;
+}
+
+static int lua_get_sql(lua_State* state)
+{
+    const auto& data = get_data(state);
+    check_precondition(state, data.session && data.buffer);
+
+    auto sql = data.session->client_connection()->parser()->get_sql(*data.buffer);
+    lua_pushlstring(state, sql.data(), sql.size());
+
+    return 1;
+}
+
+static int lua_get_replier(lua_State* state)
+{
+    const auto& data = get_data(state);
+    check_precondition(state, data.target);
+
+    lua_pushstring(state, data.target);
     return 1;
 }
 }
@@ -236,31 +288,50 @@ LuaContext::LuaContext(lua_State* state)
     lua_pushlightuserdata(m_state, &m_data);
     lua_pushcclosure(m_state, lua_get_host, 1);
     lua_setglobal(m_state, "mxs_get_host");
+
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_sql, 1);
+    lua_setglobal(m_state, "mxs_get_sql");
+
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_replier, 1);
+    lua_setglobal(m_state, "mxs_get_replier");
+
+    m_client_reply = get_function_ref(m_state, "clientReply");
+    m_route_query = get_function_ref(m_state, "routeQuery");
 }
 
 LuaContext::~LuaContext()
 {
+    for (int ref : {m_client_reply, m_route_query})
+    {
+        if (ref != LUA_REFNIL)
+        {
+            luaL_unref(m_state, LUA_REGISTRYINDEX, ref);
+        }
+    }
+
     lua_close(m_state);
 }
 
 void LuaContext::create_instance(const std::string& name)
 {
-    call_function(m_state, "createInstance", 0, name);
+    m_data = LuaData{nullptr, nullptr, nullptr};
+    call_function(m_state, CN_CREATE_INSTANCE, 0, name);
 }
 
 void LuaContext::new_session(MXS_SESSION* session)
 {
-    Scope scope(this, {session, nullptr});
-    call_function(m_state, "newSession", 0, session->user(), session->client_remote());
+    m_data = LuaData{session, nullptr, nullptr};
+    call_function(m_state, CN_NEW_SESSON, 0, session->user(), session->client_remote());
 }
 
 bool LuaContext::route_query(MXS_SESSION* session, GWBUF* buffer)
 {
-    Scope scope(this, {session, buffer});
+    m_data = LuaData{session, buffer, nullptr};
     bool route = true;
-    std::string_view sql = session->protocol()->get_sql(*m_data.buffer);
 
-    if (call_function(m_state, "routeQuery", 1, sql))
+    if (call_function(m_state, m_route_query, CN_ROUTE_QUERY, 1))
     {
         if (lua_gettop(m_state))
         {
@@ -280,21 +351,22 @@ bool LuaContext::route_query(MXS_SESSION* session, GWBUF* buffer)
 
 void LuaContext::client_reply(MXS_SESSION* session, const char* target)
 {
-    Scope scope(this, {session, nullptr});
-    call_function(m_state, "clientReply", 0, target);
+    m_data = LuaData{session, nullptr, target};
+    call_function(m_state, m_client_reply, CN_CLIENT_REPLY, 0);
 }
 
 void LuaContext::close_session(MXS_SESSION* session)
 {
-    Scope scope(this, {session, nullptr});
-    call_function(m_state, "closeSession", 0);
+    m_data = LuaData{session, nullptr, nullptr};
+    call_function(m_state, CN_CLOSE_SESSION, 0);
 }
 
 std::string LuaContext::diagnostics()
 {
     std::string rval;
+    m_data = LuaData{nullptr, nullptr, nullptr};
 
-    if (call_function(m_state, "diagnostic", 1))
+    if (call_function(m_state, CN_DIAGNOSTIC, 1))
     {
         lua_gettop(m_state);
 
