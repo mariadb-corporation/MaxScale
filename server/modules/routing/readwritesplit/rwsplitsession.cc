@@ -997,9 +997,9 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             int idle = duration_cast<seconds>(diff).count();
             errmsg = mxb::string_printf(
                 "Lost connection to the primary server, closing session.%s "
-                "Connection has been idle for %d seconds. Error caused by: %s. "
-                "Last error: %s", errmsg.c_str(), idle, message.c_str(),
-                reply.error().message().c_str());
+                "Connection from %s has been idle for %d seconds. Error caused by: %s. "
+                "Last error: %s", errmsg.c_str(), m_pSession->user_and_host().c_str(),
+                idle, message.c_str(), reply.error().message().c_str());
         }
 
         // Decrement the expected response count only if we know we can continue the sesssion.
