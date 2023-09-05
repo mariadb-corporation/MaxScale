@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2016 MariaDB Corporation Ab
+ * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2027-08-18
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
 /**
  * @file bug547.cpp regression case for bug 547 and bug 594 ( "get_dcb fails if slaves are not available" and
  *"Maxscale fails to start without anything in the logs if there is no slave available" )

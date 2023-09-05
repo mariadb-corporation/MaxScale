@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2016 MariaDB Corporation Ab
+ * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2027-08-18
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
 /**
  * MXS-2490: Unknown prepared statement handler (0) given to mysqld_stmt_execute
  * MXS-3392: Connection reset fails after execute_direct for an unknown table
