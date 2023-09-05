@@ -103,6 +103,7 @@ int main(int argc, char** argv)
                               "maxctrl alter server server1 port 3306;"
                               "maxctrl alter monitor MySQL-Monitor auto_failover true;"
                               "maxctrl alter service RW-Split-Router max_slave_connections=3;"
+                              "maxctrl alter service RW-Split-Router slave_selection_criteria=adaptive_routing;"
                               "maxctrl alter logging highprecision true;"
                               "maxctrl alter maxscale passive true;"
                               "maxctrl rotate logs;"
