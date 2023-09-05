@@ -132,6 +132,7 @@ public:
      * @param flush_nchars - flush stream every n chars, 0 means flush only at the end.
      */
     Decompressor(int flush_nchars = 0);
+    Decompressor(Decompressor&&) = delete;
     ~Decompressor();
 
     /**
