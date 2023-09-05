@@ -77,6 +77,9 @@ class ParserPlugin;
 class Parser
 {
 public:
+    Parser(const Parser&) = delete;
+    Parser& operator= (const Parser&) = delete;
+
     enum class TypeMaskStatus
     {
         FINAL,
@@ -284,8 +287,15 @@ public:
 
     static uint32_t remove_non_trx_type_bits(uint32_t type_mask);
 
-    virtual const ParserPlugin& plugin() const = 0;
-    virtual const Helper&       helper() const = 0;
+    const ParserPlugin& plugin() const
+    {
+        return m_plugin;
+    }
+
+    const Helper& helper() const
+    {
+        return m_helper;
+    }
 
     virtual Result           parse(const GWBUF& stmt, uint32_t collect) const = 0;
     std::unique_ptr<json_t>  parse_to_resource(const char* zHost, const GWBUF& stmt) const;
@@ -387,6 +397,16 @@ public:
     virtual bool set_options(uint32_t options) = 0;
     virtual void set_server_version(uint64_t version) = 0;
     virtual void set_sql_mode(SqlMode sql_mode) = 0;
+
+protected:
+    Parser(const ParserPlugin* pPlugin, const Helper* pHelper)
+        : m_plugin(*pPlugin)
+        , m_helper(*pHelper)
+    {
+    }
+
+    const ParserPlugin& m_plugin;
+    const Helper&       m_helper;
 };
 
 /**

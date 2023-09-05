@@ -468,7 +468,8 @@ namespace maxscale
 {
 
 CachingParser::CachingParser(std::unique_ptr<Parser> sParser)
-    : m_sParser(std::move(sParser))
+    : Parser(&sParser->plugin(), &sParser->helper())
+    , m_sParser(std::move(sParser))
 {
 }
 
@@ -720,16 +721,6 @@ std::unique_ptr<json_t> CachingParser::get_thread_cache_stats_as_json()
 void CachingParser::set_thread_cache_enabled(bool enabled)
 {
     this_thread.use_cache = enabled;
-}
-
-const mxs::ParserPlugin& CachingParser::plugin() const
-{
-    return m_sParser->plugin();
-}
-
-const Parser::Helper& CachingParser::helper() const
-{
-    return m_sParser->helper();
 }
 
 Parser::Result CachingParser::parse(const GWBUF& stmt, uint32_t collect) const

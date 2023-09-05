@@ -4927,17 +4927,7 @@ namespace
 class SqliteParser : public Parser
 {
 public:
-    SqliteParser(const Helper* pHelper)
-        : m_helper(*pHelper)
-    {
-    }
-
-    ParserPlugin& plugin() const override;
-
-    const Helper& helper() const override
-    {
-        return m_helper;
-    }
+    SqliteParser(const Helper* pHelper);
 
     Result parse(const GWBUF& stmt, uint32_t collect) const override
     {
@@ -5220,8 +5210,6 @@ private:
             }
         }
     }
-
-    const Helper& m_helper;
 };
 
 class SqliteParserPlugin : public ParserPlugin
@@ -5347,9 +5335,9 @@ public:
 
 SqliteParserPlugin sqlite3_plugin;
 
-ParserPlugin& SqliteParser::plugin() const
+SqliteParser::SqliteParser(const Helper* pHelper)
+    : Parser(&sqlite3_plugin, pHelper)
 {
-    return sqlite3_plugin;
 }
 
 }

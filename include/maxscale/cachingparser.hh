@@ -72,9 +72,6 @@ public:
     static std::unique_ptr<json_t> content_as_resource(const char* zHost);
 
 
-    const ParserPlugin& plugin() const override;
-    const Helper&       helper() const override;
-
     Result           parse(const GWBUF& stmt, uint32_t collect) const override;
 
     std::string_view get_canonical(const GWBUF& stmt) const override;

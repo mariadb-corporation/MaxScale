@@ -4016,17 +4016,7 @@ namespace
 class MysqlParser : public Parser
 {
 public:
-    MysqlParser(const Helper* pHelper)
-        : m_helper(*pHelper)
-    {
-    }
-
-    ParserPlugin& plugin() const override;
-
-    const Helper& helper() const override
-    {
-        return m_helper;
-    }
+    MysqlParser(const Helper* pHelper);
 
     Result parse(const GWBUF& stmt, uint32_t collect) const override
     {
@@ -4193,9 +4183,6 @@ public:
     {
         pp_mysql_set_server_version(version);
     }
-
-private:
-    const Helper& m_helper;
 };
 
 class MysqlParserPlugin : public ParserPlugin
@@ -4246,9 +4233,9 @@ public:
 
 MysqlParserPlugin mysql_plugin;
 
-ParserPlugin& MysqlParser::plugin() const
+MysqlParser::MysqlParser(const Helper* pHelper)
+    : Parser(&mysql_plugin, pHelper)
 {
-    return mysql_plugin;
 }
 
 }
