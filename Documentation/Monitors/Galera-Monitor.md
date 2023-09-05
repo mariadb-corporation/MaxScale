@@ -64,17 +64,21 @@ These are optional parameters specific to the Galera Monitor.
 
 ### `disable_master_failback`
 
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
+
 If a node marked as primary inside MaxScale happens to fail and the primary status
 is assigned to another node MaxScale will normally return the primary status to
 the original node after it comes back up. With this option enabled, if the
 primary status is assigned to a new node it will not be reassigned to the
 original node for as long as the new primary node is running.
 
-```
-disable_master_failback=true
-```
-
 ### `available_when_donor`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
 
 This option allows Galera nodes to be used normally when they are donors in an
 SST operation when the SST method is non-blocking
@@ -91,31 +95,31 @@ methods are `xtrabackup`, `xtrabackup-v2` and `mariabackup`. Read the
 [wsrep_sst_method](https://mariadb.com/kb/en/library/galera-cluster-system-variables/#wsrep_sst_method)
 documentation for more details.
 
-```
-available_when_donor=true
-```
-
 ### `disable_master_role_setting`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
 
 This disables the assignment of primary and replica roles to the Galera cluster
 nodes. If this option is enabled, Synced is the only status assigned by this
 monitor.
 
-```
-disable_master_role_setting=true
-```
-
 ### `use_priority`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
 
 Enable interaction with server priorities. This will allow the monitor to
 deterministically pick the write node for the monitored Galera cluster and will
 allow for controlled node replacement.
 
-```
-use_priority=true
-```
-
 ### `root_node_as_master`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
 
 This option controls whether the write primary Galera node requires a
 _wsrep_local_index_ value of 0. This option was introduced in MaxScale 2.1.0 and
@@ -130,7 +134,22 @@ If the `root_node_as_master` option is disabled for galeramon, the node with the
 lowest index will always be chosen as the primary. If it is enabled, only the
 node with a a _wsrep_local_index_ value of 0 can be chosen as the primary.
 
+This parameter can work with `disable_master_failback` but using them together
+is not advisable: the intention of `root_node_as_master` is to make sure that
+all MaxScale instances that are configured to use the same Galera cluster will
+send writes to the same node. If `disable_master_failback` is enabled, this is
+no longer true if the Galera cluster reorganizes itself in a way that a
+different node gets the node index 0, writes would still be going to the old
+node that previously had the node index 0. A restart of one of the MaxScales or
+a new MaxScale joining the cluster will cause writes to be sent to the wrong
+node, thus resulting in an increasing the rate of deadlock errors and
+sub-optimal performance.
+
 ### `set_donor_nodes`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
 
 This option controls whether the global variable _wsrep_sst_donor_ should be set
 in each cluster node with _slave' status_.
@@ -151,10 +170,6 @@ SET GLOBAL wsrep_sst_donor = "galera001,galera000"
 in order to set the global variable _wsrep_sst_donor_, proper privileges are
 required for the monitor user that connects to cluster nodes.
 This option is disabled by default and was introduced in MaxScale 2.1.0.
-
-```
-set_donor_nodes=true
-```
 
 ## Interaction with Server Priorities
 

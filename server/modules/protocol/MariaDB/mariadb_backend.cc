@@ -586,7 +586,12 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
 {
     std::ostringstream ss(errmsg, std::ios_base::app);
 
-    ss << " (" << m_server.name();
+    ss << " (" << m_server.name() << ", session=" << m_session->id();
+
+    if (m_thread_id)
+    {
+        ss << ", conn_id=" << m_thread_id;
+    }
 
     if (int err = gw_getsockerrno(dcb->fd()))
     {
