@@ -57,7 +57,12 @@ export default {
                     }
                 }
             )
-            await http.get('/maxscale')
+            const res = await http.get('/maxscale?fields[maxscale]=version')
+            commit(
+                'maxscale/SET_MAXSCALE_VERSION',
+                this.vue.$typy(res, 'data.data.attributes.version').safeString,
+                { root: true }
+            )
         },
         async login({ commit, dispatch, rootState }, { rememberMe, auth }) {
             const {
