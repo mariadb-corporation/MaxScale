@@ -16,6 +16,7 @@ import { APP_CONFIG } from '@rootSrc/utils/constants'
 export default {
     namespaced: true,
     state: {
+        maxscale_version: '',
         maxscale_overview_info: {},
         all_modules_map: {},
         thread_stats: [],
@@ -31,6 +32,9 @@ export default {
         chosen_log_levels: APP_CONFIG.MAXSCALE_LOG_LEVELS,
     },
     mutations: {
+        SET_MAXSCALE_VERSION(state, payload) {
+            state.maxscale_version = payload
+        },
         SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
             state.maxscale_overview_info = payload
         },

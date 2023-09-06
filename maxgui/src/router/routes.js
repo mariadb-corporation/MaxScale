@@ -33,6 +33,7 @@ const WorkspacePage = () => import(/* webpackChunkName: "workspace-page" */ 'pag
 const Users = () => import(/* webpackChunkName: "users" */ 'pages/Users')
 const Logs = () => import(/* webpackChunkName: "logs" */ 'pages/Logs')
 const Settings = () => import(/* webpackChunkName: "settings" */ 'pages/Settings')
+const Contact = () => import(/* webpackChunkName: "support" */ 'pages/Contact')
 
 // Detail views
 const Server = () => import(/* webpackChunkName: "server-detail" */ 'pages/ServerDetail')
@@ -212,6 +213,32 @@ export const sideBarRoutes = [
         },
         name: 'settings',
         label: 'settings',
+    },
+    {
+        path: '/contact',
+        component: Contact,
+        meta: {
+            requiresAuth: true,
+            isBottom: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: '$vuetify.icons.mxs_contact',
+        },
+        name: 'contact',
+        label: 'contact',
+    },
+    {
+        path: '/external-documentation',
+        meta: {
+            requiresAuth: true,
+            external: 'document',
+            isBottom: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: '$vuetify.icons.mxs_questionCircle',
+        },
+        name: 'documentation',
+        label: 'documentation',
     },
 ]
 
