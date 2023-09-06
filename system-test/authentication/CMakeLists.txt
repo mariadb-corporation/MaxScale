@@ -45,5 +45,6 @@ add_test_executable_ex(NAME ed25519_authentication SOURCE ed25519_authentication
         CONFIG ed25519_authentication.cnf VMS repl_backend)
 
 # MXS-4506: passthrough authentication test
+# MXS-4723: passthrough + change user
 add_test_executable_ex(NAME auth_mariadb_passthrough SOURCE auth_mariadb_passthrough.cc
         CONFIG auth_mariadb_passthrough.cnf VMS repl_backend LIBS auth_utils)
