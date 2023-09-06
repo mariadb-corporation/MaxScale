@@ -20,6 +20,7 @@
 
 #include <dirent.h>
 #include <execinfo.h>
+#include <unistd.h>
 
 #include <thread>
 #include <map>

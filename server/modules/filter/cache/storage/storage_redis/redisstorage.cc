@@ -718,8 +718,8 @@ public:
 
                 case RedisAction::ERROR:
                     sThis->log_error("Failed when putting value to Redis");
+                    [[fallthrough]];
 
-                    // [[fallthrough]]
                 case RedisAction::RETRY:
                     rv = CACHE_RESULT_ERROR;
             }
@@ -774,8 +774,8 @@ public:
                                 default:
                                     MXB_WARNING("Unexpected number of values - %lld - deleted with one key,",
                                                 reply.integer());
+                                    [[fallthrough]];
 
-                                    /* FLOWTHROUGH */
                                 case 1:
                                     rv = CACHE_RESULT_OK;
                                     break;
@@ -835,8 +835,8 @@ public:
 
                 case RedisAction::ERROR:
                     sThis->log_error("Failed when invalidating");
+                    [[fallthrough]];
 
-                    // [[fallthrough]]
                 case RedisAction::RETRY:
                     rv = CACHE_RESULT_ERROR;
             }
