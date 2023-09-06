@@ -71,3 +71,18 @@ check_cxx_source_compiles("
 if(HAVE_GLIBC)
   add_definitions(-DHAVE_GLIBC=1)
 endif()
+
+# The tgkill() wrapper was added in glibc 2.30. CentOS 7 and RockyLinux 8 have
+# older versions of glibc where the wrapper is not yet present.
+check_cxx_source_compiles("
+  #include <signal.h>\n
+  #include <unistd.h>\n
+  int main(){\n
+      tgkill(getpid(), gettid(), SIGTERM);\n
+      return 0;\n
+  }\n"
+  HAVE_TGKILL)
+
+if(HAVE_TGKILL)
+  add_definitions(-DHAVE_TGKILL=1)
+endif()

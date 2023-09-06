@@ -20,6 +20,7 @@
 
 #include <dirent.h>
 #include <execinfo.h>
+#include <signal.h>
 #include <unistd.h>
 
 #include <thread>
@@ -97,6 +98,7 @@ int Profiler::collect_samples()
         {
             if (int tid = atoi(de->d_name))
             {
+#ifdef HAVE_TGKILL
                 if (tgkill(pid, tid, PROFILING_RT_SIGNAL) == -1)
                 {
                     // The call can fail with ESRCH if the thread disappears between the time we read it and
@@ -110,6 +112,7 @@ int Profiler::collect_samples()
                 {
                     samples++;
                 }
+#endif
             }
         }
 
@@ -125,6 +128,7 @@ int Profiler::collect_samples()
 
 json_t* Profiler::snapshot(const char* host)
 {
+#ifdef HAVE_TGKILL
     int num_samples = collect_samples();
     json_t* arr = json_array();
 
@@ -152,6 +156,9 @@ json_t* Profiler::snapshot(const char* host)
 
         json_array_append_new(arr, val);
     }
+#else
+    json_t* arr = json_string("Profiling is not supported on this platform");
+#endif
 
     json_t* attr = json_object();
     json_object_set_new(attr, "profile", arr);
