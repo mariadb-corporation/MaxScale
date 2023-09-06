@@ -338,8 +338,6 @@ MariaDBBackendSession::exchange(GWBUF&& input)
 
                         // Backend token should have been calculated if password is used, regardless of
                         // passthrough-setting.
-                        mxb_assert(auth_data.backend_token.empty()
-                                   || auth_data.backend_token.size() == SHA_DIGEST_LENGTH);
                         rval.output = gen_native_auth_response(auth_data.backend_token, new_seqno);
                         rval.success = true;
                         m_state = State::PW_SENT;
@@ -404,11 +402,15 @@ MariaDBBackendSession::exchange(GWBUF&& input)
 
 GWBUF MariaDBBackendSession::gen_native_auth_response(const mariadb::ByteVec& sha_pw, uint8_t seqno)
 {
-    size_t pload_len = SHA_DIGEST_LENGTH;
+    mxb_assert(sha_pw.empty() || sha_pw.size() == SHA_DIGEST_LENGTH);
+    size_t pload_len = sha_pw.empty() ? 0 : SHA_DIGEST_LENGTH;
     size_t total_len = MYSQL_HEADER_LEN + pload_len;
     GWBUF rval(total_len);
     auto ptr = mariadb::write_header(rval.data(), pload_len, seqno);
-    ptr = mxs_mysql_calculate_hash(m_shared_data.scramble, sha_pw, ptr);
+    if (!sha_pw.empty())
+    {
+        ptr = mxs_mysql_calculate_hash(m_shared_data.scramble, sha_pw, ptr);
+    }
     mxb_assert(ptr - rval.data() == (ptrdiff_t)total_len);
     return rval;
 }

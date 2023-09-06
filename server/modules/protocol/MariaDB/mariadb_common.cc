@@ -37,8 +37,6 @@ using UserEntry = mariadb::UserEntry;
 
 namespace
 {
-uint8_t empty_pw_sha1[SHA_DIGEST_LENGTH] = "";
-
 // Helper function for debug assertions
 bool only_one_packet(const GWBUF& buffer)
 {
@@ -257,7 +255,7 @@ void encode_leint(uint8_t* ptr, size_t prefix_size, size_t value)
 uint8_t* mxs_mysql_calculate_hash(const uint8_t* scramble, const std::vector<uint8_t>& pw_sha1,
                                   uint8_t* output)
 {
-    const uint8_t* hash1 = pw_sha1.empty() ? empty_pw_sha1 : pw_sha1.data();
+    const uint8_t* hash1 = pw_sha1.data();
 
     uint8_t hash2[SHA_DIGEST_LENGTH];   // SHA1(SHA1(password))
     SHA1(hash1, SHA_DIGEST_LENGTH, hash2);

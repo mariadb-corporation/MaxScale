@@ -530,7 +530,7 @@ inline constexpr bool mxs_mysql_is_binlog_dump(uint8_t cmd)
  * The algorithm used is: `SHA1(scramble + SHA1(SHA1(password))) ^ SHA1(password)`
  *
  * @param scramble The 20 byte scramble sent by the server
- * @param pw_sha1  The SHA1(password) sent by the client. If empty, assumes no password.
+ * @param pw_sha1  The SHA1(password) sent by the client. Must be 20 bytes long.
  * @param output   Pointer where the resulting 20 byte hash is stored
  * @return Pointer after written data
  */
