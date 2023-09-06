@@ -258,13 +258,13 @@ without any risk to the consistency of the database.
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Values**: `LEAST_CURRENT_OPERATIONS`, `ADAPTIVE_ROUTING`, `LEAST_BEHIND_MASTER`, `LEAST_ROUTER_CONNECTIONS`, `LEAST_GLOBAL_CONNECTIONS`
-- **Default**: `LEAST_CURRENT_OPERATIONS`
+- **Values**: `least_current_operations`, `adaptive_routing`, `least_behind_master`, `least_router_connections`, `least_global_connections`
+- **Default**: `least_current_operations`
 
 This option controls how the readwritesplit router chooses the replicas it
 connects to and how the load balancing is done. The default behavior is to route
 read queries to the replica server with the lowest amount of ongoing queries i.e.
-`LEAST_CURRENT_OPERATIONS`.
+`least_current_operations`.
 
 The option syntax:
 
@@ -274,30 +274,29 @@ slave_selection_criteria=<criteria>
 
 Where `<criteria>` is one of the following values.
 
-* `LEAST_GLOBAL_CONNECTIONS`, the replica with least connections from MariaDB MaxScale
-* `LEAST_ROUTER_CONNECTIONS`, the replica with least connections from this service
-* `LEAST_BEHIND_MASTER`, the replica with smallest replication lag
-* `LEAST_CURRENT_OPERATIONS` (default), the replica with least active operations
-* `ADAPTIVE_ROUTING`, based on server average response times. See below.
+* `least_global_connections`, the replica with least connections from MariaDB MaxScale
+* `least_router_connections`, the replica with least connections from this service
+* `least_behind_master`, the replica with smallest replication lag
+* `least_current_operations` (default), the replica with least active operations
+* `adaptive_routing`, based on server average response times. See below.
 
-The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the
+The `least_global_connections` and `least_router_connections` use the
 connections from MariaDB MaxScale to the server, not the amount of connections
 reported by the server itself.
 
-`LEAST_BEHIND_MASTER` and `ADAPTIVE_ROUTING` do not take server weights into account
+`least_behind_master` and `adaptive_routing` do not take server weights into account
 when choosing a server.
 
-`ADAPTIVE_ROUTING` Measures average server response times. The server averages
+`adaptive_routing` measures average server response times. The server averages
 are used as proxies of server load conditions. At selection time the averages
 are copied and modified to favor faster servers, while at the same time
 guaranteeing at lest some traffic to the slowest servers. The server selection
 is probabilistic based on roulette wheel selection.
 
-Starting with MaxScale versions 2.5.29, 6.4.11, 22.08.9, 23.02.5 and 23.08.1,
-lowercase versions of the values are also accepted. For example,
-`slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
-`slave_selection_criteria=least_current_operations` are both accepted as valid
-values.
+Starting with MaxScale 23.08.1, the legacy uppercase values have been
+deprecated. All runtime modifications of the parameter will now be persisted in
+lowercase. The uppercase values are still accepted but will be removed in a
+future MaxScale release.
 
 #### Interaction Between `slave_selection_criteria` and `max_slave_connections`
 

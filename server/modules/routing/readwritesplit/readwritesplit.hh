@@ -107,16 +107,16 @@ static cfg::ParamEnum<mxs_target_t> s_use_sql_variables_in(
 static cfg::ParamEnum<select_criteria_t> s_slave_selection_criteria(
     &s_spec, "slave_selection_criteria", "Slave selection criteria",
 {
+    {LEAST_GLOBAL_CONNECTIONS, "least_global_connections"},
+    {LEAST_ROUTER_CONNECTIONS, "least_router_connections"},
+    {LEAST_BEHIND_MASTER, "least_behind_master"},
+    {LEAST_CURRENT_OPERATIONS, "least_current_operations"},
+    {ADAPTIVE_ROUTING, "adaptive_routing"},
     {LEAST_GLOBAL_CONNECTIONS, "LEAST_GLOBAL_CONNECTIONS"},
     {LEAST_ROUTER_CONNECTIONS, "LEAST_ROUTER_CONNECTIONS"},
     {LEAST_BEHIND_MASTER, "LEAST_BEHIND_MASTER"},
     {LEAST_CURRENT_OPERATIONS, "LEAST_CURRENT_OPERATIONS"},
     {ADAPTIVE_ROUTING, "ADAPTIVE_ROUTING"},
-    {LEAST_GLOBAL_CONNECTIONS, "least_global_connections"},
-    {LEAST_ROUTER_CONNECTIONS, "least_router_connections"},
-    {LEAST_BEHIND_MASTER, "least_behind_master"},
-    {LEAST_CURRENT_OPERATIONS, "least_current_operations"},
-    {ADAPTIVE_ROUTING, "adaptive_routing"}
 }, LEAST_CURRENT_OPERATIONS, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamEnum<failure_mode> s_master_failure_mode(

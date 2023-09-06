@@ -5,6 +5,10 @@
 * The global setting `skip_permission_checks` has been deprecated and is
   ignored. Monitors start regardless of monitor user permissions.
 
+* The uppercase versions of the `slave_selection_criteria` parameter in
+  readwritesplit have been deprecated. All runtime modifications to the
+  parameters are now saved using the lowercase versions.
+
 * By default, readwritesplit will not replay transactions that are about to
   commit when `transaction_replay` is enabled. To retain the old behavior where
   transactions were always replayed, disable `transaction_replay_safe_commit`.
