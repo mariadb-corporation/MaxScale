@@ -151,7 +151,8 @@ private:
     bool parse_ssl_request_packet(const GWBUF& buffer);
     bool parse_handshake_response_packet(const GWBUF& buffer);
 
-    bool perform_auth_exchange(mariadb::AuthenticationData& auth_data);
+    bool read_and_auth_exchange(mariadb::AuthenticationData& auth_data);
+    bool perform_auth_exchange(GWBUF&& buffer, mariadb::AuthenticationData& auth_data);
     void perform_check_token(AuthType auth_type);
     bool process_normal_packet(GWBUF&& buffer);
     bool route_statement(GWBUF&& buffer);

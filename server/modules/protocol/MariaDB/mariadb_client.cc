@@ -732,8 +732,11 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             break;
 
         case AuthState::START_EXCHANGE:
+            state_machine_continue = perform_auth_exchange(GWBUF(), auth_data);
+            break;
+
         case AuthState::CONTINUE_EXCHANGE:
-            state_machine_continue = perform_auth_exchange(auth_data);
+            state_machine_continue = read_and_auth_exchange(auth_data);
             break;
 
         case AuthState::CHECK_TOKEN:
@@ -2516,43 +2519,41 @@ void MariaDBClientConnection::trigger_ext_auth_exchange()
 {
     auto& auth_data = (m_state == State::CHANGING_USER) ? *m_change_user.auth_data :
         *m_session_data->auth_data;
-    auto adv_state = perform_auth_exchange(auth_data);
+    auto adv_state = perform_auth_exchange(GWBUF(), auth_data);
     if (adv_state)
     {
         m_dcb->trigger_read_event();    // Get the main state machine to advance.
     }
 }
 
+bool MariaDBClientConnection::read_and_auth_exchange(mariadb::AuthenticationData& auth_data)
+{
+    mxb_assert(m_auth_state == AuthState::CONTINUE_EXCHANGE);
+    auto [read_ok, buffer] = read_protocol_packet();
+    bool advance_state = false;
+    if (buffer.empty())
+    {
+        if (!read_ok)
+        {
+            // Connection is likely broken, no need to send error message.
+            m_auth_state = AuthState::FAIL;
+            advance_state = true;
+        }
+    }
+    else
+    {
+        advance_state = perform_auth_exchange(std::move(buffer), auth_data);
+    }
+    return advance_state;
+}
 /**
  * Authentication exchange state for authenticator state machine.
  *
  * @return True, if the calling state machine should continue. False, if it should wait for more client data.
  */
-bool MariaDBClientConnection::perform_auth_exchange(mariadb::AuthenticationData& auth_data)
+bool MariaDBClientConnection::perform_auth_exchange(GWBUF&& buffer, mariadb::AuthenticationData& auth_data)
 {
     mxb_assert(m_auth_state == AuthState::START_EXCHANGE || m_auth_state == AuthState::CONTINUE_EXCHANGE);
-
-    GWBUF buffer;
-    // Nothing to read on first exchange-call.
-    if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
-    {
-        bool read_ok;
-        std::tie(read_ok, buffer) = read_protocol_packet();
-        if (buffer.empty())
-        {
-            if (read_ok)
-            {
-                // Not enough data was available yet.
-                return false;
-            }
-            else
-            {
-                // Connection is likely broken, no need to send error message.
-                m_auth_state = AuthState::FAIL;
-                return true;
-            }
-        }
-    }
 
     auto res = m_authenticator->exchange(move(buffer), m_session_data, auth_data);
     if (!res.packet.empty())
