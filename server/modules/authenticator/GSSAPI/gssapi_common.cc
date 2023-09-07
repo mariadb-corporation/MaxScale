@@ -91,7 +91,7 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParamete
     return instance;
 }
 
-mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator()
+mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator(MariaDBClientConnection& client)
 {
     return std::make_unique<GSSAPIClientAuthenticator>(m_service_principal);
 }

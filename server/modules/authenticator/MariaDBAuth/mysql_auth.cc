@@ -89,7 +89,7 @@ const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plu
     return plugins;
 }
 
-mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()
+mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator(MariaDBClientConnection& client)
 {
     return std::make_unique<MariaDBClientAuthenticator>(m_log_pw_mismatch, m_passthrough_mode);
 }

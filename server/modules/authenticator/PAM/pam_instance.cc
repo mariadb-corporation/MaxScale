@@ -174,7 +174,7 @@ std::string PamAuthenticatorModule::supported_protocol() const
     return MXS_MARIADB_PROTOCOL_NAME;
 }
 
-mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
+mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator(MariaDBClientConnection& client)
 {
     return std::make_unique<PamClientAuthenticator>(m_settings, m_backend_pwds);
 }

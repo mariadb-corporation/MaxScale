@@ -861,7 +861,7 @@ void MariaDBClientConnection::update_user_account_entry(mariadb::AuthenticationD
         auth_data.client_auth_module = selected_module;
         // If changing user, this overrides the old client authenticator. Not an issue, as the client auth
         // is only used during authentication.
-        m_authenticator = selected_module->create_client_authenticator();
+        m_authenticator = selected_module->create_client_authenticator(*this);
     }
     else
     {
@@ -883,7 +883,7 @@ void MariaDBClientConnection::set_passthrough_account_entry(mariadb::Authenticat
     auth_data.client_auth_module = selected_module;
 
     // The authenticator class should not change, but this may reset some fields.
-    m_authenticator = selected_module->create_client_authenticator();
+    m_authenticator = selected_module->create_client_authenticator(*this);
 
     // Imagine that the user account was found.
     auth_data.user_entry.type = UserEntryType::USER_ACCOUNT_OK;

@@ -29,7 +29,7 @@ class Ed25519AuthenticatorModule : public mariadb::AuthenticatorModule
 public:
     static Ed25519AuthenticatorModule* create(mxs::ConfigParameters* options);
 
-    mariadb::SClientAuth  create_client_authenticator() override;
+    mariadb::SClientAuth  create_client_authenticator(MariaDBClientConnection& client) override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
     uint64_t    capabilities() const override;

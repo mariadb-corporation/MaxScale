@@ -25,7 +25,7 @@ public:
     explicit MariaDBAuthenticatorModule(bool log_pw_mismatch, bool passthrough_mode);
     ~MariaDBAuthenticatorModule() override = default;
 
-    mariadb::SClientAuth  create_client_authenticator() override;
+    mariadb::SClientAuth  create_client_authenticator(MariaDBClientConnection& client) override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
     mariadb::AuthByteVec  generate_token(std::string_view password) override;
 

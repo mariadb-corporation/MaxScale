@@ -28,7 +28,7 @@ public:
     static GSSAPIAuthenticatorModule* create(mxs::ConfigParameters* options);
     ~GSSAPIAuthenticatorModule() override = default;
 
-    mariadb::SClientAuth  create_client_authenticator() override;
+    mariadb::SClientAuth  create_client_authenticator(MariaDBClientConnection& client) override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
     uint64_t    capabilities() const override;

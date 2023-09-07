@@ -35,7 +35,7 @@ public:
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
-    mariadb::SClientAuth  create_client_authenticator() override;
+    mariadb::SClientAuth  create_client_authenticator(MariaDBClientConnection& client) override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
 private:

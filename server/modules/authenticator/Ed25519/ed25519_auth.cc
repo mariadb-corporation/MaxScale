@@ -202,7 +202,7 @@ const std::unordered_set<std::string>& Ed25519AuthenticatorModule::supported_plu
     return plugins;
 }
 
-mariadb::SClientAuth Ed25519AuthenticatorModule::create_client_authenticator()
+mariadb::SClientAuth Ed25519AuthenticatorModule::create_client_authenticator(MariaDBClientConnection& client)
 {
     return std::make_unique<Ed25519ClientAuthenticator>(m_mode, m_rsa_privkey, m_rsa_pubkey);
 }

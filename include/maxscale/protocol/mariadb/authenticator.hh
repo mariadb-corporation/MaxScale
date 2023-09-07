@@ -21,6 +21,7 @@
 class DCB;
 class SERVICE;
 class MYSQL_session;
+class MariaDBClientConnection;
 
 namespace mariadb
 {
@@ -135,7 +136,7 @@ public:
      *
      * @return Client authenticator
      */
-    virtual SClientAuth create_client_authenticator() = 0;
+    virtual SClientAuth create_client_authenticator(MariaDBClientConnection& client) = 0;
 
     /**
      * Create a new backend authenticator.
