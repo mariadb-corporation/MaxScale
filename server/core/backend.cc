@@ -83,7 +83,7 @@ bool Backend::write(GWBUF&& buffer, response_type type)
 void Backend::ack_write()
 {
     mxb_assert(!m_responses.empty());
-    m_responses.pop_front();
+    m_responses.erase(m_responses.begin());
     m_target->stats().remove_current_op();
 }
 

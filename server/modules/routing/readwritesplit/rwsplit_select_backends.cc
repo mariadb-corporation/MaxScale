@@ -57,7 +57,7 @@ bool gtid_pos_is_ok(mxs::RWBackend* backend, RWSplit::gtid gtid_pos)
 }
 
 template<class Score>
-RWBackend* best_score(PRWBackends& sBackends, Score server_score)
+RWBackend* best_score(const Candidates& sBackends, Score server_score)
 {
     if (sBackends.empty())
     {
@@ -96,7 +96,7 @@ RWBackend* best_score(PRWBackends& sBackends, Score server_score)
 }
 
 /** Compare number of global connections in backend servers */
-RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
+RWBackend* backend_cmp_global_conn(const Candidates& sBackends)
 {
     auto server_score = [](RWBackend* b) {
         return b->target()->stats().n_current_conns();
@@ -106,7 +106,7 @@ RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 }
 
 /** Compare replication lag between backend servers */
-RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
+RWBackend* backend_cmp_behind_master(const Candidates& sBackends)
 {
     static auto server_score = [](RWBackend* b) {
         return b->target()->replication_lag();
@@ -116,7 +116,7 @@ RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 }
 
 /** Compare number of current operations in backend servers */
-RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
+RWBackend* backend_cmp_current_load(const Candidates& sBackends)
 {
     auto server_score = [](RWBackend* b) {
         return b->target()->stats().n_current_ops();
@@ -137,7 +137,7 @@ RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
  * @param sBackends
  * @return the selected backend.
  */
-RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
+RWBackend* backend_cmp_response_time(const Candidates& pBackends)
 {
     if (pBackends.empty())
     {
@@ -300,7 +300,7 @@ bool RWSplitSession::need_slaves()
 
 RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
-    PRWBackends candidates;
+    Candidates candidates;
     int best_priority {INT_MAX};
     auto current_rank = get_current_rank();
 
@@ -409,7 +409,7 @@ RWBackend* RWSplitSession::get_root_master()
         return m_current_master;
     }
 
-    PRWBackends candidates;
+    Candidates candidates;
     auto best_rank = std::numeric_limits<int64_t>::max();
 
     for (const auto& backend : m_raw_backends)
@@ -480,7 +480,7 @@ bool RWSplitSession::open_connections()
     int max_nslaves = std::min(m_config->max_slave_connections, m_config->slave_connections);
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
     auto current_rank = get_current_rank();
-    PRWBackends candidates;
+    Candidates candidates;
 
     for (auto& backend : m_raw_backends)
     {

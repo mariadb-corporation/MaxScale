@@ -15,11 +15,11 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <deque>
 #include <algorithm>
 
 #include <maxscale/target.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/small_vector.hh>
 
 
 namespace maxscale
@@ -43,7 +43,7 @@ public:
     /**
      * What type of a response we expect from the backend
      */
-    enum response_type
+    enum response_type : uint8_t
     {
         EXPECT_RESPONSE,    // Response will be routed to the client
         IGNORE_RESPONSE,    // Response will be discarded by the router
@@ -263,6 +263,6 @@ private:
 
     // Contains the types of responses we're expecting from this backend. Used to detect if multiple commands
     // were sent to the backend but not all of the results should be sent to the client.
-    std::deque<response_type> m_responses;
+    mxb::small_vector<response_type> m_responses;
 };
 }
