@@ -41,19 +41,30 @@
                                 </v-row>
                             </v-col>
                             <v-col cols="8">
-                                <sessions-table
-                                    collapsible
-                                    delayLoading
-                                    :items="sessionsTableRow"
-                                    :server-items-length="getTotalFilteredSessions"
-                                    @get-data-from-api="fetchSessionsWithFilter(filterSessionParam)"
-                                    @confirm-kill="
-                                        killSession({
-                                            id: $event.id,
-                                            callback: fetchSessionsWithFilter(filterSessionParam),
-                                        })
-                                    "
-                                />
+                                <v-row>
+                                    <v-col cols="12">
+                                        <res-time-dist-histogram :resTimeDist="resTimeDist" />
+                                    </v-col>
+                                    <v-col cols="12">
+                                        <sessions-table
+                                            collapsible
+                                            delayLoading
+                                            :items="sessionsTableRow"
+                                            :server-items-length="getTotalFilteredSessions"
+                                            @get-data-from-api="
+                                                fetchSessionsWithFilter(filterSessionParam)
+                                            "
+                                            @confirm-kill="
+                                                killSession({
+                                                    id: $event.id,
+                                                    callback: fetchSessionsWithFilter(
+                                                        filterSessionParam
+                                                    ),
+                                                })
+                                            "
+                                        />
+                                    </v-col>
+                                </v-row>
                             </v-col>
                         </v-row>
                     </v-tab-item>
@@ -102,12 +113,14 @@
 import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
+import ResTimeDistHistogram from './ResTimeDistHistogram'
 
 export default {
     name: 'server-detail',
     components: {
         PageHeader,
         OverviewHeader,
+        ResTimeDistHistogram,
     },
     data() {
         return {
@@ -130,8 +143,17 @@ export default {
             getTotalFilteredSessions: 'session/getTotalFilteredSessions',
             getFilterParamByServerId: 'session/getFilterParamByServerId',
         }),
+        resTimeDist() {
+            return this.$typy(
+                this.current_server,
+                'attributes.statistics.response_time_distribution'
+            ).safeObjectOrEmpty
+        },
         serverStats() {
-            return this.$typy(this.current_server, 'attributes.statistics').safeObjectOrEmpty
+            return this.$helpers.lodash.pickBy(
+                this.$typy(this.current_server, 'attributes.statistics').safeObjectOrEmpty,
+                (_, key) => key !== 'response_time_distribution'
+            )
         },
         monitorDiagnostics() {
             const {
@@ -169,12 +191,7 @@ export default {
             }
         },
         async currentActiveTab(val) {
-            switch (val) {
-                // when active tab is Parameters & Diagnostics
-                case 1:
-                    await this.fetchModuleParameters('servers')
-                    break
-            }
+            if (val === 1) await this.fetchModuleParameters('servers')
         },
         // re-fetch when the route changes
         async $route() {

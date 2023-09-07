@@ -84,4 +84,22 @@ describe('MxsCollapse.vue', () => {
         wrapper.find('.done-editing-btn').trigger('click')
         expect(eventFired).to.equal(1)
     })
+
+    it(`Should render title-append slot `, () => {
+        wrapper = mount({
+            shallow: false,
+            component: MxsCollapse,
+            propsData: {
+                isContentVisible: true,
+                toggleOnClick: () => null,
+            },
+            slots: {
+                'title-append': '<div class="title-append">test div</div>',
+            },
+        })
+
+        expect(wrapper.find('.title-append').html()).to.be.equal(
+            '<div class="title-append">test div</div>'
+        )
+    })
 })

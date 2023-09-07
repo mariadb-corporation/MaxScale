@@ -45,6 +45,7 @@
                         </v-icon>
                     </v-btn>
                 </v-fade-transition>
+                <slot name="title-append" />
             </div>
             <v-spacer />
             <v-fade-transition>

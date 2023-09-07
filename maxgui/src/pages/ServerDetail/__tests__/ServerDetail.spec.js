@@ -146,6 +146,13 @@ describe('ServerDetail index', () => {
             expect(tableRows).to.be.deep.equals(serviceTableRow)
             expect(getRelationshipData).to.be.equals(getRelationshipDataAsync)
         })
+
+        it(`Should pass necessary props res-time-dist-histogram`, () => {
+            const { resTimeDist } = wrapper.findComponent({
+                name: 'res-time-dist-histogram',
+            }).vm.$props
+            expect(resTimeDist).to.eql(wrapper.vm.resTimeDist)
+        })
     })
     describe("Parameters & Diagnostics tab - Child component's data communication tests", () => {
         beforeEach(() => {
