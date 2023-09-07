@@ -16,7 +16,6 @@
 #include "inventory.hh"
 #include "pinloki.hh"
 #include "rpl_event.hh"
-#include "file_reader.hh"
 #include <maxbase/log.hh>
 #include <maxscale/routingworker.hh>
 #include <fstream>
@@ -45,14 +44,22 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
     return lhs_num < rhs_num || (lhs_num == rhs_num && lhs.file_pos < rhs.file_pos);
 }
 
-std::vector<GtidPosition> FileReader::find_gtid_position(const std::vector<maxsql::Gtid>& gtids)
+bool search_file(const std::string& file_name,
+                 const maxsql::Gtid& gtid,
+                 GtidPosition* ret_pos,
+                 bool first_file,
+                 const Config& cnf);
+
+
+std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
+                                             const Config& cnf)
 {
     mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
 
     std::vector<GtidPosition> ret;
     // Simple linear search. If there can be a lot of files, make this a binary search, or
     // if it really becomes slow, create an index
-    const auto& file_names = m_inventory.file_names();
+    const auto& file_names = cnf.binlog_file_names();
 
     // Search in reverse because the gtid is likely be one of the latest files, and
     // the search can stop as soon as the gtid is greater than the gtid list in the file,
@@ -65,7 +72,7 @@ std::vector<GtidPosition> FileReader::find_gtid_position(const std::vector<maxsq
         auto last_one = rend(file_names) - 1;   // which is the first, oldest file
         for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
         {
-            if (search_file(*ite, gtid, &pos, ite == last_one))
+            if (search_file(*ite, gtid, &pos, ite == last_one, cnf))
             {
                 break;
             }
@@ -79,40 +86,11 @@ std::vector<GtidPosition> FileReader::find_gtid_position(const std::vector<maxsq
     return ret;
 }
 
-/**
- * @brief search_gtid_in_file
- * @param file
- * @param from_pos
- * @return position, or 0 if not found
- */
-long FileReader::search_gtid_in_file(std::ifstream& file, const std::unique_ptr<mxq::EncryptCtx>& encrypt,
-                                     long file_pos, const maxsql::Gtid& gtid)
-{
-    long pos = file.tellg();
-
-    while (maxsql::RplEvent rpl = maxsql::RplEvent::read_event(file, encrypt))
-    {
-        if (rpl.event_type() == GTID_EVENT)
-        {
-            maxsql::GtidEvent event = rpl.gtid_event();
-
-            if (event.gtid.domain_id() == gtid.domain_id() && event.gtid.sequence_nr() == gtid.sequence_nr())
-            {
-                return pos;
-            }
-        }
-
-        pos += rpl.real_size();
-        mxb_assert(pos == file.tellg());
-    }
-
-    return 0;
-}
-
-bool FileReader::search_file(const std::string& file_name,
-                             const maxsql::Gtid& gtid,
-                             GtidPosition* ret_pos,
-                             bool first_file)
+bool search_file(const std::string& file_name,
+                 const maxsql::Gtid& gtid,
+                 GtidPosition* ret_pos,
+                 bool first_file,
+                 const Config& cnf)
 {
     if (first_file)
     {
@@ -147,7 +125,6 @@ bool FileReader::search_file(const std::string& file_name,
 
         if (rpl.event_type() == START_ENCRYPTION_EVENT)
         {
-            const auto& cnf = m_inventory.config();
             encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(), file_name, rpl);
         }
         else if (rpl.event_type() == GTID_LIST_EVENT)

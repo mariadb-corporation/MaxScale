@@ -20,6 +20,8 @@
 namespace pinloki
 {
 
+class Config;
+
 struct GtidPosition
 {
     maxsql::Gtid gtid;
@@ -30,8 +32,8 @@ struct GtidPosition
 // Return a vector with GtidPositions of the same size as the input vector.
 // The GtidPositions are sorted by file location. If a gtid is not found its
 // file_name is empty, and empty positions sort first.
-std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtid_list,
-                                             const InventoryReader& inv);
+std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
+                                             const Config& cnf);
 
 // Find the last known gtid list. This is used to seed the file rpl_state when the
 // writer starts. The function also truncates the latest file if it contains a partial

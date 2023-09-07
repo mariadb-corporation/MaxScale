@@ -67,7 +67,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
     if (gtid_list.gtids().size() > 0)
     {
         // Get a sorted list of GtidPositions
-        m_catchup = find_gtid_position(gtid_list.gtids());
+        m_catchup = find_gtid_position(gtid_list.gtids(), inv->config());
 
         // The first one is the position from which to start reading.
         const auto& gtid_pos = m_catchup.front();
