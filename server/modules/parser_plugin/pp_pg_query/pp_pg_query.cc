@@ -614,19 +614,8 @@ public:
     using Info = PgQueryInfo;
 
     PgQueryParser(const mxs::ParserPlugin* pPlugin, const Helper* pHelper)
-        : m_plugin(*pPlugin)
-        , m_helper(*pHelper)
+        : Parser(pPlugin, pHelper)
     {
-    }
-
-    const mxs::ParserPlugin& plugin() const override
-    {
-        return m_plugin;
-    }
-
-    const mxs::Parser::Helper& helper() const override
-    {
-        return m_helper;
     }
 
     Result parse(const GWBUF& query, uint32_t collect) const override
@@ -759,9 +748,6 @@ private:
 
         return PgQueryInfo::get(m_helper, query, collect);
     }
-
-    const mxs::ParserPlugin&   m_plugin;
-    const mxs::Parser::Helper& m_helper;
 };
 
 /*
