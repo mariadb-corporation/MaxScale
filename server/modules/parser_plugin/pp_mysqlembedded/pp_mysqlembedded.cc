@@ -2344,14 +2344,14 @@ int32_t pp_mysql_get_preparable_stmt(const Parser::Helper& helper,
 
                 if (!pi->preparable_stmt)
                 {
-                    const char* preparable_stmt;
+                    const char* zpreparable_stmt;
                     size_t preparable_stmt_len;
 // MYSQL_VERSION_PATCH might be smaller, but this was detected with 10.2.32.
 #if MYSQL_VERSION_MINOR >= 3 || (MYSQL_VERSION_MINOR == 2 && MYSQL_VERSION_PATCH >= 32)
-                    preparable_stmt = qcme_get_prepared_stmt_code(lex)->str_value.ptr();
+                    zpreparable_stmt = qcme_get_prepared_stmt_code(lex)->str_value.ptr();
                     preparable_stmt_len = qcme_get_prepared_stmt_code(lex)->str_value.length();
 #else
-                    preparable_stmt = lex->prepared_stmt_code.str;
+                    zpreparable_stmt = lex->prepared_stmt_code.str;
                     preparable_stmt_len = lex->prepared_stmt_code.length;
 #endif
                     size_t payload_len = preparable_stmt_len + 1;
@@ -2364,8 +2364,8 @@ int32_t pp_mysql_get_preparable_stmt(const Parser::Helper& helper,
                     // and ':N' (in Oracle mode) with '0':s as otherwise the parsing of the
                     // preparable statement as a regular statement will not always succeed.
                     Parser::SqlMode sql_mode = ::this_thread.sql_mode;
-                    const char* p = preparable_stmt;
-                    const char* end = preparable_stmt + preparable_stmt_len;
+                    const char* p = zpreparable_stmt;
+                    const char* end = zpreparable_stmt + preparable_stmt_len;
                     bool replacement = false;
                     while (p < end)
                     {
@@ -3215,10 +3215,10 @@ static void update_field_infos(parsing_info_t* pi,
                     // Embedded library silently changes "mod" into "%". We need to check
                     // what it originally was, so that the result agrees with that of
                     // pp_sqlite.
-                    const char* s;
+                    const char* s2;
                     size_t l;
-                    get_string_and_length(func_item->name, &s, &l);
-                    if (s && (strncasecmp(s, "mod", 3) == 0))
+                    get_string_and_length(func_item->name, &s2, &l);
+                    if (s2 && (strncasecmp(s, "mod", 3) == 0))
                     {
                         strcpy(func_name, "mod");
                     }
@@ -3234,10 +3234,10 @@ static void update_field_infos(parsing_info_t* pi,
                     // Embedded library silently changes "substring" into "substr". We need
                     // to check what it originally was, so that the result agrees with
                     // that of pp_sqlite. We reserved space for this above.
-                    const char* s;
+                    const char* s2;
                     size_t l;
-                    get_string_and_length(func_item->name, &s, &l);
-                    if (s && (strncasecmp(s, "substring", 9) == 0))
+                    get_string_and_length(func_item->name, &s2, &l);
+                    if (s2 && (strncasecmp(s, "substring", 9) == 0))
                     {
                         strcpy(func_name, "substring");
                     }
@@ -3293,11 +3293,11 @@ static void update_field_infos(parsing_info_t* pi,
 
                         if (subselect_item->substype() == Item_subselect::IN_SUBS)
                         {
-                            Item* item = in_subselect_item->left_expr_orig;
+                            Item* item2 = in_subselect_item->left_expr_orig;
 
-                            if (item->type() == Item::FIELD_ITEM)
+                            if (item2->type() == Item::FIELD_ITEM)
                             {
-                                add_function_field_usage(pi, select, static_cast<Item_field*>(item), fi);
+                                add_function_field_usage(pi, select, static_cast<Item_field*>(item2), fi);
                             }
                         }
                     }
@@ -3686,8 +3686,8 @@ int32_t pp_mysql_get_field_info(const Parser::Helper& helper,
             || (lex->sql_command == SQLCOM_REPLACE)
             || (lex->sql_command == SQLCOM_REPLACE_SELECT))
         {
-            List_iterator<Item> ilist(lex->field_list);
-            Item* item = ilist++;
+            List_iterator<Item> ilist2(lex->field_list);
+            Item* item = ilist2++;
 
             if (item)
             {
@@ -3695,7 +3695,7 @@ int32_t pp_mysql_get_field_info(const Parser::Helper& helper,
                 {
                     update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
 
-                    item = ilist++;
+                    item = ilist2++;
                 }
             }
 
@@ -3706,16 +3706,16 @@ int32_t pp_mysql_get_field_info(const Parser::Helper& helper,
             while (list_item)
             {
                 List_iterator<Item> it_list_item(*list_item);
-                Item* item = it_list_item++;
+                Item* item2 = it_list_item++;
 
-                while (item)
+                while (item2)
                 {
-                    if (item->type() == Item::FUNC_ITEM)
+                    if (item2->type() == Item::FUNC_ITEM)
                     {
-                        add_value_func_item(pi, static_cast<Item_func*>(item));
+                        add_value_func_item(pi, static_cast<Item_func*>(item2));
                     }
 
-                    item = it_list_item++;
+                    item2 = it_list_item++;
                 }
 
                 list_item = it_many_values++;
@@ -3723,10 +3723,10 @@ int32_t pp_mysql_get_field_info(const Parser::Helper& helper,
 
             if (lex->insert_list)
             {
-                List_iterator<Item> ilist(*lex->insert_list);
-                while (Item* item = ilist++)
+                List_iterator<Item> ilist3(*lex->insert_list);
+                while (Item* item3 = ilist++)
                 {
-                    update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
+                    update_field_infos(pi, lex->current_select, COLLECT_SELECT, item3, NULL);
                 }
             }
         }
