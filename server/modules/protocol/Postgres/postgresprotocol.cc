@@ -229,7 +229,7 @@ std::map<uint8_t, std::string_view> extract_response_fields(const uint8_t* buffe
 
         // Null-terminated string
         auto str = reinterpret_cast<const char*>(ptr);
-        size_t len = strnlen(str, end - ptr);
+        len = strnlen(str, end - ptr);
         rval[type] = std::string_view(str, len);
         ptr += len + 1;
     }
