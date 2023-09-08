@@ -11,7 +11,7 @@
             <v-icon size="14" color="primary" class="mr-1">
                 mdi-server
             </v-icon>
-            {{ connectedServerName ? connectedServerName : $mxs_t('connect') }}
+            {{ btnTxt }}
         </template>
         {{ $mxs_t('changeConn') }}
     </mxs-tooltip-btn>
@@ -39,6 +39,9 @@ export default {
     computed: {
         connectedServerName() {
             return this.$typy(this.activeConn, 'meta.name').safeString
+        },
+        btnTxt() {
+            return this.connectedServerName || this.$mxs_t('connect')
         },
     },
 }

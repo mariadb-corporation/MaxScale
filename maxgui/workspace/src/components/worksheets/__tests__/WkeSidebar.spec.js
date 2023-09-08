@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeSidebar from '../WkeSidebar.vue'
+import WkeSidebar from '@wkeComps/WkeSidebar.vue'
 
 describe('wke-sidebar', () => {
     let wrapper
