@@ -5198,6 +5198,24 @@ public:
         return rv;
     }
 
+    QueryInfo get_query_info(const GWBUF& stmt) const override
+    {
+        QueryInfo rval = m_helper.get_query_info(stmt);
+
+        if (rval.type_mask_status == TypeMaskStatus::NEEDS_PARSING)
+        {
+            if (PpSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_FUNCTIONS))
+            {
+                rval.multi_stmt = pInfo->m_multi_stmt;
+                rval.type_mask = pInfo->m_type_mask;
+                rval.op = pInfo->m_operation;
+                rval.relates_to_previous = pInfo->m_relates_to_previous;
+            }
+        }
+
+        return rval;
+    }
+
 private:
     PpSqliteInfo* get_info(const GWBUF& stmt, uint32_t collect_extra = 0) const
     {

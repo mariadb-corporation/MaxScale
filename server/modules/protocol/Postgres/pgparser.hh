@@ -40,6 +40,7 @@ public:
         bool             is_ps_direct_exec_id(uint32_t id) const override;
         bool             is_ps_packet(const GWBUF& packet) const override;
         bool             is_query(const GWBUF& packet) const override;
+        QueryInfo        get_query_info(const GWBUF& packet) const override;
     };
 
     PgParser(const PgParser&) = delete;

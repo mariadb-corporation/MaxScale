@@ -4194,6 +4194,22 @@ public:
     {
         pp_mysql_set_server_version(version);
     }
+
+    QueryInfo get_query_info(const GWBUF& stmt) const override
+    {
+        QueryInfo rval = m_helper.get_query_info(stmt);
+
+        if (rval.type_mask_status == mxs::Parser::TypeMaskStatus::NEEDS_PARSING)
+        {
+            rval.type_mask = get_type_mask(stmt);
+            rval.multi_stmt = is_multi_stmt(stmt);
+            rval.op = get_operation(stmt);
+            rval.relates_to_previous = relates_to_previous(stmt);
+        }
+
+        return rval;
+    }
+
 };
 
 class MysqlParserPlugin : public ParserPlugin

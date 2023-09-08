@@ -99,6 +99,8 @@ public:
     void set_sql_mode(SqlMode sql_mode) override;
     void set_server_version(uint64_t version) override;
 
+    QueryInfo get_query_info(const GWBUF& stmt) const override;
+
 protected:
     CachingParser(std::unique_ptr<Parser> sParser);
 

@@ -847,4 +847,9 @@ void CachingParser::set_server_version(uint64_t version)
 {
     m_sParser->set_server_version(version);
 }
+
+mxs::Parser::QueryInfo CachingParser::get_query_info(const GWBUF& stmt) const
+{
+    return m_sParser->get_query_info(stmt);
+}
 }

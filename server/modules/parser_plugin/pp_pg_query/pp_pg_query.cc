@@ -720,6 +720,12 @@ public:
         return get_info(query)->is_multi_stmt(query);
     }
 
+    QueryInfo get_query_info(const GWBUF& stmt) const override
+    {
+        mxb_assert(!true);
+        return QueryInfo{};
+    }
+
     bool set_options(uint32_t options) override
     {
         bool rv = false;
