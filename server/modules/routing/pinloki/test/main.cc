@@ -59,6 +59,10 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
 {
     mxb::Worker worker;
     mxq::Connection::ConnectionDetails details = {maxbase::Host::from_string(host), "", user, pw};
+    config().post_configure({});
+    auto latest = find_last_gtid_list(config());
+    config().save_rpl_state(latest);
+
 
     if (writer_mode)
     {

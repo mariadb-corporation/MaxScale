@@ -175,15 +175,15 @@ bool search_file(const std::string& file_name,
 }
 
 
-maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
+maxsql::GtidList find_last_gtid_list(const Config& cnf)
 {
     maxsql::GtidList ret;
-    if (inv.file_names().empty())
+    if (cnf.binlog_file_names().empty())
     {
         return ret;
     }
 
-    auto file_name = inv.file_names().back();
+    auto file_name = cnf.binlog_file_names().back();
     std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
     long file_pos = PINLOKI_MAGIC.size();
     file.seekg(file_pos);
@@ -199,7 +199,7 @@ maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
         switch (rpl.event_type())
         {
         case START_ENCRYPTION_EVENT:
-            encrypt_ctx = mxq::create_encryption_ctx(inv.config().key_id(), inv.config().encryption_cipher(),
+            encrypt_ctx = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(),
                                                      file_name, rpl);
             break;
 

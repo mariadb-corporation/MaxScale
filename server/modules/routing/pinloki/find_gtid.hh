@@ -38,5 +38,5 @@ std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gt
 // Find the last known gtid list. This is used to seed the file rpl_state when the
 // writer starts. The function also truncates the latest file if it contains a partial
 // transaction or partially written events.
-maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv);
+maxsql::GtidList find_last_gtid_list(const Config& cnf);
 }
