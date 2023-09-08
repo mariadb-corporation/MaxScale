@@ -3270,7 +3270,7 @@ static void update_field_infos(parsing_info_t* pi,
             {
             case Item_subselect::IN_SUBS:
                 fi = add_function_info(pi, select, "in", 0, 0);
-
+                [[fallthrough]];
             case Item_subselect::ALL_SUBS:
             case Item_subselect::ANY_SUBS:
                 {
