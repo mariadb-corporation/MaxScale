@@ -133,6 +133,12 @@ public:
      */
     bool is_included(const GtidList& other) const;
 
+    /**
+     * @brief has_domain Is there a gtid with the given domain in the list
+     * @return true If domain is in list
+     */
+    bool has_domain(uint32_t domain_id) const;
+
 private:
     void sort();
 

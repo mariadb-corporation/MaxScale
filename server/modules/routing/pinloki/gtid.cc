@@ -148,6 +148,15 @@ bool GtidList::is_included(const GtidList& other) const
     return true;
 }
 
+bool GtidList::has_domain(uint32_t domain_id) const
+{
+    return std::any_of(begin(m_gtids), end(m_gtids), [domain_id]
+                       (const auto& gtid)
+                       {
+        return gtid.domain_id() == domain_id;
+    });
+}
+
 std::ostream& operator<<(std::ostream& os, const GtidList& lst)
 {
     os << lst.to_string();

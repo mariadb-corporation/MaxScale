@@ -47,7 +47,6 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
 bool search_file(const std::string& file_name,
                  const maxsql::Gtid& gtid,
                  GtidPosition* ret_pos,
-                 bool first_file,
                  const Config& cnf);
 
 
@@ -69,10 +68,9 @@ std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gt
     for (const auto& gtid : gtids)
     {
         GtidPosition pos {gtid};
-        auto last_one = rend(file_names) - 1;   // which is the first, oldest file
         for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
         {
-            if (search_file(*ite, gtid, &pos, ite == last_one, cnf))
+            if (search_file(*ite, gtid, &pos, cnf))
             {
                 break;
             }
@@ -89,17 +87,8 @@ std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gt
 bool search_file(const std::string& file_name,
                  const maxsql::Gtid& gtid,
                  GtidPosition* ret_pos,
-                 bool first_file,
                  const Config& cnf)
 {
-    if (first_file)
-    {
-        // First file, no need to seek into the binlog: the event is guaranteed to be in the future
-        ret_pos->file_name = file_name;
-        ret_pos->file_pos = PINLOKI_MAGIC.size();
-        return true;
-    }
-
     std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
 
     if (!file.good())
@@ -113,8 +102,9 @@ bool search_file(const std::string& file_name,
     long file_pos = PINLOKI_MAGIC.size();
     file.seekg(file_pos);
     std::unique_ptr<mxq::EncryptCtx> encrypt;
+    maxsql::GtidList gtid_list;
 
-    while (result == NotFound)
+    for (;;)
     {
         maxsql::RplEvent rpl = mxq::RplEvent::read_event(file, encrypt);
 
@@ -130,35 +120,49 @@ bool search_file(const std::string& file_name,
         else if (rpl.event_type() == GTID_LIST_EVENT)
         {
             maxsql::GtidListEvent event = rpl.gtid_list();
+            gtid_list = event.gtid_list;
 
-            uint64_t highest_seq = 0;
-            bool domain_in_list = false;
-
-            for (const auto& tid : event.gtid_list.gtids())
-            {
-                if (tid.domain_id() == gtid.domain_id())
-                {
-                    domain_in_list = true;
-                    highest_seq = std::max(highest_seq, tid.sequence_nr());
-                }
-            }
-
-            if (!domain_in_list || (domain_in_list && highest_seq < gtid.sequence_nr()))
-            {
-                result = GtidInThisFile;
-            }
-            else if (highest_seq == gtid.sequence_nr())
-            {
-                result = GtidInPriorFile;
-            }
-            else
+            // There is only one gtid list in a file. If the list was empty, this
+            // should be the very first binlog file, continue looping and reading GTIDS
+            // to build a gtid list.
+            if (!event.gtid_list.gtids().empty())
             {
                 break;
             }
         }
+        else if (rpl.event_type() == GTID_EVENT)
+        {
+            maxsql::GtidEvent event = rpl.gtid_event();
+            if (!gtid_list.has_domain(event.gtid.domain_id()))
+            {
+                maxsql::Gtid gtid2{event.gtid.domain_id(),
+                                  event.gtid.server_id(),
+                                  event.gtid.sequence_nr() - 1};
+                gtid_list.replace(gtid2);
+            }
+        }
     }
 
-    bool success = false;
+    uint64_t highest_seq = 0;
+    bool domain_in_list = false;
+
+    for (const auto& tid : gtid_list.gtids())
+    {
+        if (tid.domain_id() == gtid.domain_id())
+        {
+            domain_in_list = true;
+            highest_seq = std::max(highest_seq, tid.sequence_nr());
+        }
+    }
+
+    if (!domain_in_list || (domain_in_list && highest_seq < gtid.sequence_nr()))
+    {
+        result = GtidInThisFile;
+    }
+    else if (highest_seq == gtid.sequence_nr())
+    {
+        result = GtidInPriorFile;
+    }
 
     if (result == GtidInThisFile || result == GtidInPriorFile)
     {
@@ -166,14 +170,12 @@ bool search_file(const std::string& file_name,
         // GTID_LIST_EVENT had a GTID in it that was smaller than the target GTID. If the result is
         // GtidInPriorFile, the GTID list contained the exact target GTID. In this case no GTIDs need to be
         // skipped. In both cases the skipping of already replicated transactions is handled in send_event().
-        success = true;
         ret_pos->file_name = file_name;
         ret_pos->file_pos = PINLOKI_MAGIC.size();
     }
 
-    return success;
+    return result != NotFound;
 }
-
 
 maxsql::GtidList find_last_gtid_list(const Config& cnf)
 {
