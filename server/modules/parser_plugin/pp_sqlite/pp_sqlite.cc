@@ -1521,6 +1521,7 @@ public:
             m_function_infos.reserve(m_function_infos.size() + 1);
             m_function_field_usage.reserve(m_function_field_usage.size() + 1);
 
+            m_relates_to_previous |= mxb::sv_case_eq(item.name, "FOUND_ROWS");
             m_function_infos.push_back(item);
             m_function_field_usage.resize(m_function_field_usage.size() + 1);
         }
@@ -3331,6 +3332,7 @@ public:
         , m_operation(mxs::sql::OP_UNDEFINED)
         , m_pPreparable_stmt(NULL)
         , m_multi_stmt(false)
+        , m_relates_to_previous(false)
     {
     }
 
@@ -3568,6 +3570,7 @@ public:
                                                                  // m_function_infos
     vector<vector<char>>              m_scratch_buffers;         // Buffers if string not found from canonical.
     bool                              m_multi_stmt;
+    bool                              m_relates_to_previous;
 };
 
 extern "C"
@@ -5127,17 +5130,9 @@ public:
         // TODO: E.g. "SHOW WARNINGS" also relates to previous.
         bool rv = false;
 
-        const mxs::Parser::FunctionInfo* pInfos = nullptr;
-        size_t nInfos = 0;
-        get_function_info(packet, &pInfos, &nInfos);
-
-        for (size_t i = 0; i < nInfos; ++i)
+        if (PpSqliteInfo* pInfo = get_info(packet, Parser::COLLECT_FUNCTIONS))
         {
-            if (mxb::sv_case_eq(pInfos[i].name, "FOUND_ROWS"))
-            {
-                rv = true;
-                break;
-            }
+            rv = pInfo->m_relates_to_previous;
         }
 
         return rv;
