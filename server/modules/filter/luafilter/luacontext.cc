@@ -107,8 +107,8 @@ bool call_function(lua_State* state, int ref, const char* name, int nret, Args .
         return false;
     }
 
-    MXB_AT_DEBUG(int type = ) lua_rawgeti(state, LUA_REGISTRYINDEX, ref);
-    mxb_assert(type == LUA_TFUNCTION);
+    lua_rawgeti(state, LUA_REGISTRYINDEX, ref);
+    mxb_assert(lua_type(state, -1) == LUA_TFUNCTION);
     return call_pushed_function(state, name, nret, std::forward<Args>(args)...);
 }
 
