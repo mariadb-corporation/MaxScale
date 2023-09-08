@@ -1,4 +1,4 @@
-include(./BuildHiredis.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/BuildHiredis.cmake)
 
 include_directories(${HIREDIS_INCLUDE_DIR})
 
