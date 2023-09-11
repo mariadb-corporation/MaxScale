@@ -24,15 +24,22 @@ class Config;
 
 struct GtidPosition
 {
+    GtidPosition(maxsql::Gtid gtid, const std::string& file_name, long file_pos)
+        : gtid(gtid)
+        , file_name(file_name)
+        , file_pos(file_pos)
+    {
+    }
     maxsql::Gtid gtid;
     std::string  file_name;
     long         file_pos;
 };
 
+
 // Return a vector with GtidPositions of the same size as the input vector.
 // The GtidPositions are sorted by file location. If a gtid is not found its
 // file_name is empty, and empty positions sort first.
-std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
+std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
                                              const Config& cnf);
 
 // Find the last known gtid list. This is used to seed the file rpl_state when the

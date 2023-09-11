@@ -69,21 +69,14 @@ private:
     bool     m_is_valid = false;
 };
 
+inline bool operator==(const Gtid& lhs, const Gtid& rhs)
+{
+    return lhs.domain_id() == rhs.domain_id()
+           && lhs.sequence_nr() == rhs.sequence_nr()
+           && lhs.server_id() == rhs.server_id();
+}
+
 std::ostream& operator<<(std::ostream& os, const maxsql::Gtid& gtid);
-
-// Sorting really only needs to be done by domain_id, as long as it is only GtidList doing it
-// inline bool operator<(const Gtid& lhs, const Gtid& rhs)
-// {
-//    return lhs.domain_id() < rhs.domain_id()
-//           || (lhs.domain_id() == rhs.domain_id() && lhs.sequence_nr() < rhs.sequence_nr());
-// }
-
-// inline bool operator==(const Gtid& lhs, const Gtid& rhs)
-// {
-//    return lhs.domain_id() == rhs.domain_id()
-//           && lhs.server_id() == rhs.server_id()
-//           && lhs.sequence_nr() == rhs.sequence_nr();
-// }
 
 class GtidList
 {

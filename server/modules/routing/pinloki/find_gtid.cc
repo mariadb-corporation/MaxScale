@@ -44,13 +44,12 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
     return lhs_num < rhs_num || (lhs_num == rhs_num && lhs.file_pos < rhs.file_pos);
 }
 
-bool search_file(const std::string& file_name,
-                 const maxsql::Gtid& gtid,
-                 GtidPosition* ret_pos,
-                 const Config& cnf);
+std::vector<GtidPosition> search_file(const std::string& file_name,
+                                      const std::vector<maxsql::Gtid>& gtids,
+                                      const Config& cnf);
 
 
-std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
+std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
                                              const Config& cnf)
 {
     mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
@@ -60,23 +59,31 @@ std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gt
     // if it really becomes slow, create an index
     const auto& file_names = cnf.binlog_file_names();
 
-    // Search in reverse because the gtid is likely be one of the latest files, and
-    // the search can stop as soon as the gtid is greater than the gtid list in the file,
-    // uh, expect for the first file which doesn't have a GTID_LIST_EVENT.
+    // Search files in reverse because the gtids are likely be in one of the latest files,
+    // and the search can stop as soon as the gtid is greater than the gtid list in the file.
 
-    // TODO, don't do one gtid at a time, modify the search to do all in one go.
-    for (const auto& gtid : gtids)
+    for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
     {
-        GtidPosition pos {gtid};
-        for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
+        auto positions = search_file(*ite, gtids, cnf);
+
+        for (const auto& pos : positions)
         {
-            if (search_file(*ite, gtid, &pos, cnf))
-            {
-                break;
-            }
+            auto gite = std::find(begin(gtids), end(gtids), pos.gtid);
+            mxb_assert(gite != end(gtids));
+            gtids.erase(gite);
+            ret.push_back(std::move(pos));
         }
 
-        ret.push_back(pos);
+        if (gtids.empty())
+        {
+            break;
+        }
+    }
+
+    // Any remaining gtids that were not found.
+    for (const auto& g : gtids)
+    {
+        ret.emplace_back(g, ""s, 0);
     }
 
     sort(begin(ret), end(ret));
@@ -134,29 +141,27 @@ maxsql::GtidList get_gtid_list(const std::string& file_name,
     return gtid_list;
 }
 
-bool search_file(const std::string& file_name,
-                 const maxsql::Gtid& gtid,
-                 GtidPosition* ret_pos,
-                 const Config& cnf)
+std::vector<GtidPosition> search_file(const std::string& file_name,
+                                      const std::vector<maxsql::Gtid>& gtids,
+                                      const Config& cnf)
 {
-    auto gtid_list = get_gtid_list(file_name, cnf);
-    bool found = false;
+    std::vector<GtidPosition> ret;
 
-    for (const auto& tid : gtid_list.gtids())
+    auto gtid_list = get_gtid_list(file_name, cnf);
+
+    for (const auto& list_gtid : gtid_list.gtids())
     {
-        if (tid.domain_id() == gtid.domain_id()
-            && tid.sequence_nr() <= gtid.sequence_nr())
+        for (const auto& search_gtid : gtids)
         {
-            // The gtid is in this file or possbily a future file
-            // if this is the last file.
-            ret_pos->file_name = file_name;
-            ret_pos->file_pos = PINLOKI_MAGIC.size();
-            found = true;
-            break;
+            if (list_gtid.domain_id() == search_gtid.domain_id()
+                && list_gtid.sequence_nr() <= search_gtid.sequence_nr())
+            {
+                ret.emplace_back(search_gtid, file_name, MAGIC_SIZE);
+            }
         }
     }
 
-    return found;
+    return ret;
 }
 
 maxsql::GtidList find_last_gtid_list(const Config& cnf)
