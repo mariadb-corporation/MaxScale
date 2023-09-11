@@ -139,42 +139,24 @@ bool search_file(const std::string& file_name,
                  GtidPosition* ret_pos,
                  const Config& cnf)
 {
-    enum GtidListResult {NotFound, GtidInThisFile, GtidInPriorFile};
-    GtidListResult result = NotFound;
     auto gtid_list = get_gtid_list(file_name, cnf);
-
-    uint64_t highest_seq = 0;
-    bool domain_in_list = false;
+    bool found = false;
 
     for (const auto& tid : gtid_list.gtids())
     {
-        if (tid.domain_id() == gtid.domain_id())
+        if (tid.domain_id() == gtid.domain_id()
+            && tid.sequence_nr() <= gtid.sequence_nr())
         {
-            domain_in_list = true;
-            highest_seq = std::max(highest_seq, tid.sequence_nr());
+            // The gtid is in this file or possbily a future file
+            // if this is the last file.
+            ret_pos->file_name = file_name;
+            ret_pos->file_pos = PINLOKI_MAGIC.size();
+            found = true;
+            break;
         }
     }
 
-    if (!domain_in_list || (domain_in_list && highest_seq < gtid.sequence_nr()))
-    {
-        result = GtidInThisFile;
-    }
-    else if (highest_seq == gtid.sequence_nr())
-    {
-        result = GtidInPriorFile;
-    }
-
-    if (result == GtidInThisFile || result == GtidInPriorFile)
-    {
-        // If the result is GtidInThisFile, the GTID is somewhere in this file. In this case the
-        // GTID_LIST_EVENT had a GTID in it that was smaller than the target GTID. If the result is
-        // GtidInPriorFile, the GTID list contained the exact target GTID. In this case no GTIDs need to be
-        // skipped. In both cases the skipping of already replicated transactions is handled in send_event().
-        ret_pos->file_name = file_name;
-        ret_pos->file_pos = PINLOKI_MAGIC.size();
-    }
-
-    return result != NotFound;
+    return found;
 }
 
 maxsql::GtidList find_last_gtid_list(const Config& cnf)
