@@ -532,24 +532,6 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, co
     }
 }
 
-uint32_t QueryClassifier::determine_query_type(const GWBUF& packet) const
-{
-    uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
-
-    mxs::Parser::PacketTypeMask ptm = m_parser.get_packet_type_mask(packet);
-
-    if (ptm.second == mxs::Parser::TypeMaskStatus::FINAL)
-    {
-        type_mask = ptm.first;
-    }
-    else
-    {
-        type_mask = m_parser.get_type_mask(packet);
-    }
-
-    return type_mask;
-}
-
 void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
 {
     if (Parser::type_mask_contains(type, mxs::sql::TYPE_CREATE_TMP_TABLE))
@@ -621,21 +603,22 @@ void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     QueryClassifier::current_target_t current_target,
     GWBUF* querybuf,
-    uint32_t* qtype)
+    uint32_t* qtype,
+    const mxs::Parser::QueryInfo& query_info)
 {
     QueryClassifier::current_target_t rv = QueryClassifier::CURRENT_TARGET_UNDEFINED;
 
-    bool is_query = m_parser.is_query(*querybuf);
+    bool is_query = query_info.query;
 
     /** Check for multi-statement queries. If no master server is available
      * and a multi-statement is issued, an error is returned to the client
      * when the query is routed. */
     if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
-        bool is_multi = is_query && m_parser.get_operation(*querybuf) == mxs::sql::OP_CALL;
+        bool is_multi = is_query && query_info.op == mxs::sql::OP_CALL;
         if (!is_multi && multi_statements_allowed() && is_query)
         {
-            is_multi = m_parser.is_multi_stmt(*querybuf);
+            is_multi = query_info.multi_stmt;
         }
 
         if (is_multi)
@@ -651,7 +634,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     {
 
         check_drop_tmp_table(querybuf);
-        if (is_read_tmp_table(querybuf, *qtype))
+        if (is_read_tmp_table(querybuf, query_info.type_mask))
         {
             *qtype |= mxs::sql::TYPE_MASTER_READ;
         }
@@ -676,9 +659,7 @@ const QueryClassifier::RouteInfo&
 QueryClassifier::update_route_info(GWBUF& buffer)
 {
     uint32_t route_target = TARGET_MASTER;
-    uint8_t cmd = 0xFF;
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
-    uint32_t stmt_id = 0;
     bool locked_to_master = m_pHandler->is_locked_to_master();
     current_target_t current_target = locked_to_master ? CURRENT_TARGET_MASTER : CURRENT_TARGET_UNDEFINED;
     TrxTracker& trx_tracker = m_route_info.m_trx_tracker;
@@ -687,7 +668,11 @@ QueryClassifier::update_route_info(GWBUF& buffer)
     m_prev_route_info = m_route_info;
     m_delta.clear();
 
-    m_route_info.set_multi_part_packet(m_parser.is_multi_part_packet(buffer));
+    auto query_info = m_parser.get_query_info(buffer);
+    uint32_t stmt_id = query_info.ps_id;
+    uint8_t cmd = query_info.command;
+
+    m_route_info.set_multi_part_packet(query_info.multi_part_packet);
 
     if (m_route_info.multi_part_packet())
     {
@@ -695,7 +680,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
         return m_route_info;
     }
 
-    trx_tracker.track_transaction_state(buffer, m_parser);
+    trx_tracker.track_transaction_state(query_info.type_mask);
 
     // Reset for every classification
     m_route_info.set_ps_continuation(false);
@@ -709,13 +694,11 @@ QueryClassifier::update_route_info(GWBUF& buffer)
     {
         // A LOAD DATA LOCAL INFILE is ongoing
     }
-    else if (!m_parser.is_empty(buffer))
+    else if (!query_info.empty)
     {
-        cmd = m_parser.get_command(buffer);
-
-        if (m_parser.is_ps_packet(buffer))
+        if (query_info.ps_direct_exec_id && m_prev_ps_id)
         {
-            stmt_id = ps_id_internal_get(&buffer);
+            stmt_id = m_prev_ps_id;
         }
 
         /**
@@ -729,11 +712,12 @@ QueryClassifier::update_route_info(GWBUF& buffer)
         }
         else
         {
-            type_mask = QueryClassifier::determine_query_type(buffer);
+            type_mask = query_info.type_mask;
 
             current_target = handle_multi_temp_and_load(current_target,
                                                         &buffer,
-                                                        &type_mask);
+                                                        &type_mask,
+                                                        query_info);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
             {
@@ -775,11 +759,11 @@ QueryClassifier::update_route_info(GWBUF& buffer)
         }
         else
         {
-            bool is_query = m_parser.is_query(buffer);
+            bool is_query = query_info.query;
 
             if (!in_read_only_trx
                 && is_query
-                && m_parser.get_operation(buffer) == mxs::sql::OP_EXECUTE)
+                && query_info.op == mxs::sql::OP_EXECUTE)
             {
                 if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, buffer)))
                 {
@@ -787,7 +771,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
                     route_to_last_used = ps->route_to_last_used;
                 }
             }
-            else if (m_parser.is_ps_packet(buffer))
+            else if (query_info.ps_packet)
             {
                 if (const auto* ps = m_sPs_manager->get(stmt_id))
                 {
@@ -796,7 +780,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
                     m_route_info.set_ps_continuation(query_continues_ps(buffer));
                 }
             }
-            else if (is_query && m_parser.relates_to_previous(buffer))
+            else if (is_query && query_info.relates_to_previous)
             {
                 route_to_last_used = true;
             }

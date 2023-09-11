@@ -77,6 +77,7 @@ public:
      */
     template<mxs::Parser::ParseTrxUsing ParseType = mxs::Parser::ParseTrxUsing::DEFAULT>
     void track_transaction_state(const GWBUF& packetbuf, const mxs::Parser& parser);
+    void track_transaction_state(uint32_t type);
 
     /**
      * Use reply to fix the transaction state
@@ -578,8 +579,6 @@ private:
 
     void log_transaction_status(GWBUF* querybuf, uint32_t qtype, const TrxTracker& trx_tracker);
 
-    uint32_t determine_query_type(const GWBUF& packet) const;
-
     void check_create_tmp_table(GWBUF* querybuf, uint32_t type);
 
     bool is_read_tmp_table(GWBUF* querybuf, uint32_t qtype);
@@ -588,7 +587,8 @@ private:
 
     current_target_t handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
                                                 GWBUF* querybuf,
-                                                uint32_t* qtype);
+                                                uint32_t* qtype,
+                                                const mxs::Parser::QueryInfo& query_info);
 
     bool query_continues_ps(const GWBUF& buffer);
 
@@ -648,6 +648,31 @@ private:
 template<mxs::Parser::ParseTrxUsing ParseType>
 void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Parser& parser)
 {
+    uint32_t type_mask = 0;
+
+    if (parser.is_query(packetbuf))
+    {
+        type_mask = parser.get_trx_type_mask_using(packetbuf, ParseType);
+
+        mxb_assert_message(ParseType == mxs::Parser::ParseTrxUsing::CUSTOM
+                           || parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::DEFAULT)
+                           == parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::CUSTOM),
+                           "Parser and query classifier should parse transactions identically: %s",
+                           std::string(parser.get_sql(packetbuf)).c_str());
+
+        if (type_mask & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
+        {
+            // Currently only pp_sqlite should return these types
+            mxb_assert(ParseType == mxs::Parser::ParseTrxUsing::DEFAULT
+                       && parser.get_operation(packetbuf) == mxs::sql::OP_SET_TRANSACTION);
+        }
+    }
+
+    track_transaction_state(type_mask);
+}
+
+inline void TrxTracker::track_transaction_state(uint32_t type)
+{
     const auto trx_starting_active = TRX_ACTIVE | TRX_STARTING;
 
     mxb_assert((m_trx_state & (TRX_STARTING | TRX_ENDING)) != (TRX_STARTING | TRX_ENDING));
@@ -675,63 +700,49 @@ void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Pars
         m_trx_state = trx_starting_active | m_default_trx_mode;
     }
 
-    if (parser.is_query(packetbuf))
+    if (type & mxs::sql::TYPE_BEGIN_TRX)
     {
-        uint32_t type = parser.get_trx_type_mask_using(packetbuf, ParseType);
-
-        mxb_assert_message(ParseType == mxs::Parser::ParseTrxUsing::CUSTOM
-                           || parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::DEFAULT)
-                           == parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::CUSTOM),
-                           "Parser and query classifier should parse transactions identically: %s",
-                           std::string(parser.get_sql(packetbuf)).c_str());
-
-        if (type & mxs::sql::TYPE_BEGIN_TRX)
+        if (type & mxs::sql::TYPE_DISABLE_AUTOCOMMIT)
         {
-            if (type & mxs::sql::TYPE_DISABLE_AUTOCOMMIT)
-            {
-                // This disables autocommit and the next statement starts a new transaction
-                m_autocommit = false;
-                m_trx_state = TRX_INACTIVE;
-            }
-            else
-            {
-                auto new_trx_state = trx_starting_active | m_default_trx_mode;
-
-                if (type & mxs::sql::TYPE_READ)
-                {
-                    new_trx_state |= TRX_READ_ONLY;
-                }
-                else if (type & mxs::sql::TYPE_WRITE)
-                {
-                    new_trx_state &= ~TRX_READ_ONLY;
-                }
-                m_trx_state = new_trx_state;
-            }
+            // This disables autocommit and the next statement starts a new transaction
+            m_autocommit = false;
+            m_trx_state = TRX_INACTIVE;
         }
-        else if (type & (mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK))
+        else
         {
-            auto new_trx_state = m_trx_state | TRX_ENDING;
-            // A commit never starts a new transaction. This would happen with: SET AUTOCOMMIT=0; COMMIT;
-            new_trx_state &= ~TRX_STARTING;
+            auto new_trx_state = trx_starting_active | m_default_trx_mode;
+
+            if (type & mxs::sql::TYPE_READ)
+            {
+                new_trx_state |= TRX_READ_ONLY;
+            }
+            else if (type & mxs::sql::TYPE_WRITE)
+            {
+                new_trx_state &= ~TRX_READ_ONLY;
+            }
             m_trx_state = new_trx_state;
-
-            if (type & mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
-            {
-                m_autocommit = true;
-            }
         }
-        else if (type & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
-        {
-            // Currently only pp_sqlite should return these types
-            mxb_assert(ParseType == mxs::Parser::ParseTrxUsing::DEFAULT
-                       && parser.get_operation(packetbuf) == mxs::sql::OP_SET_TRANSACTION);
-            uint32_t mode = type & mxs::sql::TYPE_READONLY ? TRX_READ_ONLY : 0;
+    }
+    else if (type & (mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK))
+    {
+        auto new_trx_state = m_trx_state | TRX_ENDING;
+        // A commit never starts a new transaction. This would happen with: SET AUTOCOMMIT=0; COMMIT;
+        new_trx_state &= ~TRX_STARTING;
+        m_trx_state = new_trx_state;
 
-            if (!(type & mxs::sql::TYPE_NEXT_TRX))
-            {
-                // All future transactions will use this access mode
-                m_default_trx_mode = mode;
-            }
+        if (type & mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
+        {
+            m_autocommit = true;
+        }
+    }
+    else if (type & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
+    {
+        uint32_t mode = type & mxs::sql::TYPE_READONLY ? TRX_READ_ONLY : 0;
+
+        if (!(type & mxs::sql::TYPE_NEXT_TRX))
+        {
+            // All future transactions will use this access mode
+            m_default_trx_mode = mode;
         }
     }
 }
