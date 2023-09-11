@@ -18,8 +18,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/log.hh>
 #include <maxbase/log.hh>
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/spirit/home/x3.hpp>
+#include <maxscale/boost_spirit_utils.hh>
 #include <algorithm>
 #include <sstream>
 #include <mysql.h>

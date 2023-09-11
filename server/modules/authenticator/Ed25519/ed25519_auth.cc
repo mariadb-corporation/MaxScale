@@ -224,7 +224,6 @@ Ed25519ClientAuthenticator::Ed25519ClientAuthenticator(Ed25519Authenticator::Mod
 mariadb::ClientAuthenticator::ExchRes
 Ed25519ClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
-    using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
 
     const size_t pubkey_req_buflen = MYSQL_HEADER_LEN + 1;

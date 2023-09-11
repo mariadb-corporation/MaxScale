@@ -12,6 +12,10 @@
  */
 #pragma once
 
+// Something in the Spirit X3 headers has a shadowing declaration that causes an error
+// if used with -Wshadow=local
+#pragma GCC diagnostic ignored "-Wshadow=local"
+
 //
 // Reusable Spirit X3 utilities used in MaxScale. The file also includes all the necessary headers to use it
 // with most of the standard types (e.g. tuples).
@@ -81,3 +85,5 @@ struct error_handler
 #define DECLARE_RULE(id, desc) \
         struct id : public maxscale::error_handler {}; \
         const boost::spirit::x3::rule<struct id> id = desc
+
+#pragma GCC diagnostic pop

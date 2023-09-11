@@ -1857,10 +1857,10 @@ bool RoutingWorker::get_qc_stats_by_index(int index, CachingParser::Stats* pStat
 {
     mxb_assert(MainWorker::is_current());
 
-    class Task : public Worker::Task
+    class StatsTask : public Worker::Task
     {
     public:
-        Task(CachingParser::Stats* pStats)
+        StatsTask(CachingParser::Stats* pStats)
             : m_stats(*pStats)
         {
         }
@@ -1879,7 +1879,7 @@ bool RoutingWorker::get_qc_stats_by_index(int index, CachingParser::Stats* pStat
     if (pWorker)
     {
         Semaphore sem;
-        Task task(pStats);
+        StatsTask task(pStats);
         pWorker->execute(&task, &sem, EXECUTE_AUTO);
         sem.wait();
     }
@@ -1892,10 +1892,10 @@ void RoutingWorker::get_qc_stats(std::vector<CachingParser::Stats>& all_stats)
 {
     mxb_assert(MainWorker::is_current());
 
-    class Task : public Worker::Task
+    class StatsTask : public Worker::Task
     {
     public:
-        Task(std::vector<CachingParser::Stats>* pAll_stats)
+        StatsTask(std::vector<CachingParser::Stats>* pAll_stats)
             : m_all_stats(*pAll_stats)
         {
         }
@@ -1918,7 +1918,7 @@ void RoutingWorker::get_qc_stats(std::vector<CachingParser::Stats>& all_stats)
 
     all_stats.resize(nWorkers);
 
-    Task task(&all_stats);
+    StatsTask task(&all_stats);
     mxs::RoutingWorker::execute_concurrently(task);
 }
 

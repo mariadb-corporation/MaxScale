@@ -86,7 +86,6 @@ void GSSAPIClientAuthenticator::store_client_token(const GWBUF& buffer, mariadb:
 mariadb::ClientAuthenticator::ExchRes
 GSSAPIClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
-    using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
 
     switch (m_state)
