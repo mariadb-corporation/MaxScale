@@ -24,8 +24,19 @@
             </template>
         </mxs-treeview>
         <div class="input-message-ctr mt-3">
-            <p v-if="inputMsg" :class="`v-messages__message ${inputMsg.type}--text`">
-                {{ inputMsg.text }}
+            <p
+                v-if="inputMsgObj"
+                :class="`v-messages__message ${inputMsgObj.type}--text`"
+                data-test="input-msg"
+            >
+                {{ inputMsgObj.text }}
+            </p>
+            <p
+                v-if="queryErrMsg"
+                class="v-messages__message error--text mt-2"
+                data-test="query-err-msg"
+            >
+                {{ queryErrMsg }}
             </p>
         </div>
     </div>
@@ -67,7 +78,8 @@ export default {
         return {
             selectedObjs: [],
             items: [],
-            inputMsg: null,
+            inputMsgObj: null,
+            queryErrMsg: '',
         }
     },
     computed: {
@@ -79,7 +91,7 @@ export default {
         activeRequestConfig() {
             return Worksheet.getters('activeRequestConfig')
         },
-        parsedObjs() {
+        categorizeObjs() {
             return this.selectedObjs.reduce(
                 (obj, o) => {
                     // SCHEMA nodes will be included in selectedObjs even though those have no tables
@@ -95,10 +107,10 @@ export default {
             )
         },
         targets() {
-            return this.parsedObjs.targets
+            return this.categorizeObjs.targets
         },
         emptySchemas() {
-            return this.parsedObjs.emptySchemas
+            return this.categorizeObjs.emptySchemas
         },
     },
     watch: {
@@ -117,17 +129,17 @@ export default {
             handler(v) {
                 if (v.length) {
                     if (!this.targets.length)
-                        this.inputMsg = {
+                        this.inputMsgObj = {
                             type: 'error',
                             text: this.$mxs_t('errors.emptyVisualizeSchema'),
                         }
                     else if (this.emptySchemas.length)
-                        this.inputMsg = {
+                        this.inputMsgObj = {
                             type: 'warning',
                             text: this.$mxs_t('warnings.ignoredVisualizeSchemas'),
                         }
-                    else this.inputMsg = null
-                } else this.inputMsg = null
+                    else this.inputMsgObj = null
+                } else this.inputMsgObj = null
             },
         },
         targets: {
@@ -151,12 +163,13 @@ export default {
                 })
             )
 
-            if (e) this.errMsg = this.$mxs_t('errors.retrieveSchemaObj')
+            if (e) this.queryErrMsg = this.$mxs_t('errors.retrieveSchemaObj')
             else {
                 const result = this.$typy(res, 'data.data.attributes.results[0]').safeObject
                 if (this.$typy(result, 'errno').isDefined)
-                    this.errMsg += `\n${this.$helpers.queryResErrToStr(result)}`
+                    this.queryErrMsg = this.$helpers.queryResErrToStr(result)
                 else {
+                    this.queryErrMsg = ''
                     const { nodes } = schemaNodeHelper.genNodeData({
                         queryResult: result,
                         nodeAttrs: { isEmptyChildren: true },
