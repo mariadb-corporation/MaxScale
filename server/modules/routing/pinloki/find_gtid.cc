@@ -84,35 +84,23 @@ std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gt
     return ret;
 }
 
-bool search_file(const std::string& file_name,
-                 const maxsql::Gtid& gtid,
-                 GtidPosition* ret_pos,
-                 const Config& cnf)
+maxsql::GtidList get_gtid_list(const std::string& file_name,
+                               const Config& cnf)
 {
-    std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
-
-    if (!file.good())
-    {
-        MXB_SERROR("Could not open binlog file " << file_name);
-        return false;
-    }
-
-    enum GtidListResult {NotFound, GtidInThisFile, GtidInPriorFile};
-    GtidListResult result = NotFound;
-    long file_pos = PINLOKI_MAGIC.size();
-    file.seekg(file_pos);
-    std::unique_ptr<mxq::EncryptCtx> encrypt;
+    std::ifstream is(file_name, std::ios_base::binary);
     maxsql::GtidList gtid_list;
 
-    for (;;)
+    if (!is.good())
     {
-        maxsql::RplEvent rpl = mxq::RplEvent::read_event(file, encrypt);
+        MXB_SERROR("Could not open binlog file " << file_name);
+        return gtid_list;
+    }
 
-        if (!rpl)
-        {
-            break;
-        }
+    is.seekg(MAGIC_SIZE);
+    std::unique_ptr<mxq::EncryptCtx> encrypt;
 
+    while (maxsql::RplEvent rpl = mxq::RplEvent::read_event(is, encrypt))
+    {
         if (rpl.event_type() == START_ENCRYPTION_EVENT)
         {
             encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(), file_name, rpl);
@@ -123,8 +111,8 @@ bool search_file(const std::string& file_name,
             gtid_list = event.gtid_list;
 
             // There is only one gtid list in a file. If the list was empty, this
-            // should be the very first binlog file, continue looping and reading GTIDS
-            // to build a gtid list.
+            // is the very first binlog file, continue looping and reading GTIDS
+            // to build an artificial gtid list.
             if (!event.gtid_list.gtids().empty())
             {
                 break;
@@ -142,6 +130,18 @@ bool search_file(const std::string& file_name,
             }
         }
     }
+
+    return gtid_list;
+}
+
+bool search_file(const std::string& file_name,
+                 const maxsql::Gtid& gtid,
+                 GtidPosition* ret_pos,
+                 const Config& cnf)
+{
+    enum GtidListResult {NotFound, GtidInThisFile, GtidInPriorFile};
+    GtidListResult result = NotFound;
+    auto gtid_list = get_gtid_list(file_name, cnf);
 
     uint64_t highest_seq = 0;
     bool domain_in_list = false;
