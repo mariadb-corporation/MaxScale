@@ -1207,6 +1207,10 @@ bool Config::ParamLogThrottling::from_json(const json_t* pJson,
                 "one or more of the values were not an integer.";
         }
     }
+    else if (json_is_string(pJson))
+    {
+        rv = from_string(json_string_value(pJson), pValue, pMessage);
+    }
     else
     {
         *pMessage = "Expected a json object, but got a json ";
