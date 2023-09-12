@@ -637,17 +637,18 @@ AsyncProcess::AsyncProcess(Info info, int timeout_ms)
 {
 }
 
-std::tuple<bool, std::string> AsyncProcess::read_output()
+std::optional<std::string> AsyncProcess::read_output()
 {
     const ssize_t buflen = 4096;
     char buf[buflen];
     ssize_t n;
     auto read_fd = proc_info().read_fd;
+    string output;
 
     while ((n = ::read(read_fd, buf, buflen)) > 0)
     {
         // Read all available output. No need to check for EINTR as the read is non-blocking.
-        m_output.append(buf, n);
+        output.append(buf, n);
         if (n < buflen)
         {
             // Nothing more to read.
@@ -655,9 +656,15 @@ std::tuple<bool, std::string> AsyncProcess::read_output()
         }
     }
 
-    std::tuple<bool, std::string> rval = {(n > 0 || (n == -1 && errno == EAGAIN)),
-                                          std::move(m_output)};
-    m_output.clear();
+    std::optional<std::string> rval;
+    if (!output.empty())
+    {
+        rval = std::move(output);
+    }
+    else if (n == -1 && errno == EAGAIN)
+    {
+        rval = "";
+    }
     return rval;
 }
 
@@ -694,12 +701,6 @@ bool AsyncProcess::write(const uint8_t* ptr, size_t len)
 int AsyncProcess::try_wait()
 {
     return Process::try_wait();
-}
-
-void AsyncProcess::unread(std::string&& data)
-{
-    mxb_assert(m_output.empty());
-    m_output = std::move(data);
 }
 
 int AsyncProcess::read_fd() const

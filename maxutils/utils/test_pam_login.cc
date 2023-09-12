@@ -198,11 +198,11 @@ int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on)
     // Continue reading and writing until EOF.
     while (keep_running)
     {
-        auto [read_ok, data] = ext_proc->read_output();
-        keep_running = read_ok;
-        if (read_ok)
+        auto data = ext_proc->read_output();
+        keep_running = data.has_value();
+        if (keep_running)
         {
-            msgs_buf.append(data);
+            msgs_buf.append(*data);
             while (!msgs_buf.empty() && keep_running)
             {
                 auto [type, message] = mxb::pam::next_message(msgs_buf);

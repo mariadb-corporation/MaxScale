@@ -270,10 +270,10 @@ mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messa
 {
     mxb_assert(m_state == State::SUID_WAITING_CONV);
     ExchRes rval;
-    auto [read_ok, data] = m_proc->read_output();
-    if (read_ok)
+    auto data = m_proc->read_output();
+    if (data.has_value())
     {
-        m_suid_msgs.append(data);
+        m_suid_msgs.append(*data);
         rval.status = ExchRes::Status::INCOMPLETE;
 
         while (!m_suid_msgs.empty())
