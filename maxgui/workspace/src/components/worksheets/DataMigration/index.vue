@@ -66,9 +66,11 @@ export default {
         areConnsAlive() {
             return QueryConn.getters('areActiveEtlConnsAlive')
         },
+        isPreparingEtl() {
+            return this.$typy(this.task, 'is_prepare_etl').safeBoolean
+        },
         isMigrationDisabled() {
-            const { is_prepare_etl = false } = this.task
-            if (is_prepare_etl) return !this.areConnsAlive
+            if (this.isPreparingEtl) return !this.areConnsAlive
             return !this.hasEtlRes
         },
         stages() {
