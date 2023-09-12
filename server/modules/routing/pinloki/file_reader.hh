@@ -62,12 +62,12 @@ public:
 private:
     struct ReadPosition
     {
-        std::string   name;
+        std::string   rotate_name;                  // the file name as read from the binlog
         std::ifstream file;
         int64_t       next_pos;
     };
 
-    void             open(const std::string& file_name);
+    void             open(const std::string& rotate_name);
     void             set_inotify_fd();
     maxsql::RplEvent fetch_event_internal();
 

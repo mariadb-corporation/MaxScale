@@ -107,14 +107,15 @@ FileReader::~FileReader()
     close(m_inotify_fd);
 }
 
-void FileReader::open(const std::string& file_name)
+void FileReader::open(const std::string& rotate_name)
 {
     auto previous_pos = std::move(m_read_pos);
-    m_read_pos.file.open(file_name, std::ios_base::in | std::ios_base::binary);
+    m_read_pos.file.open(rotate_name, std::ios_base::in | std::ios_base::binary);
     if (!m_read_pos.file.good())
     {
         MXB_THROW(BinlogReadError,
-                  "Could not open " << file_name << " for reading: " << errno << ", " << mxb_strerror(errno));
+                  "Could not open " << rotate_name << " for reading: " << errno << ", " <<
+                  mxb_strerror(errno));
     }
 
     // Close the previous file after the new one has been opened.
@@ -125,7 +126,7 @@ void FileReader::open(const std::string& file_name)
     }
 
     m_read_pos.next_pos = PINLOKI_MAGIC.size();     // TODO should check that it really is PINLOKI_MAGIC
-    m_read_pos.name = file_name;
+    m_read_pos.rotate_name = rotate_name;
 
     set_inotify_fd();   // Always set inotify. Avoids all race conditions, extra notifications are fine.
 }
@@ -170,7 +171,7 @@ maxsql::RplEvent FileReader::fetch_event(const maxbase::Timer& timer)
         {
             const auto& cnf = m_inventory.config();
             m_encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(),
-                                                   m_read_pos.name, event);
+                                                   m_read_pos.rotate_name, event);
             // TODO: This recursion seems a little stupid. Figure out if there's a better way.
             return fetch_event(timer);
         }
@@ -290,10 +291,10 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     }
     else if (rpl.event_type() == STOP_EVENT)
     {
-        m_generate_rotate_to = next_string(m_inventory.file_names(), m_read_pos.name);
+        m_generate_rotate_to = next_string(m_inventory.file_names(), m_read_pos.rotate_name);
         if (!m_generate_rotate_to.empty())
         {
-            MXB_SINFO("STOP_EVENT in file " << m_read_pos.name
+            MXB_SINFO("STOP_EVENT in file " << m_read_pos.rotate_name
                                             << ".  The next event will be a generated, artificial ROTATE_EVENT to "
                                             << m_generate_rotate_to);
             open(m_generate_rotate_to);
@@ -301,7 +302,7 @@ maxsql::RplEvent FileReader::fetch_event_internal()
         else
         {
             MXB_THROW(BinlogReadError,
-                      "Sequence error,  binlog file " << m_read_pos.name << " has a STOP_EVENT"
+                      "Sequence error,  binlog file " << m_read_pos.rotate_name << " has a STOP_EVENT"
                                                       << " but the Inventory has no successor for it");
         }
     }
@@ -329,7 +330,7 @@ void FileReader::set_inotify_fd()
         inotify_rm_watch(m_inotify_fd, m_inotify_descriptor);
     }
 
-    m_inotify_descriptor = inotify_add_watch(m_inotify_fd, m_read_pos.name.c_str(), IN_MODIFY);
+    m_inotify_descriptor = inotify_add_watch(m_inotify_fd, m_read_pos.rotate_name.c_str(), IN_MODIFY);
 
     if (m_inotify_descriptor == -1)
     {
@@ -339,9 +340,9 @@ void FileReader::set_inotify_fd()
 
 mxq::RplEvent FileReader::create_heartbeat_event() const
 {
-    auto pos = m_read_pos.name.find_last_of('/');
+    auto pos = m_read_pos.rotate_name.find_last_of('/');
     mxb_assert(pos != std::string::npos);
-    auto filename = m_read_pos.name.substr(pos + 1);
+    auto filename = m_read_pos.rotate_name.substr(pos + 1);
     std::vector<char> data(HEADER_LEN + filename.size() + 4);
     uint8_t* ptr = (uint8_t*)&data[0];
 
