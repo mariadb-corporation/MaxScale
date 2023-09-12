@@ -12,12 +12,14 @@
  * Public License.
  */
 
-#include <iostream>
 #include <getopt.h>
+#include <iostream>
+#include <sys/poll.h>
 #include <termios.h>
 #include <maxbase/externcmd.hh>
 #include <maxbase/log.hh>
 #include <maxbase/pam_utils.hh>
+#include <maxbase/string.hh>
 
 using std::string;
 using std::cin;
@@ -186,6 +188,153 @@ string read_password()
 
 int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on)
 {
-    return EXIT_FAILURE;
+    const char invalid_msg[] = "Invalid message from subprocess.\n";
+    bool auth_success = false;
+    string mapped_user;
+
+    string msgs_buf;
+    bool keep_running = true;
+    int conv_msg_num = 0;
+    // Continue reading and writing until EOF.
+    while (keep_running)
+    {
+        auto [read_ok, data] = ext_proc->read_output();
+        keep_running = read_ok;
+        if (read_ok)
+        {
+            msgs_buf.append(data);
+            while (!msgs_buf.empty() && keep_running)
+            {
+                auto [type, message] = mxb::pam::next_message(msgs_buf);
+                if (type == mxb::pam::SBOX_CONV)
+                {
+                    bool conv_ok = false;
+                    if (conv_msg_num >= 2)
+                    {
+                        // Have already sent two questions to client, more is not supported (for now).
+                        cout << "Pam asked more than two questions. Not supported.\n";
+                    }
+                    else if (message.empty())
+                    {
+                        // The CONV-message should have at least style byte.
+                        cout << invalid_msg;
+                    }
+                    else
+                    {
+                        uint8_t conv_type = message[0];
+                        if (conv_type == 2 || conv_type == 4)
+                        {
+                            // Message without contents is allowed.
+                            if (message.length() > 1)
+                            {
+                                std::string_view msg(&message[1], message.length() - 1);
+                                cout << msg;
+                            }
+                            else
+                            {
+                                cout << "<empty message, expecting input>\n";
+                            }
+
+                            string answer;
+                            if (conv_type == 2)
+                            {
+                                std::getline(cin, answer);
+                            }
+                            else
+                            {
+                                // Echo off.
+                                answer = read_password();
+                            }
+
+                            std::vector<uint8_t> answer_msg;
+                            mxb::pam::add_string(answer, &answer_msg);
+                            if (ext_proc->write(answer_msg.data(), answer_msg.size()))
+                            {
+                                conv_ok = true;
+                            }
+                        }
+                        else
+                        {
+                            cout << invalid_msg;
+                        }
+                        conv_msg_num++;
+                    }
+
+                    keep_running = conv_ok;
+                }
+                else if (type == mxb::pam::SBOX_AUTHENTICATED_AS)
+                {
+                    mapped_user = std::move(message);
+                }
+                else if (type == mxb::pam::SBOX_EOF)
+                {
+                    auth_success = true;
+                    keep_running = false;
+                }
+                else if (type == mxb::pam::SBOX_WARN)
+                {
+                    cout << "Warning: " << message << "\n";
+                }
+                else if (type == 0)
+                {
+                    // Incomplete message, wait for more data from external process.
+                    break;
+                }
+                else
+                {
+                    cout << invalid_msg;
+                    keep_running = false;
+                }
+            }
+
+            if (keep_running)
+            {
+                // Check that child is still running and poll for more data.
+                if (ext_proc->try_wait() == mxb::Process::TIMEOUT)
+                {
+                    pollfd pfd;
+                    pfd.fd = ext_proc->read_fd();
+                    pfd.events = POLLIN;
+                    if (poll(&pfd, 1, 10 * 1000) == -1)
+                    {
+                        cout << "Failed to poll pipe file descriptor. Error " << errno << ": " <<
+                            mxb_strerror(errno);
+                        keep_running = false;
+                    }
+                }
+                else
+                {
+                    keep_running = false;
+                }
+            }
+        }
+    }
+
+    int rval = EXIT_FAILURE;
+    int sbox_rc = ext_proc->wait();
+    if (auth_success)
+    {
+        cout << "Authentication successful.";
+        if (mapping_on)
+        {
+            cout << " Username mapped to '" << mapped_user << "'.";
+        }
+        cout << "\n";
+        rval = EXIT_SUCCESS;
+
+        if (sbox_rc == 0)
+        {
+            rval = EXIT_SUCCESS;
+        }
+        else
+        {
+            cout << "SUID sandbox returned fail status " << sbox_rc << ".\n";
+        }
+    }
+    else
+    {
+        cout << "Authentication failed.";
+    }
+    return rval;
 }
 }
