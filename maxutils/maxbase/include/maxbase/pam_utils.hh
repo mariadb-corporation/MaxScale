@@ -152,16 +152,6 @@ bool match_prompt(const char* prompt, const std::string& expected_start);
 std::optional<std::string> read_string_blocking(int fd);
 
 /**
- * Extract a length-encoded string from data returned from subprocess.
- *
- * @param ptr Start of data
- * @param end Past-end of data
- * @return Number of bytes consumed and the extracted message. Bytes < 0 on error. Bytes == 0 if a complete
- * message was not available.
- */
-std::tuple<int, std::string> extract_string(const char* ptr, const char* end);
-
-/**
  * Prepare a string to be written to a pipe. Prepends the string length, then appends the string.
  *
  * @param str The string to write
@@ -187,5 +177,13 @@ std::string gen_auth_tool_run_cmd(bool debug);
  */
 std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string_view service,
                                               bool mapping_enabled);
+
+/**
+ * Extract next message from message buffer.
+ *
+ * @param msg_buf Buffer with message(s)
+ * @return Message type and message. Type is -1 on error and 0 if buffer does not have a complete message.
+ */
+std::tuple<int, std::string> next_message(std::string& msg_buf);
 }
 }

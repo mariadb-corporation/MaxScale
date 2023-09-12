@@ -68,8 +68,6 @@ private:
     GWBUF   create_conv_packet(std::string_view msg) const;
     void    write_backend_tokens(const std::string& mapped_user, AuthenticationData& auth_data);
 
-    static std::tuple<int, std::string> next_message(std::string& msg_buf);
-
     enum class State
     {
         INIT,

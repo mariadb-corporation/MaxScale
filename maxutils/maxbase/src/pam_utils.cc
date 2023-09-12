@@ -78,6 +78,8 @@ std::optional<string> roundtrip(int fd_in, int fd_out, string_view message);
 
 mxb::pam::AuthResult
 authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pam::AuthSettings& sett);
+
+std::tuple<int, string> extract_string(const char* ptr, const char* end);
 }
 
 namespace maxbase
@@ -146,38 +148,6 @@ std::optional<string> read_string_blocking(int fd)
     return rval;
 }
 
-std::tuple<int, string> extract_string(const char* ptr, const char* end)
-{
-    int bytes_read = 0;
-    string message;
-
-    LengthType len = -1;
-    auto len_size = sizeof(len);
-    if (end - ptr >= (ssize_t)len_size)
-    {
-        memcpy(&len, ptr, len_size);
-        if (len == 0)
-        {
-            bytes_read = len_size;
-        }
-        else if (len > 0)
-        {
-            ptr += len_size;
-            if (end - ptr >= len)
-            {
-                message.resize(len);
-                memcpy(message.data(), ptr, len);
-                bytes_read = len_size + len;
-            }
-        }
-        else
-        {
-            bytes_read = -1;
-        }
-    }
-    return {bytes_read, message};
-}
-
 string gen_auth_tool_run_cmd(bool debug)
 {
     // Get path to current executable. Should typically fit in PATH_MAX.
@@ -224,6 +194,52 @@ std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string
     mxb::pam::add_string(user, &first_msg);
     mxb::pam::add_string(service, &first_msg);
     return first_msg;
+}
+
+std::tuple<int, std::string> next_message(string& msg_buf)
+{
+    mxb_assert(!msg_buf.empty());
+
+    int rval = -1;
+    string rval_msg;
+
+    uint8_t msg_type = msg_buf[0];
+    switch (msg_type)
+    {
+    case mxb::pam::SBOX_CONV:
+    case mxb::pam::SBOX_AUTHENTICATED_AS:
+    case mxb::pam::SBOX_WARN:
+        {
+            auto [bytes, message] = extract_string(&msg_buf[1], msg_buf.data() + msg_buf.size());
+            if (bytes > 0)
+            {
+                // The CONV-message should have at least style byte. Username and warning messages are also
+                // expected to have contents.
+                if (!message.empty())
+                {
+                    rval = msg_type;
+                    rval_msg = std::move(message);
+                    msg_buf.erase(0, 1 + bytes);
+                }
+            }
+            else if (bytes == 0)
+            {
+                // Incomplete message.
+                rval = 0;
+            }
+        }
+        break;
+
+    case mxb::pam::SBOX_EOF:
+        rval = msg_type;
+        // This should be the last message.
+        mxb_assert(msg_buf.length() == 1);
+        break;
+
+    default:
+        break;
+    }
+    return {rval, rval_msg};
 }
 }
 }
@@ -609,5 +625,45 @@ std::optional<string> roundtrip(int fd_in, int fd_out, string_view message)
         rval = read_string_blocking(fd_in);
     }
     return rval;
+}
+
+/**
+ * Extract a length-encoded string from data returned from subprocess.
+ *
+ * @param ptr Start of data
+ * @param end Past-end of data
+ * @return Number of bytes consumed and the extracted message. Bytes < 0 on error. Bytes == 0 if a complete
+ * message was not available.
+ */
+std::tuple<int, string> extract_string(const char* ptr, const char* end)
+{
+    int bytes_read = 0;
+    string message;
+
+    LengthType len = -1;
+    auto len_size = sizeof(len);
+    if (end - ptr >= (ssize_t)len_size)
+    {
+        memcpy(&len, ptr, len_size);
+        if (len == 0)
+        {
+            bytes_read = len_size;
+        }
+        else if (len > 0)
+        {
+            ptr += len_size;
+            if (end - ptr >= len)
+            {
+                message.resize(len);
+                memcpy(message.data(), ptr, len);
+                bytes_read = len_size + len;
+            }
+        }
+        else
+        {
+            bytes_read = -1;
+        }
+    }
+    return {bytes_read, message};
 }
 }
