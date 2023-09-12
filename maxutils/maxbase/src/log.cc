@@ -1046,8 +1046,11 @@ int mxb_log_message(int priority,
         // are never on during normal operation, so if they are enabled,
         // we are presumably debugging something. Notice messages are
         // assumed to be logged for a reason and always in a context where
-        // flooding cannot be caused.
-        if ((level == LOG_ERR) || (level == LOG_WARNING))
+        // flooding cannot be caused. If log_info is enabled, the throttling
+        // is disabled as it would cause messages to be lost that bring context
+        // to other messages.
+        if (!mxb_log_is_priority_enabled(LOG_INFO)
+            && (level == LOG_ERR || level == LOG_WARNING))
         {
             status = this_unit.sMessage_registry->get_status(file, line);
         }
