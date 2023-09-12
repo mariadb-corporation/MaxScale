@@ -274,6 +274,14 @@ const std::string& Config::key_id() const
     return m_encryption_key_id;
 }
 
+// static
+const maxbase::TempDirectory &Config::pinloki_temp_dir()
+{
+    static maxbase::TempDirectory pinloki_temp_dir("/tmp/pinloki_tmp");
+
+    return pinloki_temp_dir;
+}
+
 mxb::Cipher::AesMode Config::encryption_cipher() const
 {
     return m_encryption_cipher;

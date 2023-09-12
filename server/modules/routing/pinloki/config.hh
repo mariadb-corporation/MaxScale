@@ -19,6 +19,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxbase/stopwatch.hh>
+#include <maxbase/temp_file.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/key_manager.hh>
@@ -102,6 +103,8 @@ public:
     wall_time::Duration expire_log_duration() const;
     wall_time::Duration purge_startup_delay() const;
     wall_time::Duration purge_poll_timeout() const;
+
+    static const maxbase::TempDirectory& pinloki_temp_dir();
 
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
