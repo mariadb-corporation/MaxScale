@@ -135,7 +135,8 @@ int main(int argc, char* argv[])
     }
     else
     {
-        string total_path = mxb::pam::gen_auth_tool_run_cmd(debug);
+        string total_path = mxb::pam::gen_auth_tool_run_cmd(debug ? mxb::pam::Debug::YES :
+                                                            mxb::pam::Debug::NO);
         if (!total_path.empty())
         {
             if (auto ext_cmd = mxb::AsyncCmd::create(total_path, 1000))
