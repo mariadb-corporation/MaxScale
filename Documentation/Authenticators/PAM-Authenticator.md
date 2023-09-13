@@ -60,15 +60,18 @@ authenticator_options=pam_use_cleartext_plugin=1
 
 ### `pam_mode`
 
-This setting defines the authentication mode used. Two values are supported:
+This setting defines the authentication mode used. The following values are
+supported:
+
 - `password` (default) Normal password-based authentication
 - `password_2FA` Password + 2FA-code based authentication
+- `suid` Authenticate using suid sandbox subprocess
 
 ```
 authenticator_options=pam_mode=password_2FA
 ```
 
-If set to "password_2FA", any users authenticating via PAM will be asked two
+If set to *password_2FA*, any users authenticating via PAM will be asked two
 passwords ("Password" and "Verification code") during login. MaxScale uses the
 normal password when either the local PAM api or a backend asks for "Password".
 MaxScale answers any other password prompt (e.g. "Verification code") with the
@@ -77,10 +80,24 @@ second password. See
 for more details. Two-factor mode is incompatible with
 *pam_use_cleartext_plugin*.
 
+If set to *suid*, MaxScale will launch a separate subprocess for every client to
+handle pam authentication. This subprocess runs the binary
+`maxscale_pam_auth_tool` (installed in the binary directory), which calls the
+system pam libraries. The binary is installed with the SUID bit set, which means
+that it runs with root-privileges regardless of the user launching it. This
+should bypass any file grant issues (e.g. reading `etc/shadow`) that may arise
+with the *password* or *password_2FA* options. The *suid*-option may also
+perform faster if many clients authenticate with pam simultaneously due
+to better separation of clients.  It may also resist buggy pam plugins crashing,
+as the crash would be limited to the subprocess only. The MariaDB Server uses
+a similar pam authentication scheme. *suid*-mode supports two-factor
+authentication.
+
 ### `pam_backend_mapping`
 
 Defines backend authentication mapping, i.e. switch of authentication method
 between client-to-MaxScale and MaxScale-to-backend. Supported values:
+
 - `none` (default) No mapping
 - `mariadb` Map users to normal MariaDB accounts
 
