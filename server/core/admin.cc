@@ -98,10 +98,10 @@ static struct ThisUnit
     std::unordered_map<std::string, std::string> files;
 } this_unit;
 
-int header_cb(void* cls,
-              enum MHD_ValueKind kind,
-              const char* key,
-              const char* value)
+MHD_Result header_cb(void* cls,
+                     enum MHD_ValueKind kind,
+                     const char* key,
+                     const char* value)
 {
     Client::Headers* res = (Client::Headers*)cls;
     std::string k = key;
@@ -110,10 +110,10 @@ int header_cb(void* cls,
     return MHD_YES;
 }
 
-int cookie_cb(void* cls,
-              enum MHD_ValueKind kind,
-              const char* key,
-              const char* value)
+MHD_Result cookie_cb(void* cls,
+                     enum MHD_ValueKind kind,
+                     const char* key,
+                     const char* value)
 {
     std::pair<std::string, std::string>* res = (std::pair<std::string, std::string>*)cls;
 
@@ -149,14 +149,14 @@ static bool modifies_data(const string& method)
            || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH;
 }
 
-int handle_client(void* cls,
-                  MHD_Connection* connection,
-                  const char* url,
-                  const char* method,
-                  const char* version,
-                  const char* upload_data,
-                  size_t* upload_data_size,
-                  void** con_cls)
+MHD_Result handle_client(void* cls,
+                         MHD_Connection* connection,
+                         const char* url,
+                         const char* method,
+                         const char* version,
+                         const char* upload_data,
+                         size_t* upload_data_size,
+                         void** con_cls)
 
 {
     if (*con_cls == NULL)
@@ -635,8 +635,8 @@ bool Client::serve_file(const std::string& url) const
     return rval;
 }
 
-int Client::handle(const std::string& url, const std::string& method,
-                   const char* upload_data, size_t* upload_data_size)
+MHD_Result Client::handle(const std::string& url, const std::string& method,
+                          const char* upload_data, size_t* upload_data_size)
 {
     if (!this_unit.running.load(std::memory_order_relaxed))
     {
@@ -653,7 +653,7 @@ int Client::handle(const std::string& url, const std::string& method,
     }
 
     Client::state state = get_state();
-    int rval = MHD_NO;
+    MHD_Result rval = MHD_NO;
 
     if (state != Client::CLOSED)
     {
@@ -700,7 +700,7 @@ int Client::handle(const std::string& url, const std::string& method,
     return rval;
 }
 
-int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
+MHD_Result Client::process(string url, string method, const char* upload_data, size_t* upload_size)
 {
     json_t* json = NULL;
 
@@ -780,7 +780,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
         MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, c.c_str());
     }
 
-    int rval = MHD_queue_response(m_connection, reply.get_code(), response);
+    MHD_Result rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
 
     MXS_DEBUG("Response: HTTP %d", reply.get_code());
