@@ -16,32 +16,17 @@ import DataMigration from '@wkeComps/DataMigration'
 import EtlTask from '@wsModels/EtlTask'
 import { lodash } from '@share/utils/helpers'
 import { ETL_STATUS } from '@wsSrc/store/config'
+import { task } from '@wkeComps/DataMigration/__tests__/stubData'
 
-const taskStub = {
-    id: 'c74d6e00-4263-11ee-a879-6f8dfc9ca55f',
-    name: 'New migration',
-    status: ETL_STATUS.INITIALIZING,
-    active_stage_index: 0,
-    is_prepare_etl: false,
-    meta: { src_type: 'postgresql', dest_name: 'server_0' },
-    res: {},
-    logs: {
-        '1': [],
-        '2': [],
-        '3': [],
-    },
-    created: 1692870680800,
-    connections: [],
-}
 const mountFactory = opts =>
     mount(
         lodash.merge(
             {
                 shallow: true,
                 component: DataMigration,
-                propsData: { taskId: taskStub.id },
+                propsData: { taskId: task.id },
                 computed: {
-                    task: () => taskStub,
+                    task: () => task,
                 },
             },
             opts
@@ -107,7 +92,7 @@ describe('DataMigration', () => {
     taskStatusTestCases.forEach(status => {
         it(`Should disable the connection stage when task status is ${status}`, () => {
             wrapper = mountFactory({
-                computed: { areConnsAlive: () => false, task: () => ({ ...taskStub, status }) },
+                computed: { areConnsAlive: () => false, task: () => ({ ...task, status }) },
             })
             const stage = wrapper.vm.stages.find(stage => stage.component === 'etl-conns-stage')
             expect(stage.isDisabled).to.be.true
@@ -115,7 +100,7 @@ describe('DataMigration', () => {
 
         it(`Should disable the objects selection stage when task status is ${status}`, () => {
             wrapper = mountFactory({
-                computed: { areConnsAlive: () => true, task: () => ({ ...taskStub, status }) },
+                computed: { areConnsAlive: () => true, task: () => ({ ...task, status }) },
             })
             const stage = wrapper.vm.stages.find(stage => stage.component === 'etl-conns-stage')
             expect(stage.isDisabled).to.be.true
@@ -124,16 +109,16 @@ describe('DataMigration', () => {
 
     it(`Should return accurate value for activeStageIdx`, () => {
         wrapper = mountFactory()
-        expect(wrapper.vm.activeStageIdx).to.equal(taskStub.active_stage_index)
+        expect(wrapper.vm.activeStageIdx).to.equal(task.active_stage_index)
     })
 
     it(`Should call EtlTask.update`, () => {
         wrapper = mountFactory()
         const stub = sinon.stub(EtlTask, 'update')
-        const newValue = taskStub.active_stage_index + 1
+        const newValue = task.active_stage_index + 1
         wrapper.vm.activeStageIdx = newValue
         stub.should.have.been.calledOnceWithExactly({
-            where: taskStub.id,
+            where: task.id,
             data: { active_stage_index: newValue },
         })
     })

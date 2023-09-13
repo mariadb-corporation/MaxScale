@@ -75,14 +75,13 @@ export default {
     props: { task: { type: Object, required: true } },
     computed: {
         ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
+        areConnsAlive() {
+            return QueryConn.getters('areActiveEtlConnsAlive')
+        },
         disabled() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
             const { status } = this.task
-            return (
-                QueryConn.getters('areActiveEtlConnsAlive') ||
-                status === COMPLETE ||
-                status === RUNNING
-            )
+            return this.areConnsAlive || status === COMPLETE || status === RUNNING
         },
     },
     methods: {
