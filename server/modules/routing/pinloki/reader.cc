@@ -201,16 +201,28 @@ void Reader::send_events()
 
 bool Reader::generate_heartbeats()
 {
-    auto now = maxbase::Clock::now();
-
-    // Only send heartbeats if the connection is idle
-    if (!m_in_high_water
-        && now - m_last_event >= m_heartbeat_interval)
+    try
     {
-        m_send_callback(m_sFile_reader->create_heartbeat_event());
-        m_last_event = now;
+        m_sFile_reader->check_status();
+
+        auto now = maxbase::Clock::now();
+
+        // Only send heartbeats if the connection is idle
+        if (!m_in_high_water
+            && now - m_last_event >= m_heartbeat_interval)
+        {
+            m_send_callback(m_sFile_reader->create_heartbeat_event());
+            m_last_event = now;
+        }
+
+        return true;
+    }
+    catch (const std::exception& err)
+    {
+        MXB_ERROR("Binlog error: %s", err.what());
+        m_abort_cb();
     }
 
-    return true;
+    return false;
 }
 }

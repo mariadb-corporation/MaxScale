@@ -83,6 +83,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
         // Generate initial rotate and read format description, gtid list and any
         // binlog checkpoints from the file before jumping to the gtid.
         m_generate_rotate_to = gtid_pos.file_name;
+        strip_extension(m_generate_rotate_to, COMPRESSION_EXTENSION);
         m_read_pos.next_pos = PINLOKI_MAGIC.size();
 
         // Once the preamble is done, jump to this file position. If the position is
@@ -95,6 +96,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
     else
     {
         auto first = first_string(m_inventory.file_names());
+        strip_extension(first, COMPRESSION_EXTENSION);
         open(first);
         // Preamble just means send the initial rotate and then the whole file
         m_generate_rotate_to = first;
@@ -110,7 +112,9 @@ FileReader::~FileReader()
 void FileReader::open(const std::string& rotate_name)
 {
     auto previous_pos = std::move(m_read_pos);
-    m_read_pos.file.open(rotate_name, std::ios_base::in | std::ios_base::binary);
+    m_read_pos.sBinlog = std::make_unique<BinlogFile>(rotate_name);
+    m_read_pos.file = m_read_pos.sBinlog->make_ifstream();
+
     if (!m_read_pos.file.good())
     {
         MXB_THROW(BinlogReadError,
@@ -125,7 +129,9 @@ void FileReader::open(const std::string& rotate_name)
         previous_pos.file.close();
     }
 
-    m_read_pos.next_pos = PINLOKI_MAGIC.size();     // TODO should check that it really is PINLOKI_MAGIC
+    // TODO data race, magic might not be in the file yet.
+    // In all cases, should only read. could use StreamBuf::in_avail().
+    m_read_pos.next_pos = PINLOKI_MAGIC.size();
     m_read_pos.rotate_name = rotate_name;
 
     set_inotify_fd();   // Always set inotify. Avoids all race conditions, extra notifications are fine.
@@ -154,6 +160,12 @@ void FileReader::fd_notify(uint32_t events)
     {
         MXB_THROW(BinlogReadError, "Failed to read inotify fd: " << errno << ", " << mxb_strerror(errno));
     }
+}
+
+void FileReader::check_status()
+{
+    // Throws if there is a compression error
+    m_read_pos.sBinlog->check_status();
 }
 
 maxsql::RplEvent FileReader::fetch_event(const maxbase::Timer& timer)
@@ -214,6 +226,7 @@ maxsql::RplEvent FileReader::fetch_event(const maxbase::Timer& timer)
         }
         else if (event.event_type() == STOP_EVENT || event.event_type() == ROTATE_EVENT)
         {
+            auto rot = event.rotate();
             m_skip_gtid = false;
 
             // End of file: reset encryption in preparation for the next file.
@@ -292,6 +305,7 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     else if (rpl.event_type() == STOP_EVENT)
     {
         m_generate_rotate_to = next_string(m_inventory.file_names(), m_read_pos.rotate_name);
+        strip_extension(m_generate_rotate_to, COMPRESSION_EXTENSION);
         if (!m_generate_rotate_to.empty())
         {
             MXB_SINFO("STOP_EVENT in file " << m_read_pos.rotate_name
@@ -330,7 +344,9 @@ void FileReader::set_inotify_fd()
         inotify_rm_watch(m_inotify_fd, m_inotify_descriptor);
     }
 
-    m_inotify_descriptor = inotify_add_watch(m_inotify_fd, m_read_pos.rotate_name.c_str(), IN_MODIFY);
+    m_inotify_descriptor = inotify_add_watch(m_inotify_fd,
+                                             m_read_pos.sBinlog->file_name().c_str(),
+                                             IN_MODIFY);
 
     if (m_inotify_descriptor == -1)
     {

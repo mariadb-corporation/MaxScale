@@ -28,6 +28,7 @@
 #include "inventory.hh"
 #include "rpl_event.hh"
 #include "find_gtid.hh"
+#include "binlog_file.hh"
 
 namespace pinloki
 {
@@ -59,12 +60,16 @@ public:
      * @param events
      */
     void fd_notify(uint32_t events);
+
+    /* Called from generate_heartbeats, to generate possible decompression error */
+    void check_status();
 private:
     struct ReadPosition
     {
-        std::string   rotate_name;                  // the file name as read from the binlog
-        std::ifstream file;
-        int64_t       next_pos;
+        std::string                 rotate_name;    // the file name as read from the binlog
+        std::unique_ptr<BinlogFile> sBinlog = nullptr;
+        std::ifstream               file;
+        int64_t                     next_pos;
     };
 
     void             open(const std::string& rotate_name);
