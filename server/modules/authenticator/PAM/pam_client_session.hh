@@ -62,10 +62,11 @@ private:
     ExchRes exchange_suid(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
     ExchRes process_suid_messages(MYSQL_session* ses);
     AuthRes authenticate_old(MYSQL_session* session, AuthenticationData& auth_data);
-    AuthRes authenticate_suid(MYSQL_session* session, AuthenticationData& auth_data);
+    AuthRes authenticate_suid(AuthenticationData& auth_data);
     GWBUF   create_auth_change_packet(std::string_view msg) const;
     GWBUF   create_2fa_prompt_packet(std::string_view msg) const;
     GWBUF   create_conv_packet(std::string_view msg) const;
+    void    write_backend_tokens(const std::string& mapped_user, AuthenticationData& auth_data);
 
     static std::tuple<int, std::string> next_message(std::string& msg_buf);
 

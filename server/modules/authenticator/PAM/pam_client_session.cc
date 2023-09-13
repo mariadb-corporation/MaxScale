@@ -361,7 +361,7 @@ mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messa
 
 AuthRes PamClientAuthenticator::authenticate(MYSQL_session* session, AuthenticationData& auth_data)
 {
-    return (m_settings.mode == AuthMode::SUID) ? authenticate_suid(session, auth_data) :
+    return (m_settings.mode == AuthMode::SUID) ? authenticate_suid(auth_data) :
            authenticate_old(session, auth_data);
 }
 
@@ -402,37 +402,7 @@ AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, Authent
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
-        // Don't copy auth tokens when mapping is on so that backend authenticator will try to authenticate
-        // without a password.
-        if (!map_to_mariadbauth)
-        {
-            auth_data.backend_token = tok1;
-            if (twofa)
-            {
-                auth_data.backend_token_2fa = tok2;
-            }
-        }
-
-        if (map_to_mariadbauth && !res.mapped_user.empty())
-        {
-            if (res.mapped_user != user_name)
-            {
-                MXB_INFO("Incoming user '%s' mapped to '%s'.",
-                         user_name.c_str(), res.mapped_user.c_str());
-                auth_data.user = res.mapped_user;   // TODO: Think if using a separate field would be better.
-                // If a password for the user is found in the passwords map, use that. Otherwise, try
-                // passwordless authentication.
-                const auto& it = m_backend_pwds.find(res.mapped_user);
-                if (it != m_backend_pwds.end())
-                {
-                    MXB_INFO("Using password found in backend passwords file for '%s'.",
-                             res.mapped_user.c_str());
-                    auto begin = it->second.pw_hash;
-                    auto end = begin + SHA_DIGEST_LENGTH;
-                    auth_data.backend_token.assign(begin, end);
-                }
-            }
-        }
+        write_backend_tokens(res.mapped_user, auth_data);
     }
     else
     {
@@ -447,21 +417,13 @@ AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, Authent
     return rval;
 }
 
-AuthRes PamClientAuthenticator::authenticate_suid(MYSQL_session* session, AuthenticationData& auth_data)
+AuthRes PamClientAuthenticator::authenticate_suid(AuthenticationData& auth_data)
 {
     AuthRes rval;
     if (m_eof_received)
     {
         rval.status = AuthRes::Status::SUCCESS;
-        if (m_settings.be_mapping == BackendMapping::NONE)
-        {
-            auth_data.backend_token = auth_data.client_token;
-            auth_data.backend_token_2fa = auth_data.client_token_2fa;
-        }
-        else if (!m_mapped_user.empty() && m_mapped_user != auth_data.user)
-        {
-            // TODO
-        }
+        write_backend_tokens(m_mapped_user, auth_data);
     }
     else
     {
@@ -547,6 +509,38 @@ GWBUF PamClientAuthenticator::create_conv_packet(std::string_view msg) const
     {
         // Additional messages are simpler.
         return create_2fa_prompt_packet(msg);
+    }
+}
+
+void PamClientAuthenticator::write_backend_tokens(const string& mapped_user, AuthenticationData& auth_data)
+{
+    bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
+    const auto& user_name = auth_data.user;
+    // Don't copy auth tokens when mapping is on so that backend authenticator will try to authenticate
+    // without a password.
+    if (!map_to_mariadbauth)
+    {
+        auth_data.backend_token = auth_data.client_token;
+        auth_data.backend_token_2fa = auth_data.client_token_2fa;
+    }
+
+    if (map_to_mariadbauth && !mapped_user.empty())
+    {
+        if (mapped_user != user_name)
+        {
+            MXB_INFO("Incoming user '%s' mapped to '%s'.", user_name.c_str(), mapped_user.c_str());
+            auth_data.user = mapped_user;   // TODO: Think if using a separate field would be better.
+            // If a password for the user is found in the passwords map, use that. Otherwise, try
+            // passwordless authentication.
+            const auto& it = m_backend_pwds.find(mapped_user);
+            if (it != m_backend_pwds.end())
+            {
+                MXB_INFO("Using password found in backend passwords file for '%s'.", mapped_user.c_str());
+                auto begin = it->second.pw_hash;
+                auto end = begin + SHA_DIGEST_LENGTH;
+                auth_data.backend_token.assign(begin, end);
+            }
+        }
     }
 }
 
