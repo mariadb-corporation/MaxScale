@@ -2303,7 +2303,7 @@ static bool pid_file_exists()
     {
         int fd, b;
 
-        if ((fd = open(pathbuf, O_RDWR)) == -1)
+        if ((fd = open(pathbuf, O_RDWR | O_CLOEXEC)) == -1)
         {
             MXB_ALERT("Failed to open PID file '%s': %s", pathbuf, mxb_strerror(errno));
             return true;
@@ -2403,7 +2403,7 @@ static int write_pid_file()
     {
         int fd = -1;
 
-        fd = open(this_unit.pidfile, O_WRONLY | O_CREAT, 0777);
+        fd = open(this_unit.pidfile, O_WRONLY | O_CREAT | O_CLOEXEC, 0777);
         if (fd == -1)
         {
             MXB_ALERT("Failed to open PID file '%s': %s", this_unit.pidfile, mxb_strerror(errno));
@@ -2999,7 +2999,7 @@ static bool init_sqlite3()
 static bool lock_dir(const std::string& path)
 {
     std::string lock = path + "/maxscale.lock";
-    int fd = open(lock.c_str(), O_WRONLY | O_CREAT, 0777);
+    int fd = open(lock.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0777);
     std::string pid = std::to_string(getpid());
 
     if (fd == -1)

@@ -121,10 +121,10 @@ struct ValueFormatter
 };
 }
 
-static int value_combine_cb(void* cls,
-                            enum MHD_ValueKind kind,
-                            const char* key,
-                            const char* value)
+static MHD_Result value_combine_cb(void* cls,
+                                   enum MHD_ValueKind kind,
+                                   const char* key,
+                                   const char* value)
 {
     ValueFormatter& cnf = *(ValueFormatter*)cls;
 

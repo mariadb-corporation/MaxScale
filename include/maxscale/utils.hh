@@ -105,8 +105,6 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path);
  */
 int connect_socket(const char* host, int port, sockaddr_storage* addr);
 
-int   setnonblocking(int fd);
-int   setblocking(int fd);
 char* gw_strend(const char* s);
 void  gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);
 void  gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out);

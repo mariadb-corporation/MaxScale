@@ -15,6 +15,7 @@
 #include <getopt.h>
 #include <errno.h>
 #include <unistd.h>
+#include <maxbase/format.hh>
 #include <maxbase/log.hh>
 #include <maxbase/pam_utils.hh>
 
@@ -48,16 +49,24 @@ int main(int argc, char* argv[])
     }
 
     MXB_DEBUG("PAM sandbox started [%s].", argv[0]);
+    const int in_fd = STDIN_FILENO;
+    const int out_fd = STDOUT_FILENO;
+
     // Try to run as root. Even if it fails, proceed.
     if (setreuid(0, 0) != 0)
     {
-        MXB_WARNING("PAM sandbox: setreuid() failed. Error %i: %s", errno, strerror(errno));
+        string msg = mxb::string_printf("setreuid() failed. Error %i: %s", errno, strerror(errno));
+        std::vector<uint8_t> warn_msg;
+        warn_msg.push_back(SBOX_WARN);
+        mxb::pam::add_string(msg, &warn_msg);
+        if (write(out_fd, warn_msg.data(), warn_msg.size()) != (ssize_t)warn_msg.size())
+        {
+            return EXIT_FAILURE;
+        }
     }
 
     // Read some settings from stdio. Passing the values as command line arguments would be more convenient
     // but doing so would show username and pam service in "ps aux" and similar process lists.
-    const int in_fd = STDIN_FILENO;
-    const int out_fd = STDOUT_FILENO;
     bool mapping_on = false;
     string uname;
     string pam_service;

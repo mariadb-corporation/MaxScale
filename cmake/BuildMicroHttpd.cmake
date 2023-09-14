@@ -1,9 +1,4 @@
-if (GNUTLS_VERSION_STRING VERSION_GREATER "3.0.0")
-  set(LIBMICROHTTPD_VERSION "0.9.68")
-else()
-  set(LIBMICROHTTPD_VERSION "0.9.63")
-  message(STATUS "GnuTLS is too old, using older libmicrohttpd")
-endif()
+set(LIBMICROHTTPD_VERSION "0.9.77")
 
 message(STATUS "Using libmicrohttpd version ${LIBMICROHTTPD_VERSION}")
 

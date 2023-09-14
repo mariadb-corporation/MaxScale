@@ -1080,7 +1080,7 @@ static ClientConn accept_one_connection(int fd)
     ClientConn conn = {};
     sockaddr_storage addr {};
     socklen_t client_len = sizeof(addr);
-    conn.fd = accept(fd, (sockaddr*)&addr, &client_len);
+    conn.fd = accept4(fd, (sockaddr*)&addr, &client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
 
     if (conn.fd != -1)
     {

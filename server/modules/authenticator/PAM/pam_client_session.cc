@@ -278,7 +278,7 @@ mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messa
 
         while (!m_suid_msgs.empty())
         {
-            auto [type, msg] = next_message(m_suid_msgs);
+            auto [type, msg] = mxb::pam::next_message(m_suid_msgs);
             if (type == mxb::pam::SBOX_CONV)
             {
                 if (m_conv_msgs < 2)
@@ -334,6 +334,10 @@ mariadb::ClientAuthenticator::ExchRes PamClientAuthenticator::process_suid_messa
                     rval.status = ExchRes::Status::READY;
                 }
                 break;
+            }
+            else if (type == mxb::pam::SBOX_WARN)
+            {
+                MXB_WARNING("%s", msg.c_str());
             }
             else if (type == 0)
             {
@@ -445,57 +449,6 @@ GWBUF PamClientAuthenticator::create_2fa_prompt_packet(std::string_view msg) con
     uint8_t* pData = mariadb::write_header(rval.data(), plen, 0);
     mariadb::copy_chars(pData, msg.data(), msg.length());
     return rval;
-}
-
-/**
- * Get next message from message buffer.
- *
- * @param msg_buf Buffer with message(s)
- * @return Message type and message. Type is -1 on error and 0 if buffer is empty.
- */
-std::tuple<int, std::string> PamClientAuthenticator::next_message(string& msg_buf)
-{
-    mxb_assert(!msg_buf.empty());
-
-    int rval = -1;
-    string rval_msg;
-
-    uint8_t msg_type = msg_buf[0];
-    switch (msg_type)
-    {
-    case mxb::pam::SBOX_CONV:
-    case mxb::pam::SBOX_AUTHENTICATED_AS:
-        {
-            auto [bytes, message] = mxb::pam::extract_string(&msg_buf[1], msg_buf.data() + msg_buf.size());
-            if (bytes > 0)
-            {
-                // The CONV-message should have at least style byte. Username is also expected to not be
-                // empty.
-                if (!message.empty())
-                {
-                    rval = msg_type;
-                    rval_msg = std::move(message);
-                    msg_buf.erase(0, 1 + bytes);
-                }
-            }
-            else if (bytes == 0)
-            {
-                // Incomplete message.
-                rval = 0;
-            }
-        }
-        break;
-
-    case mxb::pam::SBOX_EOF:
-        rval = msg_type;
-        // This should be the last message.
-        mxb_assert(msg_buf.length() == 1);
-        break;
-
-    default:
-        break;
-    }
-    return {rval, rval_msg};
 }
 
 GWBUF PamClientAuthenticator::create_conv_packet(std::string_view msg) const
