@@ -121,10 +121,10 @@ static struct ThisUnit
     std::unordered_map<std::string, std::string> files;
 } this_unit;
 
-int header_cb(void* cls,
-              enum MHD_ValueKind kind,
-              const char* key,
-              const char* value)
+MHD_Result header_cb(void* cls,
+                     enum MHD_ValueKind kind,
+                     const char* key,
+                     const char* value)
 {
     Client::Headers* res = (Client::Headers*)cls;
     std::string k = key;
@@ -146,14 +146,14 @@ static bool modifies_data(const string& method)
            || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH;
 }
 
-int handle_client(void* cls,
-                  MHD_Connection* connection,
-                  const char* url,
-                  const char* method,
-                  const char* version,
-                  const char* upload_data,
-                  size_t* upload_data_size,
-                  void** con_cls)
+MHD_Result handle_client(void* cls,
+                         MHD_Connection* connection,
+                         const char* url,
+                         const char* method,
+                         const char* version,
+                         const char* upload_data,
+                         size_t* upload_data_size,
+                         void** con_cls)
 
 {
     if (*con_cls == NULL)
@@ -655,7 +655,7 @@ size_t Client::request_data_length() const
     return atoi(get_header("Content-Length").c_str());
 }
 
-int Client::wrap_MHD_queue_response(unsigned int status_code, MHD_Response* response)
+MHD_Result Client::wrap_MHD_queue_response(unsigned int status_code, MHD_Response* response)
 {
     set_http_response_code(status_code);
     return MHD_queue_response(m_connection, status_code, response);
@@ -908,8 +908,8 @@ void Client::upgrade_to_ws()
     MHD_destroy_response(resp);
 }
 
-int Client::handle(const std::string& url, const std::string& method,
-                   const char* upload_data, size_t* upload_data_size)
+MHD_Result Client::handle(const std::string& url, const std::string& method,
+                          const char* upload_data, size_t* upload_data_size)
 {
     if (!this_unit.running.load(std::memory_order_relaxed))
     {
@@ -926,7 +926,7 @@ int Client::handle(const std::string& url, const std::string& method,
     }
 
     Client::state state = get_state();
-    int rval = MHD_NO;
+    MHD_Result rval = MHD_NO;
 
     if (state != Client::CLOSED)
     {
@@ -978,7 +978,7 @@ int Client::handle(const std::string& url, const std::string& method,
     return rval;
 }
 
-int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
+MHD_Result Client::process(string url, string method, const char* upload_data, size_t* upload_size)
 {
     json_t* json = NULL;
 
@@ -1010,7 +1010,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     HttpResponse reply = is_auth_endpoint(m_request) ?
         generate_token(m_request) : resource_handle_request(m_request);
 
-    int rc = MHD_NO;
+    MHD_Result rc = MHD_NO;
 
     if ((m_ws_handler = reply.websocket_handler()))
     {
@@ -1037,7 +1037,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     return rc;
 }
 
-int Client::queue_response(const HttpResponse& reply)
+MHD_Result Client::queue_response(const HttpResponse& reply)
 {
     char* data = nullptr;
     size_t len = 0;
@@ -1083,7 +1083,7 @@ int Client::queue_response(const HttpResponse& reply)
         MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, c.c_str());
     }
 
-    int rval = wrap_MHD_queue_response(reply.get_code(), response);
+    MHD_Result rval = wrap_MHD_queue_response(reply.get_code(), response);
     MHD_destroy_response(response);
 
     MXB_DEBUG("Response: HTTP %d", reply.get_code());
@@ -1091,7 +1091,7 @@ int Client::queue_response(const HttpResponse& reply)
     return rval;
 }
 
-int Client::queue_delayed_response(const HttpResponse::Callback& cb)
+MHD_Result Client::queue_delayed_response(const HttpResponse::Callback& cb)
 {
     MHD_suspend_connection(m_connection);
 
