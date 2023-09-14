@@ -43,8 +43,8 @@ public:
     Client(MHD_Connection* connection, const char* url, const char* method);
 
     // Handle HTTP request
-    int handle(const std::string& url, const std::string& method,
-               const char* upload_data, size_t* upload_data_size);
+    MHD_Result handle(const std::string& url, const std::string& method,
+                      const char* upload_data, size_t* upload_data_size);
 
 private:
     enum state
@@ -68,7 +68,7 @@ private:
      *
      * @return MHD_YES on success, MHD_NO on error
      */
-    int process(std::string url, std::string method, const char* data, size_t* size);
+    MHD_Result process(std::string url, std::string method, const char* data, size_t* size);
 
     /**
      * @brief Authenticate the client
@@ -135,8 +135,8 @@ private:
     void        send_no_https_error() const;
     void        add_cors_headers(MHD_Response*) const;
     void        upgrade_to_ws();
-    int         queue_response(const HttpResponse& response);
-    int         queue_delayed_response(const HttpResponse::Callback& cb);
+    MHD_Result  queue_response(const HttpResponse& response);
+    MHD_Result  queue_delayed_response(const HttpResponse::Callback& cb);
 
     static void handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
                                   const char* extra_in, size_t extra_in_size,

@@ -78,7 +78,7 @@ then
        perl libtool tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
-       libsasl2-dev libxml2-dev libkrb5-dev libicu-dev
+       libsasl2-dev libxml2-dev libkrb5-dev libicu-dev libgnutls-dev libgcrypt-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   ${apt_cmd} install libsystemd-dev || \
@@ -88,24 +88,6 @@ then
   then
      # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
      ${apt_cmd} install python3
-  fi
-
-   ## separate libgnutls installation process for Ubuntu Trusty
-  cat /etc/*release | grep -E "Trusty|wheezy"
-  if [ $? == 0 ]
-  then
-     ${apt_cmd} install libgnutls-dev libgcrypt11-dev
-  else
-     ${apt_cmd} install libgnutls30 libgnutls-dev
-     if [ $? != 0 ]
-     then
-         ${apt_cmd} install libgnutls28-dev
-     fi
-     ${apt_cmd} install libgcrypt20-dev
-     if [ $? != 0 ]
-     then
-         ${apt_cmd} install libgcrypt11-dev
-     fi
   fi
 fi
 
