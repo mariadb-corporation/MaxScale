@@ -31,10 +31,10 @@
 // The API version part of the URL
 #define MXS_REST_API_VERSION "v1"
 
-static int value_iterator(void* cls,
-                          enum MHD_ValueKind kind,
-                          const char* key,
-                          const char* value)
+static MHD_Result value_iterator(void* cls,
+                                 enum MHD_ValueKind kind,
+                                 const char* key,
+                                 const char* value)
 {
     std::pair<std::string, std::string>* cmp = (std::pair<std::string, std::string>*)cls;
 
@@ -47,10 +47,10 @@ static int value_iterator(void* cls,
     return MHD_YES;
 }
 
-static int value_collector(void* cls,
-                           enum MHD_ValueKind kind,
-                           const char* key,
-                           const char* value)
+static MHD_Result value_collector(void* cls,
+                                  enum MHD_ValueKind kind,
+                                  const char* key,
+                                  const char* value)
 {
     std::map<std::string, std::string>* cmp = (std::map<std::string, std::string>*)cls;
     std::string k(key);
@@ -59,20 +59,20 @@ static int value_collector(void* cls,
     return MHD_YES;
 }
 
-static int value_sum_iterator(void* cls,
-                              enum MHD_ValueKind kind,
-                              const char* key,
-                              const char* value)
+static MHD_Result value_sum_iterator(void* cls,
+                                     enum MHD_ValueKind kind,
+                                     const char* key,
+                                     const char* value)
 {
     size_t& count = *(size_t*)cls;
     count++;
     return MHD_YES;
 }
 
-static int value_copy_iterator(void* cls,
-                               enum MHD_ValueKind kind,
-                               const char* key,
-                               const char* value)
+static MHD_Result value_copy_iterator(void* cls,
+                                      enum MHD_ValueKind kind,
+                                      const char* key,
+                                      const char* value)
 {
     std::string k = key;
     if (value)

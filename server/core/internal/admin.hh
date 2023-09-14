@@ -48,8 +48,8 @@ public:
     ~Client();
 
     // Handle HTTP request
-    int handle(const std::string& url, const std::string& method,
-               const char* upload_data, size_t* upload_data_size);
+    MHD_Result handle(const std::string& url, const std::string& method,
+                      const char* upload_data, size_t* upload_data_size);
 
 private:
     enum state
@@ -73,7 +73,7 @@ private:
      *
      * @return MHD_YES on success, MHD_NO on error
      */
-    int process(std::string url, std::string method, const char* data, size_t* size);
+    MHD_Result process(std::string url, std::string method, const char* data, size_t* size);
 
     /**
      * @brief Authenticate the client
@@ -133,7 +133,7 @@ private:
     bool         authorize_user(const char* user, mxs::user_account_type type, const char* method,
                                 const char* url) const;
     bool        is_basic_endpoint() const;
-    int         wrap_MHD_queue_response(unsigned int status_code, struct MHD_Response* response);
+    MHD_Result  wrap_MHD_queue_response(unsigned int status_code, struct MHD_Response* response);
     bool        send_cors_preflight_request(const std::string& verb);
     std::string get_header(const std::string& key) const;
     size_t      request_data_length() const;
@@ -144,8 +144,8 @@ private:
     void        send_no_https_error();
     void        add_cors_headers(MHD_Response*) const;
     void        upgrade_to_ws();
-    int         queue_response(const HttpResponse& response);
-    int         queue_delayed_response(const HttpResponse::Callback& cb);
+    MHD_Result  queue_response(const HttpResponse& response);
+    MHD_Result  queue_delayed_response(const HttpResponse::Callback& cb);
     void        set_http_response_code(uint code);
     uint        get_http_response_code() const;
     void        log_to_audit();
