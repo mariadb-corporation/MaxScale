@@ -16,6 +16,9 @@ will close the session with the following error:
 ERROR 5000 (DUPDB): Error: duplicate tables found on two different shards.
 ```
 
+The exception to this rule are the system tables `mysql`, `information_schema`,
+`performance_schema`, `sys` that are never treated as duplicates.
+
 If duplicate tables are expected, use the
 [`ignore_tables_regex`](#ignore_tables_regex) parameter to controls which
 duplicate tables are allowed. To disable the duplicate database detection, use
