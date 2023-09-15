@@ -38,8 +38,6 @@ export default {
     name: 'etl-logs',
     props: {
         task: { type: Object, required: true },
-        // Show all logs of all stages at once
-        showAll: { type: Boolean, default: false },
     },
     computed: {
         etlLog() {
@@ -49,12 +47,11 @@ export default {
             return this.$typy(this.task, 'active_stage_index').safeNumber
         },
         logs() {
-            if (this.showAll) return Object.values(this.etlLog).flat()
             return this.$typy(this.etlLog, `[${this.activeStageIdx}]`).safeArray
         },
     },
     watch: {
-        'task.logs': {
+        logs: {
             deep: true,
             handler(v) {
                 if (v && v.length) this.scrollToBottom()
