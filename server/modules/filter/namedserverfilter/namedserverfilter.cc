@@ -370,19 +370,14 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
             {
             case MXS_COM_QUERY:
                 // A normal query. If a mapping was found, add hints to the buffer.
+                inc_diverted(reg_serv);
+
                 if (reg_serv)
                 {
                     for (const auto& target : reg_serv->m_targets)
                     {
                         buffer.add_hint(reg_serv->m_htype, target);
                     }
-                    m_n_diverted++;
-                    m_fil_inst.m_total_diverted++;
-                }
-                else
-                {
-                    m_n_undiverted++;
-                    m_fil_inst.m_total_undiverted++;
                 }
 
                 break;
@@ -439,20 +434,14 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                     }
 
                     auto it = m_ps_id_to_hints.find(ps_id);
+                    inc_diverted(it != m_ps_id_to_hints.end());
+
                     if (it != m_ps_id_to_hints.end())
                     {
                         for (const auto& new_hint : it->second)
                         {
                             buffer.add_hint(new_hint);
                         }
-
-                        m_n_diverted++;
-                        m_fil_inst.m_total_diverted++;
-                    }
-                    else
-                    {
-                        m_n_undiverted++;
-                        m_fil_inst.m_total_undiverted++;
                     }
                 }
                 break;
@@ -541,6 +530,20 @@ const RegexToServers* RegexHintFSession::find_servers(const char* sql, int sql_l
     return NULL;
 }
 
+void RegexHintFSession::inc_diverted(bool was_diverted)
+{
+    if (was_diverted)
+    {
+        m_n_diverted++;
+        m_fil_inst.m_total_diverted.fetch_add(1, std::memory_order_relaxed);
+    }
+    else
+    {
+        m_n_undiverted++;
+        m_fil_inst.m_total_undiverted.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
 /**
  * Capability routine.
  *
@@ -611,8 +614,8 @@ json_t* RegexHintFilter::diagnostics() const
 {
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "queries_diverted", json_integer(m_total_diverted));
-    json_object_set_new(rval, "queries_undiverted", json_integer(m_total_undiverted));
+    json_object_set_new(rval, "queries_diverted", json_integer(m_total_diverted.load()));
+    json_object_set_new(rval, "queries_undiverted", json_integer(m_total_undiverted.load()));
 
     auto setup = *m_setup;
 

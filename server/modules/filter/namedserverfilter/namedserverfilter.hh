@@ -44,10 +44,9 @@ using SourceHostVector = std::vector<SourceHost>;
 class RegexHintFilter : public mxs::Filter
 {
 public:
-    /* Total statements diverted statistics. Unreliable due to lockless yet
-     * shared access. */
-    volatile unsigned int m_total_diverted {0};
-    volatile unsigned int m_total_undiverted {0};
+    /* Total statements diverted statistics. */
+    std::atomic<uint64_t> m_total_diverted {0};
+    std::atomic<uint64_t> m_total_undiverted {0};
 
     struct Setup
     {
@@ -153,6 +152,7 @@ private:
     std::shared_ptr<RegexHintFilter::Setup> m_setup;
 
     const RegexToServers* find_servers(const char* sql, int sql_len);
+    void                  inc_diverted(bool was_diverted);
 };
 
 /* Storage class which maps a regex to a set of servers. Note that this struct
