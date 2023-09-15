@@ -146,6 +146,25 @@ bool Resource::part_matches(const std::string& part, size_t depth) const
     return rval;
 }
 
+bool Resource::variable_part_mismatch(const std::deque<std::string>& path) const
+{
+    bool rval = m_path.size() == path.size();
+
+    if (rval)
+    {
+        for (size_t i = 0; i < m_path.size(); i++)
+        {
+            if (m_path[i] != path[i] && !is_variable_part(i))
+            {
+                rval = false;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
 static void remove_null_parameters(json_t* json)
 {
     if (json_t* parameters = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
@@ -167,6 +186,11 @@ static void remove_null_parameters(json_t* json)
 HttpResponse Resource::call(const HttpRequest& request) const
 {
     return m_cb(request);
+}
+
+bool Resource::is_variable_part(size_t i) const
+{
+    return i < m_path.size() && (m_path[i][0] == ':' || m_path[i][0] == '?');
 }
 
 bool Resource::matching_variable_path(const string& path, const string& target) const
@@ -1728,7 +1752,7 @@ public:
             {
                 const auto& path = it->path();
 
-                if (path.size() == parts.size())
+                if (it->variable_part_mismatch(parts))
                 {
                     for (size_t i = 0; i < path.size(); i++)
                     {

@@ -77,6 +77,15 @@ public:
     bool part_matches(const std::string& part, size_t depth) const;
 
     /**
+     * @brief Check if all parts except the variable ones match
+     *
+     * @param path The full path to match against
+     *
+     * @return True if only the variable part does not match
+     */
+    bool variable_part_mismatch(const std::deque<std::string>& path) const;
+
+    /**
      * @brief Handle a HTTP request
      *
      * @param request Request to handle
@@ -126,6 +135,7 @@ public:
 
 private:
 
+    bool is_variable_part(size_t i) const;
     bool matching_variable_path(const std::string& path, const std::string& target) const;
 
     ResourceCallback         m_cb;          /**< Resource handler callback */

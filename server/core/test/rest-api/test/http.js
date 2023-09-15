@@ -140,6 +140,26 @@ describe("HTTP", function () {
     it("error on invalid POST request", function () {
       return request.post(base_url + "/servers", { json: { this_is: "a test" } }).should.be.rejected;
     });
+
+    it("unknown object type is detected", async function () {
+      try {
+        await request.get(base_url + "/services/asdf/relationships/filters", {
+          resolveWithFullResponse: true,
+        });
+      } catch (err) {
+        expect(err.response.data.errors[0].detail).to.equal("asdf is not a service");
+      }
+    });
+
+    it("unknown endpoints do not generate object type errors", async function () {
+      try {
+        await request.get(base_url + "/services/asdf/asdf/asdf", {
+          resolveWithFullResponse: true,
+        });
+      } catch (err) {
+        expect(err.response.data).to.be.empty;
+      }
+    });
   });
 
   describe("Request Options", function () {
