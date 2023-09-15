@@ -192,7 +192,13 @@ int main(int argc, char** argv)
                               "maxctrl rotate logs;"
                               "maxctrl call command mariadbmon reset-replication MySQL-Monitor;"
                               "maxctrl api get servers;"
-                              "maxctrl classify 'select 1';");
+                              "maxctrl classify 'select 1';"
+                              "maxctrl debug stacktrace;"
+                              "maxctrl debug stacktrace --raw;"
+                              "maxctrl debug stacktrace --fold;"
+                              "maxctrl debug stacktrace --duration=1;"
+                              "maxctrl debug stacktrace --duration=1 --interval=100;"
+                              );
 
     test.tprintf("MXS-3697: MaxCtrl fails with \"ENOENT: no such file or directory, stat '/~/.maxctrl.cnf'\" "
                  "when running commands from the root directory.");

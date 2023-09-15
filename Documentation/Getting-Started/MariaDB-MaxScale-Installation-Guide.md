@@ -34,6 +34,36 @@ Alternatively you may download the MariaDB MaxScale source and build your own bi
 To do this, refer to the separate document
 [Building MariaDB MaxScale from Source Code](Building-MaxScale-from-Source-Code.md)
 
+## Assumptions
+
+### Memory allocation behavior
+
+MaxScale assumes that memory allocations always succeed and in general does
+not check for memory allocation failures. This assumption is compatible with
+the Linux kernel parameter
+[`vm.overcommit_memory`](https://www.kernel.org/doc/Documentation/vm/overcommit-accounting)
+having the value `0`, which is also the default on most systems.
+
+With `vm.overcommit_memory` being `0`, memory _allocations_ made by an
+application never fail, but instead the application may be killed by the
+so-called OOM (out-of-memory) killer if, by the time the application
+actually attempts to _use_ the allocated memory, there is not available
+free memory on the system.
+
+If the value is `2`, then a memory allocation made by an application may
+fail and unless the application is prepared for that possiblity, it will
+likely crash with a SIGSEGV. As MaxScale is not prepared to handle memory
+allocation failures, it will crash in this situation.
+
+The current value of `vm.overcommit_memory` can be checked with
+```
+sysctl vm.overcommit_memory
+```
+or
+```
+cat /proc/sys/vm/overcommit_memory
+```
+
 ## Configuring MariaDB MaxScale
 
 [The MaxScale Tutorial](../Tutorials/MaxScale-Tutorial.md) covers the first
