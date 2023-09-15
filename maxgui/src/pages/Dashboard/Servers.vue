@@ -275,7 +275,7 @@ export default {
                                 state: monitorState,
                                 module: monitorModule,
                                 monitor_diagnostics: { master } = {},
-                            },
+                            } = {},
                         } = this.getAllMonitorsMap.get(monitorsData[0].id) || {}
 
                         if (monitorId) {
