@@ -193,10 +193,8 @@ export default {
 
                     if (this.getAllMonitorsMap.size && associatedMonitors.length) {
                         // The associatedMonitors is always an array with one element -> get monitor at index 0
-                        const {
-                            id: monitorId = null,
-                            attributes: { state },
-                        } = this.getAllMonitorsMap.get(associatedMonitors[0].id) || {}
+                        const { id: monitorId = null, attributes: { state } = {} } =
+                            this.getAllMonitorsMap.get(associatedMonitors[0].id) || {}
                         if (monitorId) {
                             allMonitorIds.push(monitorId)
                             row.groupId = monitorId
