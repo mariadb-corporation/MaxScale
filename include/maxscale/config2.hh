@@ -309,6 +309,11 @@ public:
         AT_RUNTIME      // The parameter can be modified also at runtime.
     };
 
+    Param(const Param&) = delete;
+    Param& operator=(const Param&) = delete;
+    Param(Param&&) = delete;
+    Param& operator=(Param&&) = delete;
+
     ~Param();
 
     /**
