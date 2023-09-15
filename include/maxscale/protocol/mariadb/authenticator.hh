@@ -242,8 +242,8 @@ struct BackendAuthData
 {
     BackendAuthData(const char* srv_name);
 
-    const char* const    servername;    /**< Server name, used for logging */
-    const MYSQL_session* client_data;   /**< Protocol-session data */
+    const char* const servername;   /**< Server name, used for logging */
+    MYSQL_session*    client_data;  /**< Protocol-session data */
 
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /**< Server scramble, received from backend */
 };

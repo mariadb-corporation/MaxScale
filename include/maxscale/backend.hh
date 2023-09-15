@@ -15,11 +15,11 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <deque>
 #include <algorithm>
 
 #include <maxscale/target.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/small_vector.hh>
 
 
 namespace maxscale
@@ -43,7 +43,7 @@ public:
     /**
      * What type of a response we expect from the backend
      */
-    enum response_type
+    enum response_type : uint8_t
     {
         EXPECT_RESPONSE,    // Response will be routed to the client
         IGNORE_RESPONSE,    // Response will be discarded by the router
@@ -77,8 +77,8 @@ public:
      */
     inline mxs::Target* target() const
     {
-        mxb_assert(m_backend);
-        return m_backend->target();
+        mxb_assert(m_target);
+        return m_target;
     }
 
     /**
@@ -88,7 +88,7 @@ public:
      */
     inline bool can_connect() const
     {
-        return !has_failed() && m_backend->target()->is_connectable();
+        return !has_failed() && m_target->is_connectable();
     }
 
     /**
@@ -137,7 +137,7 @@ public:
      */
     inline bool is_active() const
     {
-        return m_backend->target()->active();
+        return m_target->active();
     }
 
     /**
@@ -190,7 +190,7 @@ public:
      */
     inline bool is_master() const
     {
-        return m_backend->target()->is_master();
+        return m_target->is_master();
     }
 
     /**
@@ -200,7 +200,7 @@ public:
      */
     inline bool is_slave() const
     {
-        return m_backend->target()->is_slave();
+        return m_target->is_slave();
     }
 
     /**
@@ -210,7 +210,7 @@ public:
      */
     inline bool is_relay() const
     {
-        return m_backend->target()->is_relay();
+        return m_target->is_relay();
     }
 
     /**
@@ -234,14 +234,14 @@ public:
      */
     inline const char* name() const
     {
-        return m_backend->target()->name();
+        return m_target->name();
     }
 
     virtual void select_started();
     virtual void select_finished();
 
-    int64_t                       num_selects() const;
-    const maxbase::IntervalTimer& select_timer() const;
+    int64_t                            num_selects() const;
+    const maxbase::EpollIntervalTimer& select_timer() const;
 
 private:
     /**
@@ -255,13 +255,14 @@ private:
     };
 
     mxs::Endpoint* m_backend {nullptr};     /**< Backend server */
+    mxs::Target*   m_target{nullptr};
     backend_state  m_state {CLOSED};        /**< State of the backend */
 
-    maxbase::IntervalTimer m_select_timer;
-    int64_t                m_num_selects {0};
+    mxb::EpollIntervalTimer m_select_timer;
+    int64_t                 m_num_selects {0};
 
     // Contains the types of responses we're expecting from this backend. Used to detect if multiple commands
     // were sent to the backend but not all of the results should be sent to the client.
-    std::deque<response_type> m_responses;
+    mxb::small_vector<response_type> m_responses;
 };
 }

@@ -187,11 +187,14 @@ void test_main(TestConnections& test)
             // MXS-4731, com_change_user between different authenticators.
             test.tprintf("Testing COM_CHANGE_USER from native user to pam user.");
             auto basic_conn = mxs.try_open_rwsplit_connection(basic_un, basic_pw);
+            // This bypasses MXS-4758. Remove when/if that issue is ever fixed.
+            auto res = basic_conn->query("select rand();");
+            test.expect(res && res->next_row(), "Query before COM_CHANGE_USER failed.");
             auto changed = basic_conn->change_user(pam_user, pam_pw, "test");
             test.expect(changed, "COM_CHANGE_USER %s->%s failed.", basic_un, pam_user);
             if (changed)
             {
-                auto res = basic_conn->query("select rand();");
+                res = basic_conn->query("select rand();");
                 test.expect(res && res->next_row(), "Query after COM_CHANGE_USER failed.");
             }
         }

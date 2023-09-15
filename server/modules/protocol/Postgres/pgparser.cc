@@ -130,6 +130,12 @@ bool PgParser::Helper::is_query(const GWBUF& packet) const
     return pg::is_query(packet);
 }
 
+mxs::Parser::QueryInfo PgParser::Helper::get_query_info(const GWBUF& packet) const
+{
+    mxb_assert_message(!true, "TODO: Implement this");
+    return QueryInfo{};
+}
+
 PgParser::PgParser(std::unique_ptr<Parser> sParser)
     : mxs::CachingParser(std::move(sParser))
 {

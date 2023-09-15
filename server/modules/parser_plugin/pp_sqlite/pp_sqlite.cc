@@ -28,6 +28,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/modinfo.hh>
 #include <maxsimd/canonical.hh>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
@@ -1520,6 +1521,7 @@ public:
             m_function_infos.reserve(m_function_infos.size() + 1);
             m_function_field_usage.reserve(m_function_field_usage.size() + 1);
 
+            m_relates_to_previous |= mxb::sv_case_eq(item.name, "FOUND_ROWS");
             m_function_infos.push_back(item);
             m_function_field_usage.resize(m_function_field_usage.size() + 1);
         }
@@ -3329,6 +3331,8 @@ public:
         , m_type_mask(mxs::sql::TYPE_UNKNOWN)
         , m_operation(mxs::sql::OP_UNDEFINED)
         , m_pPreparable_stmt(NULL)
+        , m_multi_stmt(false)
+        , m_relates_to_previous(false)
     {
     }
 
@@ -3565,6 +3569,8 @@ public:
                                                                  // of the statement. Data referred to from
                                                                  // m_function_infos
     vector<vector<char>>              m_scratch_buffers;         // Buffers if string not found from canonical.
+    bool                              m_multi_stmt;
+    bool                              m_relates_to_previous;
 };
 
 extern "C"
@@ -3825,6 +3831,10 @@ static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, u
                 pInfo->m_canonical = helper.get_sql(query);
                 maxsimd::get_canonical(&pInfo->m_canonical);
 
+                // Checking whether the statement consists of multiple statements is faster if done
+                // from the canonical query form as it is shorter than the original query.
+                pInfo->m_multi_stmt = maxsimd::is_multi_stmt(pInfo->m_canonical);
+
                 if (is_prepare)
                 {
                     // This is to ensure that a COM_QUERY and a COM_STMT_PREPARE
@@ -3853,6 +3863,11 @@ static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, u
             if (is_prepare)
             {
                 pInfo->m_type_mask |= mxs::sql::TYPE_PREPARE_STMT;
+            }
+
+            if (pInfo->m_type_mask & (mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT))
+            {
+                pInfo->set_cacheable(false);
             }
 
             pInfo->m_collected = pInfo->m_collect;
@@ -5115,17 +5130,21 @@ public:
         // TODO: E.g. "SHOW WARNINGS" also relates to previous.
         bool rv = false;
 
-        const mxs::Parser::FunctionInfo* pInfos = nullptr;
-        size_t nInfos = 0;
-        get_function_info(packet, &pInfos, &nInfos);
-
-        for (size_t i = 0; i < nInfos; ++i)
+        if (PpSqliteInfo* pInfo = get_info(packet, Parser::COLLECT_FUNCTIONS))
         {
-            if (mxb::sv_case_eq(pInfos[i].name, "FOUND_ROWS"))
-            {
-                rv = true;
-                break;
-            }
+            rv = pInfo->m_relates_to_previous;
+        }
+
+        return rv;
+    }
+
+    bool is_multi_stmt(const GWBUF& stmt) const override
+    {
+        bool rv = false;
+
+        if (PpSqliteInfo* pInfo = get_info(stmt))
+        {
+            rv = pInfo->m_multi_stmt;
         }
 
         return rv;
@@ -5177,6 +5196,24 @@ public:
         }
 
         return rv;
+    }
+
+    QueryInfo get_query_info(const GWBUF& stmt) const override
+    {
+        QueryInfo rval = m_helper.get_query_info(stmt);
+
+        if (rval.type_mask_status == TypeMaskStatus::NEEDS_PARSING)
+        {
+            if (PpSqliteInfo* pInfo = get_info(stmt, Parser::COLLECT_FUNCTIONS))
+            {
+                rval.multi_stmt = pInfo->m_multi_stmt;
+                rval.type_mask = pInfo->m_type_mask;
+                rval.op = pInfo->m_operation;
+                rval.relates_to_previous = pInfo->m_relates_to_previous;
+            }
+        }
+
+        return rval;
     }
 
 private:

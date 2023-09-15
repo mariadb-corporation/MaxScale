@@ -16,7 +16,6 @@
 #include <unordered_map>
 #include <maxbase/alloc.hh>
 #include <maxbase/string.hh>
-#include <maxsimd/multistmt.hh>
 
 using mariadb::QueryClassifier;
 using mxs::Parser;
@@ -127,6 +126,22 @@ public:
         bool     route_to_last_used = false;
     };
 
+    struct BinaryPreparedStmt
+    {
+        uint32_t     id;
+        PreparedStmt ps;
+
+        explicit BinaryPreparedStmt(uint32_t ps_id)
+            : id(ps_id)
+        {
+        }
+
+        bool operator==(const BinaryPreparedStmt& other) const
+        {
+            return id == other.id;
+        }
+    };
+
     PSManager(mxs::Parser& parser, Log log)
         : m_parser(parser)
         , m_log(log)
@@ -144,17 +159,20 @@ public:
         mxb_assert(is_prepare
                    || Parser::type_mask_contains(m_parser.get_type_mask(*buffer),
                                                  mxs::sql::TYPE_PREPARE_NAMED_STMT));
-
-        PreparedStmt stmt;
-        stmt.type = get_prepare_type(m_parser, *buffer);
-        stmt.route_to_last_used = m_parser.relates_to_previous(*buffer);
-
         if (is_prepare)
         {
-            m_binary_ps.emplace(id, std::move(stmt));
+            BinaryPreparedStmt stmt(id);
+            stmt.ps.type = get_prepare_type(m_parser, *buffer);
+            stmt.ps.route_to_last_used = m_parser.relates_to_previous(*buffer);
+
+            m_binary_ps.emplace_back(std::move(stmt));
         }
         else if (m_parser.is_query(*buffer))
         {
+            PreparedStmt stmt;
+            stmt.type = get_prepare_type(m_parser, *buffer);
+            stmt.route_to_last_used = m_parser.relates_to_previous(*buffer);
+
             m_text_ps.emplace(get_text_ps_id(m_parser, *buffer), std::move(stmt));
         }
         else
@@ -166,11 +184,11 @@ public:
     const PreparedStmt* get(uint32_t id) const
     {
         const PreparedStmt* rval = nullptr;
-        BinaryPSMap::const_iterator it = m_binary_ps.find(id);
+        auto it = std::find(m_binary_ps.begin(), m_binary_ps.end(), BinaryPreparedStmt(id));
 
         if (it != m_binary_ps.end())
         {
-            rval = &it->second;
+            rval = &it->ps;
         }
         else if (m_parser.is_execute_immediately_ps(id))
         {
@@ -186,7 +204,7 @@ public:
     const PreparedStmt* get(std::string id) const
     {
         const PreparedStmt* rval = nullptr;
-        TextPSMap::const_iterator it = m_text_ps.find(id);
+        auto it = m_text_ps.find(id);
 
         if (it != m_text_ps.end())
         {
@@ -213,12 +231,15 @@ public:
 
     void erase(uint32_t id)
     {
-        if (m_binary_ps.erase(id) == 0)
+        auto it = std::find(m_binary_ps.begin(), m_binary_ps.end(), BinaryPreparedStmt(id));
+
+        if (it != m_binary_ps.end())
         {
-            if (m_log == Log::ALL)
-            {
-                MXB_WARNING("Closing unknown prepared statement with ID %u", id);
-            }
+            m_binary_ps.erase(it);
+        }
+        else if (m_log == Log::ALL)
+        {
+            MXB_WARNING("Closing unknown prepared statement with ID %u", id);
         }
     }
 
@@ -240,32 +261,33 @@ public:
 
     void set_param_count(uint32_t id, uint16_t param_count)
     {
-        m_binary_ps[id].param_count = param_count;
+        auto it = std::find(m_binary_ps.begin(), m_binary_ps.end(), BinaryPreparedStmt(id));
+        mxb_assert(it != m_binary_ps.end());
+
+        if (it != m_binary_ps.end())
+        {
+            it->ps.param_count = param_count;
+        }
     }
 
     uint16_t param_count(uint32_t id) const
     {
         uint16_t rval = 0;
-        auto it = m_binary_ps.find(id);
+        auto it = std::find(m_binary_ps.begin(), m_binary_ps.end(), BinaryPreparedStmt(id));
 
         if (it != m_binary_ps.end())
         {
-            rval = it->second.param_count;
+            rval = it->ps.param_count;
         }
 
         return rval;
     }
 
 private:
-
-    using BinaryPSMap = std::unordered_map<uint32_t, PreparedStmt>;
-    using TextPSMap = std::unordered_map<std::string, PreparedStmt>;
-
-private:
-    mxs::Parser& m_parser;
-    BinaryPSMap  m_binary_ps;
-    TextPSMap    m_text_ps;
-    Log          m_log;
+    mxs::Parser&                                  m_parser;
+    std::vector<BinaryPreparedStmt>               m_binary_ps;
+    std::unordered_map<std::string, PreparedStmt> m_text_ps;
+    Log                                           m_log;
 };
 
 //
@@ -289,8 +311,6 @@ QueryClassifier::QueryClassifier(mxs::Parser& parser,
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_multi_statements_allowed(pSession->protocol_data()->are_multi_statements_allowed())
     , m_sPs_manager(new PSManager(parser, log))
-    , m_route_info(&parser)
-    , m_prev_route_info(&parser)
 {
 }
 
@@ -411,7 +431,7 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype, const TrxTracker& trx
 {
     bool trx_active = trx_tracker.is_trx_active();
     uint32_t target = TARGET_UNDEFINED;
-    bool load_active = (m_route_info.load_data_state() != LOAD_DATA_INACTIVE);
+    bool load_active = m_route_info.load_data_active();
     mxb_assert(!load_active);
 
     /**
@@ -522,7 +542,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, co
     {
         MXB_INFO("> Processing large request with more than 2^24 bytes of data");
     }
-    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
+    else if (!m_route_info.load_data_active())
     {
         MXB_INFO("> Autocommit: %s, trx is %s, %s",
                  trx_tracker.is_autocommit() ? "[enabled]" : "[disabled]",
@@ -533,24 +553,6 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, co
     {
         MXB_INFO("> Processing LOAD DATA LOCAL INFILE.");
     }
-}
-
-uint32_t QueryClassifier::determine_query_type(const GWBUF& packet) const
-{
-    uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
-
-    mxs::Parser::PacketTypeMask ptm = m_parser.get_packet_type_mask(packet);
-
-    if (ptm.second == mxs::Parser::TypeMaskStatus::FINAL)
-    {
-        type_mask = ptm.first;
-    }
-    else
-    {
-        type_mask = m_parser.get_type_mask(packet);
-    }
-
-    return type_mask;
 }
 
 void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
@@ -578,7 +580,7 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
         MXB_INFO("Added temporary table %s", table.c_str());
 
         /** Add the table to the set of temporary tables */
-        m_route_info.add_tmp_table(table);
+        add_tmp_table(table);
     }
 }
 
@@ -624,24 +626,22 @@ void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     QueryClassifier::current_target_t current_target,
     GWBUF* querybuf,
-    uint32_t* qtype)
+    uint32_t* qtype,
+    const mxs::Parser::QueryInfo& query_info)
 {
     QueryClassifier::current_target_t rv = QueryClassifier::CURRENT_TARGET_UNDEFINED;
 
-    bool is_query = m_parser.is_query(*querybuf);
+    bool is_query = query_info.query;
 
     /** Check for multi-statement queries. If no master server is available
      * and a multi-statement is issued, an error is returned to the client
      * when the query is routed. */
     if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
-        bool is_multi = is_query && m_parser.get_operation(*querybuf) == mxs::sql::OP_CALL;
+        bool is_multi = is_query && query_info.op == mxs::sql::OP_CALL;
         if (!is_multi && multi_statements_allowed() && is_query)
         {
-            // This is wasteful, the sql is extracted multiple times
-            // it should be in the Context, after first call.
-            const std::string sql { m_parser.helper().get_sql(*querybuf) };
-            is_multi = maxsimd::is_multi_stmt(sql);
+            is_multi = query_info.multi_stmt;
         }
 
         if (is_multi)
@@ -653,11 +653,11 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     /**
      * Check if the query has anything to do with temporary tables.
      */
-    if (m_route_info.have_tmp_tables() && is_query)
+    if (have_tmp_tables() && is_query)
     {
 
         check_drop_tmp_table(querybuf);
-        if (is_read_tmp_table(querybuf, *qtype))
+        if (is_read_tmp_table(querybuf, query_info.type_mask))
         {
             *qtype |= mxs::sql::TYPE_MASTER_READ;
         }
@@ -682,24 +682,28 @@ const QueryClassifier::RouteInfo&
 QueryClassifier::update_route_info(GWBUF& buffer)
 {
     uint32_t route_target = TARGET_MASTER;
-    uint8_t cmd = 0xFF;
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
-    uint32_t stmt_id = 0;
     bool locked_to_master = m_pHandler->is_locked_to_master();
     current_target_t current_target = locked_to_master ? CURRENT_TARGET_MASTER : CURRENT_TARGET_UNDEFINED;
     TrxTracker& trx_tracker = m_route_info.m_trx_tracker;
 
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
+    m_delta.clear();
 
-    trx_tracker.track_transaction_state(buffer, m_parser);
-    m_route_info.set_multi_part_packet(m_parser.is_multi_part_packet(buffer));
+    auto query_info = m_parser.get_query_info(buffer);
+    uint32_t stmt_id = query_info.ps_id;
+    uint8_t cmd = query_info.command;
+
+    m_route_info.set_multi_part_packet(query_info.multi_part_packet);
 
     if (m_route_info.multi_part_packet())
     {
         // Trailing part of a multi-packet query, ignore it
         return m_route_info;
     }
+
+    trx_tracker.track_transaction_state(query_info.type_mask);
 
     // Reset for every classification
     m_route_info.set_ps_continuation(false);
@@ -709,17 +713,15 @@ QueryClassifier::update_route_info(GWBUF& buffer)
     bool in_read_only_trx =
         (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) && trx_tracker.is_trx_read_only();
 
-    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+    if (m_route_info.load_data_active())
     {
         // A LOAD DATA LOCAL INFILE is ongoing
     }
-    else if (!m_parser.is_empty(buffer))
+    else if (!query_info.empty)
     {
-        cmd = m_parser.get_command(buffer);
-
-        if (m_parser.is_ps_packet(buffer))
+        if (query_info.ps_direct_exec_id && m_prev_ps_id)
         {
-            stmt_id = ps_id_internal_get(&buffer);
+            stmt_id = m_prev_ps_id;
         }
 
         /**
@@ -733,11 +735,12 @@ QueryClassifier::update_route_info(GWBUF& buffer)
         }
         else
         {
-            type_mask = QueryClassifier::determine_query_type(buffer);
+            type_mask = query_info.type_mask;
 
             current_target = handle_multi_temp_and_load(current_target,
                                                         &buffer,
-                                                        &type_mask);
+                                                        &type_mask,
+                                                        query_info);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
             {
@@ -779,11 +782,11 @@ QueryClassifier::update_route_info(GWBUF& buffer)
         }
         else
         {
-            bool is_query = m_parser.is_query(buffer);
+            bool is_query = query_info.query;
 
             if (!in_read_only_trx
                 && is_query
-                && m_parser.get_operation(buffer) == mxs::sql::OP_EXECUTE)
+                && query_info.op == mxs::sql::OP_EXECUTE)
             {
                 if (const auto* ps = m_sPs_manager->get(get_text_ps_id(m_parser, buffer)))
                 {
@@ -791,7 +794,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
                     route_to_last_used = ps->route_to_last_used;
                 }
             }
-            else if (m_parser.is_ps_packet(buffer))
+            else if (query_info.ps_packet)
             {
                 if (const auto* ps = m_sPs_manager->get(stmt_id))
                 {
@@ -800,7 +803,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
                     m_route_info.set_ps_continuation(query_continues_ps(buffer));
                 }
             }
-            else if (is_query && m_parser.relates_to_previous(buffer))
+            else if (is_query && query_info.relates_to_previous)
             {
                 route_to_last_used = true;
             }
@@ -842,8 +845,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
 
 void QueryClassifier::update_from_reply(const mxs::Reply& reply)
 {
-    m_route_info.set_load_data_state(reply.state() == mxs::ReplyState::LOAD_DATA ?
-                                     LOAD_DATA_ACTIVE : LOAD_DATA_INACTIVE);
+    m_route_info.set_load_data_active(reply.state() == mxs::ReplyState::LOAD_DATA);
 
     if (reply.is_complete())
     {
@@ -854,7 +856,7 @@ void QueryClassifier::update_from_reply(const mxs::Reply& reply)
 // static
 bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
 {
-    if (qc.m_route_info.is_tmp_table(table))
+    if (qc.is_tmp_table(table))
     {
         MXB_INFO("Query targets a temporary table: %s", table.c_str());
         return false;
@@ -866,7 +868,27 @@ bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
 // static
 bool QueryClassifier::delete_table(QueryClassifier& qc, const std::string& table)
 {
-    qc.m_route_info.remove_tmp_table(table);
+    qc.remove_tmp_table(table);
     return true;
+}
+
+void QueryClassifier::revert_update()
+{
+    m_route_info = m_prev_route_info;
+
+    for (const auto& [op, table] : m_delta)
+    {
+        if (op == ADD)
+        {
+            m_tmp_tables.erase(table);
+        }
+        else
+        {
+            mxb_assert(op == REMOVE);
+            m_tmp_tables.emplace(std::move(table));
+        }
+    }
+
+    m_delta.clear();
 }
 }

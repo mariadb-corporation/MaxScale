@@ -70,6 +70,7 @@
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 #include <maxsimd/canonical.hh>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/log.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
@@ -727,6 +728,11 @@ static bool parse_query(const Parser::Helper& helper, const GWBUF* querybuf)
     if (create_parse_tree(thd))
     {
         pi->result = Parser::Result::PARSED;
+    }
+
+    if (pi && pi->type_mask & (mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_DISABLE_AUTOCOMMIT))
+    {
+        pi->set_cacheable(false);
     }
 
     /** Add complete parsing info struct to the query buffer */
@@ -4169,6 +4175,11 @@ public:
         return rv;
     }
 
+    bool is_multi_stmt(const GWBUF& stmt) const override
+    {
+        return maxsimd::is_multi_stmt(helper().get_sql(stmt));
+    }
+
     void set_sql_mode(Parser::SqlMode sql_mode) override
     {
         pp_mysql_set_sql_mode(sql_mode);
@@ -4183,6 +4194,22 @@ public:
     {
         pp_mysql_set_server_version(version);
     }
+
+    QueryInfo get_query_info(const GWBUF& stmt) const override
+    {
+        QueryInfo rval = m_helper.get_query_info(stmt);
+
+        if (rval.type_mask_status == mxs::Parser::TypeMaskStatus::NEEDS_PARSING)
+        {
+            rval.type_mask = get_type_mask(stmt);
+            rval.multi_stmt = is_multi_stmt(stmt);
+            rval.op = get_operation(stmt);
+            rval.relates_to_previous = relates_to_previous(stmt);
+        }
+
+        return rval;
+    }
+
 };
 
 class MysqlParserPlugin : public ParserPlugin

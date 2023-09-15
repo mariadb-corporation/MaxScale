@@ -22,6 +22,63 @@ struct ThisUnit
     MariaDBParser::Helper helper;
 } this_unit;
 
+mxs::Parser::PacketTypeMask command_to_typemask(uint8_t cmd)
+{
+    uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
+    mxs::Parser::TypeMaskStatus status = mxs::Parser::TypeMaskStatus::FINAL;
+
+    switch (cmd)
+    {
+    case MXS_COM_QUIT:                  /*< 1 QUIT will close all sessions */
+    case MXS_COM_INIT_DB:               /*< 2 DDL must go to the master */
+    case MXS_COM_REFRESH:               /*< 7 - I guess this is session but not sure */
+    case MXS_COM_DEBUG:                 /*< 0d all servers dump debug info to stdout */
+    case MXS_COM_PING:                  /*< 0e all servers are pinged */
+    case MXS_COM_CHANGE_USER:           /*< 11 all servers change it accordingly */
+    case MXS_COM_SET_OPTION:            /*< 1b send options to all servers */
+    case MXS_COM_RESET_CONNECTION:      /*< 1f resets the state of all connections */
+    case MXS_COM_STMT_CLOSE:            /*< free prepared statement */
+    case MXS_COM_STMT_RESET:            /*< resets the data of a prepared statement */
+        type_mask = mxs::sql::TYPE_SESSION_WRITE;
+        break;
+
+    case MXS_COM_CREATE_DB:                 /**< 5 DDL must go to the master */
+    case MXS_COM_DROP_DB:                   /**< 6 DDL must go to the master */
+    case MXS_COM_STMT_SEND_LONG_DATA:       /*< send data to column */
+        type_mask = mxs::sql::TYPE_WRITE;
+        break;
+
+    case MXS_COM_FIELD_LIST:        /**< This is essentially SHOW COLUMNS */
+        type_mask = mxs::sql::TYPE_READ;
+        break;
+
+    case MXS_COM_QUERY:
+        status = mxs::Parser::TypeMaskStatus::NEEDS_PARSING;
+        break;
+
+    case MXS_COM_STMT_PREPARE:
+        status = mxs::Parser::TypeMaskStatus::NEEDS_PARSING;
+        break;
+
+    case MXS_COM_STMT_EXECUTE:
+        /** Parsing is not needed for this type of packet */
+        type_mask = mxs::sql::TYPE_EXEC_STMT;
+        break;
+
+    case MXS_COM_SHUTDOWN:          /**< 8 where should shutdown be routed ? */
+    case MXS_COM_STATISTICS:        /**< 9 ? */
+    case MXS_COM_PROCESS_INFO:      /**< 0a ? */
+    case MXS_COM_CONNECT:           /**< 0b ? */
+    case MXS_COM_PROCESS_KILL:      /**< 0c ? */
+    case MXS_COM_TIME:              /**< 0f should this be run in gateway ? */
+    case MXS_COM_DELAYED_INSERT:    /**< 10 ? */
+    case MXS_COM_DAEMON:            /**< 1d ? */
+    default:
+        break;
+    }
+
+    return mxs::Parser::PacketTypeMask {type_mask, status};
+}
 }
 
 // static
@@ -73,63 +130,12 @@ uint32_t MariaDBParser::Helper::get_command(const GWBUF& packet) const
 
 mxs::Parser::PacketTypeMask MariaDBParser::Helper::get_packet_type_mask(const GWBUF& packet) const
 {
-    uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
-    TypeMaskStatus status = TypeMaskStatus::FINAL;
-
-    if (packet.length() > MYSQL_HEADER_LEN)
+    if (packet.length() <= MYSQL_HEADER_LEN)
     {
-        switch (packet[MYSQL_HEADER_LEN])
-        {
-        case MXS_COM_QUIT:              /*< 1 QUIT will close all sessions */
-        case MXS_COM_INIT_DB:           /*< 2 DDL must go to the master */
-        case MXS_COM_REFRESH:           /*< 7 - I guess this is session but not sure */
-        case MXS_COM_DEBUG:             /*< 0d all servers dump debug info to stdout */
-        case MXS_COM_PING:              /*< 0e all servers are pinged */
-        case MXS_COM_CHANGE_USER:       /*< 11 all servers change it accordingly */
-        case MXS_COM_SET_OPTION:        /*< 1b send options to all servers */
-        case MXS_COM_RESET_CONNECTION:  /*< 1f resets the state of all connections */
-        case MXS_COM_STMT_CLOSE:        /*< free prepared statement */
-        case MXS_COM_STMT_RESET:        /*< resets the data of a prepared statement */
-            type_mask = mxs::sql::TYPE_SESSION_WRITE;
-            break;
-
-        case MXS_COM_CREATE_DB:             /**< 5 DDL must go to the master */
-        case MXS_COM_DROP_DB:               /**< 6 DDL must go to the master */
-        case MXS_COM_STMT_SEND_LONG_DATA:   /*< send data to column */
-            type_mask = mxs::sql::TYPE_WRITE;
-            break;
-
-        case MXS_COM_FIELD_LIST:    /**< This is essentially SHOW COLUMNS */
-            type_mask = mxs::sql::TYPE_READ;
-            break;
-
-        case MXS_COM_QUERY:
-            status = TypeMaskStatus::NEEDS_PARSING;
-            break;
-
-        case MXS_COM_STMT_PREPARE:
-            status = TypeMaskStatus::NEEDS_PARSING;
-            break;
-
-        case MXS_COM_STMT_EXECUTE:
-            /** Parsing is not needed for this type of packet */
-            type_mask = mxs::sql::TYPE_EXEC_STMT;
-            break;
-
-        case MXS_COM_SHUTDOWN:      /**< 8 where should shutdown be routed ? */
-        case MXS_COM_STATISTICS:    /**< 9 ? */
-        case MXS_COM_PROCESS_INFO:  /**< 0a ? */
-        case MXS_COM_CONNECT:       /**< 0b ? */
-        case MXS_COM_PROCESS_KILL:  /**< 0c ? */
-        case MXS_COM_TIME:          /**< 0f should this be run in gateway ? */
-        case MXS_COM_DELAYED_INSERT:/**< 10 ? */
-        case MXS_COM_DAEMON:        /**< 1d ? */
-        default:
-            break;
-        }
+        return mxs::Parser::PacketTypeMask{mxs::sql::TYPE_UNKNOWN, TypeMaskStatus::FINAL};
     }
 
-    return PacketTypeMask { type_mask, status };
+    return command_to_typemask(packet[MYSQL_HEADER_LEN]);
 }
 
 uint32_t MariaDBParser::Helper::get_ps_id(const GWBUF& packet) const
@@ -184,6 +190,33 @@ bool MariaDBParser::Helper::is_query(const GWBUF& packet) const
     return mariadb::is_com_query(packet);
 }
 
+mxs::Parser::QueryInfo MariaDBParser::Helper::get_query_info(const GWBUF& packet) const
+{
+    QueryInfo rval;
+    uint32_t len = packet.length();
+    rval.empty = len == MYSQL_HEADER_LEN;
+
+    if (!rval.empty)
+    {
+        uint8_t cmd = packet.data()[MYSQL_HEADER_LEN];
+        rval.command = cmd;
+        rval.ps_packet = mxs_mysql_is_ps_command(cmd);
+        rval.query = cmd == MXS_COM_QUERY;
+        rval.prepare = cmd == MXS_COM_STMT_PREPARE;
+        rval.multi_part_packet = len == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
+
+        std::tie(rval.type_mask, rval.type_mask_status) = command_to_typemask(cmd);
+
+        if (rval.ps_packet)
+        {
+            rval.ps_id = mxs_mysql_extract_ps_id(packet);
+            rval.ps_direct_exec_id = rval.ps_id == MARIADB_PS_DIRECT_EXEC_ID;
+            rval.execute_immediately_ps = rval.ps_direct_exec_id;
+        }
+    }
+
+    return rval;
+}
 
 MariaDBParser::MariaDBParser(std::unique_ptr<Parser> sParser)
     : mxs::CachingParser(std::move(sParser))

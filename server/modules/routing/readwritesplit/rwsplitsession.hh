@@ -27,12 +27,21 @@
 
 struct ExecInfo
 {
+    ExecInfo(uint32_t stmt_id, mxs::RWBackend* t = nullptr)
+        : id(stmt_id)
+        , target(t)
+    {
+    }
+
+    bool operator==(const ExecInfo& other) const
+    {
+        return id == other.id;
+    }
+
+    uint32_t id;
     // The latest server this was executed on, used to figure out where COM_STMT_FETCH needs to be sent.
     mxs::RWBackend* target = nullptr;
 };
-
-/** Map of COM_STMT_EXECUTE targets by internal ID */
-typedef std::unordered_map<uint32_t, ExecInfo> ExecMap;
 
 /**
  * The client session of a RWSplit instance
@@ -344,7 +353,7 @@ private:
         bool can_route = false;
 
         if (m_expected_responses == 0
-            || route_info().load_data_state() != mariadb::QueryClassifier::LOAD_DATA_INACTIVE
+            || route_info().load_data_active()
             || route_info().multi_part_packet())
         {
             // Not currently doing anything or we're processing a multi-packet query
@@ -442,12 +451,13 @@ private:
 
     int  m_expected_responses;          /**< Number of expected responses to the current query */
     bool m_locked_to_master {false};    /**< Whether session is permanently locked to the master */
+    bool m_check_stale {false};
 
     std::deque<GWBUF> m_query_queue;    /**< Queued commands waiting to be executed */
     RWSplit*          m_router;         /**< The router instance */
     mxs::RWBackend*   m_sescmd_replier {nullptr};
 
-    ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
+    std::vector<ExecInfo> m_exec_map;       // Information about COM_STMT_EXECUTE execution
 
     RWSplit::gtid   m_gtid_pos {0, 0, 0};   /**< Gtid position for causal read */
     wait_gtid_state m_wait_gtid;            /**< State of MASTER_GTID_WAIT reply */

@@ -68,12 +68,12 @@ namespace generic
  * @param buf Buffer containing the full query
  * @return True if the query contains multiple statements
  */
-bool is_multi_stmt_impl(const std::string& sql)
+bool is_multi_stmt_impl(std::string_view sql)
 {
     bool rval = false;
 
     const char* ptr;
-    char* data = const_cast<char*>(sql.c_str());
+    const char* data = sql.data();
     size_t buflen = sql.size();
 
     if (have_semicolon(data, buflen) && (ptr = mxb::strnchr_esc_mariadb(data, ';', buflen)))

@@ -151,16 +151,6 @@ void GWBUF::set_type(Type type)
     m_type |= type;
 }
 
-void GWBUF::set_protocol_info(std::shared_ptr<ProtocolInfo> new_info)
-{
-    m_protocol_info = std::move(new_info);
-}
-
-const std::shared_ptr<GWBUF::ProtocolInfo>& GWBUF::get_protocol_info() const
-{
-    return m_protocol_info;
-}
-
 void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
 {
     if (n_bytes > 0)

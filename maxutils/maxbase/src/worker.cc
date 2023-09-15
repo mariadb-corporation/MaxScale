@@ -1060,25 +1060,7 @@ void Worker::resolve_poll_error(int fd, int errornum, int op)
     raise(SIGABRT);
 }
 
-namespace
-{
-
-long time_in_100ms_ticks(maxbase::TimePoint tp)
-{
-    using TenthSecondDuration = duration<long, std::ratio<1, 10>>;
-
-    auto dur = tp.time_since_epoch();
-    auto tenth = duration_cast<TenthSecondDuration>(dur);
-
-    return tenth.count();
-}
-}
-
-TimePoint Worker::deliver_events(uint64_t cycle_start,
-                                 TimePoint loop_now,
-                                 Pollable* pPollable,
-                                 uint32_t events,
-                                 Pollable::Context context)
+void Worker::deliver_events(Pollable* pPollable, uint32_t events, Pollable::Context context)
 {
     // The polling worker can be nullptr, if epoll_wait() returned more events than
     // one and an event other than the last one caused the high watermark to be hit,
@@ -1087,14 +1069,6 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
                || pPollable->polling_worker() == this
                || pPollable->polling_worker() == nullptr);
 
-    /** Calculate event queue statistics */
-    int64_t started = time_in_100ms_ticks(loop_now);
-    int64_t qtime = started - cycle_start;
-
-    ++m_statistics.qtimes[std::min(qtime, Statistics::N_QUEUE_TIMES)];
-    m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
-
-    int fd = pPollable->poll_fd();
     uint32_t actions = pPollable->handle_poll_events(this, events, context);
 
     m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
@@ -1107,18 +1081,9 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
     {
         m_statistics.n_incomplete_read += 1;
 
-        PendingPoll pending_poll = { EPOLLIN, pPollable };
-        m_incomplete_polls.emplace(fd, pending_poll);
+        PendingPoll pending_poll = {EPOLLIN, pPollable};
+        m_incomplete_polls.emplace(pPollable->poll_fd(), pending_poll);
     }
-
-    /** Calculate event execution statistics */
-    loop_now = maxbase::Clock::now();
-    qtime = time_in_100ms_ticks(loop_now) - started;
-
-    ++m_statistics.exectimes[std::min(qtime, Statistics::N_QUEUE_TIMES)];
-    m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
-
-    return loop_now;
 }
 
 /**
@@ -1154,7 +1119,6 @@ void Worker::poll_waitevents()
         m_epoll_tick_now = mxb::Clock::now();
 
         m_load.about_to_work(m_epoll_tick_now);
-        uint64_t cycle_start = time_in_100ms_ticks(m_epoll_tick_now);
 
         if (nfds == -1 && errno != EINTR)
         {
@@ -1193,21 +1157,16 @@ void Worker::poll_waitevents()
 
         m_scheduled_polls.swap(m_incomplete_polls);
 
-        // Set loop_now before the loop, and inside the loop
-        // just before looping back to the top.
-        auto loop_now = m_epoll_tick_now;
-
         for (int i = 0; i < nfds; i++)
         {
             uint32_t pollable_events = events[i].events;
             Pollable* pPollable = static_cast<Pollable*>(events[i].data.ptr);
-            int fd = pPollable->poll_fd();
 
             // Lookup from empty unordered map is an order of magnitude more expensive
             // than checking whether it is empty.
             if (!m_scheduled_polls.empty())
             {
-                auto it = m_scheduled_polls.find(fd);
+                auto it = m_scheduled_polls.find(pPollable->poll_fd());
 
                 if (it != m_scheduled_polls.end())
                 {
@@ -1218,7 +1177,7 @@ void Worker::poll_waitevents()
                 }
             }
 
-            loop_now = deliver_events(cycle_start, loop_now, pPollable, pollable_events, Pollable::NEW_CALL);
+            deliver_events(pPollable, pollable_events, Pollable::NEW_CALL);
         }
 
         // Can't just iterate over it, in case the callback removes
@@ -1232,7 +1191,7 @@ void Worker::poll_waitevents()
             auto* pPollable = pending_poll.pPollable;
             auto pending_events = pending_poll.events;
 
-            loop_now = deliver_events(cycle_start, loop_now, pPollable, pending_events, Pollable::REPEATED_CALL);
+            deliver_events(pPollable, pending_events, Pollable::REPEATED_CALL);
         }
 
         if (!m_lcalls.empty())

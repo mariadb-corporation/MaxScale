@@ -593,7 +593,14 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
             {
                 // Remove the command from the PS mapping
                 m_qc.ps_erase(&buffer);
-                m_exec_map.erase(route_info().stmt_id());
+
+                auto stmt_id = route_info().stmt_id();
+                auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
+
+                if (it != m_exec_map.end())
+                {
+                    m_exec_map.erase(it);
+                }
             }
             else if (Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT)
                      || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_STMT))
@@ -843,11 +850,11 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 
     if (route_info().is_ps_continuation())
     {
-        ExecMap::iterator it = m_exec_map.find(stmt_id);
+        auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
 
-        if (it != m_exec_map.end() && it->second.target)
+        if (it != m_exec_map.end() && it->target)
         {
-            auto prev_target = it->second.target;
+            auto prev_target = it->target;
 
             if (prev_target->in_use())
             {
@@ -1048,13 +1055,15 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
     MXB_INFO("Route query to %s: %s <", target == m_current_master ? "primary" : "replica", target->name());
 
     uint8_t cmd = mxs_mysql_get_command(buffer);
+    bool will_respond = parser().command_will_respond(cmd);
 
     bool attempting_causal_read = false;
 
-    if (route_info().multi_part_packet() || route_info().loading_data())
+    if (route_info().multi_part_packet() || route_info().load_data_active())
     {
         // Never store multi-packet queries or data sent during LOAD DATA LOCAL INFILE
         store = false;
+        will_respond = false;
     }
     else if (!is_locked_to_master())
     {
@@ -1091,8 +1100,18 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
         {
             // Track the targets of the COM_STMT_EXECUTE statements. This information is used to route all
             // COM_STMT_FETCH commands to the same server where the COM_STMT_EXECUTE was done.
-            auto& info = m_exec_map[route_info().stmt_id()];
-            info.target = target;
+            auto stmt_id = route_info().stmt_id();
+            auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
+
+            if (it == m_exec_map.end())
+            {
+                m_exec_map.emplace_back(stmt_id, target);
+            }
+            else
+            {
+                it->target = target;
+            }
+
             MXB_INFO("%s on %s", mariadb::cmd_to_string(cmd), target->name());
         }
     }
@@ -1119,7 +1138,7 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
 
-    if (route_info().expecting_response())
+    if (will_respond)
     {
         mxb_assert(!route_info().multi_part_packet());
 

@@ -88,6 +88,24 @@ public:
 
     using PacketTypeMask = std::pair<uint32_t, TypeMaskStatus>;
 
+    struct QueryInfo
+    {
+        TypeMaskStatus   type_mask_status = TypeMaskStatus::FINAL;
+        uint32_t         command = 0;
+        uint32_t         ps_id = 0;
+        uint32_t         type_mask = 0;
+        mxs::sql::OpCode op = mxs::sql::OpCode::OP_UNDEFINED;
+        bool             multi_part_packet = false;
+        bool             empty = false;
+        bool             ps_packet = false;
+        bool             query = false;
+        bool             relates_to_previous = false;
+        bool             multi_stmt = false;
+        bool             ps_direct_exec_id = false;
+        bool             execute_immediately_ps = false;
+        bool             prepare = false;
+    };
+
     class Helper
     {
     public:
@@ -108,6 +126,8 @@ public:
         virtual bool             is_ps_direct_exec_id(uint32_t id) const = 0;
         virtual bool             is_ps_packet(const GWBUF& packet) const = 0;
         virtual bool             is_query(const GWBUF& packet) const = 0;
+
+        virtual QueryInfo get_query_info(const GWBUF& packet) const = 0;
     };
 
     struct TableName
@@ -393,10 +413,13 @@ public:
     uint32_t                 get_trx_type_mask_using(const GWBUF& stmt, ParseTrxUsing use) const;
     virtual uint32_t         get_type_mask(const GWBUF& stmt) const = 0;
     virtual bool             relates_to_previous(const GWBUF& stmt) const = 0;
+    virtual bool             is_multi_stmt(const GWBUF& stmt) const = 0;
 
     virtual bool set_options(uint32_t options) = 0;
     virtual void set_server_version(uint64_t version) = 0;
     virtual void set_sql_mode(SqlMode sql_mode) = 0;
+
+    virtual QueryInfo get_query_info(const GWBUF& stmt) const = 0;
 
 protected:
     Parser(const ParserPlugin* pPlugin, const Helper* pHelper)

@@ -68,6 +68,21 @@ public:
     public:
         virtual ~ProtocolInfo() = default;
         virtual size_t size() const = 0;
+
+        // If true, the ProtocolInfo can be cached and reused based on the canonical form of the query. If
+        // false, the result should not be cached and should always be created again.
+        bool cacheable() const
+        {
+            return m_cacheable;
+        }
+
+        void set_cacheable(bool value)
+        {
+            m_cacheable = value;
+        }
+
+    private:
+        bool m_cacheable {true};
     };
 
     enum Type : uint32_t
@@ -149,14 +164,20 @@ public:
      *
      * @param new_info  Out of band protocol information of the buffer.
      */
-    void set_protocol_info(std::shared_ptr<ProtocolInfo> new_info);
+    void set_protocol_info(std::shared_ptr<ProtocolInfo> new_info)
+    {
+        m_protocol_info = std::move(new_info);
+    }
 
     /**
      * Get out-of-band protocol information associated with the buffer.
      *
      * @return Information or null.
      */
-    const std::shared_ptr<ProtocolInfo>& get_protocol_info() const;
+    const std::shared_ptr<ProtocolInfo>& get_protocol_info() const
+    {
+        return m_protocol_info;
+    }
 
     iterator       begin();
     iterator       end();

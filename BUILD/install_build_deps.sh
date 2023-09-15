@@ -79,7 +79,7 @@ then
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
        libsasl2-dev libkrb5-dev libicu-dev unixodbc-dev libpq-dev \
-       postgresql-server-dev-all libgnutls-dev libgcrypt-dev
+       postgresql-server-dev-all gnutls-dev libgcrypt-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   ${apt_cmd} install libsystemd-dev || \

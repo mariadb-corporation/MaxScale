@@ -182,14 +182,13 @@ private:
     void     process_ps_response(Iter it, Iter end);
     void     process_ok_packet(Iter it, Iter end);
     void     update_error(Iter it, Iter end);
-    void     set_reply_state(mxs::ReplyState state);
 
     const MariaDBUserCache* user_account_cache();
 
     // Helper for getting the shared session data
     MYSQL_session* mysql_session() const
     {
-        return static_cast<MYSQL_session*>(m_session->protocol_data());
+        return m_auth_data.client_data;
     }
 
     bool use_deprecate_eof() const

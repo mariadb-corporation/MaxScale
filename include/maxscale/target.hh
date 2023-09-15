@@ -791,4 +791,233 @@ private:
     std::map<std::string, std::string, std::less<>> m_variables;
     std::vector<std::vector<std::string_view>>      m_row_data;
 };
+
+//
+// Inlined implementations
+//
+
+inline int64_t Target::Stats::n_current_conns() const
+{
+    // The returned result is used in if-statements, so use acquire ordering.
+    return m_n_current_conns.load(std::memory_order_acquire);
+}
+
+inline int64_t Target::Stats::n_total_conns() const
+{
+    return m_n_total_conns.load(std::memory_order_relaxed);
+}
+
+inline int64_t Target::Stats::add_conn_intent()
+{
+    return m_n_intended_conns.fetch_add(1, std::memory_order_acq_rel) + 1;
+}
+
+inline void Target::Stats::remove_conn_intent()
+{
+    m_n_intended_conns.fetch_sub(1, std::memory_order_release);
+}
+
+inline int64_t Target::Stats::n_conn_intents() const
+{
+    return m_n_intended_conns.load(std::memory_order_acquire);
+}
+
+inline void Target::Stats::add_client_connection()
+{
+    m_n_clients_conns.fetch_add(1, std::memory_order_relaxed);
+}
+
+inline void Target::Stats::remove_client_connection()
+{
+    MXB_AT_DEBUG(auto val_before = ) m_n_clients_conns.fetch_sub(1, std::memory_order_relaxed);
+    mxb_assert(val_before > 0);
+}
+
+inline int64_t Target::Stats::n_client_conns() const
+{
+    return m_n_clients_conns.load(std::memory_order_relaxed);
+}
+
+inline void Target::Stats::add_failed_auth()
+{
+    m_failed_auths.fetch_add(1, std::memory_order_relaxed);
+}
+
+inline void Target::Stats::add_packet()
+{
+    m_n_packets.fetch_add(1, std::memory_order_relaxed);
+}
+
+inline void Target::Stats::add_current_op()
+{
+    m_n_current_ops.fetch_add(1, std::memory_order_relaxed);
+}
+
+inline void Target::Stats::remove_current_op()
+{
+    MXB_AT_DEBUG(auto val_before = ) m_n_current_ops.fetch_sub(1, std::memory_order_relaxed);
+    mxb_assert(val_before > 0);
+}
+
+inline int64_t Target::Stats::n_current_ops() const
+{
+    return m_n_current_ops.load(std::memory_order_relaxed);
+}
+
+inline ReplyState Reply::state() const
+{
+    return m_reply_state;
+}
+
+inline uint8_t Reply::command() const
+{
+    return m_command;
+}
+
+inline bool Reply::is_complete() const
+{
+    return m_reply_state == ReplyState::DONE;
+}
+
+inline const Error& Reply::error() const
+{
+    return m_error;
+}
+
+inline bool Reply::has_started() const
+{
+    bool partially_read = m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
+    bool multiple_results = m_multiresult && m_reply_state == ReplyState::START;
+    return partially_read || multiple_results;
+}
+
+inline bool Reply::is_resultset() const
+{
+    return !m_field_counts.empty();
+}
+
+inline bool Reply::is_ok() const
+{
+    return m_is_ok && !is_resultset() && !error();
+}
+
+inline uint64_t Reply::rows_read() const
+{
+    return m_row_count;
+}
+
+inline uint16_t Reply::num_warnings() const
+{
+    return m_num_warnings;
+}
+
+inline uint32_t Reply::server_status() const
+{
+    return m_server_status;
+}
+
+inline uint64_t Reply::size() const
+{
+    return m_size;
+}
+
+inline uint64_t Reply::upload_size() const
+{
+    return m_upload_size;
+}
+
+inline const std::vector<uint64_t>& Reply::field_counts() const
+{
+    return m_field_counts;
+}
+
+inline uint32_t Reply::generated_id() const
+{
+    return m_generated_id;
+}
+
+inline uint16_t Reply::param_count() const
+{
+    return m_param_count;
+}
+
+inline const std::vector<std::vector<std::string_view>>& Reply::row_data() const
+{
+    return m_row_data;
+}
+
+inline void Reply::set_command(uint8_t command)
+{
+    m_command = command;
+}
+
+inline void Reply::set_reply_state(mxs::ReplyState state)
+{
+    m_reply_state = state;
+}
+
+inline void Reply::add_rows(uint64_t row_count)
+{
+    m_row_count += row_count;
+}
+
+inline void Reply::add_bytes(uint64_t size)
+{
+    m_size += size;
+}
+
+inline void Reply::add_upload_bytes(uint64_t size)
+{
+    m_upload_size += size;
+}
+
+inline void Reply::add_field_count(uint64_t field_count)
+{
+    m_field_counts.push_back(field_count);
+}
+
+inline void Reply::set_generated_id(uint32_t id)
+{
+    m_generated_id = id;
+}
+
+inline void Reply::set_param_count(uint16_t count)
+{
+    m_param_count = count;
+}
+
+inline void Reply::set_is_ok(bool is_ok)
+{
+    m_is_ok = is_ok;
+}
+
+inline void Reply::set_variable(std::string_view key, std::string_view value)
+{
+    m_variables.emplace(key, value);
+}
+
+inline void Reply::set_num_warnings(uint16_t warnings)
+{
+    m_num_warnings = warnings;
+}
+
+inline void Reply::set_server_status(uint16_t status)
+{
+    m_server_status = status;
+}
+
+inline void Reply::add_row_data(std::vector<std::string_view> row)
+{
+    m_row_data.push_back(std::move(row));
+}
+
+inline void Reply::clear_row_data()
+{
+    m_row_data.clear();
+}
+
+inline void Reply::set_multiresult(bool multiresult)
+{
+    m_multiresult = multiresult;
+}
 }

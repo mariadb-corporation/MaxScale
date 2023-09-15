@@ -150,7 +150,16 @@ struct HeaderData
     uint32_t pl_length {0};
     uint8_t  seq {0};
 };
-HeaderData get_header(const uint8_t* buffer);
+
+static inline HeaderData get_header(const uint8_t* buffer)
+{
+    auto bytes = get_byte4(buffer);
+    HeaderData rval;
+    rval.pl_length = (bytes & 0xFFFFFFu);
+    rval.seq = bytes >> 24u;
+    return rval;
+}
+
 
 /**
  * Write MySQL-header to buffer.
