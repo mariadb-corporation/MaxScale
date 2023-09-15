@@ -118,35 +118,16 @@ export default {
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
         }),
         async handleOpenConns() {
-            const etl_task_id = this.task.id
             this.isLoading = true
             EtlTask.dispatch('pushLog', {
-                id: etl_task_id,
+                id: this.task.id,
                 log: {
                     timestamp: new Date().valueOf(),
                     name: this.$mxs_t('info.openingConns'),
                 },
             })
-            if (!this.activeSrcConn.id)
-                await QueryConn.dispatch('openEtlConn', {
-                    body: {
-                        target: 'odbc',
-                        connection_string: this.src.connection_string,
-                        timeout: this.src.timeout,
-                    },
-                    binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
-                    etl_task_id,
-                    taskMeta: { src_type: this.src.type },
-                    connMeta: { name: this.src.type },
-                })
-            if (!this.activeDestConn.id)
-                await QueryConn.dispatch('openEtlConn', {
-                    body: this.dest,
-                    binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
-                    etl_task_id,
-                    taskMeta: { dest_name: this.dest.target },
-                    connMeta: { name: this.dest.target },
-                })
+            if (!this.activeSrcConn.id) await this.openSrcConn()
+            if (!this.activeDestConn.id) await this.openDestConn()
             if (this.hasActiveConns) {
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('success.connected')],
@@ -155,6 +136,28 @@ export default {
                 await this.$helpers.delay(300) // UX loading animation
             }
             this.isLoading = false
+        },
+        async openSrcConn() {
+            await QueryConn.dispatch('openEtlConn', {
+                body: {
+                    target: 'odbc',
+                    connection_string: this.src.connection_string,
+                    timeout: this.src.timeout,
+                },
+                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
+                etl_task_id: this.task.id,
+                taskMeta: { src_type: this.src.type },
+                connMeta: { name: this.src.type },
+            })
+        },
+        async openDestConn() {
+            await QueryConn.dispatch('openEtlConn', {
+                body: this.dest,
+                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
+                etl_task_id: this.task.id,
+                taskMeta: { dest_name: this.dest.target },
+                connMeta: { name: this.dest.target },
+            })
         },
         async next() {
             if (this.hasActiveConns) {
