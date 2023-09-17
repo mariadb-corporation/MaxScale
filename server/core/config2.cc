@@ -1394,7 +1394,7 @@ bool regex_from_string(const std::string& value_as_string,
 
             if (sCode)
             {
-                RegexValue value(value_as_string, std::move(sCode), ovec_size, options);
+                RegexValue value(text, std::move(sCode), ovec_size, options);
 
                 *pValue = value;
                 rv = true;
@@ -1415,7 +1415,7 @@ bool ParamRegex::from_string(const std::string& value_as_string,
 
 json_t* ParamRegex::to_json(const value_type& value) const
 {
-    return !value.empty() ? json_string(value.pattern().c_str()) : json_null();
+    return !value.empty() ? json_string(("/" + value.pattern() + "/").c_str()) : json_null();
 }
 
 bool ParamRegex::from_json(const json_t* pJson,
