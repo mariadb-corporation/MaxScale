@@ -182,7 +182,7 @@ describe("Alter Commands", function () {
 
   it("alters filter", function () {
     return verifyCommand("alter filter QLA match match1", "filters/QLA").then(function (res) {
-      res.data.attributes.parameters.match.should.equal("match1");
+      res.data.attributes.parameters.match.should.equal("/match1/");
     });
   });
 
@@ -190,8 +190,8 @@ describe("Alter Commands", function () {
     return verifyCommand("alter filter QLA match match2 exclude exclude2", "filters/QLA").then(function (
       res
     ) {
-      res.data.attributes.parameters.match.should.equal("match2");
-      res.data.attributes.parameters.exclude.should.equal("exclude2");
+      res.data.attributes.parameters.match.should.equal("/match2/");
+      res.data.attributes.parameters.exclude.should.equal("/exclude2/");
     });
   });
 
