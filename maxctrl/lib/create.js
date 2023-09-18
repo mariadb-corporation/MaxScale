@@ -593,29 +593,36 @@ exports.builder = function (yargs) {
             "The generated report contains the state of all the objects in MaxScale " +
               "as well as all other required information needed to diagnose problems."
           )
+          .group(["lines"], "Report options:")
+          .option("lines", {
+            describe: "How many lines of logs to collect",
+            type: "number",
+            default: 1000,
+          })
           .wrap(null)
           .usage("Usage: create report <file>");
       },
       function (argv) {
         maxctrl(argv, async function (host) {
           var endpoints = [
-            "maxscale",
-            "servers",
-            "services",
-            "monitors",
-            "listeners",
-            "filters",
-            "sessions",
-            "users",
-            "maxscale/modules",
-            "maxscale/query_classifier",
-            "maxscale/threads",
+            { endpoint: "maxscale", name: "maxscale" },
+            { endpoint: "servers", name: "servers" },
+            { endpoint: "services", name: "services" },
+            { endpoint: "monitors", name: "monitors" },
+            { endpoint: "listeners", name: "listeners" },
+            { endpoint: "filters", name: "filters" },
+            { endpoint: "sessions", name: "sessions" },
+            { endpoint: "users", name: "users" },
+            { endpoint: "maxscale/modules", name: "modules" },
+            { endpoint: "maxscale/query_classifier", name: "query_classifier" },
+            { endpoint: "maxscale/threads", name: "threads" },
+            { endpoint: "maxscale/logs/data", name: "logs", options: "?page[size]=" + argv.lines },
           ];
 
           var data = {};
 
           for (const e of endpoints) {
-            data[e] = await getJson(host, e);
+            data[e.name] = await getJson(host, e.endpoint + (e.options ? e.options : ""));
           }
 
           fs.writeFileSync(argv.file, JSON.stringify(data, null, 2));
