@@ -1041,6 +1041,19 @@ HttpResponse cb_monitor_wait(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK);
 }
 
+HttpResponse cb_debug_server_diagnostics(const HttpRequest& request)
+{
+    auto servers = MonitorManager::get_connection_settings();
+    std::string host = request.host();
+
+    // The server diagnostics requires blocking communication with the databases. To prevent it from blocking
+    // the REST-API, the MainWorker and the monitors, they need to be executed asynchronously in the thread
+    // pool.
+    return HttpResponse([servers, host](){
+        return HttpResponse(MHD_HTTP_OK, MonitorManager::server_diagnostics(servers, host.c_str()));
+    });
+}
+
 HttpResponse cb_create_user(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1392,6 +1405,7 @@ public:
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
+        m_get.emplace_back(cb_debug_server_diagnostics, "maxscale", "debug", "server_diagnostics");
 
         /** Create new resources */
         m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_server, "servers");

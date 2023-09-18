@@ -529,6 +529,8 @@ public:
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
 
+    const MonitorServer::ConnectionSettings& conn_settings() const;
+
 protected:
     /**
      * Stop the monitor. If the monitor uses a polling thread, the thread should be stopped.
@@ -656,7 +658,6 @@ protected:
     };
 
     const Settings&                          settings() const;
-    const MonitorServer::ConnectionSettings& conn_settings() const;
 
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
     std::atomic_long m_ticks {0};

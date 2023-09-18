@@ -18,6 +18,7 @@
 #include <maxbase/format.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
+#include <maxscale/mysql_utils.hh>
 
 #include "internal/config.hh"
 #include "internal/monitor.hh"
@@ -81,6 +82,22 @@ public:
         mxb_assert(iter != m_all_monitors.end());
         m_all_monitors.erase(iter);
         m_deact_monitors.push_back(monitor);
+    }
+
+    MonitorManager::ConnDetails get_connection_settings()
+    {
+        MonitorManager::ConnDetails servers;
+        Guard guard(m_all_monitors_lock);
+
+        for (auto* m : m_all_monitors)
+        {
+            for (auto* s : m->servers())
+            {
+                servers.emplace_back(s->server, m->conn_settings());
+            }
+        }
+
+        return servers;
     }
 
 private:
@@ -518,4 +535,65 @@ bool MonitorManager::remove_server_from_monitor(mxs::Monitor* mon, SERVER* serve
     }
 
     return success;
+}
+
+// static
+MonitorManager::ConnDetails MonitorManager::get_connection_settings()
+{
+    return this_unit.get_connection_settings();
+}
+
+// static
+json_t* MonitorManager::server_diagnostics(const MonitorManager::ConnDetails& servers, const char* host)
+{
+    json_t* attr = json_object();
+
+    for (const auto& kv : servers)
+    {
+        MYSQL* conn = nullptr;
+        std::string err;
+        auto result = MonitorServer::ping_or_connect_to_db(kv.second, *kv.first, &conn, &err);
+
+        if (result == MonitorServer::ConnectResult::NEWCONN_OK)
+        {
+            auto json_query = [&](auto sql, int name_idx, int val_idx){
+                unsigned int errnum;
+
+                if (auto r = mxs::execute_query(conn, sql, &err, &errnum))
+                {
+                    json_t* var = json_object();
+
+                    while (r->next_row())
+                    {
+                        json_object_set_new(var, r->get_string(name_idx).c_str(),
+                                            json_string(r->get_string(val_idx).c_str()));
+                    }
+
+                    return var;
+                }
+                else
+                {
+                    return json_pack("{s: s}", "error", err.c_str());
+                }
+            };
+
+            json_t* obj = json_object();
+            json_object_set_new(obj, "global_variables", json_query("SHOW GLOBAL VARIABLES", 0, 1));
+            json_object_set_new(obj, "global_status", json_query("SHOW GLOBAL STATUS", 0, 1));
+            json_object_set_new(obj, "engine_status", json_query("SHOW ENGINE INNODB STATUS", 0, 2));
+            json_object_set_new(attr, kv.first->name(), obj);
+
+            mysql_close(conn);
+        }
+        else
+        {
+            json_object_set_new(attr, kv.first->name(), json_pack("{s: s}", "error", err.c_str()));
+        }
+    }
+
+    json_t* rval = json_object();
+    json_object_set_new(rval, CN_ID, json_string("server_diagnostics"));
+    json_object_set_new(rval, CN_TYPE, json_string("server_diagnostics"));
+    json_object_set_new(rval, CN_ATTRIBUTES, attr);
+    return mxs_json_resource(host, MXS_JSON_API_SERVER_DIAG, rval);
 }

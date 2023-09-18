@@ -181,4 +181,30 @@ public:
      * @return True on success
      */
     static bool wait_one_tick();
+
+    using ConnDetails = std::vector<std::pair<SERVER*, mxs::MonitorServer::ConnectionSettings>>;
+
+    /**
+     * Get connection settings for each server
+     *
+     * With the help of MonitorServer::ping_or_connect_to_db(), the settings can be used to execute queries
+     * without blocking the monitors or the MainWorker.
+     *
+     * @return The connection settings for all monitored servers
+     */
+    static ConnDetails get_connection_settings();
+
+    /**
+     * Connect to the servers and get JSON diagnostics from them
+     *
+     * This function connects to the servers and converts the results of diagnostic queries
+     * (e.g. SHOW GLOBAL VARIABLES) into JSON. Since this function can block for a long time, it should be
+     * executed asynchronously by the REST-API.
+     *
+     * @param servers The connection details from get_connection_settings()
+     * @param host    The hostname of this MaxScale instance
+     *
+     * @return The results as JSON
+     */
+    static json_t* server_diagnostics(const ConnDetails& servers, const char* host);
 };

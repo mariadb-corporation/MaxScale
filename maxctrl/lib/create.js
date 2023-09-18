@@ -617,6 +617,7 @@ exports.builder = function (yargs) {
             { endpoint: "maxscale/query_classifier", name: "query_classifier" },
             { endpoint: "maxscale/threads", name: "threads" },
             { endpoint: "maxscale/logs/data", name: "logs", options: "?page[size]=" + argv.lines },
+            { endpoint: "maxscale/debug/server_diagnostics", name: "server_diagnostics" },
           ];
 
           var data = {};
