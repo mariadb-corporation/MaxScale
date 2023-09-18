@@ -585,8 +585,8 @@ exports.builder = function (yargs) {
       }
     )
     .command(
-      "report <file>",
-      "Create a diagnostic report and save it into a file",
+      "report [file]",
+      "Create a diagnostic report and save it into a file. If no file is given, the report is written to stdout.",
       function (yargs) {
         return yargs
           .epilog(
@@ -600,7 +600,7 @@ exports.builder = function (yargs) {
             default: 1000,
           })
           .wrap(null)
-          .usage("Usage: create report <file>");
+          .usage("Usage: create report [file]");
       },
       function (argv) {
         maxctrl(argv, async function (host) {
@@ -626,8 +626,12 @@ exports.builder = function (yargs) {
             data[e.name] = await getJson(host, e.endpoint + (e.options ? e.options : ""));
           }
 
-          fs.writeFileSync(argv.file, JSON.stringify(data, null, 2));
-          return OK();
+          if (argv.file) {
+            fs.writeFileSync(argv.file, JSON.stringify(data, null, 2));
+            return OK();
+          } else {
+            return JSON.stringify(data, null, 2);
+          }
         });
       }
     )
