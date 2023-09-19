@@ -52,6 +52,7 @@ namespace
 
 namespace cfg = mxs::config;
 using ParamString = mxs::config::ParamString;
+using ParamRegex = mxs::config::ParamRegex;
 auto su = cfg::Param::AT_RUNTIME;
 
 class Specification final : public cfg::Specification
@@ -114,84 +115,84 @@ ParamHintTarget s_server(&s_spec, "server", "Server to divert matching queries",
 
 // Indexed parameters
 const char target_desc[] = "Target to divert matching queries";
-ParamString s_match01(&s_spec, "match01", regex_desc, "", su);
+ParamRegex s_match01(&s_spec, "match01", regex_desc, "", su);
 ParamHintTarget s_target01(&s_spec, "target01", target_desc, "", su);
 
-ParamString s_match02(&s_spec, "match02", regex_desc, "", su);
+ParamRegex s_match02(&s_spec, "match02", regex_desc, "", su);
 ParamHintTarget s_target02(&s_spec, "target02", target_desc, "", su);
 
-ParamString s_match03(&s_spec, "match03", regex_desc, "", su);
+ParamRegex s_match03(&s_spec, "match03", regex_desc, "", su);
 ParamHintTarget s_target03(&s_spec, "target03", target_desc, "", su);
 
-ParamString s_match04(&s_spec, "match04", regex_desc, "", su);
+ParamRegex s_match04(&s_spec, "match04", regex_desc, "", su);
 ParamHintTarget s_target04(&s_spec, "target04", target_desc, "", su);
 
-ParamString s_match05(&s_spec, "match05", regex_desc, "", su);
+ParamRegex s_match05(&s_spec, "match05", regex_desc, "", su);
 ParamHintTarget s_target05(&s_spec, "target05", target_desc, "", su);
 
-ParamString s_match06(&s_spec, "match06", regex_desc, "", su);
+ParamRegex s_match06(&s_spec, "match06", regex_desc, "", su);
 ParamHintTarget s_target06(&s_spec, "target06", target_desc, "", su);
 
-ParamString s_match07(&s_spec, "match07", regex_desc, "", su);
+ParamRegex s_match07(&s_spec, "match07", regex_desc, "", su);
 ParamHintTarget s_target07(&s_spec, "target07", target_desc, "", su);
 
-ParamString s_match08(&s_spec, "match08", regex_desc, "", su);
+ParamRegex s_match08(&s_spec, "match08", regex_desc, "", su);
 ParamHintTarget s_target08(&s_spec, "target08", target_desc, "", su);
 
-ParamString s_match09(&s_spec, "match09", regex_desc, "", su);
+ParamRegex s_match09(&s_spec, "match09", regex_desc, "", su);
 ParamHintTarget s_target09(&s_spec, "target09", target_desc, "", su);
 
-ParamString s_match10(&s_spec, "match10", regex_desc, "", su);
+ParamRegex s_match10(&s_spec, "match10", regex_desc, "", su);
 ParamHintTarget s_target10(&s_spec, "target10", target_desc, "", su);
 
-ParamString s_match11(&s_spec, "match11", regex_desc, "", su);
+ParamRegex s_match11(&s_spec, "match11", regex_desc, "", su);
 ParamHintTarget s_target11(&s_spec, "target11", target_desc, "", su);
 
-ParamString s_match12(&s_spec, "match12", regex_desc, "", su);
+ParamRegex s_match12(&s_spec, "match12", regex_desc, "", su);
 ParamHintTarget s_target12(&s_spec, "target12", target_desc, "", su);
 
-ParamString s_match13(&s_spec, "match13", regex_desc, "", su);
+ParamRegex s_match13(&s_spec, "match13", regex_desc, "", su);
 ParamHintTarget s_target13(&s_spec, "target13", target_desc, "", su);
 
-ParamString s_match14(&s_spec, "match14", regex_desc, "", su);
+ParamRegex s_match14(&s_spec, "match14", regex_desc, "", su);
 ParamHintTarget s_target14(&s_spec, "target14", target_desc, "", su);
 
-ParamString s_match15(&s_spec, "match15", regex_desc, "", su);
+ParamRegex s_match15(&s_spec, "match15", regex_desc, "", su);
 ParamHintTarget s_target15(&s_spec, "target15", target_desc, "", su);
 
-ParamString s_match16(&s_spec, "match16", regex_desc, "", su);
+ParamRegex s_match16(&s_spec, "match16", regex_desc, "", su);
 ParamHintTarget s_target16(&s_spec, "target16", target_desc, "", su);
 
-ParamString s_match17(&s_spec, "match17", regex_desc, "", su);
+ParamRegex s_match17(&s_spec, "match17", regex_desc, "", su);
 ParamHintTarget s_target17(&s_spec, "target17", target_desc, "", su);
 
-ParamString s_match18(&s_spec, "match18", regex_desc, "", su);
+ParamRegex s_match18(&s_spec, "match18", regex_desc, "", su);
 ParamHintTarget s_target18(&s_spec, "target18", target_desc, "", su);
 
-ParamString s_match19(&s_spec, "match19", regex_desc, "", su);
+ParamRegex s_match19(&s_spec, "match19", regex_desc, "", su);
 ParamHintTarget s_target19(&s_spec, "target19", target_desc, "", su);
 
-ParamString s_match20(&s_spec, "match20", regex_desc, "", su);
+ParamRegex s_match20(&s_spec, "match20", regex_desc, "", su);
 ParamHintTarget s_target20(&s_spec, "target20", target_desc, "", su);
 
-ParamString s_match21(&s_spec, "match21", regex_desc, "", su);
+ParamRegex s_match21(&s_spec, "match21", regex_desc, "", su);
 ParamHintTarget s_target21(&s_spec, "target21", target_desc, "", su);
 
-ParamString s_match22(&s_spec, "match22", regex_desc, "", su);
+ParamRegex s_match22(&s_spec, "match22", regex_desc, "", su);
 ParamHintTarget s_target22(&s_spec, "target22", target_desc, "", su);
 
-ParamString s_match23(&s_spec, "match23", regex_desc, "", su);
+ParamRegex s_match23(&s_spec, "match23", regex_desc, "", su);
 ParamHintTarget s_target23(&s_spec, "target23", target_desc, "", su);
 
-ParamString s_match24(&s_spec, "match24", regex_desc, "", su);
+ParamRegex s_match24(&s_spec, "match24", regex_desc, "", su);
 ParamHintTarget s_target24(&s_spec, "target24", target_desc, "", su);
 
-ParamString s_match25(&s_spec, "match25", regex_desc, "", su);
+ParamRegex s_match25(&s_spec, "match25", regex_desc, "", su);
 ParamHintTarget s_target25(&s_spec, "target25", target_desc, "", su);
 
 struct MatchAndTarget
 {
-    ParamString* match {nullptr};
+    ParamRegex*      match {nullptr};
     ParamHintTarget* target {nullptr};
 };
 std::vector<MatchAndTarget> s_match_target_specs = {
@@ -250,7 +251,7 @@ bool Specification::do_post_validate(Params& params) const
 
     for (const auto& a : s_match_target_specs)
     {
-        std::string match = a.match->get(params);
+        std::string match = a.match->get(params).pattern();
         std::string target = a.target->get(params);
 
         if (match.empty() && target.empty())
@@ -829,7 +830,8 @@ bool RegexHintFilter::form_regex_server_mapping(const std::shared_ptr<Setup>& se
 
     for (const auto& elem : found_pairs)
     {
-        if (!regex_compile_and_add(setup, pcre_ops, false, elem.match, elem.target))
+        // TODO: Don't compile the patterns twice and use the RegexValue from the configuration
+        if (!regex_compile_and_add(setup, pcre_ops, false, elem.match.pattern(), elem.target))
         {
             error = true;
         }

@@ -16,6 +16,7 @@
  */
 #include "connector_common.hh"
 #include <thread>
+#include <maxbase/format.hh>
 
 void test_main(TestConnections& test)
 {
@@ -25,6 +26,8 @@ void test_main(TestConnections& test)
     if (clone_repo(test, "https://github.com/mariadb-corporation/mariadb-connector-odbc",
                    "master", "mariadb-connector-odbc"))
     {
+        auto log_dir = mxb::string_printf("%s/LOGS/%s", mxt::BUILD_DIR, test.shared().test_name.c_str());
+        std::string file_name = "connector_odbc_result.txt";
         std::ostringstream ss;
         ss << "cd mariadb-connector-odbc "
            << " && export TEST_DSN=maodbc_test"
@@ -40,7 +43,9 @@ void test_main(TestConnections& test)
            << " && cd test"
            << " && export ODBCINI=$PWD/odbc.ini"
            << " && export ODBCSYSINI=$PWD"
-           << " && ctest --output-on-failure";
+           << " && mkdir -p " << log_dir
+           << " && echo Test output stored in: " << log_dir << "/" << file_name
+           << " && ctest -Q -O " << log_dir << "/" << file_name;
 
         test.run_shell_command(ss.str(), "Running test suite");
     }
