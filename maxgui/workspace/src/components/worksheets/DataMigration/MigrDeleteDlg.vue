@@ -46,16 +46,18 @@ export default {
                 this.SET_MIGR_DLG({ ...this.migr_dlg, is_opened: v })
             },
         },
+        etlTaskWke() {
+            return Worksheet.query()
+                .where('etl_task_id', this.migr_dlg.etl_task_id)
+                .first()
+        },
     },
     methods: {
         ...mapMutations({ SET_MIGR_DLG: 'mxsWorkspace/SET_MIGR_DLG' }),
         async onSave() {
             const { etl_task_id } = this.migr_dlg
             await QueryConn.dispatch('disconnectConnsFromTask', etl_task_id)
-            const wke = Worksheet.query()
-                .where('etl_task_id', etl_task_id)
-                .first()
-            if (wke) await Worksheet.dispatch('handleDeleteWke', wke.id)
+            if (this.etlTaskWke) await Worksheet.dispatch('handleDeleteWke', this.etlTaskWke.id)
             EtlTask.dispatch('cascadeDelete', etl_task_id)
         },
     },

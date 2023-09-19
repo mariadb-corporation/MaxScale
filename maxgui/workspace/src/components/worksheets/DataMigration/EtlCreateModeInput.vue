@@ -33,7 +33,7 @@
             }"
             dense
             :height="32"
-            hide-details="auto"
+            hide-details
         />
     </div>
 </template>
