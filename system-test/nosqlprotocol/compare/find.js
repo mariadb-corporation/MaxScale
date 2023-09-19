@@ -17,6 +17,12 @@ const test = require('../test/nosqltest.js');
 
 const name = "find";
 
+var mongo;
+var nosql_d;
+var nosql_dc;
+var nosql_c;
+var cars;
+
 function load_cars() {
     var doc = JSON.parse(fs.readFileSync("../test/cars.json", "utf8"));
 
@@ -26,6 +32,13 @@ function load_cars() {
 async function create(db) {
     var command = {
         create: name,
+    };
+    await db.ntRunCommand(command);
+}
+
+async function drop(db) {
+    var command = {
+        drop: name,
     };
     await db.ntRunCommand(command);
 }
@@ -52,68 +65,73 @@ async function insert(db, docs)
 
 async function reset(db)
 {
-    await create(db);
     await delete_all(db);
+    await drop(db);
+    await create(db);
 }
 
-async function find_with_command(db, heading, command, n) {
+async function prepare(db, create_index) {
+    await reset(db);
+    if (create_index) {
+        var command = {
+            createIndexes: name,
+            indexes: [ { key: { Make: 1}, name: "Make" }]
+        };
+
+        await db.runCommand(command);
+    }
+    await insert(db, cars);
+}
+
+async function find_with_command(db, heading, command, n, create_index) {
+    await prepare(db, create_index);
+
+    var start = new Date();
+    var rv = await db.runCommand(command);
+    var stop = new Date();
+
+    cold_time = stop - start;
+    cold_count = rv.cursor.firstBatch.length;
+
     if (!n) {
         n = 1;
     }
 
-    var start = new Date();
+    start = new Date();
     for (var i = 0; i < n; ++i) {
         var rv = await db.runCommand(command);
     }
-    var stop = new Date();
+    stop = new Date();
 
-    console.log(heading + ": " + (stop - start)/n + ", " + rv.cursor.firstBatch.length);
-}
-
-async function fetch_all(db, heading) {
-    var command = {
-        find: name,
-        batchSize: 10000
-    };
-    var start = new Date();
-    var rv = await db.runCommand(command);
-
-    var total = rv.cursor.firstBatch.length;
-
-    if (rv.cursor.id) {
-        while (rv.cursor.id) {
-            command = {
-                getMore: rv.cursor.id,
-                collection: name
-            };
-
-            rv = await db.runCommand(command);
-
-            total += rv.cursor.nextBatch.length;
-        }
-    }
-
-    var stop = new Date();
-
-    console.log(heading + ": " + (stop - start) + ", " + total);
+    console.log(heading + ": " + (stop - start)/n + "ms, " + rv.cursor.firstBatch.length
+                + ", (" + cold_time + "ms, " + cold_count + ")");
 }
 
 async function find_all(db, heading) {
     var command = {
+        find: name,
+        batchSize: 10000
+    };
+
+    await find_with_command(db, heading, command, 250);
+}
+
+async function find_default(db, heading) {
+    var command = {
         find: name
     };
 
-    await find_with_command(db, heading, command);
+    await find_with_command(db, heading, command, 250);
 }
 
-async function find_some(db, heading) {
+async function find_some(db, heading, create_index) {
     var command = {
         find: name,
         filter : { "Make": "Toyota" },
         batchSize: 10000
     };
 
-    await find_with_command(db, heading, command);
+    await find_with_command(db, heading, command, 250, create_index);
 }
 
 async function find_one(db, heading) {
@@ -122,7 +140,7 @@ async function find_one(db, heading) {
         filter : { "_id": { "$eq": 4711 }}
     };
 
-    await find_with_command(db, heading, command, 1000);
+    await find_with_command(db, heading, command, 250);
 }
 
 async function find_by_id(db, heading) {
@@ -131,70 +149,84 @@ async function find_by_id(db, heading) {
         filter : { "_id": 4711 }
     };
 
-    await find_with_command(db, heading, command, 1000);
+    await find_with_command(db, heading, command, 250);
 }
 
-async function compare_find_all(mongo, nosql) {
-    console.log("Find all\n");
+async function compare_find_default() {
+    console.log("Find default; at most 101 documents returned in batch\n");
 
-    await find_all(mongo, "Mongo");
-    await find_all(nosql, "NoSQL");
+    await find_default(mongo,    "Mongo             ");
+    await find_default(nosql_d,  "NoSQL (non-cached)");
+    await find_default(nosql_dc, "NoSQL (cached)    ");
+    await find_default(nosql_c,  "Cached NoSQL      ");
 }
 
-async function compare_fetch_all(mongo, nosql) {
-    console.log("Fetch all\n");
+async function compare_find_all() {
+    console.log("Find all; at most 10000 documents returned in batch\n");
 
-    await fetch_all(mongo, "Mongo");
-    await fetch_all(nosql, "NoSQL");
+    await find_all(mongo,    "Mongo             ");
+    await find_all(nosql_d,  "NoSQL (non-cached)");
+    await find_all(nosql_dc, "NoSQL (cached)    ");
+    await find_all(nosql_c,  "Cached NoSQL      ");
 }
 
-async function compare_find_some(mongo, nosql) {
-    console.log("Find some\n");
+async function compare_find_some() {
+    console.log("Find some, all cars whose make is Toyota.\n");
 
-    await find_some(mongo, "Mongo");
-    await find_some(nosql, "NoSQL");
+    await find_some(mongo,    "Mongo             ", false);
+    await find_some(mongo,    "Mongo (indexed)   ", true);
+    await find_some(nosql_d,  "NoSQL (non-cached)");
+    await find_some(nosql_dc, "NoSQL (cached)    ");
+    await find_some(nosql_c,  "Cached NoSQL      ");
 }
 
-async function compare_find_one(mongo, nosql) {
-    console.log("Find one\n");
+async function compare_find_one() {
+    console.log("Find one; non-indexed query\n");
 
-    await find_one(mongo, "Mongo");
-    await find_one(nosql, "NoSQL");
+    await find_one(mongo,    "Mongo             ");
+    await find_one(nosql_d,  "NoSQL (non-cached)");
+    await find_one(nosql_dc, "NoSQL (cached)    ");
+    await find_one(nosql_c,  "Cached NoSQL      ");
 }
 
-async function compare_find_by_id(mongo, nosql) {
-    console.log("Find one (index)\n");
+async function compare_find_by_id() {
+    console.log("Find one; by id (i.e. indexed)\n");
 
-    await find_by_id(mongo, "Mongo");
-    await find_by_id(nosql, "NoSQL");
+    await find_by_id(mongo,    "Mongo             ");
+    await find_by_id(nosql_d,  "NoSQL (non-cached)");
+    await find_by_id(nosql_dc, "NoSQL (cached)    ");
+    await find_by_id(nosql_c,  "Cached NoSQL      ");
 }
 
 async function run() {
-    var mongo = await await test.MDB.create(test.MngMongo, "compare");
-    var nosql = await await test.MDB.create(test.MxsMongo, "compare");
+    mongo = await test.NoSQL.create("compare", 27017);
+    nosql_d = await test.NoSQL.create("compare_d", 17017);
+    nosql_dc = await test.NoSQL.create("compare_dc", 17018);
+    nosql_c = await test.NoSQL.create("compare_c", 17019);
 
-    const cars = load_cars();
+    cars = load_cars();
 
-    await reset(mongo);
-    await insert(mongo, cars);
-
-    await reset(nosql);
-    await insert(nosql, cars);
-
-    await compare_find_all(mongo, nosql);
-    console.log();
-    await compare_fetch_all(mongo, nosql);
-    console.log();
-    await compare_find_some(mongo, nosql);
-    console.log();
-    await compare_find_one(mongo, nosql);
-    console.log();
-    await compare_find_by_id(mongo, nosql);
     console.log();
 
-    nosql.close();
+    await compare_find_default();
+    console.log();
+
+    await compare_find_all();
+    console.log();
+
+    await compare_find_some();
+    console.log();
+
+    await compare_find_one();
+    console.log();
+
+    await compare_find_by_id();
+    console.log();
+
+    nosql_c.close();
+    nosql_dc.close();
+    nosql_d.close();
     mongo.close();
-
 }
 
 run();
