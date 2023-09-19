@@ -167,7 +167,7 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
     {
         if (settings.mode == AuthMode::SUID)
         {
-            if (string cmd_str = mxb::pam::gen_auth_tool_run_cmd(true); !cmd_str.empty())
+            if (string cmd_str = mxb::pam::gen_auth_tool_run_cmd(); !cmd_str.empty())
             {
                 int timeout_ms = 500;
                 if (auto ext_cmd = mxb::AsyncCmd::create(cmd_str, timeout_ms))

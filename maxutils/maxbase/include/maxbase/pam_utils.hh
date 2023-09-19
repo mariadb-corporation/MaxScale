@@ -159,13 +159,14 @@ std::optional<std::string> read_string_blocking(int fd);
  */
 void add_string(std::string_view str, std::vector<uint8_t>* out);
 
+enum class Debug {YES, NO};
 /**
  * Generate suid tool execute command.
  *
- * @param debug True if debugging
+ * @param debug Debug messages enabled
  * @return The command, or empty on error
  */
-std::string gen_auth_tool_run_cmd(bool debug);
+std::string gen_auth_tool_run_cmd(Debug debug = Debug::NO);
 
 /**
  * Create a message containing settings for the suid process.

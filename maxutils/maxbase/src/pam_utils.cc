@@ -148,7 +148,7 @@ std::optional<string> read_string_blocking(int fd)
     return rval;
 }
 
-string gen_auth_tool_run_cmd(bool debug)
+string gen_auth_tool_run_cmd(Debug debug)
 {
     // Get path to current executable. Should typically fit in PATH_MAX.
     string total_path;
@@ -163,7 +163,7 @@ string gen_auth_tool_run_cmd(bool debug)
             char* directory = dirname(buf);
             total_path = directory;
             total_path.append("/maxscale_pam_auth_tool");
-            if (debug)
+            if (debug == Debug::YES)
             {
                 total_path.append(" -d");
             }

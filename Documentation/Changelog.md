@@ -70,6 +70,11 @@
   [authenticator documentation](Authenticators/MySQL-Authenticator.md#clear_pw_passthrough) for more
   information.
 
+* Added `pam_mode=suid` option to PamAuth module. This option separates the
+  pam system library calls to a separate executable. See
+  [authenticator documentation](Authenticators/PAM-Authenticator.md#pam_mode)
+  for more information. *test_pam_login* tool updated to support this mode.
+
 For more details, please refer to:
 
 * [MariaDB MaxScale 23.08.0 Release Notes](Release-Notes/MaxScale-23.08.0-Release-Notes.md)

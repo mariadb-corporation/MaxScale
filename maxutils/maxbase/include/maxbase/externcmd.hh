@@ -190,13 +190,11 @@ public:
     AsyncProcess(Info info, int timeout_ms);
 
     /**
-     * Read from external process.
+     * Read external process output.
      *
-     * @return True if pipe is still readable. Second element contains all read data.
+     * @return A valid value on success. Can return an empty string if no data was read.
      */
-    std::tuple<bool, std::string> read_output();
-
-    void unread(std::string&& data);
+    std::optional<std::string> read_output();
 
     int read_fd() const;
 
