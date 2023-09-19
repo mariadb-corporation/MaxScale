@@ -91,8 +91,8 @@ private:
         // Indexed params
         struct MatchAndTarget
         {
-            std::string match;
-            std::string target;
+            mxs::config::RegexValue match;
+            std::string             target;
         };
         MatchAndTarget m_match_targets[n_regex_max];
 

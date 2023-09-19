@@ -367,6 +367,14 @@ describe("Create/Destroy Commands", function () {
     expect(js.maxscale).to.be.an("object");
   });
 
+  it("writes diagnostic report to stdout", async function () {
+    var res = await doCommand("create report");
+    expect(res).to.be.a("string");
+    var js = JSON.parse(res);
+    expect(js).to.be.an("object");
+    expect(js.maxscale).to.be.an("object");
+  });
+
   after(async function () {
     await stopMaxScale();
     await startMaxScale();
