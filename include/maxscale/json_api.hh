@@ -41,6 +41,7 @@
 #define MXS_JSON_API_QC_CLASSIFY "/maxscale/query_classifier/classify"
 #define MXS_JSON_API_QC_CACHE    "/maxscale/query_classifier/cache"
 #define MXS_JSON_API_MEMORY      "/maxscale/memory"
+#define MXS_JSON_API_SERVER_DIAG "/maxscale/debug/server_diagnostics"
 #define MXS_JSON_API_USERS       "/users/"
 
 /**

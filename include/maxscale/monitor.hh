@@ -572,6 +572,8 @@ public:
     // Returns a copy for thread safety.
     std::vector<SERVER*> active_routing_servers() const;
 
+    const MonitorServer::ConnectionSettings& conn_settings() const;
+
 protected:
 
     const std::vector<MonitorServer*>& active_servers() const;
@@ -700,7 +702,6 @@ protected:
     };
 
     const Settings&                          settings() const;
-    const MonitorServer::ConnectionSettings& conn_settings() const;
 
     std::unique_ptr<mxb::Worker> m_worker;      /**< The worker thread running this monitor */
 

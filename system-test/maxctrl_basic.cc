@@ -198,6 +198,7 @@ int main(int argc, char** argv)
                               "maxctrl debug stacktrace --fold;"
                               "maxctrl debug stacktrace --duration=1;"
                               "maxctrl debug stacktrace --duration=1 --interval=100;"
+                              "maxctrl --timeout 30s create report test-report.txt"
                               );
 
     test.tprintf("MXS-3697: MaxCtrl fails with \"ENOENT: no such file or directory, stat '/~/.maxctrl.cnf'\" "
