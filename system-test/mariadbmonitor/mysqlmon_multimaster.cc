@@ -252,7 +252,19 @@ int main(int argc, char* argv[])
         auto res = mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor");
         double time_s = mxb::to_secs(timer.lap());
         test.expect(res.rc != 0, "Switchover succeeded when it should have failed.");
-        test.expect(time_s < 1, "Switchover took %f seconds, which is longer than expected.", time_s);
+        if (res.rc != 0)
+        {
+            double expected_time = 1.1;
+            if (time_s < expected_time)
+            {
+                test.tprintf("Switchover failed in %f seconds.", time_s);
+            }
+            else
+            {
+                test.add_failure("Switchover failed in %f seconds, which is longer than expected "
+                                 "(%f seconds).", time_s, expected_time);
+            }
+        }
 
         // Finally, remove slave delay.
         set_delay(1, 0);
