@@ -140,7 +140,6 @@ export default {
     computed: {
         ...mapState({
             ETL_CREATE_MODES: state => state.mxsWorkspace.config.ETL_CREATE_MODES,
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
         }),
@@ -172,9 +171,6 @@ export default {
         showConfirm() {
             return this.createMode === this.ETL_CREATE_MODES.REPLACE
         },
-        isActive() {
-            return this.task.active_stage_index === this.ETL_STAGE_INDEX.SRC_OBJ
-        },
     },
     watch: {
         selectedObjs: {
@@ -200,8 +196,8 @@ export default {
         },
     },
 
-    async activated() {
-        if (this.isActive) await EtlTask.dispatch('fetchSrcSchemas')
+    async created() {
+        await EtlTask.dispatch('fetchSrcSchemas')
     },
     methods: {
         filter(node, search, textKey) {
