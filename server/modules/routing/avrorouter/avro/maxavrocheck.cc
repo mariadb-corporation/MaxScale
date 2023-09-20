@@ -159,7 +159,7 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    char c;
+    int c;
     int option_index;
 
     while ((c = getopt_long(argc, argv, "hvdf:c:", long_options, &option_index)) >= 0)
