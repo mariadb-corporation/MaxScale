@@ -1,17 +1,18 @@
 <template>
     <v-btn
-        v-if="isRunning || isDone"
+        v-if="shouldShowQuickActionBtn"
         small
         height="30"
-        :color="standaloneBtnData.type === ETL_ACTIONS.DELETE ? 'error' : 'primary'"
+        :color="quickActionBtnData.type === ETL_ACTIONS.DELETE ? 'error' : 'primary'"
         class="ml-4 font-weight-medium px-4 text-capitalize"
         rounded
         depressed
         outlined
-        :disabled="isStandaloneBtnDisabled"
-        @click="standaloneBtnHandler"
+        :disabled="isQuickActionBtnDisabled"
+        data-test="quick-action-btn"
+        @click="quickActionHandler"
     >
-        {{ standaloneBtnData.txt }}
+        {{ quickActionBtnData.txt }}
     </v-btn>
     <etl-task-manage
         v-else
@@ -74,7 +75,7 @@ export default {
     data() {
         return {
             isMenuOpened: false,
-            isStandaloneBtnDisabled: false,
+            isQuickActionBtnDisabled: false,
         }
     },
     computed: {
@@ -96,7 +97,10 @@ export default {
         isDone() {
             return this.hasNoConn && this.task.status === this.ETL_STATUS.COMPLETE
         },
-        standaloneBtnData() {
+        shouldShowQuickActionBtn() {
+            return this.isRunning || this.isDone
+        },
+        quickActionBtnData() {
             const { CANCEL, DELETE } = this.ETL_ACTIONS
             let type
             if (this.isRunning) type = CANCEL
@@ -105,13 +109,13 @@ export default {
         },
     },
     methods: {
-        async standaloneBtnHandler() {
-            this.isStandaloneBtnDisabled = true
+        async quickActionHandler() {
+            this.isQuickActionBtnDisabled = true
             await EtlTask.dispatch('actionHandler', {
-                type: this.standaloneBtnData.type,
+                type: this.quickActionBtnData.type,
                 task: this.task,
             })
-            this.isStandaloneBtnDisabled = false
+            this.isQuickActionBtnDisabled = false
         },
     },
 }

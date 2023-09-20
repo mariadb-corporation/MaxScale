@@ -27,6 +27,12 @@ describe('EtlEditor', () => {
             },
         })
     })
+
+    it('Should add etl-editor--error class if there is no value', async () => {
+        await wrapper.setProps({ value: '' })
+        expect(wrapper.classes('etl-editor--error')).to.be.true
+    })
+
     it('Should render min/max button', () => {
         expect(wrapper.findComponent({ name: 'mxs-tooltip-btn' }).exists()).to.be.true
     })

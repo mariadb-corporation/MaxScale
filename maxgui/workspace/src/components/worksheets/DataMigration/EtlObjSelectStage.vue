@@ -1,7 +1,10 @@
 <template>
     <etl-stage-ctr>
         <template v-slot:header>
-            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+            <h3
+                class="etl-stage-title mxs-color-helper text-navigation font-weight-light"
+                data-test="stage-header-title"
+            >
                 {{ $mxs_t('selectObjsToMigrate') }}
             </h3>
         </template>
@@ -10,6 +13,7 @@
                 <v-col cols="12" md="6" class="fill-height">
                     <div class="d-flex flex-column fill-height">
                         <etl-create-mode-input :taskId="task.id" class="mb-2" />
+                        <!-- TODO: Replace below treeview with SelectableSchemaTableTree component -->
                         <mxs-treeview
                             ref="tree"
                             v-model="selectedObjs"
@@ -54,11 +58,12 @@
                     {{ waringMsg }}
                 </p>
                 <v-checkbox
-                    v-if="showConfirm"
+                    v-if="isReplaceMode"
                     v-model="isConfirmed"
                     color="primary"
                     class="mt-0 mb-4 v-checkbox--mariadb"
                     hide-details
+                    data-test="confirm-checkbox"
                 >
                     <template v-slot:label>
                         <v-tooltip top transition="slide-y-transition" max-width="340">
@@ -90,6 +95,7 @@
                     rounded
                     depressed
                     :disabled="disabled"
+                    data-test="prepare-btn"
                     @click="next"
                 >
                     {{ $mxs_t('prepareMigrationScript') }}
@@ -133,7 +139,6 @@ export default {
             selectedObjs: [],
             errMsg: '',
             waringMsg: '',
-            isLarge: true,
             isConfirmed: false,
         }
     },
@@ -149,7 +154,7 @@ export default {
         createMode() {
             return EtlTask.getters('findCreateMode')(this.task.id)
         },
-        parsedObjs() {
+        categorizeObjs() {
             return this.selectedObjs.reduce(
                 (obj, o) => {
                     const schema = schemaNodeHelper.getSchemaName(o)
@@ -162,14 +167,17 @@ export default {
             )
         },
         tables() {
-            return this.parsedObjs.tables
+            return this.categorizeObjs.tables
+        },
+        isReplaceMode() {
+            return this.createMode === this.ETL_CREATE_MODES.REPLACE
         },
         disabled() {
-            if (this.tables.length) return this.showConfirm ? !this.isConfirmed : false
-            return !this.tables.length
+            if (this.tables.length) return this.isReplaceMode ? !this.isConfirmed : false
+            return true
         },
-        showConfirm() {
-            return this.createMode === this.ETL_CREATE_MODES.REPLACE
+        isLarge() {
+            return this.$vuetify.breakpoint.width >= 960
         },
     },
     watch: {
@@ -179,7 +187,7 @@ export default {
                 if (v.length) {
                     if (this.tables.length) {
                         this.errMsg = ''
-                        this.waringMsg = this.parsedObjs.emptySchemas.length
+                        this.waringMsg = this.categorizeObjs.emptySchemas.length
                             ? this.$mxs_t('warnings.ignoredMigrationSchemas')
                             : ''
                     } else this.errMsg = this.$mxs_t('errors.emptyMigrationSchema')
@@ -188,21 +196,11 @@ export default {
                 EtlTaskTmp.update({ where: this.task.id, data: { migration_objs: this.tables } })
             },
         },
-        '$vuetify.breakpoint.width': {
-            immediate: true,
-            handler(v) {
-                this.isLarge = v >= 960
-            },
-        },
     },
-
     async created() {
         await EtlTask.dispatch('fetchSrcSchemas')
     },
     methods: {
-        filter(node, search, textKey) {
-            return this.$helpers.ciStrIncludes(node[textKey], search)
-        },
         iconSheet(node) {
             const { SCHEMA } = this.NODE_TYPES
             const { TBL_G } = this.NODE_GROUP_TYPES
