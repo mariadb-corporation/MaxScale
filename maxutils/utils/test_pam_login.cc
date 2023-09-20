@@ -26,11 +26,23 @@ using std::cin;
 using std::cout;
 using PamResult = mxb::pam::AuthResult::Result;
 using mxb::pam::AuthMode;
+using std::optional;
 
 namespace
 {
 string read_password();
-int    run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on);
+int    run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on,
+                     const optional<string>& pw, const optional<string>& pw2);
+
+const char usage[] = R"(Usage: test_pam_login [OPTION]
+  -d, --debug              debug printing enabled, only affects SUID mode
+  -m, --mode=NUM           pam mode: 1-Password, 2-Password+2FA, 3-SUID subprocesss
+  -u, --user=USER          username
+  -s, --service=SERVICE    pam service
+  -p, --password=PASSWORD  password (can be empty)
+  -f, --password2=PASSWORD 2nd password (2FA code)
+  -a, --map=MAP            username mapping (Y-enabled, N-disabled)
+)";
 }
 
 int main(int argc, char* argv[])
@@ -38,84 +50,168 @@ int main(int argc, char* argv[])
     mxb::Log log(MXB_LOG_TARGET_STDOUT);
 
     bool debug = false;
-    const char accepted_opts[] = "d";
-    int opt;
-    while ((opt = getopt(argc, argv, accepted_opts)) != -1)
+    optional<AuthMode> auth_mode;
+    optional<bool> mapping_on;
+
+    string username, service;
+    optional<string> password, twofa_pw;
+
+    const char short_opts[] = "dm:u:s:p::f::a:h";
+    option long_opts[] = {
+        {"debug",     no_argument,       0, 'd'},
+        {"mode",      required_argument, 0, 'm'},
+        {"user",      required_argument, 0, 'u'},
+        {"service",   required_argument, 0, 's'},
+        {"password",  optional_argument, 0, 'p'},
+        {"password2", optional_argument, 0, 'f'},
+        {"map",       required_argument, 0, 'a'},
+        {"help",      no_argument,       0, 'h'},
+        {0,           0,                 0, 0  }
+    };
+
+    const char mode_str[] = "1-Password\n2-Password + 2FA code\n3-SUID wrapper\n";
+    int opt = -1;
+
+    do
     {
+        opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
         if (opt == 'd')
         {
             debug = true;
         }
-        else
+        else if (opt == 'm')
         {
-            MXB_ERROR("Invalid argument %c", optopt);
+            if (*optarg == '1')
+            {
+                auth_mode = AuthMode::PW;
+            }
+            else if (*optarg == '2')
+            {
+                auth_mode = AuthMode::PW_2FA;
+            }
+            else if (*optarg == '3')
+            {
+                auth_mode = AuthMode::SUID;
+            }
+            else
+            {
+                cout << "Invalid option argument. Valid mode selections are:\n";
+                cout << mode_str;
+                return EXIT_FAILURE;
+            }
+        }
+        else if (opt == 'u')
+        {
+            username = optarg;
+        }
+        else if (opt == 's')
+        {
+            service = optarg;
+        }
+        else if (opt == 'p')
+        {
+            password = optarg ? optarg : "";
+        }
+        else if (opt == 'f')
+        {
+            twofa_pw = optarg ? optarg : "";
+        }
+        else if (opt == 'a')
+        {
+            mapping_on = (*optarg == 'Y') || (*optarg == 'y');
+        }
+        else if (opt == 'h')
+        {
+            cout << usage;
+            return EXIT_SUCCESS;
+        }
+        else if (opt != -1)
+        {
+            cout << "Invalid argument " << (char)optopt << "\n";
+            cout << usage;
+            return EXIT_FAILURE;
+        }
+    }
+    while (opt != -1);
+
+    if (!auth_mode.has_value())
+    {
+        cout << "Select mode:\n";
+        cout << mode_str;
+
+        int selection = 0;
+        cin >> selection;
+        cin.ignore();   // ignores the \n left over from previous read.
+
+        switch (selection)
+        {
+        case 1:
+            auth_mode = AuthMode::PW;
+            break;
+
+        case 2:
+            auth_mode = AuthMode::PW_2FA;
+            break;
+
+        case 3:
+            auth_mode = AuthMode::SUID;
+            break;
+
+        default:
+            cout << "Invalid selection: '" << selection << "'.\n";
             return EXIT_FAILURE;
         }
     }
 
-    auto mode = AuthMode::PW;
-    cout << "Select mode:\n1-Password\n2-Password + 2FA code\n3-SUID wrapper\n";
-
-    int selection = 0;
-    cin >> selection;
-
-    switch (selection)
-    {
-    case 1:
-        break;
-
-    case 2:
-        mode = AuthMode::PW_2FA;
-        break;
-
-    case 3:
-        mode = AuthMode::SUID;
-        break;
-
-    default:
-        cout << "Invalid selection: '" << selection << "'.\n";
-        return EXIT_FAILURE;
-    }
-
     int rval = EXIT_FAILURE;
-    string username, service;
-    cout << "Username:\n";
-    cin.ignore();   // ignores the \n left from previous read.
-    std::getline(cin, username);
-
-    cout << "PAM service:\n";
-    std::getline(cin, service);
-
-    cout << "Username mapping enabled (Y/N, optional, default: N):\n";
-    string mapping_on_str;
-    std::getline(cin, mapping_on_str);
-    bool mapping_on = false;
-    if (mapping_on_str == "Y" || mapping_on_str == "y")
+    if (username.empty())
     {
-        mapping_on = true;
+        cout << "Username:\n";
+        std::getline(cin, username);
     }
 
-    if (mode == AuthMode::PW || mode == AuthMode::PW_2FA)
+    if (service.empty())
     {
-        cout << "Password:\n";
-        string password = read_password();
-        string twofa_pw;
-        if (mode == AuthMode::PW_2FA)
+        cout << "PAM service:\n";
+        std::getline(cin, service);
+    }
+
+    if (!mapping_on.has_value())
+    {
+        cout << "Username mapping enabled (Y/N, optional, default: N):\n";
+        string mapping_str;
+        std::getline(cin, mapping_str);
+        mapping_on = !mapping_str.empty() && (mapping_str[0] == 'Y' || mapping_str[0] == 'y');
+    }
+
+    if (*auth_mode == AuthMode::PW || *auth_mode == AuthMode::PW_2FA)
+    {
+        if (!password.has_value())
+        {
+            cout << "Password:\n";
+            password = read_password();
+        }
+
+        if (*auth_mode == AuthMode::PW_2FA && !twofa_pw.has_value())
         {
             cout << "Two-factor authenticator code:\n";
             twofa_pw = read_password();
         }
+        else
+        {
+            twofa_pw = "";
+        }
 
         mxb::pam::UserData user = {username, ""};
-        mxb::pam::PwdData pwds = {password, twofa_pw};
-        mxb::pam::AuthSettings sett = {service, mapping_on};
+        mxb::pam::PwdData pwds = {*password, *twofa_pw};
+        mxb::pam::AuthSettings sett = {service, *mapping_on};
         mxb::pam::ExpectedMsgs exp = {"Password", ""};
 
-        auto res = mxb::pam::authenticate(mode, user, pwds, sett, exp);
+        auto res = mxb::pam::authenticate(*auth_mode, user, pwds, sett, exp);
         if (res.type == PamResult::SUCCESS)
         {
             cout << "Authentication successful.";
-            if (mapping_on)
+            if (*mapping_on)
             {
                 cout << " Username mapped to '" << res.mapped_user << "'.";
             }
@@ -146,11 +242,11 @@ int main(int argc, char* argv[])
                     // Command should have started. The subprocess now expects to read a settings byte,
                     // username and service name.
                     std::vector<uint8_t> first_msg = mxb::pam::create_suid_settings_msg(
-                        username, service, mapping_on);
+                        username, service, *mapping_on);
 
                     if (ext_proc->write(first_msg.data(), first_msg.size()))
                     {
-                        rval = run_suid_auth(std::move(ext_proc), mapping_on);
+                        rval = run_suid_auth(std::move(ext_proc), *mapping_on, password, twofa_pw);
                     }
                 }
             }
@@ -187,7 +283,8 @@ string read_password()
     return rval;
 }
 
-int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on)
+int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on,
+                  const optional<string>& pw, const optional<string>& pw2)
 {
     const char invalid_msg[] = "Invalid message from subprocess.\n";
     bool auth_success = false;
@@ -244,7 +341,15 @@ int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on)
                             else
                             {
                                 // Echo off.
-                                answer = read_password();
+                                auto& cmdline_answer = (conv_msg_num == 0) ? pw : pw2;
+                                if (cmdline_answer.has_value())
+                                {
+                                    answer = *cmdline_answer;
+                                }
+                                else
+                                {
+                                    answer = read_password();
+                                }
                             }
 
                             std::vector<uint8_t> answer_msg;

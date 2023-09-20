@@ -24,7 +24,8 @@ using namespace mxb::pam;
 
 namespace
 {
-bool read_settings(int fd, bool* mapping_out, string* uname_out, string* pam_service_out);
+bool                   read_settings(int fd, bool* mapping_out, string* uname_out, string* pam_service_out);
+std::tuple<bool, bool> call_setreuid(uid_t ruid, uid_t euid, int out_fd);
 }
 
 int main(int argc, char* argv[])
@@ -48,22 +49,20 @@ int main(int argc, char* argv[])
         }
     }
 
+    // Save current real/effective uid.
+    uid_t ruid = -1;
+    uid_t euid = -1;
+    uid_t suid = -1;
+    if (getresuid(&ruid, &euid, &suid) != 0)
+    {
+        // Should not happen.
+        MXB_ERROR("getresuid() failed. Error %i: %s", errno, strerror(errno));
+        return EXIT_FAILURE;
+    }
+
     MXB_DEBUG("PAM sandbox started [%s].", argv[0]);
     const int in_fd = STDIN_FILENO;
     const int out_fd = STDOUT_FILENO;
-
-    // Try to run as root. Even if it fails, proceed.
-    if (setreuid(0, 0) != 0)
-    {
-        string msg = mxb::string_printf("setreuid() failed. Error %i: %s", errno, strerror(errno));
-        std::vector<uint8_t> warn_msg;
-        warn_msg.push_back(SBOX_WARN);
-        mxb::pam::add_string(msg, &warn_msg);
-        if (write(out_fd, warn_msg.data(), warn_msg.size()) != (ssize_t)warn_msg.size())
-        {
-            return EXIT_FAILURE;
-        }
-    }
 
     // Read some settings from stdio. Passing the values as command line arguments would be more convenient
     // but doing so would show username and pam service in "ps aux" and similar process lists.
@@ -74,9 +73,27 @@ int main(int argc, char* argv[])
     int rc = -1;
     if (read_settings(in_fd, &mapping_on, &uname, &pam_service))
     {
+        // Try to run as root. Even if it fails, proceed.
+        auto [uid_changed, io_ok] = call_setreuid(0, 0, out_fd);
+        if (!io_ok)
+        {
+            return EXIT_FAILURE;
+        }
+
         UserData user_data = {uname, ""};
         AuthSettings sett = {pam_service, mapping_on};
         auto res = authenticate_fd(in_fd, out_fd, user_data, sett);
+
+        if (uid_changed)
+        {
+            // Change back to original user.
+            std::tie(uid_changed, io_ok) = call_setreuid(ruid, euid, out_fd);
+            if (!io_ok)
+            {
+                return EXIT_FAILURE;
+            }
+        }
+
         if (res.type == AuthResult::Result::SUCCESS)
         {
             bool send_eof = true;
@@ -146,5 +163,28 @@ bool read_settings(int fd, bool* mapping_out, string* uname_out, string* pam_ser
         }
     }
     return success;
+}
+
+std::tuple<bool, bool> call_setreuid(uid_t ruid, uid_t euid, int out_fd)
+{
+    bool uid_changed = false;
+    bool io_ok = false;
+    if (setreuid(ruid, euid) == 0)
+    {
+        uid_changed = true;
+        io_ok = true;
+    }
+    else
+    {
+        string msg = mxb::string_printf("setreuid() failed. Error %i: %s", errno, strerror(errno));
+        std::vector<uint8_t> warn_msg;
+        warn_msg.push_back(SBOX_WARN);
+        mxb::pam::add_string(msg, &warn_msg);
+        if (write(out_fd, warn_msg.data(), warn_msg.size()) == (ssize_t)warn_msg.size())
+        {
+            io_ok = true;
+        }
+    }
+    return {uid_changed, io_ok};
 }
 }
