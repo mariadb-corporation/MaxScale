@@ -55,6 +55,8 @@ const mountFactory = opts =>
 describe('BlankWke', () => {
     let wrapper
 
+    afterEach(() => sinon.restore())
+
     it('Should render cards', () => {
         wrapper = mountFactory()
         expect(wrapper.findAllComponents({ name: 'v-card' }).length).to.equal(cardsStub.length)

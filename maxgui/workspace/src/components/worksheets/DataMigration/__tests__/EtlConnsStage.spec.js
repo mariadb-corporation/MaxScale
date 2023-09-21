@@ -23,6 +23,7 @@ const mountFactory = opts =>
 
 describe('EtlConnsStage', () => {
     let wrapper
+
     describe(`Child component's data communication tests`, () => {
         beforeEach(() => (wrapper = mountFactory()))
         it(`Should render etl-stage-ctr`, () => {
@@ -51,6 +52,7 @@ describe('EtlConnsStage', () => {
     })
     describe(`Computed properties and created hook`, () => {
         afterEach(() => sinon.restore())
+
         it(`Should return accurate value for destTargetType`, () => {
             wrapper = mountFactory()
             expect(wrapper.vm.destTargetType).to.equal('servers')
@@ -72,6 +74,7 @@ describe('EtlConnsStage', () => {
     })
     describe(`Method tests`, () => {
         afterEach(() => sinon.restore())
+
         it(`Should push log when handleOpenConns is called`, async () => {
             wrapper = mountFactory({
                 computed: {

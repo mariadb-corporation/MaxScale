@@ -31,6 +31,7 @@ const mountFactory = opts =>
 
 describe('ConnDlgCtr', () => {
     let wrapper
+
     describe(`Child component's data communication tests`, () => {
         beforeEach(() => {
             wrapper = mountFactory()
@@ -115,21 +116,23 @@ describe('ConnDlgCtr', () => {
     })
 
     describe(`Watcher tests`, () => {
+        afterEach(() => sinon.restore())
+
         it('Should immediately call setDefResourceType when dialog is opened', async () => {
             const spy = sinon.spy(ConnDlgCtr.methods, 'setDefResourceType')
             wrapper = mountFactory()
             spy.should.have.been.calledOnce
-            spy.restore()
         })
         it(`Should immediately call onChangeResourceType when resourceType is changed`, () => {
             const spy = sinon.spy(ConnDlgCtr.methods, 'onChangeResourceType')
             wrapper = mountFactory()
             spy.should.have.been.calledOnce
-            spy.restore()
         })
     })
 
     describe(`Method tests`, () => {
+        afterEach(() => sinon.restore())
+
         it('Should call expected methods in onChangeResourceType', async () => {
             wrapper = mountFactory({
                 propsData: { value: false },
@@ -140,7 +143,6 @@ describe('ConnDlgCtr', () => {
             await wrapper.vm.onChangeResourceType('servers')
             for (const spy of spies) {
                 spy.should.have.been.calledOnce
-                spy.restore()
             }
         })
 
@@ -152,7 +154,6 @@ describe('ConnDlgCtr', () => {
             const spy = sinon.spy(wrapper.vm, 'fetchRcTargetNames')
             await wrapper.vm.handleFetchResources('servers')
             spy.should.have.been.calledOnce
-            spy.restore()
         })
 
         it(`Should call fetchRcTargetNames in handleFetchResources only
@@ -164,7 +165,6 @@ describe('ConnDlgCtr', () => {
             const spy = sinon.spy(wrapper.vm, 'fetchRcTargetNames')
             await wrapper.vm.handleFetchResources('servers')
             spy.should.not.been.called
-            spy.restore()
         })
 
         it(`setDefResourceType method should set listener as the

@@ -33,7 +33,10 @@ const etlResTableStub = [
 
 describe('EtlMigrationStage', () => {
     let wrapper
+
     describe("Child component's data communication tests", () => {
+        afterEach(() => sinon.restore())
+
         it(`Should render etl-stage-ctr`, () => {
             wrapper = mountFactory()
             expect(wrapper.findComponent({ name: 'etl-stage-ctr' }).exists()).to.be.true
@@ -251,6 +254,7 @@ describe('EtlMigrationStage', () => {
     })
     describe('Method tests', () => {
         afterEach(() => sinon.restore())
+
         it(`cancel method should dispatch cancelEtlTask`, () => {
             wrapper = mountFactory()
             const stub = sinon.stub(EtlTask, 'dispatch').resolves()

@@ -19,6 +19,7 @@ const mountFactory = opts => mount(lodash.merge({ component: MxsDebouncedField }
 
 describe('mxs-debounced-field', () => {
     let wrapper
+    afterEach(() => sinon.restore())
 
     it(`Should pass accurate data to v-text-field`, () => {
         wrapper = mountFactory()
@@ -49,6 +50,5 @@ describe('mxs-debounced-field', () => {
         expect(wrapper.emitted().input).to.be.undefined
         clock.tick(threshold)
         expect(wrapper.emitted().input[0][0]).to.equal('testValue')
-        clock.restore()
     })
 })

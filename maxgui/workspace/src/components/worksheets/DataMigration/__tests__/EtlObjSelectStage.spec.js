@@ -28,6 +28,9 @@ const mountFactory = opts =>
 
 describe('EtlObjSelectStage', () => {
     let wrapper
+
+    afterEach(() => sinon.restore())
+
     describe("Child component's data communication tests", () => {
         it(`Should render etl-stage-ctr`, () => {
             wrapper = mountFactory()
@@ -93,8 +96,6 @@ describe('EtlObjSelectStage', () => {
             expect(btn.vm.$props.disabled).to.equal(wrapper.vm.disabled)
         })
     })
-
-    afterEach(() => sinon.restore())
 
     it(`categorizeObjs should return an object with expected fields`, () => {
         wrapper = mountFactory()

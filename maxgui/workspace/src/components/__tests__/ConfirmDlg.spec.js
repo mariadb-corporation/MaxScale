@@ -36,6 +36,8 @@ describe('ConfirmDlg', () => {
         })
     })
 
+    afterEach(() => sinon.restore())
+
     it('Should pass accurate data to mxs-dlg', () => {
         const {
             value,
@@ -65,6 +67,5 @@ describe('ConfirmDlg', () => {
         const spy = sinon.spy(wrapper.vm, 'SET_CONFIRM_DLG')
         wrapper.vm.isOpened = true
         spy.should.have.been.calledOnceWithExactly({ ...confirmDlgDataStub, is_opened: true })
-        spy.restore()
     })
 })

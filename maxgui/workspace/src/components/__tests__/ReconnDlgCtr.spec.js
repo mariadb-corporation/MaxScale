@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ReconnDlgCtr from '../ReconnDlgCtr.vue'
+import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 
 const lost_cnn_stub = {
     id: '123',
@@ -32,7 +32,9 @@ describe('ReconnDlgCtr', () => {
     beforeEach(() => {
         wrapper = mountFactory()
     })
-    afterEach(() => {})
+
+    afterEach(() => sinon.restore())
+
     it('Should show reconnection dialog when there is a connection error', () => {
         expect(wrapper.vm.showReconnDialog).to.be.false
         wrapper = mountFactory({
@@ -57,6 +59,5 @@ describe('ReconnDlgCtr', () => {
         wrapper = mountFactory({ shallow: false })
         await wrapper.find('.cancel').trigger('click') // cancel btn is disconnect btn
         spy.should.have.been.calledOnce
-        spy.restore()
     })
 })

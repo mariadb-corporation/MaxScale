@@ -36,6 +36,8 @@ describe('sidebar-ctr', () => {
     let wrapper
 
     describe(`Child component's data communication tests`, () => {
+        afterEach(() => sinon.restore())
+
         const evtFnMap = {
             'get-node-data': 'fetchNodePrvwData',
             'load-children': 'handleLoadChildren',
@@ -53,7 +55,6 @@ describe('sidebar-ctr', () => {
                 const dbListTree = wrapper.findComponent({ name: 'schema-tree-ctr' })
                 dbListTree.vm.$emit(evt)
                 spyFn.should.have.been.called
-                spyFn.restore()
             })
         })
     })

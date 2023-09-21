@@ -35,6 +35,7 @@ const mountFactory = opts =>
     )
 describe(`txt-editor-toolbar-ctr`, () => {
     let wrapper
+
     describe(`Child component's data communication tests`, () => {
         it(`Should pass accurate data to mxs-dlg`, () => {
             // shallow mount so that mxs-dlg in connection-manager will be stubbed
@@ -161,6 +162,8 @@ describe(`txt-editor-toolbar-ctr`, () => {
         })
     })
     describe('Run query tests', () => {
+        afterEach(() => sinon.restore())
+
         it(`Should popup query confirmation dialog with accurate data
       when query_confirm_flag = 1`, async () => {
             wrapper = mountFactory({

@@ -47,6 +47,7 @@ const mountFactory = opts =>
 
 describe('EtlTblScript', () => {
     let wrapper
+
     describe("Child component's data communication tests", () => {
         it(`Should pass accurate data to mxs-data-table`, () => {
             wrapper = mountFactory()
@@ -163,6 +164,8 @@ describe('EtlTblScript', () => {
         })
     })
     describe('Watcher tests', () => {
+        afterEach(() => sinon.restore())
+
         it(`Should immediately emit get-staging-data event`, () => {
             wrapper = mountFactory()
             expect(wrapper.emitted('get-staging-data')).to.be.an('array').that.is.not.empty
@@ -189,7 +192,6 @@ describe('EtlTblScript', () => {
             const spy = sinon.spy(EtlTblScript.methods, 'setTblMaxHeight')
             wrapper = mountFactory()
             spy.calledOnce
-            spy.restore()
         })
 
         it(`Should immediately emit get-activeRow event`, () => {

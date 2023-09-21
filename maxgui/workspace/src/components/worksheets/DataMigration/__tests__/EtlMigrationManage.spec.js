@@ -23,6 +23,7 @@ const mountFactory = opts =>
 
 describe('EtlMigrationManage', () => {
     let wrapper
+
     describe("Child component's data communication tests", () => {
         it(`Should render quick action button when shouldShowQuickActionBtn is true`, () => {
             wrapper = mountFactory({ computed: { shouldShowQuickActionBtn: () => true } })
@@ -46,6 +47,8 @@ describe('EtlMigrationManage', () => {
         })
     })
     describe('Computed and method tests', () => {
+        afterEach(() => sinon.restore())
+
         it(`actionTypes should be an array with expected strings`, () => {
             wrapper = mountFactory()
             expect(wrapper.vm.actionTypes).to.eql([

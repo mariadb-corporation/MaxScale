@@ -159,6 +159,7 @@ describe('fk-definitions', () => {
     })
 
     describe(`Computed properties and created hook tests`, () => {
+        afterEach(() => sinon.restore())
         it('Should return accurate value for headers', () => {
             wrapper = mountFactory()
             const {
@@ -260,6 +261,8 @@ describe('fk-definitions', () => {
         beforeEach(() => {
             wrapper = mountFactory()
         })
+        afterEach(() => sinon.restore())
+
         it('stagingKeyCategoryMaps should not be empty', () => {
             expect(wrapper.vm.stagingKeyCategoryMap).to.not.be.empty
         })

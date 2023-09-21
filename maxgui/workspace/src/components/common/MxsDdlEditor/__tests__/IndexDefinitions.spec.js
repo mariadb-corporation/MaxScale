@@ -41,6 +41,7 @@ function getKeysByCategory({ wrapper, category }) {
 }
 describe('index-definitions', () => {
     let wrapper
+
     describe(`Child component's data communication tests`, () => {
         beforeEach(async () => {
             wrapper = mountFactory()
@@ -96,6 +97,8 @@ describe('index-definitions', () => {
     })
 
     describe(`Created hook and method tests`, () => {
+        afterEach(() => sinon.restore())
+
         it(`Should call init`, () => {
             const spy = sinon.spy(IndexDefinitions.methods, 'init')
             wrapper = mountFactory()
