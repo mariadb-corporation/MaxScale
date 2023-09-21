@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-08-18
+ * Change Date: 2027-09-19
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    char c;
+    int c;
     int option_index;
 
     while ((c = getopt_long(argc, argv, "hvdf:c:", long_options, &option_index)) >= 0)
