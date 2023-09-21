@@ -142,7 +142,7 @@ query and discard the already delivered part of the result.
 
 ### [MXS-4618](https://jira.mariadb.org/browse/MXS-4618) LOAD DATA LOCAL INFILE from S3
 
-The [LDI filter](../Filters/Ldi.md) adds support for `LOAD DATA LOCAL INFILE`
+The [LDI filter](../Filters/LDIFilter.md) adds support for `LOAD DATA LOCAL INFILE`
 from S3 compatible storage.
 
 ### [MXS-4635](https://jira.mariadb.org/browse/MXS-4635) Early connection metadata
