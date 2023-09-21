@@ -2184,6 +2184,15 @@ MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_sett
         cmd_begin += "MASTER_SSL = 1, ";    // Leave out if not set to preserve existing setting.
     }
 
+    auto server_repl_custom_opts = server->replication_custom_opts();
+    const string& eff_repl_custom_opts = !server_repl_custom_opts.empty() ? server_repl_custom_opts :
+        m_settings.replication_custom_opts;
+
+    if (!eff_repl_custom_opts.empty())
+    {
+        cmd_begin.append(eff_repl_custom_opts).append(", ");
+    }
+
     // Mask user & pw for the masked version.
     const char user_pw[] = "MASTER_USER = '%s', MASTER_PASSWORD = '%s';";
     string cleartext_cmd = cmd_begin;

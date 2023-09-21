@@ -130,6 +130,11 @@ cfg::ParamBool s_replication_master_ssl(
     "Enable SSL when configuring replication",
     false, cfg::Param::AT_RUNTIME);
 
+cfg::ParamString s_replication_custom_opts(
+    &s_spec, "replication_custom_options",
+    "Custom CHANGE MASTER TO options",
+    "", cfg::Param::AT_RUNTIME);
+
 cfg::ParamBool s_verify_master_failure(
     &s_spec, CN_VERIFY_MASTER_FAILURE,
     "Verify master failure",
@@ -449,6 +454,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::shared, &Shared::demotion_sql_file, &s_demotion_sql_file);
     add_native(&Settings::shared, &Shared::handle_event_scheduler, &s_handle_events);
     add_native(&Settings::shared, &Shared::replication_ssl, &s_replication_master_ssl);
+    add_native(&Settings::shared, &Shared::replication_custom_opts, &s_replication_custom_opts);
     add_native(&Settings::shared, &Shared::replication_user, &s_replication_user);
     add_native(&Settings::shared, &Shared::replication_password, &s_replication_password);
     add_native(&Settings::cs_admin_port, &s_cs_admin_port);

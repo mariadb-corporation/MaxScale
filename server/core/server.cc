@@ -132,7 +132,9 @@ static cfg::ParamCount s_extra_port(&s_spec, CN_EXTRA_PORT, "Server extra port",
 static cfg::ParamInteger s_priority(&s_spec, CN_PRIORITY, "Server priority", 0, AT_RUNTIME);
 static cfg::ParamString s_monitoruser(&s_spec, CN_MONITORUSER, "Monitor user", "", NO_QUOTES, AT_RUNTIME);
 static cfg::ParamPassword s_monitorpw(&s_spec, CN_MONITORPW, "Monitor password", "", NO_QUOTES, AT_RUNTIME);
-
+static cfg::ParamString s_replication_custom_opts(&s_spec, "replication_custom_options",
+                                                  "Custom CHANGE MASTER TO options", "",
+                                                  NO_QUOTES, AT_RUNTIME);
 static cfg::ParamCount s_persistpoolmax(
     &s_spec, CN_PERSISTPOOLMAX, "Maximum size of the persistent connection pool", 0, AT_RUNTIME);
 
@@ -387,6 +389,7 @@ Server::Settings::Settings(const std::string& name, Server* server)
     , m_priority(this, &s_priority)
     , m_monitoruser(this, &s_monitoruser)
     , m_monitorpw(this, &s_monitorpw)
+    , m_replication_custom_opts(this, &s_replication_custom_opts)
     , m_persistmaxtime(this, &s_persistmaxtime)
     , m_proxy_protocol(this, &s_proxy_protocol)
     , m_disk_space_threshold(this, &s_disk_space_threshold)
@@ -545,6 +548,11 @@ string Server::monitor_user() const
 string Server::monitor_password() const
 {
     return m_settings.monpw;
+}
+
+string Server::replication_custom_opts() const
+{
+    return m_settings.m_replication_custom_opts.get();
 }
 
 bool Server::set_address(const string& new_address)

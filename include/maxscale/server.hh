@@ -170,6 +170,13 @@ public:
     virtual DiskSpaceLimits get_disk_space_limits() const = 0;
 
     /**
+     * Get server-specific replication custom options.
+     *
+     * @return  Replication custom options string
+     */
+    virtual std::string replication_custom_opts() const = 0;
+
+    /**
      * Is persistent connection pool enabled.
      *
      * @return True if enabled

@@ -200,6 +200,7 @@ public:
 
     std::string monitor_user() const;
     std::string monitor_password() const;
+    std::string replication_custom_opts() const override;
 
     /**
      * Convert a status string to a status bit. Only converts one status element.
@@ -364,6 +365,8 @@ private:
         mxs::config::String m_monitoruser;
         // @see monpw
         mxs::config::String m_monitorpw;
+        // Custom CHANGE MASTER TO options for this server. Used by MariaDBMon.
+        mxs::config::String m_replication_custom_opts;
         // Maximum number of seconds connection can live
         mxs::config::Seconds m_persistmaxtime;
         // Send proxy-protocol header to backends when connecting routing sessions
