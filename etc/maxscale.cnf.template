@@ -19,7 +19,6 @@ threads=auto
 type=server
 address=127.0.0.1
 port=3306
-protocol=MariaDBBackend
 # Uncomment this and add MaxScale's IP to proxy_protocol_networks in MariaDB for
 # easier user management: https://mariadb.com/kb/en/proxy-protocol-support/
 # proxy_protocol=true
@@ -41,7 +40,7 @@ module=mariadbmon
 servers=server1
 user=monitor_user
 password=monitor_pw
-monitor_interval=2000
+monitor_interval=2s
 # Uncomment these to enable automatic node failover:
 # https://mariadb.com/kb/en/mariadb-maxscale-6-mariadb-monitor/#cluster-manipulation-operations
 # auto_failover=true
@@ -96,11 +95,11 @@ password=service_pw
 [Read-Only-Listener]
 type=listener
 service=Read-Only-Service
-protocol=MariaDBClient
+protocol=mariadbprotocol
 port=4008
 
 [Read-Write-Listener]
 type=listener
 service=Read-Write-Service
-protocol=MariaDBClient
+protocol=mariadbprotocol
 port=4006
