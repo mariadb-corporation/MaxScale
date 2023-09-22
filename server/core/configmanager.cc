@@ -131,7 +131,8 @@ std::string sql_select_for_update(const std::string& cluster)
 std::string sql_select_version(const std::string& cluster)
 {
     std::ostringstream ss;
-    ss << "SELECT version, nodes FROM " << TABLE << " WHERE cluster = '" << escape_for_sql(cluster) << "'";
+    ss << "SELECT version, nodes, origin FROM " << TABLE
+       << " WHERE cluster = '" << escape_for_sql(cluster) << "'";
     return ss.str();
 }
 
@@ -1348,6 +1349,7 @@ mxb::Json ConfigManager::fetch_config()
 
         // Store the status information regardless of its version.
         m_nodes.load_string(res->get_string(1));
+        m_origin = res->get_string(2);
 
         if (version <= m_version)
         {
