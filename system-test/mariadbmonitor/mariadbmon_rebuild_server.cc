@@ -322,6 +322,40 @@ void test_main(TestConnections& test)
                         auto conn = repl.backend(bu_target_ind)->open_connection();
                         check_value(test, conn.get(), values[1]);
                         mxs.check_print_servers_status({master_st, down, down});
+
+                        if (test.ok())
+                        {
+                            // Finally, make server2 master and have all replicate from it.
+                            // Then, restore server1 from bu1 and check that it rejoins the
+                            // cluster.
+                            repl.replicate_from(0, 1);
+                            repl.replicate_from(2, 1);
+                            mxs.wait_for_monitor();
+                            mxs.check_print_servers_status({slave_st, master_st, slave_st});
+                            repl.sync_slaves(1, 5);
+
+                            if (test.ok())
+                            {
+                                test.tprintf("Rebuild server1 with master (server2) running, "
+                                             "check that server1 rejoins cluster.");
+                                repl.stop_node(bu_target_ind);
+                                restore_cmd = "call command mariadbmon async-restore-from-backup "
+                                              "MariaDB-Monitor server1 bu1";
+                                res = mxs.maxctrl(restore_cmd);
+                                restore_ok = wait_for_completion(test);
+                                mxs.wait_for_monitor();
+
+                                if (command_ok(test, res, restore_ok, restore_cmd))
+                                {
+                                    test.tprintf("Restore success.");
+                                    mxs.check_print_servers_status(
+                                        {slave_st, master_st, slave_st});
+                                    test.expect(repl.sync_slaves(1, 5),
+                                                "server1 did not sync with master");
+                                }
+                                repl.start_node(bu_target_ind);
+                            }
+                        }
                     }
 
                     repl.start_node(0);
