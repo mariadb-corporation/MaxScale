@@ -102,7 +102,7 @@ The S3 access key used to perform all requests to it.
 This must be either configured in the MaxScale configuration file or set with
 `SET @maxscale.ldi.s3_key='<key>'` before starting the data load.
 
-### `key`
+### `secret`
 
 - **Type**: string
 - **Mandatory**: No
