@@ -62,14 +62,14 @@ monitor_interval=2s
 #################################################################################################
 # cooperative_monitoring_locks=majority_of_all
 
-###########################################################################################
-# Service definitions                                                                     #
-#                                                                                         #
-# Service Definition for a read-only service and a read/write splitting service.          #
-#                                                                                         #
-# The GRANTs needed by the service user can be found here:                                #
+############################################################################################
+# Service definitions                                                                      #
+#                                                                                          #
+# Service Definition for a read-only service and a read/write splitting service.           #
+#                                                                                          #
+# The GRANTs needed by the service user can be found here:                                 #
 # https://mariadb.com/kb/en/mariadb-maxscale-23-02-authentication-modules/#required-grants #
-###########################################################################################
+############################################################################################
 
 ##################################################################
 # ReadConnRoute documentation:                                   #
