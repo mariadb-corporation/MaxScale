@@ -1372,6 +1372,10 @@ mxb::Json ConfigManager::fetch_config()
                 // The status update must have failed, try it again.
                 try_update_status(m_status_msg);
             }
+            else
+            {
+                m_status_msg = m_nodes.get_string(hostname());
+            }
 
             return config;
         }
