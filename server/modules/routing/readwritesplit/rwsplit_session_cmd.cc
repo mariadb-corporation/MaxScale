@@ -32,36 +32,30 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     mxb_assert(can_recover_servers());
 
     // Try to first find a master if we are allowed to connect to one
-    if (m_config->lazy_connect || m_config->master_reconnection)
+    if (m_config->master_reconnection && (need_master_for_sescmd() || m_config->master_accept_reads))
     {
-        for (auto backend : m_raw_backends)
+        if (auto backend = get_master_backend())
         {
-            if (!backend->in_use() && backend->can_connect() && backend->is_master())
+            if (prepare_target(backend, TARGET_MASTER))
             {
-                if (prepare_target(backend, TARGET_MASTER))
+                if (backend != m_current_master)
                 {
-                    if (backend != m_current_master)
-                    {
-                        replace_master(backend);
-                    }
-
-                    MXB_INFO("Chose '%s' as primary due to session write", backend->name());
-                    return true;
+                    replace_master(backend);
                 }
+
+                MXB_INFO("Chose '%s' as primary due to session write", backend->name());
+                return true;
             }
         }
     }
 
     // If no master was found, find a slave
-    for (auto backend : m_raw_backends)
+    if (auto backend = get_slave_backend(get_max_replication_lag()))
     {
-        if (!backend->in_use() && backend->can_connect() && backend->is_slave())
+        if (prepare_target(backend, TARGET_SLAVE))
         {
-            if (prepare_target(backend, TARGET_SLAVE))
-            {
-                MXB_INFO("Chose '%s' as replica due to session write", backend->name());
-                return true;
-            }
+            MXB_INFO("Chose '%s' as replica due to session write", backend->name());
+            return true;
         }
     }
 

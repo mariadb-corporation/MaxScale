@@ -1040,6 +1040,16 @@ initial connection creation is skipped. If the client executes only read
 queries, no connection to the primary is made. If only write queries are made,
 only the primary connection is used.
 
+In MaxScale 23.08.2, if a [session command](#routing-to-every-session-backend)
+is received as the first command, the default behavior is to execute it on a
+replica. If [master_accept_reads](#master_accept_reads) is enabled, the query is
+executed on the primary server, if one is available. In practice this means that
+workloads which are mostly reads with infrequent writes should disable
+`master_accept_reads` if they also use `lazy_connect`.
+
+Older versions of MaxScale always tried to execute all session commands on the
+primary node if one was available.
+
 ### `reuse_prepared_statements`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
