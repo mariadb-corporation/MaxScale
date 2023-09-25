@@ -42,6 +42,8 @@ const mountFactory = opts =>
 describe('EtlTaskManage', () => {
     let wrapper
 
+    afterEach(() => sinon.restore())
+
     it('Should pass $attrs to v-menu', () => {
         wrapper = mountFactory({ attrs: { value: true, tile: true } })
         const { value, tile } = wrapper.findComponent({ name: 'v-menu' }).vm.$props
@@ -71,7 +73,6 @@ describe('EtlTaskManage', () => {
                     type: action,
                     task: wrapper.vm.$props.task,
                 })
-                stub.restore()
             })
     })
 })

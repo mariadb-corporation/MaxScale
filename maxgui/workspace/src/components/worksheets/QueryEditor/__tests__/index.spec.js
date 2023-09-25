@@ -41,8 +41,11 @@ const mountFactory = opts =>
         )
     )
 describe('query-editor', () => {
+    let wrapper
+
     describe(`Created hook and child component's data communication tests`, () => {
-        let wrapper
+        afterEach(() => sinon.restore())
+
         it(`Should pass accurate data to mxs-split-pane via props`, () => {
             wrapper = mountFactory()
             const {
@@ -88,13 +91,11 @@ describe('query-editor', () => {
                 }
                 sidebar.vm.$emit(fnEvtMap[key], param)
                 spyFn.should.have.been.calledOnceWith(param)
-                spyFn.restore()
             })
         })
     })
     const queryTabTypes = ['SQL_EDITOR', 'ALTER_EDITOR', 'INSIGHT_VIEWER']
     queryTabTypes.forEach(type => {
-        let wrapper
         describe(`${type} type: child component's data communication tests`, () => {
             beforeEach(() => {
                 wrapper = mountFactory({
@@ -136,7 +137,6 @@ describe('query-editor', () => {
         })
     })
     describe(`Computed, method and other tests`, () => {
-        let wrapper
         const is_sidebar_collapsed_values = [false, true]
         is_sidebar_collapsed_values.forEach(v => {
             describe(`When sidebar is${v ? '' : ' not'} collapsed`, () => {

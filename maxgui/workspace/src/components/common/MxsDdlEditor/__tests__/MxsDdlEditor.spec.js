@@ -45,6 +45,8 @@ const mountFactory = opts =>
 let wrapper
 
 describe('mxs-ddl-editor', () => {
+    afterEach(() => sinon.restore())
+
     describe(`Child component's data communication tests`, () => {
         it(`Should pass accurate data to table-opts`, () => {
             wrapper = mountFactory()

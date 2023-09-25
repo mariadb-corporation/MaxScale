@@ -36,6 +36,8 @@ const mountFactory = opts =>
 describe('DataMigration', () => {
     let wrapper
 
+    afterEach(() => sinon.restore())
+
     it('Should have expected number of stages', () => {
         wrapper = mountFactory()
         expect(wrapper.vm.stages.length).to.equal(4)

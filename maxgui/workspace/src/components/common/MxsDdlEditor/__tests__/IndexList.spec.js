@@ -33,6 +33,7 @@ const mountFactory = opts =>
 
 describe('index-list', () => {
     let wrapper
+
     describe(`Child component's data communication tests`, () => {
         beforeEach(async () => {
             wrapper = mountFactory()
@@ -110,6 +111,8 @@ describe('index-list', () => {
     })
 
     describe(`Created hook and method tests`, () => {
+        afterEach(() => sinon.restore())
+
         it(`Should call init`, () => {
             const spy = sinon.spy(IndexList.methods, 'init')
             wrapper = mountFactory()

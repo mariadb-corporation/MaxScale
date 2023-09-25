@@ -1,5 +1,11 @@
 <template>
-    <div class="etl-editor" :class="[isFullScreen ? 'etl-editor--fullscreen' : 'relative rounded']">
+    <div
+        class="etl-editor"
+        :class="[
+            isFullScreen ? 'etl-editor--fullscreen' : 'relative rounded',
+            sql ? '' : 'etl-editor--error',
+        ]"
+    >
         <code
             class="etl-editor__header d-flex justify-space-between align-center mariadb-code-style pl-12 pr-2 py-1"
         >
@@ -84,7 +90,12 @@ export default {
         right: 0;
         bottom: 0;
         left: 0;
-        border: none;
+        &:not(.etl-editor--error) {
+            border-color: transparent;
+        }
+    }
+    &--error {
+        border-color: $error;
     }
     $header-height: 36px;
     &__header {

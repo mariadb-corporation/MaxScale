@@ -43,6 +43,7 @@ const mountFactory = opts =>
 
 describe('col-definitions', () => {
     let wrapper
+
     describe(`Child component's data communication tests`, () => {
         beforeEach(async () => {
             wrapper = mountFactory()
@@ -179,6 +180,8 @@ describe('col-definitions', () => {
     })
 
     describe(`Created hook and method tests`, () => {
+        afterEach(() => sinon.restore())
+
         it(`Should call handleShowColSpecs`, () => {
             const spy = sinon.spy(ColDefinitions.methods, 'handleShowColSpecs')
             wrapper = mountFactory()

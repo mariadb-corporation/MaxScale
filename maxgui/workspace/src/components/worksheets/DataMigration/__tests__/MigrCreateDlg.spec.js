@@ -27,6 +27,8 @@ const mountFactory = opts =>
 describe('MigrCreateDlg', () => {
     let wrapper
 
+    afterEach(() => sinon.restore())
+
     it('Should pass accurate data to mxs-dlg', () => {
         wrapper = mountFactory()
         const { value, onSave, title, saveText } = wrapper.findComponent({
@@ -69,6 +71,5 @@ describe('MigrCreateDlg', () => {
         const newValue = !wrapper.vm.isOpened
         wrapper.vm.isOpened = newValue
         stub.calledOnceWithExactly({ ...wrapper.vm.migr_dlg, is_opened: newValue })
-        stub.restore()
     })
 })

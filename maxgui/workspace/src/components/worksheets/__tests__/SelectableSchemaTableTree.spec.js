@@ -43,6 +43,7 @@ const stubTargets = [{ tbl: 't1', schema: 'test' }]
 
 describe('SelectableSchemaTableTree', () => {
     let wrapper
+
     it(`Should pass accurate data to mxs-treeview`, () => {
         wrapper = mountFactory()
         const { value, items, openOnClick, selectable, returnObject } = wrapper.findComponent({
@@ -89,6 +90,7 @@ describe('SelectableSchemaTableTree', () => {
 
     describe('watcher tests', () => {
         afterEach(() => sinon.restore())
+
         const triggerDataFetchTestCases = [true, false]
         triggerDataFetchTestCases.forEach(testCase => {
             it(`When triggerDataFetch is ${testCase}, expected methods
@@ -140,7 +142,6 @@ describe('SelectableSchemaTableTree', () => {
     })
 
     describe('method tests', () => {
-        afterEach(() => sinon.restore())
         const responseErrStub = { response: { data: { errors: [{ detail: 'query error' }] } } }
         it(`Should set queryErrMsg when an error occurs during fetchSchemas`, async () => {
             wrapper = mountFactory({

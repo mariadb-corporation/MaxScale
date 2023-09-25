@@ -3,15 +3,14 @@
         <v-col cols="12" md="6" class="fill-height py-0">
             <div ref="tableWrapper" class="fill-height migration-tbl-wrapper">
                 <mxs-data-table
-                    :value="isRunning ? [] : selectItems"
+                    v-model="selectedItems"
                     :items="tableRows"
                     fixed-header
                     hide-default-footer
                     :items-per-page="-1"
                     :height="tableMaxHeight"
-                    v-bind="{ ...$attrs }"
-                    @input="isRunning ? null : (selectItems = $event)"
-                    @click:row="isRunning ? null : (selectItems = [$event])"
+                    v-bind="$attrs"
+                    @click:row="onRowClick"
                     v-on="$listeners"
                 >
                     <template v-for="slot in Object.keys($scopedSlots)" v-slot:[slot]="slotData">
@@ -22,7 +21,7 @@
         </v-col>
         <v-col cols="12" md="6" class="fill-height py-0">
             <etl-script-editors
-                v-if="activeRow && !isRunning && hasScriptFields"
+                v-if="shouldShowScriptEditors"
                 v-model="activeRow"
                 :hasChanged="hasChanged"
                 @on-discard="discard"
@@ -64,14 +63,12 @@ export default {
     data() {
         return {
             tableMaxHeight: 450,
-            selectItems: [],
-            stagingDataMap: null,
+            selectedItems: [],
+            tableRows: [],
         }
     },
     computed: {
-        ...mapState({
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-        }),
+        ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
         defDataMap() {
             return this.data.reduce((map, obj) => {
                 const id = this.$helpers.uuidv1()
@@ -81,8 +78,8 @@ export default {
         },
         hasChanged() {
             if (this.activeRowId) {
-                const defRow = this.$typy(this.defDataMap, `[${this.activeRowId}]`).safeObject
-                return !this.$helpers.lodash.isEqual(defRow, this.activeRow)
+                const initialData = this.$typy(this.defDataMap, `[${this.activeRowId}]`).safeObject
+                return !this.$helpers.lodash.isEqual(initialData, this.activeRow)
             }
             return false
         },
@@ -94,22 +91,16 @@ export default {
         },
         activeRow: {
             get() {
-                return this.$typy(this.selectItems, '[0]').safeObject
+                return this.$typy(this.selectedItems, '[0]').safeObject
             },
             set(v) {
-                if (v) this.selectItems = [v]
+                if (v) this.selectedItems = [v]
             },
         },
-        tableRows() {
-            if (this.stagingDataMap) return Object.values(this.stagingDataMap)
-            return []
-        },
+        // keep all properties except `id` as it's generated for UI purpose
         stagingData() {
-            return this.$helpers.lodash.cloneDeep(this.tableRows).map(o => {
-                // Remove id as it is generated for UI keying purpose
-                delete o.id
-                return o
-            })
+            // eslint-disable-next-line no-unused-vars
+            return this.tableRows.map(({ id, ...rest }) => rest)
         },
         firstErrObj() {
             return this.tableRows.find(o => o.error)
@@ -121,9 +112,12 @@ export default {
                 this.$typy(this.activeRow, 'select').isDefined
             )
         },
+        shouldShowScriptEditors() {
+            return this.activeRow && !this.isRunning && this.hasScriptFields
+        },
     },
     watch: {
-        stagingDataMap: {
+        stagingData: {
             deep: true,
             immediate: true,
             handler() {
@@ -135,21 +129,18 @@ export default {
             deep: true,
             immediate: true,
             handler(v) {
-                this.stagingDataMap = this.$helpers.lodash.cloneDeep(v)
+                this.tableRows = Object.values(this.$helpers.lodash.cloneDeep(v))
                 // Select the first row as active or the first object has error field
                 if (this.tableRows.length)
-                    this.selectItems = [this.firstErrObj || this.tableRows[0]]
-                this.$helpers.doubleRAF(() => this.setTblMaxHeight())
+                    this.selectedItems = [this.firstErrObj || this.tableRows[0]]
+                this.$nextTick(() => this.setTblMaxHeight())
             },
         },
         activeRow: {
             deep: true,
             immediate: true,
             handler(v) {
-                if (v) {
-                    this.stagingDataMap[v.id] = v
-                    this.$emit('get-activeRow', v)
-                }
+                if (v) this.$emit('get-activeRow', v)
             },
         },
     },
@@ -158,6 +149,9 @@ export default {
             this.tableMaxHeight =
                 this.$typy(this.$refs, 'tableWrapper.clientHeight').safeNumber || 450
         },
+        onRowClick(row) {
+            if (!this.isRunning) this.selectedItems = [row]
+        },
         // Discard changes on the active row
         discard() {
             this.activeRow = this.$helpers.lodash.cloneDeep(this.defDataMap[this.activeRowId])
@@ -165,20 +159,6 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.confirm-label,
-.migration-script-info {
-    font-size: 14px;
-}
-.migration-tbl-wrapper {
-    tbody {
-        tr {
-            cursor: pointer;
-        }
-    }
-}
-</style>
-
 <style lang="scss">
 .migration-tbl-wrapper {
     tbody {

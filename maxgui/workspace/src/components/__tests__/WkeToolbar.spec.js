@@ -13,15 +13,17 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeToolbar from '../WkeToolbar.vue'
+import WkeToolbar from '@wsComps/WkeToolbar.vue'
 
 const mountFactory = opts => mount({ shallow: false, component: WkeToolbar, ...opts })
 
-describe(`wke-toolbar - mounted hook and child component's interaction tests`, () => {
+describe(`WkeToolbar - mounted hook and child component's interaction tests`, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory()
     })
+    afterEach(() => sinon.restore())
+
     it('Should emit get-total-btn-width evt', () => {
         expect(wrapper.emitted()).to.have.property('get-total-btn-width')
     })

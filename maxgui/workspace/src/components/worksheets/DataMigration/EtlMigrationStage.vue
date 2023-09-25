@@ -3,7 +3,10 @@
         <template v-slot:header>
             <div class="etl-migration-stage__header">
                 <div class="d-flex align-center">
-                    <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+                    <h3
+                        class="etl-stage-title mxs-color-helper text-navigation font-weight-light"
+                        data-test="stage-header-title"
+                    >
                         {{ $mxs_t('migration') }}
                     </h3>
                     <etl-migration-manage
@@ -17,31 +20,36 @@
                         :icon="$typy(task, 'status').safeString"
                         :spinning="isRunning"
                         class="mb-1"
+                        data-test="header-status-icon"
                     />
                     <span
                         v-if="isPrepareEtl && !isRunning"
                         class="mxs-color-helper text-navigation"
+                        data-test="prepare-script-info"
                     >
-                        {{
-                            $mxs_t(
-                                isInErrState
-                                    ? 'errors.failedToPrepareMigrationScript'
-                                    : 'info.migrationScriptInfo'
-                            )
-                        }}
+                        {{ prepareScriptInfo }}
                     </span>
-                    <span v-if="generalErr" class="mxs-color-helper text-navigation">
+                    <span
+                        v-if="generalErr"
+                        class="mxs-color-helper text-navigation"
+                        data-test="general-err"
+                    >
                         {{ generalErr }}
                     </span>
                     <span
                         v-else-if="hasErrAtCreationStage"
                         class="mxs-color-helper text-navigation"
+                        data-test="creation-stage-err"
                     >
                         {{ $mxs_t(`errors.etl_create_stage`) }}
                     </span>
-                    <span v-else-if="!isPrepareEtl" class="mxs-color-helper text-navigation">
+                    <span
+                        v-else-if="!isPrepareEtl"
+                        class="mxs-color-helper text-navigation"
+                        data-test="fallback-msg"
+                    >
                         {{ $mxs_t($typy(task, 'status').safeString.toLowerCase()) }}
-                        <span v-if="isRunning">...</span>
+                        <template v-if="isRunning">...</template>
                     </span>
                 </div>
             </div>
@@ -89,27 +97,27 @@
         <template v-if="!isRunning" v-slot:footer>
             <div
                 class="etl-migration-stage__footer d-flex flex-column flex-grow-1"
-                :class="{ 'etl-migration-stage__footer--with-log': showOutputLog }"
+                :class="{ 'etl-migration-stage__footer--with-log': isOutputMsgShown }"
+                data-test="stage-footer"
             >
-                <template v-if="showOutputLog">
+                <template v-if="isOutputMsgShown">
                     <h6 class="mxs-color-helper text-navigation">
                         {{ $mxs_t('outputMsgs') }}
                     </h6>
                     <code
-                        class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap msg-log-ctr"
+                        class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap output-msg-ctr"
+                        data-test="output-msg-ctr"
                     >
                         <template v-if="activeItem">
                             {{
-                                activeItem.error
-                                    ? activeItem.error
-                                    : hasErrAtCreationStage
-                                    ? $mxs_t('warnings.objCreation')
-                                    : objMigrationStatus(activeItem).txt
+                                activeItem.error ||
+                                    (hasErrAtCreationStage
+                                        ? $mxs_t('warnings.objCreation')
+                                        : objMigrationStatus(activeItem).txt)
                             }}
                             <br />
                             <template v-if="$typy(activeItem, 'execution_time').isDefined">
                                 {{ $mxs_t('exeTime') }}:
-
                                 {{
                                     $mxs_tc('seconds', activeItem.execution_time === 1 ? 1 : 2, {
                                         value: activeItem.execution_time,
@@ -120,7 +128,7 @@
                     </code>
                 </template>
                 <v-btn
-                    v-if="isPrepareEtl && !showOutputLog"
+                    v-if="isPrepareEtl && !isOutputMsgShown"
                     small
                     height="36"
                     color="primary"
@@ -128,6 +136,7 @@
                     rounded
                     depressed
                     :disabled="Boolean(generalErr) || isRunning || isInErrState"
+                    data-test="start-migration-btn"
                     @click="start"
                 >
                     {{ $mxs_t('startMigration') }}
@@ -223,7 +232,7 @@ export default {
         generalErr() {
             return this.$typy(this.etlRes, 'error').safeString
         },
-        showOutputLog() {
+        isOutputMsgShown() {
             if (this.isPrepareEtl) {
                 if (!this.$typy(this.etlRes, 'ok').isDefined) return false
                 return !this.$typy(this.etlRes, 'ok').safeBoolean
@@ -232,6 +241,13 @@ export default {
         },
         isActive() {
             return this.task.active_stage_index === this.ETL_STAGE_INDEX.DATA_MIGR
+        },
+        prepareScriptInfo() {
+            return this.$mxs_t(
+                this.isInErrState
+                    ? 'errors.failedToPrepareMigrationScript'
+                    : 'info.migrationScriptInfo'
+            )
         },
     },
     activated() {
@@ -339,7 +355,7 @@ export default {
     &--with-log {
         min-height: 150px;
         max-height: 200px;
-        .msg-log-ctr {
+        .output-msg-ctr {
             font-size: 0.75rem;
             flex: 1 1 auto;
         }

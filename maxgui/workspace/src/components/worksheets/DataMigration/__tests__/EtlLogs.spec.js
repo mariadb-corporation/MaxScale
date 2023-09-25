@@ -21,6 +21,9 @@ const mountFactory = opts =>
 
 describe('EtlLogs', () => {
     let wrapper
+
+    afterEach(() => sinon.restore())
+
     const properties = [
         {
             name: 'etlLog',
@@ -50,7 +53,6 @@ describe('EtlLogs', () => {
         const stub = sinon.stub(EtlLogs.methods, 'scrollToBottom')
         wrapper = mountFactory()
         stub.should.be.calledOnce
-        stub.restore()
     })
 
     it(`Should call scrollToBottom method when logs is changed`, async () => {
@@ -69,6 +71,5 @@ describe('EtlLogs', () => {
             },
         })
         stub.should.be.calledOnce
-        stub.restore()
     })
 })

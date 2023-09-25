@@ -4,20 +4,20 @@
             <etl-editor
                 v-model="stagingRow.select"
                 class="select-script"
-                :class="stagingRow.select ? '' : 'mxs-color-helper all-border-error'"
+                data-test="select-script"
                 :label="$mxs_t('retrieveDataFromSrc')"
             />
             <etl-editor
                 v-model="stagingRow.create"
                 class="create-script"
-                :class="stagingRow.create ? '' : 'mxs-color-helper all-border-error'"
+                data-test="create-script"
                 :label="$mxs_t('createObjInDest')"
                 skipRegEditorCompleters
             />
             <etl-editor
                 v-model="stagingRow.insert"
                 class="insert-script"
-                :class="stagingRow.insert ? '' : 'mxs-color-helper all-border-error'"
+                data-test="insert-script"
                 :label="$mxs_t('insertDataInDest')"
                 skipRegEditorCompleters
             />
@@ -25,6 +25,7 @@
                 <span
                     v-if="isInErrState"
                     class="v-messages theme--light error--text d-inline-block mt-2"
+                    data-test="script-err-msg"
                 >
                     {{ $mxs_t('errors.scriptCanNotBeEmpty') }}
                 </span>
@@ -38,6 +39,7 @@
                     rounded
                     outlined
                     depressed
+                    data-test="discard-btn"
                     @click="$emit('on-discard')"
                 >
                     {{ $mxs_t('discard') }}
@@ -77,7 +79,7 @@ export default {
     computed: {
         isInErrState() {
             const { select, create, insert } = this.stagingRow
-            return Boolean(!select || !create || !insert)
+            return !select || !create || !insert
         },
         stagingRow: {
             get() {
@@ -97,8 +99,6 @@ export default {
 .btn-ctr {
     height: 36px;
 }
-</style>
-<style lang="scss">
 .script-container {
     .create-script {
         flex-grow: 0.5;
