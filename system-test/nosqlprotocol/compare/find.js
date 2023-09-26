@@ -23,6 +23,8 @@ var nosql_dc;
 var nosql_c;
 var cars;
 
+const N = 100;
+
 function load_cars() {
     var doc = JSON.parse(fs.readFileSync("../test/cars.json", "utf8"));
 
@@ -83,7 +85,7 @@ async function prepare(db, create_index) {
     await insert(db, cars);
 }
 
-async function find_with_command(db, heading, command, n, create_index) {
+async function find_with_command(db, heading, command, create_index) {
     await prepare(db, create_index);
 
     var start = new Date();
@@ -93,17 +95,13 @@ async function find_with_command(db, heading, command, n, create_index) {
     cold_time = stop - start;
     cold_count = rv.cursor.firstBatch.length;
 
-    if (!n) {
-        n = 1;
-    }
-
     start = new Date();
-    for (var i = 0; i < n; ++i) {
+    for (var i = 0; i < N; ++i) {
         var rv = await db.runCommand(command);
     }
     stop = new Date();
 
-    console.log(heading + ": " + (stop - start)/n + "ms, " + rv.cursor.firstBatch.length
+    console.log(heading + ": " + (stop - start)/N + "ms, " + rv.cursor.firstBatch.length
                 + ", (" + cold_time + "ms, " + cold_count + ")");
 }
 
@@ -113,7 +111,7 @@ async function find_all(db, heading) {
         batchSize: 10000
     };
 
-    await find_with_command(db, heading, command, 250);
+    await find_with_command(db, heading, command);
 }
 
 async function find_default(db, heading) {
@@ -121,7 +119,7 @@ async function find_default(db, heading) {
         find: name
     };
 
-    await find_with_command(db, heading, command, 250);
+    await find_with_command(db, heading, command);
 }
 
 async function find_some(db, heading, create_index) {
@@ -131,7 +129,7 @@ async function find_some(db, heading, create_index) {
         batchSize: 10000
     };
 
-    await find_with_command(db, heading, command, 250, create_index);
+    await find_with_command(db, heading, command, create_index);
 }
 
 async function find_one(db, heading) {
@@ -140,7 +138,7 @@ async function find_one(db, heading) {
         filter : { "_id": { "$eq": 4711 }}
     };
 
-    await find_with_command(db, heading, command, 250);
+    await find_with_command(db, heading, command);
 }
 
 async function find_by_id(db, heading) {
@@ -149,7 +147,7 @@ async function find_by_id(db, heading) {
         filter : { "_id": 4711 }
     };
 
-    await find_with_command(db, heading, command, 250);
+    await find_with_command(db, heading, command);
 }
 
 async function compare_find_default() {
