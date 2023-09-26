@@ -54,6 +54,7 @@ MaxScale Workspace peerDependencies
 | vue-template-compiler        |   2.x   |
 | vuetify                      |  2.6.x  |
 | vuex                         |  3.6.x  |
+| vue-virtual-collection       |  1.5.x  |
 | vuex-persist                 |  3.1.x  |
 
 ## Example of registering the plugin

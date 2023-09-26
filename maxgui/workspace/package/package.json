@@ -50,8 +50,8 @@
         "chartjs-adapter-date-fns": "3.0.x",
         "chartjs-plugin-trendline": "2.0.x",
         "date-fns": "2.29.x",
-        "deep-diff": "1.0.x",
         "dbgate-query-splitter": "4.9.x",
+        "deep-diff": "1.0.x",
         "html2canvas": "^1.4.x",
         "immutability-helper": "3.1.x",
         "localforage": "1.10.x",
@@ -69,6 +69,7 @@
         "vue-template-compiler": "2.x",
         "vuetify": "2.6.x",
         "vuex": "3.6.x",
+        "vue-virtual-collection": "1.5.x",
         "vuex-persist": "3.1.x"
     }
 }
