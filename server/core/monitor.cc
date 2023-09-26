@@ -355,7 +355,7 @@ bool check_disk_space_exhausted(MonitorServer* pMs,
 {
     bool disk_space_exhausted = false;
 
-    int32_t used_percentage = ((san.total() - san.available()) / (double)san.total()) * 100;
+    int32_t used_percentage = ((san.total - san.available) / (double)san.total) * 100;
 
     if (used_percentage >= max_percentage)
     {

@@ -15,24 +15,15 @@
 #include <maxscale/protocol/mariadb/diskspace.hh>
 #include <maxbase/assert.hh>
 
-namespace
+namespace maxscale
+{
+namespace disk
 {
 
-using namespace maxscale;
-
-typedef void (* Callback)(void* pCollection,
-                          const char* zDisk,
-                          const char* zPath,
-                          int64_t total,
-                          int64_t used,
-                          int64_t available);
-
-int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
+int get_info_by_path(MYSQL* pMysql, DiskSizeMap* pInfo)
 {
-    int rv = 0;
-
-    rv = mysql_query(pMysql, "SELECT Disk, Path, Total, Used, Available FROM information_schema.disks");
-
+    pInfo->clear();
+    int rv = mysql_query(pMysql, "SELECT Disk, Path, Total, Used, Available FROM information_schema.disks");
     if (rv == 0)
     {
         MYSQL_RES* pResult = mysql_store_result(pMysql);
@@ -54,7 +45,10 @@ int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
                 int64_t available = strtoll(row[4], &pEnd, 0);
                 mxb_assert(*pEnd == 0);
 
-                pCallback(pCollection, row[0], row[1], total, used, available);
+                const char* zDisk = row[0];
+                const char* zPath = row[1];
+                pInfo->insert(
+                    std::make_pair(zPath, mxs::disk::SizesAndName(total, used, available, zDisk)));
             }
 
             mysql_free_result(pResult);
@@ -62,76 +56,6 @@ int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
     }
 
     return rv;
-}
-
-template<class Collection>
-inline int get_info(MYSQL* pMysql,
-                    void (* pCallback)(Collection* pCollection,
-                                       const char* zDisk,
-                                       const char* zPath,
-                                       int64_t total,
-                                       int64_t used,
-                                       int64_t available),
-                    Collection* pCollection)
-{
-    pCollection->clear();
-
-    return get_info(pMysql, reinterpret_cast<Callback>(pCallback), pCollection);
-}
-
-void add_info_by_path(std::map<std::string, disk::SizesAndName>* pSizes,
-                      const char* zDisk,
-                      const char* zPath,
-                      int64_t total,
-                      int64_t used,
-                      int64_t available)
-{
-    pSizes->insert(std::make_pair(zPath, disk::SizesAndName(total, used, available, zDisk)));
-}
-
-void add_info_by_disk(std::map<std::string, disk::SizesAndPaths>* pSizes,
-                      const char* zDisk,
-                      const char* zPath,
-                      int64_t total,
-                      int64_t used,
-                      int64_t available)
-{
-    auto i = pSizes->find(zDisk);
-
-    if (i == pSizes->end())
-    {
-        disk::SizesAndPaths& item = i->second;
-
-        mxb_assert(total == item.total());
-        mxb_assert(used == item.used());
-        mxb_assert(available == item.available());
-
-        item.add_path(zPath);
-    }
-    else
-    {
-        disk::SizesAndPaths item(total, used, available, zPath);
-
-        pSizes->insert(std::make_pair(zDisk, item));
-    }
-}
-}
-
-
-namespace maxscale
-{
-
-namespace disk
-{
-
-int get_info_by_path(MYSQL* pMysql, std::map<std::string, disk::SizesAndName>* pInfo)
-{
-    return get_info(pMysql, add_info_by_path, pInfo);
-}
-
-int get_info_by_disk(MYSQL* pMysql, std::map<std::string, disk::SizesAndPaths>* pInfo)
-{
-    return get_info(pMysql, add_info_by_disk, pInfo);
 }
 }
 }

@@ -23,6 +23,8 @@ namespace maxscale
 namespace disk
 {
 
+using DiskSizeMap = std::map<std::string, disk::SizesAndName>;
+
 /**
  * @brief Get disk space information of a server.
  *
@@ -38,23 +40,6 @@ namespace disk
  *       subsequently returns ER_UNKNOWN_TABLE(1109) then either the server
  *       version is too old or the plugin @c DISKS has not been installed.
  */
-int get_info_by_path(MYSQL* pMysql, std::map<std::string, disk::SizesAndName>* pInfo);
-
-/**
- * @brief Get disk space information of a server.
- *
- * The information is obtained by accessing the @c information_schema.disks table,
- * which is available from 10.1.32, 10.2.14 and 10.3.6 onwards.
- *
- * @param pMysql  A valid handle to some server.
- * @param pInfo   [out] Filled with disk space information, ordered by disk.
- *
- * @return 0 if successful.
- *
- * @attn If the function returns a non-zero value and @c mysql_errno(pMysql)
- *       subsequently returns ER_UNKNOWN_TABLE(1109) then either the server
- *       version is too old or the plugin @c DISKS has not been installed.
- */
-int get_info_by_disk(MYSQL* pMysql, std::map<std::string, disk::SizesAndPaths>* pInfo);
+int get_info_by_path(MYSQL* pMysql, DiskSizeMap* pInfo);
 }
 }

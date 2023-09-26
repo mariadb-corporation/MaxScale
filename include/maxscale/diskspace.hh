@@ -24,133 +24,29 @@ namespace disk
 {
 
 /**
- * The size information of a particular disk.
- */
-class Sizes
-{
-public:
-    Sizes()
-        : m_total(0)
-        , m_used(0)
-        , m_available(0)
-    {
-    }
-
-    Sizes(int64_t total,
-          int64_t used,
-          int64_t available)
-        : m_total(total)
-        , m_used(used)
-        , m_available(available)
-    {
-    }
-
-    /**
-     * The total size of a disk.
-     *
-     * @return The total size of the disk in bytes.
-     */
-    int64_t total() const
-    {
-        return m_total;
-    }
-
-    /**
-     * The used amount of space of a disk.
-     *
-     * @return The size of the used amount of space of the disk in bytes.
-     */
-    int64_t used() const
-    {
-        return m_used;
-    }
-
-    /**
-     * The available amount of space to non-root users.
-     *
-     * @attn As the reported size is what is available to non-root users,
-     *       @c available may be smaller than @total - @used.
-     *
-     * @return The size of the available amount of space of the disk in bytes.
-     */
-    int64_t available() const
-    {
-        return m_available;
-    }
-
-private:
-    int64_t m_total;
-    int64_t m_used;
-    int64_t m_available;
-};
-
-/**
  * The size information of a particular named disk.
  */
-class SizesAndName : public Sizes
+struct SizesAndName
 {
-public:
-    SizesAndName()
+    SizesAndName() = default;
+
+    SizesAndName(int64_t total, int64_t used, int64_t available, const std::string& name)
+        : total(total)
+        , used(used)
+        , available(available)
+        , name(name)
     {
     }
 
-    SizesAndName(int64_t total,
-                 int64_t used,
-                 int64_t available,
-                 const std::string& name)
-        : Sizes(total, used, available)
-        , m_name(name)
-    {
-    }
+    int64_t total {0};      /**< The total size of the disk in bytes. */
+    int64_t used {0};       /**< The used amount of space of a disk. */
 
     /**
-     * @return The name of the disk. E.g. @c /dev/sda1
+     * The available amount of space to non-root users. As the reported size is what is available to
+     * non-root users, @c available may be smaller than @total - @used.
      */
-    const std::string& name() const
-    {
-        return m_name;
-    }
-
-private:
-    std::string m_name;
+    int64_t     available {0};
+    std::string name;       /**< The name of the disk. E.g. @c /dev/sda1 */
 };
-
-/**
- * The size information of a particular disk, and the paths
- * on which that disk has been mounted.
- */
-class SizesAndPaths : public Sizes
-{
-public:
-    SizesAndPaths()
-    {
-    }
-
-    SizesAndPaths(int64_t total,
-                  int64_t used,
-                  int64_t available,
-                  const std::string& path)
-        : Sizes(total, used, available)
-    {
-        m_paths.push_back(path);
-    }
-
-    /**
-     * @return The paths that referring to the disk for which the size is reported.
-     */
-    const std::vector<std::string>& paths() const
-    {
-        return m_paths;
-    }
-
-    void add_path(const std::string path)
-    {
-        m_paths.push_back(path);
-    }
-
-private:
-    std::vector<std::string> m_paths;
-};
-
 }
 }
