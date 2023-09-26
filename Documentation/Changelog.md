@@ -1,5 +1,10 @@
 # Changelog
 
+## MariaDB MaxScale 24.02
+
+* MariaDBMonitor now requires MariaDB Server 10.4 or newer for failover/
+  switchover. Server 10.3 is end of life.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is

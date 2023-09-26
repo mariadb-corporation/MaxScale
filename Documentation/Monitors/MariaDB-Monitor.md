@@ -9,7 +9,7 @@ state of the backends and assigns server roles such as primary and replica, whic
 are used by the routers when deciding where to route a query. It can also modify
 the replication cluster by performing failover, switchover and rejoin. Backend
 server versions older than MariaDB/MySQL 5.5 are not supported. Failover and
-other similar operations require MariaDB 10.0.2 or later.
+other similar operations require MariaDB 10.4 or later.
 
 Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 

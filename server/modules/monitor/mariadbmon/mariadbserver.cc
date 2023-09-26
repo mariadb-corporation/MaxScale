@@ -950,8 +950,8 @@ void MariaDBServer::update_server_version()
         if (total >= 50500)
         {
             m_capabilities.basic_support = true;
-            // For more specific features, at least MariaDB 10.0.2 is needed.
-            if ((type == ServerType::MARIADB || type == ServerType::BLR) && total >= 100002)
+            // For more specific features, at least MariaDB 10.4 is needed.
+            if ((type == ServerType::MARIADB || type == ServerType::BLR) && total >= 100400)
             {
                 m_capabilities.gtid = true;
                 m_capabilities.slave_status_all = true;
@@ -959,19 +959,15 @@ void MariaDBServer::update_server_version()
                 if (type == ServerType::MARIADB)
                 {
                     m_capabilities.events = true;
-                    // 10.1.2 and greater support max_statement_time.
-                    if (total >= 100102)
+                    m_capabilities.max_statement_time = true;
+                    // 10.5.2 adds read-only admin.
+                    if (total >= 100502)
                     {
-                        m_capabilities.max_statement_time = true;
-                        // 10.5.2 adds read-only admin.
-                        if (total >= 100502)
+                        m_capabilities.read_only_admin = true;
+                        // 10.11.0 separates it from super.
+                        if (total >= 101100)
                         {
-                            m_capabilities.read_only_admin = true;
-                            // 10.11.0 separates it from super.
-                            if (total >= 101100)
-                            {
-                                m_capabilities.separate_ro_admin = true;
-                            }
+                            m_capabilities.separate_ro_admin = true;
                         }
                     }
                 }
