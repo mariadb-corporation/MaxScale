@@ -20,6 +20,7 @@
 
 #include <maxbase/stopwatch.hh>
 #include <maxbase/temp_file.hh>
+#include <maxbase/exception.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/key_manager.hh>
@@ -34,6 +35,23 @@ bool has_extension(const std::string& file_name, const std::string& ext);
 void strip_extension(std::string& file_name, const std::string& ext);
 
 std::string gen_uuid();
+
+/* File magic numbers. Well known, or registered (zstd) first 4 bytes of a file. */
+constexpr size_t MAGIC_SIZE = 4;
+static const std::array<char, MAGIC_SIZE> PINLOKI_MAGIC = {char(0xfe), char(0x62), char(0x69), char(0x6e)};
+static const std::array<char, MAGIC_SIZE> ZSTD_MAGIC = {char(0x28), char(0xb5), char(0x2f), char(0xfd)};
+
+// zstd a.k.a. Zstandard compression
+static const std::string COMPRESSION_EXTENSION{"zst"};
+
+DEFINE_EXCEPTION(BinlogReadError);
+DEFINE_EXCEPTION(GtidNotFoundError);
+
+struct FileLocation
+{
+    std::string file_name;
+    long        loc;
+};
 
 class BinlogIndexUpdater final
 {
