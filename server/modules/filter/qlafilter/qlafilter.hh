@@ -259,8 +259,7 @@ private:
     mxb::TimePoint       m_trx_begin_time{};    // Timer value when the last transactions started.
     uint32_t             m_qc_type_mask = 0;
     mxb::TimePoint       m_first_response_time;
-    std::string          m_wall_time_str;       // Wall time as a string when query began
-    std::chrono::seconds m_last_wall_second {0};
+    wall_time::TimePoint m_wall_time;       // Wall time when query began
 
     void        write_log_entries(const LogEventElems& elems);
     void        write_session_log_entry(const std::string& entry);

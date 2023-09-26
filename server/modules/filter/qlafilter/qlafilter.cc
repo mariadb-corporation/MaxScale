@@ -508,14 +508,7 @@ bool QlaFilterSession::routeQuery(GWBUF&& queue)
 
         if (data_flags & QlaInstance::LOG_DATA_DATE)
         {
-            using namespace std::chrono;
-            auto now = wall_time::Clock::now();
-            auto current_second = duration_cast<seconds>(now.time_since_epoch());
-            if (current_second != m_last_wall_second)
-            {
-                m_last_wall_second = current_second;
-                m_wall_time_str = wall_time::to_string(now, "%F %T");
-            }
+            m_wall_time = wall_time::Clock::now();
         }
     }
     /* Pass the query downstream */
@@ -724,7 +717,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_DATE)
     {
-        output << curr_sep << m_wall_time_str;
+        output << curr_sep << wall_time::to_string(m_wall_time, "%F %T");
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_USER)
