@@ -24,6 +24,42 @@ namespace
 {
 void test_main(TestConnections& test);
 bool wait_for_completion(TestConnections& test);
+
+void check_value(TestConnections& test, mxt::MariaDB* conn, int expected)
+{
+    std::this_thread::sleep_for(100ms);     // Sleep a little to let update propagate.
+    string query = "select * from test.t1;";
+    auto res = conn->query(query);
+    if (res && res->next_row() && res->get_col_count() == 1)
+    {
+        int found = res->get_int(0);
+        test.tprintf("Found value %i.", found);
+        test.expect(found == expected, "Found wrong value in test.t1. Got %i, expected %i",
+                    found, expected);
+    }
+    else
+    {
+        test.add_failure("Query '%s' failed or returned invalid data.", query.c_str());
+    }
+}
+
+bool command_ok(TestConnections& test, mxt::CmdResult& res, bool cmd_success, const string& backup_cmd)
+{
+    bool rval = true;
+    if (res.rc != 0)
+    {
+        test.add_failure("Command '%s' startup failed. Error %i: %s", backup_cmd.c_str(),
+                         res.rc, res.output.c_str());
+        rval = false;
+    }
+    else if (!cmd_success)
+    {
+        test.add_failure("Command '%s' failed. Check MaxScale log for more info.",
+                         backup_cmd.c_str());
+        rval = false;
+    }
+    return rval;
+}
 }
 
 int main(int argc, char* argv[])
@@ -41,7 +77,8 @@ void test_main(TestConnections& test)
     const int target_ind = 3;
     auto master_st = mxt::ServerInfo::master_st;
     auto slave_st = mxt::ServerInfo::slave_st;
-
+    auto down = mxt::ServerInfo::DOWN;
+    const string reset_repl = "call command mariadbmon reset-replication MariaDB-Monitor server1";
     auto& mxs = *test.maxscale;
     auto& repl = *test.repl;
 
@@ -56,10 +93,12 @@ void test_main(TestConnections& test)
     mxs.start();
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
-    // Firewall on the source server may interfere with the transfer, stop it.
+    // Firewall may interfere with the transfer, stop it on all servers.
     const string stop_firewall = "systemctl stop iptables";
-    const string start_firewall = "systemctl start iptables";
-    repl.backend(source_ind)->vm_node().run_cmd_output_sudo(stop_firewall);
+    for (int i = 0; i < repl.N; i++)
+    {
+        repl.backend(i)->vm_node().run_cmd_output_sudo(stop_firewall);
+    }
 
     // Need to install some packages.
     auto install_tools = [&repl](int ind) {
@@ -177,56 +216,33 @@ void test_main(TestConnections& test)
     if (test.ok())
     {
         // Normal rebuild works. Test backup creation and use. Backup storage has been configured for
-        // server4. To speed up backup creation, delete binary logs from all servers and stop replication.
-        // Replication is not required for testing backups.
-        test.tprintf("Prepare to test create-backup and restore-from-backup. First, stop replication and "
-                     "reset binary logs.");
+        // server4. To speed up backup creation, minimize binary logs on all servers.
+        test.tprintf("Prepare to test create-backup and restore-from-backup. First, truncate binlogs.");
         repl.ping_or_open_admin_connections();
         for (int i = 0; i < repl.N; i++)
         {
             auto conn = repl.backend(i)->admin_connection();
-            if (i != 0)
-            {
-                conn->cmd("stop slave;");
-            }
             conn->cmd("reset master;");
         }
-        mxs.wait_for_monitor();
-        auto running = mxt::ServerInfo::RUNNING;
-        mxs.check_print_servers_status({mxt::ServerInfo::master_st, running, running, running});
-
-        int bu_storage_ind = 3;
-        repl.stop_node(bu_storage_ind);
-        auto storage_be = repl.backend(bu_storage_ind);
-        storage_be->vm_node().run_cmd_output_sudo(stop_firewall);
+        // Reset replication to sync gtids.
+        mxs.maxctrl(reset_repl);
+        mxs.wait_for_monitor(2);
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
         auto rwsplit_conn = mxs.open_rwsplit_connection2_nodb();
         rwsplit_conn->cmd("create or replace database test;");
         rwsplit_conn->cmd("create table test.t1 (id int);");
-
-        auto check_value = [&test, &rwsplit_conn](int expected) {
-            string query = "select * from test.t1;";
-            auto res = rwsplit_conn->query(query);
-            if (res && res->next_row() && res->get_col_count() == 1)
-            {
-                int found = res->get_int(0);
-                test.expect(found == expected, "Found wrong value in test.t1. Got %i, expected %i",
-                            found, expected);
-            }
-            else
-            {
-                test.add_failure("Query '%s' failed or returned invalid data.", query.c_str());
-            }
-        };
-
-        int val1 = 1234;
-        rwsplit_conn->cmd_f("insert into test.t1 values (%i);", val1);
-        check_value(val1);
+        rwsplit_conn->cmd("insert into test.t1 values (0);");
+        mxs.wait_for_monitor();
+        repl.sync_slaves();
 
         if (test.ok())
         {
-            test.tprintf("Test database created and row added. Preparing backup directory.");
+            test.tprintf("Binlogs minimized, test database prepared.");
+            int bu_storage_ind = 3;
+            repl.stop_node(bu_storage_ind);
 
+            test.tprintf("Preparing backup directory.");
             // At this point, clear the backup folder. It may contain old backups from a previous failed
             // test run.
             const char bu_dir[] = "/tmp/backups";
@@ -235,105 +251,124 @@ void test_main(TestConnections& test)
                 bu_vm.run_cmd_output_sudof("rm -rf %s", bu_dir);
             };
             clear_backups();
+
             // Recreate backup directory and give ownership.
             bu_vm.run_cmd_output_sudof("mkdir %s", bu_dir);
             auto* ssh_user = mxs.vm_node().access_user();
             bu_vm.run_cmd_output_sudof("sudo chown %s:%s %s", ssh_user, ssh_user, bu_dir);
-            install_tools(0); // Backup tools may be missing from server1.
 
-            test.tprintf("Creating backups.");
-            const char create_backup_fmt[] = "call command mariadbmon async-create-backup MariaDB-Monitor "
-                                             "server1 %s";
-            string backup_cmd = mxb::string_printf(create_backup_fmt, "bu1");
-            auto res = mxs.maxctrl(backup_cmd);
-            bool bu_ok = wait_for_completion(test);
+            const int bu_target_ind = 0;
+            install_tools(bu_target_ind);   // Backup tools may be missing from server1.
 
-            auto command_ok = [&test, &res, &bu_ok, &backup_cmd]() {
-                bool rval = true;
-                if (res.rc != 0)
-                {
-                    test.add_failure("Command '%s' startup failed. Error %i: %s", backup_cmd.c_str(),
-                                     res.rc, res.output.c_str());
-                    rval = false;
-                }
-                else if (!bu_ok)
-                {
-                    test.add_failure("Command '%s' failed. Check MaxScale log for more info.",
-                                     backup_cmd.c_str());
-                    rval = false;
-                }
-                return rval;
-            };
-
-            if (command_ok())
+            if (test.ok())
             {
-                test.tprintf("Backup 1 created.");
                 const char update_cmd[] = "update test.t1 set id=%i;";
-                int val2 = 5678;
-                rwsplit_conn->cmd_f(update_cmd, val2);
-                check_value(val2);
+                int values[4] = {1234, 5678, 1000001, 3141596};
+                int new_val = values[0];
+                rwsplit_conn->cmd_f(update_cmd, new_val);
+                check_value(test, rwsplit_conn.get(), new_val);
+
+                test.tprintf("Creating backups.");
+                const char create_backup_fmt[] = "call command mariadbmon async-create-backup "
+                                                 "MariaDB-Monitor server1 bu%i";
+                for (int i = 1; i <= 3; i++)
+                {
+                    string backup_cmd = mxb::string_printf(create_backup_fmt, i);
+                    auto res = mxs.maxctrl(backup_cmd);
+                    bool bu_ok = wait_for_completion(test);
+
+                    if (command_ok(test, res, bu_ok, backup_cmd))
+                    {
+                        test.tprintf("Backup %i created.", i);
+                        // Make a small update so that all backups are different.
+                        new_val = values[i];
+                        rwsplit_conn->cmd_f(update_cmd, new_val);
+                        check_value(test, rwsplit_conn.get(), new_val);
+                    }
+                }
 
                 if (test.ok())
                 {
-                    backup_cmd = mxb::string_printf(create_backup_fmt, "bu2");
-                    res = mxs.maxctrl(backup_cmd);
-                    bu_ok = wait_for_completion(test);
-                    if (command_ok())
+                    mxs.wait_for_monitor();
+                    mxs.get_servers().print();
+                    test.tprintf("Stopping replication, then stopping all servers.");
+
+                    for (int i = 1; i < 3; i++)
                     {
-                        test.tprintf("Backup 2 created.");
-                        int val3 = 1000001;
-                        rwsplit_conn->cmd_f(update_cmd, val3);
-                        check_value(val3);
+                        auto slave = repl.backend(i)->admin_connection();
+                        slave->cmd("stop slave;");
+                        slave->cmd("reset slave all;");
+                    }
+                    mxs.wait_for_monitor();
+
+                    // Backup storage should now have three backups. Restore from the
+                    // second one. Master servers cannot be rebuilt so just shut it down
+                    // before restoration. Shut down other servers as well to prevent
+                    // master promotion.
+                    repl.stop_node(0);
+                    repl.stop_node(1);
+                    repl.stop_node(2);
+
+                    test.tprintf("Restoring from backup 2.");
+                    string restore_cmd = "call command mariadbmon async-restore-from-backup "
+                                         "MariaDB-Monitor server1 bu2";
+                    auto res = mxs.maxctrl(restore_cmd);
+                    bool restore_ok = wait_for_completion(test);
+                    mxs.wait_for_monitor();
+
+                    if (command_ok(test, res, restore_ok, restore_cmd))
+                    {
+                        test.tprintf("Restore success, checking contents of server1.");
+                        auto conn = repl.backend(bu_target_ind)->open_connection();
+                        check_value(test, conn.get(), values[1]);
+                        mxs.check_print_servers_status({master_st, down, down});
 
                         if (test.ok())
                         {
-                            backup_cmd = mxb::string_printf(create_backup_fmt, "bu3");
-                            res = mxs.maxctrl(backup_cmd);
-                            bu_ok = wait_for_completion(test);
-                            if (command_ok())
+                            // Finally, make server2 master and have all replicate from it.
+                            // Then, restore server1 from bu1 and check that it rejoins the
+                            // cluster.
+                            repl.replicate_from(0, 1);
+                            repl.replicate_from(2, 1);
+                            mxs.wait_for_monitor();
+                            mxs.check_print_servers_status({slave_st, master_st, slave_st});
+                            repl.sync_slaves(1, 5);
+
+                            if (test.ok())
                             {
-                                test.tprintf("Backup 3 created.");
-                                int val4 = 3141596;
-                                rwsplit_conn->cmd_f(update_cmd, val4);
-                                check_value(val4);
+                                test.tprintf("Rebuild server1 with master (server2) running, "
+                                             "check that server1 rejoins cluster.");
+                                repl.stop_node(bu_target_ind);
+                                restore_cmd = "call command mariadbmon async-restore-from-backup "
+                                              "MariaDB-Monitor server1 bu1";
+                                res = mxs.maxctrl(restore_cmd);
+                                restore_ok = wait_for_completion(test);
+                                mxs.wait_for_monitor();
 
-                                if (test.ok())
+                                if (command_ok(test, res, restore_ok, restore_cmd))
                                 {
-                                    // Backup storage should now have three backups. Restore from the
-                                    // second one. Master servers cannot be rebuilt so just shutdown the
-                                    // server before restoration.
-                                    repl.stop_node(0);
-                                    mxs.wait_for_monitor();
-
-                                    test.tprintf("Restoring from backup 2.");
-                                    backup_cmd = "call command mariadbmon async-restore-from-backup "
-                                                 "MariaDB-Monitor server1 bu2";
-                                    res = mxs.maxctrl(backup_cmd);
-                                    bu_ok = wait_for_completion(test);
-                                    mxs.wait_for_monitor();
-
-                                    if (command_ok())
-                                    {
-                                        test.tprintf("Restore success.");
-                                        rwsplit_conn = mxs.open_rwsplit_connection2();
-                                        check_value(val2);
-
-                                        if (test.ok())
-                                        {
-                                            test.tprintf("Correct value found in database.");
-                                        }
-                                    }
+                                    test.tprintf("Restore success.");
+                                    mxs.check_print_servers_status(
+                                        {slave_st, master_st, slave_st});
+                                    test.expect(repl.sync_slaves(1, 5),
+                                                "server1 did not sync with master");
                                 }
+                                repl.start_node(bu_target_ind);
                             }
                         }
                     }
+
+                    repl.start_node(0);
+                    repl.start_node(1);
+                    repl.start_node(2);
+                    mxs.wait_for_monitor();
+                    auto running = mxt::ServerInfo::RUNNING;
+                    mxs.check_print_servers_status({master_st, running, running});
                 }
             }
             clear_backups();
+            repl.start_node(bu_storage_ind);
         }
-
-        storage_be->vm_node().run_cmd_output_sudo(start_firewall);
-        repl.start_node(bu_storage_ind);
 
         repl.ping_or_open_admin_connections();
         for (int i = 0; i < repl.N; i++)
@@ -345,6 +380,11 @@ void test_main(TestConnections& test)
         mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     }
 
+    const string start_firewall = "systemctl start iptables";
+    for (int i = 0; i < repl.N; i++)
+    {
+        repl.backend(i)->vm_node().run_cmd_output_sudo(start_firewall);
+    }
     repl.backend(source_ind)->vm_node().run_cmd_output_sudo(start_firewall);
     mxs.vm_node().delete_from_node(keypath);
 }
