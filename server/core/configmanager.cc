@@ -134,7 +134,8 @@ std::string sql_select_for_update(const std::string& cluster)
 std::string sql_select_version(const std::string& cluster)
 {
     std::ostringstream ss;
-    ss << "SELECT version, nodes FROM " << TABLE << " WHERE cluster = '" << escape_for_sql(cluster) << "'";
+    ss << "SELECT version, nodes, origin FROM " << TABLE
+       << " WHERE cluster = '" << escape_for_sql(cluster) << "'";
     return ss.str();
 }
 
@@ -505,18 +506,25 @@ mxb::Json ConfigManager::to_json() const
 {
     mxb::Json obj;
 
-    // It's possible for m_current_config to be valid and m_version to be 0 if no actual changes have been
-    // made but modules were reconfigured. This can happen for example when the config_sync_cluster is changed
-    // before any other modifications have been done.
-    bool enabled = !get_cluster().empty() && m_current_config.valid() && m_version;
-
-    if (enabled)
+    if (!get_cluster().empty())
     {
-        obj.set_string(CN_CHECKSUM, checksum());
-        obj.set_int(CN_VERSION, m_version);
-        obj.set_object(CN_NODES, m_nodes);
-        obj.set_string(CN_ORIGIN, m_origin);
-        obj.set_string(CN_STATUS, m_status_msg);
+        // It's possible for m_current_config to be valid and m_version to be 0 if no actual changes have been
+        // made but modules were reconfigured. This can happen for example when the config_sync_cluster is
+        // changed before any other modifications have been done.
+        if (m_current_config.valid() && m_version)
+        {
+            obj.set_string(CN_CHECKSUM, checksum());
+            obj.set_int(CN_VERSION, m_version);
+            obj.set_object(CN_NODES, m_nodes);
+            obj.set_string(CN_ORIGIN, m_origin);
+            obj.set_string(CN_STATUS, m_status_msg);
+        }
+        else
+        {
+            // No changes have been made with this cluster
+            obj.set_int(CN_VERSION, m_version);
+            obj.set_string(CN_STATUS, "No configuration changes");
+        }
     }
     else
     {
@@ -1371,6 +1379,7 @@ mxb::Json ConfigManager::fetch_config()
 
         // Store the status information regardless of its version.
         m_nodes.load_string(res->get_string(1));
+        m_origin = res->get_string(2);
 
         if (version <= m_version)
         {
@@ -1392,6 +1401,10 @@ mxb::Json ConfigManager::fetch_config()
             {
                 // The status update must have failed, try it again.
                 try_update_status(m_status_msg);
+            }
+            else
+            {
+                m_status_msg = m_nodes.get_string(hostname());
             }
 
             return config;
