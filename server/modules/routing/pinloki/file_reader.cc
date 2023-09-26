@@ -95,7 +95,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
     }
     else
     {
-        auto first = first_string(m_inventory.file_names());
+        auto first = first_string(m_inventory.config().binlog_file_names());
         strip_extension(first, COMPRESSION_EXTENSION);
         open(first);
         // Preamble just means send the initial rotate and then the whole file
@@ -304,7 +304,7 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     }
     else if (rpl.event_type() == STOP_EVENT)
     {
-        m_generate_rotate_to = next_string(m_inventory.file_names(), m_read_pos.rotate_name);
+        m_generate_rotate_to = next_string(m_inventory.config().binlog_file_names(), m_read_pos.rotate_name);
         strip_extension(m_generate_rotate_to, COMPRESSION_EXTENSION);
         if (!m_generate_rotate_to.empty())
         {

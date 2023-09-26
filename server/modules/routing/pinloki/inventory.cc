@@ -130,9 +130,4 @@ InventoryReader::InventoryReader(const Config& config)
     : m_config(config)
 {
 }
-
-std::vector<std::string> InventoryReader::file_names() const
-{
-    return m_config.binlog_file_names();
-}
 }

@@ -71,9 +71,9 @@ public:
 
 private:
     // The configuration used to create this inventory
-    const Config& m_config;
+    const Config&        m_config;
     std::atomic<int64_t> m_master_id {0};
-    std::atomic<bool> m_is_writer_connected {false};
+    std::atomic<bool>    m_is_writer_connected {false};
 };
 
 /**
@@ -84,7 +84,6 @@ class InventoryReader
 {
 public:
     InventoryReader(const Config& config);
-    std::vector<std::string> file_names() const;
 
     const Config& config() const
     {
@@ -93,8 +92,7 @@ public:
 
 private:
     // The configuration used to create this inventory
-    const Config&                    m_config;
-    mutable std::vector<std::string> m_file_names;
+    const Config& m_config;
 };
 
 // Return the string after str in a vector of unique strings, or empty if not found
