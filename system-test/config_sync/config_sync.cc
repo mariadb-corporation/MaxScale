@@ -336,9 +336,12 @@ void test_config_parameters(TestConnections& test)
     test.expect(res.rc == 0, "Enabling config_sync_cluster failed: %s", res.output.c_str());
 
     auto sync = get(api1, "maxscale", "/data/attributes/config_sync");
-    test.expect(sync.type() == JsonType::JSON_NULL,
-                "\"config_sync\" should be null after toggling config_sync_cluster: %s",
+    test.expect(sync.type() == JsonType::OBJECT,
+                "\"config_sync\" should be an object after toggling config_sync_cluster: %s",
                 sync.to_string(NORMAL).c_str());
+    int64_t version = -1;
+    test.expect(sync.try_get_int("version", &version) && version == 0,
+                "Version should be 0: %s", sync.to_string(NORMAL).c_str());
 
     res = test.maxscale->maxctrl("alter maxscale config_sync_cluster \"\"");
     test.expect(res.rc == 0, "Disabling config_sync_cluster failed: %s", res.output.c_str());
@@ -674,8 +677,10 @@ void test_bad_cache(TestConnections& test)
 {
     auto expect_empty = [&]() {
             auto sync1 = get(api1, "maxscale", "/data/attributes/config_sync");
-            test.expect(sync1.type() == JsonType::JSON_NULL,
-                        "Wrong cached configuration should not be read.");
+            int64_t version = -1;
+            test.expect(sync1.try_get_int("version", &version) && version == 0,
+                        "Wrong cached configuration should not be read: %s",
+                        sync1.to_string(NORMAL).c_str());
         };
 
     auto expect_discarded = [&]() {
