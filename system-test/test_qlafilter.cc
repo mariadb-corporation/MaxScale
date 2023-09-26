@@ -26,6 +26,22 @@ void query(TestConnections& test, const std::vector<std::string>& queries)
     }
 }
 
+void send_query(TestConnections& test, const std::vector<std::string>& queries)
+{
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+
+    for (const auto& q : queries)
+    {
+        test.expect(c.send_query(q), "Failed to send query '%s': %s", q.c_str(), c.error());
+    }
+
+    for (const auto& q : queries)
+    {
+        test.expect(c.read_query_result(), "Failed to read query result '%s': %s", q.c_str(), c.error());
+    }
+}
+
 std::vector<std::vector<std::string>> parse_log(TestConnections& test, const std::string& log)
 {
     std::vector<std::vector<std::string>> rval;
@@ -167,6 +183,16 @@ int main(int argc, char** argv)
     check_contents(test, "/tmp/qla.match.log.unified", {
         {1, 2, "SELECT 'something'"},
         {2, 2, "SELECT 'anything'"}
+    });
+
+    test.tprintf("Test SQL matching with pipelined queries");
+
+    send_query(test, {"SELECT 'something'", "SELECT 'nothing'", "SELECT 'everything'", "SELECT 'anything'"});
+    check_contents(test, "/tmp/qla.match.log.unified", {
+        {1, 2, "SELECT 'something'"},
+        {2, 2, "SELECT 'anything'"},
+        {3, 2, "SELECT 'something'"},
+        {4, 2, "SELECT 'anything'"}
     });
 
     test.maxscale->ssh_node("rm -f /tmp/qla.match.log.unified", true);

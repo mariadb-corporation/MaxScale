@@ -30,6 +30,20 @@
 class QlaFilterSession;
 struct LogEventElems;
 
+// A query that is being executed
+struct Query
+{
+    bool                 first_reply {true};
+    bool                 matched {false};
+    std::string          sql;               // Sql, in canonical form if asked for
+    mxb::TimePoint       begin_time;        // Timer value at the moment of receiving query.
+    mxb::TimePoint       trx_begin_time;    // Timer value when the last transactions started.
+    uint32_t             qc_type_mask = 0;
+    mxb::TimePoint       first_response_time;
+    mxb::TimePoint       last_response_time;
+    wall_time::TimePoint wall_time;     // Wall time when query began
+};
+
 /**
  * A instance structure, the assumption is that the option passed
  * to the filter is simply a base for the filename to which the queries
@@ -252,48 +266,11 @@ private:
     int   m_rotation_count {0};         /* Log rotation counter */
     bool  m_write_error_logged {false}; /* Has write error been logged */
 
-    bool                 m_first_reply {true};
-    bool                 m_matched {false};
-    std::string          m_sql;                 // Sql, in canonical form if asked for
-    mxb::TimePoint       m_begin_time;          // Timer value at the moment of receiving query.
-    mxb::TimePoint       m_trx_begin_time{};    // Timer value when the last transactions started.
-    uint32_t             m_qc_type_mask = 0;
-    mxb::TimePoint       m_first_response_time;
-    std::string          m_wall_time_str;       // Wall time as a string when query began
-    std::chrono::seconds m_last_wall_second {0};
+    std::deque<Query> m_queue;
 
-    void        write_log_entries(const LogEventElems& elems);
+    void        write_log_entries(const Query& query, const mxs::Reply& reply, const mxs::ReplyRoute& down);
     void        write_session_log_entry(const std::string& entry);
-    std::string generate_log_entry(uint64_t data_flags, const LogEventElems& elems);
-    bool        should_activate();
-};
-
-/**
- * Helper struct for passing some log entry info around. Other entry elements are fields of the
- * filter session. Fields are pointers to avoid unnecessary copies.
- */
-struct LogEventElems
-{
-    mxb::TimePoint         begin_time;
-    const std::string&     sql;
-    mxb::TimePoint         first_response_time;
-    mxb::TimePoint         last_response_time;
-    const mxs::Reply&      reply;
-    const mxs::ReplyRoute& down;
-
-
-    LogEventElems(mxb::TimePoint begin_time,
-                  const std::string& sql,
-                  mxb::TimePoint first_response_time,
-                  mxb::TimePoint last_response_time,
-                  const mxs::Reply& reply,
-                  const mxs::ReplyRoute& down)
-        : begin_time(begin_time)
-        , sql(sql)
-        , first_response_time(first_response_time)
-        , last_response_time(last_response_time)
-        , reply(reply)
-        , down(down)
-    {
-    }
+    std::string generate_log_entry(uint64_t data_flags, const Query& query,
+                                   const mxs::Reply& reply, const mxs::ReplyRoute& down);
+    bool should_activate();
 };

@@ -445,7 +445,9 @@ bool QlaInstance::LogManager::match_exclude(const char* sql, int len)
  *
  * @params elems Log entry contents
  */
-void QlaFilterSession::write_log_entries(const LogEventElems& elems)
+void QlaFilterSession::write_log_entries(const Query& query,
+                                         const mxs::Reply& reply,
+                                         const mxs::ReplyRoute& down)
 {
     if (m_log->settings().write_session_log)
     {
@@ -458,7 +460,7 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 
         if (m_sSession_file)
         {
-            string entry = generate_log_entry(m_log->settings().session_data_flags, elems);
+            string entry = generate_log_entry(m_log->settings().session_data_flags, query, reply, down);
             write_session_log_entry(entry);
         }
     }
@@ -466,7 +468,7 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
     if (m_log->settings().write_unified_log || m_log->settings().write_stdout_log)
     {
         string unified_log_entry =
-            generate_log_entry(m_log->settings().log_file_data_flags, elems);
+            generate_log_entry(m_log->settings().log_file_data_flags, query, reply, down);
 
         if (m_log->settings().write_unified_log)
         {
@@ -482,66 +484,75 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 
 bool QlaFilterSession::routeQuery(GWBUF&& queue)
 {
+    if (!m_active)
+    {
+        return mxs::FilterSession::routeQuery(std::move(queue));
+    }
+
     std::string_view query = parser().get_sql(queue);
 
-    if (m_active && !query.empty() && (m_matched = m_log->match_exclude(query.data(), query.length())))
+    Query q;
+    q.matched = !query.empty() && m_log->match_exclude(query.data(), query.length());
+
+    if (q.matched)
     {
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
 
-        m_first_reply = true;
-        m_qc_type_mask = 0;     // only set if needed
+        q.first_reply = true;
+        q.qc_type_mask = 0;         // only set if needed
 
-        m_sql = m_log->settings().use_canonical_form ?
+        q.sql = m_log->settings().use_canonical_form ?
             parser().get_canonical(queue) : parser().get_sql(queue);
 
-        m_begin_time = m_pSession->worker()->epoll_tick_now();
+        q.begin_time = m_pSession->worker()->epoll_tick_now();
 
         if (data_flags & (QlaInstance::LOG_DATA_TRANSACTION | QlaInstance::LOG_DATA_TRANSACTION_DUR))
         {
-            m_qc_type_mask = parser().get_type_mask(queue);
+            q.qc_type_mask = parser().get_type_mask(queue);
 
-            if (m_qc_type_mask & mxs::sql::TYPE_BEGIN_TRX)
+            if (q.qc_type_mask & mxs::sql::TYPE_BEGIN_TRX)
             {
-                m_trx_begin_time = m_begin_time;
+                q.trx_begin_time = q.begin_time;
             }
         }
 
         if (data_flags & QlaInstance::LOG_DATA_DATE)
         {
-            using namespace std::chrono;
-            auto now = wall_time::Clock::now();
-            auto current_second = duration_cast<seconds>(now.time_since_epoch());
-            if (current_second != m_last_wall_second)
-            {
-                m_last_wall_second = current_second;
-                m_wall_time_str = wall_time::to_string(now, "%F %T");
-            }
+            q.wall_time = wall_time::Clock::now();
         }
     }
+
+    m_queue.push_back(std::move(q));
     /* Pass the query downstream */
     return mxs::FilterSession::routeQuery(std::move(queue));
 }
 
 bool QlaFilterSession::clientReply(GWBUF&& queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (m_active)
+    if (!m_active)
     {
-        if (m_first_reply)
+        return mxs::FilterSession::clientReply(std::move(queue), down, reply);
+    }
+
+    if (!m_queue.empty())
+    {
+        auto& q = m_queue.front();
+
+        if (q.first_reply)
         {
-            m_first_response_time = m_pSession->worker()->epoll_tick_now();
-            m_first_reply = false;
+            q.first_response_time = m_pSession->worker()->epoll_tick_now();
+            q.first_reply = false;
         }
 
-        if (reply.is_complete() & m_matched)
+        if (reply.is_complete())
         {
-            LogEventElems elems(m_begin_time,
-                                m_sql,
-                                m_first_response_time,
-                                m_pSession->worker()->epoll_tick_now(),
-                                reply,
-                                down);
+            if (q.matched)
+            {
+                q.last_response_time = m_pSession->worker()->epoll_tick_now();
+                write_log_entries(q, reply, down);
+            }
 
-            write_log_entries(elems);
+            m_queue.pop_front();
         }
     }
 
@@ -704,7 +715,8 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     return header.str();
 }
 
-string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventElems& elems)
+string QlaFilterSession::generate_log_entry(uint64_t data_flags, const Query& q,
+                                            const mxs::Reply& reply, const mxs::ReplyRoute& down)
 {
     /* Printing to the file in parts would likely cause garbled printing if several threads write
      * simultaneously, so we have to first print to a string. */
@@ -724,7 +736,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_DATE)
     {
-        output << curr_sep << m_wall_time_str;
+        output << curr_sep << wall_time::to_string(q.wall_time, "%F %T");
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_USER)
@@ -734,7 +746,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
-        auto secs = mxb::to_secs(elems.first_response_time - elems.begin_time);
+        auto secs = mxb::to_secs(q.first_response_time - q.begin_time);
         output << curr_sep << int(m_log->settings().duration_multiplier * secs + 0.5);
         curr_sep = real_sep;
     }
@@ -743,14 +755,14 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
         output << curr_sep;
         if (!m_log->settings().query_newline.empty())
         {
-            print_string_replace_newlines(elems.sql.data(), elems.sql.length(),
+            print_string_replace_newlines(q.sql.data(), q.sql.length(),
                                           m_log->settings().query_newline.c_str(),
                                           &output);
         }
         else
         {
             // The newline replacement is an empty string so print the query as is
-            output.write(elems.sql.data(), elems.sql.length());
+            output.write(q.sql.data(), q.sql.length());
         }
         curr_sep = real_sep;
     }
@@ -764,32 +776,32 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_TOTAL_REPLY_TIME)
     {
-        auto secs = mxb::to_secs(elems.last_response_time - elems.begin_time);
+        auto secs = mxb::to_secs(q.last_response_time - q.begin_time);
         output << curr_sep << int(m_log->settings().duration_multiplier * secs + 0.5);
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_NUM_ROWS)
     {
-        output << curr_sep << elems.reply.rows_read();
+        output << curr_sep << reply.rows_read();
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_REPLY_SIZE)
     {
-        output << curr_sep << elems.reply.size();
+        output << curr_sep << reply.size();
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_TRANSACTION)
     {
         output << curr_sep;
-        if (m_qc_type_mask & mxs::sql::TYPE_BEGIN_TRX)
+        if (q.qc_type_mask & mxs::sql::TYPE_BEGIN_TRX)
         {
             output << "BEGIN";
         }
-        else if (m_qc_type_mask & mxs::sql::TYPE_COMMIT)
+        else if (q.qc_type_mask & mxs::sql::TYPE_COMMIT)
         {
             output << "COMMIT";
         }
-        else if (m_qc_type_mask & mxs::sql::TYPE_ROLLBACK)
+        else if (q.qc_type_mask & mxs::sql::TYPE_ROLLBACK)
         {
             output << "ROLLBACK";
         }
@@ -798,33 +810,33 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     if (data_flags & QlaInstance::LOG_DATA_TRANSACTION_DUR)
     {
         output << curr_sep;
-        if (m_qc_type_mask & mxs::sql::TYPE_COMMIT)
+        if (q.qc_type_mask & mxs::sql::TYPE_COMMIT)
         {
-            auto secs = mxb::to_secs(elems.last_response_time - m_trx_begin_time);
+            auto secs = mxb::to_secs(q.last_response_time - q.trx_begin_time);
             output << int(m_log->settings().duration_multiplier * secs + 0.5);
         }
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_NUM_WARNINGS)
     {
-        output << curr_sep << elems.reply.num_warnings();
+        output << curr_sep << reply.num_warnings();
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_ERR_MSG)
     {
         output << curr_sep;
-        if (elems.reply.error())
+        if (reply.error())
         {
-            output << elems.reply.error().message();
+            output << reply.error().message();
         }
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_SERVER)
     {
         output << curr_sep;
-        if (!elems.down.empty())
+        if (!down.empty())
         {
-            output << elems.down.first()->target()->name();
+            output << down.first()->target()->name();
         }
         curr_sep = real_sep;
     }
