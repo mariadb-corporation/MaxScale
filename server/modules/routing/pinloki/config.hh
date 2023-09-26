@@ -30,6 +30,9 @@
 namespace pinloki
 {
 
+bool has_extension(const std::string& file_name, const std::string& ext);
+void strip_extension(std::string& file_name, const std::string& ext);
+
 std::string gen_uuid();
 
 class BinlogIndexUpdater final

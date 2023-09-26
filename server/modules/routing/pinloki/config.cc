@@ -187,6 +187,28 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
 }
 }
 
+bool has_extension(const std::string& file_name, const std::string& ext)
+{
+    if (auto pos = file_name.find_last_of(".");
+        pos != std::string::npos
+        && file_name.substr(pos + 1, std::string::npos) == ext)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void strip_extension(std::string& file_name, const std::string& ext)
+{
+    if (has_extension(file_name, ext))
+    {
+        file_name.resize(file_name.size() - ext.size() - 1);
+    }
+}
+
 // static
 const mxs::config::Specification* Config::spec()
 {
