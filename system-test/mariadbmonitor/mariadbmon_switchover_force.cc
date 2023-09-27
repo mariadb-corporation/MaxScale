@@ -21,7 +21,7 @@ void test_main(TestConnections& test)
     auto& mxs = *test.maxscale;
     auto master = mxt::ServerInfo::master_st;
     auto slave = mxt::ServerInfo::slave_st;
-    auto normal_status = {master, slave, slave, slave};
+    auto normal_status = mxt::ServersInfo::default_repl_states();
     mxs.check_print_servers_status(normal_status);
 
     if (test.ok())
@@ -87,6 +87,80 @@ void test_main(TestConnections& test)
         admin_conn = mxs.open_rwsplit_connection2_nodb();
         admin_conn->cmd("drop table test.t1;");
         admin_conn->cmd_f("drop user %s;", lock_user);
+
+        if (test.ok())
+        {
+            // MXS-4743
+            test.tprintf("Test that switchover-force switches even with a lagging slave.");
+            auto& repl = *test.repl;
+            auto down = mxt::ServerInfo::DOWN;
+            repl.backend(2)->stop_database();
+            repl.backend(3)->stop_database();
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status({master, slave, down, down});
+
+            if (test.ok())
+            {
+                auto conn = repl.backend(1)->open_connection();
+                auto set_delay = [&conn](int delay) {
+                    conn->cmd("stop slave;");
+                    conn->cmd_f("change master to master_delay=%i;", delay);
+                    conn->cmd("start slave;");
+                };
+
+                set_delay(100);
+                mxs.wait_for_monitor();
+                auto rwsplit_conn = mxs.open_rwsplit_connection2_nodb();
+                rwsplit_conn->cmd("flush tables;");
+                sleep(1);
+                auto servers = mxs.get_servers();
+                auto master_gtid = servers.get(0).gtid;
+                auto slave_gtid = servers.get(1).gtid;
+                test.expect(master_gtid != slave_gtid, "Slave is not lagging as it should.");
+
+                if (test.ok())
+                {
+                    test.tprintf("Replication delay set.");
+                    servers.print();
+                    test.tprintf("Trying normal switchover, it should fail.");
+
+                    mxb::StopWatch timer;
+                    res = mxs.maxctrl("-t 20s call command mariadbmon switchover MariaDB-Monitor server2");
+                    test.expect(res.rc != 0, "Normal switchover succeeded when it should have failed.");
+                    auto failtime = mxb::to_secs(timer.lap());
+                    double failtime_expected = 1.1;
+                    test.expect(failtime < failtime_expected,
+                                "Normal switchover only waited %.1f seconds when %.1f or less was expected.",
+                                failtime, failtime_expected);
+
+                    mxs.wait_for_monitor(1);
+                    mxs.check_print_servers_status({master, slave, down, down});
+
+                    if (test.ok())
+                    {
+                        test.tprintf("Trying forced switchover, it should succeed.");
+                        timer.restart();
+                        res = mxs.maxctrl("-t 20s call command mariadbmon switchover-force MariaDB-Monitor "
+                                          "server2");
+                        test.expect(res.rc == 0, "switchover-force failed: %s", res.output.c_str());
+                        auto dur_s = mxb::to_secs(timer.lap());
+                        double dur_s_expected = 4.9;
+                        test.expect(dur_s > dur_s_expected,
+                                    "Normal switchover only waited %.1f seconds when %.1f was expected.",
+                                    dur_s, dur_s_expected);
+                    }
+                }
+            }
+
+            repl.backend(2)->start_database();
+            repl.backend(3)->start_database();
+
+            // Replication is messed up, reset it.
+            mxs.wait_for_monitor(1);
+            mxs.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status(normal_status);
+        }
     }
 }
 }
