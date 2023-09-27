@@ -530,8 +530,9 @@ static void sigfatal_handler(int i)
     }
 
     thread_local std::string msg;
+    bool using_gdb = this_unit.use_gdb && mxb::have_gdb();
 
-    if (this_unit.use_gdb && mxb::have_gdb())
+    if (using_gdb)
     {
         mxb::dump_gdb_stacktrace(
             [](const char* line) {
@@ -559,6 +560,22 @@ static void sigfatal_handler(int i)
     }
 
     mxb_log_fatal_error(msg.c_str());
+
+    // If we get a SIGABRT, it's either a debug assertion or a SystemD watchdog timeout. If it's a debug
+    // assertion the output isn't really needed but for the watchdog timeouts the stacktraces of the other
+    // threads are very valuable as the signal is practically never caught by the offending thread.
+    if (!using_gdb && i == SIGABRT)
+    {
+        MXB_NOTICE("GDB not found, attempting to dump stacktraces from "
+                   "all threads using internal profiler...");
+        std::string dumped = mxs::Profiler::get().stacktrace();
+        mxb_log_fatal_error(dumped.c_str());
+
+        if (this_unit.print_stacktrace_to_stdout)
+        {
+            cerr << dumped << endl;
+        }
+    }
 
     cerr << "Writing core dump." << endl;
     /* re-raise signal to enforce core dump */

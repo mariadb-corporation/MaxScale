@@ -268,4 +268,11 @@ bool have_gdb()
     int rc = system("command -v gdb > /dev/null");
     return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 }
+
+std::string addr_to_symbol(void* addr)
+{
+    char symname[PATH_MAX + 1024] = "";
+    extract_file_and_line(addr, symname, sizeof(symname));
+    return symname;
+}
 }

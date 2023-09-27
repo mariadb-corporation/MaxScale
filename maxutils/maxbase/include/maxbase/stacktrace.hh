@@ -67,4 +67,13 @@ void dump_gdb_stacktrace(void (* handler)(const char* output) = default_gdb_stac
  * @return True if GDB can be invoked with the system() function
  */
 bool have_gdb();
+
+/**
+ * Get the demangled symbol name of the address
+ *
+ * @param addr Address to resolve
+ *
+ * @return The demangled symbol name
+ */
+std::string addr_to_symbol(void* addr);
 }

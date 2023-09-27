@@ -15,6 +15,7 @@
 
 #include <maxbase/string.hh>
 #include <maxbase/random.hh>
+#include <maxbase/stacktrace.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
 
@@ -179,5 +180,26 @@ json_t* Profiler::snapshot(const char* host)
     }
 
     return mxs_json_resource(host, "/maxscale/debug/profile", obj);
+}
+
+std::string Profiler::stacktrace()
+{
+    std::ostringstream ss;
+    int num_samples = collect_samples();
+
+    for (int i = 0; i < num_samples; i++)
+    {
+        ss << "Thread " << (i + 1) << "\n";
+        const Sample& s = m_samples[i];
+
+        for (int n = 0; n < s.count; n++)
+        {
+            ss << mxb::addr_to_symbol(s.stack[n]) << "\n";
+        }
+
+        ss << "\n";
+    }
+
+    return ss.str();
 }
 }
