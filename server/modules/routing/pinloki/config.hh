@@ -15,6 +15,7 @@
 #pragma once
 
 #include "gtid.hh"
+#include "shared_binlogs.hh"
 
 #include <maxscale/ccdefs.hh>
 
@@ -127,6 +128,8 @@ public:
 
     static const maxbase::TempDirectory& pinloki_temp_dir();
 
+    const SharedBinlogFile& shared_binlog_file() const;
+
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
@@ -182,5 +185,11 @@ private:
     std::function<bool()> m_cb;
 
     std::unique_ptr<BinlogIndexUpdater> m_binlog_files;
+    SharedBinlogFile m_shared_binlog_file;
 };
+
+inline const SharedBinlogFile &Config::shared_binlog_file() const
+{
+    return m_shared_binlog_file;
+}
 }
