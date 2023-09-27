@@ -67,7 +67,7 @@ private:
     struct ReadPosition
     {
         std::string                 rotate_name;    // the file name as read from the binlog
-        std::unique_ptr<BinlogFile> sBinlog = nullptr;
+        std::shared_ptr<BinlogFile> sBinlog;
         std::ifstream               file;
         int64_t                     next_pos;
     };

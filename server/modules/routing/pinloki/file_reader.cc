@@ -112,7 +112,7 @@ FileReader::~FileReader()
 void FileReader::open(const std::string& rotate_name)
 {
     auto previous_pos = std::move(m_read_pos);
-    m_read_pos.sBinlog = std::make_unique<BinlogFile>(rotate_name);
+    m_read_pos.sBinlog = m_inventory.config().shared_binlog_file().binlog_file(rotate_name);
     m_read_pos.file = m_read_pos.sBinlog->make_ifstream();
 
     if (!m_read_pos.file.good())
