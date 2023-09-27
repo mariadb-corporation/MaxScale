@@ -24,6 +24,7 @@ import MxsTimeoutInput from '@wsSrc/components/common/MxsTimeoutInput/'
 import MxsTreeview from '@wsSrc/components/common/MxsTreeview'
 import MxsLabelField from '@wsSrc/components/common/MxsLabelField'
 import MxsUidInput from '@wsSrc/components/common/MxsUidInput'
+import MxsVirtualTable from '@wsSrc/components/common/MxsVirtualTable'
 import MxsVirtualScrollTbl from '@wsSrc/components/common/MxsVirtualScrollTbl'
 
 // export to register in @share dir for dev env
@@ -39,6 +40,7 @@ export const workspaceComponents = {
     'mxs-label-field': MxsLabelField,
     'mxs-uid-input': MxsUidInput,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
+    'mxs-virtual-table': MxsVirtualTable,
     'mxs-sql-editor': MxsSqlEditor,
 }
 export default {
