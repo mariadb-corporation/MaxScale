@@ -16,6 +16,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/diskspace.hh>
 #include <mysql.h>
+#include <optional>
 
 namespace maxscale
 {
@@ -32,14 +33,12 @@ using DiskSizeMap = std::map<std::string, disk::SizesAndName>;
  * which is available from 10.1.32, 10.2.14 and 10.3.6 onwards.
  *
  * @param pMysql  A valid handle to some server.
- * @param pInfo   [out] Filled with disk space information, ordered by path.
+ * @return Valid map object if successful.
  *
- * @return 0 if successful.
- *
- * @attn If the function returns a non-zero value and @c mysql_errno(pMysql)
+ * @attn If the function returns a failure and @c mysql_errno(pMysql)
  *       subsequently returns ER_UNKNOWN_TABLE(1109) then either the server
  *       version is too old or the plugin @c DISKS has not been installed.
  */
-int get_info_by_path(MYSQL* pMysql, DiskSizeMap* pInfo);
+std::optional<DiskSizeMap> get_info_by_path(MYSQL* pMysql);
 }
 }

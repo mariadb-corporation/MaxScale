@@ -20,12 +20,13 @@ namespace maxscale
 namespace disk
 {
 
-int get_info_by_path(MYSQL* pMysql, DiskSizeMap* pInfo)
+std::optional<DiskSizeMap> get_info_by_path(MYSQL* pMysql)
 {
-    pInfo->clear();
+    std::optional<DiskSizeMap> rval;
     int rv = mysql_query(pMysql, "SELECT Disk, Path, Total, Used, Available FROM information_schema.disks");
     if (rv == 0)
     {
+        DiskSizeMap sizes;
         MYSQL_RES* pResult = mysql_store_result(pMysql);
 
         if (pResult)
@@ -47,15 +48,16 @@ int get_info_by_path(MYSQL* pMysql, DiskSizeMap* pInfo)
 
                 const char* zDisk = row[0];
                 const char* zPath = row[1];
-                pInfo->insert(
+                sizes.insert(
                     std::make_pair(zPath, mxs::disk::SizesAndName(total, used, available, zDisk)));
             }
 
             mysql_free_result(pResult);
         }
+        rval = std::move(sizes);
     }
 
-    return rv;
+    return rval;
 }
 }
 }

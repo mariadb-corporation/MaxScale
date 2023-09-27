@@ -2030,15 +2030,10 @@ bool MonitorServer::can_update_disk_space_status() const
 
 void MariaServer::update_disk_space_status()
 {
-    auto pMs = this;    // TODO: Clean
-    std::map<std::string, disk::SizesAndName> info;
-
-    int rv = disk::get_info_by_path(pMs->con, &info);
-
-    if (rv == 0)
+    if (const auto info = disk::get_info_by_path(con); info.has_value())
     {
         // Server-specific setting takes precedence.
-        auto dst = pMs->server->get_disk_space_limits();
+        auto dst = server->get_disk_space_limits();
         if (dst.empty())
         {
             dst = m_shared.monitor_disk_limits;
@@ -2050,7 +2045,7 @@ void MariaServer::update_disk_space_status()
 
         for (const auto& dst_item : dst)
         {
-            string path = dst_item.first;
+            const string& path = dst_item.first;
             int32_t max_percentage = dst_item.second;
 
             if (path == "*")
@@ -2059,29 +2054,27 @@ void MariaServer::update_disk_space_status()
             }
             else
             {
-                auto j = info.find(path);
+                auto j = info->find(path);
 
-                if (j != info.end())
+                if (j != info->end())
                 {
                     const disk::SizesAndName& san = j->second;
 
-                    disk_space_exhausted = check_disk_space_exhausted(pMs, path, san, max_percentage);
+                    disk_space_exhausted = check_disk_space_exhausted(this, path, san, max_percentage);
                     checked_paths.insert(path);
                 }
                 else
                 {
                     MXB_WARNING("Disk space threshold specified for %s even though server %s at %s"
                                 "does not have that.",
-                                path.c_str(),
-                                pMs->server->name(),
-                                pMs->server->address());
+                                path.c_str(), server->name(), server->address());
                 }
             }
         }
 
         if (star_max_percentage != -1)
         {
-            for (auto j = info.begin(); j != info.end(); ++j)
+            for (auto j = info->begin(); j != info->end(); ++j)
             {
                 string path = j->first;
 
@@ -2089,25 +2082,25 @@ void MariaServer::update_disk_space_status()
                 {
                     const disk::SizesAndName& san = j->second;
 
-                    disk_space_exhausted = check_disk_space_exhausted(pMs, path, san, star_max_percentage);
+                    disk_space_exhausted = check_disk_space_exhausted(this, path, san, star_max_percentage);
                 }
             }
         }
 
         if (disk_space_exhausted)
         {
-            pMs->m_pending_status |= SERVER_DISK_SPACE_EXHAUSTED;
+            m_pending_status |= SERVER_DISK_SPACE_EXHAUSTED;
         }
         else
         {
-            pMs->m_pending_status &= ~SERVER_DISK_SPACE_EXHAUSTED;
+            m_pending_status &= ~SERVER_DISK_SPACE_EXHAUSTED;
         }
     }
     else
     {
-        SERVER* pServer = pMs->server;
+        SERVER* pServer = server;
 
-        if (mysql_errno(pMs->con) == ER_UNKNOWN_TABLE)
+        if (mysql_errno(con) == ER_UNKNOWN_TABLE)
         {
             // Disable disk space checking for this server.
             m_ok_to_check_disk_space = false;
@@ -2122,10 +2115,7 @@ void MariaServer::update_disk_space_status()
         else
         {
             MXB_ERROR("Checking the disk space for %s at %s failed due to: (%d) %s",
-                      pServer->name(),
-                      pServer->address(),
-                      mysql_errno(pMs->con),
-                      mysql_error(pMs->con));
+                      pServer->name(), pServer->address(), mysql_errno(con), mysql_error(con));
         }
     }
 }
