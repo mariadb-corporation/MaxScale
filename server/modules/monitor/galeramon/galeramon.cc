@@ -150,6 +150,53 @@ json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
     return obj;
 }
 
+std::string GaleraMonitor::annotate_state_change(mxs::MonitorServer* server)
+{
+    std::ostringstream ss;
+    auto prev = m_prev_info.find(server);
+    auto next = m_info.find(server);
+
+    if (prev != m_prev_info.end() && next != m_info.end() && server->server->is_running())
+    {
+        if (prev->second.local_state != next->second.local_state)
+        {
+            ss << "local_state: " << prev->second.local_state << " -> " << next->second.local_state << " ";
+        }
+
+        if (prev->second.local_index != next->second.local_index)
+        {
+            ss << "local_index: " << prev->second.local_index << " -> " << next->second.local_index << " ";
+        }
+
+        if (prev->second.server_id != next->second.server_id)
+        {
+            ss << "server_id: " << prev->second.server_id << " -> " << next->second.server_id << " ";
+        }
+
+        if (prev->second.joined != next->second.joined)
+        {
+            ss << "joined: " << prev->second.joined << " -> " << next->second.joined << " ";
+        }
+
+        if (prev->second.cluster_size != next->second.cluster_size)
+        {
+            ss << "cluster_size: " << prev->second.cluster_size << " -> " << next->second.cluster_size << " ";
+        }
+
+        if (prev->second.cluster_uuid != next->second.cluster_uuid)
+        {
+            ss << "cluster_uuid: '" << prev->second.cluster_uuid << "' -> '" << next->second.cluster_uuid << "' ";
+        }
+
+        if (prev->second.comment != next->second.comment)
+        {
+            ss << "state_comment: '" << prev->second.comment << "' -> '" << next->second.comment << "' ";
+        }
+    }
+
+    return ss.str();
+}
+
 bool GaleraMonitor::configure(const mxs::ConfigParameters* params)
 {
     if (!MonitorWorkerSimple::configure(params))
