@@ -458,6 +458,12 @@ public:
         return rv;
     }
 
+    void clear()
+    {
+        std::lock_guard<std::mutex> guard(m_lock);
+        return m_registry.clear();
+    }
+
 private:
     std::mutex                     m_lock;
     std::unordered_map<Key, Stats> m_registry;
@@ -632,6 +638,11 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
                    this_unit.throttling.window_ms,
                    this_unit.throttling.suppress_ms);
     }
+}
+
+void mxb_log_reset_suppression()
+{
+    this_unit.sMessage_registry->clear();
 }
 
 void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)

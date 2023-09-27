@@ -776,6 +776,7 @@ Config::Config(int argc, char** argv)
                 }),
     log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
                        mxb_log_set_throttling(&throttling);
+                       mxb_log_reset_suppression();
                    }),
     dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
                         session_set_dump_statements(when);
