@@ -44,37 +44,6 @@ using Timepoint = Clock::time_point;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-namespace
-{
-std::vector<cdc::Server> service_to_servers(SERVICE* service)
-{
-    std::vector<cdc::Server> servers;
-
-    // Since this isn't a worker thread, execute it on one
-    mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->call(
-        [&]() {
-        // TODO: per-server credentials aren't exposed in the public class
-        const auto& cfg = *service->config();
-        auto pw = mxs::decrypt_password(cfg.password);
-
-        for (auto s : service->reachable_servers())
-        {
-            if (s->is_master())
-            {
-                if (s->is_master() || status_is_blr(s->status()))
-                {
-                    // TODO: per-server credentials aren't exposed in the public class
-                    const auto& cfg = *service->config();
-                    servers.push_back({s->address(), s->port(), cfg.user, pw});
-                }
-            }
-        }
-    }, mxs::RoutingWorker::EXECUTE_AUTO);
-
-    return servers;
-}
-}
-
 namespace cdc
 {
 
@@ -104,13 +73,13 @@ private:
     static const std::string STATEFILE_NAME;
     static const std::string STATEFILE_TMP_SUFFIX;
 
+    void update_server_status();
     bool connect();
     void process_events();
     void update_gtid();
     bool process_one_event(SQL::Event& event);
     bool load_gtid_state();
     void save_gtid_state() const;
-    bool is_owner() const;
     void wait();
 
     static GtidList    parse_gtid_list(const std::string& gtid_list_str);
@@ -126,6 +95,10 @@ private:
     bool                 m_implicit_commit {false}; // Commit after next query event
     Rpl                  m_rpl;                     // Class that handles the replicated events
     int                  m_state_fd {-1};           // File handle to GTID state file
+    std::atomic<bool>    m_is_owner {true};
+
+    // Access to this is protected by m_lock
+    std::vector<cdc::Server> m_servers;
 
     std::mutex              m_lock;
     std::condition_variable m_cv;
@@ -152,10 +125,45 @@ bool Replicator::Imp::ok() const
     return m_running;
 }
 
+void Replicator::Imp::update_server_status()
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    bool owner = true;
+
+    if (m_cnf.cooperate)
+    {
+        if (auto* cluster = m_cnf.service->cluster())
+        {
+            owner = cluster->is_running() && cluster->is_cluster_owner();
+        }
+    }
+
+    m_is_owner.store(owner);
+
+    // TODO: per-server credentials aren't exposed in the public class
+    SERVICE* service = m_cnf.service;
+    const auto& cfg = *service->config();
+    auto pw = mxs::decrypt_password(cfg.password);
+
+    std::unique_lock<std::mutex> guard(m_lock);
+    m_servers.clear();
+
+    for (auto s : service->reachable_servers())
+    {
+        if (s->is_master() || status_is_blr(s->status()))
+        {
+            // TODO: per-server credentials aren't exposed in the public class
+            const auto& cfg = *service->config();
+            m_servers.push_back({s->address(), s->port(), cfg.user, pw});
+        }
+    }
+}
+
 bool Replicator::Imp::connect()
 {
+    std::unique_lock<std::mutex> guard(m_lock);
     cdc::Server old_server = {};
-    auto servers = service_to_servers(m_cnf.service);
 
     if (m_sql)
     {
@@ -163,7 +171,7 @@ bool Replicator::Imp::connect()
 
         if (!m_sql->errnum())
         {
-            for (const auto& a : servers)
+            for (const auto& a : m_servers)
             {
                 if (a.host == old_server.host && a.port == old_server.port)
                 {
@@ -175,6 +183,9 @@ bool Replicator::Imp::connect()
 
         m_sql.reset();
     }
+
+    auto servers = m_servers;
+    guard.unlock();
 
     bool rval = false;
     std::string err;
@@ -254,24 +265,6 @@ void Replicator::Imp::update_gtid()
     }
 }
 
-bool Replicator::Imp::is_owner() const
-{
-    bool is_owner = true;
-
-    if (m_cnf.cooperate)
-    {
-        mxs::MainWorker::get()->call(
-            [&]() {
-            if (const auto* cluster = m_cnf.service->cluster())
-            {
-                is_owner = cluster->is_running() && cluster->is_cluster_owner();
-            }
-        }, mxs::MainWorker::EXECUTE_AUTO);
-    }
-
-    return is_owner;
-}
-
 void Replicator::Imp::wait()
 {
     std::unique_lock<std::mutex> guard(m_lock);
@@ -294,9 +287,23 @@ void Replicator::Imp::process_events()
     m_rpl.load_metadata(m_cnf.statedir);
     update_gtid();
 
+    mxs::MainWorker* main_worker = mxs::MainWorker::get();
+    mxs::MainWorker::DCId dcid;
+
+    main_worker->call([&](){
+        // Get the initial servers before we try to connect
+        update_server_status();
+
+        // Also request the servers to be updated once per second
+        dcid = main_worker->dcall(1s, [this](){
+            update_server_status();
+            return true;
+        });
+    }, mxb::Worker::EXECUTE_AUTO);
+
     while (m_running)
     {
-        if (!is_owner())
+        if (!m_is_owner)
         {
             if (was_active)
             {
@@ -392,6 +399,10 @@ void Replicator::Imp::process_events()
             break;
         }
     }
+
+    main_worker->call([&](){
+        main_worker->cancel_dcall(dcid);
+    }, mxb::Worker::EXECUTE_AUTO);
 
     if (m_state_fd != -1)
     {
