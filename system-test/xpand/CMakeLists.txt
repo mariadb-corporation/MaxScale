@@ -22,3 +22,7 @@ add_test_executable_ex(NAME xpand_repl SOURCE xpand_repl.cc CONFIG xpand_basics.
 # MXS-3934, MXS-3938
 add_test_executable_ex(NAME xpand_runtime_config SOURCE xpand_runtime_config.cc
         CONFIG xpand_runtime_config.cnf VMS xpand_backend LABELS xpand)
+
+# MXS-4750
+add_test_executable_ex(NAME mxs4750_xpand_hostnames_static SOURCE mxs4750_xpand_hostnames_static.cc
+        CONFIG mxs4750_xpand_hostnames_static.cnf VMS xpand_backend LABELS xpand)
