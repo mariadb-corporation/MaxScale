@@ -130,10 +130,9 @@ cfg::ParamBool s_replication_master_ssl(
     "Enable SSL when configuring replication",
     false, cfg::Param::AT_RUNTIME);
 
-cfg::ParamString s_replication_custom_opts(
+cfg::ParamReplOpts s_replication_custom_opts(
     &s_spec, "replication_custom_options",
-    "Custom CHANGE MASTER TO options",
-    "", cfg::Param::AT_RUNTIME);
+    "Custom CHANGE MASTER TO options", cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_verify_master_failure(
     &s_spec, CN_VERIFY_MASTER_FAILURE,

@@ -2416,5 +2416,66 @@ bool ParamPassword::from_json(const json_t* pJson, value_type* pValue, std::stri
 
     return ok;
 }
+
+bool ParamReplOpts::from_string(const std::string& value, value_type* pValue, std::string* pMessage) const
+{
+    bool rval = ParamString::from_string(value, pValue, pMessage);
+    if (rval)
+    {
+        string errmsg = check_value(value);
+        if (!errmsg.empty())
+        {
+            if (pMessage)
+            {
+                *pMessage = errmsg;
+            }
+            rval = false;
+        }
+    }
+    return rval;
+}
+
+bool ParamReplOpts::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
+{
+    bool rval = ParamString::from_json(pJson, pValue, pMessage);
+    if (rval)
+    {
+        string errmsg = check_value(*pValue);
+        if (!errmsg.empty())
+        {
+            if (pMessage)
+            {
+                *pMessage = errmsg;
+            }
+            rval = false;
+        }
+    }
+    return rval;
+}
+
+std::string ParamReplOpts::check_value(const string& value) const
+{
+
+    string errmsg;
+    if (!value.empty())
+    {
+        // For now, just check that the last letter is not ';' or ',', this is an easy error to make.
+        for (auto it = value.rbegin(); it != value.rend(); ++it)
+        {
+            char c = *it;
+            if (isspace(c))
+            {
+                continue;
+            }
+
+            if (c == ';' || c == ',')
+            {
+                errmsg = mxb::string_printf("The last character is '%c', which should be left out.", c);
+            }
+            break;
+        }
+    }
+    return errmsg;
+}
 }
 }

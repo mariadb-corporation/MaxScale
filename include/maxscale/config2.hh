@@ -2066,6 +2066,31 @@ public:
                       std::string* pMessage = nullptr) const override;
 };
 
+class ParamReplOpts : public ParamString
+{
+public:
+    ParamReplOpts(Specification* pSpecification, const char* zName, const char* zDescription,
+                  Modifiable modifiable)
+        : ParamReplOpts(pSpecification, zName, zDescription, modifiable, value_type())
+    {
+    }
+
+    bool
+    from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const override;
+
+    bool
+    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const override;
+
+private:
+    ParamReplOpts(Specification* pSpecification, const char* zName, const char* zDescription,
+                  Modifiable modifiable, value_type default_value)
+        : ParamString(pSpecification, zName, zDescription, default_value, modifiable)
+    {
+    }
+
+    std::string check_value(const std::string& value) const;
+};
+
 /**
  * ParamBitMask
  */
