@@ -304,6 +304,11 @@ void Replicator::Imp::process_events()
                 MXB_NOTICE("Cluster used by service '%s' lost ownership.", m_cnf.service->name());
             }
 
+            if (m_should_stop)
+            {
+                break;
+            }
+
             m_sql.reset();
             wait();
             continue;
