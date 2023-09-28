@@ -1241,11 +1241,12 @@ void XpandMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
+        string address = pMs->server->address();
         unordered_set<string> ips;
         string error;
-        if (!mxb::name_lookup(pMs->server->address(), &ips, &error))
+        if (!mxb::name_lookup(address, &ips, &error))
         {
-            MXB_SERROR("Could not lookup address '" << pMs->server->address()
+            MXB_SERROR("Could not lookup address '" << address
                        << "', status of bootstrap node '"
                        << pMs->server->name() << "' may be incorrectly reported: "
                        << error);
@@ -1253,13 +1254,22 @@ void XpandMonitor::update_server_statuses()
             // Insert the address just like that, in case the name lookup
             // failed for some random reason and the address happens to
             // already be an IP-address.
-            ips.insert(pMs->server->address());
+            ips.insert(address);
         }
 
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [&ips](const std::pair<int, XpandNode>& element) -> bool {
+                          [&address, &ips](const std::pair<int, XpandNode>& element) -> bool {
                               const XpandNode& info = element.second;
-                              return find(ips.begin(), ips.end(), info.ip()) != ips.end();
+                              // If dynamic_node_detection is false and hostnames are used, then
+                              // info.ip() will be the hostname and the following line will match.
+                              bool rv = address == info.ip();
+                              if (!rv)
+                              {
+                                  // Otherwise we need to check whether any ip matches.
+                                  auto jt = find(ips.begin(), ips.end(), info.ip());
+                                  rv = jt != ips.end();
+                              }
+                              return rv;
                           });
 
         if (it != m_nodes_by_id.end())
