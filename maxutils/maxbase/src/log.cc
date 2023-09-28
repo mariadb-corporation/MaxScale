@@ -687,6 +687,7 @@ bool mxb_log_should_log(int priority)
 bool mxb_log_rotate()
 {
     bool rval = this_unit.sLogger->rotate();
+    this_unit.sMessage_registry->clear();
 
     if (this_unit.redirect_stdout && rval)
     {
