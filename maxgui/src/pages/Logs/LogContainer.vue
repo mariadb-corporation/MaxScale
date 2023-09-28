@@ -169,11 +169,7 @@ export default {
             if (!this.$refs.vsl) return
             this.checkOverFlow()
             // first page items are all mounted, scroll to bottom, execute below block once
-            if (
-                !this.isFirstPageReady &&
-                this.$refs.vsl.getSizes() >= this.logs_page_size &&
-                this.overflow
-            ) {
+            if (!this.isFirstPageReady && this.overflow) {
                 this.isFirstPageReady = true
                 this.setVirtualListToBottom()
             }
