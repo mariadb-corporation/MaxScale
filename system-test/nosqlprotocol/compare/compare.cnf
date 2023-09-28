@@ -1,0 +1,85 @@
+# Config suitable for the test-programs in this directory.
+
+[maxscale]
+threads=1
+
+[Server1]
+type=server
+protocol=mariadbbackend
+socket=/var/run/mysqld/mysqld.sock
+
+[Monitor1]
+type=monitor
+module=mariadbmon
+servers=Server1
+user=maxskysql
+password=skysql
+
+[Cache]
+type=filter
+module=cache
+cached_data=shared
+max_size=100M
+soft_ttl=300s
+hard_ttl=310s
+invalidate=current
+
+# Plain RWS
+[RWS1]
+type=service
+router=readwritesplit
+user=maxskysql
+password=skysql
+servers=Server1
+
+# Cached RWS
+[RWS2]
+type=service
+router=readwritesplit
+user=maxskysql
+password=skysql
+servers=Server1
+filters=Cache
+
+# Plain RWS
+[RWS3]
+type=service
+router=readwritesplit
+user=maxskysql
+password=skysql
+servers=Server1
+
+# Non-caching NoSQL listener for RWS1 (non-cached)
+[NoSQL-RWS1-NoCache-Listener]
+type=listener
+service=RWS1
+protocol=nosqlprotocol
+nosqlprotocol.user=USER
+nosqlprotocol.password=PASSWORD
+#nosqlprotocol.debug=in,out
+port=17017
+
+# Non-caching NoSQL listener for RWS2 (cached)
+[NoSQL-RWS2-NoCache-Listener]
+type=listener
+service=RWS2
+protocol=nosqlprotocol
+nosqlprotocol.user=USER
+nosqlprotocol.password=PASSWORD
+port=17018
+
+# Caching NoSQL listener for RWS3 (non-cached)
+[NoSQL-RWS3-Cache-Listener]
+type=listener
+service=RWS3
+protocol=nosqlprotocol
+nosqlprotocol.user=USER
+nosqlprotocol.password=PASSWORD
+nosqlprotocol.internal_cache=cache
+nosqlprotocol.cache.cached_data=shared
+nosqlprotocol.cache.max_size=100M
+nosqlprotocol.cache.soft_ttl=300s
+nosqlprotocol.cache.hard_ttl=310s
+nosqlprotocol.cache.invalidate=current
+#nosqlprotocol.cache.debug=31
+port=17019

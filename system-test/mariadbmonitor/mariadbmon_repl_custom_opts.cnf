@@ -1,0 +1,61 @@
+[maxscale]
+threads=###threads###
+
+[MariaDB-Monitor]
+type=monitor
+module=mariadbmon
+servers=###server_line###
+user=mariadbmon
+password=mariadbmon
+replication_user=ssl_replicator
+replication_password=ssl_replicator
+replication_master_ssl=true
+replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_common/client-cert.pem',
+                           MASTER_SSL_KEY = '/tmp/certs_common/client-key.pem',
+                           MASTER_SSL_CA = '/tmp/certs_common/ca.pem',
+                           MASTER_SSL_VERIFY_SERVER_CERT=0
+monitor_interval=1000ms
+switchover_timeout=5s
+slave_conditions=linked_master
+
+[RW-Split-Router]
+type=service
+router= readwritesplit
+servers=###server_line###
+user=maxservice
+password=maxservice
+
+[RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+protocol=mariadb
+port=4006
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_server1/client-cert.pem',
+                           MASTER_SSL_KEY = '/tmp/certs_server1/client-key.pem',
+                           MASTER_SSL_CA = '/tmp/certs_server1/ca.pem',
+                           MASTER_SSL_VERIFY_SERVER_CERT=0
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+replication_custom_options=MASTER_SSL_VERIFY_SERVER_CERT=1
+
+[server3]
+type=server
+address=###node_server_IP_3###
+port=###node_server_port_3###
+replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_server3/client-cert.pem',
+                           MASTER_SSL_KEY = '/tmp/certs_server3/client-key.pem',
+                           MASTER_SSL_CA = '/tmp/certs_server3/ca.pem',
+                           MASTER_SSL_VERIFY_SERVER_CERT=0
+
+[server4]
+type=server
+address=###node_server_IP_4###
+port=###node_server_port_4###

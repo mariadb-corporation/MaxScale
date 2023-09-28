@@ -77,8 +77,8 @@ async function compare_update(mongo, nosql, cars) {
 }
 
 async function run() {
-    var mongo = await await test.MDB.create(test.MngMongo, "compare");
-    var nosql = await await test.MDB.create(test.MxsMongo, "compare");
+    var mongo = await await test.NoSQL.create("compare", 27017);
+    var nosql = await await test.NoSQL.create("compare", 17017);
 
     const cars = load_cars();
 

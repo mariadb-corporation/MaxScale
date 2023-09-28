@@ -128,6 +128,7 @@ public:
         std::string replication_user;           /**< Username for CHANGE MASTER TO-commands */
         std::string replication_password;       /**< Password for CHANGE MASTER TO-commands */
         bool        replication_ssl {false};    /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
+        std::string replication_custom_opts;    /**< Custom CHANGE MASTER TO options */
 
         std::string promotion_sql_file;     /**< File with sql commands which are ran to a server being
                                              *  promoted. */
