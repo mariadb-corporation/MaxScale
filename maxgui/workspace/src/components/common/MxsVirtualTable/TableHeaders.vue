@@ -3,20 +3,21 @@
         <div
             v-if="showOrderNumber"
             ref="orderNumberHeader"
-            class="th relative px-3 d-inline-flex align-center"
+            class="th px-3 d-inline-flex align-center justify-center"
             :style="{
                 width: 'max-content',
                 borderRight: '1px solid white',
             }"
+            data-test="order-number-header-ele"
         >
             #
-            <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ rowCount }}) </span>
+            <span class="ml-1 mxs-color-helper text-grayed-out">({{ rowCount }})</span>
         </div>
         <template v-for="(header, index) in headers">
             <div
                 v-if="!header.hidden"
-                :id="genHeaderColID(index)"
-                :key="`${header.text}_${index}`"
+                :id="headerIds[index]"
+                :key="headerIds[index]"
                 :ref="`header__${index}`"
                 :style="{
                     maxWidth: $helpers.handleAddPxUnit(headerWidthMap[index]),
@@ -26,13 +27,14 @@
                 :class="{
                     'text-capitalize': header.capitalize,
                     'text-uppercase': header.uppercase,
-                    'th--resizable': !isResizerDisabled(header),
+                    'th--resizable': header.resizable,
                 }"
+                :data-test="`${header.text}-ele`"
             >
                 <span
                     class="text-truncate"
                     :class="{ 'label-required': header.required }"
-                    :style="{ whiteSpace: 'nowrap' }"
+                    data-test="header-text-ele"
                 >
                     <slot
                         :name="`header-${header.text}`"
@@ -41,20 +43,17 @@
                             // maxWidth: minus padding and sort-icon
                             maxWidth: headerTxtMaxWidth(index),
                             index,
-                            activatorID: genHeaderColID(index),
+                            activatorID: headerIds[index],
                         }"
                     >
                         {{ header.text }}
                     </slot>
                 </span>
-                <div
+                <span
                     v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                     class="header__resizer d-inline-block fill-height"
-                    v-on="
-                        isResizerDisabled(header)
-                            ? null
-                            : { mousedown: e => resizerMouseDown(e, index) }
-                    "
+                    :data-test="`${header.text}-resizer-ele`"
+                    v-on="header.resizable ? { mousedown: e => resizerMouseDown(e, index) } : null"
                 />
             </div>
         </template>
@@ -75,131 +74,139 @@
  */
 /*
  *
- items: {
+ headers: {
+  text?: string, header text
   width?: string | number, default width when header is rendered
   maxWidth?: string | number, if maxWidth is declared, it ignores width and use it as default width
   minWidth?: string | number, allow resizing column to no smaller than provided value
-  resizable?: boolean, true by default
+  resizable?: boolean
   capitalize?: boolean, capitalize first letter of the header
   uppercase?: boolean, uppercase all letters of the header
   hidden?: boolean, hidden the column
   required?: boolean, if true, `label-required` class will be added to the header
 }
+ Emits:
+ - is-resizing(boolean)
+ - header-width-map(object)
+ - order-number-header-width(number)
  */
 export default {
     name: 'table-headers',
     props: {
-        items: { type: Array, required: true },
+        headers: { type: Array, required: true },
         showOrderNumber: { type: Boolean, required: true },
         rowCount: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
     },
     data() {
         return {
-            orderNumberHeaderWidth: 0,
             headerWidthMap: {},
             isResizing: false,
             resizingData: null,
+            isWatched: false,
         }
     },
     computed: {
-        headers() {
-            return this.items
-        },
         visHeaders() {
-            return this.items.filter(h => !h.hidden)
+            return this.headers.filter(h => !h.hidden)
         },
         lastVisHeader() {
-            if (this.visHeaders.length) return this.visHeaders.at(-1)
-            return {}
+            return this.visHeaders.at(-1)
+        },
+        headerIds() {
+            return Array.from({ length: this.headers.length }, () => this.$helpers.uuidv1())
+        },
+        defaultHeaderMinWidth() {
+            return 67
         },
         //threshold, user cannot resize header smaller than this
-        headerMinWidthMap() {
-            return this.headers.reduce((obj, h) => {
-                obj[h.text] = h.minWidth || 67
-                return obj
-            }, {})
+        headerMinWidths() {
+            return this.headers.map(h => h.minWidth || this.defaultHeaderMinWidth)
         },
     },
     watch: {
         isResizing(v) {
             this.$emit('is-resizing', v)
         },
-        orderNumberHeaderWidth: {
-            immediate: true,
-            handler(v) {
-                this.$emit('order-number-header-width', v)
-            },
-        },
     },
-    created() {
+    mounted() {
         window.addEventListener('mousemove', this.resizerMouseMove)
         window.addEventListener('mouseup', this.resizerMouseUp)
-        this.watch()
-    },
-    destroyed() {
-        window.removeEventListener('mousemove', this.resizerMouseMove)
-        window.removeEventListener('mouseup', this.resizerMouseUp)
-    },
-    activated() {
-        this.watch()
-    },
-    deactivated() {
-        this.unwatch()
+        this.addWatchers()
     },
     beforeDestroy() {
-        this.unwatch()
+        window.removeEventListener('mousemove', this.resizerMouseMove)
+        window.removeEventListener('mouseup', this.resizerMouseUp)
+        this.rmWatchers()
+    },
+    activated() {
+        this.addWatchers()
+    },
+    deactivated() {
+        this.rmWatchers()
     },
     methods: {
-        watch() {
-            this.watch_headers()
-            this.watch_boundingWidth()
-            this.watch_headerWidthMap()
+        addWatchers() {
+            if (!this.isWatched) {
+                this.isWatched = true
+                this.watch_headerIds()
+                this.watch_boundingWidth()
+                this.watch_headerWidthMap()
+            }
         },
-        unwatch() {
-            this.$typy(this.unwatch_headers).safeFunction()
+        rmWatchers() {
+            this.$typy(this.unwatch_headerIds).safeFunction()
             this.$typy(this.unwatch_boundingWidth).safeFunction()
             this.$typy(this.unwatch_headerWidthMap).safeFunction()
         },
-        watch_headers() {
-            this.unwatch_headers = this.$watch(
-                'headers',
+        watch_headerIds() {
+            this.unwatch_headerIds = this.$watch(
+                'headerIds',
                 (v, oV) => {
-                    if (!this.$helpers.lodash.isEqual(v, oV)) this.computeWidth()
+                    if (!this.$helpers.lodash.isEqual(v, oV)) {
+                        this.resetHeaderWidth()
+                        this.$helpers.doubleRAF(() => {
+                            if (this.showOrderNumber) this.computeOrderNumberHeaderWidth()
+                            this.computeHeaderWidthMap()
+                        })
+                    }
                 },
                 { deep: true, immediate: true }
             )
         },
         watch_boundingWidth() {
-            this.unwatch_boundingWidth = this.$watch('boundingWidth', () => this.computeWidth())
+            this.unwatch_boundingWidth = this.$watch('boundingWidth', () => {
+                this.resetHeaderWidth()
+                this.$helpers.doubleRAF(() => this.computeHeaderWidthMap())
+            })
         },
         watch_headerWidthMap() {
             this.unwatch_headerWidthMap = this.$watch(
                 'headerWidthMap',
-                v => this.$emit('get-header-width-map', v),
+                (v, oV) => {
+                    if (
+                        !this.$typy(v).isEmptyObject &&
+                        !this.$helpers.lodash.isEqual(v, oV) &&
+                        this.areNumbers(Object.values(this.headerWidthMap))
+                    )
+                        this.$emit('header-width-map', v)
+                },
                 { deep: true }
             )
         },
-        genHeaderColID(index) {
-            return `table-header__header-text_${index}`
+        areNumbers(arr) {
+            return arr.every(v => this.$typy(v).isNumber)
         },
         headerTxtMaxWidth(index) {
             const w = this.$typy(this.headerWidthMap[index]).safeNumber - 24 // padding
             return w > 0 ? w : 1
-        },
-        isResizerDisabled(header) {
-            return header.text === '#' || header.resizable === false
         },
         resetHeaderWidth() {
             let headerWidthMap = {}
             for (const [index, header] of this.headers.entries()) {
                 headerWidthMap = {
                     ...headerWidthMap,
-                    [index]: header.maxWidth
-                        ? header.maxWidth
-                        : header.width
-                        ? header.width
-                        : 'unset',
+                    [index]: header.maxWidth || header.width || 'unset',
                 }
             }
             this.headerWidthMap = headerWidthMap
@@ -213,58 +220,43 @@ export default {
             return 0
         },
         computeOrderNumberHeaderWidth() {
-            const orderNumberHeader = this.$typy(this.$refs, 'orderNumberHeader').safeObject
-            if (orderNumberHeader) {
-                const { width = this.headerMinWidth } = orderNumberHeader.getBoundingClientRect()
-                this.orderNumberHeaderWidth = width
-            }
+            const ele = this.$typy(this.$refs, 'orderNumberHeader').safeObject
+            if (ele) this.$emit('order-number-header-width', ele.getBoundingClientRect().width)
         },
         computeHeaderWidthMap() {
             let headerWidthMap = {}
-            // get width of each header then use it to set same width of corresponding cells
-            for (const [index, header] of this.headers.entries()) {
-                const minWidth = this.headerMinWidthMap[header.text]
+            this.headers.forEach((_, index) => {
+                const minWidth = this.headerMinWidths[index]
                 const width = this.getHeaderWidth(index)
                 const headerWidth = width < minWidth ? minWidth : width
                 headerWidthMap = { ...headerWidthMap, [index]: headerWidth }
-            }
-            this.headerWidthMap = headerWidthMap
-        },
-        computeWidth() {
-            this.resetHeaderWidth()
-            this.$nextTick(() => {
-                this.computeHeaderWidthMap()
-                if (this.showOrderNumber) this.computeOrderNumberHeaderWidth()
             })
+            this.headerWidthMap = headerWidthMap
         },
         hasClass({ ele, className }) {
             let str = ` ${ele.className} `
             let classToFind = ` ${className} `
             return str.indexOf(classToFind) !== -1
         },
-        getNxtResizableNodeByClass({ node, className, nxtHeaderIdx }) {
+        getNxtResizableNodeByClass({ node, className }) {
             while ((node = node.nextSibling)) {
-                nxtHeaderIdx++
-                if (this.hasClass({ ele: node, className })) return { node, nxtHeaderIdx }
+                if (this.hasClass({ ele: node, className })) return node
             }
-            return { node: null, nxtHeaderIdx }
+            return null
         },
         resizerMouseDown(e, index) {
-            const { node: nxtNode, nxtHeaderIdx } = this.getNxtResizableNodeByClass({
+            const nxtNode = this.getNxtResizableNodeByClass({
                 node: e.target.parentElement,
                 className: 'th--resizable',
-                nxtHeaderIdx: index,
             })
             this.resizingData = {
                 currPageX: e.pageX,
                 // target metadata
                 targetNode: e.target.parentElement,
                 targetNodeWidth: e.target.parentElement.offsetWidth,
-                targetHeaderMinWidth: this.headerMinWidthMap[this.headers[index].text],
+                targetHeaderMinWidth: this.headerMinWidths[index],
                 // next resizable header node
                 nxtNode,
-                nxtNodeWidth: nxtNode.offsetWidth,
-                nxtHeaderMinWidth: this.headerMinWidthMap[this.headers[nxtHeaderIdx].text],
             }
             this.isResizing = true
         },

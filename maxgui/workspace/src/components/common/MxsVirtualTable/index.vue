@@ -6,8 +6,7 @@
     >
         <div class="mxs-virtual-table__header-wrapper d-flex relative">
             <table-headers
-                ref="tableHeader"
-                :items="tableHeaders"
+                :headers="tableHeaders"
                 class="relative"
                 :boundingWidth="headersWidth"
                 :scrollBarThickness="scrollBarThickness"
@@ -17,7 +16,7 @@
                 }"
                 :showOrderNumber="showOrderNumberHeader"
                 :rowCount="rowsLength"
-                @get-header-width-map="headerWidthMap = $event"
+                @header-width-map="headerWidthMap = $event"
                 @order-number-header-width="orderNumberHeaderWidth = $event"
                 @is-resizing="isResizing = $event"
             >
@@ -35,13 +34,20 @@
             class="mxs-virtual-table__body"
             :cellSizeAndPositionGetter="cellSizeAndPositionGetter"
             :collection="collection"
-            :height="isYOverflowed ? maxBodyHeight : rowsHeight"
+            :height="isYOverflowed ? maxBodyHeight : rowsHeight + scrollBarThickness"
             :width="maxWidth"
             @scroll.native="scrolling"
         >
             <template v-slot:cell="{ data }">
-                <div class="fill-height text-truncate px-3">
-                    <!-- TODO: Add Cell component -->
+                <!-- TODO: Add Cell component -->
+                <div
+                    class="td fill-height text-truncate px-3 mxs-color-helper text-navigation border-bottom-table-border border-right-table-border"
+                    :class="{
+                        'border-left-table-border': showOrderNumberHeader
+                            ? data.isOrderNumberCol
+                            : data.colIdx === 0,
+                    }"
+                >
                     {{ data.value }}
                 </div>
             </template>
@@ -83,7 +89,7 @@ export default {
         maxWidth: { type: Number, required: true },
         headerHeight: { type: Number, default: 30 },
         rowHeight: { type: Number, default: 30 },
-        showOrderNumberHeader: { type: Boolean, required: true },
+        showOrderNumberHeader: { type: Boolean, default: false },
         autoId: { type: Boolean, default: false }, // Enable it for CRUD operations
     },
     data() {
@@ -136,14 +142,22 @@ export default {
         colLeftPosMap() {
             let left = this.showOrderNumberHeader ? this.orderNumberHeaderWidth : 0
             return Object.values(this.headerWidthMap).reduce((res, width, i) => {
-                if (!this.tableHeaders[i].hidden) {
+                if (!this.isHeaderHidden(i)) {
                     res[i] = left
                     left += width
                 }
                 return res
             }, {})
         },
+        //TODO: use web worker to optimize it further
         collection() {
+            // Wait until colLeftPosMap and orderNumberHeaderWidth are computed
+            if (
+                this.$typy(this.colLeftPosMap).isEmptyObject ||
+                (this.showOrderNumberHeader && !this.orderNumberHeaderWidth)
+            )
+                return []
+
             const headersLength = this.tableHeaders.length
             let rowIdx = 0
             let uuid = undefined
@@ -152,26 +166,28 @@ export default {
                 if (this.$typy(acc[rowIdx], 'group').isUndefined) acc.push({ group: [] })
                 const headerIdx = i % headersLength
 
+                // get uuid of a row
                 if (this.autoId && headerIdx === 0) uuid = this.cells[i]
 
+                // Push order number cell
                 if (
                     this.showOrderNumberHeader &&
                     (this.autoId ? headerIdx === 1 : headerIdx === 0)
                 ) {
-                    // Push order number cell
                     acc[rowIdx].group.push({
-                        data: { value: rowIdx, uuid, rowIdx },
+                        data: { value: rowIdx + 1, uuid, rowIdx, isOrderNumberCol: true },
                         height: this.rowHeight,
                         width: this.orderNumberHeaderWidth,
                         x: 0,
                         y: this.rowHeight * rowIdx,
                     })
                 }
+
+                // Push visible cells to group
                 const width = this.$typy(this.headerWidthMap, `[${headerIdx}]`).safeNumber
-                // cells of hidden header won't be included
-                if (!this.tableHeaders[headerIdx].hidden)
+                if (!this.isHeaderHidden(headerIdx))
                     acc[rowIdx].group.push({
-                        data: { value: cell, uuid, rowIdx },
+                        data: { value: cell, uuid, rowIdx, colIdx: headerIdx },
                         height: this.rowHeight,
                         width,
                         x: this.colLeftPosMap[headerIdx],
@@ -192,6 +208,9 @@ export default {
             //Scroll header
             this.headerScrollLeft = `-${ele.scrollLeft}px`
         },
+        isHeaderHidden(i) {
+            return this.$typy(this.tableHeaders, `[${i}].hidden`).safeBoolean
+        },
     },
 }
 </script>
@@ -211,6 +230,9 @@ export default {
     }
     &__body {
         overflow: auto !important;
+        .td {
+            font-size: 0.875rem;
+        }
     }
 }
 </style>
