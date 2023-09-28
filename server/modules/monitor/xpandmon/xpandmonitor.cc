@@ -1241,19 +1241,31 @@ void XpandMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
+        string address = pMs->server->address();
         unordered_set<string> ips;
-        string error;
-        if (!mxb::name_lookup(pMs->server->address(), &ips, &error))
+        if (m_config.dynamic_node_detection())
         {
-            MXB_SERROR("Could not lookup address '" << pMs->server->address()
-                       << "', status of bootstrap node '"
-                       << pMs->server->name() << "' may be incorrectly reported: "
-                       << error);
+            string error;
+            if (!mxb::name_lookup(address, &ips, &error))
+            {
+                MXB_SERROR("Could not lookup address '" << address
+                           << "', status of bootstrap node '"
+                           << pMs->server->name() << "' may be incorrectly reported: "
+                           << error);
 
-            // Insert the address just like that, in case the name lookup
-            // failed for some random reason and the address happens to
-            // already be an IP-address.
-            ips.insert(pMs->server->address());
+                // Insert the address just like that, in case the name lookup
+                // failed for some random reason and the address happens to
+                // already be an IP-address.
+                ips.insert(address);
+            }
+        }
+        else
+        {
+            // If dynamic_node_detection is disabled, the XpandNode will be
+            // created using the address verbatim as specified in the configuration.
+            // So this will work irrespective of whether the address is a hostname
+            // or an IP-address.
+            ips.insert(address);
         }
 
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
