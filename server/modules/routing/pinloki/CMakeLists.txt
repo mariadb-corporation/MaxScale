@@ -3,6 +3,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/BuildBoost.cmake)
 add_library(pinloki-core
   binlog_file.cc
   shared_binlogs.cc
+  ifstream_reader.cc
   config.cc
   dbconnection.cc
   file_reader.cc
