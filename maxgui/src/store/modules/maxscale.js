@@ -29,7 +29,7 @@ export default {
         prev_log_data: [],
         prev_filtered_log_link: null,
         prev_filtered_log_data: [],
-        chosen_log_levels: APP_CONFIG.MAXSCALE_LOG_LEVELS,
+        hidden_log_levels: [],
     },
     mutations: {
         SET_MAXSCALE_VERSION(state, payload) {
@@ -68,9 +68,8 @@ export default {
         SET_PREV_FILTERED_LOG_DATA(state, payload) {
             state.prev_filtered_log_data = payload
         },
-
-        SET_CHOSEN_LOG_LEVELS(state, payload) {
-            state.chosen_log_levels = payload
+        SET_HIDDEN_LOG_LEVELS(state, payload) {
+            state.hidden_log_levels = payload
         },
     },
     actions: {
@@ -181,9 +180,9 @@ export default {
             }
         },
 
-        async fetchPrevFilteredLog({ commit, state }) {
+        async fetchPrevFilteredLog({ commit, state, getters }) {
             try {
-                const currPriority = state.chosen_log_levels.join(',')
+                const currPriority = getters.getChosenLogLevels.join(',')
                 const prevLink = state.prev_filtered_log_link
                     ? state.prev_filtered_log_link
                     : state.prev_log_link
@@ -246,5 +245,7 @@ export default {
         getModulesByType: state => {
             return type => state.all_modules_map[type] || []
         },
+        getChosenLogLevels: state =>
+            APP_CONFIG.MAXSCALE_LOG_LEVELS.filter(type => !state.hidden_log_levels.includes(type)),
     },
 }

@@ -45,7 +45,6 @@
                 />
             </v-list-item>
             <v-divider />
-
             <v-list-item class="px-2" dense link>
                 <v-checkbox
                     dense
@@ -53,25 +52,25 @@
                     class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
                     hide-details
                     :label="$mxs_t('selectAll')"
-                    :input-value="isAllSelected"
+                    :input-value="isAllTicked"
+                    :indeterminate="indeterminate"
                     @change="toggleAll"
                 />
             </v-list-item>
             <v-divider />
-            <v-list-item v-for="item in itemsList" :key="`${item.text}`" class="px-2" dense link>
-                <!-- value of checkbox cannot be object, so using text then get object via itemsMapByText -->
+            <v-list-item v-for="item in itemsList" :key="`${item}`" class="px-2" dense link>
                 <v-checkbox
-                    v-model="selectedItems"
                     dense
                     color="primary"
                     class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
-                    :value="item.text"
+                    :input-value="!untickedItems.includes(item)"
                     hide-details
+                    @change="toggleItem($event, item)"
                 >
                     <template v-slot:label>
                         <mxs-truncate-str
-                            v-mxs-highlighter="{ keyword: filterTxt, txt: item.text }"
-                            :tooltipItem="{ txt: `${item.text}` }"
+                            v-mxs-highlighter="{ keyword: filterTxt, txt: item }"
+                            :tooltipItem="{ txt: `${item}` }"
                         />
                     </template>
                 </v-checkbox>
@@ -94,32 +93,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-/*
- *
- items?: Array of objects. This props accepts `mxs-virtual-scroll-tbl` headers
- or at least the object needs to have `text` property in order to make the search
- filter work.
- returnObject?: boolean, by default this component returns selected index, if true,
- it returns selected objects.
+/**
+ * All items are ticked by default, the value model contains nonticked items !!!
  */
 export default {
     name: 'mxs-filter-list',
     props: {
         value: { type: Array, required: true },
         label: { type: String, required: true },
-        items: {
-            type: Array,
-            validator: arr => {
-                if (!arr.length) return true
-                else return arr.filter(item => 'text' in item).length === arr.length
-            },
-            required: true,
-        },
+        items: { type: Array, required: true }, // array of strings
         maxHeight: { type: Number, required: true },
-        returnObject: { type: Boolean, default: false },
-        selectAllOnCreated: { type: Boolean, default: false },
-        selectAllOnActivated: { type: Boolean, default: false },
         activatorClass: { type: String, default: '' },
     },
     data() {
@@ -128,68 +111,33 @@ export default {
         }
     },
     computed: {
-        itemsMapByText() {
-            const map = {}
-            this.items.forEach(col => {
-                map[col.text] = col
-            })
-            return map
-        },
-        selectedItems: {
+        untickedItems: {
             get() {
-                if (this.returnObject) return this.value.map(col => col.text)
-                else {
-                    // this.value is array of indexes
-                    let items = []
-                    this.items.forEach((c, i) => {
-                        if (this.value.includes(i)) items.push(c.text)
-                    })
-                    return items
-                }
+                return this.value
             },
-            set(arr) {
-                // arr is an array of strings
-                if (this.returnObject) {
-                    const items = arr.reduce((arr, name) => {
-                        arr.push(this.itemsMapByText[name])
-                        return arr
-                    }, [])
-                    this.$emit('input', items) // emit array of the original objects from this.items
-                } else {
-                    let idxs = []
-                    this.items.forEach((h, i) => {
-                        if (arr.includes(h.text)) idxs.push(i)
-                    })
-                    this.$emit('input', idxs) // emit array of indexes
-                }
+            set(v) {
+                this.$emit('input', v)
             },
-        },
-        providedList() {
-            return this.$helpers.lodash.cloneDeep(this.items.filter(item => !item.hidden))
         },
         itemsList() {
-            return this.providedList.filter(obj =>
-                this.$helpers.ciStrIncludes(`${obj.text}`, this.filterTxt)
-            )
+            return this.items.filter(str => this.$helpers.ciStrIncludes(`${str}`, this.filterTxt))
         },
-        isAllSelected() {
-            return this.selectedItems.length === this.items.length
+        isAllTicked() {
+            return this.untickedItems.length === 0
         },
-    },
-    created() {
-        if (this.selectAllOnCreated) this.selectAll()
-    },
-    activated() {
-        if (this.selectAllOnActivated) this.selectAll()
+        indeterminate() {
+            if (this.untickedItems.length === this.items.length) return false
+            return !this.isAllTicked
+        },
     },
     methods: {
         toggleAll(v) {
-            if (!v) this.selectedItems = []
-            else this.selectAll()
+            if (v) this.untickedItems = []
+            else this.untickedItems = this.$helpers.lodash.cloneDeep(this.items)
         },
-        selectAll() {
-            //value of checkbox cannot be object, so using text here
-            this.selectedItems = this.items.map(h => h.text)
+        toggleItem(isChecked, item) {
+            if (isChecked) this.untickedItems.splice(this.untickedItems.indexOf(item), 1)
+            else this.untickedItems.push(item)
         },
     },
 }

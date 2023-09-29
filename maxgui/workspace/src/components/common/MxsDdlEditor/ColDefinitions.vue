@@ -9,9 +9,8 @@
         >
             <template v-slot:append>
                 <mxs-filter-list
-                    v-model="selectedColSpecs"
+                    v-model="hiddenColSpecs"
                     activatorClass="ml-2"
-                    returnObject
                     :label="$mxs_t('specs')"
                     :items="colSpecs"
                     :maxHeight="tableMaxHeight - 20"
@@ -169,7 +168,7 @@ export default {
         return {
             selectedItems: [],
             isVertTable: false,
-            selectedColSpecs: [],
+            hiddenColSpecs: [],
             headerHeight: 0,
         }
     },
@@ -229,14 +228,13 @@ export default {
             })
         },
         colSpecs() {
-            return this.headers.filter(h => !h.hidden)
+            return this.headers.reduce((acc, h) => {
+                if (!h.hidden) acc.push(h.text)
+                return acc
+            }, [])
         },
         visHeaders() {
-            return this.headers.map(h => {
-                if (!this.selectedColSpecs.find(col => col.text === h.text))
-                    return { ...h, hidden: true }
-                return h
-            })
+            return this.headers.map(h => ({ ...h, hidden: this.hiddenColSpecs.includes(h) }))
         },
         txtFields() {
             const { NAME, DEF_EXP, COMMENT } = this.COL_ATTRS
@@ -363,12 +361,10 @@ export default {
     },
     methods: {
         handleShowColSpecs() {
-            const colSpecs = this.$helpers.lodash.cloneDeep(this.colSpecs)
-            if (this.$vuetify.breakpoint.width >= 1680) this.selectedColSpecs = colSpecs
+            if (this.$vuetify.breakpoint.width >= 1680) this.hiddenColSpecs = []
             else {
                 const { CHARSET, COLLATE, COMMENT } = this.COL_ATTRS
-                const hiddenSpecs = [CHARSET, COLLATE, COMMENT]
-                this.selectedColSpecs = colSpecs.filter(col => !hiddenSpecs.includes(col.text))
+                this.hiddenColSpecs = [CHARSET, COLLATE, COMMENT]
             }
         },
         deleteSelectedRows(selectedItems) {

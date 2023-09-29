@@ -17,7 +17,7 @@
         </v-btn>
         <virtual-list
             v-if="logToShow.length"
-            ref="vsl"
+            ref="virtualList"
             :style="{ height: `${logViewHeight}px` }"
             class="log"
             :class="{ overflow }"
@@ -71,7 +71,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import VirtualList from 'vue-virtual-scroll-list'
 import LogLine from './LogLine'
 export default {
@@ -104,19 +104,17 @@ export default {
             latest_logs: state => state.maxscale.latest_logs,
             prev_log_link: state => state.maxscale.prev_log_link,
             prev_log_data: state => state.maxscale.prev_log_data,
-            chosen_log_levels: state => state.maxscale.chosen_log_levels,
             prev_filtered_log_link: state => state.maxscale.prev_filtered_log_link,
             prev_filtered_log_data: state => state.maxscale.prev_filtered_log_data,
         }),
+        ...mapGetters({ getChosenLogLevels: 'maxscale/getChosenLogLevels' }),
+
         logToShow() {
             if (this.isFiltering) return this.filteredLogData
-            else return this.allLogData
+            return this.allLogData
         },
-        isFiltering: function() {
-            /* Default chosen_log_levels length is equal to the length of MAXSCALE_LOG_LEVELS
-             * so, if it's not equal, then user's filtering logs
-             */
-            return this.chosen_log_levels.length !== this.MAXSCALE_LOG_LEVELS.length
+        isFiltering() {
+            return this.getChosenLogLevels.length < this.MAXSCALE_LOG_LEVELS.length
         },
     },
     watch: {
@@ -124,13 +122,13 @@ export default {
             // assign prev_log_data when it changes
             this.prevLogData = val
         },
-        chosen_log_levels: {
+        getChosenLogLevels: {
             deep: true,
             async handler(v) {
                 if (v.length && this.isFiltering) {
-                    // filter allLogData based on chosen_log_levels and assign it to filteredLogData
+                    // filter allLogData based on getChosenLogLevels and assign it to filteredLogData
                     this.filteredLogData = this.allLogData.filter(log =>
-                        this.chosen_log_levels.includes(log.priority)
+                        this.getChosenLogLevels.includes(log.priority)
                     )
                 } else {
                     this['SET_PREV_FILTERED_LOG_LINK'](null)
@@ -166,7 +164,7 @@ export default {
             this.allLogData = Object.freeze(this.latest_logs)
         },
         async onItemRendered() {
-            if (!this.$refs.vsl) return
+            if (!this.$refs.virtualList) return
             this.checkOverFlow()
             // first page items are all mounted, scroll to bottom, execute below block once
             if (!this.isFirstPageReady && this.overflow) {
@@ -297,17 +295,17 @@ export default {
             return logs.map(message => message.id)
         },
         checkOverFlow() {
-            const vsl = this.$refs.vsl
-            if (vsl) {
-                this.overflow = vsl.getScrollSize() > vsl.getClientSize()
+            const virtualList = this.$refs.virtualList
+            if (virtualList) {
+                this.overflow = virtualList.getScrollSize() > virtualList.getClientSize()
             }
         },
         // mock received message
         setVirtualListToOffset(offset) {
-            if (this.$refs.vsl) this.$refs.vsl.scrollToOffset(offset)
+            if (this.$refs.virtualList) this.$refs.virtualList.scrollToOffset(offset)
         },
         setVirtualListToBottom() {
-            if (this.$refs.vsl) this.$refs.vsl.scrollToBottom()
+            if (this.$refs.virtualList) this.$refs.virtualList.scrollToBottom()
         },
         /**
          * @param {Object} e - scroll event
@@ -318,17 +316,19 @@ export default {
          * @param {Object} log - log object
          */
         isMatchedFilter(log) {
-            return this.chosen_log_levels.includes(log.priority)
+            return this.getChosenLogLevels.includes(log.priority)
         },
         /**
          * @param {Array} ids - ids of new items to be prepended
          */
         preserveScrollHeight(ids) {
-            const vsl = this.$refs.vsl
+            const virtualList = this.$refs.virtualList
             const offset = ids.reduce((previousValue, currentID) => {
                 const previousSize =
-                    typeof previousValue === 'string' ? vsl.getSize(previousValue) : previousValue
-                return previousSize + this.$refs.vsl.getSize(currentID)
+                    typeof previousValue === 'string'
+                        ? virtualList.getSize(previousValue)
+                        : previousValue
+                return previousSize + this.$refs.virtualList.getSize(currentID)
             })
             this.setVirtualListToOffset(offset)
         },

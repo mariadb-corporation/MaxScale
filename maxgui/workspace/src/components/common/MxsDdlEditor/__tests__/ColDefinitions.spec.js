@@ -45,10 +45,8 @@ describe('col-definitions', () => {
     let wrapper
 
     describe(`Child component's data communication tests`, () => {
-        beforeEach(async () => {
+        beforeEach(() => {
             wrapper = mountFactory()
-            // mock show all specs
-            await wrapper.setData({ selectedColSpecs: wrapper.vm.colSpecs })
         })
         it(`Should pass accurate data to tbl-toolbar`, () => {
             const { selectedItems, isVertTable } = wrapper.findComponent({
@@ -59,11 +57,10 @@ describe('col-definitions', () => {
         })
 
         it('Should pass accurate data to mxs-filter-list', () => {
-            const { value, returnObject, items } = wrapper.findComponent({
+            const { value, items } = wrapper.findComponent({
                 name: 'mxs-filter-list',
             }).vm.$props
-            expect(value).to.be.eql(wrapper.vm.$data.selectedColSpecs)
-            expect(returnObject).to.be.true
+            expect(value).to.be.eql(wrapper.vm.$data.hiddenColSpecs)
             expect(items).to.be.eql(wrapper.vm.colSpecs)
         })
 
