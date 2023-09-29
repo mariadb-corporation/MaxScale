@@ -238,6 +238,13 @@ void get_gtid(MonitorServer* srv, GaleraNode* info)
                 info->gtid_binlog_pos = res.get_string(1);
                 info->read_only = res.get_bool(2);
                 info->server_id = res.get_int(3);
+
+                // The gtid_current_pos is not reliably updated in all cases (MDEV-26176). To make the MaxCtrl
+                // output consistent, substitute it with gtid_binlog_pos if it's found.
+                if (!info->gtid_binlog_pos.empty() && info->gtid_current_pos.empty())
+                {
+                    info->gtid_current_pos = info->gtid_binlog_pos;
+                }
             }
         }
     }
