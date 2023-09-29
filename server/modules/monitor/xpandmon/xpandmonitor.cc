@@ -1189,9 +1189,9 @@ void XpandMonitor::populate_from_bootstrap_servers()
 {
     int id = 1;
 
-    for (auto ms : m_servers)
+    for (auto* pMs : m_servers)
     {
-        SERVER* pServer = ms->server;
+        SERVER* pServer = pMs->server;
 
         xpand::Status status = xpand::Status::UNKNOWN;
         xpand::SubState substate = xpand::SubState::UNKNOWN;
@@ -1671,9 +1671,9 @@ void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& server
     // general monitor server handling, so disregard it for now. Use the configured servers as active servers
     // so the monitor has at least some. This also matches with update_server_statuses() and
     // flush_server_status() calls in tick().
-    for (auto srv : m_servers)
+    for (auto* pSrv : m_servers)
     {
-        delete srv;
+        delete pSrv;
     }
 
     auto& shared_settings = settings().shared;
@@ -1686,7 +1686,7 @@ void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& server
     set_active_servers(std::vector<MonitorServer*>(m_servers.begin(), m_servers.end()), SetRouting::NO);
 }
 
-XpandServer::XpandServer(SERVER* server, const MonitorServer::SharedSettings& shared)
-    : MariaServer(server, shared)
+XpandServer::XpandServer(SERVER* pServer, const MonitorServer::SharedSettings& shared)
+    : MariaServer(pServer, shared)
 {
 }
