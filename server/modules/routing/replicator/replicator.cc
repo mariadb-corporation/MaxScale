@@ -96,6 +96,7 @@ private:
     Rpl                  m_rpl;                     // Class that handles the replicated events
     int                  m_state_fd {-1};           // File handle to GTID state file
     std::atomic<bool>    m_is_owner {true};
+    bool                 m_warn_no_cluster {true};
 
     // Access to this is protected by m_lock
     std::vector<cdc::Server> m_servers;
@@ -136,6 +137,14 @@ void Replicator::Imp::update_server_status()
         if (auto* cluster = m_cnf.service->cluster())
         {
             owner = cluster->is_running() && cluster->is_cluster_owner();
+            m_warn_no_cluster = true;
+        }
+        else if (m_warn_no_cluster)
+        {
+            MXB_WARNING("Service '%s' is using 'cooperative_replication' but it does not use 'cluster', "
+                        "disabling 'cooperative_replication' until 'cluster' is configured.",
+                        m_cnf.service->name());
+            m_warn_no_cluster = false;
         }
     }
 
