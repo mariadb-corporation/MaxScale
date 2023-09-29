@@ -76,7 +76,7 @@ describe('LogContainer', () => {
     })
 
     it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
-        wrapper = mountFactory({ computed: { chosen_log_levels: () => dummyChosenLogLevels } })
+        wrapper = mountFactory({ computed: { getChosenLogLevels: () => dummyChosenLogLevels } })
         expect(wrapper.vm.isFiltering).to.be.true
     })
 

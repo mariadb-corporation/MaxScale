@@ -5,8 +5,7 @@
         </span>
         <v-spacer />
         <mxs-filter-list
-            v-model="chosenLogLevels"
-            returnObject
+            v-model="hiddenLogLevels"
             :label="$mxs_t('filterBy')"
             :items="allLogLevels"
             :maxHeight="400"
@@ -58,30 +57,25 @@ export default {
     computed: {
         ...mapState({
             log_source: state => state.maxscale.log_source,
-            chosen_log_levels: state => state.maxscale.chosen_log_levels,
+            hidden_log_levels: state => state.maxscale.hidden_log_levels,
             MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
         }),
         allLogLevels() {
-            return this.strToObj(this.MAXSCALE_LOG_LEVELS)
+            return this.MAXSCALE_LOG_LEVELS
         },
-        /**
-         * Chosen_log_levels is an array of strings but chosenLogLevels has
-         * to be an array of objects with `text` as a property
-         */
-        chosenLogLevels: {
+        hiddenLogLevels: {
             get() {
-                return this.strToObj(this.chosen_log_levels)
+                return this.hidden_log_levels
             },
             set(v) {
-                this.SET_CHOSEN_LOG_LEVELS(v.map(item => item.text))
+                this.SET_HIDDEN_LOG_LEVELS(v)
             },
         },
     },
     methods: {
         ...mapMutations({
-            SET_CHOSEN_LOG_LEVELS: 'maxscale/SET_CHOSEN_LOG_LEVELS',
+            SET_HIDDEN_LOG_LEVELS: 'maxscale/SET_HIDDEN_LOG_LEVELS',
         }),
-        strToObj: arr => arr.map(str => ({ text: str })),
     },
 }
 </script>
