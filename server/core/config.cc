@@ -770,6 +770,23 @@ struct ThisUnit
     std::map<std::string, std::string> source_files;
 } this_unit;
 
+class DuplicateChecker
+{
+public:
+    void check(const std::string& type, const std::string& who,
+               const std::string& param, const std::string& value)
+    {
+        if (!m_values.insert(value).second)
+        {
+            MXB_WARNING("The %s '%s' has a duplicate value in '%s': %s",
+                        type.c_str(), who.c_str(), param.c_str(), value.c_str());
+        }
+    }
+
+private:
+    std::set<std::string> m_values;
+};
+
 void reconnect_config_manager(const std::string& ignored)
 {
     if (auto manager = mxs::ConfigManager::get())
@@ -850,6 +867,7 @@ Config::Config(int argc, char** argv)
 }),
     log_throttling(this, &s_log_throttling, [](MXB_LOG_THROTTLING throttling) {
     mxb_log_set_throttling(&throttling);
+    mxb_log_reset_suppression();
 }),
     dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
     session_set_dump_statements(when);
@@ -2251,8 +2269,11 @@ std::unordered_set<ConfigSection*> get_dependencies(const std::vector<ConfigSect
 
     if (type == CN_SERVICE && obj->m_parameters.contains(CN_TARGETS))
     {
+        DuplicateChecker checker;
+
         for (auto name : mxs::strtok(obj->m_parameters.get_string(CN_TARGETS), ","))
         {
+            checker.check(type, obj->m_name, CN_TARGETS, name);
             rval.insert(name_to_object(objects, obj, name));
         }
     }
@@ -2264,8 +2285,11 @@ std::unordered_set<ConfigSection*> get_dependencies(const std::vector<ConfigSect
 
     if ((type == CN_MONITOR || type == CN_SERVICE) && obj->m_parameters.contains(CN_SERVERS))
     {
+        DuplicateChecker checker;
+
         for (std::string name : mxs::strtok(obj->m_parameters.get_string(CN_SERVERS), ","))
         {
+            checker.check(type, obj->m_name, CN_SERVERS, name);
             rval.insert(name_to_object(objects, obj, name));
         }
     }

@@ -30,6 +30,7 @@
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/threadpool.hh>
+#include <maxbase/host.hh>
 
 #define WORKER_ABSENT_ID -1
 
@@ -81,6 +82,15 @@ typedef struct worker_message
     intptr_t arg2;  /*< Message specific second argument. */
 } WORKER_MESSAGE;
 
+void warn_slow_dns_lookup()
+{
+    auto normal = mxb::to_secs(mxb::name_lookup_duration(mxb::NameLookupTimer::NORMAL));
+    auto reverse = mxb::to_secs(mxb::name_lookup_duration(mxb::NameLookupTimer::REVERSE));
+    const char* suggestion = " Consider disabling reverse hostname resolution by"
+                             " adding skip_name_resolve=true under the [maxscale] section.";
+    MXB_WARNING("Spent %.1f seconds on hostname resolution and %0.1f in reverse hostname resolution.%s",
+                normal, reverse, reverse > 1.0 ? suggestion : "");
+}
 }
 
 namespace maxbase
@@ -1118,6 +1128,7 @@ void Worker::poll_waitevents()
             timeout = 0;
         }
         int nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
+        mxb::reset_name_lookup_timers();
 
         m_epoll_tick_now = mxb::Clock::now();
 
@@ -1218,6 +1229,11 @@ void Worker::poll_waitevents()
             while (m_lcalls.begin() + i != m_lcalls.end());
 
             m_lcalls.clear();
+        }
+
+        if (mxb::name_lookup_duration(mxb::NameLookupTimer::ALL) > 5s)
+        {
+            warn_slow_dns_lookup();
         }
 
         call_epoll_tick();

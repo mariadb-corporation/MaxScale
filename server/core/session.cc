@@ -1933,3 +1933,23 @@ bool MXS_SESSION::log_is_enabled(int level) const
 {
     return m_log_level & (1 << level) || service->log_is_enabled(level);
 }
+
+namespace maxscale
+{
+void unexpected_situation(const char* msg)
+{
+    if (MXS_SESSION* ses = session_get_current())
+    {
+        if (this_unit.session_trace)
+        {
+            ses->dump_session_log();
+        }
+        else
+        {
+            MXB_WARNING("MaxScale has encountered an unexpected situation: %s. Add 'session_trace=200' "
+                        "under the [maxscale] section to enable session level tracing to make the "
+                        "debugging of this problem easier.", msg);
+        }
+    }
+}
+}

@@ -260,6 +260,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
             ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
                << ") for " << STRPACKETTYPE(info.command()) << " given to MaxScale";
             err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+            mxs::unexpected_situation(ss.str().c_str());
         }
         else
         {
