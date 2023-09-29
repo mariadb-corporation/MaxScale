@@ -16,6 +16,7 @@
 #include "inventory.hh"
 #include "pinloki.hh"
 #include "rpl_event.hh"
+#include "binlog_file.hh"
 #include <maxbase/log.hh>
 #include <maxscale/routingworker.hh>
 #include <fstream>
@@ -94,7 +95,11 @@ std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
 maxsql::GtidList get_gtid_list(const std::string& file_name,
                                const Config& cnf)
 {
-    std::ifstream is(file_name, std::ios_base::binary);
+    auto sBinlog = cnf.shared_binlog_file().binlog_file(file_name);
+
+    std::this_thread::sleep_for(100ms); // TODO temporary, just to make this version work
+
+    std::ifstream is = sBinlog->make_ifstream();
     maxsql::GtidList gtid_list;
 
     if (!is.good())
