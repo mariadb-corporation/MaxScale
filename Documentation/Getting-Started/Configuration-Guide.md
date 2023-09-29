@@ -797,6 +797,16 @@ The default is `10, 1000ms, 10000ms`, which means that if the same error is
 logged 10 times in one second, the logging of that error is suppressed for the
 following 10 seconds.
 
+Whenever an error message that is being throttled is logged within the
+triggering window (the second argument), the suppression window is
+extended. This continues until there is a pause in the messages that is longer
+than the triggering window.
+
+For example, with the default configuration the messages must pause for at least
+one second in order for the throttling to eventually stop. This mechanism
+prevents long-lasting error conditions from slowly filling up the log with short
+bursts of messages.
+
 To disable log throttling, add an entry with an empty value
 
 ```

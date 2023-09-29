@@ -1314,6 +1314,7 @@ bool MariaDBBackendConnection::write(GWBUF&& queue)
                         m_dcb->trigger_read_event();
                     }
 
+                    mxs::unexpected_situation(ss.str().c_str());
                     MXB_WARNING("%s", ss.str().c_str());
 
                     // This is an error condition that is very likely to happen if something is broken in the

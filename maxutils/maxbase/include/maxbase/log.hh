@@ -181,6 +181,11 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling);
 void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling);
 
 /**
+ * Resets the suppression of messages done by log throttling
+ */
+void mxb_log_reset_suppression();
+
+/**
  * Redirect  stdout to the log file
  *
  * @param redirect Whether to redirect the output to the log file

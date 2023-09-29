@@ -19,6 +19,8 @@
 #include <iosfwd>
 #include <unordered_set>
 
+#include <maxbase/stopwatch.hh>
+
 /** Host is a streamable class that represents an address and port, or a unix domain socket.
  */
 namespace maxbase
@@ -138,4 +140,25 @@ bool name_lookup(const std::string& host, std::unordered_set<std::string>* addre
  * @return True on success
  */
 bool reverse_name_lookup(const std::string& ip, std::string* output);
+
+/**
+ * Reset the thread-local name lookup timer
+ *
+ * This should be called by the Worker after returning from epoll_wait.
+ */
+void reset_name_lookup_timers();
+
+enum class NameLookupTimer
+{
+    NORMAL,
+    REVERSE,
+    ALL
+};
+
+/**
+ * Get the time spent waiting for name lookups to resolve
+ *
+ * @return The time that was spent in name lookups since the last call to reset_name_lookup_timer()
+ */
+mxb::Duration name_lookup_duration(NameLookupTimer type);
 }
