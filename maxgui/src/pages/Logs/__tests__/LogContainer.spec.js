@@ -22,13 +22,16 @@ const mountFactory = opts =>
     mount({
         shallow: false,
         component: LogContainer,
-        propsData: {
-            logViewHeight: 500,
-            chosenLogLevels: [],
-        },
+        propsData: { logViewHeight: 500 },
         computed: {
             prev_log_link: () => null, // prevent loopGetOlderLogs from being called
-            logToShow: () => dummy_log_data,
+            latest_logs: () => dummy_log_data,
+        },
+        stubs: {
+            'virtual-list': '<div/>',
+        },
+        methods: {
+            checkOverFlow: sinon.stub(),
         },
         ...opts,
     })
@@ -61,7 +64,7 @@ describe('LogContainer', () => {
          */
         await wrapper.vm.$helpers.delay(350)
     })
-    afterEach(function() {
+    afterEach(() => {
         axiosStub.restore()
         wsStub.restore()
         wrapper.destroy()
@@ -73,25 +76,23 @@ describe('LogContainer', () => {
     })
 
     it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
-        expect(wrapper.vm.isFiltering).to.be.false
-        wrapper.vm.$store.commit('maxscale/SET_CHOSEN_LOG_LEVELS', dummyChosenLogLevels)
+        wrapper = mountFactory({ computed: { chosen_log_levels: () => dummyChosenLogLevels } })
         expect(wrapper.vm.isFiltering).to.be.true
     })
 
     it(`Should show no logs found when logToShow is empty`, () => {
-        wrapper = mountFactory({
-            computed: {
-                logToShow: () => [],
-            },
-        })
+        wrapper = mountFactory({ computed: { logToShow: () => [] } })
         expect(wrapper.html().includes('No logs found'))
     })
 
-    it(`Should return accurate log data for computed property 'logToShow'`, async () => {
-        expect(wrapper.vm.logToShow).to.be.deep.equals(dummy_log_data)
-
-        await wrapper.setProps({
-            chosenLogLevels: dummyChosenLogLevels,
+    const logToShowTestCases = [
+        { isFiltering: true, expected: 'filteredLogData' },
+        { isFiltering: false, expected: 'allLogData' },
+    ]
+    logToShowTestCases.forEach(({ isFiltering, expected }) => {
+        it(`logToShow should return ${expected}`, () => {
+            wrapper = mountFactory({ computed: { isFiltering: () => isFiltering } })
+            expect(wrapper.vm.logToShow).to.eql(wrapper.vm[expected])
         })
     })
 })
