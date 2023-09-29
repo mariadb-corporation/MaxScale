@@ -604,4 +604,17 @@ struct RegistryTraits<MXS_SESSION>
         return NULL;
     }
 };
+
+/**
+ * Call this whenever an unexpected situation is encountered
+ *
+ * If there is a situation that is likely to be caused by a bug in MaxScale or due to a broken client,
+ * this function should be called.
+ *
+ * Currently this dumps the current session's trace log if it's enabled and logs a warning that explains
+ * how to enable it if it's not.
+ *
+ * @param msg Extra information that is logged to bring more context to the warnings if they are logged.
+ */
+void unexpected_situation(const char* msg);
 }

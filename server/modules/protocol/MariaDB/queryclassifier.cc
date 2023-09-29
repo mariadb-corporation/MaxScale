@@ -257,7 +257,9 @@ public:
         {
             if (m_log == Log::ALL)
             {
-                MXS_WARNING("Using unknown prepared statement with ID %u", id);
+                auto msg = MAKE_STR("Using unknown binary prepared statement with ID " << id);
+                mxs::unexpected_situation(msg.c_str());
+                MXS_WARNING("%s", msg.c_str());
             }
         }
 
@@ -275,7 +277,9 @@ public:
         }
         else if (m_log == Log::ALL)
         {
-            MXS_WARNING("Using unknown prepared statement with ID '%s'", id.c_str());
+            auto msg = MAKE_STR("Using unknown text prepared statement with ID '" << id << "'");
+            mxs::unexpected_situation(msg.c_str());
+            MXS_WARNING("%s", msg.c_str());
         }
 
         return rval;
@@ -287,7 +291,9 @@ public:
         {
             if (m_log == Log::ALL)
             {
-                MXS_WARNING("Closing unknown prepared statement with ID '%s'", id.c_str());
+                auto msg = MAKE_STR("Closing unknown text prepared statement with ID '" << id << "'");
+                mxs::unexpected_situation(msg.c_str());
+                MXS_WARNING("%s", msg.c_str());
             }
         }
     }
@@ -298,7 +304,9 @@ public:
         {
             if (m_log == Log::ALL)
             {
-                MXS_WARNING("Closing unknown prepared statement with ID %u", id);
+                auto msg = MAKE_STR("Closing unknown binary prepared statement with ID " << id);
+                mxs::unexpected_situation(msg.c_str());
+                MXS_WARNING("%s", msg.c_str());
             }
         }
     }
