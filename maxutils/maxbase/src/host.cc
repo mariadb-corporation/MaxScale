@@ -22,6 +22,18 @@
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 
+namespace
+{
+struct ThisThread
+{
+    // Total time spent in name server lookups
+    mxb::Duration dns_time;
+    mxb::Duration rdns_time;
+};
+
+thread_local ThisThread this_thread;
+}
+
 
 // Simple but not exhaustive address validation functions.
 // An ipv4 address "x.x.x.x" cannot be a hostname (where x is a number), but pretty
@@ -258,7 +270,10 @@ bool name_lookup(const std::string& host,
     bool success = false;
     std::string error_msg;
 
+    mxb::StopWatch stopwatch;
     int rv_addrinfo = getaddrinfo(host.c_str(), nullptr, &hints, &results);
+    this_thread.dns_time += stopwatch.split();
+
     if (rv_addrinfo == 0)
     {
         // getaddrinfo may return multiple result addresses. Save all of them.
@@ -332,11 +347,13 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
     {
         char host[NI_MAXHOST];
         auto sa = reinterpret_cast<sockaddr*>(&socket_address);
+        mxb::StopWatch stopwatch;
         if (getnameinfo(sa, slen, host, sizeof(host), nullptr, 0, NI_NAMEREQD) == 0)
         {
             *output = host;
             success = true;
         }
+        this_thread.rdns_time += stopwatch.split();
     }
 
     if (!success)
@@ -344,5 +361,29 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
         *output = ip;
     }
     return success;
+}
+
+void reset_name_lookup_timers()
+{
+    this_thread.dns_time = 0s;
+    this_thread.rdns_time = 0s;
+}
+
+mxb::Duration name_lookup_duration(NameLookupTimer type)
+{
+    switch (type)
+    {
+    case NameLookupTimer::ALL:
+        return this_thread.dns_time + this_thread.rdns_time;
+
+    case NameLookupTimer::NORMAL:
+        return this_thread.dns_time;
+
+    case NameLookupTimer::REVERSE:
+        return this_thread.rdns_time;
+    }
+
+    mxb_assert(!true);
+    return 0s;
 }
 }

@@ -157,6 +157,7 @@ public:
         if (auto cnf = create_config(m_config))
         {
             std::string err;
+            cnf->set("group.id", "maxscale-kafkacdc", err);
 
             if (auto consumer = RdKafka::KafkaConsumer::create(cnf.get(), err))
             {
@@ -400,7 +401,6 @@ private:
         // https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
         std::unordered_map<std::string, std::string> values;
         values["bootstrap.servers"] = config.bootstrap_servers;
-        values["group.id"] = "maxscale-kafkacdc";
 
         if (config.enable_idempotence)
         {

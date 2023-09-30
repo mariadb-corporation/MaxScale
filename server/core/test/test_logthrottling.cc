@@ -155,6 +155,61 @@ bool run(const MXB_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
     return check_messages(in, n_expect);
 }
 
+bool check_continued_suppression()
+{
+    MXB_LOG_THROTTLING t;
+    t.count = 5;
+    t.window_ms = 2000;
+    t.suppress_ms = 3000;
+
+    mxb_log_reset_suppression();
+    mxb_log_set_throttling(&t);
+
+    ifstream in(logfile.c_str());
+    in.seekg(0, ios_base::end);
+    auto offset = in.tellg();
+
+    cout << "Logging 100 messages, expecting 5 in the log." << endl;
+
+    log_messages(0, 100, LOG_ERR);
+
+    if (!check_messages(in, t.count))
+    {
+        return false;
+    }
+
+    in.clear();
+    in.seekg(offset, ios_base::beg);
+
+    cout << "Logging messages for 6 seconds, expecting them to continue the suppression." << endl;
+
+    for (int i = 0; i < 6; i++)
+    {
+        log_messages(0, 1, LOG_ERR);
+        sleep(1);
+    }
+
+    if (!check_messages(in, t.count))
+    {
+        return false;
+    }
+
+    in.clear();
+    in.seekg(offset, ios_base::beg);
+
+    cout << "Sleeping for 4 seconds and then logging a message." << endl;
+
+    sleep(4);
+    log_messages(0, 1, LOG_ERR);
+
+    if (!check_messages(in, t.count + 1))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 int main(int argc, char* argv[])
 {
     int rc = 0;
@@ -250,6 +305,11 @@ int main(int argc, char* argv[])
         // 20 messages * N_THREADS, and since we are logging DEBUG messages, we should
         // get 20 * N_THREADS messages.
         if (!run(t, LOG_DEBUG, 20, 20 * N_THREADS))
+        {
+            rc = EXIT_FAILURE;
+        }
+
+        if (!check_continued_suppression())
         {
             rc = EXIT_FAILURE;
         }

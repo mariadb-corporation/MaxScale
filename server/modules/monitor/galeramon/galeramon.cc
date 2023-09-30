@@ -206,6 +206,53 @@ bool GaleraMonitor::post_configure()
     return true;
 }
 
+std::string GaleraMonitor::annotate_state_change(mxs::MonitorServer* server)
+{
+    std::ostringstream ss;
+    auto prev = m_prev_info.find(server);
+    auto next = m_info.find(server);
+
+    if (prev != m_prev_info.end() && next != m_info.end() && server->server->is_running())
+    {
+        if (prev->second.local_state != next->second.local_state)
+        {
+            ss << "local_state: " << prev->second.local_state << " -> " << next->second.local_state << " ";
+        }
+
+        if (prev->second.local_index != next->second.local_index)
+        {
+            ss << "local_index: " << prev->second.local_index << " -> " << next->second.local_index << " ";
+        }
+
+        if (prev->second.server_id != next->second.server_id)
+        {
+            ss << "server_id: " << prev->second.server_id << " -> " << next->second.server_id << " ";
+        }
+
+        if (prev->second.joined != next->second.joined)
+        {
+            ss << "joined: " << prev->second.joined << " -> " << next->second.joined << " ";
+        }
+
+        if (prev->second.cluster_size != next->second.cluster_size)
+        {
+            ss << "cluster_size: " << prev->second.cluster_size << " -> " << next->second.cluster_size << " ";
+        }
+
+        if (prev->second.cluster_uuid != next->second.cluster_uuid)
+        {
+            ss << "cluster_uuid: '" << prev->second.cluster_uuid << "' -> '" << next->second.cluster_uuid << "' ";
+        }
+
+        if (prev->second.comment != next->second.comment)
+        {
+            ss << "state_comment: '" << prev->second.comment << "' -> '" << next->second.comment << "' ";
+        }
+    }
+
+    return ss.str();
+}
+
 void get_gtid(GaleraServer* srv, GaleraNode* info)
 {
     if (mxs_mysql_query(srv->con,
@@ -221,6 +268,13 @@ void get_gtid(GaleraServer* srv, GaleraNode* info)
                 info->gtid_binlog_pos = res.get_string(1);
                 info->read_only = res.get_bool(2);
                 info->server_id = res.get_int(3);
+
+                // The gtid_current_pos is not reliably updated in all cases (MDEV-26176). To make the MaxCtrl
+                // output consistent, substitute it with gtid_binlog_pos if it's found.
+                if (!info->gtid_binlog_pos.empty() && info->gtid_current_pos.empty())
+                {
+                    info->gtid_current_pos = info->gtid_binlog_pos;
+                }
             }
         }
     }
