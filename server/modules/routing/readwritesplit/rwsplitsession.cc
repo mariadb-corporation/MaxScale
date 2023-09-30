@@ -420,7 +420,6 @@ bool is_wsrep_error(const mxs::Error& error)
 
 bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
 {
-    mxb_assert(trx_is_open() || can_retry_query());
     mxb_assert(m_expected_responses >= 1);
 
     bool ok = false;

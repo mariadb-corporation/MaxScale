@@ -9,10 +9,15 @@ set(LIBMICROHTTPD_URLS
   "http://mirrors.kernel.org/gnu/${LIBMICROHTTPD_FILE}"
   CACHE STRING "libmicrohttpd sources")
 
+# Pass on the C compiler launcher to libmicrohttpd, if set.
+if (CMAKE_C_COMPILER_LAUNCHER)
+  set(LIBMICROHTTPD_C_COMPILER "CC=${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}")
+endif()
+
 ExternalProject_Add(libmicrohttpd
   URL ${LIBMICROHTTPD_URLS}
   SOURCE_DIR ${CMAKE_BINARY_DIR}/libmicrohttpd/
-  CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/libmicrohttpd//configure --prefix=${CMAKE_BINARY_DIR}/libmicrohttpd/ --enable-shared --with-pic --libdir=${CMAKE_BINARY_DIR}/libmicrohttpd/lib/
+  CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/libmicrohttpd//configure ${LIBMICROHTTPD_C_COMPILER} --prefix=${CMAKE_BINARY_DIR}/libmicrohttpd/ --enable-shared --with-pic --libdir=${CMAKE_BINARY_DIR}/libmicrohttpd/lib/ --disable-examples --disable-doc --disable-dependency-tracking
   BINARY_DIR ${CMAKE_BINARY_DIR}/libmicrohttpd/
   BUILD_COMMAND make
   INSTALL_COMMAND make install
@@ -25,4 +30,4 @@ ExternalProject_Add(libmicrohttpd
 include_directories(${CMAKE_BINARY_DIR}/libmicrohttpd/include/)
 set(MICROHTTPD_LIBRARIES ${CMAKE_BINARY_DIR}/libmicrohttpd/lib/libmicrohttpd.a)
 
-mark_as_advanced(LIBMICROHTTPD_VERSION LIBMICROHTTPD_URL MICROHTTPD_LIBRARIES LIBMICROHTTPD_FILE)
+mark_as_advanced(LIBMICROHTTPD_VERSION LIBMICROHTTPD_URL MICROHTTPD_LIBRARIES LIBMICROHTTPD_FILE LIBMICROHTTPD_C_COMPILER)

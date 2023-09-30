@@ -52,6 +52,7 @@ public:
     static GaleraMonitor* create(const std::string& name, const std::string& module);
     json_t*               diagnostics() const override;
     json_t*               diagnostics(mxs::MonitorServer* server) const override;
+    std::string           annotate_state_change(mxs::MonitorServer* server) override;
 
     mxs::config::Configuration& configuration() override final;
 

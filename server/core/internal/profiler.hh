@@ -44,6 +44,13 @@ public:
      */
     json_t* snapshot(const char* host);
 
+    /**
+     * Get a human-readable stacktrace from all threads
+     *
+     * @return The pretty-printed stacktrace
+     */
+    std::string stacktrace();
+
 private:
     using Stack = std::array<void*, 127>;
 

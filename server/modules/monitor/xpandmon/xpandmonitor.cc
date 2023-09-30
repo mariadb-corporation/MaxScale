@@ -1189,9 +1189,9 @@ void XpandMonitor::populate_from_bootstrap_servers()
 {
     int id = 1;
 
-    for (auto ms : m_servers)
+    for (auto* pMs : m_servers)
     {
-        SERVER* pServer = ms->server;
+        SERVER* pServer = pMs->server;
 
         xpand::Status status = xpand::Status::UNKNOWN;
         xpand::SubState substate = xpand::SubState::UNKNOWN;
@@ -1241,19 +1241,31 @@ void XpandMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
+        string address = pMs->server->address();
         unordered_set<string> ips;
-        string error;
-        if (!mxb::name_lookup(pMs->server->address(), &ips, &error))
+        if (m_config.dynamic_node_detection())
         {
-            MXB_SERROR("Could not lookup address '" << pMs->server->address()
-                       << "', status of bootstrap node '"
-                       << pMs->server->name() << "' may be incorrectly reported: "
-                       << error);
+            string error;
+            if (!mxb::name_lookup(address, &ips, &error))
+            {
+                MXB_SERROR("Could not lookup address '" << address
+                           << "', status of bootstrap node '"
+                           << pMs->server->name() << "' may be incorrectly reported: "
+                           << error);
 
-            // Insert the address just like that, in case the name lookup
-            // failed for some random reason and the address happens to
-            // already be an IP-address.
-            ips.insert(pMs->server->address());
+                // Insert the address just like that, in case the name lookup
+                // failed for some random reason and the address happens to
+                // already be an IP-address.
+                ips.insert(address);
+            }
+        }
+        else
+        {
+            // If dynamic_node_detection is disabled, the XpandNode will be
+            // created using the address verbatim as specified in the configuration.
+            // So this will work irrespective of whether the address is a hostname
+            // or an IP-address.
+            ips.insert(address);
         }
 
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
@@ -1659,9 +1671,9 @@ void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& server
     // general monitor server handling, so disregard it for now. Use the configured servers as active servers
     // so the monitor has at least some. This also matches with update_server_statuses() and
     // flush_server_status() calls in tick().
-    for (auto srv : m_servers)
+    for (auto* pSrv : m_servers)
     {
-        delete srv;
+        delete pSrv;
     }
 
     auto& shared_settings = settings().shared;
@@ -1674,7 +1686,7 @@ void XpandMonitor::configured_servers_updated(const std::vector<SERVER*>& server
     set_active_servers(std::vector<MonitorServer*>(m_servers.begin(), m_servers.end()), SetRouting::NO);
 }
 
-XpandServer::XpandServer(SERVER* server, const MonitorServer::SharedSettings& shared)
-    : MariaServer(server, shared)
+XpandServer::XpandServer(SERVER* pServer, const MonitorServer::SharedSettings& shared)
+    : MariaServer(pServer, shared)
 {
 }

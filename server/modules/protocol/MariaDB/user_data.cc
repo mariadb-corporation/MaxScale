@@ -1441,6 +1441,7 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
             // too much time, as this blocks the entire routing thread. TODO: use a separate thread/cache
             string resolved_addr;
             mxb::StopWatch timer;
+            mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
             bool rnl_success = mxb::reverse_name_lookup(addr, &resolved_addr);
             auto time_elapsed = timer.split();
             if (time_elapsed > 1s)

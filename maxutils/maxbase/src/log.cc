@@ -212,7 +212,8 @@ enum message_suppression_t
 {
     MESSAGE_NOT_SUPPRESSED,     // Message is not suppressed.
     MESSAGE_SUPPRESSED,         // Message is suppressed for the first time (for this round)
-    MESSAGE_STILL_SUPPRESSED    // Message is still suppressed (for this round)
+    MESSAGE_STILL_SUPPRESSED,   // Message is still suppressed (for this round)
+    MESSAGE_UNSUPPRESSED,       // Message was suppressed but the suppression is now over
 };
 
 class MessageRegistryKey
@@ -283,7 +284,7 @@ public:
     {
     }
 
-    message_suppression_t update_suppression(const MXB_LOG_THROTTLING& t)
+    std::pair<message_suppression_t, size_t> update_suppression(const MXB_LOG_THROTTLING& t)
     {
         message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
 
@@ -291,6 +292,7 @@ public:
 
         std::lock_guard<std::mutex> guard(m_lock);
 
+        size_t old_count = m_count - t.count;
         ++m_count;
 
         // Less that t.window_ms milliseconds since the message was logged
@@ -332,18 +334,25 @@ public:
             {
                 // Still in the suppression window.
                 rv = MESSAGE_STILL_SUPPRESSED;
+
+                if (now_ms - m_first_ms < t.window_ms)
+                {
+                    // Still within the trigger window, reset the timer.
+                    m_first_ms = now_ms;
+                }
             }
             else
             {
                 // We have exited the suppression window, reset the situation.
                 m_first_ms = now_ms;
                 m_count = 1;
+                rv = MESSAGE_UNSUPPRESSED;
             }
         }
 
         m_last_ms = now_ms;
 
-        return rv;
+        return {rv, old_count};
     }
 
 private:
@@ -442,9 +451,9 @@ public:
         return m_registry[key];
     }
 
-    message_suppression_t get_status(const char* file, int line)
+    std::pair<message_suppression_t, size_t> get_status(const char* file, int line)
     {
-        message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
+        std::pair<message_suppression_t, size_t> rv = {MESSAGE_NOT_SUPPRESSED, 0};
 
         // Copy the config to prevent the values from changing while we are using
         // them. It does not matter if they are changed just when we are copying
@@ -460,6 +469,12 @@ public:
         }
 
         return rv;
+    }
+
+    void clear()
+    {
+        std::lock_guard<std::mutex> guard(m_lock);
+        return m_registry.clear();
     }
 
 private:
@@ -646,6 +661,11 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
     }
 }
 
+void mxb_log_reset_suppression()
+{
+    this_unit.sMessage_registry->clear();
+}
+
 void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
 {
     // No locking; this is used only from maxadmin and an inconsistent set
@@ -684,6 +704,7 @@ bool mxb_log_should_log(int priority)
 bool mxb_log_rotate()
 {
     bool rval = this_unit.sLogger->rotate();
+    this_unit.sMessage_registry->clear();
 
     if (this_unit.redirect_stdout && rval)
     {
@@ -778,6 +799,7 @@ namespace
 {
 
 int log_message(message_suppression_t status,
+                size_t msg_count,
                 int level,
                 int priority,
                 const char* zModname,
@@ -875,12 +897,20 @@ int log_message(message_suppression_t status,
         " (subsequent similar messages suppressed for %lu milliseconds)";
     int nSuppression = 0;
     size_t suppress_ms = this_unit.throttling.suppress_ms;
+    static const char UNSUPPRESSION_FORMAT[] =
+        " (%lu similar messages were previously suppressed)";
 
     if (status == MESSAGE_SUPPRESSED)
     {
         nSuppression += sizeof(SUPPRESSION_FORMAT) - 1; // Remove trailing NULL
         nSuppression -= 3;                       // Remove the %lu
         nSuppression += UINTLEN(suppress_ms);
+    }
+    else if (status == MESSAGE_UNSUPPRESSED)
+    {
+        nSuppression += sizeof(UNSUPPRESSION_FORMAT) - 1;   // Remove trailing NULL
+        nSuppression -= 3;                                  // Remove the %lu
+        nSuppression += UINTLEN(msg_count);
     }
 
     // All set, now the final message can be constructed.
@@ -963,9 +993,13 @@ int log_message(message_suppression_t status,
     memcpy(pMessage, message.data(), nMessage);
     pMessage[nMessage] = 0;
 
-    if (nSuppression)
+    if (status == MESSAGE_SUPPRESSED)
     {
         sprintf(pSuppression, SUPPRESSION_FORMAT, suppress_ms);
+    }
+    else if (status == MESSAGE_UNSUPPRESSED)
+    {
+        sprintf(pSuppression, UNSUPPRESSION_FORMAT, msg_count);
     }
 
     // Add a final newline.
@@ -1041,6 +1075,7 @@ int mxb_log_message(int priority,
     if ((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0)     // Check that the priority is ok,
     {
         message_suppression_t status = MESSAGE_NOT_SUPPRESSED;
+        size_t msg_count = 0;
 
         // We only throttle errors and warnings. Info and debug messages
         // are never on during normal operation, so if they are enabled,
@@ -1052,7 +1087,7 @@ int mxb_log_message(int priority,
         if (!mxb_log_is_priority_enabled(LOG_INFO)
             && (level == LOG_ERR || level == LOG_WARNING))
         {
-            status = this_unit.sMessage_registry->get_status(file, line);
+            std::tie(status, msg_count) = this_unit.sMessage_registry->get_status(file, line);
         }
 
         if (status != MESSAGE_STILL_SUPPRESSED)
@@ -1095,7 +1130,7 @@ int mxb_log_message(int priority,
 
                 if ((!redirected && should_level_be_logged(level)) || is_session_tracing())
                 {
-                    err = log_message(status, level,
+                    err = log_message(status, msg_count, level,
                                       priority, modname, function,
                                       std::string_view(message, nMessage));
                 }
