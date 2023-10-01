@@ -22,7 +22,7 @@
         "postpublish": "rimraf ./dist"
     },
     "devDependencies": {
-        "@babel/core": "~7.22.11",
+        "@babel/core": "~7.22.20",
         "@babel/preset-env": "~7.22.14",
         "@rollup/plugin-alias": "~3.1.9",
         "@rollup/plugin-babel": "~5.3.1",
