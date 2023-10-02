@@ -17,6 +17,7 @@
 #include <cassert>
 #include <syslog.h>
 #include <stdexcept>
+#include <sys/time.h>
 
 /**
  * If MXB_MODULE_NAME is defined before log_manager.h is included, then all
@@ -424,9 +425,10 @@ using mxb_log_context_provider_t = size_t (*)(char* buffer, size_t len);
 /**
  * Prototype for function to be called when session tracing.
  *
- * @param message  The message abount to be logged.
+ * @param timestamp The timestamp for the message.
+ * @param message   The message abount to be logged.
  */
-using mxb_in_memory_log_t = void (*)(std::string_view message);
+using mxb_in_memory_log_t = void (*)(struct timeval timestamp, std::string_view message);
 
 /**
  * Prototype for conditional logging callback.
@@ -494,6 +496,16 @@ inline bool mxb_log_init(mxb_log_target_t target = MXB_LOG_TARGET_FS)
 
 namespace maxbase
 {
+
+/**
+ * Convert the given time value to a log timestamp
+ *
+ * @param tv            The time to convert to a log timestamp string
+ * @param highprecision If true, the timestamp will contain milliseconds
+ *
+ * @return The log timestamp string
+ */
+std::string format_timestamp(const struct timeval& tv, bool highprecision);
 
 /**
  * @class Log

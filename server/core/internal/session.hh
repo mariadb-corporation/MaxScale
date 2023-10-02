@@ -159,7 +159,7 @@ public:
     void book_server_response(mxs::Target* pTarget, bool final_response) override;
     void book_last_as_complete();
     void reset_server_bookkeeping() override;
-    void append_session_log(std::string_view msg) override;
+    void append_session_log(struct timeval tv, std::string_view msg) override;
     void dump_session_log() override;
 
     json_t* as_json_resource(const char* host, bool rdns) const;
@@ -373,7 +373,7 @@ private:
 
     using SessionVarsByName = std::unordered_map<std::string, SESSION_VARIABLE>;
     using QueryInfos = std::deque<QueryInfo>;
-    using Log = std::deque<std::string>;
+    using Log = std::deque<std::pair<struct timeval, std::string>>;
 
     MXB_AT_DEBUG(bool m_routing {false});
 

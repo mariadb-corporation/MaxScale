@@ -441,7 +441,7 @@ public:
      */
     bool log_is_enabled(int level) const;
 
-    virtual void append_session_log(std::string_view msg) = 0;
+    virtual void append_session_log(struct timeval tv, std::string_view msg) = 0;
     virtual void dump_session_log() = 0;
 
     /**

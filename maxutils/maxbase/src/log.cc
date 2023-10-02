@@ -65,73 +65,8 @@ uint64_t time_monotonic_ms()
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
 }
 
-// Regular timestamp
-std::string get_timestamp(void)
-{
-    time_t t = time(NULL);
-    struct tm tm;
-    localtime_r(&t, &tm);
-    static const char timestamp_formatstr[] = "%04d-%02d-%02d %02d:%02d:%02d   ";
-    static int required = snprintf(NULL,
-                                   0,
-                                   timestamp_formatstr,
-                                   tm.tm_year + 1900,
-                                   tm.tm_mon + 1,
-                                   tm.tm_mday,
-                                   tm.tm_hour,
-                                   tm.tm_min,
-                                   tm.tm_sec);
-    char buf[required + 1];
-
-    snprintf(buf,
-             sizeof(buf),
-             timestamp_formatstr,
-             tm.tm_year + 1900,
-             tm.tm_mon + 1,
-             tm.tm_mday,
-             tm.tm_hour,
-             tm.tm_min,
-             tm.tm_sec);
-
-    return buf;
-}
-
-// High-precision timestamp
-std::string get_timestamp_hp(void)
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    struct tm tm;
-    localtime_r(&tv.tv_sec, &tm);
-    int usec = tv.tv_usec / 1000;
-
-    static const char timestamp_formatstr_hp[] = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
-    static int required = snprintf(NULL,
-                                   0,
-                                   timestamp_formatstr_hp,
-                                   tm.tm_year + 1900,
-                                   tm.tm_mon + 1,
-                                   tm.tm_mday,
-                                   tm.tm_hour,
-                                   tm.tm_min,
-                                   tm.tm_sec,
-                                   usec);
-
-    char buf[required + 1];
-
-    snprintf(buf,
-             sizeof(buf),
-             timestamp_formatstr_hp,
-             tm.tm_year + 1900,
-             tm.tm_mon + 1,
-             tm.tm_mday,
-             tm.tm_hour,
-             tm.tm_min,
-             tm.tm_sec,
-             usec);
-
-    return buf;
-}
+static const int TIMESTAMP_LENGTH = mxb::format_timestamp(timeval {}, false).size();
+static const int TIMESTAMP_LENGTH_HP = mxb::format_timestamp(timeval {}, true).size();
 
 const std::string_view PREFIX_EMERG = "emerg  : ";
 const std::string_view PREFIX_ALERT = "alert  : ";
@@ -467,10 +402,6 @@ bool mxb_log_init(const char* ident,
                        "If session tracing has already been enabled, then in_memory_log "
                        "must be provided.");
 
-    // Trigger calculation of buffer lengths.
-    get_timestamp();
-    get_timestamp_hp();
-
     // Tests mainly pass a NULL logdir with MXB_LOG_TARGET_STDOUT but using
     // /dev/null as the default allows total suppression of logging
     std::string filepath = "/dev/null";
@@ -793,8 +724,10 @@ int log_message(message_suppression_t status,
     //   suppression :  If this particular message will henceforth be suppressed, a note about that.
 
     // timestamp
-    std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
-    int nTimestamp = timestamp.length();
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    bool highprecision = this_unit.do_highprecision;
+    int nTimestamp = highprecision ? TIMESTAMP_LENGTH_HP : TIMESTAMP_LENGTH;
 
     // prefix
     std::string_view prefix = level_to_prefix(level);
@@ -918,7 +851,6 @@ int log_message(message_suppression_t status,
     char* pMessage = pAugmentation + nAugmentation;
     char* pSuppression = pMessage + nMessage;
 
-    strcpy(pTimestamp, timestamp.c_str());
     memcpy(pPrefix, prefix.data(), nPrefix);
 
     if (nContext)
@@ -980,11 +912,18 @@ int log_message(message_suppression_t status,
 
     if (is_session_tracing())
     {
-        this_unit.in_memory_log({log_line, (std::string_view::size_type)nLog_line});
+        this_unit.in_memory_log(now, {pPrefix, (std::string_view::size_type)nLog_line - nTimestamp});
     }
 
     if (should_level_be_logged(level))
     {
+        // Converting the raw timestamp value into the formatted local time string is expensive. The
+        // __tz_convert function that localtime_r ends up calling has a global mutex which introduces a
+        // bottleneck for scaling. Delaying the timestamp string generation to this point makes it possible
+        // for the in-memory logging to avoid this cost.
+        std::string timestamp = mxb::format_timestamp(now, highprecision);
+        memcpy(pTimestamp, timestamp.c_str(), timestamp.size());
+
         // Debug messages are never logged into syslog
         if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
         {
@@ -1121,5 +1060,42 @@ LogRedirect::~LogRedirect()
 LogRedirect::Func LogRedirect::current_redirect()
 {
     return s_redirect;
+}
+
+std::string format_timestamp(const struct timeval& tv, bool highprecision)
+{
+    struct tm tm;
+    localtime_r(&tv.tv_sec, &tm);
+    char buf[100];
+    MXB_AT_DEBUG(int rc);
+
+    if (highprecision)
+    {
+        int usec = tv.tv_usec / 1000;
+        MXB_AT_DEBUG(rc = ) snprintf(buf, sizeof(buf),
+                                     "%04d-%02d-%02d %02d:%02d:%02d.%03d   ",
+                                     tm.tm_year + 1900,
+                                     tm.tm_mon + 1,
+                                     tm.tm_mday,
+                                     tm.tm_hour,
+                                     tm.tm_min,
+                                     tm.tm_sec,
+                                     usec);
+    }
+    else
+    {
+        MXB_AT_DEBUG(rc = ) snprintf(buf, sizeof(buf),
+                                     "%04d-%02d-%02d %02d:%02d:%02d   ",
+                                     tm.tm_year + 1900,
+                                     tm.tm_mon + 1,
+                                     tm.tm_mday,
+                                     tm.tm_hour,
+                                     tm.tm_min,
+                                     tm.tm_sec);
+    }
+
+    mxb_assert(rc < (int)sizeof(buf) && rc > 0);
+
+    return buf;
 }
 }

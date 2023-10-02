@@ -69,12 +69,12 @@ size_t mxs_get_context(char* buffer, size_t len)
     return len;
 }
 
-void mxs_log_in_memory(std::string_view msg)
+void mxs_log_in_memory(struct timeval tv, std::string_view msg)
 {
     MXS_SESSION* session = session_get_current();
     if (session)
     {
-        session->append_session_log(msg);
+        session->append_session_log(tv, msg);
     }
 }
 

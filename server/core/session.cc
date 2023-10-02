@@ -784,7 +784,7 @@ Session::~Session()
     {
         if (auto re = mxs::Config::get().session_trace_match.get())
         {
-            for (const std::string& line : m_log)
+            for (const auto& [_, line] : m_log)
             {
                 if (re.match(line))
                 {
@@ -895,9 +895,10 @@ json_t* Session::log_as_json() const
 {
     json_t* pLog = json_array();
 
-    for (const auto& i : m_log)
+    for (const auto& [tv, msg] : m_log)
     {
-        json_array_append_new(pLog, json_string(i.c_str()));
+        auto str = mxb::cat(mxb::format_timestamp(tv, true), msg);
+        json_array_append_new(pLog, json_string(str.c_str()));
     }
 
     return pLog;
@@ -1289,11 +1290,11 @@ bool Session::do_restart()
     return ok;
 }
 
-void Session::append_session_log(std::string_view msg)
+void Session::append_session_log(struct timeval tv, std::string_view msg)
 {
     if (!m_dumping_log)
     {
-        m_log.emplace_front(msg);
+        m_log.emplace_front(tv, msg);
 
         if (m_log.size() >= this_unit.session_trace)
         {
@@ -1315,7 +1316,7 @@ void Session::dump_session_log()
         // to filter the log output to just the original message, a prefix of ### Trace ### is added to all
         // messages. This also helps identify which ones are trace log messages and which ones are other info
         // messages from things like session-level or service-level info logging.
-        MXB_NOTICE("### Trace ### %s", it->c_str());
+        MXB_NOTICE("### Trace ### %s%s", mxb::format_timestamp(it->first, true).c_str(), it->second.c_str());
     }
 
     m_dumping_log = false;
