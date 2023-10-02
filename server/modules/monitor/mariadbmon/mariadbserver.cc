@@ -1204,9 +1204,8 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     {
         reason = "its binary log is disabled.";
     }
-    // The following will miss cases where seconds_behind_master is undefined (-1). This condition
-    // applies even to forced switchover as the dba should just wait a little.
-    else if ((op == OperationType::SWITCHOVER || op == OperationType::SWITCHOVER_FORCE)
+    // The following will miss cases where seconds_behind_master is undefined (-1).
+    else if (op == OperationType::SWITCHOVER
              && sstatus->seconds_behind_master > m_settings.switchover_timeout.count())
     {
         reason = string_printf("its replication lag (%lis) is greater than switchover_timeout (%lis).",

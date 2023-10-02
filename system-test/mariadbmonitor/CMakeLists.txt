@@ -40,6 +40,7 @@ add_test_executable_ex(NAME mysqlmon_failover_manual2_2 SOURCE mysqlmon_failover
 add_test_executable_ex(NAME mysqlmon_switchover SOURCE mysqlmon_switchover.cc CONFIG mysqlmon_switchover.cnf
         VMS repl_backend LABELS mysqlmon switchover)
 
+# MXS-4743 switchover-force works even with high replication lag
 add_test_executable_ex(NAME mariadbmon_switchover_force SOURCE mariadbmon_switchover_force.cc
         CONFIG mariadbmon_switchover_force.cnf
         VMS repl_backend LABELS mysqlmon switchover)
