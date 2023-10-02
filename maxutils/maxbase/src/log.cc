@@ -1091,40 +1091,22 @@ int mxb_log_message(int priority,
 
         if (status != MESSAGE_STILL_SUPPRESSED)
         {
-            va_list valist;
+            char message[MAX_LOGSTRLEN + 1];
 
-            /**
-             * Find out the length of log string (to be formatted str).
-             */
+            va_list valist;
             va_start(valist, format);
-            int nMessage = vsnprintf(NULL, 0, format, valist);
+            int nMessage = vsnprintf(message, sizeof(message), format, valist);
             va_end(valist);
 
             if (nMessage >= 0)
             {
-                if (nMessage > MAX_LOGSTRLEN)
-                {
-                    // MAX_LOGSTRLEN is the maximum that will be logged, so no point
-                    // in generating more than that. Further, a large 16MB insert would
-                    // cause a stack overflow.
-                    nMessage = MAX_LOGSTRLEN;
-                }
-
-                char message[nMessage + 1];
-
-                va_start(valist, format);
-                vsnprintf(message, nMessage + 1, format, valist);
-                va_end(valist);
-
-                auto redirect = mxb::LogRedirect::current_redirect();
-
                 // If there is redirection and the redirectee handles the message,
                 // the regular logging is bypassed.
                 bool redirected = false;
-                if (redirect)
+
+                if (auto redirect = mxb::LogRedirect::current_redirect())
                 {
                     redirected = redirect(level, std::string_view(message, nMessage));
-                    err = 0;
                 }
 
                 if ((!redirected && should_level_be_logged(level)) || is_session_tracing())
