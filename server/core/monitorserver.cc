@@ -50,6 +50,36 @@ bool check_disk_space_exhausted(mxs::MonitorServer* pMs, const std::string& path
     }
     return disk_space_exhausted;
 }
+
+const std::map<mxs_monitor_event_t, const char*> event_names_map =
+{
+    {MASTER_DOWN_EVENT, "master_down", },
+    {MASTER_UP_EVENT,   "master_up",   },
+    {SLAVE_DOWN_EVENT,  "slave_down",  },
+    {SLAVE_UP_EVENT,    "slave_up",    },
+    {SERVER_DOWN_EVENT, "server_down", },
+    {SERVER_UP_EVENT,   "server_up",   },
+    {SYNCED_DOWN_EVENT, "synced_down", },
+    {SYNCED_UP_EVENT,   "synced_up",   },
+    {DONOR_DOWN_EVENT,  "donor_down",  },
+    {DONOR_UP_EVENT,    "donor_up",    },
+    {LOST_MASTER_EVENT, "lost_master", },
+    {LOST_SLAVE_EVENT,  "lost_slave",  },
+    {LOST_SYNCED_EVENT, "lost_synced", },
+    {LOST_DONOR_EVENT,  "lost_donor",  },
+    {NEW_MASTER_EVENT,  "new_master",  },
+    {NEW_SLAVE_EVENT,   "new_slave",   },
+    {NEW_SYNCED_EVENT,  "new_synced",  },
+    {NEW_DONOR_EVENT,   "new_donor",   },
+    {RELAY_UP_EVENT,    "relay_up",    },
+    {RELAY_DOWN_EVENT,  "relay_down",  },
+    {LOST_RELAY_EVENT,  "lost_relay",  },
+    {NEW_RELAY_EVENT,   "new_relay",   },
+    {BLR_UP_EVENT,      "blr_up",      },
+    {BLR_DOWN_EVENT,    "blr_down",    },
+    {LOST_BLR_EVENT,    "lost_blr",    },
+    {NEW_BLR_EVENT,     "new_blr",     },
+};
 }
 
 namespace journal_fields
@@ -532,5 +562,17 @@ void MonitorServer::log_state_change(const std::string& reason)
                server->name(), server->address(), server->port(),
                get_event_name(), prev.c_str(), next.c_str(),
                reason.empty() ? "" : ": ", reason.c_str());
+}
+
+const char* MonitorServer::get_event_name()
+{
+    return get_event_name(last_event);
+}
+
+const char* MonitorServer::get_event_name(mxs_monitor_event_t event)
+{
+    auto it = event_names_map.find(event);
+    mxb_assert(it != event_names_map.end());
+    return it == event_names_map.end() ? "undefined_event" : it->second;
 }
 }

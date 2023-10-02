@@ -206,6 +206,14 @@ public:
     static mxs_monitor_event_t event_type(uint64_t before, uint64_t after);
 
     /**
+     * Convert a monitor event (enum) to string.
+     *
+     * @param   event    The event
+     * @return  Text description
+     */
+    static const char* get_event_name(mxs_monitor_event_t event);
+
+    /**
      * Calls event_type with previous and current server state
      *
      * @note This function must only be called from mon_process_state_changes

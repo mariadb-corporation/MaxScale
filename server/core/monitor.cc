@@ -756,7 +756,7 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
         json_object_set_new(rval, "node_id", json_integer(mon_srv->node_id));
         json_object_set_new(rval, "master_id", json_integer(mon_srv->master_id));
 
-        const char* event_name = get_event_name(mon_srv->last_event);
+        const char* event_name = MonitorServer::get_event_name(mon_srv->last_event);
         json_object_set_new(rval, "last_event", json_string(event_name));
         string triggered_at = http_to_date(mon_srv->triggered_at);
         json_object_set_new(rval, "triggered_at", json_string(triggered_at.c_str()));
@@ -785,48 +785,6 @@ void Monitor::wait_for_status_change()
     {
         std::this_thread::sleep_for(milliseconds(100));
     }
-}
-
-const char* Monitor::get_event_name(mxs_monitor_event_t event)
-{
-    static std::map<mxs_monitor_event_t, const char*> values =
-    {
-        {MASTER_DOWN_EVENT, "master_down", },
-        {MASTER_UP_EVENT,   "master_up",   },
-        {SLAVE_DOWN_EVENT,  "slave_down",  },
-        {SLAVE_UP_EVENT,    "slave_up",    },
-        {SERVER_DOWN_EVENT, "server_down", },
-        {SERVER_UP_EVENT,   "server_up",   },
-        {SYNCED_DOWN_EVENT, "synced_down", },
-        {SYNCED_UP_EVENT,   "synced_up",   },
-        {DONOR_DOWN_EVENT,  "donor_down",  },
-        {DONOR_UP_EVENT,    "donor_up",    },
-        {LOST_MASTER_EVENT, "lost_master", },
-        {LOST_SLAVE_EVENT,  "lost_slave",  },
-        {LOST_SYNCED_EVENT, "lost_synced", },
-        {LOST_DONOR_EVENT,  "lost_donor",  },
-        {NEW_MASTER_EVENT,  "new_master",  },
-        {NEW_SLAVE_EVENT,   "new_slave",   },
-        {NEW_SYNCED_EVENT,  "new_synced",  },
-        {NEW_DONOR_EVENT,   "new_donor",   },
-        {RELAY_UP_EVENT,    "relay_up",    },
-        {RELAY_DOWN_EVENT,  "relay_down",  },
-        {LOST_RELAY_EVENT,  "lost_relay",  },
-        {NEW_RELAY_EVENT,   "new_relay",   },
-        {BLR_UP_EVENT,      "blr_up",      },
-        {BLR_DOWN_EVENT,    "blr_down",    },
-        {LOST_BLR_EVENT,    "lost_blr",    },
-        {NEW_BLR_EVENT,     "new_blr",     },
-    };
-
-    auto it = values.find(event);
-    mxb_assert(it != values.end());
-    return it == values.end() ? "undefined_event" : it->second;
-}
-
-const char* MonitorServer::get_event_name()
-{
-    return Monitor::get_event_name(last_event);
 }
 
 string Monitor::gen_serverlist(int status, CredentialsApproach approach)
@@ -1275,7 +1233,7 @@ void Monitor::detect_handle_state_changes()
 
             if (standard_events_enabled && (event & m_settings.events))
             {
-                script_events.push_back({ptr, get_event_name(event)});
+                script_events.push_back({ptr, MonitorServer::get_event_name(event)});
             }
         }
         else if (ptr->auth_status_changed())

@@ -202,8 +202,8 @@ int main(int argc, char** argv)
 
             std::cout << "[" << mxs::Target::status_to_string(before, 0) << "] -> "
                       << "[" << mxs::Target::status_to_string(after, 0) << "]"
-                      << " ERROR: Expected " << mxs::Monitor::get_event_name(expected)
-                      << ", got " << mxs::Monitor::get_event_name(res) << "\n";
+                      << " ERROR: Expected " << mxs::MonitorServer::get_event_name(expected)
+                      << ", got " << mxs::MonitorServer::get_event_name(res) << "\n";
         }
     }
 

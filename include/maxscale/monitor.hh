@@ -97,14 +97,6 @@ public:
     static bool is_main_worker();
 
     /**
-     * Convert a monitor event (enum) to string.
-     *
-     * @param   event    The event
-     * @return  Text description
-     */
-    static const char* get_event_name(mxs_monitor_event_t event);
-
-    /**
      * Is the monitor running?
      *
      * @return True if monitor is running.
