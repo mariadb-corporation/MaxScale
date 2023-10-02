@@ -133,79 +133,49 @@ std::string get_timestamp_hp(void)
     return buf;
 }
 
-struct LOG_PREFIX
-{
-    const char* text;   // The prefix, e.g. "error: "
-    int         len;    // The length of the prefix without the trailing NULL.
-};
+const std::string_view PREFIX_EMERG = "emerg  : ";
+const std::string_view PREFIX_ALERT = "alert  : ";
+const std::string_view PREFIX_CRIT = "crit   : ";
+const std::string_view PREFIX_ERROR = "error  : ";
+const std::string_view PREFIX_WARNING = "warning: ";
+const std::string_view PREFIX_NOTICE = "notice : ";
+const std::string_view PREFIX_INFO = "info   : ";
+const std::string_view PREFIX_DEBUG = "debug  : ";
 
-const char PREFIX_EMERG[] = "emerg  : ";
-const char PREFIX_ALERT[] = "alert  : ";
-const char PREFIX_CRIT[] = "crit   : ";
-const char PREFIX_ERROR[] = "error  : ";
-const char PREFIX_WARNING[] = "warning: ";
-const char PREFIX_NOTICE[] = "notice : ";
-const char PREFIX_INFO[] = "info   : ";
-const char PREFIX_DEBUG[] = "debug  : ";
-
-LOG_PREFIX level_to_prefix(int level)
+std::string_view level_to_prefix(int level)
 {
     assert((level & ~LOG_PRIMASK) == 0);
-
-    LOG_PREFIX prefix;
 
     switch (level)
     {
     case LOG_EMERG:
-        prefix.text = PREFIX_EMERG;
-        prefix.len = sizeof(PREFIX_EMERG);
-        break;
+        return PREFIX_EMERG;
 
     case LOG_ALERT:
-        prefix.text = PREFIX_ALERT;
-        prefix.len = sizeof(PREFIX_ALERT);
-        break;
+        return PREFIX_ALERT;
 
     case LOG_CRIT:
-        prefix.text = PREFIX_CRIT;
-        prefix.len = sizeof(PREFIX_CRIT);
-        break;
+        return PREFIX_CRIT;
 
     case LOG_ERR:
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
+        return PREFIX_ERROR;
 
     case LOG_WARNING:
-        prefix.text = PREFIX_WARNING;
-        prefix.len = sizeof(PREFIX_WARNING);
-        break;
+        return PREFIX_WARNING;
 
     case LOG_NOTICE:
-        prefix.text = PREFIX_NOTICE;
-        prefix.len = sizeof(PREFIX_NOTICE);
-        break;
+        return PREFIX_NOTICE;
 
     case LOG_INFO:
-        prefix.text = PREFIX_INFO;
-        prefix.len = sizeof(PREFIX_INFO);
-        break;
+        return PREFIX_INFO;
 
     case LOG_DEBUG:
-        prefix.text = PREFIX_DEBUG;
-        prefix.len = sizeof(PREFIX_DEBUG);
-        break;
+        return PREFIX_DEBUG;
 
     default:
         assert(!true);
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
+        return PREFIX_ERROR;
     }
-
-    --prefix.len;   // Remove trailing NULL.
-
-    return prefix;
 }
 
 enum message_suppression_t
@@ -827,8 +797,8 @@ int log_message(message_suppression_t status,
     int nTimestamp = timestamp.length();
 
     // prefix
-    LOG_PREFIX prefix = level_to_prefix(level);
-    int nPrefix = prefix.len;
+    std::string_view prefix = level_to_prefix(level);
+    int nPrefix = prefix.length();
 
     // context
     char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
@@ -949,7 +919,7 @@ int log_message(message_suppression_t status,
     char* pSuppression = pMessage + nMessage;
 
     strcpy(pTimestamp, timestamp.c_str());
-    strcpy(pPrefix, prefix.text);
+    memcpy(pPrefix, prefix.data(), nPrefix);
 
     if (nContext)
     {
