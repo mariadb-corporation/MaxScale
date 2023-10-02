@@ -34,6 +34,7 @@
 #include <maxscale/cachingparser.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/secrets.hh>
 
 // Private headers
 #include "sql.hh"
@@ -140,10 +141,10 @@ void Replicator::Imp::rotate()
 {
     m_should_rotate.store(true, std::memory_order_relaxed);
 }
-    
+
 void Replicator::Imp::update_server_status()
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
 
     bool owner = true;
 
@@ -178,7 +179,6 @@ void Replicator::Imp::update_server_status()
         if (s->is_master() || status_is_blr(s->status()))
         {
             // TODO: per-server credentials aren't exposed in the public class
-            const auto& cfg = *service->config();
             m_servers.push_back({s->address(), s->port(), cfg.user, pw});
         }
     }
@@ -317,17 +317,18 @@ void Replicator::Imp::process_events()
 
     mxs::MainWorker* main_worker = mxs::MainWorker::get();
     mxs::MainWorker::DCId dcid;
+    mxb::Worker::Callable callable(main_worker);
 
     main_worker->call([&](){
         // Get the initial servers before we try to connect
         update_server_status();
 
         // Also request the servers to be updated once per second
-        dcid = main_worker->dcall(1s, [this](){
+        dcid = callable.dcall(1s, [this](){
             update_server_status();
             return true;
         });
-    }, mxb::Worker::EXECUTE_AUTO);
+    });
 
     while (m_running)
     {
@@ -430,8 +431,8 @@ void Replicator::Imp::process_events()
     }
 
     main_worker->call([&](){
-        main_worker->cancel_dcall(dcid);
-    }, mxb::Worker::EXECUTE_AUTO);
+        callable.cancel_dcall(dcid);
+    });
 
     if (m_state_fd != -1)
     {
