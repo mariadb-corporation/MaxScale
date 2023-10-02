@@ -840,17 +840,17 @@ int log_message(message_suppression_t status,
 
         if (nContext != 0)
         {
-            nContext += 3;   // +3 due to "(...) "
+            nContext += 3;      // +3 due to "(...) "
         }
     }
 
     // module
-    int nModname = zModname ? strlen(zModname) + 3 : 0;    // +3 due to "[...] "
+    int nModname = zModname ? strlen(zModname) + 3 : 0;     // +3 due to "[...] "
 
     // scope
     // If we know the actual object name, add that also
     auto zScope = mxb::LogScope::current_scope();
-    int nScope = zScope ? strlen(zScope) + 4 : 0;      // +4 due to "(...); "
+    int nScope = zScope ? strlen(zScope) + 4 : 0;       // +4 due to "(...); "
 
     // augmentation
     static const char AUGMENTATION_FORMAT[] = "(%s): ";
@@ -861,8 +861,8 @@ int log_message(message_suppression_t status,
     switch (augmentation)
     {
     case MXB_LOG_AUGMENT_WITH_FUNCTION:
-        nAugmentation = sizeof(AUGMENTATION_FORMAT) - 1; // Remove trailing 0
-        nAugmentation -= 2;                          // Remove the %s
+        nAugmentation = sizeof(AUGMENTATION_FORMAT) - 1;// Remove trailing 0
+        nAugmentation -= 2;                             // Remove the %s
         nAugmentation += strlen(zFunction);
         break;
 
@@ -903,7 +903,7 @@ int log_message(message_suppression_t status,
     if (status == MESSAGE_SUPPRESSED)
     {
         nSuppression += sizeof(SUPPRESSION_FORMAT) - 1; // Remove trailing NULL
-        nSuppression -= 3;                       // Remove the %lu
+        nSuppression -= 3;                              // Remove the %lu
         nSuppression += UINTLEN(suppress_ms);
     }
     else if (status == MESSAGE_UNSUPPRESSED)
@@ -934,7 +934,7 @@ int log_message(message_suppression_t status,
                + nAugmentation + nMessage + nSuppression == nLog_line);
     }
 
-    char log_line[nLog_line + 2]; // +2 for the '\n' that will be added and the final 0.
+    char log_line[nLog_line + 2];   // +2 for the '\n' that will be added and the final 0.
 
     // NOTE: All of these point into the same buffer, which will have a single NULL at the end.
     // NOTE: Thus, if printed without the length specified explicitly, not just that particular
@@ -1044,7 +1044,6 @@ int log_message(message_suppression_t status,
 
     return err;
 }
-
 }
 
 int mxb_log_message(int priority,
