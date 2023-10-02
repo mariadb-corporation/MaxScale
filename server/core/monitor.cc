@@ -2323,12 +2323,6 @@ bool Monitor::is_running() const
     return m_worker->event_loop_state() == mxb::Worker::EventLoop::RUNNING;
 }
 
-MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
-    : server(server)
-    , m_shared(shared)
-{
-}
-
 void MonitorServer::apply_status_requests()
 {
     // The admin can only modify the [Maintenance] and [Drain] bits.

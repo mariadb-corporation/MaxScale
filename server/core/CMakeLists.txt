@@ -34,6 +34,7 @@ add_library(maxscale-common SHARED
   modulecmd.cc
   monitor.cc
   monitormanager.cc
+  monitorserver.cc
   parser.cc
   profiler.cc
   queryclassifier.cc
