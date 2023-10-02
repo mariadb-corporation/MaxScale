@@ -254,7 +254,7 @@ xpand::Result xpand::ping_or_connect_to_hub(const char* zName,
     std::string err;
     auto rv2 = mxs::MariaServer::ping_or_connect_to_db(settings, server, ppCon, &err);
 
-    if (Monitor::connection_is_ok(rv2))
+    if (MonitorServer::connection_is_ok(rv2))
     {
         bool is_part_of_the_quorum;
         std::tie(rv, is_part_of_the_quorum) = xpand::is_part_of_the_quorum(zName, *ppCon);

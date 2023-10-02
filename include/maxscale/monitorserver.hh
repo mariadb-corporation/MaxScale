@@ -124,6 +124,14 @@ public:
     virtual ~MonitorServer() = default;
 
     /**
+     * Is the return value one of the 'OK' values.
+     *
+     * @param connect_result Return value of mon_ping_or_connect_to_db
+     * @return True of connection is ok
+     */
+    static bool connection_is_ok(MonitorServer::ConnectResult connect_result);
+
+    /**
      * Set pending status bits in the monitor server
      *
      * @param bits      The bits to set for the server
@@ -155,11 +163,10 @@ public:
 
     static bool status_changed(uint64_t before, uint64_t after);
 
-    bool        status_changed();
-    bool        flush_status();
-    bool        auth_status_changed();
-    std::string get_connect_error(ConnectResult rval);
-    void        log_connect_error(ConnectResult rval);
+    bool status_changed();
+    bool flush_status();
+    bool auth_status_changed();
+    void log_connect_error(ConnectResult rval);
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.

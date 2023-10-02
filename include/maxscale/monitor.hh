@@ -87,8 +87,6 @@ public:
     Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
 
-    static bool connection_is_ok(MonitorServer::ConnectResult connect_result);
-
     static std::string get_server_monitor(const SERVER* server);
 
     /**

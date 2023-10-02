@@ -2354,7 +2354,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
     m_new_events.clear();
     ConnectResult conn_status = ping_or_connect();
 
-    if (mxs::Monitor::connection_is_ok(conn_status))
+    if (connection_is_ok(conn_status))
     {
         maybe_fetch_variables();
         fetch_uptime();

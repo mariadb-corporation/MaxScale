@@ -1219,17 +1219,6 @@ void MariaServer::fetch_uptime()
     }
 }
 
-/**
- * Is the return value one of the 'OK' values.
- *
- * @param connect_result Return value of mon_ping_or_connect_to_db
- * @return True of connection is ok
- */
-bool Monitor::connection_is_ok(ConnectResult connect_result)
-{
-    return connect_result == ConnectResult::OLDCONN_OK || connect_result == ConnectResult::NEWCONN_OK;
-}
-
 string Monitor::get_server_monitor(const SERVER* server)
 {
     return this_unit.claimed_by(server->name());
@@ -1238,35 +1227,6 @@ string Monitor::get_server_monitor(const SERVER* server)
 bool Monitor::is_main_worker()
 {
     return mxs::MainWorker::is_current();
-}
-
-std::string MonitorServer::get_connect_error(ConnectResult rval)
-{
-    mxb_assert(!Monitor::connection_is_ok(rval));
-    const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
-    const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
-    return mxb::string_printf(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
-                              server->name(), server->address(), server->port(), m_latest_error.c_str());
-}
-
-/**
- * Log an error about the failure to connect to a backend server and why it happened.
- *
- * @param rval Return value of mon_ping_or_connect_to_db
- */
-void MonitorServer::log_connect_error(ConnectResult rval)
-{
-    MXB_ERROR("%s", get_connect_error(rval).c_str());
-}
-
-void MonitorServer::log_state_change(const std::string& reason)
-{
-    string prev = Target::status_to_string(m_prev_status, server->stats().n_current_conns());
-    string next = server->status_string();
-    MXB_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
-               server->name(), server->address(), server->port(),
-               get_event_name(), prev.c_str(), next.c_str(),
-               reason.empty() ? "" : ": ", reason.c_str());
 }
 
 void Monitor::hangup_failed_servers()
@@ -1833,7 +1793,7 @@ void SimpleMonitor::tick()
 
         ConnectResult conn_status = pMs->ping_or_connect();
 
-        if (connection_is_ok(conn_status))
+        if (MonitorServer::connection_is_ok(conn_status))
         {
             pMs->maybe_fetch_variables();
             pMs->fetch_uptime();

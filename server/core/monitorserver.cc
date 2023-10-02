@@ -76,6 +76,11 @@ const MonitorServer::ConnectionSettings& MonitorServer::conn_settings() const
     return m_shared.conn_settings;
 }
 
+bool MonitorServer::connection_is_ok(ConnectResult connect_result)
+{
+    return connect_result == ConnectResult::OLDCONN_OK || connect_result == ConnectResult::NEWCONN_OK;
+}
+
 bool MonitorServer::is_access_denied_error(int64_t errornum)
 {
     return errornum == ER_ACCESS_DENIED_ERROR || errornum == ER_ACCESS_DENIED_NO_PASSWORD_ERROR;
@@ -497,5 +502,35 @@ mxs_monitor_event_t MonitorServer::event_type(uint64_t before, uint64_t after)
     }
 
     return rval;
+}
+
+/**
+ * Log an error about the failure to connect to a backend server and why it happened.
+ *
+ * @param rval Return value of mon_ping_or_connect_to_db
+ */
+void MonitorServer::log_connect_error(ConnectResult rval)
+{
+    mxb_assert(!connection_is_ok(rval));
+    if (rval == ConnectResult::TIMEOUT)
+    {
+        MXB_ERROR("Monitor timed out when connecting to server %s[%s:%d] : '%s'",
+                  server->name(), server->address(), server->port(), m_latest_error.c_str());
+    }
+    else
+    {
+        MXB_ERROR("Monitor was unable to connect to server %s[%s:%d] : '%s'",
+                  server->name(), server->address(), server->port(), m_latest_error.c_str());
+    }
+}
+
+void MonitorServer::log_state_change(const std::string& reason)
+{
+    string prev = Target::status_to_string(m_prev_status, server->stats().n_current_conns());
+    string next = server->status_string();
+    MXB_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
+               server->name(), server->address(), server->port(),
+               get_event_name(), prev.c_str(), next.c_str(),
+               reason.empty() ? "" : ": ", reason.c_str());
 }
 }
