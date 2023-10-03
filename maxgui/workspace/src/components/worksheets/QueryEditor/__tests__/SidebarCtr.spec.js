@@ -13,17 +13,24 @@
  */
 
 import mount from '@tests/unit/setup'
-import SidebarCtr from '../SidebarCtr.vue'
+import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
+import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>
-    mount({
-        shallow: true,
-        component: SidebarCtr,
-        stubs: {
-            'mxs-sql-editor': "<div class='stub'></div>",
-        },
-        ...opts,
-    })
+    mount(
+        lodash.merge(
+            {
+                shallow: true,
+                component: SidebarCtr,
+                propsData: {
+                    queryEditorId: 'query-editor-id',
+                    activeQueryTabId: 'query-tab-id',
+                    activeQueryTabConn: {},
+                },
+            },
+            opts
+        )
+    )
 
 function mockShowingDbListTree() {
     return {
@@ -37,6 +44,26 @@ describe('sidebar-ctr', () => {
 
     describe(`Child component's data communication tests`, () => {
         afterEach(() => sinon.restore())
+
+        it(`Should pass accurate data to schema-tree-ctr via props`, () => {
+            wrapper = mountFactory()
+            const {
+                queryEditorId,
+                activeQueryTabId,
+                queryEditorTmp,
+                activeQueryTabConn,
+                schemaSidebar,
+                filterTxt,
+            } = wrapper.findComponent({
+                name: 'schema-tree-ctr',
+            }).vm.$props
+            expect(queryEditorId).to.equal(wrapper.vm.$props.queryEditorId)
+            expect(activeQueryTabId).to.equal(wrapper.vm.$props.activeQueryTabId)
+            expect(queryEditorTmp).to.eql(wrapper.vm.queryEditorTmp)
+            expect(activeQueryTabConn).to.be.eql(wrapper.vm.$props.activeQueryTabConn)
+            expect(schemaSidebar).to.eql(wrapper.vm.schemaSidebar)
+            expect(filterTxt).to.equal(wrapper.vm.filterTxt)
+        })
 
         const evtFnMap = {
             'get-node-data': 'fetchNodePrvwData',
@@ -66,26 +93,16 @@ describe('sidebar-ctr', () => {
             wrapper = mountFactory()
             expect(wrapper.vm.hasConn).to.be.false
             // Have valid connection
-            wrapper = mountFactory({
-                computed: { ...mockShowingDbListTree() },
-            })
+            wrapper = mountFactory({ computed: { ...mockShowingDbListTree() } })
             expect(wrapper.vm.hasConn).to.be.true
         })
-        it(`Should return accurate value for disableReload`, async () => {
+        it(`Should return accurate value for disableReload`, () => {
             // has connection
-            wrapper = mountFactory({
-                computed: {
-                    hasConn: () => true,
-                },
-            })
+            wrapper = mountFactory({ computed: { hasConn: () => true } })
             expect(wrapper.vm.disableReload).to.be.false
             // have no connection and still loading for data
-            await wrapper.setProps({ hasConn: false, isLoading: true })
             wrapper = mountFactory({
-                computed: {
-                    hasConn: () => false,
-                    isLoadingDbTree: () => true,
-                },
+                computed: { hasConn: () => false, isLoadingDbTree: () => true },
             })
             expect(wrapper.vm.disableReload).to.be.true
         })

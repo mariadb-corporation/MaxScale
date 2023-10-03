@@ -30,7 +30,11 @@
                     <keep-alive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
                         <template v-if="activeWkeId === wke.id">
                             <!-- query-editor has query-tab-nav-toolbar-right slot used by SkySQL -->
-                            <query-editor v-if="isQueryEditorWke(wke)" :ctrDim="ctrDim">
+                            <query-editor
+                                v-if="isQueryEditorWke(wke)"
+                                :ctrDim="ctrDim"
+                                :queryEditorId="wke.query_editor_id"
+                            >
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                             </query-editor>
                             <erd-wke v-else-if="isErdWke(wke)" :ctrDim="ctrDim" />
