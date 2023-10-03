@@ -59,7 +59,10 @@ describe('WorkspaceCtr', () => {
 
     it('Should pass accurate data to query-editor component via props', () => {
         wrapper = mountFactory()
-        const wke = wrapper.findAllComponents({ name: 'query-editor' }).at(0)
-        expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.ctrDim)
+        const { ctrDim, queryEditorId } = wrapper
+            .findAllComponents({ name: 'query-editor' })
+            .at(0).vm.$props
+        expect(ctrDim).to.be.equals(wrapper.vm.ctrDim)
+        expect(queryEditorId).to.be.equals(activeWke.query_editor_id)
     })
 })

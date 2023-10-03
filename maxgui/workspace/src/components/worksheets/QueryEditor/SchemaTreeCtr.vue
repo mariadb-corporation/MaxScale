@@ -138,8 +138,6 @@ This component emits the following events
 import { mapState } from 'vuex'
 import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
-import QueryConn from '@wsModels/QueryConn'
-import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
@@ -150,13 +148,20 @@ import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 export default {
     name: 'schema-tree-ctr',
     mixins: [customDragEvt, asyncEmit],
+    props: {
+        queryEditorId: { type: String, required: true },
+        activeQueryTabId: { type: String, required: true },
+        queryEditorTmp: { type: Object, required: true },
+        activeQueryTabConn: { type: Object, required: true },
+        filterTxt: { type: String, required: true },
+        schemaSidebar: { type: Object, required: true },
+    },
     data() {
         return {
             showCtxMenu: false,
             activeCtxNode: null,
             activeCtxItemOpts: [],
             hoveredNode: null,
-            expandedNodes: [],
         }
     },
     computed: {
@@ -167,36 +172,30 @@ export default {
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
             NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
         }),
-        queryEditorId() {
-            return QueryEditor.getters('activeId')
+        activeQueryTab() {
+            return QueryTab.find(this.activeQueryTabId) || {}
         },
-        activeQueryTabConn() {
-            return QueryConn.getters('activeQueryTabConn')
-        },
-        activeQueryTabId() {
-            return QueryEditor.getters('activeQueryTabId')
-        },
-        filterTxt() {
-            return SchemaSidebar.getters('filterTxt')
-        },
-        dbTreeData() {
-            return SchemaSidebar.getters('dbTreeData')
-        },
-        queryTabType() {
-            return QueryTab.getters('type')
+        activeQueryTabType() {
+            return this.$typy(this.activeQueryTab, 'type').safeString
         },
         isSqlEditor() {
-            return QueryTab.getters('isSqlEditor')
+            return this.activeQueryTabType === this.QUERY_TAB_TYPES.SQL_EDITOR
+        },
+        dbTreeData() {
+            return this.$typy(this.queryEditorTmp, 'db_tree').safeArray
         },
         activeNode() {
             const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = this.QUERY_TAB_TYPES
-            switch (this.queryTabType) {
+            switch (this.activeQueryTabType) {
                 case ALTER_EDITOR:
-                    return AlterEditor.getters('activeNode')
+                    return this.$typy(this.activeQueryTab, 'alterEditor.active_node')
+                        .safeObjectOrEmpty
                 case INSIGHT_VIEWER:
-                    return InsightViewer.getters('activeNode')
+                    return this.$typy(this.activeQueryTab, 'insightViewer.active_node')
+                        .safeObjectOrEmpty
                 case SQL_EDITOR:
-                    return QueryTab.getters('previewingNode')
+                    return this.$typy(this.activeQueryTab, 'queryTabTmp.previewing_node')
+                        .safeObjectOrEmpty
                 default:
                     return null
             }
@@ -209,7 +208,7 @@ export default {
                 if (v.length) {
                     const activeNode = this.$typy(this.minimizeNodes(v), '[0]').safeObjectOrEmpty
                     const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = this.QUERY_TAB_TYPES
-                    switch (this.queryTabType) {
+                    switch (this.activeQueryTabType) {
                         case ALTER_EDITOR:
                             AlterEditor.update({
                                 where: this.activeQueryTabId,
@@ -225,9 +224,7 @@ export default {
                         case SQL_EDITOR:
                             QueryTabTmp.update({
                                 where: this.activeQueryTabId,
-                                data: {
-                                    previewing_node: activeNode,
-                                },
+                                data: { previewing_node: activeNode },
                             })
                             break
                     }
@@ -303,52 +300,40 @@ export default {
                 [TRIGGER]: spFnTriggerOpts,
             }
         },
+        expandedNodes: {
+            get() {
+                return this.$typy(this.schemaSidebar, 'expanded_nodes').safeArray
+            },
+            set(v) {
+                let nodes = this.minimizeNodes(v)
+                //   The order is important which is used to reload the schema and update the tree
+                //   Sort expandedNodes by level property
+                nodes.sort((a, b) => a.level - b.level)
+                // Auto collapse all expanded nodes if schema node is collapsed
+                let validLevels = nodes.map(node => node.level)
+                if (validLevels[0] === 1)
+                    SchemaSidebar.update({
+                        where: this.queryEditorId,
+                        data: {
+                            expanded_nodes: nodes,
+                        },
+                    })
+                else
+                    SchemaSidebar.update({
+                        where: this.queryEditorId,
+                        data: {
+                            expanded_nodes: [],
+                        },
+                    })
+            },
+        },
     },
     watch: {
         showCtxMenu(v) {
             if (!v) this.activeCtxNode = null
         },
     },
-    activated() {
-        this.expandedNodes = SchemaSidebar.getters('expandedNodes')
-        this.watch_expandedNodes()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_expandedNodes).safeFunction()
-    },
     methods: {
-        watch_expandedNodes() {
-            this.unwatch_expandedNodes = this.$watch(
-                'expandedNodes',
-                (v, oV) => {
-                    const oldNodeIds = oV.map(node => node.id)
-                    const newNodeIds = v.map(node => node.id)
-                    if (!this.$helpers.lodash.isEqual(newNodeIds, oldNodeIds)) {
-                        let nodes = this.minimizeNodes(v)
-                        //   The order is important which is used to reload the schema and update the tree
-                        //   Sort expandedNodes by level property
-                        nodes.sort((a, b) => a.level - b.level)
-                        // Auto collapse all expanded nodes if schema node is collapsed
-                        let validLevels = nodes.map(node => node.level)
-                        if (validLevels[0] === 1)
-                            SchemaSidebar.update({
-                                where: this.queryEditorId,
-                                data: {
-                                    expanded_nodes: nodes,
-                                },
-                            })
-                        else
-                            SchemaSidebar.update({
-                                where: this.queryEditorId,
-                                data: {
-                                    expanded_nodes: [],
-                                },
-                            })
-                    }
-                },
-                { deep: true }
-            )
-        },
         filter(node, search, textKey) {
             return this.$helpers.ciStrIncludes(node[textKey], search)
         },

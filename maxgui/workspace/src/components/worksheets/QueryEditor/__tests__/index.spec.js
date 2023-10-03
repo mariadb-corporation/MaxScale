@@ -26,9 +26,10 @@ const mountFactory = opts =>
                 component: QueryEditor,
                 propsData: {
                     ctrDim: dummyCtrDim,
+                    queryEditorId: 'some id',
                 },
                 computed: {
-                    allQueryTabs: () => dummy_query_tabs,
+                    queryTabs: () => dummy_query_tabs,
                     activeQueryTabId: () => dummy_query_tabs[0].id,
                 },
                 stubs: {
@@ -64,6 +65,16 @@ describe('query-editor', () => {
             expect(maxPercent).to.be.equals(wrapper.vm.maxSidebarPct)
             expect(split).to.be.equals('vert')
             expect(progress).to.be.equals(true)
+        })
+
+        it(`Should pass accurate data to sidebar-ctr via props`, () => {
+            wrapper = mountFactory()
+            const { queryEditorId, activeQueryTabId, activeQueryTabConn } = wrapper.findComponent({
+                name: 'sidebar-ctr',
+            }).vm.$props
+            expect(queryEditorId).to.eql(wrapper.vm.$props.queryEditorId)
+            expect(activeQueryTabId).to.eql(wrapper.vm.activeQueryTabId)
+            expect(activeQueryTabConn).to.eql(wrapper.vm.activeQueryTabConn)
         })
 
         const fnEvtMap = {

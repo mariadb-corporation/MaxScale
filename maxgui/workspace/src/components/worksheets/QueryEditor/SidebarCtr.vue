@@ -48,21 +48,25 @@
                 :disabled="!hasConn"
             />
         </template>
-        <keep-alive>
-            <schema-tree-ctr
-                v-show="!isCollapsed"
-                class="schema-list-ctr"
-                @get-node-data="fetchNodePrvwData"
-                @load-children="handleLoadChildren"
-                @use-db="useDb"
-                @alter-tbl="onAlterTable"
-                @drop-action="handleOpenExecSqlDlg"
-                @truncate-tbl="handleOpenExecSqlDlg"
-                @gen-erd="handleShowGenErdDlg([$event.qualified_name])"
-                @view-node-insights="viewNodeInsights"
-                v-on="$listeners"
-            />
-        </keep-alive>
+        <schema-tree-ctr
+            v-show="!isCollapsed"
+            class="schema-list-ctr"
+            :queryEditorId="queryEditorId"
+            :activeQueryTabId="activeQueryTabId"
+            :queryEditorTmp="queryEditorTmp"
+            :activeQueryTabConn="activeQueryTabConn"
+            :schemaSidebar="schemaSidebar"
+            :filterTxt="filterTxt"
+            @get-node-data="fetchNodePrvwData"
+            @load-children="handleLoadChildren"
+            @use-db="useDb"
+            @alter-tbl="onAlterTable"
+            @drop-action="handleOpenExecSqlDlg"
+            @truncate-tbl="handleOpenExecSqlDlg"
+            @gen-erd="handleShowGenErdDlg([$event.qualified_name])"
+            @view-node-insights="viewNodeInsights"
+            v-on="$listeners"
+        />
     </wke-sidebar>
 </template>
 
@@ -85,7 +89,7 @@ import { mapState, mapActions, mapMutations } from 'vuex'
 import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
-import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
@@ -97,6 +101,11 @@ import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 export default {
     name: 'sidebar-ctr',
     components: { SchemaTreeCtr, WkeSidebar },
+    props: {
+        queryEditorId: { type: String, required: true },
+        activeQueryTabId: { type: String, required: true },
+        activeQueryTabConn: { type: Object, required: true },
+    },
     data() {
         return {
             actionName: '',
@@ -110,6 +119,9 @@ export default {
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
+        queryEditorTmp() {
+            return QueryEditorTmp.find(this.queryEditorId) || {}
+        },
         isCollapsed: {
             get() {
                 return this.is_sidebar_collapsed
@@ -118,40 +130,31 @@ export default {
                 this.SET_IS_SIDEBAR_COLLAPSED(v)
             },
         },
-        queryEditorId() {
-            return QueryEditor.getters('activeId')
-        },
-        activeQueryTabId() {
-            return QueryEditor.getters('activeQueryTabId')
+        schemaSidebar() {
+            return SchemaSidebar.find(this.queryEditorId) || {}
         },
         filterTxt: {
             get() {
-                return SchemaSidebar.getters('filterTxt')
+                return this.schemaSidebar.filter_txt || ''
             },
             set(v) {
                 SchemaSidebar.update({ where: this.queryEditorId, data: { filter_txt: v } })
             },
         },
+        activeQueryTabConnId() {
+            return this.$typy(this.activeQueryTabConn, 'id').safeString
+        },
         isLoadingDbTree() {
-            return SchemaSidebar.getters('loadingDbTree')
+            return this.queryEditorTmp.loading_db_tree || false
+        },
+        hasConn() {
+            return Boolean(this.activeQueryTabConnId)
         },
         disableReload() {
             return !this.hasConn || this.isLoadingDbTree
         },
         isSidebarDisabled() {
-            return QueryConn.getters('isActiveQueryTabConnBusy') || this.isLoadingDbTree
-        },
-        activeQueryTabConnId() {
-            return this.$typy(QueryConn.getters('activeQueryTabConn'), 'id').safeString
-        },
-        hasConn() {
-            return Boolean(this.activeQueryTabConnId)
-        },
-        dbTreeData() {
-            return SchemaSidebar.getters('dbTreeData')
-        },
-        activeQueryEditorConn() {
-            return QueryConn.getters('activeQueryEditorConn')
+            return this.activeQueryTabConn.is_busy || this.isLoadingDbTree
         },
     },
     methods: {
@@ -221,7 +224,10 @@ export default {
             this.SET_GEN_ERD_DLG({
                 is_opened: true,
                 preselected_schemas: this.$typy(preselectedSchemas).safeArray,
-                connection: this.activeQueryEditorConn,
+                connection:
+                    QueryConn.query()
+                        .where('query_editor_id', this.queryEditorId)
+                        .first() || {},
                 gen_in_new_ws: true,
             })
         },

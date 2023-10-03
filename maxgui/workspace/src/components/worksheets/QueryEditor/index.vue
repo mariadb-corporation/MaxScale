@@ -14,6 +14,9 @@
     >
         <template slot="pane-left">
             <sidebar-ctr
+                :queryEditorId="queryEditorId"
+                :activeQueryTabId="activeQueryTabId"
+                :activeQueryTabConn="activeQueryTabConn"
                 @place-to-editor="$typy($refs, 'editor[0].placeToEditor').safeFunction($event)"
                 @on-dragging="$typy($refs, 'editor[0].draggingTxt').safeFunction($event)"
                 @on-dragend="$typy($refs, 'editor[0].dropTxtToEditor').safeFunction($event)"
@@ -24,7 +27,7 @@
                 <query-tab-nav-ctr :height="queryTabCtrHeight">
                     <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                 </query-tab-nav-ctr>
-                <keep-alive v-for="queryTab in allQueryTabs" :key="queryTab.id" :max="20">
+                <keep-alive v-for="queryTab in queryTabs" :key="queryTab.id" :max="20">
                     <template v-if="activeQueryTabId === queryTab.id">
                         <txt-editor-ctr
                             v-if="isSqlEditor"
@@ -76,6 +79,7 @@ export default {
     },
     props: {
         ctrDim: { type: Object, required: true },
+        queryEditorId: { type: String, required: true },
     },
     data() {
         return {
@@ -87,21 +91,35 @@ export default {
         ...mapState({
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             sidebar_pct_width: state => state.prefAndStorage.sidebar_pct_width,
+            QUERY_TAB_TYPES: state => state.mxsWorkspace.config.QUERY_TAB_TYPES,
         }),
-        activeQueryTabConn() {
-            return QueryConn.getters('activeQueryTabConn')
+        queryEditor() {
+            return QueryEditor.query().find(this.queryEditorId) || {}
         },
-        isSqlEditor() {
-            return QueryTab.getters('isSqlEditor')
-        },
-        isAlterEditor() {
-            return QueryTab.getters('isAlterEditor')
-        },
-        allQueryTabs() {
-            return QueryTab.all()
+        queryTabs() {
+            return (
+                QueryTab.query()
+                    .where(t => t.query_editor_id === this.queryEditorId)
+                    .get() || []
+            )
         },
         activeQueryTabId() {
-            return QueryEditor.getters('activeQueryTabId')
+            return this.$typy(this.queryEditor, 'active_query_tab_id').safeString
+        },
+        activeQueryTab() {
+            return QueryTab.find(this.activeQueryTabId) || {}
+        },
+        activeQueryTabConn() {
+            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.activeQueryTabId)
+        },
+        activeQueryTabConnId() {
+            return this.$typy(this.activeQueryTabConn, 'id').safeString
+        },
+        isSqlEditor() {
+            return this.activeQueryTab.type === this.QUERY_TAB_TYPES.SQL_EDITOR
+        },
+        isAlterEditor() {
+            return this.activeQueryTab.type === this.QUERY_TAB_TYPES.ALTER_EDITOR
         },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
@@ -143,39 +161,25 @@ export default {
         is_sidebar_collapsed(v) {
             if (!v && this.sidebarPct <= this.minSidebarPct) this.sidebarPct = this.defSidebarPct
         },
+        activeQueryTabConnId: {
+            deep: true,
+            immediate: true,
+            async handler(v, oV) {
+                if (v !== oV) {
+                    await QueryEditor.dispatch('handleInitialFetch')
+                    this.isInitializing = false
+                } else if (!v) this.isInitializing = false
+            },
+        },
     },
     mounted() {
         this.$nextTick(() => this.handleSetDefSidebarPct())
-    },
-    activated() {
-        this.watch_activeQueryTabConn()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_activeQueryTabConn).safeFunction()
     },
     methods: {
         ...mapMutations({
             SET_SIDEBAR_PCT_WIDTH: 'prefAndStorage/SET_SIDEBAR_PCT_WIDTH',
             SET_IS_SIDEBAR_COLLAPSED: 'prefAndStorage/SET_IS_SIDEBAR_COLLAPSED',
         }),
-        /**
-         * A watcher on activeQueryTabConn state that is triggered immediately
-         * to behave like a created hook. The watcher is watched/unwatched based on
-         * activated/deactivated hook to prevent it from being triggered while changing
-         * the value of activeQueryTabConn in another worksheet.
-         */
-        watch_activeQueryTabConn() {
-            this.unwatch_activeQueryTabConn = this.$watch(
-                'activeQueryTabConn.id',
-                async (v, oV) => {
-                    if (v !== oV) {
-                        await QueryEditor.dispatch('handleInitialFetch')
-                        this.isInitializing = false
-                    } else if (!v) this.isInitializing = false
-                },
-                { deep: true, immediate: true }
-            )
-        },
         // panes dimension/percentages calculation functions
         handleSetDefSidebarPct() {
             if (!this.sidebarPct) this.sidebarPct = this.defSidebarPct

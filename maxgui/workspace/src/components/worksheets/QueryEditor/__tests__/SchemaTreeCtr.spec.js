@@ -16,6 +16,7 @@ import mount from '@tests/unit/setup'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import { lodash } from '@share/utils/helpers'
 import { NODE_CTX_TYPES, NODE_TYPES } from '@wsSrc/store/config'
+
 const mountFactory = opts =>
     mount(
         lodash.merge(
@@ -23,6 +24,14 @@ const mountFactory = opts =>
                 shallow: true,
                 component: SchemaTreeCtr,
                 computed: { dbTreeData: () => dummy_db_tree_data },
+                propsData: {
+                    queryEditorId: 'query-editor-id',
+                    activeQueryTabId: 'query-tab-id',
+                    queryEditorTmp: {},
+                    activeQueryTabConn: {},
+                    filterTxt: '',
+                    schemaSidebar: {},
+                },
             },
             opts
         )
@@ -151,7 +160,7 @@ describe(`SchemaTreeCtr`, () => {
         expect(openOnClick).to.be.true
         expect(loadChildren).to.be.equal(wrapper.vm.handleLoadChildren)
         expect(active).to.be.deep.equals(wrapper.vm.activeNodes)
-        expect(open).to.be.deep.equals(wrapper.vm.$data.expandedNodes)
+        expect(open).to.be.deep.equals(wrapper.vm.expandedNodes)
         expect(returnObject).to.be.true
     })
 
@@ -172,9 +181,7 @@ describe(`SchemaTreeCtr`, () => {
     it(`Should bold SCHEMA node if active_db === node.qualified_name`, () => {
         wrapper = mountFactory({
             shallow: false,
-            computed: {
-                activeQueryTabConn: () => ({ active_db: dummy_schema_node.qualified_name }),
-            },
+            propsData: { activeQueryTabConn: { active_db: dummy_schema_node.qualified_name } },
         })
         const schemaNodeNameEle = wrapper
             .find('.mxs-treeview')
@@ -184,7 +191,6 @@ describe(`SchemaTreeCtr`, () => {
     })
 
     describe(`node tooltip tests`, () => {
-        let wrapper
         it(`Should pass accurate data to preview-data-tooltip via props`, () => {
             wrapper = mountFactory({ data: () => ({ hoveredNode: dummy_schema_node }) })
             const { activator } = wrapper.findComponent('.preview-data-tooltip').vm.$props
@@ -219,8 +225,6 @@ describe(`SchemaTreeCtr`, () => {
         })
     })
     describe(`draggable node tests`, () => {
-        let wrapper
-
         afterEach(() => sinon.restore())
 
         it(`Should call onNodeDragStart when mousedown event is emitted`, () => {
@@ -239,8 +243,6 @@ describe(`SchemaTreeCtr`, () => {
         })
     })
     describe(`context menu tests`, () => {
-        let wrapper
-
         afterEach(() => sinon.restore())
 
         /**
