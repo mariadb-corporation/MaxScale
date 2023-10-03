@@ -133,29 +133,6 @@ RplEvent::RplEvent(size_t sz)
 {
 }
 
-RplEvent::RplEvent(RplEvent&& rhs)
-    : m_maria_rpl(std::move(rhs.m_maria_rpl))
-    , m_raw(std::move(rhs.m_raw))
-{
-    if (!is_empty())
-    {
-        init();
-    }
-}
-
-RplEvent& RplEvent::operator=(RplEvent&& rhs)
-{
-    m_maria_rpl = std::move(rhs.m_maria_rpl);
-    m_raw = std::move(rhs.m_raw);
-
-    if (!is_empty())
-    {
-        init();
-    }
-
-    return *this;
-}
-
 const char* RplEvent::pBuffer() const
 {
     if (!m_maria_rpl.is_empty())
@@ -203,6 +180,11 @@ void RplEvent::init(bool with_body)
 
     if (with_body)
     {
+        if (!m_real_size)
+        {
+            m_real_size = buffer_size();
+        }
+
         auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
         m_checksum = mariadb::get_byte4(pCrc);
     }
@@ -498,6 +480,8 @@ bool RplEvent::read_body(std::istream& file, long* file_pos)
     {
         *file_pos = next_event_pos();
     }
+
+    m_real_size = m_raw.size();
 
     return true;
 }

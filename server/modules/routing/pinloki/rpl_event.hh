@@ -96,8 +96,8 @@ public:
      */
     explicit RplEvent(std::vector<char>&& raw, size_t real_size);
 
-    RplEvent(RplEvent&& rhs);
-    RplEvent& operator=(RplEvent&& rhs);
+    RplEvent(RplEvent&& rhs) = default;
+    RplEvent& operator=(RplEvent&& rhs) = default;
 
     bool     is_empty() const;
     explicit operator bool() const;
