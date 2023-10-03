@@ -2,8 +2,8 @@
     <div>
         <div ref="tableTools" class="table-tools pb-2 d-inline-flex align-center">
             <slot name="left-table-tools-prepend" />
-            <v-text-field
-                v-model="filterKeyword"
+            <mxs-debounced-field
+                v-model="search"
                 name="filter"
                 dense
                 outlined
@@ -13,10 +13,9 @@
                 hide-details
             />
             <mxs-filter-list
-                v-model="filterHeaderIdxs"
-                selectAllOnActivated
+                v-model="excludedSearchHeaderNames"
                 :label="$mxs_t('filterBy')"
-                :items="tableHeaders"
+                :items="visHeaderNames"
                 :maxHeight="tableHeight - 20"
             />
             <slot name="left-table-tools-append" />
@@ -53,10 +52,9 @@
                 :defExportFileName="defExportFileName"
             />
             <mxs-filter-list
-                v-model="visHeaderIdxs"
-                selectAllOnActivated
+                v-model="hiddenHeaderNames"
                 :label="$mxs_t('columns')"
-                :items="tableHeaders"
+                :items="allHeaderNames"
                 :maxHeight="tableHeight - 20"
             />
             <mxs-tooltip-btn
@@ -88,7 +86,7 @@
             :showSelect="showSelect"
             :groupBy="groupBy"
             :activeRow="activeRow"
-            :search="filterKeyword"
+            :search="search"
             :selectedItems.sync="selectedItems"
             @is-grouping="isGrouping = $event"
             @on-cell-right-click="onCellRClick"
@@ -139,7 +137,7 @@
  */
 
 /*
-@on-delete-selected: selectedItems:any[]. Event is emitted when showSelect props is true
+@on-delete-selected: selectedRowIndexes:number[]. Event is emitted when showSelect props is true
 @on-done-editing: changedCells:[].  cells have its value changed
 Also emits other events from mxs-virtual-scroll-tbl via v-on="$listeners"
 */
@@ -175,9 +173,9 @@ export default {
     },
     data() {
         return {
-            filterHeaderIdxs: [],
-            visHeaderIdxs: [],
-            filterKeyword: '',
+            excludedSearchHeaderNames: [],
+            hiddenHeaderNames: [],
+            search: '',
             tableToolsHeight: 0,
             isVertTable: false,
             isGrouping: false,
@@ -205,14 +203,29 @@ export default {
             if (this.headers.length)
                 headers = [
                     { text: '#', maxWidth: 'max-content' },
-                    ...this.headers.map(h =>
-                        this.showGroupBy && !this.$typy(h, 'groupable').isDefined
-                            ? { ...h, groupable: true, draggable: this.draggable }
-                            : { ...h, draggable: this.draggable }
-                    ),
+                    ...this.headers.map(h => ({
+                        ...h,
+                        resizable: true,
+                        groupable: this.showGroupBy || h.groupable,
+                        draggable: this.draggable,
+                        hidden: this.hiddenHeaderNames.includes(h.text),
+                    })),
                 ]
 
             return headers
+        },
+        allHeaderNames() {
+            return this.tableHeaders.map(h => h.text)
+        },
+        visibleHeaders() {
+            return this.tableHeaders.filter(h => !h.hidden)
+        },
+        visHeaderNames() {
+            return this.$helpers.lodash.xorWith(
+                this.allHeaderNames,
+                this.hiddenHeaderNames,
+                (a, b) => a === b
+            )
         },
         rowsWithIndex() {
             return this.rows.map((row, i) => [i + 1, ...row])
@@ -221,15 +234,17 @@ export default {
             return this.filteredRows.map(row => row.filter((cell, i) => i !== 0))
         },
         visHeaders_wo_idx() {
-            return this.visibleHeaders.filter(header => header.text !== '#')
+            return this.visibleHeaders.slice(1)
         },
         filteredRows() {
             return this.rowsWithIndex.filter(row => {
                 let match = false
                 for (const [i, cell] of row.entries()) {
+                    const header = this.getHeader(i)
                     if (
-                        (this.filterHeaderIdxs.includes(i) || !this.filterHeaderIdxs.length) &&
-                        this.handleFilter(cell, this.filterKeyword, i)
+                        (!this.excludedSearchHeaderNames.includes(header.text) ||
+                            this.excludedSearchHeaderNames.length === this.tableHeaders.length) &&
+                        this.handleFilter(cell, this.search, i)
                     ) {
                         match = true
                         break
@@ -238,11 +253,7 @@ export default {
                 return match
             })
         },
-        visibleHeaders() {
-            return this.tableHeaders.map((h, i) =>
-                this.visHeaderIdxs.includes(i) ? h : { ...h, hidden: true }
-            )
-        },
+
         activeRow() {
             return this.$typy(this.ctxMenuData, 'row').safeArray
         },
@@ -292,13 +303,16 @@ export default {
             if (!v) this.ctxMenuData = {}
         },
     },
-    activated() {
+    mounted() {
         this.setTableToolsHeight()
     },
     methods: {
         setTableToolsHeight() {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
+        },
+        getHeader(i) {
+            return this.tableHeaders[i]
         },
         handleFilter(value, search, cellIdx) {
             const header = this.$typy(this.tableHeaders[cellIdx]).safeObjectOrEmpty

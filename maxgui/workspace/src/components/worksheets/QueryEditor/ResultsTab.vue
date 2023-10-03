@@ -80,15 +80,12 @@
                 />
             </v-menu>
             <v-spacer />
-            <keep-alive>
-                <duration-timer
-                    v-if="requestSentTime"
-                    :startTime="requestSentTime"
-                    :executionTime="execTime"
-                    :totalDuration="totalDuration"
-                />
-            </keep-alive>
-
+            <duration-timer
+                v-if="requestSentTime"
+                :startTime="requestSentTime"
+                :executionTime="execTime"
+                :totalDuration="totalDuration"
+            />
             <v-tooltip
                 v-if="
                     $typy(resultData[activeResSet], 'data').isDefined &&
@@ -120,7 +117,7 @@
                     <result-data-table
                         v-if="$typy(resSet, 'data').isDefined"
                         :height="resultTableHeight"
-                        :width="dynDim.width"
+                        :width="dim.width"
                         :headers="resSet.fields.map(field => ({ text: field }))"
                         :rows="resSet.data"
                         showGroupBy
@@ -165,7 +162,7 @@ export default {
         VirtualList,
     },
     props: {
-        dynDim: {
+        dim: {
             type: Object,
             validator(obj) {
                 return 'width' in obj && 'height' in obj
@@ -187,9 +184,7 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
-        }),
+        ...mapState({ OS_KEY: state => state.mxsWorkspace.config.OS_KEY }),
         ResultSetItem() {
             return ResultSetItem
         },
@@ -219,7 +214,7 @@ export default {
             } else return {}
         },
         resultTableHeight() {
-            return this.dynDim.height - this.headerHeight
+            return this.dim.height - this.headerHeight
         },
         errorTabId() {
             return 'Error'
@@ -235,26 +230,22 @@ export default {
                     if (this.isErrorTab) this.$refs.resultSetItems.scrollToBottom()
                 })
         },
-    },
-    activated() {
-        this.setHeaderHeight()
-        this.watch_resultSetItems()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_resultSetItems).safeFunction()
-    },
-    methods: {
-        watch_resultSetItems() {
-            this.unwatch_resultSetItems = this.$watch('resultSetItems', v => {
+        resultSetItems: {
+            deep: true,
+            handler(v) {
                 if (v.length) {
                     const errResSetIdx = v.findIndex(item => item.id === this.errorTabId)
                     this.activeResSet = errResSetIdx >= 0 ? v[errResSetIdx].id : v[0].id
                 }
-            })
+            },
         },
+        isLoading(v) {
+            if (!v) this.setHeaderHeight()
+        },
+    },
+    methods: {
         setHeaderHeight() {
-            if (!this.$refs.header) return
-            this.headerHeight = this.$refs.header.clientHeight
+            if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
         onClickResSetTab(item) {
             this.activeResSet = item.id

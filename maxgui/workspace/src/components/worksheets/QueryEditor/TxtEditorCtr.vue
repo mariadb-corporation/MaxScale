@@ -1,10 +1,13 @@
 <template>
     <div class="d-flex flex-column fill-height">
-        <!-- ref is needed here so that its parent can call method in it  -->
         <txt-editor-toolbar-ctr
             class="d-flex"
             :height="txtEditorToolbarHeight"
             :queryTab="queryTab"
+            :queryTabTmp="queryTabTmp"
+            :queryTabConn="queryTabConn"
+            :queryTxt="queryTxt"
+            :isVisSidebarShown="isVisSidebarShown"
             @disable-tab-move-focus="toggleTabMoveFocus"
         />
         <!-- Main panel contains editor pane and chart-config -->
@@ -18,7 +21,6 @@
             <template slot="pane-left">
                 <!-- TxtEditor pane contains editor and result pane -->
                 <mxs-split-pane
-                    ref="editorResultPane"
                     v-model="queryPanePctHeight"
                     :boundary="panesDim.height"
                     split="horiz"
@@ -43,7 +45,7 @@
                             <template slot="pane-left">
                                 <mxs-sql-editor
                                     ref="sqlEditor"
-                                    v-model="allQueryTxt"
+                                    v-model="queryTxt"
                                     class="editor pt-2 pl-2"
                                     :completionItems="completionItems"
                                     isKeptAlive
@@ -67,9 +69,11 @@
                     </template>
                     <template slot="pane-right">
                         <query-result-ctr
-                            ref="queryResultPane"
-                            :dynDim="resultPaneDim"
+                            :dim="resultPaneDim"
                             class="query-result-ctr"
+                            :queryTab="queryTab"
+                            :queryTabConn="queryTabConn"
+                            :queryTabTmp="queryTabTmp"
                             @place-to-editor="placeToEditor"
                             @on-dragging="draggingTxt"
                             @on-dragend="dropTxtToEditor"
@@ -108,10 +112,8 @@
  */
 import { mapMutations, mapState } from 'vuex'
 import TxtEditor from '@wsModels/TxtEditor'
-import QueryEditor from '@wsModels/QueryEditor'
-import QueryResult from '@wsModels/QueryResult'
-import QueryTab from '@wsModels/QueryTab'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
+import QueryConn from '@wsModels/QueryConn'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import TxtEditorToolbarCtr from '@wkeComps/QueryEditor/TxtEditorToolbarCtr.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import ChartConfig from '@wkeComps/QueryEditor/ChartConfig'
@@ -128,6 +130,7 @@ export default {
     },
     props: {
         dim: { type: Object, required: true },
+        queryEditorTmp: { type: Object, required: true },
         queryTab: { type: Object, required: true },
     },
     data() {
@@ -166,58 +169,38 @@ export default {
         eventBus() {
             return EventBus
         },
-        isVisSidebarShown() {
-            return TxtEditor.getters('isVisSidebarShown')
+        queryTabConn() {
+            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
         },
-        isTabMoveFocus: {
-            get() {
-                return this.tab_moves_focus
-            },
-            set(v) {
-                this.SET_TAB_MOVES_FOCUS(v)
-            },
+        queryTabTmp() {
+            return QueryTabTmp.find(this.queryTab.id) || {}
+        },
+        prvwDataResultSets() {
+            let resSets = []
+            const { prvw_data, prvw_data_details, previewing_node } = this.queryTabTmp
+            const nodeQualifiedName = this.$typy(previewing_node, 'qualified_name').safeString
+            const addToResSets = (data, mode) => {
+                if (!this.$typy(data).isEmptyObject)
+                    resSets.push({ id: `${this.$mxs_t(mode)} of ${nodeQualifiedName}`, ...data })
+            }
+            addToResSets(prvw_data, 'previewData')
+            addToResSets(prvw_data_details, 'viewDetails')
+            return resSets
+        },
+        userResultSets() {
+            const results = this.$typy(this.queryTabTmp, 'query_results.data.attributes.results')
+                .safeArray
+            let count = 0
+            return results.reduce((resultSets, res) => {
+                if (res.data) {
+                    ++count
+                    resultSets.push({ id: `RESULT SET ${count}`, ...res })
+                }
+                return resultSets
+            }, [])
         },
         resultSets() {
-            let resSets = []
-            // user query result data
-            const userQueryResults = this.$helpers.stringifyClone(
-                this.$typy(QueryResult.getters('userQueryRes'), 'data.attributes.results').safeArray
-            )
-            let resSetCount = 0
-            for (const res of userQueryResults) {
-                if (res.data) {
-                    ++resSetCount
-                    resSets.push({ id: `RESULT SET ${resSetCount}`, ...res })
-                }
-            }
-            // preview data
-            const { PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
-            const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
-            const prvwNodeQualifiedName = QueryTab.getters('previewingNodeQualifiedName')
-            for (const mode of prvwModes) {
-                const data = this.$helpers.stringifyClone(
-                    this.$typy(
-                        QueryResult.getters('findPrvwDataRes')(mode),
-                        'data.attributes.results[0]'
-                    ).safeObjectOrEmpty
-                )
-                if (!this.$typy(data).isEmptyObject) {
-                    let resName = ''
-                    switch (mode) {
-                        case PRVW_DATA:
-                            resName = this.$mxs_t('previewData')
-                            break
-                        case PRVW_DATA_DETAILS:
-                            resName = this.$mxs_t('viewDetails')
-                            break
-                    }
-                    resSets.push({
-                        id: `${resName} of ${prvwNodeQualifiedName}`,
-                        ...data,
-                    })
-                }
-            }
-            return resSets
+            return [...this.userResultSets, ...this.prvwDataResultSets]
         },
         snippetList() {
             return this.query_snippets.map(q => ({
@@ -228,7 +211,10 @@ export default {
             }))
         },
         completionItems() {
-            return [...SchemaSidebar.getters('completionItems'), ...this.snippetList]
+            return [
+                ...this.$typy(this.queryEditorTmp, 'completion_items').safeArray,
+                ...this.snippetList,
+            ]
         },
         showVisChart() {
             const labels = this.$typy(this.chartOpt, 'chartData.labels').safeArray
@@ -272,17 +258,15 @@ export default {
                 ? this.$helpers.pxToPct({ px: 32, containerPx: this.panesDim.width })
                 : 0
         },
-        allQueryTxt: {
+        txtEditor() {
+            return TxtEditor.find(this.queryTab.id) || {}
+        },
+        queryTxt: {
             get() {
-                return TxtEditor.getters('queryTxt')
+                return this.$typy(this.txtEditor, 'query_txt').safeString
             },
             set(value) {
-                TxtEditor.update({
-                    where: QueryEditor.getters('activeQueryTabId'),
-                    data: {
-                        query_txt: value,
-                    },
-                })
+                TxtEditor.update({ where: this.queryTab.id, data: { query_txt: value } })
             },
         },
         resultPaneDim() {
@@ -291,6 +275,17 @@ export default {
                 width: this.panesDim.width - visSideBarWidth,
                 height: (this.panesDim.height * (100 - this.queryPanePctHeight)) / 100,
             }
+        },
+        isVisSidebarShown() {
+            return this.$typy(this.txtEditor, 'is_vis_sidebar_shown').safeBoolean
+        },
+        isTabMoveFocus: {
+            get() {
+                return this.tab_moves_focus
+            },
+            set(v) {
+                this.SET_TAB_MOVES_FOCUS(v)
+            },
         },
     },
     watch: {

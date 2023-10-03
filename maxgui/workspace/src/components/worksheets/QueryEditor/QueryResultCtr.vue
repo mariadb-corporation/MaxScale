@@ -27,7 +27,7 @@
                         height: `calc(100% - 24px)`,
                     }"
                     :class="tabItemClass"
-                    :dynDim="componentDynDim"
+                    :dim="tabDim"
                     :isLoading="isLoading"
                     :data="queryData"
                     :requestSentTime="requestSentTime"
@@ -44,9 +44,10 @@
                         height: `calc(100% - 24px)`,
                     }"
                     :class="tabItemClass"
-                    :dynDim="componentDynDim"
-                    :activeQueryMode="activeQueryMode"
-                    :previewingNodeQualifiedName="previewingNodeQualifiedName"
+                    :dim="tabDim"
+                    :queryMode="queryMode"
+                    :queryTabId="queryTabId"
+                    :queryTabTmp="queryTabTmp"
                     :isLoading="isLoading"
                     :data="queryData"
                     :requestSentTime="requestSentTime"
@@ -60,7 +61,9 @@
                         height: `calc(100% - 24px)`,
                     }"
                     :class="tabItemClass"
-                    :dynDim="componentDynDim"
+                    :dim="tabDim"
+                    :queryMode="queryMode"
+                    :queryTabId="queryTabId"
                     v-on="$listeners"
                 />
             </keep-alive>
@@ -83,10 +86,7 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import QueryEditor from '@wsModels/QueryEditor'
-import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
-import QueryTab from '@wsModels/QueryTab'
 import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
@@ -99,13 +99,16 @@ export default {
         HistoryAndSnippetsCtr,
     },
     props: {
-        dynDim: {
+        dim: {
             type: Object,
             validator(obj) {
                 return 'width' in obj && 'height' in obj
             },
             required: true,
         },
+        queryTab: { type: Object, required: true },
+        queryTabConn: { type: Object, required: true },
+        queryTabTmp: { type: Object, required: true },
     },
     data() {
         return {
@@ -113,25 +116,26 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
-        }),
+        ...mapState({ QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES }),
+        queryTabId() {
+            return this.$typy(this.queryTab, 'id').safeString
+        },
         isConnBusy() {
-            return QueryConn.getters('isActiveQueryTabConnBusy')
+            return this.$typy(this.queryTabConn, 'is_busy').safeBoolean
         },
-        componentDynDim() {
+        tabDim() {
             /*
-             * width: dynDim.width - px-5
-             * height: dynDim.height - $tab-bar-height - pt-2
+             * width: dim.width - px-5
+             * height: dim.height - $tab-bar-height - pt-2
              */
-            return { width: this.dynDim.width - 40, height: this.dynDim.height - 24 - 8 }
+            return { width: this.dim.width - 40, height: this.dim.height - 24 - 8 }
         },
-        activeQueryMode() {
-            return QueryResult.getters('queryMode')
+        queryMode() {
+            return this.$typy(QueryResult.find(this.queryTabId), 'query_mode').safeString
         },
         activeTab: {
             get() {
-                switch (this.activeQueryMode) {
+                switch (this.queryMode) {
                     case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     case this.QUERY_MODES.PRVW_DATA:
                         return this.QUERY_MODES.PRVW_DATA
@@ -139,30 +143,28 @@ export default {
                     case this.QUERY_MODES.HISTORY:
                         return this.QUERY_MODES.HISTORY
                     default:
-                        return this.activeQueryMode
+                        return this.queryMode
                 }
             },
             set(v) {
-                QueryResult.update({
-                    where: QueryEditor.getters('activeQueryTabId'),
-                    data: { query_mode: v },
-                })
+                QueryResult.update({ where: this.queryTabId, data: { query_mode: v } })
             },
-        },
-        isLoading() {
-            return this.$typy(this.queryData, 'is_loading').safeBoolean
         },
         queryData() {
             const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
-            switch (this.activeQueryMode) {
+            switch (this.queryMode) {
                 case QUERY_VIEW:
-                    return QueryResult.getters('userQueryRes')
+                    return this.$typy(this.queryTabTmp, 'query_results').safeObjectOrEmpty
                 case PRVW_DATA:
+                    return this.$typy(this.queryTabTmp, 'prvw_data').safeObjectOrEmpty
                 case PRVW_DATA_DETAILS:
-                    return QueryResult.getters('findPrvwDataRes')(this.activeQueryMode)
+                    return this.$typy(this.queryTabTmp, 'prvw_data_details').safeObjectOrEmpty
                 default:
                     return {}
             }
+        },
+        isLoading() {
+            return this.$typy(this.queryData, 'is_loading').safeBoolean
         },
         requestSentTime() {
             return this.$typy(this.queryData, 'request_sent_time').safeNumber
@@ -176,9 +178,6 @@ export default {
         },
         totalDuration() {
             return this.$typy(this.queryData, 'total_duration').safeNumber
-        },
-        previewingNodeQualifiedName() {
-            return QueryTab.getters('previewingNodeQualifiedName')
         },
     },
 }

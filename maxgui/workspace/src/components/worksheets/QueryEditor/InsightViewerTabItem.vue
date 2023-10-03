@@ -85,9 +85,6 @@ export default {
             INSIGHT_SPECS: state => state.mxsWorkspace.config.INSIGHT_SPECS,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
         }),
-        requestConfig() {
-            return Worksheet.getters('activeRequestConfig')
-        },
         specData() {
             return this.$typy(this.analyzedData, `[${this.activeSpec}]`).safeObject
         },
@@ -215,26 +212,16 @@ export default {
             }, {})
         },
     },
-    activated() {
-        this.watch_activeSpec()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_activeSpec).safeFunction()
-    },
-    beforeDestroy() {
-        this.$typy(this.unwatch_activeSpec).safeFunction()
+    watch: {
+        activeSpec: {
+            immediate: true,
+            async handler(v) {
+                if (!this.analyzedData[v]) await this.fetch(v)
+            },
+        },
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
-        watch_activeSpec() {
-            this.unwatch_activeSpec = this.$watch(
-                'activeSpec',
-                async v => {
-                    if (!this.analyzedData[v]) await this.fetch(v)
-                },
-                { immediate: true }
-            )
-        },
         async fetch(spec) {
             const sql = this.specQueryMap[spec]
             if (sql) {
@@ -250,7 +237,7 @@ export default {
                 queries.post({
                     id: this.conn.id,
                     body: { sql },
-                    config: this.requestConfig,
+                    config: Worksheet.getters('activeRequestConfig'),
                 })
             )
             if (e) this.SET_SNACK_BAR_MESSAGE({ text: getErrorsArr(e), type: 'error' })

@@ -27,7 +27,12 @@ const mountFactory = opts =>
                     'mxs-sql-editor': "<div class='stub'></div>",
                 },
                 propsData: {
+                    height: 30,
                     queryTab: dummy_query_tab,
+                    queryTabTmp: {},
+                    queryTabConn: {},
+                    queryTxt: '',
+                    isVisSidebarShown: false,
                 },
             },
             opts
@@ -81,23 +86,23 @@ describe(`txt-editor-toolbar-ctr`, () => {
             expect(saveToSnippetsBtn.element.disabled).to.be.true
         })
         it(`Should allow query to be saved to snippets if queryTxt is not empty`, () => {
-            wrapper = mountFactory({ computed: { queryTxt: () => 'SELECT 1' } })
+            wrapper = mountFactory({ propsData: { queryTxt: 'SELECT 1' } })
             const saveToSnippetsBtn = wrapper.find('.create-snippet-btn')
             expect(saveToSnippetsBtn.element.disabled).to.be.false
         })
         it(`Should popup dialog to save query text to snippets`, () => {
             expect(wrapper.vm.confDlg.isOpened).to.be.false
-            wrapper = mountFactory({ computed: { queryTxt: () => 'SELECT 1' } })
+            wrapper = mountFactory({ propsData: { queryTxt: 'SELECT 1' } })
             wrapper.find('.create-snippet-btn').trigger('click')
             expect(wrapper.vm.confDlg.isOpened).to.be.true
         })
         it(`Should generate snippet object before popup the dialog`, () => {
-            wrapper = mountFactory({ computed: { queryTxt: () => 'SELECT 1' } })
+            wrapper = mountFactory({ propsData: { queryTxt: 'SELECT 1' } })
             wrapper.find('.create-snippet-btn').trigger('click')
             expect(wrapper.vm.snippet.name).to.be.equals('')
         })
         it(`Should assign addSnippet as the save handler for confDlg`, () => {
-            wrapper = mountFactory({ computed: { queryTxt: () => 'SELECT 1' } })
+            wrapper = mountFactory({ propsData: { queryTxt: 'SELECT 1' } })
             wrapper.vm.openSnippetDlg()
             expect(wrapper.vm.$data.confDlg.onSave).to.be.equals(wrapper.vm.addSnippet)
         })

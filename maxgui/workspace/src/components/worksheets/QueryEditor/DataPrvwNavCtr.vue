@@ -1,5 +1,5 @@
 <template>
-    <v-tabs v-model="activeView" hide-slider :height="20" class="v-tabs--mxs-workspace-style">
+    <v-tabs v-model="activeMode" hide-slider :height="20" class="v-tabs--mxs-workspace-style">
         <v-tab
             :key="QUERY_MODES.PRVW_DATA"
             :href="`#${QUERY_MODES.PRVW_DATA}`"
@@ -34,43 +34,35 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
-import QueryTab from '@wsModels/QueryTab'
 
 export default {
     name: 'data-prvw-nav-ctr',
     props: {
+        queryTabId: { type: String, required: true },
+        queryMode: { type: String, required: true },
         isLoading: { type: Boolean, required: true },
         resultData: { type: Object, required: true },
+        nodeQualifiedName: { type: String, required: true },
     },
     computed: {
-        ...mapState({
-            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
-        }),
-        activeQueryMode() {
-            return QueryResult.getters('queryMode')
-        },
-        activeView: {
+        ...mapState({ QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES }),
+        activeMode: {
             get() {
-                return this.activeQueryMode
+                return this.queryMode
             },
             set(v) {
                 if (
-                    this.activeQueryMode === this.QUERY_MODES.PRVW_DATA ||
-                    this.activeQueryMode === this.QUERY_MODES.PRVW_DATA_DETAILS
+                    this.queryMode === this.QUERY_MODES.PRVW_DATA ||
+                    this.queryMode === this.QUERY_MODES.PRVW_DATA_DETAILS
                 )
-                    QueryResult.update({
-                        where: QueryEditor.getters('activeQueryTabId'),
-                        data: { query_mode: v },
-                    })
+                    QueryResult.update({ where: this.queryTabId, data: { query_mode: v } })
             },
         },
     },
     watch: {
-        activeView: async function(activeView) {
-            // Wait until data is fetched
-            if (!this.isLoading) await this.handleFetch(activeView)
+        activeMode: async function(activeMode) {
+            if (!this.isLoading) await this.handleFetch(activeMode)
         },
     },
     methods: {
@@ -86,7 +78,7 @@ export default {
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
                         await QueryResult.dispatch('fetchPrvw', {
-                            qualified_name: QueryTab.getters('previewingNodeQualifiedName'),
+                            qualified_name: this.nodeQualifiedName,
                             query_mode,
                         })
                     }

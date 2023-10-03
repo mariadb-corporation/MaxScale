@@ -8,20 +8,13 @@
                 small
                 class="float-left add-query-tab-btn"
                 icon
-                @click="
-                    add({ query_editor_id: queryEditorId, schema: activeQueryTabConn.active_db })
-                "
+                @click="$emit('add')"
             >
                 <v-icon size="18" color="blue-azure">mdi-plus</v-icon>
             </v-btn>
         </div>
         <div ref="toolbarRight" class="ml-auto d-flex align-center mx-3 fill-height">
-            <connection-btn
-                :activeConn="activeQueryEditorConn"
-                @click="
-                    SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR })
-                "
-            />
+            <connection-btn :activeConn="activeQueryTabConn" @click="$emit('edit-conn')" />
             <!-- A slot for SkySQL Query Editor in service details page where the worksheet tab is hidden  -->
             <slot name="query-tab-nav-toolbar-right" />
         </div>
@@ -41,30 +34,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryEditor from '@wsModels/QueryEditor'
-import QueryTab from '@wsModels/QueryTab'
-import QueryConn from '@wsModels/QueryConn'
+/*
+ Emits:
+ - add
+ - edit-conn
+*/
 import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
-import { mapMutations, mapState } from 'vuex'
 
 export default {
-    name: 'query-tab-nav-toolbar-ctr',
+    name: 'query-tab-nav-toolbar',
     components: { ConnectionBtn },
+    props: {
+        activeQueryTabConn: { type: Object, required: true },
+    },
     computed: {
-        ...mapState({
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
-        }),
-        queryEditorId() {
-            return QueryEditor.getters('activeId')
-        },
-        activeQueryTabConn() {
-            return QueryConn.getters('activeQueryTabConn')
-        },
-        activeQueryEditorConn() {
-            return QueryConn.getters('activeQueryEditorConn')
-        },
         connectedServerName() {
-            return this.$typy(this.activeQueryEditorConn, 'meta.name').safeString
+            return this.$typy(this.activeQueryTabConn, 'meta.name').safeString
         },
     },
     watch: {
@@ -76,9 +61,6 @@ export default {
         this.calcWidth()
     },
     methods: {
-        ...mapMutations({
-            SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG',
-        }),
         calcWidth() {
             this.$nextTick(() =>
                 this.$emit(
@@ -87,9 +69,6 @@ export default {
                     this.$refs.buttonWrapper.clientWidth + this.$refs.toolbarRight.clientWidth + 24
                 )
             )
-        },
-        add(param) {
-            QueryTab.dispatch('handleAddQueryTab', param)
         },
     },
 }

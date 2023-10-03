@@ -1,25 +1,27 @@
 <template>
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center">
-            <template v-if="previewingNodeQualifiedName">
+            <template v-if="nodeQualifiedName">
                 <div class="d-flex align-center mr-4">
                     <b class="mr-1">Table:</b>
                     <mxs-truncate-str
-                        :tooltipItem="{ txt: previewingNodeQualifiedName, nudgeLeft: 16 }"
+                        :tooltipItem="{ txt: nodeQualifiedName, nudgeLeft: 16 }"
                         :maxWidth="260"
                     />
                 </div>
-                <data-prvw-nav-ctr :isLoading="isLoading" :resultData="resultData" />
+                <data-prvw-nav-ctr
+                    :queryTabId="queryTabId"
+                    :queryMode="queryMode"
+                    :isLoading="isLoading"
+                    :resultData="resultData"
+                    :nodeQualifiedName="nodeQualifiedName"
+                />
                 <v-spacer />
-                <!-- Add activeQueryMode as key to make sure it re-render when switching between two tabs  -->
-                <keep-alive>
-                    <duration-timer
-                        :key="activeQueryMode"
-                        :startTime="requestSentTime"
-                        :executionTime="execTime"
-                        :totalDuration="totalDuration"
-                    />
-                </keep-alive>
+                <duration-timer
+                    :startTime="requestSentTime"
+                    :executionTime="execTime"
+                    :totalDuration="totalDuration"
+                />
             </template>
             <span v-else v-html="$mxs_t('prvwTabGuide')" />
         </div>
@@ -27,26 +29,26 @@
             v-if="isLoading"
             :loading="isLoading"
             type="table: table-thead, table-tbody"
-            :height="dynDim.height - headerHeight"
+            :height="dim.height - headerHeight"
         />
         <template v-else>
             <keep-alive>
                 <result-data-table
                     v-if="$typy(resultData, 'fields').safeArray.length"
-                    :key="activeQueryMode"
-                    :height="dynDim.height - headerHeight"
-                    :width="dynDim.width"
+                    :key="queryMode"
+                    :height="dim.height - headerHeight"
+                    :width="dim.width"
                     :headers="$typy(resultData, 'fields').safeArray.map(field => ({ text: field }))"
                     :rows="$typy(resultData, 'data').safeArray"
                     showGroupBy
                     v-on="$listeners"
                 />
-                <div v-else>
+                <template v-else>
                     <div v-for="(v, key) in resultData" :key="key">
                         <b>{{ key }}:</b>
                         <span class="d-inline-block ml-4">{{ v }}</span>
                     </div>
-                </div>
+                </template>
             </keep-alive>
         </template>
     </div>
@@ -78,20 +80,21 @@ export default {
         DataPrvwNavCtr,
     },
     props: {
-        dynDim: {
+        dim: {
             type: Object,
             validator(obj) {
                 return 'width' in obj && 'height' in obj
             },
             required: true,
         },
-        activeQueryMode: { type: String, required: true },
+        queryMode: { type: String, required: true },
+        queryTabId: { type: String, required: true },
+        queryTabTmp: { type: Object, required: true },
         isLoading: { type: Boolean, required: true },
         data: { type: Object, required: true },
         requestSentTime: { type: Number, required: true },
         execTime: { type: Number, required: true },
         totalDuration: { type: Number, required: true },
-        previewingNodeQualifiedName: { type: String, required: true },
     },
     data() {
         return {
@@ -102,14 +105,18 @@ export default {
         resultData() {
             return this.$typy(this.data, 'data.attributes.results[0]').safeObjectOrEmpty
         },
+        nodeQualifiedName() {
+            return this.$typy(this.queryTabTmp, 'previewing_node.qualified_name').safeString
+        },
     },
-    activated() {
-        this.setHeaderHeight()
+    watch: {
+        isLoading(v) {
+            if (!v) this.setHeaderHeight()
+        },
     },
     methods: {
         setHeaderHeight() {
-            if (!this.$refs.header) return
-            this.headerHeight = this.$refs.header.clientHeight
+            if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
     },
 }

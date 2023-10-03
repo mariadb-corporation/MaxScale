@@ -20,7 +20,7 @@
             icon
             x-small
             :disabled="isQueryTabConnBusy"
-            @click.stop.prevent="onClickClose"
+            @click.stop.prevent="onClickDelete"
         >
             <v-icon size="8" :color="isQueryTabConnBusy ? '' : 'error'">
                 $vuetify.icons.mxs_close
@@ -43,12 +43,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/*
+ Emits:
+ - delete(id:string)
+*/
 import { mapState, mapMutations, mapGetters } from 'vuex'
-import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryConn from '@wsModels/QueryConn'
-import QueryResult from '@wsModels/QueryResult'
-import saveFile from '@wsSrc/mixins/saveFile'
 import AlterEditor from '@wsModels/AlterEditor'
+import saveFile from '@wsSrc/mixins/saveFile'
 
 export default {
     name: 'query-tab-nav-item',
@@ -65,27 +69,27 @@ export default {
         tabId() {
             return this.queryTab.id
         },
+        queryTabTmp() {
+            return QueryTabTmp.find(this.tabId) || {}
+        },
         isQueryTabUnsaved() {
             return this.getIsQueryTabUnsaved(this.tabId)
         },
-        initialDdlEditorData() {
+        initialAlterEditorData() {
             return this.$typy(AlterEditor.find(this.tabId), 'data').safeObjectOrEmpty
         },
         alterEditorStagingData() {
-            return QueryTab.getters('findAlterEditorStagingData')(this.tabId)
+            return this.$typy(this.queryTabTmp, 'alter_editor_staging_data').safeObjectOrEmpty
         },
         hasAlterEditorDataChanged() {
             if (this.$typy(this.alterEditorStagingData).isEmptyObject) return false
             return !this.$helpers.lodash.isEqual(
-                this.initialDdlEditorData,
+                this.initialAlterEditorData,
                 this.alterEditorStagingData
             )
         },
-        queryTabsOfActiveWke() {
-            return QueryTab.getters('queryTabsOfActiveWke')
-        },
         isLoadingQueryResult() {
-            return QueryResult.getters('findIsLoading')(this.tabId)
+            return this.$typy(this.queryTabTmp, 'query_results.is_loading').safeBoolean
         },
         isQueryTabConnBusy() {
             return QueryConn.getters('isConnBusyByQueryTabId')(this.tabId)
@@ -93,16 +97,16 @@ export default {
     },
     methods: {
         ...mapMutations({ SET_CONFIRM_DLG: 'mxsWorkspace/SET_CONFIRM_DLG' }),
-        onClickClose() {
+        onClickDelete() {
             if (this.isQueryTabUnsaved || this.hasAlterEditorDataChanged) {
                 let confirm_msg = this.$mxs_t('confirmations.deleteQueryTab', {
                         targetId: this.queryTab.name,
                     }),
                     on_save = async () => {
                         await this.handleSaveFile(this.queryTab)
-                        await this.handleDeleteTab()
+                        this.$emit('delete', this.tabId)
                     },
-                    after_cancel = async () => await this.handleDeleteTab(),
+                    after_cancel = () => this.$emit('delete', this.tabId),
                     save_text = 'save',
                     cancel_text = 'dontSave'
 
@@ -110,7 +114,7 @@ export default {
                     confirm_msg = this.$mxs_t('confirmations.deleteAlterTab', {
                         targetId: this.queryTab.name,
                     })
-                    on_save = async () => await this.handleDeleteTab()
+                    on_save = () => this.$emit('delete', this.tabId)
                     after_cancel = () => null
                     save_text = 'confirm'
                     cancel_text = 'cancel'
@@ -125,12 +129,7 @@ export default {
                     on_save,
                     after_cancel,
                 })
-            } else this.handleDeleteTab()
-        },
-        async handleDeleteTab() {
-            if (this.queryTabsOfActiveWke.length === 1)
-                QueryTab.dispatch('refreshLastQueryTab', this.tabId)
-            else await QueryTab.dispatch('handleDeleteQueryTab', this.tabId)
+            } else this.$emit('delete', this.tabId)
         },
     },
 }

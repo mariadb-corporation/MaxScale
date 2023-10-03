@@ -173,7 +173,6 @@
  * @disable-tab-move-focus : void
  */
 import { mapMutations, mapState, mapActions } from 'vuex'
-import QueryConn from '@wsModels/QueryConn'
 import TxtEditor from '@wsModels/TxtEditor'
 import QueryResult from '@wsModels/QueryResult'
 import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
@@ -187,8 +186,12 @@ export default {
         FileBtnsCtr,
     },
     props: {
-        queryTab: { type: Object, required: true },
         height: { type: Number, required: true },
+        queryTab: { type: Object, required: true },
+        queryTabTmp: { type: Object, required: true },
+        queryTabConn: { type: Object, required: true },
+        queryTxt: { type: String, required: true },
+        isVisSidebarShown: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -222,12 +225,6 @@ export default {
         eventBus() {
             return EventBus
         },
-        isVisSidebarShown() {
-            return TxtEditor.getters('isVisSidebarShown')
-        },
-        queryTxt() {
-            return TxtEditor.getters('queryTxt')
-        },
         isRowLimitValid: {
             get() {
                 return this.is_max_rows_valid
@@ -237,27 +234,24 @@ export default {
             },
         },
         isExecuting() {
-            return QueryResult.getters('findIsLoading')(this.queryTab.id)
+            return this.$typy(this.queryTabTmp, 'query_results.is_loading').safeBoolean
         },
         hasKillFlag() {
-            return QueryResult.getters('findHasKillFlag')(this.queryTab.id)
+            return this.$typy(this.queryTabTmp, 'has_kill_flag').safeBoolean
+        },
+        isQueryTabConnBusy() {
+            return this.$typy(this.queryTabConn, 'is_busy').safeBoolean
         },
         isRunBtnDisabled() {
-            const queryTabConn = QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
-            const { query_txt } = TxtEditor.find(this.queryTab.id) || {}
             return (
-                !query_txt ||
-                !queryTabConn.id ||
-                QueryConn.getters('isConnBusyByQueryTabId')(this.queryTab.id) ||
+                !this.queryTxt ||
+                !this.queryTabConn.id ||
+                this.isQueryTabConnBusy ||
                 this.isExecuting
             )
         },
         isVisBtnDisabled() {
-            const queryTabConn = QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
-            return (
-                !queryTabConn.id ||
-                (QueryConn.getters('isConnBusyByQueryTabId')(this.queryTab.id) && this.isExecuting)
-            )
+            return !this.queryTabConn.id || (this.isQueryTabConnBusy && this.isExecuting)
         },
         sqlTxt() {
             return this.activeRunMode === 'selected' ? this.selected_query_txt : this.queryTxt
@@ -273,9 +267,7 @@ export default {
         this.eventBus.$off('workspace-shortkey')
     },
     methods: {
-        ...mapActions({
-            pushToQuerySnippets: 'prefAndStorage/pushToQuerySnippets',
-        }),
+        ...mapActions({ pushToQuerySnippets: 'prefAndStorage/pushToQuerySnippets' }),
         ...mapMutations({
             SET_QUERY_ROW_LIMIT: 'prefAndStorage/SET_QUERY_ROW_LIMIT',
             SET_QUERY_CONFIRM_FLAG: 'prefAndStorage/SET_QUERY_CONFIRM_FLAG',
