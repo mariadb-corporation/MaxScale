@@ -69,7 +69,7 @@
  * Public License.
  */
 import TableHeaders from '@wsSrc/components/common/MxsVirtualTable/TableHeaders'
-
+import worker from 'worker-loader!./worker.js'
 export default {
     name: 'mxs-virtual-table',
     components: {
@@ -98,6 +98,7 @@ export default {
             headerWidthMap: {},
             headerScrollLeft: 0,
             isResizing: false,
+            collection: [],
         }
     },
     computed: {
@@ -149,54 +150,25 @@ export default {
                 return res
             }, {})
         },
-        //TODO: use web worker to optimize it further
-        collection() {
-            // Wait until colLeftPosMap and orderNumberHeaderWidth are computed
-            if (
-                this.$typy(this.colLeftPosMap).isEmptyObject ||
-                (this.showOrderNumberHeader && !this.orderNumberHeaderWidth)
-            )
-                return []
-
-            const headersLength = this.tableHeaders.length
-            let rowIdx = 0
-            let uuid = undefined
-            return this.cells.reduce((acc, cell, i) => {
-                // cells of a row are pushed to group
-                if (this.$typy(acc[rowIdx], 'group').isUndefined) acc.push({ group: [] })
-                const headerIdx = i % headersLength
-
-                // get uuid of a row
-                if (this.autoId && headerIdx === 0) uuid = this.cells[i]
-
-                // Push order number cell
+    },
+    watch: {
+        colLeftPosMap: {
+            immediate: true,
+            deep: true,
+            handler(v, oV) {
                 if (
-                    this.showOrderNumberHeader &&
-                    (this.autoId ? headerIdx === 1 : headerIdx === 0)
-                ) {
-                    acc[rowIdx].group.push({
-                        data: { value: rowIdx + 1, uuid, rowIdx, isOrderNumberCol: true },
-                        height: this.rowHeight,
-                        width: this.orderNumberHeaderWidth,
-                        x: 0,
-                        y: this.rowHeight * rowIdx,
-                    })
-                }
-
-                // Push visible cells to group
-                const width = this.$typy(this.headerWidthMap, `[${headerIdx}]`).safeNumber
-                if (!this.isHeaderHidden(headerIdx))
-                    acc[rowIdx].group.push({
-                        data: { value: cell, uuid, rowIdx, colIdx: headerIdx },
-                        height: this.rowHeight,
-                        width,
-                        x: this.colLeftPosMap[headerIdx],
-                        y: this.rowHeight * rowIdx,
-                    })
-                if (headerIdx === headersLength - 1) rowIdx++
-                return acc
-            }, [])
+                    !this.$helpers.lodash.isEqual(v, oV) &&
+                    !this.$typy(this.colLeftPosMap).isEmptyObject
+                )
+                    this.computeCollection()
+            },
         },
+    },
+    created() {
+        this.worker = new worker()
+    },
+    beforeDestroy() {
+        this.worker.terminate()
     },
     methods: {
         cellSizeAndPositionGetter(item) {
@@ -210,6 +182,22 @@ export default {
         },
         isHeaderHidden(i) {
             return this.$typy(this.tableHeaders, `[${i}].hidden`).safeBoolean
+        },
+        computeCollection() {
+            const data = {
+                tableHeaders: this.tableHeaders,
+                cells: this.cells,
+                autoId: this.autoId,
+                showOrderNumberHeader: this.showOrderNumberHeader,
+                rowHeight: this.rowHeight,
+                orderNumberHeaderWidth: this.orderNumberHeaderWidth,
+                headerWidthMap: this.headerWidthMap,
+                colLeftPosMap: this.colLeftPosMap,
+            }
+            this.worker.postMessage({ action: 'compute-collection', data })
+            this.worker.onmessage = event => {
+                this.collection = event.data
+            }
         },
     },
 }

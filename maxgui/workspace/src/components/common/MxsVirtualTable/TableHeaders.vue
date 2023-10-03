@@ -31,24 +31,25 @@
                 }"
                 :data-test="`${header.text}-ele`"
             >
-                <span
-                    class="text-truncate"
-                    :class="{ 'label-required': header.required }"
-                    data-test="header-text-ele"
+                <slot
+                    :name="`header-${header.text}`"
+                    :data="{
+                        header,
+                        // maxWidth: minus padding and sort-icon
+                        maxWidth: headerTxtMaxWidth(index),
+                        index,
+                        activatorID: headerIds[index],
+                    }"
                 >
-                    <slot
-                        :name="`header-${header.text}`"
-                        :data="{
-                            header,
-                            // maxWidth: minus padding and sort-icon
-                            maxWidth: headerTxtMaxWidth(index),
-                            index,
-                            activatorID: headerIds[index],
-                        }"
+                    <span
+                        class="text-truncate"
+                        :class="{ 'label-required': header.required }"
+                        data-test="header-text-ele"
                     >
                         {{ header.text }}
-                    </slot>
-                </span>
+                    </span>
+                </slot>
+
                 <span
                     v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                     class="header__resizer d-inline-block fill-height"
@@ -103,7 +104,6 @@ export default {
             headerWidthMap: {},
             isResizing: false,
             resizingData: null,
-            isWatched: false,
         }
     },
     computed: {
@@ -114,7 +114,10 @@ export default {
             return this.visHeaders.at(-1)
         },
         headerIds() {
-            return Array.from({ length: this.headers.length }, () => this.$helpers.uuidv1())
+            return Array.from(
+                { length: this.headers.length },
+                () => `header-${this.$helpers.uuidv1()}`
+            )
         },
         defaultHeaderMinWidth() {
             return 67
@@ -128,72 +131,50 @@ export default {
         isResizing(v) {
             this.$emit('is-resizing', v)
         },
+        rowCount: {
+            immediate: true,
+            handler() {
+                this.$helpers.doubleRAF(() => this.computeOrderNumberHeaderWidth())
+            },
+        },
+        headerIds: {
+            immediate: true,
+            deep: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) {
+                    this.resetHeaderWidth()
+                    this.$helpers.doubleRAF(() => {
+                        if (this.showOrderNumber) this.computeOrderNumberHeaderWidth()
+                        this.computeHeaderWidthMap()
+                    })
+                }
+            },
+        },
+        headerWidthMap: {
+            deep: true,
+            handler(v, oV) {
+                if (
+                    !this.$typy(v).isEmptyObject &&
+                    !this.$helpers.lodash.isEqual(v, oV) &&
+                    this.areNumbers(Object.values(this.headerWidthMap))
+                )
+                    this.$emit('header-width-map', v)
+            },
+        },
+        boundingWidth() {
+            this.resetHeaderWidth()
+            this.$helpers.doubleRAF(() => this.computeHeaderWidthMap())
+        },
     },
     mounted() {
         window.addEventListener('mousemove', this.resizerMouseMove)
         window.addEventListener('mouseup', this.resizerMouseUp)
-        this.addWatchers()
     },
     beforeDestroy() {
         window.removeEventListener('mousemove', this.resizerMouseMove)
         window.removeEventListener('mouseup', this.resizerMouseUp)
-        this.rmWatchers()
-    },
-    activated() {
-        this.addWatchers()
-    },
-    deactivated() {
-        this.rmWatchers()
     },
     methods: {
-        addWatchers() {
-            if (!this.isWatched) {
-                this.isWatched = true
-                this.watch_headerIds()
-                this.watch_boundingWidth()
-                this.watch_headerWidthMap()
-            }
-        },
-        rmWatchers() {
-            this.$typy(this.unwatch_headerIds).safeFunction()
-            this.$typy(this.unwatch_boundingWidth).safeFunction()
-            this.$typy(this.unwatch_headerWidthMap).safeFunction()
-        },
-        watch_headerIds() {
-            this.unwatch_headerIds = this.$watch(
-                'headerIds',
-                (v, oV) => {
-                    if (!this.$helpers.lodash.isEqual(v, oV)) {
-                        this.resetHeaderWidth()
-                        this.$helpers.doubleRAF(() => {
-                            if (this.showOrderNumber) this.computeOrderNumberHeaderWidth()
-                            this.computeHeaderWidthMap()
-                        })
-                    }
-                },
-                { deep: true, immediate: true }
-            )
-        },
-        watch_boundingWidth() {
-            this.unwatch_boundingWidth = this.$watch('boundingWidth', () => {
-                this.resetHeaderWidth()
-                this.$helpers.doubleRAF(() => this.computeHeaderWidthMap())
-            })
-        },
-        watch_headerWidthMap() {
-            this.unwatch_headerWidthMap = this.$watch(
-                'headerWidthMap',
-                (v, oV) => {
-                    if (
-                        !this.$typy(v).isEmptyObject &&
-                        !this.$helpers.lodash.isEqual(v, oV) &&
-                        this.areNumbers(Object.values(this.headerWidthMap))
-                    )
-                        this.$emit('header-width-map', v)
-                },
-                { deep: true }
-            )
-        },
         areNumbers(arr) {
             return arr.every(v => this.$typy(v).isNumber)
         },

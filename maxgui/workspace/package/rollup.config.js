@@ -12,6 +12,7 @@ import monaco from 'rollup-plugin-monaco-editor'
 import copy from 'rollup-plugin-copy'
 import dotenv from 'rollup-plugin-dotenv'
 import { terser } from 'rollup-plugin-terser'
+import webWorkerLoader from 'rollup-plugin-web-worker-loader'
 
 const projectRoot = path.resolve(__dirname, '../../')
 const rootSrcPath = path.resolve(projectRoot, 'src')
@@ -25,10 +26,7 @@ const sharePath = path.resolve(projectRoot, 'share')
 const monacoConfig = require(`${sharePath}/buildConfig/monaco`)
 
 // Get browserslist config
-const esbrowserslist = fs
-    .readFileSync(`${projectRoot}/.browserslistrc`)
-    .toString()
-    .split('\n')
+const esbrowserslist = fs.readFileSync(`${projectRoot}/.browserslistrc`).toString().split('\n')
 
 const resolver = resolve({ extensions: ['.js', '.vue', '.json', '.scss'] })
 
@@ -46,11 +44,15 @@ const external = [
     'chartjs-plugin-trendline',
     'localforage',
     'lodash',
+    'd3',
     'date-fns',
+    'dbgate-query-splitter',
+    'monaco-editor',
     'sql-formatter',
     'uuid',
     'vue',
     'vue-chartjs',
+    'vue-virtual-collection',
     'vuetify',
     'vuetify/lib',
     'vuex',
@@ -130,6 +132,7 @@ export default [
             }),
             terser(),
             copyrightBanner(),
+            webWorkerLoader({ pattern: /(worker-loader!)(.+)/ }),
         ],
     },
 ]

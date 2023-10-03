@@ -39,7 +39,8 @@
         "rollup-plugin-scss": "~3.0.0",
         "rollup-plugin-terser": "~7.0.2",
         "rollup-plugin-vue": "~5.1.9",
-        "rollup-plugin-vuetify": "~0.2.4"
+        "rollup-plugin-vuetify": "~0.2.4",
+        "rollup-plugin-web-worker-loader": "~1.6.1"
     },
     "peerDependencies": {
         "@mdi/font": "7.1.x",
@@ -49,6 +50,7 @@
         "chart.js": "3.9.x",
         "chartjs-adapter-date-fns": "3.0.x",
         "chartjs-plugin-trendline": "2.0.x",
+        "d3": "7.8.x",
         "date-fns": "2.29.x",
         "dbgate-query-splitter": "4.9.x",
         "deep-diff": "1.0.x",
@@ -67,9 +69,9 @@
         "vue-i18n": "8.x",
         "vue-shortkey": "3.x",
         "vue-template-compiler": "2.x",
+        "vue-virtual-collection": "1.5.x",
         "vuetify": "2.6.x",
         "vuex": "3.6.x",
-        "vue-virtual-collection": "1.5.x",
         "vuex-persist": "3.1.x"
     }
 }
