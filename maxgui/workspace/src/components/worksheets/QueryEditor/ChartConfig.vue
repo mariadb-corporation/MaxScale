@@ -188,6 +188,16 @@ export default {
         },
     },
     watch: {
+        resultSets: {
+            deep: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) {
+                    this.clearAxes()
+                    this.resSet = null
+                    this.genChartData()
+                }
+            },
+        },
         'chartOpt.type'() {
             this.clearAxes()
         },
@@ -213,23 +223,7 @@ export default {
             this.genChartData()
         },
     },
-    deactivated() {
-        this.$typy(this.unwatch_resultSets).safeFunction()
-    },
-    activated() {
-        this.watch_resultSets()
-    },
     methods: {
-        watch_resultSets() {
-            // store watcher to unwatch_resultSets and use it for removing the watcher
-            this.unwatch_resultSets = this.$watch('resultSets', (v, oV) => {
-                if (!this.$helpers.lodash.isEqual(v, oV)) {
-                    this.clearAxes()
-                    this.resSet = null
-                    this.genChartData()
-                }
-            })
-        },
         clearAxes() {
             this.axisKeys = { x: '', y: '' }
             this.axesType = { x: '', y: '' }

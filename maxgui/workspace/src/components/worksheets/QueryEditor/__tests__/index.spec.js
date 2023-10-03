@@ -69,12 +69,36 @@ describe('query-editor', () => {
 
         it(`Should pass accurate data to sidebar-ctr via props`, () => {
             wrapper = mountFactory()
-            const { queryEditorId, activeQueryTabId, activeQueryTabConn } = wrapper.findComponent({
+            const {
+                queryEditorId,
+                queryEditorTmp,
+                activeQueryTabId,
+                activeQueryTabConn,
+            } = wrapper.findComponent({
                 name: 'sidebar-ctr',
             }).vm.$props
-            expect(queryEditorId).to.eql(wrapper.vm.$props.queryEditorId)
-            expect(activeQueryTabId).to.eql(wrapper.vm.activeQueryTabId)
+            expect(queryEditorId).to.equal(wrapper.vm.$props.queryEditorId)
+            expect(queryEditorTmp).to.eql(wrapper.vm.queryEditorTmp)
+            expect(activeQueryTabId).to.equal(wrapper.vm.activeQueryTabId)
             expect(activeQueryTabConn).to.eql(wrapper.vm.activeQueryTabConn)
+        })
+
+        it(`Should pass accurate data to query-tab-nav-ctr via props`, () => {
+            wrapper = mountFactory()
+            const {
+                queryEditorId,
+                activeQueryTabId,
+                activeQueryTabConn,
+                queryTabs,
+                height,
+            } = wrapper.findComponent({
+                name: 'query-tab-nav-ctr',
+            }).vm.$props
+            expect(queryEditorId).to.equal(wrapper.vm.$props.queryEditorId)
+            expect(queryTabs).to.eql(wrapper.vm.queryTabs)
+            expect(activeQueryTabId).to.equal(wrapper.vm.activeQueryTabId)
+            expect(activeQueryTabConn).to.eql(wrapper.vm.activeQueryTabConn)
+            expect(height).to.equal(wrapper.vm.$data.queryTabCtrHeight)
         })
 
         const fnEvtMap = {

@@ -1,7 +1,7 @@
 <template>
     <div class="d-flex flex-row">
         <v-tabs
-            v-model="activeQueryTabId"
+            v-model="activeId"
             show-arrows
             hide-slider
             :height="height"
@@ -10,18 +10,25 @@
             center-active
         >
             <v-tab
-                v-for="queryTab in queryTabsOfActiveWke"
-                :key="`${queryTab.id}`"
-                :href="`#${queryTab.id}`"
+                v-for="tab in queryTabs"
+                :key="`${tab.id}`"
+                :href="`#${tab.id}`"
                 class="pa-0 tab-btn text-none"
                 active-class="tab-btn--active"
             >
-                <query-tab-nav-item :queryTab="queryTab" />
+                <query-tab-nav-item :queryTab="tab" @delete="handleDeleteTab" />
             </v-tab>
         </v-tabs>
-        <query-tab-nav-toolbar-ctr @get-total-btn-width="queryTabNavToolbarWidth = $event">
+        <query-tab-nav-toolbar
+            :activeQueryTabConn="activeQueryTabConn"
+            @add="addTab"
+            @edit-conn="
+                SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR })
+            "
+            @get-total-btn-width="queryTabNavToolbarWidth = $event"
+        >
             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-        </query-tab-nav-toolbar-ctr>
+        </query-tab-nav-toolbar>
     </div>
 </template>
 
@@ -39,37 +46,55 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapMutations, mapState } from 'vuex'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
-import QueryTabNavToolbarCtr from '@wkeComps/QueryEditor/QueryTabNavToolbarCtr.vue'
+import QueryTabNavToolbar from '@wkeComps/QueryEditor/QueryTabNavToolbar.vue'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
-import saveFile from '@wsSrc/mixins/saveFile'
 
 export default {
     name: 'query-tab-nav-ctr',
-    components: { QueryTabNavToolbarCtr, QueryTabNavItem },
-    mixins: [saveFile],
-    props: { height: { type: Number, required: true } },
+    components: { QueryTabNavToolbar, QueryTabNavItem },
+    props: {
+        queryEditorId: { type: String, required: true },
+        activeQueryTabId: { type: String, required: true },
+        activeQueryTabConn: { type: Object, required: true },
+        queryTabs: { type: Array, required: true },
+        height: { type: Number, required: true },
+    },
     data() {
         return {
             queryTabNavToolbarWidth: 0,
         }
     },
     computed: {
-        activeQueryTabId: {
+        ...mapState({
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
+        }),
+        activeId: {
             get() {
-                return QueryEditor.getters('activeQueryTabId')
+                return this.activeQueryTabId
             },
             set(v) {
                 if (v)
                     QueryEditor.update({
-                        where: QueryEditor.getters('activeId'),
+                        where: this.queryEditorId,
                         data: { active_query_tab_id: v },
                     })
             },
         },
-        queryTabsOfActiveWke() {
-            return QueryTab.getters('queryTabsOfActiveWke')
+    },
+    methods: {
+        ...mapMutations({ SET_CONN_DLG: 'mxsWorkspace/SET_CONN_DLG' }),
+        async handleDeleteTab(id) {
+            if (this.queryTabs.length === 1) QueryTab.dispatch('refreshLastQueryTab', id)
+            else await QueryTab.dispatch('handleDeleteQueryTab', id)
+        },
+        addTab() {
+            QueryTab.dispatch('handleAddQueryTab', {
+                query_editor_id: this.queryEditorId,
+                schema: this.activeQueryTabConn.active_db,
+            })
         },
     },
 }

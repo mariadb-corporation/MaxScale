@@ -89,7 +89,6 @@ import { mapState, mapActions, mapMutations } from 'vuex'
 import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
@@ -103,6 +102,7 @@ export default {
     components: { SchemaTreeCtr, WkeSidebar },
     props: {
         queryEditorId: { type: String, required: true },
+        queryEditorTmp: { type: Object, required: true },
         activeQueryTabId: { type: String, required: true },
         activeQueryTabConn: { type: Object, required: true },
     },
@@ -119,9 +119,6 @@ export default {
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
-        queryEditorTmp() {
-            return QueryEditorTmp.find(this.queryEditorId) || {}
-        },
         isCollapsed: {
             get() {
                 return this.is_sidebar_collapsed

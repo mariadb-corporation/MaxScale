@@ -2,7 +2,7 @@
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center">
             <v-tabs
-                v-model="activeView"
+                v-model="activeMode"
                 hide-slider
                 :height="20"
                 class="v-tabs--mxs-workspace-style"
@@ -28,20 +28,20 @@
         <keep-alive>
             <template v-if="persistedQueryData.length">
                 <table-list
-                    v-if="activeView === QUERY_MODES.HISTORY || activeView === QUERY_MODES.SNIPPETS"
-                    :key="activeView"
-                    :height="dynDim.height - headerHeight"
-                    :width="dynDim.width"
+                    v-if="activeMode === QUERY_MODES.HISTORY || activeMode === QUERY_MODES.SNIPPETS"
+                    :key="activeMode"
+                    :height="dim.height - headerHeight"
+                    :width="dim.width"
                     :headers="headers"
                     :rows="currRows"
                     showSelect
                     showGroupBy
                     groupBy="date"
                     :menuOpts="menuOpts"
-                    :showEditBtn="activeView === QUERY_MODES.SNIPPETS"
+                    :showEditBtn="activeMode === QUERY_MODES.SNIPPETS"
                     :defExportFileName="
                         `MaxScale Query ${
-                            activeView === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+                            activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
                         }`
                     "
                     @on-delete-selected="handleDeleteSelectedRows"
@@ -54,7 +54,7 @@
                             :maxWidth="maxWidth"
                         />
                     </template>
-                    <template v-if="activeView === QUERY_MODES.SNIPPETS" v-slot:header-name>
+                    <template v-if="activeMode === QUERY_MODES.SNIPPETS" v-slot:header-name>
                         {{ $mxs_t('prefix') }}
                     </template>
                     <template
@@ -120,7 +120,7 @@
                         </v-tooltip>
                     </template>
                     <template
-                        v-if="activeView === QUERY_MODES.HISTORY"
+                        v-if="activeMode === QUERY_MODES.HISTORY"
                         v-slot:left-table-tools-append
                     >
                         <div class="ml-2">
@@ -137,7 +137,7 @@
             <i18n
                 v-else
                 :path="
-                    activeView === QUERY_MODES.HISTORY
+                    activeMode === QUERY_MODES.HISTORY
                         ? 'mxs.historyTabGuide'
                         : 'mxs.snippetTabGuide'
                 "
@@ -158,7 +158,7 @@
         <mxs-dlg
             v-model="isConfDlgOpened"
             :title="
-                activeView === QUERY_MODES.HISTORY
+                activeMode === QUERY_MODES.HISTORY
                     ? $mxs_t('clearSelectedQueries', {
                           targetType: $mxs_t('queryHistory'),
                       })
@@ -177,7 +177,7 @@
                                     ? $mxs_t('entire')
                                     : $mxs_t('selected'),
                             targetType: $mxs_t(
-                                activeView === QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'
+                                activeMode === QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'
                             ),
                         })
                     }}
@@ -202,7 +202,6 @@
  * Public License.
  */
 import { mapState, mapMutations } from 'vuex'
-import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
 import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable'
 
@@ -210,13 +209,15 @@ export default {
     name: 'history-and-snippets-ctr',
     components: { 'table-list': ResultDataTable },
     props: {
-        dynDim: {
+        dim: {
             type: Object,
             validator(obj) {
                 return 'width' in obj && 'height' in obj
             },
             required: true,
         },
+        queryMode: { type: String, required: true },
+        queryTabId: { type: String, required: true },
     },
     data() {
         return {
@@ -235,22 +236,16 @@ export default {
             query_history: state => state.prefAndStorage.query_history,
             query_snippets: state => state.prefAndStorage.query_snippets,
         }),
-        activeQueryMode() {
-            return QueryResult.getters('queryMode')
-        },
-        activeView: {
+        activeMode: {
             get() {
-                return this.activeQueryMode
+                return this.queryMode
             },
             set(v) {
                 if (
-                    this.activeQueryMode === this.QUERY_MODES.HISTORY ||
-                    this.activeQueryMode === this.QUERY_MODES.SNIPPETS
+                    this.queryMode === this.QUERY_MODES.HISTORY ||
+                    this.queryMode === this.QUERY_MODES.SNIPPETS
                 )
-                    QueryResult.update({
-                        where: QueryEditor.getters('activeQueryTabId'),
-                        data: { query_mode: v },
-                    })
+                    QueryResult.update({ where: this.queryTabId, data: { query_mode: v } })
             },
         },
         queryLogTypes() {
@@ -258,7 +253,7 @@ export default {
         },
         headers() {
             let data = []
-            switch (this.activeView) {
+            switch (this.activeMode) {
                 case this.QUERY_MODES.HISTORY:
                     data = this.query_history
                     break
@@ -311,16 +306,16 @@ export default {
                         break
                     case 'name':
                         header.width = 240
-                        if (this.activeView === this.QUERY_MODES.SNIPPETS) header.editableCol = true
+                        if (this.activeMode === this.QUERY_MODES.SNIPPETS) header.editableCol = true
                         break
                     case 'sql':
-                        if (this.activeView === this.QUERY_MODES.SNIPPETS) header.editableCol = true
+                        if (this.activeMode === this.QUERY_MODES.SNIPPETS) header.editableCol = true
                 }
                 return header
             })
         },
         persistedQueryData() {
-            switch (this.activeView) {
+            switch (this.activeMode) {
                 case this.QUERY_MODES.HISTORY:
                     return this.query_history
                 case this.QUERY_MODES.SNIPPETS:
@@ -334,7 +329,7 @@ export default {
         },
         currRows() {
             let data = this.persistedQueryData
-            if (this.activeView === this.QUERY_MODES.HISTORY)
+            if (this.activeMode === this.QUERY_MODES.HISTORY)
                 data = data.filter(log => !this.hiddenLogTypes.includes(log.action.type))
             return data.map(item => Object.values(item))
         },
@@ -364,7 +359,7 @@ export default {
             ]
         },
     },
-    activated() {
+    mounted() {
         this.setHeaderHeight()
     },
     methods: {
@@ -373,8 +368,7 @@ export default {
             SET_QUERY_SNIPPETS: 'prefAndStorage/SET_QUERY_SNIPPETS',
         }),
         setHeaderHeight() {
-            if (!this.$refs.header) return
-            this.headerHeight = this.$refs.header.clientHeight
+            if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
         handleDeleteSelectedRows(itemsToBeDeleted) {
             this.itemsToBeDeleted = itemsToBeDeleted
@@ -392,7 +386,7 @@ export default {
                 arr: newMaxtrices,
             })
 
-            this[`SET_QUERY_${this.activeView}`](newData)
+            this[`SET_QUERY_${this.activeMode}`](newData)
         },
         txtOptHandler({ opt, data }) {
             let rowData = this.$helpers.map2dArr({
@@ -400,7 +394,7 @@ export default {
                 arr: [data.row.filter((_, i) => i !== 0)], // Remove # col
             })
             let sql, name
-            switch (this.activeView) {
+            switch (this.activeMode) {
                 case this.QUERY_MODES.HISTORY: {
                     name = rowData[0].action.name
                     sql = rowData[0].action.sql

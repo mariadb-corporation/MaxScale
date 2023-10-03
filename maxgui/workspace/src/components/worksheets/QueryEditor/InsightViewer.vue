@@ -9,17 +9,15 @@
             :style="{ height: `${tabItemDim.height}px` }"
             class="pt-2 px-5 mxs-field-text-size mxs-color-helper text-small-text"
         >
-            <keep-alive>
-                <insight-viewer-tab-item
-                    v-if="activeConn.id && activeNode.id"
-                    :dim="tabItemDim"
-                    :conn="activeConn"
-                    :node="activeNode"
-                    :activeSpec="activeSpec"
-                    :specs="specs"
-                    :nodeType="nodeType"
-                />
-            </keep-alive>
+            <insight-viewer-tab-item
+                v-if="queryTabConn.id && node.id"
+                :dim="tabItemDim"
+                :conn="queryTabConn"
+                :node="node"
+                :activeSpec="activeSpec"
+                :specs="specs"
+                :nodeType="nodeType"
+            />
         </div>
     </v-card>
 </template>
@@ -40,7 +38,6 @@
 import { mapState } from 'vuex'
 import InsightViewer from '@wsModels/InsightViewer'
 import QueryConn from '@wsModels/QueryConn'
-import QueryEditor from '@wsModels/QueryEditor'
 import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem'
 
 export default {
@@ -48,33 +45,32 @@ export default {
     components: { InsightViewerTabItem },
     props: {
         dim: { type: Object, required: true },
+        queryTab: { type: Object, required: true },
     },
     computed: {
         ...mapState({
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             INSIGHT_SPECS: state => state.mxsWorkspace.config.INSIGHT_SPECS,
         }),
+        insightViewer() {
+            return InsightViewer.find(this.queryTab.id) || {}
+        },
         activeSpec: {
             get() {
-                return InsightViewer.getters('activeSpec')
+                return this.$typy(this.insightViewer, 'active_spec').safeString
             },
             set(v) {
-                InsightViewer.update({
-                    where: QueryEditor.getters('activeQueryTabId'),
-                    data: {
-                        active_spec: v,
-                    },
-                })
+                InsightViewer.update({ where: this.queryTab.id, data: { active_spec: v } })
             },
         },
-        activeConn() {
-            return QueryConn.getters('activeQueryTabConn')
+        queryTabConn() {
+            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
         },
-        activeNode() {
-            return InsightViewer.getters('activeNode')
+        node() {
+            return this.$typy(this.insightViewer, 'active_node').safeObjectOrEmpty
         },
         nodeType() {
-            return this.$typy(this.activeNode, 'type').safeString
+            return this.$typy(this.node, 'type').safeString
         },
         specs() {
             const { SCHEMA, TBL, VIEW, TRIGGER, SP, FN } = this.NODE_TYPES

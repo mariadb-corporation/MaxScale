@@ -15,6 +15,7 @@
         <template slot="pane-left">
             <sidebar-ctr
                 :queryEditorId="queryEditorId"
+                :queryEditorTmp="queryEditorTmp"
                 :activeQueryTabId="activeQueryTabId"
                 :activeQueryTabConn="activeQueryTabConn"
                 @place-to-editor="$typy($refs, 'editor[0].placeToEditor').safeFunction($event)"
@@ -24,7 +25,13 @@
         </template>
         <template slot="pane-right">
             <div class="d-flex flex-column fill-height">
-                <query-tab-nav-ctr :height="queryTabCtrHeight">
+                <query-tab-nav-ctr
+                    :queryEditorId="queryEditorId"
+                    :activeQueryTabId="activeQueryTabId"
+                    :activeQueryTabConn="activeQueryTabConn"
+                    :queryTabs="queryTabs"
+                    :height="queryTabCtrHeight"
+                >
                     <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                 </query-tab-nav-ctr>
                 <keep-alive v-for="queryTab in queryTabs" :key="queryTab.id" :max="20">
@@ -32,11 +39,12 @@
                         <txt-editor-ctr
                             v-if="isSqlEditor"
                             ref="editor"
+                            :queryEditorTmp="queryEditorTmp"
                             :queryTab="queryTab"
                             :dim="editorDim"
                         />
                         <alter-table-editor v-else-if="isAlterEditor" :dim="editorDim" />
-                        <insight-viewer v-else :dim="editorDim" />
+                        <insight-viewer v-else :dim="editorDim" :queryTab="queryTab" />
                     </template>
                 </keep-alive>
             </div>
@@ -61,6 +69,7 @@
 import { mapMutations, mapState } from 'vuex'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
 import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
@@ -95,6 +104,9 @@ export default {
         }),
         queryEditor() {
             return QueryEditor.query().find(this.queryEditorId) || {}
+        },
+        queryEditorTmp() {
+            return QueryEditorTmp.find(this.queryEditorId) || {}
         },
         queryTabs() {
             return (

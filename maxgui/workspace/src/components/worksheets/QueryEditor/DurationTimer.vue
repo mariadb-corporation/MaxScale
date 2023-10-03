@@ -58,23 +58,21 @@ export default {
             return Math.abs(this.duration - this.executionTime).toFixed(4)
         },
     },
-    activated() {
-        this.duration = this.totalDuration
-        this.watch_executionTime()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_executionTime).safeFunction()
+    watch: {
+        executionTime: {
+            immediate: true,
+            handler(v) {
+                if (v === -1) this.updateSecond()
+            },
+        },
+        totalDuration: {
+            immediate: true,
+            handler(v) {
+                this.duration = v
+            },
+        },
     },
     methods: {
-        watch_executionTime() {
-            this.unwatch_executionTime = this.$watch(
-                'executionTime',
-                v => {
-                    if (v === -1) this.updateSecond()
-                },
-                { immediate: true }
-            )
-        },
         updateSecond() {
             const now = new Date().valueOf()
             const currSec = ((now - this.startTime) / 1000).toFixed(4)

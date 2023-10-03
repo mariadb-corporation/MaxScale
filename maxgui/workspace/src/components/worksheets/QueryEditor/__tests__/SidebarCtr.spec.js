@@ -26,6 +26,7 @@ const mountFactory = opts =>
                     queryEditorId: 'query-editor-id',
                     activeQueryTabId: 'query-tab-id',
                     activeQueryTabConn: {},
+                    queryEditorTmp: {},
                 },
             },
             opts
