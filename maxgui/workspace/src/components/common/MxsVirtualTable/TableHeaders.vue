@@ -3,7 +3,7 @@
         <div
             v-if="showOrderNumber"
             ref="orderNumberHeader"
-            class="th px-3 d-inline-flex align-center justify-center"
+            class="th order-number-header px-3 d-inline-flex align-center justify-center"
             :style="{
                 width: 'max-content',
                 borderRight: '1px solid white',
@@ -20,8 +20,8 @@
                 :key="headerIds[index]"
                 :ref="`header__${index}`"
                 :style="{
-                    maxWidth: $helpers.handleAddPxUnit(headerWidthMap[index]),
-                    minWidth: $helpers.handleAddPxUnit(headerWidthMap[index]),
+                    maxWidth: $helpers.handleAddPxUnit(headerWidths[index]),
+                    minWidth: $helpers.handleAddPxUnit(headerWidths[index]),
                 }"
                 class="th relative px-3 d-inline-flex align-center flex-grow-1"
                 :class="{
@@ -85,10 +85,11 @@
   uppercase?: boolean, uppercase all letters of the header
   hidden?: boolean, hidden the column
   required?: boolean, if true, `label-required` class will be added to the header
+  filter?: (value: any, search: string) => boolean, custom filter
 }
  Emits:
  - is-resizing(boolean)
- - header-width-map(object)
+ - header-widths(array)
  - order-number-header-width(number)
  */
 export default {
@@ -101,7 +102,8 @@ export default {
     },
     data() {
         return {
-            headerWidthMap: {},
+            headerWidths: [],
+            orderNumberHeaderWidth: 0,
             isResizing: false,
             resizingData: null,
         }
@@ -142,28 +144,17 @@ export default {
             deep: true,
             handler(v, oV) {
                 if (!this.$helpers.lodash.isEqual(v, oV)) {
-                    this.resetHeaderWidth()
+                    this.resetHeaderWidths()
                     this.$helpers.doubleRAF(() => {
                         if (this.showOrderNumber) this.computeOrderNumberHeaderWidth()
-                        this.computeHeaderWidthMap()
+                        this.computeHeaderWidths()
                     })
                 }
             },
         },
-        headerWidthMap: {
-            deep: true,
-            handler(v, oV) {
-                if (
-                    !this.$typy(v).isEmptyObject &&
-                    !this.$helpers.lodash.isEqual(v, oV) &&
-                    this.areNumbers(Object.values(this.headerWidthMap))
-                )
-                    this.$emit('header-width-map', v)
-            },
-        },
         boundingWidth() {
-            this.resetHeaderWidth()
-            this.$helpers.doubleRAF(() => this.computeHeaderWidthMap())
+            this.resetHeaderWidths()
+            this.$helpers.doubleRAF(() => this.computeHeaderWidths())
         },
     },
     mounted() {
@@ -179,18 +170,13 @@ export default {
             return arr.every(v => this.$typy(v).isNumber)
         },
         headerTxtMaxWidth(index) {
-            const w = this.$typy(this.headerWidthMap[index]).safeNumber - 24 // padding
+            const w = this.$typy(this.headerWidths[index]).safeNumber - 24 // padding
             return w > 0 ? w : 1
         },
-        resetHeaderWidth() {
-            let headerWidthMap = {}
-            for (const [index, header] of this.headers.entries()) {
-                headerWidthMap = {
-                    ...headerWidthMap,
-                    [index]: header.maxWidth || header.width || 'unset',
-                }
-            }
-            this.headerWidthMap = headerWidthMap
+        resetHeaderWidths() {
+            this.headerWidths = this.headers.map(header =>
+                header.hidden ? 0 : header.maxWidth || header.width || 'unset'
+            )
         },
         getHeaderWidth(headerIdx) {
             const headerEle = this.$typy(this.$refs, `header__${headerIdx}[0]`).safeObject
@@ -204,15 +190,13 @@ export default {
             const ele = this.$typy(this.$refs, 'orderNumberHeader').safeObject
             if (ele) this.$emit('order-number-header-width', ele.getBoundingClientRect().width)
         },
-        computeHeaderWidthMap() {
-            let headerWidthMap = {}
-            this.headers.forEach((_, index) => {
+        computeHeaderWidths() {
+            this.headerWidths = this.headers.map((header, index) => {
                 const minWidth = this.headerMinWidths[index]
                 const width = this.getHeaderWidth(index)
-                const headerWidth = width < minWidth ? minWidth : width
-                headerWidthMap = { ...headerWidthMap, [index]: headerWidth }
+                return header.hidden ? 0 : width < minWidth ? minWidth : width
             })
-            this.headerWidthMap = headerWidthMap
+            this.$emit('header-widths', this.headerWidths)
         },
         hasClass({ ele, className }) {
             let str = ` ${ele.className} `
@@ -266,7 +250,7 @@ export default {
         resizerMouseUp() {
             if (this.isResizing) {
                 this.isResizing = false
-                this.computeHeaderWidthMap()
+                this.computeHeaderWidths()
                 this.resizingData = null
             }
         },
@@ -284,7 +268,7 @@ export default {
         &:first-child {
             border-radius: 5px 0 0 0;
         }
-        &:last-child {
+        &:last-child:not(.order-number-header) {
             padding-right: 0px !important;
         }
         // disabled by default

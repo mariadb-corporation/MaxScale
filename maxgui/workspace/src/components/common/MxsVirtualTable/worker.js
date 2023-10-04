@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2020 MariaDB Corporation Ab
- * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ * Copyright (c) 2023 MariaDB plc
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
@@ -13,60 +12,120 @@
  */
 import { t } from 'typy'
 
-function computeCollection(data) {
-    const {
-        tableHeaders,
-        cells,
-        autoId,
-        showOrderNumberHeader,
-        rowHeight,
-        orderNumberHeaderWidth,
-        headerWidthMap,
-        colLeftPosMap,
-    } = data
-    const headersLength = tableHeaders.length
-    let rowIdx = 0
-    let uuid = undefined
-    return cells.reduce((acc, cell, i) => {
-        // cells of a row are pushed to group
-        if (t(acc[rowIdx], 'group').isUndefined) acc.push({ group: [] })
-        const headerIdx = i % headersLength
-
-        // get uuid of a row
-        if (autoId && headerIdx === 0) uuid = cells[i]
-
-        // Push order number cell
-        if (showOrderNumberHeader && (autoId ? headerIdx === 1 : headerIdx === 0)) {
-            acc[rowIdx].group.push({
-                data: { value: rowIdx + 1, uuid, rowIdx, isOrderNumberCol: true },
-                height: rowHeight,
-                width: orderNumberHeaderWidth,
-                x: 0,
-                y: rowHeight * rowIdx,
-            })
-        }
-
-        // Push visible cells to group
-        const width = t(headerWidthMap, `[${headerIdx}]`).safeNumber
-        if (!t(tableHeaders, `[${headerIdx}].hidden`).safeBoolean)
-            acc[rowIdx].group.push({
-                data: { value: cell, uuid, rowIdx, colIdx: headerIdx },
-                height: rowHeight,
-                width,
-                x: colLeftPosMap[headerIdx],
-                y: rowHeight * rowIdx,
-            })
-        if (headerIdx === headersLength - 1) rowIdx++
-        return acc
-    }, [])
-}
-
-onmessage = e => {
-    const { action, data } = e.data
-    switch (action) {
-        case 'compute-collection':
-            postMessage(computeCollection(data))
-            break
-        //TODO: Add action to filter, group rows
+function genOrderNumberCell({ value, rowId, rowHeight, orderNumberCellWidth, y }) {
+    return {
+        data: { value, rowId, isOrderNumberCol: true },
+        height: rowHeight,
+        width: orderNumberCellWidth,
+        x: 0,
+        y,
     }
 }
+
+function genCell({ x, y, colWidths, row, rowIdx, colIdx, rowId, rowHeight }) {
+    const width = t(colWidths, `[${colIdx}]`).safeNumber
+    return {
+        data: {
+            value: row[colIdx],
+            rowId,
+            cellPos: { rowIdx, colIdx },
+            width,
+        },
+        height: rowHeight,
+        width,
+        x,
+        y,
+    }
+}
+
+function genRowCells({
+    row,
+    rowIdx,
+    orderNumber,
+    rowHeight,
+    y,
+    autoId,
+    showOrderNumberCell,
+    orderNumberCellWidth,
+    headers,
+    colWidths,
+    colLeftPosMap,
+}) {
+    let rowId = undefined
+    let cells = []
+
+    for (let colIdx = 0; colIdx < row.length; colIdx++) {
+        if (autoId && colIdx === 0) rowId = row[colIdx]
+        if (showOrderNumberCell && (autoId ? colIdx === 1 : colIdx === 0))
+            cells.push(
+                genOrderNumberCell({
+                    value: orderNumber,
+                    rowId,
+                    rowHeight,
+                    orderNumberCellWidth,
+                    y,
+                })
+            )
+        if (!t(headers, `[${colIdx}].hidden`).safeBoolean)
+            cells.push(
+                genCell({
+                    x: t(colLeftPosMap, `[${colIdx}]`).safeNumber,
+                    y,
+                    colWidths,
+                    row,
+                    rowIdx,
+                    colIdx,
+                    rowId,
+                    rowHeight,
+                })
+            )
+    }
+    return cells
+}
+
+/**
+ * @param {object} data
+ * @param {array} data.headers - table headers
+ * @param {array} data.rows - table 2d rows
+ * @param {boolean} data.autoId - if it's true, the first item in the row is the uuid
+ * @param {boolean} data.showOrderNumberCell - conditionally push an order number cell
+ * @param {number} data.rowHeight - height of the row
+ * @param {number} data.orderNumberCellWidth - width of the order number cell
+ * @param {array} data.colWidths - column widths
+ * @param {object} data.colLeftPosMap
+ * @param {string} data.search - keyword for filtering items
+ * @param {array} data.searchBy - included header names for filtering
+ * @returns {array} collection data for virtual-collection component
+ */
+function computeCollection(data) {
+    const {
+        headers,
+        rows,
+        autoId,
+        showOrderNumberCell,
+        rowHeight,
+        orderNumberCellWidth,
+        colWidths,
+        colLeftPosMap,
+    } = data
+    //TODO: Add props for filtering, sorting and grouping rows
+    return rows.map((row, i) => {
+        return {
+            group: genRowCells({
+                row,
+                rowIdx: i,
+                orderNumber: i + 1,
+                rowHeight,
+                y: rowHeight * i,
+                autoId,
+                showOrderNumberCell,
+                orderNumberCellWidth,
+                headers,
+                colWidths,
+                colLeftPosMap,
+            }),
+        }
+    })
+}
+
+onmessage = e => postMessage(computeCollection(e.data))

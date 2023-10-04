@@ -16,7 +16,7 @@
                 }"
                 :showOrderNumber="showOrderNumberHeader"
                 :rowCount="rowsLength"
-                @header-width-map="headerWidthMap = $event"
+                @header-widths="headerWidths = $event"
                 @order-number-header-width="orderNumberHeaderWidth = $event"
                 @is-resizing="isResizing = $event"
             >
@@ -38,17 +38,41 @@
             :width="maxWidth"
             @scroll.native="scrolling"
         >
-            <template v-slot:cell="{ data }">
-                <!-- TODO: Add Cell component -->
+            <template
+                v-slot:cell="{
+                    data: {
+                        value: cellValue,
+                        isOrderNumberCol,
+                        cellPos,
+                        width: cellWidth,
+                    },
+                }"
+            >
                 <div
                     class="td fill-height text-truncate px-3 mxs-color-helper text-navigation border-bottom-table-border border-right-table-border"
                     :class="{
                         'border-left-table-border': showOrderNumberHeader
-                            ? data.isOrderNumberCol
-                            : data.colIdx === 0,
+                            ? isOrderNumberCol
+                            : cellPos.colIdx === 0,
                     }"
                 >
-                    {{ data.value }}
+                    <template v-if="isOrderNumberCol"> {{ cellValue }} </template>
+                    <slot
+                        v-else
+                        :name="$typy(tableHeaders, `[${cellPos.colIdx}].text`).safeString"
+                        :data="{
+                            rowData: data[cellPos.rowIdx],
+                            rowIdx: cellPos.rowIdx,
+                            cell: cellValue,
+                            colIdx: cellPos.colIdx,
+                            header: tableHeaders[cellPos.colIdx],
+                            maxWidth: cellWidth,
+                            activatorID: genActivatorID(`${cellPos.rowIdx}-${cellPos.colIdx}`),
+                            search,
+                        }"
+                    >
+                        {{ cellValue }}
+                    </slot>
                 </div>
             </template>
         </VirtualCollection>
@@ -84,18 +108,20 @@ export default {
             },
             required: true,
         },
-        data: { type: Array, required: true },
+        data: { type: Array, required: true }, // 2d array
         maxHeight: { type: Number, required: true },
         maxWidth: { type: Number, required: true },
         headerHeight: { type: Number, default: 30 },
         rowHeight: { type: Number, default: 30 },
         showOrderNumberHeader: { type: Boolean, default: false },
         autoId: { type: Boolean, default: false }, // Enable it for CRUD operations
+        search: { type: String, default: '' }, // keyword for filtering items
+        searchBy: { type: Array, default: () => [] }, // included header names for filtering
     },
     data() {
         return {
             orderNumberHeaderWidth: 0,
-            headerWidthMap: {},
+            headerWidths: [],
             headerScrollLeft: 0,
             isResizing: false,
             collection: [],
@@ -129,20 +155,16 @@ export default {
         rowIds() {
             return Array.from({ length: this.data.length }, () => this.$helpers.uuidv1())
         },
-        cells() {
-            if (this.autoId) {
-                let cells = []
-                this.data.forEach((row, index) => {
-                    // Place uuid cell first
-                    cells.push(this.rowIds[index], ...row)
-                })
-                return cells
-            }
-            return this.data.flat()
+        rows() {
+            if (this.autoId)
+                return this.data.map(
+                    (row, index) => [this.rowIds[index], ...row] // Place uuid cell first
+                )
+            return this.data
         },
         colLeftPosMap() {
             let left = this.showOrderNumberHeader ? this.orderNumberHeaderWidth : 0
-            return Object.values(this.headerWidthMap).reduce((res, width, i) => {
+            return this.headerWidths.reduce((res, width, i) => {
                 if (!this.isHeaderHidden(i)) {
                     res[i] = left
                     left += width
@@ -152,15 +174,11 @@ export default {
         },
     },
     watch: {
-        colLeftPosMap: {
+        headerWidths: {
             immediate: true,
             deep: true,
             handler(v, oV) {
-                if (
-                    !this.$helpers.lodash.isEqual(v, oV) &&
-                    !this.$typy(this.colLeftPosMap).isEmptyObject
-                )
-                    this.computeCollection()
+                if (!this.$helpers.lodash.isEqual(v, oV) && v.length) this.computeCollection()
             },
         },
     },
@@ -175,6 +193,7 @@ export default {
             const { width, height, x, y } = item
             return { width, height, x, y }
         },
+        genActivatorID: id => `activator_id-${id}`,
         scrolling(event) {
             const ele = event.currentTarget || event.target
             //Scroll header
@@ -184,17 +203,18 @@ export default {
             return this.$typy(this.tableHeaders, `[${i}].hidden`).safeBoolean
         },
         computeCollection() {
-            const data = {
-                tableHeaders: this.tableHeaders,
-                cells: this.cells,
+            this.worker.postMessage({
+                headers: this.tableHeaders,
+                rows: this.rows,
                 autoId: this.autoId,
-                showOrderNumberHeader: this.showOrderNumberHeader,
+                showOrderNumberCell: this.showOrderNumberHeader,
                 rowHeight: this.rowHeight,
-                orderNumberHeaderWidth: this.orderNumberHeaderWidth,
-                headerWidthMap: this.headerWidthMap,
+                colWidths: this.headerWidths,
+                orderNumberCellWidth: this.orderNumberHeaderWidth,
                 colLeftPosMap: this.colLeftPosMap,
-            }
-            this.worker.postMessage({ action: 'compute-collection', data })
+                search: this.search,
+                searchBy: this.searchBy,
+            })
             this.worker.onmessage = event => {
                 this.collection = event.data
             }
