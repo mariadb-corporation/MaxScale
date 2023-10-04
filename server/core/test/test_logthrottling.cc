@@ -186,7 +186,7 @@ bool check_continued_suppression()
     for (int i = 0; i < 6; i++)
     {
         log_messages(0, 1, LOG_ERR);
-        sleep(1);
+        sleep_ms(1000);
     }
 
     if (!check_messages(in, t.count))
@@ -199,7 +199,7 @@ bool check_continued_suppression()
 
     cout << "Sleeping for 4 seconds and then logging a message." << endl;
 
-    sleep(4);
+    sleep_ms(4000);
     log_messages(0, 1, LOG_ERR);
 
     if (!check_messages(in, t.count + 1))
