@@ -39,39 +39,32 @@
             @scroll.native="scrolling"
         >
             <template
-                v-slot:cell="{
-                    data: {
-                        value: cellValue,
-                        isOrderNumberCol,
-                        cellPos,
-                        width: cellWidth,
-                    },
-                }"
+                v-slot:cell="{ data : { value, isOrderNumberCell = false, rowIdx, colIdx, width, }}"
             >
                 <div
-                    class="td fill-height text-truncate px-3 mxs-color-helper text-navigation border-bottom-table-border border-right-table-border"
+                    class="table-cell d-flex align-center fill-height mxs-color-helper text-navigation border-bottom-table-border border-right-table-border"
                     :class="{
-                        'border-left-table-border': showOrderNumberHeader
-                            ? isOrderNumberCol
-                            : cellPos.colIdx === 0,
+                        'border-left-table-border': isOrderNumberCell || colIdx === 0,
+                        'px-3': isOrderNumberCell,
                     }"
+                    data-test="table-cell"
                 >
-                    <template v-if="isOrderNumberCol"> {{ cellValue }} </template>
+                    <template v-if="isOrderNumberCell"> {{ value }} </template>
                     <slot
                         v-else
-                        :name="$typy(tableHeaders, `[${cellPos.colIdx}].text`).safeString"
-                        :data="{
-                            rowData: data[cellPos.rowIdx],
-                            rowIdx: cellPos.rowIdx,
-                            cell: cellValue,
-                            colIdx: cellPos.colIdx,
-                            header: tableHeaders[cellPos.colIdx],
-                            maxWidth: cellWidth,
-                            activatorID: genActivatorID(`${cellPos.rowIdx}-${cellPos.colIdx}`),
-                            search,
-                        }"
+                        :name="getHeaderName(colIdx)"
+                        :data="{ rowIdx, colIdx, value, width }"
                     >
-                        {{ cellValue }}
+                        <mxs-truncate-str
+                            v-mxs-highlighter="{
+                                keyword: searchBy.includes(getHeaderName(colIdx)) ? search : '',
+                                txt: value,
+                            }"
+                            class="px-3"
+                            :tooltipItem="{ txt: value }"
+                            :maxWidth="width"
+                            :debounce="400"
+                        />
                     </slot>
                 </div>
             </template>
@@ -181,6 +174,15 @@ export default {
                 if (!this.$helpers.lodash.isEqual(v, oV) && v.length) this.computeCollection()
             },
         },
+        search() {
+            this.computeCollection()
+        },
+        searchBy: {
+            deep: true,
+            handler() {
+                this.computeCollection()
+            },
+        },
     },
     created() {
         this.worker = new worker()
@@ -193,7 +195,6 @@ export default {
             const { width, height, x, y } = item
             return { width, height, x, y }
         },
-        genActivatorID: id => `activator_id-${id}`,
         scrolling(event) {
             const ele = event.currentTarget || event.target
             //Scroll header
@@ -201,6 +202,9 @@ export default {
         },
         isHeaderHidden(i) {
             return this.$typy(this.tableHeaders, `[${i}].hidden`).safeBoolean
+        },
+        getHeaderName(i) {
+            return this.tableHeaders[i].text
         },
         computeCollection() {
             this.worker.postMessage({
@@ -222,9 +226,10 @@ export default {
     },
 }
 </script>
-<style lang="scss">
+<style lang="scss" scoped>
 .mxs-virtual-table {
     width: 100%;
+    font-size: 0.875rem;
     overflow: hidden;
     &__header-wrapper {
         .fixed-padding {
@@ -238,9 +243,6 @@ export default {
     }
     &__body {
         overflow: auto !important;
-        .td {
-            font-size: 0.875rem;
-        }
     }
 }
 </style>

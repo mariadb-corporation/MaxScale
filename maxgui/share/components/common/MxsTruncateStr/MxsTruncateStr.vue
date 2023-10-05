@@ -1,6 +1,6 @@
 <template>
     <span
-        :id="tooltipItem.activatorID ? '' : componentActivatorID"
+        :id="tooltipItem.activatorID || componentActivatorID"
         ref="string"
         class="d-inline-block text-truncate"
         :style="style"
@@ -34,34 +34,38 @@ export default {
         tooltipItem: { type: Object, required: true },
         maxWidth: { type: Number, default: 0 }, // if maxWidth isn't provided, it uses clientWidth
         disabled: { type: Boolean, default: false },
-    },
-    data() {
-        return {
-            componentActivatorID: `mxs-truncate-str__${this.$helpers.uuidv1()}`,
-            scrollWidth: 0,
-            clientWidth: 0,
-        }
+        debounce: { type: Number, default: 0 },
     },
     computed: {
         style() {
             if (this.maxWidth) return { maxWidth: `${this.maxWidth}px` }
-            else return { maxWidth: '100%' } // clientWidth
+            return { maxWidth: '100%' } // clientWidth
         },
-        activatorID() {
-            if (this.tooltipItem.activatorID) return this.tooltipItem.activatorID
-            else return this.componentActivatorID
+        componentActivatorID() {
+            return `mxs-truncate-str__${this.$helpers.uuidv1()}`
         },
         truncateTooltipItem() {
-            return { ...this.tooltipItem, activatorID: this.activatorID }
+            if (this.tooltipItem.activatorID) return this.tooltipItem
+            return {
+                ...this.tooltipItem,
+                activatorID: this.componentActivatorID,
+            }
         },
+    },
+    created() {
+        this.debouncedMouseEnter = this.$helpers.lodash.debounce(() => {
+            this.SET_TRUNCATE_TOOLTIP_ITEM(
+                this.$typy(this.$refs, 'string.scrollWidth').safeNumber >
+                    this.$typy(this.$refs, 'string.clientWidth').safeNumber
+                    ? this.truncateTooltipItem
+                    : null
+            )
+        }, this.debounce)
     },
     methods: {
         ...mapMutations({ SET_TRUNCATE_TOOLTIP_ITEM: 'mxsApp/SET_TRUNCATE_TOOLTIP_ITEM' }),
         mouseenter() {
-            const isTruncated = this.$refs.string.scrollWidth > this.$refs.string.clientWidth
-            this.scrollWidth = this.$refs.string.scrollWidth
-            this.clientWidth = this.$refs.string.clientWidth
-            this.SET_TRUNCATE_TOOLTIP_ITEM(isTruncated ? this.truncateTooltipItem : null)
+            this.debouncedMouseEnter()
         },
     },
 }

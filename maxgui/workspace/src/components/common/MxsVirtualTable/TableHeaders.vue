@@ -106,6 +106,7 @@ export default {
             orderNumberHeaderWidth: 0,
             isResizing: false,
             resizingData: null,
+            headerIds: [],
         }
     },
     computed: {
@@ -114,12 +115,6 @@ export default {
         },
         lastVisHeader() {
             return this.visHeaders.at(-1)
-        },
-        headerIds() {
-            return Array.from(
-                { length: this.headers.length },
-                () => `header-${this.$helpers.uuidv1()}`
-            )
         },
         defaultHeaderMinWidth() {
             return 67
@@ -130,6 +125,18 @@ export default {
         },
     },
     watch: {
+        headers: {
+            immediate: true,
+            deep: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) {
+                    this.headerIds = Array.from(
+                        { length: this.headers.length },
+                        () => `header-${this.$helpers.uuidv1()}`
+                    )
+                }
+            },
+        },
         isResizing(v) {
             this.$emit('is-resizing', v)
         },

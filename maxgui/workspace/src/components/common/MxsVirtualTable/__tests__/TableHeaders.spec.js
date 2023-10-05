@@ -138,16 +138,13 @@ describe('TableHeaders', () => {
 
         it('Call expected methods on mounted hook', () => {
             let addEventListenerStub = sinon.stub(window, 'addEventListener')
-            let addWatchersStub = sinon.stub(TableHeaders.methods, 'addWatchers')
             wrapper = mountFactory()
             sinon.assert.calledWith(addEventListenerStub, 'mousemove', wrapper.vm.resizerMouseMove)
             sinon.assert.calledWith(addEventListenerStub, 'mouseup', wrapper.vm.resizerMouseUp)
-            addWatchersStub.should.have.been.calledOnce
         })
 
         it('Call expected methods on beforeDestroy hook', () => {
             let removeEventListenerStub = sinon.stub(window, 'removeEventListener')
-            let rmWatchersStub = sinon.stub(TableHeaders.methods, 'rmWatchers')
             wrapper = mountFactory()
             wrapper.destroy()
             sinon.assert.calledWith(
@@ -156,7 +153,6 @@ describe('TableHeaders', () => {
                 wrapper.vm.resizerMouseMove
             )
             sinon.assert.calledWith(removeEventListenerStub, 'mouseup', wrapper.vm.resizerMouseUp)
-            rmWatchersStub.should.have.been.calledOnce
         })
     })
 })

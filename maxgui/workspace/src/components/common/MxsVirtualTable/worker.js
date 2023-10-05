@@ -11,10 +11,22 @@
  * Public License.
  */
 import { t } from 'typy'
+import { ciStrIncludes } from '@share/utils/helpers'
+
+function filter(value, search) {
+    return ciStrIncludes(`${value}`, search)
+}
 
 function genOrderNumberCell({ value, rowId, rowHeight, orderNumberCellWidth, y }) {
     return {
-        data: { value, rowId, isOrderNumberCol: true },
+        data: {
+            value,
+            rowId,
+            rowIdx: value - 1,
+            colIdx: 0,
+            width: orderNumberCellWidth,
+            isOrderNumberCell: true,
+        },
         height: rowHeight,
         width: orderNumberCellWidth,
         x: 0,
@@ -22,13 +34,14 @@ function genOrderNumberCell({ value, rowId, rowHeight, orderNumberCellWidth, y }
     }
 }
 
-function genCell({ x, y, colWidths, row, rowIdx, colIdx, rowId, rowHeight }) {
+function genCell({ value, x, y, colWidths, rowIdx, colIdx, rowId, rowHeight }) {
     const width = t(colWidths, `[${colIdx}]`).safeNumber
     return {
         data: {
-            value: row[colIdx],
+            value,
             rowId,
-            cellPos: { rowIdx, colIdx },
+            rowIdx,
+            colIdx,
             width,
         },
         height: rowHeight,
@@ -50,10 +63,12 @@ function genRowCells({
     headers,
     colWidths,
     colLeftPosMap,
+    search,
+    searchBy,
 }) {
     let rowId = undefined
     let cells = []
-
+    let matched = false
     for (let colIdx = 0; colIdx < row.length; colIdx++) {
         if (autoId && colIdx === 0) rowId = row[colIdx]
         if (showOrderNumberCell && (autoId ? colIdx === 1 : colIdx === 0))
@@ -66,21 +81,26 @@ function genRowCells({
                     y,
                 })
             )
-        if (!t(headers, `[${colIdx}].hidden`).safeBoolean)
+        const header = headers[colIdx]
+        if (!header.hidden) {
+            const cellValue = row[colIdx]
+            if (filter(cellValue, search) && searchBy.includes(header.text)) matched = true
             cells.push(
                 genCell({
+                    value: cellValue,
                     x: t(colLeftPosMap, `[${colIdx}]`).safeNumber,
                     y,
                     colWidths,
-                    row,
                     rowIdx,
                     colIdx,
                     rowId,
                     rowHeight,
                 })
             )
+        }
     }
-    return cells
+    if (matched) return cells
+    return []
 }
 
 /**
@@ -107,25 +127,34 @@ function computeCollection(data) {
         orderNumberCellWidth,
         colWidths,
         colLeftPosMap,
+        search,
+        searchBy,
     } = data
-    //TODO: Add props for filtering, sorting and grouping rows
-    return rows.map((row, i) => {
-        return {
-            group: genRowCells({
-                row,
-                rowIdx: i,
-                orderNumber: i + 1,
-                rowHeight,
-                y: rowHeight * i,
-                autoId,
-                showOrderNumberCell,
-                orderNumberCellWidth,
-                headers,
-                colWidths,
-                colLeftPosMap,
-            }),
+    //TODO: Add props for sorting and grouping rows
+    let collection = []
+    let currentVisibleIdx = 0
+    for (let i = 0; i < rows.length; i++) {
+        const cells = genRowCells({
+            row: rows[i],
+            rowIdx: i,
+            orderNumber: i + 1,
+            rowHeight,
+            y: rowHeight * currentVisibleIdx,
+            autoId,
+            showOrderNumberCell,
+            orderNumberCellWidth,
+            headers,
+            colWidths,
+            colLeftPosMap,
+            search,
+            searchBy,
+        })
+        if (cells.length) {
+            collection.push({ group: cells })
+            currentVisibleIdx++
         }
-    })
+    }
+    return collection
 }
 
 onmessage = e => postMessage(computeCollection(e.data))

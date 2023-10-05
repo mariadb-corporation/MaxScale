@@ -115,11 +115,11 @@
             <keep-alive v-for="(resSet, name) in resultData" :key="name">
                 <template v-if="activeResSet === name">
                     <result-data-table
-                        v-if="$typy(resSet, 'data').isDefined"
+                        v-if="$typy(resSet, 'headers').isDefined"
                         :height="resultTableHeight"
                         :width="dim.width"
-                        :headers="resSet.fields.map(field => ({ text: field }))"
-                        :rows="resSet.data"
+                        :headers="resSet.headers"
+                        :rows="resSet.rows"
                         showGroupBy
                         v-on="$listeners"
                     />
@@ -202,7 +202,12 @@ export default {
                 for (const res of this.data.data.attributes.results) {
                     if (this.$typy(res, 'data').isDefined) {
                         ++resSetCount
-                        resultData[`Result set ${resSetCount}`] = res
+                        resultData[`Result set ${resSetCount}`] = {
+                            headers: this.$typy(res, 'fields').safeArray.map(field => ({
+                                text: field,
+                            })),
+                            rows: this.$typy(res, 'data').safeArray,
+                        }
                     } else if (this.$typy(res, 'errno').isDefined) {
                         resultData[this.errorTabId] = res
                     } else {
