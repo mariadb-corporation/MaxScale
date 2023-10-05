@@ -166,9 +166,19 @@ void MariaDBBackendConnection::finish_connection()
         mysql_session()->history_info.erase(this);
     }
 
-    // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
     m_dcb->silence_errors();
-    m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
+
+    if (m_reply.command() == MXS_COM_BINLOG_DUMP)
+    {
+        // For replication connections in this stage, the connection must be dropped without sending a
+        // COM_QUIT. If it's sent, the server might misinterpret it as a semi-sync acknowledgement packet.
+    }
+    else
+    {
+        // Always send a COM_QUIT to the backend being closed if it's a normal connection. This causes the
+        // connection to be closed faster and it also makes sure that the connection shuts down correctly.
+        m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
+    }
 }
 
 bool MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
