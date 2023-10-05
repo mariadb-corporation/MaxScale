@@ -86,6 +86,7 @@
   hidden?: boolean, hidden the column
   required?: boolean, if true, `label-required` class will be added to the header
   filter?: (value: any, search: string) => boolean, custom filter
+  filterDateFormat?: string, date-fns format, E, dd MMM yyyy
 }
  Emits:
  - is-resizing(boolean)

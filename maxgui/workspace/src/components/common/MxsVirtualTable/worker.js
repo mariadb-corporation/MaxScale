@@ -11,9 +11,12 @@
  * Public License.
  */
 import { t } from 'typy'
-import { ciStrIncludes } from '@share/utils/helpers'
+import { ciStrIncludes, dateFormat } from '@share/utils/helpers'
 
-function filter(value, search) {
+function filter({ cellValue, search, header }) {
+    let value = cellValue
+    // format the value before filtering
+    if (header.filterDateFormat) value = dateFormat({ value, formatType: header.filterDateFormat })
     return ciStrIncludes(`${value}`, search)
 }
 
@@ -84,7 +87,8 @@ function genRowCells({
         const header = headers[colIdx]
         if (!header.hidden) {
             const cellValue = row[colIdx]
-            if (filter(cellValue, search) && searchBy.includes(header.text)) matched = true
+            if (filter({ cellValue, search, header }) && searchBy.includes(header.text))
+                matched = true
             cells.push(
                 genCell({
                     value: cellValue,
