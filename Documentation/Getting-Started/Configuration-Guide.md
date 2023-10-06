@@ -2903,6 +2903,22 @@ section of the galeramon documentation for more information on how to use it.
 Starting with MaxScale 2.5.21, this parameter also accepts negative values. In
 older versions, the parameter only accepted non-negative values.
 
+### `replication_custom_options`
+
+- **Type**: string
+- **Default**: None
+- **Dynamic**: Yes
+
+Server-specific custom string added to "CHANGE MASTER TO"-commands sent by
+MariaDB Monitor. Overrides `replication_custom_options` setting set in
+the monitor. This setting affects the server where the command is ran at, not
+the source of the replication. That is, if monitor sends a "CHANGE MASTER TO"-
+command to server A telling it to replicate from server B, the setting value
+from MaxScale configuration for server A would be used.
+
+See [MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#replication_custom_options)
+for more information.
+
 ## Monitor
 
 Monitor sections are used to define the monitoring module that watches a set of

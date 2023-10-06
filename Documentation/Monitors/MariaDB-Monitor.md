@@ -834,6 +834,26 @@ user should require an encrypted connection (`e.g. ALTER USER repl@'%' REQUIRE S
 If the setting is left OFF, `MASTER_SSL` is not set at all, which will preserve existing
 settings when redirecting a replica connection.
 
+### `replication_custom_options`
+
+Type: string
+
+A custom string added to "CHANGE MASTER TO"-commands sent by the monitor
+whenever setting up replication (e.g. during switchover). Useful for defining
+ssl certificates or other specialized replication options. MaxScale does not
+check the contents of the string, so care should be taken to ensure that
+only valid options are set and that the contents do not interfere with
+the options MaxScale sets on its own (e.g. MASTER_HOST). This setting can
+also be configured for an individual server. If configured for both
+the monitor and a server, the server setting takes priority.
+
+```
+replication_custom_options=MASTER_SSL_CERT = '/tmp/certs/client-cert.pem',
+                           MASTER_SSL_KEY = '/tmp/certs/client-key.pem',
+                           MASTER_SSL_CA = '/tmp/certs/ca.pem',
+                           MASTER_SSL_VERIFY_SERVER_CERT=0
+```
+
 #### `failover_timeout` and `switchover_timeout`
 
 Time limit for failover and switchover operations. The default
