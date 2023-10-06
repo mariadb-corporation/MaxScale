@@ -638,20 +638,25 @@ user-designated server must fulfill the same requirements.
 
 ### Limitations and requirements
 
-Switchover and failover only understand simple topologies. They will not work if
-the cluster has multiple masters, relay masters, or if the topology is circular.
+Switchover and failover are meant for simple topologies (one master and
+several slaves). Using these commands with complicated topologies
+(multiple masters, relays, circular replication) may give unpredictable results
+and should be tested before use on a production system.
+
 The server cluster is assumed to be well-behaving with no significant
-replication lag and all commands that modify the cluster complete in a few
-seconds (faster than `backend_read_timeout` and `backend_write_timeout`).
+replication lag (within `failover_timeout`/`switchover_timeout`) and all
+commands that modify the cluster (such as "STOP SLAVE", "CHANGE MASTER",
+"START SLAVE") complete in a few seconds (faster than `backend_read_timeout`
+and `backend_write_timeout`).
 
 The backends must all use GTID-based replication, and the domain id should not
-change during a switchover or failover. Master and slaves must have
-well-behaving GTIDs with no extra events on slave servers.
+change during a switchover or failover. Slave servers should not have extra
+local events so that GTIDs are compatible across the cluster.
 
 Failover cannot be performed if MaxScale was started only after the master
 server went down. This is because MaxScale needs reliable information on the
 gtid domain of the cluster and the replication topology in general to properly
-select the new master.
+select the new master. `enforce_simple_topology=1` relaxes this requirement.
 
 Failover may lose events. If a master goes down before sending new events to at
 least one slave, those events are lost when a new master is chosen. If the old
@@ -664,10 +669,12 @@ In semisynchronous mode, the master waits for a slave to receive an event before
 returning an acknowledgement to the client. This does not yet guarantee a clean
 failover. If the master fails after preparing a transaction but before receiving
 slave acknowledgement, it will still commit the prepared transaction as part of
-its crash recovery. Since the slaves may never have seen this transaction, the
-old master has diverged from the slaves. See
+its crash recovery. If the slaves never saw this transaction, the
+old master has diverged from the cluster. See
 [Configuring the Master Wait Point](https://mariadb.com/kb/en/library/semisynchronous-replication/#configuring-the-master-wait-point)
-for more information.
+for more information. This situation is much less likely in MariaDB Server
+10.6.2 and later, as the improved crash recovery logic will delete such
+transactions.
 
 Even a controlled shutdown of the master may lose events. The server does not by
 default wait for all data to be replicated to the slaves when shutting down and
@@ -684,7 +691,7 @@ master backend to stop any updates. *read_only* does not affect users with the
 SUPER-privilege so any such user can issue writes during a switchover. These
 writes have a high chance of breaking replication, because the write may not be
 replicated to all slaves before they switch to the new master. To prevent this,
-any users who commonly do updates should not have the SUPER-privilege. For even
+any users who commonly do updates should NOT have the SUPER-privilege. For even
 more security, the only SUPER-user session during a switchover should be the
 MaxScale monitor user.
 
@@ -1362,25 +1369,41 @@ OK
 
 ### Failover/switchover fails
 
-Before performing failover or switchover, the MariaDB Monitor first checks that
-prerequisites are fulfilled, printing any found errors. This should catch and
-explain most issues with failover or switchover not working. If the operations
-are attempted and still fail, then most likely one of the commands the monitor
-issued to a server failed or timed out. The log should explain which query failed.
-To print out all queries sent to the servers, start MaxScale with
-`--debug=enable-statement-logging`. This setting prints all queries sent to the
-backends by monitors and authenticators. The printed queries may include
-usernames and passwords.
+See the [Limitations and requirements-section](#limitations_and_requirements).
 
-A typical reason for failure is that a command such as `STOP SLAVE` takes longer than the
+Before performing failover or switchover, the monitor checks that
+prerequisites are fulfilled, printing any errors and warnings found. This should
+catch and explain most issues with failover or switchover not working.
+If the operations are attempted and still fail, then most likely one of
+the commands the monitor issued to a server failed or timed out. The log should
+explain which query failed.
+
+A typical failure reason is that a command such as `STOP SLAVE` takes longer than the
 `backend_read_timeout` of the monitor, causing the connection to break. As of 2.3, the
 monitor will retry most such queries if the failure was caused by a timeout. The retrying
 continues until the total time for a failover or switchover has been spent. If the log
 shows warnings or errors about commands timing out, increasing the backend timeout
-settings of the monitor should help. Another settings to look at are `query_retries` and
+settings of the monitor should help. Other settings to look at are `query_retries` and
 `query_retry_timeout`. These are general MaxScale settings described in the
 [Configuration guide](../Getting-Started/Configuration-Guide.md). Setting
 `query_retries` to 2 is a reasonable first try.
+
+If switchover causes the old master (now slave) to fail replication, then most
+likely a user or perhaps a scheduled event performed a write while monitor
+had set `read_only=1`. This is possible if the user performing the write has
+"SUPER" or "READ_ONLY ADMIN" privileges. The switchover-operation tries to kick
+out SUPER-users but this is not certain to succeed. Remove these privileges
+from any users that regularly do writes to prevent them from interfering with
+switchover.
+
+The server configuration files should have `log-slave-updates=1` to ensure that
+a newly promoted master has binary logs of previous events. This allows the new
+master to replicate past events to any lagging slaves.
+
+To print out all queries sent to the servers, start MaxScale with
+`--debug=enable-statement-logging`. This setting prints all queries sent to the
+backends by monitors and authenticators. The printed queries may include
+usernames and passwords.
 
 ### Slave detection shows external masters
 
