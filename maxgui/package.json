@@ -16,8 +16,8 @@
     "dependencies": {
         "@kazupon/vue-i18n-loader": "~0.5.0",
         "@mdi/font": "~7.1.96",
-        "@vue/cli-plugin-babel": "~4.5.19",
-        "@vue/cli-service": "~4.5.19",
+        "@vue/cli-plugin-babel": "~5.0.8",
+        "@vue/cli-service": "~5.0.8",
         "@vue/eslint-config-prettier": "~6.0.0",
         "@vuex-orm/core": "~0.36.4",
         "axios": "~0.27.2",
@@ -67,8 +67,8 @@
         "worker-loader": "~2.0.0"
     },
     "optionalDependencies": {
-        "@vue/cli-plugin-eslint": "~4.5.19",
-        "@vue/cli-plugin-unit-mocha": "~4.5.19",
+        "@vue/cli-plugin-eslint": "~5.0.8",
+        "@vue/cli-plugin-unit-mocha": "~5.0.8",
         "@vue/test-utils": "~1.3.6",
         "canvas": "~2.11.2",
         "chai": "~4.3.10",
