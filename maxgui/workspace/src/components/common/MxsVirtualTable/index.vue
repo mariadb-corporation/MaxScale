@@ -6,7 +6,7 @@
     >
         <div class="mxs-virtual-table__header-wrapper d-flex relative">
             <table-headers
-                :headers="tableHeaders"
+                :headers="headers"
                 class="relative"
                 :boundingWidth="headersWidth"
                 :scrollBarThickness="scrollBarThickness"
@@ -16,6 +16,7 @@
                 }"
                 :showOrderNumber="showOrderNumberHeader"
                 :rowCount="rowsLength"
+                :sortOptions.sync="sortOptions"
                 @header-widths="headerWidths = $event"
                 @order-number-header-width="orderNumberHeaderWidth = $event"
                 @is-resizing="isResizing = $event"
@@ -89,9 +90,7 @@ import TableHeaders from '@wsSrc/components/common/MxsVirtualTable/TableHeaders'
 import worker from 'worker-loader!./worker.js'
 export default {
     name: 'mxs-virtual-table',
-    components: {
-        TableHeaders,
-    },
+    components: { TableHeaders },
     props: {
         headers: {
             type: Array,
@@ -107,7 +106,6 @@ export default {
         headerHeight: { type: Number, default: 30 },
         rowHeight: { type: Number, default: 30 },
         showOrderNumberHeader: { type: Boolean, default: false },
-        autoId: { type: Boolean, default: false }, // Enable it for CRUD operations
         search: { type: String, default: '' }, // keyword for filtering items
         searchBy: { type: Array, default: () => [] }, // included header names for filtering
     },
@@ -118,14 +116,15 @@ export default {
             headerScrollLeft: 0,
             isResizing: false,
             collection: [],
+            sortOptions: { sortBy: '', sortDesc: false },
         }
     },
     computed: {
-        tableHeaders() {
-            if (this.autoId)
-                // add an uuid header first
-                return [{ text: 'uuid', hidden: true }, ...this.headers]
-            return this.headers
+        headerNamesIndexesMap() {
+            return this.headers.reduce((map, h, i) => {
+                map[h.text] = i
+                return map
+            }, {})
         },
         rowsLength() {
             return this.data.length
@@ -145,16 +144,6 @@ export default {
         maxBodyHeight() {
             return this.maxHeight - this.headerHeight
         },
-        rowIds() {
-            return Array.from({ length: this.data.length }, () => this.$helpers.uuidv1())
-        },
-        rows() {
-            if (this.autoId)
-                return this.data.map(
-                    (row, index) => [this.rowIds[index], ...row] // Place uuid cell first
-                )
-            return this.data
-        },
         colLeftPosMap() {
             let left = this.showOrderNumberHeader ? this.orderNumberHeaderWidth : 0
             return this.headerWidths.reduce((res, width, i) => {
@@ -167,6 +156,12 @@ export default {
         },
     },
     watch: {
+        data: {
+            deep: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV) && v.length) this.computeCollection()
+            },
+        },
         headerWidths: {
             immediate: true,
             deep: true,
@@ -181,6 +176,12 @@ export default {
             deep: true,
             handler() {
                 this.computeCollection()
+            },
+        },
+        sortOptions: {
+            deep: true,
+            handler() {
+                this.sortCollection()
             },
         },
     },
@@ -201,26 +202,42 @@ export default {
             this.headerScrollLeft = `-${ele.scrollLeft}px`
         },
         isHeaderHidden(i) {
-            return this.$typy(this.tableHeaders, `[${i}].hidden`).safeBoolean
+            return this.$typy(this.headers, `[${i}].hidden`).safeBoolean
         },
         getHeaderName(i) {
-            return this.tableHeaders[i].text
+            return this.headers[i].text
         },
         computeCollection() {
             this.worker.postMessage({
-                headers: this.tableHeaders,
-                rows: this.rows,
-                autoId: this.autoId,
-                showOrderNumberCell: this.showOrderNumberHeader,
-                rowHeight: this.rowHeight,
-                colWidths: this.headerWidths,
-                orderNumberCellWidth: this.orderNumberHeaderWidth,
-                colLeftPosMap: this.colLeftPosMap,
-                search: this.search,
-                searchBy: this.searchBy,
+                action: 'compute',
+                data: {
+                    headers: this.headers,
+                    rows: this.data,
+                    showOrderNumberCell: this.showOrderNumberHeader,
+                    rowHeight: this.rowHeight,
+                    colWidths: this.headerWidths,
+                    orderNumberCellWidth: this.orderNumberHeaderWidth,
+                    colLeftPosMap: this.colLeftPosMap,
+                    search: this.search,
+                    searchBy: this.searchBy,
+                },
             })
-            this.worker.onmessage = event => {
-                this.collection = event.data
+            this.worker.onmessage = e => (this.collection = e.data)
+        },
+        sortCollection() {
+            if (this.sortOptions.sortBy < 0) this.computeCollection()
+            else {
+                this.worker.postMessage({
+                    action: 'sort',
+                    data: {
+                        headerNamesIndexesMap: this.headerNamesIndexesMap,
+                        rowHeight: this.rowHeight,
+                        collection: this.collection,
+                        sortOptions: this.sortOptions,
+                        showOrderNumberCell: this.showOrderNumberHeader,
+                    },
+                })
+                this.worker.onmessage = e => (this.collection = e.data)
             }
         },
     },

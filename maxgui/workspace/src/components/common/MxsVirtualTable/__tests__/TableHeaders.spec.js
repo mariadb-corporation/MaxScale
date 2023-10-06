@@ -25,6 +25,7 @@ const mountFactory = opts =>
                     rowCount: 0,
                     showOrderNumber: false,
                     boundingWidth: 800,
+                    sortOptions: { sortBy: '', sortDesc: false },
                 },
             },
             opts
@@ -57,7 +58,9 @@ describe('TableHeaders', () => {
                 const selector = `[data-test="${h.text}-ele"]`
                 if (h.hidden) expect(wrapper.find(selector).exists()).to.be.false
                 else
-                    expect(wrapper.find(selector).attributes().id).to.equal(wrapper.vm.headerIds[i])
+                    expect(wrapper.find(selector).attributes().id).to.equal(
+                        wrapper.vm.$data.headerIds[i]
+                    )
             })
         })
 
@@ -116,7 +119,7 @@ describe('TableHeaders', () => {
 
         it(`headerIds should have the same length as headers`, () => {
             wrapper = mountFactory({ propsData: { headers: stubHeaders } })
-            expect(wrapper.vm.headerIds.length).to.equal(stubHeaders.length)
+            expect(wrapper.vm.$data.headerIds.length).to.equal(stubHeaders.length)
         })
 
         it(`headerMinWidths should return array of header minimum widths`, () => {

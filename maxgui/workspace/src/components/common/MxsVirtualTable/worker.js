@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -11,7 +12,7 @@
  * Public License.
  */
 import { t } from 'typy'
-import { ciStrIncludes, dateFormat } from '@share/utils/helpers'
+import { ciStrIncludes, dateFormat, lodash } from '@share/utils/helpers'
 
 function filter({ cellValue, search, header }) {
     let value = cellValue
@@ -20,11 +21,10 @@ function filter({ cellValue, search, header }) {
     return ciStrIncludes(`${value}`, search)
 }
 
-function genOrderNumberCell({ value, rowId, rowHeight, orderNumberCellWidth, y }) {
+function genOrderNumberCell({ value, rowHeight, orderNumberCellWidth, y }) {
     return {
         data: {
             value,
-            rowId,
             rowIdx: value - 1,
             colIdx: 0,
             width: orderNumberCellWidth,
@@ -37,12 +37,11 @@ function genOrderNumberCell({ value, rowId, rowHeight, orderNumberCellWidth, y }
     }
 }
 
-function genCell({ value, x, y, colWidths, rowIdx, colIdx, rowId, rowHeight }) {
+function genCell({ value, x, y, colWidths, rowIdx, colIdx, rowHeight }) {
     const width = t(colWidths, `[${colIdx}]`).safeNumber
     return {
         data: {
             value,
-            rowId,
             rowIdx,
             colIdx,
             width,
@@ -60,7 +59,6 @@ function genRowCells({
     orderNumber,
     rowHeight,
     y,
-    autoId,
     showOrderNumberCell,
     orderNumberCellWidth,
     headers,
@@ -69,16 +67,13 @@ function genRowCells({
     search,
     searchBy,
 }) {
-    let rowId = undefined
     let cells = []
     let matched = false
     for (let colIdx = 0; colIdx < row.length; colIdx++) {
-        if (autoId && colIdx === 0) rowId = row[colIdx]
-        if (showOrderNumberCell && (autoId ? colIdx === 1 : colIdx === 0))
+        if (showOrderNumberCell && colIdx === 0)
             cells.push(
                 genOrderNumberCell({
                     value: orderNumber,
-                    rowId,
                     rowHeight,
                     orderNumberCellWidth,
                     y,
@@ -97,7 +92,6 @@ function genRowCells({
                     colWidths,
                     rowIdx,
                     colIdx,
-                    rowId,
                     rowHeight,
                 })
             )
@@ -111,7 +105,6 @@ function genRowCells({
  * @param {object} data
  * @param {array} data.headers - table headers
  * @param {array} data.rows - table 2d rows
- * @param {boolean} data.autoId - if it's true, the first item in the row is the uuid
  * @param {boolean} data.showOrderNumberCell - conditionally push an order number cell
  * @param {number} data.rowHeight - height of the row
  * @param {number} data.orderNumberCellWidth - width of the order number cell
@@ -125,7 +118,6 @@ function computeCollection(data) {
     const {
         headers,
         rows,
-        autoId,
         showOrderNumberCell,
         rowHeight,
         orderNumberCellWidth,
@@ -134,7 +126,6 @@ function computeCollection(data) {
         search,
         searchBy,
     } = data
-    //TODO: Add props for sorting and grouping rows
     let collection = []
     let currentVisibleIdx = 0
     for (let i = 0; i < rows.length; i++) {
@@ -144,7 +135,6 @@ function computeCollection(data) {
             orderNumber: i + 1,
             rowHeight,
             y: rowHeight * currentVisibleIdx,
-            autoId,
             showOrderNumberCell,
             orderNumberCellWidth,
             headers,
@@ -161,4 +151,40 @@ function computeCollection(data) {
     return collection
 }
 
-onmessage = e => postMessage(computeCollection(e.data))
+/**
+ * Sort the provided collection, then update new y position
+ * @param {object} data
+ * @param {object} data.headerNamesIndexesMap
+ * @param {array} data.collection - virtual-collection data
+ * @param {object} data.sortOptions - width of the order number cell
+ * @param {number} data.rowHeight - height of the row
+ * @param {boolean} data.showOrderNumberCell
+ * @returns {array} sorted collection
+ */
+function sortCollection({
+    headerNamesIndexesMap,
+    rowHeight,
+    collection,
+    sortOptions,
+    showOrderNumberCell,
+}) {
+    const { sortBy, sortDesc } = sortOptions
+    let colIdxToBeSorted = headerNamesIndexesMap[sortBy]
+    if (showOrderNumberCell) colIdxToBeSorted++
+
+    let sortedCollection = lodash.cloneDeep(collection).sort((a, b) => {
+        const aValue = a.group[colIdxToBeSorted].data.value
+        const bValue = b.group[colIdxToBeSorted].data.value
+        if (sortDesc) return bValue < aValue ? -1 : 1
+        return aValue > bValue ? 1 : -1
+    })
+    return sortedCollection.map((item, rowIdx) => ({
+        group: item.group.map(cellItem => ({ ...cellItem, y: rowIdx * rowHeight })),
+    }))
+}
+onmessage = e => {
+    const { action, data } = e.data
+    if (action === 'compute') postMessage(computeCollection(data))
+    else if (action === 'sort') postMessage(sortCollection(data))
+    //TODO: Add collection grouping
+}

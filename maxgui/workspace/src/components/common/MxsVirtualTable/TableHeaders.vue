@@ -28,8 +28,12 @@
                     'text-capitalize': header.capitalize,
                     'text-uppercase': header.uppercase,
                     'th--resizable': header.resizable,
+                    pointer: enableSorting && header.sortable !== false,
+                    [`sort--active ${sortOpts.sortDesc ? 'desc' : 'asc'}`]:
+                        sortOpts.sortBy === header.text,
                 }"
                 :data-test="`${header.text}-ele`"
+                @click="enableSorting && header.sortable !== false ? updateSortOpts(header) : null"
             >
                 <slot
                     :name="`header-${header.text}`"
@@ -49,11 +53,18 @@
                         {{ header.text }}
                     </span>
                 </slot>
-
+                <v-icon
+                    v-if="enableSorting && header.sortable !== false"
+                    size="14"
+                    class="sort-icon ml-2"
+                >
+                    $vuetify.icons.mxs_arrowDown
+                </v-icon>
                 <span
                     v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                     class="header__resizer d-inline-block fill-height"
                     :data-test="`${header.text}-resizer-ele`"
+                    @click.stop
                     v-on="header.resizable ? { mousedown: e => resizerMouseDown(e, index) } : null"
                 />
             </div>
@@ -87,6 +98,7 @@
   required?: boolean, if true, `label-required` class will be added to the header
   filter?: (value: any, search: string) => boolean, custom filter
   filterDateFormat?: string, date-fns format, E, dd MMM yyyy
+  sortable?: boolean, true by default
 }
  Emits:
  - is-resizing(boolean)
@@ -100,6 +112,7 @@ export default {
         showOrderNumber: { type: Boolean, required: true },
         rowCount: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
+        sortOptions: { type: Object, required: true }, // sync
     },
     data() {
         return {
@@ -111,6 +124,14 @@ export default {
         }
     },
     computed: {
+        sortOpts: {
+            get() {
+                return this.sortOptions
+            },
+            set(v) {
+                this.$emit('update:sortOptions', v)
+            },
+        },
         visHeaders() {
             return this.headers.filter(h => !h.hidden)
         },
@@ -123,6 +144,9 @@ export default {
         //threshold, user cannot resize header smaller than this
         headerMinWidths() {
             return this.headers.map(h => h.minWidth || this.defaultHeaderMinWidth)
+        },
+        enableSorting() {
+            return this.rowCount <= 10000
         },
     },
     watch: {
@@ -211,25 +235,19 @@ export default {
             let classToFind = ` ${className} `
             return str.indexOf(classToFind) !== -1
         },
-        getNxtResizableNodeByClass({ node, className }) {
-            while ((node = node.nextSibling)) {
-                if (this.hasClass({ ele: node, className })) return node
+        getLastNode() {
+            const index = this.headers.indexOf(this.lastVisHeader)
+            return {
+                node: this.$typy(this.$refs, `header__${index}[0]`).safeObject,
+                lastNodeMinWidth: this.headerMinWidths[index],
             }
-            return null
         },
         resizerMouseDown(e, index) {
-            const nxtNode = this.getNxtResizableNodeByClass({
-                node: e.target.parentElement,
-                className: 'th--resizable',
-            })
             this.resizingData = {
                 currPageX: e.pageX,
-                // target metadata
                 targetNode: e.target.parentElement,
                 targetNodeWidth: e.target.parentElement.offsetWidth,
                 targetHeaderMinWidth: this.headerMinWidths[index],
-                // next resizable header node
-                nxtNode,
             }
             this.isResizing = true
         },
@@ -241,16 +259,27 @@ export default {
                     targetNode,
                     targetNodeWidth,
                     targetHeaderMinWidth,
-                    nxtNode,
                 } = this.resizingData
                 const diffX = e.pageX - currPageX
                 const targetNewWidth = targetNodeWidth + diffX
                 if (targetNewWidth >= targetHeaderMinWidth) {
                     targetNode.style.maxWidth = handleAddPxUnit(targetNewWidth)
                     targetNode.style.minWidth = handleAddPxUnit(targetNewWidth)
-                    if (nxtNode) {
-                        nxtNode.style.maxWidth = 'unset'
-                        nxtNode.style.minWidth = 'unset'
+                    const { node: lastNode, lastNodeMinWidth } = this.getLastNode()
+                    if (lastNode) {
+                        // Let the last header node to auto grow its width
+                        lastNode.style.maxWidth = 'unset'
+                        lastNode.style.minWidth = 'unset'
+                        // use the default min width if the actual width is smaller than it
+                        const { width: currentLastNodeWidth } = lastNode.getBoundingClientRect()
+                        if (currentLastNodeWidth < lastNodeMinWidth) {
+                            lastNode.style.maxWidth = this.$helpers.handleAddPxUnit(
+                                lastNodeMinWidth
+                            )
+                            lastNode.style.minWidth = this.$helpers.handleAddPxUnit(
+                                lastNodeMinWidth
+                            )
+                        }
                     }
                 }
             }
@@ -260,6 +289,19 @@ export default {
                 this.isResizing = false
                 this.computeHeaderWidths()
                 this.resizingData = null
+            }
+        },
+        /**
+         * Update sort options in three states: initial, asc or desc
+         * @param {object} - header
+         */
+        updateSortOpts(header) {
+            if (this.sortOpts.sortBy === header.text) {
+                if (this.sortOpts.sortDesc) this.sortOpts.sortBy = -1
+                this.sortOpts.sortDesc = !this.sortOpts.sortDesc
+            } else {
+                this.sortOpts.sortBy = header.text
+                this.sortOpts.sortDesc = false
             }
         },
     },
@@ -278,6 +320,27 @@ export default {
         }
         &:last-child:not(.order-number-header) {
             padding-right: 0px !important;
+        }
+        .sort-icon {
+            transform: none;
+            visibility: hidden;
+        }
+        &.sort--active {
+            color: black;
+        }
+        &.sort--active .sort-icon {
+            color: inherit;
+            visibility: visible;
+        }
+        &.desc {
+            .sort-icon {
+                transform: rotate(-180deg);
+            }
+        }
+        &:hover {
+            .sort-icon {
+                visibility: visible;
+            }
         }
         // disabled by default
         .header__resizer {
