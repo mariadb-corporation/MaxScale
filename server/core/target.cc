@@ -274,34 +274,36 @@ void Error::clear()
 
 std::string Reply::describe() const
 {
-    std::ostringstream ss;
+    std::string rval;
 
     if (is_complete())
     {
         if (error())
         {
-            ss << "Error: " << error().code() << ", " << error().sql_state() << " " << error().message();
+            rval = mxb::cat("Error: ", std::to_string(error().code()), ", ", error().sql_state(),
+                            " ", error().message());
         }
         else if (is_ok())
         {
-            ss << "OK: " << num_warnings() << " warnings";
+            rval = mxb::cat("OK: ", std::to_string(num_warnings()), " warnings");
         }
         else if (is_resultset())
         {
-            ss << "Resultset: " << rows_read() << " rows in " << mxb::pretty_size(size());
+            rval = mxb::cat("Resultset: ", std::to_string(rows_read()),
+                            " rows in ", mxb::pretty_size(size()));
         }
         else
         {
             // TODO: Is this really unknown?
-            ss << "Unknown result type";
+            rval = "Unknown result type";
         }
     }
     else
     {
-        ss << "Partial reply";
+        rval = "Partial reply";
     }
 
-    return ss.str();
+    return rval;
 }
 
 std::string Reply::to_string() const

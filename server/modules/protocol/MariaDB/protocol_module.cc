@@ -15,6 +15,7 @@
 #define MXB_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
 
 #include "protocol_module.hh"
+#include <charconv>
 #include <maxbase/format.hh>
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/cn_strings.hh>
@@ -122,44 +123,39 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
     }
 
     unsigned char command = packet[4];
-
     MariaDBParser& p = MariaDBParser::get();
+    char hexcmd[3];
+    char plen[32];
     std::string type_mask = mxs::Parser::type_mask_to_string(p.get_type_mask(const_cast<GWBUF&>(packet)));
+    std::to_chars(hexcmd, hexcmd + sizeof(hexcmd) - 1, command, 16).ptr[0] = '\0';
+    std::to_chars(plen, plen + sizeof(plen) - 1, MYSQL_GET_PACKET_LEN(&packet)).ptr[0] = '\0';
 
-    const char* pSql;
-    int len;
+    std::string_view stmt;
     std::string sql;
+    std::string_view hint_label;
+    std::string_view hint_type;
+
+    if (!packet.hints().empty())
+    {
+        hint_label = ", Hint: ";
+        hint_type = Hint::type_to_str(packet.hints()[0].type);
+    }
+
     if (mxs_mysql_is_ps_command(command))
     {
         sql = "ID: " + std::to_string(mxs_mysql_extract_ps_id(packet));
-        pSql = sql.c_str();
-        len = sql.length();
+        stmt = sql;
     }
     else
     {
-        std::string_view sv = mariadb::get_sql(packet);
-        pSql = sv.data();
-        len = sv.length();
+        stmt = mariadb::get_sql(packet).substr(0, body_max_len);
     }
 
-    if (len > body_max_len)
-    {
-        len = body_max_len;
-    }
-
-    const char* zType_mask = type_mask.empty() ? "N/A" : type_mask.c_str();
-    const char* zHint = packet.hints().empty() ? "" : ", Hint:";
-    const char* zHint_type = packet.hints().empty() ? "" : Hint::type_to_str(packet.hints()[0].type);
-
-    return mxb::string_printf("cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
-                              command,
-                              mariadb::cmd_to_string(command),
-                              MYSQL_GET_PACKET_LEN(&packet),
-                              zType_mask,
-                              len,
-                              pSql,
-                              zHint,
-                              zHint_type);
+    return mxb::cat("cmd: (0x", hexcmd, ") ", mariadb::cmd_to_string(command),
+                    ", plen: ", plen,
+                    ", type: ", type_mask.empty() ? "N/A" : type_mask,
+                    ", stmt: ", stmt,
+                    hint_label, hint_type);
 }
 
 GWBUF MySQLProtocolModule::make_query(std::string_view sql) const

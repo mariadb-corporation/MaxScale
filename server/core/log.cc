@@ -21,6 +21,7 @@
 #include <cinttypes>
 #include <fstream>
 #include <deque>
+#include <charconv>
 
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-journal.h>
@@ -59,7 +60,10 @@ size_t mxs_get_context(char* buffer, size_t len)
 
     if (session_id != 0)
     {
-        len = snprintf(buffer, len, "%" PRIu64, session_id);
+        auto rc = std::to_chars(buffer, buffer + len - 1, session_id);
+        mxb_assert(rc.ec == std::errc {});
+        len = rc.ptr - buffer;
+        buffer[len] = '\0';
     }
     else
     {
