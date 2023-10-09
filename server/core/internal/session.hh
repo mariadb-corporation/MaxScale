@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <maxbase/window.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
 #include <maxscale/target.hh>
@@ -373,7 +374,7 @@ private:
 
     using SessionVarsByName = std::unordered_map<std::string, SESSION_VARIABLE>;
     using QueryInfos = std::deque<QueryInfo>;
-    using Log = std::deque<std::pair<struct timeval, std::string>>;
+    using Log = mxb::Window<std::pair<struct timeval, std::string>>;
 
     MXB_AT_DEBUG(bool m_routing {false});
 
@@ -382,7 +383,7 @@ private:
     QueryInfos        m_last_queries;           /*< The N last queries by the client */
     int               m_current_query {-1};     /*< The index of the current query */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
-    Log               m_log;                    /*< Session specific in-memory log */
+    Log               m_log {0};                /*< Session specific in-memory log */
     bool              m_dumping_log {false};    /*< If true, the session is dumping the log */
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */

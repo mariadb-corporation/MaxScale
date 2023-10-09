@@ -65,3 +65,7 @@ add_test(test_proxy_protocol test_proxy_protocol)
 add_executable(test_small_vector test_small_vector.cc)
 target_link_libraries(test_small_vector maxbase)
 add_test(test_small_vector test_small_vector)
+
+add_executable(test_window test_window.cc)
+target_link_libraries(test_window maxbase)
+add_test(test_window test_window)
