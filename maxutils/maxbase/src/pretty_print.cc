@@ -16,6 +16,7 @@
 #include <array>
 #include <tuple>
 #include <cmath>
+#include <cstring>
 
 namespace maxbase
 {
@@ -35,62 +36,11 @@ static std::pair<double, const char*> pretty_number_split_binary(double dsize)
     return {dsize, byte_prefix[index]};
 }
 
-static std::array<const char*, 9> si_prefix_greater_1 {"", "k", "M", "G", "T", "P", "E", "Z", "Y"};
-static std::array<const char*, 8> si_prefix_less_1 {"m", "u", "n", "p", "f", "a", "z", "y"};
-
-static std::pair<double, const char*> pretty_number_split_decimal(double dsize)
-{
-    if (dsize == 0)
-    {
-        return {0, ""};
-    }
-
-    constexpr int ten_to_three = 1000;
-
-    size_t index = 0;
-    if (dsize >= 1)
-    {
-        while (index < si_prefix_greater_1.size() && dsize >= ten_to_three)
-        {
-            ++index;
-            dsize /= ten_to_three;
-        }
-        return {dsize, si_prefix_greater_1[index]};
-    }
-    else
-    {
-        dsize *= ten_to_three;
-        while (++index < si_prefix_less_1.size() && dsize < 1.0)
-        {
-            dsize *= ten_to_three;
-        }
-        --index;
-        return {dsize, si_prefix_less_1[index]};
-    }
-}
-
-std::pair<double, const char*> pretty_number_split(double value, NumberType size_type)
-{
-    int sign = 1;
-    if (std::signbit(value))
-    {
-        sign = -1;
-        value = -value;
-    }
-
-    std::pair<double, const char*> res = (size_type == NumberType::Byte) ?
-        pretty_number_split_binary(value) : pretty_number_split_decimal(value);
-
-    res.first *= sign;
-    return res;
-}
-
-static std::string make_it_pretty(double dsize, const char* separator, NumberType size_type)
+std::string pretty_size(size_t sz)
 {
     char buf[64];
 
-    const char* prefix;
-    std::tie(dsize, prefix) = pretty_number_split(dsize, size_type);
+    auto [dsize, suffix] = pretty_number_split_binary(sz);
 
     // format with two decimals
     auto len = std::sprintf(buf, "%.2f", dsize);
@@ -105,19 +55,9 @@ static std::string make_it_pretty(double dsize, const char* separator, NumberTyp
     {
         ++ptr;
     }
-    *ptr = '\0';
 
-    return std::string {buf} + separator + prefix;
-}
+    strcpy(ptr, suffix);
 
-std::string pretty_size(size_t sz, const char* separator)
-{
-    return make_it_pretty(sz, separator, NumberType::Byte);
-}
-
-std::string pretty_number(double num, const char* separator, const char* suffix)
-{
-    auto pretty = make_it_pretty(num, separator, NumberType::Regular);
-    return pretty + suffix;
+    return buf;
 }
 }
