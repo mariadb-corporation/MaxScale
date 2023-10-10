@@ -366,6 +366,7 @@ enum gw_mysql_capabilities_t
 // Default extended flags that MaxScale supports
 constexpr const uint32_t MXS_EXTRA_CAPABILITIES_SERVER =
     MXS_MARIA_CAP_STMT_BULK_OPERATIONS
+    | MXS_MARIA_CAP_EXTENDED_TYPES
     | MXS_MARIA_CAP_CACHE_METADATA;
 
 // Same as above, for uint64.

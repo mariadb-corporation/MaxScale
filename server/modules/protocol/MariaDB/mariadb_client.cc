@@ -552,7 +552,11 @@ bool MariaDBClientConnection::send_server_handshake()
         {
             // The metadata caching was added in 10.6 and should only be enabled if all nodes support it.
             caps &= ~(MXS_MARIA_CAP_CACHE_METADATA << 32);
-            mxb_assert((caps & MXS_EXTRA_CAPS_SERVER64) == (MXS_MARIA_CAP_STMT_BULK_OPERATIONS << 32));
+
+            if (min_version < 100500)
+            {
+                caps &= ~(MXS_MARIA_CAP_EXTENDED_TYPES << 32);
+            }
         }
     }
 
@@ -560,7 +564,8 @@ bool MariaDBClientConnection::send_server_handshake()
     {
         // Some module requires that only the base protocol is used, most likely due to the fact
         // that it processes the contents of the resultset.
-        caps &= ~((MXS_MARIA_CAP_CACHE_METADATA << 32) | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
+        const uint64_t extensions = MXS_MARIA_CAP_CACHE_METADATA | MXS_MARIA_CAP_EXTENDED_TYPES;
+        caps &= ~((extensions << 32) | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
         mxb_assert((caps & MXS_EXTRA_CAPS_SERVER64) == (MXS_MARIA_CAP_STMT_BULK_OPERATIONS << 32)
                    || cap_types != CapTypes::MARIADB);
         mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
