@@ -59,7 +59,6 @@
         "vue-router": "~3.6.5",
         "vue-shortkey": "~3.1.7",
         "vue-template-compiler": "~2.6.14",
-        "vue-virtual-collection": "~1.5.0",
         "vue-virtual-scroll-list": "~2.3.5",
         "vuetify": "~2.6.16",
         "vuetify-loader": "~1.7.3",

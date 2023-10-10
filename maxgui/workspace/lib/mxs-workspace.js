@@ -20,7 +20,6 @@ import * as helpers from '@wsSrc/utils/helpers'
 import logger from '@share/plugins/logger'
 import scopingI18n from '@share/plugins/scopingI18n'
 import txtHighlighter from '@share/plugins/txtHighlighter'
-import virtualCollection from '@share/plugins/virtualCollection'
 
 export { default as ConfirmLeaveDlg } from '@wsComps/ConfirmLeaveDlg.vue'
 export { default as MigrCreateDlg } from '@wkeComps/DataMigration/MigrCreateDlg.vue'
@@ -56,7 +55,6 @@ export default /*#__PURE__*/ (() => {
         Vue.use(helpersPlugin, { addon: helpers }) // Vue.prototype.$helpers
         Vue.use(logger) // Vue.prototype.$logger
         Vue.use(txtHighlighter) // mxs-highlighter directive
-        Vue.use(virtualCollection)
     }
     return installable
 })()

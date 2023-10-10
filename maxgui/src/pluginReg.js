@@ -1,5 +1,4 @@
 import Vue from 'vue'
-import virtualCollection from '@share/plugins/virtualCollection'
 import Vuetify from 'vuetify/lib'
 import helpersPlugin from '@share/plugins/helpers'
 import logger from '@share/plugins/logger'
@@ -15,7 +14,6 @@ import VueI18n from 'vue-i18n'
 import Workspace from '@rootSrc/plugins/workspace.js'
 import Ripple from 'vuetify/lib/directives/ripple'
 
-Vue.use(virtualCollection)
 Vue.use(VueI18n)
 // i18n only available after Vue.use(VueI18n)
 Vue.use(scopingI18n, { i18n: require('@share/plugins/i18n').default })

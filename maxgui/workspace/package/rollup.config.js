@@ -52,7 +52,6 @@ const external = [
     'uuid',
     'vue',
     'vue-chartjs',
-    'vue-virtual-collection',
     'vuetify',
     'vuetify/lib',
     'vuex',

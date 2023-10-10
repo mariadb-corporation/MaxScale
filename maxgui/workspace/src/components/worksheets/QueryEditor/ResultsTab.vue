@@ -88,7 +88,7 @@
             />
             <v-tooltip
                 v-if="
-                    $typy(resultData[activeResSet], 'data').isDefined &&
+                    $typy(resultData[activeResSet], 'headers').isDefined &&
                         !resultData[activeResSet].complete
                 "
                 top
@@ -207,6 +207,7 @@ export default {
                                 text: field,
                             })),
                             rows: this.$typy(res, 'data').safeArray,
+                            complete: this.$typy(res, 'complete').safeBoolean,
                         }
                     } else if (this.$typy(res, 'errno').isDefined) {
                         resultData[this.errorTabId] = res

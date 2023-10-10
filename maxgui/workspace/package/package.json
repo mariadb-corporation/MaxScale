@@ -70,7 +70,6 @@
         "vue-i18n": "8.x",
         "vue-shortkey": "3.x",
         "vue-template-compiler": "2.x",
-        "vue-virtual-collection": "1.5.x",
         "vuetify": "2.6.x",
         "vuex": "3.6.x",
         "vuex-persist": "3.1.x"
