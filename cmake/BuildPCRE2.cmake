@@ -8,7 +8,7 @@
 
 set(PCRE2_REPO "https://github.com/PCRE2Project/pcre2.git" CACHE STRING "PCRE2 Git repository")
 
-set(PCRE2_TAG "pcre2-10.36" CACHE STRING "PCRE2 Git tag")
+set(PCRE2_TAG "pcre2-10.42" CACHE STRING "PCRE2 Git tag")
 
 message(STATUS "Using pcre2 version ${PCRE2_TAG}")
 
