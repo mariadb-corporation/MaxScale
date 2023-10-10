@@ -16,6 +16,7 @@
 
 #include <sstream>
 #include <algorithm>
+#include <charconv>
 
 #include <glob.h>
 #include <math.h>
@@ -1406,9 +1407,16 @@ gtid_pos_t gtid_pos_t::from_string(std::string str)
 
 std::string gtid_pos_t::to_string() const
 {
-    std::stringstream ss;
-    ss << domain << "-" << server_id << "-" << seq;
-    return ss.str();
+    char buf[80];
+    char* end = buf + sizeof(buf);
+
+    char* ptr = std::to_chars(buf, end, domain).ptr;
+    *ptr++ = '-';
+    ptr = std::to_chars(ptr, end, server_id).ptr;
+    *ptr++ = '-';
+    ptr = std::to_chars(ptr, end, seq).ptr;
+
+    return std::string(buf, ptr);
 }
 
 bool gtid_pos_t::empty() const
