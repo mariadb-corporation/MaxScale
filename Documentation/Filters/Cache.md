@@ -68,6 +68,13 @@ the data of each user separately, which effectively means that there can
 be no unintended sharing. Please see [users](#users) for how to change
 the default behaviour.
 
+### `information_schema`
+
+When [invalidation](#invalidation) is enabled, SELECTs targeting tables
+in `information_schema` are not cached. The reason is that as the content
+of the tables changes as the side-effect of something else, the cache would
+not know when to invalidate the cache-entries.
+
 ## Invalidation
 
 Since MaxScale 2.5, the cache is capable of invalidating entries in the
