@@ -37,3 +37,14 @@ void maxscale_reset_starttime(void);
 // Helper functions for debug assertions
 bool maxscale_teardown_in_progress();
 void maxscale_start_teardown();
+
+enum class LogBlurbAction {STARTUP, LOG_ROTATION};
+
+/**
+ * Log the details of the MaxScale and the system it is running on
+ *
+ * Should be called on startup and whenever the log is rotated.
+ *
+ * @param type The action type
+ */
+void maxscale_log_info_blurb(LogBlurbAction type);

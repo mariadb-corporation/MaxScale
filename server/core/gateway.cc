@@ -44,7 +44,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/sysinfo.h>
 
 #include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
@@ -1987,16 +1986,7 @@ int main(int argc, char** argv)
     }
 
     // Config successfully read and we are a unique MaxScale, time to log some info.
-    MXS_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %lu processor cores.",
-               cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
-               cnf.version.c_str(), cnf.machine.c_str(), get_processor_count());
-
-    struct sysinfo info;
-    sysinfo(&info);
-    MXS_NOTICE("Total usable main memory: %s.",
-               mxb::pretty_size(info.mem_unit * info.totalram).c_str());
-    MXS_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
-    MXS_NOTICE("MaxScale is running in process %i", getpid());
+    maxscale_log_info_blurb(LogBlurbAction::STARTUP);
 
     if (!this_unit.daemon_mode)
     {

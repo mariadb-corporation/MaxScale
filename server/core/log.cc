@@ -35,6 +35,8 @@
 #include <maxscale/session.hh>
 #include <maxbase/string.hh>
 
+#include "internal/maxscale.hh"
+
 namespace
 {
 
@@ -681,6 +683,7 @@ bool mxs_log_rotate()
     if (rotated)
     {
         this_unit.rotation_count.fetch_add(1, std::memory_order_relaxed);
+        maxscale_log_info_blurb(LogBlurbAction::LOG_ROTATION);
     }
     return rotated;
 }
