@@ -87,6 +87,7 @@ private:
     bool connect();
     void process_events();
     void update_gtid();
+    void query_gtid();
     bool process_one_event(SQL::Event& event);
     bool load_gtid_state();
     void save_gtid_state() const;
@@ -227,6 +228,12 @@ bool Replicator::Imp::connect()
     else
     {
         mxb_assert(m_sql);
+
+        if (m_gtid_position.empty())
+        {
+            query_gtid();
+        }
+
         std::string gtid_list_str = gtid_list_to_string(m_gtid_position);
         std::string gtid_start_pos = "SET @slave_connect_state='" + gtid_list_str + "'";
 
@@ -615,7 +622,11 @@ Replicator::Imp::GtidList Replicator::Imp::parse_gtid_list(const std::string& gt
         if (!trimmed.empty())
         {
             auto gtid = gtid_pos_t::from_string(trimmed);
-            rval[gtid.domain] = gtid;
+
+            if (!gtid.empty())
+            {
+                rval[gtid.domain] = gtid;
+            }
         }
     }
     return rval;
@@ -631,6 +642,41 @@ std::string Replicator::Imp::gtid_list_to_string(const GtidList& gtid_list)
         sep = ",";
     }
     return rval;
+}
+
+void Replicator::Imp::query_gtid()
+{
+
+    if (m_cnf.gtid == "newest")
+    {
+        auto res = m_sql->result("SELECT @@gtid_binlog_pos");
+
+        if (!res.empty() && !res[0].empty() && !res[0][0].empty())
+        {
+            m_gtid_position = parse_gtid_list(res[0][0]);
+        }
+    }
+    else if (m_cnf.gtid == "oldest")
+    {
+        auto res = m_sql->result("SHOW BINARY LOGS");
+
+        if (!res.empty() && !res[0].empty() && !res[0][0].empty())
+        {
+            std::string show_events = "SHOW BINLOG EVENTS IN '" + res[0][0] + "' LIMIT 100;";
+
+            res = m_sql->result(show_events);
+
+            for (const auto& row : res)
+            {
+                if (row.size() >= 6 && row[2] == "Gtid_list")
+                {
+                    // The GTID list value looks like this: [0-3000-17]
+                    m_gtid_position = parse_gtid_list(row[5].substr(1, row[5].size() - 2));
+                    break;
+                }
+            }
+        }
+    }
 }
 
 //

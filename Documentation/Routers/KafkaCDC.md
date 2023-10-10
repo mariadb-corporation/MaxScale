@@ -169,6 +169,15 @@ replication is started from the beginning. The value of this parameter is only
 used if no previously replicated events with GTID positions can be retrieved
 from Kafka.
 
+Starting in MaxScale 24.02, the special values `newest` and `oldest` can be
+used:
+
+- `newest` uses the current value of `@@gtid_binlog_pos` as the GTID where the
+  replication is started from.
+
+- `oldest` uses the oldest binlog that's available in `SHOW BINARY LOGS` and
+  then extracting the oldest GTID from it with `SHOW BINLOG EVENTS`.
+
 ### `server_id`
 
 The
