@@ -18,7 +18,7 @@
             </template>
         </tbl-toolbar>
         <mxs-virtual-scroll-tbl
-            :headers="visHeaders"
+            :headers="headers"
             :rows="rows"
             :itemHeight="32"
             :maxHeight="tableMaxHeight"
@@ -193,6 +193,9 @@ export default {
         colAttrs() {
             return Object.values(this.COL_ATTRS)
         },
+        colSpecs() {
+            return this.colAttrs.filter(attr => attr !== this.COL_ATTRS.ID)
+        },
         headers() {
             const { ID, NAME, TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED } = this.COL_ATTRS
             return this.colAttrs.map(field => {
@@ -200,6 +203,7 @@ export default {
                     text: field,
                     sortable: false,
                     uppercase: true,
+                    hidden: this.hiddenColSpecs.includes(field),
                 }
                 switch (field) {
                     case NAME:
@@ -226,15 +230,6 @@ export default {
                 }
                 return h
             })
-        },
-        colSpecs() {
-            return this.headers.reduce((acc, h) => {
-                if (!h.hidden) acc.push(h.text)
-                return acc
-            }, [])
-        },
-        visHeaders() {
-            return this.headers.map(h => ({ ...h, hidden: this.hiddenColSpecs.includes(h) }))
         },
         txtFields() {
             const { NAME, DEF_EXP, COMMENT } = this.COL_ATTRS

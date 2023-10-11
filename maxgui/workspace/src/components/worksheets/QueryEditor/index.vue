@@ -43,7 +43,12 @@
                             :queryTab="queryTab"
                             :dim="editorDim"
                         />
-                        <alter-table-editor v-else-if="isAlterEditor" :dim="editorDim" />
+                        <alter-table-editor
+                            v-else-if="isAlterEditor"
+                            :queryEditorTmp="queryEditorTmp"
+                            :queryTab="queryTab"
+                            :dim="editorDim"
+                        />
                         <insight-viewer v-else :dim="editorDim" :queryTab="queryTab" />
                     </template>
                 </keep-alive>

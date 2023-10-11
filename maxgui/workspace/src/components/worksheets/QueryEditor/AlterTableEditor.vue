@@ -3,10 +3,11 @@
         <keep-alive>
             <mxs-ddl-editor
                 v-if="!$typy(stagingData).isEmptyObject"
+                :key="queryTab.id"
                 v-model="stagingData"
                 :dim="dim"
                 :initialData="initialData"
-                :connData="{ id: activeQueryTabConnId, config: activeRequestConfig }"
+                :connData="{ id: connId, config: activeRequestConfig }"
                 :onExecute="onExecute"
                 :lookupTables="{ [stagingData.id]: stagingData }"
                 :hintedRefTargets="hintedRefTargets"
@@ -32,16 +33,15 @@
 import { mapState, mapActions } from 'vuex'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
-import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
-import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 
 export default {
     name: 'alter-table-editor',
     props: {
         dim: { type: Object, required: true },
+        queryEditorTmp: { type: Object, required: true },
+        queryTab: { type: Object, required: true },
     },
     computed: {
         ...mapState({
@@ -49,23 +49,29 @@ export default {
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             UNPARSED_TBL_PLACEHOLDER: state => state.mxsWorkspace.config.UNPARSED_TBL_PLACEHOLDER,
         }),
+        queryTabTmp() {
+            return QueryTabTmp.find(this.queryTab.id) || {}
+        },
+        alterEditor() {
+            return AlterEditor.find(this.queryTab.id) || {}
+        },
+        queryTabConn() {
+            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
+        },
         isFetchingData() {
-            return AlterEditor.getters('isFetchingData')
+            return this.$typy(this.alterEditor, 'is_fetching').safeBoolean
         },
         initialData() {
-            return AlterEditor.getters('data')
+            return this.$typy(this.alterEditor, 'data').safeObjectOrEmpty
         },
-        activeQueryTabConnId() {
-            return this.$typy(QueryConn.getters('activeQueryTabConn'), 'id').safeString
+        connId() {
+            return this.$typy(this.queryTabConn, 'id').safeString
         },
         activeRequestConfig() {
             return Worksheet.getters('activeRequestConfig')
         },
-        activeQueryTabId() {
-            return QueryEditor.getters('activeQueryTabId')
-        },
         alterEditorStagingData() {
-            return QueryTab.getters('alterEditorStagingData')
+            return this.$typy(this.queryTabTmp, 'alter_editor_staging_data').safeObjectOrEmpty
         },
         stagingData: {
             get() {
@@ -73,18 +79,18 @@ export default {
             },
             set(data) {
                 QueryTabTmp.update({
-                    where: this.activeQueryTabId,
+                    where: this.queryTab.id,
                     data: { alter_editor_staging_data: data },
                 })
             },
         },
         activeSpec: {
             get() {
-                return AlterEditor.getters('activeSpec')
+                return this.$typy(this.alterEditor, 'active_spec').safeString
             },
             set(v) {
                 AlterEditor.update({
-                    where: this.activeQueryTabId,
+                    where: this.queryTab.id,
                     data: { active_spec: v },
                 })
             },
@@ -96,7 +102,9 @@ export default {
             return this.$typy(this.stagingData, 'options.name').safeString
         },
         sidebarSchemaNode() {
-            return SchemaSidebar.getters('dbTreeData').find(n => n.name === this.schema)
+            return this.$typy(this.queryEditorTmp, 'db_tree').safeArray.find(
+                n => n.name === this.schema
+            )
         },
         tablesInSchema() {
             const schemaGroupNode = this.$typy(this.sidebarSchemaNode, 'children').safeArray.find(
@@ -115,44 +123,34 @@ export default {
             }))
         },
     },
-    activated() {
-        this.watch_isLoading()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_isLoading).safeFunction()
-    },
-    beforeDestroy() {
-        this.$typy(this.unwatch_isLoading).safeFunction()
+    watch: {
+        isFetchingData: {
+            immediate: true,
+            handler(v) {
+                if (!v && this.$typy(this.alterEditorStagingData).isEmptyObject) {
+                    QueryTabTmp.update({
+                        where: this.queryTab.id,
+                        data: {
+                            alter_editor_staging_data: this.$helpers.lodash.cloneDeep(
+                                this.initialData
+                            ),
+                        },
+                    })
+                }
+            },
+        },
     },
     methods: {
         ...mapActions({ exeDdlScript: 'mxsWorkspace/exeDdlScript' }),
-        watch_isLoading() {
-            this.unwatch_isLoading = this.$watch(
-                'isFetchingData',
-                v => {
-                    if (!v && this.$typy(this.alterEditorStagingData).isEmptyObject) {
-                        QueryTabTmp.update({
-                            where: this.activeQueryTabId,
-                            data: {
-                                alter_editor_staging_data: this.$helpers.lodash.cloneDeep(
-                                    this.initialData
-                                ),
-                            },
-                        })
-                    }
-                },
-                { deep: true, immediate: true }
-            )
-        },
         async onExecute() {
             await this.exeDdlScript({
-                connId: this.activeQueryTabConnId,
+                connId: this.connId,
                 schema: this.initialData.options.schema,
                 name: this.initialData.options.name,
                 successCb: () => {
                     const data = this.$helpers.lodash.cloneDeep(this.stagingData)
                     AlterEditor.update({
-                        where: this.activeQueryTabId,
+                        where: this.queryTab.id,
                         data: { data },
                     })
                 },
