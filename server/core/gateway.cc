@@ -451,11 +451,11 @@ static void sigfatal_handler(int i)
 
     print_alert("MaxScale %s received fatal signal %d. "
                 "Commit ID: %s System name: %s Release string: %s\n\n",
-                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string.c_str());
 
     MXS_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
-              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string.c_str());
 
     const char* pStmt;
     size_t nStmt;

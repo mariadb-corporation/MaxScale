@@ -177,10 +177,10 @@ public:
     std::string debug;
 
     // The following will not be configured via the configuration mechanism.
-    bool    config_check;                               /**< Only check config */
-    char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
-    char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
-    uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
+    bool        config_check;                   /**< Only check config */
+    std::string release_string;                 /**< The release name string of the system */
+    char        sysname[SYSNAME_LEN];           /**< The OS name of the system */
+    uint8_t     mac_sha1[SHA_DIGEST_LENGTH];    /**< The SHA1 digest of an interface MAC address */
 
     mxb_log_target_t    log_target;                 /**< Log type */
     bool                substitute_variables;       /**< Should environment variables be substituted */
