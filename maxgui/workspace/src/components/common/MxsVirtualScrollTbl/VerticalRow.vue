@@ -96,9 +96,9 @@ export default {
             required: true,
         },
         lineHeight: { type: String, required: true },
-        headerWidthMap: { type: Object, required: true },
+        colWidths: { type: Array, required: true },
         genActivatorID: { type: Function, required: true },
-        cellContentWidthMap: { type: Object, required: true },
+        cellContentWidths: { type: Array, required: true },
         isDragging: { type: Boolean, default: true },
         search: { type: String, required: true },
     },
@@ -112,20 +112,20 @@ export default {
         headerColStyle() {
             return {
                 ...this.baseColStyle,
-                minWidth: this.$helpers.handleAddPxUnit(this.headerWidthMap[0]),
+                minWidth: this.$helpers.handleAddPxUnit(this.colWidths[0]),
             }
         },
         valueColStyle() {
             return {
                 ...this.baseColStyle,
-                minWidth: this.$helpers.handleAddPxUnit(this.headerWidthMap[1]),
+                minWidth: this.$helpers.handleAddPxUnit(this.colWidths[1]),
             }
         },
         headerContentWidth() {
-            return this.$typy(this.cellContentWidthMap[0]).safeNumber
+            return this.$typy(this.cellContentWidths, '[0]').safeNumber
         },
         valueContentWidth() {
-            return this.$typy(this.cellContentWidthMap[1]).safeNumber
+            return this.$typy(this.cellContentWidths, '[1]').safeNumber
         },
     },
     methods: {

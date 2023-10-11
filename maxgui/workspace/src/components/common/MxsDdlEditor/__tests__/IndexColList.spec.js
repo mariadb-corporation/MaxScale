@@ -59,7 +59,7 @@ describe('index-col-list', () => {
                 boundingWidth,
                 showSelect,
                 selectedItems,
-                showTotalNumber,
+                showRowCount,
             } = wrapper.findComponent({
                 name: 'mxs-virtual-scroll-tbl',
             }).vm.$props
@@ -69,7 +69,7 @@ describe('index-col-list', () => {
             expect(maxHeight).to.be.eql(wrapper.vm.dim.height)
             expect(boundingWidth).to.be.eql(wrapper.vm.dim.width)
             expect(showSelect).to.be.true
-            expect(showTotalNumber).to.be.false
+            expect(showRowCount).to.be.false
             expect(selectedItems).to.be.eql(wrapper.vm.$data.selectedItems)
         })
 
