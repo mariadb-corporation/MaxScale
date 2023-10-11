@@ -1,27 +1,27 @@
 <template>
     <div
-        class="virtual-table"
+        class="mxs-virtual-table"
         :class="{ 'no-userSelect': isResizing }"
         :style="{ cursor: isResizing ? 'col-resize' : '' }"
     >
         <table-header
             ref="tableHeader"
             :isVertTable="isVertTable"
-            :headers="tableHeaders"
+            :items="tableHeaders"
             :boundingWidth="maxBoundingWidth"
             :headerStyle="headerStyle"
-            :curr2dRowsLength="curr2dRowsLength"
+            :rowCount="rowCount"
             :showSelect="showSelect"
             :checkboxColWidth="checkboxColWidth"
-            :isAllselected="isAllselected"
+            :isAllSelected="isAllSelected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
-            :scrollBarThicknessOffset="scrollBarThicknessOffset"
+            :scrollBarThickness="scrollBarThickness"
             :singleSelect="singleSelect"
-            :showTotalNumber="showTotalNumber"
-            @get-header-width-map="headerWidthMap = $event"
+            :showRowCount="showRowCount"
+            :sortOptions.sync="sortOptions"
+            @header-widths="headerWidths = $event"
             @is-resizing="isResizing = $event"
-            @on-sorting="onSorting"
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
         >
@@ -34,7 +34,7 @@
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : bench"
             :items="currRows"
-            :height="(isYOverflowed ? maxTbodyHeight : rowsHeight) + scrollBarThicknessOffset"
+            :height="(isYOverflowed ? maxTbodyHeight : rowsHeight) + scrollBarThickness"
             :max-height="maxTbodyHeight"
             :item-height="rowHeight"
             class="tbody"
@@ -47,8 +47,8 @@
                     :rowIdx="rowIdx"
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
-                    :headerWidthMap="headerWidthMap"
-                    :cellContentWidthMap="cellContentWidthMap"
+                    :colWidths="headerWidths"
+                    :cellContentWidths="cellContentWidths"
                     :genActivatorID="genActivatorID"
                     :isDragging="isDragging"
                     :search="search"
@@ -87,8 +87,8 @@
                     :checkboxColWidth="checkboxColWidth"
                     :activeRow="activeRow"
                     :genActivatorID="genActivatorID"
-                    :headerWidthMap="headerWidthMap"
-                    :cellContentWidthMap="cellContentWidthMap"
+                    :colWidths="headerWidths"
+                    :cellContentWidths="cellContentWidths"
                     :isDragging="isDragging"
                     :search="search"
                     :singleSelect="singleSelect"
@@ -169,16 +169,15 @@ export default {
         search: { type: String, default: '' }, // Text input used to highlight cell
         noDataText: { type: String, default: '' },
         selectedItems: { type: Array, default: () => [] }, //sync
-        showTotalNumber: { type: Boolean, default: true },
+        showRowCount: { type: Boolean, default: true },
     },
     data() {
         return {
-            headerWidthMap: {},
+            headerWidths: [],
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
-            idxOfSortingCol: -1,
-            isDesc: false,
+            sortOptions: { sortBy: '', sortDesc: false },
             //GroupBy feat states
             activeGroupBy: '',
             idxOfGroupCol: -1,
@@ -188,18 +187,18 @@ export default {
         }
     },
     computed: {
-        scrollBarThicknessOffset() {
+        scrollBarThickness() {
             return this.$helpers.getScrollbarWidth()
         },
         // minus scrollbar thickness if body is vertically overflow
         maxBoundingWidth() {
-            return this.boundingWidth - (this.isYOverflowed ? this.scrollBarThicknessOffset : 0)
+            return this.boundingWidth - (this.isYOverflowed ? this.scrollBarThickness : 0)
         },
         lineHeight() {
             return `${this.itemHeight}px`
         },
         maxRowGroupWidth() {
-            let width = Object.values(this.headerWidthMap).reduce((acc, v, idx) => {
+            let width = this.headerWidths.reduce((acc, v, idx) => {
                 if (idx !== this.idxOfGroupCol) acc += this.$typy(v).safeNumber
                 return acc
             }, 0)
@@ -216,7 +215,7 @@ export default {
             return this.isVertTable ? this.itemHeight * this.visHeaders.length : this.itemHeight
         },
         rowsHeight() {
-            return this.currRowsLength * this.rowHeight + this.scrollBarThicknessOffset
+            return this.currRowsLength * this.rowHeight + this.scrollBarThickness
         },
         maxTbodyHeight() {
             return this.maxHeight - 30 // header fixed height is 30px
@@ -229,16 +228,19 @@ export default {
             return this.rows.length
         },
         // indicates the number of current rows (rows after being filtered), excluding row group objects
-        curr2dRowsLength() {
+        rowCount() {
             return this.currRows.filter(row => !this.isRowGroup(row)).length
         },
         // indicates the number of current rows (rows after being filtered) including rows group
         currRowsLength() {
             return this.currRows.length
         },
+        idxOfSortingCol() {
+            return this.headerNamesIndexesMap[this.sortOptions.sortBy]
+        },
         tableRows() {
             let rows = this.$helpers.lodash.cloneDeep(this.rows)
-            if (this.idxOfSortingCol !== -1) this.handleSort(rows)
+            if (this.idxOfSortingCol >= 0) this.handleSort(rows)
             if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows
         },
@@ -251,23 +253,26 @@ export default {
                 this.activeGroupBy === h.text ? { ...h, hidden: true } : h
             )
         },
-        isAllselected() {
+        headerNamesIndexesMap() {
+            return this.tableHeaders.reduce((map, h, i) => {
+                map[h.text] = i
+                return map
+            }, {})
+        },
+        isAllSelected() {
             if (!this.selectedTblRows.length) return false
             return this.selectedTblRows.length === this.initialRowsLength
         },
         indeterminate() {
             if (!this.selectedTblRows.length) return false
-            return !this.isAllselected && this.selectedTblRows.length < this.initialRowsLength
+            return !this.isAllSelected && this.selectedTblRows.length < this.initialRowsLength
         },
         areHeadersHidden() {
             return this.visHeaders.length === 0
         },
         // minus padding. i.e px-3
-        cellContentWidthMap() {
-            return Object.keys(this.headerWidthMap).reduce((obj, key) => {
-                obj[key] = this.$typy(this.headerWidthMap[key]).safeNumber - 24
-                return obj
-            }, {})
+        cellContentWidths() {
+            return this.headerWidths.map(w => w - 24)
         },
         selectedTblRows: {
             get() {
@@ -326,19 +331,12 @@ export default {
         genActivatorID: id => `activator_id-${id}`,
         //SORT FEAT
         /**
-         * @param {String} payload.sortBy  sort by header name
-         * @param {Boolean} payload.isDesc  isDesc
-         */
-        onSorting({ sortBy, isDesc }) {
-            this.idxOfSortingCol = this.tableHeaders.findIndex(h => h.text === sortBy)
-            this.isDesc = isDesc
-        },
-        /**
          * @param {Array} rows - 2d array to be sorted
          */
         handleSort(rows) {
             rows.sort((a, b) => {
-                if (this.isDesc) return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
+                if (this.sortOptions.sortDesc)
+                    return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
                 else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
             })
         },
@@ -450,7 +448,7 @@ export default {
 </script>
 
 <style lang="scss">
-.virtual-table {
+.mxs-virtual-table {
     width: 100%;
     .tbody {
         overflow: auto;

@@ -9,7 +9,7 @@
         showSelect
         :style="{ width: `${dim.width}px` }"
         :selectedItems.sync="selectedItems"
-        :showTotalNumber="false"
+        :showRowCount="false"
         @row-click="onRowClick"
     >
         <template v-slot:[KEY_COL_EDITOR_ATTRS.COL_ORDER]="{ data: { rowData } }">

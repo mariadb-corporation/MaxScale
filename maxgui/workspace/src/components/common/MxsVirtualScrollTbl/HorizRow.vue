@@ -29,10 +29,10 @@
             <!-- dependency keys to force a rerender -->
             <table-cell
                 v-if="!h.hidden"
-                :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
+                :key="`${h.text}_${colWidths[colIdx]}_${colIdx}`"
                 :style="{
                     height: lineHeight,
-                    minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
+                    minWidth: $helpers.handleAddPxUnit(colWidths[colIdx]),
                 }"
                 :slotName="h.text"
                 :slotData="{
@@ -41,7 +41,7 @@
                     cell: row[colIdx],
                     colIdx,
                     header: h,
-                    maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
+                    maxWidth: $typy(cellContentWidths[colIdx]).safeNumber,
                     activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
                     isDragging,
                     search,
@@ -90,8 +90,8 @@ export default {
         checkboxColWidth: { type: Number, required: true },
         activeRow: { type: [Array, Object], required: true },
         genActivatorID: { type: Function, required: true },
-        headerWidthMap: { type: Object, required: true },
-        cellContentWidthMap: { type: Object, required: true },
+        colWidths: { type: Array, required: true },
+        cellContentWidths: { type: Array, required: true },
         isDragging: { type: Boolean, default: true },
         search: { type: String, required: true },
         singleSelect: { type: Boolean, required: true },

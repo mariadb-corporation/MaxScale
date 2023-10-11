@@ -206,7 +206,7 @@ export default {
                     ...this.headers.map(h => ({
                         ...h,
                         resizable: true,
-                        groupable: this.showGroupBy || h.groupable,
+                        groupable: this.showGroupBy && !this.$typy(h, 'groupable').isDefined,
                         draggable: this.draggable,
                         hidden: this.hiddenHeaderNames.includes(h.text),
                     })),

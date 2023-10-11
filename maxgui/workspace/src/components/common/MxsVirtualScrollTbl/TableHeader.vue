@@ -12,7 +12,7 @@
             >
                 <template v-if="!singleSelect">
                     <v-checkbox
-                        :input-value="isAllselected"
+                        :input-value="isAllSelected"
                         :indeterminate="indeterminate"
                         class="v-checkbox--mariadb-xs ma-0"
                         primary
@@ -22,36 +22,32 @@
                     <div class="header__resizer no-pointerEvent d-inline-block fill-height" />
                 </template>
             </div>
-            <template v-for="(header, colIdx) in tableHeaders">
+            <template v-for="(header, index) in headers">
                 <div
                     v-if="!header.hidden"
-                    :id="genHeaderColID(colIdx)"
-                    :key="`${header.text}_${colIdx}`"
-                    :ref="`header__${colIdx}`"
+                    :id="headerIds[index]"
+                    :key="headerIds[index]"
+                    :ref="`header__${index}`"
                     :style="{
                         ...headerStyle,
-                        maxWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
-                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
+                        maxWidth: $helpers.handleAddPxUnit(headerWidths[index]),
+                        minWidth: $helpers.handleAddPxUnit(headerWidths[index]),
                     }"
                     class="th d-flex align-center px-3"
                     :class="{
                         pointer: enableSorting && header.sortable !== false,
-                        [`sort--active ${sortOrder}`]: activeSort === header.text,
+                        [`sort--active ${sortOpts.sortDesc ? 'desc' : 'asc'}`]:
+                            sortOpts.sortBy === header.text,
                         'text-capitalize': header.capitalize,
                         'text-uppercase': header.uppercase,
                         'th--resizable': !isResizerDisabled(header),
                     }"
-                    @click="
-                        () =>
-                            enableSorting && header.sortable !== false
-                                ? handleSort(header.text)
-                                : null
-                    "
+                    @click="isSortable(header) ? updateSortOpts(header) : null"
                 >
-                    <template v-if="header.text === '#'">
-                        <span> {{ header.text }}</span>
-                        <span v-if="showTotalNumber" class="ml-1 mxs-color-helper text-grayed-out">
-                            ({{ curr2dRowsLength }})
+                    <template v-if="index === 0 && header.text === '#'">
+                        {{ header.text }}
+                        <span v-if="showRowCount" class="ml-1 mxs-color-helper text-grayed-out">
+                            ({{ rowCount }})
                         </span>
                     </template>
                     <span
@@ -64,19 +60,15 @@
                             :data="{
                                 header,
                                 // maxWidth: minus padding and sort-icon
-                                maxWidth: headerTxtMaxWidth({ header, colIdx }),
-                                colIdx: colIdx,
-                                activatorID: genHeaderColID(colIdx),
+                                maxWidth: headerTxtMaxWidth({ header, index }),
+                                colIdx: index,
+                                activatorID: headerIds[index],
                             }"
                         >
                             {{ header.text }}
                         </slot>
                     </span>
-                    <v-icon
-                        v-if="enableSorting && header.sortable !== false"
-                        size="14"
-                        class="sort-icon ml-2"
-                    >
+                    <v-icon v-if="isSortable(header)" size="14" class="sort-icon ml-2">
                         $vuetify.icons.mxs_arrowDown
                     </v-icon>
                     <span
@@ -91,21 +83,22 @@
                     >
                         {{ $mxs_t('group') }}
                     </span>
-                    <div
+                    <span
                         v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                         class="header__resizer d-inline-block fill-height"
+                        :data-test="`${header.text}-resizer-ele`"
                         v-on="
                             isResizerDisabled(header)
                                 ? null
-                                : { mousedown: e => resizerMouseDown(e, colIdx) }
+                                : { mousedown: e => resizerMouseDown(e, index) }
                         "
                     />
                 </div>
             </template>
         </div>
         <div
-            :style="{ minWidth: `${scrollBarThicknessOffset}px` }"
-            class="d-inline-block dummy-header"
+            :style="{ minWidth: `${scrollBarThickness}px` }"
+            class="d-inline-block fixed-padding"
         />
     </div>
 </template>
@@ -125,7 +118,7 @@
  */
 /*
  *
- headers: {
+ items: {
   width?: string | number, default width when header is rendered
   maxWidth?: string | number, if maxWidth is declared, it ignores width and use it as default width
   minWidth?: string | number, allow resizing column to no smaller than provided value
@@ -143,152 +136,127 @@
 export default {
     name: 'table-header',
     props: {
-        headers: { type: Array, required: true },
+        items: { type: Array, required: true },
         boundingWidth: { type: Number, required: true },
         headerStyle: { type: Object, required: true },
         isVertTable: { type: Boolean, default: false },
-        curr2dRowsLength: { type: Number, required: true },
+        rowCount: { type: Number, required: true },
         showSelect: { type: Boolean, required: true },
         singleSelect: { type: Boolean, required: true },
         checkboxColWidth: { type: Number, required: true },
-        isAllselected: { type: Boolean, required: true },
+        isAllSelected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
         areHeadersHidden: { type: Boolean, required: true },
-        scrollBarThicknessOffset: { type: Number, required: true },
-        showTotalNumber: { type: Boolean, required: true },
+        scrollBarThickness: { type: Number, required: true },
+        showRowCount: { type: Boolean, required: true },
+        sortOptions: { type: Object, required: true }, // sync
     },
     data() {
         return {
-            headerWidthMap: {},
+            headerWidths: [],
             isResizing: false,
-            resizingData: {
-                currCol: null,
-                nxtCol: null,
-                currPageX: 0,
-                nxtColWidth: 0,
-                currColWidth: 0,
-                currColIndex: 0,
-                nxtColIndex: 0,
-            },
-            sortOrder: 'asc',
-            activeSort: '',
+            resizingData: null,
+            headerIds: [],
             activeGroupBy: '',
         }
     },
     computed: {
-        tableHeaders() {
+        headers() {
             return this.isVertTable
                 ? [
                       { text: 'COLUMN', width: '20%' },
                       { text: 'VALUE', width: '80%' },
                   ]
-                : this.headers
+                : this.items
         },
         visHeaders() {
-            return this.tableHeaders.filter(h => !h.hidden)
+            return this.headers.filter(h => !h.hidden)
         },
         lastVisHeader() {
-            if (this.visHeaders.length) return this.visHeaders.at(-1)
-            return {}
+            return this.visHeaders.at(-1)
+        },
+        sortOpts: {
+            get() {
+                return this.sortOptions
+            },
+            set(v) {
+                this.$emit('update:sortOptions', v)
+            },
         },
         enableSorting() {
-            return this.curr2dRowsLength <= 10000 && !this.isVertTable
+            return this.rowCount <= 10000 && !this.isVertTable
         },
         enableGrouping() {
-            return this.tableHeaders.filter(h => !h.hidden).length > 1
+            return this.headers.filter(h => !h.hidden).length > 1
         },
         //threshold, user cannot resize header smaller than this
-        headerMinWidthMap() {
-            return this.tableHeaders.reduce((obj, h) => {
-                obj[h.text] = h.minWidth
-                    ? h.minWidth
-                    : this.$typy(h, 'groupable').safeBoolean
-                    ? 117
-                    : 67
-                return obj
-            }, {})
+        headerMinWidths() {
+            return this.headers.map(
+                h => h.minWidth || (this.$typy(h, 'groupable').safeBoolean ? 117 : 67)
+            )
         },
     },
     watch: {
         isResizing(v) {
             this.$emit('is-resizing', v)
         },
+        headers: {
+            immediate: true,
+            deep: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) {
+                    this.headerIds = Array.from(
+                        { length: this.headers.length },
+                        () => `header-${this.$helpers.uuidv1()}`
+                    )
+                }
+            },
+        },
+        headerIds: {
+            immediate: true,
+            deep: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) {
+                    this.resetHeaderWidths()
+                    this.$nextTick(() => this.computeHeaderWidths())
+                }
+            },
+        },
+        boundingWidth() {
+            this.resetHeaderWidths()
+            this.$nextTick(() => this.computeHeaderWidths())
+        },
     },
     created() {
         window.addEventListener('mousemove', this.resizerMouseMove)
         window.addEventListener('mouseup', this.resizerMouseUp)
-        this.watch()
     },
-    destroyed() {
+    beforeDestroy() {
         window.removeEventListener('mousemove', this.resizerMouseMove)
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
-    activated() {
-        this.watch()
-    },
-    deactivated() {
-        this.unwatch()
-    },
-    beforeDestroy() {
-        this.unwatch()
-    },
     methods: {
-        watch() {
-            this.watch_tableHeaders()
-            this.watch_boundingWidth()
-            this.watch_headerWidthMap()
+        isSortable(header) {
+            return this.enableSorting && header.sortable !== false
         },
-        unwatch() {
-            this.$typy(this.unwatch_tableHeaders).safeFunction()
-            this.$typy(this.unwatch_boundingWidth).safeFunction()
-            this.$typy(this.unwatch_headerWidthMap).safeFunction()
-        },
-        watch_tableHeaders() {
-            this.unwatch_tableHeaders = this.$watch(
-                'tableHeaders',
-                (v, oV) => {
-                    if (!this.$helpers.lodash.isEqual(v, oV)) this.getComputedWidth()
-                },
-                { deep: true, immediate: true }
-            )
-        },
-        watch_boundingWidth() {
-            this.unwatch_boundingWidth = this.$watch('boundingWidth', () => this.getComputedWidth())
-        },
-        watch_headerWidthMap() {
-            this.unwatch_headerWidthMap = this.$watch(
-                'headerWidthMap',
-                v => this.$emit('get-header-width-map', v),
-                { deep: true }
-            )
-        },
-        genHeaderColID(colIdx) {
-            return `table-header__header-text_${colIdx}`
-        },
-        headerTxtMaxWidth({ header, colIdx }) {
-            const w =
-                this.$typy(this.headerWidthMap[colIdx]).safeNumber -
-                (this.enableSorting && header.sortable !== false ? 22 : 0) -
-                (this.enableGrouping && this.$typy(header, 'groupable').safeBoolean ? 38 : 0) -
-                24 // padding
-            return w > 0 ? w : 1
+        isGroupable(header) {
+            return this.enableGrouping && this.$typy(header, 'groupable').safeBoolean
         },
         isResizerDisabled(header) {
             return header.text === '#' || header.resizable === false
         },
-        resetHeaderWidth() {
-            let headerWidthMap = {}
-            for (const [colIdx, header] of this.tableHeaders.entries()) {
-                headerWidthMap = {
-                    ...headerWidthMap,
-                    [colIdx]: header.maxWidth
-                        ? header.maxWidth
-                        : header.width
-                        ? header.width
-                        : 'unset',
-                }
-            }
-            this.headerWidthMap = headerWidthMap
+        headerTxtMaxWidth({ header, index }) {
+            const w =
+                this.$typy(this.headerWidths[index]).safeNumber -
+                (this.isSortable(header) ? 22 : 0) -
+                (this.isGroupable(header) ? 38 : 0) -
+                24 // padding
+            return w > 0 ? w : 1
+        },
+        resetHeaderWidths() {
+            this.headerWidths = this.headers.map(header =>
+                header.hidden ? 0 : header.maxWidth || header.width || 'unset'
+            )
         },
         getHeaderWidth(headerIdx) {
             const headerEle = this.$typy(this.$refs, `header__${headerIdx}[0]`).safeObject
@@ -298,109 +266,87 @@ export default {
             }
             return 0
         },
-        assignHeaderWidthMap() {
-            let headerWidthMap = {}
-            // get width of each header then use it to set same width of corresponding cells
-            for (const [colIdx, header] of this.tableHeaders.entries()) {
-                const minWidth = this.headerMinWidthMap[header.text]
-                const width = this.getHeaderWidth(colIdx)
-                const headerWidth = width < minWidth ? minWidth : width
-                headerWidthMap = { ...headerWidthMap, [colIdx]: headerWidth }
-            }
-            this.headerWidthMap = headerWidthMap
-        },
-        getComputedWidth() {
-            this.resetHeaderWidth()
-            this.$nextTick(() => this.assignHeaderWidthMap())
+        computeHeaderWidths() {
+            this.headerWidths = this.headers.map((header, index) => {
+                const minWidth = this.headerMinWidths[index]
+                const width = this.getHeaderWidth(index)
+                return header.hidden ? 0 : width < minWidth ? minWidth : width
+            })
+            this.$emit('header-widths', this.headerWidths)
         },
         hasClass({ ele, className }) {
             let str = ` ${ele.className} `
             let classToFind = ` ${className} `
             return str.indexOf(classToFind) !== -1
         },
-        getNxtColByClass({ node, className, nxtColIndex }) {
-            while ((node = node.nextSibling)) {
-                nxtColIndex++
-                if (this.hasClass({ ele: node, className })) return { node, nxtColIndex }
+        getLastNode() {
+            const index = this.headers.indexOf(this.lastVisHeader)
+            return {
+                node: this.$typy(this.$refs, `header__${index}[0]`).safeObject,
+                lastNodeMinWidth: this.headerMinWidths[index],
             }
-            return { node: null, nxtColIndex }
         },
-        resizerMouseDown(e, colIdx) {
-            let resizingData = {
-                currColIndex: colIdx,
-                currCol: e.target.parentElement,
+        resizerMouseDown(e, index) {
+            this.resizingData = {
                 currPageX: e.pageX,
-                currColWidth: e.target.parentElement.offsetWidth,
+                targetNode: e.target.parentElement,
+                targetNodeWidth: e.target.parentElement.offsetWidth,
+                targetHeaderMinWidth: this.headerMinWidths[index],
             }
-            const { node: nxtCol, nxtColIndex } = this.getNxtColByClass({
-                node: resizingData.currCol,
-                className: 'th--resizable',
-                nxtColIndex: colIdx,
-            })
-            resizingData = { ...resizingData, nxtCol, nxtColIndex }
-            if (resizingData.nxtCol) resizingData.nxtColWidth = resizingData.nxtCol.offsetWidth
             this.isResizing = true
-            this.resizingData = { ...this.resizingData, ...resizingData }
         },
         resizerMouseMove(e) {
             if (this.isResizing) {
+                const { handleAddPxUnit } = this.$helpers
                 const {
                     currPageX,
-                    currCol,
-                    currColWidth,
-                    currColIndex,
-                    nxtCol,
-                    nxtColWidth,
-                    nxtColIndex,
+                    targetNode,
+                    targetNodeWidth,
+                    targetHeaderMinWidth,
                 } = this.resizingData
                 const diffX = e.pageX - currPageX
-                if (
-                    currColWidth + diffX >=
-                    this.headerMinWidthMap[this.tableHeaders[currColIndex].text]
-                ) {
-                    const newCurrColW = `${currColWidth + diffX}px`
-                    currCol.style.maxWidth = newCurrColW
-                    currCol.style.minWidth = newCurrColW
-                    if (
-                        nxtCol &&
-                        nxtColWidth - diffX >=
-                            this.headerMinWidthMap[this.tableHeaders[nxtColIndex].text]
-                    ) {
-                        const newNxtColW = `${nxtColWidth - diffX}px`
-                        nxtCol.style.maxWidth == newNxtColW
-                        nxtCol.style.minWidth = newNxtColW
+                const targetNewWidth = targetNodeWidth + diffX
+                if (targetNewWidth >= targetHeaderMinWidth) {
+                    targetNode.style.maxWidth = handleAddPxUnit(targetNewWidth)
+                    targetNode.style.minWidth = handleAddPxUnit(targetNewWidth)
+                    const { node: lastNode, lastNodeMinWidth } = this.getLastNode()
+                    if (lastNode) {
+                        // Let the last header node to auto grow its width
+                        lastNode.style.maxWidth = 'unset'
+                        lastNode.style.minWidth = 'unset'
+                        // use the default min width if the actual width is smaller than it
+                        const { width: currentLastNodeWidth } = lastNode.getBoundingClientRect()
+                        if (currentLastNodeWidth < lastNodeMinWidth) {
+                            lastNode.style.maxWidth = this.$helpers.handleAddPxUnit(
+                                lastNodeMinWidth
+                            )
+                            lastNode.style.minWidth = this.$helpers.handleAddPxUnit(
+                                lastNodeMinWidth
+                            )
+                        }
                     }
-                    this.$nextTick(() => this.assignHeaderWidthMap())
                 }
             }
         },
         resizerMouseUp() {
             if (this.isResizing) {
                 this.isResizing = false
-                this.resizingData = {}
+                this.computeHeaderWidths()
+                this.resizingData = null
             }
         },
         /**
-         * @param {String} h - header name
+         * Update sort options in three states: initial, asc or desc
+         * @param {object} - header
          */
-        handleSort(h) {
-            if (this.activeSort === h)
-                switch (this.sortOrder) {
-                    case 'asc':
-                        this.sortOrder = 'desc'
-                        break
-                    case 'desc':
-                        this.sortOrder = 'asc'
-                        break
-                }
-            else {
-                this.activeSort = h
-                this.sortOrder = 'asc'
+        updateSortOpts(header) {
+            if (this.sortOpts.sortBy === header.text) {
+                if (this.sortOpts.sortDesc) this.sortOpts.sortBy = -1
+                this.sortOpts.sortDesc = !this.sortOpts.sortDesc
+            } else {
+                this.sortOpts.sortBy = header.text
+                this.sortOpts.sortDesc = false
             }
-            this.$emit('on-sorting', {
-                sortBy: this.activeSort,
-                isDesc: this.sortOrder !== 'asc',
-            })
         },
         /**
          * @param {String} header - header name
@@ -431,6 +377,9 @@ export default {
             height: 30px;
             &:first-child {
                 border-radius: 5px 0 0 0;
+            }
+            &:last-child {
+                padding-right: 0px !important;
             }
             .sort-icon {
                 transform: none;
@@ -490,7 +439,7 @@ export default {
         }
     }
 
-    .dummy-header {
+    .fixed-padding {
         z-index: 2;
         background-color: $table-border;
         height: 30px;
