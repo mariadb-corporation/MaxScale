@@ -32,7 +32,7 @@
         <v-virtual-scroll
             v-if="initialRowsLength && !areHeadersHidden"
             ref="vVirtualScroll"
-            :bench="isVertTable ? 1 : bench"
+            :bench="bench"
             :items="currRows"
             :height="(isYOverflowed ? maxTbodyHeight : rowsHeight) + scrollBarThickness"
             :max-height="maxTbodyHeight"
@@ -159,7 +159,7 @@ export default {
         maxHeight: { type: Number, required: true },
         itemHeight: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
-        bench: { type: Number, default: 10 },
+        bench: { type: Number, default: 1 },
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
         singleSelect: { type: Boolean, default: false },

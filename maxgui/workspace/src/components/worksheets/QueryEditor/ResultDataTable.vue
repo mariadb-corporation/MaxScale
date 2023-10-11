@@ -20,6 +20,17 @@
             />
             <slot name="left-table-tools-append" />
             <v-spacer />
+            <v-tooltip v-if="columnsLimitInfo" top transition="slide-y-transition" max-width="400">
+                <template v-slot:activator="{ on }">
+                    <span class="text-truncate mx-2 d-flex align-center" v-on="on">
+                        <v-icon size="16" color="warning" class="mr-2">
+                            $vuetify.icons.mxs_alertWarning
+                        </v-icon>
+                        {{ $mxs_t('columnsLimit') }}
+                    </span>
+                </template>
+                {{ columnsLimitInfo }}
+            </v-tooltip>
             <slot name="right-table-tools-prepend" />
             <v-btn
                 v-if="showEditBtn"
@@ -186,6 +197,7 @@ export default {
             // states for editing table cell
             isEditing: false,
             changedCells: [], // cells have its value changed
+            columnsLimitInfo: '',
         }
     },
     computed: {
@@ -198,9 +210,12 @@ export default {
         draggable() {
             return !this.isEditing
         },
+        headersLength() {
+            return this.headers.length
+        },
         tableHeaders() {
             let headers = []
-            if (this.headers.length)
+            if (this.headersLength)
                 headers = [
                     { text: '#', maxWidth: 'max-content' },
                     ...this.headers.map(h => ({
@@ -301,6 +316,15 @@ export default {
         showCtxMenu(v) {
             // when menu is closed by blur event, clear ctxMenuData so that activeRow can be reset
             if (!v) this.ctxMenuData = {}
+        },
+        headersLength: {
+            immediate: true,
+            handler(v) {
+                if (v > 50) {
+                    this.hiddenHeaderNames = this.allHeaderNames.slice(50)
+                    this.columnsLimitInfo = this.$mxs_t('info.columnsLimit')
+                }
+            },
         },
     },
     mounted() {
