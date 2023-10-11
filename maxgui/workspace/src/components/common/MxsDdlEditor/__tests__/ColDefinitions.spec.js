@@ -78,7 +78,7 @@ describe('col-definitions', () => {
             } = wrapper.findComponent({
                 name: 'mxs-virtual-scroll-tbl',
             }).vm.$props
-            expect(headers).to.be.eql(wrapper.vm.visHeaders)
+            expect(headers).to.be.eql(wrapper.vm.headers)
             expect(rows).to.be.eql(wrapper.vm.rows)
             expect(itemHeight).to.be.eql(32)
             expect(maxHeight).to.be.eql(wrapper.vm.tableMaxHeight)
@@ -128,7 +128,8 @@ describe('col-definitions', () => {
             expect(rowData).to.be.an('array')
         })
 
-        it('Should pass accurate data to charset-collate-input', () => {
+        it('Should pass accurate data to charset-collate-input', async () => {
+            await wrapper.setData({ hiddenColSpecs: [] })
             const {
                 value,
                 height,

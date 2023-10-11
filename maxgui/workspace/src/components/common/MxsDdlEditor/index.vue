@@ -249,12 +249,6 @@ export default {
     created() {
         this.addKeyEvtListener()
     },
-    activated() {
-        this.addKeyEvtListener()
-    },
-    deactivated() {
-        this.removeKeyEvtListener()
-    },
     beforeDestroy() {
         this.removeKeyEvtListener()
     },
