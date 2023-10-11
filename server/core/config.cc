@@ -3192,8 +3192,16 @@ static int get_release_string(char* release)
                 }
             }
 
-            if (skipindex == 0)
+            if (skipindex == 0 && found.gl_pathc > 1)
             {
+                // This entire function is broken and needs to be re-written.
+                // It basically assumes that every pattern returns at least 2 paths,
+                // and then uses the second, which causes a null-pointer to be
+                // passed to open() if there is just one. And has special handling
+                // for "/etc/lsb-release", which may be present only in the case of
+                // one of the 4 glob-pattern. The added found.gl_pathc check
+                // above is just a quick-fix.
+                // https://jira.mariadb.org/browse/MXS-4807 fixes it properly.
                 startindex++;
             }
 
