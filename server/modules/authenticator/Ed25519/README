@@ -13,3 +13,6 @@ message length as it's already known.
 
 crypto_sign_open() only returns the result of the verification (passed/failed),
 not the verified message.
+
+crypto_sign_keypair() derives the private key from the cleartext password
+instead of generating it from random data.

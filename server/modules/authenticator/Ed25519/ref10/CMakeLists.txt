@@ -6,5 +6,5 @@ add_library(ed25519ref10 STATIC open.c sign.c keypair.c
         ge_p3_0.c ge_p3_dbl.c ge_p3_to_cached.c ge_p3_to_p2.c ge_p3_tobytes.c ge_precomp_0.c
         ge_scalarmult_base.c ge_sub.c  ge_tobytes.c
         sc_muladd.c sc_reduce.c
-        internal/verify.c internal/hash.c internal/randombytes.cc)
+        internal/verify.c internal/hash.c)
 target_include_directories(ed25519ref10 PRIVATE exports internal)
