@@ -18,11 +18,20 @@
 namespace maxbase
 {
 
+enum class ReleaseSource
+{
+    LSB_RELEASE, // From /etc/lsb-release
+    OS_RELEASE,  // From /etc/os-release
+    ANY          // First /etc/os-release, then /etc/lsb-release
+};
+
 /**
  * Get the linux distribution info
  *
+ * @param source Where the release should be looked for.
+ *
  * @return If successful, the distribution, otherwise an empty string.
  */
-std::string get_release_string();
+std::string get_release_string(ReleaseSource source = ReleaseSource::ANY);
 
 }

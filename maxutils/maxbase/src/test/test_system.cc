@@ -18,9 +18,13 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
+    // Just for info.
+    cout << "/etc/lsb-release: " << mxb::get_release_string(mxb::ReleaseSource::LSB_RELEASE) << endl;
+    cout << "/etc/os-release : " << mxb::get_release_string(mxb::ReleaseSource::OS_RELEASE) << endl;
+
     string release = mxb::get_release_string();
 
-    cout << release << endl;
+    cout << "Any: " << release << endl;
 
     return !release.empty();
 }

@@ -19,11 +19,110 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <vector>
 
 using namespace std;
 
 namespace
 {
+
+string get_param_value(const char* zParams, const char* zParam)
+{
+    string rv;
+
+    const char* z = strstr(zParams, zParam);
+
+    if (z)
+    {
+        z += strlen(zParam);
+
+        if (*z == '"')
+        {
+            ++z;
+        }
+
+        const char* zEnd = strchrnul(z, '\n');
+
+        if (zEnd > z && *(zEnd - 1) == '"')
+        {
+            --zEnd;
+        }
+
+        rv.assign(z, zEnd);
+    }
+
+    return rv;
+}
+
+vector<char> get_content(const char* zPath)
+{
+    vector<char> rv;
+
+    int fd = ::open(zPath, O_RDONLY);
+    if (fd != -1)
+    {
+        struct stat s;
+        if (::fstat(fd, &s) == 0)
+        {
+            rv.resize(s.st_size + 1);
+            ssize_t size = ::read(fd, rv.data(), s.st_size);
+
+            if (size > 0)
+            {
+                rv[size] = 0;
+            }
+            else
+            {
+                rv.clear();
+            }
+        }
+
+        ::close(fd);
+    }
+
+    return rv;
+}
+
+string get_release_from_os_release()
+{
+    string rv;
+
+    vector<char> buffer = get_content("/etc/os-release");
+
+    if (!buffer.empty())
+    {
+        string name = get_param_value(buffer.data(), "NAME=");
+        string version = get_param_value(buffer.data(), "VERSION=");
+
+        if (!name.empty())
+        {
+            rv += name;
+
+            if (!version.empty())
+            {
+                rv += " ";
+            }
+        }
+
+        rv += version;
+    }
+
+    return rv;
+}
+
+string get_release_from_lsb_release()
+{
+    string rv;
+
+    vector<char> buffer = get_content("/etc/lsb-release");
+
+    if (!buffer.empty())
+    {
+        rv = get_param_value(buffer.data(), "DISTRIB_DESCRIPTION=");
+    }
+
+    return rv;
+}
 
 #define RELEASE_STR_LENGTH 256
 
@@ -161,14 +260,22 @@ int get_release_string(char* release)
 
 }
 
-string maxbase::get_release_string()
+string maxbase::get_release_string(ReleaseSource source)
 {
-    string rv;
-    char release_string[RELEASE_STR_LENGTH];
+    // Unless told otherwise, we first look in /etc/os-release, but if the file
+    // does not exist or what we look for is not there, we make a second attempt
+    // with /etc/lsb-release.
 
-    if (::get_release_string(release_string) == 1)
+    string rv;
+
+    if (source == ReleaseSource::OS_RELEASE || source == ReleaseSource::ANY)
     {
-        rv = release_string;
+        rv = get_release_from_os_release();
+    }
+
+    if (rv.empty() && (source == ReleaseSource::LSB_RELEASE || source == ReleaseSource::ANY))
+    {
+        rv = get_release_from_lsb_release();
     }
 
     return rv;
