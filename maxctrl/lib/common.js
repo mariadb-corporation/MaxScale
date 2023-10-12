@@ -570,17 +570,5 @@ function getTable(headobj) {
 }
 
 function pingCluster(hosts) {
-  var promises = [];
-
-  if (hosts.length > 1) {
-    hosts.forEach(function (i) {
-      args = {};
-      args.url = getUri(i, "");
-      args.auth = { username: argv.u, password: argv.p };
-      setTlsCerts(args);
-      promises.push(axios(args));
-    });
-  }
-
-  return Promise.all(promises);
+  return hosts.length > 1 ? Promise.all(hosts.map((i) => doRequest(i, ""))) : Promise.resolve();
 }
