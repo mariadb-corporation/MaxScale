@@ -9,7 +9,7 @@
         isCreating
         :schemas="schemas"
         :lookupTables="lookupTables"
-        :connData="{ id: activeErdConnId, config: activeRequestConfig }"
+        :connData="{ id: connId, config: activeRequestConfig }"
         :showApplyBtn="false"
         v-on="$listeners"
     >
@@ -46,7 +46,6 @@
 import { mapActions, mapMutations } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
-import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import { EventBus } from '@wkeComps/EventBus'
 
@@ -54,6 +53,13 @@ export default {
     name: 'entity-editor-ctr',
     props: {
         dim: { type: Object, required: true },
+        taskId: { type: String, required: true },
+        connId: { type: String, required: true },
+        nodeMap: { type: Object, required: true },
+        tables: { type: Array, required: true },
+        schemas: { type: Array, required: true },
+        activeEntityId: { type: String, required: true },
+        erdTaskTmp: { type: Object, required: true },
     },
     data() {
         return {
@@ -61,29 +67,14 @@ export default {
         }
     },
     computed: {
-        activeErdConnId() {
-            return this.$typy(QueryConn.getters('activeErdConn'), 'id').safeString
-        },
-        activeTaskId() {
-            return ErdTask.getters('activeRecordId')
-        },
-        nodeMap() {
-            return ErdTask.getters('nodeMap')
-        },
         lookupTables() {
-            return ErdTask.getters('lookupTables')
-        },
-        activeEntityId() {
-            return ErdTask.getters('activeEntityId')
+            return this.$helpers.lodash.keyBy(this.tables, 'id')
         },
         stagingActiveNode() {
             return this.nodeMap[this.activeEntityId]
         },
         stagingInitialData() {
             return this.$typy(this.stagingActiveNode, 'data').safeObjectOrEmpty
-        },
-        schemas() {
-            return ErdTask.getters('schemas')
         },
         eventBus() {
             return EventBus
@@ -93,56 +84,47 @@ export default {
         },
         activeSpec: {
             get() {
-                return ErdTask.getters('activeSpec')
+                return this.$typy(this.erdTaskTmp, 'active_spec').safeString
             },
             set(v) {
-                ErdTaskTmp.update({
-                    where: this.activeTaskId,
-                    data: { active_spec: v },
-                })
+                ErdTaskTmp.update({ where: this.taskId, data: { active_spec: v } })
             },
         },
     },
-    activated() {
-        this.watch()
-    },
-    deactivated() {
-        this.unwatch()
+    watch: {
+        stagingInitialData: {
+            deep: true,
+            immediate: true,
+            handler(v) {
+                if (
+                    !this.$typy(v).isEmptyObject &&
+                    !this.$helpers.lodash.isEqual(v, this.stagingData)
+                ) {
+                    this.$typy(this.unwatch_stagingData).safeFunction()
+                    this.stagingData = this.$helpers.lodash.cloneDeep(v)
+                    this.watch_stagingData()
+                }
+            },
+        },
+        connId: {
+            immediate: true,
+            async handler(v) {
+                if (v)
+                    await this.queryDdlEditorSuppData({
+                        connId: this.connId,
+                        config: this.activeRequestConfig,
+                    })
+            },
+        },
     },
     beforeDestroy() {
-        this.unwatch()
+        this.$typy(this.unwatch_stagingData).safeFunction()
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
         ...mapActions({
             queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData',
         }),
-        watch() {
-            this.watch_stagingInitialData()
-            this.watch_activeErdConnId()
-        },
-        unwatch() {
-            this.$typy(this.unwatch_stagingInitialData).safeFunction()
-            this.$typy(this.unwatch_stagingData).safeFunction()
-            this.$typy(this.unwatch_activeErdConnId).safeFunction()
-        },
-        //Watcher to work with multiple worksheets which are kept alive
-        watch_stagingInitialData() {
-            this.unwatch_stagingInitialData = this.$watch(
-                'stagingInitialData',
-                v => {
-                    if (
-                        !this.$typy(v).isEmptyObject &&
-                        !this.$helpers.lodash.isEqual(v, this.stagingData)
-                    ) {
-                        this.$typy(this.unwatch_stagingData).safeFunction()
-                        this.stagingData = this.$helpers.lodash.cloneDeep(v)
-                        this.watch_stagingData()
-                    }
-                },
-                { deep: true, immediate: true }
-            )
-        },
         watch_stagingData() {
             this.unwatch_stagingData = this.$watch(
                 'stagingData',
@@ -152,7 +134,7 @@ export default {
                     const nodeMap = immutableUpdate(this.nodeMap, {
                         [id]: { data: { $set: data } },
                     })
-                    ErdTask.update({ where: this.activeTaskId, data: { nodeMap } })
+                    ErdTask.update({ where: this.taskId, data: { nodeMap } })
                     ErdTask.dispatch('updateNodesHistory', nodeMap)
                     // Emit the event to update the node in the diagram
                     this.eventBus.$emit('entity-editor-ctr-update-node-data', { id, data })
@@ -160,23 +142,10 @@ export default {
                 { deep: true }
             )
         },
-        watch_activeErdConnId() {
-            this.unwatch_activeErdConnId = this.$watch(
-                'activeErdConnId',
-                async v => {
-                    if (v)
-                        await this.queryDdlEditorSuppData({
-                            connId: this.activeErdConnId,
-                            config: this.activeRequestConfig,
-                        })
-                },
-                { immediate: true }
-            )
-        },
         close(formRef) {
             if (formRef.validate())
                 ErdTaskTmp.update({
-                    where: this.activeTaskId,
+                    where: this.taskId,
                     data: { graph_height_pct: 100, active_entity_id: '' },
                 })
             else

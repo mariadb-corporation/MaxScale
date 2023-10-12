@@ -1,7 +1,7 @@
 <template>
     <mxs-split-pane
         v-model="graphHeightPct"
-        :boundary="dim.height"
+        :boundary="ctrDim.height"
         split="horiz"
         :minPercent="minErdPct"
         :maxPercent="maxErdPct"
@@ -11,9 +11,19 @@
         <template slot="pane-left">
             <diagram-ctr
                 ref="diagramCtr"
-                :dim="erdDim"
-                :connId="connId"
                 :isFormValid="isFormValid"
+                :dim="erdDim"
+                :graphHeightPct="graphHeightPct"
+                :erdTask="erdTask"
+                :conn="conn"
+                :nodeMap="nodeMap"
+                :nodes="nodes"
+                :tables="tables"
+                :schemas="schemas"
+                :activeEntityId="activeEntityId"
+                :erdTaskTmp="erdTaskTmp"
+                :refTargetMap="refTargetMap"
+                :tablesColNameMap="tablesColNameMap"
                 @on-apply-script="applyScript"
                 @on-export-script="exportScript"
                 @on-export-as-jpeg="exportAsJpeg"
@@ -24,6 +34,13 @@
             <entity-editor-ctr
                 v-show="activeEntityId"
                 :dim="editorDim"
+                :taskId="taskId"
+                :connId="connId"
+                :nodeMap="nodeMap"
+                :tables="tables"
+                :schemas="schemas"
+                :activeEntityId="activeEntityId"
+                :erdTaskTmp="erdTaskTmp"
                 @is-form-valid="isFormValid = $event"
             />
         </template>
@@ -47,16 +64,17 @@ import { mapMutations, mapState, mapActions } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
-import Worksheet from '@wsModels/Worksheet'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
+import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'erd-wke',
     components: { DiagramCtr, EntityEditorCtr },
     props: {
         ctrDim: { type: Object, required: true },
+        wke: { type: Object, required: true },
     },
     data() {
         return {
@@ -69,9 +87,32 @@ export default {
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
             CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
         }),
-        dim() {
-            const { width, height } = this.ctrDim
-            return { width: width, height: height }
+        taskId() {
+            return this.wke.erd_task_id
+        },
+        erdTask() {
+            return ErdTask.find(this.taskId) || {}
+        },
+        erdTaskTmp() {
+            return ErdTaskTmp.find(this.taskId) || {}
+        },
+        nodeMap() {
+            return this.$typy(this.erdTask, 'nodeMap').safeObjectOrEmpty
+        },
+        nodes() {
+            return Object.values(this.nodeMap)
+        },
+        tables() {
+            return this.nodes.map(n => n.data)
+        },
+        schemas() {
+            return [...new Set(this.nodes.map(n => n.data.options.schema))]
+        },
+        refTargetMap() {
+            return this.$helpers.lodash.keyBy(erdHelper.genRefTargets(this.tables), 'id')
+        },
+        tablesColNameMap() {
+            return erdHelper.createTablesColNameMap(this.tables)
         },
         erdDim() {
             return { width: this.ctrDim.width, height: this.erGraphHeight }
@@ -79,46 +120,44 @@ export default {
         erGraphHeight() {
             return this.$helpers.pctToPx({
                 pct: this.graphHeightPct,
-                containerPx: this.dim.height,
+                containerPx: this.ctrDim.height,
             })
         },
         editorDim() {
-            return { width: this.ctrDim.width, height: this.dim.height - this.erGraphHeight }
+            return { width: this.ctrDim.width, height: this.ctrDim.height - this.erGraphHeight }
         },
         minErdPct() {
             return this.$helpers.pxToPct({
                 px: this.activeEntityId ? 40 : 0,
-                containerPx: this.dim.height,
+                containerPx: this.ctrDim.height,
             })
         },
         maxErdPct() {
             return 100 - this.minErdPct
         },
         activeEntityId() {
-            return ErdTask.getters('activeEntityId')
-        },
-        activeTaskId() {
-            return ErdTask.getters('activeRecordId')
+            return this.$typy(this.erdTaskTmp, 'active_entity_id').safeString
         },
         taskName() {
-            return this.$typy(Worksheet.getters('activeRecord'), 'name').safeString
+            return this.wke.name
         },
         graphHeightPct: {
             get() {
-                return ErdTask.getters('graphHeightPct')
+                return this.$typy(this.erdTaskTmp, 'graph_height_pct').safeNumber
             },
             set(v) {
-                ErdTaskTmp.update({
-                    where: this.activeTaskId,
-                    data: { graph_height_pct: v },
-                })
+                ErdTaskTmp.update({ where: this.taskId, data: { graph_height_pct: v } })
             },
         },
-        activeErdConn() {
-            return QueryConn.getters('activeErdConn')
+        conn() {
+            return (
+                QueryConn.query()
+                    .where('erd_task_id', this.taskId)
+                    .first() || {}
+            )
         },
         connId() {
-            return this.$typy(this.activeErdConn, 'id').safeString
+            return this.$typy(this.conn, 'id').safeString
         },
         blockCmt() {
             return '# ============================================================================='
@@ -146,25 +185,23 @@ export default {
         },
         genScript() {
             this.scriptGeneratedTime = this.$helpers.dateFormat({ value: new Date() })
-            const tablesColNameMap = ErdTask.getters('tablesColNameMap')
-            const refTargetMap = ErdTask.getters('refTargetMap')
             const { formatSQL, quotingIdentifier: quoting } = this.$helpers
             let parts = [],
                 tablesFks = []
             // new schemas
-            ErdTask.getters('schemas').forEach((s, i) => {
+            this.schemas.forEach((s, i) => {
                 if (i === 0) parts.push(this.createSectionCmt('Create schemas'))
                 const schema = quoting(s)
                 parts.push(`CREATE SCHEMA IF NOT EXISTS ${schema};`)
             })
             // new tables
-            ErdTask.getters('tables').forEach((tbl, i) => {
+            this.tables.forEach((tbl, i) => {
                 if (i === 0) parts.push(this.createSectionCmt('Create tables'))
                 const builder = new TableScriptBuilder({
                     initialData: {},
                     stagingData: tbl,
-                    refTargetMap,
-                    tablesColNameMap,
+                    refTargetMap: this.refTargetMap,
+                    tablesColNameMap: this.tablesColNameMap,
                     options: {
                         isCreating: true,
                         skipSchemaCreation: true,

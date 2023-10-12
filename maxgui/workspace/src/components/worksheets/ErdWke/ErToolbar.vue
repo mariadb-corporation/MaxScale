@@ -248,7 +248,7 @@
             btnClass="er-toolbar__btn connection-btn"
             depressed
             :height="buttonHeight"
-            :activeConn="activeErdConn"
+            :activeConn="conn"
             @click="SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })"
         />
     </div>
@@ -280,15 +280,13 @@
  * click-auto-arrange: void
  * change-graph-config-attr-value: { path: string, value: any}. path. e.g. 'link.isAttrToAttr'
  */
-import ErdTask from '@wsModels/ErdTask'
-import QueryConn from '@wsModels/QueryConn'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
 import { EventBus } from '@wkeComps/EventBus'
 import { mapMutations, mapState } from 'vuex'
 
 export default {
-    name: 'er-toolbar-ctr',
+    name: 'er-toolbar',
     components: { ConnectionBtn },
     props: {
         graphConfig: { type: Object, required: true },
@@ -296,6 +294,9 @@ export default {
         zoom: { type: Number, required: true },
         isFitIntoView: { type: Boolean, required: true },
         exportOptions: { type: Array, required: true },
+        conn: { type: Object, required: true },
+        nodesHistory: { type: Array, required: true },
+        activeHistoryIdx: { type: Number, required: true },
     },
     computed: {
         ...mapState({
@@ -305,9 +306,6 @@ export default {
         }),
         allLinkShapes() {
             return Object.values(LINK_SHAPES)
-        },
-        activeErdConn() {
-            return QueryConn.getters('activeErdConn')
         },
         buttonHeight() {
             return 28
@@ -320,14 +318,8 @@ export default {
                 if (v) this.$emit('set-zoom', { v: v / 100 })
             },
         },
-        nodesHistory() {
-            return ErdTask.getters('nodesHistory')
-        },
-        activeHistoryIdx() {
-            return ErdTask.getters('activeHistoryIdx')
-        },
         hasConnId() {
-            return Boolean(this.activeErdConn.id)
+            return Boolean(this.conn.id)
         },
         isUndoDisabled() {
             return this.activeHistoryIdx === 0
@@ -357,7 +349,7 @@ export default {
             this.SET_GEN_ERD_DLG({
                 is_opened: true,
                 preselected_schemas: [],
-                connection: this.activeErdConn,
+                connection: this.conn,
                 gen_in_new_ws: false,
             })
         },
