@@ -25,6 +25,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4807](https://jira.mariadb.org/browse/MXS-4807) MaxScale does not always report the OS version correctly
 * [MXS-4756](https://jira.mariadb.org/browse/MXS-4756) GUI caching issue
 * [MXS-4749](https://jira.mariadb.org/browse/MXS-4749) log_throttling should be disabled if log_info is on
 * [MXS-4747](https://jira.mariadb.org/browse/MXS-4747) log_throttling is hard to modify via MaxCtrl
